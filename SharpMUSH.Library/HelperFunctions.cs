@@ -230,6 +230,11 @@ public static partial class HelperFunctions
 		=> await obj.HasFlag("DARK", cancellationToken)
 			&& (await obj.CanDark(cancellationToken) || !await obj.IsAlive(cancellationToken));
 
+	/// <summary><see cref="IsDarkLegal(AnySharpObject, CancellationToken)"/> with the object's own flags already read.</summary>
+	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj, IReadOnlyList<SharpObjectFlag> flags,
+		CancellationToken cancellationToken)
+		=> HasFlag(flags, "DARK") && (await obj.CanDark(cancellationToken) || !await obj.IsAlive(flags, cancellationToken));
+
 	public static async ValueTask<bool> IsAudible(this AnySharpObject obj)
 		=> await obj.HasFlag("AUDIBLE");
 
@@ -248,6 +253,16 @@ public static partial class HelperFunctions
 		cancellationToken.ThrowIfCancellationRequested();
 		return obj.IsPlayer || await obj.HasFlag("PUPPET", cancellationToken)
 			|| await obj.HasFlag("AUDIBLE", cancellationToken) && await obj.Object().LazyAttributes.Value
+				.AnyAsync(attribute => attribute.Name.Equals("FORWARDLIST", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
+
+	/// <summary><see cref="IsAlive(AnySharpObject, CancellationToken)"/> with the object's own flags already read.</summary>
+	public static async ValueTask<bool> IsAlive(this AnySharpObject obj, IReadOnlyList<SharpObjectFlag> flags,
+		CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsPlayer || HasFlag(flags, "PUPPET")
+			|| HasFlag(flags, "AUDIBLE") && await obj.Object().LazyAttributes.Value
 				.AnyAsync(attribute => attribute.Name.Equals("FORWARDLIST", StringComparison.OrdinalIgnoreCase), cancellationToken);
 	}
 
@@ -330,16 +345,26 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>The role-backed flags (<see cref="RoleFlags"/>) a role or override shows on the object.</summary>
-	public static IEnumerable<SharpObjectFlag> RoleFlagsShown(ObjectGrants grants)
-		=> RoleFlags.All.Where(flag => grants.Shows(flag.Scope)).Select(flag => new SharpObjectFlag
+	public static IReadOnlyList<SharpObjectFlag> RoleFlagsShown(ObjectGrants grants)
+	{
+		// Most objects show none; a listing asks this once per line.
+		List<SharpObjectFlag>? shown = null;
+		for (var i = 0; i < RoleFlags.All.Count; i++)
 		{
-			Name = flag.Name,
-			Symbol = flag.Symbol,
-			System = true,
-			SetPermissions = [],
-			UnsetPermissions = [],
-			TypeRestrictions = ["ROOM", "PLAYER", "EXIT", "THING"]
-		});
+			var flag = RoleFlags.All[i];
+			if (!grants.Shows(flag.Scope)) continue;
+			(shown ??= []).Add(new SharpObjectFlag
+			{
+				Name = flag.Name,
+				Symbol = flag.Symbol,
+				System = true,
+				SetPermissions = [],
+				UnsetPermissions = [],
+				TypeRestrictions = ["ROOM", "PLAYER", "EXIT", "THING"]
+			});
+		}
+		return shown ?? [];
+	}
 
 	/// <summary>
 	/// PennMUSH's <c>Hearer</c> (<c>src/game.c:1564</c>) walks <c>ATTR_FOR_EACH(thing, ptr)</c>,
@@ -439,9 +464,48 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> RoleFlags.Find(flag) is { } roleFlag
 			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(roleFlag.Scope)
-			: await obj.Flags.Value
-				.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
-										 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
+			: HasFlag(await obj.FlagsNowAsync(cancellationToken), flag);
+
+	/// <summary>
+	/// The object's flags as stored now, its type's flag last: read on the spot when the provider can
+	/// (<see cref="IReadableNow{T}"/>), otherwise enumerated.
+	/// </summary>
+	public static ValueTask<SharpObjectFlag[]> FlagsNowAsync(this SharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var flags = obj.Flags.Value;
+		if (flags is not IReadableNow<SharpObjectFlag> now) return flags.ToArrayAsync(cancellationToken);
+		var read = now.ReadNow();
+		return ValueTask.FromResult(read as SharpObjectFlag[] ?? [.. read]);
+	}
+
+	/// <summary>
+	/// <see cref="HasFlag(SharpObject,string,CancellationToken)"/> over flags already read from the object: a
+	/// flag of this name or alias is in <paramref name="flags"/>. Not for WIZARD or ROYALTY, which are roles.
+	/// </summary>
+	public static bool HasFlag(IReadOnlyList<SharpObjectFlag> flags, string flag)
+	{
+		// Indexed: a foreach over the interface boxes an enumerator per call, and this runs per item of a listing.
+		for (var i = 0; i < flags.Count; i++)
+		{
+			if (Names(flags[i], flag)) return true;
+		}
+
+		return false;
+	}
+
+	// Flag names are ASCII, so an ordinal comparison answers as a culture-aware one would, without the
+	// culture lookup (half the cost of building an ObjectFlagSet went to hashing names through ICU).
+	private static bool Names(SharpObjectFlag candidate, string flag)
+	{
+		if (candidate.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)) return true;
+		foreach (var alias in candidate.Aliases ?? [])
+		{
+			if (alias.Equals(flag, StringComparison.OrdinalIgnoreCase)) return true;
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// Reads the object's flags and grants once, for a caller that asks several flag questions about it,
@@ -449,7 +513,7 @@ public static partial class HelperFunctions
 	/// of its questions answers as the per-read helper here does.
 	/// </summary>
 	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
-		=> new(obj.DBRef, await obj.Flags.Value.ToListAsync(cancellationToken), await obj.Grants.WithCancellation(cancellationToken));
+		=> new(obj.DBRef, await obj.FlagsNowAsync(cancellationToken), await obj.Grants.WithCancellation(cancellationToken));
 
 	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
 		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);

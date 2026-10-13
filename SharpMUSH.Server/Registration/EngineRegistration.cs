@@ -425,7 +425,11 @@ internal static class EngineRegistration
 				SizeLimit = CacheEntryProfiles.MemoryCacheSizeLimit,
 				CompactionPercentage = CacheEntryProfiles.MemoryCacheCompactionPercentage,
 			}))
-			.WithDefaultEntryOptions(CacheEntryProfiles.Tagged);
+			.WithDefaultEntryOptions(CacheEntryProfiles.Tagged)
+			// With any logger at all, FusionCache builds an operation-id string for every call, hits
+			// included, and every tag check is a call. Under the Error level appsettings sets for it, the
+			// only messages left are serializer and plugin errors, and this memory-only cache has neither.
+			.WithoutLogger();
 
 		// Dedicated cache for compiled boolean-lock expressions.
 		// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used

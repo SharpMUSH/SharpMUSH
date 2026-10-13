@@ -13,6 +13,7 @@ namespace SharpMUSH.Library.Queries.Database;
 /// </summary>
 public record GetObjectNodeByNumberQuery(int Number) : IQuery<AnyOptionalSharpObject>, ICacheable
 {
-	public string CacheKey => CacheKeys.Object(Number);
+	// Built once per query: the caching behaviour reads it twice.
+	public string CacheKey { get; } = CacheKeys.Object(Number);
 	public string[] CacheTags => [];
 }

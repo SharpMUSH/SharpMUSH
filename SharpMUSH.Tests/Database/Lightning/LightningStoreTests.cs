@@ -43,6 +43,34 @@ public class LightningStoreTests
 		await Assert.That(counts.Length).IsEqualTo(Tables.All.Count);
 	}
 
+	// A read that throws mid-enumeration hands back no transaction for the next read to inherit.
+	[Test]
+	public async Task ReadsAfterAFailedReadSeeTheLatestWrite()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(20));
+			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(30));
+			return 0;
+		});
+		for (var i = 0; i < 20; i++)
+		{
+			await Assert.That(() => store.Read<int>(tx =>
+			{
+				foreach (var _ in tx.Dups(Tables.RevLocation, Keys.Dbref(1))) throw new InvalidOperationException("read failed");
+				return 0;
+			})).Throws<InvalidOperationException>();
+		}
+		await store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(40));
+			return 0;
+		});
+		var after = store.Read(tx => tx.Dups(Tables.RevLocation, Keys.Dbref(1)).Select(v => Keys.ReadDbref(v)).ToArray());
+		await Assert.That(after).IsEquivalentTo(new long[] { 20, 30, 40 });
+	}
+
 	[Test]
 	public async Task RangeReturnsOnlyKeysUnderThePrefixInOrder()
 	{
