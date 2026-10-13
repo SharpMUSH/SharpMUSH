@@ -324,7 +324,7 @@ public partial class Commands
 	{
 		var obj = changed.Object();
 		if (Configuration.CurrentValue.Database.AncestorPlayer is { } ancestor && obj.DBRef.Number == (int)ancestor) return true;
-		return obj.Children.Value is { } children && await children.AnyAsync();
+		return await Mediator.Send(new GetChildCountQuery(obj.DBRef)) > 0;
 	}
 
 	/// <summary>
