@@ -18,10 +18,11 @@ public interface ILightningStorageAccessor
 	T Read<T>(Func<ITx, T> read);
 
 	/// <summary>
-	/// Enqueues <paramref name="job"/> to run on the dedicated writer thread, inside one committed write
-	/// transaction. Blocks the caller until the writer thread runs the job (via the returned task), so
-	/// <b>must not be called from inside another write job</b> — a job already running on the writer
-	/// thread that calls this would wait forever on itself.
+	/// Runs <paramref name="job"/> inside one committed write transaction, one write job at a time.
+	/// With nothing queued or running, the job runs synchronously on the calling thread; otherwise it
+	/// queues for the dedicated writer thread and the returned task completes when that thread has run it.
+	/// The job must not depend on which thread it runs on, and <b>must not call this from inside another
+	/// write job</b> — the inner write would wait forever for the outer one to finish.
 	/// </summary>
 	ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default);
 
