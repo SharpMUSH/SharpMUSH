@@ -59,4 +59,15 @@ public class AliveHelperTests
 		await Assert.That(async () => await obj.IsAlive(cancellation.Token)).Throws<OperationCanceledException>();
 		await Assert.That(entered).IsTrue();
 	}
+
+	[Test]
+	[Arguments("PUPPET", true)]
+	[Arguments("NOSPOOF", false)]
+	public async Task AliveWithReadFlagsDoesNotReadThemAgain(string flag, bool alive)
+	{
+		var obj = new TestObjectFactory().CreateThing(8, "thing");
+		obj.Object().Flags = new(() => throw new InvalidOperationException("Flags must not be read again"));
+		obj.Object().LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>());
+		await Assert.That(await obj.IsAlive([Flag(flag)], default)).IsEqualTo(alive);
+	}
 }

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database;
@@ -9,7 +10,14 @@ namespace SharpMUSH.Database;
 /// </summary>
 public static class ObjectTypeFlag
 {
-	public static SharpObjectFlag For(string type) => new()
+	private static readonly FrozenDictionary<string, SharpObjectFlag> Known =
+		new[] { "PLAYER", "ROOM", "THING", "EXIT" }.ToFrozenDictionary(type => type, Create, StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>The flag for <paramref name="type"/>, in capitals; one shared instance per object type.</summary>
+	public static SharpObjectFlag For(string type)
+		=> Known.TryGetValue(type, out var flag) ? flag : Create(type.ToUpperInvariant());
+
+	private static SharpObjectFlag Create(string type) => new()
 	{
 		Name = type,
 		SetPermissions = [],

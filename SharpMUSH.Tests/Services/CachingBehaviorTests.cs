@@ -97,8 +97,8 @@ public class CachingBehaviorTests
 	/// <summary>
 	/// An object's flags are loaded with it. The same object also sits inside the room's cached
 	/// contents list, and a flag write removes only the object's own key; a mortal's <c>lcon()</c>
-	/// after <c>@set obj=DARK</c> read that list and still showed the object. Every cached result
-	/// carries a tag per object it embeds, and invalidating the object expires them all.
+	/// after <c>@set obj=DARK</c> read that list and still showed the object. The list is now stored
+	/// as dbrefs and each read resolves them through the node cache, which the write did expire.
 	/// </summary>
 	[Test]
 	public async Task AFlagSetAfterAContentsListWasCachedIsSeenThroughThatList()
@@ -120,7 +120,38 @@ public class CachingBehaviorTests
 		var embedded = after.Single(c => c.Object().DBRef.Number == thing.Number);
 
 		await Assert.That(await embedded.Object().HasFlag("DARK")).IsTrue()
-			.Because("the contents list carried the object's tag, so the flag write expired it");
+			.Because("the contents list resolves its members through the node cache, which the flag write expired");
+	}
+
+	/// <summary>
+	/// A contents list carries its container's tags and no tag per member: every tag is checked on
+	/// every hit, so a full room paid per item on each read, and a write to a member has nothing in
+	/// the list to expire. A flag written on a member leaves the list cached.
+	/// </summary>
+	[Test]
+	public async Task AWriteToAMemberLeavesItsContainersContentsCached()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("MemberWrite")}"))).Message.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("MemberWrite")}"))).Message.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
+
+		// A delete anywhere expires every contents list (ObjectContents), and parallel tests delete, so
+		// the write is retried until one lands between two such sweeps.
+		var key = SharpMUSH.Library.Definitions.CacheKeys.Contents(room);
+		var kept = false;
+		for (var attempt = 0; !kept && attempt < 10; attempt++)
+		{
+			await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@set #{thing.Number}={(attempt % 2 == 0 ? "" : "!")}VISUAL"));
+			kept = (await Cache.TryGetAsync<CachedObjectRefs>(key)).HasValue;
+		}
+
+		await Assert.That(kept).IsTrue();
 	}
 
 	/// <summary>

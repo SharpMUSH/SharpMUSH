@@ -230,6 +230,7 @@ public sealed partial class LightningStore : IDisposable
 	/// report a failure once its own cleanup is complete.</summary>
 	internal MDBResultCode Close()
 	{
+		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
 		_tables = new();
 		var flushed = MDBResultCode.Success;
@@ -289,12 +290,69 @@ public sealed partial class LightningStore : IDisposable
 		_gate.EnterReadLock();
 		try
 		{
-			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
-			return read(new Tx(tx, _tables));
+			var tx = RentReader();
+			T result;
+			try
+			{
+				result = read(new Tx(tx, _tables));
+			}
+			catch
+			{
+				// A read that failed may have left a cursor open on the transaction; it is not pooled.
+				tx.Dispose();
+				throw;
+			}
+
+			ReturnReader(tx);
+			return result;
 		}
 		finally
 		{
 			_gate.ExitReadLock();
+		}
+	}
+
+	/// <summary>
+	/// Read transactions kept between reads, reset. Beginning one takes a reader slot under LMDB's reader
+	/// table lock (the environment runs without thread-local storage); renewing a reset one keeps its slot
+	/// and only takes a fresh snapshot, about a third of the cost. A room listing reads per item, so this
+	/// is most of what a read costs before it touches a page. A reset transaction pins no pages, so a
+	/// writer reclaims space as if it were closed. Emptied by <see cref="Close"/>, under the gate's write
+	/// lock, before the environment goes.
+	/// </summary>
+	private readonly LightningTransaction?[] _readers = new LightningTransaction?[16];
+
+	private LightningTransaction RentReader()
+	{
+		for (var i = 0; i < _readers.Length; i++)
+		{
+			if (Interlocked.Exchange(ref _readers[i], null) is not { } pooled) continue;
+			if (pooled.Renew() == MDBResultCode.Success) return pooled;
+			pooled.Dispose();
+		}
+
+		return _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+	}
+
+	private void ReturnReader(LightningTransaction tx)
+	{
+		if (tx.State == LightningTransactionState.Ready)
+		{
+			tx.Reset();
+			for (var i = 0; i < _readers.Length; i++)
+			{
+				if (Interlocked.CompareExchange(ref _readers[i], tx, null) is null) return;
+			}
+		}
+
+		tx.Dispose();
+	}
+
+	private void DisposeReaders()
+	{
+		for (var i = 0; i < _readers.Length; i++)
+		{
+			Interlocked.Exchange(ref _readers[i], null)?.Dispose();
 		}
 	}
 

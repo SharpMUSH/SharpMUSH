@@ -12,10 +12,11 @@ namespace SharpMUSH.Library.Behaviors;
 /// </summary>
 /// <remarks>
 /// A loaded <see cref="SharpObject"/> is a snapshot (flags, powers, locks, name), and the same
-/// object sits inside many cached results: its own node, a room's contents list, an occupant's
-/// location answer, a player-by-name lookup. A write removes the node's key; the tag is what
-/// reaches the rest. Only the value's own shape is walked - an object, a typed object, a union of
-/// them, or a sequence of those - never the lazies hanging off an object.
+/// object sits inside many cached results: its own node, an occupant's location answer, a
+/// player-by-name lookup. A write removes the node's key; the tag is what reaches the rest. A query
+/// opts out with <see cref="Attributes.ICacheable.TagsEmbeddedObjects"/>. Only the value's own shape
+/// is walked - an object, a typed object, a union of them, or a sequence of those - never the lazies
+/// hanging off an object.
 /// </remarks>
 public static class EmbeddedObjects
 {
