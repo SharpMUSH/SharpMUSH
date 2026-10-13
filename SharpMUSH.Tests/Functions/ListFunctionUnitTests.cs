@@ -784,6 +784,29 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	public async Task SortByKeepsEqualItemsInListOrder()
+	{
+		var objNum = await CreateObjectWithAttribute("sortby_stable_obj", "COMP_FIRST_LETTER",
+			"comp(left(%0,1),left(%1,1))");
+		var result = await Parser.EvaluateAsync(
+			MarkupText.Plain($"sortby(#{objNum}/COMP_FIRST_LETTER,b2 a1 c1 b1 a2 c2 a3 b3)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("a1 a2 a3 b2 b1 b3 c1 c2");
+	}
+
+	// 300 items take about 2,400 comparisons sorted by merging. Ranking every item against every
+	// other took 89,700, over function_invocation_limit (25,000), so the call failed.
+	[Test]
+	public async Task SortByLargeListStaysWithinInvocationLimit()
+	{
+		const int count = 300;
+		var objNum = await CreateObjectWithAttribute("sortby_large_obj", "COMP_NUMBER", "sub(%0,%1)");
+		var shuffled = Enumerable.Range(0, count).Select(i => i * 7 % count);
+		var result = await Parser.EvaluateAsync(
+			MarkupText.Plain($"sortby(#{objNum}/COMP_NUMBER,{string.Join(' ', shuffled)})"));
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Join(' ', Enumerable.Range(0, count)));
+	}
+
+	[Test]
 	[Arguments("sortkey(test/KEY_SORTKEY,abc ab a)", "a ab abc")]
 	public async Task SortKey(string str, string expected)
 	{
