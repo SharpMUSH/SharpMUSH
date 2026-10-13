@@ -327,8 +327,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	/// <summary>
 	/// Feed kind <c>bench</c>, owned by God: <c>bench/crowd</c> with <paramref name="members"/> players (none
 	/// connected) and its default 500 lines stored, <c>bench/long</c> keeping every line with
-	/// <paramref name="lines"/> stored and the last of them as its one member, and <c>bench/quiet</c>, unlogged,
-	/// with the same members as crowd. Returns crowd's last member, who has read none of long's lines.
+	/// <paramref name="lines"/> stored and crowd's last member as its one member, and <c>bench/quiet</c> and
+	/// <c>radio/1</c>, unlogged, with the same members as crowd. God holds the radio package's line. Returns crowd's last member, who has read none of long's lines.
 	/// </summary>
 	private async Task<DBRef> SeedFeedsAsync(IMUSHCodeParser baseParser, DBRef god, int members, int lines)
 	{

@@ -183,10 +183,10 @@ public class FeedStoreTests
 		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101.5", long.MaxValue)).IsEqualTo(0);
 		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101", 0)).IsEqualTo(1);
 
-		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 0)).IsEquivalentTo(new long[] { 1, 2, 3, 4, 5, 6 });
-		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 2, 0)).IsEquivalentTo(new long[] { 5, 6 });
-		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 4)).IsEquivalentTo(new long[] { 5, 6 });
-		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101", 0, 0)).IsEquivalentTo(new long[] { 7 });
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 0)).IsEquivalentTo(new long[] { 1, 2, 3, 4, 5, 6 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 2, 0)).IsEquivalentTo(new long[] { 5, 6 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 4)).IsEquivalentTo(new long[] { 5, 6 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101", 0, 0)).IsEquivalentTo(new long[] { 7 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
@@ -217,7 +217,7 @@ public class FeedStoreTests
 		var copy = (await _db.GetFeedAsync("radio", "101.6")).Expect<SharpFeed>();
 		await Assert.That(feed.Messages).IsEqualTo(100);
 		await Assert.That(feed.Bytes).IsEqualTo(copy.Bytes);
-		await Assert.That((await _db.GetFeedMessageIdsAsync("radio", "99.1", 0, 0))).IsEquivalentTo(new long[] { held + 1 });
+		await Assert.That((await _db.GetFeedMessageIdsAsync("radio", "99.1", 0, 0))).IsEquivalentTo(new long[] { held + 1 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
