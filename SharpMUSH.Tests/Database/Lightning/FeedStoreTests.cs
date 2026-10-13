@@ -145,6 +145,82 @@ public class FeedStoreTests
 	}
 
 	[Test]
+	public async Task AMember_IsReadByItsOwnKey_AndNotByALaterHolderOfItsDbref()
+	{
+		var ann = await NewPlayer("Ann");
+		var bo = await NewPlayer("Bo");
+		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 2, true, 7));
+
+		var member = (await _db.GetFeedMemberAsync("radio", "101.5", ann)).Expect<SharpFeedMember>();
+		await Assert.That(member).IsEqualTo(new SharpFeedMember(ann, 2, true, 7));
+		await Assert.That(await _db.GetFeedMemberAsync("radio", "101.5", bo) is NotFound).IsTrue();
+		await Assert.That(await _db.GetFeedMemberAsync("radio", "99.1", ann) is NotFound).IsTrue();
+
+		// The same dbref with another creation time is another object: Ann's membership is not theirs.
+		var recycled = new DBRef(ann.Number, ann.CreationMilliseconds!.Value + 1);
+		await Assert.That(await _db.GetFeedMemberAsync("radio", "101.5", recycled) is NotFound).IsTrue();
+	}
+
+	[Test]
+	public async Task MembersAndLines_AreCountedAndListedFromTheirKeys()
+	{
+		var ann = await NewPlayer("Ann");
+		var bo = await NewPlayer("Bo");
+		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, 0));
+		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(bo, 0, true, 0));
+		await _db.SetFeedMemberAsync("radio", "101", new SharpFeedMember(ann, 0, false, 0));
+		for (var id = 1; id <= 6; id++) await _db.AppendFeedMessageAsync(Line(id, ann, $"line {id}"), Keep());
+		await _db.AppendFeedMessageAsync(Line(7, ann, "elsewhere", key: "101"), Keep());
+
+		// "101" is a prefix of "101.5" as text, never as a feed: the keys end each feed with a separator.
+		await Assert.That(await _db.CountFeedMembersAsync("radio", "101.5")).IsEqualTo(2);
+		await Assert.That(await _db.CountFeedMembersAsync("radio", "101")).IsEqualTo(1);
+		await Assert.That(await _db.CountFeedMembersAsync("radio", "none")).IsEqualTo(0);
+
+		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101.5", 0)).IsEqualTo(6);
+		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101.5", 4)).IsEqualTo(2);
+		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101.5", 6)).IsEqualTo(0);
+		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101.5", long.MaxValue)).IsEqualTo(0);
+		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101", 0)).IsEqualTo(1);
+
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 0)).IsEquivalentTo(new long[] { 1, 2, 3, 4, 5, 6 });
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 2, 0)).IsEquivalentTo(new long[] { 5, 6 });
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 4)).IsEquivalentTo(new long[] { 5, 6 });
+		await Assert.That(await _db.GetFeedMessageIdsAsync("radio", "101", 0, 0)).IsEquivalentTo(new long[] { 7 });
+	}
+
+	[Test]
+	public async Task ALongFeed_DropsOnlyWhatIsOverItsLimit_InOneWrite()
+	{
+		const int held = 5000;
+		var ann = await NewPlayer("Ann");
+		for (var id = 1; id <= held; id++) await _db.AppendFeedMessageAsync(Line(id, ann, $"line {id}"), Keep());
+		await _db.AppendFeedMessageAsync(Line(held + 1, ann, "elsewhere", key: "99.1"), Keep(messages: 1));
+
+		// Keeping every line, a line is added and none goes.
+		await _db.AppendFeedMessageAsync(Line(held + 2, ann, "kept"), Keep());
+		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().Messages).IsEqualTo(held + 1);
+
+		// A limit of 100 drops the oldest 4,902 in the one write that adds the next line.
+		await _db.AppendFeedMessageAsync(Line(held + 3, ann, "last"), Keep(messages: 100));
+		var ids = await _db.GetFeedMessageIdsAsync("radio", "101.5", 0, 0);
+		await Assert.That(ids.Count).IsEqualTo(100);
+		await Assert.That(ids[0]).IsEqualTo(held - 97);
+		await Assert.That(ids[^1]).IsEqualTo(held + 3);
+		await Assert.That(await _db.GetFeedMessageAsync(held - 98) is NotFound).IsTrue();
+		await Assert.That(await _db.CountFeedMessagesAsync("radio", "101.5", 0)).IsEqualTo(100);
+
+		// The text counted is what the same 100 lines come to in a feed of their own.
+		foreach (var line in await _db.GetFeedMessagesAsync("radio", "101.5", 0, 0))
+			await _db.AppendFeedMessageAsync(line with { Id = line.Id + 100_000, Key = "101.6" }, Keep());
+		var feed = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		var copy = (await _db.GetFeedAsync("radio", "101.6")).Expect<SharpFeed>();
+		await Assert.That(feed.Messages).IsEqualTo(100);
+		await Assert.That(feed.Bytes).IsEqualTo(copy.Bytes);
+		await Assert.That((await _db.GetFeedMessageIdsAsync("radio", "99.1", 0, 0))).IsEquivalentTo(new long[] { held + 1 });
+	}
+
+	[Test]
 	public async Task Taps_AreAddedOnceAndEndWithTheirObject()
 	{
 		var logger = await NewPlayer("Logger");

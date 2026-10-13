@@ -111,8 +111,7 @@ public partial class Functions
 		return await RunnableFeedAsync(parser, FeedArg(parser, 0)) switch
 		{
 			FeedArgument target => new CallState(string.Join(' ',
-				(await Mediator.Send(new GetFeedMessagesQuery(target.Kind.Name, target.Feed.Key, count, after), ExecutionBudget.CurrentToken))
-				.Select(message => message.Id))),
+				await Mediator.Send(new GetFeedMessageIdsQuery(target.Kind.Name, target.Feed.Key, count, after), ExecutionBudget.CurrentToken))),
 			Error<string> error => new CallState(error.Value)
 		};
 	}
@@ -187,7 +186,7 @@ public partial class Functions
 			"bytes" => new CallState(feed.Bytes),
 			"stored" => new CallState(feed.StoredBytes),
 			"last" => new CallState(feed.LastId),
-			"members" => new CallState((await Mediator.Send(new GetFeedMembersQuery(kind.Name, key), ExecutionBudget.CurrentToken)).Count),
+			"members" => new CallState(await Mediator.Send(new CountFeedMembersQuery(kind.Name, key), ExecutionBudget.CurrentToken)),
 			"read" or "send" => new CallState(feed.Lock(option)),
 			_ => SettingValue(feed.Settings.Over(kind.Effective), option)
 		};
@@ -267,8 +266,8 @@ public partial class Functions
 		{
 			FeedArgument target => await WithFeedMemberAsync(parser, target, async member => member is null
 				? CallState.Empty
-				: new CallState((await Mediator.Send(new GetFeedMessagesQuery(target.Kind.Name, target.Feed.Key, 0, member.LastSeen),
-					ExecutionBudget.CurrentToken)).Count)),
+				: new CallState(await Mediator.Send(new CountFeedMessagesQuery(target.Kind.Name, target.Feed.Key, member.LastSeen),
+					ExecutionBudget.CurrentToken))),
 			Error<string> error => new CallState(error.Value)
 		};
 
@@ -307,10 +306,8 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, FeedArg(parser, 1),
-			LocateFlags.All, async found =>
-			{
-				var members = await Mediator.Send(new GetFeedMembersQuery(target.Kind.Name, target.Feed.Key), ExecutionBudget.CurrentToken);
-				return await answer(members.FirstOrDefault(member => member.Member == found.Object().DBRef));
-			});
+			LocateFlags.All, async found => await answer(
+				await Mediator.Send(new GetFeedMemberQuery(target.Kind.Name, target.Feed.Key, found.Object().DBRef),
+					ExecutionBudget.CurrentToken) is SharpFeedMember member ? member : null));
 	}
 }

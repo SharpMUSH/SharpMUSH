@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
@@ -99,12 +101,25 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
 		new("theme-me", "@theme me=fantasy", true),
 		new("theme-anc", "@theme #4=fantasy", true),
+		// Feeds (--feed-members N, --feed-lines N): bench/crowd has N members and the default 500-line limit,
+		// full; bench/long keeps every line and holds --feed-lines of them. {MEMBER} is crowd's last member.
+		new("feed-send", "@feed/send bench/crowd=Coming in.", true),
+		new("feed-long", "@feed/send bench/long=Coming in.", true),
+		new("feed-quiet", "@feed/send bench/quiet=Coming in.", true),
+		new("feed-member", "[feedmember(bench/crowd,{MEMBER})]", false),
+		new("feed-gag", "[feedmember(bench/crowd,{MEMBER},gag)]", false),
+		new("feed-unread", "[feedunread(bench/long,{MEMBER})]", false),
+		new("feed-recall", "[iter(feedrecall(bench/long,20),feedmsg(##,text))]", false),
+		new("feed-info", "[feedinfo(bench/crowd,members)]", false),
+		new("feed-who", "[words(feedwho(bench/crowd,active))]", false),
+		new("feedsof", "[feedsof({MEMBER},bench)]", false),
 	];
 
 	private const int BigFlat = 4000;
 	private const int BigBranches = 40;
 	private const int BigLeaves = 50;
 	private const int KidAttributes = 100;
+	private const string FeedKind = "bench";
 
 	/// <summary>
 	/// <see cref="ParenGroupBenchmarks"/>' workloads, each in the form its setting reads: unescaped with
@@ -127,6 +142,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var seconds = 10;
 		var wait = 0;
 		var connections = 0;
+		var feedMembers = 200;
+		var feedLines = 5000;
 		bool? parenGroups = null;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
@@ -153,6 +170,14 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 					if (++i >= args.Length || !int.TryParse(args[i], out connections) || connections < 0)
 						throw new ArgumentException("--connections requires a non-negative integer.");
 					break;
+				case "--feed-members":
+					if (++i >= args.Length || !int.TryParse(args[i], out feedMembers) || feedMembers <= 0)
+						throw new ArgumentException("--feed-members requires a positive integer.");
+					break;
+				case "--feed-lines":
+					if (++i >= args.Length || !int.TryParse(args[i], out feedLines) || feedLines < 0)
+						throw new ArgumentException("--feed-lines requires a non-negative integer.");
+					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
 		}
@@ -166,7 +191,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups, connections);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups, connections, feedMembers, feedLines);
 		}
 		finally
 		{
@@ -174,7 +199,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 	}
 
-	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups, int connections)
+	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups, int connections,
+		int feedMembers, int feedLines)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
@@ -198,8 +224,11 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
 			? await SeedBigObjectsAsync()
 			: (one, one, one);
+		var member = scenarios.Any(scenario => scenario.Input.Contains($"{FeedKind}/") || scenario.Input.Contains("{MEMBER}"))
+			? await SeedFeedsAsync(baseParser, one, feedMembers, feedLines)
+			: one;
 		var inputs = scenarios.ToDictionary(scenario => scenario, scenario => MarkupText.Plain(scenario.Input
-			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}")));
+			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}").Replace("{MEMBER}", member.ToString())));
 		DBRef Executor(Scenario scenario) => scenario.AsMortal ? mortal : one;
 
 		foreach (var scenario in scenarios)
@@ -273,6 +302,53 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			=> await _database!.GetObjectNodeAsync(dbref) is AnySharpObject node
 				? node
 				: throw new InvalidOperationException($"#{dbref.Number} is missing.");
+	}
+
+	/// <summary>
+	/// Feed kind <c>bench</c>, owned by God: <c>bench/crowd</c> with <paramref name="members"/> players (none
+	/// connected) and its default 500 lines stored, <c>bench/long</c> keeping every line with
+	/// <paramref name="lines"/> stored and the last of them as its one member, and <c>bench/quiet</c>, unlogged,
+	/// with the same members as crowd. Returns crowd's last member, who has read none of long's lines.
+	/// </summary>
+	private async Task<DBRef> SeedFeedsAsync(IMUSHCodeParser baseParser, DBRef god, int members, int lines)
+	{
+		var mediator = _server!.Services.GetRequiredService<IMediator>();
+		var ids = _server.Services.GetRequiredService<IChannelMessageIdSource>();
+		foreach (var command in new[]
+		{
+			$"@feed/define {FeedKind}=me", $"@feed/set {FeedKind}/long/max_messages=0", $"@feed/set {FeedKind}/quiet/logged=no"
+		})
+			await baseParser.FromState(BenchmarkHelpers.FreshState(god)).CommandParse(MarkupText.Plain(command));
+
+		var last = god;
+		for (var i = 0; i < members; i++)
+		{
+			var created = await _database!.CreatePlayerAsync($"ProfileListener{i}", "unused", new DBRef(0), new DBRef(0), 100);
+			last = await _database.GetObjectNodeAsync(created) is AnySharpObject player
+				? player.Object().DBRef
+				: throw new InvalidOperationException($"#{created.Number} is missing.");
+			foreach (var key in new[] { "crowd", "quiet" })
+				await mediator.Send(new SetFeedMemberCommand(FeedKind, key, new SharpFeedMember(last, 0, false, 0)));
+		}
+
+		await mediator.Send(new SetFeedMemberCommand(FeedKind, "long", new SharpFeedMember(last, 0, false, 0)));
+		var godObject = await _database!.GetObjectNodeAsync(god) is AnySharpObject found
+			? found.Object()
+			: throw new InvalidOperationException("God is missing.");
+		var crowdLimits = FeedSettings.Defaults;
+		var longLimits = FeedSettings.Defaults with { MaxMessages = 0 };
+		foreach (var (key, count, limits) in new[] { ("crowd", 500, crowdLimits), ("long", lines, longLimits) })
+		{
+			for (var i = 0; i < count; i++)
+			{
+				var message = new SharpFeedMessage(await ids.NextAsync(), FeedKind, key, DateTimeOffset.UtcNow,
+					godObject.DBRef, godObject.Name, godObject.DBRef, godObject.Name, null, "", FeedStyles.Say,
+					MarkupText.Plain($"Line {i} of the seeded history."), "");
+				await mediator.Send(new AppendFeedMessageCommand(message, limits));
+			}
+		}
+
+		return last;
 	}
 
 	/// <summary>

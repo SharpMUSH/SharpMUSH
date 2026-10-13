@@ -119,6 +119,18 @@ public class GetFeedMembersQueryHandler(IFeedStore store)
 		=> store.GetFeedMembersAsync(query.Kind, query.Key, cancellationToken);
 }
 
+public class GetFeedMemberQueryHandler(IFeedStore store) : IQueryHandler<GetFeedMemberQuery, Found<SharpFeedMember>>
+{
+	public ValueTask<Found<SharpFeedMember>> Handle(GetFeedMemberQuery query, CancellationToken cancellationToken)
+		=> store.GetFeedMemberAsync(query.Kind, query.Key, query.Member, cancellationToken);
+}
+
+public class CountFeedMembersQueryHandler(IFeedStore store) : IQueryHandler<CountFeedMembersQuery, int>
+{
+	public ValueTask<int> Handle(CountFeedMembersQuery query, CancellationToken cancellationToken)
+		=> store.CountFeedMembersAsync(query.Kind, query.Key, cancellationToken);
+}
+
 public class GetMemberFeedsQueryHandler(IFeedStore store)
 	: IQueryHandler<GetMemberFeedsQuery, IReadOnlyList<(string Kind, string Key)>>
 {
@@ -132,6 +144,18 @@ public class GetFeedMessagesQueryHandler(IFeedStore store)
 {
 	public ValueTask<IReadOnlyList<SharpFeedMessage>> Handle(GetFeedMessagesQuery query, CancellationToken cancellationToken)
 		=> store.GetFeedMessagesAsync(query.Kind, query.Key, query.Count, query.AfterId, cancellationToken);
+}
+
+public class GetFeedMessageIdsQueryHandler(IFeedStore store) : IQueryHandler<GetFeedMessageIdsQuery, IReadOnlyList<long>>
+{
+	public ValueTask<IReadOnlyList<long>> Handle(GetFeedMessageIdsQuery query, CancellationToken cancellationToken)
+		=> store.GetFeedMessageIdsAsync(query.Kind, query.Key, query.Count, query.AfterId, cancellationToken);
+}
+
+public class CountFeedMessagesQueryHandler(IFeedStore store) : IQueryHandler<CountFeedMessagesQuery, int>
+{
+	public ValueTask<int> Handle(CountFeedMessagesQuery query, CancellationToken cancellationToken)
+		=> store.CountFeedMessagesAsync(query.Kind, query.Key, query.AfterId, cancellationToken);
 }
 
 public class GetFeedMessageQueryHandler(IFeedStore store) : IQueryHandler<GetFeedMessageQuery, Found<SharpFeedMessage>>

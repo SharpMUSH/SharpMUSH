@@ -47,6 +47,16 @@ public interface IFeedStore
 	ValueTask<IReadOnlyList<SharpFeedMember>> GetFeedMembersAsync(string kind, string key,
 		CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// <paramref name="member"/>'s (an objid) membership of a feed; not found when it has none, or when the
+	/// membership was left by an earlier holder of its dbref.
+	/// </summary>
+	ValueTask<Found<SharpFeedMember>> GetFeedMemberAsync(string kind, string key, DBRef member,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>How many members a feed has, counted without reading them.</summary>
+	ValueTask<int> CountFeedMembersAsync(string kind, string key, CancellationToken cancellationToken = default);
+
 	/// <summary>The feeds <paramref name="member"/> (an objid) is a member of, as (kind, key), of one kind or all.</summary>
 	ValueTask<IReadOnlyList<(string Kind, string Key)>> GetMemberFeedsAsync(DBRef member, string? kind,
 		CancellationToken cancellationToken = default);
@@ -72,6 +82,17 @@ public interface IFeedStore
 	/// <paramref name="afterId"/>.
 	/// </summary>
 	ValueTask<IReadOnlyList<SharpFeedMessage>> GetFeedMessagesAsync(string kind, string key, int count, long afterId,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// The ids of a feed's newest <paramref name="count"/> lines (0 for all), oldest first; only ids above
+	/// <paramref name="afterId"/>. Read from the keys, so no line is read.
+	/// </summary>
+	ValueTask<IReadOnlyList<long>> GetFeedMessageIdsAsync(string kind, string key, int count, long afterId,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>How many of a feed's lines have an id above <paramref name="afterId"/>, counted without reading them.</summary>
+	ValueTask<int> CountFeedMessagesAsync(string kind, string key, long afterId,
 		CancellationToken cancellationToken = default);
 
 	ValueTask<Found<SharpFeedMessage>> GetFeedMessageAsync(long id, CancellationToken cancellationToken = default);
