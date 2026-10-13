@@ -48,6 +48,10 @@ web HTTPS alone does not protect telnet.
 Then open `https://<your-domain>/setup` straight away: the first visitor claims the admin
 account linked to `#1`.
 
+### Optional MCP and LSP enablement
+
+The remote transports are disabled by default. `.env` provides Compose interpolation, not automatic container forwarding. Follow [Set up editor and AI analysis](analysis-tools.md) for the explicit analysis overlay and editor/MCP checks.
+
 ### Socket worker identity and connection capacity
 
 SocketServer and renderer run as UID/GID `1654:1654`. New `render-socket` volumes
@@ -333,11 +337,11 @@ Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.ym
 
 `restart: unless-stopped` already brings the containers back after a reboot, and for most
 boxes that is enough. But it replays the **last state**, not the **declared** one: it
-restarts whatever happened to be running when the box went down. A `docker compose down`,
+restarts whatever happened to be running when the box went down. A `docker compose -f docker-compose.prod.yml down`,
 a hand-stopped container, or an edited compose file therefore survives the reboot, and the
 box silently drifts from what `deploy/` says it should be.
 
-`sharpmush.service` closes that gap by running `docker compose up -d` on boot, so the box
+`sharpmush.service` uses `docker-compose.cloudflare.yml` by default (change all Exec* filenames for Caddy and add any analysis overlay). It reconciles the declared stack on boot, so the box
 reconciles against the compose file every time it starts:
 
 ```bash
@@ -397,26 +401,20 @@ an installed plugin's folder (see [Plugins](#plugins)) is not in it.
 Each copy is LMDB's own `mdb_env_copy` of the environment, a point-in-time snapshot by
 construction.
 
-The `docker compose run --rm backup …` commands below work whether or not the profile is
+The `docker compose -f docker-compose.prod.yml run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
 
-> The commands below (and under **Updating**) omit `-f` by exporting `COMPOSE_FILE`, so
-> they work for either stack. Set it once per shell to whichever stack you deployed:
-> ```bash
-> export COMPOSE_FILE=docker-compose.prod.yml        # or docker-compose.cloudflare.yml
-> ```
-> Include any enabled overlays in `COMPOSE_FILE` too, separated by `:` on Linux, so later
-> `docker compose up` commands keep the same configuration.
+The backup/restore commands below explicitly select the Caddy production file from `deploy/`. If your game uses Cloudflare, replace **every** `-f docker-compose.prod.yml` with `-f docker-compose.cloudflare.yml`. If analysis or another overlay is enabled, include its `-f` argument after the base file in every invocation (for example, `-f docker-compose.prod.yml -f docker-compose.analysis.yml`). Explicit `-f` arguments override `COMPOSE_FILE`; setting that environment variable does not add omitted overlays to these commands.
 
 ```bash
 # List snapshots:
-docker compose run --rm backup restic snapshots
+docker compose -f docker-compose.prod.yml run --rm backup restic snapshots
 
 # Run a backup right now:
-docker compose run --rm backup backup   # (entrypoint verb)
+docker compose -f docker-compose.prod.yml run --rm backup backup   # (entrypoint verb)
 
 # Restore the latest snapshot into a scratch dir to inspect it:
-docker compose run --rm -v restore:/restore backup \
+docker compose -f docker-compose.prod.yml run --rm -v restore:/restore backup \
   restic restore latest --target /restore
 ```
 
@@ -436,20 +434,20 @@ Do not continue after a failed stop or Restic restore command.
 
 ```bash
 RESTORE_VOLUME="sharpmush-restore-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-docker compose stop sharpmush-server connectionserver &&
+docker compose -f docker-compose.prod.yml stop sharpmush-server connectionserver &&
 
 # 1. Restore into a scratch volume. The -v is what makes the files outlive the container;
 #    without it restic writes into the container's own filesystem and they are gone.
 docker volume create "$RESTORE_VOLUME" &&
-docker compose run --rm -v "$RESTORE_VOLUME:/restore" backup \
+docker compose -f docker-compose.prod.yml run --rm -v "$RESTORE_VOLUME:/restore" backup \
   restic restore latest --target /restore &&
 
 # 2. See which copies the snapshot carried and pick one.
-docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server \
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server \
   -c 'ls /restore/data/backup' &&
 
 # 3. Put it in place. The app image mounts app-data read-write, unlike the backup service.
-docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server -c '
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server -c '
   set -eu
   source=/restore/data
   target=/app/data
@@ -482,7 +480,7 @@ docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh 
   fi
   rm -rf "$target/lightning.plugins"
   cp -a "$source/lightning.plugins" "$target/lightning.plugins"' && \
-  docker compose start connectionserver sharpmush-server
+  docker compose -f docker-compose.prod.yml start connectionserver sharpmush-server
 ```
 
 If the plugin directory is absent, stop and inspect the selected recovery point. An older backup
@@ -493,7 +491,7 @@ empty directory in the scratch volume and repeat step 3; this deliberately clear
 installed plugins and disabled-plugin state:
 
 ```bash
-docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint mkdir sharpmush-server \
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint mkdir sharpmush-server \
   -p /restore/data/lightning.plugins
 ```
 
@@ -520,6 +518,8 @@ and a copy still being written is named `.incoming-*` and excluded until it is m
 complete.
 
 ## Disk capacity
+
+Every Compose inspection, cleanup, compaction and restart command in this section explicitly selects the Caddy production file. For a Cloudflare deployment, replace each `-f docker-compose.prod.yml` with `-f docker-compose.cloudflare.yml`. Include enabled overlays after the base file in every invocation; `COMPOSE_FILE` cannot supply overlays omitted from explicit `-f` arguments.
 
 The world's disk use is easy to misread. Four numbers describe it, and `@storage` (wizard-only)
 reports each of them:
@@ -585,14 +585,16 @@ Nothing is written in that case.
 
 ### Earlier worlds
 
+Use your deployed base file and all enabled overlays for the cleanup commands below; the shown commands are Caddy examples.
+
 Promoting a staged import moves the world it replaces to `<world>.previous`. That world is **never
 deleted automatically**, because it is the way back if the import turns out wrong. Delete it once the
 promoted world has been verified. `@storage` lists it, along with any `.staging-*` world an import left
 and any `.incoming-*` copy an interrupted backup left:
 
 ```bash
-docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /app/data/*'
-docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
+docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /app/data/*'
+docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
 ```
 
 The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`), the
@@ -605,6 +607,8 @@ docker system df -v | grep -E 'app-data|nats-data'
 
 ### Compacting the world
 
+Before copying the commands below, select your deployed base file: Caddy uses `docker-compose.prod.yml`, Cloudflare uses `docker-compose.cloudflare.yml`. Append all enabled overlays to each command, including restart and log inspection.
+
 To give the disk back what deleted records freed, have the server replace the world's file with a
 compacted copy of itself when it starts. Nothing else has the file open at that point, so no write
 can land between the copy and the swap:
@@ -612,11 +616,11 @@ can land between the copy and the swap:
 ```bash
 # 1. Check there is room: the copy needs about the live data (see @storage) plus a margin, free.
 # 2. Set SHARPMUSH_LIGHTNING_COMPACT_ON_START=true on sharpmush-server, then restart it:
-docker compose up -d sharpmush-server
+docker compose -f docker-compose.prod.yml up -d sharpmush-server
 # 3. Check the log, then @storage in-game, and play-test.
-docker compose logs sharpmush-server | grep -i compact
+docker compose -f docker-compose.prod.yml logs sharpmush-server | grep -i compact
 # 4. Remove SHARPMUSH_LIGHTNING_COMPACT_ON_START again and restart, then delete the original:
-docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.precompact'
+docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.precompact'
 ```
 
 On each start the server:
@@ -708,6 +712,9 @@ count toward it.
 
 ## Updating
 
+The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
+
+
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
 publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
 `sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
@@ -734,8 +741,8 @@ label scope) or to force an immediate app update instead of waiting for the poll
 
 ```bash
 git pull
-docker compose pull
-docker compose up -d
+docker compose -f docker-compose.cloudflare.yml pull
+docker compose -f docker-compose.cloudflare.yml up -d
 ```
 
 The `app-data` volume persists across updates, so the world is untouched. Database migrations
@@ -744,3 +751,7 @@ are recorded in the database and re-applied only when new, so unattended restart
 ## Updates and live connections
 
 See [Connections during deployment](connection-updates.md) for lifecycle notices, PR deployment-impact checks, stop grace, session recovery limits and rollout options.
+
+## Editor and MCP analysis
+
+Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compose overlay, secure desktop editor configuration, curl smoke requests and troubleshooting. An entry in `.env` is not automatically forwarded to the server.

@@ -1,0 +1,12 @@
+# Optional remote analysis; does not publish ports or configure credentials/TLS.
+# Use after docker-compose.prod.yml or docker-compose.cloudflare.yml.
+services:
+  sharpmush-server:
+    environment:
+      Mcp__Enabled: "${SHARPMUSH_MCP_ENABLED:-false}"
+      Lsp__Enabled: "${SHARPMUSH_LSP_ENABLED:-false}"
+      Mcp__Path: /mcp
+      Lsp__Path: /lsp
+      Analysis__MaxConcurrentAnalyses: "2"
+      Analysis__MaxQueuedAnalyses: "8"
+      Analysis__AnalysisTimeout: "00:00:05"
