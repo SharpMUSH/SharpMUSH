@@ -83,6 +83,13 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
 		new("actions", "@pemit me=Hi [add(1,2)];@switch 1=1,think yes;@trigger me/PROFILE_NOOP=a,b", true, IsCommandList: true),
 		new("include", "@include me/PROFILE_ACTIONS=5", true, IsCommandList: true),
+		// Command piping (help piping): a list that pipes against the same list without, typed and from an attribute.
+		new("list2", "think hello;think %>", true, IsCommandList: true),
+		new("pipe", "think hello ;| think %|", true, IsCommandList: true),
+		new("list2-inc", "@include me/PROFILE_LIST", true, IsCommandList: true),
+		new("pipe-inc", "@include me/PROFILE_PIPE", true, IsCommandList: true),
+		new("list-50", "@dolist/inline lnum(50)=think ##;think words(%>)", true, IsCommandList: true),
+		new("pipe-50", "@dolist/inline lnum(50)=think ## ;| think words(%|)", true, IsCommandList: true),
 		// {BIG}: a mortal's object holding BigFlat flat attributes and BigBranches trees of BigLeaves leaves.
 		// {KID}: a child of {BIG} with KidAttributes of its own. "-m" runs as that mortal, not as God.
 		new("lattr-big", "[lattr({BIG})]", false),
@@ -189,6 +196,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_DOC"], MarkupText.Plain("{\"kind\":\"\",\"schema_version\":1,\"title\":\"\",\"pages\":[{\"key\":\"main\",\"title\":\"\",\"order\":1,\"sections\":[]}],\"actions\":{}}"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_NOOP"], MarkupText.Plain("think"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_CMP"], MarkupText.Plain("sub(%0,%1)"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_LIST"], MarkupText.Plain("think hello;think %>"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_PIPE"], MarkupText.Plain("think hello ;| think %|"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ACTIONS"], MarkupText.Plain("@pemit me=Got %0 [add(%0,1)];think [mul(%0,2)];@switch %0=5,{@pemit me=five},{@pemit me=other}"), god);
 		for (var i = 0; i < 50; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
