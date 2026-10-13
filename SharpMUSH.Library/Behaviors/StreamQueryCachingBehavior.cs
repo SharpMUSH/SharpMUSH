@@ -28,21 +28,36 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 	{
 		if (Shaped)
 		{
+			// On a miss the handler has just resolved every object through the node cache; those are what
+			// a re-resolve of the stored refs would hand out, so a list this call stored is yielded as read
+			// rather than resolved a second time.
+			CachedObjectRefs? produced = null;
+			TResponse[] read = [];
 			var stored = await cache.GetOrSetAsync<CachedObjectRefs>(message.CacheKey,
 				async (ctx, ct) =>
 				{
-					var refs = await next(message, ct)
-						.Select(ObjectShaped<TResponse>.RefOf)
-						.Where(reference => reference.HasValue)
-						.Select(reference => reference!.Value)
+					var values = await next(message, ct)
+						.Where(value => ObjectShaped<TResponse>.RefOf(value).HasValue)
 						.ToArrayAsync(ct);
+					var refs = values.Select(value => ObjectShaped<TResponse>.RefOf(value)!.Value).ToArray();
 					ctx.Options.Size = Math.Clamp(refs.Length, 1, CacheEntryProfiles.MaxEntrySize);
 					EmbeddedObjectTags.Apply(ctx, message, refs.Select(r => r.Number));
-					return new CachedObjectRefs(refs);
+					read = values;
+					return produced = new CachedObjectRefs(refs);
 				},
 				options: CacheEntryProfiles.For(message.Profile),
 				tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
 				token: cancellationToken);
+
+			if (ReferenceEquals(stored, produced))
+			{
+				foreach (var value in read)
+				{
+					yield return value;
+				}
+
+				yield break;
+			}
 
 			foreach (var reference in stored.Refs)
 			{

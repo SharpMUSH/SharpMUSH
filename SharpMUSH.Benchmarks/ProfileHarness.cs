@@ -7,9 +7,10 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]
-/// [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
+/// [--things N] [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
 /// second, managed bytes allocated per operation, and generation-zero collections per thousand
-/// operations. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
+/// operations. <c>--things</c> is how many things God carries (default 50), for the scenarios that
+/// grow with a container. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
 /// scenarios are <see cref="ParenGroupBenchmarks"/>' workloads.
 /// </summary>
 public sealed class ProfileHarness : LightningBaseBenchmark
@@ -75,6 +76,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
 		new("actions", "@pemit me=Hi [add(1,2)];@switch 1=1,think yes;@trigger me/PROFILE_NOOP=a,b", true, IsCommandList: true),
 		new("include", "@include me/PROFILE_ACTIONS=5", true, IsCommandList: true),
+		// God's inventory holds --things "Profile Thing N" objects; these grow with it.
+		new("look-me", "look me", true),
+		new("locate", "[locate(me,Profile Thing 1,*)]", false),
+		new("tel", "[tel(Profile Thing 1,me)]", false),
 		// {BIG}: a mortal's object holding BigFlat flat attributes and BigBranches trees of BigLeaves leaves.
 		// {KID}: a child of {BIG} with KidAttributes of its own. "-m" runs as that mortal, not as God.
 		new("lattr-big", "[lattr({BIG})]", false),
@@ -115,6 +120,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	{
 		var seconds = 10;
 		var wait = 0;
+		var things = 50;
 		bool? parenGroups = null;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
@@ -128,6 +134,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 				case "--wait":
 					if (++i >= args.Length || !int.TryParse(args[i], out wait) || wait < 0)
 						throw new ArgumentException("--wait requires a non-negative integer.");
+					break;
+				case "--things":
+					if (++i >= args.Length || !int.TryParse(args[i], out things) || things < 0)
+						throw new ArgumentException("--things requires a non-negative integer.");
 					break;
 				case "--paren-groups":
 					parenGroups = ++i < args.Length ? args[i] switch
@@ -150,7 +160,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, things, parenGroups);
 		}
 		finally
 		{
@@ -158,7 +168,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 	}
 
-	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups)
+	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, int things, bool? parenGroups)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
@@ -173,7 +183,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_DOC"], MarkupText.Plain("{\"kind\":\"\",\"schema_version\":1,\"title\":\"\",\"pages\":[{\"key\":\"main\",\"title\":\"\",\"order\":1,\"sections\":[]}],\"actions\":{}}"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_NOOP"], MarkupText.Plain("think"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ACTIONS"], MarkupText.Plain("@pemit me=Got %0 [add(%0,1)];think [mul(%0,2)];@switch %0=5,{@pemit me=five},{@pemit me=other}"), god);
-		for (var i = 0; i < 50; i++)
+		for (var i = 0; i < things; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
 
 		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))

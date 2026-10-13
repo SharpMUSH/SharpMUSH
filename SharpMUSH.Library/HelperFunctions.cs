@@ -230,6 +230,11 @@ public static partial class HelperFunctions
 		=> await obj.HasFlag("DARK", cancellationToken)
 			&& (await obj.CanDark(cancellationToken) || !await obj.IsAlive(cancellationToken));
 
+	/// <summary><see cref="IsDarkLegal(AnySharpObject, CancellationToken)"/> with the object's own flags already read.</summary>
+	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj, IReadOnlyList<SharpObjectFlag> flags,
+		CancellationToken cancellationToken)
+		=> HasFlag(flags, "DARK") && (await obj.CanDark(cancellationToken) || !await obj.IsAlive(cancellationToken));
+
 	public static async ValueTask<bool> IsAudible(this AnySharpObject obj)
 		=> await obj.HasFlag("AUDIBLE");
 
@@ -439,9 +444,34 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> RoleFlags.Find(flag) is { } roleFlag
 			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(roleFlag.Scope)
-			: await obj.Flags.Value
-				.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
-										 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
+			: await obj.Flags.Value.AnyAsync(x => Names(x, flag), cancellationToken);
+
+	/// <summary>
+	/// <see cref="HasFlag(SharpObject,string,CancellationToken)"/> over flags already read from the object: a
+	/// flag of this name or alias is in <paramref name="flags"/>. Not for WIZARD or ROYALTY, which are roles.
+	/// </summary>
+	public static bool HasFlag(IReadOnlyList<SharpObjectFlag> flags, string flag)
+	{
+		foreach (var each in flags)
+		{
+			if (Names(each, flag)) return true;
+		}
+
+		return false;
+	}
+
+	// Flag names are ASCII, so an ordinal comparison answers as a culture-aware one would, without the
+	// culture lookup (half the cost of building an ObjectFlagSet went to hashing names through ICU).
+	private static bool Names(SharpObjectFlag candidate, string flag)
+	{
+		if (candidate.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)) return true;
+		foreach (var alias in candidate.Aliases ?? [])
+		{
+			if (alias.Equals(flag, StringComparison.OrdinalIgnoreCase)) return true;
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// Reads the object's flags and grants once, for a caller that asks several flag questions about it,

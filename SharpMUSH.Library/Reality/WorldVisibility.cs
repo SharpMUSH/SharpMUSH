@@ -14,37 +14,60 @@ public static class WorldVisibility
 		AnySharpObject viewer, AnySharpObject container, IRealityPolicy reality,
 		IConnectionService connections, CancellationToken ct = default)
 	{
+		var scan = await CreateFlagScanAsync(viewer, container, reality, connections, ct);
+		return async (item, token) => await scan(item, token) is SharpObjectFlag[];
+	}
+
+	/// <summary>
+	/// <see cref="CreateScanAsync"/> that hands back each visible item's own flags, read once for the
+	/// DARK/LIGHT rules, so a listing that shows them does not read them again.
+	/// </summary>
+	public static async ValueTask<Func<AnySharpContent, CancellationToken, ValueTask<Found<SharpObjectFlag[]>>>> CreateFlagScanAsync(
+		AnySharpObject viewer, AnySharpObject container, IRealityPolicy reality,
+		IConnectionService connections, CancellationToken ct = default)
+	{
 		ct.ThrowIfCancellationRequested();
 		Func<DBRef, CancellationToken, ValueTask<bool>> perceive = reality is IRealityObservationProvider observations
 			? await observations.ObserveAsync(viewer.Object().DBRef, ct)
 			: (target, token) => reality.CanPerceiveAsync(viewer.Object().DBRef, target, token);
 		var containerVisible = await perceive(container.Object().DBRef, ct);
-		var roomLight = containerVisible && container.IsRoom && await ReadAsync(() => container.IsLight(), ct);
-		var roomDark = containerVisible && container.IsRoom && await ReadAsync(() => container.IsDarkLegal(), ct);
+		SharpObjectFlag[] roomFlags = containerVisible && container.IsRoom ? await ReadAsync(() => FlagsOf(container), ct) : [];
+		var roomLight = HelperFunctions.HasFlag(roomFlags, "LIGHT");
+		var roomDark = HelperFunctions.HasFlag(roomFlags, "DARK")
+			&& await ReadAsync(() => container.IsDarkLegal(roomFlags, ExecutionBudget.CurrentToken), ct);
 		var seeAll = containerVisible && await ReadAsync(() => viewer.IsSee_All(), ct);
 		return async (item, token) =>
 		{
 			token.ThrowIfCancellationRequested();
 			var target = item.WithRoomOption();
-			if (!containerVisible || !await perceive(target.Object().DBRef, token)) return false;
-			var dark = await ReadAsync(() => target.IsDarkLegal(), token);
-			var light = await ReadAsync(() => target.IsLight(), token);
+			if (!containerVisible || !await perceive(target.Object().DBRef, token)) return new NotFound();
+			// One read of the item's flags answers DARK and LIGHT both; it was a read per question.
+			var flags = await ReadAsync(() => FlagsOf(target), token);
+			var dark = HelperFunctions.HasFlag(flags, "DARK")
+				&& await ReadAsync(() => target.IsDarkLegal(flags, ExecutionBudget.CurrentToken), token);
+			var light = HelperFunctions.HasFlag(flags, "LIGHT");
 			var visible = roomLight || (roomDark ? seeAll || light : !dark || seeAll);
-			if (!visible || item.IsExit && dark && !seeAll) return false;
+			if (!visible || item.IsExit && dark && !seeAll) return new NotFound();
 			token.ThrowIfCancellationRequested();
-			return !item.IsPlayer || await ReadAsync(() => connections.IsOnline(target), token);
+			if (item.IsPlayer && !await ReadAsync(() => connections.IsOnline(target), token)) return new NotFound();
+			return flags;
 		};
 	}
 
+	private static ValueTask<SharpObjectFlag[]> FlagsOf(AnySharpObject obj)
+		=> obj.Object().Flags.Value.ToArrayAsync(ExecutionBudget.CurrentToken);
+
 	// Visibility helpers and the connection interface retain their published tokenless signatures.
 	// Each read gets the caller's lifetime, including delegate invocations after scan creation ends.
-	private static async ValueTask<bool> ReadAsync(Func<ValueTask<bool>> read, CancellationToken ct)
+	// A caller already running under that lifetime (look passes the ambient token) gets no new budget
+	// or linked source: those were most of what a full room allocated per item.
+	private static async ValueTask<T> ReadAsync<T>(Func<ValueTask<T>> read, CancellationToken ct)
 	{
-		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
-		using var budget = ExecutionBudget.FromMilliseconds(0, cancellation.Token);
-		using var scope = budget.Enter();
-		budget.ThrowIfExceeded();
-		return await read().AsTask().WaitAsync(budget.Token);
+		using var scope = ExecutionBudget.EnterLinked(ct);
+		var pending = read();
+		return pending.IsCompletedSuccessfully
+			? pending.Result
+			: await pending.AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
 	public static async ValueTask<bool> CanSeeContentAsync(AnySharpObject viewer, AnySharpObject container,

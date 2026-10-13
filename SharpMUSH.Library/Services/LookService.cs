@@ -362,47 +362,58 @@ public class LookService(
 		=> (await attributeService.GetAttributeAsync(look.God, look.Viewing, formatAttributeName,
 			IAttributeService.AttributeMode.Read, true)).IsAttribute;
 
-	/// <summary>What the looker can see in the container, split into exits and everything else.</summary>
-	private async ValueTask<(List<AnySharpContent> Contents, List<AnySharpContent> Exits)> VisibleContentsAsync(
+	/// <summary>
+	/// What the looker can see in the container, split into exits and everything else. Each content
+	/// keeps the flags the visibility check read, which a See_All listing shows.
+	/// </summary>
+	private async ValueTask<(List<SeenContent> Contents, List<AnySharpContent> Exits)> VisibleContentsAsync(
 		Look look, AnySharpContainer container)
 	{
 		var allContents = mediator.CreateStream(new GetContentsQuery(container), ExecutionBudget.CurrentToken);
 
-		var visibleContents = new List<AnySharpContent>();
+		var visibleContents = new List<SeenContent>();
 		var visibleExits = new List<AnySharpContent>();
 
-		var canSeeContent = await WorldVisibility.CreateScanAsync(
+		var canSeeContent = await WorldVisibility.CreateFlagScanAsync(
 			look.Looker, look.Viewing, reality, connectionService, ExecutionBudget.CurrentToken);
 		var lookerRef = look.Looker.Object().DBRef;
-		// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
-		var visible = allContents
-			.Where(item => item.Object().DBRef != lookerRef)
-			.Where((item, _) => canSeeContent(item, ExecutionBudget.CurrentToken));
-		await foreach (var item in visible.WithCancellation(ExecutionBudget.CurrentToken))
+		await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
 		{
+			// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
+			if (item.Object().DBRef == lookerRef
+					|| await canSeeContent(item, ExecutionBudget.CurrentToken) is not SharpObjectFlag[] flags)
+			{
+				continue;
+			}
+
 			if (item.IsExit) visibleExits.Add(item);
-			else visibleContents.Add(item);
+			else visibleContents.Add(new SeenContent(item, flags));
 		}
 
 		return (visibleContents, visibleExits);
 	}
 
-	private async ValueTask ShowContentsAsync(Look look, List<AnySharpContent> visibleContents)
+	/// <summary>A content the looker can see, with its own flags as the visibility check read them.</summary>
+	private readonly record struct SeenContent(AnySharpContent Item, SharpObjectFlag[] Flags);
+
+	private async ValueTask ShowContentsAsync(Look look, List<SeenContent> visibleContents)
 	{
-		var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
-		var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+		var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Item.Object().DBRef.Number}"));
+		var contentNames = string.Join("|", visibleContents.Select(x => x.Item.Object().Name));
 		var contentsLabel = look.Viewing.IsRoom ? "Contents:" : "Carrying:";
 
 		// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
 		// The flag view is needed only for the Name(#dbrefFlags) form.
 		var flagView = await look.Looker.IsSee_All() ? await FlagView.ForAsync(look.Looker, connectionService) : null;
-		var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
+		var contentMStrings = await Task.WhenAll(visibleContents.Select(async seen =>
 		{
+			var obj = seen.Item.Object();
 			if (flagView is not null)
 			{
-				return await MessageFormatting.FormatObjectWithDbrefMString(item.Object(), flagView);
+				var flags = new ObjectFlagSet(obj.DBRef, seen.Flags, await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken));
+				return await MessageFormatting.FormatObjectWithDbrefMString(obj, flagView, flags);
 			}
-			return MarkupText.Plain(item.Object().Name);
+			return MarkupText.Plain(obj.Name);
 		}));
 		var defaultContents = visibleContents.Count == 0
 			? MarkupText.Empty

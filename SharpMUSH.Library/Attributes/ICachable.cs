@@ -16,4 +16,12 @@ public interface ICacheable
 	/// Override only to opt a large or rarely read listing into <see cref="CacheEntryProfile.Scan"/>.
 	/// </summary>
 	CacheEntryProfile Profile => CacheTags.Length == 0 ? CacheEntryProfile.Object : CacheEntryProfile.Tagged;
+
+	/// <summary>
+	/// Whether the stored result also carries one object tag per object it names, so a write to any of
+	/// them expires it (see <see cref="SharpMUSH.Library.Behaviors.EmbeddedObjectTags"/>). Every tag is
+	/// checked on every hit, so a list pays per member on each read. Turn it off only for a list whose
+	/// membership no write to a member can change except through one of the query's own tags.
+	/// </summary>
+	bool TagsEmbeddedObjects => true;
 }

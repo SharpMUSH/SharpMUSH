@@ -3,7 +3,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
-using static MarkupString.MStringInterpolation;
 
 namespace SharpMUSH.Library.Common;
 
@@ -76,10 +75,14 @@ public static class MessageFormatting
 	/// by name): no type pseudo-flag, CONNECTED for a connected player, and only what
 	/// <see cref="FlagView.CanSeeAsync"/> allows. Without a view every stored flag is shown and CONNECTED never is.
 	/// </summary>
-	public static async ValueTask<SharpObjectFlag[]> VisibleFlagsAsync(SharpObject obj, FlagView? view = null)
+	/// <param name="obj">Whose flags.</param>
+	/// <param name="view">Whose view of them; without one every stored flag is shown.</param>
+	/// <param name="read">The object's flags when the caller has read them already; otherwise they are read here.</param>
+	public static async ValueTask<SharpObjectFlag[]> VisibleFlagsAsync(SharpObject obj, FlagView? view = null,
+		ObjectFlagSet? read = null)
 	{
 		var flags = new List<SharpObjectFlag>();
-		var ownFlags = (await obj.ReadFlagsAsync()).Flags
+		var ownFlags = (read ?? await obj.ReadFlagsAsync()).Flags
 			.Where(flag => !flag.Name.Equals(obj.Type, StringComparison.OrdinalIgnoreCase));
 		foreach (var flag in ownFlags)
 		{
@@ -92,19 +95,25 @@ public static class MessageFormatting
 			flags.Add(Connected);
 		}
 
-		return flags
-			.OrderBy(flag => PennFlagRank.GetValueOrDefault(flag.Name, int.MaxValue))
-			.ThenBy(flag => flag.Name, StringComparer.Ordinal)
-			.ToArray();
+		flags.Sort(PennOrder);
+		return flags.ToArray();
 	}
+
+	/// <summary>PennMUSH's bit order, then SharpMUSH's own flags by name.</summary>
+	private static readonly Comparison<SharpObjectFlag> PennOrder = (first, second) =>
+	{
+		var rank = PennFlagRank.GetValueOrDefault(first.Name, int.MaxValue)
+			.CompareTo(PennFlagRank.GetValueOrDefault(second.Name, int.MaxValue));
+		return rank != 0 ? rank : string.CompareOrdinal(first.Name, second.Name);
+	};
 
 	/// <summary>
 	/// PennMUSH's <c>unparse_flags</c> (<c>src/flags.c:1638</c>): the type letter, then the symbols of
 	/// <see cref="VisibleFlagsAsync"/>. Example: <c>PenAc</c> for a connected player.
 	/// </summary>
-	public static async ValueTask<string> FlagSymbolsAsync(SharpObject obj, FlagView? view = null)
+	public static async ValueTask<string> FlagSymbolsAsync(SharpObject obj, FlagView? view = null, ObjectFlagSet? read = null)
 		=> obj.Type[..1].ToUpperInvariant()
-			+ string.Concat((await VisibleFlagsAsync(obj, view)).Select(flag => flag.Symbol));
+			+ string.Concat((await VisibleFlagsAsync(obj, view, read)).Select(flag => flag.Symbol));
 
 	/// <summary>
 	/// PennMUSH's <c>flag_description</c> (<c>src/flags.c:1683</c>), examine's
@@ -120,11 +129,13 @@ public static class MessageFormatting
 	/// </summary>
 	/// <param name="obj">The sharp object to format</param>
 	/// <param name="view">Whose view of the flags to show; see <see cref="VisibleFlagsAsync"/>.</param>
+	/// <param name="read">The object's flags when the caller has read them already.</param>
 	/// <returns>A task yielding the formatted MString with the name hilighted</returns>
-	public static async ValueTask<MString> FormatObjectWithDbrefMString(SharpObject obj, FlagView? view = null)
+	public static async ValueTask<MString> FormatObjectWithDbrefMString(SharpObject obj, FlagView? view = null,
+		ObjectFlagSet? read = null)
 	{
-		var flagSymbols = await FlagSymbolsAsync(obj, view);
-		return Format($"{obj.Name.Hilight()}(#{obj.DBRef.Number}{flagSymbols})");
+		var flagSymbols = await FlagSymbolsAsync(obj, view, read);
+		return MarkupText.Concat(obj.Name.Hilight(), MarkupText.Plain($"(#{obj.DBRef.Number}{flagSymbols})"));
 	}
 
 	/// <summary>
