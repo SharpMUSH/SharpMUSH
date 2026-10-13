@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
 using System.Text;
 
@@ -93,6 +94,9 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("hasattr-m", "[hasattr({BIG},FLAT3999)]", false, AsMortal: true),
 		new("grep-m", "[grep({BIG},FLAT1*,value)]", false, AsMortal: true),
 		new("examine-m", "examine {BIG}", true, AsMortal: true),
+		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
+		new("theme-me", "@theme me=fantasy", true),
+		new("theme-anc", "@theme #4=fantasy", true),
 	];
 
 	private const int BigFlat = 4000;
@@ -120,6 +124,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	{
 		var seconds = 10;
 		var wait = 0;
+		var connections = 0;
 		bool? parenGroups = null;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
@@ -142,6 +147,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 						_ => throw new ArgumentException("--paren-groups takes on or off.")
 					} : throw new ArgumentException("--paren-groups takes on or off.");
 					break;
+				case "--connections":
+					if (++i >= args.Length || !int.TryParse(args[i], out connections) || connections < 0)
+						throw new ArgumentException("--connections requires a non-negative integer.");
+					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
 		}
@@ -155,7 +164,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups, connections);
 		}
 		finally
 		{
@@ -163,7 +172,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 	}
 
-	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups)
+	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups, int connections)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
@@ -181,6 +190,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ACTIONS"], MarkupText.Plain("@pemit me=Got %0 [add(%0,1)];think [mul(%0,2)];@switch %0=5,{@pemit me=five},{@pemit me=other}"), god);
 		for (var i = 0; i < 50; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
+
+		await ConnectPlayersAsync(connections);
 
 		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
 			? await SeedBigObjectsAsync()
@@ -260,6 +271,26 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			=> await _database!.GetObjectNodeAsync(dbref) is AnySharpObject node
 				? node
 				: throw new InvalidOperationException($"#{dbref.Number} is missing.");
+	}
+
+	/// <summary>
+	/// <paramref name="count"/> players logged in on handles of their own, output discarded, each with a THEME
+	/// that is code, as a game's would be.
+	/// </summary>
+	private async Task ConnectPlayersAsync(int count)
+	{
+		var connectionService = _server!.Services.GetRequiredService<IConnectionService>();
+		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
+			throw new InvalidOperationException("God (#1) is not seeded as a player.");
+		for (var i = 0; i < count; i++)
+		{
+			var player = await _database.CreatePlayerAsync($"ProfileOnline{i}", "unused", new DBRef(0), new DBRef(0), 100);
+			await _database.SetAttributeAsync(player, ["THEME"], MarkupText.Plain("if(1,nord)"), god);
+			var handle = 900_000L + i;
+			await connectionService.Register(handle, "localhost", "localhost", "profile",
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+			await connectionService.Bind(handle, player);
+		}
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)
