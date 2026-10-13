@@ -1,72 +1,41 @@
-# VS Code Extension Example for SharpMUSH
+# SharpMUSH VS Code desktop example
 
-This directory contains example files for creating a VS Code extension that uses the SharpMUSH Language Server.
+This example supports offline stdio and optional authenticated remote LSP. It is built from source; no marketplace installation is assumed. For operator enablement and MCP, see [Set up editor and AI analysis](../../deploy/analysis-tools.md).
 
-## Setup
+## Build, install and configure
 
-1. **Prerequisites**:
-   - Node.js 22 or newer and npm installed
-   - Build the offline language server or remote bridge with the repository's .NET 11 SDK.
-   - TypeScript and VSCE are project dependencies; no global installation is needed.
+On the editor machine, install the SDK pinned by the checkout's `global.json`, plus Node 22 or newer. From the repository root:
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+```bash
+dotnet publish SharpMUSH.LspBridge/SharpMUSH.LspBridge.csproj -c Release -o ./artifacts/lsp-bridge
+cd SharpMUSH.LanguageServer/vscode-extension-example
+npm ci
+npm test
+npm run package
+```
 
-3. **Compile TypeScript**:
-   ```bash
-   npm run compile
-   ```
+Keep the bridge's entire publish directory. In VS Code's Extensions menu choose **Install from VSIX…** and select the generated `.vsix`. This is a source-built example, not a claim that a marketplace extension is installed.
 
-4. **Package the extension**:
-   ```bash
-   npm run package
-   ```
+Open a trusted workspace and set these values in **user settings JSON**, replacing the path/domain:
 
-This will create a `.vsix` file that can be installed in VS Code.
+```json
+{
+  "sharpmush.languageServer.mode": "remote",
+  "sharpmush.languageServer.bridgePath": "/absolute/path/SharpMUSH/artifacts/lsp-bridge/SharpMUSH.LspBridge.dll",
+  "sharpmush.languageServer.endpoint": "wss://mush.example.com/lsp",
+  "sharpmush.trace.server": "off"
+}
+```
 
-## Development
+Run **SharpMUSH: Set Remote Credentials** from the Command Palette. Enter the existing **character name**, then its password in the hidden prompt. The extension stores both in endpoint-bound SecretStorage and injects them only into the bridge child environment. Changing endpoint requires credentials for that endpoint. Use **Developer: Reload Window** after settings/credential changes, then open or reopen a softcode file. **SharpMUSH: Clear Remote Credentials** deletes the current endpoint's entries and stops the client. Never put the password in settings, arguments, URLs, tracing logs or version control.
 
-1. Copy this directory to a new location outside the SharpMUSH repository
-2. Build the SharpMUSH.LanguageServer project
-3. Either:
-   - Copy the built `SharpMUSH.LanguageServer.dll` and its dependencies to `server/` directory
-   - Or configure the path in VS Code settings: `sharpmush.languageServer.path`
+Create `analysis-smoke.mushfn` containing `add(`. Expect a syntax diagnostic in Problems. Replace it with `add(1,2)`; expect that syntax error to clear. Hover `add` for function help, request completion with `ad`, and signature help within `add(`. These are expected checks, not a live IDE run recorded here. `.mush`/`.mu` use commands per line, `.mushfn`/`.fun` use function mode, and `.mushcmd` uses command-list mode.
 
-## Testing
+An `analysis-timeout` warning preserves the document; edit again to retry. Admission rejection instead closes the session: reload/reconnect and reopen files. The client does not automatically resume documents.
 
-1. Open this directory in VS Code
-2. Press F5 to start debugging
-3. This will open a new VS Code window with the extension loaded
-4. Create a `.mush` or `.mu` file and start editing
 
-## Files
+## Offline mode
 
-- `package.json` - Extension manifest
-- `extension.ts` - Extension entry point and LSP client
-- `language-configuration.json` - Language configuration (brackets, comments, etc.)
-- `syntaxes/mush.tmLanguage.json` - TextMate grammar for basic syntax highlighting
+Build `SharpMUSH.LanguageServer`, set `sharpmush.languageServer.mode` to `offline` and `sharpmush.languageServer.path` to the built DLL. Remote credential commands are not needed.
 
-## Notes
-
-The TextMate grammar provides basic syntax highlighting, but the LSP server provides semantic highlighting which is more accurate and context-aware.
-
-## Bounded remote mode
-
-Build/publish `SharpMUSH.LspBridge`, then set `sharpmush.languageServer.mode` to `remote`,
-`sharpmush.languageServer.bridgePath` to its DLL, and `sharpmush.languageServer.endpoint` to a WSS
-`/lsp` endpoint without userinfo/query/fragment. Run **SharpMUSH: Set Remote Credentials** for an
-existing character. Values are endpoint-bound SecretStorage entries injected into the bridge's
-private child environment, never settings/arguments/logs. **Clear Remote Credentials** removes both
-and stops the current client. Reload to reconnect after changing settings/credentials.
-
-Offline mode remains the default and uses `sharpmush.languageServer.path`. .NET 11 is required for
-both. Remote capabilities are full sync, diagnostics, completion, hover and signatures across
-`.mush`, `.mu`, `.mushfn`, `.fun`, `.mushcmd`; no remote formatting/rename/attribute save is advertised.
-Only trusted workspaces may launch/configure the client. `npm test` compiles TypeScript and verifies
-remote launch/SecretStorage behavior with a mocked IDE API, not a real VS Code UI/TLS E2E test.
-
-Remote overload or connection loss requires a fresh initialize and reopening current documents.
-The server closes explicitly if synchronized text cannot obtain analysis admission. Real VS Code UI
-and TLS/proxy integration still require a separately approved disposable fixture.
+`npm test` uses a mocked IDE API. These instructions have not been exercised in a real VS Code UI/TLS fixture.
