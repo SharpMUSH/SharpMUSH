@@ -185,8 +185,8 @@ PennMUSH answers `100`:
 
 **PennMUSH** splices each list element into the pattern as text and then evaluates it, so element
 text containing softcode executes.<br>
-**SharpMUSH** binds `##` to the iteration register (equivalent to `%iL`) and does not re-evaluate
-element text.<br>
+**SharpMUSH** binds `##` to the iteration register (equivalent to `%iL`) and `#@` to its position
+(equivalent to `inum(L)`), and does not re-evaluate element text.<br>
 **Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can
 influence becomes executable.<br>
 **Workaround.** Use `u()` or an explicit evaluation where you meant to run the element.
@@ -194,6 +194,8 @@ influence becomes executable.<br>
 ```sharp
 > think iter(a b,##)
 a b
+> think iter(a b,#@:##)
+1:a 2:b
 > &CODE me=[add(1,2)]
 > think iter(CODE,u(##))
 3

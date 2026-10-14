@@ -177,10 +177,6 @@
    "command": "think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]"
   },
   {
-   "key": "30-softcode/sc.lists#3",
-   "command": "think [iter(a b c,##-#@)] [map(#lambda/strlen(%%0),aa b cccc)] [fold(#lambda/add(%%0,%%1),1 2 3)] [filter(#lambda/gt(%%0,1),0 1 2 3)]"
-  },
-  {
    "key": "30-softcode/sc.login#0",
    "command": "Wiz wizpass"
   },

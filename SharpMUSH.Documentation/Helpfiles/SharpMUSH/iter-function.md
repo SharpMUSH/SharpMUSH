@@ -25,17 +25,13 @@
 
 For each word in `<list>`, iter() evaluates `<pattern>` once, and returns a list of the results of those evaluations. Words in `<list>` are separated by `<delimiter>`, if given, and spaces if not. Words in the resulting list are separated by the given `<ouput separator>`, or a space if no output separator is given.
 
-Prior to each evaluation, every occurrence of the string "##" in `<pattern>` is replaced with the current word from `<list>`. However, because this replacement occurs before evaluation, it cannot be used well in nested iter()s, and should not be used on user input or untrusted `<list>`s, as the word will be evaluated. Instead, you can use the %iX substitution, or the itext() function. The substitution '%iL' refers to the outermost iter of the current expression, and is intended to replace ##.
+In `<pattern>`, the string "##" stands for the current word and "#@" for its position in `<list>`, counting from 1. They read the same values as %iL and inum(L), and the word is never evaluated as code, so ## is safe on user input. See [compatibility parser in iter is data not code].
 
-The string "#@" will be replaced with the position of the current word in `<list>`. Like "##", the replacement occurs before substitution. Use the inum() function for nested iter()s.
-
-If you nest iter()s, ## and #@ refer to the first/outermost iter(). The ilev() function can be used to get the current iter() nesting level.
+If you nest iter()s, ## and #@ refer to the first/outermost iter(). For the current iter(), use %i0 or itext(0), and inum(0). The ilev() function can be used to get the current iter() nesting level.
 
 parse() is an alias for iter().
 
 ::: seealso
-- [ilev()]
-- [ilev()]
 - [ilev()]
 - [IBREAK()]
 - [MAP()]
