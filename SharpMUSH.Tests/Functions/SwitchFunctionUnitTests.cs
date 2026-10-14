@@ -1,4 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -8,6 +11,8 @@ public class SwitchFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
 	/// switch() glob-matches through the same quick_wild as everything else, so it is
@@ -176,5 +181,69 @@ public class SwitchFunctionUnitTests
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// #$ is the subject in the list or default that runs, as PennMUSH's fun_switch splices it; case() and
+	/// caseall() leave it alone. A nested switch's #$ names the outermost switch whose list it is written in.
+	/// </summary>
+	[Test]
+	[Arguments("switch(moof,*a*,foo,*b*,bar,*t*,neat,#$)", "moof")]
+	[Arguments("switch(abc,a*,<#$>,no)", "<abc>")]
+	[Arguments("switchall(abc,a*,#$,*c,-#$)", "abc-abc")]
+	[Arguments("case(moof,moof,#$)", "#$")]
+	[Arguments("caseall(moof,moof,#$,x,#$)", "#$")]
+	[Arguments("case(moof,x,no,#$)", "#$")]
+	[Arguments("reswitch(abc,^a,#$)", "abc")]
+	[Arguments("switch(a,*,switch(b,*,#$))", "a")]
+	[Arguments("switch(a,*,switch(b,*,%$0#$))", "ba")]
+	[Arguments("switch(a,*,reswitch(b,b,#$))", "a")]
+	[Arguments("case(a,a,switch(b,*,#$))", "b")]
+	[Arguments("switch(a,*,case(b,b,#$))", "a")]
+	[Arguments("iter(x y,switch(##,*,#$))", "x y")]
+	public async Task HashDollarIsTheSubject(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// #$ is text where no switch's list reads it: in a pattern (PennMUSH splices only the list), outside any
+	/// switch, unevaluated, escaped, and in the subject itself, which is never evaluated again.
+	/// </summary>
+	[Test]
+	[Arguments("#$", "#$")]
+	[Arguments("switch(abc,#$,yes,no)", "no")]
+	[Arguments("switch(#$,#$,yes,no)", "yes")]
+	[Arguments("switch(b,*,switch(b,#$,x,y))", "x")]
+	[Arguments("switch(a,*,lit(#$))", "#$")]
+	[Arguments("switch(a,*,\\#$)", "#$")]
+	[Arguments("switch(lit([add(1,1)]),*,#$)", "[add(1,1)]")]
+	[Arguments("switch(a,*,#$0 x#)", "a0 x#")]
+	public async Task HashDollarAsText(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// #$ belongs to the switch it is written in: an attribute the list calls keeps it as text, unless that
+	/// attribute runs a switch of its own.
+	/// </summary>
+	[Test]
+	public async Task HashDollarStaysInItsOwnAttribute()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("HashDollarObj");
+		var created = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, name);
+		var obj = $"#{DBRef.Parse(created.Message!.ToPlainText()).Number}";
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&SHOW {obj}=#$"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&OWN {obj}=switch(z,*,#$)"));
+
+		async Task Check(string fn, string exp) =>
+			await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain(fn))).ToPlainText()).IsEqualTo(exp);
+
+		await Check($"switch(a,*,u({obj}/SHOW))", "#$");
+		await Check($"switch(a,*,u({obj}/OWN))", "z");
+		await Check($"switch(a,*,#$[u({obj}/SHOW)])", "a#$");
 	}
 }

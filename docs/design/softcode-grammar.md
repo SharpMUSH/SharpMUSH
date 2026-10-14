@@ -42,7 +42,7 @@ A context is the set of facts that decide what the five tokens mean:
 | G | paren_groups is on |
 
 That is 128 combinations. Many treat the five tokens alike and have the same successors, so the
-generator merges them into 52 classes, giving 420 rules. A copy is named for its class: `Top_` or
+generator merges them into 52 classes, giving 422 rules. A copy is named for its class: `Top_` or
 `Call_`, then the letters of the tokens that are text there (R `)`, S `;`, C `,`, E `=`, A `>`), then
 `_G` with paren_groups. `beginGenericText__Top_RSCEA` takes all five as text;
 `function__Call_SEA` is a call whose `)` and `,` are structure.

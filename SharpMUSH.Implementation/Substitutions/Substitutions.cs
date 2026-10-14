@@ -201,7 +201,7 @@ public static partial class Substitutions
 
 		// Get the nth item from the stack (0 is top/current)
 		var item = stack.ElementAtOrDefault(symbolNumber);
-		return new CallState(item ?? MarkupText.Empty);
+		return new CallState(item?.Text ?? MarkupText.Empty);
 	}
 
 	// Symbol: %$L --> Last/outermost switch string
@@ -216,7 +216,7 @@ public static partial class Substitutions
 
 		var depth = stack.Count - 1;
 		var item = stack.ElementAtOrDefault(depth);
-		return new CallState(item ?? MarkupText.Empty);
+		return new CallState(item?.Text ?? MarkupText.Empty);
 	}
 
 	// Symbol Example: %i0 --> 0

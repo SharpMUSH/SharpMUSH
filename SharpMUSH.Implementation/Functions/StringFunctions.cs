@@ -1613,7 +1613,7 @@ public partial class Functions
 	/// pattern matched.
 	/// </summary>
 	/// <param name="exact">
-	/// case(): a case-sensitive string comparison, and no regexp context of its own. Otherwise a glob,
+	/// case(): a case-sensitive string comparison, no regexp context of its own, and no <c>#$</c>. Otherwise a glob,
 	/// whose captures (one per <c>*</c> or <c>?</c>, numbered from 0) are a regexp context that
 	/// <c>$0</c>-<c>$9</c> read while the matched list is evaluated.
 	/// </param>
@@ -1635,7 +1635,21 @@ public partial class Functions
 
 		var captures = exact ? null : new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		if (captures is not null) parser.CurrentState.RegexRegisters.Push(captures);
-		parser.CurrentState.SwitchStack.Push(arg0);
+		// PennMUSH splices #$ into the list it evaluates, but not for case() (src/funmisc.c, fun_switch).
+		var frame = new SwitchFrame { Text = arg0, Spliced = !exact, Evaluation = parser.CurrentState.CurrentEvaluation };
+		parser.CurrentState.SwitchStack.Push(frame);
+		async ValueTask<MString?> EvaluateAction(CallState argument)
+		{
+			frame.InAction = true;
+			try
+			{
+				return await EvaluateArgument(argument);
+			}
+			finally
+			{
+				frame.InAction = false;
+			}
+		}
 
 		try
 		{
@@ -1650,7 +1664,7 @@ public partial class Functions
 					continue;
 				}
 
-				var matched = await EvaluateArgument(list) ?? MarkupText.Empty;
+				var matched = await EvaluateAction(list) ?? MarkupText.Empty;
 				if (!all)
 				{
 					return new CallState(matched) { HadErrors = hadErrors };
@@ -1661,7 +1675,7 @@ public partial class Functions
 
 			var result = resultList.Count != 0
 				? MarkupText.Concat(resultList)
-				: defaultValue is null ? MarkupText.Empty : await EvaluateArgument(defaultValue) ?? MarkupText.Empty;
+				: defaultValue is null ? MarkupText.Empty : await EvaluateAction(defaultValue) ?? MarkupText.Empty;
 			return new CallState(result) { HadErrors = hadErrors };
 		}
 		finally

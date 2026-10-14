@@ -99,7 +99,7 @@ public partial class Functions
 				yield return ("T0", "0");
 		}
 
-		if (kinds.HasFlag(RegisterKinds.Switch) && state.SwitchStack.TryPeek(out var switchText) && switchText.Length > 0)
+		if (kinds.HasFlag(RegisterKinds.Switch) && state.SwitchStack.TryPeek(out var switchFrame) && switchFrame.Text.Length > 0)
 			yield return ("S0", "0");
 	}
 
@@ -279,7 +279,7 @@ public partial class Functions
 						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 					if (stack.Count == 0 || depth < 0 || depth >= stack.Count)
 						return ValueTask.FromResult(new CallState(string.Empty));
-					return ValueTask.FromResult(new CallState(stack.ElementAtOrDefault(depth) ?? MarkupText.Empty));
+					return ValueTask.FromResult(new CallState(stack.ElementAtOrDefault(depth)?.Text ?? MarkupText.Empty));
 				}
 
 			default:
@@ -447,7 +447,7 @@ public partial class Functions
 		}
 
 		var item = stack.ElementAtOrDefault(depth);
-		return ValueTask.FromResult(new CallState(item ?? MarkupText.Empty));
+		return ValueTask.FromResult(new CallState(item?.Text ?? MarkupText.Empty));
 	}
 
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
