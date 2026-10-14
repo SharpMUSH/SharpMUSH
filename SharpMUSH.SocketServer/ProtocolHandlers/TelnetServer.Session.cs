@@ -22,6 +22,7 @@ public partial class TelnetServer
 	private sealed class TelnetSession(
 		TelnetServer server,
 		ConnectionContext connection,
+		ConnectionCloser closer,
 		long handle,
 		RegistrationHold held,
 		CancellationToken ct)
@@ -314,7 +315,7 @@ public partial class TelnetServer
 				WriteOutputAsync,
 				WritePromptAsync,
 				() => telnet.CurrentEncoding,
-				connection.Abort,
+				closer.Close,
 				async (module, message) =>
 				{
 					await telnet.SendGMCPCommand(module, message);
