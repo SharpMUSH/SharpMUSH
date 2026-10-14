@@ -437,8 +437,8 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctIter=pctitercmd"));
 		await ExpectHeardOnce(testPlayer.DbRef,
 			@"^#\d+! +\[iter\(Hello,strlen\(##\)\)\] :$",
-			@"^#\d+! +strlen\(%iL\) :$",
-			@"^#\d+! +strlen\(%iL\) => 5$");
+			@"^#\d+! +strlen\(##\) :$",
+			@"^#\d+! +strlen\(##\) => 5$");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPctIter"));
 	}

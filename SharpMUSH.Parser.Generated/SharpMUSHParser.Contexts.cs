@@ -118,6 +118,8 @@ public partial class SharpMUSHParser
 		IValidSubstitutionContext validSubstitution(int i) => SoftcodeTree.Rule<IValidSubstitutionContext>(this, i);
 		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
+		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
+		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
 		IGenericTextContext[] genericText() => SoftcodeTree.Rules<IGenericTextContext>(this);
 		IGenericTextContext genericText(int i) => SoftcodeTree.Rule<IGenericTextContext>(this, i);
 	}
@@ -137,6 +139,8 @@ public partial class SharpMUSHParser
 		IValidSubstitutionContext validSubstitution(int i) => SoftcodeTree.Rule<IValidSubstitutionContext>(this, i);
 		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
+		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
+		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
 	}
 
 	/// <summary>Every <c>callTail__*</c> rule.</summary>
@@ -154,6 +158,8 @@ public partial class SharpMUSHParser
 		IValidSubstitutionContext validSubstitution(int i) => SoftcodeTree.Rule<IValidSubstitutionContext>(this, i);
 		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
+		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
+		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
 	}
 
 	/// <summary>Every <c>regexpCapture__*</c> rule.</summary>
@@ -234,6 +240,7 @@ public partial class SharpMUSHParser
 		EscapedTextContext escapedText() => SoftcodeTree.Rule<EscapedTextContext>(this, 0);
 		ITerminalNode OTHER() => SoftcodeTree.Token(this, SharpMUSHParser.OTHER, 0);
 		ITerminalNode DOLLAR() => SoftcodeTree.Token(this, SharpMUSHParser.DOLLAR, 0);
+		ITerminalNode HASH() => SoftcodeTree.Token(this, SharpMUSHParser.HASH, 0);
 		AnsiContext ansi() => SoftcodeTree.Rule<AnsiContext>(this, 0);
 	}
 
@@ -656,6 +663,7 @@ public partial class SharpMUSHParser
 	public partial class ValidSubstitution__Top_RSE_GContext : IValidSubstitutionContext;
 	public partial class SubstitutionSymbolContext : ISoftcodeContext;
 	public partial class EscapedTextContext : ISoftcodeContext;
+	public partial class IterationTokenContext : ISoftcodeContext;
 	public partial class AnsiContext : ISoftcodeContext;
 
 	/// <summary>

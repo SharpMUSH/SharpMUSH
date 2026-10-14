@@ -135,14 +135,15 @@ def generate(grammar_name):
 
 	def first(c):
 		alts = [f'bracePattern__{inside(c, "brace")}', f'bracketPattern__{inside(c, "bracket")}', f'beginGenericText__{N(c)}',
-				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}']
+				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken']
 		if c.G:
 			alts.append(f'closedGroupFirst__{inside(c, "group")}')
 		return alts
 
 	def later(c):
 		alts = [f'bracePattern__{inside(c, "brace")}', f'bracketPattern__{inside(c, "bracket")}',
-				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', f'genericText__{N(c)}']
+				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken',
+				f'genericText__{N(c)}']
 		if c.G:
 			alts.append(f'closedGroup__{inside(c, "group")}')
 		return alts
@@ -222,7 +223,7 @@ def generate(grammar_name):
 		# With paren_groups, a '(' or a name's '(' that starts no call opens a group instead of being text.
 		w(f'genericText__{n}: beginGenericText__{n}' + ('' if c.G else ' | FUNCHAR') + ';')
 		tokens = list(text_tokens(c)) + ([] if c.G else ['OPAREN'])
-		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | ansi)']) + ';')
+		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | ansi)']) + ';')
 		if c.P == 1:
 			body = block(later(c)) + '*'
 			w(f'closedGroupFirst__{n}: beginGenericText__Open {body} genericText__Close;')
@@ -245,6 +246,8 @@ def generate(grammar_name):
 ;
 
 escapedText: ESCAPE ANY;
+
+iterationToken: ITER_ELEMENT | ITER_POSITION;
 
 ansi: OANSI ANSICHARACTER? CANSI;''')
 
@@ -288,11 +291,11 @@ ACCESSORS = {
 	'commaCommandArgs': [('evaluationString', True), ('COMMAWS', True)],
 	'evaluationString': [('function', False), ('explicitEvaluationString', False), ('callTail', False)],
 	'explicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('beginGenericText', False),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('genericText', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True), ('genericText', True)],
 	'braceExplicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True)],
 	'callTail': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True)],
 	'regexpCapture': [('REGEXP_NUM', False), ('REGEXP_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False)],
 	'bracePattern': [('OBRACE', False), ('braceExplicitEvaluationString', False), ('CBRACE', False)],
 	'bracketPattern': [('OBRACK', False), ('evaluationString', False), ('CBRACK', False)],
@@ -303,7 +306,7 @@ ACCESSORS = {
 		('STEXT_LAST', False), ('VWX', False)],
 	'genericText': [('beginGenericText', False), ('FUNCHAR', False)],
 	'beginGenericText': [('CPAREN', False), ('SEMICOLON', False), ('COMMAWS', False), ('EQUALS', False), ('CCARET', False),
-		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('ansi', False)],
+		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('ansi', False)],
 }
 
 # Rules that are spliced into their parent when they exit: the tree keeps one flat run of text.
@@ -378,7 +381,7 @@ def bridge(grammar):
 		elif base in ACCESSORS:
 			for rule in copies:
 				w(f'	public partial class {pascal(rule)}Context : {iface(base)};')
-	for rule in ('substitutionSymbol', 'escapedText', 'ansi'):
+	for rule in ('substitutionSymbol', 'escapedText', 'iterationToken', 'ansi'):
 		w(f'	public partial class {pascal(rule)}Context : ISoftcodeContext;')
 	w('')
 	w('	/// <summary>')

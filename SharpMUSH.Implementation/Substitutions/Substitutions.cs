@@ -147,10 +147,8 @@ public static partial class Substitutions
 
 	/// <summary>
 	/// <c>%iL</c> — the OUTERMOST iteration, matching <c>itext(L)</c> and <c>itext(ilev())</c>
-	/// (<c>help ITEXT()</c>). It is also what <c>##</c> resolves to: iter() and @dolist
-	/// rewrite <c>##</c> to <c>%iL</c>, and PennMUSH's <c>##</c> is spliced textually before
-	/// evaluation, so a nested one names the outermost loop — the documented
-	/// <c>iter(red blue green, iter(fish shoe, #@:##))</c> answers red red blue blue green green.
+	/// (<c>help ITEXT()</c>). <c>##</c> also names the outermost loop, but only one started by the
+	/// same evaluation (<c>VisitIterationToken</c>).
 	///
 	/// <para>The register is returned as-is, the way <c>%i&lt;n&gt;</c> does; interpolating it into a
 	/// string flattens the <c>MString</c> and bakes any colour into the plain text.</para>

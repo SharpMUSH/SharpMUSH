@@ -663,8 +663,8 @@ public class UtilityFunctionUnitTests
 		"1:red 1:red 2:blue 2:blue 3:green 3:green")]
 	[Arguments("iter(red blue green,iter(fish shoe,%iL))", "red red blue blue green green")]
 	[Arguments("iter(red blue green,iter(fish shoe,[itext(L)]))", "red red blue blue green green")]
-	// ## and #@ are rewritten to %iL and inum(L) by iter()/@dolist, so a nested one names the
-	// OUTERMOST loop — help ITEXT2's first worked example.
+	// ## and #@ name the OUTERMOST loop written around them, as PennMUSH's splice does — help ITEXT2's
+	// first worked example.
 	[Arguments("iter(red blue green,iter(fish shoe,##))", "red red blue blue green green")]
 	// help ILEV()'s worked example: #@ is the outermost position too.
 	[Arguments("iter(red blue green,iter(fish shoe,#@:##))", "1:red 1:red 2:blue 2:blue 3:green 3:green")]

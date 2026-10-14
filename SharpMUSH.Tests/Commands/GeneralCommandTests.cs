@@ -102,6 +102,26 @@ public class GeneralCommandTests
 		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(god, $"{token}-queued-at-12", god);
 	}
 
+	/// <summary>
+	/// A ## written in an outer queued @dolist names the outer element inside a nested one, as PennMUSH's
+	/// splice gives it; %i0 is still the inner element.
+	/// </summary>
+	[Test]
+	public async ValueTask DolistNestedQueuedHashNamesTheOuterElement()
+	{
+		var token = Token();
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist a b=@dolist x y=@pemit #1={token}-nested-##-%i0-#@"));
+
+		foreach (var (outer, position) in new[] { ("a", 1), ("b", 2) })
+		{
+			foreach (var inner in new[] { "x", "y" })
+			{
+				await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(god, $"{token}-nested-{outer}-{inner}-{position}", god);
+			}
+		}
+	}
+
 	[Test]
 	public async ValueTask DoListComplex()
 	{

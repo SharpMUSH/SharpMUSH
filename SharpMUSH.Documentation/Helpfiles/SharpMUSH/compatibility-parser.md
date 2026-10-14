@@ -185,8 +185,9 @@ PennMUSH answers `100`:
 
 **PennMUSH** splices each list element into the pattern as text and then evaluates it, so element
 text containing softcode executes.<br>
-**SharpMUSH** binds `##` to the iteration register (equivalent to `%iL`) and `#@` to its position
-(equivalent to `inum(L)`), and does not re-evaluate element text.<br>
+**SharpMUSH** reads `##` as the element and `#@` as its position, from the outermost `iter()` or
+`@dolist` they are written in, and does not re-evaluate element text. Inside `lit()` or after `\`
+they stay `##` and `#@`, where PennMUSH has already spliced the value.<br>
 **Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can
 influence becomes executable.<br>
 **Workaround.** Use `u()` or an explicit evaluation where you meant to run the element.
