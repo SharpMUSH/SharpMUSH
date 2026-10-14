@@ -952,6 +952,7 @@ public partial class Commands
 			if (!hasNoBreak && targets.Length > 1)
 			{
 				var texts = new List<string>(targets.Length);
+				DBAttribute? evaluation = null;
 
 				foreach (var parts in targets.Select(target => target.Split('/', 2)))
 				{
@@ -961,7 +962,7 @@ public partial class Commands
 						return new CallState(ErrorMessages.Returns.InvalidPath);
 					}
 
-					var (error, _, text) = await ReadTarget(parts[0], parts[1]);
+					var (error, _, text, included) = await ReadTarget(parts[0], parts[1]);
 					if (error is not null)
 					{
 						return error;
@@ -973,6 +974,7 @@ public partial class Commands
 					}
 
 					texts.Add(text);
+					evaluation ??= included;
 				}
 
 				if (texts.Count == 0)
@@ -986,7 +988,12 @@ public partial class Commands
 				var chainPropagation = new BreakPropagation { PreserveNext = true };
 				lastResult = await parser.With(
 					state => state with
-					{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = chainPropagation },
+					{
+						EnvironmentRegisters = envArgs,
+						Caller = state.Executor,
+						BreakPropagation = chainPropagation,
+						CurrentEvaluation = evaluation
+					},
 					p => p.CommandListParse(MarkupText.Plain(combined))) ?? CallState.Empty;
 
 				RaiseBreakForCaller(chainPropagation);
@@ -1005,7 +1012,7 @@ public partial class Commands
 					return new CallState(ErrorMessages.Returns.InvalidPath) { HadErrors = lastResult.HadErrors };
 				}
 
-				var (error, attribute, text) = await ReadTarget(parts[0], parts[1]);
+				var (error, attribute, text, included) = await ReadTarget(parts[0], parts[1]);
 				if (error is not null)
 				{
 					return error with { HadErrors = error.HadErrors || lastResult.HadErrors };
@@ -1016,7 +1023,7 @@ public partial class Commands
 					continue;
 				}
 
-				var result = await RunOne(attribute!, text);
+				var result = await RunOne(attribute!, text, included!);
 				lastResult = result with { HadErrors = result.HadErrors || lastResult.HadErrors };
 			}
 
@@ -1029,8 +1036,9 @@ public partial class Commands
 		}
 
 		// Locate -> read -> strip $/^ prefix. Returns a (notified) error CallState on a hard failure;
-		// Text=null for an empty attribute (already notified); otherwise the attribute and its stripped text.
-		async ValueTask<(CallState? Error, SharpAttribute? Attribute, string? Text)> ReadTarget(string objectName, string attributeName)
+		// Text=null for an empty attribute (already notified); otherwise the attribute, its stripped text and
+		// the evaluation it runs as.
+		async ValueTask<(CallState? Error, SharpAttribute? Attribute, string? Text, DBAttribute? Evaluation)> ReadTarget(string objectName, string attributeName)
 		{
 			// Locate + read AS THE EXECUTOR (looker=executor, perm=executor): @include runs as the executor,
 			// mirroring u()/$-command dispatch -- NOT the enactor (which broke remote $-command triggers on
@@ -1039,11 +1047,11 @@ public partial class Commands
 				parser, executor, executor, objectName, LocateFlags.All) switch
 			{
 				AnySharpObject targetObject => await ReadTargetAttribute(targetObject, attributeName),
-				Error<CallState> error => (error.Value, null, null)
+				Error<CallState> error => (error.Value, null, null, null)
 			};
 		}
 
-		async ValueTask<(CallState? Error, SharpAttribute? Attribute, string? Text)> ReadTargetAttribute(
+		async ValueTask<(CallState? Error, SharpAttribute? Attribute, string? Text, DBAttribute? Evaluation)> ReadTargetAttribute(
 			AnySharpObject targetObject, string attributeName)
 		{
 			// queue_include_attribute reads with noparent 0 (cque.c:712-717): parents and the type
@@ -1055,13 +1063,13 @@ public partial class Commands
 			{
 				// Surface the real error (e.g. a permission failure) instead of masking it as "no such attribute".
 				await NotifyService.Notify(executor, attributeError.Value, executor);
-				return (new CallState(attributeError.Value), null, null);
+				return (new CallState(attributeError.Value), null, null, null);
 			}
 
 			if (attributeResult is not SharpAttribute[] attributeChain)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, attributeName);
-				return (null, null, null);
+				return (null, null, null, null);
 			}
 
 			var attribute = attributeChain.Last();
@@ -1077,17 +1085,24 @@ public partial class Commands
 				}
 			}
 
-			return (null, attribute, attributeText);
+			// A new evaluation, as queue_include_attribute's PE_REGS_NEWATTR (cque.c): the caller's regexp
+			// captures, ## and #@ stay out of sight of the included actions.
+			return (null, attribute, attributeText, new DBAttribute(targetObject.Object().DBRef, attribute.LongName));
 		}
 
 		// Execute one already-read target in-place with the shared env args, containing an @break when /nobreak.
-		async ValueTask<CallState> RunOne(SharpAttribute attribute, string text)
+		async ValueTask<CallState> RunOne(SharpAttribute attribute, string text, DBAttribute evaluation)
 		{
 			var propagation = new BreakPropagation { PreserveNext = true };
 
 			var execResult = await parser.With(
 				state => state with
-				{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = propagation },
+				{
+					EnvironmentRegisters = envArgs,
+					Caller = state.Executor,
+					BreakPropagation = propagation,
+					CurrentEvaluation = evaluation
+				},
 				p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MarkupText.Plain(text))));
 
 			RaiseBreakForCaller(propagation);
