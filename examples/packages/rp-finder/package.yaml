@@ -734,9 +734,9 @@ objects:
       HELP`RP: |-
         The RP finder helps you find someone to play with.
 
-        - `+lfrp` says what you are looking for, and lists who else is looking. See \[lfrp\].
-        - `+call/post` puts up an open call anyone may answer, and `+calls` lists them. See \[calls\].
-        - `+watch` tells you when the people you follow connect. See \[watch\].
+        - `+lfrp` says what you are looking for, and lists who else is looking. `+help lfrp` has more.
+        - `+call/post` puts up an open call anyone may answer, and `+calls` lists them. `+help calls` has more.
+        - `+watch` tells you when the people you follow connect. `+help watch` has more.
       HELP`RP`STAFF: |-
         Staff with the `softcode.rp_finder.moderate` permission, which the `rp-moderator` role allows, look after the finder:
 
