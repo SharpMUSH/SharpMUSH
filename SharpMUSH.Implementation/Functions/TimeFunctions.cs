@@ -927,13 +927,30 @@ public partial class Functions
 		}
 
 		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+			? tzArg.Message.ToPlainText()
+			: string.Empty;
 
-		// Format: Ddd MMM DD HH:MM:SS YYYY, as time() and LASTLOGOUT write it, in the server's time zone.
-		if (DateTimeOffset.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
-			DateTimeStyles.AssumeLocal, out var pennTime))
+		// Format: Ddd MMM DD HH:MM:SS YYYY, as time() and LASTLOGOUT write it, read in the given time zone
+		// (the server's when none is given).
+		if (DateTime.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
+			DateTimeStyles.None, out var pennTime))
 		{
+			var zone = timezone switch
+			{
+				"" => TimeZoneInfo.Local,
+				_ when timezone.Equals("utc", StringComparison.OrdinalIgnoreCase) => TimeZoneInfo.Utc,
+				_ => TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var named) ? named : null
+			};
+
+			if (zone is null)
+			{
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
+			}
+
+			var instant = new DateTimeOffset(pennTime, zone.GetUtcOffset(pennTime));
 			return ValueTask.FromResult<CallState>(
-				TimePrecisions.Format(pennTime.ToUnixTimeMilliseconds(), precision));
+				TimePrecisions.Format(instant.ToUnixTimeMilliseconds(), precision));
 		}
 
 		if (!DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var dateTime))

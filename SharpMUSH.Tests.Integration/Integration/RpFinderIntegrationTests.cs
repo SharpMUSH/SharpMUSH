@@ -256,19 +256,22 @@ public class RpFinderIntegrationTests
 			await Assert.That(Heard(cy, $"{ann.Name} has disconnected.")).Count().IsEqualTo(1);
 			await God($"@unlock/page #{ann.DbRef.Number}");
 
-			// Hidden from watchers, or DARK, Ann is not announced.
-			ann = await Connect(ann);
-			await Assert.That(await As(ann, "+watch/hide")).Contains("Nobody hears when you connect or leave");
-			await Disconnect(ann);
+			// Hidden from watchers, or DARK, Ann is not announced; nor is her leaving once she hides.
 			await God($"&WATCH`{annKey}`SAID {Store}=1");
 			ann = await Connect(ann);
-			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(1);
+			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(2);
+			await Assert.That(await As(ann, "+watch/hide")).Contains("Nobody hears when you connect or leave");
+			await Disconnect(ann);
+			await Assert.That(Heard(bo, $"{ann.Name} has disconnected.")).Count().IsEqualTo(2);
+			await God($"&WATCH`{annKey}`SAID {Store}=1");
+			ann = await Connect(ann);
+			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(2);
 			await Assert.That(await As(bo, "+watch")).Contains("Nobody you watch is on.");
 			await As(ann, "+watch/unhide");
 			await Disconnect(ann);
 			await God($"@set #{ann.DbRef.Number}=DARK");
 			ann = await Connect(ann);
-			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(1);
+			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(2);
 			await God($"@set #{ann.DbRef.Number}=!DARK");
 
 			// At login, a player hears who of those they watch is on.
@@ -279,6 +282,17 @@ public class RpFinderIntegrationTests
 			await Assert.That(await As(cy, $"+friend/delete {ann.Name}")).Contains($"You no longer watch {ann.Name}.");
 			await Assert.That(await As(cy, $"+watch/del {ann.Name}")).Contains($"You do not watch {ann.Name}.");
 			await Assert.That(await As(ann, "+watch/watchers")).Contains("1 watching").And.DoesNotContain(cy.Name);
+
+			// A connect nobody hears does not count: the leaving after it is not announced, and the next connect is.
+			await Disconnect(ann);
+			await As(bo, "+watch/mute");
+			await God($"&WATCH`{annKey}`SAID {Store}=1");
+			ann = await Connect(ann);
+			await As(bo, "+watch/unmute");
+			await Disconnect(ann);
+			await Assert.That(Heard(bo, $"{ann.Name} has disconnected.")).Count().IsEqualTo(2);
+			ann = await Connect(ann);
+			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(3);
 		}
 		finally
 		{

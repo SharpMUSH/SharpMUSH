@@ -131,6 +131,18 @@ public class NewPennMUSHFunctionTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("1700000000");
 	}
 
+	/// <summary>A named time zone is the one the time string is read in, whatever the server's own.</summary>
+	[Test]
+	[Arguments("convtime(convsecs(1700000000,utc),utc)", "1700000000")]
+	[Arguments("convtime(Tue Nov 14 22:13:20 2023,utc)", "1700000000")]
+	[Arguments("convtime(Tue Nov 14 23:13:20 2023,Europe/Berlin)", "1700000000")]
+	[Arguments("convtime(Tue Nov 14 22:13:20 2023,Nowhere/Atlantis)", ErrorMessages.Returns.InvalidTimezone)]
+	public async Task CONVTIME_ReadsTheTimeInTheGivenZone(string input, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async Task CONVTIME_HandlesInvalidInput()
 	{

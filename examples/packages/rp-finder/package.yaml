@@ -444,14 +444,15 @@ objects:
         flags: [cmdsyntax]
       # Tells %<target>'s watchers that they connected or left (%<event>, connected or disconnected). A
       # connect is announced unless the player is hidden from watchers, DARK, or connected hidden, or had a
-      # connect announced in the last DATA`WATCH`QUIET seconds; a disconnect only when its connect was.
+      # connect announced in the last DATA`WATCH`QUIET seconds, and counts as announced only once someone hears
+      # it. A disconnect is announced only when its connect was and the player has not since hidden or gone DARK.
       INC`WATCH`ANNOUNCE:
         value: |-
-          think setq(watch_key,u(%!/FUN`KEY,%<target>)); @break strmatch(%<event>,disconnected)={@include/args %!/INC`WATCH`ANNOUNCEOFF=target,%<target>,key,%q<watch_key>}; @break get({{store}}/WATCH`%q<watch_key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); @assert gte(sub(secs(),default({{store}}/WATCH`%q<watch_key>`SAID,0)),get(%!/DATA`WATCH`QUIET)); &WATCH`%q<watch_key>`SAID {{store}}=secs(); &WATCH`%q<watch_key>`ANNOUNCED {{store}}=1; think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%q<watch_key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); @pemit/list %q<watch_hearers>=notice(RP,name(%<target>) has connected.)
+          think setq(watch_key,u(%!/FUN`KEY,%<target>)); @break strmatch(%<event>,disconnected)={@include/args %!/INC`WATCH`ANNOUNCEOFF=target,%<target>,key,%q<watch_key>}; @break get({{store}}/WATCH`%q<watch_key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); @assert gte(sub(secs(),default({{store}}/WATCH`%q<watch_key>`SAID,0)),get(%!/DATA`WATCH`QUIET)); think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%q<watch_key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); &WATCH`%q<watch_key>`SAID {{store}}=secs(); &WATCH`%q<watch_key>`ANNOUNCED {{store}}=1; @pemit/list %q<watch_hearers>=notice(RP,name(%<target>) has connected.)
         flags: [cmdsyntax]
       INC`WATCH`ANNOUNCEOFF:
         value: |-
-          @assert get({{store}}/WATCH`%<key>`ANNOUNCED); &WATCH`%<key>`ANNOUNCED {{store}}; think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%<key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); @pemit/list %q<watch_hearers>=notice(RP,name(%<target>) has disconnected.)
+          @assert get({{store}}/WATCH`%<key>`ANNOUNCED); &WATCH`%<key>`ANNOUNCED {{store}}; @break get({{store}}/WATCH`%<key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%<key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); @pemit/list %q<watch_hearers>=notice(RP,name(%<target>) has disconnected.)
         flags: [cmdsyntax]
 
       # ---- connect and disconnect -----------------------------------------------
