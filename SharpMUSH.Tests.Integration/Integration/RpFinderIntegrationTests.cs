@@ -17,7 +17,7 @@ namespace SharpMUSH.Tests.Integration;
 /// <summary>
 /// The bundled rp-finder package, installed from the catalogue with who-where and driven with typed commands:
 /// +lfrp statuses, shown in +who, and the watch list fed by the master room's ACONNECT and ADISCONNECT. Each
-/// test installs both packages and removes them again. Nothing waits on the clock: a status that ran out, or a
+/// test installs rp-finder and removes it again. Nothing waits on the clock: a status that ran out, or a
 /// connect outside the quiet window, is written onto the store. Not in parallel: +lfrp, +watch and +who are
 /// global.
 /// </summary>
@@ -81,15 +81,32 @@ public class RpFinderIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
+	/// <summary>
+	/// A table's text with its spaces, borders and line breaks taken out, so a cell the column wrapped reads
+	/// whole. The shared world's long player names leave the Status column narrow.
+	/// </summary>
+	private static string Unwrapped(string table)
+		=> new(table.Where(c => !char.IsWhiteSpace(c) && c != '|').ToArray());
+
 	/// <summary>The key a player's records are filed under on the store.</summary>
 	private async Task<string> Key(TestIsolationHelpers.TestPlayer player)
 		=> await God($"think edit(objid(#{player.DbRef.Number}),#,,:,_)");
 
+	/// <summary>
+	/// Installs who-where once and leaves it: an uninstalled package's objects wait GOING in the master room
+	/// until the next purge, and their $-commands still answer, so a reinstalled who-where would print +who
+	/// once per install. rp-finder is installed and removed by each test.
+	/// </summary>
 	private async Task InstallAsync()
 	{
-		await ApplyAsync("who-where");
+		var registry = WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
+		if (!(await registry.GetPackageObjectsAsync("who-where")).Any())
+		{
+			await ApplyAsync("who-where");
+		}
+
 		await ApplyAsync("rp-finder");
-		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("rp-finder");
+		var objects = await registry.GetPackageObjectsAsync("rp-finder");
 		Finder = objects.First(o => o.Ref == "finder").Objid;
 		Store = objects.First(o => o.Ref == "store").Objid;
 	}
@@ -115,7 +132,6 @@ public class RpFinderIntegrationTests
 	private async Task UninstallAsync()
 	{
 		await Installer.UninstallAsync("rp-finder", force: true, CancellationToken.None);
-		await Installer.UninstallAsync("who-where", force: true, CancellationToken.None);
 	}
 
 	[Test]
@@ -313,7 +329,8 @@ public class RpFinderIntegrationTests
 			var line = TestIsolationHelpers.GenerateUniqueName("WhLine");
 			await As(ann, $"+lfrp {line}");
 			var who = await As(bo, "+who");
-			await Assert.That(who).Contains("Status").And.Contains(line);
+			await Assert.That(who).Contains("Status");
+			await Assert.That(Unwrapped(who)).Contains(line);
 
 			// A long line is cut to 40 characters.
 			var whoWhere = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("who-where"))
@@ -325,12 +342,12 @@ public class RpFinderIntegrationTests
 
 			// Another package's filter runs after this one, in name order, and gets its status as %0.
 			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}=if(strlen(%0),%[%0%],%0)");
-			await Assert.That(await As(bo, "+who")).Contains($"[{line}");
+			await Assert.That(Unwrapped(await As(bo, "+who"))).Contains($"[{line}");
 			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}");
 
 			// A status that ran out is gone from +who.
 			await God($"&LFRP`{await Key(ann)}`UNTIL {Store}=1");
-			await Assert.That(await As(bo, "+who")).DoesNotContain(line);
+			await Assert.That(Unwrapped(await As(bo, "+who"))).DoesNotContain(line);
 		}
 		finally
 		{
