@@ -42,11 +42,12 @@ think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]
 think [t()] [t(0)] [t(00)] [t(a)] [t(#-1)] [isnum(1.5)] [isint(1.5)] [isdbref(#1)]
 
 ::case sc.itertokens  ## and #@ name the loop they are written in, not one a called attribute runs in (#1827)
+# The inner @dolist is inline: a second queued level reaches the two servers' output in different steps.
 &ITOK me=##:#@
 &ILOOP me=iter(x y,#@:##)
 think [iter(a b,u(me/ITOK))] [iter(a b,u(me/ILOOP))] [iter(a b,iter(x y,#@:##))]
 think [iter(a b,#1 x#)] ##:#@
-@dolist a b=@dolist x y=think nested ##
+@dolist a b=@dolist/inline x y=think nested ##
 ::settle
 &ITOK me
 &ILOOP me
