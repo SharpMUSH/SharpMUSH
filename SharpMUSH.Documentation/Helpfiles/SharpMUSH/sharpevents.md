@@ -208,7 +208,7 @@ To mimic old behaviour:
 - Triggered after an image is added to a character's profile gallery on the web portal. %# is the character who uploaded it, *<objid>* the character whose gallery it is, *<asset>* the stored file's id, *<url>* its site-relative address, and *<use>* one of gallery, avatar or banner: what it was uploaded as.
 
 - **gallery\`report** (*objid*, *asset*, *url*, *reason*, *caption*)
-- Triggered when someone signed in to the web portal reports a gallery image. %# is the reporter's character, *<objid>* the character whose gallery holds the image, *<reason>* what the reporter wrote, and *<caption>* the image's caption, empty when it has none. SharpMUSH keeps no report of its own: the handler decides what one does. The portal offers Report only while the event handler has a GALLERY\`REPORT attribute; the bundled jobs package sets one that files a job. *<reason>* is the reporter's own text, so use it as text and never evaluate it.
+- Triggered when someone signed in to the web portal reports a gallery image. %# is the reporter's character, *<objid>* the character whose gallery holds the image, *<reason>* what the reporter wrote, and *<caption>* the image's caption, empty when it has none. SharpMUSH keeps no report of its own: the handler decides what one does. The portal offers Report only while the event handler has GALLERY\`REPORT or a package's attribute under it; the bundled jobs package sets GALLERY\`REPORT\`JOBS, which files a job. *<reason>* is the reporter's own text, so use it as text and never evaluate it.
 
 ### Example
 ```sharp

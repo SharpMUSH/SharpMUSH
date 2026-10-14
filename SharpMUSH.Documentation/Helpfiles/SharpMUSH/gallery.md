@@ -69,7 +69,7 @@ At the harbour rail
 Two events let the game decide what happens to the gallery's images (see [event gallery]):
 
 - ``GALLERY`ADD`` runs after an image is added. Use it to tell staff about new pictures.
-- ``GALLERY`REPORT`` runs when someone signed in to the portal reports an image. The portal offers Report only while the event handler has a ``GALLERY`REPORT`` attribute. The bundled jobs package sets one that files a job in its Staff bucket.
+- ``GALLERY`REPORT`` runs when someone signed in to the portal reports an image. The portal offers Report only while the event handler has ``GALLERY`REPORT`` or a package's attribute under it. The bundled jobs package sets ``GALLERY`REPORT`JOBS``, which files a job in its Staff bucket.
 
 Example: telling connected wizards about every report.
 ```sharp

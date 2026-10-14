@@ -864,7 +864,7 @@ objects:
       # new run and the old one stops at its next tick.
       TICK: |-
         @assert strmatch(%0,get({{jobs}}/TICK`ID)); @dolist/inline [u({{jobs}}/FUN`DUE`NOW)]={&OVERDUE`FIRED ##=[secs()]; @trigger/args [get(##/BUCKET)]/ON`OVERDUE=0,[get(##/NUM)],2,[get(##/DUE)],job,[get(##/NUM)],due,[get(##/DUE)]; think [setq(_tj,##)][setq(_th,squish(iter(u({{jobs}}/FUN`HLIST,##,HANDLER),if(strmatch(%i0,role:*),,%i0))))][if(strlen(%q<_th>),pemit(%q<_th>,[notice(JOBS,Job [get(%q<_tj>/NUM)] is overdue: [get(%q<_tj>/TITLE)],warn)]))]}; @dolist/inline [u({{jobs}}/FUN`EXPIRED)]={&INDEX`[get(##/NUM)] {{store}}; @tel ##={{jobs}}; @nuke ##}; @wait [get({{jobs}}/DATA`TICK)]=@trigger {{jobs}}/TICK=%0
-      # A report of a profile gallery image, handed on by the event handler's GALLERY`REPORT: files a job
+      # A report of a profile gallery image, handed on by the event handler's GALLERY`REPORT`JOBS: files a job
       # as the reporter in the bucket DATA`GALLERY`BUCKET names. The reason is the reporter's own text and
       # arrives as data, never evaluated.
       GALLERY`REPORT: |-
@@ -1544,14 +1544,15 @@ objects:
       POST`JOBS`ACT: |-
         think [setq(body,%<body>)]; @force {{jobs}}=@include/args/nobreak {{jobs}}/WEB`ACT=viewer,%<viewer>; @respond/type application/json; think %q<out>
 
-  # A report of a profile gallery image, sent from the web portal's image viewer. The portal offers
-  # Report only while the event handler has this attribute. It hands the report to the Jobs object,
+  # A report of a profile gallery image, sent from the web portal's image viewer: jobs' subscription to
+  # the GALLERY`REPORT event, beside any other package's. The portal offers Report only while the event
+  # handler answers that event. It hands the report to the Jobs object,
   # which files it (GALLERY`REPORT there): INC`API`FILE finds the job store through the Jobs object's
   # own references, so it must run as Jobs, not as the handler.
   - ref: gallery_reports
     target: "{{$event_handler}}"
     attributes:
-      GALLERY`REPORT: |-
+      GALLERY`REPORT`JOBS: |-
         @trigger/args {{jobs}}/GALLERY`REPORT=reporter,%#,objid,%<objid>,url,%<url>,caption,%<caption>,reason,%<reason>
 
   # ---- help storage -------------------------------------------------------------------

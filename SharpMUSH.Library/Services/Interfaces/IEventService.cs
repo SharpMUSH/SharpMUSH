@@ -36,8 +36,8 @@ public interface IEventService
 	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args);
 
 	/// <summary>
-	/// Whether the configured event handler has its own attribute named <paramref name="eventName"/>, so a
-	/// trigger would queue something. A surface that only makes sense when the game answers an event (the
+	/// Whether the configured event handler has its own attribute named <paramref name="eventName"/>, or a
+	/// package's child of it (<c>GALLERY`REPORT`JOBS</c>), so a trigger would queue something. A surface that only makes sense when the game answers an event (the
 	/// portal's Report button and <c>GALLERY`REPORT</c>) asks first.
 	/// </summary>
 	ValueTask<bool> HasHandlerAsync(string eventName);

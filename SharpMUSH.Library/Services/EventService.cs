@@ -33,8 +33,18 @@ public class EventService(
 			return false;
 		}
 
-		return await attributeService.GetAttributeAsync(eventHandler, eventHandler, eventName,
-			IAttributeService.AttributeMode.Execute, parent: false) is SharpAttribute[];
+		// A package answers an event with a child named for it (GALLERY`REPORT`JOBS) rather than taking the
+		// event's own attribute. An empty attribute is only the branch its children hang from.
+		if (await attributeService.GetAttributeAsync(eventHandler, eventHandler, eventName,
+					IAttributeService.AttributeMode.Execute, parent: false) is SharpAttribute[] { Length: > 0 } own
+				&& own[^1].Value.Length > 0)
+		{
+			return true;
+		}
+
+		return await attributeService.GetAttributePatternAsync(eventHandler, eventHandler, $"{eventName}`*",
+			checkParents: false, IAttributeService.AttributePatternMode.Wildcard) is SharpAttribute[] children
+			&& children.Any(child => child.Value.Length > 0);
 	}
 
 	/// <inheritdoc />
