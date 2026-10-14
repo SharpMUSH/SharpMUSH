@@ -12,7 +12,9 @@ namespace SharpMUSH.Tests.BUnit.Components.Scenes;
 /// </summary>
 public class SceneCardTests : TrackingBunitContext
 {
-	public SceneCardTests() => CharactersApiFake.Install(this);
+	private readonly CharactersApiFake _api;
+
+	public SceneCardTests() => _api = CharactersApiFake.Install(this).Fake;
 
 	private static SceneSummary Scene(string status = "active", string? title = "Salt Market at Dusk", bool isPublic = true,
 		long? scheduledFor = null) => new(
@@ -72,5 +74,32 @@ public class SceneCardTests : TrackingBunitContext
 		var due = DateTimeOffset.UtcNow.AddDays(3);
 		var cut = Render<SceneCard>(p => p.Add(x => x.Scene, Scene("new", scheduledFor: due.ToUnixTimeMilliseconds())));
 		await Assert.That(cut.Find(".scene-card-meta").TextContent).Contains($"Scheduled for {due.ToLocalTime():MMM d, HH:mm}");
+	}
+
+	[Test]
+	public async Task AScene_ShowsTheDetailsTheGameLists_AsTags()
+	{
+		_api.Extra["/api/scenes/details"] = """
+			{"details":[{"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10},
+			            {"key":"canon","label":"Canon","hint":"","choices":[],"many":true,"listed":false,"order":20},
+			            {"key":"warning","label":"Content warning","hint":"","choices":[],"many":true,"listed":true,"order":30}],
+			 "problems":[]}
+			""";
+		var scene = Scene() with
+		{
+			Meta = new Dictionary<string, string>
+			{
+				["title"] = "Salt Market at Dusk", ["verse"] = "Marvel", ["canon"] = "X-Men", ["warning"] = "Violence|Blood",
+			},
+		};
+
+		var cut = Render<SceneCard>(p => p.Add(x => x.Scene, scene));
+
+		cut.WaitForAssertion(() =>
+		{
+			var tags = cut.FindAll(".scene-card-detail").Select(t => t.TextContent.Trim()).ToList();
+			if (!tags.SequenceEqual(["Marvel", "Violence", "Blood"])) throw new InvalidOperationException(string.Join(",", tags));
+		});
+		await Assert.That(cut.Markup).DoesNotContain("X-Men").Because("canon is not a listed detail");
 	}
 }

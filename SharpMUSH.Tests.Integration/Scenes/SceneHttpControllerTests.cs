@@ -119,6 +119,37 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(dto.Hidden.All(key => dto.Types.Any(t => t.Key == key))).IsTrue();
 	}
 
+	private record SceneDetailDto(string Key, string Label, string Hint, List<string> Choices, bool Many, bool Listed, int Order);
+	private record SceneDetailsDto(List<SceneDetailDto> Details, List<JsonElement> Problems);
+
+	[Test]
+	public async Task GetDetails_ReturnsTheSceneLoggersDetailsInOrder()
+	{
+		var response = await CreateClient().GetAsync("api/scenes/details");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var dto = (await response.Content.ReadFromJsonAsync<SceneDetailsDto>())!;
+		await Assert.That(dto.Details.Take(3).Select(d => d.Key)).IsEquivalentTo(new[] { "verse", "canon", "warning" });
+		var canon = dto.Details.Single(d => d.Key == "canon");
+		await Assert.That(canon.Label).IsEqualTo("Canon");
+		await Assert.That(canon.Many).IsTrue();
+		await Assert.That(canon.Listed).IsFalse();
+	}
+
+	[Test]
+	public async Task ListScenes_Search_FindsASceneByItsDetail()
+	{
+		var verse = $"Verse{Guid.NewGuid():N}";
+		var sceneId = await Eval($"scenecreate(,{God},DetailSearch {Guid.NewGuid():N})");
+		await Eval($"sceneset({sceneId},verse,{verse})");
+
+		var response = await CreateClient().GetAsync($"api/scenes?filter=recent&search={verse}");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var found = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
+		await Assert.That(found!.Select(s => s.GetProperty("id").GetString() ?? "")).IsEquivalentTo(new[] { sceneId });
+	}
+
 	[Test]
 	public async Task GetScene_Unknown_Returns404()
 	{

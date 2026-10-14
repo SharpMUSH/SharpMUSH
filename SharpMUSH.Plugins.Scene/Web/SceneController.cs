@@ -22,6 +22,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
 ///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones
+///   GET /api/scenes/details               — the scene details the game defines, and the ones that did not read
 ///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
@@ -170,7 +171,10 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 			_ => true,
 		};
 
-	/// <summary>The scene's title, pitch or room name holds <paramref name="search"/>, ignoring case.</summary>
+	/// <summary>
+	/// The scene's title, pitch, room name or one of its details holds <paramref name="search"/>, ignoring case, so
+	/// searching for a verse finds the scenes set in it.
+	/// </summary>
 	private static bool MatchesSearch(Contracts.Scene scene, string? search)
 	{
 		if (string.IsNullOrWhiteSpace(search)) return true;
@@ -178,7 +182,8 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		var text = search.Trim();
 		return Holds(scene.RoomName)
 			|| (scene.Meta.TryGetValue("title", out var title) && Holds(title))
-			|| (scene.Meta.TryGetValue("summary", out var pitch) && Holds(pitch));
+			|| (scene.Meta.TryGetValue("summary", out var pitch) && Holds(pitch))
+			|| scene.Meta.Any(m => SceneDetails.Normalize(m.Key) is string && Holds(m.Value));
 
 		bool Holds(string? value) => value?.Contains(text, StringComparison.OrdinalIgnoreCase) == true;
 	}
@@ -196,6 +201,20 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	{
 		var catalogue = await SceneLogger.CatalogueAsync(services);
 		return Ok(new PoseTypesDto(catalogue.Types, catalogue.Problems, await SceneLogger.HiddenForAsync(services, catalogue, CallerRef)));
+	}
+
+	/// <summary>The scene details the game defines, and the <c>DETAIL`</c> attributes that did not read as one.</summary>
+	public record SceneDetailsDto(IReadOnlyList<SceneDetail> Details, IReadOnlyList<SceneDetailProblem> Problems);
+
+	/// <summary>
+	/// The scene details the Scene Logger defines, in order, and the <c>DETAIL`</c> attributes that did not read as
+	/// one. Empty lists when the scene package is not installed; the portal then shows a scene's details by their keys.
+	/// </summary>
+	[HttpGet("details")]
+	public async Task<IActionResult> GetDetails([FromServices] IServiceProvider services)
+	{
+		var catalogue = await SceneLogger.DetailsAsync(services);
+		return Ok(new SceneDetailsDto(catalogue.Details, catalogue.Problems));
 	}
 
 	/// <summary>

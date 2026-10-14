@@ -338,4 +338,25 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-not-found").TextContent).Contains("Scene not found.");
 		await Assert.That(cut.FindAll("a[href='/scenes']").Count).IsEqualTo(1);
 	}
+
+	[Test]
+	public async Task TheScenePage_ListsItsDetails_TheGamesInOrder_ThenAPlayersOwn()
+	{
+		_api.Extra["/api/scenes/details"] = """
+			{"details":[{"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10},
+			            {"key":"canon","label":"Canon","hint":"","choices":[],"many":true,"listed":false,"order":20}],
+			 "problems":[]}
+			""";
+		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", room: "Lower Docks", poses: 2,
+			details: new Dictionary<string, string> { ["era"] = "1980s", ["canon"] = "Marvel|X-Men", ["verse"] = "Marvel 616" });
+
+		var cut = RenderDetail("S1");
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-value"), TimeSpan.FromSeconds(5));
+
+		var facts = cut.Find(".scene-detail-facts");
+		var names = facts.QuerySelectorAll("dt").Select(d => d.TextContent.Trim()).Take(3).ToList();
+		var values = facts.QuerySelectorAll(".scene-detail-value").Select(d => d.TextContent.Trim()).ToList();
+		await Assert.That(names).IsEquivalentTo(new[] { "Verse", "Canon", "Era" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(values).IsEquivalentTo(new[] { "Marvel 616", "Marvel · X-Men", "1980s" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
 }

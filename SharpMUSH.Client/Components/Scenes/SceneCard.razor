@@ -1,4 +1,5 @@
 @inject IStringLocalizer<SharedResource> Loc
+@inject SceneDetailService SceneDetails
 
 @* One scene in a list (/scenes, /scenes/active), after the scene cards in board 30's feed: the title,
    a LIVE tag while it runs (PAUSED while it waits to resume), the pitch's first line, "room · N poses · when"
@@ -19,6 +20,10 @@
             @if (!Scene.IsPublic)
             {
                 <Pill Tag="true" Class="scene-card-private">@Loc["NavScenePrivate"]</Pill>
+            }
+            @foreach (var value in ListedDetails())
+            {
+                <Pill Tag="true" Class="scene-card-detail">@value</Pill>
             }
         </div>
         @if (Pitch is { } pitch)
@@ -54,6 +59,13 @@
     /// <summary>The pitch the owner set with +scene/pitch, or null when there is none.</summary>
     private string? Pitch =>
         Scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch.Trim() : null;
+
+    /// <summary>The scene's values for the details the game shows on cards (<c>listed</c>), such as its verse.</summary>
+    private IEnumerable<string> ListedDetails() =>
+        SceneDetails.Catalogue.Of(Scene).Where(d => d.Detail.Listed).SelectMany(d => d.Values);
+
+    /// <summary>Reads the detail catalogue once for every card; a card drawn before it answers shows none.</summary>
+    protected override async Task OnInitializedAsync() => await SceneDetails.LoadAsync();
 
     /// <summary>A scene that has not begun: it has a time to come and nothing recorded yet.</summary>
     private bool Upcoming => !Scene.IsLive && Scene.PoseCount == 0 && Scene.ScheduledForUtc is { } due && due > DateTimeOffset.UtcNow;
