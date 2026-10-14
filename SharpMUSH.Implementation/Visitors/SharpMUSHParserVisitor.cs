@@ -1095,6 +1095,28 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	}
 
 	/// <summary>
+	/// <c>##</c> or <c>#@</c>: the element or position, counting from 1, of the outermost <c>iter()</c> or
+	/// <c>@dolist</c> this evaluation started. PennMUSH splices both into a loop's text before evaluating it, so
+	/// the outermost loop takes every one written inside it, a nested loop's included, and never one in the code
+	/// of an attribute the loop calls. With no such loop, or in a pass that does not evaluate, it is text.
+	/// </summary>
+	public override ValueTask<CallState?> VisitIterationToken([NotNull] IterationTokenContext context)
+	{
+		var state = parser.CurrentState;
+		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval
+				|| state.IterationRegisters.LastOrDefault(frame => frame.Spliced
+					&& ReferenceEquals(frame.Evaluation, state.CurrentEvaluation)) is not { } loop)
+		{
+			return ValueTask.FromResult<CallState?>(new CallState(GetContextText(context), context.Depth()));
+		}
+
+		EvaluationRestrictions.DemandSubstitution(context.GetText(), state.Restrictions);
+		return ValueTask.FromResult<CallState?>(context.ITER_ELEMENT() is not null
+			? new CallState(loop.Value, context.Depth())
+			: new CallState(loop.Iteration.ToString(), context.Depth()));
+	}
+
+	/// <summary>
 	/// Decodes <c>\x</c> to <c>x</c> — but only in an evaluating pass. A NoParse/NoEval pass keeps the
 	/// backslash, exactly as it keeps <c>%#</c> and <c>[fn()]</c> raw: its text is either shown or stored
 	/// as written (<c>]think</c>, <c>/noeval</c>, <c>&amp;</c>) or evaluated later, and that later

@@ -69,6 +69,41 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// ## and #@ are text where no loop reads them: outside any loop, unevaluated, escaped, and a '#' that
+	/// starts neither (a dbref, a '#' at the end).
+	/// </summary>
+	[Test]
+	[Arguments("##:#@", "##:#@")]
+	[Arguments("iter(a b,lit(##:#@))", "##:#@ ##:#@")]
+	[Arguments("iter(a b,\\##)", "## ##")]
+	[Arguments("iter(a b,#1 #-1 x#)", "#1 #-1 x# #1 #-1 x#")]
+	[Arguments("iter(a b,strlen(#))", "1 1")]
+	public async Task IterationTokensAsText(string function, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// ## and #@ belong to the loop they are written in: an attribute the pattern calls keeps them as text,
+	/// unless it runs a loop of its own, as PennMUSH splices only the pattern's own text.
+	/// </summary>
+	[Test]
+	public async Task IterationTokensStayInTheirOwnAttribute()
+	{
+		var objNum = await CreateObjectWithAttribute("iteration_tokens_obj", "SHOW", "##:#@");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LOOP #{objNum}=iter(x y,#@:##)"));
+
+		async Task Check(string fn, string exp) =>
+			await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain(fn))).ToString()).IsEqualTo(exp);
+
+		await Check($"iter(a b,u(#{objNum}/SHOW))", "##:#@ ##:#@");
+		await Check($"iter(a b,u(#{objNum}/LOOP))", "1:x 2:y 1:x 2:y");
+		await Check($"iter(a b,##[u(#{objNum}/SHOW)])", "a##:#@ b##:#@");
+		await Check("iter(a b,ulambda(lit(#lambda/##)))", "a b");
+	}
+
 	[Test]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak()],|,-)", "2")]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2-3-4")]

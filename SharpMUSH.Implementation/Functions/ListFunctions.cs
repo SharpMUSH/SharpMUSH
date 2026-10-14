@@ -440,11 +440,13 @@ public partial class Functions
 		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
-		{ Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0 };
+		{
+			Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0,
+			Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
+		};
 		var result = new List<MString>();
 
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var modifiedPattern = IterationTokens.Rewrite(patternArg.Message);
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
@@ -452,9 +454,7 @@ public partial class Functions
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
-			var parsed = modifiedPattern != null
-				? errors.Record(await parser.FunctionParse(modifiedPattern))
-				: errors.Record(await patternArg.GetParsedResultAsync());
+			var parsed = errors.Record(await patternArg.GetParsedResultAsync());
 			result.Add(parsed!);
 
 			if (wrappedIteration.Break)

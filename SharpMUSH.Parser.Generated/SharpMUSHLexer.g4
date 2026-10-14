@@ -31,8 +31,15 @@ REGEXP_STARTCARET: '$<';
 // Any other '$' is text. OTHER stops at every '$' so that it cannot swallow a following $0.
 DOLLAR: '$';
 
+// ## and #@: an iter() or @dolist element and its position, and text anywhere else. A '#' that does
+// not start one stays inside OTHER, so a dbref in text does not break the run; HASH is a '#' that
+// OTHER cannot take (one at the end, or before a special character).
+ITER_ELEMENT: '##';
+ITER_POSITION: '#@';
+HASH: '#';
+
 // Greedy way of grabbing non-special characters which the parser does not care about, and can thus fast-forward through.
-OTHER: ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' | '$' )+;
+OTHER: ( ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' | '$' | '#' ) | '#' ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' | '$' | '#' | '@' ) )+;
 
 // --------------- SUBSTITUTION MODE -------------
 mode SUBSTITUTION;

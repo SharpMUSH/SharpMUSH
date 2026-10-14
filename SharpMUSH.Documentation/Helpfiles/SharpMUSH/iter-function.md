@@ -25,9 +25,11 @@
 
 For each word in `<list>`, iter() evaluates `<pattern>` once, and returns a list of the results of those evaluations. Words in `<list>` are separated by `<delimiter>`, if given, and spaces if not. Words in the resulting list are separated by the given `<ouput separator>`, or a space if no output separator is given.
 
-In `<pattern>`, the string "##" stands for the current word and "#@" for its position in `<list>`, counting from 1. They read the same values as %iL and inum(L), and the word is never evaluated as code, so ## is safe on user input. See [compatibility parser in iter is data not code].
+In `<pattern>`, "##" stands for the current word and "#@" for its position in `<list>`, counting from 1. The word is never evaluated as code, so ## is safe on user input. See [compatibility parser in iter is data not code].
 
 If you nest iter()s, ## and #@ refer to the first/outermost iter(). For the current iter(), use %i0 or itext(0), and inum(0). The ilev() function can be used to get the current iter() nesting level.
+
+"##" and "#@" count only where they are written in the iter() itself. In the code of an attribute the pattern calls, such as u(), they are plain text unless that code runs an iter() of its own. They are also plain text outside any iter() or @dolist, and inside lit() or after \.
 
 parse() is an alias for iter().
 

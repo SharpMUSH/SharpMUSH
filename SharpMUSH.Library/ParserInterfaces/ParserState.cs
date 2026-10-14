@@ -205,6 +205,20 @@ public class IterationWrapper<T>
 	/// NoBreak indicator is to ensure that a CommandListBreak does not also break the Iteration.
 	/// </summary>
 	public required bool NoBreak { get; set; }
+
+	/// <summary>
+	/// Whether <c>##</c> and <c>#@</c> read this iteration: true for <c>iter()</c> and <c>@dolist</c>, which
+	/// PennMUSH splices them into, and false for the rest, whose code reads it only through <c>itext()</c>
+	/// and <c>inum()</c>.
+	/// </summary>
+	public bool Spliced { get; init; }
+
+	/// <summary>
+	/// The attribute being evaluated when the iteration started, compared by reference: <c>##</c> and
+	/// <c>#@</c> read it only from code of that same evaluation, as PennMUSH splices only the text written in
+	/// the loop, never the code of an attribute it calls.
+	/// </summary>
+	public DBAttribute? Evaluation { get; init; }
 }
 
 /// <summary>
@@ -685,7 +699,9 @@ public partial record ParserState
 				Value = frame.Value,
 				Iteration = frame.Iteration,
 				Break = frame.Break,
-				NoBreak = frame.NoBreak
+				NoBreak = frame.NoBreak,
+				Spliced = frame.Spliced,
+				Evaluation = frame.Evaluation
 			})),
 			RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
 				? owned.Clone()

@@ -350,6 +350,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.IRegexpCaptureContext
 				=> SemanticTokenType.Register,
 
+			// ## and #@ read the loop's element and position.
+			SharpMUSHParser.IterationTokenContext
+				=> SemanticTokenType.Substitution,
+
 			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,

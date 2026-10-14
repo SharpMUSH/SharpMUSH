@@ -261,7 +261,6 @@ public partial class Commands
 
 		var list = listText.Split(delimiter);
 		var command = parser.CurrentState.Arguments["1"].Message;
-		command = IterationTokens.Rewrite(command) ?? command;
 
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
 
@@ -269,7 +268,10 @@ public partial class Commands
 		{
 			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
 			var wrappedIteration = new IterationWrapper<MString>
-			{ Value = MarkupText.Empty, Break = false, NoBreak = noBreak, Iteration = 0 };
+			{
+				Value = MarkupText.Empty, Break = false, NoBreak = noBreak, Iteration = 0,
+				Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
+			};
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
 			var lastCallState = CallState.Empty;
@@ -321,10 +323,24 @@ public partial class Commands
 					Value = item!,
 					Break = false,
 					NoBreak = noBreak,
-					Iteration = iteration
+					Iteration = iteration,
+					Spliced = true,
+					Evaluation = parser.CurrentState.CurrentEvaluation
 				};
 
-				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>();
+				// The loops this one runs inside stay visible, as they do inline: a ## written in an outer
+				// @dolist reads the outer element, as PennMUSH's splice gives it. Copies, since an inline
+				// outer loop moves on before this action runs.
+				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>(
+					parser.CurrentState.IterationRegisters.Reverse().Select(frame => new IterationWrapper<MString>
+					{
+						Value = frame.Value,
+						Iteration = frame.Iteration,
+						Break = frame.Break,
+						NoBreak = frame.NoBreak,
+						Spliced = frame.Spliced,
+						Evaluation = frame.Evaluation
+					}));
 				iterationStack.Push(iterationWrapper);
 
 				var stateForIteration = parser.CurrentState with
