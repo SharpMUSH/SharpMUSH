@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
@@ -172,7 +173,7 @@ public class GalleryController(
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
 		var added = normalized.First(e => e.AssetId == asset.Id);
-		await events.TriggerEventAsync("GALLERY`ADD", User.GetActingCharacter(),
+		await events.TriggerEventAsync(SharpEvents.GalleryAdd, User.GetActingCharacter(),
 			character.Object().DBRef.ToString(), asset.Id, added.Url, role.ToString().ToLowerInvariant());
 		return Ok(normalized);
 	}
@@ -249,9 +250,7 @@ public class GalleryController(
 	/// </summary>
 	[HttpGet("~/api/gallery/reports")]
 	[AllowAnonymous]
-	public async Task<GalleryReporting> Reporting() => new(await events.HasHandlerAsync(ReportEvent));
-
-	private const string ReportEvent = "GALLERY`REPORT";
+	public async Task<GalleryReporting> Reporting() => new(await events.HasHandlerAsync(SharpEvents.GalleryReport));
 
 	/// <summary>
 	/// Reports an image to the game's staff: fires <c>GALLERY`REPORT</c> with the reporter's character as
@@ -274,10 +273,10 @@ public class GalleryController(
 			return NotFound();
 		if ((await ReadGalleryAsync(character)).FirstOrDefault(e => e.AssetId == assetId) is not { } entry)
 			return NotFound();
-		if (!await events.HasHandlerAsync(ReportEvent))
+		if (!await events.HasHandlerAsync(SharpEvents.GalleryReport))
 			return StatusCode(StatusCodes.Status501NotImplemented, new ApiErrorDto("This game does not take reports of images."));
 
-		await events.TriggerEventAsync(ReportEvent, reporter.Object().DBRef,
+		await events.TriggerEventAsync(SharpEvents.GalleryReport, reporter.Object().DBRef,
 			character.Object().DBRef.ToString(), entry.AssetId, entry.Url, reason, entry.Caption ?? "");
 		logger.LogInformation("Gallery image reported on {Character}: asset={Asset} by={Reporter}",
 			LogSanitizer.Sanitize(name), entry.AssetId, reporter.Object().DBRef);
