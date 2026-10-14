@@ -47,19 +47,18 @@ public sealed record SceneDetailCatalogue(IReadOnlyList<SceneDetailInfo> Details
 	/// </summary>
 	public IReadOnlyList<(SceneDetailInfo Detail, IReadOnlyList<string> Values)> Of(SceneSummary scene)
 	{
-		var shown = new List<(SceneDetailInfo, IReadOnlyList<string>)>();
-		foreach (var detail in Details.Where(d => scene.Meta.ContainsKey(d.Key)))
-		{
-			if (detail.Values(scene.Meta[detail.Key]) is { Count: > 0 } values) shown.Add((detail, values));
-		}
+		var catalogued = Details
+			.Where(d => scene.Meta.ContainsKey(d.Key))
+			.Select(d => (Detail: d, Values: d.Values(scene.Meta[d.Key])))
+			.Where(d => d.Values.Count > 0);
 
 		var listed = Details.Select(d => d.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-		foreach (var (key, value) in scene.Meta.OrderBy(m => m.Key, StringComparer.Ordinal))
-		{
-			if (listed.Contains(key) || SceneDetailInfo.NotDetails.Contains(key) || string.IsNullOrWhiteSpace(value)) continue;
-			var unlisted = SceneDetailInfo.Unlisted(key);
-			shown.Add((unlisted, unlisted.Values(value)));
-		}
-		return shown;
+		var unlisted = scene.Meta
+			.Where(m => !listed.Contains(m.Key) && !SceneDetailInfo.NotDetails.Contains(m.Key) && !string.IsNullOrWhiteSpace(m.Value))
+			.OrderBy(m => m.Key, StringComparer.Ordinal)
+			.Select(m => (Detail: SceneDetailInfo.Unlisted(m.Key), m.Value))
+			.Select(d => (d.Detail, Values: d.Detail.Values(d.Value)));
+
+		return [.. catalogued, .. unlisted];
 	}
 }
