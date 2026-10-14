@@ -4,8 +4,8 @@ using SharpMUSH.Library.Models.Portal;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// The scene details the game defines (<c>GET api/scenes/details</c>), read once and kept: what each is called, what
-/// goes in it and whether scene cards show it. A scene's values are in its <c>Meta</c>; owners set them with
+/// The scene details the game defines (<c>GET api/scenes/details</c>), kept between reads: what each is called, what
+/// goes in it and whether scene cards show it. Cards read the kept copy; a scene's page reads it again. A scene's values are in its <c>Meta</c>; owners set them with
 /// <c>+scene/set</c>, and staff change the catalogue with <c>+scene/detail/add|set|remove</c>.
 /// </summary>
 /// <remarks>A game without the scene package answers empty lists, and a scene's details then show by their keys.</remarks>
@@ -20,10 +20,13 @@ public class SceneDetailService(IHttpClientFactory httpClientFactory)
 
 	private bool _loaded;
 
-	/// <summary>The catalogue, read from the server the first time and kept after. A failed read keeps what was there.</summary>
-	public async Task<SceneDetailCatalogue> LoadAsync()
+	/// <summary>
+	/// The catalogue, read from the server the first time and kept after; <paramref name="refresh"/> reads it again, so
+	/// staff changes made with <c>+scene/detail</c> show without reloading the portal. A failed read keeps what was there.
+	/// </summary>
+	public async Task<SceneDetailCatalogue> LoadAsync(bool refresh = false)
 	{
-		if (_loaded) return Catalogue;
+		if (_loaded && !refresh) return Catalogue;
 
 		if (await _flight.RunAsync("", FetchAsync) is SceneDetailCatalogue catalogue)
 		{

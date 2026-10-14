@@ -424,8 +424,8 @@
         _pausing = false;
         _actionError = null;
 
-        // The detail catalogue goes out beside the scene: the header names its details with it.
-        var details = SceneDetails.LoadAsync();
+        // The detail catalogue goes out beside the scene, read again so staff changes show: the header names its details with it.
+        var details = SceneDetails.LoadAsync(refresh: true);
         var found = await SceneService.GetSceneAsync(Id);
         await details;
         if (!_reload.IsCurrent(ticket)) return;

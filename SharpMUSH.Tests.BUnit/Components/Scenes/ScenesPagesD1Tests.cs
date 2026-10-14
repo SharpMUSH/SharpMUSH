@@ -359,4 +359,26 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(names).IsEquivalentTo(new[] { "Verse", "Canon", "Era" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(values).IsEquivalentTo(new[] { "Marvel 616", "Marvel · X-Men", "1980s" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
+
+	[Test]
+	public async Task TheScenePage_ReadsTheDetailsAgain_SoAStaffChangeShowsWithoutAReload()
+	{
+		const string Catalogue = """
+			{"details":[{"key":"verse","label":"LABEL","hint":"","choices":[],"many":false,"listed":true,"order":10}],"problems":[]}
+			""";
+		_api.Extra["/api/scenes/details"] = Catalogue.Replace("LABEL", "Verse");
+		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", room: "Lower Docks", poses: 2,
+			details: new Dictionary<string, string> { ["verse"] = "Marvel 616" });
+
+		var first = RenderDetail("S1");
+		first.WaitForAssertion(() => first.Find(".scene-detail-value"), TimeSpan.FromSeconds(5));
+		await Assert.That(first.Find(".scene-detail-facts dt").TextContent.Trim()).IsEqualTo("Verse");
+		first.Dispose();
+
+		_api.Extra["/api/scenes/details"] = Catalogue.Replace("LABEL", "Setting");
+		var second = Render<SceneDetail>(p => p.Add(c => c.Id, "S1"));
+		second.WaitForState(() => second.FindAll(".scene-detail-facts dt").Any(d => d.TextContent.Trim() == "Setting"),
+			TimeSpan.FromSeconds(5));
+		await Assert.That(second.Find(".scene-detail-facts dt").TextContent.Trim()).IsEqualTo("Setting");
+	}
 }
