@@ -412,6 +412,23 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string JsonFillJsonFormat = "#-1 VALUE FOR {0} MUST BE JSON";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollSyntaxErrorFormat = "#-1 ROLL SYNTAX ERROR AT CHARACTER {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollNoSuchVariableFormat = "#-1 NO SUCH ROLL VARIABLE: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollVariableNotANumberFormat = "#-1 ROLL VARIABLE {0} IS NOT A NUMBER OR FORMULA";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollCircularVariableFormat = "#-1 ROLL VARIABLE {0} REFERS TO ITSELF";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollUnknownFunctionFormat = "#-1 NO SUCH ROLL FUNCTION: {0}";
+		public const string RollVariablesTooDeep = "#-1 ROLL VARIABLES NESTED TOO DEEPLY";
+		public const string RollTooManyDice = "#-1 TOO MANY DICE";
+		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
+		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
+		public const string RollInvalidJson = "#-1 INVALID JSON";
+		public const string RollOutputMode = "#-1 ROLL OUTPUT MUST BE TOTAL, TEXT, JSON, MIN OR MAX";
+		public const string RollDataMustBeObject = "#-1 ROLL DATA MUST BE A JSON OBJECT OR AN OBJECT";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DuplicateKeysFormat = "#-1 DUPLICATE KEYS: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MarkdownRenderErrorFormat = "#-1 ERROR RENDERING MARKDOWN: {0}";
