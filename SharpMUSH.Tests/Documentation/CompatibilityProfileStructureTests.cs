@@ -58,6 +58,10 @@ public class CompatibilityProfileStructureTests
 		["A command that crashes says so"] = "a crash is a defect, fixed once found, so none is kept to show it",
 		["`@config/set` is stored"] = "shows only after a restart; the parity harness starts each server once",
 		["A `MAILFILTER` that mails its owner does not recurse"] = "PennMUSH's side crashes the server",
+		["log\\`huh is never raised"] = "an event that is never raised leaves nothing to show",
+		["Signal events are never raised"] = "a signal is sent from outside the game",
+		["player\\`inactivity is never raised"] = "an event that is never raised leaves nothing to show",
+		["http\\`fail is never raised"] = "a malformed request is sent from outside the game",
 	};
 
 	/// <summary>An <c>**Example.**</c> line: the parity case and the scenario file it is in.</summary>

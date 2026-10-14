@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -223,6 +224,7 @@ public partial class ScheduledTaskManagementService(
 	public class UpdatePurgeTimeJob(
 		IExpandedObjectDataService dataService,
 		IObjectDestructionService destructionService,
+		IEventService eventService,
 		IServiceProvider serviceProvider,
 		ILogger<UpdatePurgeTimeJob> logger) : IJob
 	{
@@ -252,6 +254,9 @@ public partial class ScheduledTaskManagementService(
 				var freed = await destructionService.PurgeAsync(parser, context.CancellationToken);
 
 				logger.LogInformation("Purge freed {Freed} object(s); next purge at {Time}", freed, newPurgeTime);
+
+				// PennMUSH spec: db`purge, after the scheduled purge only, never after a manual @purge.
+				await eventService.TriggerEventAsync(SharpEvents.DbPurge, null);
 			}
 			catch (Exception ex)
 			{

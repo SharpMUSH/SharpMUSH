@@ -34,4 +34,10 @@ public interface IEventService
 	/// <param name="enactor">The object that caused the event, or null for system events (which use God, #1)</param>
 	/// <param name="args">Arguments to pass to the event handler as %0, %1, %2, etc.</param>
 	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args);
+
+	/// <summary>
+	/// As <see cref="TriggerEventAsync(string, DBRef?, string[])"/>, with arguments that keep their markup: the
+	/// SharpMUSH events whose catalogue entry gives an argument the markup kind pass it this way.
+	/// </summary>
+	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, IReadOnlyList<MString> args);
 }

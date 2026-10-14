@@ -276,7 +276,7 @@ public partial class Commands
 	/// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
 	/// </summary>
 	private async ValueTask TriggerLoginFailAsync(long handle, string ipAddress, string reason, string playerObjid, string name)
-		=> await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
+		=> await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
 			null, // System event
 			handle.ToString(),
 			ipAddress,
@@ -386,7 +386,7 @@ public partial class Commands
 
 		if (playerDbRef is null)
 		{
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL", null,
+			await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail, null,
 				handle.ToString(), ipAddress, "1",
 				"invalid or expired login token", "#-1", "token");
 			await NotifyService.Notify(handle, "Invalid or expired login token.");
@@ -458,7 +458,7 @@ public partial class Commands
 
 		if (guestPlayers.Count == 0)
 		{
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
 				null,
 				handle.ToString(),
 				ipAddress,
@@ -486,7 +486,7 @@ public partial class Commands
 
 			if (selectedGuest == null)
 			{
-				await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
+				await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
 					null,
 					handle.ToString(),
 					ipAddress,
@@ -516,7 +516,7 @@ public partial class Commands
 
 			if (totalGuestConnections >= maxGuests)
 			{
-				await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
+				await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
 					null,
 					handle.ToString(),
 					ipAddress,
@@ -550,7 +550,7 @@ public partial class Commands
 		if (selectedGuest == null)
 		{
 			// This shouldn't happen, but handle it just in case
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
+			await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
 				null,
 				handle.ToString(),
 				ipAddress,
@@ -686,7 +686,7 @@ public partial class Commands
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
 		var connectionCount = await ConnectionService.Get(playerRef).CountAsync();
-		await EventService.TriggerEventAsync("PLAYER`CONNECT",
+		await EventService.TriggerEventAsync(SharpEvents.PlayerConnect,
 			playerRef,
 			$"#{player.Object.Key}",
 			connectionCount.ToString(),

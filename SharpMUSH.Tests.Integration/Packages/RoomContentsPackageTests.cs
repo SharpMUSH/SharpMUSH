@@ -34,7 +34,7 @@ public class RoomContentsPackageTests(ServerWebAppFactory factory)
 			.Select(m => m.Attribute)
 			.ToList();
 
-		await Assert.That(managed).Contains("ROOM`CONTENTS");
+		await Assert.That(managed).Contains("ROOM`CONTENTS`ROOMCONTENTS");
 		await Assert.That(managed).Contains("FN`WHOROW");
 		await Assert.That(managed).Contains("FN`EXITROW");
 		await Assert.That(managed).Contains("FN`WHOVIS");
@@ -61,7 +61,7 @@ public class RoomContentsPackageTests(ServerWebAppFactory factory)
 			.CurrentValue.Database.EventHandler;
 
 		var managed = await Registry.GetManagedAttributesAsync("room-contents");
-		var handler = managed.Single(m => m.Attribute == "ROOM`CONTENTS");
+		var handler = managed.Single(m => m.Attribute == "ROOM`CONTENTS`ROOMCONTENTS");
 
 		await Assert.That(handler.Objid).StartsWith($"#{configured}:");
 	}

@@ -1,6 +1,6 @@
 format: 1
 package: comm-feed
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — the channels a player may see and which they are on, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
 license: MIT
@@ -11,6 +11,10 @@ requires_server: ">=0.1"
 # Attach mode (decision 20.3): manages four event handlers and their helpers on
 # the existing event_handler object ({{$event_handler}}, #9 by default). Every
 # helper is under FN`COMM` so it cannot collide with room-contents' FN`*.
+#
+# 1.2.0 moves each handler below its event (PAGE`MESSAGE`COMMFEED): the engine
+# runs every attribute one level below an event's own, so another package can
+# hear the same event beside this one (help event).
 #
 # The engine decides who received what; this package never decides it again.
 # CHANNEL`MESSAGE fires after a channel line is delivered and names exactly the
@@ -99,19 +103,19 @@ objects:
       # recipients are the members the line was delivered to. A presence line
       # (a connect or disconnect) is not sent: the portal shows who is on a
       # channel as its member list (comm.who) instead.
-      CHANNEL`MESSAGE: |-
+      CHANNEL`MESSAGE`COMMFEED: |-
         think null(if(strmatch(%<style>,presence),,oob(u(me/FN`COMM`RECIPIENTS,%<recipients>),comm.message,uargs(me/FN`COMM`MESSAGE,kind,channel,channel,%<channel>,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,id,%<id>))))
       # recipients are those the page reached. The pager is sent it too, as
       # their terminal shows them their own page; setunion() keeps a self-page
       # to one copy.
-      PAGE`MESSAGE: |-
+      PAGE`MESSAGE`COMMFEED: |-
         think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
       # viewers are the members whose view of the list changed; cause is
       # connect, disconnect, join, leave or status.
-      CHANNEL`WHO: |-
+      CHANNEL`WHO`COMMFEED: |-
         think null(oob(u(me/FN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
       # objid is the player; cause is connect, resume, join, leave, status,
       # rename or delete; channel is empty on connect and resume. The whole
       # list, to that player.
-      PLAYER`CHANNELS: |-
+      PLAYER`CHANNELS`COMMFEED: |-
         think null(if(u(me/FN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FN`COMM`CHANNELS,%<objid>))))

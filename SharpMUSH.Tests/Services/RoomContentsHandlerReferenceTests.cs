@@ -6,6 +6,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
@@ -73,6 +74,7 @@ public class RoomContentsHandlerReferenceTests
 			Mediator,
 			services.GetRequiredService<IAttributeService>(),
 			new Lazy<ITaskScheduler>(services.GetRequiredService<ITaskScheduler>),
+			new Lazy<IMUSHCodeParser>(services.GetRequiredService<IMUSHCodeParser>),
 			new EventHandlerOverride(services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(), uint.Parse(handler[1..])),
 			NullLogger<EventService>.Instance);
 		await events.TriggerEventAsync(SharpEvents.RoomContents, enactor, room, cause);
@@ -146,7 +148,7 @@ public class RoomContentsHandlerReferenceTests
 		{
 			// Install a simplified handler: record lcon(%0) (all occupants) under the room's number, so
 			// we can verify %0 was the correct room and that lcon sees its contents.
-			await Cmd($"&ROOM`CONTENTS {handler}=&FANOUT_LIST`[after(first(%0,:),#)] {handler}=[lcon(%0)]");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&FANOUT_LIST`[after(first(%0,:),#)] {handler}=[lcon(%0)]");
 
 			// Fire the event via the same service path that movement/connect/disconnect use.
 			// The handler runs with its own permissions; like #9 it is WIZARD, so it has the elevated
@@ -177,7 +179,7 @@ public class RoomContentsHandlerReferenceTests
 		try
 		{
 			// Install a handler that records the occupant COUNT (via words()) for easier assertion.
-			await Cmd($"&ROOM`CONTENTS {handler}=&FANOUT_COUNT`[after(first(%0,:),#)] {handler}=[words(lcon(%0))]");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&FANOUT_COUNT`[after(first(%0,:),#)] {handler}=[words(lcon(%0))]");
 
 			await Trigger(handler, probe.Room, "move-in");
 
@@ -203,7 +205,7 @@ public class RoomContentsHandlerReferenceTests
 		try
 		{
 			// Install a handler that captures %1 (the cause) into LAST_CAUSE.
-			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_CAUSE`[after(first(%0,:),#)] {handler}=%1");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&LAST_CAUSE`[after(first(%0,:),#)] {handler}=%1");
 
 			var cause = "move-in";
 			await Trigger(handler, probe.Room, cause);
@@ -237,7 +239,7 @@ public class RoomContentsHandlerReferenceTests
 			// a live WebSocket the harness lacks, so we capture the built payload instead of sending it.
 			await Cmd($"&FN`NOTEXIT {handler}=not(hastype(%0,exit))");
 			await Cmd($"&FN`V1ROW {handler}=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))");
-			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=json(object,who,json_array(iter(filter({handler}/FN`NOTEXIT,lcon(%0)),u({handler}/FN`V1ROW,itext(0)),%b,|),|))");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=json(object,who,json_array(iter(filter({handler}/FN`NOTEXIT,lcon(%0)),u({handler}/FN`V1ROW,itext(0)),%b,|),|))");
 
 			await Trigger(handler, probe.Room, "move-in");
 
@@ -264,8 +266,8 @@ public class RoomContentsHandlerReferenceTests
 		try
 		{
 			// Install, then immediately clear. Trigger must not set FANOUT_SENTINEL.
-			await Cmd($"&ROOM`CONTENTS {handler}=&FANOUT_SENTINEL`[after(first(%0,:),#)] {handler}=ran");
-			await Cmd($"&ROOM`CONTENTS {handler}=");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&FANOUT_SENTINEL`[after(first(%0,:),#)] {handler}=ran");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=");
 
 			await Trigger(handler, probe.Room, "move-in");
 
@@ -853,12 +855,12 @@ public class RoomContentsHandlerReferenceTests
 			// error ("#-1 ...") or a locate failure ("I can't see that here."). Capture both by
 			// recording what the handler evaluates to — the same body with strcat() for null(), so
 			// every argument still runs and their output is stored — with the send left in place.
-			var shipped = PackageAttributes.Value["ROOM`CONTENTS"];
+			var shipped = PackageAttributes.Value["ROOM`CONTENTS`ROOMCONTENTS"];
 			await Assert.That(shipped).StartsWith("think null(");
 			var body = shipped["think null(".Length..];
 			// Recorded under the fixture room's number.
 			var payload = $"LAST_PAYLOAD`{f.Room[1..]}";
-			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body}");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body}");
 
 			// The causer (God, the test's enactor) is not in the room: two viewers, each sent
 			// room.contents and room.exits (0 deliveries each, no WebSocket), plus room.info to both on
@@ -908,7 +910,7 @@ public class RoomContentsHandlerReferenceTests
 
 			// A room nobody connected is in: the handler finds no viewer and builds nothing. The record also
 			// carries the info<n> register FN`PREPARE fills, so preparing the room's rows anyway shows.
-			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body[..^1]},[r(info[rest(num(%0),#)])])");
+			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body[..^1]},[r(info[rest(num(%0),#)])])");
 			var emptyRoom = $"LAST_PAYLOAD`{f.Dest[1..]}";
 			await Cmd($"&{emptyRoom} {handler}=unset");
 			await Trigger(handler, f.Dest, "move-in");

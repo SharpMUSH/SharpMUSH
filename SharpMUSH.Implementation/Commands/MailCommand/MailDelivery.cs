@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
@@ -32,7 +33,8 @@ public static partial class MailDelivery
 		IAttributeService Attributes,
 		IExpandedObjectDataService ObjectData,
 		IOptionsWrapper<SharpMUSHOptions> Configuration,
-		IConnectionService Connections);
+		IConnectionService Connections,
+		IEventService Events);
 
 	/// <summary>A message on its way to one or more mailboxes.</summary>
 	/// <param name="Body">The text as the sender wrote it, which is what the <c>clear</c> check reads.</param>
@@ -225,6 +227,16 @@ public static partial class MailDelivery
 
 		await services.Notify.Notify(target,
 			$"MAIL: You have a new message ({admission.Number}) from {sender.Object().Name}.", sender);
+
+		// SharpMUSH's own: who received what, so the handler can tell the player elsewhere (push, Discord).
+		await services.Events.TriggerEventAsync(SharpEvents.MailReceived, sender.Object().DBRef,
+			[
+				MarkupText.Plain(target.Object.DBRef.ToString()),
+				MarkupText.Plain(sender.Object().DBRef.ToString()),
+				MarkupText.Plain(admission.Number.ToString()),
+				letter.Subject,
+				MarkupText.Plain(letter.Urgent ? "1" : "0")
+			]);
 
 		// extmail.c:1695 — filter_mail runs on the stored message, so a refused one never filters, and files
 		// it by id rather than by the number, which the filter's own side effects may have moved.

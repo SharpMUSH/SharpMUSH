@@ -158,6 +158,8 @@ public partial class Commands
 	/// <summary>Reports a finished <c>@backup</c> copy and returns its name.</summary>
 	private async ValueTask<Option<CallState>> BackupWrittenAsync(AnySharpObject executor, WorldBackup written)
 	{
+		await EventService.TriggerEventAsync(SharpEvents.BackupComplete, executor.Object().DBRef, written.Name,
+			written.SizeBytes.ToString());
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
 			executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
 		return new CallState(written.Name);
@@ -166,6 +168,7 @@ public partial class Commands
 	/// <summary>Reports why <c>@backup</c> wrote no copy.</summary>
 	private async ValueTask<Option<CallState>> BackupFailedAsync(AnySharpObject executor, string reason)
 	{
+		await EventService.TriggerEventAsync(SharpEvents.BackupError, executor.Object().DBRef, reason);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
 			reason);
 		return new None();
@@ -510,6 +513,17 @@ public partial class Commands
 		{
 			Logger.LogInformation("{LogMessage}", MarkupTextSerializer.Serialize(logMessage));
 		}
+
+		// PennMUSH spec: log`<type> (message). Only @log raises it: the server's own log lines go to Serilog.
+		await EventService.TriggerEventAsync(category switch
+		{
+			"Check" => SharpEvents.LogCheck,
+			"Connection" => SharpEvents.LogConn,
+			"Error" => SharpEvents.LogErr,
+			"Trace" => SharpEvents.LogTrace,
+			"Wizard" => SharpEvents.LogWiz,
+			_ => SharpEvents.LogCmd
+		}, executor.Object().DBRef, logMessage.ToPlainText());
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, category);
 		return CallState.Empty;

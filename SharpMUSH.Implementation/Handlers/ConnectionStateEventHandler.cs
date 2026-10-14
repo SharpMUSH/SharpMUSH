@@ -60,7 +60,7 @@ public class ConnectionStateEventHandler(
 						? ip : "unknown";
 
 					// EventService handles all exception logging, so no try-catch needed here
-					await eventService.TriggerEventAsync("SOCKET`CONNECT",
+					await eventService.TriggerEventAsync(SharpEvents.SocketConnect,
 						null, // System event (no enactor)
 						notification.Handle.ToString(),
 						ipAddress);
@@ -108,7 +108,7 @@ public class ConnectionStateEventHandler(
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
 
-				await eventService.TriggerEventAsync("PLAYER`DISCONNECT",
+				await eventService.TriggerEventAsync(SharpEvents.PlayerDisconnect,
 					notification.PlayerRef.Value, // Enactor is the disconnecting player
 					$"#{notification.PlayerRef.Value.Number}",
 					remainingConnections.ToString(),
@@ -157,7 +157,7 @@ public class ConnectionStateEventHandler(
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
 
 				// EventService handles all exception logging
-				await eventService.TriggerEventAsync("SOCKET`DISCONNECT",
+				await eventService.TriggerEventAsync(SharpEvents.SocketDisconnect,
 					null, // System event (no enactor)
 					notification.Handle.ToString(),
 					ipAddress,

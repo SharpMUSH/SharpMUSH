@@ -473,7 +473,7 @@ public class BackupTests
 		backups.IsSupported.Returns(true);
 		backups.Root.Returns(root);
 		backups.ScheduledInterval.Returns(TimeSpan.Zero);
-		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
+		var schedule = new WorldBackupScheduleService(backups, Substitute.For<IEventService>(), NullLogger<WorldBackupScheduleService>.Instance);
 		try
 		{
 			await schedule.StartAsync(CancellationToken.None);
@@ -506,7 +506,7 @@ public class BackupTests
 				new WorldBackup("20260101-000000-000", Path.Combine(root, "20260101-000000-000"),
 					DateTimeOffset.UnixEpoch, 0));
 		});
-		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
+		var schedule = new WorldBackupScheduleService(backups, Substitute.For<IEventService>(), NullLogger<WorldBackupScheduleService>.Instance);
 		try
 		{
 			await schedule.StartAsync(CancellationToken.None);
@@ -535,7 +535,7 @@ public class BackupTests
 			Interlocked.Increment(ref attempts);
 			return new ValueTask<Result<WorldBackup>>(new Error<string>("disk full"));
 		});
-		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
+		var schedule = new WorldBackupScheduleService(backups, Substitute.For<IEventService>(), NullLogger<WorldBackupScheduleService>.Instance);
 		try
 		{
 			await schedule.StartAsync(CancellationToken.None);

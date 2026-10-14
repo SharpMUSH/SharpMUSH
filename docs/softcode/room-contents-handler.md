@@ -257,7 +257,7 @@ carries a comment per attribute; this is the map.
 &FN`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0),,,%1),u(me/FN`WHOROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FN`EXITVIS,lexits(%0),,,%1)),u(me/FN`EXITROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`INFO #9=json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
-&ROOM`CONTENTS #9=think null(if(setr(viewers,filter(me/FN`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),[setq(info[rest(num(%<room>),#)],u(me/FN`INFOBASE,%<room>))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))],[u(me/FN`PREPARE,%<room>)][iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%<room>,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))])])))
+&ROOM`CONTENTS`ROOMCONTENTS #9=think null(if(setr(viewers,filter(me/FN`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),[setq(info[rest(num(%<room>),#)],u(me/FN`INFOBASE,%<room>))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))],[u(me/FN`PREPARE,%<room>)][iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%<room>,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))])])))
 ```
 
 Reading the main handler:
@@ -288,7 +288,7 @@ Reading the main handler:
 Verify it is set:
 
 ```text
-> get #9/ROOM`CONTENTS
+> get #9/ROOM`CONTENTS`ROOMCONTENTS
 ```
 
 ### Data the rows read
@@ -306,7 +306,7 @@ All of it as **plain text** via `get()`, never evaluated:
 ## Silencing the handler
 
 ```text
-&ROOM`CONTENTS #9=
+&ROOM`CONTENTS`ROOMCONTENTS #9=
 ```
 
 An empty `&` sets the attribute to an empty string, which silences the handler
