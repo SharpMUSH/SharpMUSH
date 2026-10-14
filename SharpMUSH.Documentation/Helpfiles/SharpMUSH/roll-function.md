@@ -182,7 +182,7 @@ json     every term and die, for a program to read<br>
 min      the lowest total the formula can come to<br>
 max      the highest total the formula can come to
 
-`{"output":"text","mode":"max"}` gives the text of the highest roll. min and max leave out explosions and rerolls, so `2d6x` reaches at most 12.
+`{"output":"text","mode":"max"}` gives the text of the highest roll. min and max follow the arithmetic, so the lowest of `1d20-1d4` takes the d20's 1 and the d4's 4. They leave out explosions and rerolls, so `2d6x` reaches at most 12. A formula that could divide by zero has no range. Through abs() and %, min and max are limits the roll may not reach, and the text shows only the number.
 
 In text, each die is marked: `!` exploded, `*` a success, `_` a failure, and a die in round brackets was dropped or rerolled and does not count.
 
@@ -191,6 +191,8 @@ In text, each die is marked: `!` exploded, `*` a success, `_` a failure, and a d
 {"formula":"2d6kh1+1","total":6,"text":"2d6kh1[5, (2)] + 1 = 6","dice":[{"formula":"2d6kh1","faces":6,"total":5,"results":[{"result":5,"active":true},{"result":2,"active":false,"dropped":true}]}]}
 > think roll(4d6kh3,,max)
 18
+> think roll(1d20-1d4,,min)
+-3
 ```
 
 Output: in JSON, `faces` is the number of sides, `F` for fate dice, `C` for coins or `pool`, and `flavor` is a term's label. A result's `active` is false when it does not count, with `dropped` or `rerolled` saying why; `exploded`, `success` and `failure` appear only when true.

@@ -287,6 +287,43 @@ public class DiceRollTests
 	}
 
 	[Test]
+	[Arguments("1d6 - 1d6", "1d6[1] - 1d6[6] = -5", "1d6[6] - 1d6[1] = 5")]
+	[Arguments("10 - 2d6kh1", "10 - 2d6kh1[(6), 6] = 4", "10 - 2d6kh1[(1), 1] = 9")]
+	[Arguments("-1d4 * 3", "-1d4[4] * 3 = -12", "-1d4[1] * 3 = -3")]
+	[Arguments("2 * (1d6 - 4)", "2 * (1d6[1] - 4) = -6", "2 * (1d6[6] - 4) = 4")]
+	[Arguments("1d6 * (1d3 - 2)", "1d6[6] * (1d3[1] - 2) = -6", "1d6[6] * (1d3[3] - 2) = 6")]
+	[Arguments("4d6sf<3", "4d6sf<3[2_, 2_, 2_, 2_] = -8", "4d6sf<3[6, 6, 6, 6] = 24")]
+	[Arguments("3d6cf<2", "3d6cf<2[2, 2, 2] = 0", "3d6cf<2[1_, 1_, 1_] = 3")]
+	[Arguments("2d5even", "2d5even[1, 1] = 0", "2d5even[2*, 2*] = 2")]
+	[Arguments("1d20 - (1d4)d4", "1d20[1] - (1d4)d4[4, 4, 4, 4] = -15", "1d20[20] - (1d4)d4[1] = 19")]
+	[Arguments("{1d20, 15 - 1d6}kh", "{1d20[1], 15 - 1d6[6]}kh[(1), 9] = 9", "{1d20[20], 15 - 1d6[6]}kh[20, (9)] = 20")]
+	[Arguments("abs(1d6 - 1d6)", "0 = 0", "abs(1d6[1] - 1d6[6]) = 5")]
+	[Arguments("1d6 % 4", "0 = 0", "3 = 3")]
+	public async Task MinimizeAndMaximizeFollowTheOperators(string formula, string lowest, string highest)
+	{
+		var low = Rolled(formula, null, DiceRollMode.Minimize, []).Expect<DiceRollResult>();
+		var high = Rolled(formula, null, DiceRollMode.Maximize, []).Expect<DiceRollResult>();
+
+		await Assert.That(low.Text).IsEqualTo(lowest);
+		await Assert.That(high.Text).IsEqualTo(highest);
+	}
+
+	[Test]
+	public async Task ARangeThatCouldDivideByZeroIsRefused()
+	{
+		await Assert.That(Rolled("10 / (1d3 - 2)", null, DiceRollMode.Maximize, []).Expect<Error<string>>().Value)
+			.IsEqualTo(ErrorMessages.Returns.DivisionByZero);
+	}
+
+	[Test]
+	[Arguments("{79228162514264337593543950335, 1}")]
+	[Arguments("round(79228162514264337593543950335)")]
+	public async Task OverflowInAPoolOrFunctionIsOutOfRange(string formula)
+	{
+		await Assert.That(Error(formula)).IsEqualTo(ErrorMessages.Returns.NumberOutOfRange);
+	}
+
+	[Test]
 	[Arguments("2d6kh3+STR", true)]
 	[Arguments("{1d20, 10}kh[luck] + @skills.stealth", true)]
 	[Arguments("2d6+", false)]

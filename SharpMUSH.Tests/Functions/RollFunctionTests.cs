@@ -47,6 +47,8 @@ public class RollFunctionTests
 	[Arguments("roll(2d6x+1dF+2,,min)", "3")]
 	[Arguments("roll(2d6x+1dF+2,,max)", "15")]
 	[Arguments("""roll(4d6kh3,,lit({"mode":"max"}))""", "18")]
+	[Arguments("roll(1d20-1d4,,min)", "-3")]
+	[Arguments("roll(1d20-1d4,,max)", "19")]
 	public async Task MinAndMaxGiveTheRange(string softcode, string expected)
 	{
 		await Assert.That(await Evaluate(softcode)).IsEqualTo(expected);
