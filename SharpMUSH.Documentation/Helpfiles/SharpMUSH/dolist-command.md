@@ -32,7 +32,7 @@ Output: with `/inline` or `/inplace`, the output of the last command run; queued
 
 The %i0 substitution, or the function itext(0), can be used in the `<action list>` to get the current element of the `<list>`, and the inum(0) function returns the position of the current element. ilev() returns the nesting depth of @dolists. The %iL substitution returns the itext() for the outermost @dolist, and is equivilent to itext(ilev()).
 
-For backwards compatability, the string "##" is also replaced with the current element of the list, and "#@" the current position. However, these replacements occur BEFORE evaluation, which means that they always return the values for the outermost @dolist, and are thus unsuitable for nesting. It also makes them unsafe for use on user-input or strings which may contain special characters; using the %i* sub or itext() instead is very strongly recommended.
+For backwards compatibility, the string "##" also stands for the current element of the list, and "#@" for its position, counting from 1. They read the same values as %iL and inum(L), so in a nested @dolist/inline they name the outermost @dolist. The element is never evaluated as code. For the current @dolist, use %i0 or itext(0), and inum(0).
 
 ## Notification and delimiters
 

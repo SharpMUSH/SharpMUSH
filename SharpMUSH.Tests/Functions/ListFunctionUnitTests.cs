@@ -37,7 +37,6 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1|2|3,%i0,|,-)", "1-2-3")]
 	[Arguments("iter(1|2|3,add(%i0,1),|,-)", "2-3-4")]
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
-	// TODO: %iL does not evaluate to the correct value.
 	[Arguments("iter(1 2 3,##)", "1 2 3")]
 	[Arguments("iter(1 2 3,add(##,1))", "2 3 4")]
 	[Arguments("iter(1|2|3,##,|,-)", "1-2-3")]
@@ -47,8 +46,6 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	// TODO: Implement #@ token as shorthand for inum(0).
-	//
 	// inum(0) is the CURRENT iteration — the innermost one — so in the nested case it counts the
 	// inner list 1..3 while %i1 holds the outer element. The old expectation ("2 2 2-4 4 4-6 6 6")
 	// was inum(0) returning the OUTERMOST iteration, which is what itext()/inum() did before they
@@ -56,6 +53,16 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("iter(5 6 7,inum(0))", "1 2 3")]
 	[Arguments("iter(1|2|3,iter(1 2 3,add(inum(0),%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
+	// #@ is the position, like inum(L) (#1825): bare, inside a function argument, after text, and
+	// next to ##. ###@ is ## then #@, the way PennMUSH scans it.
+	[Arguments("iter(a b,#@)", "1 2")]
+	[Arguments("iter(a b,add(#@,0))", "1 2")]
+	[Arguments("iter(a b,rjust(#@,3))", "  1   2")]
+	[Arguments("iter(a b,switch(#@,>1,x))", " x")]
+	[Arguments("iter(a b,pos#@)", "pos1 pos2")]
+	[Arguments("iter(a b,###@)", "a1 b2")]
+	[Arguments("iter(a|b,#@:##,|,-)", "1:a-2:b")]
+	[Arguments("iter(5 6 7,mul(add(%i0,#@),2))", "12 16 20")]
 	public async Task IterationNumber(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
