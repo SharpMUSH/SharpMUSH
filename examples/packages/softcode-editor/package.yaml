@@ -1,0 +1,137 @@
+format: 1
+package: softcode-editor
+version: 1.0.0
+authors: [SharpMUSH]
+description: "@editor — an @input-driven line editor for function and command softcode."
+license: MIT
+keywords: [editor, softcode, input]
+requires_server: ">=0.1"
+
+# Active editors call these attributes by name. Finish them before upgrading,
+# rolling back or uninstalling this package.
+objects:
+  - ref: editor
+    type: thing
+    name: Softcode Editor
+    flags: [WIZARD]
+    attributes:
+      # One branch per connection, DATA`<descriptor>: OBJECT and ATTRIBUTE being edited, MODE
+      # (function or command), DRAFT, APPENDED (lines added since the last save, so a first blank
+      # line still counts), UNDO and UNDOAPPENDED, and the stored attribute as it was when opened or
+      # last saved: NEW, ORIGINAL, ORIGINALCMD and ORIGINALFUN.
+      DATA:
+        value: |-
+          Per-descriptor editor state. A normal exit removes its branch.
+        flags: [no_command]
+
+      STARTUP: |-
+        @command/add/noparse/rsnoparse @editor; @hook/override/inline @editor=%!,CMD`EDITOR
+      AINSTALL: |-
+        @trigger %!/STARTUP
+      AUPDATE: |-
+        @trigger %!/STARTUP
+
+      # @editor <object>/<attribute>[=function|command]: checks the target, then opens the editor.
+      CMD`EDITOR:
+        value: |-
+          $(?is)^@editor +(?<spec>[^=]+?)(?\:=(?<mode>function|command))? *$: @assert strmatch(%<spec>,*/*)=@pemit/port %d=notice(EDITOR,Usage: @editor <object>/<attribute>%[=function|command%],warn); think setqm(obj,locate(%#,trim(before(%<spec>,/)),*),attr,ucstr(trim(after(%<spec>,/)))); @assert cand(isdbref(%q<obj>),valid(attrname,%q<attr>))=@pemit/port %d=notice(EDITOR,I cannot find that object or attribute name.,warn); @assert controls(%#,%q<obj>)=@pemit/port %d=notice(EDITOR,Permission denied.,error); think setq(mode,firstof(lcstr(%<mode>),u(%!/FUN`MODEOF,%q<obj>/%q<attr>))); @assert member(function command,%q<mode>)=@pemit/port %d=notice(EDITOR,Use =function or =command for a new or unflagged attribute.,warn); @include %!/INC`OPEN
+        flags: [regexp, cmdsyntax]
+      # The syntax an existing attribute %0 (<object>/<attribute>) is flagged with, or nothing.
+      FUN`MODEOF:
+        value: |-
+          switch(1,hasflag(%0,cmdsyntax),command,hasflag(%0,funsyntax),function)
+        flags: [funsyntax]
+
+      # Starts this connection's branch for %q<attr> on %q<obj> in %q<mode>, then the session.
+      INC`OPEN: |-
+        @include %!/INC`SWEEP; &DATA`%d`OBJECT %!=objid(%q<obj>); &DATA`%d`ATTRIBUTE %!=%q<attr>; &DATA`%d`MODE %!=%q<mode>; &DATA`%d`DRAFT %!=get(%q<obj>/%q<attr>); &DATA`%d`UNDO %!; &DATA`%d`UNDOAPPENDED %!; @include %!/INC`BASELINE; @pemit/port %d=u(%!/FUN`LIST); @include %!/INPUT`START
+      # Disconnecting ends a session without running anything, so a branch can outlive its
+      # connection. Each open drops the branches of connections that are gone.
+      INC`SWEEP: |-
+        @dolist/inline setdiff(lattr(%!/DATA`*),iter(lports(),DATA`%i0))={@wipe %!/##`**; @wipe %!/##}
+      # Records the stored attribute as it is now, for the conflict check, and counts no lines as
+      # added since. Runs on open and after each save.
+      INC`BASELINE: |-
+        think setq(stored,hasattr(%q<obj>,%q<attr>)); &DATA`%d`NEW %!=not(%q<stored>); &DATA`%d`ORIGINAL %!=if(%q<stored>,get(%q<obj>/%q<attr>)); &DATA`%d`ORIGINALCMD %!=cand(%q<stored>,hasflag(%q<obj>/%q<attr>,cmdsyntax)); &DATA`%d`ORIGINALFUN %!=cand(%q<stored>,hasflag(%q<obj>/%q<attr>,funsyntax)); &DATA`%d`APPENDED %!=0
+
+      # The session. .sq, .q and .q! end it (INPUT`EXIT); every other key keeps it open, and any
+      # line that is not a key is code.
+      INPUT`START: |-
+        @input/start/regex u(%!/FUN`PROMPT)=^\\.(sq|q!?)$,INPUT`EXIT,^\\.s$,INPUT`SAVE,^\\.c$,INPUT`CHECK,^\\.l$,INPUT`LIST,^\\.u$,INPUT`UNDO,^\\.h$,INPUT`HELP,^\\.(\\..*)$,INPUT`DOT,*,INPUT`LINE,3600
+      FUN`PROMPT:
+        value: |-
+          get(%!/DATA`%d`ATTRIBUTE)> .h help · .sq save and quit
+        flags: [funsyntax]
+      # A line of code, %0 exactly as typed.
+      INPUT`LINE: |-
+        @include/args %!/INC`APPEND=line,%0
+      # A line starting .., which is code starting with one dot (%1).
+      INPUT`DOT: |-
+        @include/args %!/INC`APPEND=line,%1
+      # Adds %<line> to the draft, keeping the draft before it for .u.
+      INC`APPEND: |-
+        think setqm(draft,get(%!/DATA`%d`DRAFT),appended,get(%!/DATA`%d`APPENDED)); &DATA`%d`UNDO %!=%q<draft>; &DATA`%d`UNDOAPPENDED %!=%q<appended>; &DATA`%d`DRAFT %!=%q<draft>[if(cor(strlen(%q<draft>),%q<appended>),%r)]%<line>; &DATA`%d`APPENDED %!=inc(%q<appended>); @input/prompt u(%!/FUN`PROMPT)
+      INPUT`LIST: |-
+        @pemit/port %d=u(%!/FUN`LIST); @input/prompt u(%!/FUN`PROMPT)
+      INPUT`HELP: |-
+        @pemit/port %d=.s save · .sq save and quit · .q quit · .q! quit and discard · .c check · .l list · .u undo · .h help · a line starting .. adds one starting .; @input/prompt u(%!/FUN`PROMPT)
+      # Swaps the draft with the one before the last line, so a second .u puts the line back.
+      INPUT`UNDO: |-
+        @assert hasattr(%!,DATA`%d`UNDO)=@pemit/port %d=notice(EDITOR,Nothing to undo.,warn); think setqm(draft,get(%!/DATA`%d`DRAFT),appended,get(%!/DATA`%d`APPENDED)); &DATA`%d`DRAFT %!=get(%!/DATA`%d`UNDO); &DATA`%d`APPENDED %!=get(%!/DATA`%d`UNDOAPPENDED); &DATA`%d`UNDO %!=%q<draft>; &DATA`%d`UNDOAPPENDED %!=%q<appended>; @pemit/port %d=notice(EDITOR,Undone.,ok); @input/prompt u(%!/FUN`PROMPT)
+      INPUT`CHECK: |-
+        think setq(diagnostics,u(%!/FUN`DIAGNOSE)); @pemit/port %d=if(json_query(%q<diagnostics>,size),u(%!/FUN`ERRORS,%q<diagnostics>),notice(EDITOR,Syntax OK.,ok)); @input/prompt u(%!/FUN`PROMPT)
+      INPUT`SAVE: |-
+        @include/nobreak %!/INC`SAVE; @input/prompt u(%!/FUN`PROMPT)
+
+      # The session has ended: .sq, .q or .q! (%1), or the hour ran out. Running out of time is
+      # not a way out, so the editor opens again with the draft as it was.
+      INPUT`EXIT: |-
+        @break strmatch(r(reason,args),timeout)={@include %!/INPUT`START}; @break strmatch(%1,q!)={@include %!/INC`CLOSE}; @break strmatch(%1,q)={@include %!/INC`EXIT`QUIT}; @include %!/INC`EXIT`SAVE
+      # .q leaves only when nothing is unsaved; .q! discards it.
+      INC`EXIT`QUIT: |-
+        @assert u(%!/FUN`UNSAVED)={@include %!/INC`CLOSE}; @pemit/port %d=notice(EDITOR,There are unsaved changes. .sq saves and quits%, .q! discards them.,warn); @include %!/INPUT`START
+      # .sq leaves only when the save worked; otherwise the editor opens again with the draft.
+      INC`EXIT`SAVE: |-
+        think setq(saved,0); @include/nobreak %!/INC`SAVE; @assert %q<saved>={@include %!/INPUT`START}; @include %!/INC`CLOSE
+      INC`CLOSE: |-
+        @pemit/port %d=notice(EDITOR,Editor closed.,info); @wipe %!/DATA`%d`**; @wipe %!/DATA`%d
+      # 1 when the draft differs from what was stored at open or the last save.
+      FUN`UNSAVED:
+        value: |-
+          cor(get(%!/DATA`%d`APPENDED),comp(get(%!/DATA`%d`DRAFT),get(%!/DATA`%d`ORIGINAL)))
+        flags: [funsyntax]
+
+      # Checks the draft's syntax, that the player still controls the object, and that nobody
+      # changed the attribute or its syntax flag since the editor opened it or last saved it. Then
+      # saves it as the player and sets %q<saved> to 1.
+      INC`SAVE: |-
+        think setq(diagnostics,u(%!/FUN`DIAGNOSE)); @assert not(json_query(%q<diagnostics>,size))=@pemit/port %d=u(%!/FUN`ERRORS,%q<diagnostics>)%r[notice(EDITOR,Not saved.,warn)]; think setqm(obj,get(%!/DATA`%d`OBJECT),attr,get(%!/DATA`%d`ATTRIBUTE)); @assert controls(%#,%q<obj>)=@pemit/port %d=notice(EDITOR,Permission denied.,error); @assert u(%!/FUN`UNCHANGED,%q<obj>,%q<attr>)=@pemit/port %d=notice(EDITOR,%q<attr> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`STORE; @assert not(comp(get(%q<obj>/%q<attr>),%q<draft>))=@pemit/port %d=notice(EDITOR,%q<attr> could not be saved.,error); @include %!/INC`BASELINE; think setq(saved,1); @pemit/port %d=notice(EDITOR,%q<attr> saved.,ok)
+        flags: [cmdsyntax]
+      # Writes the draft and its syntax flag as the player, so the attribute is theirs and their own
+      # permissions decide whether it may be set.
+      INC`STORE: |-
+        think setqm(draft,get(%!/DATA`%d`DRAFT),syntax,switch(get(%!/DATA`%d`MODE),command,cmdsyntax,funsyntax),other,switch(get(%!/DATA`%d`MODE),command,funsyntax,cmdsyntax)); @force/inline %#={&%q<attr> %q<obj>=[escape(%q<draft>)]; @set %q<obj>/%q<attr>=%q<syntax>}; @force/inline %#=@set %q<obj>/%q<attr>=!%q<other>
+      # 1 when attribute %1 on %0 is as INC`BASELINE recorded it.
+      FUN`UNCHANGED:
+        value: |-
+          if(get(%!/DATA`%d`NEW),not(hasattr(%0,%1)),cand(hasattr(%0,%1),not(comp(get(%0/%1),get(%!/DATA`%d`ORIGINAL))),eq(hasflag(%0/%1,cmdsyntax),get(%!/DATA`%d`ORIGINALCMD)),eq(hasflag(%0/%1,funsyntax),get(%!/DATA`%d`ORIGINALFUN))))
+        flags: [funsyntax]
+
+      FUN`DIAGNOSE:
+        value: |-
+          syntaxdiagnostics(%!/DATA`%d`DRAFT,get(%!/DATA`%d`MODE))
+        flags: [funsyntax]
+      # One line per diagnostic in the JSON array %0.
+      FUN`ERRORS:
+        value: |-
+          json_map(%!/FUN`ERROR,%0,%r)
+        flags: [funsyntax]
+      FUN`ERROR:
+        value: |-
+          notice(EDITOR,Line [json_query(%1,get,line)]%, column [json_query(%1,get,column)]: [json_query(%1,get,message)],warn)
+        flags: [funsyntax]
+      # The draft with line numbers.
+      FUN`LIST:
+        value: |-
+          if(cor(strlen(get(%!/DATA`%d`DRAFT)),get(%!/DATA`%d`APPENDED)),iter(get(%!/DATA`%d`DRAFT),rjust(inum(0),3): %i0,%r,%r),notice(EDITOR,The draft is empty.,info))
+        flags: [funsyntax]

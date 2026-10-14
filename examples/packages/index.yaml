@@ -1,6 +1,11 @@
 name: SharpMUSH Example Packages
 description: Reference packages demonstrating the package.yaml manifest format.
 packages:
+  - path: softcode-editor/
+    name: Softcode Editor
+    package: softcode-editor
+    version: 1.0.0
+    description: "@editor — an @input-driven line editor for function and command softcode"
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph
