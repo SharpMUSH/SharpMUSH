@@ -77,6 +77,31 @@ public class GeneralCommandTests
 		await Assert.That(Heard($"{token}-dolist-hash-3", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// <c>#@</c> is the position of the element, inline and queued, as in PennMUSH (#1825).
+	/// </summary>
+	[Test]
+	public async ValueTask DolistHashAtReplacement()
+	{
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b c=@pemit #1={token}-dolist-at-#@:##"));
+
+		await Assert.That(Heard($"{token}-dolist-at-1:a", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"{token}-dolist-at-2:b", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"{token}-dolist-at-3:c", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+	}
+
+	[Test]
+	public async ValueTask DolistHashAtReplacementQueued()
+	{
+		var token = Token();
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist x y=@pemit #1={token}-queued-at-[add(#@,10)]"));
+
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(god, $"{token}-queued-at-11", god);
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(god, $"{token}-queued-at-12", god);
+	}
+
 	[Test]
 	public async ValueTask DoListComplex()
 	{

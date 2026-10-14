@@ -443,11 +443,8 @@ public partial class Functions
 		{ Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
 
-		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var modifiedPattern = patternArg.Message.Text.Contains("##")
-			? patternArg.Message.ReplaceAll("##", MarkupText.Plain("%iL"))
-			: null;
+		var modifiedPattern = IterationTokens.Rewrite(patternArg.Message);
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
