@@ -135,7 +135,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
+	[SharpCommand(Name = "@SET", Behavior = CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
 	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -144,7 +144,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
-			NotifyService, executor, args["0"].Message, args["1"].Message);
+			NotifyService, PermissionService, executor, args["0"].Message, args["1"].Message);
 	}
 
 	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]

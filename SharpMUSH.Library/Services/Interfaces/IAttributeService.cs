@@ -75,6 +75,14 @@ public interface IAttributeService
 	ValueTask<Result<Success>> SetAttributeFlagsAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens);
 
 	/// <summary>
+	/// <c>@set &lt;object&gt;/&lt;attribute pattern&gt;=&lt;flags&gt;</c>: PennMUSH's <c>do_attrib_flags</c>,
+	/// which applies the batch to every attribute of the object's own that the pattern matches and the
+	/// executor can read. The flag list is checked once, before any attribute is looked at; an
+	/// attribute the executor may not change is reported and skipped.
+	/// </summary>
+	ValueTask<Result<AttributeFlagPatternOutcome>> SetAttributeFlagsByPatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern, IReadOnlyList<string> flagTokens);
+
+	/// <summary>
 	/// Fetches the attribute a function such as <c>map()</c> or <c>filter()</c> runs for each element —
 	/// PennMUSH's <c>fetch_ufun_attrib</c>. <paramref name="objectAndAttribute"/> is
 	/// <c>[&lt;object&gt;/]&lt;attribute&gt;</c>, and a bare attribute name is read from
@@ -108,3 +116,9 @@ public interface IAttributeService
 	/// </summary>
 	ValueTask<bool> ExceedsMaxParentDepthAsync(AnySharpObject prospectiveParent, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// What <see cref="IAttributeService.SetAttributeFlagsByPatternAsync"/> did: how many attributes the
+/// pattern matched, and how many of those the executor was allowed to change.
+/// </summary>
+public readonly record struct AttributeFlagPatternOutcome(int Matched, int Changed);

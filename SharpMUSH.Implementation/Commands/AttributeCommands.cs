@@ -1,5 +1,6 @@
-using SharpMUSH.Library;
+﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -61,6 +62,23 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> CopyAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr, bool move)
 	{
+		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
+		// starting at index 1. Collect all destination args in order.
+		var destinations = args
+			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
+			.OrderBy(kvp => int.Parse(kvp.Key))
+			.Select(kvp => kvp.Value.Message.ToPlainText().Trim())
+			.Where(d => !string.IsNullOrEmpty(d))
+			.ToList();
+
+		return SharpMUSH.Library.Services.AttributeService.IsLiteralPattern(sourceAttr, IAttributeService.AttributePatternMode.Wildcard)
+			? await CopyNamedAttributeAsync(parser, executor, sourceObject, destinations, copyFlags, sourceAttr, move)
+			: await CopyMatchingAttributesAsync(parser, executor, sourceObject, destinations, copyFlags, sourceAttr, move);
+	}
+
+	private async ValueTask<Option<CallState>> CopyNamedAttributeAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject sourceObject, List<string> destinations, bool copyFlags, string sourceAttr, bool move)
+	{
 		// do_cpattr copies only the source's own attribute (set.c:723, atr_get_noparent).
 		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 				IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] sourceAttribute)
@@ -69,19 +87,118 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var sourceLeaf = sourceAttribute.Last();
+		var copiedCount = await CopyToDestinationsAsync(parser, executor, sourceObject, destinations, copyFlags,
+			sourceAttr, sourceAttribute.Last());
+
+		if (copiedCount == 0)
+		{
+			return await NothingCopiedAsync(executor, move);
+		}
+
+		var destWord = copiedCount == 1 ? "destination" : "destinations";
+		if (!move)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, copiedCount, destWord);
+			return new CallState(string.Empty);
+		}
+
+		var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
+			IAttributeService.AttributePatternMode.Exact);
+
+		if (clearResult is Error<string> clearError)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearError.Value);
+		}
+		else
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
+		}
+
+		return new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// A wildcard source (<c>@cpattr obj/FOO*=dest</c>), which PennMUSH does not have: <c>do_cpattr</c>
+	/// reads one attribute by name. Each attribute of the source's own that the pattern matches and the
+	/// executor can read is copied under its own name, so a destination names only an object.
+	/// </summary>
+	private async ValueTask<Option<CallState>> CopyMatchingAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject sourceObject, List<string> destinations, bool copyFlags, string sourcePattern, bool move)
+	{
+		if (destinations.FirstOrDefault(d => HelperFunctions.SplitDbRefAndOptionalAttr(d) is { Attribute.Length: > 0 }) is { } named)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PatternCopyDestinationNamesAttributeFormat), executor, named);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var matches = await AttributeService.GetAttributePatternAsync(executor, sourceObject, sourcePattern, false,
+			IAttributeService.AttributePatternMode.Wildcard) switch
+		{
+			SharpAttribute[] found => found,
+			Error<string> => []
+		};
+
+		if (matches.Length == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourcePattern);
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+
+		// A move takes leaves before their branches, so a branch is never cleared while it still has children.
+		var ordered = move ? matches.AsEnumerable().Reverse() : matches;
+		var anyCopied = false;
+
+		foreach (var match in ordered)
+		{
+			var name = match.LongName!;
+			var copiedCount = await CopyToDestinationsAsync(parser, executor, sourceObject, destinations, copyFlags, name, match);
+			if (copiedCount == 0)
+			{
+				continue;
+			}
+
+			anyCopied = true;
+			var destWord = copiedCount == 1 ? "destination" : "destinations";
+
+			if (!move)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NamedAttributeCopiedToDestinationsFormat), executor, name, copiedCount, destWord);
+				continue;
+			}
+
+			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, name,
+				IAttributeService.AttributePatternMode.Exact);
+
+			await (clearResult switch
+			{
+				Error<string> clearError => NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NamedAttributeMovedFailedRemoveFormat), executor, name, copiedCount, destWord, clearError.Value),
+				_ => NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NamedAttributeMovedToFormat), executor, name, copiedCount, destWord)
+			});
+		}
+
+		return anyCopied
+			? new CallState(string.Empty)
+			: await NothingCopiedAsync(executor, move);
+	}
+
+	private async ValueTask<Option<CallState>> NothingCopiedAsync(AnySharpObject executor, bool move)
+	{
+		await NotifyService.NotifyLocalized(executor, move
+			? nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny)
+			: nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
+		return new CallState(move ? ErrorMessages.Returns.MoveFailed : ErrorMessages.Returns.CopyFailed);
+	}
+
+	/// <summary>
+	/// Copies one source attribute to every destination, returning how many copies landed. A destination
+	/// with no attribute name takes <paramref name="sourceName"/>.
+	/// </summary>
+	private async ValueTask<int> CopyToDestinationsAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject sourceObject, List<string> destinations, bool copyFlags, string sourceName, SharpAttribute sourceLeaf)
+	{
 		var attrValue = sourceLeaf.Value;
 		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
-
-		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
-		// starting at index 1. Collect all destination args in order.
-		var destinations = args
-			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
-			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => kvp.Value.Message.ToPlainText().Trim())
-			.Where(d => !string.IsNullOrEmpty(d));
-
-		int copiedCount = 0;
+		var copiedCount = 0;
 
 		foreach (var dest in destinations)
 		{
@@ -91,7 +208,7 @@ public partial class Commands
 				continue;
 			}
 
-			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
+			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceName : destAttr;
 
 			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
@@ -103,7 +220,7 @@ public partial class Commands
 			// PennMUSH do_cpattr (src/set.c:751-753) skips a destination that is the source attribute itself:
 			// counting it would let @mvattr clear the only copy.
 			if (destObject.Object().DBRef == sourceObject.Object().DBRef
-				&& targetAttrName.Equals(sourceAttr, StringComparison.OrdinalIgnoreCase))
+				&& targetAttrName.Equals(sourceName, StringComparison.OrdinalIgnoreCase))
 			{
 				continue;
 			}
@@ -135,34 +252,7 @@ public partial class Commands
 			copiedCount++;
 		}
 
-		if (copiedCount == 0)
-		{
-			await NotifyService.NotifyLocalized(executor, move
-				? nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny)
-				: nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
-			return new CallState(move ? ErrorMessages.Returns.MoveFailed : ErrorMessages.Returns.CopyFailed);
-		}
-
-		var destWord = copiedCount == 1 ? "destination" : "destinations";
-		if (!move)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, copiedCount, destWord);
-			return new CallState(string.Empty);
-		}
-
-		var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
-			IAttributeService.AttributePatternMode.Exact);
-
-		if (clearResult is Error<string> clearError)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearError.Value);
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, copiedCount, destWord);
-		}
-
-		return new CallState(string.Empty);
+		return copiedCount;
 	}
 
 	[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/attribute", "player"])]
@@ -197,26 +287,65 @@ public partial class Commands
 		AnySharpObject targetObject, CallState ownerArg, string attrName)
 	{
 		// do_atrchown changes only an attribute the object has itself (attrib.c:2597, atr_get_noparent);
-		// an inherited one is "No such attribute.", never copied down.
-		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-				IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] attribute)
+		// an inherited one is "No such attribute.", never copied down. A wildcard pattern, which
+		// PennMUSH does not take here, changes every readable attribute of the object's own it matches.
+		var attributes = await OwnAttributeChainsAsync(executor, targetObject, attrName);
+		if (attributes.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		var newOwnerText = ownerArg.Message.ToPlainText();
+		var named = !SharpMUSH.Library.Services.AttributeService.IsLiteralPattern(attrName,
+			IAttributeService.AttributePatternMode.Wildcard);
 
 		// A thing, room or exit named as the new owner stands for its own owner.
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, newOwnerText, LocateFlags.All) switch
 		{
-			AnySharpObject and SharpPlayer newOwnerPlayer => await ChownAttributeToAsync(executor, targetObject, attrName,
-				attribute, newOwnerPlayer),
-			AnySharpObject newOwnerObject => await ChownAttributeToAsync(executor, targetObject, attrName, attribute,
-				await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None)),
+			AnySharpObject and SharpPlayer newOwnerPlayer => await ChownAttributesToAsync(executor, targetObject,
+				attributes, newOwnerPlayer, named),
+			AnySharpObject newOwnerObject => await ChownAttributesToAsync(executor, targetObject, attributes,
+				await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None), named),
 			Error<CallState> error => await NewOwnerNotFoundAsync(executor, error.Value)
 		};
+	}
+
+	/// <summary>
+	/// The attributes of <paramref name="obj"/>'s own that <paramref name="attributePattern"/> names and
+	/// <paramref name="executor"/> can read, each as its root..leaf path: one for a plain name, every
+	/// match for a wildcard pattern.
+	/// </summary>
+	private async ValueTask<List<SharpAttribute[]>> OwnAttributeChainsAsync(AnySharpObject executor, AnySharpObject obj,
+		string attributePattern)
+	{
+		if (SharpMUSH.Library.Services.AttributeService.IsLiteralPattern(attributePattern,
+				IAttributeService.AttributePatternMode.Wildcard))
+		{
+			return await AttributeService.GetAttributeAsync(executor, obj, attributePattern,
+				IAttributeService.AttributeMode.Read, parent: false) is SharpAttribute[] chain
+				? [chain]
+				: [];
+		}
+
+		if (await AttributeService.GetAttributePatternAsync(executor, obj, attributePattern, false,
+				IAttributeService.AttributePatternMode.Wildcard) is not SharpAttribute[] matches)
+		{
+			return [];
+		}
+
+		var chains = new List<SharpAttribute[]>(matches.Length);
+		foreach (var match in matches)
+		{
+			if (await AttributeService.GetAttributeAsync(executor, obj, match.LongName!,
+					IAttributeService.AttributeMode.Read, parent: false) is SharpAttribute[] chain)
+			{
+				chains.Add(chain);
+			}
+		}
+
+		return chains;
 	}
 
 	private async ValueTask<Option<CallState>> NewOwnerNotFoundAsync(AnySharpObject executor, CallState error)
@@ -225,51 +354,59 @@ public partial class Commands
 		return error;
 	}
 
-	private async ValueTask<Option<CallState>> ChownAttributeToAsync(AnySharpObject executor,
-		AnySharpObject targetObject, string attrName, SharpAttribute[] attribute, SharpPlayer newOwnerPlayer)
+	/// <summary>
+	/// do_atrchown's write (attrib.c:2599-2613): the attribute must be writable, a mortal may only chown
+	/// to their own owner, and the attribute's owner becomes the new owner. <paramref name="named"/>
+	/// names each attribute in the report, for a pattern that matched several.
+	/// </summary>
+	private async ValueTask<Option<CallState>> ChownAttributesToAsync(AnySharpObject executor,
+		AnySharpObject targetObject, List<SharpAttribute[]> attributes, SharpPlayer newOwnerPlayer, bool named)
 	{
-		// Mortals can only chown to themselves; wizards can chown to anyone.
-		var isWizard = await executor.IsWizard();
-		var canSet = await PermissionService.CanSet(executor, targetObject);
-
-		if (!canSet)
+		if (!await PermissionService.CanSet(executor, targetObject))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (!isWizard)
+		// Mortals can only chown to their own owner; wizards can chown to anyone.
+		if (!await executor.IsWizard())
 		{
-			if (executor is SharpPlayer executorPlayer)
+			var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+			if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 			{
-				if (newOwnerPlayer.Object.DBRef != executorPlayer.Object.DBRef)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
-				}
-			}
-			else
-			{
-				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
-				}
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
-		var currentValue = attribute.Last().Value;
-		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
-
-		if (setResult is Error<string> error)
+		var changed = 0;
+		foreach (var chain in attributes)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, error.Value);
-			return new CallState(ErrorMessages.Returns.Failed);
+			var name = chain.Last().LongName!;
+			if (!await PermissionService.CanSet(executor, targetObject, chain))
+			{
+				await (named
+					? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoPermissionToChownNamedFormat), executor, name)
+					: NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoPermissionToChown), executor));
+				continue;
+			}
+
+			if (!await Mediator.Send(new SetAttributeOwnerCommand(targetObject.Object().DBRef,
+					chain.Select(item => item.Name).ToArray(), newOwnerPlayer), CancellationToken.None))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+				continue;
+			}
+
+			changed++;
+			await (named
+				? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NamedAttributeOwnerChangedFormat), executor, name)
+				: NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeOwnerChanged), executor));
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeOwnerChanged), executor);
-		return new CallState(string.Empty);
+		return changed > 0
+			? new CallState(string.Empty)
+			: new CallState(ErrorMessages.Returns.PermissionDenied);
 	}
 
 	[SharpCommand(Name = "@WIPE", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]

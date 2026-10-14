@@ -526,7 +526,7 @@ public class AttributeService(
 	/// and <c>atr_iter_get_parent</c> (<c>src/attrib.c:1351</c>, <c>:1522</c>): not a regex, not ending
 	/// in a backtick (which lists a branch's children), and no unescaped wildcard.
 	/// </summary>
-	internal static bool IsLiteralPattern(string pattern, IAttributeService.AttributePatternMode mode)
+	public static bool IsLiteralPattern(string pattern, IAttributeService.AttributePatternMode mode)
 		=> mode != IAttributeService.AttributePatternMode.Regex
 			&& pattern.Length > 0
 			&& !pattern.EndsWith('`')
@@ -1049,6 +1049,55 @@ public class AttributeService(
 			None => new Error<string>(ErrorMessages.Returns.ObjectAttributeString),
 			Error<string> error => error
 		};
+	}
+
+	/// <inheritdoc/>
+	/// <remarks>
+	/// <c>atr_iter_get(player, thing, atrname, AIG_NONE, af_helper, &amp;af)</c> (<c>src/set.c:594</c>):
+	/// the object's own attributes only, filtered by <c>Can_Read_Attr</c>, then <c>af_helper</c> on each.
+	/// A literal name takes the same path and matches at most one attribute.
+	/// </remarks>
+	public async ValueTask<Result<AttributeFlagPatternOutcome>> SetAttributeFlagsByPatternAsync(AnySharpObject executor,
+		AnySharpObject obj, string attributePattern, IReadOnlyList<string> flagTokens)
+		=> await _flagWriter.ResolveAsync(executor, flagTokens) switch
+		{
+			AttributeFlagBatch batch => await GetAttributePatternAsync(executor, obj, attributePattern, false,
+				IAttributeService.AttributePatternMode.Wildcard) switch
+			{
+				SharpAttribute[] matches => await SetAttributeFlagsOnMatchesAsync(executor, obj, matches, batch),
+				Error<string> error => error
+			},
+			Error<string> error => error
+		};
+
+	private async ValueTask<Result<AttributeFlagPatternOutcome>> SetAttributeFlagsOnMatchesAsync(AnySharpObject executor,
+		AnySharpObject obj, SharpAttribute[] matches, AttributeFlagBatch batch)
+	{
+		var changed = 0;
+		foreach (var match in matches)
+		{
+			// The write gate needs the root..leaf path, which a pattern read does not carry.
+			if (await GetAttributeAsync(executor, obj, match.LongName!, IAttributeService.AttributeMode.SystemSet, false)
+					is not SharpAttribute[] chain)
+			{
+				continue;
+			}
+
+			switch (await _flagWriter.ApplyAsync(executor, obj, chain, batch))
+			{
+				case Success:
+					changed++;
+					break;
+				case Error<string>:
+					// af_helper: "You cannot change that flag on %s/%s", then on to the next match.
+					await notifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.AttributeFlagChangeDeniedFormat), obj,
+						obj.Object().Name, match.LongName!);
+					break;
+			}
+		}
+
+		return new AttributeFlagPatternOutcome(matches.Length, changed);
 	}
 
 }

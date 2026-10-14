@@ -41,6 +41,7 @@ internal static class AttributeLockHelpers
 	/// Sets or clears the lock, having already established that <paramref name="executor"/> controls
 	/// <paramref name="target"/> and that <paramref name="chain"/> is the attribute it named.
 	/// </summary>
+	/// <param name="named">Name the attribute in what is reported, for one match of a pattern.</param>
 	/// <returns>Empty on success, otherwise the failure's <c>#-1</c> string.</returns>
 	public static async ValueTask<CallState> ChangeAsync(
 		IPermissionService permissionService,
@@ -51,11 +52,14 @@ internal static class AttributeLockHelpers
 		AnySharpObject target,
 		string attributeName,
 		SharpAttribute[] chain,
-		bool lockIt)
+		bool lockIt,
+		bool named = false)
 	{
 		if (!await permissionService.CanSet(executor, target, chain))
 		{
-			await notifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor);
+			await (named
+				? notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NamedAttributeLockNeedsSetFormat), executor, attributeName)
+				: notifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -82,9 +86,13 @@ internal static class AttributeLockHelpers
 			}
 		}
 
-		await notifyService.NotifyLocalized(executor, lockIt
-			? nameof(ErrorMessages.Notifications.AttributeLocked)
-			: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
+		await (named
+			? notifyService.NotifyLocalized(executor, lockIt
+				? nameof(ErrorMessages.Notifications.NamedAttributeLockedFormat)
+				: nameof(ErrorMessages.Notifications.NamedAttributeUnlockedFormat), executor, attributeName)
+			: notifyService.NotifyLocalized(executor, lockIt
+				? nameof(ErrorMessages.Notifications.AttributeLocked)
+				: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor));
 
 		return CallState.Empty;
 	}

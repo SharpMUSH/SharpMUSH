@@ -208,6 +208,12 @@
   <data name="AttributeFlagsSetFormat" xml:space="preserve">
     <value>{0}/{1} - {2} set.</value>
   </data>
+  <data name="AttributeFlagChangeDeniedFormat" xml:space="preserve">
+    <value>You cannot change that flag on {0}/{1}</value>
+  </data>
+  <data name="NoAttributeFoundToChange" xml:space="preserve">
+    <value>No attribute found to change.</value>
+  </data>
   <data name="NoAttributesWiped" xml:space="preserve">
     <value>No attributes wiped.</value>
   </data>
@@ -790,8 +796,41 @@
   <data name="AttributeMovedFailedRemoveFormat" xml:space="preserve">
     <value>Attribute moved to {0} {1} but failed to remove source: {2}</value>
   </data>
+  <data name="NamedAttributeOwnerChangedFormat" xml:space="preserve">
+    <value>Attribute {0} owner changed.</value>
+  </data>
+  <data name="NoPermissionToChownNamedFormat" xml:space="preserve">
+    <value>You don't have the permission to chown {0}.</value>
+  </data>
+  <data name="NamedAttributeIsLockedFormat" xml:space="preserve">
+    <value>Attribute {0} is locked.</value>
+  </data>
+  <data name="NamedAttributeIsUnlockedFormat" xml:space="preserve">
+    <value>Attribute {0} is unlocked.</value>
+  </data>
+  <data name="NamedAttributeLockedFormat" xml:space="preserve">
+    <value>Attribute {0} locked.</value>
+  </data>
+  <data name="NamedAttributeUnlockedFormat" xml:space="preserve">
+    <value>Attribute {0} unlocked.</value>
+  </data>
+  <data name="NamedAttributeLockNeedsSetFormat" xml:space="preserve">
+    <value>You need to be able to set {0} to change its lock.</value>
+  </data>
   <data name="AttributeMovedToFormat" xml:space="preserve">
     <value>Attribute moved to {0} {1}.</value>
+  </data>
+  <data name="NamedAttributeCopiedToDestinationsFormat" xml:space="preserve">
+    <value>Attribute {0} copied to {1} {2}.</value>
+  </data>
+  <data name="NamedAttributeMovedToFormat" xml:space="preserve">
+    <value>Attribute {0} moved to {1} {2}.</value>
+  </data>
+  <data name="NamedAttributeMovedFailedRemoveFormat" xml:space="preserve">
+    <value>Attribute {0} moved to {1} {2} but failed to remove source: {3}</value>
+  </data>
+  <data name="PatternCopyDestinationNamesAttributeFormat" xml:space="preserve">
+    <value>Copying a pattern keeps each attribute's name; name only an object in {0}.</value>
   </data>
   <data name="FailedToMoveAttributeAny" xml:space="preserve">
     <value>Failed to move attribute to any destinations.</value>
