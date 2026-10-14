@@ -32,6 +32,15 @@ public sealed class WebhookDispatcher
 	private readonly Counter<long> _attempts;
 	private readonly Histogram<double> _durations;
 
+	/// <summary>
+	/// Bucket bounds, in seconds. The SDK's defaults (0, 5, 10, 25, ...) are meant for milliseconds and would put
+	/// every try under the 10-second timeout in one or two buckets.
+	/// </summary>
+	private static readonly InstrumentAdvice<double> DurationAdvice = new()
+	{
+		HistogramBucketBoundaries = [0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30]
+	};
+
 	private sealed record Pending(string Subscription, WebhookMessage Message, int Attempt, bool Test);
 
 	private sealed class Ledger
@@ -57,7 +66,7 @@ public sealed class WebhookDispatcher
 		_attempts = meter.CreateCounter<long>("sharpmush.webhook.attempts",
 			description: "Webhook delivery tries, by subscription and outcome");
 		_durations = meter.CreateHistogram<double>("sharpmush.webhook.duration", unit: "s",
-			description: "How long each webhook delivery try took");
+			description: "How long each webhook delivery try took", advice: DurationAdvice);
 	}
 
 	/// <summary>

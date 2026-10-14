@@ -92,8 +92,8 @@ Each event is one `POST` with a JSON body:
   "timestamp": "2026-10-14T21:04:11.000Z",
   "data": {
     "enactor": { "dbref": "#5", "objid": "#5:1792017800803", "name": "Alice" },
-    "arguments": { "objid": "#5:1792017800803", "connections": "1", "descriptor": "3" },
-    "positional": [ "#5:1792017800803", "1", "3" ]
+    "arguments": { "objid": "#5", "connections": "1", "descriptor": "3" },
+    "positional": [ "#5", "1", "3" ]
   }
 }
 ```
@@ -101,7 +101,7 @@ Each event is one `POST` with a JSON body:
 - `type` is the event's name.
 - `enactor` is who caused the event, or `null` for an event the server raised itself.
 - `arguments` has the event's arguments by the names [event list] gives them.
-- `positional` has them in order, the way the event handler gets them as %0-%9.
+- `positional` has them in order, the way the event handler gets them as %0-%9. Where one argument is several numbers joined by `/`, such as `0/0/5` for ``PLAYER`DISCONNECT``, `arguments` names each number.
 
 Three headers come with it: `webhook-id` (the delivery's id, the same on every retry, so a receiver can ignore one it has already handled), `webhook-timestamp` and `webhook-signature`.
 
