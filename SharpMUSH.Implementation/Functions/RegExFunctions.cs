@@ -368,7 +368,8 @@ public partial class Functions
 
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
-		parser.CurrentState.SwitchStack.Push(subject);
+		var frame = new SwitchFrame { Text = subject, Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation };
+		parser.CurrentState.SwitchStack.Push(frame);
 
 		try
 		{
@@ -401,7 +402,7 @@ public partial class Functions
 				}
 
 				captures.Fill(regex, match, subject);
-				var evaluated = await EvaluateSwitchBody(parser, orderedArgs[i + 1].Value, subject);
+				var evaluated = await EvaluateSwitchBody(frame, orderedArgs[i + 1].Value);
 				hadErrors |= evaluated.HadErrors;
 				var evaluatedMsg = evaluated.Message;
 				results.Add(evaluatedMsg);
@@ -420,7 +421,7 @@ public partial class Functions
 
 			if (defaultValue != null)
 			{
-				var defaultEvaluated = await EvaluateSwitchBody(parser, defaultValue.Value.Value, subject);
+				var defaultEvaluated = await EvaluateSwitchBody(frame, defaultValue.Value.Value);
 				return new CallState(defaultEvaluated.Message)
 				{ HadErrors = hadErrors || defaultEvaluated.HadErrors };
 			}
@@ -435,20 +436,19 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// A reswitch body or default. PennMUSH replaces <c>#$</c> with the subject text before evaluating
-	/// either (<c>replace_string("#$", mstr, ...)</c>), so a body that uses it is re-parsed from its text;
-	/// every other body is evaluated as it was parsed.
+	/// A reswitch body or default, during which <c>#$</c> reads the subject (<c>VisitSwitchSubject</c>).
 	/// </summary>
-	private static async ValueTask<CallState> EvaluateSwitchBody(IMUSHCodeParser parser, CallState body, MString subject)
+	private static async ValueTask<CallState> EvaluateSwitchBody(SwitchFrame frame, CallState body)
 	{
-		var text = body.Message.ToPlainText();
-		if (!text.Contains("#$", StringComparison.Ordinal))
+		frame.InAction = true;
+		try
 		{
 			return await body.GetParsedResultAsync();
 		}
-
-		return await parser.FunctionParse(MarkupText.Plain(text.Replace("#$", subject.ToPlainText())))
-			?? new CallState(MarkupText.Empty);
+		finally
+		{
+			frame.InAction = false;
+		}
 	}
 
 	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,

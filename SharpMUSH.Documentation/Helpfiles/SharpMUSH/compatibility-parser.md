@@ -187,7 +187,9 @@ PennMUSH answers `100`:
 text containing softcode executes.<br>
 **SharpMUSH** reads `##` as the element and `#@` as its position, from the outermost `iter()` or
 `@dolist` they are written in, and does not re-evaluate element text. Inside `lit()` or after `\`
-they stay `##` and `#@`, where PennMUSH has already spliced the value.<br>
+they stay `##` and `#@`, where PennMUSH has already spliced the value. `#$` in `switch()`,
+`reswitch()`, `@switch` and `@select` works the same way: it reads the subject of the outermost one
+whose action it is written in, and the subject is never re-evaluated.<br>
 **Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can
 influence becomes executable.<br>
 **Workaround.** Use `u()` or an explicit evaluation where you meant to run the element.

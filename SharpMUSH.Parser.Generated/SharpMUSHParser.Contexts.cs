@@ -120,6 +120,8 @@ public partial class SharpMUSHParser
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
 		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
 		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
+		SwitchSubjectContext[] switchSubject() => SoftcodeTree.Rules<SwitchSubjectContext>(this);
+		SwitchSubjectContext switchSubject(int i) => SoftcodeTree.Rule<SwitchSubjectContext>(this, i);
 		IGenericTextContext[] genericText() => SoftcodeTree.Rules<IGenericTextContext>(this);
 		IGenericTextContext genericText(int i) => SoftcodeTree.Rule<IGenericTextContext>(this, i);
 	}
@@ -141,6 +143,8 @@ public partial class SharpMUSHParser
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
 		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
 		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
+		SwitchSubjectContext[] switchSubject() => SoftcodeTree.Rules<SwitchSubjectContext>(this);
+		SwitchSubjectContext switchSubject(int i) => SoftcodeTree.Rule<SwitchSubjectContext>(this, i);
 	}
 
 	/// <summary>Every <c>callTail__*</c> rule.</summary>
@@ -160,6 +164,8 @@ public partial class SharpMUSHParser
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
 		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
 		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
+		SwitchSubjectContext[] switchSubject() => SoftcodeTree.Rules<SwitchSubjectContext>(this);
+		SwitchSubjectContext switchSubject(int i) => SoftcodeTree.Rule<SwitchSubjectContext>(this, i);
 	}
 
 	/// <summary>Every <c>regexpCapture__*</c> rule.</summary>
@@ -664,6 +670,7 @@ public partial class SharpMUSHParser
 	public partial class SubstitutionSymbolContext : ISoftcodeContext;
 	public partial class EscapedTextContext : ISoftcodeContext;
 	public partial class IterationTokenContext : ISoftcodeContext;
+	public partial class SwitchSubjectContext : ISoftcodeContext;
 	public partial class AnsiContext : ISoftcodeContext;
 
 	/// <summary>

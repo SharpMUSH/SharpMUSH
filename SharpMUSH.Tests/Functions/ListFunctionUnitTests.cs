@@ -79,6 +79,9 @@ public class ListFunctionUnitTests
 	[Arguments("iter(a b,\\##)", "## ##")]
 	[Arguments("iter(a b,#1 #-1 x#)", "#1 #-1 x# #1 #-1 x#")]
 	[Arguments("iter(a b,strlen(#))", "1 1")]
+	// The element's text is inserted, never evaluated again: PennMUSH splices it into the pattern first.
+	[Arguments("iter(lit([add(1,1)]),##:#@)", "[add(1,1)]:1")]
+	[Arguments("iter(lit(%#),##)", "%#")]
 	public async Task IterationTokensAsText(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));

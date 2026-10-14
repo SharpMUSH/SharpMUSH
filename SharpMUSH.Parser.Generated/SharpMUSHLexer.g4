@@ -36,6 +36,9 @@ DOLLAR: '$';
 // OTHER cannot take (one at the end, or before a special character).
 ITER_ELEMENT: '##';
 ITER_POSITION: '#@';
+// #$: the subject of the switch()/@switch it is written in, and text anywhere else. OTHER already stops
+// at '$', so this costs nothing where it is absent.
+SWITCH_SUBJECT: '#$';
 HASH: '#';
 
 // Greedy way of grabbing non-special characters which the parser does not care about, and can thus fast-forward through.

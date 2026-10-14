@@ -354,6 +354,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.IterationTokenContext
 				=> SemanticTokenType.Substitution,
 
+			// #$ reads the switch's subject.
+			SharpMUSHParser.SwitchSubjectContext
+				=> SemanticTokenType.Substitution,
+
 			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,
