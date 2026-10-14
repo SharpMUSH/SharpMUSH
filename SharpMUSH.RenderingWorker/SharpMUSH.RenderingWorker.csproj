@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Serves no browser assets. Without this the .NET 11 rc.2 Web SDK adds a dotnet-watch JS
+         initializer, and a Web project referencing this one fails with "scoped css bundles do not
+         have matching endpoints". -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SharpMUSH.SocketServer/SharpMUSH.SocketServer.csproj" />

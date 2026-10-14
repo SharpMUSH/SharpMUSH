@@ -8,16 +8,16 @@ SharpMUSH is a modern .NET 11 MUSH server (text-based multiplayer role-playing) 
 
 ## Build & Test Commands
 
-`global.json` pins the SDK to **11.0.100-rc.1** (`allowPrerelease: true`, rolling forward within
+`global.json` pins the SDK to **11.0.100-rc.2** (`allowPrerelease: true`, rolling forward within
 the 11.0.1xx band), so a .NET 10 SDK or an older 11.0 preview will not satisfy it — `dotnet` fails
 with "A compatible .NET SDK was not found" before any project is read. Install it with:
 
 ```bash
-curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 11.0.100-rc.1.26425.128
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 11.0.100-rc.2.26504.105
 ```
 
 The source-generator projects reference `Microsoft.CodeAnalysis.CSharp` 5.9.0; the compiler that
-loads them must be at least that version, and 11.0.100-rc.1 carries Roslyn 5.11. An SDK with an
+loads them must be at least that version, and 11.0.100-rc.2 carries Roslyn 5.12. An SDK with an
 older compiler rejects the generators with CS9057.
 
 `global.json` is the only place the SDK version is written down. Every workflow resolves it with
