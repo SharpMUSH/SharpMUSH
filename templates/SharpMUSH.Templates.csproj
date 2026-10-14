@@ -22,6 +22,7 @@
     <Description>`dotnet new` templates for SharpMUSH extensions: a softcode package (sharpmush-softcode), a Dynamic Application (sharpmush-application), and a C# DLL plugin (sharpmush-plugin). Aligned to PluginContractVersion 1.1.0.</Description>
     <PackageTags>dotnet-new;templates;sharpmush;mush;plugin;softcode;dynamic-application</PackageTags>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/SharpMUSH/SharpMUSH</PackageProjectUrl>
     <RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -40,6 +41,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
     <Content Include="plugin-dll/**/*;plugin-softcode/**/*;plugin-application/**/*"
              Exclude="**/bin/**;**/obj/**" />
     <Compile Remove="**/*" />

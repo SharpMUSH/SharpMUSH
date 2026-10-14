@@ -4,6 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -130,17 +131,20 @@ public partial class Commands
 				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 				// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 				var setResult =
-					await AttributeService.SetAttributeAsync(executor, realLocated, attrName, contents);
+					await AttributeService.SetAttributeForReportAsync(executor, realLocated, attrName, contents);
 				var (setMessage, stored) = setResult switch
 				{
-					Success => (
+					WrittenAttribute => (
 						string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
 						$"{realLocated.Object().Name}/{attrNameParsed}"),
 					Error<string> failure => (failure.Value, string.Empty)
 				};
 				if (!PlayerAliases.Applies(realLocated, attrName)
-					&& (setResult is Error<string>
-						|| !await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, realLocated, attrName)))
+					&& setResult switch
+					{
+						WrittenAttribute written => !await AttributeWriteReport.IsSuppressedAsync(executor, realLocated, written),
+						Error<string> => true
+					})
 				{
 					await NotifyService.Notify(executor, setMessage, executor);
 				}

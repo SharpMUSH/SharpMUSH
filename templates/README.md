@@ -9,21 +9,21 @@ plugins of all three kinds. Two ways to start:
   `dotnet new sharpmush-softcode|sharpmush-application|sharpmush-plugin` (handles all renaming).
 
 SharpMUSH extends at three layers (see the
-[extensibility overview](../docs/design/extensibility-overview.md)); these templates
+[extensibility overview](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/design/extensibility-overview.md)); these templates
 cover the two runtime layers plus the portal:
 
 | Template | `dotnet new` short-name | Kind | What it is |
 |---|---|---|---|
-| [`plugin-softcode/`](plugin-softcode/) | `sharpmush-softcode` | `kind: softcode` | A YAML package of objects + attributes + a global `@function`. Game **policy**, no C#, no recompile. |
-| [`plugin-application/`](plugin-application/) | `sharpmush-application` | `kind: application` (+ softcode routes) | A Dynamic Application (Area 21): softcode schema/submit routes plus a portal page registration. |
-| [`plugin-dll/`](plugin-dll/) | `sharpmush-plugin` | C# DLL (`kind: plugin`) | A compiled `net11.0` plugin: `[SharpPlugin] : PluginBase` with a command + function, distributed as a plugin package. |
+| [`plugin-softcode/`](https://github.com/SharpMUSH/SharpMUSH/tree/main/templates/plugin-softcode) | `sharpmush-softcode` | `kind: softcode` | A YAML package of objects + attributes + a global `@function`. Game **policy**, no C#, no recompile. |
+| [`plugin-application/`](https://github.com/SharpMUSH/SharpMUSH/tree/main/templates/plugin-application) | `sharpmush-application` | `kind: application` (+ softcode routes) | A Dynamic Application (Area 21): softcode schema/submit routes plus a portal page registration. |
+| [`plugin-dll/`](https://github.com/SharpMUSH/SharpMUSH/tree/main/templates/plugin-dll) | `sharpmush-plugin` | C# DLL (`kind: plugin`) | A compiled `net11.0` plugin: `[SharpPlugin] : PluginBase` with a command + function, distributed as a plugin package. |
 
 Authoring background:
 
-- Plugin model & load semantics: [`docs/design/plugin-system.md`](../docs/design/plugin-system.md)
-- Worked author guide: [`docs/guides/writing-a-plugin.md`](../docs/guides/writing-a-plugin.md)
-- Where each layer fits: [`docs/design/extensibility-overview.md`](../docs/design/extensibility-overview.md)
-- The `package.yaml` manifest reference: [`examples/packages/README.md`](../examples/packages/README.md)
+- Plugin model & load semantics: [`docs/design/plugin-system.md`](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/design/plugin-system.md)
+- Worked author guide: [`docs/guides/writing-a-plugin.md`](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/guides/writing-a-plugin.md)
+- Where each layer fits: [`docs/design/extensibility-overview.md`](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/design/extensibility-overview.md)
+- The `package.yaml` manifest reference: [`examples/packages/README.md`](https://github.com/SharpMUSH/SharpMUSH/blob/main/examples/packages/README.md)
 
 ## Use them via `dotnet new`
 
@@ -104,7 +104,7 @@ route is a manual find-and-replace of the same tokens.
   the bundled `validate.yml` CI check it on push. Release as a git tag
   `<package-dir>/v<semver>`.
 - **DLL**: the project references the `SharpMUSH.Library` + generator NuGets
-  (versioned 1.1.0). Until they publish to a public feed,
+  (versions pinned in the template `.csproj`). To build against a local checkout,
   build against an in-repo SharpMUSH checkout via the commented `ProjectReference`
   block in the `.csproj`. The `build-and-release.yml` CI does a deterministic build,
   computes the SHA-256 hashes, rewrites the plugin package's `package.yaml`, and cuts a release.

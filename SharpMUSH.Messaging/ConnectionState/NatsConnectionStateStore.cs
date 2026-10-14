@@ -65,7 +65,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			await _store.PutAsync(GetKey(handle), json, cancellationToken: ct);
 			_logger.LogTrace("Stored connection state for handle {Handle}", handle);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested))
 		{
 			_logger.LogError(ex, "Failed to store connection state for handle {Handle}", handle);
 			throw;
@@ -88,7 +88,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			var json = result.Value.Value;
 			return json is null ? null : JsonSerializer.Deserialize<ConnectionStateData>(json);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested))
 		{
 			_logger.LogError(ex, "Failed to retrieve connection state for handle {Handle}", handle);
 			throw;
@@ -102,7 +102,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			await _store.DeleteAsync(GetKey(handle), cancellationToken: ct);
 			_logger.LogTrace("Removed connection state for handle {Handle}", handle);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested))
 		{
 			_logger.LogError(ex, "Failed to remove connection state for handle {Handle}", handle);
 			throw;

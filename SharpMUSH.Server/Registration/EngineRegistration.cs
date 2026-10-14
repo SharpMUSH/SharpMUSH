@@ -14,10 +14,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.CodeAnalysis;
+using SharpMUSH.CodeAnalysis.Catalog;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
-using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
@@ -173,6 +173,7 @@ internal static class EngineRegistration
 		// The plugin-package installer and the host's SHARPMUSH_PLUGIN_INSTALL switch (on unless set to false).
 		services.AddSingleton(_ => PluginInstallOptions.FromEnvironment());
 		services.AddSingleton<IPluginPackageInstaller, PluginPackageInstaller>();
+		services.AddSingleton<SharpMUSH.Library.Applications.UiPackageStore>();
 		// The Packages page's Plugins tab and @plugin: what runs, turning plugins on and off, and portal uploads.
 		services.AddSingleton<Services.PluginAdministrationService>();
 		services.AddSingleton<IPluginAdministration>(sp => sp.GetRequiredService<Services.PluginAdministrationService>());
@@ -321,6 +322,15 @@ internal static class EngineRegistration
 		// Shared MUSH code intelligence — the single source of truth behind both the
 		// Language Server (for editors) and the in-server MCP tools (for agents/tooling).
 		services.AddSingleton<IMushCodeAnalyzer, MushCodeAnalyzer>();
+		services.AddOptions<AnalysisExecutionOptions>().BindConfiguration("Mcp").BindConfiguration("Analysis");
+		services.AddSingleton(provider => new AnalysisExecutor(provider.GetRequiredService<IOptions<AnalysisExecutionOptions>>(), provider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
+		services.AddSingleton<IAnalysisSessionFactory, SharpMUSH.Server.Services.AnalysisSessionFactory>();
+		services.AddSingleton<IAnalysisCatalog>(provider =>
+		{
+			var parser = provider.GetRequiredService<SharpMUSH.Library.ParserInterfaces.IMUSHCodeParser>();
+			return new LiveAnalysisCatalog(parser.FunctionLibrary, parser.CommandLibrary,
+				provider.GetRequiredService<IUserDefinedFunctionService>(), provider.GetRequiredService<ILockService>());
+		});
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
 		services.AddOptions<SharpMUSHOptions>().ValidateOnStart();
@@ -415,7 +425,11 @@ internal static class EngineRegistration
 				SizeLimit = CacheEntryProfiles.MemoryCacheSizeLimit,
 				CompactionPercentage = CacheEntryProfiles.MemoryCacheCompactionPercentage,
 			}))
-			.WithDefaultEntryOptions(CacheEntryProfiles.Tagged);
+			.WithDefaultEntryOptions(CacheEntryProfiles.Tagged)
+			// With any logger at all, FusionCache builds an operation-id string for every call, hits
+			// included, and every tag check is a call. Under the Error level appsettings sets for it, the
+			// only messages left are serializer and plugin errors, and this memory-only cache has neither.
+			.WithoutLogger();
 
 		// Dedicated cache for compiled boolean-lock expressions.
 		// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used

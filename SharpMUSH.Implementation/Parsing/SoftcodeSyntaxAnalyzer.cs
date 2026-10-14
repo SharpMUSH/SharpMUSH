@@ -89,6 +89,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		var tokens = new List<TokenInfo>(tokenArray.Count - 1);
 		for (var i = 0; i < tokenArray.Count - 1; i++)
 		{
+			if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 			var token = tokenArray[i];
 			var tokenInfo = new TokenInfo
 			{
@@ -168,6 +169,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		var diagnostics = new List<Diagnostic>(errors.Count);
 		for (var i = 0; i < errors.Count; i++)
 		{
+			if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 			diagnostics.Add(errors[i].ToDiagnostic());
 		}
 
@@ -248,6 +250,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		{
 			for (var i = 0; i < tokenArray.Count - 1; i++)
 			{
+				if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 				var token = tokenArray[i];
 				if (!classifications.TryGetValue(token.TokenIndex, out var info))
 					info = (SemanticTokenType.Text, SemanticTokenModifier.None);
@@ -292,7 +295,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		}
 
 		for (var i = 0; i < tree.ChildCount; i++)
+		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
 			CollectTerminalClassifications(tree.GetChild(i), map, sourceText);
+		}
 	}
 
 	/// <summary>
@@ -348,9 +354,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,
 
-			// PERCENT is the only direct terminal child of IExplicitEvaluationStringContext.
+			// PERCENT is the only direct terminal child of these.
 			SharpMUSHParser.IExplicitEvaluationStringContext
 			or SharpMUSHParser.IBraceExplicitEvaluationStringContext
+			or SharpMUSHParser.ICallTailContext
 				=> SemanticTokenType.Substitution,
 
 			SharpMUSHParser.IStartEqSplitCommandContext

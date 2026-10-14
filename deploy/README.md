@@ -9,12 +9,14 @@ Everything runs under Docker Compose. **Kubernetes is not needed** at this scale
 
 ## What's here
 
-Two entry points, pick one based on how you terminate TLS:
+Two entry points, pick one based on how you terminate web TLS. Native-client TLS is a
+separate, optional overlay for either stack:
 
 | File | Purpose |
 |------|---------|
 | `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
-| `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports, hidden origin IP). See the Cloudflare section below. |
+| `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports). Native clients still connect directly. See the Cloudflare section below. |
+| `docker-compose.telnet-tls.yml` | Opt-in native-client TLS on 4203 with an operator-supplied certificate. See [Native-client TLS](native-client-tls.md). |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
 | `grafana/sharpmush-invocations.json` | Optional Grafana dashboard for function and command timings (see [Function and command timings](#function-and-command-timings)) |
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
@@ -40,9 +42,15 @@ docker compose -f docker-compose.prod.yml run --rm backup restic init
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-The web portal comes up on `https://<your-domain>` (via Caddy) and telnet on port `4201`.
+The web portal comes up on `https://<your-domain>` (via Caddy) and plaintext telnet on port `4201`.
+For encrypted native MU* clients, also follow [Native-client TLS](native-client-tls.md);
+web HTTPS alone does not protect telnet.
 Then open `https://<your-domain>/setup` straight away: the first visitor claims the admin
 account linked to `#1`.
+
+### Optional MCP and LSP enablement
+
+The remote transports are disabled by default. `.env` provides Compose interpolation, not automatic container forwarding. Follow [Set up editor and AI analysis](analysis-tools.md) for the explicit analysis overlay and editor/MCP checks.
 
 ### Socket worker identity and connection capacity
 
@@ -142,27 +150,27 @@ reached at one stable HTTPS address and the proxy passes the browser's `Host` th
 |------|---------|----------------------|
 | 80 / 443 (TCP), 443 (UDP) | Caddy (web portal, SignalR, and `/ws` → connection server); UDP 443 is HTTP/3 (QUIC) | yes — open UDP 443 on the host firewall too, or browsers stay on HTTP/2 |
 | 4201 | Telnet — **plaintext** | yes |
-| 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
+| 4203 | Native Telnet over TLS | only with `docker-compose.telnet-tls.yml`; allow TCP 4203 on the host firewall when enabled |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
 | 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
 | 9092 | Server `/metrics` for Prometheus (plain HTTP, answers nothing else; `Metrics:Port`, 0 turns it off) | no — published on the host's loopback only (`127.0.0.1:9092`), for a scraper on the host or an ssh tunnel. Needs Docker Engine 28.3.3 or later: older engines let hosts on the same network segment reach loopback-published ports (before 28.0.0), or did so after a firewalld reload (before 28.3.3) |
 | 9091 | Connection server `/metrics` (same; `ConnectionServer:MetricsPort`) | no — scrape it from the compose network |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
 
-> **Telnet is unencrypted today.** Everything a player types on `4201`, including their password
-> on login, crosses the network in the clear. The web portal is HTTPS via Caddy, but MU\* clients
-> connect straight to `4201` and bypass it entirely.
->
-> `ssl_port` (4203) exists in the configuration and **nothing listens on it** —
-> [#743](https://github.com/SharpMUSH/SharpMUSH/issues/743) is the issue to implement it, and
-> records the intended deployment shape: the Caddy stack can reuse the Let's Encrypt certificate
-> Caddy already renews into `caddy-data`, and the Cloudflare stack (which has no Caddy, and so no
-> local certificate) needs an ACME sidecar doing a DNS-01 challenge.
->
-> Until then, if you need encrypted player connections, terminate TLS in front of `4201` yourself
-> (stunnel, or a TCP-mode proxy). Be aware of the cost: the game takes a connection's IP from the
-> socket's peer address and has no PROXY-protocol support, so every player will appear to connect
-> from the proxy — site-locks, bans and connection logs all lose the real client address.
+**Port 4201 is plaintext**, including login passwords. The optional
+[`docker-compose.telnet-tls.yml`](docker-compose.telnet-tls.yml) overlay enables the existing
+SocketServer TLS listener on **4203**, terminating TLS directly in the socket owner so it retains
+the client's peer address. It works with either base stack and leaves 4201 enabled.
+
+Follow [Native-client TLS](native-client-tls.md) for trusted PEM certificates, permissions,
+verification and renewal. Set `ConnectionServer__TelnetSslPort` to open the listener;
+`ssl_port` in the game configuration only advertises the MSSP port and does not open one.
+Without the overlay, `TelnetSslPort` defaults to `0` and there is no TLS listener.
+
+Caddy and Cloudflare provide HTTPS for the web portal and WebSocket terminal only. This overlay
+does not discover Caddy's certificates, provision ACME certificates, or renew them. Certificate
+changes require a deliberate `connectionserver` restart, which disconnects its native and
+WebSocket clients.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
 terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
@@ -221,8 +229,9 @@ dials *outbound* to Cloudflare and Cloudflare routes public traffic back down th
 connection, which means:
 
 - you open **no inbound web ports** (no 80/443 on the host firewall),
-- you manage **no TLS certificate** (Cloudflare terminates HTTPS at its edge),
-- your server's **origin IP stays hidden** behind Cloudflare.
+- you manage **no web TLS certificate** (Cloudflare terminates HTTPS at its edge),
+- web traffic reaches the origin through the tunnel; a DNS-only native-client hostname
+  still reveals the same host's public IP.
 
 ### The one thing to understand first: there are TWO independent front doors
 
@@ -231,13 +240,15 @@ SharpMUSH is reached two different ways, and Cloudflare only handles one of them
 | Traffic | Protocol | Path | Goes through Cloudflare? |
 |---------|----------|------|--------------------------|
 | Web portal, REST, SignalR, WebSocket terminal | HTTP/HTTPS + WS | Cloudflare Tunnel → `sharpmush-server:8080` | **Yes** |
-| Telnet (MU\* clients) | raw TCP | Client → host IP `:4201` directly | **No** |
+| Telnet (MU\* clients) | raw TCP, optionally TLS | Client → host IP `:4201` (plaintext) or `:4203` (TLS overlay) directly | **No** |
 
 Cloudflare's normal proxy (the orange cloud) only carries HTTP/HTTPS and WebSockets.
 **Raw telnet is plain TCP and cannot go through it** on free/standard plans — that would
 require the paid Spectrum product. So the Zero Trust / Tunnel steps below apply **only to
 the web side**. Telnet is configured entirely separately, with a plain DNS record, and is
-served straight off the host. Keep the two in separate mental buckets.
+served straight off the host. TLS on 4203 is still native TCP, not HTTPS, and does not
+make this traffic compatible with the orange-cloud web proxy. See Cloudflare's
+[network-port guidance](https://developers.cloudflare.com/fundamentals/reference/network-ports/).
 
 ### Part A — the web side (Cloudflare Zero Trust Tunnel)
 
@@ -287,13 +298,18 @@ that resolves straight to your server:
    record, e.g. `telnet.mush.example.com` → your host's public IP.
 2. Set that record to **DNS only (grey cloud)**, *not* proxied. A proxied record would try
    to send telnet through Cloudflare's HTTP proxy, which does not work.
-3. Make sure the host firewall allows inbound **TCP 4201** (the compose file already
-   publishes it). Players then connect their MU\* client to `telnet.mush.example.com 4201`.
+3. For encrypted connections, enable [Native-client TLS](native-client-tls.md), allow inbound
+   **TCP 4203** on the host firewall, and give players `telnet.mush.example.com 4203` with
+   their client's TLS/SSL option enabled and certificate validation on. The certificate must
+   cover that hostname.
+4. The base stack also publishes **TCP 4201**, which is plaintext. Allow it through the host
+   firewall only if you intend to offer legacy plaintext access; the TLS overlay does not
+   remove that mapping.
 
 > Trade-off to be aware of: because this record is DNS-only, that hostname reveals your
-> server's real IP. The web portal stays hidden behind Cloudflare; only the telnet
-> hostname is exposed. If hiding the telnet IP matters to you, that requires Cloudflare
-> Spectrum (paid) or a different TCP proxy.
+> server's real IP, including when native TLS is enabled. Web traffic still uses Cloudflare,
+> but the shared host's address is no longer secret. If hiding the telnet IP matters to you,
+> that requires Cloudflare Spectrum (paid) or a different TCP proxy.
 
 ### Part C — bring it up
 
@@ -311,7 +327,8 @@ Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.ym
 
 | Port | Service | Open on host firewall? |
 |------|---------|------------------------|
-| 4201 | Telnet | **yes** (Part B) |
+| 4201 | Telnet — plaintext | only if offering legacy plaintext access (Part B); published by the base stack |
+| 4203 | Native Telnet over TLS | **yes when enabled** with the TLS overlay (Part B) |
 | 80 / 443 | — | **no** — the tunnel is outbound-only |
 | 8080 | ASP.NET server (HTTP) | no — internal, reached via the tunnel |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
@@ -320,11 +337,11 @@ Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.ym
 
 `restart: unless-stopped` already brings the containers back after a reboot, and for most
 boxes that is enough. But it replays the **last state**, not the **declared** one: it
-restarts whatever happened to be running when the box went down. A `docker compose down`,
+restarts whatever happened to be running when the box went down. A `docker compose -f docker-compose.prod.yml down`,
 a hand-stopped container, or an edited compose file therefore survives the reboot, and the
 box silently drifts from what `deploy/` says it should be.
 
-`sharpmush.service` closes that gap by running `docker compose up -d` on boot, so the box
+`sharpmush.service` uses `docker-compose.cloudflare.yml` by default (change all Exec* filenames for Caddy and add any analysis overlay). It reconciles the declared stack on boot, so the box
 reconciles against the compose file every time it starts:
 
 ```bash
@@ -352,9 +369,9 @@ To enable it, fill in the restic settings in `.env` and uncomment:
 COMPOSE_PROFILES=backup
 ```
 
-Once enabled, the `backup` service snapshots `/data/backup`, `/data/wiki-assets` and
-`/data/lightning.dataprotection-keys` to your bucket every night at 03:30, keeping 7 daily and 4
-weekly snapshots. The volume is mounted
+Once enabled, the `backup` service snapshots `/data/backup`, `/data/wiki-assets`,
+`/data/lightning.dataprotection-keys`, and `/data/lightning.plugins` to your bucket every night
+at 03:30, keeping 7 daily and 4 weekly snapshots. The volume is mounted
 **read-only**, so a backup run can never corrupt live data.
 
 **What it snapshots is a copy, not the live world.** restic reads `data.mdb` front to back
@@ -384,57 +401,113 @@ an installed plugin's folder (see [Plugins](#plugins)) is not in it.
 Each copy is LMDB's own `mdb_env_copy` of the environment, a point-in-time snapshot by
 construction.
 
-The `docker compose run --rm backup …` commands below work whether or not the profile is
+The `docker compose -f docker-compose.prod.yml run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
 
-> The commands below (and under **Updating**) omit `-f` by exporting `COMPOSE_FILE`, so
-> they work for either stack. Set it once per shell to whichever stack you deployed:
-> ```bash
-> export COMPOSE_FILE=docker-compose.prod.yml        # or docker-compose.cloudflare.yml
-> ```
+The backup/restore commands below explicitly select the Caddy production file from `deploy/`. If your game uses Cloudflare, replace **every** `-f docker-compose.prod.yml` with `-f docker-compose.cloudflare.yml`. If analysis or another overlay is enabled, include its `-f` argument after the base file in every invocation (for example, `-f docker-compose.prod.yml -f docker-compose.analysis.yml`). Explicit `-f` arguments override `COMPOSE_FILE`; setting that environment variable does not add omitted overlays to these commands.
 
 ```bash
 # List snapshots:
-docker compose run --rm backup restic snapshots
+docker compose -f docker-compose.prod.yml run --rm backup restic snapshots
 
 # Run a backup right now:
-docker compose run --rm backup backup   # (entrypoint verb)
+docker compose -f docker-compose.prod.yml run --rm backup backup   # (entrypoint verb)
 
 # Restore the latest snapshot into a scratch dir to inspect it:
-docker compose run --rm -v restore:/restore backup \
+docker compose -f docker-compose.prod.yml run --rm -v restore:/restore backup \
   restic restore latest --target /restore
 ```
 
 **To restore for real**: stop the stack, then put the snapshot's
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
-`lightning`, and `wiki-assets` and `lightning.dataprotection-keys` go back as they are. The game
-reads whatever is in the volume on boot.
+`lightning`, and `wiki-assets`, `lightning.dataprotection-keys`, and `lightning.plugins` go back
+beside it. Restore the whole installed-plugin directory, including `plugins.state.json` (disabled
+plugins) and hidden `.uploads/` contents. Replace it rather than merging: files installed after
+the recovery point must not remain beside the restored world. The game reads the volume on boot.
+
+Use a fresh, empty scratch volume for each snapshot; restoring over an earlier scratch restore
+can leave files the selected snapshot did not contain. The commands below create a uniquely named
+volume and keep it until you have verified recovery. Replace `REPLACE_WITH_SELECTED_TIMESTAMP`
+with a completed directory name from step 2, not `latest` or an `.incoming-*` directory. If you
+changed the configured world, asset, key-ring, or plugin paths, adjust the paths below as well.
+Do not continue after a failed stop or Restic restore command.
 
 ```bash
-docker compose stop sharpmush-server connectionserver
+RESTORE_VOLUME="sharpmush-restore-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+docker compose -f docker-compose.prod.yml stop sharpmush-server connectionserver &&
 
 # 1. Restore into a scratch volume. The -v is what makes the files outlive the container;
 #    without it restic writes into the container's own filesystem and they are gone.
-docker compose run --rm -v restore:/restore backup \
-  restic restore latest --target /restore
+docker volume create "$RESTORE_VOLUME" &&
+docker compose -f docker-compose.prod.yml run --rm -v "$RESTORE_VOLUME:/restore" backup \
+  restic restore latest --target /restore &&
 
 # 2. See which copies the snapshot carried and pick one.
-docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server \
-  -c 'ls /restore/data/backup'
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server \
+  -c 'ls /restore/data/backup' &&
 
 # 3. Put it in place. The app image mounts app-data read-write, unlike the backup service.
-docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server -c '
-  rm -rf /app/data/lightning &&
-  cp -a /restore/data/backup/<timestamp> /app/data/lightning &&
-  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/ &&
-  if [ -d /restore/data/lightning.dataprotection-keys ]; then
-    rm -rf /app/data/lightning.dataprotection-keys &&
-    cp -a /restore/data/lightning.dataprotection-keys /app/data/lightning.dataprotection-keys
-  fi'
-
-docker compose start connectionserver sharpmush-server
-docker volume rm restore    # once the game is up and you are satisfied
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server -c '
+  set -eu
+  source=/restore/data
+  target=/app/data
+  world_copy=REPLACE_WITH_SELECTED_TIMESTAMP
+  case "$world_copy" in
+    ""|.*|*/*|latest)
+      echo "Choose a completed, dated world copy before restoring." >&2
+      exit 1 ;;
+  esac
+  world="$source/backup/$world_copy"
+  if [ ! -f "$world/data.mdb" ]; then
+    echo "Selected world copy has no data.mdb; nothing was changed." >&2
+    exit 1
+  fi
+  if [ ! -d "$source/wiki-assets" ]; then
+    echo "Snapshot has no wiki-assets directory; nothing was changed." >&2
+    exit 1
+  fi
+  if [ ! -d "$source/lightning.plugins" ]; then
+    echo "Snapshot has no plugin directory; inspect the recovery point before continuing." >&2
+    exit 1
+  fi
+  rm -rf "$target/lightning"
+  cp -a "$world" "$target/lightning"
+  mkdir -p "$target/wiki-assets"
+  cp -a "$source/wiki-assets/." "$target/wiki-assets/"
+  if [ -d "$source/lightning.dataprotection-keys" ]; then
+    rm -rf "$target/lightning.dataprotection-keys"
+    cp -a "$source/lightning.dataprotection-keys" "$target/lightning.dataprotection-keys"
+  fi
+  rm -rf "$target/lightning.plugins"
+  cp -a "$source/lightning.plugins" "$target/lightning.plugins"' && \
+  docker compose -f docker-compose.prod.yml start connectionserver sharpmush-server
 ```
+
+If the plugin directory is absent, stop and inspect the selected recovery point. An older backup
+may have omitted it, or the game may never have installed plugins or saved any enable/disable
+state. Recover any required plugin files and state from a matching trusted source before starting
+the game. Only if you have verified that the intended plugin directory should be empty, create an
+empty directory in the scratch volume and repeat step 3; this deliberately clears any currently
+installed plugins and disabled-plugin state:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint mkdir sharpmush-server \
+  -p /restore/data/lightning.plugins
+```
+
+Check world identity, logins, wiki assets, and plugin behavior using the
+[operator restore drill](../docs/guides/operator-handbook.md#restore-drill). Confirm a required
+installed plugin loads and a disabled plugin remains disabled. If any command failed, leave the
+services stopped and keep the scratch volume while you investigate. Once recovery is verified:
+
+```bash
+docker volume rm "$RESTORE_VOLUME"
+```
+
+A local regression check exercises the shell in step 3 against disposable fixture directories:
+`python3 -m unittest discover -s .github/scripts -p test_restore_instructions.py -v` from the
+repository root. This checks file replacement and failure handling; it does not replace a
+Restic/LMDB restore drill.
 
 A restored copy carries no `lock.mdb` — LMDB writes a fresh one on open — and no
 `lightning.previous`, which is a superseded world from a staging promotion and never part of a
@@ -445,6 +518,8 @@ and a copy still being written is named `.incoming-*` and excluded until it is m
 complete.
 
 ## Disk capacity
+
+Every Compose inspection, cleanup, compaction and restart command in this section explicitly selects the Caddy production file. For a Cloudflare deployment, replace each `-f docker-compose.prod.yml` with `-f docker-compose.cloudflare.yml`. Include enabled overlays after the base file in every invocation; `COMPOSE_FILE` cannot supply overlays omitted from explicit `-f` arguments.
 
 The world's disk use is easy to misread. Four numbers describe it, and `@storage` (wizard-only)
 reports each of them:
@@ -510,14 +585,16 @@ Nothing is written in that case.
 
 ### Earlier worlds
 
+Use your deployed base file and all enabled overlays for the cleanup commands below; the shown commands are Caddy examples.
+
 Promoting a staged import moves the world it replaces to `<world>.previous`. That world is **never
 deleted automatically**, because it is the way back if the import turns out wrong. Delete it once the
 promoted world has been verified. `@storage` lists it, along with any `.staging-*` world an import left
 and any `.incoming-*` copy an interrupted backup left:
 
 ```bash
-docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /app/data/*'
-docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
+docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /app/data/*'
+docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
 ```
 
 The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`), the
@@ -530,6 +607,8 @@ docker system df -v | grep -E 'app-data|nats-data'
 
 ### Compacting the world
 
+Before copying the commands below, select your deployed base file: Caddy uses `docker-compose.prod.yml`, Cloudflare uses `docker-compose.cloudflare.yml`. Append all enabled overlays to each command, including restart and log inspection.
+
 To give the disk back what deleted records freed, have the server replace the world's file with a
 compacted copy of itself when it starts. Nothing else has the file open at that point, so no write
 can land between the copy and the swap:
@@ -537,11 +616,11 @@ can land between the copy and the swap:
 ```bash
 # 1. Check there is room: the copy needs about the live data (see @storage) plus a margin, free.
 # 2. Set SHARPMUSH_LIGHTNING_COMPACT_ON_START=true on sharpmush-server, then restart it:
-docker compose up -d sharpmush-server
+docker compose -f docker-compose.prod.yml up -d sharpmush-server
 # 3. Check the log, then @storage in-game, and play-test.
-docker compose logs sharpmush-server | grep -i compact
+docker compose -f docker-compose.prod.yml logs sharpmush-server | grep -i compact
 # 4. Remove SHARPMUSH_LIGHTNING_COMPACT_ON_START again and restart, then delete the original:
-docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.precompact'
+docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.precompact'
 ```
 
 On each start the server:
@@ -633,6 +712,9 @@ count toward it.
 
 ## Updating
 
+The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
+
+
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
 publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
 `sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
@@ -659,8 +741,8 @@ label scope) or to force an immediate app update instead of waiting for the poll
 
 ```bash
 git pull
-docker compose pull
-docker compose up -d
+docker compose -f docker-compose.cloudflare.yml pull
+docker compose -f docker-compose.cloudflare.yml up -d
 ```
 
 The `app-data` volume persists across updates, so the world is untouched. Database migrations
@@ -669,3 +751,7 @@ are recorded in the database and re-applied only when new, so unattended restart
 ## Updates and live connections
 
 See [Connections during deployment](connection-updates.md) for lifecycle notices, PR deployment-impact checks, stop grace, session recovery limits and rollout options.
+
+## Editor and MCP analysis
+
+Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compose overlay, secure desktop editor configuration, curl smoke requests and troubleshooting. An entry in `.env` is not automatically forwarded to the server.

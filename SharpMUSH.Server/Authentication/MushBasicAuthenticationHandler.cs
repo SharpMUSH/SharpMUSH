@@ -35,7 +35,7 @@ public class MushBasicAuthenticationHandler(
 	IAccountService accountService)
 	: AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-	public const string SchemeName = "MushBasic";
+	public const string SchemeName = SharpMUSH.Library.Authorization.AnalysisTransportSecurity.AuthenticationScheme;
 
 	/// <summary>
 	/// A real, never-matching PBKDF2 hash used only to spend equivalent verification time on the
@@ -117,6 +117,7 @@ public class MushBasicAuthenticationHandler(
 			new("character_key", player.Object.Key.ToString()),
 			new("character_creation_time", player.Object.CreationTime.ToString()),
 			new("character_name", player.Object.Name),
+			new(SharpMUSH.CodeAnalysis.AnalysisIdentity.CredentialVersionClaim, SharpMUSH.CodeAnalysis.AnalysisIdentity.CredentialVersion(player.PasswordHash)),
 			new(GameHub.CharacterDbrefClaim, player.Object.DBRef.ToString())
 		};
 

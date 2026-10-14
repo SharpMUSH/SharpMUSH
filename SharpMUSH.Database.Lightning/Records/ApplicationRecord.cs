@@ -26,4 +26,7 @@ public sealed record ApplicationRecord
 	public string? OobPackage { get; init; }
 	public string? Permission { get; init; }
 	public string? NavUrl { get; init; }
+	public string? DefinitionId { get; init; }
+	public int ConfigVersion { get; init; } = 1;
+	public System.Text.Json.JsonElement? Config { get; init; }
 }

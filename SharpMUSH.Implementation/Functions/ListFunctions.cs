@@ -1025,31 +1025,47 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// fun_sortby's order: every item is compared against every other, its rank is the sum of those
-	/// results, and equal ranks keep list order.
+	/// sortby()'s order: a stable top-down merge sort, so about n log n comparisons, and items the
+	/// comparator calls equal keep list order. PennMUSH's fun_sortby (funlist.c) sorts with
+	/// sane_qsort (sort.c), a quicksort that is not stable; for a consistent comparator both give the
+	/// same order apart from equal items.
 	/// </summary>
 	/// <remarks>
-	/// Comparisons run one at a time, in list order, as PennMUSH's do. Every comparison shares the
-	/// evaluation's call counters and recursion-depth dictionary, which are not thread-safe: running
-	/// items concurrently corrupted that dictionary, and the throw surfaced as an empty, errored
-	/// sortby() (GRA-39). It also made a comparator's side effects run in no fixed order.
+	/// Comparisons run one at a time, in a fixed order. Every comparison shares the evaluation's call
+	/// counters and recursion-depth dictionary, which are not thread-safe: running items concurrently
+	/// corrupted that dictionary, and the throw surfaced as an empty, errored sortby() (GRA-39). It also
+	/// made a comparator's side effects run in no fixed order.
 	/// </remarks>
-	private static async Task<IEnumerable<MString>> SortByComparisons(MString[] list,
+	private static async Task<MString[]> SortByComparisons(MString[] list,
 		Func<MString, MString, Task<int>> compare)
 	{
-		var ranked = new (MString Item, int Rank)[list.Length];
-		for (var index = 0; index < list.Length; index++)
+		var items = list.ToArray();
+		var scratch = new MString[items.Length];
+		await MergeSort(0, items.Length);
+		return items;
+
+		async Task MergeSort(int from, int to)
 		{
-			var rank = 0;
-			for (var j = 0; j < list.Length; j++)
+			if (to - from < 2) return;
+
+			var middle = (from + to) / 2;
+			await MergeSort(from, middle);
+			await MergeSort(middle, to);
+
+			var left = from;
+			var right = middle;
+			var next = from;
+			while (left < middle && right < to)
 			{
-				if (j != index) rank += await compare(list[index], list[j]);
+				// Only a right item that sorts strictly before the left one goes first; that keeps it stable.
+				scratch[next++] = await compare(items[left], items[right]) > 0 ? items[right++] : items[left++];
 			}
 
-			ranked[index] = (list[index], rank);
+			Array.Copy(items, left, scratch, next, middle - left);
+			next += middle - left;
+			Array.Copy(items, right, scratch, next, to - right);
+			Array.Copy(scratch, from, items, from, to - from);
 		}
-
-		return ranked.OrderBy(r => r.Rank).Select(r => r.Item);
 	}
 
 	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]

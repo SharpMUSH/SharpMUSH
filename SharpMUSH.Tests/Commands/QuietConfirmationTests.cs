@@ -149,6 +149,57 @@ public class QuietConfirmationTests
 	}
 
 	/// <summary>
+	/// <c>do_set_atr</c>'s second gate (<c>src/attrib.c:2446-2451</c>): the attribute it finds after the
+	/// write carries <c>AF_QUIET</c>. Asked of an attribute already flagged quiet, set three ways.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async ValueTask SettingAQuietAttribute_IsSilent(bool quietAttribute)
+	{
+		var player = await PlayerInOwnRoom("QuietAttr", quiet: false);
+		var attribute = TestIsolationHelpers.GenerateUniqueName("QATTR").ToUpperInvariant();
+		await As(player, $"&{attribute} me=first");
+		if (quietAttribute)
+		{
+			await As(player, $"@set me/{attribute}=quiet");
+		}
+
+		var said = await MessagesWhile(player.DbRef, player.Handle, async () =>
+		{
+			await As(player, $"&{attribute} me=second");
+			await As(player, $"@set me={attribute}:third");
+			await As(player, $"think attrib_set(me/{attribute},fourth)");
+		});
+
+		await Assert.That(said.Count(message => message.Contains($"/{attribute} - Set.", StringComparison.OrdinalIgnoreCase)))
+			.IsEqualTo(quietAttribute ? 0 : 3).Because(string.Join(" | ", said));
+	}
+
+	/// <summary>
+	/// A new attribute takes its entry's default flags as it is created, so an entry that defaults to
+	/// <c>quiet</c> makes its first set silent too.
+	/// </summary>
+	[Test]
+	public async ValueTask CreatingAnAttributeWhoseEntryIsQuiet_IsSilent()
+	{
+		var player = await PlayerInOwnRoom("QuietEntry", quiet: false);
+		var attribute = TestIsolationHelpers.GenerateUniqueName("QENTRY").ToUpperInvariant();
+		var loud = TestIsolationHelpers.GenerateUniqueName("QLOUD").ToUpperInvariant();
+		await God($"@attribute/access {attribute}=quiet");
+
+		var said = await MessagesWhile(player.DbRef, player.Handle, async () =>
+		{
+			await As(player, $"&{attribute} me=value");
+			await As(player, $"&{loud} me=value");
+		});
+
+		await Assert.That(Says(said, $"/{attribute} - Set.")).IsFalse().Because(string.Join(" | ", said));
+		await Assert.That(Says(said, $"/{loud} - Set.")).IsTrue()
+			.Because("precondition: an attribute with no entry is still reported");
+	}
+
+	/// <summary>
 	/// <c>set_power</c> reports a grant only when <c>!AreQuiet(player, thing)</c>
 	/// (<c>src/flags.c:1978</c>).
 	/// </summary>

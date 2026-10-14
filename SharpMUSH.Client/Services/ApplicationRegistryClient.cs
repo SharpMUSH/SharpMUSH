@@ -53,6 +53,12 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 		}
 	}
 
+	public async Task<PortalApplication?> GetConfiguredAsync(string slug)
+	{
+		try { return await Client.GetFromJsonAsync<PortalApplication>($"api/applications/{Uri.EscapeDataString(slug)}/configuration"); }
+		catch (Exception ex) when (IsUnavailable(ex)) { return null; }
+	}
+
 	/// <summary>
 	/// A read that could not be answered. These reads take no token, so a cancellation is
 	/// <see cref="HttpClient"/>'s timeout, and it means the same as a failed request.

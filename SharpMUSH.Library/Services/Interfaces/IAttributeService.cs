@@ -38,6 +38,13 @@ public interface IAttributeService
 	ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
 
 	/// <summary>
+	/// As the four-argument <see cref="SetAttributeAsync(AnySharpObject, AnySharpObject, string, MString)"/>,
+	/// also answering what the <c>"- Set."</c> report's QUIET gate needs to know about the attribute just
+	/// written, so a caller that reports the write need not read it back.
+	/// </summary>
+	ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
+
+	/// <summary>
 	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
 	/// owner instead of deriving it from <paramref name="executor"/>. Mirrors PennMUSH's
 	/// <c>atr_cpy</c> (<c>src/attrib.c:1706</c>), which passes <c>AL_CREATOR(ptr)</c> through

@@ -45,20 +45,44 @@ public partial class Functions
 	/// and is suppressed by a QUIET player, a QUIET object they own, or a <c>quiet</c> attribute.
 	/// Failures come back as the return value instead.
 	/// </summary>
-	private async ValueTask NotifyOfSet(AnySharpObject executor, AnySharpObject thing, string attribute,
-		bool succeeded, bool wasSet)
+	private async ValueTask<Result<Success>> SetAndNotifyAsync(AnySharpObject executor, AnySharpObject thing,
+		string attribute, MString value)
 	{
-		// A player's alias list was reported by the write itself (PlayerAliases).
-		// Read back the attribute that was just written, as Penn does, so its own quiet flag counts.
-		if (!succeeded || PlayerAliases.Applies(thing, attribute)
-				|| await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, thing, attribute))
+		var result = await AttributeService.SetAttributeForReportAsync(executor, thing, attribute, value);
+
+		// A player's alias list was reported by the write itself (PlayerAliases). The written attribute's
+		// own quiet flag comes back with the write.
+		if (result is WrittenAttribute written && !PlayerAliases.Applies(thing, attribute)
+				&& !await AttributeWriteReport.IsSuppressedAsync(executor, thing, written))
 		{
-			return;
+			await NotifyOfWrite(executor, thing, attribute, "Set");
 		}
 
-		await NotifyService.Notify(executor,
-			$"{thing.Object().Name}/{attribute.ToUpperInvariant()} - {(wasSet ? "Set" : "Cleared")}.");
+		return result switch
+		{
+			WrittenAttribute => new Success(),
+			Error<string> error => error
+		};
 	}
+
+	private async ValueTask<Result<Success>> ClearAndNotifyAsync(AnySharpObject executor, AnySharpObject thing,
+		string attribute)
+	{
+		var result = await AttributeService.ClearAttributeAsync(executor, thing, attribute,
+			IAttributeService.AttributePatternMode.Exact);
+
+		// Read back what is left, as Penn does: a parent's attribute may now answer, and its quiet flag counts.
+		if (result is Success && !PlayerAliases.Applies(thing, attribute)
+				&& !await AttributeWriteReport.IsSuppressedAsync(AttributeService, executor, thing, attribute))
+		{
+			await NotifyOfWrite(executor, thing, attribute, "Cleared");
+		}
+
+		return result;
+	}
+
+	private async ValueTask NotifyOfWrite(AnySharpObject executor, AnySharpObject thing, string attribute, string what)
+		=> await NotifyService.Notify(executor, $"{thing.Object().Name}/{attribute.ToUpperInvariant()} - {what}.");
 
 	[SharpFunction(Name = "attrib_set", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -108,11 +132,8 @@ public partial class Functions
 				}
 
 				var setResult = hasValue
-					? await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents!.Message)
-					: await AttributeService.ClearAttributeAsync(executor, realLocated, attribute,
-						IAttributeService.AttributePatternMode.Exact);
-
-				await NotifyOfSet(executor, realLocated, attribute, setResult is Success, args.ContainsKey("1"));
+					? await SetAndNotifyAsync(executor, realLocated, attribute, contents!.Message)
+					: await ClearAndNotifyAsync(executor, realLocated, attribute);
 
 				return new CallState(setResult switch
 				{

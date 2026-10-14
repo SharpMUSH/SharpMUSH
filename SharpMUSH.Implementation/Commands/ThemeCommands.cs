@@ -4,6 +4,7 @@ using MarkupString;
 using MarkupString.Layout;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -289,30 +290,70 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// After <paramref name="changed"/>'s THEME changed: every connected player's theme, since any object, a player
-	/// included, can be another's parent or ancestor. Only the players whose themes changed see a difference.
+	/// After <paramref name="changed"/>'s THEME changed: the theme of each connected player who inherits from it, that is
+	/// whose THEME read visits it (themselves, a parent, their type ancestor or one of its parents). Nobody else's
+	/// theme can have changed, so nobody else's is worked out again.
 	/// </summary>
 	private async ValueTask RefreshThemesAfterAsync(IMUSHCodeParser parser, AnySharpObject changed)
 	{
-		if (changed.IsPlayer) await RefreshThemeAsync(parser, changed);
-		await RefreshConnectedThemesAsync(parser, tellUnreadable: false, except: changed.Object().DBRef);
-	}
+		if (!await MayBeInheritedAsync(changed))
+		{
+			if (changed.IsPlayer) await RefreshThemeAsync(parser, changed);
+			return;
+		}
 
-	/// <summary>
-	/// Every connected player's theme but <paramref name="except"/>'s, worked out again. When
-	/// <paramref name="tellUnreadable"/>, a player whose theme does not read is told why.
-	/// </summary>
-	private async ValueTask RefreshConnectedThemesAsync(IMUSHCodeParser parser, bool tellUnreadable = true, DBRef? except = null)
-	{
+		var source = changed.Object().DBRef;
 		var players = await ConnectionService.GetAll()
-			.Where(connection => connection.Ref is not null && connection.Ref != except)
+			.Where(connection => connection.Ref is not null)
 			.Select(connection => connection.Ref!.Value)
 			.Distinct()
 			.ToArrayAsync();
 		foreach (var dbref in players)
 		{
 			if (await Mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject player) continue;
-			if (await RefreshThemeAsync(parser, player) is Error<string> error && tellUnreadable)
+			if (!await ReadsThemeFromAsync(player, source)) continue;
+			await RefreshThemeAsync(parser, player);
+		}
+	}
+
+	/// <summary>
+	/// Whether another player's THEME read can visit <paramref name="changed"/>: only a parent or the player
+	/// ancestor is in a read besides its own, and a parent has children.
+	/// </summary>
+	private async ValueTask<bool> MayBeInheritedAsync(AnySharpObject changed)
+	{
+		var obj = changed.Object();
+		if (Configuration.CurrentValue.Database.AncestorPlayer is { } ancestor && obj.DBRef.Number == (int)ancestor) return true;
+		return await Mediator.Send(new GetChildCountQuery(obj.DBRef)) > 0;
+	}
+
+	/// <summary>
+	/// Whether <paramref name="player"/>'s THEME read visits <paramref name="source"/>: the targets
+	/// <see cref="AttributeAncestry.TargetsAsync"/> walks, as an inherited attribute read does.
+	/// </summary>
+	private async ValueTask<bool> ReadsThemeFromAsync(AnySharpObject player, DBRef source)
+	{
+		if (player.Object().DBRef.SameObjectAs(source)) return true;
+		var ancestor = await player.Ancestor(Configuration) is { } ancestorRef
+			&& await Mediator.Send(new GetObjectNodeQuery(ancestorRef)) is AnySharpObject node
+				? node.Object()
+				: null;
+		var targets = await AttributeAncestry.TargetsAsync(player.Object(), ancestor, (int)Configuration.CurrentValue.Limit.MaxParents);
+		return targets.Any(target => target.SameObjectAs(source));
+	}
+
+	/// <summary>Every connected player's theme, worked out again. A player whose theme does not read is told why.</summary>
+	private async ValueTask RefreshConnectedThemesAsync(IMUSHCodeParser parser)
+	{
+		var players = await ConnectionService.GetAll()
+			.Where(connection => connection.Ref is not null)
+			.Select(connection => connection.Ref!.Value)
+			.Distinct()
+			.ToArrayAsync();
+		foreach (var dbref in players)
+		{
+			if (await Mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject player) continue;
+			if (await RefreshThemeAsync(parser, player) is Error<string> error)
 				await NotifyService.NotifyLocalized(player, nameof(ErrorMessages.Notifications.ThemeUnreadableFormat), null, error.Value);
 		}
 	}

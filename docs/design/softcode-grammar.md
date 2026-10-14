@@ -42,7 +42,7 @@ A context is the set of facts that decide what the five tokens mean:
 | G | paren_groups is on |
 
 That is 128 combinations. Many treat the five tokens alike and have the same successors, so the
-generator merges them into 52 classes, giving 379 rules. A copy is named for its class: `Top_` or
+generator merges them into 52 classes, giving 420 rules. A copy is named for its class: `Top_` or
 `Call_`, then the letters of the tokens that are text there (R `)`, S `;`, C `,`, E `=`, A `>`), then
 `_G` with paren_groups. `beginGenericText__Top_RSCEA` takes all five as text;
 `function__Call_SEA` is a call whose `)` and `,` are structure.
@@ -50,6 +50,15 @@ generator merges them into 52 classes, giving 379 rules. A copy is named for its
 Entry points come in pairs: `startPlainString` and `startPlainString__G`. The parser's
 `ParenGroups` property picks one; `SoftcodeParsePipeline.Enter` calls `StartPlainString()` and the
 others, which dispatch on it.
+
+## A call's tail
+
+`evaluationString` is either a leading call followed by `callTail`, or an `explicitEvaluationString`.
+`explicitEvaluationString` cannot begin with a `name(` token (`FUNCHAR`); that is how a string that
+starts with one is known to start with a call, with no choice for prediction to make. `callTail` is
+what follows the call, and takes what may come later in any string, where a `FUNCHAR` is text:
+`add(1,2)mul(2,3)` is `3mul(2,3)`, as in PennMUSH, which looks for a function only at the first `(`.
+In an argument the tail's `,` and `)` keep their meaning there, as they do after any other text.
 
 ## Paren groups
 

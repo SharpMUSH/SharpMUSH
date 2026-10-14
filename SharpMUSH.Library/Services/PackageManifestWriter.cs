@@ -45,6 +45,9 @@ public static class PackageManifestWriter
 			case PackageKind.Application when manifest.Application is { } application:
 				WriteApplication(yaml, application);
 				break;
+			case PackageKind.Ui when manifest.Binary is { } uiBinary:
+				WriteBinaries(yaml, uiBinary);
+				break;
 			case PackageKind.Plugin when manifest.Binary is { } binary:
 				WriteBinaries(yaml, binary);
 				break;

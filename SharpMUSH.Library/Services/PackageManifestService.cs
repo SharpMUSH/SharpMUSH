@@ -782,7 +782,7 @@ public partial class PackageManifestService : IPackageManifestService
 			return kind;
 		}
 
-		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, plugin)."));
+		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, plugin, ui)."));
 		return PackageKind.Softcode;
 	}
 
@@ -816,12 +816,12 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		var present = doc.TryGetValue("binaries", out var node) && node is not null;
 
-		if (kind != PackageKind.Plugin)
+		if (kind is not (PackageKind.Plugin or PackageKind.Ui))
 		{
 			if (present)
 			{
 				issues.Add(PackageManifestIssue.Error("binaries",
-					"'binaries' is only valid when 'kind: plugin'."));
+					"'binaries' is only valid for plugin or ui packages."));
 			}
 
 			return null;
@@ -912,7 +912,7 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		// A DLL is the point of a plugin package: require at least one.
-		if (files.Count > 0 && files.All(f => !f.FileName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+		if (kind == PackageKind.Plugin && files.Count > 0 && files.All(f => !f.FileName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
 		{
 			issues.Add(PackageManifestIssue.Warning("binaries.files",
 				"No '.dll' among the carried files; the plugin loader only loads assemblies."));

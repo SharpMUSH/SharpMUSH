@@ -5045,7 +5045,7 @@ You say, "-1"
 # sortby()
 `sortby([<obj>/]<attrib>, <list>[, <delimiter>[, <output separator>]])`
 
-  This sorts an arbitrary list according to the ufun `<obj>`/`<attrib>`. This ufun should compare two arbitrary elements, %0 and %1, and return zero (equal), a negative integer (element 1 is less than element 2) or a positive integer (element 1 is greater than element 2), similar to the comp() function.
+  This sorts an arbitrary list according to the ufun `<obj>`/`<attrib>`. This ufun should compare two arbitrary elements, %0 and %1, and return zero (equal), a negative integer (element 1 is less than element 2) or a positive integer (element 1 is greater than element 2), similar to the comp() function. Elements the ufun calls equal keep their order from `<list>`.
 
   A simple example, which imitates a normal alphabetic sort:<br>
     > &ALPHASORT test=comp(%0,%1)<br>

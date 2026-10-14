@@ -450,7 +450,7 @@ public class PackagesController(
 		// the same commit (or the staged upload) so the installer can verify and deposit the bytes.
 		// Softcode/application packages need none.
 		IPluginPackageBinarySource? binarySource = null;
-		if (manifest.Kind == PackageKind.Plugin && isCatalogue)
+		if ((manifest.Kind is PackageKind.Plugin or PackageKind.Ui) && isCatalogue)
 		{
 			// The catalogue embeds manifests, not DLLs: there is nothing to read the binaries out
 			// of. No bundled package is a plugin package today, and this refuses rather than handing the
@@ -467,7 +467,7 @@ public class PackagesController(
 
 			binarySource = staged;
 		}
-		else if (manifest.Kind == PackageKind.Plugin)
+		else if (manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			switch (await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken))
 			{
@@ -493,7 +493,7 @@ public class PackagesController(
 
 		var outcome = await operations.RunAsync("apply",
 			token => installer.ApplyAsync(manifest, applyRequest, token, binarySource), cancellationToken);
-		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult } && manifest.Kind == PackageKind.Plugin)
+		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult } && manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			if (isUpload)
 			{

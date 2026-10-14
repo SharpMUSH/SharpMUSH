@@ -81,13 +81,13 @@ public class LightningWriterTests
 	{
 		var store = Open();
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var slow = store.WriteAsync(tx =>
+		var slow = Task.Run(async () => await store.WriteAsync(tx =>
 		{
 			started.SetResult();
 			Thread.Sleep(200);
 			tx.Put(Tables.Meta, Keys.Str("slow"), Keys.Str("done"));
 			return 1;
-		}).AsTask();
+		}));
 
 		await started.Task;
 		store.Dispose();
@@ -108,6 +108,75 @@ public class LightningWriterTests
 
 		store.Dispose();
 		await Assert.That(() => store.Dispose()).ThrowsNothing();
+	}
+
+	/// <summary>With nothing queued and nothing running, a write runs on the thread that asked for it: the
+	/// handoff to the writer thread and back costs several times the transaction itself.</summary>
+	[Test]
+	public async Task AnUncontendedWriteRunsOnTheCallersThread()
+	{
+		using var store = Open();
+		var caller = Environment.CurrentManagedThreadId;
+		var ran = 0;
+		var write = store.WriteAsync(tx =>
+		{
+			ran = Environment.CurrentManagedThreadId;
+			tx.Put(Tables.Meta, Keys.Str("k"), Keys.Str("v"));
+			return 1;
+		});
+
+		await Assert.That(write.IsCompletedSuccessfully).IsTrue();
+		await Assert.That(ran).IsEqualTo(caller);
+		await Assert.That(store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("k"), out _))).IsTrue();
+	}
+
+	/// <summary>A paused writer holds back every write, including one that would otherwise run on its
+	/// caller's thread.</summary>
+	[Test]
+	public async Task APausedWriterHoldsBackAWriteThatWouldRunOnItsCaller()
+	{
+		using var store = Open();
+		store.PauseWriter();
+		try
+		{
+			var write = store.WriteAsync(tx => { tx.Put(Tables.Meta, Keys.Str("held"), Keys.Str("1")); return 1; }).AsTask();
+			var wonRace = await Task.WhenAny(write, Task.Delay(TimeSpan.FromMilliseconds(300)));
+			await Assert.That(ReferenceEquals(wonRace, write)).IsFalse();
+
+			store.ResumeWriter();
+			await Assert.That(await write.WaitAsync(TimeSpan.FromSeconds(5))).IsEqualTo(1);
+		}
+		finally
+		{
+			store.ResumeWriter();
+		}
+	}
+
+	/// <summary>A write that arrives while another runs on its caller's thread queues behind it and lands
+	/// after it, never alongside.</summary>
+	[Test]
+	public async Task AWriteArrivingWhileACallerRunsItsOwnWaitsItsTurn()
+	{
+		using var store = Open();
+		using var release = new ManualResetEventSlim(false);
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var order = new List<string>();
+		var first = Task.Run(async () => await store.WriteAsync(tx =>
+		{
+			started.SetResult();
+			release.Wait();
+			lock (order) order.Add("first");
+			return 1;
+		}));
+		await started.Task;
+
+		var second = store.WriteAsync(tx => { lock (order) order.Add("second"); return 2; }).AsTask();
+		await Assert.That(second.IsCompleted).IsFalse();
+
+		release.Set();
+		await Assert.That(await second.WaitAsync(TimeSpan.FromSeconds(5))).IsEqualTo(2);
+		await first;
+		await Assert.That(order).IsEquivalentTo(new[] { "first", "second" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]

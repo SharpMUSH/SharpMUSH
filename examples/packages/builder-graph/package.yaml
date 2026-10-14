@@ -1,0 +1,17 @@
+format: 1.3
+package: builder-graph
+version: 0.1.0
+kind: ui
+authors: [SharpMUSH]
+description: Read-only builder topology in the reusable HTML/JavaScript host.
+binaries:
+  min_server_version: ">=2.0"
+  files:
+    - file: ui.json
+      sha256: 9337fbee7d8faf0054bb32d9c93945d9f86d24f5a87893949d9ca59f6001479a
+    - file: index.html
+      sha256: c061b4beb59b6f35577169ea7af1c3bd22d57516cc0b4653ec1d289bdb82ccf8
+    - file: graph.js
+      sha256: 897b63843f60884d9235a48f6e0a106b730332f830ed46f577ce811f42193085
+    - file: graph.css
+      sha256: 0f590dc9d5996f66d4c17eed8d744796de6db3e4e7a3936086d5c89bac511e37

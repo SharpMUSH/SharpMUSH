@@ -70,6 +70,24 @@ public class PrintedOutputSubstitutionTests
 		await Assert.That(heard).Contains($"got={marker}-two");
 	}
 
+	/// <summary>
+	/// The command after the pipe keeps its parse tree, as the list's does; a second run of the same text
+	/// reads that run's piped output, not the first's.
+	/// </summary>
+	[Test]
+	public async Task SameListAgainReadsItsOwnPipedOutput()
+	{
+		var attribute = Unique("PIPEVAL").ToUpperInvariant();
+		var list = $"think v({attribute}) ;| @pemit me=got=%|";
+		var (first, second) = (Unique("First"), Unique("Second"));
+		await Queued($"&{attribute} me={first}");
+		var heardFirst = await Queued(list);
+		await Queued($"&{attribute} me={second}");
+		var heardSecond = await Queued(list);
+		await Assert.That(heardFirst).Contains($"got={first}");
+		await Assert.That(heardSecond).Contains($"got={second}");
+	}
+
 	[Test]
 	public async Task OnlyTheCommandAfterThePipeReadsIt()
 	{

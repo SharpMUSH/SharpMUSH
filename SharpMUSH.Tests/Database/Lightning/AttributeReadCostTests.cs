@@ -458,11 +458,11 @@ public class AttributeReadCostTests
 		await SetMany(target, [["W"], [new string('X', 40)]]);
 
 		var clock = new StoppedClock();
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(400), default, clock);
+		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), default, clock);
 		using var scope = budget.Enter();
 		var rows = _db.GetLazyAttributesByRegexAsync(target, "^(X|XX)+C$|^W$").GetAsyncEnumerator();
 		await Assert.That(await rows.MoveNextAsync()).IsTrue();
-		clock.Advance(TimeSpan.FromMilliseconds(350));
+		clock.Advance(TimeSpan.FromMinutes(1) - TimeSpan.FromMilliseconds(50));
 
 		var timedOut = await Assert.That(async () => await rows.MoveNextAsync()).Throws<RegexMatchTimeoutException>();
 		await Assert.That(timedOut!.MatchTimeout).IsLessThan(SoftcodeRegex.MatchTimeout);

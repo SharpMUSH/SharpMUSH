@@ -93,7 +93,9 @@ public sealed partial class LightningStore : IDisposable
 		_options = options;
 		_logger = logger;
 		Open();
-		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch);
+		// A thread inside one of the gate's sections cannot take it again (NoRecursion), so its writes queue.
+		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch,
+			() => !_gate.IsReadLockHeld && !_gate.IsWriteLockHeld);
 		if (options.Sync == LightningSyncMode.Periodic)
 		{
 			_flushTimer = new Timer(_ => FlushIfDirty(), null, options.FlushInterval, options.FlushInterval);
@@ -228,6 +230,7 @@ public sealed partial class LightningStore : IDisposable
 	/// report a failure once its own cleanup is complete.</summary>
 	internal MDBResultCode Close()
 	{
+		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
 		_tables = new();
 		var flushed = MDBResultCode.Success;
@@ -287,8 +290,21 @@ public sealed partial class LightningStore : IDisposable
 		_gate.EnterReadLock();
 		try
 		{
-			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
-			return read(new Tx(tx, _tables));
+			var tx = RentReader();
+			T result;
+			try
+			{
+				result = read(new Tx(tx, _tables));
+			}
+			catch
+			{
+				// A read that failed may have left a cursor open on the transaction; it is not pooled.
+				tx.Dispose();
+				throw;
+			}
+
+			ReturnReader(tx);
+			return result;
 		}
 		finally
 		{
@@ -297,7 +313,51 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	/// <summary>
-	/// Runs one group commit on the calling thread; only <see cref="LightningWriter"/>'s thread may call
+	/// Read transactions kept between reads, reset. Beginning one takes a reader slot under LMDB's reader
+	/// table lock (the environment runs without thread-local storage); renewing a reset one keeps its slot
+	/// and only takes a fresh snapshot, about a third of the cost. A room listing reads per item, so this
+	/// is most of what a read costs before it touches a page. A reset transaction pins no pages, so a
+	/// writer reclaims space as if it were closed. Emptied by <see cref="Close"/>, under the gate's write
+	/// lock, before the environment goes.
+	/// </summary>
+	private readonly LightningTransaction?[] _readers = new LightningTransaction?[16];
+
+	private LightningTransaction RentReader()
+	{
+		for (var i = 0; i < _readers.Length; i++)
+		{
+			if (Interlocked.Exchange(ref _readers[i], null) is not { } pooled) continue;
+			if (pooled.Renew() == MDBResultCode.Success) return pooled;
+			pooled.Dispose();
+		}
+
+		return _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
+	}
+
+	private void ReturnReader(LightningTransaction tx)
+	{
+		if (tx.State == LightningTransactionState.Ready)
+		{
+			tx.Reset();
+			for (var i = 0; i < _readers.Length; i++)
+			{
+				if (Interlocked.CompareExchange(ref _readers[i], tx, null) is null) return;
+			}
+		}
+
+		tx.Dispose();
+	}
+
+	private void DisposeReaders()
+	{
+		for (var i = 0; i < _readers.Length; i++)
+		{
+			Interlocked.Exchange(ref _readers[i], null)?.Dispose();
+		}
+	}
+
+	/// <summary>
+	/// Runs one group commit on the calling thread; only <see cref="LightningWriter"/>, holding its turn, may call
 	/// this. A single item runs directly in the top-level transaction, exactly as a lone write always has.
 	/// Several items each get a nested transaction under one parent: an item that throws (its own code,
 	/// or a failed put) has its child aborted and its <see cref="LightningWriter.BatchItem.Error"/> set,
@@ -687,6 +747,21 @@ public sealed partial class LightningStore : IDisposable
 				if (code != MDBResultCode.Success) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
 			} while (cursor.Next().resultCode == MDBResultCode.Success);
+		}
+
+		public long CountRange(TableDef table, byte[] prefix, byte[] startKey)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			if (cursor.SetRange(startKey) != MDBResultCode.Success) return 0;
+			var count = 0L;
+			do
+			{
+				var (code, k, _) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success || !Keys.StartsWith(k.AsSpan(), prefix)) break;
+				count++;
+			} while (cursor.Next().resultCode == MDBResultCode.Success);
+
+			return count;
 		}
 
 		/// <summary>

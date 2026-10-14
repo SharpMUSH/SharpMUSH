@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
 using System.Text;
 
@@ -7,18 +10,31 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]
-/// [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
+/// [--things N] [--connections N] [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
 /// second, managed bytes allocated per operation, and generation-zero collections per thousand
-/// operations. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
+/// operations. <c>--things</c> is how many things God carries (default 50), for the scenarios that
+/// grow with a container. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
 /// scenarios are <see cref="ParenGroupBenchmarks"/>' workloads.
 /// </summary>
 public sealed class ProfileHarness : LightningBaseBenchmark
 {
 	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false, bool AsMortal = false);
 
+	private static readonly string Shuffled100 = string.Join(' ', Enumerable.Range(0, 100).Select(i => i * 37 % 100));
+
 	private static readonly Scenario[] Scenarios =
 	[
 		new("think", "think Hello World", true),
+		new("b-fn", "add(1,2)", false),
+		new("b-fn-br", "[add(1,2)]", false),
+		new("b-nest", "add(mul(2,3),sub(5,1))", false),
+		new("b-nest-br", "[add([mul(2,3)],[sub(5,1)])]", false),
+		new("b-iter", "iter(lnum(20),add(%i0,1))", false),
+		new("b-iter-br", "[iter(lnum(20),[add(%i0,1)])]", false),
+		new("b-sub", "%#", false),
+		new("b-sub-br", "[%#]", false),
+		new("b-think", "think add(1,2)", true),
+		new("b-think-br", "think [add(1,2)]", true),
 		new("think-subst", "think %#", true),
 		new("pemit-fn", "@pemit me=[add(1,2)]", true),
 		new("fn1", "[add(1,2)]", false),
@@ -60,11 +76,27 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("setq", "[setq(w1,x)]", false),
 		new("rc-whovis", "[filter(me/PROFILE_WHOVIS,lcon(me),,,me)]", false),
 		new("rc-whobase", "[iter(lcon(me),u(me/PROFILE_WHOBASE,##))]", false),
+		// 0-99 in a fixed shuffled order: a sorted list is a merge sort's best case.
+		new("sort", $"[sort({Shuffled100})]", false),
+		new("sortby", $"[sortby(me/PROFILE_CMP,{Shuffled100})]", false),
 		new("set", "&PROFILE_X me=x", true),
+		new("set-cmd", "@set me=PROFILE_X:x", true),
+		new("set-fn", "[attrib_set(me/PROFILE_X,x)]", false),
 		new("set+lattr", "&PROFILE_X me=x;think [lattr(me)]", true, IsCommandList: true),
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
 		new("actions", "@pemit me=Hi [add(1,2)];@switch 1=1,think yes;@trigger me/PROFILE_NOOP=a,b", true, IsCommandList: true),
 		new("include", "@include me/PROFILE_ACTIONS=5", true, IsCommandList: true),
+		// God's inventory holds --things "Profile Thing N" objects; these grow with it.
+		new("look-me", "look me", true),
+		new("locate", "[locate(me,Profile Thing 0,*)]", false),
+		new("tel", "[tel(Profile Thing 0,me)]", false),
+		// Command piping (help piping): a list that pipes against the same list without, typed and from an attribute.
+		new("list2", "think hello;think %>", true, IsCommandList: true),
+		new("pipe", "think hello ;| think %|", true, IsCommandList: true),
+		new("list2-inc", "@include me/PROFILE_LIST", true, IsCommandList: true),
+		new("pipe-inc", "@include me/PROFILE_PIPE", true, IsCommandList: true),
+		new("list-50", "@dolist/inline lnum(50)=think ##;think words(%>)", true, IsCommandList: true),
+		new("pipe-50", "@dolist/inline lnum(50)=think ## ;| think words(%|)", true, IsCommandList: true),
 		// {BIG}: a mortal's object holding BigFlat flat attributes and BigBranches trees of BigLeaves leaves.
 		// {KID}: a child of {BIG} with KidAttributes of its own. "-m" runs as that mortal, not as God.
 		new("lattr-big", "[lattr({BIG})]", false),
@@ -78,12 +110,47 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("hasattr-m", "[hasattr({BIG},FLAT3999)]", false, AsMortal: true),
 		new("grep-m", "[grep({BIG},FLAT1*,value)]", false, AsMortal: true),
 		new("examine-m", "examine {BIG}", true, AsMortal: true),
+		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
+		new("theme-me", "@theme me=fantasy", true),
+		new("theme-anc", "@theme #4=fantasy", true),
+		// Feeds (--feed-members N, --feed-lines N): bench/crowd has N members and the default 500-line limit,
+		// full; bench/long keeps every line and holds --feed-lines of them. {MEMBER} is crowd's last member.
+		new("feed-send", "@feed/send bench/crowd=Coming in.", true),
+		new("feed-long", "@feed/send bench/long=Coming in.", true),
+		new("feed-quiet", "@feed/send bench/quiet=Coming in.", true),
+		// radio/1: bench/quiet's members, each line drawn by the radio package's FORMAT.
+		new("feed-format", "@feed/send radio/1=Coming in.", true),
+		new("radio-line0", "[uargs(me/FUN`LINE,frequency,1,speaker,%#,name,God,style,pose,text,waves.,reader,%#)]", false),
+		new("radio-line", "[uargs(me/FUN`LINE,id,1,frequency,1,speaker,%#,name,God,style,say,text,Coming in.,reader,%#)]", false),
+		new("feed-member", "[feedmember(bench/crowd,{MEMBER})]", false),
+		new("feed-gag", "[feedmember(bench/crowd,{MEMBER},gag)]", false),
+		new("feed-unread", "[feedunread(bench/long,{MEMBER})]", false),
+		new("feed-recall", "[iter(feedrecall(bench/long,20),feedmsg(##,text))]", false),
+		new("feed-info", "[feedinfo(bench/crowd,members)]", false),
+		new("feed-who", "[words(feedwho(bench/crowd,active))]", false),
+		new("feedsof", "[feedsof({MEMBER},bench)]", false),
 	];
 
 	private const int BigFlat = 4000;
 	private const int BigBranches = 40;
 	private const int BigLeaves = 50;
 	private const int KidAttributes = 100;
+	private const string FeedKind = "bench";
+
+	/// <summary>
+	/// The bundled radio package's line (examples/packages/radio, <c>{{radio}}</c> as <c>me</c>), on God, for
+	/// <c>feed-format</c> and <c>radio-line</c>. Copy it again when the package changes.
+	/// </summary>
+	private static readonly Dictionary<string, string> RadioLine = new()
+	{
+		["FUN`KEY"] = "[edit(objid(%0),#,,:,_)]",
+		["FUN`NAME"] = "[get(me/F`%0`NAME)]",
+		["FUN`LINE"] = "if(cor(not(strlen(%<id>)),comp(%q<line_id>,%<frequency>/%<id>)),setqm(line_id,%<frequency>/%<id>,line_title,get(me/P`[u(me/FUN`KEY,%<speaker>)]`TITLE`%<frequency>),line_speaker,if(strlen(%q<line_title>),%q<line_title>%b)%<name>,line_frequency,get(me/F`%<frequency>`NAME),line_painted_colour,#-1))[setq(line_colour,firstof(get(me/P`[edit(objid(%<reader>),#,,:,_)]`COLOR`%<frequency>),get(me/DATA`COLOR)))][if(comp(%q<line_painted_colour>,%q<line_colour>),setqm(line_painted_colour,%q<line_colour>,line_painted,u(me/FUN`PAINT,%q<line_colour>,%q<line_frequency>)))]<%q<line_painted>> [switch(%<style>,pose,%q<line_speaker> %<text>,semipose,%q<line_speaker>%<text>,emit,%<text>,announce,%<text>,%q<line_speaker> says\\, \"%<text>\")]",
+		["FUN`PAINT"] = "[if(strmatch(setr(_p,tone(%0,%1)),#-*),ansi(%0,%1),%q<_p>)]",
+		["FEED`RADIO`FORMAT"] = "uargs(me/FUN`LINE,id,%<id>,frequency,%<key>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,%<recipient>)",
+		["DATA`COLOR"] = "info",
+		["F`1`NAME"] = "Ops",
+	};
 
 	/// <summary>
 	/// <see cref="ParenGroupBenchmarks"/>' workloads, each in the form its setting reads: unescaped with
@@ -105,6 +172,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	{
 		var seconds = 10;
 		var wait = 0;
+		var things = 50;
+		var connections = 0;
+		var feedMembers = 200;
+		var feedLines = 5000;
 		bool? parenGroups = null;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
@@ -119,6 +190,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 					if (++i >= args.Length || !int.TryParse(args[i], out wait) || wait < 0)
 						throw new ArgumentException("--wait requires a non-negative integer.");
 					break;
+				case "--things":
+					if (++i >= args.Length || !int.TryParse(args[i], out things) || things < 0)
+						throw new ArgumentException("--things requires a non-negative integer.");
+					break;
 				case "--paren-groups":
 					parenGroups = ++i < args.Length ? args[i] switch
 					{
@@ -126,6 +201,18 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 						"off" => false,
 						_ => throw new ArgumentException("--paren-groups takes on or off.")
 					} : throw new ArgumentException("--paren-groups takes on or off.");
+					break;
+				case "--connections":
+					if (++i >= args.Length || !int.TryParse(args[i], out connections) || connections < 0)
+						throw new ArgumentException("--connections requires a non-negative integer.");
+					break;
+				case "--feed-members":
+					if (++i >= args.Length || !int.TryParse(args[i], out feedMembers) || feedMembers <= 0)
+						throw new ArgumentException("--feed-members requires a positive integer.");
+					break;
+				case "--feed-lines":
+					if (++i >= args.Length || !int.TryParse(args[i], out feedLines) || feedLines < 0)
+						throw new ArgumentException("--feed-lines requires a non-negative integer.");
 					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
@@ -136,11 +223,15 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			? all
 			: all.Where(s => selected.Contains(s.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
 
+		// locate and tel name the first thing God carries.
+		if (things == 0 && scenarios.Any(scenario => scenario.Input.Contains("Profile Thing 0")))
+			throw new ArgumentException("locate and tel need --things of at least 1.");
+
 		var harness = new ProfileHarness();
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, things, parenGroups, connections, feedMembers, feedLines);
 		}
 		finally
 		{
@@ -148,7 +239,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 	}
 
-	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups)
+	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, int things, bool? parenGroups, int connections,
+		int feedMembers, int feedLines)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
@@ -162,15 +254,24 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOBASE"], MarkupText.Plain("json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,status,if(hastype(%0,player),json(string,idle(%0)),null),profile,if(hastype(%0,player),true,null)))"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_DOC"], MarkupText.Plain("{\"kind\":\"\",\"schema_version\":1,\"title\":\"\",\"pages\":[{\"key\":\"main\",\"title\":\"\",\"order\":1,\"sections\":[]}],\"actions\":{}}"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_NOOP"], MarkupText.Plain("think"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_CMP"], MarkupText.Plain("sub(%0,%1)"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_LIST"], MarkupText.Plain("think hello;think %>"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_PIPE"], MarkupText.Plain("think hello ;| think %|"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ACTIONS"], MarkupText.Plain("@pemit me=Got %0 [add(%0,1)];think [mul(%0,2)];@switch %0=5,{@pemit me=five},{@pemit me=other}"), god);
-		for (var i = 0; i < 50; i++)
+		for (var i = 0; i < things; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
+
+		await ConnectPlayersAsync(connections);
 
 		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
 			? await SeedBigObjectsAsync()
 			: (one, one, one);
+		var member = scenarios.Any(scenario => scenario.Name.StartsWith("feed", StringComparison.Ordinal)
+				|| scenario.Name.StartsWith("radio", StringComparison.Ordinal))
+			? await SeedFeedsAsync(baseParser, one, feedMembers, feedLines)
+			: one;
 		var inputs = scenarios.ToDictionary(scenario => scenario, scenario => MarkupText.Plain(scenario.Input
-			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}")));
+			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}").Replace("{MEMBER}", member.ToString())));
 		DBRef Executor(Scenario scenario) => scenario.AsMortal ? mortal : one;
 
 		foreach (var scenario in scenarios)
@@ -244,6 +345,76 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			=> await _database!.GetObjectNodeAsync(dbref) is AnySharpObject node
 				? node
 				: throw new InvalidOperationException($"#{dbref.Number} is missing.");
+	}
+
+	/// <summary>
+	/// Feed kind <c>bench</c>, owned by God: <c>bench/crowd</c> with <paramref name="members"/> players (none
+	/// connected) and its default 500 lines stored, <c>bench/long</c> keeping every line with
+	/// <paramref name="lines"/> stored and crowd's last member as its one member, and <c>bench/quiet</c> and
+	/// <c>radio/1</c>, unlogged, with the same members as crowd. God holds the radio package's line. Returns crowd's last member, who has read none of long's lines.
+	/// </summary>
+	private async Task<DBRef> SeedFeedsAsync(IMUSHCodeParser baseParser, DBRef god, int members, int lines)
+	{
+		var mediator = _server!.Services.GetRequiredService<IMediator>();
+		var ids = _server.Services.GetRequiredService<IChannelMessageIdSource>();
+		foreach (var command in new[]
+		{
+			$"@feed/define {FeedKind}=me", $"@feed/set {FeedKind}/long/max_messages=0", $"@feed/set {FeedKind}/quiet/logged=no",
+			"@feed/define radio=me", "@feed/set radio/1/logged=no"
+		})
+			await baseParser.FromState(BenchmarkHelpers.FreshState(god)).CommandParse(MarkupText.Plain(command));
+
+		var last = god;
+		for (var i = 0; i < members; i++)
+		{
+			var created = await _database!.CreatePlayerAsync($"ProfileListener{i}", "unused", new DBRef(0), new DBRef(0), 100);
+			last = await _database.GetObjectNodeAsync(created) is AnySharpObject player
+				? player.Object().DBRef
+				: throw new InvalidOperationException($"#{created.Number} is missing.");
+			foreach (var (kind, key) in new[] { (FeedKind, "crowd"), (FeedKind, "quiet"), ("radio", "1") })
+				await mediator.Send(new SetFeedMemberCommand(kind, key, new SharpFeedMember(last, 0, false, 0)));
+		}
+
+		await mediator.Send(new SetFeedMemberCommand(FeedKind, "long", new SharpFeedMember(last, 0, false, 0)));
+		if (await _database!.GetObjectNodeAsync(god) is not (AnySharpObject found and SharpPlayer godPlayer))
+			throw new InvalidOperationException("God is missing.");
+		var godObject = found.Object();
+		foreach (var (name, value) in RadioLine)
+			await _database.SetAttributeAsync(god, name.Split('`'), MarkupText.Plain(value), godPlayer);
+		var crowdLimits = FeedSettings.Defaults;
+		var longLimits = FeedSettings.Defaults with { MaxMessages = 0 };
+		foreach (var (key, count, limits) in new[] { ("crowd", 500, crowdLimits), ("long", lines, longLimits) })
+		{
+			for (var i = 0; i < count; i++)
+			{
+				var message = new SharpFeedMessage(await ids.NextAsync(), FeedKind, key, DateTimeOffset.UtcNow,
+					godObject.DBRef, godObject.Name, godObject.DBRef, godObject.Name, null, "", FeedStyles.Say,
+					MarkupText.Plain($"Line {i} of the seeded history."), "");
+				await mediator.Send(new AppendFeedMessageCommand(message, limits));
+			}
+		}
+
+		return last;
+	}
+
+	/// <summary>
+	/// <paramref name="count"/> players logged in on handles of their own, output discarded, each with a THEME
+	/// that is code, as a game's would be.
+	/// </summary>
+	private async Task ConnectPlayersAsync(int count)
+	{
+		var connectionService = _server!.Services.GetRequiredService<IConnectionService>();
+		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
+			throw new InvalidOperationException("God (#1) is not seeded as a player.");
+		for (var i = 0; i < count; i++)
+		{
+			var player = await _database.CreatePlayerAsync($"ProfileOnline{i}", "unused", new DBRef(0), new DBRef(0), 100);
+			await _database.SetAttributeAsync(player, ["THEME"], MarkupText.Plain("if(1,nord)"), god);
+			var handle = 900_000L + i;
+			await connectionService.Register(handle, "localhost", "localhost", "profile",
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+			await connectionService.Bind(handle, player);
+		}
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)

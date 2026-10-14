@@ -37,6 +37,7 @@
 		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->
 		<PackageReference Include="SharpMUSH.Implementation.Generated" Version="1.1.0"
 			PrivateAssets="all" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
 	</ItemGroup>
 
 	<!-- ════════════════════════════════════════════════════════════════════════════════════════

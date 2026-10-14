@@ -14,6 +14,11 @@
       "id": "boolean-examples",
       "heading": "Boolean examples",
       "lookup": "boolean values boolean examples"
+    },
+    {
+      "id": "testing-a-condition",
+      "heading": "Testing a condition",
+      "lookup": "boolean values testing a condition"
     }
   ],
   "redirects": {
@@ -58,6 +63,33 @@ Examples (assuming tiny_booleans is "no"):<br>
     not(#12) = 0<br>
 And so on...<br>
 (note: These rules only apply when a function expects a Boolean value, not for strings that expect other values.)
+
+## Testing a condition
+
+t() returns 1 or 0 by the same rules every condition uses to read its value, so wrapping a condition's value in t() gives the same answer and costs one more function call. The conditions are if(), ifelse(), cond(), condall(), ncond(), ncondall(), not(), and(), or(), xor(), nand(), nor(), cand(), cor(), ncand(), ncor(), the predicate of filterbool(), every() and some(), and the commands @break, @assert and @if.
+
+```sharp
+> think if(match(a b c,b),yes,no)
+yes
+> think not(pos(x,abc))
+1
+```
+
+A position, count or lookup is a condition already: match() and member() give 0 when nothing matches, and pos() gives #-1, which is false.
+
+t() is needed where the value is used as text rather than tested. filter() keeps only results that are exactly 1, switch() and @switch compare text, and add() counts numbers:
+
+```sharp
+> &ITSELF me=%0
+> think filter(me/ITSELF,1 2 abc 0)
+1
+> think filterbool(me/ITSELF,1 2 abc 0)
+1 2 abc
+> think switch(1,match(a b c,c),yes,no)
+no
+> think add(t(abc),t(0),t(5))
+2
+```
 
 
 ::: seealso

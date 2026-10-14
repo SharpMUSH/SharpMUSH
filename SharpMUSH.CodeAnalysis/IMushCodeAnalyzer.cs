@@ -15,7 +15,7 @@ public interface IMushCodeAnalyzer
 {
 	/// <summary>
 	/// Parses <paramref name="code"/> and returns any diagnostics (syntax errors,
-	/// warnings, hints). Never throws: a parser failure is surfaced as a single
+	/// warnings, hints). Propagates ambient budget cancellation; otherwise a parser failure is surfaced as a single
 	/// error diagnostic so callers can always render a result.
 	/// </summary>
 	/// <param name="code">The MUSH softcode to analyse.</param>
@@ -29,7 +29,7 @@ public interface IMushCodeAnalyzer
 	/// <summary>
 	/// Formats MUSH softcode with a consistent style: trims trailing/leading whitespace per
 	/// line, ensures a space after a comma, and a space between an <c>@command</c> and its
-	/// first argument. Line count is preserved. Never throws.
+	/// first argument. Line count is preserved. Propagates cancellation; other failures are contained.
 	/// </summary>
 	string Format(string code);
 
@@ -40,7 +40,7 @@ public interface IMushCodeAnalyzer
 	/// same layout engine <c>@examine</c>/<c>@grep</c> use, so a break is only ever inserted where
 	/// that engine has proven it is safe (never inside a call whose contents are copied verbatim
 	/// from source, such as <c>lit(...)</c>, and never before a closing delimiter). CRLF line
-	/// endings are preserved at every inserted break, mirroring <see cref="Format"/>. Never throws.
+	/// endings are preserved at every inserted break, mirroring <see cref="Format"/>. Propagates cancellation; other failures are contained.
 	/// <para>
 	/// Deliberately does <b>not</b> run <see cref="Format"/>'s cosmetic pass first: that pass edits
 	/// whitespace by a blind per-line regex with no notion of "this comma is inside a <c>lit(...)</c>
@@ -66,26 +66,26 @@ public interface IMushCodeAnalyzer
 	/// <summary>
 	/// Returns hover information (function/command signature docs, or a built-in pattern
 	/// explanation) for the word at the 0-based <paramref name="line"/>/<paramref name="character"/>,
-	/// or null if there is nothing to show. Never throws.
+	/// or null if there is nothing to show. Propagates cancellation; other failures are contained.
 	/// </summary>
 	HoverInfo? Hover(string code, int line, int character);
 
 	/// <summary>
 	/// Returns completion suggestions (functions, commands, and common substitutions) for the
-	/// word prefix at the 0-based <paramref name="line"/>/<paramref name="character"/>. Never throws.
+	/// word prefix at the 0-based <paramref name="line"/>/<paramref name="character"/>. Propagates cancellation; other failures are contained.
 	/// </summary>
 	IReadOnlyList<CompletionSuggestion> Complete(string code, int line, int character);
 
 	/// <summary>
 	/// Returns signature help for the function call surrounding the 0-based
 	/// <paramref name="line"/>/<paramref name="character"/>, or null if the position is not
-	/// inside a known function call. Never throws.
+	/// inside a known function call. Propagates cancellation; other failures are contained.
 	/// </summary>
 	SignatureInfo? SignatureHelp(string code, int line, int character);
 
 	/// <summary>
 	/// Returns an outline of the softcode: attribute definitions, <c>@set</c> attributes,
-	/// function calls, and commands. Never throws.
+	/// function calls, and commands. Propagates cancellation; other failures are contained.
 	/// </summary>
 	IReadOnlyList<CodeSymbol> DocumentSymbols(string code);
 }

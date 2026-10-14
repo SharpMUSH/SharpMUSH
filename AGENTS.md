@@ -122,7 +122,7 @@ Browser (Blazor WASM)
 | `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Image `sharpmush-connectionserver`, compose service `renderer` |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
-| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes group-committed on one thread, sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
+| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes run one at a time (on the caller's thread when nothing is queued, else group-committed on the writer thread), sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.Tests` | TUnit tests (unit + integration with real DB via Testcontainers) |

@@ -96,3 +96,16 @@ think a|b
 ::case sc.empty-bracket  an empty [] evaluates to nothing
 ::as wiz
 think a[]b|[strcat(x,[],y)]|[]
+
+::case sc.skip  @skip runs its action list only when the condition is false; @skip/ifelse is @if
+::as wiz
+@skip 1=think skip-1 ran
+@skip abc=think skip-abc ran
+@skip 0=think skip-0 ran
+@skip #-1 NO MATCH=think skip-nomatch ran
+@skip =think skip-empty ran
+@skip 0=think first,think second
+@skip 0
+@skip/ifelse 1=think ifelse-true,think ifelse-false
+@skip/ifelse 0=think ifelse-true,think ifelse-false
+@skip/ifelse 0=think ifelse-only-true

@@ -10,11 +10,12 @@ namespace SharpMUSH.Implementation.Visitors;
 
 /// <summary>
 /// The services evaluation uses, resolved once per parser rather than per call, and the pipelines
-/// built over them. A <see cref="MUSHCodeParser"/> builds one when it is constructed and every
+/// built over them. A <see cref="MUSHCodeParser"/> builds one on first evaluation and every
 /// state it pushes, and every visitor it creates, shares it.
 /// </summary>
 /// <remarks>
-/// <para>The required services are resolved eagerly, as the parser always did. The optional ones —
+/// <para>The required services are resolved together when evaluation first needs them. Syntax analysis
+/// does not create this bundle. The optional ones —
 /// telemetry, the <c>@function</c> registry, plugin command interceptors and the reality policy —
 /// used to be located on every function call or command; they are resolved on first use and kept,
 /// which is the same instance every time because each is a singleton.</para>

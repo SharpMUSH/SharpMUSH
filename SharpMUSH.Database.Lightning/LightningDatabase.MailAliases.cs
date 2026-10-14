@@ -9,7 +9,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <summary>
 /// <see cref="IMailAliasStore"/>: global mail aliases in <see cref="Tables.MailAlias"/>, keyed by the
 /// upper-cased name. A game has a handful of them, so ordered reads are a scan sorted by
-/// <see cref="MailAliasRecord.Sequence"/>. Each write is one job on the single writer thread, so a
+/// <see cref="MailAliasRecord.Sequence"/>. Each write is one job, and write jobs run one at a time, so a
 /// name check followed by a put is atomic with respect to every other write.
 /// </summary>
 public partial class LightningDatabase

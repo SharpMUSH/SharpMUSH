@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "id": "builder-graph",
+  "entry": "index.html",
+  "configVersion": 1,
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["rooms", "title"],
+    "properties": {
+      "rooms": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "integer", "minimum": 0, "maximum": 2147483647}},
+      "title": {"type": "string", "maxLength": 120}
+    }
+  }
+}

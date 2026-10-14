@@ -82,9 +82,9 @@ public sealed partial class PluginUploadStore(
 			return new Error<string>($"The archive's {ManifestFile} is not a valid package manifest; open it in Author to see why.");
 		}
 
-		if (manifest is not { Kind: PackageKind.Plugin, Binary: { } binary })
+		if (manifest.Binary is not { } binary || manifest.Kind is not (PackageKind.Plugin or PackageKind.Ui))
 		{
-			return new Error<string>($"{manifest.Name} is a {manifest.Kind.ToString().ToLowerInvariant()} package. Only plugin packages are uploaded; install others from a remote.");
+			return new Error<string>($"{manifest.Name} is a {manifest.Kind.ToString().ToLowerInvariant()} package. Only plugin and UI file packages are uploaded; install others from a remote.");
 		}
 
 		var missing = binary.Files.Where(f => !files.ContainsKey(f.FileName)).Select(f => f.FileName).ToList();

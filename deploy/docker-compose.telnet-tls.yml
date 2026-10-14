@@ -1,0 +1,17 @@
+# Opt-in native-client TLS. Add AFTER either production base file; see native-client-tls.md.
+# This does not obtain/renew certificates or remove the base's plaintext 4201 listener.
+services:
+  connectionserver:
+    environment:
+      ConnectionServer__TelnetSslPort: "4203"
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /run/sharpmush-tls/fullchain.pem
+      ASPNETCORE_Kestrel__Certificates__Default__KeyPath: /run/sharpmush-tls/privkey.pem
+    ports:
+      - "4203:4203"
+    volumes:
+      - type: bind
+        source: ${SHARPMUSH_TELNET_TLS_CERT_DIR:?set SHARPMUSH_TELNET_TLS_CERT_DIR to an existing certificate directory}
+        target: /run/sharpmush-tls
+        read_only: true
+        bind:
+          create_host_path: false

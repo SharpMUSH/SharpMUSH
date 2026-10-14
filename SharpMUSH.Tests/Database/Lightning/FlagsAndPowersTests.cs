@@ -288,14 +288,19 @@ public class FlagsAndPowersTests
 		await Assert.That(await _db.GetObjectPowersAsync().AnyAsync(power => power.Name == name)).IsFalse();
 	}
 
-	/// <summary>Each read hands out its own model: changing one does not change what the next read sees.</summary>
+	/// <summary>
+	/// Reads share one model per flag definition, so no reader may change one: every property is
+	/// init-only, and what one read hands out is what the next sees.
+	/// </summary>
 	[Test]
-	public async Task FlagModels_AreNotSharedBetweenReads()
+	public async Task FlagModels_CannotBeChangedByAReader()
 	{
-		var first = (await _db.GetObjectFlagAsync("WIZARD"))!;
-		first.Symbol = "?";
+		var settable = typeof(SharpObjectFlag).GetProperties()
+			.Where(property => property.SetMethod is { } setter
+				&& !setter.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(System.Runtime.CompilerServices.IsExternalInit)))
+			.Select(property => property.Name);
 
-		await Assert.That((await _db.GetObjectFlagAsync("WIZARD"))!.Symbol).IsNotEqualTo("?");
+		await Assert.That(settable).IsEmpty();
 	}
 
 	private async Task<SharpObjectFlag?> ObjectFlag(AnySharpObject target, string name)

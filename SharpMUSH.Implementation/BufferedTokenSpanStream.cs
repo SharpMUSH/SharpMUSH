@@ -1,4 +1,5 @@
 ﻿using Antlr4.Runtime;
+using SharpMUSH.Library.ParserInterfaces;
 using Antlr4.Runtime.Misc;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -129,6 +130,7 @@ namespace SharpMUSH.Implementation
 
 			for (var i = 0; i < n; i++)
 			{
+				if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 				var token = _tokenSource.NextToken();
 
 				if (token is IWritableToken token1)
@@ -172,9 +174,12 @@ namespace SharpMUSH.Implementation
 				: Tokens[p - k];
 		}
 
+		private int _budgetChecks;
+
 		[return: NotNull]
 		public virtual IToken? LT(int k)
 		{
+			if ((++_budgetChecks & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 			LazyInit();
 			switch (k)
 			{

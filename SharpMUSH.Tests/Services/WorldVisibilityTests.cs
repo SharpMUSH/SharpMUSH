@@ -15,12 +15,11 @@ public class WorldVisibilityTests
 	internal static void Flags(SharpObject obj, params string[] names) => obj.Flags = new(() => names.Select(name =>
 		new SharpObjectFlag { Name = name, Symbol = "", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] }).ToAsyncEnumerable());
 
+	// The room's flags and each item's are read once, for DARK and LIGHT both, so each has one stage.
 	[Test]
-	[Arguments("room-light")]
-	[Arguments("room-dark")]
+	[Arguments("room")]
 	[Arguments("viewer-power")]
-	[Arguments("item-dark")]
-	[Arguments("item-light")]
+	[Arguments("item")]
 	public async Task ExplicitScanCancellationReachesVisibilityStreams(string stage)
 	{
 		var objects = new TestObjectFactory();
@@ -32,16 +31,13 @@ public class WorldVisibilityTests
 		using var cancellation = new CancellationTokenSource();
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var count = 0;
-		var skip = stage is "room-dark" or "item-light" ? 1 : 0;
 		async IAsyncEnumerable<T> Block<T>([EnumeratorCancellation] CancellationToken token = default)
 		{
-			if (count++ < skip) yield break;
 			entered.TrySetResult(token);
 			await release.Task.WaitAsync(token);
 			yield break;
 		}
-		if (stage.StartsWith("room")) room.Object.Flags = new(() => Block<SharpObjectFlag>());
+		if (stage == "room") room.Object.Flags = new(() => Block<SharpObjectFlag>());
 		else if (stage == "viewer-power") viewer.Object().Grants = new(async token => { await Block<bool>(token).ToListAsync(token); return ObjectGrants.None; });
 		else item.Object().Flags = new(() => Block<SharpObjectFlag>());
 		async Task Run()
@@ -114,6 +110,35 @@ public class WorldVisibilityTests
 			.Returns(ObjectReality.Default(viewer.Object().DBRef) with { Receive = ["ghost"] });
 		var next = await WorldVisibility.CreateScanAsync(viewer, room, policy, Substitute.For<IConnectionService>());
 		await Assert.That(await next(first.AsOptionalContent.Expect<AnySharpContent>(), default)).IsFalse();
+	}
+
+	[Test]
+	public async Task AContentsScanReadsEachItemsFlagsOnceAndHandsThemBack()
+	{
+		var objects = new TestObjectFactory();
+		var room = objects.CreateRoom(10, "Room");
+		var viewer = objects.CreatePlayer(11, "Viewer", room);
+		var item = objects.CreateThing(12, "Thing", room).AsOptionalContent.Expect<AnySharpContent>();
+		var reads = 0;
+		item.Object().Flags = new(() => Counted());
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+
+		var scan = await WorldVisibility.CreateFlagScanAsync(viewer, room, reality, Substitute.For<IConnectionService>());
+		var seen = (await scan(item, default)).Expect<SharpObjectFlag[]>();
+
+		await Assert.That(reads).IsEqualTo(1);
+		await Assert.That(seen.Select(flag => flag.Name)).IsEquivalentTo(["LIGHT", "VISUAL"]);
+
+		async IAsyncEnumerable<SharpObjectFlag> Counted()
+		{
+			reads++;
+			foreach (var name in new[] { "LIGHT", "VISUAL" })
+			{
+				await Task.Yield();
+				yield return new SharpObjectFlag { Name = name, Symbol = "", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] };
+			}
+		}
 	}
 
 	[Test]

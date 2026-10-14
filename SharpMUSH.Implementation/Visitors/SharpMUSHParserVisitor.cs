@@ -642,7 +642,13 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		context.Depth());
 
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
-		[NotNull] IExplicitEvaluationStringContext context)
+		[NotNull] IExplicitEvaluationStringContext context) => await TrimmedAtTheEnd(context);
+
+	/// <summary>The text after a leading call, as in <c>add(1,2)mul(2,3)</c>; it ends the string as any text does.</summary>
+	public override async ValueTask<CallState?> VisitCallTail([NotNull] ICallTailContext context)
+		=> await TrimmedAtTheEnd(context);
+
+	private async ValueTask<CallState?> TrimmedAtTheEnd(ISoftcodeContext context)
 	{
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
@@ -827,37 +833,15 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			var compressed = MushText.CompressSpaces(result.Message);
 			// Strip leading when this is the FIRST text node in an evaluation string
 			// (direct child of explicitEvaluationString). When reached via genericText
-			// (text between brackets), leading spaces are meaningful separators.
-			//
-			// Being that first element is necessary but NOT sufficient, because an
-			// explicitEvaluationString is not always the start of the string it belongs to:
-			// `evaluationString: function explicitEvaluationString?` (every evaluationString__* copy)
-			// parses the text *after* a leading call as a second explicitEvaluationString, whose
-			// first element is exactly such a node. `add(1,2) x` used to lose that space and yield
-			// "3x"; the space separates the call's result from what follows it and is no more
-			// leading than the "3" is. So a tail-of-a-call node is excluded here.
-			if (context.Parent is IExplicitEvaluationStringContext or IBraceExplicitEvaluationStringContext
-					&& !FollowsACallInTheSameEvaluationString(context.Parent))
+			// (text between brackets, or after a leading call in callTail), leading spaces are
+			// meaningful separators: `add(1,2) x` is "3 x".
+			if (context.Parent is IExplicitEvaluationStringContext or IBraceExplicitEvaluationStringContext)
 				compressed = compressed.Trim(global::MarkupString.TrimType.TrimStart, " ");
 			return result with { Message = compressed };
 		}
 
 		return result;
 	}
-
-	/// <summary>
-	/// Whether <paramref name="explicitEvaluationString"/> is the trailing half of
-	/// <c>evaluationString: function explicitEvaluationString?</c> rather than a string's own
-	/// beginning &mdash; i.e. whether a <c>function</c> was already emitted to its left.
-	/// <para>
-	/// Only that one production puts an <c>explicitEvaluationString</c> after something that
-	/// produces output. Everywhere else it is genuinely first, and its leading whitespace is the
-	/// string's own leading whitespace.
-	/// </para>
-	/// </summary>
-	private static bool FollowsACallInTheSameEvaluationString(Antlr4.Runtime.Tree.IParseTree explicitEvaluationString)
-		=> explicitEvaluationString.Parent is IEvaluationStringContext evaluationString
-			 && evaluationString.function() is not null;
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] IValidSubstitutionContext context)
@@ -1090,7 +1074,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (commandText is not null) commandText.Printed = printed;
 		try
 		{
-			return await parser.CommandParse(text);
+			return await parser.PipedCommandParse(text);
 		}
 		finally
 		{

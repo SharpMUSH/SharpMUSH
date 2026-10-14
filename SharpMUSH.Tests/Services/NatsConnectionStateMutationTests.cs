@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NATS.Client.Core;
 using NATS.Client.JetStream.Models;
@@ -6,6 +7,7 @@ using NATS.Client.KeyValueStore;
 using NSubstitute;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -185,6 +187,25 @@ public class NatsConnectionStateMutationTests
 		await using var store = Create(kv);
 
 		await Assert.That(async () => await store.GetAllConnectionsAsync()).Throws<OperationCanceledException>();
+	}
+
+	[Test]
+	public async Task CallerCancellationIsNotLoggedAsAFailure()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		kv.PutAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<INatsSerialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromCanceled<ulong>(call.ArgAt<CancellationToken>(3)));
+		kv.DeleteAsync(Arg.Any<string>(), Arg.Any<NatsKVDeleteOpts>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromCanceled(call.ArgAt<CancellationToken>(2)));
+		var logger = new RecordingLogger<NatsConnectionStateStore>();
+		await using var store = new NatsConnectionStateStore(new NatsConnection(), kv, logger);
+		using var closed = new CancellationTokenSource();
+		await closed.CancelAsync();
+
+		await Assert.That(async () => await store.SetConnectionAsync(42, Data(), closed.Token)).Throws<OperationCanceledException>();
+		await Assert.That(async () => await store.RemoveConnectionAsync(42, closed.Token)).Throws<OperationCanceledException>();
+
+		await Assert.That(logger.Entries.Any(e => e.Level >= LogLevel.Warning)).IsFalse();
 	}
 
 	private static async IAsyncEnumerable<string> Keys(params string[] keys)

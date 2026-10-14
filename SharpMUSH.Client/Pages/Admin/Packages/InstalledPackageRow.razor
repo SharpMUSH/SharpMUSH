@@ -77,6 +77,7 @@
 
     private static string KindIcon(PackageKind kind) => kind switch
     {
+        PackageKind.Ui => Icons.Material.Filled.WebAsset,
         PackageKind.Application => Icons.Material.Filled.Apps,
         PackageKind.Plugin => Icons.Material.Filled.Extension,
         _ => Icons.Material.Filled.Archive
@@ -84,6 +85,7 @@
 
     private string KindName(PackageKind kind) => kind switch
     {
+        PackageKind.Ui => "UI",
         PackageKind.Application => Loc["PkgKindApplication"],
         PackageKind.Plugin => Loc["PkgKindPlugin"],
         _ => Loc["PkgKindSoftcode"]

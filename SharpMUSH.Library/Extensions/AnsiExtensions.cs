@@ -21,9 +21,18 @@ public static class AnsiExtensions
 	/// theme as well as a dark one. A reader with no theme gets bold alone.
 	/// </summary>
 	public static MString Hilight(this MString str) =>
-		MarkupText.Wrap(Bold, ToneMarkup.Build(ThemeRole.Foreground, str, null));
+		str.Runs.IsDefaultOrEmpty && str.Length > 0
+			? MarkupText.Wrap(HilightMarkups, str.Text)
+			: MarkupText.Wrap(Bold, ToneMarkup.Build(ThemeRole.Foreground, str, null));
 
 	/// <inheritdoc cref="Hilight(MString)"/>
 	public static MString Hilight(this string str) =>
-		Hilight(MarkupText.Plain(str));
+		str.Length > 0 ? MarkupText.Wrap(HilightMarkups, str) : Hilight(MarkupText.Plain(str));
+
+	/// <summary>
+	/// The layers <see cref="Hilight(MString)"/> puts on plain text, built once: a listing that hilights a name
+	/// per line wraps each in this set rather than building the tone span again.
+	/// </summary>
+	public static readonly MarkupSet HilightMarkups =
+		MarkupText.Wrap(Bold, ToneMarkup.Build(ThemeRole.Foreground, MarkupText.Plain(" "), null)).Runs[0].Markups;
 }

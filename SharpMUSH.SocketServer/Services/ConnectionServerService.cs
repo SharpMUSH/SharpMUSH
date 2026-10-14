@@ -90,7 +90,10 @@ public class ConnectionServerService(
 		}
 		catch (Exception ex)
 		{
-			logger.LogWarning(ex, "Connection registration failed for {Handle}; closing the incomplete session", handle);
+			if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+				logger.LogDebug("Connection {Handle} closed before its registration finished", handle);
+			else
+				logger.LogWarning(ex, "Connection registration failed for {Handle}; closing the incomplete session", handle);
 			while (_sessionState.TryGetValue(handle, out var current) && current.SessionId == sessionId)
 			{
 				if (!_sessionState.TryRemove(new KeyValuePair<long, ConnectionData>(handle, current))) continue;

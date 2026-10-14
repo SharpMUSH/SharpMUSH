@@ -242,12 +242,12 @@ public partial class Commands
 
 		if (await Mediator.Send(new GetFeedQuery(kind.Name, key), ct) is not SharpFeed feed)
 			return MarkupText.Plain($"Feed {kind.Name}/{key} has no members or lines.");
-		var members = await Mediator.Send(new GetFeedMembersQuery(kind.Name, key), ct);
+		var members = await Mediator.Send(new CountFeedMembersQuery(kind.Name, key), ct);
 		(string, MString)[] fields =
 		[
 			("Lines", MarkupText.Plain(LinesHeld(feed.Messages, feed.Bytes, feed.StoredBytes))),
 			("Newest", MarkupText.Plain(feed.LastId == 0 ? "none" : feed.LastId.ToString(CultureInfo.InvariantCulture))),
-			("Members", MarkupText.Plain(members.Count.ToString(CultureInfo.InvariantCulture))),
+			("Members", MarkupText.Plain(members.ToString(CultureInfo.InvariantCulture))),
 			.. SettingRows(feed.Settings, effective, "kind"),
 			("Locks", MarkupText.Plain(LockList(feed.Locks))),
 		];
@@ -434,8 +434,9 @@ public partial class Commands
 		var ct = ExecutionBudget.CurrentToken;
 		var (kind, feed) = target;
 		var dbref = who.Object().DBRef;
-		var members = await Mediator.Send(new GetFeedMembersQuery(kind.Name, feed.Key), ct);
-		var member = members.FirstOrDefault(m => m.Member == dbref);
+		var member = await Mediator.Send(new GetFeedMemberQuery(kind.Name, feed.Key, dbref), ct) is SharpFeedMember found
+			? found
+			: null;
 		if (operation == "JOIN")
 		{
 			if (member is not null) return $"{Display(who)} is already on {feed.Name}.";

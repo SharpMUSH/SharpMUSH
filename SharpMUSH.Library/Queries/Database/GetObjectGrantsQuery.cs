@@ -17,6 +17,8 @@ namespace SharpMUSH.Library.Queries.Database;
 /// </remarks>
 public record GetObjectGrantsQuery(int Number, bool IsPlayer) : IQuery<ObjectGrants>, ICacheable
 {
-	public string CacheKey => $"grants:#{Number}:{(IsPlayer ? 'p' : 'o')}";
-	public string[] CacheTags => [CacheKeys.ObjectTag(Number), Definitions.CacheTags.Grants];
+	// Built once per query: every privilege check sends one, and the caching behaviour reads both more
+	// than once, so a computed property allocated a key, a tag array and a tag string on each read.
+	public string CacheKey { get; } = $"grants:#{Number}:{(IsPlayer ? 'p' : 'o')}";
+	public string[] CacheTags { get; } = [CacheKeys.ObjectTag(Number), Definitions.CacheTags.Grants];
 }

@@ -18,6 +18,17 @@ namespace SharpMUSH.Implementation.Common;
 /// </remarks>
 public static class AttributeWriteReport
 {
+	/// <summary>
+	/// The gate after a value set. The attribute <c>atr_get</c> would find is the one just written on
+	/// <paramref name="thing"/> itself, so its own flag comes with the write's result instead of a read.
+	/// </summary>
+	public static async ValueTask<bool> IsSuppressedAsync(AnySharpObject executor, AnySharpObject thing,
+		WrittenAttribute written)
+		=> written.IsQuiet || await thing.Object().AreQuietAsync(executor);
+
+	/// <summary>
+	/// The gate after a clear: what <c>atr_get</c> finds then may be a parent's attribute, so it is read.
+	/// </summary>
 	public static async ValueTask<bool> IsSuppressedAsync(IAttributeService attributeService, AnySharpObject executor,
 		AnySharpObject thing, string attribute)
 	{

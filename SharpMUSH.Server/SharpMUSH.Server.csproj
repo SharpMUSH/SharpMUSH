@@ -66,8 +66,59 @@
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Lsp\SharpMUSH.Plugins.Lsp.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Mcp\SharpMUSH.Plugins.Mcp.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\SharpMUSH.CodeAnalysis\SharpMUSH.CodeAnalysis.csproj" />
   </ItemGroup>
+
+  <!-- Preserve the full private runtime closure, including SDK DLLs, rather than a three-file payload.
+       Host-owned SharpMUSH assemblies resolve through the plugin loader's shared contracts/manifest. -->
+  <Target Name="ResolveMcpPluginFiles">
+    <PropertyGroup><McpPluginOutDir>$(MSBuildThisFileDirectory)../SharpMUSH.Plugins.Mcp/bin/$(Configuration)/net11.0</McpPluginOutDir></PropertyGroup>
+    <ItemGroup>
+      <McpPluginFiles Include="$(McpPluginOutDir)\**\*.dll;$(McpPluginOutDir)\runtimes\**\*;$(McpPluginOutDir)\SharpMUSH.Plugins.Mcp.deps.json;$(McpPluginOutDir)\SharpMUSH.Plugins.Mcp.runtimeconfig.json;$(McpPluginOutDir)\plugin.json" Exclude="$(McpPluginOutDir)\SharpMUSH.*.dll;$(McpPluginOutDir)\SharpMUSH.*.pdb;$(McpPluginOutDir)\SharpMUSH.*.xml" />
+      <McpPluginFiles Include="$(McpPluginOutDir)\SharpMUSH.Plugins.Mcp.dll;$(McpPluginOutDir)\SharpMUSH.Plugins.Mcp.pdb" />
+      <McpPluginFiles Update="@(McpPluginFiles)">
+        <PluginRelativePath>$([MSBuild]::MakeRelative('$(McpPluginOutDir)', '%(FullPath)'))</PluginRelativePath>
+      </McpPluginFiles>
+    </ItemGroup>
+    <RemoveDuplicates Inputs="@(McpPluginFiles)"><Output TaskParameter="Filtered" ItemName="UniqueMcpPluginFiles" /></RemoveDuplicates>
+    <ItemGroup><McpPluginFiles Remove="@(McpPluginFiles)" /><McpPluginFiles Include="@(UniqueMcpPluginFiles)" /></ItemGroup>
+  </Target>
+  <Target Name="CopyMcpPlugin" AfterTargets="Build" DependsOnTargets="ResolveMcpPluginFiles">
+    <RemoveDir Directories="$(OutDir)plugins\mcp" />
+    <Copy SourceFiles="@(McpPluginFiles)" DestinationFiles="@(McpPluginFiles->'$(OutDir)plugins/mcp/%(PluginRelativePath)')" />
+  </Target>
+  <Target Name="PublishMcpPlugin" AfterTargets="ComputeResolvedFilesToPublishList" DependsOnTargets="ResolveMcpPluginFiles">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(McpPluginFiles)">
+        <RelativePath>plugins/mcp/%(McpPluginFiles.PluginRelativePath)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+
+  <Target Name="ResolveLspPluginFiles">
+    <PropertyGroup><LspPluginOutDir>$(MSBuildThisFileDirectory)../SharpMUSH.Plugins.Lsp/bin/$(Configuration)/net11.0</LspPluginOutDir></PropertyGroup>
+    <ItemGroup>
+      <LspPluginFiles Include="$(LspPluginOutDir)/**/*.dll;$(LspPluginOutDir)/runtimes/**/*;$(LspPluginOutDir)/SharpMUSH.Plugins.Lsp.deps.json;$(LspPluginOutDir)/SharpMUSH.Plugins.Lsp.runtimeconfig.json;$(LspPluginOutDir)/plugin.json"
+        Exclude="$(LspPluginOutDir)/SharpMUSH.*.dll" />
+      <LspPluginFiles Include="$(LspPluginOutDir)/SharpMUSH.Plugins.Lsp.dll;$(LspPluginOutDir)/SharpMUSH.Plugins.Lsp.pdb;$(LspPluginOutDir)/SharpMUSH.AnalysisProtocol.dll" />
+      <LspPluginFiles Update="@(LspPluginFiles)"><PluginRelativePath>$([MSBuild]::MakeRelative('$(LspPluginOutDir)', '%(FullPath)'))</PluginRelativePath></LspPluginFiles>
+    </ItemGroup>
+    <RemoveDuplicates Inputs="@(LspPluginFiles)"><Output TaskParameter="Filtered" ItemName="UniqueLspPluginFiles" /></RemoveDuplicates>
+    <ItemGroup><LspPluginFiles Remove="@(LspPluginFiles)" /><LspPluginFiles Include="@(UniqueLspPluginFiles)" /></ItemGroup>
+  </Target>
+  <Target Name="CopyLspPlugin" AfterTargets="Build" DependsOnTargets="ResolveLspPluginFiles">
+    <RemoveDir Directories="$(OutDir)plugins/lsp" />
+    <Copy SourceFiles="@(LspPluginFiles)" DestinationFiles="@(LspPluginFiles->'$(OutDir)plugins/lsp/%(PluginRelativePath)')" />
+  </Target>
+  <Target Name="PublishLspPlugin" AfterTargets="ComputeResolvedFilesToPublishList" DependsOnTargets="ResolveLspPluginFiles">
+    <ItemGroup><ResolvedFileToPublish Include="@(LspPluginFiles)">
+      <RelativePath>plugins/lsp/%(LspPluginFiles.PluginRelativePath)</RelativePath><CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </ResolvedFileToPublish></ItemGroup>
+  </Target>
 
   <!-- The Scene plugin's shipped payload (DLL + deps.json + manifest). Resolved in a target rather than at
        evaluation time because the files only exist once the referenced plugin project has been built; both
@@ -113,7 +164,7 @@
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.2.1" />
-    <PackageReference Include="Fido2" Version="4.2.0" />
+    <PackageReference Include="Fido2" Version="4.3.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.32.0" />
     <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
       <Link>TextFiles\help\%(Filename)%(Extension)</Link>
@@ -208,7 +259,7 @@
     <EmbeddedResource Include="Resources\Wiki\Starter\*.md">
       <LogicalName>SharpMUSH.Server.Resources.Wiki.Starter.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>
 
