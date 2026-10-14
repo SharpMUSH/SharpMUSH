@@ -214,7 +214,21 @@ internal static class EngineRegistration
 		// (package uninstall, the PennMUSH import's package removal). Reached through Lazy<T>: it holds
 		// the command library, which reaches nearly every service.
 		services.AddSingleton<IRuntimeRegistrationService, Implementation.Services.RuntimeRegistrationService>();
-		services.AddSingleton<IEventService, EventService>();
+		// Every event is offered to the webhook subscriptions before it is queued for the event handler.
+		services.AddSingleton<EventService>();
+		services.AddSingleton<IEventService>(sp => new Implementation.Services.Webhooks.WebhookPublishingEventService(
+			sp.GetRequiredService<EventService>(),
+			sp.GetRequiredService<IWebhookService>(),
+			sp.GetRequiredService<ILogger<Implementation.Services.Webhooks.WebhookPublishingEventService>>()));
+		services.Configure<Library.Webhooks.WebhookOptions>(configuration.GetSection(Library.Webhooks.WebhookOptions.Section));
+		services.AddSingleton<Implementation.Services.Webhooks.WebhookDispatcher>();
+		services.AddSingleton<Implementation.Services.Webhooks.WebhookService>();
+		services.AddSingleton<IWebhookService>(sp => sp.GetRequiredService<Implementation.Services.Webhooks.WebhookService>());
+		// No request logging: a webhook's address can hold its credential (a Discord webhook's token is in the path).
+		services.AddHttpClient(Implementation.Services.Webhooks.WebhookDispatcher.ClientName)
+			.RemoveAllLoggers()
+			.ConfigurePrimaryHttpMessageHandler(sp =>
+				WebhookDeliveryService.Handler(sp.GetRequiredService<IOptions<Library.Webhooks.WebhookOptions>>().Value));
 		services.AddSingleton<IFeedService, FeedService>();
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();

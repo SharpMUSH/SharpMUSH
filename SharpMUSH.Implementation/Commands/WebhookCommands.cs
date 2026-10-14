@@ -1,0 +1,200 @@
+using System.Globalization;
+using MarkupString.Layout;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Webhooks;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+
+namespace SharpMUSH.Implementation.Commands;
+
+public partial class Commands
+{
+	private static readonly string[] WebhookOperations =
+		["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "SECRET", "ROTATE", "TEST", "DELETE"];
+
+	/// <summary>
+	/// <c>@webhook</c>: endpoints outside the game that hear its events (<c>help @webhook</c>). A SharpMUSH
+	/// command; PennMUSH has no outbound events.
+	/// </summary>
+	[SharpCommand(Name = "@WEBHOOK", Switches = ["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "SECRET", "ROTATE", "TEST", "DELETE"],
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, CommandLock = "PERM^config.admin",
+		MinArgs = 0, MaxArgs = 2, ParameterNames = ["webhook", "value"])]
+	public async ValueTask<Option<CallState>> Webhook(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var operations = parser.CurrentState.Switches.Where(WebhookOperations.Contains).ToArray();
+		var args = parser.CurrentState.Arguments;
+		var name = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
+		var value = (args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "").Trim();
+		var executorRef = executor.Object().DBRef;
+
+		var operation = operations.Length switch
+		{
+			0 => name.Length == 0 ? "LIST" : "INFO",
+			1 => operations[0],
+			_ => ""
+		};
+
+		if (operation is not ("LIST" or "") && name.Length == 0)
+		{
+			return await WebhookReplyAsync(executor, "Which webhook?", ok: false);
+		}
+
+		return operation switch
+		{
+			"" => await WebhookReplyAsync(executor, "Choose one @webhook operation.", ok: false),
+			"LIST" => await WebhookReplyAsync(executor, WebhookList(await Webhooks.ListAsync()), name),
+			"INFO" => await Webhooks.GetAsync(name) switch
+			{
+				WebhookSubscription found => await WebhookReplyAsync(executor, WebhookInfo(found, Webhooks.Status(found.Name)), found.Name),
+				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
+			},
+			"CREATE" => await Webhooks.CreateAsync(name, value, [], executorRef.ToString()) switch
+			{
+				WebhookSubscription created => await WebhookChangedAsync(executor, AuditActions.WebhookCreate, created,
+					$"Webhook {created.Name} created. It hears no events yet: set them with @webhook/events {created.Name}=<pattern> ...\n"
+					+ $"Its signing secret is {created.Secret}", $"url {WebhookAddress.Redacted(created.Url)}"),
+				Error<string> error => await WebhookReplyAsync(executor, error.Value, ok: false),
+			},
+			"URL" => await WebhookChangeAsync(executor, name, await Webhooks.SetUrlAsync(name, value),
+				changed => changed.Url is null
+					? $"Webhook {changed.Name} has no address now: it is heard only through its event stream."
+					: $"Webhook {changed.Name} now posts to {changed.Url}.", $"url {WebhookAddress.Redacted(value)}"),
+			"EVENTS" => await WebhookChangeAsync(executor, name,
+				await Webhooks.SetEventsAsync(name, value.Split(' ', StringSplitOptions.RemoveEmptyEntries)),
+				changed => changed.Events.Count == 0
+					? $"Webhook {changed.Name} hears no events now."
+					: $"Webhook {changed.Name} now hears: {string.Join(' ', changed.Events)}", $"events {value}"),
+			"ENABLE" => await WebhookChangeAsync(executor, name, await Webhooks.SetEnabledAsync(name, true),
+				changed => $"Webhook {changed.Name} is on.", "enabled"),
+			"DISABLE" => await WebhookChangeAsync(executor, name, await Webhooks.SetEnabledAsync(name, false),
+				changed => $"Webhook {changed.Name} is off.", "disabled"),
+			"ROTATE" => await WebhookChangeAsync(executor, name, await Webhooks.RotateSecretAsync(name),
+				changed => $"Webhook {changed.Name} has a new signing secret: {changed.Secret}\nThe old one no longer verifies.", "secret rotated"),
+			"SECRET" => await Webhooks.GetAsync(name) switch
+			{
+				WebhookSubscription found => await WebhookReplyAsync(executor, $"Webhook {found.Name}'s signing secret is {found.Secret}", found.Name),
+				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
+			},
+			"TEST" => await Webhooks.TestAsync(name, executorRef) switch
+			{
+				WebhookMessage message => await WebhookReplyAsync(executor,
+					$"Sent {message.EventName} to webhook {name} as {message.Id}. @webhook {name} shows how it went.", name),
+				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
+				Error<string> error => await WebhookReplyAsync(executor, error.Value, ok: false),
+			},
+			"DELETE" => await Webhooks.DeleteAsync(name) switch
+			{
+				WebhookSubscription removed => await WebhookChangedAsync(executor, AuditActions.WebhookDelete, removed,
+					$"Webhook {removed.Name} deleted.", null),
+				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
+			},
+			_ => await WebhookReplyAsync(executor, "Choose one @webhook operation.", ok: false),
+		};
+	}
+
+	private async ValueTask<Option<CallState>> WebhookChangeAsync(AnySharpObject executor, string name,
+		FoundResult<WebhookSubscription> result, Func<WebhookSubscription, string> said, string details)
+		=> result switch
+		{
+			WebhookSubscription changed => await WebhookChangedAsync(executor, AuditActions.WebhookChange, changed, said(changed), details),
+			NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
+			Error<string> error => await WebhookReplyAsync(executor, error.Value, ok: false),
+		};
+
+	private async ValueTask<Option<CallState>> WebhookChangedAsync(AnySharpObject executor, string action,
+		WebhookSubscription subscription, string said, string? details)
+	{
+		await Audit.RecordAsync(executor, action, new AuditTarget(AuditTargetKinds.Webhook, subscription.Name, subscription.Name), details);
+		return await WebhookReplyAsync(executor, said, subscription.Name);
+	}
+
+	private async ValueTask<Option<CallState>> WebhookReplyAsync(AnySharpObject executor, string text, bool ok)
+		=> await WebhookReplyAsync(executor, MarkupText.Plain(text), ok ? "" : "#-1");
+
+	private async ValueTask<Option<CallState>> WebhookReplyAsync(AnySharpObject executor, string text, string result)
+		=> await WebhookReplyAsync(executor, MarkupText.Plain(text), result);
+
+	private async ValueTask<Option<CallState>> WebhookReplyAsync(AnySharpObject executor, MString text, string result)
+	{
+		await NotifyService.Notify(executor, text, executor);
+		return new CallState(result);
+	}
+
+	private static MString WebhookList(IReadOnlyList<WebhookSubscription> subscriptions)
+	{
+		if (subscriptions.Count == 0)
+		{
+			return MarkupText.Plain("There are no webhooks. @webhook/create <name>=<url> adds one.");
+		}
+
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Webhooks"), ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Name")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("State")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Events")) { Min = 10 },
+				new TableColumn(MarkupText.Plain("Address")) { Min = 10 },
+			],
+			subscriptions.OrderBy(subscription => subscription.Name, StringComparer.OrdinalIgnoreCase)
+				.Select(subscription => (IEnumerable<string>)
+				[
+					subscription.Name,
+					subscription.Enabled ? "on" : "off",
+					subscription.Events.Count == 0 ? "none" : string.Join(' ', subscription.Events),
+					subscription.Url ?? "stream only",
+				]))), 78);
+	}
+
+	private static MString WebhookInfo(WebhookSubscription subscription, WebhookStatus status)
+	{
+		(string, MString)[] fields =
+		[
+			("State", MarkupText.Plain(subscription.Enabled ? "on" : $"off{(subscription.DisabledReason is { } why ? $": {why}" : "")}")),
+			("Address", MarkupText.Plain(subscription.Url ?? "none: heard only through its event stream")),
+			("Events", MarkupText.Plain(subscription.Events.Count == 0 ? "none" : string.Join(' ', subscription.Events))),
+			("Created", MarkupText.Plain($"{WebhookTime(subscription.CreatedAt)}{(subscription.CreatedBy is { } by ? $" by {by}" : "")}")),
+			("Delivered", MarkupText.Plain($"{status.Delivered.ToString(CultureInfo.InvariantCulture)}{(status.LastDelivered is { } at ? $", last {WebhookTime(at)}" : "")}")),
+			("Failed tries", MarkupText.Plain($"{status.FailedAttempts.ToString(CultureInfo.InvariantCulture)}{(status.LastFailed is { } failed ? $", last {WebhookTime(failed)}" : "")}")),
+			("Dropped", MarkupText.Plain(status.Dropped.ToString(CultureInfo.InvariantCulture))),
+			("Waiting", MarkupText.Plain(status.Pending.ToString(CultureInfo.InvariantCulture))),
+			("Streams", MarkupText.Plain(status.Streams.ToString(CultureInfo.InvariantCulture))),
+		];
+
+		List<Block> parts = [ServerLayout.KeyValues(fields)];
+		if (status.Recent.Count > 0)
+		{
+			parts.Add(new Rule(MarkupText.Plain("Recent tries")));
+			parts.Add(ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Time")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Event")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Try")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Result")) { Min = 10 },
+				],
+				status.Recent.Select(attempt => (IEnumerable<string>)
+				[
+					WebhookTime(attempt.At),
+					attempt.EventName,
+					attempt.Attempt.ToString(CultureInfo.InvariantCulture),
+					WebhookResult(attempt),
+				])));
+		}
+
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Webhook {subscription.Name}"), [.. parts]), 78);
+	}
+
+	private static string WebhookResult(WebhookAttempt attempt) => attempt.Outcome switch
+	{
+		WebhookAttemptOutcome.Delivered => $"delivered, {attempt.StatusCode}, {attempt.Duration.TotalMilliseconds:0}ms",
+		WebhookAttemptOutcome.Retrying => $"{attempt.Error}; will retry",
+		_ => $"{attempt.Error}; dropped",
+	};
+
+	private static string WebhookTime(DateTimeOffset at)
+		=> at.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+}

@@ -61,6 +61,9 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		client.BaseAddress = new Uri("https://localhost");
 		return client;
 	}
+	/// <summary>A WebSocket client that targets the in-process test server, for the server's WebSocket endpoints.</summary>
+	public Microsoft.AspNetCore.TestHost.WebSocketClient CreateWebSocketClient() => _server!.Server.CreateWebSocketClient();
+
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private readonly Lock _createClientLock = new();
 	private DBRef _one;

@@ -16,9 +16,12 @@ If you would rather use a different object, point the config at it with `@config
 - The enactor (%#) is the executor that caused the event. For a **system event with no executor** (an automatic dump, a signal, an idle-boot), %# is **#1 (God)**, not #-1. If the causer has been destroyed since, %# is #1 as well. Because %# is a real dbref either way, use an event's own arguments (not %#) to distinguish system- from player-caused triggers.
 
 
+Programs outside the game can hear the same events through a webhook: see [@webhook].
+
 ::: seealso
 - [EVENT LIST]
 - [event examples]
+- [@webhook]
 :::
 
 # Event List

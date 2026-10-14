@@ -144,6 +144,24 @@ reached at one stable HTTPS address and the proxy passes the browser's `Host` th
   the server's own, or one behind a proxy that rewrites `Host`. Without it, `Cors__AllowedOrigins`
   is used.
 
+### Webhooks
+
+Wizards send the game's events to programs outside it with `@webhook` (see `help @webhook`). Each
+delivery is a signed HTTPS `POST` from the server, so the server needs outbound HTTPS to wherever
+the webhooks point. Tools without a public address connect to the server instead, at
+`wss://<your-domain>/api/webhooks/<name>/stream`, which the `Caddyfile` passes through with the
+rest of the API. The limits are environment variables on the server:
+
+- `Webhooks__MaxAttempts` (default `9`), `Webhooks__FirstRetryDelay` (`00:00:05`, each later wait five
+  times longer) and `Webhooks__MaxRetryDelay` (`02:00:00`): how long a failing delivery is retried.
+- `Webhooks__Timeout` (`00:00:10`) and `Webhooks__MaxConcurrency` (`4`): one try's time limit, and
+  how many are in flight at once.
+- `Webhooks__MaxPendingPerSubscription` (`1000`): deliveries one webhook may have waiting before new
+  events for it are dropped. Waiting deliveries are kept in memory; a restart drops them.
+- `Webhooks__AllowHttp=true` and `Webhooks__AllowPrivateNetworks=true`: let webhooks post over plain
+  `http`, and to loopback and private addresses. Both are off so that a game administrator cannot use
+  webhooks to reach the host's own network. Turn them on only where every wizard is trusted with it.
+
 ## Ports
 
 | Port | Service | Exposed to internet? |

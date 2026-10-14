@@ -97,6 +97,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.RecurringJobRunner>();
 		services.AddHostedService<Services.ExpiredSessionSweepService>();
 		services.AddHostedService<Services.BanExpiryService>();
+		services.AddHostedService<Services.WebhookDeliveryService>();
 		// One instance: MSSPReportRequestConsumer asks it to send.
 		services.AddSingleton<Services.MsspReportPublisher>();
 		services.AddHostedService(sp => sp.GetRequiredService<Services.MsspReportPublisher>());

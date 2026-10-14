@@ -53,6 +53,7 @@ public static class AuditTargetKinds
 	public const string Function = "function";
 	public const string Plugin = "plugin";
 	public const string Server = "server";
+	public const string Webhook = "webhook";
 }
 
 /// <summary>
@@ -152,6 +153,9 @@ public static class AuditActions
 	public const string PluginUpload = "plugin.upload";
 	public const string PluginInstall = "plugin.install";
 	public const string ServerRestart = "server.restart";
+	public const string WebhookCreate = "webhook.create";
+	public const string WebhookChange = "webhook.change";
+	public const string WebhookDelete = "webhook.delete";
 
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
@@ -161,6 +165,7 @@ public static class AuditActions
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
-		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart,
+		WebhookCreate, WebhookChange, WebhookDelete
 	];
 }
