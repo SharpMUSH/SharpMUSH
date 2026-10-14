@@ -123,6 +123,17 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	public async ValueTask DolistIncludedAttributeKeepsHashAsText()
+	{
+		var token = Token();
+		var attribute = UniqueAttributeName("INCHASH");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} #1=@pemit #1={token}-included-##-#@"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b=@include #1/{attribute}"));
+
+		await Assert.That(Heard($"{token}-included-##-#@", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(2);
+	}
+
+	[Test]
 	public async ValueTask DoListComplex()
 	{
 		var token = Token();
