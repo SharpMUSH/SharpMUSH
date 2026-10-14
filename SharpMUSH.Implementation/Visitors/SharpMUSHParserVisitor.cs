@@ -428,7 +428,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 	internal bool BeginsRestrictedEvaluation(IFunctionContext context)
 	{
-		var name = FunctionNameOf(context);
+		// !restrictedexpr(...) runs restrictedexpr(), so it opens restricted evaluation the same way.
+		var name = Bang.FunctionName(FunctionNameOf(context));
 		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
 		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
 			|| definition.LibraryInformation.RestrictedOperation == "fn"
