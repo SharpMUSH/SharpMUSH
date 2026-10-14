@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using System.Threading.Channels;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -20,16 +21,21 @@ public interface IWebhookService
 
 	/// <summary>
 	/// Adds a subscription with a new secret. <paramref name="url"/> may be empty for one heard only through
-	/// its event stream. <paramref name="createdBy"/> names who made it: an objid, or a portal account. Fails on a
+	/// its event stream. <paramref name="createdBy"/> names who made it: an objid, or a portal account, and
+	/// <paramref name="reach"/> what they may be told about (<see cref="WebhookSubscription.Reach"/>). Fails on a
 	/// taken or malformed name, an unusable address or a malformed pattern.
 	/// </summary>
-	ValueTask<Result<WebhookSubscription>> CreateAsync(string name, string? url, IReadOnlyList<string> events, string? createdBy);
+	ValueTask<Result<WebhookSubscription>> CreateAsync(string name, string? url, IReadOnlyList<string> events, EventPrivacy reach,
+		string? createdBy);
 
 	/// <summary>Points the subscription at <paramref name="url"/>, or at nothing (stream only).</summary>
 	ValueTask<FoundResult<WebhookSubscription>> SetUrlAsync(string name, string? url);
 
-	/// <summary>Replaces the event patterns the subscription hears.</summary>
-	ValueTask<FoundResult<WebhookSubscription>> SetEventsAsync(string name, IReadOnlyList<string> events);
+	/// <summary>
+	/// Replaces the event patterns the subscription hears, and its <see cref="WebhookSubscription.Reach"/> with
+	/// <paramref name="reach"/>: the reach of whoever set them.
+	/// </summary>
+	ValueTask<FoundResult<WebhookSubscription>> SetEventsAsync(string name, IReadOnlyList<string> events, EventPrivacy reach);
 
 	/// <summary>Turns delivery on or off. Turning it on clears a reason the server gave for turning it off.</summary>
 	ValueTask<FoundResult<WebhookSubscription>> SetEnabledAsync(string name, bool enabled);

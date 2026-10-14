@@ -63,9 +63,11 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 		}
 		catch (OperationCanceledException)
 		{
+			// The tool closed the socket or the request was aborted: nothing is left to send.
 		}
 		catch (WebSocketException)
 		{
+			// The connection dropped mid-send: nothing is left to send, and nobody to tell.
 		}
 
 		await closed.CancelAsync();
@@ -78,6 +80,7 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 			}
 			catch (WebSocketException)
 			{
+				// The tool went away before the close handshake finished; the socket is gone either way.
 			}
 		}
 	}
@@ -105,6 +108,7 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 		}
 		catch (Exception ex) when (ex is OperationCanceledException or WebSocketException)
 		{
+			// The stream ended or the connection dropped: either way the tool is no longer listening.
 		}
 
 		await closed.CancelAsync();

@@ -66,6 +66,12 @@
                                           Variant="Variant.Outlined" Margin="Margin.Dense" />
                             <MudTextField @bind-Value="draft.Events" Label="@Loc["AdmWebhooksEvents"]" HelperText="@Loc["AdmWebhooksEventsHint"]"
                                           Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            @if (hook.Reach != "private")
+                            {
+                                <p class="adm-hooks-reach" data-reach="@hook.Reach">
+                                    @(hook.Reach == "staff" ? Loc["AdmWebhooksReachStaff"] : Loc["AdmWebhooksReachPublic"])
+                                </p>
+                            }
 
                             <dl class="adm-hooks-counts">
                                 <div><dt>@Loc["AdmWebhooksDelivered"]</dt><dd>@hook.Status.Delivered</dd></div>

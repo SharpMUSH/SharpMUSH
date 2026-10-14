@@ -43,11 +43,15 @@ public sealed record WebhookStatus(
 	public static WebhookStatus None { get; } = new(0, 0, 0, 0, 0, null, null, []);
 }
 
-/// <summary>A webhook subscription as the admin API shows it: everything but its secret.</summary>
+/// <summary>
+/// A webhook subscription as the admin API shows it: everything but its secret. <see cref="Reach"/> is the most
+/// private events it is sent: <c>public</c>, <c>staff</c> or <c>private</c>.
+/// </summary>
 public sealed record WebhookView(
 	string Name,
 	string? Url,
 	IReadOnlyList<string> Events,
+	string Reach,
 	bool Enabled,
 	string? DisabledReason,
 	string? CreatedBy,

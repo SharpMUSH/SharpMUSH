@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -27,7 +28,10 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/admin/webhooks")]
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
-public sealed class AdminWebhooksController(IWebhookService webhooks, IAuditLog audit) : ControllerBase
+public sealed class AdminWebhooksController(
+	IWebhookService webhooks,
+	IAuditLog audit,
+	IAdministrativeCapabilityService capabilities) : ControllerBase
 {
 	[HttpGet]
 	public async Task<ActionResult<IReadOnlyList<WebhookView>>> List()
@@ -43,7 +47,7 @@ public sealed class AdminWebhooksController(IWebhookService webhooks, IAuditLog 
 
 	[HttpPost]
 	public async Task<ActionResult<WebhookSecret>> Create([FromBody] WebhookCreateRequest request)
-		=> await webhooks.CreateAsync(request.Name ?? "", request.Url, request.Events ?? [], Creator()) switch
+		=> await webhooks.CreateAsync(request.Name ?? "", request.Url, request.Events ?? [], await ReachAsync(), Creator()) switch
 		{
 			WebhookSubscription created => await CreatedAsync(created),
 			Error<string> error => BadRequest(error.Value),
@@ -70,7 +74,7 @@ public sealed class AdminWebhooksController(IWebhookService webhooks, IAuditLog 
 
 		if (request.Events is not null)
 		{
-			var result = await webhooks.SetEventsAsync(name, request.Events);
+			var result = await webhooks.SetEventsAsync(name, request.Events, await ReachAsync());
 			if (result is not WebhookSubscription) return result;
 		}
 
@@ -118,8 +122,21 @@ public sealed class AdminWebhooksController(IWebhookService webhooks, IAuditLog 
 		};
 
 	private WebhookView View(WebhookSubscription subscription)
-		=> new(subscription.Name, subscription.Url, subscription.Events, subscription.Enabled, subscription.DisabledReason,
+		=> new(subscription.Name, subscription.Url, subscription.Events, subscription.Reach.ToString().ToLowerInvariant(), subscription.Enabled, subscription.DisabledReason,
 			subscription.CreatedBy, subscription.CreatedAt, webhooks.Status(subscription.Name));
+
+	/// <summary>
+	/// The most private events a webhook whose events this account sets may be sent, from the account's own
+	/// grants as <c>@webhook/events</c> takes them from the character's.
+	/// </summary>
+	private async Task<EventPrivacy> ReachAsync()
+	{
+		if (User.FindFirstValue(ClaimTypes.NameIdentifier) is not { Length: > 0 } accountId) return EventPrivacy.Public;
+		var actor = new CapabilityActor(accountId, null, null);
+		return WebhookSubscription.ReachOf(
+			await capabilities.AuthorizeAsync(actor, PortalPermission.GamePower("See_All"), HttpContext.RequestAborted),
+			await capabilities.AuthorizeAsync(actor, PortalPermission.PlayersModerate, HttpContext.RequestAborted));
+	}
 
 	private string? Creator()
 		=> User.FindFirstValue(ClaimTypes.Name) is { Length: > 0 } name ? $"account {name}" : null;

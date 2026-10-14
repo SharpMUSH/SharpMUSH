@@ -67,6 +67,14 @@ A name is up to 64 letters, digits, `-` and `_`. Case does not matter.
 
 `@webhook/create` makes a webhook and shows its signing secret (see [@webhook signing]). A new webhook hears no events. `@webhook/events` sets the events it hears, replacing any it had. Each pattern is an event name, where `*` matches anything and `?` matches one character. ``PLAYER`*`` is every player event, and `*` is every event.
 
+A webhook is sent only the events that whoever last set its events may be told about:
+
+- Events that show hidden or dark objects, such as ``PLAYER`CONNECT`` and ``OBJECT`CREATE``, need `game.see_all` (the See_All power).
+- Events that carry what players wrote to each other or their addresses, such as ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`DISCONNECT`` and the ``LOG`` events, need `players.moderate` as well.
+- An event a plugin raises that is not in [event list] counts as private.
+
+The wizard role allows both permissions. If you lack one, `@webhook/events` says what the webhook will not be sent, and `@webhook <name>` shows it on the "Sent" line.
+
 The address must be a full `https://` URL. Addresses on a private network, such as `10.0.0.5` or `localhost`, are refused, so that webhooks cannot reach the server's own network. The server's operator can allow both (see [@webhook retries]). A webhook with no address is heard only through its event stream (see [@webhook stream]).
 
 `@webhook` lists every webhook. `@webhook <name>` shows one: its address, its events, how many deliveries succeeded, failed or were dropped, and its most recent tries.

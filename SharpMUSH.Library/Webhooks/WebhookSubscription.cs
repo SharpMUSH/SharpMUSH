@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Definitions;
+
 namespace SharpMUSH.Library.Webhooks;
 
 /// <summary>
@@ -32,8 +34,34 @@ public sealed record WebhookSubscription
 
 	public DateTimeOffset CreatedAt { get; init; }
 
-	/// <summary>Whether <paramref name="eventName"/> is one this subscription hears.</summary>
-	public bool Hears(string eventName) => Events.Any(pattern => WebhookEventPattern.Matches(pattern, eventName));
+	/// <summary>
+	/// The most private events it is sent: what whoever last set <see cref="Events"/> may be told about
+	/// (<see cref="ReachOf"/>). An event more private than this is withheld even when a pattern matches it.
+	/// </summary>
+	public EventPrivacy Reach { get; init; } = EventPrivacy.Public;
+
+	/// <summary>Whether <paramref name="eventName"/> is one this subscription hears and may be sent.</summary>
+	public bool Hears(string eventName)
+		=> PrivacyOf(eventName) <= Reach && Events.Any(pattern => WebhookEventPattern.Matches(pattern, eventName));
+
+	/// <summary>
+	/// How private <paramref name="eventName"/> is, from <see cref="EventCatalogue"/>. An event the catalogue does
+	/// not list, such as one a plugin raises, is treated as private: nothing says what it carries.
+	/// </summary>
+	public static EventPrivacy PrivacyOf(string eventName)
+		=> EventCatalogue.Find(eventName)?.Privacy ?? EventPrivacy.Private;
+
+	/// <summary>
+	/// The reach of someone who may see everything (<c>game.see_all</c>) and read private content
+	/// (<c>players.moderate</c>, which also shows connection addresses): each lifts it one step.
+	/// </summary>
+	public static EventPrivacy ReachOf(bool seesAll, bool readsPrivate)
+		=> (seesAll, readsPrivate) switch
+		{
+			(true, true) => EventPrivacy.Private,
+			(true, false) => EventPrivacy.Staff,
+			_ => EventPrivacy.Public
+		};
 }
 
 /// <summary>Every webhook subscription in the world, stored as one server document.</summary>

@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Services.Webhooks;
 /// <para>Each try reads the subscription afresh, so a changed address or a rotated secret applies to
 /// deliveries already waiting, and a deleted or disabled subscription's deliveries are dropped.</para>
 /// </summary>
-public sealed class WebhookDispatcher
+public sealed class WebhookDispatcher : IDisposable
 {
 	/// <summary>The named <see cref="HttpClient"/> deliveries go through.</summary>
 	public const string ClientName = "webhooks";
@@ -29,6 +29,7 @@ public sealed class WebhookDispatcher
 	private readonly PriorityQueue<Pending, DateTimeOffset> _queue = new();
 	private readonly Dictionary<string, Ledger> _ledgers = new(StringComparer.OrdinalIgnoreCase);
 	private readonly SemaphoreSlim _wake = new(0);
+	private readonly Meter _meter;
 	private readonly Counter<long> _attempts;
 	private readonly Histogram<double> _durations;
 
@@ -62,10 +63,10 @@ public sealed class WebhookDispatcher
 		_options = options.Value;
 		_logger = logger;
 		// The same meter name the host's OpenTelemetry pipeline already exports.
-		var meter = new Meter("SharpMUSH", "1.0.0");
-		_attempts = meter.CreateCounter<long>("sharpmush.webhook.attempts",
+		_meter = new Meter("SharpMUSH", "1.0.0");
+		_attempts = _meter.CreateCounter<long>("sharpmush.webhook.attempts",
 			description: "Webhook delivery tries, by subscription and outcome");
-		_durations = meter.CreateHistogram<double>("sharpmush.webhook.duration", unit: "s",
+		_durations = _meter.CreateHistogram<double>("sharpmush.webhook.duration", unit: "s",
 			description: "How long each webhook delivery try took", advice: DurationAdvice);
 	}
 
@@ -308,4 +309,6 @@ public sealed class WebhookDispatcher
 		request.Headers.Add(WebhookSignature.SignatureHeader, WebhookSignature.Sign(subscription.Secret, message.Id, timestamp, message.Body));
 		return request;
 	}
+
+	public void Dispose() => _meter.Dispose();
 }

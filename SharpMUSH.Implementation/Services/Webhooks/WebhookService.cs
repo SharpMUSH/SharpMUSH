@@ -71,7 +71,8 @@ public sealed partial class WebhookService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<Result<WebhookSubscription>> CreateAsync(string name, string? url, IReadOnlyList<string> events, string? createdBy)
+	public async ValueTask<Result<WebhookSubscription>> CreateAsync(string name, string? url, IReadOnlyList<string> events,
+		EventPrivacy reach, string? createdBy)
 	{
 		if (!NamePattern().IsMatch(name))
 		{
@@ -95,6 +96,7 @@ public sealed partial class WebhookService(
 				Name = name,
 				Url = string.IsNullOrWhiteSpace(url) ? null : url.Trim(),
 				Events = Normalize(events),
+				Reach = reach,
 				Secret = WebhookSignature.NewSecret(),
 				Enabled = true,
 				CreatedBy = createdBy,
@@ -117,10 +119,11 @@ public sealed partial class WebhookService(
 			: Lift(await ChangeAsync(name, subscription => subscription with { Url = string.IsNullOrWhiteSpace(url) ? null : url.Trim() }));
 
 	/// <inheritdoc />
-	public async ValueTask<FoundResult<WebhookSubscription>> SetEventsAsync(string name, IReadOnlyList<string> events)
+	public async ValueTask<FoundResult<WebhookSubscription>> SetEventsAsync(string name, IReadOnlyList<string> events,
+		EventPrivacy reach)
 		=> CheckEvents(events) is { } error
 			? new Error<string>(error)
-			: Lift(await ChangeAsync(name, subscription => subscription with { Events = Normalize(events) }));
+			: Lift(await ChangeAsync(name, subscription => subscription with { Events = Normalize(events), Reach = reach }));
 
 	/// <inheritdoc />
 	public async ValueTask<FoundResult<WebhookSubscription>> SetEnabledAsync(string name, bool enabled)

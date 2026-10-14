@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Implementation.Services.Webhooks;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Webhooks;
 
@@ -38,7 +39,7 @@ public class WebhookDeliveryTests
 		}
 
 		public async Task<WebhookSubscription> CreateAsync(string name = "relay", string? url = Url, params string[] events)
-			=> (await Webhooks.CreateAsync(name, url, events.Length == 0 ? ["PLAYER`*"] : events, "#1")).Expect<WebhookSubscription>();
+			=> (await Webhooks.CreateAsync(name, url, events.Length == 0 ? ["PLAYER`*"] : events, EventPrivacy.Private, "#1")).Expect<WebhookSubscription>();
 
 		public Task<int> RunAsync() => Dispatcher.RunDueAsync(Webhooks.Current, Webhooks.MarkGoneAsync, CancellationToken.None);
 
@@ -81,6 +82,43 @@ public class WebhookDeliveryTests
 		await Assert.That(status.Delivered).IsEqualTo(1);
 		await Assert.That(status.Pending).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task AnEventMorePrivateThanTheSubscriptionsReachIsWithheld()
+	{
+		var fixture = new Fixture();
+		(await fixture.Webhooks.CreateAsync("relay", Url, ["*"], EventPrivacy.Staff, "#1")).Expect<WebhookSubscription>();
+
+		await fixture.ConnectAsync();
+		await fixture.Webhooks.PublishAsync("LOG`ERR", null, ["disk full"]);
+		await fixture.Webhooks.PublishAsync("PLUGIN`UNLISTED", null, []);
+
+		await Assert.That(await fixture.RunAsync()).IsEqualTo(1);
+		using var body = JsonDocument.Parse(fixture.Endpoint.Received.Single().Body);
+		await Assert.That(body.RootElement.GetProperty("type").GetString()).IsEqualTo("PLAYER`CONNECT");
+	}
+
+	[Test]
+	public async Task SettingEventsTakesTheReachOfWhoeverSetThem()
+	{
+		var fixture = new Fixture();
+		await fixture.CreateAsync(events: "LOG`ERR");
+
+		var narrowed = (await fixture.Webhooks.SetEventsAsync("relay", ["LOG`ERR"], EventPrivacy.Public)).Expect<WebhookSubscription>();
+		await fixture.Webhooks.PublishAsync("LOG`ERR", null, ["disk full"]);
+
+		await Assert.That(narrowed.Reach).IsEqualTo(EventPrivacy.Public);
+		await Assert.That(await fixture.RunAsync()).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false, false, EventPrivacy.Public)]
+	[Arguments(true, false, EventPrivacy.Staff)]
+	[Arguments(false, true, EventPrivacy.Public)]
+	[Arguments(true, true, EventPrivacy.Private)]
+	public async Task ReachNeedsSeeAllForStaffEventsAndModerationAsWellForPrivateOnes(bool seesAll, bool readsPrivate,
+		EventPrivacy reach)
+		=> await Assert.That(WebhookSubscription.ReachOf(seesAll, readsPrivate)).IsEqualTo(reach);
 
 	[Test]
 	public async Task AnEventNoSubscriptionHearsSendsNothing()
@@ -259,7 +297,7 @@ public class WebhookDeliveryTests
 	{
 		var fixture = new Fixture();
 
-		var result = await fixture.Webhooks.CreateAsync(name, url, ["*"], "#1");
+		var result = await fixture.Webhooks.CreateAsync(name, url, ["*"], EventPrivacy.Private, "#1");
 
 		await Assert.That(result.Expect<Error<string>>().Value).Contains(reason);
 	}
@@ -273,7 +311,7 @@ public class WebhookDeliveryTests
 			options.AllowPrivateNetworks = true;
 		});
 
-		var result = await fixture.Webhooks.CreateAsync("lan", "http://127.0.0.1:9000/hook", ["*"], "#1");
+		var result = await fixture.Webhooks.CreateAsync("lan", "http://127.0.0.1:9000/hook", ["*"], EventPrivacy.Private, "#1");
 
 		await Assert.That(result.Expect<WebhookSubscription>().Url).IsEqualTo("http://127.0.0.1:9000/hook");
 	}
@@ -284,7 +322,7 @@ public class WebhookDeliveryTests
 		var fixture = new Fixture();
 		await fixture.CreateAsync("Relay");
 
-		var second = await fixture.Webhooks.CreateAsync("relay", Url, ["*"], "#1");
+		var second = await fixture.Webhooks.CreateAsync("relay", Url, ["*"], EventPrivacy.Private, "#1");
 
 		await Assert.That(second.Expect<Error<string>>().Value).Contains("already");
 	}

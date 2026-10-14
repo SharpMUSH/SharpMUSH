@@ -1,6 +1,9 @@
 using System.Globalization;
 using MarkupString.Layout;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
@@ -14,6 +17,18 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	/// <summary>The most private events a webhook whose events <paramref name="executor"/> sets may be sent.</summary>
+	private static async ValueTask<EventPrivacy> WebhookReachAsync(AnySharpObject executor)
+		=> WebhookSubscription.ReachOf(await executor.Can(PortalPermission.GamePower("See_All")),
+			await executor.Can(PortalPermission.PlayersModerate));
+
+	private static string WebhookWithheld(EventPrivacy reach) => reach switch
+	{
+		EventPrivacy.Private => "",
+		EventPrivacy.Staff => "\nIt is not sent private events: you may not read them.",
+		_ => "\nIt is sent public events only: you may not see staff or private ones."
+	};
+
 	private static readonly string[] WebhookOperations =
 		["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "SECRET", "ROTATE", "TEST", "DELETE"];
 
@@ -54,7 +69,7 @@ public partial class Commands
 				WebhookSubscription found => await WebhookReplyAsync(executor, WebhookInfo(found, Webhooks.Status(found.Name)), found.Name),
 				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
 			},
-			"CREATE" => await Webhooks.CreateAsync(name, value, [], executorRef.ToString()) switch
+			"CREATE" => await Webhooks.CreateAsync(name, value, [], EventPrivacy.Public, executorRef.ToString()) switch
 			{
 				WebhookSubscription created => await WebhookChangedAsync(executor, AuditActions.WebhookCreate, created,
 					$"Webhook {created.Name} created. It hears no events yet: set them with @webhook/events {created.Name}=<pattern> ...\n"
@@ -66,10 +81,10 @@ public partial class Commands
 					? $"Webhook {changed.Name} has no address now: it is heard only through its event stream."
 					: $"Webhook {changed.Name} now posts to {changed.Url}.", $"url {WebhookAddress.Redacted(value)}"),
 			"EVENTS" => await WebhookChangeAsync(executor, name,
-				await Webhooks.SetEventsAsync(name, value.Split(' ', StringSplitOptions.RemoveEmptyEntries)),
+				await Webhooks.SetEventsAsync(name, value.Split(' ', StringSplitOptions.RemoveEmptyEntries), await WebhookReachAsync(executor)),
 				changed => changed.Events.Count == 0
 					? $"Webhook {changed.Name} hears no events now."
-					: $"Webhook {changed.Name} now hears: {string.Join(' ', changed.Events)}", $"events {value}"),
+					: $"Webhook {changed.Name} now hears: {string.Join(' ', changed.Events)}{WebhookWithheld(changed.Reach)}", $"events {value}"),
 			"ENABLE" => await WebhookChangeAsync(executor, name, await Webhooks.SetEnabledAsync(name, true),
 				changed => $"Webhook {changed.Name} is on.", "enabled"),
 			"DISABLE" => await WebhookChangeAsync(executor, name, await Webhooks.SetEnabledAsync(name, false),
@@ -157,6 +172,12 @@ public partial class Commands
 			("State", MarkupText.Plain(subscription.Enabled ? "on" : $"off{(subscription.DisabledReason is { } why ? $": {why}" : "")}")),
 			("Address", MarkupText.Plain(subscription.Url ?? "none: heard only through its event stream")),
 			("Events", MarkupText.Plain(subscription.Events.Count == 0 ? "none" : string.Join(' ', subscription.Events))),
+			("Sent", MarkupText.Plain(subscription.Reach switch
+			{
+				EventPrivacy.Private => "every event it hears",
+				EventPrivacy.Staff => "public and staff events, not private ones",
+				_ => "public events only"
+			})),
 			("Created", MarkupText.Plain($"{WebhookTime(subscription.CreatedAt)}{(subscription.CreatedBy is { } by ? $" by {by}" : "")}")),
 			("Delivered", MarkupText.Plain($"{status.Delivered.ToString(CultureInfo.InvariantCulture)}{(status.LastDelivered is { } at ? $", last {WebhookTime(at)}" : "")}")),
 			("Failed tries", MarkupText.Plain($"{status.FailedAttempts.ToString(CultureInfo.InvariantCulture)}{(status.LastFailed is { } failed ? $", last {WebhookTime(failed)}" : "")}")),

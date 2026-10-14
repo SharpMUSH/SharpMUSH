@@ -25,7 +25,7 @@ internal sealed class WebhooksApiHandler : HttpMessageHandler
 
 	private readonly List<WebhookView> _webhooks =
 	[
-		new("logger", "https://logs.example.com/game", ["PLAYER`CONNECT"], true, null, "#1:1", DateTimeOffset.UnixEpoch,
+		new("logger", "https://logs.example.com/game", ["PLAYER`CONNECT"], "private", true, null, "#1:1", DateTimeOffset.UnixEpoch,
 			new WebhookStatus(4, 1, 0, 0, 0, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch,
 			[
 				new WebhookAttempt("msg_2", "PLAYER`CONNECT", 2, DateTimeOffset.UnixEpoch, 200, null, TimeSpan.FromMilliseconds(40), WebhookAttemptOutcome.Delivered),
@@ -47,7 +47,7 @@ internal sealed class WebhooksApiHandler : HttpMessageHandler
 		if (request.Method == HttpMethod.Post && path == "api/admin/webhooks")
 		{
 			var created = (await request.Content!.ReadFromJsonAsync<WebhookCreateRequest>(cancellationToken))!;
-			_webhooks.Add(new WebhookView(created.Name, created.Url, created.Events ?? [], true, null, null, DateTimeOffset.UnixEpoch, WebhookStatus.None));
+			_webhooks.Add(new WebhookView(created.Name, created.Url, created.Events ?? [], "public", true, null, null, DateTimeOffset.UnixEpoch, WebhookStatus.None));
 			return new HttpResponseMessage(HttpStatusCode.Created) { Content = JsonContent.Create(new WebhookSecret(created.Name, Secret)) };
 		}
 
@@ -104,6 +104,7 @@ public class AdminWebhooksPageTests : TrackingBunitContext
 			.IsEquivalentTo(new[] { "4", "1", "0", "0", "0" });
 		await Assert.That(card.QuerySelectorAll(".adm-hooks-recent tbody tr").Length).IsEqualTo(2);
 		await Assert.That(card.TextContent).Contains("answered 503 Service Unavailable");
+		await Assert.That(card.QuerySelectorAll(".adm-hooks-reach").Length).IsEqualTo(0);
 	}
 
 	[Test]
@@ -131,5 +132,6 @@ public class AdminWebhooksPageTests : TrackingBunitContext
 		{
 			if (cut.FindAll("[data-webhook='relay']").Count == 0) throw new InvalidOperationException("list not reloaded yet");
 		});
+		await Assert.That(cut.Find("[data-webhook='relay'] .adm-hooks-reach").GetAttribute("data-reach")).IsEqualTo("public");
 	}
 }

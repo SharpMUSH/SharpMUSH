@@ -7759,6 +7759,12 @@
   <data name="AdmWebhooksEvents" xml:space="preserve">
     <value>Events</value>
   </data>
+  <data name="AdmWebhooksReachStaff" xml:space="preserve">
+    <value>Not sent private events, such as pages and connection addresses: whoever last set its events may not read them.</value>
+  </data>
+  <data name="AdmWebhooksReachPublic" xml:space="preserve">
+    <value>Sent public events only: whoever last set its events may not see staff or private ones.</value>
+  </data>
   <data name="AdmWebhooksEventsHint" xml:space="preserve">
     <value>Event names or patterns, separated by spaces, such as PLAYER`* CHANNEL`MESSAGE.</value>
   </data>
