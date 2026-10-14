@@ -46,7 +46,9 @@
                         // MUSH percent-substitutions — @ must NOT be inside [...] in
                         // Monarch (it expands @word as an attribute reference).
                         // Use (?:...|@) alternation so @ appears outside char classes.
-                        [/%(?:[#!]|@|[nNlLsSrRdDcCpPtT]|[0-9])/, 'variable.other'],
+                        // Iteration and @dolist levels: %i0 %iL %d0 %dL (a bare %d is the letter d)
+                        [/%[iIdD](?:[0-9]+|[lL])/, 'variable.other'],
+                        [/%(?:[#!]|@|[nNlLsSrRjJcCpPtT]|[0-9])/, 'variable.other'],
 
                         // Object dbrefs: #123, #-1
                         [/#-?[0-9]+/, 'constant.other.dbref'],
@@ -281,7 +283,8 @@
                 var colIdx = position.column - 1;
                 if (colIdx > 0 && lineText[colIdx - 1] === '%') {
                     var ch = lineText[colIdx];
-                    var subst = subInfo('%' + ch);
+                    var level = /^[dD](?:[0-9]|[lL])/.test(lineText.substr(colIdx, 2));
+                    var subst = level ? '**`%d<n>`** — Element of the nth `@dolist` out; `%dL` is the outermost' : subInfo('%' + ch);
                     if (subst) return { contents: [{ value: subst }] };
                 }
                 return null;
@@ -308,6 +311,7 @@
             '%s': '**`%s`** — Enactor\'s subjective pronoun',
             '%P': '**`%P`** — Enactor\'s possessive pronoun (his/her/its)',
             '%p': '**`%p`** — Enactor\'s possessive pronoun',
+            '%J': '**`%J`** — Connection handle the command came in on', '%j': '**`%j`** — Connection handle the command came in on',
         };
         return map[s] || null;
     }
