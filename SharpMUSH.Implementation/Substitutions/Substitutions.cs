@@ -81,7 +81,9 @@ public static partial class Substitutions
 				}),
 			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
-			"d" or "D" => parser.CurrentState.Handle?.ToString() ?? string.Empty,
+			// %j: the connection the command came in on. %d is RhostMUSH's @dolist element; no MUSH
+			// server gives %j a meaning.
+			"j" or "J" => parser.CurrentState.Handle?.ToString() ?? string.Empty,
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
 			"C" or "c" => CommandBeforeEvaluation(parser),
 			"U" or "u" => CommandAfterEvaluation(parser),
@@ -138,6 +140,8 @@ public static partial class Substitutions
 		if (context.REG_ALPHA() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.ITEXT_LAST() is not null) return HandleITextOutermost(symbol, parser);
+		if (context.DTEXT_NUM() is not null) return HandleDoListNumber(symbol, parser);
+		if (context.DTEXT_LAST() is not null) return HandleDoListOutermost(parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
 		if (context.STEXT_LAST() is not null) return HandleSTextLast(parser);
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
@@ -157,6 +161,26 @@ public static partial class Substitutions
 		parser.CurrentState.IterationRegisters.IsEmpty
 			? new CallState(ErrorMessages.Returns.RegisterRange)
 			: new CallState(parser.CurrentState.IterationRegisters.Last().Value);
+
+	/// <summary>
+	/// <c>%d&lt;n&gt;</c>, from RhostMUSH: the element of the n-th <c>@dolist</c> out from the innermost,
+	/// counting only <c>@dolist</c> levels. <c>%i&lt;n&gt;</c> counts <c>iter()</c> levels as well, so in
+	/// <c>@dolist a=think iter(x,%d0:%i0)</c> the two name different loops.
+	/// </summary>
+	private static CallState HandleDoListNumber(CallState symbol, IMUSHCodeParser parser)
+	{
+		var level = int.Parse(symbol.Message.ToPlainText());
+		var frame = parser.CurrentState.IterationRegisters.Where(frame => frame.DoList).ElementAtOrDefault(level);
+		return frame is null
+			? new CallState(ErrorMessages.Returns.RegisterRange)
+			: new CallState(frame.Value);
+	}
+
+	/// <summary><c>%dL</c>: the element of the outermost <c>@dolist</c>.</summary>
+	private static CallState HandleDoListOutermost(IMUSHCodeParser parser) =>
+		parser.CurrentState.IterationRegisters.LastOrDefault(frame => frame.DoList) is { } frame
+			? new CallState(frame.Value)
+			: new CallState(ErrorMessages.Returns.RegisterRange);
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{

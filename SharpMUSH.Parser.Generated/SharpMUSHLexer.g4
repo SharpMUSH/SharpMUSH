@@ -78,6 +78,8 @@ INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
 ITEXT_NUM: [iI][0-9]+ -> popMode;
 ITEXT_LAST: [iI] 'L' -> popMode;
+DTEXT_NUM: [dD][0-9]+ -> popMode;
+DTEXT_LAST: [dD][lL] -> popMode;
 STEXT_NUM: '$' [0-9]+ -> popMode;
 STEXT_LAST: '$' 'L' -> popMode;
 ARG_STARTCARET: '<' -> popMode;

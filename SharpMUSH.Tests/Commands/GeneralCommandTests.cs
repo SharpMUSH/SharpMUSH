@@ -122,6 +122,67 @@ public class GeneralCommandTests
 		}
 	}
 
+	/// <summary>
+	/// <c>%d0</c> is the innermost @dolist's element, counting @dolist levels only, as in RhostMUSH;
+	/// <c>%i0</c> inside the iter() is the iter() element.
+	/// </summary>
+	[Test]
+	public async ValueTask DolistElementSkipsIterLevels()
+	{
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b=@pemit #1={token}-[iter(x y,%d0:%i0:%i1)]"));
+
+		await Assert.That(Heard($"{token}-a:x:a a:y:a", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"{token}-b:x:b b:y:b", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+	}
+
+	[Test]
+	public async ValueTask DolistElementNestedInline()
+	{
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b=@dolist/inline x=@pemit #1={token}-%d0-%d1-%dL-%dl"));
+
+		await Assert.That(Heard($"{token}-x-a-a-a", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Heard($"{token}-x-b-b-b", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+	}
+
+	[Test]
+	public async ValueTask DolistElementNestedQueued()
+	{
+		var token = Token();
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist a b=@dolist x y=@pemit #1={token}-%d0-%d1-%dL"));
+
+		foreach (var outer in new[] { "a", "b" })
+		{
+			foreach (var inner in new[] { "x", "y" })
+			{
+				await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(god, $"{token}-{inner}-{outer}-{outer}", god);
+			}
+		}
+	}
+
+	/// <summary>The element is returned as it is, never evaluated again.</summary>
+	[Test]
+	public async ValueTask DolistElementIsNotEvaluated()
+	{
+		var token = Token();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline lit([add(1,1)])=@pemit #1={token}-%d0"));
+
+		await Assert.That(Heard($"{token}-[add(1,1)]", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+	}
+
+	[Test]
+	[Arguments("%d0")]
+	[Arguments("%dL")]
+	[Arguments("[iter(a,%d0)]")]
+	public async ValueTask DolistElementOutsideDolist(string code)
+	{
+		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(code));
+
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.RegisterRange);
+	}
+
 	[Test]
 	public async ValueTask DolistIncludedAttributeKeepsHashAsText()
 	{

@@ -32,6 +32,8 @@ Output: with `/inline` or `/inplace`, the output of the last command run; queued
 
 The %i0 substitution, or the function itext(0), can be used in the `<action list>` to get the current element of the `<list>`, and the inum(0) function returns the position of the current element. ilev() returns the nesting depth of @dolists. The %iL substitution returns the itext() for the outermost @dolist, and is equivilent to itext(ilev()).
 
+%d0 is the current element as well, %d1 the element of the @dolist around it, and %dL the outermost one's. Unlike %i, %d counts only @dolists, so an iter() inside the action list does not move it. The idea comes from RhostMUSH.
+
 For backwards compatibility, "##" also stands for the current element of the list, and "#@" for its position, counting from 1. In a nested @dolist they name the outermost one. The element is never evaluated as code. For the current @dolist, use %i0 or itext(0), and inum(0). Like iter()'s, they count only in the action list as written, not in the code of an attribute it triggers or calls.
 
 ## Notification and delimiters
@@ -88,4 +90,10 @@ You say, "b/3"
 You say, "c/1"
 You say, "c/2"
 You say, "c/3"
+```
+
+```sharp
+> @dolist a b=think iter(x y,%d0:%i0)
+a:x a:y
+b:x b:y
 ```
