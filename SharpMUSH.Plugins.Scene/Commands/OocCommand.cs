@@ -139,7 +139,7 @@ public static class OocCommand
 	/// </summary>
 	private static async ValueTask<bool> IsApprovedAsync(IMUSHCodeParser parser, AnySharpObject speaker)
 	{
-		if (await SceneLogger.FindAsync(parser.ServiceProvider) is AnySharpObject logger)
+		if (await SceneLogger.FindAsync(parser.ServiceProvider) is { } logger)
 		{
 			var attributes = parser.ServiceProvider.GetRequiredService<IAttributeService>();
 			if (await attributes.GetAttributeAsync(logger, logger, ApprovalRule, IAttributeService.AttributeMode.Read)

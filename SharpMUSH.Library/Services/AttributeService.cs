@@ -555,7 +555,7 @@ public class AttributeService(
 		}
 
 		var source = resolved.SourceObject;
-		if (await HolderAsync(obj, source, [], token) is not AnySharpObject holder)
+		if (await HolderAsync(obj, source, [], token) is not { } holder)
 		{
 			return null;
 		}
@@ -601,7 +601,7 @@ public class AttributeService(
 			return await CanReadOnHolderAsync(obj);
 		}
 
-		if (await HolderAsync(obj, source, holders, token) is AnySharpObject holder
+		if (await HolderAsync(obj, source, holders, token) is { } holder
 				&& await CanReadOnHolderAsync(holder))
 		{
 			return true;

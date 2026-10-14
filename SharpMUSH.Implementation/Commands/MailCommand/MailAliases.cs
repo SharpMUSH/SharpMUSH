@@ -766,7 +766,7 @@ public static class MailAliases
 	{
 		if (entry.Equals("me", StringComparison.OrdinalIgnoreCase))
 		{
-			return executor is AnySharpObject and SharpPlayer self ? self : null;
+			return executor is SharpPlayer self ? self : null;
 		}
 
 		if (entry.StartsWith('#'))

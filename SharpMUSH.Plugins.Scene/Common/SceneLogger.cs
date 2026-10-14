@@ -31,7 +31,7 @@ public static class SceneLogger
 	/// <summary>Every pose type the logger defines, in order, and the attributes that do not read as one.</summary>
 	public static async ValueTask<PoseTypeCatalogue> CatalogueAsync(IServiceProvider services)
 	{
-		if (await FindAsync(services) is not AnySharpObject logger) return PoseTypeCatalogue.Empty;
+		if (await FindAsync(services) is not { } logger) return PoseTypeCatalogue.Empty;
 
 		var attributes = services.GetRequiredService<IAttributeService>();
 		if (await attributes.GetAttributePatternAsync(logger, logger, TypePrefix + "*", false, IAttributeService.AttributePatternMode.Wildcard)

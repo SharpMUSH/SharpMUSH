@@ -54,7 +54,7 @@ public partial class PackageInstallService(
 	private async Task MarkGoingAsync(
 		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)
 	{
-		if (await GetKnownAsync(objid, cancellationToken) is not AnySharpObject node)
+		if (await GetKnownAsync(objid, cancellationToken) is not { } node)
 		{
 			return;
 		}
@@ -72,7 +72,7 @@ public partial class PackageInstallService(
 	private async Task ClearGoingAsync(
 		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)
 	{
-		if (await GetKnownAsync(objid, cancellationToken) is not AnySharpObject node
+		if (await GetKnownAsync(objid, cancellationToken) is not { } node
 			|| await flags.GetObjectFlagAsync("GOING", cancellationToken) is not SharpObjectFlag going
 			|| !await node.Object().Flags.Value.AnyAsync(f => f.Name == going.Name, cancellationToken))
 		{
