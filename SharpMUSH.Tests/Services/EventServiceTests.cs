@@ -25,11 +25,12 @@ public class EventServiceTests
 		public IMediator Mediator { get; } = Substitute.For<IMediator>();
 		public IAttributeService Attributes { get; } = Substitute.For<IAttributeService>();
 		public ITaskScheduler Scheduler { get; } = Substitute.For<ITaskScheduler>();
+		public IMUSHCodeParser Parser { get; } = Substitute.For<IMUSHCodeParser>();
 		public EventService Events { get; }
 		public AnySharpObject Handler { get; }
 		public AnySharpObject Player { get; }
 
-		public Fixture(string? attributeBody)
+		public Fixture(string? attributeBody, string eventName = "TEST`EVENT", params (string Name, string Body)[] below)
 		{
 			var objects = new TestObjectFactory();
 			Handler = objects.CreateThing(9, "Event Handler");
@@ -41,19 +42,32 @@ public class EventServiceTests
 					20 => Player,
 					_ => new None()
 				}));
-			Attributes.GetAttributeAsync(Handler, Handler, "TEST`EVENT", IAttributeService.AttributeMode.Execute, false)
+			Attributes.GetAttributeAsync(Handler, Handler, eventName, IAttributeService.AttributeMode.Execute, false)
 				.Returns(ValueTask.FromResult<OptionalSharpAttributeOrError>(attributeBody is null
 					? new None()
-					: new[] { new SharpAttribute("", "", "TEST`EVENT", [], null, "TEST`EVENT", null!, null!, null!) { Value = MarkupText.Plain(attributeBody) } }));
+					: new[] { Attribute(eventName, attributeBody) }));
+			Attributes.GetAttributePatternAsync(Handler, Handler, $"{eventName}`*", false, IAttributeService.AttributePatternMode.Wildcard)
+				.Returns(ValueTask.FromResult(new SharpAttributesOrError(below.Select(x => Attribute(x.Name, x.Body)).ToArray())));
+			Parser.FromState(Arg.Any<ParserState>()).Returns(Parser);
 			Scheduler.AdmitCommandList(Arg.Any<MString>(), Arg.Any<ParserState>())
 				.Returns(ValueTask.FromResult(new QueueAdmissionResult(1, QueueRejectionReason.None)));
 
 			var baseline = TestSharpMushOptions.Create();
 			var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 			options.CurrentValue.Returns(baseline with { Database = baseline.Database with { EventHandler = 9 } });
-			Events = new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(Scheduler), options,
-				NullLogger<EventService>.Instance);
+			Events = new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(Scheduler), new Lazy<IMUSHCodeParser>(Parser),
+				options, NullLogger<EventService>.Instance);
 		}
+
+		private static SharpAttribute Attribute(string name, string body)
+			=> new("", "", name, [], null, name, null!, null!, null!) { Value = MarkupText.Plain(body) };
+
+		/// <summary>What each queued entry runs, and as which attribute, in the order they were queued.</summary>
+		public (string Body, string Attribute)[] Queued()
+			=> Scheduler.ReceivedCalls()
+				.Where(x => x.GetMethodInfo().Name == nameof(ITaskScheduler.AdmitCommandList))
+				.Select(x => (((MString)x.GetArguments()[0]!).ToPlainText(), ((ParserState)x.GetArguments()[1]!).CurrentEvaluation!.Name))
+				.ToArray();
 	}
 
 	[Test]
@@ -99,5 +113,69 @@ public class EventServiceTests
 		await fixture.Events.TriggerEventAsync("TEST`EVENT", fixture.Player.Object().DBRef);
 
 		await fixture.Scheduler.DidNotReceiveWithAnyArgs().AdmitCommandList(default!, default!);
+	}
+
+	/// <summary>
+	/// Each attribute one level below the event's own is queued after it as an entry of its own, as @trigger would
+	/// queue it, so a package can hear an event without editing the attribute another package wrote.
+	/// </summary>
+	[Test]
+	public async Task TheAttributesBelowTheEventAreQueuedAfterItInNameOrder()
+	{
+		var fixture = new Fixture("think own", "TEST`EVENT", ("TEST`EVENT`SCENE", "think scene"), ("TEST`EVENT`COMMFEED", "think comm"));
+
+		await fixture.Events.TriggerEventAsync("TEST`EVENT", fixture.Player.Object().DBRef, "first");
+
+		await Assert.That(fixture.Queued()).IsEquivalentTo(new[]
+		{
+			("think own", "TEST`EVENT"),
+			("think comm", "TEST`EVENT`COMMFEED"),
+			("think scene", "TEST`EVENT`SCENE")
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>The event's own attribute, empty because it only holds the ones below it, runs nothing.</summary>
+	[Test]
+	public async Task AnEmptyBranchRunsOnlyTheAttributesBelowIt()
+	{
+		var fixture = new Fixture("", "TEST`EVENT", ("TEST`EVENT`SCENE", "think scene"), ("TEST`EVENT`EMPTY", ""));
+
+		await fixture.Events.TriggerEventAsync("TEST`EVENT", fixture.Player.Object().DBRef);
+
+		await Assert.That(fixture.Queued()).IsEquivalentTo(new[] { ("think scene", "TEST`EVENT`SCENE") });
+	}
+
+	/// <summary>
+	/// A stoppable event's attributes run in turn in one entry, as @include would run them; one that calls
+	/// stopevent() keeps the ones after it from running.
+	/// </summary>
+	[Test]
+	public async Task StopEventKeepsTheLaterAttributesOfAStoppableEventFromRunning()
+	{
+		var fixture = new Fixture("think own", SharpMUSH.Library.Definitions.SharpEvents.SocketGmcp,
+			("SOCKET`GMCP`A", "think stop"), ("SOCKET`GMCP`B", "think never"));
+		Func<ValueTask<CallState?>>? work = null;
+		fixture.Scheduler.AdmitWork(Arg.Do<Func<ValueTask<CallState?>>>(x => work = x), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<DBRef>(), Arg.Any<bool>())
+			.Returns(ValueTask.FromResult(new QueueAdmissionResult(1, QueueRejectionReason.None)));
+		var ran = new List<string>();
+		fixture.Parser.CommandListParse(Arg.Any<MString>()).Returns(call =>
+		{
+			var body = call.Arg<MString>().ToPlainText();
+			ran.Add(body);
+			if (body == "think stop")
+			{
+				EventStop.Current!.Request();
+			}
+
+			return ValueTask.FromResult<CallState?>(CallState.Empty);
+		});
+
+		await fixture.Events.TriggerEventAsync(SharpMUSH.Library.Definitions.SharpEvents.SocketGmcp, null, "1", "Core.Hello", "{}", "");
+		await Assert.That(fixture.Queued()).IsEmpty();
+		await work!();
+
+		await Assert.That(ran).IsEquivalentTo(new[] { "think own", "think stop" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(EventStop.Current).IsNull();
 	}
 }

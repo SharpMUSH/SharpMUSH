@@ -225,6 +225,7 @@ public class Program
 		HttpContext context,
 		SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher dispatcher,
 		SitelockGuard sitelock,
+		SharpMUSH.Library.Services.Interfaces.IEventService events,
 		ILogger<Program> logger)
 	{
 		var request = context.Request;
@@ -239,8 +240,11 @@ public class Program
 		var clientIp = context.Connection.RemoteIpAddress?.ToString()
 			?? SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher.UnknownAddress;
 
-		if (SiteRefuses(sitelock, logger, clientIp, request.Method, path))
+		if (SiteRefusal(sitelock, logger, clientIp, request.Method, path) is { } refusal)
 		{
+			// PennMUSH spec: http`blocked (descriptor, IP, method, path, reason). An HTTP request has no descriptor.
+			await events.TriggerEventAsync(SharpEvents.HttpBlocked, null,
+				"", clientIp, request.Method.ToUpperInvariant(), path, refusal);
 			context.Response.StatusCode = StatusCodes.Status403Forbidden;
 			await context.Response.WriteAsync("Forbidden", context.RequestAborted);
 			return;
@@ -312,7 +316,8 @@ public class Program
 	/// kind of deliberate deviation as the 404 for a missing method attribute (help sharphttp).
 	/// </para>
 	/// </summary>
-	private static bool SiteRefuses(SitelockGuard sitelock, Microsoft.Extensions.Logging.ILogger logger, string clientIp, string method, string path)
+	/// <returns>Why the request is refused (<c>IP sitelocked !connect</c> or <c>path sitelocked !connect</c>), or null when it is not.</returns>
+	private static string? SiteRefusal(SitelockGuard sitelock, Microsoft.Extensions.Logging.ILogger logger, string clientIp, string method, string path)
 	{
 		// Upper-cased to match how the handler attribute itself is looked up, so a rule written
 		// against POST cannot be slipped past by sending "post".
@@ -325,7 +330,7 @@ public class Program
 
 		if (reason is null)
 		{
-			return false;
+			return null;
 		}
 
 		// Method and path are the caller's, and routing hands the path over percent-DECODED — so
@@ -334,6 +339,6 @@ public class Program
 		// reason is one of the two literals above; neither can carry one.
 		logger.LogInformation("Refused inbound HTTP {Method} {Path} from {ClientIp}: http: {Reason}.",
 			SafeLogValue.OneLine(upperMethod), SafeLogValue.OneLine(path), clientIp, reason);
-		return true;
+		return reason;
 	}
 }

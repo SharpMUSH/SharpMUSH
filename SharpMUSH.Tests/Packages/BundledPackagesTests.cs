@@ -38,7 +38,7 @@ public class BundledPackagesTests
 
 		var handler = parsed.Manifest.Objects.Single();
 		await Assert.That(handler.Target).IsEqualTo(new PackageRef(PackageRefKind.WellKnown, "event_handler"));
-		await Assert.That(handler.Attributes.Keys).Contains("ROOM`CONTENTS");
+		await Assert.That(handler.Attributes.Keys).Contains("ROOM`CONTENTS`ROOMCONTENTS");
 	}
 
 	/// <summary>

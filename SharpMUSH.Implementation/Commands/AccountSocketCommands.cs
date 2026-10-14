@@ -43,6 +43,7 @@ public partial class Commands
 
 		if (!Configuration.CurrentValue.Net.PlayerCreation)
 		{
+			await TriggerCreateFailAsync(handle, "creation disabled", "");
 			await NotifyPlayerCreationDisabledAsync(handle);
 			return new None();
 		}
@@ -83,7 +84,7 @@ public partial class Commands
 		return await AccountService.CreateAccountAsync(username, email, password) switch
 		{
 			SharpAccount account => await RegisteredAsync(handle, account),
-			Error<string> error => await RegistrationRefusedAsync(handle, error.Value),
+			Error<string> error => await RegistrationRefusedAsync(handle, username, error.Value),
 		};
 	}
 
@@ -103,8 +104,9 @@ public partial class Commands
 	}
 
 	/// <summary>Tells the socket why the account service would not create the account.</summary>
-	private async ValueTask<Option<CallState>> RegistrationRefusedAsync(long handle, string reason)
+	private async ValueTask<Option<CallState>> RegistrationRefusedAsync(long handle, string name, string reason)
 	{
+		await TriggerCreateFailAsync(handle, reason, name);
 		await NotifyService.Notify(handle, reason);
 		return new None();
 	}
@@ -236,6 +238,7 @@ public partial class Commands
 
 		if (!Configuration.CurrentValue.Net.PlayerCreation)
 		{
+			await TriggerCreateFailAsync(handle, "creation disabled", "");
 			await NotifyPlayerCreationDisabledAsync(handle);
 			return new None();
 		}
@@ -270,12 +273,14 @@ public partial class Commands
 		if (await Mediator.CreateStream(new GetPlayerQuery(charName))
 				.AnyAsync(x => x.Object.Name.Equals(charName, StringComparison.InvariantCultureIgnoreCase)))
 		{
+			await TriggerCreateFailAsync(handle, "name taken", charName);
 			await NotifyService.Notify(handle, "There is already a player with that name.");
 			return new None();
 		}
 
 		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(charName), new None(), new None()))
 		{
+			await TriggerCreateFailAsync(handle, "bad name", charName);
 			await NotifyService.Notify(handle, "That name is not allowed.");
 			return new None();
 		}
@@ -288,6 +293,10 @@ public partial class Commands
 		var playerDbRef = await Mediator.Send(new CreatePlayerCommand(charName, charPassword, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
 		await AccountService.LinkCharacterAsync(accountId, playerDbRef);
+
+		// PennMUSH spec: player`create (objid, name, how, descriptor, email); 'create' at the connect screen.
+		await EventService.TriggerEventAsync(SharpEvents.PlayerCreate, null, playerDbRef.ToString(), charName, "create",
+			handle.ToString(), "");
 
 		// The character was created a line ago, so this is its first ever entry into play: it gets
 		// the first-login greeting, not "Welcome back".
@@ -498,4 +507,20 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
 		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await new AnySharpObject(character).IsWizard());
+
+	/// <summary>
+	/// Fires SOCKET`CREATEFAIL as a system event, for an account or character the connect screen refused to create.
+	/// PennMUSH spec: socket`createfail (descriptor, IP, count, reason, name[, error])
+	/// </summary>
+	private async ValueTask TriggerCreateFailAsync(long handle, string reason, string name)
+	{
+		var ipAddress = ConnectionService.Get(handle)?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		await EventService.TriggerEventAsync(SharpEvents.SocketCreateFail, null,
+			handle.ToString(),
+			ipAddress,
+			"1", // count, as socket`loginfail passes it
+			reason,
+			name,
+			"");
+	}
 }

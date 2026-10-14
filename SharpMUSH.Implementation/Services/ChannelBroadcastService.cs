@@ -73,7 +73,7 @@ public class ChannelBroadcastService(
 	/// <summary>
 	/// <see cref="SharpEvents.ChannelMessage"/>: the line as parts, and exactly who it was delivered to, so
 	/// a handler can pass it on (the <c>comm-feed</c> package's <c>comm.message</c>) without deciding again
-	/// who may hear it. Nobody heard it, nothing fires. The parts are plain text after the mogrifier; a
+	/// who may hear it. Nobody heard it, nothing fires. The name and message keep their markup, after the mogrifier; a
 	/// member's own <c>@chatformat</c> changes only their terminal line. The last argument is the line's id,
 	/// which the recall buffer holds it under too.
 	/// </summary>
@@ -94,14 +94,16 @@ public class ChannelBroadcastService(
 
 		await eventService.TriggerEventAsync(SharpEvents.ChannelMessage,
 			sender?.Object().DBRef,
-			notification.Channel.Name.ToPlainText(),
-			named ? sender?.Object().DBRef.ToString() ?? string.Empty : string.Empty,
-			StyleFor(line.ChatType),
-			named ? line.PlayerName.ToPlainText() : string.Empty,
-			line.Message.ToPlainText(),
-			string.Join(' ', recipients.Select(recipient => recipient.Object().DBRef.ToString())),
-			sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
-			id.ToString(CultureInfo.InvariantCulture));
+			[
+				MarkupText.Plain(notification.Channel.Name.ToPlainText()),
+				MarkupText.Plain(named ? sender?.Object().DBRef.ToString() ?? string.Empty : string.Empty),
+				MarkupText.Plain(StyleFor(line.ChatType)),
+				named ? line.PlayerName : MarkupText.Empty,
+				line.Message,
+				MarkupText.Plain(string.Join(' ', recipients.Select(recipient => recipient.Object().DBRef.ToString()))),
+				MarkupText.Plain(sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture)),
+				MarkupText.Plain(id.ToString(CultureInfo.InvariantCulture))
+			]);
 	}
 
 	/// <summary>

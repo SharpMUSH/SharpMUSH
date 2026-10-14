@@ -107,7 +107,7 @@ public partial class Commands
 				{
 					// set.c:151-154: queue_event(...OBJECT`RENAME...), then
 					// `if (!AreQuiet(player, thing)) notify(player, T("Name set."))`.
-					await EventService.TriggerEventAsync("OBJECT`RENAME",
+					await EventService.TriggerEventAsync(SharpEvents.ObjectRename,
 						executor.Object().DBRef,
 						found.Object().DBRef.ToString(),
 						name.ToPlainText(),

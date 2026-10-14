@@ -104,7 +104,7 @@ public static class BuildingHelpers
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CreatedObject), executor,
 			$"#{thing.Number}");
 
-		await eventService.TriggerEventAsync("OBJECT`CREATE", executor.Object().DBRef,
+		await eventService.TriggerEventAsync(SharpEvents.ObjectCreate, executor.Object().DBRef,
 			thing.ToString(),
 			""); // null for cloned-from (not a clone)
 
@@ -131,7 +131,7 @@ public static class BuildingHelpers
 	public static async ValueTask AnnounceCreatedAsync(IMUSHCodeParser parser, IEventService eventService,
 		AnySharpObject executor, DBRef created)
 	{
-		await eventService.TriggerEventAsync("OBJECT`CREATE", executor.Object().DBRef, created.ToString());
+		await eventService.TriggerEventAsync(SharpEvents.ObjectCreate, executor.Object().DBRef, created.ToString());
 
 		if (parser.ServiceProvider.GetService<IPluginHookDispatcher>() is { } createHooks)
 		{
@@ -152,7 +152,7 @@ public static class BuildingHelpers
 			name, player.Number, password);
 
 		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
-		await eventService.TriggerEventAsync("PLAYER`CREATE",
+		await eventService.TriggerEventAsync(SharpEvents.PlayerCreate,
 			executor.Object().DBRef, // Enactor is the wizard who did the creating
 			player.ToString(),
 			name,
@@ -925,7 +925,7 @@ public static class BuildingHelpers
 			await mediator.Send(new SetObjectParentCommand(clonedObj, parent));
 		}
 
-		await eventService.TriggerEventAsync("OBJECT`CREATE", executor.Object().DBRef,
+		await eventService.TriggerEventAsync(SharpEvents.ObjectCreate, executor.Object().DBRef,
 			cloneDbRef.ToString(),
 			target.Object().DBRef.ToString()); // cloned-from
 

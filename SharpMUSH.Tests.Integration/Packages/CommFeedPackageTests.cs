@@ -184,15 +184,15 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 
 		var managed = await Registry.GetManagedAttributesAsync("comm-feed");
 		var names = managed.Select(m => m.Attribute).ToList();
-		await Assert.That(names).Contains("CHANNEL`MESSAGE");
-		await Assert.That(names).Contains("PAGE`MESSAGE");
-		await Assert.That(names).Contains("PLAYER`CHANNELS");
-		await Assert.That(names).Contains("CHANNEL`WHO");
+		await Assert.That(names).Contains("CHANNEL`MESSAGE`COMMFEED");
+		await Assert.That(names).Contains("PAGE`MESSAGE`COMMFEED");
+		await Assert.That(names).Contains("PLAYER`CHANNELS`COMMFEED");
+		await Assert.That(names).Contains("CHANNEL`WHO`COMMFEED");
 		await Assert.That((await Registry.GetPackageObjectsAsync("comm-feed")).Count).IsEqualTo(0);
 
 		var configured = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
 			.CurrentValue.Database.EventHandler;
-		await Assert.That(managed.Single(m => m.Attribute == "CHANNEL`MESSAGE").Objid).StartsWith($"#{configured}:");
+		await Assert.That(managed.Single(m => m.Attribute == "CHANNEL`MESSAGE`COMMFEED").Objid).StartsWith($"#{configured}:");
 	}
 
 	[Test]

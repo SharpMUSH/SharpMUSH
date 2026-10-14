@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Quartz;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -182,8 +183,9 @@ public class ScheduledTaskManagementServiceTests
 		var serviceProvider = Substitute.For<IServiceProvider>();
 		serviceProvider.GetService(typeof(IMUSHCodeParser)).Returns(Substitute.For<IMUSHCodeParser>());
 
+		var events = Substitute.For<IEventService>();
 		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(
-			dataService, destructionService, serviceProvider, logger);
+			dataService, destructionService, events, serviceProvider, logger);
 
 		await job.Execute(jobContext);
 
@@ -193,6 +195,7 @@ public class ScheduledTaskManagementServiceTests
 
 		// The deadline moving forward is not the point of the job any more — the purge is.
 		await destructionService.Received(1).PurgeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<CancellationToken>());
+		await events.Received(1).TriggerEventAsync(SharpEvents.DbPurge, null);
 	}
 
 	[Test]
@@ -221,8 +224,9 @@ public class ScheduledTaskManagementServiceTests
 		var serviceProvider = Substitute.For<IServiceProvider>();
 		serviceProvider.GetService(typeof(IMUSHCodeParser)).Returns(Substitute.For<IMUSHCodeParser>());
 
+		var events = Substitute.For<IEventService>();
 		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(
-			dataService, destructionService, serviceProvider, logger);
+			dataService, destructionService, events, serviceProvider, logger);
 
 		await job.Execute(jobContext);
 
@@ -231,6 +235,7 @@ public class ScheduledTaskManagementServiceTests
 		// Before the deadline, nothing is destroyed — this is the guard that keeps the frequent
 		// trigger from purging on every tick.
 		await destructionService.DidNotReceive().PurgeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<CancellationToken>());
+		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default(string[])!);
 	}
 
 	/// <summary>

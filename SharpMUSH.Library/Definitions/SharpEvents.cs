@@ -1,12 +1,38 @@
 namespace SharpMUSH.Library.Definitions;
 
 /// <summary>
-/// Names of SharpMUSH-fired events (attributes evaluated on the configured event_handler object).
-/// PennMUSH-parity events are fired with string literals at their call sites; this holds
-/// SharpMUSH extension events so the name has a single definition shared by firer and tests.
+/// The names of the events a SharpMUSH game raises, one constant each, so the raiser, the catalogue
+/// (<see cref="EventCatalogue"/>) and the tests share one spelling. Every raise names its event through one of
+/// these; a test fails when a raise does not, or names an event the catalogue lacks.
 /// </summary>
 public static class SharpEvents
 {
+	// PennMUSH's events, by the names PennMUSH gives them (help event list).
+	public const string DbPurge = "DB`PURGE";
+	public const string DbWcheck = "DB`WCHECK";
+	public const string LogErr = "LOG`ERR";
+	public const string LogCmd = "LOG`CMD";
+	public const string LogWiz = "LOG`WIZ";
+	public const string LogConn = "LOG`CONN";
+	public const string LogTrace = "LOG`TRACE";
+	public const string LogCheck = "LOG`CHECK";
+	public const string ObjectCreate = "OBJECT`CREATE";
+	public const string ObjectDestroy = "OBJECT`DESTROY";
+	public const string ObjectMove = "OBJECT`MOVE";
+	public const string ObjectRename = "OBJECT`RENAME";
+	public const string ObjectFlag = "OBJECT`FLAG";
+	public const string PlayerCreate = "PLAYER`CREATE";
+	public const string PlayerConnect = "PLAYER`CONNECT";
+	public const string PlayerDisconnect = "PLAYER`DISCONNECT";
+	public const string PlayerWarn = "PLAYER`WARN";
+	public const string SocketConnect = "SOCKET`CONNECT";
+	public const string SocketDisconnect = "SOCKET`DISCONNECT";
+	public const string SocketLoginFail = "SOCKET`LOGINFAIL";
+	public const string SocketCreateFail = "SOCKET`CREATEFAIL";
+	public const string SocketGmcp = "SOCKET`GMCP";
+	public const string HttpBlocked = "HTTP`BLOCKED";
+	public const string HttpCommand = "HTTP`COMMAND";
+
 	/// <summary>
 	/// Fired (room-scoped, not actor-scoped) whenever a room's visible contents change — an
 	/// object enters/leaves, or a player connects/disconnects in it. Args: (roomobjid, cause).
@@ -55,4 +81,13 @@ public static class SharpEvents
 	/// those who no longer do.
 	/// </summary>
 	public const string ChannelWho = "CHANNEL`WHO";
+
+	/// <summary>A player received @mail. Args: (recipient objid, sender objid, message number, subject, urgent).</summary>
+	public const string MailReceived = "MAIL`RECEIVED";
+
+	/// <summary>A copy of the world was written by @backup or the backup schedule. Args: (name, bytes).</summary>
+	public const string BackupComplete = "BACKUP`COMPLETE";
+
+	/// <summary>A copy of the world could not be written. Args: (reason).</summary>
+	public const string BackupError = "BACKUP`ERROR";
 }

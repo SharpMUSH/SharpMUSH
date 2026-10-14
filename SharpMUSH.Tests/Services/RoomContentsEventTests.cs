@@ -60,6 +60,52 @@ public class RoomContentsEventTests
 		await Cmd($"&FIRED_{marker} #9=");
 	}
 
+	/// <summary>
+	/// An event runs the handler's attribute named after it and each attribute one level below it, so a second
+	/// package hears the event beside the first. Clearing the event's own attribute leaves the ones below it.
+	/// </summary>
+	[Test]
+	public async ValueTask AttributesBelowTheEventRunBesideItsOwn()
+	{
+		var marker = TestIsolationHelpers.GenerateUniqueName("RcBelow");
+		await Cmd("&ROOM`CONTENTS`TESTBELOWA #9=&BELOWA_[secure(%0)] #9=a");
+		await Cmd("&ROOM`CONTENTS`TESTBELOWB #9=&BELOWB_[secure(%0)] #9=b");
+
+		await EventService.TriggerEventAsync(SharpEvents.RoomContents, new DBRef(1), marker, "move-in");
+
+		await Assert.That(await Eval($"[get(#9/BELOWA_{marker})] [get(#9/BELOWB_{marker})]")).IsEqualTo("a b");
+
+		await Cmd("&ROOM`CONTENTS #9=");
+		await Assert.That(await Eval("hasattr(#9,ROOM`CONTENTS`TESTBELOWA)")).IsEqualTo("1");
+
+		await Cmd("&ROOM`CONTENTS`TESTBELOWA #9=");
+		await Cmd("&ROOM`CONTENTS`TESTBELOWB #9=");
+		await Cmd($"&BELOWA_{marker} #9=");
+		await Cmd($"&BELOWB_{marker} #9=");
+	}
+
+	/// <summary>
+	/// SOCKET`GMCP is stoppable: its attributes run in turn, and one that calls stopevent() keeps the ones after
+	/// it from running. Outside a stoppable event stopevent() is an error.
+	/// </summary>
+	[Test]
+	public async ValueTask StopEventKeepsLaterAttributesOfAStoppableEventFromRunning()
+	{
+		var marker = TestIsolationHelpers.GenerateUniqueName("GmcpStop");
+		await Cmd("&SOCKET`GMCP`TESTSTOPA #9=think [stopevent()][set(#9,STOPA_[secure(%1)]:ran)]");
+		await Cmd("&SOCKET`GMCP`TESTSTOPB #9=think set(#9,STOPB_[secure(%1)]:ran)");
+
+		await EventService.TriggerEventAsync(SharpEvents.SocketGmcp, null, "0", marker, "", "");
+
+		await Assert.That(await Eval($"get(#9/STOPA_{marker})")).IsEqualTo("ran");
+		await Assert.That(await Eval($"hasattr(#9,STOPB_{marker})")).IsEqualTo("0");
+		await Assert.That(await Eval("stopevent()")).IsEqualTo("#-1 NOT HEARING A STOPPABLE EVENT");
+
+		await Cmd("&SOCKET`GMCP`TESTSTOPA #9=");
+		await Cmd("&SOCKET`GMCP`TESTSTOPB #9=");
+		await Cmd($"&STOPA_{marker} #9=");
+	}
+
 	[Test]
 	public async ValueTask MoveFiresRoomContentsForNewLocation()
 	{

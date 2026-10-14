@@ -111,10 +111,10 @@ comments every attribute; every helper is under ``FN`COMM`` so it cannot
 collide with `room-contents`' ``FN`*``.
 
 ```mushcode
-&CHANNEL`MESSAGE #9=think null(if(strmatch(%<style>,presence),,oob(u(me/FN`COMM`RECIPIENTS,%<recipients>),comm.message,uargs(me/FN`COMM`MESSAGE,kind,channel,channel,%<channel>,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,id,%<id>))))
-&PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
-&PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FN`COMM`CHANNELS,%<objid>))))
-&CHANNEL`WHO #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
+&CHANNEL`MESSAGE`COMMFEED #9=think null(if(strmatch(%<style>,presence),,oob(u(me/FN`COMM`RECIPIENTS,%<recipients>),comm.message,uargs(me/FN`COMM`MESSAGE,kind,channel,channel,%<channel>,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,id,%<id>))))
+&PAGE`MESSAGE`COMMFEED #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
+&PLAYER`CHANNELS`COMMFEED #9=think null(if(u(me/FN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FN`COMM`CHANNELS,%<objid>))))
+&CHANNEL`WHO`COMMFEED #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
 ```
 
 | Attribute | Decides |
