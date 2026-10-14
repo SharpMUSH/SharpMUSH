@@ -1,6 +1,7 @@
 using Humanizer;
 using Mediator;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -167,15 +168,9 @@ public static partial class Substitutions
 	/// counting only <c>@dolist</c> levels. <c>%i&lt;n&gt;</c> counts <c>iter()</c> levels as well, so in
 	/// <c>@dolist a=think iter(x,%d0:%i0)</c> the two name different loops.
 	/// </summary>
-	private static CallState HandleDoListNumber(CallState symbol, IMUSHCodeParser parser)
-	{
-		var frame = int.TryParse(symbol.Message.ToPlainText(), out var level)
-			? parser.CurrentState.IterationRegisters.Where(frame => frame.DoList).ElementAtOrDefault(level)
-			: null;
-		return frame is null
-			? new CallState(ErrorMessages.Returns.RegisterRange)
-			: new CallState(frame.Value);
-	}
+	private static CallState HandleDoListNumber(CallState symbol, IMUSHCodeParser parser) =>
+		ReadLevel(symbol, parser,
+			level => parser.CurrentState.IterationRegisters.Where(frame => frame.DoList).ElementAtOrDefault(level));
 
 	/// <summary><c>%dL</c>: the element of the outermost <c>@dolist</c>.</summary>
 	private static CallState HandleDoListOutermost(IMUSHCodeParser parser) =>
@@ -183,12 +178,34 @@ public static partial class Substitutions
 			? new CallState(frame.Value)
 			: new CallState(ErrorMessages.Returns.RegisterRange);
 
+	/// <summary>
+	/// <c>%q&lt;name&gt;</c> and the rest. A bang before the name (<c>%q&lt;!!$name&gt;</c>) answers 1 or 0
+	/// about the register (<see cref="Bang"/>); no register name starts with one.
+	/// </summary>
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
+		var name = symbol.Message.ToPlainText();
+		var bangLength = Bang.Read(name, out var bang);
 		parser.CurrentState.Registers.TryPeek(out var curVal);
-		return curVal!.TryGetValue(symbol.Message.ToPlainText().ToUpper(), out var value)
-			? new CallState(value)
-			: new CallState(string.Empty);
+		var value = curVal!.TryGetValue(name[bangLength..].ToUpper(), out var found) ? found : MarkupText.Empty;
+		return new CallState(bangLength > 0 ? bang.Apply(value, parser) : value);
+	}
+
+	/// <summary>
+	/// <c>%i&lt;n&gt;</c> or <c>%d&lt;n&gt;</c>, with any bang before the number applied to the element.
+	/// An out-of-range level is the error, whatever the bang.
+	/// </summary>
+	private static CallState ReadLevel(CallState symbol, IMUSHCodeParser parser,
+		Func<int, IterationWrapper<MString>?> frameAt)
+	{
+		var text = symbol.Message.ToPlainText();
+		var bangLength = Bang.Read(text, out var bang);
+		return (int.TryParse(text.AsSpan(bangLength), out var level) ? frameAt(level) : null) switch
+		{
+			null => new CallState(ErrorMessages.Returns.RegisterRange),
+			var frame when bangLength > 0 => new CallState(bang.Apply(frame.Value, parser)),
+			var frame => new CallState(frame.Value)
+		};
 	}
 
 	// Symbol Example: %vw --> vw
@@ -245,19 +262,6 @@ public static partial class Substitutions
 	}
 
 	// Symbol Example: %i0 --> 0
-	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
-	{
-		var symbolValue = symbol.Message.ToPlainText();
-		var symbolNumber = int.Parse(symbolValue);
-		var maxCount = parser.CurrentState.IterationRegisters.Count;
-
-		if (maxCount <= symbolNumber)
-		{
-			return new CallState(ErrorMessages.Returns.RegisterRange);
-		}
-
-		var val = parser.CurrentState.IterationRegisters.ElementAt(symbolNumber).Value;
-
-		return new CallState(val);
-	}
+	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser) =>
+		ReadLevel(symbol, parser, level => parser.CurrentState.IterationRegisters.ElementAtOrDefault(level));
 }

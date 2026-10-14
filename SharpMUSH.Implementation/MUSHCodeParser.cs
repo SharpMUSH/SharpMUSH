@@ -8,6 +8,7 @@ using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -107,7 +108,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var token = tokens.tokens[index];
 			if (token.Type != SharpMUSHLexer.FUNCHAR) continue;
-			var name = token.Text.TrimEnd()[..^1];
+			var name = Bang.FunctionName(token.Text.TrimEnd()[..^1]);
 			if (!functions.TryGetValue(name, out var definition)) continue;
 			if (definition.LibraryInformation.RestrictedOperation == "restrictedexpr") return true;
 			if (definition.LibraryInformation.RestrictedOperation != "fn") continue;
