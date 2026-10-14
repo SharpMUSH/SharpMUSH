@@ -48,7 +48,7 @@ public class PackageSettingManifestTests
 
 	[Test]
 	[Arguments("no_such_option: 1", "is not a configuration option")]
-	[Arguments("sql_password: hunter2", "cannot be set by a package")]
+	[Arguments("sql_username: hunter2", "cannot be set by a package")]
 	[Arguments("portal_port: lots", "is not a value 'portal_port' takes")]
 	[Arguments("noisy_whisper: perhaps", "is not a value 'noisy_whisper' takes")]
 	[Arguments("portal_port: \"{{desk}}\"", "is not a dbref option")]

@@ -10,6 +10,7 @@ using MySqlConnector;
 using NSubstitute;
 using Quartz;
 using Serilog;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.SocketServer.ProtocolHandlers;
@@ -111,7 +112,6 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 					SqlHost = sqlHost,
 					SqlDatabase = csb.Database ?? "",
 					SqlUsername = csb.UserID ?? "",
-					SqlPassword = csb.Password ?? "",
 					SqlPlatform = "mysql"
 				}
 			};
@@ -123,7 +123,7 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 			sc.AddSingleton(optionsSubstitute);
 
 			sc.RemoveAll<ISqlService>();
-			sc.AddSingleton<ISqlService>(new SqlService(optionsMonitor));
+			sc.AddSingleton<ISqlService>(new SqlService(optionsMonitor, FixedSecrets.With(SecretDefinition.SqlPassword.Name, csb.Password ?? "")));
 
 			// INotifyService is intentionally NOT overridden here so the real
 			// NotifyService (registered by Startup.cs) is used.  This allows

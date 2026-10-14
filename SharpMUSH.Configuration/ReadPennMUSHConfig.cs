@@ -270,7 +270,6 @@ public static partial class ReadPennMushConfig
 				String(Get(nameof(NetOptions.SqlHost)), d.Net.SqlHost),
 				String(Get(nameof(NetOptions.SqlDatabase)), d.Net.SqlDatabase),
 				String(Get(nameof(NetOptions.SqlUsername)), d.Net.SqlUsername),
-				String(Get(nameof(NetOptions.SqlPassword)), d.Net.SqlPassword),
 				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), d.Net.JsonUnsafeUnescape),
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), d.Net.SslRequireClientCert)
 			),

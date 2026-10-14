@@ -1,6 +1,8 @@
 using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.Providers;
 
@@ -13,17 +15,20 @@ namespace SharpMUSH.Library.Services;
 public class SqlService : ISqlService, IAsyncDisposable
 {
 	private readonly IOptionsMonitor<SharpMUSHOptions> _config;
+	private readonly ISecretStore _secrets;
 	private readonly SemaphoreSlim _providerLock = new(1, 1);
 	private ISqlProvider? _currentProvider;
 	private string? _currentConnectionString;
 	private bool _disposed;
 
 	/// <summary>
-	/// Constructor that accepts configuration monitor for runtime configuration changes.
+	/// Constructor that accepts configuration monitor for runtime configuration changes. The password is
+	/// the <c>sql.password</c> secret, never a configuration option.
 	/// </summary>
-	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
+	public SqlService(IOptionsMonitor<SharpMUSHOptions> config, ISecretStore secrets)
 	{
 		_config = config;
+		_secrets = secrets;
 	}
 
 	public bool IsAvailable => GetCurrentProviderAsync().GetAwaiter().GetResult()?.IsAvailable ?? false;
@@ -49,13 +54,20 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
+		var password = platform is "sqlite"
+			? null
+			: await _secrets.GetAsync(SecretDefinition.SqlPassword.Name) switch
+			{
+				string value => value,
+				_ => null
+			};
 
 		var connectionString = platform switch
 		{
 			"mysql" or "mariadb" =>
-				BuildMySqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
+				BuildMySqlConnectionString(cvn.SqlHost, cvn.SqlUsername, password, cvn.SqlDatabase),
 			"postgresql" or "postgres" =>
-				BuildPostgreSqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
+				BuildPostgreSqlConnectionString(cvn.SqlHost, cvn.SqlUsername, password, cvn.SqlDatabase),
 			"sqlite" =>
 				$"Data Source={cvn.SqlDatabase}",
 			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")

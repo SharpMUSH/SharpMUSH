@@ -797,7 +797,7 @@ The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Bool
 
 SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all (the listening addresses and ports belong to the connection server's own configuration), so setting them has no effect.
 
-Only God can see the SQL credentials (sql_username, sql_password, sql_database).
+Only God can see the SQL credentials (sql_username, sql_database). The SQL password is not a configuration option: it is the `sql.password` secret, which nobody can see. See [@secret].
 
 For information about parameters, see [@config parameters]
 # @conformat
@@ -2380,6 +2380,40 @@ Nesting is limited by the `max_depth` configuration option, as it is for [@@] an
 - [@@]
 - [restrictedexpr]
 :::
+# @secret
+`@secret[/list]`<br>
+`@secret <name>=<value>`<br>
+`@secret/clear <name>`
+
+Manages the secrets the server keeps for itself: passwords, tokens and signing keys, such as the SQL password (`sql.password`). A stored value is encrypted with the server's key ring, which is kept outside the world, so a copy of the world alone opens no secret. Nothing shows a value again: not this command, not the web portal, and no function. Softcode cannot read a secret.
+
+With no argument, or `/list`, @secret lists every secret the server or a plugin reads, and every stored one: where its value comes from, when and by whom it was stored, and what it is for.
+
+`@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`, `-` or `_`.
+
+`/clear` removes the stored value.
+
+An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` and `-` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
+
+A typed value passes through your client, which may keep it in a log. Use the web portal's Secrets page, or an override, where that matters.
+
+Using @secret needs the `config.admin` permission. A plugin may name another permission that manages its own secret.
+
+Output: nothing; it tells you what it did.
+
+### Examples
+```
+> @secret sql.password=hunter2
+sql.password is set. Its value is never shown again.
+> @secret/clear sql.password
+sql.password is cleared.
+```
+
+
+::: seealso
+- [@config]
+- [@sql]
+:::
 # @set
 `@set <object>=[!]<flag> [[!]<flag> ...]`<br>
 `@<pre-defined attribute> <object>=<value>`<br>
@@ -2724,6 +2758,8 @@ Test
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
 
+The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
+
 For each row returned by the query, the action list in `<obj>/<attr>` is queued, with row number passed as %0 and the columns passed as %1-%9 and v(10) to v(29). Row numbers start at 1. The MUSH will also set named arguments, with arg names matching the SQL field names. These are accessible as `r(<name>, arg)`.
 
 The `/notify` switch queues `@notify me` after the admitted row callbacks. This runs as the object executing `@mapsql`. One queue slot is reserved for completion before the query starts; if that reservation fails, the query does not run. Completion still runs for an empty result or partial row admission, but a query error releases its reservation without notifying.
@@ -2763,6 +2799,8 @@ Prepared statement example:
 `@sql[/prepare] <query>[, <param1>[, <param2>[, ...]]]`
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
+
+The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
 
 Output: the query's result, as it shows it.
 
