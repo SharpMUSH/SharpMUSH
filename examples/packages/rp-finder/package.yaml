@@ -2,10 +2,10 @@ format: 1.2
 package: rp-finder
 version: 1.0.0
 authors: [SharpMUSH]
-description: "RP Finder: +lfrp says what you are looking for, +call posts an open call anyone may answer, and +watch tells you when the people you follow connect."
+description: "RP Finder: +lfrp sets a looking-for-RP status, shown in +who, and +watch tells you when the people you follow connect."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
-keywords: [lfrp, roleplay, watch, friends, calls]
+keywords: [lfrp, roleplay, watch, friends, status]
 requires_server: ">=0.1"
 
 depends:
@@ -15,21 +15,26 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
+  - package: who-where
+    version: ">=1.3 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/
+      branch: main
 
-# One permission, for the people who keep the finder tidy: close anyone's open call, read every answer,
-# and clear anyone's +lfrp status. A game hands it out with the role below (@role/assign <player>=rp-moderator)
+# One permission, for the people who keep the finder tidy: clear anyone's +lfrp status. A game hands it out with the role below (@role/assign <player>=rp-moderator)
 # or to one player (@permission/allow <player>=softcode.rp_finder.moderate).
 categories:
   roles:
     - name: RP Finder
-      description: Roles for the people who look after +lfrp and open calls.
+      description: Roles for the people who look after +lfrp statuses.
   permissions:
     - name: RP Finder
-      description: Looking after +lfrp statuses and open calls.
+      description: Looking after +lfrp statuses.
 permissions:
   - name: softcode.rp_finder.moderate
     category: RP Finder
-    description: Close any open call, read every answer to one, and clear anyone's +lfrp status.
+    description: Clear anyone's +lfrp status.
 roles:
   - slug: rp-moderator
     name: RP Moderator
@@ -40,15 +45,15 @@ roles:
 
 objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), owns
-  # the rpcall feed kind, reads every player's connection, idle time and page lock, and hears every connect
+  # reads every player's connection, idle time and page lock, and hears every connect
   # and disconnect through ACONNECT and ADISCONNECT, which run on master room objects for everyone.
   #
-  # +lfrp, +call, +calls, +watch and +friend are added with /noparse/rsnoparse and hooked to CMD`<word>, so
+  # +lfrp, +watch and +friend are added with /noparse/rsnoparse and hooked to CMD`<word>, so
   # what a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`LFRP`, INC`CALL` and
-  # INC`WATCH` one routine per switch, INC`CONNECT`/INC`DISCONNECT` the login and logout steps. FUN` reads:
-  # FUN`LFRP`, FUN`CALL`, FUN`WATCH` per feature, FUN`DISPLAY` and FUN`PAGE` for screens. DATA` the settings,
+  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`LFRP` and INC`WATCH`
+  # one routine per switch, INC`CONNECT`/INC`DISCONNECT` the login and logout steps. FUN` reads:
+  # FUN`LFRP` and FUN`WATCH` per feature, FUN`DISPLAY` and FUN`PAGE` for screens. DATA` the settings,
   # one leaf each. Every record is kept on the RP Finder Store, never on a player, so nobody can rewrite
   # someone else's watch list or status.
   - ref: finder
@@ -69,14 +74,6 @@ objects:
         400
       DATA`LFRP`LENGTH`PLACE: |-
         60
-      # How many days an open call stays up, how many one player may have open, and the longest call and
-      # answer in characters. STARTUP gives the rpcall feed the same age and length.
-      DATA`CALL`DAYS: |-
-        7
-      DATA`CALL`MAX: |-
-        3
-      DATA`CALL`LENGTH: |-
-        1000
       # How many people one player may watch, and how many seconds pass before a player's connect is
       # announced again, so a connection that drops and comes back does not announce itself every time.
       DATA`WATCH`MAX: |-
@@ -84,7 +81,7 @@ objects:
       DATA`WATCH`QUIET: |-
         300
       # Which INC` routine each command runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
-      # command with something after it and no switch. +calls uses the CALL table and +friend the WATCH one.
+      # command with something after it and no switch. +friend uses the WATCH table.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
       DATA`ROUTE`LFRP`BARE: |-
@@ -99,24 +96,6 @@ objects:
         LFRP`OFF
       DATA`ROUTE`LFRP`SHOW: |-
         LFRP`SHOW
-      DATA`ROUTE`CALL`BARE: |-
-        CALL`LIST
-      DATA`ROUTE`CALL`ARG: |-
-        CALL`SHOW
-      DATA`ROUTE`CALL`LIST: |-
-        CALL`LIST
-      DATA`ROUTE`CALL`MINE: |-
-        CALL`MINE
-      DATA`ROUTE`CALL`POST: |-
-        CALL`POST
-      DATA`ROUTE`CALL`ANSWER: |-
-        CALL`ANSWER
-      DATA`ROUTE`CALL`CLOSE: |-
-        CALL`CLOSE
-      DATA`ROUTE`CALL`ON: |-
-        CALL`ON
-      DATA`ROUTE`CALL`OFF: |-
-        CALL`OFF
       DATA`ROUTE`WATCH`BARE: |-
         WATCH`ONLINE
       DATA`ROUTE`WATCH`ARG: |-
@@ -141,23 +120,15 @@ objects:
         WATCH`UNMUTE
       DATA`ROUTE`WATCH`WATCHERS: |-
         WATCH`WATCHERS
-      # The routines that take a page as a last switch: +lfrp/2, +calls/mine/2, +watch/list/3.
+      # The routines that take a page as a last switch: +lfrp/2, +watch/list/3.
       DATA`PAGED: |-
-        LFRP`LIST CALL`LIST CALL`MINE WATCH`ONLINE WATCH`LIST WATCH`WATCHERS
+        LFRP`LIST WATCH`ONLINE WATCH`LIST WATCH`WATCHERS
 
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
       CMD`LFRP:
         value: |-
           $(?is)^\+lfrp(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,lfrp,table,LFRP,switches,%1,argument,%2
-        flags: [regexp, cmdsyntax]
-      CMD`CALL:
-        value: |-
-          $(?is)^\+call(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,call,table,CALL,switches,%1,argument,%2
-        flags: [regexp, cmdsyntax]
-      CMD`CALLS:
-        value: |-
-          $(?is)^\+calls(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,calls,table,CALL,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       CMD`WATCH:
         value: |-
@@ -198,7 +169,7 @@ objects:
       # %0 a route table: the +help topic that explains it.
       FUN`COMMAND`HELPTOPIC:
         value: |-
-          switch(%0,LFRP,lfrp,CALL,calls,watch)
+          switch(%0,LFRP,lfrp,watch)
         flags: [funsyntax]
       # 1 when the player running the command may moderate the finder.
       FUN`IS`MODERATOR:
@@ -266,17 +237,13 @@ objects:
         flags: [cmdsyntax]
 
       # ---- looking for RP ------------------------------------------------------
-      # A status is LFRP`<key> on the store (the player's objid), with IC, NOTE, PLACE and SET (when it was
-      # last set, in seconds) beneath it.
-      # %0 a key: 1 when that player's status is set and has not run out. %1, when given, is the oldest SET
-      # that has not, from FUN`LFRP`CUTOFF.
+      # A status is LFRP`<key> on the store (the player's objid), with IC, NOTE, PLACE, SET (when it was last
+      # set, in seconds) and UNTIL (when it runs out) beneath it. UNTIL is kept on the store so the +who filter
+      # reads everything it needs from there.
+      # %0 a key: 1 when that player's status is set and has not run out. %1, when given, is secs().
       FUN`LFRP`ACTIVE:
         value: |-
-          gt(get({{store}}/LFRP`%0`SET),firstof(%1,u(%!/FUN`LFRP`CUTOFF)))
-        flags: [funsyntax]
-      FUN`LFRP`CUTOFF:
-        value: |-
-          sub(secs(),mul(get(%!/DATA`LFRP`HOURS),3600))
+          gt(get({{store}}/LFRP`%0`UNTIL),firstof(%1,secs()))
         flags: [funsyntax]
       # %0 a player: 1 when they are looking for RP.
       FUN`LFRP`LOOKING:
@@ -288,10 +255,11 @@ objects:
         value: |-
           setq(lfrp_place,get({{store}}/LFRP`[u(%!/FUN`KEY,%0)]`PLACE))[if(strmatch(%q<lfrp_place>,here),name(room(%0)),%q<lfrp_place>)]
         flags: [funsyntax]
-      # The connected players the reader can see who are looking for RP, least idle first.
+      # %0 the keys of the statuses that have not run out: the connected players the reader can see among
+      # them, least idle first.
       FUN`LFRP`PLAYERS:
         value: |-
-          sort(setinter(iter(filterbool(%!/FUN`LFRP`ACTIVE,iter(lattr({{store}}/LFRP`*),after(%i0,`)),,,u(%!/FUN`LFRP`CUTOFF)),num(get({{store}}/LFRP`%i0))),lwho(%#)),idle)
+          sort(setinter(iter(%0,num(get({{store}}/LFRP`%i0))),lwho(%#)),idle)
         flags: [funsyntax]
       # Stops a command whose player is not looking for RP.
       INC`LFRP`NEEDACTIVE:
@@ -301,12 +269,12 @@ objects:
       # Starts or renews the player's status: a status that had run out loses its note and place first.
       INC`LFRP`TOUCH:
         value: |-
-          @if not(u(%!/FUN`LFRP`ACTIVE,%q<viewer_key>))={@include/args %!/INC`LFRP`CLEAR=key,%q<viewer_key>}; &LFRP`%q<viewer_key> {{store}}=%q<viewer_objid>; &LFRP`%q<viewer_key>`SET {{store}}=secs()
+          @if not(u(%!/FUN`LFRP`ACTIVE,%q<viewer_key>))={@include/args %!/INC`LFRP`CLEAR=key,%q<viewer_key>}; &LFRP`%q<viewer_key> {{store}}=%q<viewer_objid>; &LFRP`%q<viewer_key>`SET {{store}}=secs(); &LFRP`%q<viewer_key>`UNTIL {{store}}=add(secs(),mul(get(%!/DATA`LFRP`HOURS),3600))
         flags: [cmdsyntax]
       # Clears the status filed under %<key>, leaves first.
       INC`LFRP`CLEAR:
         value: |-
-          &LFRP`%<key>`IC {{store}}; &LFRP`%<key>`NOTE {{store}}; &LFRP`%<key>`PLACE {{store}}; &LFRP`%<key>`SET {{store}}; &LFRP`%<key> {{store}}
+          &LFRP`%<key>`IC {{store}}; &LFRP`%<key>`NOTE {{store}}; &LFRP`%<key>`PLACE {{store}}; &LFRP`%<key>`SET {{store}}; &LFRP`%<key>`UNTIL {{store}}; &LFRP`%<key> {{store}}
         flags: [cmdsyntax]
       # +lfrp <text>
       INC`LFRP`SET:
@@ -349,148 +317,23 @@ objects:
       # +lfrp[/<page>]: who is looking. Statuses that ran out are cleared as the list is drawn.
       INC`LFRP`LIST:
         value: |-
-          @include %!/INC`LFRP`SWEEP; think setq(lfrp_players,u(%!/FUN`LFRP`PLAYERS)); @assert words(%q<lfrp_players>)=@pemit %#=notice(RP,Nobody is looking for RP right now. +lfrp <what you would like to play> puts you on the list.); @include/args %!/INC`PAGE`CHECK=list,%q<lfrp_players>; @pemit %#=u(%!/FUN`LFRP`TABLE,u(%!/FUN`PAGE`ITEMS,%q<lfrp_players>))%r[u(%!/FUN`PAGE`FOOTER,%q<lfrp_players>,+lfrp,+lfrp/show <name> shows a note)][if(hasattr(%!,DATA`LFRP`MORE),%r[tone(muted,get(%!/DATA`LFRP`MORE))])]
+          @include %!/INC`LFRP`SWEEP; think setq(lfrp_players,u(%!/FUN`LFRP`PLAYERS,%q<lfrp_live>)); @assert words(%q<lfrp_players>)=@pemit %#=notice(RP,Nobody is looking for RP right now. +lfrp <what you would like to play> puts you on the list.); @include/args %!/INC`PAGE`CHECK=list,%q<lfrp_players>; @pemit %#=u(%!/FUN`LFRP`TABLE,u(%!/FUN`PAGE`ITEMS,%q<lfrp_players>))%r[u(%!/FUN`PAGE`FOOTER,%q<lfrp_players>,+lfrp,+lfrp/show <name> shows a note)][if(hasattr(%!,DATA`LFRP`MORE),%r[tone(muted,get(%!/DATA`LFRP`MORE))])]
         flags: [cmdsyntax]
       # %0 players: the table of their statuses.
       FUN`LFRP`TABLE:
         value: |-
           rule(Looking for RP)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r4,1%r1%r2%r3,%r1,%r20%r10),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Looking for)]%r[iter(%0,get({{store}}/LFRP`[u(%!/FUN`KEY,%i0)]`IC),,%r)],[ansi(h,Where)]%r[iter(%0,firstof(u(%!/FUN`LFRP`PLACE,%i0),-),,%r)],>[ansi(h,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)])]
         flags: [funsyntax]
-      # Clears every status that has run out, or whose player is gone.
+      # Clears every status that has run out, or whose player is gone, and sets lfrp_live to the keys of the rest.
       INC`LFRP`SWEEP:
         value: |-
-          think setq(lfrp_cutoff,u(%!/FUN`LFRP`CUTOFF)); @dolist/inline lattr({{store}}/LFRP`*)={@assert cor(not(isdbref(get({{store}}/##))),not(u(%!/FUN`LFRP`ACTIVE,after(##,`),%q<lfrp_cutoff>)))=@@; @include/args %!/INC`LFRP`CLEAR=key,after(##,`)}
+          think setq(lfrp_keys,iter(lattr({{store}}/LFRP`*),after(%i0,`))); think setq(lfrp_live,filterbool(%!/FUN`LFRP`LIVE,%q<lfrp_keys>,,,secs())); @dolist/inline setdiff(%q<lfrp_keys>,%q<lfrp_live>)={@include/args %!/INC`LFRP`CLEAR=key,##}
         flags: [cmdsyntax]
-
-      # ---- open calls -----------------------------------------------------------
-      # A call is a line on the rpcall/open feed, which keeps its text, its poster and when it was posted, and
-      # sends it to everyone who turned calls on. The store keeps the rest under CALL`<number>: the poster's
-      # objid, LINE (the feed line), NEW (answers the poster has not read) and ANSWER`<key>, the answerer's
-      # objid, with NAME, TEXT and TIME beneath it. One answer per player. OPEN lists the numbers of the calls
-      # not closed, oldest first, and POSTED`<key> those of one poster, so no list reads every call there ever
-      # was. A call that is closed or past its days is forgotten: its records go. Calls are numbered from
-      # COUNTER`CALL on the store.
-      #
-      # The oldest posting time an open call can have.
-      FUN`CALL`CUTOFF:
+      # %0 a key, %1 secs(): 1 when the status has not run out and its player still exists.
+      FUN`LFRP`LIVE:
         value: |-
-          sub(secs(),mul(get(%!/DATA`CALL`DAYS),86400))
-        flags: [funsyntax]
-      # %0 a call number, %1 FUN`CALL`CUTOFF: 1 when it was posted since.
-      FUN`CALL`FRESH:
-        value: |-
-          gte(feedmsg(get({{store}}/CALL`%0`LINE),time),%1)
-        flags: [funsyntax]
-      # %0 a call number: 1 when it is open: posted, not closed, and not past its days.
-      FUN`CALL`OPEN:
-        value: |-
-          cand(member(get({{store}}/OPEN),%0),u(%!/FUN`CALL`FRESH,%0,u(%!/FUN`CALL`CUTOFF)))
-        flags: [funsyntax]
-      # %0 FUN`CALL`CUTOFF: the calls past their days. OPEN is oldest first, so they are the ones before the
-      # first that is not, and the rest are never read.
-      FUN`CALL`STALE:
-        value: |-
-          squish(iter(get({{store}}/OPEN),if(u(%!/FUN`CALL`FRESH,%i0,%0),ibreak(),%i0)))
-        flags: [funsyntax]
-      # %0 a player's key: their open calls, newest first.
-      FUN`CALL`OPENOF:
-        value: |-
-          revwords(filterbool(%!/FUN`CALL`FRESH,get({{store}}/POSTED`%0),,,u(%!/FUN`CALL`CUTOFF)))
-        flags: [funsyntax]
-      # %0 a call, %1 a field of its feed line (text, time, name, speaker).
-      FUN`CALL`LINE:
-        value: |-
-          feedmsg(get({{store}}/CALL`%0`LINE),%1)
-        flags: [funsyntax]
-      # %0 a call: the keys of its answers, oldest first.
-      FUN`CALL`ANSWERS:
-        value: |-
-          sortby(%!/FUN`CALL`ANSWERORDER,iter(lattr({{store}}/CALL`%0`ANSWER`*),last(%i0,`)))
-        flags: [funsyntax]
-      FUN`CALL`ANSWERORDER:
-        value: |-
-          comp(get({{store}}/CALL`%q<call_number>`ANSWER`%0`TIME),get({{store}}/CALL`%q<call_number>`ANSWER`%1`TIME),n)
-        flags: [funsyntax]
-      # %0 a call: 1 when the player running the command may read every answer to it.
-      FUN`CALL`READSALL:
-        value: |-
-          cor(strmatch(get({{store}}/CALL`%0),%q<viewer_objid>),u(%!/FUN`IS`MODERATOR))
-        flags: [funsyntax]
-      # Sets call_number from %q<cmd_left_side>: a call that is open.
-      INC`CALL`NEEDOPEN:
-        value: |-
-          think setq(call_number,trim(%q<cmd_left_side>,#,l)); @assert isint(%q<call_number>)=@pemit %#=notice(RP,Which call? Give its number: +calls lists them.,warn); @assert u(%!/FUN`CALL`OPEN,%q<call_number>)=@pemit %#=notice(RP,There is no open call %q<call_number>. +calls lists them.,warn)
+          cand(gt(get({{store}}/LFRP`%0`UNTIL),%1),isdbref(get({{store}}/LFRP`%0)))
         flags: [cmdsyntax]
-      # +call/post <text>
-      INC`CALL`POST:
-        value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(RP,What are you looking for? +call/post <your call>,warn); @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CALL`LENGTH))=@pemit %#=notice(RP,Keep a call to [get(%!/DATA`CALL`LENGTH)] characters.,warn); @assert lt(words(u(%!/FUN`CALL`OPENOF,%q<viewer_key>)),get(%!/DATA`CALL`MAX))=@pemit %#=notice(RP,You have [get(%!/DATA`CALL`MAX)] open calls. +call/close <number> closes one.,warn); @assert cor(not(strlen(feedinfo(rpcall,send))),testlock(feedinfo(rpcall,send),%#))=@pemit %#=notice(RP,You may not post open calls.,error); @include %!/INC`CALL`SWEEP; think setq(call_number,inc(get({{store}}/COUNTER`CALL))); &COUNTER`CALL {{store}}=%q<call_number>; &CALL`%q<call_number> {{store}}=%q<viewer_objid>; &SENDING`CALL {{store}}=%q<call_number>; @feed/send/say rpcall/open=%q<cmd_argument>; &CALL`%q<call_number>`LINE {{store}}=feedinfo(rpcall/open,last); &SENDING`CALL {{store}}; &OPEN {{store}}=trim(get({{store}}/OPEN) %q<call_number>); &POSTED`%q<viewer_key> {{store}}=trim(get({{store}}/POSTED`%q<viewer_key>) %q<call_number>); @pemit %#=notice(RP,Your open call is up as number %q<call_number>. It stays up [get(%!/DATA`CALL`DAYS)] days or until you close it with +call/close %q<call_number>.,ok)
-        flags: [cmdsyntax]
-      # Forgets the calls past their days.
-      INC`CALL`SWEEP:
-        value: |-
-          @dolist/inline u(%!/FUN`CALL`STALE,u(%!/FUN`CALL`CUTOFF))={@include/args %!/INC`CALL`FORGET=call,##}
-        flags: [cmdsyntax]
-      # Forgets call %<call>: it leaves OPEN and its poster's POSTED, and its records go.
-      INC`CALL`FORGET:
-        value: |-
-          think setq(call_poster_key,u(%!/FUN`KEY,get({{store}}/CALL`%<call>))); &OPEN {{store}}=remove(get({{store}}/OPEN),%<call>); &POSTED`%q<call_poster_key> {{store}}=remove(get({{store}}/POSTED`%q<call_poster_key>),%<call>); @wipe {{store}}/CALL`%<call>`**; &CALL`%<call> {{store}}
-        flags: [cmdsyntax]
-      # +call/answer <number>=<text>
-      INC`CALL`ANSWER:
-        value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(RP,+call/answer <number>=<your answer>,warn); @include %!/INC`CALL`NEEDOPEN; @assert comp(get({{store}}/CALL`%q<call_number>),%q<viewer_objid>)=@pemit %#=notice(RP,That is your own call.,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(RP,What is your answer?,warn); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CALL`LENGTH))=@pemit %#=notice(RP,Keep an answer to [get(%!/DATA`CALL`LENGTH)] characters.,warn); think setqm(call_poster,get({{store}}/CALL`%q<call_number>),answer_prefix,CALL`%q<call_number>`ANSWER`%q<viewer_key>); &%q<answer_prefix> {{store}}=%q<viewer_objid>; &%q<answer_prefix>`NAME {{store}}=name(%#); &%q<answer_prefix>`TEXT {{store}}=%q<cmd_right_side>; &%q<answer_prefix>`TIME {{store}}=secs(); @pemit %#=notice(RP,You answered [name(%q<call_poster>)]'s call %q<call_number>.,ok); @break hasflag(%q<call_poster>,connected)={@pemit %q<call_poster>=notice(RP,[name(%#)] answered your open call %q<call_number>: %q<cmd_right_side>)}; &CALL`%q<call_number>`NEW {{store}}=inc(default({{store}}/CALL`%q<call_number>`NEW,0))
-        flags: [cmdsyntax]
-      # +call/close <number>
-      INC`CALL`CLOSE:
-        value: |-
-          @include %!/INC`CALL`NEEDOPEN; @assert u(%!/FUN`CALL`READSALL,%q<call_number>)=@pemit %#=notice(RP,Only its poster or an RP moderator can close call %q<call_number>.,error); @include/args %!/INC`CALL`FORGET=call,%q<call_number>; @pemit %#=notice(RP,Call %q<call_number> is closed.,ok)
-        flags: [cmdsyntax]
-      # +calls/on and +calls/off: whether new calls reach the player.
-      INC`CALL`ON:
-        value: |-
-          @assert not(feedmember(rpcall/open,%#))=@pemit %#=notice(RP,New open calls already reach you.,warn); @feed/join rpcall/open=%#; @pemit %#=notice(RP,New open calls reach you as they are posted. +calls/off stops them.,ok)
-        flags: [cmdsyntax]
-      INC`CALL`OFF:
-        value: |-
-          @assert feedmember(rpcall/open,%#)=@pemit %#=notice(RP,New open calls do not reach you.,warn); @feed/leave rpcall/open=%#; @pemit %#=notice(RP,New open calls no longer reach you. +calls still lists them.,ok)
-        flags: [cmdsyntax]
-      # +call <number>: the call, with every answer for its poster and moderators, and the reader's own for anyone else.
-      INC`CALL`SHOW:
-        value: |-
-          @include %!/INC`CALL`NEEDOPEN; think setqm(call_answers,u(%!/FUN`CALL`ANSWERS,%q<call_number>),call_reads_all,u(%!/FUN`CALL`READSALL,%q<call_number>)); @pemit %#=u(%!/FUN`CALL`CARD,%q<call_number>); @assert strmatch(get({{store}}/CALL`%q<call_number>),%q<viewer_objid>); &CALL`%q<call_number>`NEW {{store}}
-        flags: [cmdsyntax]
-      # %0 a call: the call and the answers the reader may see, as set by INC`CALL`SHOW.
-      FUN`CALL`CARD:
-        value: |-
-          rule(Open call %0)%r[fields(,From,u(%!/FUN`CALL`LINE,%0,name),Posted,[u(%!/FUN`DISPLAY`DURATION,sub(secs(),u(%!/FUN`CALL`LINE,%0,time)))] ago,Answers,words(%q<call_answers>))]%r%r[u(%!/FUN`CALL`LINE,%0,text)][iter(if(%q<call_reads_all>,%q<call_answers>,if(member(%q<call_answers>,%q<viewer_key>),%q<viewer_key>)),%r%r[rule(get({{store}}/CALL`%0`ANSWER`%i0`NAME) · [u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/CALL`%0`ANSWER`%i0`TIME)))] ago)]%r[get({{store}}/CALL`%0`ANSWER`%i0`TEXT)],,)]%r[rule(if(strmatch(get({{store}}/CALL`%0),%q<viewer_objid>),+call/close %0 closes it,+call/answer %0=<text> answers it))]
-        flags: [funsyntax]
-      # +calls[/<page>]: every open call, newest first.
-      INC`CALL`LIST:
-        value: |-
-          @include %!/INC`CALL`SWEEP; think setq(call_list,revwords(get({{store}}/OPEN))); @assert words(%q<call_list>)=@pemit %#=notice(RP,There are no open calls. +call/post <what you are looking for> posts one.); @include/args %!/INC`PAGE`CHECK=list,%q<call_list>; @pemit %#=u(%!/FUN`CALL`TABLE,Open calls,u(%!/FUN`PAGE`ITEMS,%q<call_list>))%r[u(%!/FUN`PAGE`FOOTER,%q<call_list>,+calls,+call <number> reads one · [if(feedmember(rpcall/open,%#),+calls/off,+calls/on)] [if(feedmember(rpcall/open,%#),stops,sends you)] new ones)]
-        flags: [cmdsyntax]
-      # +calls/mine[/<page>]: the player's own open calls.
-      INC`CALL`MINE:
-        value: |-
-          think setq(call_list,u(%!/FUN`CALL`OPENOF,%q<viewer_key>)); @assert words(%q<call_list>)=@pemit %#=notice(RP,You have no open calls. +call/post <what you are looking for> posts one.); @include/args %!/INC`PAGE`CHECK=list,%q<call_list>; @pemit %#=u(%!/FUN`CALL`TABLE,Your open calls,u(%!/FUN`PAGE`ITEMS,%q<call_list>))%r[u(%!/FUN`PAGE`FOOTER,%q<call_list>,+calls/mine,+call <number> reads its answers)]
-        flags: [cmdsyntax]
-      # %0 a title, %1 calls: the table of them. The poster sees how many answers are new.
-      FUN`CALL`TABLE:
-        value: |-
-          rule(%0)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r3%r2%r1,%r%r%r%r1,%r%r%r%r20),>[ansi(h,#)]%r[iter(%1,%i0,,%r)],[ansi(h,From)]%r[iter(%1,u(%!/FUN`CALL`LINE,%i0,name),,%r)],>[ansi(h,Posted)]%r[iter(%1,u(%!/FUN`DISPLAY`DURATION,sub(secs(),u(%!/FUN`CALL`LINE,%i0,time))),,%r)],>[ansi(h,Answers)]%r[iter(%1,u(%!/FUN`CALL`ANSWERCOUNT,%i0),,%r)],[ansi(h,Call)]%r[iter(%1,u(%!/FUN`DISPLAY`SHORT,u(%!/FUN`CALL`LINE,%i0,text),100),,%r)])]
-        flags: [funsyntax]
-      # %0 a call: how many answers it has, and how many of them are new when the reader posted it.
-      FUN`CALL`ANSWERCOUNT:
-        value: |-
-          words(lattr({{store}}/CALL`%0`ANSWER`*))[if(cand(get({{store}}/CALL`%0`NEW),strmatch(get({{store}}/CALL`%0),%q<viewer_objid>)),%b%([get({{store}}/CALL`%0`NEW)] new%))]
-        flags: [funsyntax]
-      # The rpcall feed's tie-in: a new call, for everyone who turned calls on but its poster. The number is the
-      # one INC`CALL`POST is sending (SENDING`CALL), since the line is delivered while @feed/send runs.
-      FEED`RPCALL`FORMAT:
-        value: |-
-          if(comp(objid(%<recipient>),objid(%<speaker>)),notice(RP,name(%<speaker>) posted open call [get({{store}}/SENDING`CALL)]: [u(%!/FUN`DISPLAY`SHORT,%<text>,200)] · +call/answer [get({{store}}/SENDING`CALL)]=<text> answers it))
-        flags: [funsyntax]
 
       # ---- watch list -----------------------------------------------------------
       # Under WATCH`<key> on the store (the player's objid): LIST (whom they watch), BY (who watches them),
@@ -616,7 +459,7 @@ objects:
       # how many connections they have. Only the first connection and the last disconnection count.
       ACONNECT:
         value: |-
-          @assert cand(eq(%1,1),hastype(%#,player)); @include/nobreak/args %!/INC`WATCH`ANNOUNCE=target,%#,event,connected; @include/nobreak %!/INC`CONNECT`WATCHED; @include/nobreak %!/INC`CONNECT`ANSWERS
+          @assert cand(eq(%1,1),hastype(%#,player)); @include/nobreak/args %!/INC`WATCH`ANNOUNCE=target,%#,event,connected; @include/nobreak %!/INC`CONNECT`WATCHED
         flags: [cmdsyntax]
       ADISCONNECT:
         value: |-
@@ -627,18 +470,11 @@ objects:
         value: |-
           think setq(viewer_key,u(%!/FUN`KEY,%#)); @break get({{store}}/WATCH`%q<viewer_key>`MUTE); think setq(watch_online,u(%!/FUN`WATCH`ONLINE,u(%!/FUN`WATCH`LIST,%q<viewer_key>))); @assert words(%q<watch_online>); @pemit %#=notice(RP,On now of those you watch: [u(%!/FUN`DISPLAY`NAMES,%q<watch_online>)].)
         flags: [cmdsyntax]
-      # At login: the answers the player has not read to their open calls.
-      INC`CONNECT`ANSWERS:
-        value: |-
-          think setq(call_unread,squish(iter(u(%!/FUN`CALL`OPENOF,u(%!/FUN`KEY,%#)),if(get({{store}}/CALL`%i0`NEW),%i0)))); @assert words(%q<call_unread>); @pemit %#=notice(RP,Your open [if(eq(words(%q<call_unread>),1),call %q<call_unread> has,calls [itemize(%q<call_unread>)] have)] new answers. +call <number> reads them.)
-        flags: [cmdsyntax]
-
       # ---- lifecycle ------------------------------------------------------------
-      # @command/add and @hook last until a restart, so STARTUP sets them on every boot. Defining the feed kind
-      # again changes nothing; its age and length follow DATA`CALL`DAYS and DATA`CALL`LENGTH.
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @feed/define rpcall=%!; @feed/describe rpcall=Open RP calls posted with +call/post.; @feed/set rpcall/max_messages=0; @feed/set rpcall/max_age=[get(%!/DATA`CALL`DAYS)]d; @feed/set rpcall/max_length=get(%!/DATA`CALL`LENGTH); @feed/set rpcall/style=say; @dolist/inline lfrp call calls watch friend={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist/inline lfrp watch friend={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -649,7 +485,7 @@ objects:
           @trigger %!/STARTUP
         flags: [cmdsyntax]
 
-  # Every record: statuses, open calls and their answers, and watch lists. Inside the RP Finder, so no
+  # Every record: statuses and watch lists. Inside the RP Finder, so no
   # player can reach it, and no_command, so nothing kept on it is ever matched as a command.
   - ref: store
     type: thing
@@ -659,18 +495,8 @@ objects:
     attributes:
       LFRP: |-
         Looking-for-RP statuses, one branch per player key.
-      CALL: |-
-        Open calls, one branch per call number.
-      POSTED: |-
-        Each poster's open call numbers, one leaf per player key.
       WATCH: |-
         Watch lists, one branch per player key.
-      COUNTER: |-
-        Counters.
-      COUNTER`CALL: |-
-        0
-      SENDING: |-
-        The call being posted, while the rpcall feed delivers it.
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
   # are evaluated, so brackets, parentheses and percent signs are escaped.
@@ -680,15 +506,13 @@ objects:
     location: "{{finder}}"
     attributes:
       HELP: |-
-        Finding roleplay: +lfrp, open calls and the watch list.
+        Finding roleplay: +lfrp and the watch list.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`LFRP: |-
-        calls|watch
-      SEE`CALLS: |-
-        lfrp|watch
+        watch
       SEE`WATCH: |-
-        lfrp|calls
+        lfrp
       HELP`LFRP: |-
         `+lfrp` tells the game you are looking for roleplay, and shows who else is.
 
@@ -696,6 +520,8 @@ objects:
         - `+lfrp/note <text>` adds an OOC note: what kind of scene, how long you have, what you would rather not play.
         - `+lfrp/place <text>` says where to find you. `+lfrp/place here` shows wherever you are standing, as you move.
         - `+lfrp/off` ends it.
+
+        While you are looking, your line shows in the Status column of `+who`.
 
         Leave the text out of `/note` or `/place` to clear it. Your status lasts a few hours from when you last changed it \(four, unless the game changed it\), and ends when you log off.
 
@@ -705,17 +531,6 @@ objects:
         - `+lfrp/show <name>` shows one person's status with their note. `+lfrp/show` on its own shows yours.
 
         The list shows only who you could see in `WHO`.
-      HELP`CALLS: |-
-        An **open call** is a request anyone may answer: a scene you would like to run, a character you want to meet, a plot hook.
-
-        - `+call/post <text>` posts one. You may have a few open at a time \(three, unless the game changed it\), and each stays up for a week.
-        - `+calls` lists the open calls, newest first, and `+call <number>` reads one.
-        - `+call/answer <number>=<text>` answers it. The poster hears at once if they are connected, and otherwise when they next log in. Answering again replaces your answer.
-        - `+call/close <number>` closes your own call.
-        - `+calls/mine` lists your own open calls and how many new answers each has.
-        - `+calls/on` sends you each new call as it is posted, and `+calls/off` stops them.
-
-        Answers are private: the poster reads them all, and everyone else sees only their own.
       HELP`WATCH: |-
         The **watch list** tells you when people you want to play with connect and leave.
 
@@ -735,25 +550,28 @@ objects:
         The RP finder helps you find someone to play with.
 
         - `+lfrp` says what you are looking for, and lists who else is looking. `+help lfrp` has more.
-        - `+call/post` puts up an open call anyone may answer, and `+calls` lists them. `+help calls` has more.
         - `+watch` tells you when the people you follow connect. `+help watch` has more.
       HELP`RP`STAFF: |-
         Staff with the `softcode.rp_finder.moderate` permission, which the `rp-moderator` role allows, look after the finder:
 
-        - `+call/close <number>` closes anyone's call, and `+call <number>` shows them every answer to it.
         - `+lfrp/off <name>` clears someone's status, and tells them.
 
         ## Settings
 
         Each setting is an attribute on the RP Finder object in the master room:
 
-        - `` DATA`LFRP`HOURS ``: how long a status lasts. 4 by default.
-        - `` DATA`CALL`DAYS ``, `` DATA`CALL`MAX `` and `` DATA`CALL`LENGTH ``: how long a call stays up, how many one player may have open, and the longest call or answer. 7, 3 and 1000.
+        - `` DATA`LFRP`HOURS ``: how long a status lasts from when it is set. 4 by default.
         - `` DATA`WATCH`MAX ``: how many people one player may watch. 100.
         - `` DATA`WATCH`QUIET ``: seconds before a player's connect is announced again, so a dropped connection does not announce itself each time. 300.
         - `` DATA`LFRP`MORE ``: a line shown under `+lfrp`, such as where longer requests are posted. Unset by default.
 
-        A change to the call settings reaches the open-call feed at the next restart.
+  # The +who Status column (who-where 1.3): a player looking for RP shows their +lfrp line, cut to 40
+  # characters. The filter runs as the Who-Where Function Object, so it reads the store and nothing else.
+  - ref: who_status
+    target: "{{who-where/ww_functions}}"
+    attributes:
+      FILTER`WHO`STATUS`LFRP: |-
+        setq(lfrp_who_key,LFRP`[edit(objid(%1),#,,:,_)])[if(gt(get({{store}}/%q<lfrp_who_key>`UNTIL),secs()),setq(lfrp_who_line,get({{store}}/%q<lfrp_who_key>`IC))[if(gt(strlen(%q<lfrp_who_line>),40),left(%q<lfrp_who_line>,37)...,%q<lfrp_who_line>)],%0)]
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
