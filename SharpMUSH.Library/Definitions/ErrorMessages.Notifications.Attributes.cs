@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace SharpMUSH.Library.Definitions;
 
@@ -32,6 +32,14 @@ public static partial class ErrorMessages
 		/// <inheritdoc cref="AttributeFlagsResetFormat"/>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeFlagsSetFormat = "{0}/{1} - {2} set.";
+		/// <summary>
+		/// <c>af_helper</c>'s refusal (<c>src/set.c:509-514</c>), one line per matched attribute the
+		/// player may not change; the rest of the pattern's matches are still processed.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeFlagChangeDeniedFormat = "You cannot change that flag on {0}/{1}";
+		/// <summary><c>do_attrib_flags</c> when no attribute was changed (<c>src/set.c:594-595</c>).</summary>
+		public const string NoAttributeFoundToChange = "No attribute found to change.";
 
 		// --- A player's ALIAS attribute: do_set_atr's ALIAS branch (PennMUSH src/attrib.c:2268-2316,
 		// 2418-2423) and do_name's player case (src/set.c:83-100) ---
@@ -70,8 +78,32 @@ public static partial class ErrorMessages
 		public const string AttributeMovedFailedRemoveFormat = "Attribute moved to {0} {1} but failed to remove source: {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeMovedToFormat = "Attribute moved to {0} {1}.";
+		// --- @cpattr/@mvattr with a wildcard source: one line per matched attribute, naming it ---
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeCopiedToDestinationsFormat = "Attribute {0} copied to {1} {2}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeMovedToFormat = "Attribute {0} moved to {1} {2}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeMovedFailedRemoveFormat = "Attribute {0} moved to {1} {2} but failed to remove source: {3}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PatternCopyDestinationNamesAttributeFormat = "Copying a pattern keeps each attribute's name; name only an object in {0}.";
 		public const string AttributeNotFound = "No such attribute.";
 		public const string AttributeOwnerChanged = "Attribute owner changed.";
+		// --- @atrchown/@atrlock with a wildcard pattern: one line per matched attribute, naming it ---
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeOwnerChangedFormat = "Attribute {0} owner changed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NoPermissionToChownNamedFormat = "You don't have the permission to chown {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeIsLockedFormat = "Attribute {0} is locked.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeIsUnlockedFormat = "Attribute {0} is unlocked.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeLockedFormat = "Attribute {0} locked.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeUnlockedFormat = "Attribute {0} unlocked.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NamedAttributeLockNeedsSetFormat = "You need to be able to set {0} to change its lock.";
 
 		public const string AttributeCommandMustSpecifyAttribute = "You must specify an attribute.";
 		public const string AttributeCommandMustSpecifyFlags = "You must specify attribute flags.";

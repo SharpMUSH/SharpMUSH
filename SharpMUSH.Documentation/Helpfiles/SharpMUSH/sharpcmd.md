@@ -534,6 +534,12 @@ In all of these attributes, %0 is the object which teleported `<object>`, and %1
 
 This command changes the ownership of the attribute `<attribute>` on `<object>` to `<new owner>`. You can only @atrchown attributes which you can set. Wizards can @atrchown to any player, while mortals can only @atrchown attributes to themselves. Only players can own attributes; if `<new owner>` is not a player, `<new owner>`'s owner is used instead.
 
+`<attribute>` may be a wildcard pattern (see [wildcards]). Then every attribute of `<object>`'s own that matches and that you can see changes owner, and each one is reported by name. PennMUSH takes one attribute at a time; patterns are a SharpMUSH addition.
+```sharp
+> @atrchown Widget/CMD`**=me
+```
+Output: one "Attribute <name> owner changed." line for each attribute under CMD on Widget.
+
 
 ::: seealso
 - [@atrlock]
@@ -545,13 +551,19 @@ This command changes the ownership of the attribute `<attribute>` on `<object>` 
 # @atrlock
 # @attrlock
 `@atrlock <object>/<attribute>`<br>
-`@atrlock <object>/<attribute=[on|off]`
+`@atrlock <object>/<attribute>=[on|off]`
 
 The first form of this command tells you whether or not the given attribute is locked (whether it has the "locked" attribute flag set).
 
 The second form attempts to lock (for 'on') or unlock (for 'off') the given attribute. You automatically gain ownership of the attribute (as per @atrchown) when you lock it. Locked attributes cannot be altered by anyone but Wizards and the attribute's owner (though the owner may be unable to alter the attribute for other reasons, such as not controlling `<object>`). You must be able to set an attribute in order to lock it.
 
 If you wish to lock an attribute without gaining ownership, you can set it "locked" with `@set <obj>/<attr>=locked` - be aware that you'll be unable to make any changes to the attribute after this, including unlocking it!
+
+`<attribute>` may be a wildcard pattern (see [wildcards]). Then both forms act on every attribute of `<object>`'s own that matches and that you can see, and each line names its attribute. PennMUSH takes one attribute at a time; patterns are a SharpMUSH addition.
+```sharp
+> @atrlock Widget/CMD`*=on
+```
+Output: one "Attribute <name> locked." line for each attribute directly under CMD on Widget.
 
 
 ::: seealso
@@ -1036,7 +1048,9 @@ Your exit has been created.
 # @cpattr
 # @mvattr
 `@cpattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
-`@mvattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`
+`@mvattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
+`@cpattr[/noflagcopy] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`<br>
+`@mvattr[/noflagcopy] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`
 
 @cpattr copies the `<attr>` attribute from `<obj>` to `<obj1>` (and any other objects given). By default, the new attributes will have the same name as the original, but you can specify a different name to be used on each object if you wish.
 
@@ -1053,6 +1067,12 @@ would check the object "box" for an attribute named TEST and then copy it to the
 > @cpattr box/test=cube
 ```
 would copy the TEST attribute from "box" to TEST on "cube".
+
+When `<attr>` is a wildcard pattern (see [wildcards]), every attribute of `<obj>`'s own that matches it and that you can see is copied, each under its own name, so each destination names only an object. PennMUSH copies one attribute at a time; patterns are a SharpMUSH addition.
+```sharp
+> @cpattr box/CMD`**=cube
+```
+Output: one "Attribute <name> copied to 1 destination." line for each attribute under CMD on "box". Each copy on "cube" has the same name as its original.
 
 
 ::: seealso
@@ -2328,7 +2348,7 @@ Nesting is limited by the `max_depth` configuration option, as it is for [@@] an
 `@set <object>=[!]<flag> [[!]<flag> ...]`<br>
 `@<pre-defined attribute> <object>=<value>`<br>
 `@set <object>=<attribute>:<value>`<br>
-`@set <object>/<attribute>=[!]<attrflag>`
+`@set <object>/<attribute pattern>=[!]<attrflag> [[!]<attrflag> ...]`
 
 The first form sets (or unsets) flag(s) on `<object>`. See [flags].<br>
 Ex: `@set me=VISUAL`<br>
@@ -2343,7 +2363,19 @@ Ex: `@set Test Object=random:This is a random attribute.`<br>
 `&random Test Object=This is a random attribute.`<br>
 An important difference between these two forms is that @set will always evaluate the `<value>` before setting it on `<object>`, while the `&<attribute>` form will not evaluate when entered directly by a player in his client (and is usually what you want).
 
-The fourth form sets (or unsets) an attribute flag on the specified attribute. See [attribute flags].
+The third form keeps everything after the first colon as the value, commas included.
+
+The fourth form sets (or unsets) attribute flags on every attribute of `<object>`'s own that matches `<attribute pattern>` and that you can see. The pattern takes the wildcards `*` and `?`; `**` also matches inside attribute trees. A plain attribute name matches only that attribute. An attribute you may not change is reported and skipped, and the rest are still changed. See [attribute flags] and [wildcards].
+
+### Examples
+```sharp
+> @set me/CMD`*=no_inherit
+```
+Output: one "- no_inherit set." line for each attribute under CMD on you.
+```sharp
+> @set Test Object=list:red,green,blue
+```
+Output: Test Object/LIST - Set. The value is "red,green,blue".
 
 
 ::: seealso

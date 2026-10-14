@@ -125,20 +125,32 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-				IAttributeService.AttributeMode.Read, false) is not SharpAttribute[] attribute)
+		// do_atrlock reads only the object's own attribute (attrib.c:2512, atr_get_noparent). A wildcard
+		// pattern, which PennMUSH does not take here, reads or changes every readable match, naming each.
+		var attributes = await OwnAttributeChainsAsync(executor, targetObject, attrName);
+		if (attributes.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
+		var named = !SharpMUSH.Library.Services.AttributeService.IsLiteralPattern(attrName,
+			IAttributeService.AttributePatternMode.Wildcard);
+
 		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message.ToPlainText()))
 		{
-			await NotifyService.NotifyLocalized(executor,
-				AttributeLockHelpers.IsLocked(attribute)
-					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
-					: nameof(ErrorMessages.Notifications.AttributeIsUnlocked),
-				executor);
+			foreach (var chain in attributes)
+			{
+				var locked = AttributeLockHelpers.IsLocked(chain);
+				await (named
+					? NotifyService.NotifyLocalized(executor, locked
+						? nameof(ErrorMessages.Notifications.NamedAttributeIsLockedFormat)
+						: nameof(ErrorMessages.Notifications.NamedAttributeIsUnlockedFormat), executor, chain.Last().LongName!)
+					: NotifyService.NotifyLocalized(executor, locked
+						? nameof(ErrorMessages.Notifications.AttributeIsLocked)
+						: nameof(ErrorMessages.Notifications.AttributeIsUnlocked), executor));
+			}
+
 			return new CallState(string.Empty);
 		}
 
@@ -148,7 +160,22 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidValue);
 		}
 
-		return await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
-			executor, targetObject, attrName, attribute, shouldLock);
+		CallState? firstFailure = null;
+		var anyChanged = false;
+		foreach (var chain in attributes)
+		{
+			var result = await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
+				executor, targetObject, chain.Last().LongName!, chain, shouldLock, named);
+			if (result.Message.ToPlainText().Length == 0)
+			{
+				anyChanged = true;
+			}
+			else
+			{
+				firstFailure ??= result;
+			}
+		}
+
+		return anyChanged ? CallState.Empty : firstFailure ?? CallState.Empty;
 	}
 }

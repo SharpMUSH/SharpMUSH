@@ -128,3 +128,14 @@ think [lset(Lockbox/Enter,visual)]
 @unlock Lockbox
 @unlock/Enter Lockbox
 @tel Lockbox=[lsearch(me,name,Linkroom)]
+
+::case attr.pattern  @set and set() take an attribute pattern; @set obj=attr:value keeps commas
+@create Patternbox
+&PAT1 Patternbox=one
+&PAT2 Patternbox=two
+&OTHER Patternbox=three
+@set Patternbox/PAT*=no_command
+@set Patternbox/NOMATCH*=no_command
+think [set(Patternbox/PAT*,!no_command)][flags(Patternbox/PAT1)][flags(Patternbox/PAT2)][flags(Patternbox/OTHER)]
+@set Patternbox=LIST:red,green,blue
+think [get(Patternbox/LIST)]

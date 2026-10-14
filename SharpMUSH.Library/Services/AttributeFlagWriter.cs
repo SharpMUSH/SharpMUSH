@@ -36,6 +36,19 @@ internal sealed class AttributeFlagWriter(
 	/// </param>
 	public async ValueTask<Result<Success>> ApplyAsync(AnySharpObject executor,
 		AnySharpObject obj, SharpAttribute[] chain, IReadOnlyList<string> flagTokens)
+		=> await ResolveAsync(executor, flagTokens) switch
+		{
+			AttributeFlagBatch batch => await ApplyAsync(executor, obj, chain, batch),
+			Error<string> error => error
+		};
+
+	/// <summary>
+	/// PennMUSH's <c>string_to_atrflagsets</c> (<c>src/attrib.c:221-256</c>): the whole flag argument
+	/// is parsed once, before any attribute is looked at, so a bad name refuses the command however
+	/// many attributes a pattern would have matched.
+	/// </summary>
+	public async ValueTask<Result<AttributeFlagBatch>> ResolveAsync(AnySharpObject executor,
+		IReadOnlyList<string> flagTokens)
 	{
 		var flagList = await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
 
@@ -77,6 +90,16 @@ internal sealed class AttributeFlagWriter(
 			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
 		}
 
+		return new AttributeFlagBatch(resolved, flagList);
+	}
+
+	/// <summary>
+	/// <c>af_helper</c> for one attribute: the write gate, then the batch, then the report.
+	/// </summary>
+	public async ValueTask<Result<Success>> ApplyAsync(AnySharpObject executor,
+		AnySharpObject obj, SharpAttribute[] chain, AttributeFlagBatch batch)
+	{
+		var (resolved, flagList) = batch;
 		var target = chain.Last();
 
 		// Penn's af_helper (src/set.c:509-511) requires the normal, safe-obeying Can_Write_Attr
@@ -140,7 +163,7 @@ internal sealed class AttributeFlagWriter(
 	/// into up to N messages and leaked whether a flag the player may not even see was present.
 	/// </summary>
 	private async ValueTask ReportAsync(AnySharpObject executor, AnySharpObject obj, SharpAttribute target,
-		List<(SharpAttributeFlag Flag, bool Unset)> resolved, SharpAttributeFlag[] flagList)
+		IReadOnlyList<(SharpAttributeFlag Flag, bool Unset)> resolved, SharpAttributeFlag[] flagList)
 	{
 		if (await IsQuietForAsync(executor, obj, target))
 		{
@@ -191,3 +214,11 @@ internal sealed class AttributeFlagWriter(
 		SharpAttribute attribute)
 		=> attribute.IsQuiet() || await obj.Object().AreQuietAsync(executor);
 }
+
+/// <summary>
+/// A flag argument parsed by <see cref="AttributeFlagWriter.ResolveAsync"/>: each named flag with its
+/// direction, and the flag table it was looked up in (whose order the report follows).
+/// </summary>
+internal readonly record struct AttributeFlagBatch(
+	IReadOnlyList<(SharpAttributeFlag Flag, bool Unset)> Flags,
+	SharpAttributeFlag[] Table);

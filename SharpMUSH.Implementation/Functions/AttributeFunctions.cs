@@ -1019,7 +1019,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var result = await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
-			NotifyService, executor,
+			NotifyService, PermissionService, executor,
 			parser.CurrentState.Arguments["0"].Message,
 			parser.CurrentState.Arguments["1"].Message);
 

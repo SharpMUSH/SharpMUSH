@@ -1,4 +1,4 @@
-using SharpMUSH.Library;
+﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -38,6 +38,7 @@ public static class SetHelpers
 		IAttributeService attributeService,
 		IFlagAndPowerService flagAndPowerService,
 		INotifyService notifyService,
+		IPermissionService permissionService,
 		AnySharpObject executor,
 		MString objectAndOptionalAttribute,
 		MString flagOrAttributeValue)
@@ -75,24 +76,40 @@ public static class SetHelpers
 				: await SetFlags(target, areQuiet);
 		}
 
-		// do_attrib_flags: every token is applied as ONE batch, because Penn checks permission once
-		// for the whole flag argument rather than once per flag, so the result does not depend on
-		// which token is processed first.
-		async ValueTask<CallState> SetAttributeFlags(AnySharpObject found, string attribute)
+		// do_attrib_flags: the left side's attribute is a pattern (atr_iter_get), and every token is
+		// applied to each match as ONE batch, because Penn checks permission once per attribute for the
+		// whole flag argument rather than once per flag, so the result does not depend on which token
+		// is processed first.
+		async ValueTask<CallState> SetAttributeFlags(AnySharpObject found, string attributePattern)
 		{
+			// do_attrib_flags finds the object with match_controlled (src/set.c:570), so a player who does
+			// not control it learns nothing about its attributes.
+			if (!await permissionService.Controls(executor, found))
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
 			var flagTokens = MushText.SplitList(MarkupText.Space, flagOrAttributeValue)
 				.Select(x => x.ToPlainText())
 				.ToList();
 
-			var result = await attributeService.SetAttributeFlagsAsync(executor, found, attribute, flagTokens);
-
-			if (result is Error<string> error)
+			return await attributeService.SetAttributeFlagsByPatternAsync(executor, found, attributePattern, flagTokens) switch
 			{
-				await notifyService.Notify(executor, error.Value, executor);
-				return new CallState(error.Value);
-			}
+				AttributeFlagPatternOutcome { Changed: > 0 } => new CallState(string.Empty),
+				AttributeFlagPatternOutcome outcome => await ReportNothingChanged(outcome),
+				Error<string> error => await ReportAttributeRefused(error)
+			};
+		}
 
-			return new CallState(string.Empty);
+		// "No attribute found to change." follows any per-attribute refusals, as in Penn; the function
+		// form still needs a #-1 that says which of the two it was.
+		async ValueTask<CallState> ReportNothingChanged(AttributeFlagPatternOutcome outcome)
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoAttributeFoundToChange), executor);
+			return new CallState(outcome.Matched == 0
+				? ErrorMessages.Returns.ObjectAttributeString
+				: ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		// do_set_atr(thing, flag, p, player, 1) — the trailing 1 is what makes it report the write
