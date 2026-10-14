@@ -73,16 +73,16 @@ These '@' commands are general utility and programming commands:
 |--------------|--------------|--------------|--------------|--------------|
 | [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
 | [@chat]      | [@command]   | [@config]    | [@decompile] | [@doing]     |
-| [@dolist]    | [@drain]     | [@edit]      | [@emit]      | [@find]      |
-| [@force]     | [@function]  | [@gedit]     | [@grep]      | [@halt]      |
-| [@if]        | [@input]     | [@job]       | [@lemit]     | [@listmotd]  |
-| [@locale]    | [@mail]      | [@map]       | [@notify]    | [@nsemit]    |
-| [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  | [@nsremit]   |
-| [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     | [@profile]   |
-| [@prompt]    | [@ps]        | [@queue]      | [@remit]     | [@restart]   |
-| [@scan]      | [@search]     | [@select]    | [@stats]     | [@sweep]     |
-| [@switch]    | [@teleport]  | [@trigger]   | [@verb]      | [@version]   |
-| [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     |              |
+| [@dolist]    | [@drain]     | [@edit]      | [@emit]      | [@entrances] |
+| [@find]      | [@force]     | [@function]  | [@gedit]     | [@grep]      |
+| [@halt]      | [@if]        | [@input]     | [@job]       | [@lemit]     |
+| [@listmotd]  | [@locale]    | [@mail]      | [@map]       | [@notify]    |
+| [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  |
+| [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     |
+| [@profile]   | [@prompt]    | [@ps]        | [@queue]     | [@remit]     |
+| [@restart]   | [@scan]      | [@search]    | [@select]    | [@stats]     |
+| [@sweep]     | [@switch]    | [@teleport]  | [@trigger]   | [@verb]      |
+| [@version]   | [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
@@ -899,17 +899,19 @@ Show just the object names (with no ansi) in a table:
 |---------|--------|
 | `.s` | Check syntax and save, remaining in the editor. |
 | `.sq` | Check syntax, save, and quit. |
-| `.q` | Quit without saving. |
-| `.q!` | Quit and discard unsaved changes immediately. |
+| `.q` | Quit, when nothing is unsaved. |
+| `.q!` | Quit and discard unsaved changes. |
 | `.c` | Check syntax without saving. |
-| `.l` | List the buffer. |
-| `.u` | Undo the last appended line. |
+| `.l` | List the buffer with line numbers. |
+| `.u` | Undo the last appended line; a second `.u` puts it back. |
 | `.h` | Show the command summary. |
 
-  A syntax error keeps the editor open and leaves the stored attribute unchanged. A best-effort
-  conflict check also refuses a save when the attribute changed after the editor opened or its last
-  save. `@input/cancel` remains the unconditional escape. Finish active editor sessions before
-  upgrading, rolling back or uninstalling the package.
+  A syntax error keeps the editor open and leaves the stored attribute unchanged; each error names
+  its line and column, as `.l` numbers them. A best-effort conflict check also refuses a save when
+  the attribute or its syntax flag changed after the editor opened it or last saved it. The editor
+  stays open until one of its quit commands: when [@input]'s hour runs out it opens again with the
+  draft as it was. `@input/cancel` remains the unconditional escape and saves nothing. Finish active
+  editor sessions before upgrading, rolling back or uninstalling the package.
 
 ::: seealso
 - [@input]
