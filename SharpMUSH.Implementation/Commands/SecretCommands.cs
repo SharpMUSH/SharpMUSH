@@ -137,7 +137,9 @@ public partial class Commands
 		return managed;
 	}
 
-	/// <summary>Each secret, where its value comes from, when and by whom it was stored, and what it is for.</summary>
+	/// <summary>
+	/// Each secret, where its value comes from, when (UTC) and by whom it was stored, and what it is for.
+	/// </summary>
 	private static MString SecretListing(IReadOnlyList<SecretStatus> secrets)
 	{
 		Block body = secrets.Count == 0
@@ -154,13 +156,17 @@ public partial class Commands
 					secret.Name,
 					SecretSourceText(secret),
 					secret is { SetAt: { } at, SetBy: { } by }
-						? $"{at.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC by {by.Name}({by.Id})"
+						? $"{at.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} by {SecretAuthorText(by)}"
 						: "-",
 					secret.Description ?? "-",
 				}));
 
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Secrets ({secrets.Count})"), body), 78);
 	}
+
+	/// <summary>A character as its name and dbref; an account, which set it in the portal, as its name.</summary>
+	private static string SecretAuthorText(SecretAuthor author)
+		=> author.Id.StartsWith('#') ? $"{author.Name}({author.Id.Split(':')[0]})" : $"{author.Name} (portal)";
 
 	private static string SecretSourceText(SecretStatus secret) => secret.Source switch
 	{

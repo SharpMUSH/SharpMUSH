@@ -2387,7 +2387,7 @@ Nesting is limited by the `max_depth` configuration option, as it is for [@@] an
 
 Manages the secrets the server keeps for itself: passwords, tokens and signing keys, such as the SQL password (`sql.password`). A stored value is encrypted with the server's key ring, which is kept outside the world, so a copy of the world alone opens no secret. Nothing shows a value again: not this command, not the web portal, and no function. Softcode cannot read a secret.
 
-With no argument, or `/list`, @secret lists every secret the server or a plugin reads, and every stored one: where its value comes from, when and by whom it was stored, and what it is for.
+With no argument, or `/list`, @secret lists every secret the server or a plugin reads, and every stored one: where its value comes from, when (UTC) and by whom it was stored, and what it is for. A secret whose stored value this server cannot decrypt shows as `unreadable: set it again`.
 
 `@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`, `-` or `_`.
 
@@ -2405,6 +2405,14 @@ Output: nothing; it tells you what it did.
 ```
 > @secret sql.password=hunter2
 sql.password is set. Its value is never shown again.
+> @secret
++-------------------------------< Secrets (1) >------------------------------+
+| Secret        Value       Stored                   For                     |
+| -------------------------------------------------------------------------- |
+| sql.password  stored      2026-10-14 23:38 by      The password of         |
+|                           God(#1)                  sql_username on the SQL |
+|                                                    server.                 |
++----------------------------------------------------------------------------+
 > @secret/clear sql.password
 sql.password is cleared.
 ```
