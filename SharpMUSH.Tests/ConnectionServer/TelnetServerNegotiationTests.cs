@@ -133,14 +133,26 @@ public class TelnetServerNegotiationTests
 			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(async call =>
 			{
 				entered.SetResult();
-				await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, call.ArgAt<CancellationToken>(13));
+				try
+				{
+					await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, call.ArgAt<CancellationToken>(13));
+				}
+				catch
+				{
+					// ConnectionServerService closes an incomplete session before rethrowing.
+					call.ArgAt<Action>(7)();
+					throw;
+				}
 			});
 		var descriptors = Substitute.For<IDescriptorGeneratorService>();
 		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
 		var input = new Pipe();
 		var output = new Pipe();
 		using var closed = new CancellationTokenSource();
-		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), closed.Token);
+		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), closed.Token)
+		{
+			OnAbort = closed.Cancel
+		};
 		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
 			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions(), new MsspReportHolder(), new TerminalProbes());
 
@@ -150,6 +162,39 @@ public class TelnetServerNegotiationTests
 		await handler.WaitAsync(Timeout);
 
 		await service.Received(1).DisconnectAsync(42, Arg.Any<CancellationToken>());
+		descriptors.Received(1).ReleaseTelnetDescriptor(42);
+	}
+
+	// Registration that times out (or is cut short by shutdown) closes the connection before it rethrows,
+	// and that close cancels ConnectionClosed too. It is still the server's failure, not a client leaving.
+	[Test]
+	public async Task RegistrationTheServerGaveUpOnStillFails()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		service.RegisterAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<Encoding>>(),
+			Arg.Any<Action>(), Arg.Any<Func<string, string, ValueTask>>(), Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(),
+			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(call =>
+			{
+				call.ArgAt<Action>(7)();
+				return Task.FromException(new OperationCanceledException("registration deadline"));
+			});
+		var descriptors = Substitute.For<IDescriptorGeneratorService>();
+		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
+		var input = new Pipe();
+		var output = new Pipe();
+		using var closed = new CancellationTokenSource();
+		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), closed.Token)
+		{
+			OnAbort = closed.Cancel
+		};
+		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
+			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions(), new MsspReportHolder(), new TerminalProbes());
+
+		await Assert.That(async () => await server.OnConnectedAsync(context).WaitAsync(Timeout))
+			.Throws<OperationCanceledException>();
+
+		await Assert.That(closed.IsCancellationRequested).IsTrue();
 		descriptors.Received(1).ReleaseTelnetDescriptor(42);
 	}
 
@@ -180,6 +225,8 @@ public class TelnetServerNegotiationTests
 		public override IDictionary<object, object?> Items { get; set; } = new Dictionary<object, object?>();
 		public override CancellationToken ConnectionClosed { get; set; } = closed;
 		public override EndPoint? RemoteEndPoint { get; set; } = new IPEndPoint(IPAddress.Loopback, 4321);
+		public Action? OnAbort { get; init; }
+		public override void Abort(ConnectionAbortedException abortReason) => OnAbort?.Invoke();
 	}
 
 	/// <summary>

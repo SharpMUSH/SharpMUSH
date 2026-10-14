@@ -58,11 +58,12 @@ public partial class TelnetServer : ConnectionHandler
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
 		var ct = connection.ConnectionClosed;
+		var closer = new ConnectionCloser(connection);
 		try
 		{
-			await ServeAsync(connection, ct);
+			await ServeAsync(connection, closer, ct);
 		}
-		catch (OperationCanceledException) when (ct.IsCancellationRequested)
+		catch (OperationCanceledException) when (ct.IsCancellationRequested && !closer.ClosedByServer)
 		{
 			// The client left before its connection was registered: a port probe that connects and
 			// closes at once ends here. Kestrel would log anything thrown as an unhandled exception.
@@ -70,12 +71,12 @@ public partial class TelnetServer : ConnectionHandler
 		}
 	}
 
-	private async Task ServeAsync(ConnectionContext connection, CancellationToken ct)
+	private async Task ServeAsync(ConnectionContext connection, ConnectionCloser closer, CancellationToken ct)
 	{
 		var nextPort = await _descriptorGenerator.GetNextTelnetDescriptorAsync(ct);
 		try
 		{
-			await RunConnectionAsync(connection, nextPort, ct);
+			await RunConnectionAsync(connection, closer, nextPort, ct);
 		}
 		finally
 		{
@@ -86,12 +87,33 @@ public partial class TelnetServer : ConnectionHandler
 		}
 	}
 
-	private async Task RunConnectionAsync(ConnectionContext connection, long nextPort, CancellationToken ct)
+	/// <summary>
+	/// Closes a connection for the server and remembers that it did. Aborting cancels
+	/// <see cref="ConnectionContext.ConnectionClosed"/> just as a client leaving does, so the token
+	/// alone cannot say whose close a cancellation came from.
+	/// </summary>
+	private sealed class ConnectionCloser(ConnectionContext connection)
+	{
+		private int _closedByServer;
+
+		/// <summary>True once the server closed a connection whose client was still there.</summary>
+		public bool ClosedByServer => Volatile.Read(ref _closedByServer) == 1;
+
+		public void Close()
+		{
+			if (!connection.ConnectionClosed.IsCancellationRequested)
+				Volatile.Write(ref _closedByServer, 1);
+			connection.Abort();
+		}
+	}
+
+	private async Task RunConnectionAsync(ConnectionContext connection, ConnectionCloser closer, long nextPort,
+		CancellationToken ct)
 	{
 		using var readLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		ct = readLifetime.Token;
 		using var held = new RegistrationHold(nextPort, _logger, ct);
-		var session = new TelnetSession(this, connection, nextPort, held, ct);
+		var session = new TelnetSession(this, connection, closer, nextPort, held, ct);
 
 		var telnet = await session.BuildInterpreterAsync();
 		if (telnet.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } terminalQueries)
