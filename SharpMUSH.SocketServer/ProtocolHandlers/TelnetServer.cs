@@ -58,6 +58,20 @@ public partial class TelnetServer : ConnectionHandler
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
 		var ct = connection.ConnectionClosed;
+		try
+		{
+			await ServeAsync(connection, ct);
+		}
+		catch (OperationCanceledException) when (ct.IsCancellationRequested)
+		{
+			// The client left before its connection was registered: a port probe that connects and
+			// closes at once ends here. Kestrel would log anything thrown as an unhandled exception.
+			_logger.LogDebug("Connection {ConnectionId} closed before it was registered", connection.ConnectionId);
+		}
+	}
+
+	private async Task ServeAsync(ConnectionContext connection, CancellationToken ct)
+	{
 		var nextPort = await _descriptorGenerator.GetNextTelnetDescriptorAsync(ct);
 		try
 		{

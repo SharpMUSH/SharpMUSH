@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging.Abstractions;
+using NATS.Client.Core;
+using NATS.Client.KeyValueStore;
 using NSubstitute;
 using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
@@ -91,6 +93,64 @@ public class TelnetServerNegotiationTests
 			await input.Writer.CompleteAsync();
 			await output.Reader.CompleteAsync();
 		}
+	}
+
+	// A monitoring probe (connect, then close at once) can be gone before Kestrel calls the handler.
+	// The handle reservation then sees an already-closed connection, which is how a client leaves,
+	// not an error, so nothing may escape to Kestrel's "Unhandled exception" log.
+	[Test]
+	public async Task ClientGoneBeforeAHandleIsReservedEndsQuietly()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		kv.TryGetEntryAsync<string>(DurableDescriptorGeneratorService.HighWaterKey, Arg.Any<ulong>(),
+				Arg.Any<INatsDeserialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(new NatsResult<NatsKVEntry<string>>(new NatsKVKeyNotFoundException()));
+		kv.TryUpdateAsync(DurableDescriptorGeneratorService.HighWaterKey, Arg.Any<string>(), Arg.Any<ulong>(),
+				Arg.Any<INatsSerialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(new NatsResult<ulong>(1UL));
+		await using var descriptors = await DurableDescriptorGeneratorService.CreateAsync(kv, 4, 0);
+		var service = Substitute.For<IConnectionServerService>();
+		using var closed = new CancellationTokenSource();
+		closed.Cancel();
+		var pipe = new Pipe();
+		var context = new FakeConnectionContext(new PipeDuplex(pipe.Reader, pipe.Writer), closed.Token);
+		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
+			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions(), new MsspReportHolder(), new TerminalProbes());
+
+		await server.OnConnectedAsync(context).WaitAsync(Timeout);
+
+		await Assert.That(service.ReceivedCalls().Any()).IsFalse();
+	}
+
+	[Test]
+	public async Task ClientGoneDuringRegistrationEndsQuietlyAndTearsDown()
+	{
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var service = Substitute.For<IConnectionServerService>();
+		service.RegisterAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<Encoding>>(),
+			Arg.Any<Action>(), Arg.Any<Func<string, string, ValueTask>>(), Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(),
+			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(async call =>
+			{
+				entered.SetResult();
+				await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, call.ArgAt<CancellationToken>(13));
+			});
+		var descriptors = Substitute.For<IDescriptorGeneratorService>();
+		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
+		var input = new Pipe();
+		var output = new Pipe();
+		using var closed = new CancellationTokenSource();
+		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), closed.Token);
+		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
+			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions(), new MsspReportHolder(), new TerminalProbes());
+
+		var handler = server.OnConnectedAsync(context);
+		await entered.Task.WaitAsync(Timeout);
+		await closed.CancelAsync();
+		await handler.WaitAsync(Timeout);
+
+		await service.Received(1).DisconnectAsync(42, Arg.Any<CancellationToken>());
+		descriptors.Received(1).ReleaseTelnetDescriptor(42);
 	}
 
 	/// <summary>A builder factory in server mode, standing in for the one DI registers.</summary>

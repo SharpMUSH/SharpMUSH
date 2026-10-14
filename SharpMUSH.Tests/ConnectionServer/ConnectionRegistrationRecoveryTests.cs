@@ -1,11 +1,13 @@
 using System.Text;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
@@ -90,6 +92,31 @@ public class ConnectionRegistrationRecoveryTests
 		await Assert.That(disconnected).IsTrue();
 		await Assert.That(service.Get(42)).IsNull();
 		await bus.DidNotReceive().Publish(Arg.Any<ConnectionEstablishedMessage>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task ClientClosingDuringRegistrationIsNotAWarning()
+	{
+		var store = Substitute.For<IConnectionStateStore>();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		store.SetConnectionAsync(42, Arg.Any<ConnectionStateData>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			entered.SetResult();
+			return Task.Delay(Timeout.Infinite, call.ArgAt<CancellationToken>(2));
+		});
+		var logger = new RecordingLogger<ConnectionServerService>();
+		var service = new ConnectionServerService(logger, Substitute.For<IMessageBus>(), store);
+		using var closed = new CancellationTokenSource();
+		var disconnected = false;
+		var registration = Register(service, () => disconnected = true, closed.Token);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await closed.CancelAsync();
+
+		await Assert.That(async () => await registration.WaitAsync(TimeSpan.FromSeconds(5))).Throws<OperationCanceledException>();
+
+		await Assert.That(disconnected).IsTrue();
+		await Assert.That(logger.Entries.Any(e => e.Level >= LogLevel.Warning)).IsFalse();
+		await store.Received(1).RemoveConnectionAsync(42, Arg.Any<CancellationToken>());
 	}
 
 	[Test]
