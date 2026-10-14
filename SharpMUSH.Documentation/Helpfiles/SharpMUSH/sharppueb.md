@@ -139,6 +139,8 @@ Each client gets the link in its own dialect: `<a xch_cmd>` for Pueblo, `<send h
 
 cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennMUSH requires for XCH_CMD; anyone else gets `#-1 PERMISSION DENIED`. A *<command>* containing a control character (a line break, a tab, an escape) is `#-1 INVALID ARGUMENT`: a line break would have the client send the rest as a second command, and the others are not part of any command a player could type.
 
+Clicking a link sends *<command>* as if the reader had typed it, so it runs as whoever clicks, not as the object that made the link, and anyone can type the same line. A command behind a link checks who is running it (`%#`) the way any command does. The Chat Cards guide on the SharpMUSH documentation site works through an example.
+
 ### Example
 ```sharp
 > think cmdlink(Who is online?,+who,List the connected players)
