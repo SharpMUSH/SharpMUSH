@@ -42,7 +42,7 @@ Output: with `/inline` or `/inplace`, the output of the last command run; queued
 
 If `<expr>` is a regexp or a wildcard glob, then $0-$9 will be set with capture data. (In wildcard globbing, every wildcard captures.)
 
-The string "#$" in `<action>`'s will be replaced with the evaluated result of `<string>` before it is acted on. Note that this replacement happens BEFORE the `<action>` is queued and executed, and does not work well in nested switches. It is recommended that you use the %$N substitution, or the stext() function, instead.
+In an `<action>` or the `<default>`, "#$" stands for the evaluated `<string>`, and a queued `<action>` keeps it. The value is never evaluated as code. In nested switches #$ refers to the outermost one whose `<action>` it is written in; for the current one, use %$0 or stext(0). Like switch()'s, #$ counts only in the `<action>` as written: in an `<expr>`, in the code of an attribute the `<action>` triggers or calls, and inside lit() or after \, it is plain text.
 
 `@switch/all` runs `<action>`s for all matching `<expr>`s. Default for @switch.<br>
 `@switch/first` runs `<action>` for the first matching `<expr>` only. Same as @select, and often the desired behaviour.<br>

@@ -16,7 +16,7 @@ public static class SceneTypesRead
 {
 	public static async ValueTask<MString> Types(IMUSHCodeParser parser, INotifyService notifyService, AnySharpObject executor)
 	{
-		if (await SceneLogger.FindAsync(parser.ServiceProvider) is not AnySharpObject)
+		if (await SceneLogger.FindAsync(parser.ServiceProvider) is null)
 		{
 			await notifyService.Notify(executor, SceneCommandHelper.Notice("The scene package is not installed, so there are no pose types.", NoticeKind.Warn));
 			return MarkupText.Empty;

@@ -222,6 +222,37 @@ public class IterationWrapper<T>
 }
 
 /// <summary>
+/// One switch's subject, which <c>stext()</c> and <c>%$&lt;n&gt;</c> read, and which <c>#$</c> reads while one of
+/// its actions runs.
+/// </summary>
+public sealed class SwitchFrame
+{
+	/// <summary>The string being matched.</summary>
+	public required MString Text { get; init; }
+
+	/// <summary>
+	/// Whether <c>#$</c> reads this switch: true for <c>switch()</c>, <c>reswitch()</c>, <c>@switch</c> and
+	/// <c>@select</c>, which PennMUSH splices it into, and false for <c>case()</c>, which it does not.
+	/// </summary>
+	public bool Spliced { get; init; }
+
+	/// <summary>
+	/// The attribute being evaluated when the switch started, compared by reference: <c>#$</c> reads it only
+	/// from code of that same evaluation, as PennMUSH splices only the action's own text.
+	/// </summary>
+	public DBAttribute? Evaluation { get; init; }
+
+	/// <summary>
+	/// Whether one of the switch's actions is being evaluated. PennMUSH splices <c>#$</c> into the action it
+	/// runs, never into the patterns, so a <c>#$</c> in a pattern reads an enclosing switch or is text.
+	/// </summary>
+	public bool InAction { get; set; }
+
+	/// <summary>A copy for a queued action, which must not see the switch move on to its next pattern.</summary>
+	public SwitchFrame Clone() => new() { Text = Text, Spliced = Spliced, Evaluation = Evaluation, InAction = InAction };
+}
+
+/// <summary>
 /// Lets one command list hand its <c>@break</c>/<c>@assert</c> up to the list that ran it.
 ///
 /// <para><c>VisitCommandList</c> pops the break marker when its list stops, which is right at the
@@ -371,8 +402,8 @@ public sealed record EvaluationContext
 	/// </summary>
 	public required ConcurrentStack<Dictionary<string, MString>> RegexRegisters { get; init; }
 
-	/// <summary>The switch context stack for stext() and slev(): the string matched in each nested switch.</summary>
-	public required ConcurrentStack<MString> SwitchStack { get; init; }
+	/// <summary>The switch context stack for stext(), slev() and #$: the string matched in each nested switch.</summary>
+	public required ConcurrentStack<SwitchFrame> SwitchStack { get; init; }
 
 	/// <summary>Execution control for the running command list (<see cref="Execution.CommandListBreak"/>).</summary>
 	public required ConcurrentStack<Execution> ExecutionStack { get; init; }
@@ -453,7 +484,7 @@ public partial record ParserState
 	}
 
 	/// <inheritdoc cref="EvaluationContext.SwitchStack"/>
-	public ConcurrentStack<MString> SwitchStack
+	public ConcurrentStack<SwitchFrame> SwitchStack
 	{
 		get => Context.SwitchStack;
 		init => Context = Context with { SwitchStack = value };
@@ -706,7 +737,7 @@ public partial record ParserState
 			RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
 				? owned.Clone()
 				: new Dictionary<string, MString>(frame, frame.Comparer))),
-			SwitchStack = new(SwitchStack.Reverse()),
+			SwitchStack = new(SwitchStack.Reverse().Select(frame => frame.Clone())),
 			EnvironmentRegisters = new(EnvironmentRegisters, EnvironmentRegisters.Comparer),
 			ExecutionStack = [],
 			CallDepth = new(),

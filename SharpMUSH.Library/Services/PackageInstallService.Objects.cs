@@ -49,7 +49,7 @@ public partial class PackageInstallService
 				}
 			case PackageObjectType.Exit:
 				{
-					if (await ResolveContainerAsync(spec.Location, resolve, cancellationToken) is not AnySharpContainer location)
+					if (await ResolveContainerAsync(spec.Location, resolve, cancellationToken) is not { } location)
 					{
 						return new Error<string>(ExitSourceUnresolved(spec.Ref));
 					}
@@ -62,7 +62,7 @@ public partial class PackageInstallService
 				return new Error<string>($"Object type '{spec.Type}' is not supported by the apply engine.");
 		}
 
-		if (await writes.CreateAsync(create, cancellationToken) is not AnySharpObject created)
+		if (await writes.CreateAsync(create, cancellationToken) is not { } created)
 		{
 			return new Error<string>($"Internal error: object {{{{{spec.Ref}}}}} vanished during apply.");
 		}
