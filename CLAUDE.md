@@ -81,7 +81,7 @@ Key environment variables:
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
 - `SHARPMUSH_DATAPROTECTION_PATH` — directory for ASP.NET Core's Data Protection key ring (default: `<world path>.dataprotection-keys`, beside the world so it lands on the same volume). It also decrypts the stored secrets
-- `SHARPMUSH_SECRET_<NAME>` — overrides the stored secret `<name>` (upper case, `.` and `-` as `_`: `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`)
+- `SHARPMUSH_SECRET_<NAME>` — overrides the stored secret `<name>` (upper case, `.` as `_`: `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`)
 - `SHARPMUSH_SECRETS_PATH` — directory of one file per secret, named for it, that overrides the stored value (default: `/run/secrets`); the environment variable wins over the file
 - `SHARPMUSH_PLUGINS_PATH` — directory for plugins installed from plugin packages, one folder per plugin id, plus `plugins.state.json` and `.uploads/` (default: `<world path>.plugins`, beside the world so an image update keeps them); shipped plugins stay in `<app>/plugins/`
 - `SHARPMUSH_PLUGIN_INSTALL` — whether the server installs plugin packages at all, from a remote or by portal upload (default: on; only `false` turns it off). Each apply still needs the administrator's `AllowPluginCode` confirmation

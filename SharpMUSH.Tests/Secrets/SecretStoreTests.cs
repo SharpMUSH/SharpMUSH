@@ -174,15 +174,15 @@ public class SecretStoreTests
 	public async Task TheListHoldsEveryDeclaredSecretAndEveryStoredOne()
 	{
 		using var host = new Host();
-		await host.Store.SetAsync("webhook.mail-relay.signing", "s3cret", Grave);
+		await host.Store.SetAsync("webhook.mailrelay.signing", "s3cret", Grave);
 
 		var list = await host.Store.ListAsync();
 
-		await Assert.That(list.Select(s => s.Name)).IsEquivalentTo(new[] { "discord.token", "sql.password", "webhook.mail-relay.signing" },
+		await Assert.That(list.Select(s => s.Name)).IsEquivalentTo(new[] { "discord.token", "sql.password", "webhook.mailrelay.signing" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(list.Single(s => s.Name == "discord.token")).IsEqualTo(new SecretStatus("discord.token",
 			Token.Description, SecretSource.Unset, null, false, null, null, "discord.admin", true));
-		await Assert.That(list.Single(s => s.Name == "webhook.mail-relay.signing").Declared).IsFalse();
+		await Assert.That(list.Single(s => s.Name == "webhook.mailrelay.signing").Declared).IsFalse();
 		await Assert.That((await host.Store.GetAsync("discord.token")).Value).IsTypeOf<NotFound>();
 	}
 
@@ -191,6 +191,8 @@ public class SecretStoreTests
 	[Arguments("../etc/passwd")]
 	[Arguments(".hidden")]
 	[Arguments("sql..password")]
+	[Arguments("discord_token")]
+	[Arguments("discord-token")]
 	[Arguments("")]
 	public async Task ANameThatIsNotOneIsRefused(string name)
 	{
@@ -214,7 +216,7 @@ public class SecretStoreTests
 
 	[Test]
 	[Arguments("sql.password", "SHARPMUSH_SECRET_SQL_PASSWORD")]
-	[Arguments("webhook.mail-relay.signing", "SHARPMUSH_SECRET_WEBHOOK_MAIL_RELAY_SIGNING")]
+	[Arguments("webhook.mailrelay.signing", "SHARPMUSH_SECRET_WEBHOOK_MAILRELAY_SIGNING")]
 	public async Task AnEnvironmentVariableIsTheNameInUpperCaseWithUnderscores(string name, string variable)
 		=> await Assert.That(SecretNames.EnvironmentVariable(name)).IsEqualTo(variable);
 

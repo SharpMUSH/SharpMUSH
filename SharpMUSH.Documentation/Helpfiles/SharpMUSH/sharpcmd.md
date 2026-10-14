@@ -2389,11 +2389,11 @@ Manages the secrets the server keeps for itself: passwords, tokens and signing k
 
 With no argument, or `/list`, @secret lists every secret the server or a plugin reads, and every stored one: where its value comes from, when (UTC) and by whom it was stored, and what it is for. A secret whose stored value this server cannot decrypt shows as `unreadable: set it again`.
 
-`@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`, `-` or `_`.
+`@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`.
 
 `/clear` removes the stored value.
 
-An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` and `-` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
+An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
 
 A typed value passes through your client, which may keep it in a log. Use the web portal's Secrets page, or an override, where that matters.
 

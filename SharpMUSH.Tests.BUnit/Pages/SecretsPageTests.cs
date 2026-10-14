@@ -31,9 +31,15 @@ public class SecretsPageTests : TrackingBunitContext
 		public string? PutPath;
 		public string? PutBody;
 		public string? DeletePath;
+		public bool Forbidden;
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
+			if (Forbidden)
+			{
+				return new(HttpStatusCode.Forbidden);
+			}
+
 			if (request.Method == HttpMethod.Put)
 			{
 				PutPath = request.RequestUri!.AbsolutePath;
@@ -100,5 +106,26 @@ public class SecretsPageTests : TrackingBunitContext
 		await Assert.That(_api.PutPath).IsEqualTo("/api/secrets/sql.password");
 		await Assert.That(_api.PutBody).Contains("hunter2");
 		cut.WaitForState(() => string.IsNullOrEmpty(cut.FindAll(".secret-form input")[1].GetAttribute("value")));
+	}
+
+	[Test]
+	public async Task SomeoneWhoMayManageNoSecretIsToldSo()
+	{
+		_api.Forbidden = true;
+
+		var cut = Render<Secrets>();
+		cut.WaitForAssertion(() => cut.Find(".secret-forbidden"));
+
+		await Assert.That(cut.FindAll(".secret-form")).IsEmpty();
+	}
+
+	[Test]
+	public async Task ThePageAsksOnlyForASignedInAccount()
+	{
+		var authorize = typeof(Secrets).GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+			.Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>().Single();
+
+		await Assert.That(authorize.Policy).IsNull()
+			.Because("a secret's ManagedBy permission lets its holder manage it here; the server filters the list");
 	}
 }

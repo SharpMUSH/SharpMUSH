@@ -7750,6 +7750,9 @@
   <data name="AdmSecretsList" xml:space="preserve">
     <value>Secrets</value>
   </data>
+  <data name="AdmSecretsForbidden" xml:space="preserve">
+    <value>You may not manage any secret.</value>
+  </data>
   <data name="AdmSecretsNone" xml:space="preserve">
     <value>No secrets are declared or stored.</value>
   </data>

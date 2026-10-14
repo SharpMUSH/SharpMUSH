@@ -24,7 +24,8 @@ public class SecretCommandTests
 	private IExpandedObjectDataService ServerData => WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
 	private DBRef God => WebAppFactoryArg.ExecutorDBRef;
 
-	private static string SecretName() => TestIsolationHelpers.GenerateUniqueName("test.secret").ToLowerInvariant();
+	private static string SecretName()
+		=> "test.secret." + string.Concat(TestIsolationHelpers.GenerateUniqueName("s").Where(char.IsAsciiLetterOrDigit)).ToLowerInvariant();
 
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{
