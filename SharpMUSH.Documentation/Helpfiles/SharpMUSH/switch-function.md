@@ -32,7 +32,9 @@ These functions match `<string>` against the `<expr>`essions, returning the corr
 
 switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [SWITCH WILDCARDS]. case() and caseall() do a case-sensitive exact match, like member() or comp(). In this case, $0-$9 will be set to the text that the nth wildcard character met.
 
-If the string "#$" appears in the `<list>` to be evaluated, it will be replaced with the evaluated value of `<str>` /before/ evaluation of `<list>`. This is not done in case() and caseall(), for TinyMUSH 3 compatibility. Note that this replacement happens before evaluation, which makes it unsafe when `<str>` contains user input, and makes it unsuitable for use in nested switch()es. It is strongly recommended you use the %$`\<n\>` substitution or stext() function instead, which solves these problems.
+In the `<list>` that is evaluated, or the `<default>`, "#$" stands for `<str>`. The value is never evaluated as code, so #$ is safe on user input. If you nest switch()es, #$ refers to the outermost one whose `<list>` it is written in. For the current switch(), use %$0 or stext(0).
+
+"#$" counts only where it is written in the switch() itself. In an `<expr>`, in the code of an attribute a `<list>` calls such as u(), outside any switch, and inside lit() or after \, it is plain text. case() and caseall() leave it as text, for TinyMUSH 3 compatibility.
 
 
 ::: seealso

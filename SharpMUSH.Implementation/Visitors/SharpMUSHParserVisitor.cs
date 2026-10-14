@@ -1117,6 +1117,27 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	}
 
 	/// <summary>
+	/// <c>#$</c>: the subject of the outermost <c>switch()</c>, <c>switchall()</c>, <c>reswitch()</c>, <c>@switch</c>
+	/// or <c>@select</c> this evaluation started whose action is running. PennMUSH splices it into the action
+	/// before evaluating it, so the outermost switch takes every one written inside its action, a nested switch's
+	/// included, and none in its patterns or in the code of an attribute it calls. <c>case()</c> splices nothing.
+	/// With no such switch, or in a pass that does not evaluate, it is text.
+	/// </summary>
+	public override ValueTask<CallState?> VisitSwitchSubject([NotNull] SwitchSubjectContext context)
+	{
+		var state = parser.CurrentState;
+		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval
+				|| state.SwitchStack.LastOrDefault(frame => frame is { Spliced: true, InAction: true }
+					&& ReferenceEquals(frame.Evaluation, state.CurrentEvaluation)) is not { } subject)
+		{
+			return ValueTask.FromResult<CallState?>(new CallState(GetContextText(context), context.Depth()));
+		}
+
+		EvaluationRestrictions.DemandSubstitution(context.GetText(), state.Restrictions);
+		return ValueTask.FromResult<CallState?>(new CallState(subject.Text, context.Depth()));
+	}
+
+	/// <summary>
 	/// Decodes <c>\x</c> to <c>x</c> — but only in an evaluating pass. A NoParse/NoEval pass keeps the
 	/// backslash, exactly as it keeps <c>%#</c> and <c>[fn()]</c> raw: its text is either shown or stored
 	/// as written (<c>]think</c>, <c>/noeval</c>, <c>&amp;</c>) or evaluated later, and that later

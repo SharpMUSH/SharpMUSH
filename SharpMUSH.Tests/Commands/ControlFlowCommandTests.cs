@@ -339,6 +339,44 @@ public class ControlFlowCommandTests
 		await Assert.That(Delivered(executor, "SwHashDollarDef_goodbye_92047", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// A nested @switch's #$ names the outer subject, as PennMUSH's splice of the outer action gives it, and a
+	/// queued @select action keeps its subject.
+	/// </summary>
+	[Test]
+	public async ValueTask Switch_HashDollar_NestedAndQueued()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch/inline outer{id}=*,{{@switch/inline inner=*,{{@pemit #1=SwNested_#$_%$0}}}}"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@select queued{id}=q*,@pemit #1=SelQueued_#$_end"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwNested_outer{id}_inner")).IsTrue();
+		await Assert.That(await WaitForMessage(executor, $"SelQueued_queued{id}_end")).IsTrue();
+	}
+
+	/// <summary>
+	/// ## and #$ insert the element's or subject's text, which is never evaluated again: PennMUSH splices it
+	/// into the action and evaluates the result, so code in the data would run there.
+	/// </summary>
+	[Test]
+	public async ValueTask HashTokens_DoNotEvaluateTheirValue()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dolist [lit([add(1,1)])]=@pemit #1=DolNoEval{id}_##_#@"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch/inline [lit([add(1,1)])]=*,@pemit #1=SwNoEval{id}_#$"));
+
+		await Assert.That(await WaitForMessage(executor, $"DolNoEval{id}_[add(1,1)]_1")).IsTrue();
+		await Assert.That(await WaitForMessage(executor, $"SwNoEval{id}_[add(1,1)]")).IsTrue();
+	}
+
 	[Test]
 	public async ValueTask Switch_NotifySwitch_RunsActionAndQueuesNotify()
 	{

@@ -135,7 +135,8 @@ def generate(grammar_name):
 
 	def first(c):
 		alts = [f'bracePattern__{inside(c, "brace")}', f'bracketPattern__{inside(c, "bracket")}', f'beginGenericText__{N(c)}',
-				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken']
+				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken',
+				'switchSubject']
 		if c.G:
 			alts.append(f'closedGroupFirst__{inside(c, "group")}')
 		return alts
@@ -143,7 +144,7 @@ def generate(grammar_name):
 	def later(c):
 		alts = [f'bracePattern__{inside(c, "brace")}', f'bracketPattern__{inside(c, "bracket")}',
 				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken',
-				f'genericText__{N(c)}']
+				'switchSubject', f'genericText__{N(c)}']
 		if c.G:
 			alts.append(f'closedGroup__{inside(c, "group")}')
 		return alts
@@ -249,6 +250,8 @@ escapedText: ESCAPE ANY;
 
 iterationToken: ITER_ELEMENT | ITER_POSITION;
 
+switchSubject: SWITCH_SUBJECT;
+
 ansi: OANSI ANSICHARACTER? CANSI;''')
 
 	return prune('\n'.join(out), [n for n, _ in entries] + [n + '__G' for n, _ in entries]), len(seen), len(representative)
@@ -291,11 +294,14 @@ ACCESSORS = {
 	'commaCommandArgs': [('evaluationString', True), ('COMMAWS', True)],
 	'evaluationString': [('function', False), ('explicitEvaluationString', False), ('callTail', False)],
 	'explicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('beginGenericText', False),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True), ('genericText', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True), ('switchSubject', True),
+		('genericText', True)],
 	'braceExplicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True),
+		('switchSubject', True)],
 	'callTail': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True),
+		('switchSubject', True)],
 	'regexpCapture': [('REGEXP_NUM', False), ('REGEXP_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False)],
 	'bracePattern': [('OBRACE', False), ('braceExplicitEvaluationString', False), ('CBRACE', False)],
 	'bracketPattern': [('OBRACK', False), ('evaluationString', False), ('CBRACK', False)],
@@ -381,7 +387,7 @@ def bridge(grammar):
 		elif base in ACCESSORS:
 			for rule in copies:
 				w(f'	public partial class {pascal(rule)}Context : {iface(base)};')
-	for rule in ('substitutionSymbol', 'escapedText', 'iterationToken', 'ansi'):
+	for rule in ('substitutionSymbol', 'escapedText', 'iterationToken', 'switchSubject', 'ansi'):
 		w(f'	public partial class {pascal(rule)}Context : ISoftcodeContext;')
 	w('')
 	w('	/// <summary>')
