@@ -358,6 +358,25 @@ public class ControlFlowCommandTests
 		await Assert.That(await WaitForMessage(executor, $"SelQueued_queued{id}_end")).IsTrue();
 	}
 
+	/// <summary>
+	/// ## and #$ insert the element's or subject's text, which is never evaluated again: PennMUSH splices it
+	/// into the action and evaluates the result, so code in the data would run there.
+	/// </summary>
+	[Test]
+	public async ValueTask HashTokens_DoNotEvaluateTheirValue()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dolist [lit([add(1,1)])]=@pemit #1=DolNoEval{id}_##_#@"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch/inline [lit([add(1,1)])]=*,@pemit #1=SwNoEval{id}_#$"));
+
+		await Assert.That(await WaitForMessage(executor, $"DolNoEval{id}_[add(1,1)]_1")).IsTrue();
+		await Assert.That(await WaitForMessage(executor, $"SwNoEval{id}_[add(1,1)]")).IsTrue();
+	}
+
 	[Test]
 	public async ValueTask Switch_NotifySwitch_RunsActionAndQueuesNotify()
 	{

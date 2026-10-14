@@ -220,6 +220,9 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(a,*,\\#$)", "#$")]
 	[Arguments("switch(lit([add(1,1)]),*,#$)", "[add(1,1)]")]
 	[Arguments("switch(a,*,#$0 x#)", "a0 x#")]
+	// The subject's text is inserted, never evaluated again: PennMUSH splices it into the code first.
+	[Arguments("switch(lit(%#),*,#$)", "%#")]
+	[Arguments("switch(lit([add(1,1)]),*,#$:%$0)", "[add(1,1)]:[add(1,1)]")]
 	public async Task HashDollarAsText(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
