@@ -4784,6 +4784,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Виж всички</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Всички</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Обратно към {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Надпис</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Редактиране на подробности</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Премести по-напред</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Премести по-назад</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Нито едно изображение няма този етикет.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Галерия: {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Сигнализирай</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Сигналът не можа да бъде изпратен: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Какъв е проблемът с това изображение?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Изпрати сигнал</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Сигналът ви е изпратен на екипа.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Покажи изображението</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Филтриране по етикет</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Етикети</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Разделяйте етикетите със запетаи.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Предупреждение за съдържание</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Скрива изображението, докато зрителят не реши да го види. Изображение с предупреждение не може да бъде аватар или банер.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Предупреждение за съдържание: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Подробностите за изображението не можаха да бъдат запазени: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Изображението не можа да бъде преместено: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Портрет</value>
   </data>

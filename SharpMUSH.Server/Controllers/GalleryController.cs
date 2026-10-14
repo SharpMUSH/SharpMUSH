@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.RateLimiting;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -26,14 +28,17 @@ namespace SharpMUSH.Server.Controllers;
 /// <c>IMAGE`ALT</c> attributes (spec §2), so softcode and OOB payloads read the same picture. Edits
 /// require <c>wiki.edit</c>, as the biography beside the gallery does, and then the requester's account to
 /// own the character, whichever of its characters is acting, or the acting character to control it
-/// (staff), enforced by <see cref="IPermissionService"/>.
+/// (staff), enforced by <see cref="IPermissionService"/>. An upload fires <c>GALLERY`ADD</c> and a report
+/// <c>GALLERY`REPORT</c> on the event handler, so the game decides what a new picture or a report does.
 ///
 /// Routes:
 ///   GET    /api/profile/{name}/gallery          — list gallery entries (anonymous)
 ///   POST   /api/profile/{name}/gallery          — upload an image (wiki.edit; owner/staff); <c>?use=banner</c> or
 ///                                                 <c>?use=avatar</c> makes it the banner or the avatar
-///   PUT    /api/profile/{name}/gallery          — replace order/captions/icon/banner (wiki.edit; owner/staff)
+///   PUT    /api/profile/{name}/gallery          — replace order/captions/tags/warnings/icon/banner (wiki.edit; owner/staff)
 ///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (wiki.edit; owner/staff)
+///   POST   /api/profile/{name}/gallery/{assetId}/report — report an image to staff (signed in, playing a character)
+///   GET    /api/gallery/reports                 — whether the game takes reports (anonymous)
 /// </summary>
 [ApiController]
 [Route("api/profile/{name}/gallery")]
@@ -44,6 +49,8 @@ public class GalleryController(
 	IPermissionService permissionService,
 	IVisibleWorldProjection projection,
 	IAccountService accounts,
+	IEventService events,
+	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<GalleryController> logger) : ControllerBase
 {
 	private const string GalleryAttribute = GalleryWriter.GalleryAttribute;
@@ -91,17 +98,39 @@ public class GalleryController(
 				new { error = $"Content type '{file.ContentType}' is not allowed. Allowed: {string.Join(", ", AllowedContentTypes)}" });
 		}
 
+		// The declared type is the browser's word; the stored type is what the bytes are.
+		if (await SniffAsync(file, ct) is not string contentType)
+		{
+			return StatusCode(StatusCodes.Status415UnsupportedMediaType,
+				new { error = $"{file.FileName} is not a PNG, JPEG, GIF or WebP image." });
+		}
+
+		var limit = options.CurrentValue.Limit.MaxGalleryImages;
+		if ((await ReadGalleryAsync(character)).Count >= limit)
+		{
+			return Conflict(new { error = $"A gallery holds at most {limit} images. Remove one before adding another." });
+		}
+
 		// Never default a missing identity to God (#1): reject so uploads cannot be
 		// misattributed or bypass identity-based controls downstream.
 		var uploaderDbref = User.GetActingCharacter()?.ToString();
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
-		return await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct) switch
+		return await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct) switch
 		{
 			WikiAsset asset => await AddToGalleryAsync(name, character, asset, role, uploaderDbref),
 			Error<string> saveError => StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value }),
 		};
+	}
+
+	/// <summary>The image type the file's first bytes name; not found for anything else.</summary>
+	private static async Task<Found<string>> SniffAsync(IFormFile file, CancellationToken ct)
+	{
+		var head = new byte[GalleryRules.SniffLength];
+		await using var stream = file.OpenReadStream();
+		var read = await stream.ReadAtLeastAsync(head, head.Length, throwOnEndOfStream: false, ct);
+		return GalleryRules.SniffImageType(head.AsSpan(0, read));
 	}
 
 	/// <summary>What an upload is for: a gallery image, the banner, or the avatar.</summary>
@@ -142,6 +171,9 @@ public class GalleryController(
 		var write = await WriteGalleryAsync(character, normalized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
+		var added = normalized.First(e => e.AssetId == asset.Id);
+		await events.TriggerEventAsync("GALLERY`ADD", User.GetActingCharacter(),
+			character.Object().DBRef.ToString(), asset.Id, added.Url, role.ToString().ToLowerInvariant());
 		return Ok(normalized);
 	}
 
@@ -163,11 +195,26 @@ public class GalleryController(
 			return Ok(Array.Empty<GalleryEntry>());
 		}
 
-		var sanitized = GalleryRules.Normalize(entries
-			.Where(e => existing.ContainsKey(e.AssetId))
-			.DistinctBy(e => e.AssetId)
-			.Select((e, i) => existing[e.AssetId] with { Caption = e.Caption, Order = i, IsIcon = e.IsIcon, IsBanner = e.IsBanner }));
+		var kept = new List<GalleryEntry>();
+		foreach (var (sent, i) in entries.Where(e => existing.ContainsKey(e.AssetId)).DistinctBy(e => e.AssetId).Select((e, i) => (e, i)))
+		{
+			var named = existing[sent.AssetId] with
+			{
+				Caption = sent.Caption,
+				Order = i,
+				IsIcon = sent.IsIcon,
+				IsBanner = sent.IsBanner,
+				Tags = sent.Tags,
+				Warning = sent.Warning,
+			};
+			switch (GalleryRules.Clean(named))
+			{
+				case GalleryEntry clean: kept.Add(clean); break;
+				case Error<string> refused: return BadRequest(new ApiErrorDto(refused.Value));
+			}
+		}
 
+		var sanitized = GalleryRules.Normalize(kept);
 		var write = await WriteGalleryAsync(character, sanitized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		return Ok(sanitized);
@@ -194,6 +241,47 @@ public class GalleryController(
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		await assetService.DeleteAsync(assetId);
 		return Ok(normalized);
+	}
+
+	/// <summary>
+	/// Whether the game takes reports: the event handler has a <c>GALLERY`REPORT</c> attribute. The portal
+	/// offers Report only then, so a report never goes nowhere.
+	/// </summary>
+	[HttpGet("~/api/gallery/reports")]
+	[AllowAnonymous]
+	public async Task<GalleryReporting> Reporting() => new(await events.HasHandlerAsync(ReportEvent));
+
+	private const string ReportEvent = "GALLERY`REPORT";
+
+	/// <summary>
+	/// Reports an image to the game's staff: fires <c>GALLERY`REPORT</c> with the reporter's character as
+	/// %#. SharpMUSH keeps no report of its own; the handler decides what one does (open a job, tell a
+	/// channel).
+	/// </summary>
+	[HttpPost("{assetId}/report")]
+	[Authorize]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> Report(string name, string assetId, [FromBody] GalleryReportRequest request, CancellationToken ct)
+	{
+		var reason = request.Reason?.Trim() ?? "";
+		if (reason.Length == 0)
+			return BadRequest(new ApiErrorDto("Say what is wrong with the image."));
+		if (reason.Length > GalleryRules.MaxReportLength)
+			return BadRequest(new ApiErrorDto($"Keep a report to {GalleryRules.MaxReportLength} characters."));
+		if (await ResolveViewerAsync(ct) is not { } reporter)
+			return Conflict(new ApiErrorDto("Choose a character to act as before reporting an image."));
+		if (await ResolveCharacterAsync(name, ct) is not { } character)
+			return NotFound();
+		if ((await ReadGalleryAsync(character)).FirstOrDefault(e => e.AssetId == assetId) is not { } entry)
+			return NotFound();
+		if (!await events.HasHandlerAsync(ReportEvent))
+			return StatusCode(StatusCodes.Status501NotImplemented, new ApiErrorDto("This game does not take reports of images."));
+
+		await events.TriggerEventAsync(ReportEvent, reporter.Object().DBRef,
+			character.Object().DBRef.ToString(), entry.AssetId, entry.Url, reason, entry.Caption ?? "");
+		logger.LogInformation("Gallery image reported on {Character}: asset={Asset} by={Reporter}",
+			LogSanitizer.Sanitize(name), entry.AssetId, reporter.Object().DBRef);
+		return NoContent();
 	}
 
 	private async Task<AnySharpObject?> ResolveCharacterAsync(string name, CancellationToken ct)

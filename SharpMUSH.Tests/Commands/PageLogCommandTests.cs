@@ -244,6 +244,8 @@ public class PageLogCommandTests
 			if (eventName == SharpMUSH.Library.Definitions.SharpEvents.PageMessage) Interlocked.Increment(ref PageEvents);
 			return inner.TriggerEventAsync(eventName, enactor, args);
 		}
+
+		public ValueTask<bool> HasHandlerAsync(string eventName) => inner.HasHandlerAsync(eventName);
 	}
 
 	private sealed class OrderNotingPageLog(IPageLogService inner, RecordingEvents events) : IPageLogService

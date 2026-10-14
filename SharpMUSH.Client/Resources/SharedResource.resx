@@ -4214,6 +4214,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>View all</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Back to {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Caption</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Edit details</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Move earlier</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Move later</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>No image carries this tag.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Gallery of {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Report</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Could not send the report: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>What is wrong with this image?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Send report</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Your report was sent to staff.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Show image</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filter by tag</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Separate tags with commas.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Content warning</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Covers the image until a viewer chooses to see it. An image with a warning cannot be the avatar or the banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Content warning: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Could not save the image's details: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Could not move the image: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portrait</value>
   </data>

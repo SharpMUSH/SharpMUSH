@@ -334,7 +334,8 @@ else
         return urls
             .Where(u => ImageUrlPolicy.IsRenderable(u.Url))
             .DistinctBy(u => u.Url)
-            .Select(u => new ImageViewer.Item(u.Url, DisplayName, u.Caption ?? _gallery.FirstOrDefault(g => g.Url == u.Url)?.Caption))
+            .Select(u => (u.Url, u.Caption, Entry: _gallery.FirstOrDefault(g => g.Url == u.Url)))
+            .Select(u => new ImageViewer.Item(u.Url, DisplayName, u.Caption ?? u.Entry?.Caption) { Warning = u.Entry?.Warning, Tags = u.Entry?.Tags })
             .ToList();
     }
 

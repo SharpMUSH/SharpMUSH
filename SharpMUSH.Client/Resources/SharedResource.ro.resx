@@ -4784,6 +4784,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Vezi tot</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Toate</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Înapoi la {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Legendă</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Editează detaliile</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Mută mai devreme</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Mută mai târziu</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Nicio imagine nu are această etichetă.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galeria lui {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Raportează</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Raportul nu a putut fi trimis: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Ce este în neregulă cu această imagine?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Trimite raportul</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Raportul tău a fost trimis echipei.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Arată imaginea</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtrează după etichetă</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Etichete</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Separă etichetele prin virgule.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Avertisment de conținut</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Acoperă imaginea până când cineva alege să o vadă. O imagine cu avertisment nu poate fi avatar sau banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Avertisment de conținut: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Detaliile imaginii nu au putut fi salvate: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Imaginea nu a putut fi mutată: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portret</value>
   </data>

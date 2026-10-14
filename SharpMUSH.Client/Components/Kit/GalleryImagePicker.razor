@@ -2,7 +2,8 @@
 
 @* Choosing a character's banner or avatar: upload a new file, or pick one of the images already in
    the gallery. A modal over the page like the image viewer; Escape or a click outside closes it.
-   The image in that role now is marked and pressed. *@
+   The image in that role now is marked and pressed. An image with a warning cannot take either role,
+   which shows without a click, so it is offered covered and disabled. *@
 @if (Open)
 {
     <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Class="kit-picker-overlay" Style="@ScrimStyle">
@@ -31,10 +32,14 @@
                     @foreach (var item in Items)
                     {
                         var current = item.AssetId == SelectedAssetId;
-                        <button type="button" class="@($"kit-picker-item{(current ? " kit-picker-item--current" : "")}")"
-                                aria-pressed="@(current ? "true" : "false")" aria-label="@(item.Caption ?? item.AssetId)"
-                                disabled="@Busy" @onclick="@(() => PickAsync(item))">
-                            @if (ImageUrlPolicy.IsRenderable(item.Url))
+                        <button type="button" class="@($"kit-picker-item{(current ? " kit-picker-item--current" : "")}{(item.Warning is null ? "" : " kit-picker-item--covered")}")"
+                                aria-pressed="@(current ? "true" : "false")" aria-label="@(item.Warning is { } label ? Loc["NavGalleryWarningLabel", label].Value : item.Caption ?? item.AssetId)"
+                                disabled="@(Busy || item.Warning is not null)" @onclick="@(() => PickAsync(item))">
+                            @if (item.Warning is { } warning)
+                            {
+                                <span class="kit-picker-cover">@warning</span>
+                            }
+                            else if (ImageUrlPolicy.IsRenderable(item.Url))
                             {
                                 <img src="@ApiUrl.Resolve(item.Url)" alt="" />
                             }

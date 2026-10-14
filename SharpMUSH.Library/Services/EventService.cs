@@ -24,6 +24,20 @@ public class EventService(
 	ILogger<EventService> logger) : IEventService
 {
 	/// <inheritdoc />
+	public async ValueTask<bool> HasHandlerAsync(string eventName)
+	{
+		var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
+		if (eventHandlerDbRef is null or 0
+				|| await mediator.Send(new GetObjectNodeQuery(new DBRef((int)eventHandlerDbRef.Value, null))) is not AnySharpObject eventHandler)
+		{
+			return false;
+		}
+
+		return await attributeService.GetAttributeAsync(eventHandler, eventHandler, eventName,
+			IAttributeService.AttributeMode.Execute, parent: false) is SharpAttribute[];
+	}
+
+	/// <inheritdoc />
 	public async ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args)
 	{
 		try

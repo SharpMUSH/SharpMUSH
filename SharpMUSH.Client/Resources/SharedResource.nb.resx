@@ -4784,6 +4784,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Se alle</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Tilbake til {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Bildetekst</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Rediger detaljer</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Flytt fram</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Flytt bak</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Ingen bilder har denne taggen.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galleri for {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Rapporter</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Rapporten kunne ikke sendes: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Hva er galt med dette bildet?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Send rapport</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Rapporten din er sendt til staben.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Vis bilde</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtrer etter tagg</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tagger</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Skill taggene med komma.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Innholdsadvarsel</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Dekker bildet til noen velger å se det. Et bilde med advarsel kan ikke være avatar eller banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Innholdsadvarsel: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Bildets detaljer kunne ikke lagres: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Bildet kunne ikke flyttes: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portrett</value>
   </data>

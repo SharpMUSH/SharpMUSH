@@ -4784,6 +4784,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Visa alla</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Alla</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Tillbaka till {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Bildtext</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Redigera detaljer</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Flytta fram</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Flytta bak</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Ingen bild har den här taggen.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galleri för {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Anmäl</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Anmälan kunde inte skickas: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Vad är fel med den här bilden?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Skicka anmälan</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Din anmälan har skickats till personalen.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Visa bild</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtrera efter tagg</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Taggar</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Skilj taggarna åt med kommatecken.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Innehållsvarning</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Döljer bilden tills någon väljer att se den. En bild med varning kan inte vara avatar eller banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Innehållsvarning: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Bildens detaljer kunde inte sparas: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Bilden kunde inte flyttas: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Porträtt</value>
   </data>

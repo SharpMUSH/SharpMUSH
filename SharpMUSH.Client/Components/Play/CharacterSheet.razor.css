@@ -158,3 +158,18 @@
 	object-fit: cover;
 	display: block;
 }
+
+.sheet-gallery-cover {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	width: 100%;
+	height: 100%;
+	padding: 4px;
+	box-sizing: border-box;
+	font-size: 11px;
+	color: var(--text-dim);
+	text-align: center;
+	overflow: hidden;
+}

@@ -4784,6 +4784,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Все</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Все</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Назад к {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Подпись</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Изменить сведения</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Переместить раньше</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Переместить позже</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Ни у одного изображения нет этого тега.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Галерея: {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Пожаловаться</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Не удалось отправить жалобу: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Что не так с этим изображением?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Отправить жалобу</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Ваша жалоба отправлена администрации.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Показать изображение</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Фильтр по тегу</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Теги</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Разделяйте теги запятыми.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Предупреждение о содержимом</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Скрывает изображение, пока зритель сам не решит его открыть. Изображение с предупреждением не может быть аватаром или баннером.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Предупреждение о содержимом: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить сведения об изображении: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Не удалось переместить изображение: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Портрет</value>
   </data>

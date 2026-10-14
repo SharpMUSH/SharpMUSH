@@ -1,0 +1,160 @@
+@page "/character/{Name}/gallery"
+@layout CharactersLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@using SharpMUSH.Client.Components.Characters
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject GalleryService Gallery
+@inject AccountAuthService AccountAuth
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["NavGalleryPageTitle", Name] — @Loc["AppTitle"]</PageTitle>
+
+@* Every image in the character's gallery, in the owner's order, as a grid: the profile's Gallery card
+   links here with View all. Tags narrow the grid; the viewer pages through what the filter kept, and
+   whoever may edit the profile moves, captions, tags and warns images there. An image with a warning
+   is covered by it until opened and chosen. *@
+<div class="char-gallery-page">
+    <PlainPageHeader Kicker="@Loc["Gallery"]" Title="@Loc["NavGalleryPageTitle", Name]">
+        <DescriptionContent>
+            <a class="char-gallery-back" href="@ProfileHref">@Loc["NavGalleryBack", Name]</a>
+        </DescriptionContent>
+    </PlainPageHeader>
+
+    @if (TagChips.Count > 1)
+    {
+        <TypeChips Items="@TagChips" Selected="@_tag" SelectedChanged="SelectTag" AriaLabel="@Loc["NavGalleryTagFilter"]" />
+    }
+
+    @if (_loading)
+    {
+        <div class="char-gallery-grid" aria-busy="true">
+            @for (var i = 0; i < 6; i++)
+            {
+                <SkeletonCard Height="160" />
+            }
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <EmptyBox Class="char-gallery-failed">@_error</EmptyBox>
+    }
+    else if (_items.Count == 0)
+    {
+        <EmptyBox Class="char-gallery-none">@Loc["GalleryEmpty"]</EmptyBox>
+    }
+    else if (Shown.Count == 0)
+    {
+        <EmptyBox Class="char-gallery-no-match">@Loc["NavGalleryNoMatch"]</EmptyBox>
+    }
+    else
+    {
+        <div class="char-gallery-grid">
+            @for (var i = 0; i < Shown.Count; i++)
+            {
+                var index = i;
+                var entry = Shown[i];
+                <figure class="char-gallery-item" @key="entry.AssetId">
+                    <button type="button" class="char-gallery-tile" aria-label="@TileLabel(entry)" @onclick="@(() => OpenViewer(index))">
+                        @if (entry.Warning is { } warning)
+                        {
+                            <span class="char-gallery-cover"><MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" />@warning</span>
+                        }
+                        else if (ImageUrlPolicy.IsRenderable(entry.Url))
+                        {
+                            <img src="@ApiUrl.Resolve(entry.Url)" alt="@(entry.Caption ?? string.Empty)" loading="lazy" />
+                        }
+                        @if (entry.IsIcon)
+                        {
+                            <span class="char-gallery-badge" title="@Loc["NavGalleryPortrait"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
+                            </span>
+                        }
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(entry.Caption))
+                    {
+                        <figcaption class="char-gallery-caption">@entry.Caption</figcaption>
+                    }
+                </figure>
+            }
+        </div>
+    }
+</div>
+
+<GalleryViewer CharacterName="@Name" Items="@Shown" WholeGallery="@_items" CanEdit="@_canEdit"
+               @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Loc["NavGalleryPageTitle", Name]" OnChanged="OnChanged" />
+
+@code {
+    [Parameter] public required string Name { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private const string AllTags = "";
+
+    private IReadOnlyList<GalleryEntry> _items = [];
+    private string _tag = AllTags;
+    private bool _loading = true;
+    private bool _canEdit;
+    private bool _viewerOpen;
+    private int _viewerIndex;
+    private string? _error;
+    private string? _loadedFor;
+
+    /// <summary>Bumped on every load: an answer for an older load is dropped.</summary>
+    private int _generation;
+
+    private string ProfileHref => $"/character/{Uri.EscapeDataString(Name)}";
+
+    /// <summary>The images the tag filter keeps, in the gallery's order.</summary>
+    private IReadOnlyList<GalleryEntry> Shown =>
+        _tag == AllTags ? _items : _items.Where(i => i.Tags?.Contains(_tag) == true).ToList();
+
+    private IReadOnlyList<(string Key, string Label)> TagChips =>
+        [(AllTags, Loc["NavGalleryAllTags"]), .. GalleryService.AllTags(_items).Select(t => (t, t))];
+
+    private string TileLabel(GalleryEntry entry) =>
+        entry.Warning is { } warning ? Loc["NavGalleryWarningLabel", warning] : entry.Caption ?? entry.FileName;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? null : (await AuthState).User;
+        var mine = user?.Identity?.IsAuthenticated == true && await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> own
+            ? own
+            : [];
+        _canEdit = ProfileEditRights.CanEdit(user, mine, Name);
+
+        if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase)) return;
+        _loadedFor = Name;
+        (_items, _tag, _error, _loading, _viewerOpen) = ([], AllTags, null, true, false);
+        var generation = ++_generation;
+        var result = await Gallery.ListAsync(Name);
+        if (generation != _generation) return;
+        (_items, _error) = result switch
+        {
+            List<GalleryEntry> items => (items, (string?)null),
+            ApiFailure failure => ([], failure.Message),
+        };
+        _loading = false;
+    }
+
+    private void SelectTag(string tag)
+    {
+        _tag = tag;
+        _viewerOpen = false;
+    }
+
+    private void OpenViewer(int index)
+    {
+        _viewerIndex = index;
+        _viewerOpen = true;
+    }
+
+    /// <summary>A write from the viewer. A filter whose last image lost its tag falls back to every image.</summary>
+    private void OnChanged(List<GalleryEntry> updated)
+    {
+        _items = updated;
+        if (_tag != AllTags && Shown.Count == 0) _tag = AllTags;
+        if (Shown.Count == 0) _viewerOpen = false;
+    }
+}

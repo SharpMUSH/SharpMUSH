@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Forms;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -76,6 +77,30 @@ public class GalleryService(IHttpClientFactory httpClientFactory, CharacterDirec
 	public async Task<ApiResult<List<GalleryEntry>>> ReplaceAsync(string name, IReadOnlyList<GalleryEntry> items) =>
 		Written(await Client.PutApiAsync<IReadOnlyList<GalleryEntry>, List<GalleryEntry>>(GalleryUrl(name), items, NoGallery));
 
+	/// <summary>
+	/// Reports an image to the game's staff with the reason given. The server fires the game's
+	/// <c>GALLERY`REPORT</c> event; what happens next is the game's choice.
+	/// </summary>
+	public Task<ApiResult<Success>> ReportAsync(string name, string assetId, string reason) =>
+		Client.PostApiAsync($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}/report", new GalleryReportRequest(reason));
+
+	private Task<bool>? _reporting;
+
+	/// <summary>
+	/// Whether the game takes reports of images, asked once: Report is offered only when a report reaches
+	/// someone. A failed read answers no and is asked again next time.
+	/// </summary>
+	public async Task<bool> ReportsTakenAsync()
+	{
+		var reporting = _reporting ??= ReadReportingAsync();
+		var taken = await reporting;
+		if (!taken) _reporting = null;
+		return taken;
+	}
+
+	private async Task<bool> ReadReportingAsync() =>
+		await Client.GetApiAsync<GalleryReporting>("api/gallery/reports", NoGallery) is GalleryReporting { Taken: true };
+
 	/// <summary>A write the server took may have moved the avatar, which every avatar on screen shows.</summary>
 	private ApiResult<List<GalleryEntry>> Written(ApiResult<List<GalleryEntry>> result)
 	{
@@ -90,6 +115,38 @@ public class GalleryService(IHttpClientFactory httpClientFactory, CharacterDirec
 	/// <summary>The gallery with <paramref name="assetId"/> as its only banner, or none when null.</summary>
 	public static IReadOnlyList<GalleryEntry> WithBanner(IEnumerable<GalleryEntry> items, string? assetId) =>
 		[.. items.Select(i => i with { IsBanner = i.AssetId == assetId })];
+
+	/// <summary>The gallery with <paramref name="assetId"/> moved <paramref name="delta"/> places, kept inside the list.</summary>
+	public static IReadOnlyList<GalleryEntry> Moved(IReadOnlyList<GalleryEntry> items, string assetId, int delta)
+	{
+		var list = items.ToList();
+		var from = list.FindIndex(i => i.AssetId == assetId);
+		if (from < 0) return items;
+		var to = Math.Clamp(from + delta, 0, list.Count - 1);
+		var item = list[from];
+		list.RemoveAt(from);
+		list.Insert(to, item);
+		return [.. list.Select((e, i) => e with { Order = i })];
+	}
+
+	/// <summary>The gallery with <paramref name="assetId"/>'s caption, tags and warning replaced; blank clears.</summary>
+	public static IReadOnlyList<GalleryEntry> WithDetails(IEnumerable<GalleryEntry> items, string assetId, string? caption, string? tags, string? warning) =>
+		[.. items.Select(i => i.AssetId != assetId
+			? i
+			: i with
+			{
+				Caption = string.IsNullOrWhiteSpace(caption) ? null : caption.Trim(),
+				Tags = ParseTags(tags) is { Count: > 0 } parsed ? parsed : null,
+				Warning = string.IsNullOrWhiteSpace(warning) ? null : warning.Trim(),
+			})];
+
+	/// <summary>Tags typed as a comma-separated list: trimmed, lower-cased, each once.</summary>
+	public static IReadOnlyList<string> ParseTags(string? text) =>
+		[.. (text ?? string.Empty).Split(',').Select(t => t.Trim().ToLowerInvariant()).Where(t => t.Length > 0).Distinct(StringComparer.Ordinal)];
+
+	/// <summary>Every tag the gallery's images carry, in the order they first appear.</summary>
+	public static IReadOnlyList<string> AllTags(IEnumerable<GalleryEntry> items) =>
+		[.. items.SelectMany(i => i.Tags ?? []).Distinct(StringComparer.Ordinal)];
 
 	private static string GalleryUrl(string name) => $"api/profile/{Uri.EscapeDataString(name)}/gallery";
 }
