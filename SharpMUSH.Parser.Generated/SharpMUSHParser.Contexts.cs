@@ -247,6 +247,7 @@ public partial class SharpMUSHParser
 		ITerminalNode OTHER() => SoftcodeTree.Token(this, SharpMUSHParser.OTHER, 0);
 		ITerminalNode DOLLAR() => SoftcodeTree.Token(this, SharpMUSHParser.DOLLAR, 0);
 		ITerminalNode HASH() => SoftcodeTree.Token(this, SharpMUSHParser.HASH, 0);
+		ITerminalNode PERCENT_AT_END() => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT_AT_END, 0);
 		AnsiContext ansi() => SoftcodeTree.Rule<AnsiContext>(this, 0);
 	}
 

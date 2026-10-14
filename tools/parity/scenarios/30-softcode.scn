@@ -132,3 +132,14 @@ think a[]b|[strcat(x,[],y)]|[]
 @skip/ifelse 1=think ifelse-true,think ifelse-false
 @skip/ifelse 0=think ifelse-true,think ifelse-false
 @skip/ifelse 0=think ifelse-only-true
+
+::case sc.trailing-percent  a % at the end of the text is a literal %; a \ there is dropped when evaluated and kept when stored
+::as wiz
+think 50%
+say 50%
+think 50%% x
+think %
+think a\
+&TRAILPCT me=50%
+&TRAILBS me=a\
+think [get(me/TRAILPCT)] [u(me/TRAILPCT)] [get(me/TRAILBS)] [u(me/TRAILBS)]

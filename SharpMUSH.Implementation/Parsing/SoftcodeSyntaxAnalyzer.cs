@@ -396,7 +396,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.Substitution,
 			"OBRACK" or "CBRACK" => SemanticTokenType.BracketSubstitution,
 			"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
-			"ESCAPE" => SemanticTokenType.EscapeSequence,
+			"ESCAPE" or "ESCAPE_AT_END" => SemanticTokenType.EscapeSequence,
 			"OANSI" or "CANSI" or "ANSICHARACTER" => SemanticTokenType.AnsiCode,
 			"PERCENT" => SemanticTokenType.Substitution,
 			"FUNCHAR" => ClassifyFunction(token.Text),
@@ -476,7 +476,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 				"PERCENT" => SemanticTokenType.Substitution,
 				"OBRACK" or "CBRACK" => SemanticTokenType.BracketSubstitution,
 				"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
-				"ESCAPE" => SemanticTokenType.EscapeSequence,
+				"ESCAPE" or "ESCAPE_AT_END" => SemanticTokenType.EscapeSequence,
 				"COMMAWS" or "EQUALS" or "SEMICOLON" => SemanticTokenType.Operator,
 				_ => SemanticTokenType.Text
 			},
