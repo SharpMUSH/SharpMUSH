@@ -176,6 +176,7 @@ public class GeneralCommandTests
 	[Arguments("%d0")]
 	[Arguments("%dL")]
 	[Arguments("[iter(a,%d0)]")]
+	[Arguments("%d99999999999999999999")]
 	public async ValueTask DolistElementOutsideDolist(string code)
 	{
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(code));

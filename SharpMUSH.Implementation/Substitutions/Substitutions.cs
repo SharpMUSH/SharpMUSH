@@ -169,8 +169,9 @@ public static partial class Substitutions
 	/// </summary>
 	private static CallState HandleDoListNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		var level = int.Parse(symbol.Message.ToPlainText());
-		var frame = parser.CurrentState.IterationRegisters.Where(frame => frame.DoList).ElementAtOrDefault(level);
+		var frame = int.TryParse(symbol.Message.ToPlainText(), out var level)
+			? parser.CurrentState.IterationRegisters.Where(frame => frame.DoList).ElementAtOrDefault(level)
+			: null;
 		return frame is null
 			? new CallState(ErrorMessages.Returns.RegisterRange)
 			: new CallState(frame.Value);
