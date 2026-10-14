@@ -7732,4 +7732,139 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Reorder</value>
   </data>
+  <data name="AdmWebhooksTitle" xml:space="preserve">
+    <value>Webhooks</value>
+  </data>
+  <data name="AdmCardWebhooks" xml:space="preserve">
+    <value>Send the game's events to programs outside it, signed and retried.</value>
+  </data>
+  <data name="AdmWebhooksDescription" xml:space="preserve">
+    <value>Each webhook posts the events it hears to an address outside the game. In the game, @webhook does the same.</value>
+  </data>
+  <data name="AdmWebhooksAddTitle" xml:space="preserve">
+    <value>Add a webhook</value>
+  </data>
+  <data name="AdmWebhooksName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AdmWebhooksNameHint" xml:space="preserve">
+    <value>Letters, digits, - and _.</value>
+  </data>
+  <data name="AdmWebhooksAddress" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="AdmWebhooksAddressHint" xml:space="preserve">
+    <value>A full https:// URL. Leave it empty to hear the events only through the event stream.</value>
+  </data>
+  <data name="AdmWebhooksEvents" xml:space="preserve">
+    <value>Events</value>
+  </data>
+  <data name="AdmWebhooksEventsHint" xml:space="preserve">
+    <value>Event names or patterns, separated by spaces, such as PLAYER`* CHANNEL`MESSAGE.</value>
+  </data>
+  <data name="AdmWebhooksCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="AdmWebhooksCreated" xml:space="preserve">
+    <value>Webhook {0} created.</value>
+  </data>
+  <data name="AdmWebhooksSecretTitle" xml:space="preserve">
+    <value>Signing secret for {0}</value>
+  </data>
+  <data name="AdmWebhooksSecretHint" xml:space="preserve">
+    <value>The endpoint checks each delivery's signature with this secret. Keep it private.</value>
+  </data>
+  <data name="AdmWebhooksStreamHint" xml:space="preserve">
+    <value>Tools without an address of their own can read the events from {0}, sending Authorization: Bearer and the secret.</value>
+  </data>
+  <data name="AdmWebhooksCopy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="AdmWebhooksEmpty" xml:space="preserve">
+    <value>There are no webhooks.</value>
+  </data>
+  <data name="AdmWebhooksOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="AdmWebhooksOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="AdmWebhooksStreamOnly" xml:space="preserve">
+    <value>No address: heard only through its event stream</value>
+  </data>
+  <data name="AdmWebhooksDelivered" xml:space="preserve">
+    <value>Delivered</value>
+  </data>
+  <data name="AdmWebhooksFailedTries" xml:space="preserve">
+    <value>Failed tries</value>
+  </data>
+  <data name="AdmWebhooksDropped" xml:space="preserve">
+    <value>Dropped</value>
+  </data>
+  <data name="AdmWebhooksWaiting" xml:space="preserve">
+    <value>Waiting</value>
+  </data>
+  <data name="AdmWebhooksStreams" xml:space="preserve">
+    <value>Streams</value>
+  </data>
+  <data name="AdmWebhooksSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AdmWebhooksSaved" xml:space="preserve">
+    <value>Webhook {0} saved.</value>
+  </data>
+  <data name="AdmWebhooksTurnOn" xml:space="preserve">
+    <value>Turn on</value>
+  </data>
+  <data name="AdmWebhooksTurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="AdmWebhooksTest" xml:space="preserve">
+    <value>Send test</value>
+  </data>
+  <data name="AdmWebhooksTestSent" xml:space="preserve">
+    <value>Sent a test event to {0}.</value>
+  </data>
+  <data name="AdmWebhooksShowSecret" xml:space="preserve">
+    <value>Show secret</value>
+  </data>
+  <data name="AdmWebhooksRotate" xml:space="preserve">
+    <value>New secret</value>
+  </data>
+  <data name="AdmWebhooksRotateConfirm" xml:space="preserve">
+    <value>Give {0} a new secret? The old one stops working at once.</value>
+  </data>
+  <data name="AdmWebhooksDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AdmWebhooksDeleteConfirm" xml:space="preserve">
+    <value>Delete webhook {0}? Deliveries still waiting are dropped.</value>
+  </data>
+  <data name="AdmWebhooksDeleted" xml:space="preserve">
+    <value>Webhook {0} deleted.</value>
+  </data>
+  <data name="AdmWebhooksRecent" xml:space="preserve">
+    <value>Recent tries</value>
+  </data>
+  <data name="AdmWebhooksColTime" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="AdmWebhooksColEvent" xml:space="preserve">
+    <value>Event</value>
+  </data>
+  <data name="AdmWebhooksColTry" xml:space="preserve">
+    <value>Try</value>
+  </data>
+  <data name="AdmWebhooksColResult" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="AdmWebhooksOutcomeDelivered" xml:space="preserve">
+    <value>Delivered ({0})</value>
+  </data>
+  <data name="AdmWebhooksOutcomeRetrying" xml:space="preserve">
+    <value>{0}; will retry</value>
+  </data>
+  <data name="AdmWebhooksOutcomeDropped" xml:space="preserve">
+    <value>{0}; dropped</value>
+  </data>
 </root>

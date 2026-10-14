@@ -1,0 +1,312 @@
+@page "/admin/webhooks"
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Library.Webhooks
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IStringLocalizer<SharedResource> Loc
+@inject WebhooksAdminService Webhooks
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
+
+@* Webhooks: what @webhook does in the game. Each one's address, events and state, edited in place; its
+   delivery counts and recent tries; its secret only when asked for, created or rotated. *@
+
+<PageTitle>@Loc["AdmWebhooksTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+<div class="page-stack page-stack--padded adm-hooks">
+    <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmWebhooksTitle"]" Description="@Loc["AdmWebhooksDescription"]" />
+
+    <KitCard Title="@Loc["AdmWebhooksAddTitle"]">
+        <div class="adm-hooks-form">
+            <MudTextField @bind-Value="_newName" Label="@Loc["AdmWebhooksName"]" HelperText="@Loc["AdmWebhooksNameHint"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" id="webhook-new-name" />
+            <MudTextField @bind-Value="_newUrl" Label="@Loc["AdmWebhooksAddress"]" HelperText="@Loc["AdmWebhooksAddressHint"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" id="webhook-new-url" />
+            <MudTextField @bind-Value="_newEvents" Label="@Loc["AdmWebhooksEvents"]" HelperText="@Loc["AdmWebhooksEventsHint"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" id="webhook-new-events" />
+            <div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" id="webhook-create"
+                           Disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" OnClick="CreateAsync">
+                    @Loc["AdmWebhooksCreate"]
+                </MudButton>
+            </div>
+        </div>
+    </KitCard>
+
+    @if (_shownSecret is { } secret)
+    {
+        <MudAlert Severity="Severity.Info" id="webhook-secret" ShowCloseIcon="true" CloseIconClicked="() => _shownSecret = null">
+            <div class="adm-hooks-secret">
+                <strong>@Loc["AdmWebhooksSecretTitle", secret.Name]</strong>
+                <code>@secret.Secret</code>
+                <span>@Loc["AdmWebhooksSecretHint"]</span>
+                <span>@Loc["AdmWebhooksStreamHint", StreamAddress(secret.Name)]</span>
+                <div><MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => CopyAsync(secret.Secret)">@Loc["AdmWebhooksCopy"]</MudButton></div>
+            </div>
+        </MudAlert>
+    }
+
+    <LoadState TValue="List<WebhookView>" Value="_webhooks" Loading="@(_webhooks is null && _error is null)" Error="@_error"
+               IsEmpty="@(list => list.Count == 0)" Context="list">
+        <Empty><p class="adm-hooks-empty" id="webhooks-empty">@Loc["AdmWebhooksEmpty"]</p></Empty>
+        <ChildContent>
+            @foreach (var hook in list.OrderBy(h => h.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                var draft = Draft(hook);
+                <KitCard Title="@hook.Name" Sub="@StateText(hook)" Class="adm-hooks-card">
+                    <Controls>
+                        <span class="adm-hooks-state @(hook.Enabled ? "adm-hooks-state--on" : null)">
+                            @(hook.Enabled ? Loc["AdmWebhooksOn"] : Loc["AdmWebhooksOff"])
+                        </span>
+                    </Controls>
+                    <ChildContent>
+                        <div class="adm-hooks-body" data-webhook="@hook.Name">
+                            <MudTextField @bind-Value="draft.Url" Label="@Loc["AdmWebhooksAddress"]" HelperText="@Loc["AdmWebhooksAddressHint"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            <MudTextField @bind-Value="draft.Events" Label="@Loc["AdmWebhooksEvents"]" HelperText="@Loc["AdmWebhooksEventsHint"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+
+                            <dl class="adm-hooks-counts">
+                                <div><dt>@Loc["AdmWebhooksDelivered"]</dt><dd>@hook.Status.Delivered</dd></div>
+                                <div><dt>@Loc["AdmWebhooksFailedTries"]</dt><dd>@hook.Status.FailedAttempts</dd></div>
+                                <div><dt>@Loc["AdmWebhooksDropped"]</dt><dd>@hook.Status.Dropped</dd></div>
+                                <div><dt>@Loc["AdmWebhooksWaiting"]</dt><dd>@hook.Status.Pending</dd></div>
+                                <div><dt>@Loc["AdmWebhooksStreams"]</dt><dd>@hook.Status.Streams</dd></div>
+                            </dl>
+
+                            <div class="adm-hooks-actions">
+                                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || !IsDirty(hook))"
+                                           OnClick="() => SaveAsync(hook)">@Loc["AdmWebhooksSave"]</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => ToggleAsync(hook)">
+                                    @(hook.Enabled ? Loc["AdmWebhooksTurnOff"] : Loc["AdmWebhooksTurnOn"])
+                                </MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => TestAsync(hook)">@Loc["AdmWebhooksTest"]</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => ShowSecretAsync(hook)">@Loc["AdmWebhooksShowSecret"]</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => RotateAsync(hook)">@Loc["AdmWebhooksRotate"]</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="_busy" OnClick="() => DeleteAsync(hook)">@Loc["AdmWebhooksDelete"]</MudButton>
+                            </div>
+
+                            @if (hook.Status.Recent.Count > 0)
+                            {
+                                <MudSimpleTable Dense="true" Class="adm-hooks-recent">
+                                    <caption>@Loc["AdmWebhooksRecent"]</caption>
+                                    <thead>
+                                        <tr>
+                                            <th>@Loc["AdmWebhooksColTime"]</th>
+                                            <th>@Loc["AdmWebhooksColEvent"]</th>
+                                            <th>@Loc["AdmWebhooksColTry"]</th>
+                                            <th>@Loc["AdmWebhooksColResult"]</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var attempt in hook.Status.Recent)
+                                        {
+                                            <tr>
+                                                <td>@attempt.At.ToLocalTime().ToString("g")</td>
+                                                <td><code>@attempt.EventName</code></td>
+                                                <td>@attempt.Attempt</td>
+                                                <td>@Result(attempt)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </MudSimpleTable>
+                            }
+                        </div>
+                    </ChildContent>
+                </KitCard>
+            }
+        </ChildContent>
+    </LoadState>
+</div>
+
+@code {
+    private List<WebhookView>? _webhooks;
+    private string? _error;
+    private bool _busy;
+    private string _newName = "";
+    private string _newUrl = "";
+    private string _newEvents = "";
+    private WebhookSecret? _shownSecret;
+    private readonly Dictionary<string, HookDraft> _drafts = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The address and events as the page's fields hold them, before they are saved.</summary>
+    private sealed class HookDraft
+    {
+        public string Url { get; set; } = "";
+        public string Events { get; set; } = "";
+    }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        switch (await Webhooks.ListAsync())
+        {
+            case List<WebhookView> list:
+                _webhooks = list;
+                _error = null;
+                _drafts.Clear();
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private HookDraft Draft(WebhookView hook)
+    {
+        if (!_drafts.TryGetValue(hook.Name, out var draft))
+        {
+            _drafts[hook.Name] = draft = new HookDraft { Url = hook.Url ?? "", Events = string.Join(' ', hook.Events) };
+        }
+
+        return draft;
+    }
+
+    private bool IsDirty(WebhookView hook)
+        => Draft(hook) is var draft && (draft.Url.Trim() != (hook.Url ?? "") || Split(draft.Events) is var events
+            && !events.Select(e => e.ToUpperInvariant()).SequenceEqual(hook.Events));
+
+    private static string[] Split(string events) => events.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+    private string StateText(WebhookView hook)
+        => hook.Url is { Length: > 0 } url ? url : Loc["AdmWebhooksStreamOnly"];
+
+    private string Result(WebhookAttempt attempt) => attempt.Outcome switch
+    {
+        WebhookAttemptOutcome.Delivered => Loc["AdmWebhooksOutcomeDelivered", attempt.StatusCode ?? 0],
+        WebhookAttemptOutcome.Retrying => Loc["AdmWebhooksOutcomeRetrying", attempt.Error ?? ""],
+        _ => Loc["AdmWebhooksOutcomeDropped", attempt.Error ?? ""],
+    };
+
+    private string StreamAddress(string name)
+        => $"{Navigation.BaseUri.Replace("https://", "wss://").Replace("http://", "ws://").TrimEnd('/')}/api/webhooks/{Uri.EscapeDataString(name)}/stream";
+
+    private Task CreateAsync()
+    {
+        var request = new WebhookCreateRequest(_newName.Trim(), string.IsNullOrWhiteSpace(_newUrl) ? null : _newUrl.Trim(), Split(_newEvents));
+        return RunAsync(async () => await Webhooks.CreateAsync(request) switch
+        {
+            WebhookSecret secret => Created(secret),
+            ApiFailure failure => failure.Message,
+        });
+    }
+
+    private string? Created(WebhookSecret secret)
+    {
+        _shownSecret = secret;
+        _newName = _newUrl = _newEvents = "";
+        return Done(Loc["AdmWebhooksCreated", secret.Name]);
+    }
+
+    private Task SaveAsync(WebhookView hook)
+    {
+        var draft = Draft(hook);
+        return UpdateAsync(hook.Name, new WebhookUpdateRequest(draft.Url.Trim(), Split(draft.Events), null));
+    }
+
+    private Task ToggleAsync(WebhookView hook) => UpdateAsync(hook.Name, new WebhookUpdateRequest(null, null, !hook.Enabled));
+
+    private Task UpdateAsync(string name, WebhookUpdateRequest request)
+        => RunAsync(async () => await Webhooks.UpdateAsync(name, request) switch
+        {
+            WebhookView => Done(Loc["AdmWebhooksSaved", name]),
+            ApiFailure failure => failure.Message,
+        });
+
+    private Task TestAsync(WebhookView hook)
+        => RunAsync(async () => await Webhooks.TestAsync(hook.Name) switch
+        {
+            WebhookTestSent => Done(Loc["AdmWebhooksTestSent", hook.Name]),
+            ApiFailure failure => failure.Message,
+        });
+
+    private async Task ShowSecretAsync(WebhookView hook)
+    {
+        switch (await Webhooks.SecretAsync(hook.Name))
+        {
+            case WebhookSecret secret:
+                _shownSecret = secret;
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+        }
+    }
+
+    private async Task RotateAsync(WebhookView hook)
+    {
+        if (!await ConfirmAsync(Loc["AdmWebhooksRotateConfirm", hook.Name])) return;
+        await RunAsync(async () => await Webhooks.RotateAsync(hook.Name) switch
+        {
+            WebhookSecret secret => Rotated(secret),
+            ApiFailure failure => failure.Message,
+        });
+    }
+
+    private string? Rotated(WebhookSecret secret)
+    {
+        _shownSecret = secret;
+        return Done(Loc["AdmWebhooksSaved", secret.Name]);
+    }
+
+    private async Task DeleteAsync(WebhookView hook)
+    {
+        if (!await ConfirmAsync(Loc["AdmWebhooksDeleteConfirm", hook.Name])) return;
+        await RunAsync(async () => await Webhooks.DeleteAsync(hook.Name) switch
+        {
+            Success => Deleted(hook.Name),
+            ApiFailure failure => failure.Message,
+        });
+    }
+
+    private string? Deleted(string name)
+    {
+        if (_shownSecret?.Name == name) _shownSecret = null;
+        return Done(Loc["AdmWebhooksDeleted", name]);
+    }
+
+    private async Task<bool> ConfirmAsync(string question)
+        => await DialogService.ShowMessageBoxAsync(Loc["WidConfirm"].Value, question,
+            yesText: Loc["WidConfirm"].Value, cancelText: Loc["Cancel"].Value) == true;
+
+    /// <summary>Says a change worked; nothing went wrong, so there is no failure to report.</summary>
+    private string? Done(string said)
+    {
+        Snackbar.Add(said, Severity.Success);
+        return null;
+    }
+
+    /// <summary>Runs one change, reports its failure if it has one, and reads the list again so the counts are current.</summary>
+    private async Task RunAsync(Func<Task<string?>> change)
+    {
+        _busy = true;
+        try
+        {
+            if (await change() is { } failure)
+            {
+                Snackbar.Add(failure, Severity.Error);
+                return;
+            }
+
+            await LoadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        }
+        catch (JSException)
+        {
+            // Rejected outside a secure context; the secret is still on screen to copy by hand.
+        }
+    }
+}

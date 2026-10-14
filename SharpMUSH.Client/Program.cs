@@ -70,6 +70,7 @@ builder.Services.AddSingleton<AsciiTranslationsService>();
 builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();
 builder.Services.AddSingleton<GameMessagesService>();
+builder.Services.AddSingleton<WebhooksAdminService>();
 builder.Services.AddSingleton<PortalThemesAdminService>();
 builder.Services.AddSingleton<AdminCharactersService>();
 builder.Services.AddSingleton<AdminAuditService>();

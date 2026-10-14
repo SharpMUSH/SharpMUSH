@@ -105,6 +105,7 @@ public static class BuildNavCatalog
 
 		new("/admin/server", Icons.Material.Filled.Dns, "AdmServerStatusLabel", "AdmCardServer", Group.Server, ["server.admin"]),
 		new("/admin/config", Icons.Material.Filled.Tune, "Configuration", "AdmCardConfig", Group.Server, ["config.admin"]),
+		new("/admin/webhooks", Icons.Material.Filled.Webhook, "AdmWebhooksTitle", "AdmCardWebhooks", Group.Server, ["config.admin"]),
 		new("/admin/import", Icons.Material.Filled.CloudUpload, "AdmImportLabel", "AdmCardImport", Group.Server, ["server.admin"]),
 	];
 

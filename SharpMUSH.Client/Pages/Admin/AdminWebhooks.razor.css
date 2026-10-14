@@ -1,0 +1,61 @@
+.adm-hooks-form,
+.adm-hooks-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px 16px;
+}
+
+.adm-hooks-secret {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-wrap: anywhere;
+}
+
+.adm-hooks-empty {
+    color: var(--text-dim);
+}
+
+.adm-hooks-state {
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+.adm-hooks-state--on {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.adm-hooks-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.adm-hooks-counts dt {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+.adm-hooks-counts dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.adm-hooks-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+@container page (max-width: 48rem) {
+    .adm-hooks-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

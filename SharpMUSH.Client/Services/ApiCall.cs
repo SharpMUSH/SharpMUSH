@@ -73,6 +73,11 @@ public static class ApiCall
 		this HttpClient http, string url, TBody body, string whenEmpty) =>
 		ReadingAsync<TResult>(() => http.PutAsJsonAsync(url, body), whenEmpty);
 
+	/// <summary>PATCHes <paramref name="body"/> as JSON and reads a <typeparamref name="TResult"/> back.</summary>
+	public static Task<ApiResult<TResult>> PatchApiAsync<TBody, TResult>(
+		this HttpClient http, string url, TBody body, string whenEmpty) =>
+		ReadingAsync<TResult>(() => http.PatchAsJsonAsync(url, body), whenEmpty);
+
 	/// <summary>PUTs <paramref name="body"/> as JSON where the answer is only whether it worked.</summary>
 	public static async Task<ApiResult<Success>> PutApiAsync<TBody>(this HttpClient http, string url, TBody body) =>
 		await SucceededAsync(() => http.PutAsJsonAsync(url, body));
