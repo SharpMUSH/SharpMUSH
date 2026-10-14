@@ -44,7 +44,10 @@ public sealed class SecretStore(
 
 	private readonly SemaphoreSlim _writeLock = new(1, 1);
 
+	// A declaration under a name no one could set is dropped, so every name this store looks up, reads a file
+	// for or logs has passed SecretNames.IsValid.
 	private readonly IReadOnlyDictionary<string, SecretDefinition> _definitions = definitions
+		.Where(definition => SecretNames.IsValid(definition.Name))
 		.GroupBy(definition => definition.Name, StringComparer.Ordinal)
 		.ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 
@@ -92,7 +95,7 @@ public sealed class SecretStore(
 	{
 		if (!SecretNames.IsValid(name))
 		{
-			return new Error<string>($"'{name}' is not a secret name: use lower-case letters and digits, in parts joined by '.', '-' or '_'.");
+			return new Error<string>($"'{name}' is not a secret name: use lower-case letters and digits, in parts joined by '.'.");
 		}
 
 		if (value.Length == 0)

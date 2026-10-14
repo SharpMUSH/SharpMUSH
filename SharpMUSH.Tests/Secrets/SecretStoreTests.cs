@@ -21,6 +21,7 @@ public class SecretStoreTests
 	private static readonly SecretAuthor Grave = new("#1:1", "Grave");
 
 	private static readonly SecretDefinition Token = new("discord.token", "The Discord bot's token.", "discord.admin");
+	private static readonly SecretDefinition Misnamed = new("../outside", "Names a file outside the secrets directory.");
 
 	/// <summary>
 	/// A world, a key ring beside it and a store over both. The ring caches its keys and refreshes them in the
@@ -54,7 +55,7 @@ public class SecretStoreTests
 		}
 
 		private SecretStore Open() => new(World, _ring.GetRequiredService<IDataProtectionProvider>(),
-			[SecretDefinition.SqlPassword, Token],
+			[SecretDefinition.SqlPassword, Token, Misnamed],
 			new SecretStoreOptions(Files, name => _environment?.GetValueOrDefault(name)),
 			new FixedClock(Now), NullLogger<SecretStore>.Instance);
 
@@ -179,7 +180,7 @@ public class SecretStoreTests
 		var list = await host.Store.ListAsync();
 
 		await Assert.That(list.Select(s => s.Name)).IsEquivalentTo(new[] { "discord.token", "sql.password", "webhook.mailrelay.signing" },
-			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("a declaration under a name no one could set is dropped");
 		await Assert.That(list.Single(s => s.Name == "discord.token")).IsEqualTo(new SecretStatus("discord.token",
 			Token.Description, SecretSource.Unset, null, false, null, null, "discord.admin", true));
 		await Assert.That(list.Single(s => s.Name == "webhook.mailrelay.signing").Declared).IsFalse();
