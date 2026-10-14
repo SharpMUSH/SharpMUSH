@@ -1,4 +1,8 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -122,18 +126,33 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	private record SceneDetailDto(string Key, string Label, string Hint, List<string> Choices, bool Many, bool Listed, int Order);
 	private record SceneDetailsDto(List<SceneDetailDto> Details, List<JsonElement> Problems);
 
+	/// <summary>Not in parallel: it lists a detail on the game's own catalogue for as long as it runs.</summary>
 	[Test]
+	[NotInParallel]
 	public async Task GetDetails_ReturnsTheSceneLoggersDetailsInOrder()
 	{
-		var response = await CreateClient().GetAsync("api/scenes/details");
+		var registry = (IPackageRegistryService)factory.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+		var key = $"d{Guid.NewGuid():N}"[..12];
+		await Eval($$"""attrib_set(#{{logger.Number}}/DETAIL`{{key}},lit({"label":"Era","hint":"When it is set.","many":true,"order":-1000}))""");
+		try
+		{
+			var response = await CreateClient().GetAsync("api/scenes/details");
 
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		var dto = (await response.Content.ReadFromJsonAsync<SceneDetailsDto>())!;
-		await Assert.That(dto.Details.Take(3).Select(d => d.Key)).IsEquivalentTo(new[] { "verse", "canon", "warning" });
-		var canon = dto.Details.Single(d => d.Key == "canon");
-		await Assert.That(canon.Label).IsEqualTo("Canon");
-		await Assert.That(canon.Many).IsTrue();
-		await Assert.That(canon.Listed).IsFalse();
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+			var dto = (await response.Content.ReadFromJsonAsync<SceneDetailsDto>())!;
+			var first = dto.Details.First();
+			await Assert.That(first.Key).IsEqualTo(key).Because("the lowest order comes first");
+			await Assert.That(first.Label).IsEqualTo("Era");
+			await Assert.That(first.Hint).IsEqualTo("When it is set.");
+			await Assert.That(first.Choices).IsEmpty();
+			await Assert.That(first.Many).IsTrue();
+			await Assert.That(first.Listed).IsFalse();
+		}
+		finally
+		{
+			await Eval($"attrib_set(#{logger.Number}/DETAIL`{key})");
+		}
 	}
 
 	[Test]

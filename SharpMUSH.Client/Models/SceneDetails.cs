@@ -48,10 +48,9 @@ public sealed record SceneDetailCatalogue(IReadOnlyList<SceneDetailInfo> Details
 	public IReadOnlyList<(SceneDetailInfo Detail, IReadOnlyList<string> Values)> Of(SceneSummary scene)
 	{
 		var shown = new List<(SceneDetailInfo, IReadOnlyList<string>)>();
-		foreach (var detail in Details)
+		foreach (var detail in Details.Where(d => scene.Meta.ContainsKey(d.Key)))
 		{
-			if (scene.Meta.TryGetValue(detail.Key, out var value) && detail.Values(value) is { Count: > 0 } values)
-				shown.Add((detail, values));
+			if (detail.Values(scene.Meta[detail.Key]) is { Count: > 0 } values) shown.Add((detail, values));
 		}
 
 		var listed = Details.Select(d => d.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);

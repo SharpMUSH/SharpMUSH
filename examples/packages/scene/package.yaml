@@ -181,9 +181,10 @@ objects:
       FUN`TYPE`FRAMED: |-
         [not(match(band message notice,scenetype(lcstr(%0),presentation)))]
       # The rule over pose %1 of scene %0: who posed it and the pose on the left, the scene and the pose's marks
-      # (+scene/mark) on the right. When the line is too narrow for both, the scene goes first.
+      # (+scene/mark) on the right, through the POSE`RULE filters. When the line is too narrow for both, the scene
+      # goes first.
       FUN`POSE`RULE: |-
-        [rule([firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname))] [chr(183)] pose %1,,json(object,title,"left",titles,json(array,json(object,text,json(string,Scene %0[if(words(setr(_m,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<_m>,%b,%b[chr(183)]%b)])]),side,"right"))))]
+        [rule([firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname))] [chr(183)] pose %1,,json(object,title,"left",titles,json(array,json(object,text,json(string,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(_m,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<_m>,%b,%b[chr(183)]%b)])],%0,%1)),side,"right"))))]
       # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: under its rule when its type has one,
       # nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
       FUN`POSE`DRAW: |-
@@ -238,23 +239,36 @@ objects:
           $(?is)^\+scene/sh(?\:o(?\:w)?)? +(.+)$: think [setq(T,lcstr(trim(%1)))]; @assert member(scenetypes(),%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>. +scene/types lists them.,warn)]; &SCENE`SHOW %#=[setunion(get(%#/SCENE`SHOW),%q<T>)]; &SCENE`HIDE %#=[setdiff(get(%#/SCENE`HIDE),%q<T>)]; @assert member(get(%#/SCENE`SHOW),%q<T>)=@pemit %#=[notice(SCENE,Your choice could not be saved on your character.,warn)]; @pemit %#=[notice(SCENE,[scenetype(%q<T>,label)] lines show in your recall and log.,ok)]
         flags: [REGEXP]
 
+      # ---- filters ----------------------------------------------------------------
+      # Another package changes what +scene shows without editing this one: it attaches FILTER`<POINT>`<NAME> to the
+      # Scene Logger. Where +scene draws a point, chain() runs every filter on it in name order: each gets what would
+      # be shown as %0 and returns what is shown instead, and the next gets that. Uninstalling the package takes its
+      # filters away. A filter runs here, as the Logger, with %# the player reading. The points:
+      #   CARD         %0 the body of a scene's card (+scene <id>), between its title and its last rule; %1 the scene
+      #   LIST`TITLE   %0 a scene's title in +scene, /old and /mine, with its listed details; %1 the scene
+      #   LOG`HEAD     %0 the lines over +scene/log; %1 the scene
+      #   POSE`RULE    %0 the right side of the rule over a pose, plain text; %1 the scene, %2 the pose
+      #   DETAIL`SHOW  %0 a scene's value for a detail, as shown everywhere it is shown; %1 the scene, %2 the detail
+      #   JOIN         %0 what a player is told when they join; %1 the scene, %2 the player
+      FUN`FILTER: |-
+        chain(u(%!/FUN`FILTERS,%0),%1,%2,%3)
+      # The filters on point %0, as the chain() list: this object's FILTER`%0`<NAME> attributes.
+      FUN`FILTERS: |-
+        iter(lattr(%!/FILTER`%0`*),%!/%i0)
+
       # ---- scene details ----------------------------------------------------------
       # A scene's details say what it is about beyond its title and pitch: the verse it is set in, the canon it
-      # draws on, a content warning. Each is one key of the scene's metadata, which @scene/set writes and scene()
-      # reads, so softcode reads a scene's verse as scene(<id>,verse). The catalogue is one attribute per detail:
+      # draws on, a content warning, or anything else its owner names. Each is one key of the scene's metadata,
+      # which @scene/set writes and scene() reads, so softcode reads a scene's verse as scene(<id>,verse). The game
+      # may list some, one attribute per detail; this package lists none, and scene-verse adds verse, canon and
+      # warning:
       #   DETAIL`<KEY>  JSON the Scene plugin reads: label (its name for people), hint (one line on what goes in
       #                 it), choices (the values it allows; none means any text), many (true when a scene may give
       #                 several, split by |), listed (shown beside the title in +scene lists and on the portal's
       #                 scene cards) and order. scenedetails() lists the keys, scenedetail() reads a field.
       # A key must be a word that is not one of the scene's own fields (status, title, room, ...). Staff with
-      # layout.admin change the catalogue with +scene/detail/add, /set and /remove. With DATA`OPEN_DETAILS set,
-      # an owner may also set a detail the catalogue does not list, shown under its key.
-      DETAIL`VERSE: |-
-        {"label":"Verse","hint":"The setting or universe the scene takes place in.","listed":true,"order":10}
-      DETAIL`CANON: |-
-        {"label":"Canon","hint":"The source works the scene draws on. Split several with |.","many":true,"order":20}
-      DETAIL`WARNING: |-
-        {"label":"Content warning","hint":"What a reader may want to know before joining, such as violence. Split several with |.","many":true,"listed":true,"order":30}
+      # layout.admin change the catalogue with +scene/detail/add, /set and /remove. With DATA`OPEN_DETAILS set, as
+      # shipped, an owner may set any detail, shown under its key when the catalogue does not list it.
       DATA`OPEN_DETAILS: |-
         1
       DATA`DENY_DETAILS: |-
@@ -263,34 +277,34 @@ objects:
         label hint choices many listed order
       # The name detail %0 goes by: its label, or for one the catalogue does not list, its key.
       FUN`DETAIL`LABEL: |-
-        [if(member(scenedetails(),%0),scenedetail(%0),capstr(%0))]
-      # Scene %0's value for detail %1, several values split by a middle dot.
+        if(member(scenedetails(),%0),scenedetail(%0),capstr(%0))
+      # Scene %0's value for detail %1, several values split by a middle dot, through the DETAIL`SHOW filters.
       FUN`DETAIL`SHOW: |-
-        [edit(scene(%0,%1),|,%b[chr(183)]%b)]
+        u(%!/FUN`FILTER,DETAIL`SHOW,edit(scene(%0,%1),|,%b[chr(183)]%b),%0,%1)
       # How many of scene %0's values for detail %1 match the pattern %2, ignoring case.
       FUN`DETAIL`HAS: |-
-        [if(not(strmatch(setr(_v,scene(%0,%1)),#-1*)),words(iter(%q<_v>,if(strmatch(trim(%i0),%2),1),|,%b)),0)]
+        if(not(strmatch(setr(_v,scene(%0,%1)),#-1*)),words(iter(%q<_v>,if(strmatch(trim(%i0),%2),1),|,%b)),0)
       # The scene's details as a table, a name and a value to a row, for the card.
       FUN`DETAIL`TABLE: |-
-        [datacolumns(u(%!/FUN`TABLE`OPTS,1,|,1|2,|1),[iter(%1,ansi(h,u(%!/FUN`DETAIL`LABEL,%i0)),,%r)],[iter(%1,u(%!/FUN`DETAIL`SHOW,%0,%i0),,%r)])]
+        datacolumns(u(%!/FUN`TABLE`OPTS,1,|,1|2,|1),iter(%1,ansi(h,u(%!/FUN`DETAIL`LABEL,%i0)),,%r),iter(%1,u(%!/FUN`DETAIL`SHOW,%0,%i0),,%r))
       # The scene's details on one line, for the top of its log.
       FUN`DETAIL`LINE: |-
-        [iter(scene(%0,details),[ansi(h,u(%!/FUN`DETAIL`LABEL,%i0))]: [u(%!/FUN`DETAIL`SHOW,%0,%i0)],,%b[chr(183)]%b)]
+        iter(scene(%0,details),ansi(h,u(%!/FUN`DETAIL`LABEL,%i0)): [u(%!/FUN`DETAIL`SHOW,%0,%i0)],,%b[chr(183)]%b)
       # The listed details scene %0 has, after its title in a list, in a muted tone.
       FUN`DETAIL`TAGS: |-
-        [setq(_l,squish(iter(scenedetails(),if(cand(scenedetail(%i0,listed),strlen(scene(%0,%i0))),%i0))))][if(words(%q<_l>),tone(muted,%b[chr(183)] [iter(%q<_l>,u(%!/FUN`DETAIL`SHOW,%0,%i0),,%b[chr(183)]%b)]))]
+        setq(_l,squish(iter(scenedetails(),if(cand(scenedetail(%i0,listed),strlen(scene(%0,%i0))),%i0))))[if(words(%q<_l>),tone(muted,%b[chr(183)] [iter(%q<_l>,u(%!/FUN`DETAIL`SHOW,%0,%i0),,%b[chr(183)]%b)]))]
       # What detail %0 takes: its choices, or any text, and whether several.
       FUN`DETAIL`TAKES: |-
-        [if(strlen(setr(_c,scenedetail(%0,choices))),itemize(%q<_c>,|,or),any text)][if(scenedetail(%0,many),\, several split by |)]
+        if(strlen(setr(_c,scenedetail(%0,choices))),itemize(%q<_c>,|,or),any text)[if(scenedetail(%0,many),\, several split by |)]
       # %0's value for catalogue field %1, as JSON: choices are a list split by |, many and listed yes or no.
       FUN`DETAIL`VALUE: |-
-        [switch(%0,choices,[chr(91)][iter(%1,json(string,trim(%i0)),|,chr(44))][chr(93)],many,u(%!/FUN`DETAIL`BOOL,%1),listed,u(%!/FUN`DETAIL`BOOL,%1),order,if(isint(%1),%1,json(string,%1)),json(string,%1))]
+        switch(%0,choices,chr(91)[iter(%1,json(string,trim(%i0)),|,chr(44))][chr(93)],many,u(%!/FUN`DETAIL`BOOL,%1),listed,u(%!/FUN`DETAIL`BOOL,%1),order,if(isint(%1),%1,json(string,%1)),json(string,%1))
       FUN`DETAIL`BOOL: |-
-        [switch(lcstr(%0),yes,true,true,true,on,true,1,true,no,false,false,false,off,false,0,false,json(string,%0))]
+        switch(lcstr(%0),yes,true,true,true,on,true,1,true,no,false,false,false,off,false,0,false,json(string,%0))
       FUN`DETAILS`TABLE: |-
-        [setq(_k,scenedetails())][box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|3|2,||1|),[ansi(h,Detail)]%r[iter(%q<_k>,%i0,,%r)],[ansi(h,Name)]%r[iter(%q<_k>,scenedetail(%i0),,%r)],[ansi(h,What goes in it)]%r[iter(%q<_k>,firstof(scenedetail(%i0,hint),-),,%r)],[ansi(h,Takes)]%r[iter(%q<_k>,u(%!/FUN`DETAIL`TAKES,%i0),,%r)]),Scene details,,u(%!/FUN`FRAME))]
+        setq(_k,scenedetails())[box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|3|2,||1|),[ansi(h,Detail)]%r[iter(%q<_k>,%i0,,%r)],[ansi(h,Name)]%r[iter(%q<_k>,scenedetail(%i0),,%r)],[ansi(h,What goes in it)]%r[iter(%q<_k>,firstof(scenedetail(%i0,hint),-),,%r)],[ansi(h,Takes)]%r[iter(%q<_k>,u(%!/FUN`DETAIL`TAKES,%i0),,%r)]),Scene details,,u(%!/FUN`FRAME))]
       FUN`DETAIL`CARD: |-
-        [box(fields(,Detail,%0,Name,scenedetail(%0),What goes in it,firstof(scenedetail(%0,hint),-),Takes,u(%!/FUN`DETAIL`TAKES,%0),In lists,if(scenedetail(%0,listed),yes,no),Order,scenedetail(%0,order)),Scene detail %0,,u(%!/FUN`FRAME))]
+        box(fields(,Detail,%0,Name,scenedetail(%0),What goes in it,firstof(scenedetail(%0,hint),-),Takes,u(%!/FUN`DETAIL`TAKES,%0),In lists,if(scenedetail(%0,listed),yes,no),Order,scenedetail(%0,order)),Scene detail %0,,u(%!/FUN`FRAME))
       # +scene/details lists the game's details; +scene/detail <key> shows one.
       CMD`DETAILS:
         value: |-
@@ -325,7 +339,7 @@ objects:
       # as the pose's tags. The portal's scene page filters by them, and recall shows them beside the scene on the
       # pose's rule. The pose's author, the scene's owner or a wizard.
       FUN`CAN`MARK: |-
-        [or(strmatch(scenepose(,%1,author),num(%0)),u(%!/FUN`OWNS,%0,scenepose(,%1,scene)))]
+        or(strmatch(scenepose(,%1,author),num(%0)),u(%!/FUN`OWNS,%0,scenepose(,%1,scene)))
       CMD`MARK:
         value: |-
           $(?is)^\+scene/ma(?\:r(?\:k)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert cand(strlen(setr(pid,trim(before(%1,chr(61))))),eq(words(setr(w,lcstr(trim(after(%1,chr(61)))))),1))=@pemit %#=[notice(SCENE,[get(%!/DATA`USAGE`MARK)],warn)]; @assert not(strmatch(scenepose(,%q<pid>,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %q<pid>,warn)]; @assert u(%!/FUN`CAN`MARK,%#,%q<pid>)=@pemit %#=[notice(SCENE,That pose is not yours to mark. Its author or the scene's owner can.,error)]; @assert not(member(scenepose(,%q<pid>,tags),%q<w>))=@pemit %#=[notice(SCENE,Pose %q<pid> is already marked %q<w>.,warn)]; @scene/setpose %q<pid>/tags=[setunion(scenepose(,%q<pid>,tags),%q<w>)]; @pemit %#=[notice(SCENE,Pose %q<pid> marked %q<w>.,ok)]
@@ -608,7 +622,7 @@ objects:
       # exists first; scene() also hides a private scene from a non-member, so it cannot be joined by its id.
       CMD`JOIN:
         value: |-
-          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @if not(strmatch(scenemember(%1,%#,role),owner))={@scene/member %1/participant=%#}; @scene/focus %#=%1; @pemit %#=[notice(SCENE,Joined and focused on scene %1.,ok)]
+          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @if not(strmatch(scenemember(%1,%#,role),owner))={@scene/member %1/participant=%#}; @scene/focus %#=%1; @pemit %#=[u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)]
         flags: [REGEXP]
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
@@ -762,10 +776,11 @@ objects:
         value: |-
           $(?is)^\+scene/rec(?\:a(?\:l(?\:l)?)?)?(?\: +(.*))?$: think [setq(Named,t(pos(chr(61),%1)))][setq(SceneID,if(cand(%q<Named>,strlen(setr(_i,trim(before(%1,chr(61)))))),%q<_i>,scenefocus(%#)))][setq(Count,trim(if(%q<Named>,after(%1,chr(61)),%1)))]; @assert not(strmatch(%q<SceneID>,#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert or(not(strlen(%q<Count>)),and(isint(%q<Count>),gt(%q<Count>,0)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_COUNT)],warn)]; @assert words(sceneposes(%q<SceneID>))=@pemit %#=[notice(SCENE,Scene %q<SceneID> has no poses yet.)]; @include/args %!/INC`RECALL=scene,%q<SceneID>,count,[firstof(%q<Count>,max(1,mul(get(%!/DATA`RECALL_ROUNDS),words(scenemembers(%q<SceneID>)))))]
         flags: [REGEXP]
-      # The whole log of the focused scene, or of the one named, under a rule with its title and a line of its details.
+      # The whole log of the focused scene, or of the one named, under a rule with its title and a line of its details,
+      # through the LOG`HEAD filters.
       CMD`LOG:
         value: |-
-          $(?is)^\+scene/lo(?\:g)?(?\: +(.*))?$: think [setq(SceneID,if(strlen(trim(%1)),trim(%1),scenefocus(%#)))]; @assert not(strmatch(%q<SceneID>,#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert words(sceneposes(%q<SceneID>))=@pemit %#=[notice(SCENE,Scene %q<SceneID> has no poses yet.)]; @pemit %#=[rule(Scene %q<SceneID>: [u(%!/FUN`LIST_TITLE,%q<SceneID>)],,json(object,title,"left"))][if(words(scene(%q<SceneID>,details)),%r[u(%!/FUN`DETAIL`LINE,%q<SceneID>)])]; @include/args %!/INC`RECALL=scene,%q<SceneID>
+          $(?is)^\+scene/lo(?\:g)?(?\: +(.*))?$: think [setq(SceneID,if(strlen(trim(%1)),trim(%1),scenefocus(%#)))]; @assert not(strmatch(%q<SceneID>,#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert words(sceneposes(%q<SceneID>))=@pemit %#=[notice(SCENE,Scene %q<SceneID> has no poses yet.)]; @pemit %#=[u(%!/FUN`FILTER,LOG`HEAD,rule(Scene %q<SceneID>: [u(%!/FUN`LIST_TITLE,%q<SceneID>)],,json(object,title,"left"))[if(words(scene(%q<SceneID>,details)),%r[u(%!/FUN`DETAIL`LINE,%q<SceneID>)])],%q<SceneID>)]; @include/args %!/INC`RECALL=scene,%q<SceneID>
         flags: [REGEXP]
 
       # ---- pose tracker (+pot): query-on-run turn tracker for the focused scene --
@@ -809,7 +824,7 @@ objects:
       FUN`LIST_LINK: |-
         [cmdlink(edit(u(%!/FUN`LIST_TITLE,%0),%r,%b),+scene %0,+scene %0)]
       FUN`LIST_TABLE: |-
-        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,[u(%!/FUN`LIST_LINK,%i0)][u(%!/FUN`DETAIL`TAGS,%i0)],,%r)],[ansi(h,Where)]%r[iter(%0,u(%!/FUN`SCENE_FIELD,%i0,roomname,-),,%r)],>[ansi(h,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],[ansi(h,Status)]%r[iter(%0,scene(%i0,status),,%r)])]
+        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`FILTER,LIST`TITLE,u(%!/FUN`LIST_LINK,%i0)[u(%!/FUN`DETAIL`TAGS,%i0)],%i0),,%r)],[ansi(h,Where)]%r[iter(%0,u(%!/FUN`SCENE_FIELD,%i0,roomname,-),,%r)],>[ansi(h,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],[ansi(h,Status)]%r[iter(%0,scene(%i0,status),,%r)])]
       # Rows a page holds: what fits the reader's screen under the title, headings, rule and footer.
       FUN`LIST_ROWS: |-
         [max(5,sub(height(%#,24),8))]
@@ -949,8 +964,9 @@ objects:
       # so the URL row is in one call or the other rather than blanked.
       FUN`INFO`FIELDS: |-
         [setq(sw,scene(%0,scheduledfor))][if(strlen(setr(url,u(%!/FUN`URL,%0))),fields(,Status,scene(%0,status),Owner,scene(%0,ownername),Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet),Created,u(%!/FUN`WHEN,scene(%0,startedat)),Scheduled,if(strlen(%q<sw>),u(%!/FUN`WHEN,%q<sw>),-),Watchers,switch(scene(%0,public),1,Anyone,Members only),URL,%q<url>),fields(,Status,scene(%0,status),Owner,scene(%0,ownername),Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet),Created,u(%!/FUN`WHEN,scene(%0,startedat)),Scheduled,if(strlen(%q<sw>),u(%!/FUN`WHEN,%q<sw>),-),Watchers,switch(scene(%0,public),1,Anyone,Members only)))]
+      # The card's body goes through the CARD filters before it is boxed.
       INC`DISPLAY`INFO: |-
-        @pemit %#=[box([u(%!/FUN`INFO`FIELDS,%<scene>)]%r[rule(Pitch)]%r[u(%!/FUN`SCENE_FIELD,%<scene>,summary,-)]%r[if(words(setr(_dk,scene(%<scene>,details))),[rule(Details)]%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<_dk>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],Scene %<scene>: [u(%!/FUN`LIST_TITLE,%<scene>)],,u(%!/FUN`FRAME))]
+        @pemit %#=[box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>)%r[rule(Pitch)]%r[u(%!/FUN`SCENE_FIELD,%<scene>,summary,-)]%r[if(words(setr(_dk,scene(%<scene>,details))),[rule(Details)]%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<_dk>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],%<scene>),Scene %<scene>: [u(%!/FUN`LIST_TITLE,%<scene>)],,u(%!/FUN`FRAME))]
       # +scene/title [<id>=]<text> and +scene/pitch [<id>=]<text>: the focused scene, or the one named.
       # The id is digits, so a title or pitch that merely has an = in it is not taken for one.
       CMD`TITLE:
@@ -1161,6 +1177,8 @@ objects:
         scene pose|scene details
       SEE`SCENE`DETAILS: |-
         scene pitch|scene types
+      SEE`SCENE`FILTERS: |-
+        scene details|scene types
       SEE`POT: |-
         scene pose|scene join
       HELP`SCENE: |-
@@ -1188,7 +1206,7 @@ objects:
         - `+scene/create <title>` — start one here and focus it
         - `+scene/title \[<id>=\]<text>` — rename it
         - `+scene/pitch \[<id>=\]<text>` — say what it is about, so people can decide to come
-        - `+scene/set \[<id>/\]<detail>=<value>` — its verse, canon, content warning and other details;
+        - `+scene/set \[<id>/\]<detail>=<value>` — a detail, such as its verse or a content warning;
           see `+help scene details`
         - `+scene/pause` — stop it for now; it leaves the live list for the schedule
         - `+scene/start` — resume a paused scene
@@ -1320,29 +1338,27 @@ objects:
         scene id, then `>`. A type with no format is shown that way too, with its name.
       HELP`SCENE`DETAILS: |-
         A scene's **details** say what it is about beyond its title and pitch: the verse it is set in, the
-        canon it draws on, a content warning. They show on the scene's card, beside its title in lists, at
-        the top of its log and on its page in the portal, and you can list scenes by them.
+        canon it draws on, a content warning, the era, anything its owner wants to note. They show on the
+        scene's card, at the top of its log and on its page in the portal, and you can list scenes by them.
 
-        - `+scene/details` — the details this game lists, what goes in each, and what each takes
         - `+scene/set <detail>=<value>` — set one on your focused scene
         - `+scene/set <id>/<detail>=<value>` — set one on a scene you own without focusing it
         - `+scene/set <detail>=` — clear it
+        - `+scene/details` — the details this game lists, if any, and what goes in each
 
         For example:
 
         `+scene/set verse=Marvel`
 
-        Output: \[SCENE\] Done: Scene 1: Verse is now Marvel.
+        Output: `\[SCENE\] Done: Scene 1: Verse is now Marvel.`
 
-        A detail that takes several values splits them with `|`:
+        A detail is a word of letters, digits, `-` and `_`, starting with a letter, and can't be one of a
+        scene's own fields, such as `title` or `status`. Split several values with `|`:
+        `+scene/set canon=Marvel|X-Men`. Only the scene's owner, or staff, can set its details.
 
-        `+scene/set canon=Marvel|X-Men`
-
-        Output: \[SCENE\] Done: Scene 1: Canon is now Marvel · X-Men.
-
-        A detail with choices takes only those, and says which they are when you give another. Most games
-        also let you set a detail of your own with any name, such as `+scene/set era=1980s`. Only the
-        scene's owner, or staff, can set its details.
+        A game can list the details it uses, with a name and a hint for each, and some only take certain
+        values; `+scene/details` says which. The `scene-verse` package lists a verse, a canon and a content
+        warning; see `+help scene verse` when it is installed.
 
         ## Finding scenes by detail
 
@@ -1355,13 +1371,12 @@ objects:
         In softcode, `scene\(<id>,verse\)` reads a scene's verse, and `scene\(<id>,details\)` lists the
         details it has.
 
-        ## Changing the details
+        ## Listing details
 
         Staff holding the `layout.admin` permission decide which details the game lists:
 
         - `+scene/detail <detail>` — one detail in full
-        - `+scene/detail/add <detail>=<name>` — a new one. The detail is a word of letters, digits, `-` and
-          `_`, starting with a letter, and can't be one of a scene's own fields, such as `title` or `status`
+        - `+scene/detail/add <detail>=<name>` — list a new one
         - `+scene/detail/set <detail>/<field>=<value>` — one field:
           - `label` — its name
           - `hint` — one line saying what goes in it
@@ -1373,12 +1388,31 @@ objects:
 
         For example:
 
-        `+scene/detail/set verse/choices=Marvel|DC|Original`
+        `+scene/detail/add era=Era`
 
-        Output: \[SCENE\] Done: Scene detail verse: choices set.
+        Output: `\[SCENE\] Done: Added scene detail era. +scene/detail/set era/<field>=<value> changes it.`
 
-        Whether players may set details the game does not list is `` DATA`OPEN_DETAILS `` on the Scene
-        Logger: `1` lets them, `0` keeps them to the list.
+        Players may set details the game does not list unless `` DATA`OPEN_DETAILS `` on the Scene
+        Logger is `0`.
+      HELP`SCENE`FILTERS: |-
+        A package can change what `+scene` shows without editing the scene package. It adds a **filter**
+        to the Scene Logger: an attribute named `` FILTER`<point>`<name> ``. Where `+scene` draws that
+        point, it runs every filter on it in name order with `chain\(\)`. Each filter gets what would be
+        shown as `%%0` and returns what is shown instead; the next filter gets that.
+
+        - `CARD` — the body of `+scene <id>`'s card. `%%1` is the scene
+        - `` LIST`TITLE `` — a scene's title in `+scene`, `+scene/old` and `+scene/mine`. `%%1` is the scene
+        - `` LOG`HEAD `` — the lines over `+scene/log`. `%%1` is the scene
+        - `` POSE`RULE `` — the right side of the line over a pose, plain text. `%%1` is the scene, `%%2` the pose
+        - `` DETAIL`SHOW `` — a scene's value for a detail, wherever it is shown. `%%1` is the scene, `%%2` the detail
+        - `JOIN` — what a player is told when they join. `%%1` is the scene, `%%2` the player
+
+        A filter runs as the Scene Logger, with `%%#` the player reading. For example, to show every
+        verse in capitals:
+
+        `` &FILTER`DETAIL`SHOW`CAPS <logger>=if\(strmatch\(%%2,verse\),ucstr\(%%0\),%%0\) ``
+
+        A filter a package attaches to the Scene Logger goes away when the package is uninstalled.
       HELP`POT: |-
         `+pot` — "pose tracker" — shows who is in your focused scene, how long since each of them
         last posed, so a table can tell whose turn it is.

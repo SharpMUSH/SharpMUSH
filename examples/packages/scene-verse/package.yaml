@@ -1,0 +1,79 @@
+format: 1.2
+package: scene-verse
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Verse, canon and content warnings on scenes: three scene details for +scene/set, a content warning told to whoever joins, and +scene/verses."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, verse, canon, content-warning, rp]
+requires_server: ">=0.1"
+
+# The scene package keeps any detail a scene's owner sets; this one names three and shows them. Everything
+# here is attached to the scene package's objects, so uninstalling it takes it all away again. Scenes keep
+# the values they were given, and they then show under their keys.
+depends:
+  - package: scene
+    version: ">=1.6 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+
+objects:
+  - ref: verse
+    target: "{{scene/logger}}"
+    attributes:
+      # The details, read by the Scene plugin (+help scene details): verse and the content warning follow a
+      # scene's title in +scene lists and show as tags on the portal's scene cards; canon and the content
+      # warning take several values, split by |.
+      DETAIL`VERSE: |-
+        {"label":"Verse","hint":"The setting or universe the scene takes place in.","listed":true,"order":10}
+      DETAIL`CANON: |-
+        {"label":"Canon","hint":"The source works the scene draws on. Split several with |.","many":true,"order":20}
+      DETAIL`WARNING: |-
+        {"label":"Content warning","hint":"What a reader may want to know before joining, such as violence. Split several with |.","many":true,"listed":true,"order":30}
+
+      # Filters (+help scene filters). A content warning is shown in the warning colour wherever it is shown,
+      # and a player who joins a scene that has one is told it.
+      FILTER`DETAIL`SHOW`VERSE: |-
+        if(strmatch(%2,warning),tone(warning,%0),%0)
+      FILTER`JOIN`VERSE: |-
+        %0[if(strlen(scene(%1,warning)),%r[notice(SCENE,Content warning: [u(%!/FUN`DETAIL`SHOW,%1,warning)])])]
+
+      # +scene/verses: the verses of the scenes running now, and how many scenes each has.
+      # The verses of scenes %0, split by |, once each.
+      FUN`VERSE`ALL: |-
+        setunion(squish(iter(%0,scene(%i0,verse),,|),|),,|)
+      # How many of scenes %0 are set in verse %1, ignoring case.
+      FUN`VERSE`COUNT: |-
+        words(iter(%0,if(not(comp(lcstr(scene(%i0,verse)),lcstr(%1))),x)))
+      FUN`VERSE`TABLE: |-
+        box(datacolumns(u(%!/FUN`TABLE`OPTS,2,|,1|2,1|),ansi(h,Verse)%r[iter(%1,%i0,|,%r)],>[ansi(h,Scenes)]%r[iter(%1,u(%!/FUN`VERSE`COUNT,%0,%i0),|,%r)]),Verses played now,,u(%!/FUN`FRAME))
+      CMD`VERSES:
+        value: |-
+          $(?is)^\+scene/verses$: think setq(sc,scenelist(active))[setq(vs,u(%!/FUN`VERSE`ALL,%q<sc>))]; @assert words(%q<vs>,|)=@pemit %#=[notice(SCENE,No scene running now has a verse. +scene/set verse=<verse> gives yours one.)]; @pemit %#=[u(%!/FUN`VERSE`TABLE,%q<sc>,%q<vs>)]%r+scene/list verse=<verse> lists a verse's scenes.
+        flags: [REGEXP]
+
+  # +help scene verse, a subtopic of +help scene. Bodies are evaluated, so brackets, parentheses and percent
+  # signs are escaped.
+  - ref: verse_help
+    target: "{{scene/scene_help}}"
+    attributes:
+      SEE`SCENE`VERSE: |-
+        scene details|scene join
+      HELP`SCENE`VERSE: |-
+        A scene can say which **verse** it is set in, which **canon** it draws on, and what a reader may want to know before joining, its **content warning**.
+
+        - `+scene/set verse=<verse>` — the setting or universe it takes place in
+        - `+scene/set canon=<work>|<work>` — the source works it draws on
+        - `+scene/set warning=<warning>|<warning>` — its content warnings, such as violence
+        - `+scene/verses` — the verses of the scenes running now, and how many each has
+        - `+scene/list verse=<verse>` — the scenes running now in one verse; `+scene/old verse=<verse>` the finished ones
+
+        For example:
+
+        `+scene/set warning=Violence`
+
+        Output: `\[SCENE\] Done: Scene 1: Content warning is now Violence.`
+
+        The verse and the content warning follow the scene's title in `+scene`, and all three show on its card and at the top of its log. Whoever joins a scene with a content warning is told it as they join. See `+help scene details` for the rest.

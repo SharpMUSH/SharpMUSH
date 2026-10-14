@@ -97,9 +97,9 @@ public static class SceneCommandModule
 				=> await SceneWrite.Set(parser, sceneService, notifyService, executor, arg0!, arg1 ?? MarkupText.Empty),
 			"ADDPOSE" when hasArg0 && hasArg1
 				=> await ScenePoseHandlers.AddPose(parser, sceneService, notifyService, executor, arg0!, arg1!),
-			// An empty value clears the key, so a pose's last tag can be taken off.
-			"SETPOSE" when hasArg0
-				=> await ScenePoseHandlers.SetPose(parser, sceneService, notifyService, executor, arg0!, arg1 ?? MarkupText.Empty),
+			// An empty value after the = clears the key, so a pose's last tag can be taken off; no = at all is refused.
+			"SETPOSE" when hasArg0 && arg1 is not null
+				=> await ScenePoseHandlers.SetPose(parser, sceneService, notifyService, executor, arg0!, arg1),
 			"EDITPOSE" when hasArg0 && hasArg1
 				=> await ScenePoseHandlers.EditPose(parser, sceneService, notifyService, executor, arg0!, arg1!),
 			"UNDO" when hasArg0

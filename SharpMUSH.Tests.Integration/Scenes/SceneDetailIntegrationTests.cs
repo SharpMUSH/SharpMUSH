@@ -1,6 +1,8 @@
 using Mediator;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -8,13 +10,15 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// Scene details: the <c>DETAIL`&lt;KEY&gt;</c> catalogue on the Scene Logger, <c>+scene/set</c> writing a scene's
-/// verse or canon, where they show, the list filters, and <c>+scene/mark</c> on one pose.
-/// Not in parallel: the catalogue is the game's, one for every test.
+/// Scene details: <c>+scene/set</c> writing any detail, the <c>DETAIL`&lt;KEY&gt;</c> catalogue on the Scene Logger,
+/// where details show, the list filters, the <c>FILTER`&lt;POINT&gt;`&lt;NAME&gt;</c> chains, the scene-verse package,
+/// and <c>+scene/mark</c> on one pose. Not in parallel: the catalogue and the filters are the game's, one for every test.
 /// </summary>
 [NotInParallel]
 public class SceneDetailIntegrationTests
@@ -27,6 +31,7 @@ public class SceneDetailIntegrationTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
+	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
@@ -39,6 +44,7 @@ public class SceneDetailIntegrationTests
 	{
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+		await WebAppFactoryArg.QueueBarrierAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
@@ -74,22 +80,25 @@ public class SceneDetailIntegrationTests
 	/// <summary>A detail key no other test uses.</summary>
 	private static string Key() => $"d{Guid.NewGuid():N}"[..12];
 
-	[Test]
-	public async Task The_shipped_details_are_read_by_the_plugin()
+	private async Task InstallAsync(string package)
 	{
-		await LoggerAsync();
-		await Assert.That((await Eval("scenedetails()")).Split(' ').Take(3)).IsEquivalentTo(new[] { "verse", "canon", "warning" });
-		await Assert.That(await Eval("scenedetail(verse)")).IsEqualTo("Verse");
-		await Assert.That(await Eval("scenedetail(verse,listed)")).IsEqualTo("1");
-		await Assert.That(await Eval("scenedetail(canon,many)")).IsEqualTo("1");
-		await Assert.That(await Eval("scenedetail(nosuchdetail)")).IsEqualTo("#-1 NO SUCH SCENE DETAIL");
-		await Assert.That(await Eval("scenedetail(verse,colour)")).IsEqualTo("#-1 UNKNOWN DETAIL FIELD");
-		await Assert.That(await Eval("scenedetailvalue(canon, Marvel | X-Men |)")).IsEqualTo("Marvel|X-Men");
-		await Assert.That(await Eval("scenedetailvalue(title,x)")).StartsWith("#-1 'title' is a scene field already");
+		var controller = new PackagesController(
+			WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageSourceService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
+			Installer,
+			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
+			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+		var applied = await controller.Apply(
+			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
+		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
+		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
 	[Test]
-	public async Task An_owner_sets_details_that_show_on_the_card_the_log_and_in_lists()
+	public async Task The_scene_package_lists_no_details_and_an_owner_sets_any()
 	{
 		await LoggerAsync();
 		var room = await RoomAsync("DetailRoom");
@@ -98,26 +107,107 @@ public class SceneDetailIntegrationTests
 		var scene = await SceneAsync(owner);
 		var verse = TestIsolationHelpers.GenerateUniqueName("Verse");
 
-		await Assert.That(await Eval($"scene({scene},verse)")).IsEmpty().Because("a listed detail reads empty until it is set");
+		await Assert.That(await Eval("scenedetails()")).IsEmpty().Because("the scene package names no details of its own");
+		await Assert.That(await As(owner, "+scene/details")).Contains("This game lists no scene details. You can still set your own");
+		await Assert.That(await Eval("scenedetail(nosuchdetail)")).IsEqualTo("#-1 NO SUCH SCENE DETAIL");
+		await Assert.That(await Eval("scenedetailvalue(title,x)")).StartsWith("#-1 'title' is a scene field already");
+
 		await Assert.That(await As(owner, $"+scene/set verse={verse}")).Contains($"Scene {scene}: Verse is now {verse}.");
-		await Assert.That(await As(owner, $"+scene/set canon=Marvel|X-Men")).Contains("Canon is now Marvel · X-Men.");
+		await Assert.That(await As(owner, "+scene/set canon=Marvel|X-Men")).Contains("Canon is now Marvel · X-Men.");
 		await Assert.That(await As(other, $"+scene/set {scene}/verse=Elsewhere")).Contains("not yours to change");
 		await Assert.That(await Eval($"scene({scene},verse)")).IsEqualTo(verse);
-		await Assert.That(await Eval($"scene({scene},details)")).IsEqualTo("verse canon");
+		await Assert.That(await Eval($"scene({scene},details)")).IsEqualTo("canon verse").Because("details the game does not list go by name");
 
 		var card = await As(other, $"+scene {scene}");
 		await Assert.That(card).Contains("Details").And.Contains(verse).And.Contains("Marvel · X-Men");
 
 		await As(owner, $"pose {TestIsolationHelpers.GenerateUniqueName("waves")}");
-		await Assert.That(await As(other, $"+scene/log {scene}")).Contains($"Verse: {verse} · Canon: Marvel · X-Men");
+		await Assert.That(await As(other, $"+scene/log {scene}")).Contains($"Canon: Marvel · X-Men · Verse: {verse}");
 
-		var listed = await As(other, $"+scene/list verse={verse}");
-		await Assert.That(listed).Contains(verse).And.Contains(" ·").Because("a listed detail follows the title");
-		await Assert.That(listed).Contains("1 scene");
+		await Assert.That(await As(other, $"+scene/list verse={verse}")).Contains("1 scene");
 		await Assert.That(await As(other, "+scene/list verse=NoSuchVerseAtAll")).Contains("No scenes.");
 
 		await Assert.That(await As(owner, "+scene/set verse=")).Contains("Verse cleared.");
 		await Assert.That(await Eval($"scene({scene},details)")).IsEqualTo("canon");
+	}
+
+	[Test]
+	public async Task Filters_on_the_logger_change_what_scene_shows_in_name_order()
+	{
+		var logger = await LoggerAsync();
+		var room = await RoomAsync("FilterRoom");
+		var owner = await PlayerAsync("FilOwner", room);
+		var scene = await SceneAsync(owner);
+		var name = Key().ToUpperInvariant();
+		var marker = TestIsolationHelpers.GenerateUniqueName("Filtered");
+		string[] filters = [$"CARD`{name}", $"LIST`TITLE`{name}", $"LOG`HEAD`{name}", $"POSE`RULE`{name}", $"JOIN`{name}",
+			$"DETAIL`SHOW`{name}A", $"DETAIL`SHOW`{name}B"];
+		try
+		{
+			await God($"&FILTER`CARD`{name} {logger}=%0%r{marker}-card-%1");
+			await God($"&FILTER`LIST`TITLE`{name} {logger}=~t%1 %0");
+			await God($"&FILTER`LOG`HEAD`{name} {logger}={marker}-head%r%0");
+			await God($"&FILTER`POSE`RULE`{name} {logger}=%0 ~p%2");
+			await God($"&FILTER`JOIN`{name} {logger}=%0%r{marker}-joined-%1");
+			await God($"&FILTER`DETAIL`SHOW`{name}B {logger}=%0-second");
+			await God($"&FILTER`DETAIL`SHOW`{name}A {logger}=%0-first");
+
+			await Assert.That(await As(owner, "+scene/set era=1980s")).Contains("Era is now 1980s-first-second.")
+				.Because("filters on one point run in name order, each given what the one before returned");
+			await Assert.That(await As(owner, $"+scene {scene}")).Contains($"{marker}-card-{scene}").And.Contains("1980s-first-second");
+			await Assert.That(await As(owner, "+scene/list")).Contains($"~t{scene}");
+			await As(owner, $"pose {TestIsolationHelpers.GenerateUniqueName("waves")}");
+			var pose = await Eval($"last(sceneposes({scene}))");
+			await Assert.That(await As(owner, $"+scene/recall {scene}=1")).Contains($"Scene {scene} ~p{pose}");
+			var log = await As(owner, $"+scene/log {scene}");
+			await Assert.That(log.IndexOf($"{marker}-head", StringComparison.Ordinal)).IsLessThan(log.IndexOf($"Scene {scene}:", StringComparison.Ordinal));
+			await Assert.That(await As(owner, $"+scene/join {scene}")).Contains("Joined and focused").And.Contains($"{marker}-joined-{scene}");
+		}
+		finally
+		{
+			foreach (var filter in filters) await God($"&FILTER`{filter} {logger}");
+		}
+
+		await Assert.That(await As(owner, $"+scene {scene}")).DoesNotContain(marker);
+	}
+
+	[Test]
+	public async Task The_scene_verse_package_names_verse_canon_and_a_content_warning()
+	{
+		var room = await RoomAsync("VerseRoom");
+		var owner = await PlayerAsync("VerOwner", room);
+		var joiner = await PlayerAsync("VerJoin", room);
+		var verse = TestIsolationHelpers.GenerateUniqueName("Verse");
+		string scene;
+		try
+		{
+			await InstallAsync("scene-verse");
+			await LoggerAsync();
+			await Assert.That((await Eval("scenedetails()")).Split(' ').Take(3)).IsEquivalentTo(new[] { "verse", "canon", "warning" });
+			await Assert.That(await Eval("scenedetail(warning)")).IsEqualTo("Content warning");
+			await Assert.That(await Eval("scenedetail(canon,many)")).IsEqualTo("1");
+			await Assert.That(await Eval("scenedetailvalue(canon, Marvel | X-Men |)")).IsEqualTo("Marvel|X-Men");
+
+			scene = await SceneAsync(owner);
+			await Assert.That(await Eval($"scene({scene},verse)")).IsEmpty().Because("a listed detail reads empty until it is set");
+			await As(owner, $"+scene/set verse={verse}");
+			await Assert.That(await As(owner, "+scene/set warning=Violence")).Contains("Content warning is now Violence.");
+
+			var listed = await As(joiner, $"+scene/list verse={verse}");
+			await Assert.That(listed).Contains(verse).And.Contains("Violence").Because("the verse and the warning follow the title");
+			await Assert.That(await As(joiner, $"+scene/join {scene}")).Contains("Content warning: Violence");
+			var verses = await As(joiner, "+scene/verses");
+			await Assert.That(verses).Contains("Verses played now").And.Contains(verse).And.Contains("+scene/list verse=<verse>");
+			await Assert.That(await As(joiner, "+help scene verse")).Contains("+scene/verses");
+		}
+		finally
+		{
+			await Installer.UninstallAsync("scene-verse", force: true, CancellationToken.None);
+		}
+
+		await Assert.That(await Eval("scenedetails()")).IsEmpty().Because("uninstalling scene-verse takes its details away");
+		await Assert.That(await Eval($"scene({scene},verse)")).IsEqualTo(verse).Because("scenes keep the values they were given");
+		await Assert.That(await As(joiner, $"+scene/join {scene}")).DoesNotContain("Content warning");
 	}
 
 	[Test]
@@ -173,6 +263,8 @@ public class SceneDetailIntegrationTests
 		await Assert.That(await As(poser, $"+scene/mark {pose}=flashback")).Contains($"Pose {pose} marked flashback.");
 		await Assert.That(await As(owner, $"+scene/mark {pose}=Dream")).Contains("marked dream.");
 		await Assert.That(await Eval($"scenepose({scene},{pose},tags)")).IsEqualTo("dream flashback");
+		await God($"@scene/setpose {pose}/tags");
+		await Assert.That(await Eval($"scenepose({scene},{pose},tags)")).IsEqualTo("dream flashback").Because("without an = nothing is set");
 		await Assert.That(await As(owner, $"+scene/recall {scene}=1")).Contains($"Scene {scene} · dream · flashback");
 
 		await As(poser, $"+scene/unmark {pose}=dream");
