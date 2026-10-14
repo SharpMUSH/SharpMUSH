@@ -224,7 +224,7 @@ def generate(grammar_name):
 		# With paren_groups, a '(' or a name's '(' that starts no call opens a group instead of being text.
 		w(f'genericText__{n}: beginGenericText__{n}' + ('' if c.G else ' | FUNCHAR') + ';')
 		tokens = list(text_tokens(c)) + ([] if c.G else ['OPAREN'])
-		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | ansi)']) + ';')
+		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi)']) + ';')
 		if c.P == 1:
 			body = block(later(c)) + '*'
 			w(f'closedGroupFirst__{n}: beginGenericText__Open {body} genericText__Close;')
@@ -246,7 +246,7 @@ def generate(grammar_name):
     )
 ;
 
-escapedText: ESCAPE ANY;
+escapedText: ESCAPE ANY | ESCAPE_AT_END;
 
 iterationToken: ITER_ELEMENT | ITER_POSITION;
 
@@ -312,7 +312,7 @@ ACCESSORS = {
 		('STEXT_LAST', False), ('VWX', False)],
 	'genericText': [('beginGenericText', False), ('FUNCHAR', False)],
 	'beginGenericText': [('CPAREN', False), ('SEMICOLON', False), ('COMMAWS', False), ('EQUALS', False), ('CCARET', False),
-		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('ansi', False)],
+		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('PERCENT_AT_END', False), ('ansi', False)],
 }
 
 # Rules that are spliced into their parent when they exit: the tree keeps one flat run of text.
