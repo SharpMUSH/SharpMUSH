@@ -89,6 +89,9 @@ public static class BundledPackages
 		// portal page is a separate application package, as jobs-app is for jobs.
 		new("bboards", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +lfrp, +call and +watch are global commands, and +watch and +friend are names a
+		// game may already use for its own code.
+		new("rp-finder", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

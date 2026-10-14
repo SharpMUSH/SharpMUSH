@@ -123,6 +123,14 @@ public class NewPennMUSHFunctionTests
 		await Assert.That(resultText).Contains("1969").Or.Contains("1970");
 	}
 
+	/// <summary>convtime() reads what time() and convsecs() write, so LASTLOGOUT can be turned back into seconds.</summary>
+	[Test]
+	public async Task CONVTIME_ReadsWhatConvsecsWrites()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("convtime(convsecs(1700000000))"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("1700000000");
+	}
+
 	[Test]
 	public async Task CONVTIME_HandlesInvalidInput()
 	{

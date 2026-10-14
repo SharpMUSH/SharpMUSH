@@ -928,7 +928,14 @@ public partial class Functions
 
 		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
-		// Format: Ddd MMM DD HH:MM:SS YYYY
+		// Format: Ddd MMM DD HH:MM:SS YYYY, as time() and LASTLOGOUT write it, in the server's time zone.
+		if (DateTimeOffset.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
+			DateTimeStyles.AssumeLocal, out var pennTime))
+		{
+			return ValueTask.FromResult<CallState>(
+				TimePrecisions.Format(pennTime.ToUnixTimeMilliseconds(), precision));
+		}
+
 		if (!DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var dateTime))
 		{
 			if (!DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var dt))

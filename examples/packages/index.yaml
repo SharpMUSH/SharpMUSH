@@ -107,3 +107,8 @@ packages:
     package: bboards-app
     version: 1.0.1
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
+  - path: rp-finder/
+    name: RP Finder
+    package: rp-finder
+    version: 1.0.0
+    description: +lfrp, +call and +watch — say what you are looking for, post open calls anyone may answer, and hear when the people you watch connect
