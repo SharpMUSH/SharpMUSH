@@ -44,6 +44,11 @@
       "id": "rhostmush-printf-fields-rhost-printf",
       "heading": "RhostMUSH printf() fields: `rhost_printf`",
       "lookup": "compatibility config rhostmush printf fields rhost printf"
+    },
+    {
+      "id": "rhostmush-side-effect-flag-sidefx-flag",
+      "heading": "RhostMUSH side-effect flag: `sidefx_flag`",
+      "lookup": "compatibility config rhostmush side effect flag sidefx flag"
     }
   ]
 }
@@ -234,4 +239,23 @@ The less common codes (`@ < > ' `` ` `` # / ;`) are read as on RhostMUSH as well
 |ab   |   cd|
 > think printf(<$10:.:s>,ab)
 <........ab>
+```
+
+## RhostMUSH side-effect flag: `sidefx_flag`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `sidefx_flag` off, side-effect functions (pemit(), set(), attrib_set(), create() and the rest that
+change the game) work for anyone, subject to `function_side_effects` and their own permission checks,
+as in PennMUSH. With it on, they work only for an object that has the SIDEFX flag or holds the
+`softcode.sidefx` permission; anything else gets `#-1 FUNCTION DISABLED`, the same answer as with side
+effects turned off. Anyone may set SIDEFX on what they control. The wizard role allows
+`softcode.sidefx`, so wizards need no flag, where on RhostMUSH a wizard needs the flag as well. A
+function's reading form, such as name() with one argument, is never affected.
+
+```sharp sidefx_flag
+> think hasflag(me,SIDEFX) [permission(me,softcode.sidefx)]
+0 1
+> think [attrib_set(me/RHOSTDOC_SIDEFX,ok)][get(me/RHOSTDOC_SIDEFX)]
+ok
 ```

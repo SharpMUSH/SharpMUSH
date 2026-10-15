@@ -68,7 +68,7 @@ To take a permission away from one object, use an override (`@permission/deny`).
 | Priority | Role | Allows |
 |---|---|---|
 | 40 | god | administrator |
-| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `feed.admin`, `server.operate`, `control.all`, `protect.wizard`, `protect.admin` |
+| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `feed.admin`, `softcode.sidefx`, `server.operate`, `control.all`, `protect.wizard`, `protect.admin` |
 | 25 | moderator | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `queue.control`, `roles.admin` |
 | 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
 | 15 | builder | `diagnostics.profile`, `game.builder` |
@@ -103,6 +103,7 @@ Being a wizard (`game.wizard`) is split into groups, so a custom role can hand o
 | `packages.admin` | @package |
 | `chat.admin` | Wizard channels (and Admin channels), channel privileges, @channel changes and nuking on channels you don't own, @wizwall, @wall, @rwall, the MOTDs and `wizmotd()`, @mail admin and stats, mail alias admin |
 | `feed.admin` | @feed on every kind: defining kinds, their taps, members and limits (a kind's owner runs its own without it); see [@feed] |
+| `softcode.sidefx` | side-effect functions, when the `sidefx_flag` option asks for the SIDEFX flag; see [SIDEFX] |
 | `wiki.admin` | wiki requirements (setting them, and skipping them), protecting and publishing pages; see [wiki permissions] |
 | `server.operate` | @shutdown, @dump, @dbck, @purge, @readcache, @backup, @storage, @log, @slave, @kick, @uptime details |
 

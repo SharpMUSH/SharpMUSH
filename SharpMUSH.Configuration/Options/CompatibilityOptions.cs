@@ -87,5 +87,13 @@ public record CompatibilityOptions(
 		Description = "In map(), leave %1 empty when no extra arguments are given, as RhostMUSH does, instead of passing the item's position",
 		Group = "RhostMUSH Compatibility",
 		Order = 4)]
-	bool RhostMapArgs
+	bool RhostMapArgs,
+
+	[property: SharpConfig(
+		Name = "sidefx_flag",
+		Category = "Compatibility",
+		Description = "Let side-effect functions (pemit(), set(), create() ...) work only for an object with the SIDEFX flag or the softcode.sidefx permission, as RhostMUSH does; others get the disabled-function error",
+		Group = "RhostMUSH Compatibility",
+		Order = 5)]
+	bool SidefxFlag
 );
