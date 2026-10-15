@@ -549,7 +549,7 @@ public partial class PackageInstallService
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
 			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
-			Kind: manifest.Kind, PastMaximum: pastMaximum));
+			Kind: manifest.Kind, PastMaximum: pastMaximum, Plugins: manifest.Plugins));
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -609,7 +609,8 @@ public partial class PackageInstallService
 
 		// The same dependency/conflict gate a softcode plan enforces, and it must run here: once
 		// DeployAsync has written plugins/<id>/, the loader runs that code on the next boot.
-		var issues = PackagePlanService.CheckDependenciesAndConflicts(manifest, await registry.GetInstalledPackagesAsync());
+		var issues = PackagePlanService.CheckDependenciesAndConflicts(manifest, await registry.GetInstalledPackagesAsync(),
+			RunningPlugins(manifest));
 		if (issues.Count > 0)
 		{
 			return Blocked(issues);
@@ -650,10 +651,14 @@ public partial class PackageInstallService
 	}
 
 	private static Error<string> Blocked(IEnumerable<PackageDependencyIssue> issues) =>
-		new($"Plan is blocked: {string.Join("; ", issues.Select(i =>
-			i.IsConflict
-				? $"conflicts with installed {i.PackageId} {i.InstalledVersion}"
-				: $"requires {i.PackageId} {i.Constraint}{(i.InstalledVersion is null ? " (not installed)" : $" (installed: {i.InstalledVersion})")}"))}");
+		new($"Plan is blocked: {string.Join("; ", issues.Select(Describe))}");
+
+	private static string Describe(PackageDependencyIssue issue) => issue switch
+	{
+		{ IsPlugin: true } => $"needs the {issue.PackageId} plugin, which is not running",
+		{ IsConflict: true } => $"conflicts with installed {issue.PackageId} {issue.InstalledVersion}",
+		_ => $"requires {issue.PackageId} {issue.Constraint}{(issue.InstalledVersion is null ? " (not installed)" : $" (installed: {issue.InstalledVersion})")}"
+	};
 
 	/// <summary>
 	/// Records a managed package whose binaries <see cref="IPluginPackageInstaller"/> has deposited: the
@@ -676,7 +681,7 @@ public partial class PackageInstallService
 		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
 			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed,
-			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, notes)));
+			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, notes), Plugins: manifest.Plugins));
 
 		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))

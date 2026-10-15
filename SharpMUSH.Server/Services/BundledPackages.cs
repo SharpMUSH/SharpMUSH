@@ -2,6 +2,7 @@ using System.Reflection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
 
@@ -133,6 +134,17 @@ public static class BundledPackages
 	public static bool IsCatalogueSource(string? sourceRepo) => BundledPackageSource.IsCatalogueSource(sourceRepo);
 
 	/// <summary>
+	/// The plugins a bundled package names in <c>plugins:</c>: without each of them running, its commands call into
+	/// nothing, so it is neither installed nor offered.
+	/// </summary>
+	public static IReadOnlyList<string> RequiredPlugins(string packageId, IPackageManifestService manifests)
+		=> manifests.ParseManifest(ManifestYaml(packageId)) switch
+		{
+			ParsedPackageManifest parsed => parsed.Manifest.RequiredPlugins,
+			_ => []
+		};
+
+	/// <summary>
 	/// The README a bundled package ships, in Markdown: its <c>examples/packages/&lt;id&gt;/README.md</c> when this
 	/// build embeds one, else one written from <paramref name="manifest"/> — what it is, whether a new game gets it,
 	/// what it needs and what it creates.
@@ -177,6 +189,13 @@ public static class BundledPackages
 			lines.Add("");
 			lines.Add("## Requires");
 			lines.AddRange(manifest.Dependencies.Select(d => $"- `{d.PackageId}` {d.Constraint}"));
+		}
+
+		if (manifest.RequiredPlugins.Count > 0)
+		{
+			lines.Add("");
+			lines.Add("## Plugins");
+			lines.AddRange(manifest.RequiredPlugins.Select(p => $"- `{p}`"));
 		}
 
 		// An attach entry adds attributes to an object the package does not create.

@@ -3916,6 +3916,10 @@
     <value>Începeți prin a citi wiki-ul, a explora personajele sau a intra într-o scenă.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Începeți prin a citi wiki-ul sau a explora personajele.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Citire wiki</value>
     <comment>MT</comment>

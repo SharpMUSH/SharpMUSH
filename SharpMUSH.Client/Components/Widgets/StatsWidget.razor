@@ -41,8 +41,11 @@
     private bool _onlineFailed;
     private bool _activeScenesFailed;
 
-    /// <summary>A game without the Scene System has no scenes to count, so it has no tile for them.</summary>
-    private bool _scenesOn = true;
+    /// <summary>
+    /// A game without the Scene System has no scenes to count, so it has no tile for them and asks for none: without
+    /// the Scene plugin nothing serves <c>api/scenes</c>.
+    /// </summary>
+    private bool _scenesOn;
 
     private (string LabelKey, string Value, bool Failed)[] Tiles =>
     [
@@ -67,9 +70,7 @@
             StateHasChanged();
         }), SceneService);
 
-        var scenesOnTask = ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
-        await Task.WhenAll(LoadRecentAsync(), LoadCharactersAsync(), LoadOnlineAsync(), LoadActiveScenesAsync(), scenesOnTask);
-        _scenesOn = await scenesOnTask;
+        await Task.WhenAll(LoadRecentAsync(), LoadCharactersAsync(), LoadOnlineAsync(), LoadScenesTileAsync());
         if (AnyFailed) StartRetrying();
     }
 
@@ -149,17 +150,27 @@
                     _recentFailed ? LoadRecentAsync() : Task.CompletedTask,
                     _charactersFailed ? LoadCharactersAsync() : Task.CompletedTask,
                     _onlineFailed ? LoadOnlineAsync() : Task.CompletedTask,
-                    _activeScenesFailed ? LoadActiveScenesAsync() : Task.CompletedTask);
+                    // A failed server-info read reads as "no Scene System": ask again with the others, so a
+                    // game that comes back with it shows the tile.
+                    !_scenesOn ? LoadScenesTileAsync() : _activeScenesFailed ? LoadActiveScenesAsync() : Task.CompletedTask);
                 StateHasChanged();
             });
         }
     }
 
-    private Task LoadActiveScenesAsync() => _reload.LoadAsync(() => SceneService.GetActiveScenesAsync(), result =>
+    private async Task LoadScenesTileAsync()
     {
-        _activeScenes = result is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
-        _activeScenesFailed = _activeScenes is null;
-    });
+        _scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
+        await LoadActiveScenesAsync();
+    }
+
+    private Task LoadActiveScenesAsync() => !_scenesOn
+        ? Task.CompletedTask
+        : _reload.LoadAsync(() => SceneService.GetActiveScenesAsync(), result =>
+        {
+            _activeScenes = result is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
+            _activeScenesFailed = _activeScenes is null;
+        });
 
     public void Dispose()
     {

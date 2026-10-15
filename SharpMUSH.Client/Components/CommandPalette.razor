@@ -104,7 +104,7 @@
             _query = string.Empty;
             _active = 0;
             var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
-            var build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+            var build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
             var scenes = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
             _destinations =
             [

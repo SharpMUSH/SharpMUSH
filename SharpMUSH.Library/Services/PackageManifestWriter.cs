@@ -99,6 +99,10 @@ public static class PackageManifestWriter
 
 		AppendOptional(yaml, "verified_server", manifest.VerifiedServer?.ToString());
 		AppendOptional(yaml, "maximum_server", manifest.MaximumServer?.ToString());
+		if (manifest.RequiredPlugins.Count > 0)
+		{
+			yaml.Append("plugins: ").AppendLine(Flow(manifest.RequiredPlugins));
+		}
 
 		AppendOptional(yaml, "replaces", manifest.Replaces);
 		AppendOptional(yaml, "locale", manifest.Locale);
