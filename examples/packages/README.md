@@ -499,6 +499,62 @@ page with what the install does to it.
 - **Rollback** leaves wiki pages as they are; a page's own history is the way
   back for its text.
 
+## Attribute entries (format 1.5)
+
+A package can add standard attributes to the game's `@attribute` table: the
+default flags every new copy of the attribute gets, and a `limit` or an `enum`
+its values must meet. Declare them in `attributes:` and set `format: 1.5`; a
+manifest with `attributes:` and an older format is refused. Before 1.5 a
+package could only do this from `AINSTALL` softcode.
+
+```yaml
+format: 1.5
+package: jobs
+version: 2.0.0
+
+attributes:                     # attribute name: the entry @attribute would make
+  BBPOST_COUNT:
+    flags: [no_command, wizard] # default flags, as @attribute/access takes them
+  JOB`STATUS:
+    enum: [new, staff, player, held, closed]   # as @attribute/enum: a value must name one
+  JOB`TITLE:
+    limit: '^.{1,60}$'          # as @attribute/limit: a caseless regular expression
+  JOB`DUE:
+    enum: [this week, next week, someday]
+    delimiter: '|'              # choices with spaces need another delimiter
+  JOB`OWNER:
+    flags: [wizard]
+    retroactive: true           # also give these flags to every copy already on an object
+```
+
+The name is one `@attribute` takes, upper-cased, with `` ` `` only between
+branches. Each flag must be an attribute flag (`branch` is structure, not a
+default). A `limit` must compile as `@attribute/limit` compiles it, and an
+entry takes a limit or an enum, not both, since each replaces the other. An
+`index:` key is reserved for a later format and ignored. A plugin package
+cannot declare `attributes:`. The plan checks each entry against the game's
+live table, and its flags against the game's attribute flags.
+
+- **Install.** An entry the game lacks is created and becomes the package's.
+  An entry the game already has is the game's: the package uses it as it is
+  and never changes or removes it. If the game's entry has a different `limit`
+  or `enum` from the one the manifest declares, the plan is blocked and says
+  so; different default flags are only noted. An entry another installed
+  package owns blocks the plan.
+- **Retroactive.** Default flags reach new copies of the attribute only,
+  unless the entry sets `retroactive: true`: then, whenever the apply writes
+  the entry's flags, or a new version turns `retroactive` on, every copy already on an object gets exactly those flags
+  (its `branch` flag kept, its owner unchanged). The review screen shows how
+  many existing copies change, and asks the installer to confirm first.
+- **Upgrade.** The package's entries are merged field by field against what
+  the previous version declared: the default flags, and the limit-or-enum. A
+  field the new version changes takes the new value; the other keeps what the
+  game has, so an administrator's `@attribute/access` survives.
+- **Dropped entries and uninstall.** The entry is deleted from the table.
+  Values already stored on objects stay as they are.
+- **Rollback** restores objects and attributes only; attribute entries stay as
+  they are.
+
 ## Engine version range (format 1.6)
 
 Three optional keys say which SharpMUSH versions a package runs on. Set
