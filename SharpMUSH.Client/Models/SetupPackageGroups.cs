@@ -2,8 +2,8 @@ using SharpMUSH.Library.Models.Portal.Setup;
 
 namespace SharpMUSH.Client.Models;
 
-/// <summary>The packages the setup wizard lists under one category; <paramref name="Title"/> is null for those with none.</summary>
-public sealed record SetupPackageGroup(string? Title, IReadOnlyList<SetupGroupedPackage> Packages);
+/// <summary>The packages the setup wizard lists under one category.</summary>
+public sealed record SetupPackageGroup(string Title, IReadOnlyList<SetupGroupedPackage> Packages);
 
 /// <summary>A package in its group; <paramref name="AddOn"/> when it is listed under a package it builds on.</summary>
 public sealed record SetupGroupedPackage(BundledPackageState Package, bool AddOn);
@@ -12,14 +12,20 @@ public sealed record SetupGroupedPackage(BundledPackageState Package, bool AddOn
 public static class SetupPackageGroups
 {
 	/// <summary>
-	/// <paramref name="packages"/> by category, ignoring case, in the order the server lists them, with the packages
-	/// that have none last. In a group, a package that builds on another of the group's packages is listed under it.
+	/// <paramref name="packages"/> by category, ignoring case, in the order the server lists them. A package with no
+	/// category, or with the category <see cref="Uncategorized"/>, is listed last under <paramref name="uncategorizedTitle"/>.
+	/// In a group, a package that builds on another of the group's packages is listed under it.
 	/// </summary>
-	public static IReadOnlyList<SetupPackageGroup> For(IReadOnlyList<BundledPackageState> packages) => packages
-		.GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase)
-		.OrderBy(group => group.Key is null)
-		.Select(group => new SetupPackageGroup(group.Key, Gathered(group.ToList())))
+	public static IReadOnlyList<SetupPackageGroup> For(IReadOnlyList<BundledPackageState> packages, string uncategorizedTitle) => packages
+		.GroupBy(p => p.Category is { } category && !string.Equals(category, Uncategorized, StringComparison.OrdinalIgnoreCase)
+			? category
+			: string.Empty, StringComparer.OrdinalIgnoreCase)
+		.OrderBy(group => group.Key.Length == 0)
+		.Select(group => new SetupPackageGroup(group.Key.Length == 0 ? uncategorizedTitle : group.Key, Gathered(group.ToList())))
 		.ToList();
+
+	/// <summary>The category a package without one is listed under, whatever language the wizard shows it in.</summary>
+	public const string Uncategorized = "Uncategorized";
 
 	/// <summary>
 	/// <paramref name="group"/> with each package that builds on no other package of the group followed by those that
