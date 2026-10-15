@@ -1178,8 +1178,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			return innermostFirst.FirstOrDefault(binds);
 		}
 
-		var current = parser.CurrentState.CurrentEvaluation;
-		return innermostFirst.LastOrDefault(frame => binds(frame) && ReferenceEquals(evaluation(frame), current));
+		var current = DBAttribute.Scope(parser.CurrentState.CurrentEvaluation);
+		return innermostFirst.LastOrDefault(frame => binds(frame)
+			&& ReferenceEquals(DBAttribute.Scope(evaluation(frame)), current));
 	}
 
 	/// <summary>
