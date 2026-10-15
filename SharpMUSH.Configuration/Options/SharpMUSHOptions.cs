@@ -106,13 +106,13 @@ public record SharpMUSHOptions
 			MuxLogic: false,
 			MuxJustify: false,
 			MuxCollation: false,
-			MuxList: false,
 			InnermostTokens: false,
 			RhostEdit: false,
 			RhostLattr: false,
 			RhostPrintf: false,
 			RhostMapArgs: false,
-			SidefxFlag: false
+			SidefxFlag: false,
+			RhostList: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,
