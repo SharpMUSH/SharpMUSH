@@ -25,6 +25,8 @@ public static class SharpEvents
 	public const string PlayerConnect = "PLAYER`CONNECT";
 	public const string PlayerDisconnect = "PLAYER`DISCONNECT";
 	public const string PlayerWarn = "PLAYER`WARN";
+	public const string PlayerLink = "PLAYER`LINK";
+	public const string PlayerUnlink = "PLAYER`UNLINK";
 	public const string SocketConnect = "SOCKET`CONNECT";
 	public const string SocketDisconnect = "SOCKET`DISCONNECT";
 	public const string SocketLoginFail = "SOCKET`LOGINFAIL";
@@ -95,6 +97,15 @@ public static class SharpEvents
 	/// those who no longer do.
 	/// </summary>
 	public const string ChannelWho = "CHANNEL`WHO";
+
+	/// <summary>
+	/// Fired after a write changes an attribute flagged <c>watched</c>: a set, a clear or a wipe, by any command
+	/// or function. Args: (object objid, attribute name, old value, new value, enactor objid). A cleared or
+	/// wiped attribute's new value is empty, as is a new attribute's old value. Not raised for attributes
+	/// without the flag, nor past <see cref="Services.AttributeChangeChain.MaxDepth"/> changes made by the
+	/// handlers of earlier ones.
+	/// </summary>
+	public const string AttributeChange = "ATTRIBUTE`CHANGE";
 
 	/// <summary>A player received @mail. Args: (recipient objid, sender objid, message number, subject, urgent).</summary>
 	public const string MailReceived = "MAIL`RECEIVED";

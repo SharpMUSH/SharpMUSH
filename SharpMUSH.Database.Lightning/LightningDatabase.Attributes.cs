@@ -36,6 +36,9 @@ public partial class LightningDatabase
 {
 	private const string BranchFlag = "branch";
 
+	/// <summary>The attribute flag whose writes the store reports (<see cref="WatchedAttributesChanged"/>).</summary>
+	private const string WatchedFlag = "watched";
+
 	#region Attribute reads
 
 	public IAsyncEnumerable<SharpAttribute> GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
@@ -299,32 +302,36 @@ public partial class LightningDatabase
 	/// branch keeps its owner and only gains the <c>branch</c> flag, so a leaf that grows a child becomes a
 	/// branch.
 	/// </para>
+	/// <para>
+	/// Whether the leaf is <c>watched</c> is read from the metadata row the write reads anyway; only a watched
+	/// leaf's previous value is read, in the same transaction.
+	/// </para>
 	/// </summary>
-	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
+	public async ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
 		CancellationToken cancellationToken = default)
 	{
 		if (attribute.Length == 0)
 		{
-			return false;
+			return new NotFound();
 		}
 
 		var n = (long)dbref.Number;
 		var write = PreparedAttributeWrite.From(new AttributeWrite(attribute, value, owner, []));
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
 			if (ReadObject(tx, n) is null)
 			{
-				return false;
+				return new NotFound();
 			}
 
-			WriteAttributePath(tx, n, write);
+			var outcome = WriteAttributePath(tx, n, write);
 			if (TouchesAliases(write.Path))
 			{
 				SyncPlayerAliases(tx, n);
 			}
 
-			return true;
+			return outcome;
 		}, cancellationToken);
 	}
 
@@ -361,13 +368,14 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// An <see cref="AttributeWrite"/> with its path upper-cased and its value serialized, so the writer
-	/// thread does neither.
+	/// thread does neither. <see cref="Text"/> is the value as given, for a <c>watched</c> leaf's report.
 	/// </summary>
-	private readonly record struct PreparedAttributeWrite(string[] Path, byte[] Value, long Owner, string[] Flags)
+	private readonly record struct PreparedAttributeWrite(string[] Path, byte[] Value, MString Text, long Owner, string[] Flags)
 	{
 		public static PreparedAttributeWrite From(AttributeWrite write) => new(
 			[.. write.Path.Select(segment => segment.ToUpperInvariant())],
 			Keys.Str(MarkupTextSerializer.Serialize(write.Value)),
+			write.Value,
 			write.Owner.Object.Key,
 			[.. write.Flags.Select(flag => flag.Name)]);
 	}
@@ -376,12 +384,14 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// One attribute set, as <see cref="SetAttributeAsync"/> describes it, inside the caller's transaction.
-	/// The write's own flags land on its leaf alongside the entry's defaults.
+	/// The write's own flags land on its leaf alongside the entry's defaults. Answers the leaf's change when
+	/// the leaf carries <c>watched</c> once written.
 	/// </summary>
-	private static void WriteAttributePath(ITx tx, long n, PreparedAttributeWrite write)
+	private static AttributeWriteOutcome WriteAttributePath(ITx tx, long n, PreparedAttributeWrite write)
 	{
 		var path = write.Path;
 		var longName = string.Empty;
+		AttributeWriteOutcome outcome = new Success();
 
 		for (var level = 0; level < path.Length; level++)
 		{
@@ -416,6 +426,12 @@ public partial class LightningDatabase
 			// A node that already exists keeps its value unless it is the leaf being set.
 			if (isLeaf)
 			{
+				if (IsWatched(flags))
+				{
+					var previous = existing is null ? MarkupText.Empty : ReadPreviousValue(tx, key);
+					outcome = new WatchedAttributesChanged([new WatchedAttributeChange(longName, previous, write.Text)]);
+				}
+
 				tx.Put(Tables.AttrVal, key, write.Value);
 			}
 			else if (existing is null)
@@ -423,7 +439,16 @@ public partial class LightningDatabase
 				tx.Put(Tables.AttrVal, key, EmptyAttributeValue);
 			}
 		}
+
+		return outcome;
 	}
+
+	private static bool IsWatched(IEnumerable<string> flags)
+		=> flags.Any(flag => flag.Equals(WatchedFlag, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>A node's stored value, read inside the write that is about to replace or remove it.</summary>
+	private static MString ReadPreviousValue(ITx tx, byte[] key)
+		=> DeserializeValue(tx.TryGet(Tables.AttrVal, key, out var bytes) ? bytes : null);
 
 	/// <summary>
 	/// The provider's one full-table write: attribute ownership is stored inside each
@@ -488,21 +513,25 @@ public partial class LightningDatabase
 	/// Empties the node's value when it still has children (a branch has to survive to carry them), and
 	/// otherwise deletes it outright, dropping <c>branch</c> from the parent when that was its last child.
 	/// </summary>
-	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+	public async ValueTask<AttributeWriteOutcome> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 	{
 		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
 		var n = (long)dbref.Number;
 		var empty = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
-			if (ReadPathPrefixes(tx, n, path).Count != path.Length || path.Length == 0)
+			var walk = ReadPathPrefixes(tx, n, path);
+			if (walk.Count != path.Length || path.Length == 0)
 			{
-				return false;
+				return new NotFound();
 			}
 
 			var longName = string.Join('`', path);
 			var key = Keys.Attr(n, longName);
+			AttributeWriteOutcome outcome = IsWatched(walk[^1].Meta.Flags)
+				? new WatchedAttributesChanged([new WatchedAttributeChange(longName, ReadPreviousValue(tx, key), MarkupText.Empty)])
+				: new Success();
 
 			if (HasChildren(tx, n, longName))
 			{
@@ -520,28 +549,30 @@ public partial class LightningDatabase
 				SyncPlayerAliases(tx, n);
 			}
 
-			return true;
+			return outcome;
 		}, cancellationToken);
 	}
 
 	/// <summary>Deletes the node and every descendant — one exact-key delete plus one prefix delete over
 	/// <c>LONGNAME`</c> in both tables, which is the whole subtree and nothing else (a sibling such as
 	/// <c>FOOZ</c> shares the <c>FOO</c> prefix but not the <c>FOO`</c> one).</summary>
-	public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+	public async ValueTask<AttributeWriteOutcome> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 	{
 		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
 		var n = (long)dbref.Number;
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
-			if (ReadPathPrefixes(tx, n, path).Count != path.Length || path.Length == 0)
+			var walk = ReadPathPrefixes(tx, n, path);
+			if (walk.Count != path.Length || path.Length == 0)
 			{
-				return false;
+				return new NotFound();
 			}
 
 			var longName = string.Join('`', path);
 			var key = Keys.Attr(n, longName);
 			var descendants = Keys.Attr(n, longName + "`");
+			var outcome = WatchedRemovals(tx, longName, key, walk[^1].Meta, descendants);
 
 			tx.Delete(Tables.AttrMeta, key);
 			tx.Delete(Tables.AttrVal, key);
@@ -553,8 +584,34 @@ public partial class LightningDatabase
 				SyncPlayerAliases(tx, n);
 			}
 
-			return true;
+			return outcome;
 		}, cancellationToken);
+	}
+
+	/// <summary>
+	/// The <c>watched</c> attributes a wipe of <paramref name="longName"/> removes, the node first and then its
+	/// descendants in key order, each with the value it held. A wipe reads its descendants' metadata for this;
+	/// only a watched one's value is read.
+	/// </summary>
+	private static AttributeWriteOutcome WatchedRemovals(ITx tx, string longName, byte[] key, AttrMetaRecord meta,
+		byte[] descendants)
+	{
+		var changes = new List<WatchedAttributeChange>();
+		if (IsWatched(meta.Flags))
+		{
+			changes.Add(new WatchedAttributeChange(longName, ReadPreviousValue(tx, key), MarkupText.Empty));
+		}
+
+		foreach (var (descendantKey, descendantMeta) in tx.Range(Tables.AttrMeta, descendants))
+		{
+			if (IsWatched(Codec.Deserialize<AttrMetaRecord>(descendantMeta).Flags))
+			{
+				changes.Add(new WatchedAttributeChange(Keys.ParseAttr(descendantKey).LongName,
+					ReadPreviousValue(tx, descendantKey), MarkupText.Empty));
+			}
+		}
+
+		return changes.Count == 0 ? new Success() : new WatchedAttributesChanged(changes);
 	}
 
 	#endregion

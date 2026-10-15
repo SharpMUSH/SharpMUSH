@@ -65,7 +65,7 @@ public class LightningWriteBenchmarks : LightningBaseBenchmark
 	}
 
 	[Benchmark(Description = "SetAttributeAsync on #1")]
-	public async ValueTask<bool> SetAttribute() =>
+	public async ValueTask<SharpMUSH.Library.DiscriminatedUnions.AttributeWriteOutcome> SetAttribute() =>
 		await _database!.SetAttributeAsync(
 			new DBRef(1),
 			["BENCH_ATTR"],

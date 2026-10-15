@@ -4,10 +4,10 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class WipeAttributeCommandHandler(IAttributeStore database) : ICommandHandler<WipeAttributeCommand, bool>
+public class WipeAttributeCommandHandler(IAttributeStore database, IPublisher publisher) : ICommandHandler<WipeAttributeCommand, bool>
 {
 	public async ValueTask<bool> Handle(WipeAttributeCommand request, CancellationToken cancellationToken)
-	{
-		return await database.WipeAttributeAsync(request.DBRef, request.Attribute, cancellationToken);
-	}
+		=> await publisher.AnnounceAsync(
+			await database.WipeAttributeAsync(request.DBRef, request.Attribute, cancellationToken),
+			request.DBRef, request.Enactor, cancellationToken);
 }

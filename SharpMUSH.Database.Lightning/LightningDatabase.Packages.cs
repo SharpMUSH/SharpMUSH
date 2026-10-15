@@ -44,7 +44,8 @@ public partial class LightningDatabase
 		Kind = package.Kind == PackageKind.Softcode ? null : package.Kind.ToString().ToLowerInvariant(),
 		PastMaximumServer = package.PastMaximum?.Server,
 		PastMaximum = package.PastMaximum?.Maximum,
-		PastMaximumAt = package.PastMaximum is { } past ? FormatPackageTimestamp(past.At) : null
+		PastMaximumAt = package.PastMaximum is { } past ? FormatPackageTimestamp(past.At) : null,
+		Plugins = package.Plugins?.ToArray()
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
@@ -56,7 +57,8 @@ public partial class LightningDatabase
 		Enum.TryParse<PackageKind>(r.Kind, ignoreCase: true, out var kind) ? kind : PackageKind.Softcode,
 		r is { PastMaximumServer: { } server, PastMaximum: { } maximum, PastMaximumAt: { } at }
 			? new PackageMaximumOverride(server, maximum, ParsePackageTimestamp(at))
-			: null);
+			: null,
+		r.Plugins is { Length: > 0 } ? r.Plugins : null);
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 		=> await Store.WriteAsync(tx =>

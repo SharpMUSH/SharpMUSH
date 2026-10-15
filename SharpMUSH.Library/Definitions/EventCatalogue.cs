@@ -162,6 +162,10 @@ public static class EventCatalogue
 		new("OBJECT`FLAG", Args(("objid", O), ("flag", W), ("type", W), ("set", B), ("change", W)), "Whoever set or cleared it",
 			"A flag or power with the event restriction was set or cleared.", EventPrivacy.Staff, false, Penn),
 
+		new(SharpEvents.AttributeChange, Args(("objid", O), ("attribute", T), ("old", M), ("new", M), ("enactor", O)),
+			"Whoever wrote the attribute, or God (#1) for the server's own bookkeeping",
+			"An attribute flagged watched was set, cleared or wiped.", EventPrivacy.Private, false, Sharp),
+
 		new("SQL`CONNECT", Args(("platform", W)), Nobody,
 			"The game connected to its SQL database.", EventPrivacy.Public, false, Penn),
 		new("SQL`CONNECTFAIL", Args(("platform", W), ("error", T)), Nobody,
@@ -189,6 +193,10 @@ public static class EventCatalogue
 			"A connected player's channel list may have changed.", EventPrivacy.Staff, false, Sharp),
 		new("PLAYER`WARN", Args(("objid", O), ("reason", T), ("account", T)), "The staff member's character",
 			"Staff warned a character from the web portal.", EventPrivacy.Private, true, Sharp),
+		new(SharpEvents.PlayerLink, Args(("objid", O), ("account", T)), "God (#1)",
+			"A character was linked to an account.", EventPrivacy.Staff, false, Sharp),
+		new(SharpEvents.PlayerUnlink, Args(("objid", O), ("account", T)), "God (#1)",
+			"A character was taken off an account.", EventPrivacy.Staff, false, Sharp),
 		new(SharpEvents.GalleryAdd, Args(("objid", O), ("asset", W), ("url", T), ("use", W)), "The character who uploaded it",
 			"An image was added to a character's profile gallery on the web portal.", EventPrivacy.Public, false, Sharp),
 		new(SharpEvents.GalleryReport, Args(("objid", O), ("asset", W), ("url", T), ("reason", T), ("caption", T)), "The reporter's character",

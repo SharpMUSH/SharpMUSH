@@ -67,6 +67,7 @@ These attribute flags alter the way attributes are used in commands and ^-listen
 - `amhear (M)`        ^-listens on this attribute match like `@amhear`
 - `prefixmatch`       When set with `@<attrib>`, this attribute will be matched down to its unique prefixes. This flag is primarily used internally, but also useful in `@attribute/access`.
 - `quiet (Q)`         When altering the attribute's value or flags, don't show the usual confirmation message
+- `watched (W)`       Every change to the attribute's value (set, cleared or wiped, by any command or function) triggers the attribute\`change event on the event handler, with the old and new values. Attributes without it trigger nothing. Only the attribute it is set on is watched, not the ones below it. Set it on one attribute with `@set <object>/<attribute>=watched`, or on a standard attribute with `@attribute/access <attribute>=watched`, which applies to that attribute wherever it is created from then on; copies that already exist keep their own flags. See [event attribute].
 
 These attribute flags are only used internally. They cannot be set, but seen on 'examine' and flags()/lflags(), tested for with hasflag(), etc:
 - `branch (\`)`        This attribute is a branch. See: [attribute trees]

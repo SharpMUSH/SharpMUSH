@@ -85,9 +85,10 @@ public class EventService(
 
 			var handlerRef = eventHandler.Object().DBRef;
 			var arguments = EventArguments.Of(name, args);
+			var run = new EventRun(handlerRef, resolvedEnactorRef, ChangeDepthFor(name));
 			if (EventCatalogue.Find(name) is { Stoppable: true })
 			{
-				await QueueInTurnAsync(name, handlerRef, resolvedEnactorRef, arguments, hearers);
+				await QueueInTurnAsync(name, run, arguments, hearers);
 				return;
 			}
 
@@ -98,8 +99,7 @@ public class EventService(
 			// a custom, non-wizard handler runs unprivileged.
 			foreach (var hearer in hearers)
 			{
-				var admission = await QueueHold.AdmitAsync(scheduler.Value, Body(hearer),
-					State(handlerRef, resolvedEnactorRef, arguments, hearer));
+				var admission = await QueueHold.AdmitAsync(scheduler.Value, Body(hearer), State(run, arguments, hearer));
 				if (!admission.Accepted)
 				{
 					logger.LogWarning("Event {EventName} was not queued for {Attribute}: {Reason}", name, hearer.Attribute,
@@ -154,7 +154,7 @@ public class EventService(
 	/// A stoppable event's attributes run in turn in one queue entry, as @include would run them, so one may call
 	/// <c>stopevent()</c> to keep the ones after it from running.
 	/// </summary>
-	private async ValueTask QueueInTurnAsync(string eventName, DBRef handler, DBRef enactor,
+	private async ValueTask QueueInTurnAsync(string eventName, EventRun run,
 		Dictionary<string, CallState> arguments, IReadOnlyList<Hearer> hearers)
 	{
 		var admission = await scheduler.Value.AdmitWork(async () =>
@@ -166,7 +166,7 @@ public class EventService(
 				using (EventStop.Enter(stop))
 				{
 					result = await parser.Value
-						.FromState(State(handler, enactor, arguments, hearer) with { ExecutionBudget = ExecutionBudget.Current })
+						.FromState(State(run, arguments, hearer) with { ExecutionBudget = ExecutionBudget.Current })
 						.CommandListParse(Body(hearer));
 				}
 
@@ -177,7 +177,7 @@ public class EventService(
 			}
 
 			return result;
-		}, $"event:{eventName}", "event", handler, enactor, notifyOnRejection: false);
+		}, $"event:{eventName}", "event", run.Handler, run.Enactor, notifyOnRejection: false);
 
 		if (!admission.Accepted)
 		{
@@ -190,15 +190,27 @@ public class EventService(
 	/// </summary>
 	private static MString Body(Hearer hearer) => MarkupText.Plain(hearer.Body.ToPlainText());
 
+	/// <summary>Who runs an event's attributes, as whom, and how many attribute changes stand behind it.</summary>
+	private readonly record struct EventRun(DBRef Handler, DBRef Enactor, int AttributeChangeDepth);
+
+	/// <summary>
+	/// The <see cref="AttributeChangeChain"/> depth an event's attributes run at: one deeper than the code that
+	/// raised it for <c>ATTRIBUTE`CHANGE</c>, and the same for any other event, so a chain that passes through
+	/// another event (a handler that moves something, whose OBJECT`MOVE handler sets HP) is still counted.
+	/// </summary>
+	private static int ChangeDepthFor(string eventName)
+		=> AttributeChangeChain.Depth + (eventName == SharpEvents.AttributeChange ? 1 : 0);
+
 	/// <summary>
 	/// The arguments are %0-%9, and each also by its name in EventArguments. Every attribute gets its own copy.
 	/// </summary>
-	private static ParserState State(DBRef handler, DBRef enactor, Dictionary<string, CallState> arguments, Hearer hearer)
-		=> ParserState.RootFor(handler) with
+	private static ParserState State(EventRun run, Dictionary<string, CallState> arguments, Hearer hearer)
+		=> ParserState.RootFor(run.Handler) with
 		{
-			Enactor = enactor,
+			Enactor = run.Enactor,
 			Arguments = new Dictionary<string, CallState>(arguments, StringComparer.OrdinalIgnoreCase),
 			EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
-			CurrentEvaluation = new DBAttribute(handler, hearer.Attribute)
+			CurrentEvaluation = new DBAttribute(run.Handler, hearer.Attribute),
+			AttributeChangeDepth = run.AttributeChangeDepth
 		};
 }

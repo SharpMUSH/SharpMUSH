@@ -11,9 +11,10 @@ namespace SharpMUSH.Library.Commands.Database;
 /// <remarks>
 /// The keys come from <see cref="CacheKeys.AttributesTouchedBy"/>, which the attribute readers build
 /// their own keys from, so a reader and its invalidator cannot drift apart; the tags from
-/// <see cref="CacheKeys.AttributeWriteTags"/>.
+/// <see cref="CacheKeys.AttributeWriteTags"/>. A write that changes a <c>watched</c> attribute publishes
+/// <see cref="Notifications.AttributeChangedNotification"/>, naming <c>Enactor</c> (null: God) as its cause.
 /// </remarks>
-public record ClearAttributeCommand(DBRef DBRef, string[] Attribute) : ICommand<bool>, ICacheInvalidating
+public record ClearAttributeCommand(DBRef DBRef, string[] Attribute, DBRef? Enactor = null) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => Definitions.CacheKeys.AttributesTouchedBy(DBRef, Attribute);
 

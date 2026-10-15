@@ -55,9 +55,10 @@ Event Types:
 - **db**: db\`dbck, db\`purge, db\`wcheck
 - **log**: log\`err, log\`cmd, log\`wiz, log\`conn, log\`trace, log\`check, log\`huh
 - **object**: object\`create, object\`destroy, object\`move, object\`rename, object\`flag
+- **attribute**: attribute\`change
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
-- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn
+- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink
 - **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp
 - **http**: http\`blocked, http\`fail, http\`command
 - **room**: room\`contents
@@ -67,7 +68,7 @@ Event Types:
 - **backup**: backup\`complete, backup\`error
 - **gallery**: gallery\`add, gallery\`report
 
-The room, channel, page, mail, backup and gallery events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
+The attribute, room, channel, page, mail, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. attribute\`change tells the game an attribute flagged `watched` changed, so a gauge or a character sheet need not check it over and over, player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.
 
@@ -149,6 +150,28 @@ Message logged to Wizard log.
 &OBJECT`FLAG #9=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
 ```
 
+# Attribute Events
+# Event Attribute
+- **attribute\`change** (*objid*, *attribute*, *old*, *new*, *enactor*)
+- Triggered after an attribute flagged `watched` is changed: set with `&` or `@set`, by set() or another function, copied or moved onto with `@cpattr` or `@mvattr`, cleared, or wiped. *<objid>* is the object the attribute is on, *<attribute>* its full name in upper case (HP, or STATS\`HP), *<old>* the value it had and *<new>* the value it has now, both keeping their colour. A new attribute's *<old>* is empty, and a cleared or wiped attribute's *<new>* is empty; a `@wipe` triggers once for each watched attribute it removes. *<enactor>* is whoever changed it, which %# is too, or #1 when the server changed it for its own bookkeeping. Setting an attribute to the value it already has still triggers it.
+
+Only attributes flagged `watched` trigger it (see [attribute flags]), so attributes nobody watches cost nothing. Mark one with `@set <object>/<attribute>=watched`, or a standard attribute wherever it is created from then on with `@attribute/access <attribute>=watched`. The flag watches the attribute it is set on, not the ones below it. Loading a PennMUSH database triggers nothing.
+
+The handler runs after the change has happened, so the event cannot be stopped, and it is private: the values may be hidden from everyone but the owner.
+
+**Changes made by the handler:** a handler that changes a watched attribute (the one it heard about, or another) triggers attribute\`change again, and so does anything the handler queues with `@trigger`, `@wait` or `@force`. To keep a handler that changes what it heard about, or two handlers that change each other's attributes, from running for ever, a chain stops after 10 events: a change made by the handler of the tenth is still made, but triggers nothing, and the server logs a warning. A change typed by a player or made by any other code starts a new chain.
+
+### Example
+```sharp
+> &HP me=20
+> @set me/HP=watched
+> &ATTRIBUTE`CHANGE`LOG #9=@assert strmatch(%<attribute>,HP) ; @pemit %<objid>=HP went from %<old> to %<new>.
+> &HP me=15
+```
+Output: after the last line you are told "HP went from 20 to 15."
+
+See [event examples gauge example] for a health gauge sent to the player's client.
+
 # SQL Events
 # Event SQL
 SharpMUSH opens a connection for each sql() query, so these report a change: whether the latest attempt to reach the SQL server worked, against the one before it.
@@ -198,6 +221,12 @@ To mimic old behaviour:
 
 - **player\`warn** (*objid*, *reason*, *account*)
 - Stoppable. Triggered when staff warn a character from the web portal's moderation page. %# is the staff member's character, *<objid>* the warned character, *<reason>* what staff wrote, and *<account>* the staff member's account name. SharpMUSH keeps no warning itself beyond the audit log entry: the handler decides what a warning does, such as sending mail, opening a job or keeping a count. Nothing happens when the handler has no PLAYER\`WARN attribute.
+
+- **player\`link** (*objid*, *account*)
+- Triggered when a character is linked to an account, however it happened: @account/link, @account/claim or claim at the connect screen, the web portal, or a package. *<account>* is the account's id, as account() returns it. A character moved from one account to another triggers player\`unlink for the old account, then player\`link for the new one. %# is #1.
+
+- **player\`unlink** (*objid*, *account*)
+- Triggered when a character is taken off an account, by @account/unlink, the web portal, or a move to another account. *<account>* is the id of the account it left. The character itself is kept. %# is #1.
 
 # Socket Events
 # Event Socket

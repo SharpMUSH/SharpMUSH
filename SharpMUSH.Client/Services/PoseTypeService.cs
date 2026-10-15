@@ -1,6 +1,7 @@
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Models.Portal.Setup;
 
 namespace SharpMUSH.Client.Services;
 
@@ -19,10 +20,13 @@ public class PoseTypeService
 	private readonly IHttpClientFactory _httpClientFactory;
 	private readonly GameCommandService _commands;
 	private readonly IAccountAuthState _accountAuth;
+	private readonly ServerInfoService? _serverInfo;
 
-	public PoseTypeService(IHttpClientFactory httpClientFactory, GameCommandService commands, IAccountAuthState accountAuth)
+	public PoseTypeService(IHttpClientFactory httpClientFactory, GameCommandService commands, IAccountAuthState accountAuth,
+		ServerInfoService? serverInfo = null)
 	{
 		_httpClientFactory = httpClientFactory;
+		_serverInfo = serverInfo;
 		_commands = commands;
 		_accountAuth = accountAuth;
 		// The hidden set is the character's: another character's is read afresh.
@@ -90,7 +94,7 @@ public class PoseTypeService
 
 	private async Task<ApiResult<PoseTypeCatalogue>> FetchAsync()
 	{
-		var result = await Client.GetApiAsync<PoseTypeCatalogue>("api/scenes/types", "The server returned no pose types.");
+		var result = await Client.GetFeatureApiAsync<PoseTypeCatalogue>(_serverInfo, GameFeatures.Scenes, "api/scenes/types", "The server returned no pose types.");
 		return result switch
 		{
 			PoseTypeCatalogue catalogue => new PoseTypeCatalogue(catalogue.Types ?? [], catalogue.Problems ?? [], catalogue.Hidden ?? []),

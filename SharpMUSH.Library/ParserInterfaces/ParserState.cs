@@ -466,6 +466,9 @@ public sealed record EvaluationContext
 
 	/// <inheritdoc cref="ParserState.OutputLimit"/>
 	public int OutputLimit { get; init; } = OutputCeiling.CurrentLimit;
+
+	/// <inheritdoc cref="ParserState.AttributeChangeDepth"/>
+	public int AttributeChangeDepth { get; init; }
 }
 
 /// <summary>
@@ -586,6 +589,17 @@ public partial record ParserState
 	{
 		get => Context.MoveDepth;
 		init => Context = Context with { MoveDepth = value };
+	}
+
+	/// <summary>
+	/// How many <c>ATTRIBUTE`CHANGE</c> events stand behind this evaluation (see
+	/// <see cref="Services.AttributeChangeChain"/>). The event's queue entry starts one deeper than the code that
+	/// made the change, and the actions it queues keep its depth.
+	/// </summary>
+	public int AttributeChangeDepth
+	{
+		get => Context.AttributeChangeDepth;
+		init => Context = Context with { AttributeChangeDepth = value };
 	}
 
 	/// <summary>
@@ -863,13 +877,17 @@ public partial record ParserState
 
 	/// <summary>
 	/// A fresh state carrying invocation and recursion tracking for an evaluation entered without it.
-	/// It keeps <paramref name="caller"/>'s actors, execution budget, restrictions and <c>%c</c>/<c>%u</c>,
-	/// and nothing else: registers and counters start empty. With no caller it has no actors.
+	/// It keeps <paramref name="caller"/>'s actors, execution budget, restrictions, <c>%c</c>/<c>%u</c> and
+	/// <see cref="AttributeChangeDepth"/>, and nothing else: registers and counters start empty. With no caller it
+	/// has no actors.
 	/// </summary>
 	public static ParserState ForTrackedEvaluation(ParserState? caller)
 		=> Fresh(caller?.Executor, caller?.Enactor, caller?.Caller, handle: null, ParserStateFlags.None,
 			session: null, caller?.ExecutionBudget, caller?.Restrictions, caller?.CommandText,
-			OutputCeiling.CurrentLimit);
+			OutputCeiling.CurrentLimit) with
+		{
+			AttributeChangeDepth = caller?.AttributeChangeDepth ?? 0
+		};
 
 	private static ParserState Fresh(DBRef? executor, DBRef? enactor, DBRef? caller, long? handle,
 		ParserStateFlags flags, string? session, ExecutionBudget? budget, EvaluationRestrictions? restrictions,
