@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
@@ -156,7 +157,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AddSplitsTheValueListAndReloads()
+	public async Task AddSendsTheValueListAndReloads()
 	{
 		string? addedKey = null;
 		string[]? addedValues = null;
@@ -195,10 +196,13 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		await component.FindAll("input")[0].InputAsync("*.example.com");
 		await component.FindAll("input")[1].InputAsync("!connect");
+		// Leaving the values field for Add adds what was typed in it.
+		await component.FindAll("input")[1].ChangeAsync(new ChangeEventArgs());
 		await component.Find("button.kit-capsule--primary").ClickAsync();
 
 		await Assert.That(loads).IsEqualTo(1);
 		await Assert.That(component.FindAll("input")[0].GetAttribute("value")).IsEqualTo("*.example.com");
+		await Assert.That(component.Find(".list-editor-chip").TextContent).Contains("!connect");
 		await Assert.That(Services.GetRequiredService<ISnackbar>().ShownSnackbars
 			.Any(s => s.Severity == Severity.Error)).IsTrue();
 	}

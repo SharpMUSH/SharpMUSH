@@ -12,7 +12,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// The server's secrets, as <c>@secret</c> manages them: list what is set and where from, set one, clear one.
+/// The server's secrets, as <c>@secret</c> manages them: list what is set and where from, set one, clear one, name
+/// the hosts <c>@http</c> may send one to.
 /// No request ever answers with a value. <see cref="PortalPermission.ConfigAdmin"/> manages every secret;
 /// the permission a secret's declaration names manages that one.
 /// </summary>
@@ -54,6 +55,21 @@ public class SecretsController(
 		};
 	}
 
+	[HttpPut("{name}/hosts")]
+	public async Task<ActionResult<SecretStatus>> SetHosts(string name, [FromBody] SecretHostsRequest request)
+	{
+		if (!await MayManageAsync(name))
+		{
+			return Forbid();
+		}
+
+		return await secrets.SetHostsAsync(name, request.Hosts ?? [], HttpContext.RequestAborted) switch
+		{
+			SecretStatus status => await AuditedAsync(AuditActions.SecretHosts, status, status.Hosts),
+			Error<string> error => BadRequest(new { error = error.Value }),
+		};
+	}
+
 	[HttpDelete("{name}")]
 	public async Task<ActionResult<SecretStatus>> Clear(string name)
 	{
@@ -69,9 +85,9 @@ public class SecretsController(
 		};
 	}
 
-	private async Task<ActionResult<SecretStatus>> AuditedAsync(string action, SecretStatus status)
+	private async Task<ActionResult<SecretStatus>> AuditedAsync(string action, SecretStatus status, string? details = null)
 	{
-		await audit.RecordPortalAsync(User, action, AuditTargets.Of(AuditTargetKinds.Secret, status.Name));
+		await audit.RecordPortalAsync(User, action, AuditTargets.Of(AuditTargetKinds.Secret, status.Name), details);
 		return Ok(status);
 	}
 

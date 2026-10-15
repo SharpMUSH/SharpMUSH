@@ -16,8 +16,8 @@
         <SectionLabel>@Loc["WidFormStepOf", 1, 4]</SectionLabel>
         <KitCard Title="@Loc["PkgStepSelectObjects"]">
             <div class="pkg-card-body">
-                <MudTextField @bind-Value="_objidInput" Label="@Loc["PkgObjectIdsLabel"]"
-                              Lines="3" Variant="Variant.Outlined" />
+                <ListEditor Items="_objids" ItemsChanged="@(objids => _objids = objids)" Label="@Loc["PkgObjectIdsLabel"]"
+                            Placeholder="#847:1778518155494" Mono="true" Separators="ObjidSeparators" Class="pkg-objids" />
                 <MudButton Class="mt-2 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ScanAsync">
                     @Loc["PkgScanSelection"]
                 </MudButton>
@@ -131,7 +131,7 @@
                         <MudTextField @bind-Value="_license" Label="@Loc["PkgLicenseLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudItem>
                     <MudItem xs="12" md="3">
-                        <MudTextField @bind-Value="_authors" Label="@Loc["PkgAuthorsLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        <ListEditor Items="_authors" ItemsChanged="@(authors => _authors = authors)" Label="@Loc["PkgAuthorsLabel"]" Class="pkg-authors" />
                     </MudItem>
                     <MudItem xs="12">
                         <MudTextField @bind-Value="_description" Label="@Loc["PkgDescriptionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -171,7 +171,10 @@
         public string ConfigureLabel = "";
     }
 
-    private string _objidInput = "";
+    private IReadOnlyList<string> _objids = [];
+
+    // An object id holds no space or comma, so either ends one; a pasted column of ids splits on its line breaks.
+    private static readonly char[] ObjidSeparators = [' ', ',', '\n'];
     private PackageAuthoringScan? _scan;
     private bool _busy;
 
@@ -183,7 +186,7 @@
     private string _version = "1.0.0";
     private string _description = "";
     private string _license = "";
-    private string _authors = "";
+    private IReadOnlyList<string> _authors = [];
 
     private bool _showExport;
     private string _exportedYaml = "";
@@ -220,9 +223,7 @@
 
     private async Task ScanAsync()
     {
-        var objids = _objidInput
-            .Split(['\n', ',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList();
+        var objids = _objids.ToList();
         if (objids.Count == 0)
         {
             Snackbar.Add(Loc["PkgEnterObjectId"], Severity.Warning);
@@ -291,7 +292,7 @@
             switch (await Packages.AuthorExportAsync(new PackageAuthoringRequest(
                 _packageId.Trim(), _version.Trim(), _description.Trim(),
                 string.IsNullOrWhiteSpace(_license) ? null : _license.Trim(),
-                _authors.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                [.. _authors],
                 selections, wellKnown, configure)))
             {
                 case string yaml:

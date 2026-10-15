@@ -27,7 +27,12 @@
                               Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
                               Class="kvl-field kvl-field--key"
                               OnKeyDown="HandleKeyDown" />
-                @if (HasValues)
+                @if (HasValues && !Text.SingleValue)
+                {
+                    <ListEditor Items="_newValueList" ItemsChanged="@(values => _newValueList = values)" Label="@(Text.ValuesLabel ?? string.Empty)"
+                                Placeholder="@Text.ValuesPlaceholder" Mono="true" Class="kvl-field kvl-field--values" />
+                }
+                else if (HasValues)
                 {
                     <MudTextField T="string" Value="@_newValues" ValueChanged="@(v => _newValues = v ?? string.Empty)"
                                   Label="@Text.ValuesLabel" Placeholder="@Text.ValuesPlaceholder"
@@ -108,19 +113,21 @@
     public Func<string, Task<ApiResult<Success>>> Delete { get; set; } = default!;
 
     /// <summary>
-    /// Whether an entry carries a comma-separated value list (sitelock access rules, restriction
+    /// Whether an entry carries a value list (sitelock access rules, restriction
     /// flags) or is a bare key (a banned name). It follows from the text: a list with no values has
     /// nothing to label them with.
     /// </summary>
     private bool HasValues => Text.ValuesLabel is not null;
 
-    private bool CanAdd => !string.IsNullOrWhiteSpace(_newKey)
-        && (!HasValues || Text.SingleValue || !string.IsNullOrWhiteSpace(_newValues));
+    // A multi-value list may still hold its last value in the editor's field: leaving the field for Add adds it,
+    // so Add is not held back for an empty list; AddAsync says when there is truly nothing.
+    private bool CanAdd => !string.IsNullOrWhiteSpace(_newKey);
 
     private bool _loading = true;
     private IReadOnlyList<AdminKeyValueEntry> _entries = [];
     private string _newKey = string.Empty;
     private string _newValues = string.Empty;
+    private IReadOnlyList<string> _newValueList = [];
 
     protected override Task OnInitializedAsync() => ReloadAsync();
 
@@ -155,7 +162,7 @@
         var key = _newKey.Trim();
         string[] values = !HasValues ? []
             : Text.SingleValue ? [_newValues]
-            : _newValues.Split(',').Select(v => v.Trim()).Where(v => v.Length > 0).ToArray();
+            : [.. _newValueList];
 
         if (HasValues && !Text.SingleValue && values.Length == 0)
         {
@@ -169,6 +176,7 @@
                 Snackbar.Add(Text.Added(key), Severity.Success);
                 _newKey = string.Empty;
                 _newValues = string.Empty;
+                _newValueList = [];
                 await ReloadAsync();
                 break;
             case ApiFailure failure:

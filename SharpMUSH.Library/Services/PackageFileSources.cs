@@ -145,3 +145,57 @@ public static class PackageWikiBodies
 /// <param name="Manifest">The manifest, every page carrying its body.</param>
 /// <param name="Warnings">Links that look like a typo for a page the package ships.</param>
 public sealed record PackageWikiLoad(PackageManifest Manifest, IReadOnlyList<PackageManifestIssue> Warnings);
+
+/// <summary>
+/// The README a package carries beside its <c>package.yaml</c>. It is read with the manifest, from the same source,
+/// and kept with the revision an apply records, so the Packages page shows the README of the version installed.
+/// </summary>
+public static class PackageReadme
+{
+	/// <summary>The file names a README may have, in the order they are looked for.</summary>
+	public static readonly IReadOnlyList<string> FileNames = ["README.md", "README.MD", "readme.md", "Readme.md"];
+
+	/// <summary>The largest README a package may carry; a larger one is left out.</summary>
+	public const int MaxBytes = 256 * 1024;
+
+	/// <summary>
+	/// The README in <paramref name="files"/>, or <see cref="NotFound"/> when there is none, or it is larger than
+	/// <see cref="MaxBytes"/> or not UTF-8 text. A package without a readable README still installs.
+	/// </summary>
+	public static async Task<Found<string>> ReadAsync(IPackageFileSource? files, CancellationToken cancellationToken = default)
+	{
+		if (files is null)
+		{
+			return new NotFound();
+		}
+
+		foreach (var name in FileNames)
+		{
+			if (await files.ReadFileAsync(name, cancellationToken) is { } bytes)
+			{
+				return Decode(bytes);
+			}
+		}
+
+		return new NotFound();
+	}
+
+	/// <summary><paramref name="bytes"/> as README text, or <see cref="NotFound"/> when too large or not UTF-8.</summary>
+	public static Found<string> Decode(byte[] bytes)
+	{
+		if (bytes.Length > MaxBytes)
+		{
+			return new NotFound();
+		}
+
+		try
+		{
+			var text = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(bytes);
+			return text.TrimStart('﻿').ReplaceLineEndings("\n");
+		}
+		catch (DecoderFallbackException)
+		{
+			return new NotFound();
+		}
+	}
+}

@@ -21,7 +21,7 @@
     <comment>MT — the rule literals are values the admin types; left in English.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Hozzáférési szabályok (vesszővel elválasztva)</value>
+    <value>Hozzáférési szabályok</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Szerzők (vesszővel elválasztva)</value>
+    <value>Szerzők</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Objektumazonosítók (soronként egy, például #847:1778518155494)</value>
+    <value>Objektumazonosítók</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — the flag literals are values the admin types; left in English.</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Korlátozások (vesszővel elválasztva)</value>
+    <value>Korlátozások</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

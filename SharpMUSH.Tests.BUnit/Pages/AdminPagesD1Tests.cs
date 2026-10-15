@@ -161,8 +161,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".config-input, .config-primary-btn, .config-icon-btn, .config-field-card").Count).IsEqualTo(0)
 			.Because("the hand-built controls are gone");
 		await Assert.That(cut.FindAll("input").Count).IsGreaterThan(0);
-		await Assert.That(cut.FindAll("input:not(.mud-input-slot)").Count).IsEqualTo(0)
-			.Because("every field is a MudBlazor field styled like the rest of the portal");
+		await Assert.That(cut.FindAll("input:not(.mud-input-slot):not(.list-editor-input)").Count).IsEqualTo(0)
+			.Because("every field is a MudBlazor field or the kit's list editor, styled like the rest of the portal");
 		await Assert.That(cut.FindAll("button.kit-capsule.kit-capsule--primary").Count).IsEqualTo(1)
 			.Because("the add action is the page's one primary capsule");
 		await Assert.That(cut.FindAll("button.mud-icon-button.config-delete[aria-label='Delete']").Count).IsEqualTo(1);

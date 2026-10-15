@@ -19,6 +19,7 @@ using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 using SharpMUSH.Library.Markup;
 using DotNext.Collections.Generic;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -1483,67 +1484,46 @@ public partial class Functions
 
 	private async ValueTask<CallState> RollWithDataAsync(IMUSHCodeParser parser, string formula, string data, RollOptions options)
 	{
-		if (data.Length == 0) return RollAnswer(await DiceRoll.RollAsync(formula, NoDiceData, RollDie, options.Mode), options);
-		if (data[0] is '{' or '[') return RollAnswer(await RollWithJsonAsync(formula, data, options.Mode), options);
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, data, All,
-			async holder => RollAnswer(
-				await DiceRoll.RollAsync(formula, name => DiceValueFromAttributeAsync(executor, holder, name), RollDie, options.Mode),
-				options));
-	}
-
-	private static async ValueTask<Result<DiceRollResult>> RollWithJsonAsync(string formula, string data, DiceRollMode mode)
-	{
-		JsonDocument document;
-		try
+		return await RollData.RollAsync(parser, executor, LocateService, AttributeService, formula, data, options.Mode) switch
 		{
-			document = JsonDocument.Parse(data);
-		}
-		catch (JsonException)
-		{
-			return new Error<string>(ErrorMessages.Returns.RollInvalidJson);
-		}
-
-		using (document)
-		{
-			var root = document.RootElement;
-			return root.ValueKind == JsonValueKind.Object
-				? await DiceRoll.RollAsync(formula, name => ValueTask.FromResult(DiceRoll.FromJson(root, name)), RollDie, mode)
-				: new Error<string>(ErrorMessages.Returns.RollDataMustBeObject);
-		}
-	}
-
-	/// <summary>
-	/// <c>stat.dex</c> is the attribute <c>STAT`DEX</c>, read with the visibility get() checks and
-	/// never evaluated.
-	/// </summary>
-	private async ValueTask<DiceValue> DiceValueFromAttributeAsync(AnySharpObject executor, AnySharpObject holder, string name)
-	{
-		var attribute = name.Replace('.', '`').ToUpperInvariant();
-		return await AttributeService.GetAttributeAsync(executor, holder, attribute,
-				mode: Library.Services.Interfaces.IAttributeService.AttributeMode.Read, parent: true) switch
-		{
-			SharpAttribute[] chain when chain.Last().Value.ToPlainText().Trim() is { Length: > 0 } text => new DiceFormula(text),
-			SharpAttribute[] or None => new NotFound(),
-			Error<string> error => error
+			DiceRollResult result when options.Output is RollOutput.Record => await RecordedRollAnswerAsync(parser, executor, result),
+			DiceRollResult result => options.Output switch
+			{
+				RollOutput.Text => new CallState(result.Text),
+				RollOutput.Json => new CallState(result.ToJson()),
+				_ => new CallState(result.Total)
+			},
+			Error<string> error => new CallState(error.Value)
 		};
 	}
 
-	private static CallState RollAnswer(Result<DiceRollResult> rolled, RollOptions options) => rolled switch
+	private async ValueTask<CallState> RecordedRollAnswerAsync(IMUSHCodeParser parser, AnySharpObject executor, DiceRollResult result)
 	{
-		DiceRollResult result => options.Output switch
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		return new CallState(RollData.ToJson(await RollData.RecordAsync(Mediator, enactor, executor, result)));
+	}
+
+	/// <summary>
+	/// A recorded roll, by the id <c>@roll</c> or roll()'s <c>record</c> option gave it, as JSON: who rolled
+	/// it, when, and every die. Anyone may read any roll; that is what makes a claimed roll checkable.
+	/// </summary>
+	[SharpFunction(Name = "rollinfo", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["id"])]
+	public async ValueTask<CallState> RollInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var text = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim().TrimStart('#');
+		if (!long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var id))
 		{
-			RollOutput.Text => new CallState(result.Text),
-			RollOutput.Json => new CallState(result.ToJson()),
-			_ => new CallState(result.Total)
-		},
-		Error<string> error => new CallState(error.Value)
-	};
+			return new CallState(ErrorMessages.Returns.NoSuchRoll);
+		}
 
-	private static ValueTask<DiceValue> NoDiceData(string name) => ValueTask.FromResult<DiceValue>(new NotFound());
-
-	private static int RollDie(int sides) => Random.Shared.Next(1, sides + 1);
+		return await Mediator.Send(new GetRollQuery(id)) switch
+		{
+			RecordedRoll recorded => new CallState(RollData.ToJson(recorded)),
+			_ => new CallState(ErrorMessages.Returns.NoSuchRoll)
+		};
+	}
 
 	/// <summary>
 	/// A random number: a real in [0,1) with no argument, otherwise an integer in the given range.

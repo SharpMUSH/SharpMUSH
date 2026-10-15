@@ -670,8 +670,9 @@ Several things are kept after they stop being what the game shows:
 - **Deleted poses.** Deleting a pose hides it. Its content and edit history stay stored.
 - **The audit log.** Every staff action, from the portal or the game, is one entry (the portal's
   audit log page lists them).
+- **Recorded rolls.** Every `@roll`, and every roll() kept with `record`, so `rollinfo()` can show it.
 
-All four grow without bound by default. Each one makes the live world larger, and so every backup.
+All five grow without bound by default. Each one makes the live world larger, and so every backup.
 `@storage/history` counts them.
 
 **The default keeps everything.** Unless an operator sets a policy, nothing is ever purged. That
@@ -694,6 +695,7 @@ A purge frees pages inside the file for reuse. It does not shrink the file (see
 | `SHARPMUSH_HISTORY_SCENE_EDITS_MAX_AGE` | unset | Purge pose versions older than this. |
 | `SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE` | unset | Purge a deleted pose (its content and all its versions) once it has been deleted this long. |
 | `SHARPMUSH_HISTORY_AUDIT_MAX_AGE` | unset | Purge audit log entries older than this. The audit log takes no `_KEEP`. |
+| `SHARPMUSH_HISTORY_ROLLS_MAX_AGE` | unset | Purge recorded rolls (`@roll`, roll() with `record`) older than this. A purged roll's number is never reused. Rolls take no `_KEEP`. |
 | `SHARPMUSH_HISTORY_INTERVAL` | unset, so no scheduled pass | How often a pass runs, for example `1d`. `@storage/purge` runs one at any time. |
 | `SHARPMUSH_HISTORY_BATCH` | `256` | The most records one write transaction deletes. |
 | `SHARPMUSH_HISTORY_ARCHIVE_PATH` | unset, so no archive | Purged records are appended here as `<kind>-<date>.jsonl`, and flushed to disk, before they are deleted. |

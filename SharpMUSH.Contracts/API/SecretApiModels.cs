@@ -49,3 +49,9 @@ public sealed record SecretStatus(
 
 /// <summary><c>PUT api/secrets/{name}</c>: the new value. It is never sent back.</summary>
 public sealed record SecretSetRequest(string Value);
+
+/// <summary>
+/// <c>PUT api/secrets/{name}/hosts</c>: the hosts <c>@http</c> may send the secret to, replacing the ones named
+/// before; none takes them all away. <c>*.example.com</c> covers every host under <c>example.com</c>.
+/// </summary>
+public sealed record SecretHostsRequest(IReadOnlyList<string> Hosts);
