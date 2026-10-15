@@ -1432,6 +1432,14 @@ public static partial class ErrorMessages
 
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
+		public const string DumpStarting = "Dumping...";
+
+		public const string DumpComplete = "Dump complete.";
+
+		public const string InactivityTimeout = "*** Inactivity timeout ***";
+
+		public const string InactivityHidden = "*** Inactivity limit reached. You are now HIDDEN. ***";
+
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";

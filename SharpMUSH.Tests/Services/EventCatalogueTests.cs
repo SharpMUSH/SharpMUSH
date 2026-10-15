@@ -24,7 +24,7 @@ public partial class EventCatalogueTests
 	public async Task EveryRaiseNamesACataloguedEventThroughSharpEvents()
 	{
 		var offenders = Raises()
-			.Where(raise => raise.Event is not { } name || EventCatalogue.Find(name) is not { Support: EventSupport.Raised })
+			.Where(raise => raise.Event is not { } name || EventCatalogue.Find(name) is not { Support: EventSupport.Raised or EventSupport.Compatibility })
 			.Select(raise => $"{raise.File}: {raise.Expression}")
 			.ToArray();
 
@@ -38,7 +38,7 @@ public partial class EventCatalogueTests
 	{
 		var raised = Raises().Select(raise => raise.Event).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
 		var neverRaised = EventCatalogue.All
-			.Where(definition => definition.Support == EventSupport.Raised && !raised.Contains(definition.Name))
+			.Where(definition => definition.Support is EventSupport.Raised or EventSupport.Compatibility && !raised.Contains(definition.Name))
 			.Select(definition => definition.Name)
 			.ToArray();
 
@@ -62,7 +62,7 @@ public partial class EventCatalogueTests
 		var help = File.ReadAllText(HelpFile("sharpevents.md"))
 			.Replace("\\`", "`");
 		var missing = EventCatalogue.All
-			.Where(definition => definition.Support == EventSupport.Raised)
+			.Where(definition => definition.Support is EventSupport.Raised or EventSupport.Compatibility)
 			.Where(definition => !help.Contains(HelpSignature(definition), StringComparison.Ordinal))
 			.Select(HelpSignature)
 			.ToArray();
@@ -72,22 +72,32 @@ public partial class EventCatalogueTests
 	}
 
 	[Test]
-	public async Task HelpPutsEveryUnsupportedEventInTheCompatibilityProfile()
+	public async Task HelpSaysEachCompatibilityEventNeedsTheOption()
 	{
-		var events = File.ReadAllText(HelpFile("sharpevents.md"))
+		var help = File.ReadAllText(HelpFile("sharpevents.md"))
 			.Replace("\\`", "`");
-		var compatibility = File.ReadAllText(HelpFile("compatibility-events.md"))
-			.Replace("\\`", "`");
-		var misplaced = EventCatalogue.All
-			.Where(definition => definition.Support == EventSupport.Unsupported)
-			.Where(definition => events.Contains(HelpSignature(definition), StringComparison.Ordinal)
-				|| !compatibility.Contains(definition.Name.ToLowerInvariant(), StringComparison.Ordinal))
+		var unmarked = EventCatalogue.All
+			.Where(definition => definition.Support == EventSupport.Compatibility)
+			.Where(definition => !HelpTopicAround(help, HelpSignature(definition)).Contains("compatibility_events", StringComparison.Ordinal))
 			.Select(definition => definition.Name)
 			.ToArray();
 
-		await Assert.That(misplaced).IsEmpty()
-			.Because("an event SharpMUSH cannot raise is listed in help compatibility events, not documented as working: "
-				+ string.Join(", ", misplaced));
+		await Assert.That(unmarked).IsEmpty()
+			.Because("an event raised only under compatibility_events says so in its help topic: " + string.Join(", ", unmarked));
+	}
+
+	/// <summary>The help topic (from one <c># </c> heading to the next) that holds <paramref name="text"/>.</summary>
+	private static string HelpTopicAround(string help, string text)
+	{
+		var at = help.IndexOf(text, StringComparison.Ordinal);
+		if (at < 0)
+		{
+			return string.Empty;
+		}
+
+		var start = help.LastIndexOf("\n# ", at, StringComparison.Ordinal);
+		var end = help.IndexOf("\n# ", at, StringComparison.Ordinal);
+		return help[(start < 0 ? 0 : start)..(end < 0 ? help.Length : end)];
 	}
 
 	private static string HelpSignature(EventDefinition definition)

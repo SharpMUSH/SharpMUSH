@@ -360,4 +360,10 @@ public record LimitOptions(
 
 	[SharpConfig(Name = "command_burst_size", Category = "Limit", Description = "Maximum typed lines one connection may have admitted and unfinished; typed input is never charged to the owner queue", Group = "Performance", Order = 10, Min = 1, Max = 1000000)]
 	public uint CommandBurstSize { get; init; } = DefaultCommandBurstSize;
+
+	/// <summary>Default number of images one character's profile gallery may hold.</summary>
+	public const uint DefaultMaxGalleryImages = 50;
+
+	[SharpConfig(Name = "max_gallery_images", Category = "Limit", Description = "Maximum number of images one character's profile gallery may hold; an upload past it is refused", Group = "Players", Order = 5, Min = 1, Max = 1000)]
+	public uint MaxGalleryImages { get; init; } = DefaultMaxGalleryImages;
 }

@@ -33,6 +33,21 @@ public static class SharpEvents
 	public const string HttpBlocked = "HTTP`BLOCKED";
 	public const string HttpCommand = "HTTP`COMMAND";
 
+	// PennMUSH's events SharpMUSH has nothing of its own to raise from, raised only while compatibility_events is on.
+	public const string Dump5Min = "DUMP`5MIN";
+	public const string Dump1Min = "DUMP`1MIN";
+	public const string DumpComplete = "DUMP`COMPLETE";
+	public const string DumpError = "DUMP`ERROR";
+	public const string DbDbck = "DB`DBCK";
+	public const string LogHuh = "LOG`HUH";
+	public const string SqlConnect = "SQL`CONNECT";
+	public const string SqlConnectFail = "SQL`CONNECTFAIL";
+	public const string SqlDisconnect = "SQL`DISCONNECT";
+	public const string SignalUsr1 = "SIGNAL`USR1";
+	public const string SignalUsr2 = "SIGNAL`USR2";
+	public const string PlayerInactivity = "PLAYER`INACTIVITY";
+	public const string HttpFail = "HTTP`FAIL";
+
 	/// <summary>
 	/// Fired (room-scoped, not actor-scoped) whenever a room's visible contents change — an
 	/// object enters/leaves, or a player connects/disconnects in it. Args: (roomobjid, cause).
@@ -90,4 +105,17 @@ public static class SharpEvents
 
 	/// <summary>A copy of the world could not be written. Args: (reason).</summary>
 	public const string BackupError = "BACKUP`ERROR";
+
+	/// <summary>
+	/// Fired after an image is added to a character's profile gallery on the web portal. Args: (character
+	/// objid, asset id, site-relative url, use). The enactor is the uploader; use is <c>gallery</c>,
+	/// <c>avatar</c> or <c>banner</c>.
+	/// </summary>
+	public const string GalleryAdd = "GALLERY`ADD";
+
+	/// <summary>
+	/// Fired when someone signed in to the web portal reports a gallery image. Args: (character objid, asset
+	/// id, site-relative url, reason, caption). The enactor is the reporter; the reason is their own text.
+	/// </summary>
+	public const string GalleryReport = "GALLERY`REPORT";
 }

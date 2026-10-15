@@ -19,7 +19,27 @@ public record WikiAssetInfo(
 	long SizeBytes,
 	string Sha256,
 	string UploaderDbref,
-	DateTimeOffset UploadedAt);
+	DateTimeOffset UploadedAt,
+	bool Private = false,
+	string? Lock = null);
+
+/// <summary>
+/// One file in the shared image library (<c>GET api/wiki-assets/library</c>).
+/// </summary>
+/// <param name="Lock">The permission a player needs to find it; null for everyone.</param>
+/// <param name="CanManage">The caller uploaded it or holds <c>media.admin</c>, so may change its lock.</param>
+public record LibraryAssetInfo(
+	string Id,
+	string FileName,
+	string Url,
+	string ContentType,
+	long SizeBytes,
+	DateTimeOffset UploadedAt,
+	string? Lock,
+	bool CanManage);
+
+/// <summary>The body of <c>PUT api/wiki-assets/{id}/sharing</c>.</summary>
+public record AssetSharingRequest(bool Shared, string? Lock);
 
 /// <summary>
 /// Client-side service for wiki image/file assets. Uploads, lists and deletes
@@ -67,6 +87,24 @@ public class WikiAssetService(IHttpClientFactory httpClientFactory, ILogger<Wiki
 			return [];
 		}
 	}
+
+	/// <summary>
+	/// The shared image library, newest first: the files the caller finds, whose names contain
+	/// <paramref name="search"/> when one is given.
+	/// </summary>
+	public Task<ApiResult<List<LibraryAssetInfo>>> LibraryAsync(string? search = null, int skip = 0, int take = 100) =>
+		httpClientFactory.CreateClient("api").GetApiAsync<List<LibraryAssetInfo>>(
+			$"api/wiki-assets/library?skip={skip}&take={take}&search={Uri.EscapeDataString(search ?? "")}",
+			"The server returned no image library.");
+
+	/// <summary>
+	/// Shares a file kept to one gallery, or sets the permission a player needs to find it in the library
+	/// (null for everyone). Answers with the file as the library now shows it.
+	/// </summary>
+	public Task<ApiResult<LibraryAssetInfo>> SetSharingAsync(string id, bool shared, string? lockPermission) =>
+		httpClientFactory.CreateClient("api").PutApiAsync<AssetSharingRequest, LibraryAssetInfo>(
+			$"api/wiki-assets/{Uri.EscapeDataString(id)}/sharing", new AssetSharingRequest(shared, lockPermission),
+			"The server returned no file.");
 
 	/// <summary>
 	/// Deletes an asset: <see cref="Success"/> once the server confirmed it, or the

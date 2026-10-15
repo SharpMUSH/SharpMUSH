@@ -2725,9 +2725,6 @@
   <data name="WkDirectiveCategoryHeader" xml:space="preserve">
     <value>Category: {0}</value>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>No assets uploaded yet.</value>
-  </data>
   <data name="WkHistoryPageTitle" xml:space="preserve">
     <value>History: {0}</value>
   </data>
@@ -4214,6 +4211,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>View all</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Back to {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Caption</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Edit details</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Move earlier</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Move later</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>No image carries this tag.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Gallery of {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Report</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Could not send the report: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>What is wrong with this image?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Send report</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Your report was sent to staff.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Show image</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filter by tag</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Separate tags with commas.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Content warning</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Covers the image until a viewer chooses to see it. An image with a warning cannot be the avatar or the banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Content warning: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Could not save the image's details: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Could not move the image: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portrait</value>
   </data>
@@ -4429,6 +4492,12 @@
   </data>
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Details</value>
+  </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Scenes where {0} is {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Show all scenes</value>
   </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Started</value>
@@ -7872,5 +7941,62 @@
   </data>
   <data name="AdmWebhooksOutcomeDropped" xml:space="preserve">
     <value>{0}; dropped</value>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Search the image library</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>No images in the library yet.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>No file name matches.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Or choose from the image library</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>In the shared image library. Removing it from the gallery keeps the file.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Share in the image library</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Anyone signed in can then use it on a wiki page or in a gallery. This cannot be undone.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Could not share the image: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Library sharing</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>In the shared library</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Lets anyone signed in pick it for a wiki page or a gallery. This cannot be undone.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Lock to a permission</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Only holders of this permission find it in the library. Leave empty for everyone.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>One gallery</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Everyone</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Locked: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Could not save: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>An image with a content warning stays out of the image library. Take the warning off to share it.</value>
   </data>
 </root>

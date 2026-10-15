@@ -119,7 +119,8 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), d.Compatibility.TinyMath),
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), d.Compatibility.SilentPEmit),
 				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), d.Compatibility.ParenGroups),
-				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters)
+				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters),
+				Boolean(Get(nameof(CompatibilityOptions.CompatibilityEvents)), d.Compatibility.CompatibilityEvents)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
@@ -175,7 +176,13 @@ public static partial class ReadPennMushConfig
 				DatabaseReference(Get(nameof(DatabaseOptions.MessagesObject)), d.Database.MessagesObject)
 			),
 			Dump = new DumpOptions(
-				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval)
+				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval),
+				RequiredString(Get(nameof(DumpOptions.DumpInterval)), d.Dump.DumpInterval),
+				RequiredString(Get(nameof(DumpOptions.DbckInterval)), d.Dump.DbckInterval),
+				String(Get(nameof(DumpOptions.DumpMessage)), d.Dump.DumpMessage),
+				String(Get(nameof(DumpOptions.DumpComplete)), d.Dump.DumpComplete),
+				String(Get(nameof(DumpOptions.DumpWarning5Min)), d.Dump.DumpWarning5Min),
+				String(Get(nameof(DumpOptions.DumpWarning1Min)), d.Dump.DumpWarning1Min)
 			),
 			File = new FileOptions(
 				RequiredString(Get(nameof(FileOptions.AccessFile)), d.File.AccessFile),
@@ -233,6 +240,7 @@ public static partial class ReadPennMushConfig
 			{
 				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), d.Limit.GlobalQueueLimit),
 				GuestOutputLimit = UnsignedInteger(Get(nameof(LimitOptions.GuestOutputLimit)), d.Limit.GuestOutputLimit),
+				MaxGalleryImages = UnsignedInteger(Get(nameof(LimitOptions.MaxGalleryImages)), d.Limit.MaxGalleryImages),
 				CommandBurstSize = UnsignedInteger(Get(nameof(LimitOptions.CommandBurstSize)), d.Limit.CommandBurstSize)
 			},
 			Log = new LogOptions(

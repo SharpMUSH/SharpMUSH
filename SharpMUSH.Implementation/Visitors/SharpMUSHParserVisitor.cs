@@ -428,7 +428,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 	internal bool BeginsRestrictedEvaluation(IFunctionContext context)
 	{
-		var name = FunctionNameOf(context);
+		// !restrictedexpr(...) runs restrictedexpr(), so it opens restricted evaluation the same way.
+		var name = Bang.FunctionName(FunctionNameOf(context));
 		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
 		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
 			|| definition.LibraryInformation.RestrictedOperation == "fn"
@@ -541,6 +542,16 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		}
 
 		var functionName = FunctionNameOf(context);
+		// !name(...): the bang answers 1 or 0 about the result. Only a name that is a function takes one;
+		// any other stays as written, so !text(...) is prose or an unknown function, as it was.
+		Bang? bang = null;
+		if (Bang.Read(functionName, out var readBang) is > 0 and var bangLength
+				&& _services.Functions.IsFunction(parser, functionName[bangLength..]))
+		{
+			functionName = functionName[bangLength..];
+			bang = readBang;
+		}
+
 		// Reject oversized calls before ANTLR child-array and argument-map materialization.
 		var restricted = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
 		if (restricted) DemandBoundedArguments(context);
@@ -620,6 +631,10 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (shouldDebug) _debugNestDepth++;
 
 		var result = await _services.Functions.InvokeAsync(this, functionName, context, arguments);
+		if (bang is { } applied)
+		{
+			result = result with { Message = applied.Apply(result.Message, parser) };
+		}
 
 		if (shouldDebug) _debugNestDepth--;
 
@@ -1300,6 +1315,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (context.REG_NUM() is not null
 				|| context.REG_ALPHA() is not null
 				|| context.ITEXT_NUM() is not null
+				|| context.DTEXT_NUM() is not null
 				|| context.STEXT_NUM() is not null)
 		{
 			return new CallState(

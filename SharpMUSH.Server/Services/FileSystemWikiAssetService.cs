@@ -18,6 +18,9 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 {
 	private readonly string _root;
 
+	/// <summary>Metadata rewrites run one at a time, so two changes to one file cannot interleave.</summary>
+	private readonly SemaphoreSlim _writes = new(1, 1);
+
 	[GeneratedRegex("[^a-zA-Z0-9._-]")]
 	private static partial Regex DisallowedFileNameChars();
 
@@ -61,6 +64,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 		string contentType,
 		Stream content,
 		string uploaderDbref,
+		bool isPrivate = false,
 		CancellationToken ct = default)
 	{
 		var id = Guid.NewGuid().ToString("N");
@@ -89,7 +93,8 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 				size,
 				sha256,
 				uploaderDbref,
-				DateTimeOffset.UtcNow);
+				DateTimeOffset.UtcNow,
+				isPrivate);
 
 			await File.WriteAllTextAsync(MetaPath(id), JsonSerializer.Serialize(asset), ct);
 			return asset;
@@ -104,22 +109,50 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 
 	public async Task<Found<OpenedWikiAsset>> OpenAsync(string id, CancellationToken ct = default)
 	{
-		if (!IsValidId(id) || !File.Exists(MetaPath(id)) || !File.Exists(BinPath(id)))
+		if (!File.Exists(BinPath(id)))
+		{
+			return new NotFound();
+		}
+
+		return await FindAsync(id, ct) switch
+		{
+			WikiAsset asset => new OpenedWikiAsset(asset, File.OpenRead(BinPath(id))),
+			NotFound none => none,
+		};
+	}
+
+	public async Task<Found<WikiAsset>> FindAsync(string id, CancellationToken ct = default)
+	{
+		if (!IsValidId(id) || !File.Exists(MetaPath(id)))
 		{
 			return new NotFound();
 		}
 
 		var json = await File.ReadAllTextAsync(MetaPath(id), ct);
-		var asset = JsonSerializer.Deserialize<WikiAsset>(json);
-		if (asset is null)
-		{
-			return new NotFound();
-		}
-
-		return new OpenedWikiAsset(asset, File.OpenRead(BinPath(id)));
+		return JsonSerializer.Deserialize<WikiAsset>(json) is { } asset ? asset : new NotFound();
 	}
 
-	public async Task<IReadOnlyList<WikiAsset>> ListAsync(int skip = 0, int take = 100)
+	public async Task<Found<WikiAsset>> SetSharingAsync(string id, bool isPrivate, string? lockPermission, CancellationToken ct = default)
+	{
+		await _writes.WaitAsync(ct);
+		try
+		{
+			if (await FindAsync(id, ct) is not WikiAsset asset)
+			{
+				return new NotFound();
+			}
+
+			var changed = asset with { Private = isPrivate, Lock = lockPermission };
+			await File.WriteAllTextAsync(MetaPath(id), JsonSerializer.Serialize(changed), ct);
+			return changed;
+		}
+		finally
+		{
+			_writes.Release();
+		}
+	}
+
+	public async Task<IReadOnlyList<WikiAsset>> ListAsync(int skip = 0, int take = 100, Func<WikiAsset, bool>? where = null)
 	{
 		var assets = new List<WikiAsset>();
 		foreach (var metaFile in Directory.EnumerateFiles(_root, "*.json"))
@@ -138,6 +171,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 		}
 
 		return assets
+			.Where(where ?? (_ => true))
 			.OrderByDescending(a => a.UploadedAt)
 			.Skip(skip)
 			.Take(take)

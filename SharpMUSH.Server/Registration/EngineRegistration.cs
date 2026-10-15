@@ -229,6 +229,7 @@ internal static class EngineRegistration
 			.RemoveAllLoggers()
 			.ConfigurePrimaryHttpMessageHandler(sp =>
 				WebhookDeliveryService.Handler(sp.GetRequiredService<IOptions<Library.Webhooks.WebhookOptions>>().Value));
+		services.AddSingleton<IDumpService, DumpService>();
 		services.AddSingleton<IFeedService, FeedService>();
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();

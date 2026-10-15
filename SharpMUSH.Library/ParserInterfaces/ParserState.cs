@@ -219,6 +219,12 @@ public class IterationWrapper<T>
 	/// the loop, never the code of an attribute it calls.
 	/// </summary>
 	public DBAttribute? Evaluation { get; init; }
+
+	/// <summary>
+	/// Whether this iteration is an <c>@dolist</c>, which <c>%d&lt;n&gt;</c> counts. <c>%i&lt;n&gt;</c> counts
+	/// every iteration.
+	/// </summary>
+	public bool DoList { get; init; }
 }
 
 /// <summary>
@@ -732,7 +738,8 @@ public partial record ParserState
 				Break = frame.Break,
 				NoBreak = frame.NoBreak,
 				Spliced = frame.Spliced,
-				Evaluation = frame.Evaluation
+				Evaluation = frame.Evaluation,
+				DoList = frame.DoList
 			})),
 			RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
 				? owned.Clone()

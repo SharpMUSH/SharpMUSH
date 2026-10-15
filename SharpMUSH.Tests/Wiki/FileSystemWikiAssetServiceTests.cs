@@ -144,4 +144,66 @@ public class FileSystemWikiAssetServiceTests
 			root.Delete(recursive: true);
 		}
 	}
+
+	[Test]
+	public async Task SetSharingAsync_KeepsTheChange_AndListAsyncFiltersBeforePaging()
+	{
+		var (service, root) = MakeService();
+		try
+		{
+			var kept = (await service.SaveAsync("kept.png", "image/png", Bytes("aaa"), "#1", isPrivate: true)).Expect<WikiAsset>();
+			await service.SaveAsync("open.png", "image/png", Bytes("bbb"), "#1");
+			await Assert.That(kept.Private).IsTrue();
+
+			var changed = (await service.SetSharingAsync(kept.Id, isPrivate: false, "lore.secret")).Expect<WikiAsset>();
+			await Assert.That(changed.Lock).IsEqualTo("lore.secret");
+			var found = (await service.FindAsync(kept.Id)).Expect<WikiAsset>();
+			await Assert.That(found.Private).IsFalse();
+			await Assert.That(found.Lock).IsEqualTo("lore.secret");
+
+			var locked = await service.ListAsync(0, 1, a => a.Lock is not null);
+			await Assert.That(locked.Select(a => a.FileName)).IsEquivalentTo(["kept.png"]);
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	/// <summary>Metadata written before sharing existed reads as a shared file with no lock.</summary>
+	[Test]
+	public async Task FindAsync_OlderMetadata_ReadsAsSharedAndUnlocked()
+	{
+		var (service, root) = MakeService();
+		try
+		{
+			var id = Guid.NewGuid().ToString("N");
+			await File.WriteAllBytesAsync(Path.Combine(root.FullName, $"{id}.bin"), [1]);
+			await File.WriteAllTextAsync(Path.Combine(root.FullName, $"{id}.json"),
+				$$"""{"Id":"{{id}}","FileName":"old.png","ContentType":"image/png","SizeBytes":1,"Sha256":"","UploaderDbref":"#1","UploadedAt":"2026-01-01T00:00:00+00:00"}""");
+
+			var found = (await service.FindAsync(id)).Expect<WikiAsset>();
+			await Assert.That(found.Private).IsFalse();
+			await Assert.That(found.Lock).IsNull();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task SetSharingAsync_UnknownId_ReturnsNotFound()
+	{
+		var (service, root) = MakeService();
+		try
+		{
+			var result = await service.SetSharingAsync(Guid.NewGuid().ToString("N"), isPrivate: false, null);
+			await Assert.That(result.Value).IsTypeOf<NotFound>();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
 }

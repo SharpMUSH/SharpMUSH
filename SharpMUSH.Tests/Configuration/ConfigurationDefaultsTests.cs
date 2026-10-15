@@ -57,8 +57,6 @@ public class ConfigurationDefaultsTests
 		["chunk_cache_memory"] = "Penn's attribute chunk store.",
 		["chunk_swap_initial_size"] = "Penn's attribute chunk store.",
 		["attr_compression"] = "Penn's attribute chunk store.",
-		["dbck_interval"] = "Penn's database consistency pass.",
-		["dump_interval"] = "Penn's flatfile dump timer.",
 		["forking_dump"] = "Penn forks to write its flatfile.",
 		["help_command"] = "Penn registers help files as commands; SharpMUSH indexes its own helpfiles.",
 		["ahelp_command"] = "Penn registers help files as commands.",

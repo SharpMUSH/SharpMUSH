@@ -1,6 +1,7 @@
 using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -410,7 +411,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// </summary>
 	private SemanticTokenType ClassifyFunction(string functionText)
 	{
-		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
+		var functionName = Bang.FunctionName(functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f'));
 
 		if (functionLibrary.TryGetValue(functionName, out var functionInfo)
 			|| functionLibrary.TryGetValue(functionName.ToLowerInvariant(), out functionInfo))
