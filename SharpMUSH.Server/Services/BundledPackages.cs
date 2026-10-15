@@ -111,6 +111,13 @@ public static class BundledPackages
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +rel is a name a game may already use for its own code. It reads finger's fields.
+		// relationships-scene adds the last scene together and needs the Scene System; relationships-app (the web on a
+		// profile) and relationships-card (a line on the name card) are its portal widgets.
+		new("relationships", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("relationships-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("relationships-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("relationships-card", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a

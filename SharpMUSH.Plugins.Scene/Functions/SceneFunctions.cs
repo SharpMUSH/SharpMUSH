@@ -222,6 +222,56 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
+	/// sceneshared(&lt;player&gt;, &lt;player&gt;[, &lt;count&gt;])
+	/// The scenes both players belong to, the latest activity first, that the enactor may see: at most
+	/// &lt;count&gt; of them (1 by default), from the first player's last 200. Cancelled scenes are left out, as
+	/// scenelist() leaves them out.
+	/// </summary>
+	[SharpFunction(Name = "sceneshared", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["player", "other", "count"])]
+	public static async ValueTask<CallState> SceneShared(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var count = 1;
+		if (args.TryGetValue("2", out var countArg) && countArg.Message.ToPlainText().Trim() is { Length: > 0 } countText)
+		{
+			if (!int.TryParse(countText, out count) || count < 1)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENESHARED"));
+			}
+		}
+
+		if (await SceneLocate.PlayerAsync(parser, args["0"].Message.ToPlainText().Trim()) is not { } player
+			|| await SceneLocate.PlayerAsync(parser, args["1"].Message.ToPlainText().Trim()) is not { } other)
+		{
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+		}
+
+		return new CallState(string.Join(" ", await SharedScenesAsync(parser, player, other, count)));
+	}
+
+	/// <summary>The ids of up to <paramref name="count"/> of <paramref name="player"/>'s last 200 scenes that <paramref name="other"/> also belongs to and the enactor may see.</summary>
+	private static async ValueTask<List<string>> SharedScenesAsync(IMUSHCodeParser parser, string player, string other, int count)
+	{
+		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		var shared = new List<string>(count);
+		foreach (var scene in await service.ListScenesAsync("mine", player, count: SharedScanLimit))
+		{
+			if (shared.Count == count) break;
+			if (await service.GetMemberAsync(scene.Id, other) is SceneMember && await SceneVisibleToAsync(service, scene, parser))
+			{
+				shared.Add(scene.Id);
+			}
+		}
+
+		return shared;
+	}
+
+	/// <summary>How many of the first player's scenes sceneshared() reads, newest first.</summary>
+	private const int SharedScanLimit = 200;
+
+	/// <summary>
 	/// scenewhere(&lt;roomDbref&gt;)
 	/// Returns the id of the active scene bound to a room, or #-1 NOT FOUND.
 	/// </summary>

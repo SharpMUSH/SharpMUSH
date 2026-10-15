@@ -6153,4 +6153,16 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Ein Bild mit Inhaltswarnung bleibt aus der Bildbibliothek heraus. Entferne die Warnung, um es zu teilen.</value>
   </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>Diagramm</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} zu {1}: {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>Karte von {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

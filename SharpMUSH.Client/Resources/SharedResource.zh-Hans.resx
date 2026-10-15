@@ -6153,4 +6153,16 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>带有内容警告的图片不会进入图片库。移除警告后才能分享。</value>
   </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>图表</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} 到 {1}：{2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>{0} 的名片</value>
+    <comment>MT</comment>
+  </data>
 </root>

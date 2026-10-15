@@ -339,6 +339,22 @@
       <Link>BundledPackages\time.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\relationships\package.yaml">
+      <Link>BundledPackages\relationships.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.relationships.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\relationships-scene\package.yaml">
+      <Link>BundledPackages\relationships-scene.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.relationships-scene.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\relationships-app\package.yaml">
+      <Link>BundledPackages\relationships-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.relationships-app.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\relationships-card\package.yaml">
+      <Link>BundledPackages\relationships-card.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.relationships-card.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord\package.yaml">
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>
