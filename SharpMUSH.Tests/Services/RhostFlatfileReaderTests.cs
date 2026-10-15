@@ -81,6 +81,9 @@ public class RhostFlatfileReaderTests
 	[Arguments("+V74247\n!0\n", DatabaseDialect.RhostMUSH)]
 	[Arguments("+V-1\ndbversion 5\n", DatabaseDialect.PennMUSH)]
 	[Arguments("+V-1\nsavedtime \"Mon Jan 1 00:00:00 2024\"\n", DatabaseDialect.PennMUSH)]
+	[Arguments("+X996101\n+S11\n+N259\n", DatabaseDialect.TinyMUX)]
+	[Arguments("+X2\n!0\n", DatabaseDialect.TinyMUX)]
+	[Arguments("+Xnot a number\n+S11\n", DatabaseDialect.PennMUSH)]
 	[Arguments("garbage\n", DatabaseDialect.PennMUSH)]
 	public async Task TellsTheFormatsApart(string start, DatabaseDialect expected)
 	{

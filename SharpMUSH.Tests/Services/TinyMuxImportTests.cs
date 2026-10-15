@@ -133,6 +133,21 @@ public class TinyMuxImportTests
 		await Assert.That(inbox.Select(m => m.Subject.ToPlainText())).IsEquivalentTo(["Hello"]);
 	}
 
+	/// <summary>A format chosen by the caller is the one the file is read in, with mail.db and comsys.db beside it.</summary>
+	[Test]
+	public async Task AnExplicitFormatIsHonoured()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(
+			new DatabaseImportFiles(FlatfilePath, MailPath, ComsysPath, Format: DatabaseImportFormat.TinyMUX),
+			new Progress<ConversionProgress>());
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(result.ChannelsConverted).IsEqualTo(2);
+		await Assert.That(result.MailMessagesConverted).IsEqualTo(2);
+	}
+
 	private static async Task<AnySharpObject> NodeAsync(IsolatedImportWorld world, int dbref)
 		=> (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)))).Expect<AnySharpObject>();
 
