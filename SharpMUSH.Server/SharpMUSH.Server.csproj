@@ -347,6 +347,14 @@
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster\package.yaml">
+      <Link>BundledPackages\roster.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster-jobs\package.yaml">
+      <Link>BundledPackages\roster-jobs.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs.package.yaml</LogicalName>
+    </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the
          file names carry hyphens. -->

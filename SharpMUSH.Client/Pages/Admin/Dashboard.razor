@@ -4,6 +4,8 @@
 @inject IAuthorizationService Authorization
 @inject SetupWizardService SetupWizard
 @inject ServerInfoService ServerInfo
+@implements IDisposable
+@using System.Security.Claims
 
 <PageTitle>@Loc["AdmOverview"] — @Loc["NavBuildManage"] — @Loc["AppTitle"]</PageTitle>
 
@@ -45,17 +47,33 @@
     /// <summary>The viewer administers the server and the first-run wizard is unfinished.</summary>
     private bool _setupPending;
 
+    private ClaimsPrincipal? _user;
+
     protected override async Task OnInitializedAsync()
     {
         if (AuthState is null) return;
-        var user = (await AuthState).User;
-        var setup = (await Authorization.AuthorizeAsync(user, "server.admin")).Succeeded
+        _user = (await AuthState).User;
+        ServerInfo.Changed += OnServerInfoChanged;
+        var setup = (await Authorization.AuthorizeAsync(_user, "server.admin")).Succeeded
             ? SetupWizard.GetAsync()
             : null;
+        await LoadGroupsAsync(_user);
+        _setupPending = setup is not null && await setup is SetupWizardResponse { Pending: true };
+    }
+
+    private async Task LoadGroupsAsync(ClaimsPrincipal user) =>
         _groups = (await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo))
             .Where(e => e.Group != BuildNavCatalog.Group.Overview)
             .GroupBy(e => e.Group)
             .ToList();
-        _setupPending = setup is not null && await setup is SetupWizardResponse { Pending: true };
-    }
+
+    /// <summary>An application was turned on or off: its cards follow without a reload.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        if (_user is null) return;
+        await LoadGroupsAsync(_user);
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
 }

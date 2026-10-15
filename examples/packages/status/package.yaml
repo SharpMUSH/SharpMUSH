@@ -74,6 +74,8 @@ objects:
         value: |-
           How long a status line, note and place may be, and what +status/list says under the list.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Status
       DATA`CONFIG`LINE-LENGTH: |-
         100
       DATA`CONFIG`LINE-LENGTH`TYPE: |-
@@ -86,6 +88,10 @@ objects:
         400
       DATA`CONFIG`LINE-LENGTH`DESCRIPTION: |-
         The longest status line, in characters.
+      DATA`CONFIG`LINE-LENGTH`LABEL: |-
+        Line length
+      DATA`CONFIG`LINE-LENGTH`EXAMPLE: |-
+        140
       DATA`CONFIG`NOTE-LENGTH: |-
         400
       DATA`CONFIG`NOTE-LENGTH`TYPE: |-
@@ -98,6 +104,10 @@ objects:
         2000
       DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
         The longest note, in characters.
+      DATA`CONFIG`NOTE-LENGTH`LABEL: |-
+        Note length
+      DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
+        800
       DATA`CONFIG`PLACE-LENGTH: |-
         60
       DATA`CONFIG`PLACE-LENGTH`TYPE: |-
@@ -110,6 +120,10 @@ objects:
         200
       DATA`CONFIG`PLACE-LENGTH`DESCRIPTION: |-
         The longest place, in characters.
+      DATA`CONFIG`PLACE-LENGTH`LABEL: |-
+        Place length
+      DATA`CONFIG`PLACE-LENGTH`EXAMPLE: |-
+        80
       DATA`CONFIG`LIST-FOOTER: |-
 
       DATA`CONFIG`LIST-FOOTER`TYPE: |-
@@ -120,6 +134,10 @@ objects:
         200
       DATA`CONFIG`LIST-FOOTER`DESCRIPTION: |-
         A line shown under +status/list, such as where longer requests are posted.
+      DATA`CONFIG`LIST-FOOTER`LABEL: |-
+        List footer
+      DATA`CONFIG`LIST-FOOTER`EXAMPLE: |-
+        Longer requests: +bbread public/looking
       # Which INC` routine each switch runs: DATA`ROUTE`STATUS`<switch>. BARE is the command alone, ARG the
       # command with something after it and no switch.
       DATA`ROUTE: |-

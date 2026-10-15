@@ -69,6 +69,7 @@
             if (AnyFailed) StartRetrying();
             StateHasChanged();
         }), SceneService);
+        ServerInfo.Changed += OnServerInfoChanged;
 
         await Task.WhenAll(LoadRecentAsync(), LoadCharactersAsync(), LoadOnlineAsync(), LoadScenesTileAsync());
         if (AnyFailed) StartRetrying();
@@ -172,8 +173,17 @@
             _activeScenesFailed = _activeScenes is null;
         });
 
+    /// <summary>The scene system was turned on or off: the tile follows without a reload.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadScenesTileAsync();
+        if (AnyFailed) StartRetrying();
+        StateHasChanged();
+    });
+
     public void Dispose()
     {
+        ServerInfo.Changed -= OnServerInfoChanged;
         _retry?.Cancel();
         _reload.Dispose();
     }
