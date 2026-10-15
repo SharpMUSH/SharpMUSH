@@ -90,13 +90,15 @@ public sealed record PackageRollbackResult(int Revision, int RestoredFromRevisio
 /// <param name="Structure">Final package-managed object structure (flags/powers/locks/attribute flags) per object after this apply.</param>
 /// <param name="PastMaximum">The confirmed install past <c>maximum_server</c> this apply recorded, restored by a rollback to it.</param>
 /// <param name="Readme">The package's README as applied, in Markdown, or null when it carried none.</param>
+/// <param name="Plugins">The plugins this revision named in <c>plugins:</c>, restored by a rollback to it; null for none.</param>
 public sealed record PackageRevisionSnapshot(
 	string Version,
 	IReadOnlyList<PackageRevisionSnapshotObject> Objects,
 	IReadOnlyList<PackageRevisionSnapshotAttribute> Attributes,
 	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null,
 	PackageMaximumOverride? PastMaximum = null,
-	string? Readme = null);
+	string? Readme = null,
+	IReadOnlyList<string>? Plugins = null);
 
 /// <summary>One object in a revision snapshot.</summary>
 /// <param name="Ref">The manifest ref that produced or targets the object.</param>

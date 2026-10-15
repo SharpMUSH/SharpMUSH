@@ -1,0 +1,123 @@
+.adm-activity-controls {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+}
+
+.adm-activity-controls ::deep .adm-activity-select {
+	flex: 0 1 12rem;
+}
+
+.adm-activity-zone,
+.adm-activity-note {
+	margin: 0;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-faint);
+}
+
+.adm-activity-note {
+	padding: 8px 16px 12px;
+}
+
+/* The heatmap: 7 rows of 24 cells, one hue from the card's surface to the accent. The cells shrink with
+   the card; nothing scrolls sideways on a phone. */
+.adm-activity-heat {
+	display: grid;
+	gap: 2px;
+	padding: 14px 16px 6px;
+}
+
+.adm-activity-heat-row {
+	display: grid;
+	grid-template-columns: 2.6rem repeat(24, minmax(0, 1fr));
+	gap: 2px;
+	align-items: center;
+}
+
+.adm-activity-heat-day,
+.adm-activity-heat-hour {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--text-faint);
+	white-space: nowrap;
+}
+
+.adm-activity-heat-cell {
+	display: block;
+	aspect-ratio: 1;
+	min-height: 8px;
+	border-radius: 3px;
+	background: color-mix(in oklab, var(--accent) calc(var(--heat) * 92%), var(--surface));
+	box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+
+.adm-activity-legend {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 16px 14px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--text-faint);
+}
+
+.adm-activity-legend .adm-activity-heat-cell {
+	width: 14px;
+}
+
+.adm-activity-pair {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	gap: 16px;
+	align-items: start;
+}
+
+@media (max-width: 900px) {
+	.adm-activity-pair {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+::deep .adm-activity-table {
+	background: transparent;
+}
+
+/* A retention share keeps the page's own ink; the tint stops short of the accent so the text stays legible. */
+::deep .adm-activity-share {
+	background: color-mix(in oklab, var(--accent) calc(var(--heat) * 45%), transparent);
+	font-variant-numeric: tabular-nums;
+}
+
+.adm-activity-mono,
+::deep .adm-activity-mono {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+.adm-activity-dim,
+::deep .adm-activity-dim {
+	color: var(--text-faint);
+}
+
+.adm-activity-link,
+::deep .adm-activity-link {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.adm-activity-dead {
+	list-style: none;
+	margin: 0;
+	padding: 8px 16px 12px;
+	display: grid;
+	gap: 6px;
+}
+
+.adm-activity-dead li {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	font-size: 13px;
+}

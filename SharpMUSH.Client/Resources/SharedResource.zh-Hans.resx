@@ -3916,6 +3916,10 @@
     <value>先阅读 wiki、浏览角色，或者直接加入一个场景，就此开始。</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>先阅读 wiki 或浏览角色，就此开始。</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>阅读 Wiki</value>
     <comment>MT</comment>
@@ -4908,6 +4912,12 @@
   </data>
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>显示更多</value>
+  </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>时间线</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>未注明日期</value>
   </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>查看全部</value>
@@ -6148,5 +6158,103 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>带有内容警告的图片不会进入图片库。移除警告后才能分享。</value>
+  </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>添加到日历</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>将日程添加到你的日历</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>你的日历应用会按你的本地时间显示每个场景，并每小时检查一次更新。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>公开场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>日程中的所有公开场景。任何人都可以使用此地址。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>你的私人链接</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>还会列出此角色可见的私人场景。拿到链接的人都能读取，请勿外传。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>仅显示我主持或加入的场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>此地址只显示这一次。离开页面前，请将它复制到你的日历应用中。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>你于 {0} 创建了私人链接。新建一个链接即可再次看到地址；旧链接将失效。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>创建我的私人链接</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>新建链接</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>关闭链接</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>日历地址</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>复制</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>已复制日历地址</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>订阅</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>正在保存草稿</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>草稿已保存</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>草稿仅保存在此设备上</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>通知</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>门户关闭时在此手机或电脑上接收通知</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>只有你能看到这条。</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>发给你的通知</value>
   </data>
 </root>

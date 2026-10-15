@@ -32,8 +32,20 @@ public sealed record PackageChangeset(
 	IReadOnlyList<PackageDeclarationChange>? Declarations = null,
 	IReadOnlyList<PackageSettingChange>? Settings = null,
 	IReadOnlyList<PackageWikiChange>? Wiki = null,
-	PackageServerCompatibility? Compatibility = null)
+	PackageServerCompatibility? Compatibility = null,
+	IReadOnlyList<PackageLocalHook>? LocalHooks = null)
 {
+	/// <summary>
+	/// The attribute the apply runs on each of the package's objects afterwards: <c>AINSTALL</c> on a first install,
+	/// <c>AUPDATE</c> on an upgrade, none otherwise.
+	/// </summary>
+	public string? LifecycleHook => Kind switch
+	{
+		PackageRevisionKind.Install => "AINSTALL",
+		PackageRevisionKind.Upgrade => "AUPDATE",
+		_ => null
+	};
+
 	/// <summary>
 	/// True when dependency/conflict issues, a declared item or setting that cannot be applied, or a server older than
 	/// the package's <c>requires_server</c>, prevent applying at all.
@@ -50,6 +62,16 @@ public sealed record PackageChangeset(
 		|| Structure.Any(s => s.Action == PackageStructureAction.Conflict)
 		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Conflict) ?? false);
 }
+
+/// <summary>
+/// A <see cref="PackageChangeset.LifecycleHook"/> attribute an existing package object holds that the package does not
+/// ship: the apply runs it all the same.
+/// </summary>
+/// <param name="TargetRef">The object's manifest ref.</param>
+/// <param name="Objid">The object.</param>
+/// <param name="Attribute">The hook's name.</param>
+/// <param name="Value">The code the apply runs.</param>
+public sealed record PackageLocalHook(string TargetRef, string Objid, string Attribute, string Value);
 
 /// <summary>Object-level classification.</summary>
 public enum PackageObjectAction
@@ -118,7 +140,13 @@ public enum PackageAttributeAction
 	RemoveBaseline,
 
 	/// <summary>Needs an admin decision; see <see cref="PackageConflictKind"/>.</summary>
-	Conflict
+	Conflict,
+
+	/// <summary>
+	/// The game and the package both changed it, on different lines; write the line-by-line merge
+	/// (<see cref="PackageAttributeChange.MergedValue"/>), as a wiki page body merges.
+	/// </summary>
+	Merge
 }
 
 /// <summary>Why an attribute needs an admin decision.</summary>
@@ -151,6 +179,12 @@ public enum PackageConflictKind
 /// <param name="NewValue">Incoming value with refs resolved as far as currently possible, or null for deletes.</param>
 /// <param name="PreviousAttribute">Legacy ref path whose local value is being migrated; the old leaf remains for other code.</param>
 /// <param name="RequiresApplyResolution">True when the new value references objects that only get dbrefs at apply time.</param>
+/// <param name="MergedValue">
+/// For <see cref="PackageAttributeAction.Merge"/>, the merged value the apply writes. For a
+/// <see cref="PackageConflictKind.ModifyModify"/> conflict on a value of several lines, the merge with each clash
+/// written out between <c>&lt;&lt;&lt;&lt;&lt;&lt;&lt; game</c> and <c>&gt;&gt;&gt;&gt;&gt;&gt;&gt; package</c>
+/// markers, for an edited merge to start from. Null otherwise.
+/// </param>
 public sealed record PackageAttributeChange(
 	string TargetRef,
 	string? Objid,
@@ -161,7 +195,16 @@ public sealed record PackageAttributeChange(
 	string? LiveValue = null,
 	string? NewValue = null,
 	bool RequiresApplyResolution = false,
-	string? PreviousAttribute = null);
+	string? PreviousAttribute = null,
+	string? MergedValue = null)
+{
+	/// <summary>
+	/// True when the game changed this attribute away from what the package last installed (or has one of its own where
+	/// the package now ships one): the upgrade keeps it, merges it, or asks.
+	/// </summary>
+	public bool IsLocalEdit => Action is PackageAttributeAction.KeepLocal or PackageAttributeAction.Merge
+		or PackageAttributeAction.Conflict;
+}
 
 /// <summary>The kind of object-structure element a <see cref="PackageStructureChange"/> describes.</summary>
 public enum PackageStructureKind
@@ -237,7 +280,11 @@ public sealed record PackageStructureChange(
 	string? BaseValue = null,
 	string? LiveValue = null,
 	string? NewValue = null,
-	bool RequiresApplyResolution = false);
+	bool RequiresApplyResolution = false)
+{
+	/// <summary>True when the game changed this flag, power or lock away from what the package last installed.</summary>
+	public bool IsLocalEdit => Action is PackageStructureAction.KeepLocal or PackageStructureAction.Conflict;
+}
 
 /// <summary>
 /// The package-managed object structure baseline for one object (decision
@@ -260,18 +307,20 @@ public sealed record PackageStructureBaseline(
 		new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase));
 }
 
-/// <summary>A dependency or conflict violation that blocks apply (decisions 20.6, 20.20).</summary>
-/// <param name="PackageId">The other package involved.</param>
+/// <summary>A dependency, conflict or missing plugin that blocks apply (decisions 20.6, 20.20).</summary>
+/// <param name="PackageId">The other package involved, or the plugin's id when <paramref name="IsPlugin"/>.</param>
 /// <param name="Constraint">Declared constraint text (empty = any).</param>
 /// <param name="InstalledVersion">Its installed version, or null when not installed.</param>
 /// <param name="Source">The manifest's source hint, for "fetch it from here?" offers.</param>
 /// <param name="IsConflict">True for a <c>conflicts:</c> violation, false for an unmet dependency.</param>
+/// <param name="IsPlugin">True for a <c>plugins:</c> entry whose plugin is not running on this server.</param>
 public sealed record PackageDependencyIssue(
 	string PackageId,
 	string Constraint,
 	string? InstalledVersion,
 	PackageSourceHint? Source,
-	bool IsConflict);
+	bool IsConflict,
+	bool IsPlugin = false);
 
 /// <summary>A $command pattern collision with another installed package (warning, decision 20.20).</summary>
 /// <param name="Pattern">The normalized command pattern (e.g. <c>+bbread *</c>).</param>
@@ -335,6 +384,7 @@ public sealed record LiveObjectState(
 /// <param name="ConfigureAnswers">Resolution map: configure key → value (objid for dbref-typed); may be partial before review.</param>
 /// <param name="CrossPackageObjids">Resolution map: <c>pkg/ref</c> → objid for dependency-owned objects.</param>
 /// <param name="StructureBaselines">This package's managed object-structure baselines, keyed by objid (decision 20.13, extended for full structure diffs).</param>
+/// <param name="RunningPlugins">The ids of the plugins running now, which the manifest's <c>plugins:</c> are checked against; null is none.</param>
 public sealed record PackagePlanInputs(
 	PackageManifest Manifest,
 	InstalledPackageRecord? Installed,
@@ -346,4 +396,5 @@ public sealed record PackagePlanInputs(
 	IReadOnlyDictionary<string, string> WellKnownObjids,
 	IReadOnlyDictionary<string, string> ConfigureAnswers,
 	IReadOnlyDictionary<string, string> CrossPackageObjids,
-	IReadOnlyDictionary<string, PackageStructureBaseline>? StructureBaselines = null);
+	IReadOnlyDictionary<string, PackageStructureBaseline>? StructureBaselines = null,
+	IReadOnlySet<string>? RunningPlugins = null);

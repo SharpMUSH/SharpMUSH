@@ -189,6 +189,10 @@ public static class EventCatalogue
 			"A connected player's channel list may have changed.", EventPrivacy.Staff, false, Sharp),
 		new("PLAYER`WARN", Args(("objid", O), ("reason", T), ("account", T)), "The staff member's character",
 			"Staff warned a character from the web portal.", EventPrivacy.Private, true, Sharp),
+		new(SharpEvents.PlayerLink, Args(("objid", O), ("account", T)), "God (#1)",
+			"A character was linked to an account.", EventPrivacy.Staff, false, Sharp),
+		new(SharpEvents.PlayerUnlink, Args(("objid", O), ("account", T)), "God (#1)",
+			"A character was taken off an account.", EventPrivacy.Staff, false, Sharp),
 		new(SharpEvents.GalleryAdd, Args(("objid", O), ("asset", W), ("url", T), ("use", W)), "The character who uploaded it",
 			"An image was added to a character's profile gallery on the web portal.", EventPrivacy.Public, false, Sharp),
 		new(SharpEvents.GalleryReport, Args(("objid", O), ("asset", W), ("url", T), ("reason", T), ("caption", T)), "The reporter's character",
@@ -233,6 +237,9 @@ public static class EventCatalogue
 		new(SharpEvents.MailReceived,
 			Args(("recipient", O), ("sender", O), ("number", N), ("subject", M), ("urgent", B)),
 			"The sender", "A player received @mail.", EventPrivacy.Private, false, Sharp),
+
+		new(SharpEvents.SceneStatus, Args(("scene", N), ("status", W), ("previous", W)), "Whoever made the scene or changed its status",
+			"A scene was made, or its status changed (the Scene plugin).", EventPrivacy.Staff, false, Sharp),
 
 		new(SharpEvents.BackupComplete, Args(("name", T), ("bytes", N)),
 			"Whoever ran @backup or @dump, or God (#1) for a scheduled copy",

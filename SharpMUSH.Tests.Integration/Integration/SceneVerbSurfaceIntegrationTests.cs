@@ -446,7 +446,7 @@ public class SceneVerbSurfaceIntegrationTests
 
 	/// <summary>
 	/// Bare <c>+scene/recall</c> answers with a default window rather than nothing: two rounds of the
-	/// room, which is <c>DATA`RECALL_ROUNDS</c> times the size of the cast. Someone arriving at a scene
+	/// room, which is <c>DATA`CONFIG`RECALL-ROUNDS</c> times the size of the cast. Someone arriving at a scene
 	/// wants what they missed without first having to guess a number.
 	/// </summary>
 	[Test]

@@ -29,6 +29,10 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Wiki">The wiki pages the package ships (<c>wiki:</c>, format 1.4), or null for none.</param>
 /// <param name="VerifiedServer">The newest SharpMUSH version the author tested on (<c>verified_server</c>, format 1.6), or null.</param>
 /// <param name="MaximumServer">The newest SharpMUSH version the package runs on (<c>maximum_server</c>, format 1.6), or null for no limit.</param>
+/// <param name="Plugins">
+/// The plugins the package's code calls into (<c>plugins:</c>, format 1.7), by plugin id, or null for none. The package
+/// installs only while each of them runs, and turning one off uninstalls it.
+/// </param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -53,13 +57,17 @@ public sealed record PackageManifest(
 	string? Locale = null,
 	IReadOnlyList<PackageWikiPageSpec>? Wiki = null,
 	PackageVersion? VerifiedServer = null,
-	PackageVersionCeiling? MaximumServer = null)
+	PackageVersionCeiling? MaximumServer = null,
+	IReadOnlyList<string>? Plugins = null)
 {
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
 
 	/// <summary>The wiki pages the package ships; never null.</summary>
 	public IReadOnlyList<PackageWikiPageSpec> WikiPages => Wiki ?? [];
+
+	/// <summary>The plugins the package needs running; never null.</summary>
+	public IReadOnlyList<string> RequiredPlugins => Plugins ?? [];
 }
 
 /// <summary>
@@ -167,7 +175,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 6);
+	public static PackageFormatVersion Supported { get; } = new(1, 7);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

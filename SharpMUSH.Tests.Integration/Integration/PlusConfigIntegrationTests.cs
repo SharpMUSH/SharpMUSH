@@ -54,6 +54,7 @@ public class PlusConfigIntegrationTests
 			"DATA`CONFIG=A system under test.",
 			"DATA`CONFIG`HOURS=14400", "DATA`CONFIG`HOURS`TYPE=duration", "DATA`CONFIG`HOURS`DEFAULT=14400",
 			"DATA`CONFIG`HOURS`MIN=600", "DATA`CONFIG`HOURS`DESCRIPTION=How long a status lasts.",
+			"DATA`CONFIG`HOURS`LABEL=Status length", "DATA`CONFIG`HOURS`EXAMPLE=2h", "DATA`CONFIG`LABEL=Test system",
 			"DATA`CONFIG`COLUMNS=2", "DATA`CONFIG`COLUMNS`TYPE=integer", "DATA`CONFIG`COLUMNS`MIN=1", "DATA`CONFIG`COLUMNS`MAX=4",
 			"DATA`CONFIG`ORDER=name", "DATA`CONFIG`ORDER`TYPE=choice", "DATA`CONFIG`ORDER`CHOICES=name idle",
 			"DATA`CONFIG`KEYS=QUOTE", "DATA`CONFIG`KEYS`TYPE=list", "DATA`CONFIG`KEYS`PATTERN=^[A-Z]+$",
@@ -83,7 +84,10 @@ public class PlusConfigIntegrationTests
 		{
 			var listing = await As(staff, $"+config {system}");
 			await Assert.That(listing).Contains("A system under test.").And.Contains("hours").And.Contains("4h")
-				.And.Contains("How long a status lasts.");
+				.And.Contains("Status length.").And.Contains("Settings: Test system");
+			await Assert.That(await As(staff, $"+config {system}/hours")).Contains("Name:").And.Contains("Status length")
+				.And.Contains($"+config {system}/hours=2h");
+			await Assert.That(await As(staff, $"+config {system}/label")).Contains($"{system} has no setting called label.");
 			await Assert.That(await As(staff, "+config")).Contains(system);
 
 			// A duration is read the way stringsecs() reads it and kept in seconds.
@@ -153,6 +157,81 @@ public class PlusConfigIntegrationTests
 			await Assert.That(await As(staff, $"+config/unregister {system}")).Contains($"{system} is no longer registered.");
 			await Assert.That(await As(staff, $"+config {system}")).Contains($"No system is called {system}.");
 			await Assert.That(await God($"think get({obj}/DATA`CONFIG`COLUMNS)")).IsEqualTo("4");
+		}
+		finally
+		{
+			await As(staff, $"+config/unregister {system}");
+		}
+	}
+
+	[Test]
+	public async Task ATableKeepsItsEntriesOnItsStoreAndChangesOneFieldAtATime()
+	{
+		var staff = await Player("CtStaff");
+		var mortal = await Player("CtMortal");
+		await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+		var (obj, system) = await SystemAsync(staff);
+		var store = await God($"think create({TestIsolationHelpers.GenerateUniqueName("CfgStore")})");
+		await God($"@set {store}=NO_COMMAND");
+		string[] leaves =
+		[
+			"DATA`CONFIG`RANKS`TYPE=table", $"DATA`CONFIG`RANKS`STORE={store}", "DATA`CONFIG`RANKS`PATH=RANK",
+			"DATA`CONFIG`RANKS`ENTRY=title", "DATA`CONFIG`RANKS`FIELDS=title pay", "DATA`CONFIG`RANKS`LABEL=Ranks",
+			"DATA`CONFIG`RANKS`KEYPATTERN=^[a-z]+$",
+			"DATA`CONFIG`RANKS`FIELD`TITLE`TYPE=text", "DATA`CONFIG`RANKS`FIELD`TITLE`MIN=1", "DATA`CONFIG`RANKS`FIELD`TITLE`LABEL=Title",
+			"DATA`CONFIG`RANKS`FIELD`PAY`TYPE=integer", "DATA`CONFIG`RANKS`FIELD`PAY`MIN=0", "DATA`CONFIG`RANKS`FIELD`PAY`DEFAULT=10",
+			"DATA`CONFIG`RANKS`FIELD`PAY`CHECK=CHECK`PAY", "CHECK`PAY=if(cand(strmatch(%2,recruit),gt(%0,20)),Recruits earn at most 20 %3.)",
+			"ACONFIG=@pemit %<by>=Heard %<action> of %<entry>/%<field> on %<setting>.",
+		];
+		foreach (var leaf in leaves)
+		{
+			var (attribute, value) = (leaf[..leaf.IndexOf('=')], leaf[(leaf.IndexOf('=') + 1)..]);
+			await God($"&{attribute} {obj}={value}");
+		}
+		try
+		{
+			await Assert.That(await As(staff, $"+config {system}")).Contains("0 entries").And.Contains("Entries with title and pay");
+			await Assert.That(await As(staff, $"+config {system}/ranks")).Contains("No entries yet.");
+
+			// An entry is added with its ENTRY field; the others start at their defaults, on the store.
+			await Assert.That(await As(staff, $"+config/add {system}/ranks/recruit=Recruit")).Contains($"Added {system}/ranks/recruit.")
+				.And.Contains($"Heard add of recruit/ on ranks.");
+			await Assert.That(await God($"think get({store}/RANK`RECRUIT):[get({store}/RANK`RECRUIT`PAY)]")).IsEqualTo("Recruit:10");
+			await Assert.That(await As(staff, $"+config/add {system}/ranks/Recruit2=x")).Contains("An entry's name must match ^[a-z]+$.");
+			await Assert.That(await As(mortal, $"+config/add {system}/ranks/scout=Scout")).Contains("needs the config.admin permission.");
+
+			// One field at a time, through its type and its CHECK, which hears the entry and field too.
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/pay=30")).Contains("Recruits earn at most 20 pay.");
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/pay=-1")).Contains("It must be at least 0.");
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/pay=15")).Contains($"{system}/ranks/recruit/pay is now 15, was 10.")
+				.And.Contains("Heard set of recruit/pay on ranks.");
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/title=[add(1,2)]")).Contains("is now [add(1,2)], was Recruit.");
+			await Assert.That(await God($"think strlen(get({store}/RANK`RECRUIT))")).IsEqualTo("10");
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/title=")).Contains("Write at least 1 character.");
+			await Assert.That(await As(staff, $"+config {system}/ranks/recruit/rank=1")).Contains("Its fields are title and pay.");
+			await Assert.That(await As(staff, $"+config {system}/ranks/nobody/pay=1")).Contains($"{system}/ranks has no entry called nobody.");
+			await Assert.That(await As(staff, $"+config {system}/columns/x")).Contains("is one setting, not a table");
+			await Assert.That(await As(staff, $"+config/reset {system}/ranks/recruit/pay")).Contains("is now 10, was 15.");
+			await Assert.That(await As(mortal, $"+config {system}/ranks")).Contains("recruit").And.Contains("Title: [add(1,2)] · pay: 10");
+			await Assert.That(await As(mortal, $"+config {system}/ranks/recruit")).Contains("Field").And.Contains("A whole number, at least 0");
+
+			// FIXED keeps the entries as they are.
+			await God($"&DATA`CONFIG`RANKS`FIXED {obj}=1");
+			await Assert.That(await As(staff, $"+config/add {system}/ranks/scout=Scout")).Contains("has a fixed set of entries.");
+			await Assert.That(await As(staff, $"+config/remove {system}/ranks/recruit")).Contains("has a fixed set of entries.");
+			await God($"&DATA`CONFIG`RANKS`FIXED {obj}");
+
+			await Assert.That(await As(staff, $"+config/remove {system}/ranks/recruit")).Contains($"Removed {system}/ranks/recruit.")
+				.And.Contains("Heard remove of recruit/ on ranks.");
+			await Assert.That(await God($"think lattr({store}/RANK`RECRUIT*)")).IsEqualTo(string.Empty);
+
+			// +config writes only where nothing can run as a command, and only on its system's owner's objects.
+			await God($"@set {store}=!NO_COMMAND");
+			await Assert.That(await As(staff, $"+config {system}/ranks")).Contains("could run as commands");
+			await God($"@set {store}=NO_COMMAND");
+			await God($"@chown {store}=#{mortal.DbRef.Number}");
+			await Assert.That(await As(staff, $"+config/add {system}/ranks/scout=Scout")).Contains("its STORE must have the same owner");
+			await Assert.That(await God($"think lattr({store}/RANK`*)")).IsEqualTo(string.Empty);
 		}
 		finally
 		{
