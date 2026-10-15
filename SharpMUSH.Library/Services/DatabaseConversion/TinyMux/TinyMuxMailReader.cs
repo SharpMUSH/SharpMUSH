@@ -39,8 +39,9 @@ public static class TinyMuxMailReader
 
 		reader.ReadInt();
 		var entries = new List<(int To, int From, int Body, string Time, string Subject, int Flags)>();
-		string? line;
-		while ((line = reader.ReadLine()) is not null && !line.StartsWith("***", StringComparison.Ordinal))
+		string line;
+		while (!(line = reader.ReadLine() ?? throw reader.Error("the file ends before *** END OF DUMP ***"))
+			.StartsWith("***", StringComparison.Ordinal))
 		{
 			var to = Number(reader, line);
 			var from = reader.ReadInt();
@@ -53,7 +54,8 @@ public static class TinyMuxMailReader
 		}
 
 		var bodies = new Dictionary<int, string>();
-		while ((line = reader.ReadLine()) is not null && !line.StartsWith("+++", StringComparison.Ordinal))
+		while (!(line = reader.ReadLine() ?? throw reader.Error("the file ends before +++ END OF DUMP +++"))
+			.StartsWith("+++", StringComparison.Ordinal))
 		{
 			bodies[Number(reader, line)] = reader.ReadString();
 		}
@@ -66,8 +68,10 @@ public static class TinyMuxMailReader
 
 		foreach (var (to, from, body, time, subject, flags) in entries)
 		{
-			mail.Messages.Add(new PennMUSHMailMessage(to, from, 0, PennTime(time), subject,
-				bodies.GetValueOrDefault(body, string.Empty), flags));
+			var bodyText = bodies.TryGetValue(body, out var found)
+				? found
+				: throw reader.Error($"a message to #{to} names body {body}, which the file does not have");
+			mail.Messages.Add(new PennMUSHMailMessage(to, from, 0, PennTime(time), subject, bodyText, flags));
 		}
 
 		if (reader.ReadLine() == "*** Begin MALIAS ***")

@@ -79,6 +79,18 @@ public class TinyMuxImportTests
 		await Assert.That(mine.UsePrivileges).IsEqualTo((int)(MailAliasPrivileges.Owner | MailAliasPrivileges.Admin));
 	}
 
+	/// <summary>A cut-off mail.db is refused rather than imported with empty bodies.</summary>
+	[Test]
+	[Arguments("+V6\n1\n4\n1\n0\n\"#4\"\n\"Fri Sep 04 12:01:45 2026\"\n\"Hello\"\n0\n", "*** END OF DUMP ***")]
+	[Arguments("+V6\n1\n4\n1\n0\n\"#4\"\n\"Fri Sep 04 12:01:45 2026\"\n\"Hello\"\n0\n*** END OF DUMP ***\n0\n\"Hi\"\n", "+++ END OF DUMP +++")]
+	[Arguments("+V6\n1\n4\n1\n7\n\"#4\"\n\"Fri Sep 04 12:01:45 2026\"\n\"Hello\"\n0\n*** END OF DUMP ***\n0\n\"Hi\"\n+++ END OF DUMP +++\n", "body 7")]
+	public async Task RefusesATruncatedMailFile(string file, string expected)
+	{
+		var read = () => TinyMuxMailReader.Read(new StringReader(file));
+
+		await Assert.That(read).Throws<FormatException>().WithMessageContaining(expected);
+	}
+
 	/// <summary>
 	/// Through the path the upload endpoint takes: the converter sniffs the flatfile as TinyMUX and reads its
 	/// comsys and mail beside it.
