@@ -94,6 +94,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IStorageCapacityService StorageCapacity { get; }
 
+	private IAttributeIndexBuilder AttributeIndexBuilder { get; }
+
 	private IHistoryRetentionService HistoryRetention { get; }
 
 	private IBooleanExpressionParser BooleanExpressionParser { get; }
@@ -169,6 +171,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IServerRestart serverRestart,
 		Lazy<IPluginAdministration> pluginAdministration,
 		IStorageCapacityService storageCapacity,
+		IAttributeIndexBuilder attributeIndexBuilder,
 		IHistoryRetentionService historyRetention,
 		IBooleanExpressionParser booleanExpressionParser,
 		IPageLogService pageLog,
@@ -227,6 +230,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ServerRestart = serverRestart;
 		PluginAdministration = pluginAdministration;
 		StorageCapacity = storageCapacity;
+		AttributeIndexBuilder = attributeIndexBuilder;
 		HistoryRetention = historyRetention;
 		BooleanExpressionParser = booleanExpressionParser;
 		PageLog = pageLog;

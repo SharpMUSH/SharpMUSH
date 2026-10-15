@@ -59,7 +59,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.6 the engine range, 1.7 plugins)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -530,9 +530,8 @@ attributes:                     # attribute name: the entry @attribute would mak
 The name is one `@attribute` takes, upper-cased, with `` ` `` only between
 branches. Each flag must be an attribute flag (`branch` is structure, not a
 default). A `limit` must compile as `@attribute/limit` compiles it, and an
-entry takes a limit or an enum, not both, since each replaces the other. An
-`index:` key is reserved for a later format and ignored. A plugin package
-cannot declare `attributes:`. The plan checks each entry against the game's
+entry takes a limit or an enum, not both, since each replaces the other. A
+plugin package cannot declare `attributes:`. The plan checks each entry against the game's
 live table, and its flags against the game's attribute flags.
 
 - **Install.** An entry the game lacks is created and becomes the package's.
@@ -546,12 +545,33 @@ live table, and its flags against the game's attribute flags.
   the entry's flags, or a new version turns `retroactive` on, every copy already on an object gets exactly those flags
   (its `branch` flag kept, its owner unchanged). The review screen shows how
   many existing copies change, and asks the installer to confirm first.
+- **Index (format 1.8).** `index:` puts an index on the attribute's values, as
+  `@attribute/index` does, so `indexed()` and `lsearch INDEX` can find them:
+  `true` for the default (text without case, whole
+  values, every object), or the option words as a string or a list
+  (`exact`, `numeric`, `split[:<delimiter>]`, `type:<type>`). An entry with
+  `internal` in its flags cannot have one. Applying it builds the index in the
+  background over the copies already on objects, and the review screen says
+  how many ("Builds an index ... on N objects."); until it is done, `indexed()`
+  answers `#-1 INDEX BUILDING`. An entry the game already has must already have
+  the same index, or the plan is blocked and names the `@attribute/index` line
+  that fixes it, since the package's queries rely on its order. The key needs
+  `format: 1.8`; in an older manifest it is ignored with a warning, as it was
+  before 1.8 gave it a meaning.
+
+  ```yaml
+  format: 1.8
+  attributes:
+    JOB`LEVEL:
+      index: numeric type:thing
+  ```
 - **Upgrade.** The package's entries are merged field by field against what
-  the previous version declared: the default flags, and the limit-or-enum. A
+  the previous version declared: the default flags, the limit-or-enum, and the
+  index. A
   field the new version changes takes the new value; the other keeps what the
   game has, so an administrator's `@attribute/access` survives.
-- **Dropped entries and uninstall.** The entry is deleted from the table.
-  Values already stored on objects stay as they are.
+- **Dropped entries and uninstall.** The entry is deleted from the table,
+  with its index. Values already stored on objects stay as they are.
 - **Rollback** restores objects and attributes only; attribute entries stay as
   they are.
 

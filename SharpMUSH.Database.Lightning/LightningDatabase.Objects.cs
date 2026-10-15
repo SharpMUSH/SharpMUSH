@@ -588,6 +588,7 @@ public partial class LightningDatabase
 		if (filter.Types is [var type]) seeds.Add((Tables.ObjType, ObjTypeKey(type)));
 		if (FlagIndexSeed(tx, filter.HasFlag) is { } flagKey) seeds.Add((Tables.ObjFlag.Reverse, flagKey));
 		if (PowerIndexSeed(tx, filter.HasPower) is { } powerKey) seeds.Add((Tables.ObjPower.Reverse, powerKey));
+		if (filter.AttributeValue is { } probe && AttributeIndexSeed(tx, probe) is { } indexKey) seeds.Add((Tables.AttrIdx, indexKey));
 		if (seeds.Count == 0) return null;
 
 		return seeds.MinBy(seed => tx.CountDups(seed.Table, seed.Key) switch
@@ -789,7 +790,8 @@ public partial class LightningDatabase
 
 	private static bool NeedsEdgePredicates(ObjectSearchFilter filter)
 		=> filter.Owner.HasValue || filter.Zone.HasValue || filter.Parent.HasValue
-			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower);
+			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower)
+			|| filter.AttributeValue is not null;
 
 	/// <summary>The remaining predicates — owner, zone, parent, flag, power — each of which reads an edge table.</summary>
 	private bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
@@ -828,6 +830,11 @@ public partial class LightningDatabase
 			{
 				return false;
 			}
+		}
+
+		if (filter.AttributeValue is { } probe && !IndexListsCopy(tx, dbref, probe))
+		{
+			return false;
 		}
 
 		return true;
@@ -967,7 +974,8 @@ public partial class LightningDatabase
 				tx.Delete(Tables.ObjName, Keys.Lower(alias), key);
 			}
 
-			// Attributes: metadata and values live under the same dbref-prefixed key range.
+			// Attributes: metadata and values live under the same dbref-prefixed key range, and so do their index entries.
+			UnindexCopies(tx, n, Keys.AttrPrefix(n));
 			tx.DeletePrefix(Tables.AttrMeta, Keys.AttrPrefix(n));
 			tx.DeletePrefix(Tables.AttrVal, Keys.AttrPrefix(n));
 

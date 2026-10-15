@@ -10,15 +10,18 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]
-/// [--things N] [--connections N] [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
+/// [--things N] [--connections N] [--paren-groups on|off] [--index-world N] [--warmup N]</c>. Boots the Lightning-backed benchmark host and reports operations per
 /// second, managed bytes allocated per operation, and generation-zero collections per thousand
 /// operations. <c>--things</c> is how many things God carries (default 50), for the scenarios that
 /// grow with a container. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
-/// scenarios are <see cref="ParenGroupBenchmarks"/>' workloads.
+/// scenarios are <see cref="ParenGroupBenchmarks"/>' workloads. <c>--index-world N</c> seeds N things carrying indexed
+/// STATUS and LEVEL attributes and adds the attribute index scenarios (<see cref="IndexScenarios"/>), which run only
+/// then. <c>--warmup</c> sets the unmeasured runs per scenario (default 200), for scenarios too slow to repeat that often.
 /// </summary>
 public sealed class ProfileHarness : LightningBaseBenchmark
 {
-	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false, bool AsMortal = false);
+	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false, bool AsMortal = false,
+		bool AsStranger = false);
 
 	private static readonly string Shuffled100 = string.Join(' ', Enumerable.Range(0, 100).Select(i => i * 37 % 100));
 
@@ -145,6 +148,34 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("feedsof", "[feedsof({MEMBER},bench)]", false),
 	];
 
+	/// <summary>
+	/// Attribute index workloads over the <c>--index-world</c> things (owned by a mortal, STATUS one of ten words
+	/// with one "rare" in 10,000, LEVEL 000-999): <c>indexed()</c> against the <c>lsearch()</c> EVAL scan it replaces,
+	/// as God, as the owner (<c>-m</c>) and as a stranger who may read none of the copies (<c>-s</c>), where every
+	/// hit is hidden. The writes compare a set of an indexed attribute with one of a plain one.
+	/// </summary>
+	private static readonly Scenario[] IndexScenarios =
+	[
+		new("idx-eq20", "[indexed(STATUS,=,approved,1,20)]", false),
+		new("idx-eq-all", "[words(indexed(STATUS,=,approved))]", false),
+		new("idx-rare", "[indexed(STATUS,=,rare)]", false),
+		new("idx-count", "[indexed(STATUS,count,approved)]", false),
+		new("idx-count-m", "[indexed(STATUS,count,approved)]", false, AsMortal: true),
+		new("idx-top10", "[indexed(LEVEL,last,,1,10)]", false),
+		new("idx-range20", "[indexed(LEVEL,between,100 200,1,20)]", false),
+		new("idx-prefix", "[indexed(STATUS,prefix,appr,1,20)]", false),
+		new("idx-eq20-m", "[indexed(STATUS,=,approved,1,20)]", false, AsMortal: true),
+		new("idx-eq20-s", "[indexed(STATUS,=,approved,1,20)]", false, AsStranger: true),
+		new("ls-index20", "[lsearch(all,INDEX,STATUS:approved,COUNT,20)]", false),
+		new("ls-index20-m", "[lsearch(all,INDEX,STATUS:approved,COUNT,20)]", false, AsMortal: true),
+		new("ls-eval20", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,approved\\)\\],COUNT,20)]", false),
+		new("ls-eval20-m", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,approved\\)\\],COUNT,20)]", false, AsMortal: true),
+		new("ls-eval20-s", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,approved\\)\\],COUNT,20)]", false, AsStranger: true),
+		new("ls-rare", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,rare\\)\\])]", false),
+		new("set-idx", "&STATUS {IDXW}=[rand(100000)]", true),
+		new("set-plain", "&NOTE {IDXW}=[rand(100000)]", true),
+	];
+
 	private const int BigFlat = 4000;
 	private const int BigBranches = 40;
 	private const int BigLeaves = 50;
@@ -191,6 +222,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var feedMembers = 200;
 		var feedLines = 5000;
 		bool? parenGroups = null;
+		var indexWorld = 0;
+		var warmup = 200;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
 		{
@@ -228,11 +261,19 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 					if (++i >= args.Length || !int.TryParse(args[i], out feedLines) || feedLines < 0)
 						throw new ArgumentException("--feed-lines requires a non-negative integer.");
 					break;
+				case "--index-world":
+					if (++i >= args.Length || !int.TryParse(args[i], out indexWorld) || indexWorld < 0)
+						throw new ArgumentException("--index-world requires a non-negative integer.");
+					break;
+				case "--warmup":
+					if (++i >= args.Length || !int.TryParse(args[i], out warmup) || warmup < 0)
+						throw new ArgumentException("--warmup requires a non-negative integer.");
+					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
 		}
 
-		var all = Scenarios.Concat(ParenScenarios(parenGroups ?? false)).ToArray();
+		var all = Scenarios.Concat(ParenScenarios(parenGroups ?? false)).Concat(indexWorld > 0 ? IndexScenarios : []).ToArray();
 		var scenarios = selected.Count == 0
 			? all
 			: all.Where(s => selected.Contains(s.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
@@ -245,7 +286,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait, things, parenGroups, connections, feedMembers, feedLines);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, things, parenGroups, connections, feedMembers, feedLines, indexWorld,
+				warmup);
 		}
 		finally
 		{
@@ -254,7 +296,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	}
 
 	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, int things, bool? parenGroups, int connections,
-		int feedMembers, int feedLines)
+		int feedMembers, int feedLines, int indexWorld, int warmup)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
@@ -288,14 +330,20 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 				|| scenario.Name.StartsWith("radio", StringComparison.Ordinal))
 			? await SeedFeedsAsync(baseParser, one, feedMembers, feedLines)
 			: one;
+		var (indexOwner, indexWrite, stranger) = indexWorld > 0 ? await SeedIndexWorldAsync(indexWorld) : (one, one, one);
 		var inputs = scenarios.ToDictionary(scenario => scenario, scenario => MarkupText.Plain(scenario.Input
+			.Replace("{IDXW}", $"#{indexWrite.Number}")
 			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}").Replace("{MEMBER}", member.ToString()).Replace("{OTHER}", $"#{other.Number}")
 			.Replace("{ONLINE}", string.Join(' ', online.Select(player => $"#{player.Number}")))));
-		DBRef Executor(Scenario scenario) => scenario.AsMortal ? mortal : one;
+		DBRef Executor(Scenario scenario) => scenario.AsStranger
+			? stranger
+			: scenario.AsMortal
+				? IndexScenarios.Contains(scenario) ? indexOwner : mortal
+				: one;
 
 		foreach (var scenario in scenarios)
 		{
-			for (var i = 0; i < 200; i++) await RunOnce(baseParser, Executor(scenario), scenario, inputs[scenario]);
+			for (var i = 0; i < warmup; i++) await RunOnce(baseParser, Executor(scenario), scenario, inputs[scenario]);
 		}
 
 		if (wait > 0)
@@ -314,7 +362,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			var gen0Before = GC.CollectionCount(0);
 			var sw = Stopwatch.StartNew();
 			long ops = 0;
-			while (sw.Elapsed.TotalSeconds < seconds)
+			while (ops == 0 || sw.Elapsed.TotalSeconds < seconds)
 			{
 				await RunOnce(baseParser, executor, scenario, input);
 				ops++;
@@ -460,6 +508,57 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 
 		return online;
+	}
+
+	/// <summary>
+	/// <paramref name="count"/> things owned by a mortal, each with a STATUS, a LEVEL and a description, then STATUS
+	/// indexed as text and LEVEL as numbers through the batched background build, as <c>@attribute/index</c> builds
+	/// them. Returns the owner, a thing for the write scenarios, and a stranger who may read none of the copies.
+	/// </summary>
+	private async Task<(DBRef Owner, DBRef Write, DBRef Stranger)> SeedIndexWorldAsync(int count)
+	{
+		var room = await _database!.GetObjectNodeAsync(new DBRef(0)) is AnySharpObject { AsOptionalContainer: AnySharpContainer start }
+			? start
+			: throw new InvalidOperationException("Room #0 is not seeded.");
+		var ownerRef = await _database.CreatePlayerAsync("IndexOwner", "unused", new DBRef(0), new DBRef(0), count + 100);
+		if (await _database.GetObjectNodeAsync(ownerRef) is not (AnySharpObject and SharpPlayer owner))
+			throw new InvalidOperationException("The index owner was not created.");
+		string[] words = ["approved", "pending", "new", "held", "closed", "rejected", "draft", "staff", "player", "archived"];
+		var seeding = Stopwatch.StartNew();
+		DBRef last = default;
+		for (var i = 0; i < count; i++)
+		{
+			last = await _database.CreateThingAsync($"Indexed {i}", room, owner, room);
+			var status = i % 10_000 == 5 ? "rare" : words[i % words.Length];
+			await _database.SetAttributesAsync(last,
+			[
+				new AttributeWrite(["STATUS"], MarkupText.Plain(status), owner, []),
+				new AttributeWrite(["LEVEL"], MarkupText.Plain((i * 7919 % 1000).ToString("D3")), owner, []),
+				new AttributeWrite(["DESCRIBE"], MarkupText.Plain($"A generated thing, number {i}, for the index scenarios."), owner, []),
+			]);
+		}
+
+		Console.WriteLine($"seeded {count} things in {seeding.Elapsed.TotalSeconds:N1}s");
+		var builder = _server!.Services.GetRequiredService<IAttributeIndexBuilder>();
+		var indexes = _server.Services.GetRequiredService<IAttributeIndexStore>();
+		foreach (var (name, options) in new[] { ("STATUS", AttributeIndexOptions.Default), ("LEVEL", new AttributeIndexOptions(Numeric: true)) })
+		{
+			await _database.CreateOrUpdateAttributeEntryAsync(name, []);
+			if (await indexes.SetAttributeIndexAsync(name, options) is not SharpAttributeEntry)
+				throw new InvalidOperationException($"{name} could not be indexed.");
+			var build = Stopwatch.StartNew();
+			var run = builder.Build(name);
+			await run.Completion;
+			Console.WriteLine($"index {name}: {run.Indexed} copies on {run.Scanned} objects in {build.Elapsed.TotalMilliseconds:N0} ms");
+		}
+
+		foreach (var usage in indexes.GetAttributeIndexUsage())
+		{
+			Console.WriteLine($"index {usage.Name}: {usage.Rows} rows, {usage.Pages} pages, {usage.Bytes} bytes");
+		}
+
+		var stranger = await _database.CreatePlayerAsync("IndexStranger", "unused", new DBRef(0), new DBRef(0), 100);
+		return (owner.Object.DBRef, last, stranger);
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)
