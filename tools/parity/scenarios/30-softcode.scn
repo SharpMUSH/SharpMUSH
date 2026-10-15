@@ -131,6 +131,14 @@ think a|b
 ::as wiz
 think a[]b|[strcat(x,[],y)]|[]
 
+::case sc.bracket-starts-over  only ] ends a bracket and only > a register name: , ) ; = inside one are text even in a function's argument
+::as wiz
+think cat(a,[x,y])|[cat(a,[x)])]|[cat(a,[cat(b,c))])]|[cat(a,[x=y])]
+think [x;y]
+think -[if(1,,(x))]-[cat(a,,(x),b)]-
+think -[cat(a,%q<x,y>)]-[cat(a,%q<x)y>)]-
+think -%q<x;y>-
+
 ::case sc.skip  @skip runs its action list only when the condition is false; @skip/ifelse is @if
 ::as wiz
 @skip 1=think skip-1 ran

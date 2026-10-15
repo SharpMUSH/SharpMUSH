@@ -343,6 +343,14 @@
       <Link>BundledPackages\info.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.info.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\health\package.yaml">
+      <Link>BundledPackages\health.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.health.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\health-jobs\package.yaml">
+      <Link>BundledPackages\health-jobs.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.health-jobs.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\timeline\package.yaml">
       <Link>BundledPackages\timeline.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.timeline.package.yaml</LogicalName>

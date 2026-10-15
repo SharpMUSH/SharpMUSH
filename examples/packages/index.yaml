@@ -152,6 +152,16 @@ packages:
     package: info
     version: 1.0.0
     description: +info, +pinfo and +journal — public and private files on a character, and a journal shared entry by entry
+  - path: health/
+    name: Health
+    package: health
+    version: 1.0.0
+    description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
+  - path: health-jobs/
+    name: Health Staff Load
+    package: health-jobs
+    version: 1.0.0
+    description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
   - path: timeline/
     name: Timeline
     package: timeline

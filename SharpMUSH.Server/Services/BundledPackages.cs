@@ -113,6 +113,10 @@ public static class BundledPackages
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +info and +journal are names a game may already use for its own code.
 		new("info", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
+		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: joins health and jobs, so +health shows staff load.
+		new("health-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
 		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.

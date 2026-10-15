@@ -830,6 +830,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
+		SceneActivity.AfterSet(parser, key, statusBefore, scene);
 		await SceneRoomRefresh.AfterSetAsync(parser, key, roomBefore, scene);
 		await SceneStatusEvent.AfterSetAsync(parser, key, statusBefore, scene);
 		return new CallState(scene.Id);
