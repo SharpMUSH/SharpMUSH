@@ -220,6 +220,8 @@
             _active = 0;
             _slotRow = null;
             _output = null;
+            // The last opening's rows may be another character's: the account can have switched since.
+            _server = null;
             _expanded.Clear();
             var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
             var build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
