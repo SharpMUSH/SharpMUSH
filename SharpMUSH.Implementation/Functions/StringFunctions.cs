@@ -1085,13 +1085,26 @@ public partial class Functions
 		var truthy = parsedIfElse.Message.Truthy(parser);
 		var result = CallState.Empty;
 
-		if (truthy)
+		// The branch runs as a switch on the evaluated condition: #$, %$0 and stext() read it and slev() counts it,
+		// as #$ does in TinyMUX. PennMUSH has none of them in if().
+		parser.CurrentState.SwitchStack.Push(new SwitchFrame
 		{
-			result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message);
+			Text = parsedIfElse.Message, InAction = true, Evaluation = parser.CurrentState.CurrentEvaluation
+		});
+		try
+		{
+			if (truthy)
+			{
+				result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message);
+			}
+			else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+			{
+				result = await parser.FunctionParse(arg2.Message);
+			}
 		}
-		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+		finally
 		{
-			result = await parser.FunctionParse(arg2.Message);
+			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
 
 		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
@@ -1613,7 +1626,8 @@ public partial class Functions
 	/// pattern matched.
 	/// </summary>
 	/// <param name="exact">
-	/// case(): a case-sensitive string comparison, no regexp context of its own, and no <c>#$</c>. Otherwise a glob,
+	/// case(): a case-sensitive string comparison and no regexp context of its own; its <c>#$</c> gives way to an
+	/// enclosing switch's (<see cref="SwitchFrame.Spliced"/>). Otherwise a glob,
 	/// whose captures (one per <c>*</c> or <c>?</c>, numbered from 0) are a regexp context that
 	/// <c>$0</c>-<c>$9</c> read while the matched list is evaluated.
 	/// </param>
@@ -1635,7 +1649,8 @@ public partial class Functions
 
 		var captures = exact ? null : new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		if (captures is not null) parser.CurrentState.RegexRegisters.Push(captures);
-		// PennMUSH splices #$ into the list it evaluates, but not for case() (src/funmisc.c, fun_switch).
+		// PennMUSH splices #$ into the list it evaluates, but not for case() (src/funmisc.c, fun_switch), whose #$
+		// SharpMUSH reads as TinyMUX does.
 		var frame = new SwitchFrame { Text = arg0, Spliced = !exact, Evaluation = parser.CurrentState.CurrentEvaluation };
 		parser.CurrentState.SwitchStack.Push(frame);
 		async ValueTask<MString?> EvaluateAction(CallState argument)
