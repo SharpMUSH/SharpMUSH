@@ -9,7 +9,7 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 /// <remarks>
 /// Kept in the server data, so a restart keeps the week. Written only when an entry moves to a new hour or one is
-/// dropped, so sampling every minute costs at most a write an hour per player. A player who connects and leaves
+/// dropped (or the last such write failed), so sampling every minute costs at most a write an hour per player. A player who connects and leaves
 /// between two samples is not counted.
 /// </remarks>
 public sealed class PlayerActivity(IExpandedObjectDataService serverData)
@@ -17,38 +17,37 @@ public sealed class PlayerActivity(IExpandedObjectDataService serverData)
 	public static readonly TimeSpan Week = TimeSpan.FromDays(7);
 
 	private readonly SemaphoreSlim _gate = new(1, 1);
-	private Dictionary<int, long>? _lastSeen;
+	private Dictionary<string, long>? _lastSeen;
+	private bool _unsaved;
 
-	/// <summary>Notes that <paramref name="players"/> are connected at <paramref name="now"/>.</summary>
-	public async ValueTask RecordAsync(IEnumerable<int> players, DateTimeOffset now, CancellationToken cancellationToken = default)
+	/// <summary>Notes that <paramref name="players"/> (objids) are connected at <paramref name="now"/>.</summary>
+	public async ValueTask RecordAsync(IEnumerable<string> players, DateTimeOffset now, CancellationToken cancellationToken = default)
 	{
 		await _gate.WaitAsync(cancellationToken);
 		try
 		{
 			var lastSeen = await LoadAsync();
 			var hour = HourOf(now);
-			var changed = false;
 
 			foreach (var player in players)
 			{
 				if (lastSeen.TryGetValue(player, out var seen) && seen >= hour) continue;
 				lastSeen[player] = hour;
-				changed = true;
+				_unsaved = true;
 			}
 
 			var cutoff = HourOf(now - Week);
 			foreach (var stale in lastSeen.Where(entry => entry.Value < cutoff).Select(entry => entry.Key).ToList())
 			{
 				lastSeen.Remove(stale);
-				changed = true;
+				_unsaved = true;
 			}
 
-			if (changed)
+			// Kept until a write succeeds, so a failed one is tried again on the next sample.
+			if (_unsaved)
 			{
-				await serverData.SetExpandedServerDataAsync(new PlayerActivityData
-				{
-					LastSeen = lastSeen.ToDictionary(entry => entry.Key.ToString(System.Globalization.CultureInfo.InvariantCulture), entry => entry.Value)
-				});
+				await serverData.SetExpandedServerDataAsync(new PlayerActivityData { LastSeen = new(lastSeen) });
+				_unsaved = false;
 			}
 		}
 		finally
@@ -75,14 +74,12 @@ public sealed class PlayerActivity(IExpandedObjectDataService serverData)
 	}
 
 	/// <summary>Called holding the gate.</summary>
-	private async ValueTask<Dictionary<int, long>> LoadAsync()
+	private async ValueTask<Dictionary<string, long>> LoadAsync()
 	{
 		if (_lastSeen is not null) return _lastSeen;
 
 		var stored = await serverData.GetExpandedServerDataAsync<PlayerActivityData>();
-		_lastSeen = (stored?.LastSeen ?? [])
-			.Where(entry => int.TryParse(entry.Key, System.Globalization.CultureInfo.InvariantCulture, out _))
-			.ToDictionary(entry => int.Parse(entry.Key, System.Globalization.CultureInfo.InvariantCulture), entry => entry.Value);
+		_lastSeen = new Dictionary<string, long>(stored?.LastSeen ?? [], StringComparer.Ordinal);
 		return _lastSeen;
 	}
 
@@ -90,7 +87,7 @@ public sealed class PlayerActivity(IExpandedObjectDataService serverData)
 	private static long HourOf(DateTimeOffset at) => at.ToUnixTimeSeconds() / 3600 * 3600;
 }
 
-/// <summary>The server data <see cref="PlayerActivity"/> keeps: player dbref number → the hour last seen, in Unix seconds.</summary>
+/// <summary>The server data <see cref="PlayerActivity"/> keeps: player objid → the hour last seen, in Unix seconds.</summary>
 public sealed class PlayerActivityData
 {
 	public Dictionary<string, long> LastSeen { get; set; } = [];

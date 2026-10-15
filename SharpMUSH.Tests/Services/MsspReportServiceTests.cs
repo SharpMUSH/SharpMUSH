@@ -110,9 +110,9 @@ public class MsspReportServiceTests
 		{
 			LastSeen = new Dictionary<string, long>
 			{
-				["1"] = (Now - hour).ToUnixTimeSeconds(),
-				["2"] = (Now - TimeSpan.FromDays(3)).ToUnixTimeSeconds(),
-				["3"] = (Now - TimeSpan.FromDays(6)).ToUnixTimeSeconds()
+				["#1:10"] = (Now - hour).ToUnixTimeSeconds(),
+				["#2:20"] = (Now - TimeSpan.FromDays(3)).ToUnixTimeSeconds(),
+				["#3:30"] = (Now - TimeSpan.FromDays(6)).ToUnixTimeSeconds()
 			}
 		};
 
@@ -159,5 +159,25 @@ public class MsspReportServiceTests
 				PortalRole.Player, null, null, 0));
 
 		await Assert.That(Values(report, "PORTAL APPLICATION")).IsNull();
+	}
+
+	/// <summary>
+	/// A tab or line break in a page's name would start another variable in the report, so it becomes a space; a name
+	/// with nothing else is left out.
+	/// </summary>
+	[Test]
+	public async Task APageNameStaysOneValue()
+	{
+		static RegisteredApplication App(string slug, string name) =>
+			new(slug, name, null, ApplicationKind.Page, "http/x", null, null, PortalRole.Player, null, null, 0);
+
+		var report = await BuildAsync(o => o with { Net = o.Net with { MudUrl = "https://mush.example.com" } }, null, null,
+			App("chargen", "Character\tApplication\r\nPLAYERS\t999"),
+			App("blank", "\t\n"));
+
+		await Assert.That(Values(report, "PORTAL APPLICATION")).IsEquivalentTo(new[]
+		{
+			"https://mush.example.com/apps/chargen Character Application PLAYERS 999"
+		});
 	}
 }

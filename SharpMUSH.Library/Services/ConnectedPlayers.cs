@@ -26,23 +26,23 @@ public static class ConnectedPlayers
 	}
 
 	/// <summary>
-	/// The players <see cref="CountAsync"/> counts, each once however many connections it has: who the heartbeat's
-	/// day and week counts are taken from.
+	/// The players <see cref="CountAsync"/> counts, each once however many connections it has, as objids so a
+	/// recycled dbref is a different player: who MSSP's PLAYERS DAY and PLAYERS WEEK are taken from.
 	/// </summary>
-	public static async ValueTask<IReadOnlySet<int>> DistinctAsync(IConnectionService connections, IMediator mediator, bool countAll)
+	public static async ValueTask<IReadOnlySet<string>> DistinctAsync(IConnectionService connections, IMediator mediator, bool countAll)
 	{
-		var players = new HashSet<int>();
+		var players = new HashSet<string>(StringComparer.Ordinal);
 
-		await foreach (var reference in CountedAsync(connections, mediator, countAll))
+		await foreach (var player in CountedAsync(connections, mediator, countAll))
 		{
-			players.Add(reference.Number);
+			players.Add(player.Object().DBRef.ToString());
 		}
 
 		return players;
 	}
 
 	/// <summary>One entry per connection that counts.</summary>
-	private static async IAsyncEnumerable<DBRef> CountedAsync(IConnectionService connections, IMediator mediator, bool countAll)
+	private static async IAsyncEnumerable<AnySharpObject> CountedAsync(IConnectionService connections, IMediator mediator, bool countAll)
 	{
 		await foreach (var connection in connections.GetAll())
 		{
@@ -54,7 +54,7 @@ public static class ConnectedPlayers
 
 			if (!countAll && await found.IsDark()) continue;
 
-			yield return reference;
+			yield return found;
 		}
 	}
 }

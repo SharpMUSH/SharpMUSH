@@ -109,10 +109,19 @@ public sealed class MsspReportService(
 		return (await applications.GetApplicationsAsync())
 			.Where(app => app.Kind == ApplicationKind.Page && app.MinimumRole <= PortalRole.Player && app.Permission is null)
 			.Where(app => allowBrowserCode || app.RenderKind == ApplicationRenderKind.Schema)
-			.OrderBy(app => app.DisplayName, StringComparer.OrdinalIgnoreCase)
-			.Select(app => $"{new Uri(site, $"/apps/{Uri.EscapeDataString(app.Slug)}")} {app.DisplayName}")
+			.Select(app => (app.Slug, Name: OneLine(app.DisplayName)))
+			.Where(app => app.Name.Length > 0)
+			.OrderBy(app => app.Name, StringComparer.OrdinalIgnoreCase)
+			.Select(app => $"{new Uri(site, $"/apps/{Uri.EscapeDataString(app.Slug)}")} {app.Name}")
 			.ToArray();
 	}
+
+	/// <summary>
+	/// A name as one MSSP value: a tab or line break would start another variable in the report, so every control
+	/// character and run of white space becomes one space.
+	/// </summary>
+	private static string OneLine(string name)
+		=> System.Text.RegularExpressions.Regex.Replace(name, @"[\s\p{Cc}]+", " ").Trim();
 
 	private static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
 
