@@ -205,6 +205,31 @@ public class TinyMuxDatabaseReaderTests
 			.WithMessageContaining(expected);
 	}
 
+	/// <summary>
+	/// %c/%x colour substitutions become ansi(), before the colour TinyMUX stores in the text becomes escapes,
+	/// and each attribute the rewrite touched is a note, with what it could not carry over exactly. Limbo's
+	/// description already holds stored colour, which stays beside the rewritten substitutions.
+	/// </summary>
+	[Test]
+	public async Task RewritesColourSubstitutions()
+	{
+		var text = (await File.ReadAllTextAsync(Fixture("tinymux-v5.flat")))
+			.Replace("\"Welcome to ", "\"%crWelcome%cn to ")
+			.Replace("\"Gone fishing.\"", "\"[setq(0,%cr)]%q0Gone%cn\"");
+		using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
+
+		var database = TinyMuxDatabaseReader.Read(stream);
+
+		var limbo = Object(database, 0).Attributes.First(a => a.Name == "DESCRIBE").Value;
+		await Assert.That(limbo).StartsWith("ansi(r,Welcome)");
+		await Assert.That(limbo).Contains("\u001b[");
+		await Assert.That(Object(database, 1).Attributes.First(a => a.Name == "AWAY").Value).IsEqualTo("[setq(0,)]%q0Gone");
+
+		await Assert.That(database.ImportNotes).Contains("#0/DESCRIBE: %c/%x colour written as ansi()");
+		await Assert.That(database.ImportNotes).Contains("#1/AWAY: %c/%x colour written as ansi(); " +
+			"check by hand: colour-code-in-register; check by hand: trailing-codes-dropped");
+	}
+
 	[Test]
 	public async Task ReadsQuotedStringsAcrossLines()
 	{

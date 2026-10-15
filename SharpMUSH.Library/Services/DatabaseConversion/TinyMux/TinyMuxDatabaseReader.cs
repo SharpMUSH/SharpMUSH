@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
@@ -21,6 +22,8 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 /// <para>Versions 1 and 2 are Latin-1 with raw ANSI colour; 3 and later are UTF-8 with colour as
 /// private-use code points (<see cref="TinyMuxColour"/>). A file whose attributes are kept in a separate
 /// database (<c>V_DATABASE</c>) carries no attribute values and is refused.</para>
+/// <para>Attribute text has its <c>%c</c>/<c>%x</c> colour substitutions rewritten as <c>ansi()</c>
+/// (<see cref="ColourSubstitutionRewriter"/>), each attribute that changed noted on its own line.</para>
 /// </remarks>
 public static partial class TinyMuxDatabaseReader
 {
@@ -324,6 +327,9 @@ public static partial class TinyMuxDatabaseReader
 		private readonly HashSet<string> _powersUsed = new(StringComparer.OrdinalIgnoreCase);
 		private int _longValues;
 
+		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
+		private readonly List<string> _rewrites = [];
+
 		private void Tally(string what, int dbref)
 		{
 			if (!_tally.TryGetValue(what, out var dbrefs))
@@ -432,15 +438,12 @@ public static partial class TinyMuxDatabaseReader
 					_longValues++;
 				}
 
-				// TODO(colour substitutions): run the shared rewriter here once it lands —
-				// value = ColourSubstitutionRewriter.Rewrite(value); — so %x/%c colour codes in MUX softcode
-				// become SharpMUSH's. This is the single place TinyMUX attribute text is produced.
 				attributes.Add(new PennMUSHAttribute
 				{
 					Name = name,
 					Owner = owner >= 0 && owner != raw.Owner ? owner : null,
 					Flags = AttributeFlagNames(flags, name, raw.DBRef),
-					Value = TinyMuxColour.ToAnsi(value, file.Version)
+					Value = TinyMuxColour.ToAnsi(Rewritten(value, raw.DBRef, name), file.Version)
 				});
 			}
 
@@ -716,6 +719,32 @@ public static partial class TinyMuxDatabaseReader
 			}
 		}
 
+		/// <summary>
+		/// The attribute's text with its <c>%c</c>/<c>%x</c> colour substitutions written as <c>ansi()</c>, which
+		/// SharpMUSH reads as the last command and an attribute; each attribute that changed, or that holds
+		/// colour the rewrite could not carry over exactly, is a note of its own. It runs on the text as stored,
+		/// before the stored colour becomes escapes, so an escape's <c>[</c> is never read as a function call.
+		/// </summary>
+		private string Rewritten(string value, int dbref, string name)
+		{
+			var colour = ColourSubstitutionRewriter.Rewrite(value,
+				new ColourRewriteOptions(ColourSubstitutionDialect.TinyMux, ColourRewriteMode.Auto));
+
+			var said = new List<string>();
+			if (colour.Changed)
+			{
+				said.Add("%c/%x colour written as ansi()");
+			}
+
+			said.AddRange(colour.Flags.Select(flag => $"check by hand: {flag}"));
+			if (said.Count > 0)
+			{
+				_rewrites.Add($"#{dbref}/{name}: {string.Join("; ", said)}");
+			}
+
+			return colour.Text;
+		}
+
 		private void Report()
 		{
 			var notes = _database.ImportNotes;
@@ -736,6 +765,8 @@ public static partial class TinyMuxDatabaseReader
 				var sample = string.Join(" ", distinct.Take(10).Select(dbref => $"#{dbref}"));
 				notes.Add($"{what} ({dbrefs.Count} time(s), on {sample}{(distinct.Count > 10 ? " ..." : "")})");
 			}
+
+			notes.AddRange(_rewrites);
 		}
 	}
 
