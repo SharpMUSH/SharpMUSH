@@ -1,7 +1,7 @@
 @using SharpMUSH.Library.Models.Packages
 @inject IStringLocalizer<SharedResource> Loc
 
-@* A plugin: its id, version, origin, status and any change waiting on a restart, and the on/off action. *@
+@* A plugin: its id, version, origin, status and any change waiting on a restart, and the README and on/off actions. *@
 <PackageRow Icon="@Icons.Material.Filled.Extension" Kind="plugin" Name="@Plugin.Name">
     <Tags>
         @if (!string.Equals(Plugin.Name, Plugin.Id, StringComparison.Ordinal))
@@ -40,6 +40,13 @@
         }
     </Meta>
     <Actions>
+        @if (Plugin.Package is { } package)
+        {
+            <MudTooltip Text="@Loc["PkgShowReadme", Plugin.Name]">
+                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" aria-label="@Loc["PkgShowReadme", Plugin.Name]"
+                               OnClick="@(() => OnReadme.InvokeAsync(package))" />
+            </MudTooltip>
+        }
         <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@Busy"
                    Color="@(Plugin.Enabled ? Color.Error : Color.Primary)"
                    aria-label="@Loc[Plugin.Enabled ? "PkgPluginTurnOffNamed" : "PkgPluginTurnOnNamed", Plugin.Name]"
@@ -54,6 +61,9 @@
 
     /// <summary>Whether a request or a restart is under way; the toggle waits for it.</summary>
     [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Shows the README of the package the plugin came from, given that package's id.</summary>
+    [Parameter] public EventCallback<string> OnReadme { get; set; }
 
     /// <summary>Turns the plugin the other way.</summary>
     [Parameter] public EventCallback OnToggle { get; set; }

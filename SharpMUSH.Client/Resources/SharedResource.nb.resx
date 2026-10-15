@@ -21,7 +21,7 @@
     <comment>MT — sitelock rule keywords are machine values; kept.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Tilgangsregler (kommaseparert)</value>
+    <value>Tilgangsregler</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Forfattere (kommaseparert)</value>
+    <value>Forfattere</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations kept as in the English.</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Objekt-id-er (én per linje, f.eks. #847:1778518155494)</value>
+    <value>Objekt-id-er</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — privilege-level names kept in English per glossary.</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Restriksjoner (kommaseparert)</value>
+    <value>Restriksjoner</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

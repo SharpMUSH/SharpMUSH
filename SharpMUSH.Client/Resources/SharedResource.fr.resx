@@ -644,7 +644,7 @@
     <value>Sélectionner les objets</value>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Identifiants d'objets (un par ligne, ex. #847:1778518155494)</value>
+    <value>Identifiants d'objets</value>
   </data>
   <data name="PkgScanSelection" xml:space="preserve">
     <value>Analyser la sélection</value>
@@ -692,7 +692,7 @@
     <value>Licence (facultatif)</value>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Auteurs (séparés par des virgules)</value>
+    <value>Auteurs</value>
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Description</value>
@@ -2768,7 +2768,7 @@
     <comment>MT — rule literals left untranslated</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Règles d'accès (séparées par des virgules)</value>
+    <value>Règles d'accès</value>
     <comment>MT</comment>
   </data>
   <data name="AddBannedName" xml:space="preserve">
@@ -3432,7 +3432,7 @@
     <comment>MT — privilege-level values left untranslated</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Restrictions (séparées par des virgules)</value>
+    <value>Restrictions</value>
     <comment>MT</comment>
   </data>
   <data name="Rooms" xml:space="preserve">

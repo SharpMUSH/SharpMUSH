@@ -48,7 +48,9 @@ public class SecretCommandTests
 		try
 		{
 			var set = await AsGod($"@secret {name}={value}");
-			var listed = string.Join("\n", await AsGod("@secret"));
+			// The listing wraps a long host across lines of its column; read the column's text back joined.
+			var listed = new string(string.Join("\n", await AsGod("@secret"))
+				.Where(c => !char.IsWhiteSpace(c) && c != '│' && c != '|').ToArray());
 
 			await Assert.That(set).Contains($"{name} is set. Its value is never shown again.");
 			await Assert.That(listed).Contains(name);
@@ -70,7 +72,9 @@ public class SecretCommandTests
 		try
 		{
 			var set = await AsGod($"@secret/host {name}=api.example.com *.example.org");
-			var listed = string.Join("\n", await AsGod("@secret"));
+			// The listing wraps a long host across lines of its column; read the column's text back joined.
+			var listed = new string(string.Join("\n", await AsGod("@secret"))
+				.Where(c => !char.IsWhiteSpace(c) && c != '│' && c != '|').ToArray());
 			var cleared = await AsGod($"@secret/host {name}=");
 
 			await Assert.That(set).Contains($"@http may send {name} to: *.example.org api.example.com");

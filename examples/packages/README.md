@@ -35,6 +35,7 @@ which games can add as a remote in the admin panel.
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 | [`rp-finder/`](rp-finder/) | Finding roleplay: a `+lfrp` status that runs out and ends at logoff, shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter, and a watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global (requires who-where) |
+| [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
 
 ## The manifest: `package.yaml`
 
@@ -593,7 +594,8 @@ network, no configured remote. Two different decisions live there:
 
 Both are declared in `SharpMUSH.Server/Services/BundledPackages.cs`, and adding
 a package to the catalogue also means adding its `EmbeddedResource` to
-`SharpMUSH.Server.csproj`. A catalogue package may only depend on another
+`SharpMUSH.Server.csproj` — its `README.md` too, when it has one (a catalogue
+package without one gets a README written from its manifest). A catalogue package may only depend on another
 catalogue package — otherwise its offline install would need the network after
 all. Anything installed from the catalogue records `bundled:sharpmush` as its
 source repo and is upgraded in place when a later build ships a newer version.
@@ -604,6 +606,23 @@ the browser is the tag list; installing a version checks out its tag; HEAD is
 the development channel. Release tags are immutable: never move or delete one
 — republish a fix as a new version. The installer records the commit it
 applied and warns loudly if a tag it installed from no longer points there.
+
+### The package's README
+
+Put a `README.md` beside `package.yaml` (`README.MD`, `readme.md` and
+`Readme.md` are found too). The portal shows it in **Browse** before an install
+and on the **Packages** page after one, from the Installed row and, for a plugin,
+the Plugins row. The installed copy is read from the same commit, upload or
+catalogue entry as the manifest and kept with the revision, so it always matches
+the installed version: an upgrade replaces it, a rollback restores its
+revision's, and an upload carries it at the top of the `.zip`.
+
+It is rendered like a wiki page (raw HTML removed). Links and images whose URL
+is not absolute — `../profile-handler/`, `docs/setup.md`, `shot.png` — point
+into the package folder, which the game does not serve, so they show as their
+text; `https://` and `mailto:` links, `#` anchors and `[[Namespace:slug]]` wiki
+links stay. A README over 256 KB or not UTF-8 is left out, and the package
+installs without it.
 
 ## Ownership and upgrade model
 

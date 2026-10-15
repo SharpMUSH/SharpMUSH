@@ -46,12 +46,18 @@ public sealed record PackageApplySource(string Repo, string? Path, string Commit
 /// refused unless this is true <i>and</i> the server's managed-package allow-list
 /// permits the package id. Ignored for softcode/application packages.
 /// </param>
+/// <param name="Readme">
+/// The README the package carries beside its manifest (<c>README.md</c>), read from the same source
+/// as the manifest; the revision keeps it so the Packages page shows the README of what is installed. Null when
+/// it has none.
+/// </param>
 public sealed record PackageApplyRequest(
 	PackageApplySource Source,
 	IReadOnlyDictionary<string, string> ConfigureAnswers,
 	IReadOnlyList<PackageConflictDecision> ConflictDecisions,
 	int KeepRevisions = 10,
-	bool AllowPluginCode = false);
+	bool AllowPluginCode = false,
+	string? Readme = null);
 
 /// <summary>Result of a successful apply.</summary>
 /// <param name="Revision">The revision number this apply recorded.</param>
@@ -77,11 +83,13 @@ public sealed record PackageRollbackResult(int Revision, int RestoredFromRevisio
 /// <param name="Objects">Package objects after this apply (ref, objid, type).</param>
 /// <param name="Attributes">Final effective value of every managed attribute after this apply.</param>
 /// <param name="Structure">Final package-managed object structure (flags/powers/locks/attribute flags) per object after this apply.</param>
+/// <param name="Readme">The package's README as applied, in Markdown, or null when it carried none.</param>
 public sealed record PackageRevisionSnapshot(
 	string Version,
 	IReadOnlyList<PackageRevisionSnapshotObject> Objects,
 	IReadOnlyList<PackageRevisionSnapshotAttribute> Attributes,
-	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null);
+	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null,
+	string? Readme = null);
 
 /// <summary>One object in a revision snapshot.</summary>
 /// <param name="Ref">The manifest ref that produced or targets the object.</param>

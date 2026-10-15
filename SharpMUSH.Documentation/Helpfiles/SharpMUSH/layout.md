@@ -42,7 +42,7 @@ Boxes, titled rules, columns, labelled fields, trees and pictures, described onc
 | [BOX()] | a frame with a title in its top edge |
 | [RULE()] | a line across, with a title in it |
 | [FLEX()], [LFLEX()] and [ITEM()] | things side by side |
-| [FIELDS()] | labels and values, the values lined up |
+| [FIELDS()] and [LFIELDS()] | labels and values, the values lined up |
 | [TREE()], [LTREE()], [NODE()] and [LNODE()] | items under their parents |
 | [FIGURE()] | a picture, with text art for a terminal |
 | [GAUGE()] | a bar filled to a value |

@@ -61,4 +61,10 @@ public interface IPackageInstallService
 		string packageId,
 		int revision,
 		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// The README, in Markdown, that the installed package's current revision was applied with; or
+	/// <see cref="NotFound"/> when the package is not installed or carried none.
+	/// </summary>
+	Task<Found<string>> GetReadmeAsync(string packageId);
 }
