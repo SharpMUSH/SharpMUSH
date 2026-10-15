@@ -501,7 +501,7 @@ A SAFE object cannot be destroyed with `@destroy`. Only a Wizard can remove the 
 
 **Flag: SHARED (players)**
 
-A SHARED player is a shared player (also called a Zone Master): anyone who passes its `@lock/zone` controls the objects it owns. A player who passes that lock can also `@chown` what they own to it.
+A player set SHARED is a shared player (also called a Zone Master): anyone who passes its `@lock/zone` controls the objects it owns. A player who passes that lock can also `@chown` what they own to it.
 
 
 ::: seealso
