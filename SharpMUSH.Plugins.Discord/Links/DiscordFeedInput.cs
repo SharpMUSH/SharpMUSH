@@ -41,8 +41,16 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 		}
 
 		var spoken = new TaskCompletionSource<SpeechOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+		// Whichever comes first takes the line: the queue to send it, or the timeout to give it up, so a line the
+		// speaker was told did not get through never reaches the feed later.
+		var claim = Pending;
 		var admission = await services.GetRequiredService<ITaskScheduler>().AdmitWork(async () =>
 		{
+			if (Interlocked.CompareExchange(ref claim, Sent, Pending) != Pending)
+			{
+				return null;
+			}
+
 			try
 			{
 				spoken.TrySetResult(await SendAsync(speech, kind, bridge, character));
@@ -65,11 +73,20 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 		{
 			return await spoken.Task.WaitAsync(QueueTimeout, cancellationToken);
 		}
-		catch (TimeoutException)
+		catch (TimeoutException) when (Interlocked.CompareExchange(ref claim, Abandoned, Pending) == Pending)
 		{
 			return new Refused("The game did not take it in time.");
 		}
+		catch (TimeoutException)
+		{
+			// The queue took it just as the wait ran out; the speaker hears what became of it.
+			return await spoken.Task.WaitAsync(cancellationToken);
+		}
 	}
+
+	private const int Pending = 0;
+	private const int Sent = 1;
+	private const int Abandoned = 2;
 
 	/// <summary>
 	/// On the game's queue: that the character is still on the speaker's active account, the checks <c>@feed/send</c>
