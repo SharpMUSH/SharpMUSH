@@ -1,12 +1,16 @@
-format: 1.2
+format: 1.7
 package: scene-verse
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Verse, canon and content warnings on scenes: three scene details for +scene/set, a content warning told to whoever joins, and +scene/verses."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, verse, canon, content-warning, rp]
 requires_server: ">=0.1"
+
+# The details and +scene/verses call the Scene plugin's scene functions, so it installs only while the
+# plugin runs.
+plugins: [scene]
 
 # The scene package keeps any detail a scene's owner sets; this one names three and shows them. Everything
 # here is attached to the scene package's objects, so uninstalling it takes it all away again. Scenes keep

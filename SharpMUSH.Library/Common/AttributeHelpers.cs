@@ -156,6 +156,14 @@ public static class AttributeHelpers
 	}
 
 	/// <summary>
+	/// The attribute that holds an object's gender: the one <c>gender_attr</c> names, or <c>SEX</c> when it is
+	/// blank. Pronoun substitution reads it, and <c>@gender</c> sets it.
+	/// </summary>
+	/// <param name="configured">The <c>gender_attr</c> option as it stands now.</param>
+	public static string GenderAttributeName(string? configured)
+		=> string.IsNullOrWhiteSpace(configured) ? "SEX" : configured.Trim().ToUpperInvariant();
+
+	/// <summary>
 	/// Gets the gender attribute that indicates the pronoun. This is typically 'SEX' for legacy reasons.
 	/// PennMUSH's <c>get_gender</c> (<c>src/funstr.c:70</c>) is a bare <c>atr_get</c>: inherited, and with
 	/// no permission check, so it is read as God rather than as the object itself.
@@ -166,7 +174,7 @@ public static class AttributeHelpers
 		var attribute = await attributeService.GetAttributeAsync(
 			god,
 			onObject,
-			string.IsNullOrWhiteSpace(attr) ? "SEX" : attr,
+			GenderAttributeName(attr),
 			IAttributeService.AttributeMode.Read);
 
 		return attribute is SharpAttribute[] chain

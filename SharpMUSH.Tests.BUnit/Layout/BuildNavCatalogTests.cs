@@ -4,6 +4,7 @@ using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Layout;
+using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
 
@@ -17,12 +18,23 @@ public class BuildNavCatalogTests : BunitContext
 
 	public BuildNavCatalogTests() => _auth = AddAuthorization();
 
-	private async Task<List<string>> VisibleHrefs(ClaimsPrincipal? user = null)
+	private async Task<List<string>> VisibleHrefs(ClaimsPrincipal? user = null, ServerInfoService? features = null)
 	{
 		var authorization = Services.GetRequiredService<IAuthorizationService>();
 		var principal = user ?? (await Services.GetRequiredService<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider>()
 			.GetAuthenticationStateAsync()).User;
-		return (await BuildNavCatalog.VisibleAsync(authorization, principal)).Select(e => e.Href).ToList();
+		return (await BuildNavCatalog.VisibleAsync(authorization, principal, features ?? new StubServerInfoService(guestsEnabled: true))).Select(e => e.Href).ToList();
+	}
+
+	/// <summary>The pose types page is the Scene plugin's: a game without the Scene System is not offered it.</summary>
+	[Test]
+	public async Task PoseTypes_AreListedOnlyWithScenesOn()
+	{
+		_auth.SetAuthorized("staff");
+		_auth.SetPolicies("layout.admin");
+		await Assert.That(await VisibleHrefs()).Contains("/admin/scenes/types");
+		await Assert.That(await VisibleHrefs(features: new StubServerInfoService(guestsEnabled: true, features: [])))
+			.DoesNotContain("/admin/scenes/types");
 	}
 
 	[Test]

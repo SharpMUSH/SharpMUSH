@@ -1319,20 +1319,6 @@ public partial class Commands
 		//   /spoof: preserve the current enactor (the original player who started the chain)
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : executor.Object().DBRef;
 
-		// Q-registers from the calling context are copied into the triggered attribute unless
-		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
-		// is run will be copied and made available in the triggered attribute").
-		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-		if (switches.Contains("CLEARREGS"))
-		{
-			registerStack.Push(new Dictionary<string, MString>());
-		}
-		else
-		{
-			parser.CurrentState.Registers.TryPeek(out var currentRegs);
-			registerStack.Push(currentRegs != null ? new Dictionary<string, MString>(currentRegs) : new());
-		}
-
 		if (switches.Contains("MATCH"))
 		{
 			var testString = matchArg!.Message.ToPlainText();
@@ -1360,6 +1346,28 @@ public partial class Commands
 			}
 		}
 
+		// Q-registers from the calling context are copied into the triggered attribute unless
+		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
+		// is run will be copied and made available in the triggered attribute").
+		// /inline without /localize (PennMUSH @trigger2 help) lets the triggered attribute override the caller's
+		// Q-registers, so it can hand values back the way an @include does: it works on the caller's own set,
+		// which /clearregs empties first (RegisterScope's bare QUEUE_CLEAR_QREG case). After /match, so an unmatched
+		// trigger leaves the caller's registers alone.
+		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+		parser.CurrentState.Registers.TryPeek(out var currentRegs);
+		var clearsRegisters = switches.Contains("CLEARREGS");
+		if (switches.Contains("INLINE") && !switches.Contains("LOCALIZE") && currentRegs is not null)
+		{
+			if (clearsRegisters) currentRegs.Clear();
+			registerStack.Push(currentRegs);
+		}
+		else
+		{
+			registerStack.Push(clearsRegisters || currentRegs is null
+				? new Dictionary<string, MString>()
+				: new Dictionary<string, MString>(currentRegs));
+		}
+
 		// Note: INLINE switch executes immediately (current default behavior).
 		// Queue dispatch available via AdmitCommandListRequest if needed for future enhancements.
 
@@ -1371,7 +1379,10 @@ public partial class Commands
 			Enactor = executionEnactor,
 			Caller = parser.CurrentState.Executor,
 			Registers = registerStack,
-			EnvironmentRegisters = envRegisters
+			EnvironmentRegisters = envRegisters,
+			// A loop or switch the trigger ran inside does not bind ##, #@ or #$ written in the attribute it runs:
+			// PennMUSH queues that attribute, and splices those tokens only into the loop's own text.
+			CurrentEvaluation = new DBAttribute(targetObject.Object().DBRef, attribute.LongName)
 		};
 
 		var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,

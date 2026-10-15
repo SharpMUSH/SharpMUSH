@@ -19,7 +19,9 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 	private const string DefaultMudName = "SharpMUSH";
 
-	private static readonly ServerInfoResponse Fallback = new(true, DefaultMudName, GameFeatures.Defaults);
+	// No optional application: one whose plugin is not running has nothing behind its pages, and a portal that cannot
+	// ask cannot tell.
+	private static readonly ServerInfoResponse Fallback = new(true, DefaultMudName, []);
 
 	private Task<ServerInfoResponse?>? _info;
 
@@ -61,7 +63,8 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 	/// <summary>
 	/// Whether the game has the optional application <paramref name="feature"/> (a <see cref="GameFeatures"/>
-	/// id) on. On any fetch failure this degrades to what a new game has, <see cref="GameFeatures.Defaults"/>.
+	/// id) on. On any fetch failure this degrades to <c>false</c>: an application may be off, or its plugin not
+	/// running, and its pages would call into nothing.
 	/// </summary>
 	public virtual async Task<bool> HasFeatureAsync(string feature)
 		=> (await FetchAsync()).Features?.Contains(feature, StringComparer.OrdinalIgnoreCase) ?? false;
@@ -116,6 +119,9 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 		// Forget the failure only if nobody has started a newer fetch in the meantime.
 		_ = Interlocked.CompareExchange(ref _info, null, pending);
+		// A first read that failed gave its readers the defaults (no application on), so the answer that follows
+		// is compared with those: FeatureGate shows the Scene System's links once the server is back.
+		_lastAnswer ??= Fallback;
 		return Fallback;
 	}
 
