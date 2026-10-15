@@ -42,4 +42,11 @@ public interface IPortalWidget
 	[DynamicallyAccessedMembers(
 		DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicConstructors)]
 	Type? ConfigType { get; }
+
+	/// <summary>
+	/// The optional application the widget shows (a <c>GameFeatures</c> id, such as <c>scenes</c>), or null for none.
+	/// While the game does not have it on, the layout editor does not offer the widget and a placed one is left out:
+	/// without the application's plugin nothing serves its data.
+	/// </summary>
+	string? Feature => null;
 }

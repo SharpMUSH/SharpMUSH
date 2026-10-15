@@ -1,0 +1,226 @@
+@page "/settings/notifications"
+@layout SettingsLayout
+@attribute [Authorize]
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IStringLocalizer<SharedResource> Loc
+@inject AccountPushService Push
+@inject ApplicationCatalog Applications
+
+@* Notifications on this device and the account's others. What notifies is the game's: the notifications package
+   decides in softcode and each character chooses what they receive (+notify, or the package's page). Permission
+   is asked only on the button, never on arrival. *@
+
+<PageTitle>@Loc["NavNotifications"] — @Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
+
+<div class="settings-notify-page">
+    <PlainPageHeader Kicker="@($"{Loc["AppTitle"]} · {Loc["Settings"]}")" Title="@Loc["NavNotifications"]" Description="@Loc["NotifyIntro"]" />
+
+    <KitCard Title="@Loc["NotifyThisDevice"]">
+        <div class="settings-notify-body" id="notify-this-device">
+            @if (_browser is null)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+            }
+            else if (_browser.Ios && !_browser.Standalone)
+            {
+                <p class="settings-notify-note" data-state="ios">@Loc["NotifyIosHowTo"]</p>
+            }
+            else if (!_browser.Supported)
+            {
+                <p class="settings-notify-note" data-state="unsupported">@Loc["NotifyUnsupported"]</p>
+            }
+            else if (_browser.Permission == "denied")
+            {
+                <p class="settings-notify-note" data-state="denied">@Loc["NotifyBlocked"]</p>
+            }
+            else if (ThisDevice is { } own)
+            {
+                <p class="settings-notify-state" data-state="on">@Loc["NotifyOnHere", own.Device]</p>
+                <div class="settings-notify-actions">
+                    <CapsuleButton Icon="@Icons.Material.Outlined.NotificationsActive" Disabled="_busy" OnClick="() => TestAsync(own)">@Loc["NotifySendTest"]</CapsuleButton>
+                    <CapsuleButton Icon="@Icons.Material.Outlined.NotificationsOff" Disabled="_busy" OnClick="TurnOffAsync">@Loc["NotifyTurnOff"]</CapsuleButton>
+                </div>
+            }
+            else
+            {
+                <p class="settings-notify-state" data-state="off">@Loc["NotifyOffHere"]</p>
+                <div class="settings-notify-actions">
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Notifications" Disabled="_busy" OnClick="TurnOnAsync">@Loc["NotifyTurnOn"]</CapsuleButton>
+                </div>
+            }
+
+            @if (_browser is { CanInstall: true, Standalone: false })
+            {
+                <div class="settings-notify-install">
+                    <span class="settings-notify-note">@Loc["NotifyInstallNote"]</span>
+                    <CapsuleButton Icon="@Icons.Material.Outlined.InstallDesktop" Disabled="_busy" OnClick="InstallAsync">@Loc["NotifyInstall"]</CapsuleButton>
+                </div>
+            }
+        </div>
+    </KitCard>
+
+    <KitCard Title="@Loc["NotifyDevices"]" Sub="@Loc["NotifyDevicesSub"]">
+        <div class="settings-notify-body">
+            @if (_devices is null)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+            }
+            else if (_devices.Count == 0)
+            {
+                <EmptyBox>@Loc["NotifyNoDevices"]</EmptyBox>
+            }
+            else
+            {
+                <ul class="settings-notify-devices">
+                    @foreach (var device in _devices)
+                    {
+                        <li class="settings-notify-device" data-device="@device.Id">
+                            <MudIcon Icon="@Icons.Material.Outlined.Devices" Size="Size.Small" />
+                            <div class="settings-notify-device-text">
+                                <span class="settings-notify-device-name">
+                                    @device.Device
+                                    @if (device.Endpoint == _browser?.Endpoint)
+                                    {
+                                        <Pill Tag="true">@Loc["NotifyThisDeviceTag"]</Pill>
+                                    }
+                                </span>
+                                <span class="settings-notify-note">@Describe(device)</span>
+                            </div>
+                            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                           aria-label="@Loc["NotifyRemoveDevice", device.Device]" Disabled="_busy"
+                                           OnClick="() => RemoveAsync(device)" />
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </KitCard>
+
+    <KitCard Title="@Loc["NotifyWhat"]">
+        <div class="settings-notify-body">
+            <p class="settings-notify-note">@Loc["NotifyWhatNote"]</p>
+            @if (Applications.Get("notifications") is not null)
+            {
+                <div class="settings-notify-actions">
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Tune" Href="/apps/notifications">@Loc["NotifyChoose"]</CapsuleButton>
+                </div>
+            }
+        </div>
+    </KitCard>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert>
+    }
+    @if (_message is not null)
+    {
+        <MudAlert Severity="Severity.Success" role="status">@_message</MudAlert>
+    }
+</div>
+
+@code {
+    private PushBrowserState? _browser;
+    private IReadOnlyList<PushDeviceResponse>? _devices;
+    private bool _busy;
+    private string? _error;
+    private string? _message;
+
+    /// <summary>This browser's entry, when it is subscribed and the account holds it with the current key.</summary>
+    private PushDeviceResponse? ThisDevice =>
+        _browser?.Endpoint is { } endpoint ? _devices?.FirstOrDefault(d => d.Endpoint == endpoint && d.Current) : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Applications.Loaded;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _browser = await Push.BrowserStateAsync();
+        _devices = await Push.DevicesAsync() switch
+        {
+            IReadOnlyList<PushDeviceResponse> list => list,
+            ApiFailure failure => Failed(failure)
+        };
+    }
+
+    private IReadOnlyList<PushDeviceResponse> Failed(ApiFailure failure)
+    {
+        _error = failure.Message;
+        return [];
+    }
+
+    private string Describe(PushDeviceResponse device)
+    {
+        var on = Loc["NotifyDeviceSince", device.CreatedAt.LocalDateTime.ToString("d")].Value;
+        if (!device.Current) return $"{on} · {Loc["NotifyDeviceStale"]}";
+        if (device.LastFailureAt is { } failed && (device.LastSuccessAt is not { } worked || failed > worked))
+            return $"{on} · {Loc["NotifyDeviceFailed", failed.LocalDateTime.ToString("g"), device.LastFailure ?? ""]}";
+        return device.LastSuccessAt is { } sent ? $"{on} · {Loc["NotifyDeviceLastSent", sent.LocalDateTime.ToString("g")]}" : on;
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        _busy = true;
+        _error = null;
+        _message = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private Task TurnOnAsync() => RunAsync(async () =>
+    {
+        switch (await Push.TurnOnAsync())
+        {
+            case PushDeviceResponse:
+                _message = Loc["NotifyTurnedOn"];
+                break;
+            case ApiFailure failure:
+                _error = failure.Message is "denied" or "dismissed" ? Loc["NotifyPermissionRefused"] : failure.Message;
+                break;
+        }
+
+        await RefreshAsync();
+    });
+
+    private Task TurnOffAsync() => RunAsync(async () =>
+    {
+        if (await Push.TurnOffAsync(_devices ?? []) is ApiFailure failure) _error = failure.Message;
+        await RefreshAsync();
+    });
+
+    private Task TestAsync(PushDeviceResponse device) => RunAsync(async () =>
+    {
+        switch (await Push.TestAsync(device.Id))
+        {
+            case Success:
+                _message = Loc["NotifyTestSent"];
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        await RefreshAsync();
+    });
+
+    private Task RemoveAsync(PushDeviceResponse device) => RunAsync(async () =>
+    {
+        if (await Push.RemoveAsync(device.Id) is ApiFailure failure) _error = failure.Message;
+        await RefreshAsync();
+    });
+
+    private Task InstallAsync() => RunAsync(async () =>
+    {
+        await Push.InstallAsync();
+        _browser = await Push.BrowserStateAsync();
+    });
+}

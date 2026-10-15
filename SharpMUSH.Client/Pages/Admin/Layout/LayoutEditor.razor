@@ -7,6 +7,7 @@
 @inject ILayoutService LayoutService
 @inject IWidgetRegistry Registry
 @inject ApplicationCatalog Applications
+@inject ServerInfoService ServerInfo
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -392,7 +393,15 @@
         _leftWidth = layout.Settings.LeftSidebarWidth;
         _rightWidth = layout.Settings.RightSidebarWidth;
 
-        _palette = Registry.GetAllWidgets()
+        // A widget of an application the game does not have on shows nothing and asks a plugin that is not running.
+        var widgets = Registry.GetAllWidgets().ToList();
+        var answers = await Task.WhenAll(widgets.Select(w => w.Feature).OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(async feature => (Feature: feature, On: await ServerInfo.HasFeatureAsync(feature))));
+        var featuresOn = answers.Where(a => a.On).Select(a => a.Feature).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        _palette = widgets
+            .Where(w => w.Feature is null || featuresOn.Contains(w.Feature))
             .Where(w => w.AllowedZones.Any(z => _scopeInfo!.Zones.Contains(z)))
             .Select(w => new LayoutEditItem { WidgetName = w.Name, DisplayName = WidgetLabel(w), Zone = LayoutDraft.Palette, IsTemplate = true })
             .OrderBy(i => i.DisplayName, StringComparer.CurrentCultureIgnoreCase)

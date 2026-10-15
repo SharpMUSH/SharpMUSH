@@ -3916,6 +3916,10 @@
     <value>Kezdje a wiki elolvasásával, a karakterek böngészésével, vagy csatlakozzon egy jelenethez.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Kezdje a wiki elolvasásával vagy a karakterek böngészésével.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>A wiki elolvasása</value>
     <comment>MT</comment>
@@ -6148,5 +6152,97 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>A tartalmi figyelmeztetéssel ellátott kép kimarad a képtárból. Vegye le a figyelmeztetést a megosztáshoz.</value>
+  </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Hozzáadás a naptárhoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Vedd fel a menetrendet a naptáradba</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>A naptáralkalmazásod minden jelenetet a saját helyi idődben mutat, és óránként keres változásokat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Nyilvános jelenetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>A menetrend minden nyilvános jelenete. Ezt a címet bárki használhatja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>A privát hivatkozásod</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>A karakter által látható privát jeleneteket is mutatja. Aki ismeri a hivatkozást, olvashatja, ezért tartsd meg magadnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Csak az általam vezetett vagy csatlakozott jelenetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Ez a cím csak most látszik. Másold be a naptáralkalmazásodba, mielőtt elhagyod az oldalt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>{0} napon készítettél privát hivatkozást. Készíts újat, hogy újra lásd a címét; a régi megszűnik működni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Privát hivatkozás készítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Új hivatkozás készítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Kikapcsolás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Naptár címe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Másolás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Naptár címe kimásolva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Feliratkozás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Piszkozat mentése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Piszkozat mentve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Piszkozat csak ezen az eszközön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Értesítések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Értesítések erre a telefonra vagy számítógépre, amikor a portál zárva van</value>
+    <comment>MT</comment>
   </data>
 </root>

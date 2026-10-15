@@ -35,6 +35,7 @@ These options control some attribute behavior.
 - `room_connects=<boolean>`: Are @aconnect and @adisconnect triggered on rooms?
 - `read_remote_desc=<boolean>`: Can anyone remotely retrieve @descs?
 - `empty_attrs=<boolean>`: Can attributes be set to an empty string?
+- `gender_attr=<string>`: The attribute that holds an object's gender, which pronoun substitution reads and [@gender] sets. SEX when blank, and by default.
 - `reverse_shs=<boolean>`: Reverse the endedness of the shs password encryption? (**Warning**: Playing with this will break logins)
 
 # @config chat
@@ -158,7 +159,7 @@ Options that help control compability with TinyMUSH servers.
 - `tiny_trim_fun=<boolean>`: Are the second and third arguments to trim() reversed?
 - `tiny_math=<boolean>`: Is a string where a number is expected considered a 0?
 - `silent_pemit=<boolean>`: Does @pemit default to @pemit/silent?
-- `paren_groups=<boolean>`: Does an unescaped `(` that starts no function call open a literal group, as in PennMUSH? Its commas are text and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments. When off, escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`. Importing a PennMUSH database turns it on.
+- `paren_groups=<boolean>`: Does an unescaped `(` that starts no function call open a literal group, as in PennMUSH? Its commas are text and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments. When off, escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`. Importing a PennMUSH, RhostMUSH or TinyMUX database turns it on.
 - `mux_logic=<boolean>`: Do and(), or(), xor(), cand() and cor() test each argument by its leading signed integer, as TinyMUX does, and does xor() answer 1 for an odd number of true arguments? See [compatibility config].
 - `mux_justify=<boolean>`: Do ljust(), rjust() and center() cut text longer than the width, as TinyMUX does?
 - `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
