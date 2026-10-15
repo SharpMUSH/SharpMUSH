@@ -108,7 +108,7 @@ public sealed class DiscordAccounts(
 
 		var link = new DiscordAccountLink(ticket.User.UserId, accountId, ticket.User.Username, now);
 		await store.SaveAsync(link, CancellationToken.None);
-		logger.LogInformation("[Discord] {User} linked to account {Account}.", link.Username, accountId);
+		logger.LogInformation("[Discord] {User} linked their game account.", link.Username);
 		await ChangeRoleAsync(() => linkedRole.GiveAsync(link.UserId, cancellationToken), link);
 		return link;
 	}
@@ -125,7 +125,7 @@ public sealed class DiscordAccounts(
 			}
 
 			await store.SaveAsync(link with { UnlinkedAt = time.GetUtcNow() }, CancellationToken.None);
-			logger.LogInformation("[Discord] {User} unlinked from account {Account}.", link.Username, link.AccountId);
+			logger.LogInformation("[Discord] {User} unlinked their game account.", link.Username);
 			await ChangeRoleAsync(() => linkedRole.TakeAsync(link.UserId, cancellationToken), link);
 			return link;
 		}

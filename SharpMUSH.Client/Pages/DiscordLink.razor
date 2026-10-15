@@ -33,7 +33,7 @@
                             <div class="discord-link-user">
                                 @if (ticket.AvatarUrl is { } avatar)
                                 {
-                                    <img class="discord-link-avatar" src="@avatar" alt="" />
+                                    <img class="discord-link-avatar" src="@ApiUrl.Resolve(avatar)" alt="" />
                                 }
                                 <div>
                                     <div class="discord-link-name">@ticket.Username</div>

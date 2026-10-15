@@ -311,17 +311,41 @@
       <Link>BundledPackages\who-where.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\rp-finder\package.yaml">
-      <Link>BundledPackages\rp-finder.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.rp-finder.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\status\package.yaml">
+      <Link>BundledPackages\status.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.status.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\watch\package.yaml">
+      <Link>BundledPackages\watch.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.watch.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\finger\package.yaml">
       <Link>BundledPackages\finger.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.finger.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\time\package.yaml">
+      <Link>BundledPackages\time.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord\package.yaml">
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\notifications\package.yaml">
+      <Link>BundledPackages\notifications.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.notifications.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\notifications-app\package.yaml">
+      <Link>BundledPackages\notifications-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.notifications-app.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster\package.yaml">
+      <Link>BundledPackages\roster.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster-jobs\package.yaml">
+      <Link>BundledPackages\roster-jobs.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs.package.yaml</LogicalName>
     </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the

@@ -1,6 +1,6 @@
-# Migrating a PennMUSH world
+# Migrating a PennMUSH, RhostMUSH or TinyMUX world
 
-SharpMUSH can import a PennMUSH flatfile and, optionally, the world's `mush.cnf`, mail database (`maildb`), and chat database (`chatdb`). The flatfile is the only supported direct world/object source. RhostMUSH and TinyMUX have no direct supported importer; move those worlds through a compatible PennMUSH export only after validating that intermediate conversion independently.
+SharpMUSH can import a PennMUSH flatfile and, optionally, the world's `mush.cnf`, mail database (`maildb`), and chat database (`chatdb`). It can also import a RhostMUSH flatfile with its mail dumps, or a TinyMUX flatfile with its `mail.db` and `comsys.db`; see [Importing from RhostMUSH or TinyMUX](#importing-from-rhostmush-or-tinymux) for what those imports carry over and what they leave behind. Everything below applies to all three; where it names a PennMUSH file, use the matching file from your server.
 
 Import is one-way. Keep the original PennMUSH installation and its immutable pre-cutover backup until the SharpMUSH world has passed its observation period. Never treat a successful upload as proof that the game is ready for players.
 
@@ -23,7 +23,7 @@ Check the destination with `@storage`. The import needs room for the live world,
 ## 2. Rehearse the import
 
 1. Start a clean SharpMUSH stack and protect `/setup` from untrusted visitors. Claim the administrator account linked to `#1`.
-2. From setup, open **Import PennMUSH**. Upload the flatfile and the matching optional `mush.cnf`, `maildb`, and `chatdb` together. Configuration-derived object references and restrictions are applied before objects are converted; mail aliases, messages, channels, memberships, and history come from the ancillary databases.
+2. From setup, open **Import a PennMUSH, RhostMUSH or TinyMUX database** (later, **Database import** under Build & manage, at `/admin/import`). Leave the format on **Tell from the file** unless the import picks the wrong one. Upload the flatfile and the matching optional `mush.cnf`, `maildb`, and `chatdb` together. Configuration-derived object references and restrictions are applied before objects are converted; mail aliases, messages, channels, memberships, and history come from the ancillary databases.
 3. Read every skipped-configuration warning. Reproduce settings SharpMUSH supports and record intentional exceptions.
 4. Upload the flatfile and let conversion finish. SharpMUSH writes into a separate `<world>.staging-*` LMDB environment; a failed conversion does not partially replace the live world.
 5. Review the import diagnostics before promotion. Promotion moves the former live world to `<world>.previous` and atomically installs the staging world.
@@ -32,6 +32,30 @@ Check the destination with `@storage`. The import needs room for the live world,
 An import rehearsal is evidence, not authority. Do not expose its endpoints, accept player changes, or quietly promote it into the production game. Repeat the process from a new final flatfile at cutover.
 
 The parity harness in [`tools/parity/README.md`](../../tools/parity/README.md) explains the project's automated PennMUSH comparison method. Its passing scenarios are useful compatibility evidence, but they do not replace validation of a game's custom code.
+
+## Importing from RhostMUSH or TinyMUX
+
+The import page and the start-up import read three formats. Each is told from the file's first lines: a TinyMUX flatfile starts `+X`, and a PennMUSH outdb and a RhostMUSH flatfile both start `+V` and differ in the line after it. If the guess is wrong, choose the format yourself: the page has a format choice, the upload API takes a `format` field (`auto`, `pennmush`, `rhostmush` or `tinymux`), and a start-up import reads `PENNMUSH_DATABASE_FORMAT` beside `PENNMUSH_DATABASE_PATH`.
+
+The files that go with each format:
+
+| Format | Database | Mail | Channels |
+| --- | --- | --- | --- |
+| PennMUSH | the outdb | `maildb` | `chatdb` |
+| RhostMUSH | the flatfile `@dump/flat` writes | `.dump.mail` from `wmail/unload`, with its `.dump.folder` in the mail-folders slot | none: see below |
+| TinyMUX | the flatfile (versions 1 to 5) | `mail.db` | `comsys.db` in the chat slot |
+
+The `mush.cnf` slot reads PennMUSH's configuration file. A RhostMUSH or TinyMUX configuration file is not read; set the matching options yourself.
+
+**What comes across.** Objects keep their numbers, with their names, owners, parents, zones, locks, attributes and creation times. Flags and powers become SharpMUSH's where one matches: a wizard becomes the `wizard` role, a RhostMUSH councilor the `royalty` role and an architect the `builder` role, and a TinyMUX power such as `control_all` becomes the permission it stands for. A flag or power with no match is kept as a custom flag or power of its own, so `hasflag()` still sees it. Passwords keep working: the forms these servers store (DES and extended DES crypt, MD5-crypt, SHA-crypt, TinyMUX's SHA-1, and a PennMUSH hash TinyMUX carried over) are checked at login and rehashed the first time each player connects. Mail comes across, in RhostMUSH's folders when the folder dump is given; TinyMUX channels come across with their members, and each player's comsys aliases become `CHANALIAS` attributes.
+
+**What the import changes in softcode.** Colour written as `%c` or `%x` codes (`%crRed%cn`) becomes `ansi()` (`ansi(r,Red)`), because in SharpMUSH `%c` is the last command and `%x` an attribute. A RhostMUSH import also rewrites its character codes and literal `timefmt()` formats. The import turns on the compatibility options the source's softcode expects: for RhostMUSH, `paren_groups`, `tiny_trim_fun`, `rhost_edit`, `rhost_lattr`, `rhost_printf`, `rhost_map_args`, `sidefx_flag` and `rhost_list`; for TinyMUX, `paren_groups`, `mux_logic`, `mux_justify`, `mux_collation`, `rhost_list`, `innermost_tokens`, `tiny_trim_fun`, `tiny_math` and `null_eq_zero`, with `function_recursion_limit` raised to 500 and `max_attribute_value_length` to 32768.
+
+**What is left behind.** Destroyed objects, money, RhostMUSH exits that lead HOME (left unlinked, as a PennMUSH import leaves them), flags and toggles SharpMUSH has nothing for, and attribute numbers the flatfile does not name. RhostMUSH channels are not imported: a stock RhostMUSH runs them in softcode, which comes across with the objects that hold it, and a hardcoded comsys's `CHANNELS` attribute comes across as a plain attribute. A bcrypt password cannot be checked, so those players need a new password from a wizard. TinyMUX compresses runs of spaces in evaluated text and SharpMUSH does not, so output that relied on it may show extra spaces. A TinyMUX flatfile that keeps its attributes in a separate database is refused, because it holds no attribute text.
+
+**Where the report lists it.** Every choice above is a warning in the import report: the result panel of the import page lists them all when the import ends, and a start-up import writes the first ten to the server log. Each line names what was done and the objects it touched, such as `Flag SEETHRU imported as TRANSPARENT (3 time(s), on #5 #9 #12)`. Rewritten softcode is reported apart: one warning says how many attributes were rewritten and how many need checking by hand, and the import page lists every one of them under **Rewritten softcode**, one line each, such as `#9/DESCRIBE: %c/%x colour written as ansi()`. Open a line to see the attribute's code before and after the rewrite. A line the rewrite could not carry over exactly says `check by hand` with the reason. A start-up import writes the whole list to the server log, not only the first ten. Read these lines before promoting the world, and test the attributes they name.
+
+**The import log.** The whole report, every count, error and warning and each rewritten attribute's code before and after, is also a plain text file. The import page's **Download import log** button saves it as `sharpmush-import-<date>-<time>.log`; a start-up import writes the same file beside the imported database and names it in the server log. Keep it with the cutover records, or attach it when you ask for help with an import.
 
 ## 3. Validate the rehearsed world
 

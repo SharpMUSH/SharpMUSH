@@ -3,6 +3,8 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Widgets
 @using SharpMUSH.Library.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@implements IDisposable
 
 @if (_placements.Count > 0)
 {
@@ -92,6 +94,30 @@
         if (await Gate.ResolveAsync(ordered.Select(p => p.WidgetName)) && generation == _generation)
         {
             _placements = Visible(ordered, role);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (Services.GetService<ServerInfoService>() is { } serverInfo)
+        {
+            serverInfo.Changed += OnServerInfoChanged;
+        }
+    }
+
+    /// <summary>An application was switched on or off: a widget that belongs to one appears or goes with it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        Gate.ForgetFeatures();
+        await OnParametersSetAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        if (Services.GetService<ServerInfoService>() is { } serverInfo)
+        {
+            serverInfo.Changed -= OnServerInfoChanged;
         }
     }
 

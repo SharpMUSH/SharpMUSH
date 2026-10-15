@@ -34,9 +34,14 @@ which games can add as a remote in the admin panel.
 | [`scene-verse/`](scene-verse/) | Extends another package's output without editing it: scene details on the Scene Logger, and ``FILTER`<point>`<name>`` attributes that `+scene` runs with `chain()` over what it shows (requires scene) |
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
-| [`rp-finder/`](rp-finder/) | Finding roleplay: a `+lfrp` status that runs out and ends at logoff, shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter, and a watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global (requires who-where) |
+| [`status/`](status/) | `+status`: whether a player is looking for roleplay (`lfrp`, runs out and ends at logoff) or glad to be asked (`rp_ok`), from a list of statuses the game keeps on the Status Store; shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter (requires who-where) |
+| [`watch/`](watch/) | A watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global, and `+watch` shows each player's `+who` status (requires who-where) |
 | [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
+| [`time/`](time/) | Time zones and an IC clock: `+time` shows the game's time and the player's own, `+time 8pm Pacific` converts a time (with a Discord timestamp), `+timezone` keeps the player's zone in `TZ` as PennMUSH does, and a Clock object holds the IC calendar settings and the functions other packages read the time through |
 | [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
+| [`notifications/`](notifications/) + [`notifications-app/`](notifications-app/) | The rules behind push notifications: subscriptions to the ``PAGE`MESSAGE`` and ``MAIL`RECEIVED`` events on the event handler call `@push` when the player wants that kind, the same settings are a `+notify` command and a portal form, and other packages add a kind and send it with ``@trigger/args`` on ``API`SEND`` |
+| [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
+| [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
 
 ## The manifest: `package.yaml`
 
@@ -46,7 +51,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.6 the engine range, 1.7 plugins)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -55,13 +60,16 @@ license: MIT                    # optional — SPDX expression recommended
 homepage: https://example.com   # optional
 keywords: [bbs, boards]         # optional — up to 5, feeds browse/search
 convention_prefix: BBS_         # optional — advisory attr prefix, not enforced
-requires_server: ">=0.1"        # optional — SharpMUSH version constraint
+requires_server: ">=0.1"        # optional — the lowest SharpMUSH version it runs on
+verified_server: "2.0"          # optional — the newest SharpMUSH version it was tested on (format 1.6)
+maximum_server: "2"             # optional — only for a known break: the newest it runs on (format 1.6)
+plugins: [scene]                # optional (format 1.7) — plugins its code calls; it installs only while they run
 
 depends:                        # optional — other packages this one requires
   - volund-core: ">=1.0"        # shorthand: id + version constraint
   - some-util                   # bare id = any release version
   - package: who-where          # full form: adds a source hint (see below)
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: who-where/
@@ -221,7 +229,9 @@ Build metadata (`+...`) is not supported.
 
 Dependency constraints support `>=`, `>`, `<=`, `<`, `=` and bare versions
 (exact match). Space- or comma-separated clauses are ANDed. Caret/tilde
-ranges (`^1.2`, `~1.2`) are **not** supported — write `>=1.2 <2.0`.
+ranges (`^1.2`, `~1.2`) are **not** supported — write `>=1.2`. Add an upper
+bound (`>=1.2 <2.0`) only when you know version 2.0 breaks your package; see
+[Engine version range](#engine-version-range-format-16).
 
 **Prereleases are never selected implicitly**: `>=1.0` does not match
 `2.0.0-beta`. A prerelease only satisfies a constraint when some clause names
@@ -242,7 +252,7 @@ Use the full mapping form (a `package:` key marks it; this also means
 ```yaml
 depends:
   - package: who-where
-    version: ">=1.0 <2.0"       # optional; omit for any release version
+    version: ">=1.0"            # optional; omit for any release version
     source:                     # optional
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: who-where/          # optional — package directory in a monorepo
@@ -481,6 +491,48 @@ page with what the install does to it.
 - **Rollback** leaves wiki pages as they are; a page's own history is the way
   back for its text.
 
+## Engine version range (format 1.6)
+
+Three optional keys say which SharpMUSH versions a package runs on. Set
+`format: 1.6` to use the last two; an older server warns and ignores them.
+
+```yaml
+format: 1.6
+package: who-where
+version: 1.3.1
+requires_server: ">=2.0"    # the lowest version: a server below it cannot install the package
+verified_server: "2.4"      # the newest version you tested on
+maximum_server: "2"         # the newest version it runs on: here every 2.x, not 3.0
+```
+
+- **`requires_server`** is the lowest version, written with `>=` or `>`. A
+  server below it refuses the package: the review screen shows why and Apply
+  stays off. An upper bound or an exact version here is an error; that is what
+  `maximum_server` is for.
+- **`verified_server`** is a version you have tested on. When the server is a
+  newer *major* version, the review screen warns that nobody has checked the
+  package on it. A newer minor or patch version does not warn, because those do
+  not break packages.
+- **`maximum_server`** is the newest version the package runs on, with one to
+  three numbers. What you leave out matches anything: `2` covers every 2.x,
+  `2.4` every 2.4.x, and `2.4.1` that version alone. On a newer server the review
+  screen warns and asks the administrator to confirm before Apply. If they
+  confirm, the package is marked "Past maximum" on the Packages page and the
+  audit log records a `package.past-maximum` entry. Applying a version that fits
+  the server again clears the mark.
+
+Leave `maximum_server` out unless you know a SharpMUSH version breaks the
+package. A maximum you set "to be safe" makes every engine upgrade warn about a
+package that still works, and administrators learn to click through the
+warning. The same goes for the upper bound of a dependency: write
+`plus-help: ">=1.0"`, not `">=1.0 <2.0"`, until plus-help 2.0 exists and you
+know it breaks you. The SharpMUSH.Docs guide "Versioning packages" says what
+counts as a breaking change.
+
+On a 2.9.0 server, a package with the range above installs without a warning.
+On 3.1.0 it is past its maximum: the review screen warns, and Apply turns on
+only once the administrator ticks "Install it anyway". On 1.9.0 it is refused.
+
 ## Application packages (`kind: application`)
 
 Most packages are **softcode** packages (`kind: softcode`, the default): they
@@ -496,7 +548,7 @@ package: chargen-app
 kind: application                 # softcode (default) | application
 version: 1.0.0
 depends:
-  - chargen: ">=1.0 <2.0"         # the softcode package providing the routes
+  - chargen: ">=1.0"              # the softcode package providing the routes
 
 configure:
   access:                         # an application field can be admin-configured

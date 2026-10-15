@@ -25,10 +25,12 @@ Every command has an output: the answer a function doing the same thing would gi
 The `%>` substitution holds the output of the last command run in the same action list, so the next command can use it:
 
 ```sharp
-> @force me={@dig Kitchen;think Dug [name(%>)] as [num(%>)].}
-Kitchen created with room number #12.
+> @force/noeval me={@dig Kitchen;think Dug [name(%>)] as [num(%>)].}
+Kitchen created with room number 12.
 Dug Kitchen as #12.
 ```
+
+The examples run their lists with `@force/noeval me={...}`, the way to try a list at the prompt. Without `/noeval`, `@force` evaluates the list once before running it, as PennMUSH does, and every `%>` in it is read then, before any command has run, so it is empty.
 
 To use what a command shows instead, pipe it into the next command with `;|` and read `%|`: see [piping].
 
@@ -44,8 +46,8 @@ A command that fails leaves the `#-1` error it failed with, the way its function
 - **Unchanged.** `@@`, `@assert` and `@break` leave `%>` as they found it, so a check in the middle of a list does not lose the value.
 
 ```sharp
-> @force me={@dig Pantry;@assert %>;think Still have [name(%>)].}
-Pantry created with room number #13.
+> @force/noeval me={@dig Pantry;@assert %>;think Still have [name(%>)].}
+Pantry created with room number 13.
 Still have Pantry.
 ```
 
@@ -54,7 +56,7 @@ Still have Pantry.
 A queued action list (`@wait`, a queued `@switch` or `@dolist`, `@trigger`) starts with a copy of `%>` from when it was queued, the way it gets a copy of the q-registers. The list that queued it can go on changing its own `%>` without affecting it.
 
 ```sharp
-> @force me={think first;@wait 1=think Was %>.;think second}
+> @force/noeval me={think first;@wait 1=think Was %>.;think second}
 first
 second
 Was first.
