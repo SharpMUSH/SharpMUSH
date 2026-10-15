@@ -226,7 +226,7 @@ objects:
         flags: [funsyntax]
       INC`ZONE`SHOW:
         value: |-
-          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,[if(u(%!/FUN`LOOKUP`OK,%#),+timezone/detect looks yours up from where you connect. )]+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
+          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,[if(u(%!/FUN`LOOKUP`OK,%#),+timezone/detect looks yours up from where you connect.%b)]+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
         flags: [cmdsyntax]
       # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
       # the Clock. God is beyond any object's reach, so the write is checked.
