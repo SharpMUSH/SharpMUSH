@@ -311,13 +311,21 @@
       <Link>BundledPackages\who-where.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\rp-finder\package.yaml">
-      <Link>BundledPackages\rp-finder.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.rp-finder.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\status\package.yaml">
+      <Link>BundledPackages\status.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.status.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\watch\package.yaml">
+      <Link>BundledPackages\watch.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.watch.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\finger\package.yaml">
       <Link>BundledPackages\finger.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.finger.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\time\package.yaml">
+      <Link>BundledPackages\time.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord\package.yaml">
       <Link>BundledPackages\discord.package.yaml</Link>

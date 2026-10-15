@@ -2897,7 +2897,7 @@ You say, "foo   "
 :::
 # list()
 `list(<option>[, <type>])`<br>
-`list(<list>, <action>[, <delimiter>])`
+`list(<list>, <eval>[, <delimiter>][, <header>][, <target>])`
 
   This is the function-equivilent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
 
@@ -2914,7 +2914,17 @@ You say, "foo   "
 
   "commands"/"functions" return both built-in and local commands/functions by default. You can specify a `<type>` of either "builtin", "local" or "all" to limit this if you wish.
 
-  With the `mux_list` @config option on, list() is TinyMUX's instead, the second form: `<action>` is evaluated for each element of `<list>`, as by iter(), and each result is told to you rather than returned. list() itself returns nothing. See [compatibility config].
+  With the `rhost_list` @config option on, list() is the second form instead, which comes from RhostMUSH; its first three arguments are TinyMUX's list(). `<eval>` is evaluated for each element of `<list>`, as by iter(), and each result is told to you on a line of its own rather than returned. list() itself returns nothing. `<delimiter>` separates the elements and is a space when left out. A `<header>` that is not empty is told once, before the first result. A `<target>` you control hears the header and the results instead of you; a target you do not control, or one that is not found, is ignored. An empty list tells nothing, not even the header. See [compatibility config].
+
+  Examples, with `rhost_list` on:
+
+    > think list(red blue,Color #@: ##)<br>
+    Color 1: red<br>
+    Color 2: blue<br>
+    > think list(a|b,[strlen(##)],|,Lengths:)<br>
+    Lengths:<br>
+    1<br>
+    1
 
 
 ::: seealso

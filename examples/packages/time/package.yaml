@@ -1,0 +1,578 @@
+format: 1
+package: time
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [time, timezone, clock, calendar, ic]
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and sets
+  # a player's TZ attribute.
+  #
+  # +time and +timezone are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
+  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # A player's time zone is their TZ attribute, as PennMUSH keeps it, so time(*<player>) reads it too.
+  # Everything a game sets, and every function another package reads, is on the Clock beside it.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC` one routine per command
+  # form. FUN`READ` reads a typed time, FUN`SCREEN` draws each screen, FUN`DISPLAY` the shared pieces.
+  # FILTER`TIME`SCREEN`<name>, when another package adds one, adds to the +time screen.
+  - ref: time
+    type: thing
+    name: Time
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # Which INC` routine each command runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`TIME`BARE: |-
+        SHOW
+      DATA`ROUTE`TIME`ARG: |-
+        ARG
+      DATA`ROUTE`TIMEZONE`BARE: |-
+        ZONE`SHOW
+      DATA`ROUTE`TIMEZONE`ARG: |-
+        ZONE`SET
+      DATA`ROUTE`TIMEZONE`CLEAR: |-
+        ZONE`CLEAR
+      DATA`ROUTE`TIMEZONE`HIDE: |-
+        ZONE`HIDE
+      DATA`ROUTE`TIMEZONE`UNHIDE: |-
+        ZONE`UNHIDE
+
+      # ---- commands -------------------------------------------------------------
+      # Each command word: %1 the switches and %2 what follows, exactly as typed.
+      CMD`TIME:
+        value: |-
+          $(?is)^\+time(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,time,table,TIME,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`TIMEZONE:
+        value: |-
+          $(?is)^\+timezone(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,timezone,table,TIMEZONE,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch, and runs the routine.
+      INC`COMMAND`RUN:
+        value: |-
+          think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(TIME,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(TIME,+%q<cmd_word> has no /%q<cmd_switch> switch. +help time lists them.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument (spaces squeezed), cmd_route (the INC` routine to run), now
+      # (secs()), viewer_zone (the player's zone, empty when they set none) and game_zone.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(squish(%3)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          now,secs(),
+          viewer_zone,u({{clock}}/FUN`ZONE`CHECK,get(%#/TZ)),
+          game_zone,u({{clock}}/FUN`ZONE`GAME))
+        flags: [funsyntax]
+
+      # ---- shared reads ---------------------------------------------------------
+      # %0 typed text: the objid of the player it names, or nothing.
+      FUN`PLAYER:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+      # %0 an instant and %1 a zone: the time there and the zone's name, the way every screen shows a time.
+      FUN`DISPLAY`AT:
+        value: |-
+          [u({{clock}}/FUN`OOC`SHOW,%0,%1)] [tone(muted,· [u({{clock}}/FUN`ZONE`LABEL,%1,%0)])]
+        flags: [funsyntax]
+      # %0 an instant: how far it is from now, as in 3h 20m or 2d ago.
+      FUN`DISPLAY`FROMNOW:
+        value: |-
+          case(1,lt(abs(sub(%0,%q<now>)),60),now,gt(%0,%q<now>),in [trim(etime(sub(%0,%q<now>),6))],[trim(etime(sub(%q<now>,%0),6))] ago)
+        flags: [funsyntax]
+      # %0 seconds between two zones, %1 a name: how far ahead of or behind the reader that is.
+      FUN`DISPLAY`DIFFERENCE:
+        value: |-
+          case(sign(%0),0,%1 keeps the same time as you,1,%1 is [u(%!/FUN`DISPLAY`HOURS,%0)] ahead of you,%1 is [u(%!/FUN`DISPLAY`HOURS,%0)] behind you)
+        flags: [funsyntax]
+      # %0 seconds: so many hours, 5 hours or 5.5 hours.
+      FUN`DISPLAY`HOURS:
+        value: |-
+          [fdiv(abs(%0),3600)] hour[if(neq(abs(%0),3600),s)]
+        flags: [funsyntax]
+      # Every screen is a box() with no sides, corners or tees, as +finger's and +help's are, so a time copied
+      # from a terminal carries no |.
+      FUN`DISPLAY`FRAME:
+        value: |-
+          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+        flags: [funsyntax]
+      # The FILTER`TIME`SCREEN`<name> attributes on this object, in name order, for chain().
+      FUN`DISPLAY`FILTERS:
+        value: |-
+          iter(lattr(%!/FILTER`TIME`SCREEN`*),%!/%i0)
+        flags: [funsyntax]
+
+      # ---- +time ----------------------------------------------------------------
+      # +time: the game's time, the player's own and the IC date.
+      INC`SHOW:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`NOW)
+        flags: [cmdsyntax]
+      FUN`SCREEN`NOW:
+        value: |-
+          box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`NOWFIELDS),%#,%q<now>)%r[rule()]%r[tone(muted,+time <time> converts a time · +timezone <zone> sets yours)],Time,,u(%!/FUN`DISPLAY`FRAME))
+        flags: [funsyntax]
+      # Game time, your time and, when the game shows one, the IC date, split by chr(30).
+      FUN`SCREEN`NOWFIELDS:
+        value: |-
+          lfields(,Game time[chr(30)]Your time[if(get({{clock}}/DATA`IC`SHOW),[chr(30)]IC date)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<game_zone>)][chr(30)][if(strlen(%q<viewer_zone>),u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>),tone(muted,not set · +timezone <zone> sets it))][if(get({{clock}}/DATA`IC`SHOW),[chr(30)][u({{clock}}/FUN`IC`DATE,%q<now>)])],chr(30))
+        flags: [funsyntax]
+      # +time <time> or +time <name>: a time when it reads as one, or when it starts with a digit or a date and no
+      # player has that name (a name may start with a digit, as 7of9 does); else a player.
+      INC`ARG:
+        value: |-
+          think u(%!/FUN`READ`TIME,%q<cmd_argument>)[setq(read_error,u(%!/FUN`READ`ERROR))]; @break cor(not(strlen(%q<read_error>)),cand(cor(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>)),isint(left(%q<cmd_argument>,1))),not(strlen(u(%!/FUN`PLAYER,%q<cmd_argument>)))))={@include %!/INC`CONVERT}; @include %!/INC`PLAYER
+        flags: [cmdsyntax]
+
+      # ---- +time <name> -----------------------------------------------------------
+      INC`PLAYER:
+        value: |-
+          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(TIME,There is no player called '%q<cmd_argument>'.,warn); @assert cor(not(u(%!/FUN`ZONE`HIDDEN,%q<target>)),controls(%#,%q<target>))=@pemit %#=notice(TIME,[name(%q<target>)] keeps their time zone to themselves.,warn); think setq(target_zone,u({{clock}}/FUN`ZONE`CHECK,get(%q<target>/TZ))); @assert strlen(%q<target_zone>)=@pemit %#=notice(TIME,[name(%q<target>)] has not set a time zone.,warn); @pemit %#=u(%!/FUN`SCREEN`PLAYER)
+        flags: [cmdsyntax]
+      # The time where %q<target> is, the reader's own, and how far apart they are.
+      FUN`SCREEN`PLAYER:
+        value: |-
+          box(lfields(,[name(%q<target>)][chr(30)]You[if(strlen(%q<viewer_zone>),[chr(30)]Difference)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<target_zone>)][chr(30)][if(strlen(%q<viewer_zone>),[u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>)][chr(30)][u(%!/FUN`DISPLAY`DIFFERENCE,sub(u({{clock}}/FUN`ZONE`OFFSET,%q<target_zone>,%q<now>),u({{clock}}/FUN`ZONE`OFFSET,%q<viewer_zone>,%q<now>)),name(%q<target>))],tone(muted,not set · +timezone <zone> sets it))],chr(30)),Time for [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))
+        flags: [funsyntax]
+
+      # ---- +time <time> -----------------------------------------------------------
+      # +time [<date>] <time> [<zone>]
+      INC`CONVERT:
+        value: |-
+          think u(%!/FUN`READ`TIME,%q<cmd_argument>); @assert not(strlen(setr(read_error,u(%!/FUN`READ`ERROR))))=@pemit %#=notice(TIME,%q<read_error>,warn); @pemit %#=u(%!/FUN`SCREEN`CONVERT)
+        flags: [cmdsyntax]
+      # %0 a typed time, [<date>] <time>[ am or pm] [<zone>]. Sets read_date (the date given, else today's in the
+      # zone), read_clock (the time as typed), read_ampm, read_hour and read_minute as typed, read_hour24,
+      # read_zone_typed, read_zone (the zone given, else the reader's, else the game's; empty when the one
+      # given is unknown) and read_instant (that moment, in seconds).
+      FUN`READ`TIME:
+        value: |-
+          setqm(read_words,%0,
+          read_date,if(u(%!/FUN`READ`ISDATE,first(%0)),first(%0)),
+          read_words,if(strlen(%q<read_date>),rest(%q<read_words>),%q<read_words>),
+          read_clock,lcstr(first(%q<read_words>)),
+          read_words,rest(%q<read_words>),
+          read_clock,if(match(am pm,first(%q<read_words>)),%q<read_clock>[lcstr(first(%q<read_words>))],%q<read_clock>),
+          read_words,if(match(am pm,first(%q<read_words>)),rest(%q<read_words>),%q<read_words>),
+          read_zone_typed,%q<read_words>,
+          read_ampm,if(cor(strmatch(%q<read_clock>,*am),strmatch(%q<read_clock>,*pm)),right(%q<read_clock>,2)),
+          read_core,if(strlen(%q<read_ampm>),left(%q<read_clock>,sub(strlen(%q<read_clock>),2)),%q<read_clock>),
+          read_hour,first(%q<read_core>,:),
+          read_minute,if(strmatch(%q<read_core>,*:*),rest(%q<read_core>,:),00),
+          read_hour24,if(strlen(%q<read_ampm>),add(mod(%q<read_hour>,12),if(strmatch(%q<read_ampm>,pm),12,0)),%q<read_hour>),
+          read_zone,if(strlen(%q<read_zone_typed>),u({{clock}}/FUN`ZONE`FIND,%q<read_zone_typed>),firstof(%q<viewer_zone>,%q<game_zone>)),
+          read_date,firstof(%q<read_date>,timefmt($Y-$m-$d,%q<now>,firstof(%q<read_zone>,UTC))),
+          read_instant,u({{clock}}/FUN`DATE`INSTANT,%q<read_date>,%q<read_hour24>,%q<read_minute>,firstof(%q<read_zone>,UTC)))
+        flags: [funsyntax]
+      # %0 a word: 1 when it is a date, written 2026-10-20.
+      FUN`READ`ISDATE:
+        value: |-
+          cand(strmatch(%0,????-??-??),isint(edit(%0,-,)))
+        flags: [funsyntax]
+      # 1 when %q<read_hour> and %q<read_minute> make a time: 0 to 23, or 1 to 12 with am or pm, and 00 to 59.
+      FUN`READ`CLOCKOK:
+        value: |-
+          cand(isint(%q<read_hour>),isint(%q<read_minute>),eq(strlen(%q<read_minute>),2),gte(%q<read_minute>,0),lte(%q<read_minute>,59),if(strlen(%q<read_ampm>),cand(gte(%q<read_hour>,1),lte(%q<read_hour>,12)),cand(gte(%q<read_hour>,0),lte(%q<read_hour>,23))))
+        flags: [funsyntax]
+      # What is wrong with the time FUN`READ`TIME read, or nothing. A time the clocks skip when summer time starts
+      # reads back as another hour, and is refused.
+      FUN`READ`ERROR:
+        value: |-
+          case(1,not(u(%!/FUN`READ`CLOCKOK)),'[firstof(%q<read_clock>,%q<cmd_argument>)]' is not a time. Write 20:00%, 8pm or 8:30 am.,gt(words(%q<read_zone_typed>),1),Give one time zone after the time%, such as America/New_York.,cand(strlen(%q<read_zone_typed>),not(strlen(%q<read_zone>))),There is no time zone called '%q<read_zone_typed>'. +help timezone says how they are named.,not(isnum(%q<read_instant>)),'%q<read_date>' is not a date. Write it as 2026-10-20.,comp(timefmt($H:$M,%q<read_instant>,%q<read_zone>),[rjust(%q<read_hour24>,2,0)]:%q<read_minute>),There is no [rjust(%q<read_hour24>,2,0)]:%q<read_minute> on %q<read_date> in %q<read_zone>: the clocks go forward past it.)
+        flags: [funsyntax]
+      # The moment FUN`READ`TIME read, in its zone, the game's, the reader's, how far off it is, and a Discord
+      # timestamp, which Discord shows to each reader in their own time.
+      FUN`SCREEN`CONVERT:
+        value: |-
+          box(lfields(,%q<read_zone>[if(comp(%q<read_zone>,%q<game_zone>),[chr(30)]Game time)][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),[chr(30)]Your time)][chr(30)]When[chr(30)]Discord,[u({{clock}}/FUN`OOC`SHOW,%q<read_instant>,%q<read_zone>)] [tone(muted,· UTC[timefmt($Z,%q<read_instant>,%q<read_zone>)])][if(comp(%q<read_zone>,%q<game_zone>),[chr(30)][u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<game_zone>)])][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),[chr(30)][u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<viewer_zone>)])][chr(30)][u(%!/FUN`DISPLAY`FROMNOW,%q<read_instant>)][chr(30)]<t:%q<read_instant>:F>,chr(30))%r[rule()]%r[tone(muted,Paste the Discord line into Discord: each reader sees it in their own time.)],[timefmt($H:$M,%q<read_instant>,%q<read_zone>)] on [timefmt($a $d $b,%q<read_instant>,%q<read_zone>)],,u(%!/FUN`DISPLAY`FRAME))
+        flags: [funsyntax]
+
+      # ---- +timezone --------------------------------------------------------------
+      # %0 a player: 1 when they set a zone and hid it. Their TZ is then not visual, so only they, staff and this
+      # object read it, and the Clock's functions answer nothing for them.
+      FUN`ZONE`HIDDEN:
+        value: |-
+          cand(hasattr(%0,TZ),not(hasflag(%0/TZ,visual)))
+        flags: [funsyntax]
+      INC`ZONE`SHOW:
+        value: |-
+          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. +timezone <zone> sets it%, such as +timezone America/New_York.); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
+        flags: [cmdsyntax]
+      # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
+      # the Clock. God is beyond any object's reach, so the write is checked.
+      INC`ZONE`SET:
+        value: |-
+          think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'. +help timezone says how they are named.,warn); &TZ %#=%q<zone_found>; @assert strmatch(get(%#/TZ),%q<zone_found>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<zone_found> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.,ok)
+        flags: [cmdsyntax]
+      # +timezone/hide and +timezone/unhide: TZ's visual flag. A zone changed while hidden stays hidden.
+      INC`ZONE`HIDE:
+        value: |-
+          @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your time zone is already hidden.,warn); @set %#/TZ=!visual; @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your TZ attribute could not be changed. @set me/TZ=!visual hides it.,error); @pemit %#=notice(TIME,Only you and staff see your time zone now. +time <your name> tells others you keep it to yourself.,ok)
+        flags: [cmdsyntax]
+      INC`ZONE`UNHIDE:
+        value: |-
+          @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your time zone is not hidden.,warn); @set %#/TZ=visual; @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your TZ attribute could not be changed. @set me/TZ=visual shows it.,error); @pemit %#=notice(TIME,Everyone sees your time zone again.,ok)
+        flags: [cmdsyntax]
+      INC`ZONE`CLEAR:
+        value: |-
+          @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); &TZ %#; @pemit %#=notice(TIME,Your time zone is cleared. Times are shown in the game's.,ok)
+        flags: [cmdsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @dolist/inline time timezone={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The Clock: what a game sets, and the functions any code reads the time through, u(<Clock>/FUN`IC`DATE) and
+  # the rest. A plain VISUAL thing rather than the WIZARD Time object, so a player's code and other packages can
+  # u() it: nothing on it is secret, and it reads nothing a player has not made visible.
+  - ref: clock
+    type: thing
+    name: Clock
+    location: "{{time}}"
+    flags: [no_command, visual]
+    attributes:
+      DATA: |-
+        Settings. One leaf per setting.
+      # The game's own time zone, the one +time calls game time.
+      DATA`ZONE: |-
+        UTC
+      # How a time is written, as timefmt() takes it.
+      DATA`FORMAT: |-
+        $a $d $b $Y, $H:$M
+      # The IC clock. At DATA`IC`ANCHOR, in seconds since 1970 (2026-01-01 00:00 UTC by default), the IC clock
+      # reads the same as the real one; from there it runs DATA`IC`RATIO times as fast. DATA`IC`DAYS moves the
+      # IC date that many days on (or back, below 0), and DATA`IC`YEARS adds to the year it shows.
+      DATA`IC`SHOW: |-
+        1
+      DATA`IC`ANCHOR: |-
+        1767225600
+      DATA`IC`RATIO: |-
+        1
+      DATA`IC`DAYS: |-
+        0
+      DATA`IC`YEARS: |-
+        0
+      # The names of the IC months, January's first, and of the weekdays, Sunday's first, each split by |.
+      # Empty uses the real names.
+      DATA`IC`MONTHS: |-
+
+      DATA`IC`WEEKDAYS: |-
+
+      # How the IC date is written. Evaluated with %<year>, %<month> (1 to 12), %<monthname>, %<day>,
+      # %<weekday> (its name), %<hour>, %<minute> and %<second>.
+      FORMAT`IC: |-
+        %<weekday>, %<day> %<monthname> %<year>, %<hour>:%<minute>
+
+      # Names a player may give +timezone for a zone, one leaf each: ALIAS`<name>=<zone>. A name here wins over a
+      # zone with the same name, so EST is New York's time, summer time and all, not a fixed UTC-5.
+      ALIAS: |-
+        Short names for zones. One leaf per name.
+      ALIAS`EASTERN: |-
+        America/New_York
+      ALIAS`EST: |-
+        America/New_York
+      ALIAS`EDT: |-
+        America/New_York
+      ALIAS`CENTRAL: |-
+        America/Chicago
+      ALIAS`CST: |-
+        America/Chicago
+      ALIAS`CDT: |-
+        America/Chicago
+      ALIAS`MOUNTAIN: |-
+        America/Denver
+      ALIAS`MST: |-
+        America/Denver
+      ALIAS`MDT: |-
+        America/Denver
+      ALIAS`ARIZONA: |-
+        America/Phoenix
+      ALIAS`PACIFIC: |-
+        America/Los_Angeles
+      ALIAS`PST: |-
+        America/Los_Angeles
+      ALIAS`PDT: |-
+        America/Los_Angeles
+      ALIAS`ALASKA: |-
+        America/Anchorage
+      ALIAS`HAWAII: |-
+        Pacific/Honolulu
+      ALIAS`GMT: |-
+        Europe/London
+      ALIAS`BST: |-
+        Europe/London
+      ALIAS`UK: |-
+        Europe/London
+      ALIAS`CET: |-
+        Europe/Paris
+      ALIAS`CEST: |-
+        Europe/Paris
+      ALIAS`EET: |-
+        Europe/Athens
+      ALIAS`JST: |-
+        Asia/Tokyo
+      ALIAS`AEST: |-
+        Australia/Sydney
+      ALIAS`AEDT: |-
+        Australia/Sydney
+      ALIAS`NZST: |-
+        Pacific/Auckland
+      ALIAS`NZDT: |-
+        Pacific/Auckland
+      ALIAS`Z: |-
+        UTC
+
+      # ---- time zones -----------------------------------------------------------
+      # %0 a zone: 1 when the server knows it.
+      FUN`ZONE`VALID:
+        value: |-
+          cand(strlen(%0),not(strmatch(timefmt($Z,0,%0),#-1*)))
+        flags: [funsyntax]
+      # %0 a zone: itself when the server knows it, else nothing.
+      FUN`ZONE`CHECK:
+        value: |-
+          if(u(%!/FUN`ZONE`VALID,%0),%0)
+        flags: [funsyntax]
+      # %0 a zone as a player typed it: the zone it names, or nothing. An ALIAS` name first, then as typed, then
+      # with each part capitalised (america/new_york), then with the region in capitals (us/eastern), then all in
+      # capitals (est5edt).
+      FUN`ZONE`FIND:
+        value: |-
+          if(cand(strlen(%0),not(strmatch(%0,* *))),first(filterbool(%!/FUN`ZONE`VALID,[if(not(strmatch(%0,*/*)),get(%!/ALIAS`%0))] %0 [u(%!/FUN`ZONE`TITLE,%0)] [ucstr(first(%0,/))][if(strmatch(%0,*/*),/[u(%!/FUN`ZONE`TITLE,rest(%0,/))])] [ucstr(%0)])))
+        flags: [funsyntax]
+      # %0 a zone name: each part between / and _ capitalised.
+      FUN`ZONE`TITLE:
+        value: |-
+          iter(%0,iter(%i0,capstr(lcstr(%i0)),_,_),/,/)
+        flags: [funsyntax]
+      # The game's zone, UTC when DATA`ZONE names none the server knows.
+      FUN`ZONE`GAME:
+        value: |-
+          firstof(u(%!/FUN`ZONE`CHECK,get(%!/DATA`ZONE)),UTC)
+        flags: [funsyntax]
+      # %0 an object: the zone in its TZ, or nothing when it set none (or keeps it hidden).
+      FUN`ZONE`OF:
+        value: |-
+          u(%!/FUN`ZONE`CHECK,get(%0/TZ))
+        flags: [funsyntax]
+      # %0 a zone and %1 an instant: how far the zone's clock is ahead of UTC then, in seconds.
+      FUN`ZONE`OFFSET:
+        value: |-
+          sub(convtime(timefmt($a $b $d $H:$M:$S $Y,%1,%0),UTC),%1)
+        flags: [funsyntax]
+      # %0 a zone and %1 an instant: the zone's name and its offset then, America/New_York (UTC-04:00).
+      FUN`ZONE`LABEL:
+        value: |-
+          if(strmatch(%0,UTC),UTC,%0 \(UTC[timefmt($Z,%1,%0)]\))
+        flags: [funsyntax]
+
+      # ---- real time ------------------------------------------------------------
+      # %0 an instant and %1 a zone (the game's when empty): the time there, as DATA`FORMAT writes it.
+      FUN`OOC`SHOW:
+        value: |-
+          timefmt(get(%!/DATA`FORMAT),%0,firstof(%1,u(%!/FUN`ZONE`GAME)))
+        flags: [funsyntax]
+      # %0 an instant and %1 a reader: the time in the reader's zone, else in the game's.
+      FUN`OOC`FOR:
+        value: |-
+          u(%!/FUN`OOC`SHOW,%0,u(%!/FUN`ZONE`OF,%1))
+        flags: [funsyntax]
+      # %0 a date (2026-10-20), %1 an hour (0 to 23), %2 a minute and %3 a zone: that moment, in seconds.
+      # Read through the zone's own rules, so a date in summer time gets summer time's offset.
+      FUN`DATE`INSTANT:
+        value: |-
+          convtime(timefmt($a $b $d $H:$M:$S $Y,convtime(%0T[rjust(%1,2,0)]:[rjust(%2,2,0)]:00Z),UTC),%3)
+        flags: [funsyntax]
+
+      # ---- IC time --------------------------------------------------------------
+      # %0 an instant (now when empty): the IC clock's instant then, in seconds, before DATA`IC`YEARS.
+      FUN`IC`SECS:
+        value: |-
+          round(add(get(%!/DATA`IC`ANCHOR),mul(sub(if(strlen(%0),%0,secs()),get(%!/DATA`IC`ANCHOR)),get(%!/DATA`IC`RATIO)),mul(get(%!/DATA`IC`DAYS),86400)),0)
+        flags: [funsyntax]
+      # %0 an instant (now when empty): the IC date and time, as FORMAT`IC writes it.
+      FUN`IC`DATE:
+        value: |-
+          u(%!/FUN`IC`WRITE,timefmt($Y $m $d $w $H $M $S,u(%!/FUN`IC`SECS,%0),UTC))
+        flags: [funsyntax]
+      # %0 the year, month, day, weekday (0 for Sunday), hour, minute and second, split by spaces: FORMAT`IC of them.
+      FUN`IC`WRITE:
+        value: |-
+          uargs(%!/FORMAT`IC,year,add(first(%0),get(%!/DATA`IC`YEARS)),month,add(0,extract(%0,2,1)),monthname,u(%!/FUN`IC`MONTHNAME,add(0,extract(%0,2,1))),day,add(0,extract(%0,3,1)),weekday,u(%!/FUN`IC`WEEKDAYNAME,extract(%0,4,1)),hour,extract(%0,5,1),minute,extract(%0,6,1),second,extract(%0,7,1))
+        flags: [funsyntax]
+      # %0 a month, 1 to 12: its IC name.
+      FUN`IC`MONTHNAME:
+        value: |-
+          firstof(extract(get(%!/DATA`IC`MONTHS),%0,1,|),timefmt($B,convtime(2026-[rjust(%0,2,0)]-01T00:00:00Z),UTC))
+        flags: [funsyntax]
+      # %0 a weekday, 0 for Sunday to 6: its IC name. 1970-01-04 was a Sunday.
+      FUN`IC`WEEKDAYNAME:
+        value: |-
+          firstof(extract(get(%!/DATA`IC`WEEKDAYS),inc(%0),1,|),timefmt($A,add(259200,mul(%0,86400)),UTC))
+        flags: [funsyntax]
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: time_help
+    type: thing
+    name: Time Help
+    location: "{{time}}"
+    attributes:
+      HELP: |-
+        The game's time, your own, and the IC date: +time and +timezone.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`TIME: |-
+        timezone
+      SEE`TIMEZONE: |-
+        time
+      HELP`TIME: |-
+        `+time` shows the game's time, your own and the IC date, and converts a time from one zone to another.
+
+        - `+time` shows the game's time, yours, and the IC date.
+        - `+time <name>` shows another player's time, and how far ahead of you or behind it is.
+        - `+time <time>` reads a time in your zone and shows it in the game's: `+time 8pm`, `+time 20:30`, `+time 8:30 am`.
+        - `+time <time> <zone>` reads it in another zone: `+time 8pm pacific`.
+        - `+time <date> <time> \[<zone>\]` reads it on another day, the date written year first: `+time 2026-10-20 8pm`.
+
+        A converted time also shows how long until it, or how long ago it was, and a Discord timestamp such as `<t:1792540800:F>`. Paste that into Discord and each reader sees the time in their own zone.
+
+        For example, from a player whose zone is America/New_York:
+
+        `+time 2026-07-15 8:30 pm pacific`
+
+        Output: a box titled `20:30 on Wed 15 Jul` with the time in America/Los_Angeles, the game time, your time, how far off it is, and the line for Discord.
+
+        Until you set your zone with `+timezone`, a time you type is read in the game's. See `+help timezone`.
+      HELP`TIME`SETTINGS: |-
+        The settings are attributes on the Clock object, which sits inside the Time object in the master room:
+
+        - `` DATA`ZONE ``: the game's time zone, the one `+time` calls game time. `UTC` by default.
+        - `` DATA`FORMAT ``: how a time is written, in `timefmt\(\)`'s codes. `$a $d $b $Y, $H:$M` by default, which writes `Thu 15 Oct 2026, 20:00`.
+        - `` ALIAS`<name> ``: a short name a player may give `+timezone` or `+time`, one attribute each, its value the zone. A short name wins over a zone of the same name.
+
+        For example, to keep the game on London time and let players type `irish`:
+
+        `` &DATA`ZONE <Clock>=Europe/London ``
+
+        `` &ALIAS`IRISH <Clock>=Europe/Dublin ``
+
+        The IC date has its own settings: see `+help time ic`.
+      HELP`TIME`IC: |-
+        The IC date `+time` shows comes from these attributes on the Clock object, inside the Time object in the master room:
+
+        - `` DATA`IC`ANCHOR ``: a moment, in seconds since 1970, when the IC clock reads the same as the real one. `1767225600`, 1 January 2026 at midnight UTC, by default.
+        - `` DATA`IC`RATIO ``: how many IC seconds pass each real second. `1` by default; `2` makes an IC day pass in twelve real hours.
+        - `` DATA`IC`DAYS ``: days added to the IC date. Below 0 goes back.
+        - `` DATA`IC`YEARS ``: years added to the year shown.
+        - `` DATA`IC`MONTHS ``: the twelve month names, January's first, split by `|`. Empty uses the real ones.
+        - `` DATA`IC`WEEKDAYS ``: the seven weekday names, Sunday's first, split by `|`. Empty uses the real ones.
+        - `` DATA`IC`SHOW ``: `0` takes the IC date off `+time`.
+        - `` FORMAT`IC ``: how the date is written. It is evaluated with `%%<year>`, `%%<month>` \(1 to 12\), `%%<monthname>`, `%%<day>`, `%%<weekday>` \(its name\), `%%<hour>`, `%%<minute>` and `%%<second>`.
+
+        For example, a game set 300 years on, whose IC days run twice as fast from 1 March 2026. `convtime\(\)` turns the date into seconds:
+
+        `think convtime\(2026-03-01T00:00:00Z\)`
+
+        Output: `1772323200`
+
+        `` &DATA`IC`ANCHOR <Clock>=1772323200 ``
+
+        `` &DATA`IC`RATIO <Clock>=2 ``
+
+        `` &DATA`IC`YEARS <Clock>=300 ``
+
+        The IC calendar is the real one's: twelve months of the real lengths. A calendar of its own, with other month lengths, is a game's own code in `` FORMAT`IC ``.
+      HELP`TIME`CODE: |-
+        Other code reads the time through functions on the Clock object, with `u\(\)`. The Clock is VISUAL, so any object may call them.
+
+        - `` u\(<Clock>/FUN`IC`DATE\) ``: the IC date now, as `` FORMAT`IC `` writes it. Give a moment in seconds for another time: `` u\(<Clock>/FUN`IC`DATE,<seconds>\) ``.
+        - `` u\(<Clock>/FUN`IC`SECS,<seconds>\) ``: the IC clock's moment, in seconds, before the years are added.
+        - `` u\(<Clock>/FUN`OOC`FOR,<seconds>,<player>\) ``: that moment in the player's zone, or the game's when they set none.
+        - `` u\(<Clock>/FUN`OOC`SHOW,<seconds>,<zone>\) ``: that moment in a zone, the game's when it is left empty.
+        - `` u\(<Clock>/FUN`ZONE`OF,<player>\) ``: the player's zone, or nothing.
+        - `` u\(<Clock>/FUN`ZONE`GAME\) ``: the game's zone.
+        - `` u\(<Clock>/FUN`ZONE`FIND,<text>\) ``: the zone a player's text names, short names included, or nothing.
+        - `` u\(<Clock>/FUN`DATE`INSTANT,<date>,<hour>,<minute>,<zone>\) ``: a date such as `2026-10-20` at that hour and minute in that zone, in seconds.
+
+        For example, with the shipped settings:
+
+        `` think u\(<Clock>/FUN`IC`DATE,1767225600\) ``
+
+        Output: `Thursday, 1 January 2026, 00:00`
+
+        ## Adding to +time
+
+        Another package adds lines to the `+time` screen with a filter on the Time object: an attribute named `` FILTER`TIME`SCREEN`<name> ``. Filters run in name order with `chain\(\)`, each given the screen so far as `%%0`, the player reading as `%%1` and the moment as `%%2`, and each returns the screen with its own lines added:
+
+        `` &FILTER`TIME`SCREEN`WEATHER <Time>=%%0%%r\[fields\(,Weather,Light rain\)\] ``
+      HELP`TIMEZONE: |-
+        `+timezone` sets your time zone, the one `+time` shows your time in and reads a time you type in.
+
+        - `+timezone` shows yours.
+        - `+timezone <zone>` sets it: `+timezone America/New_York`.
+        - `+timezone/clear` clears it. Times are then shown and read in the game's.
+        - `+timezone/hide` keeps your zone to you and staff: `+time <name>` tells anyone else you keep it to yourself, and other packages read nothing. `+timezone/unhide` shows it again.
+
+        A zone is named the way the tz database names it: a region and a city, such as `America/Chicago`, `Europe/Berlin` or `Australia/Perth`, or `UTC`. Capitals are put in for you, so `america/new_york` works. Short names work too:
+
+        - `eastern`, `est`, `edt`: America/New_York
+        - `central`, `cst`, `cdt`: America/Chicago
+        - `mountain`, `mst`, `mdt`: America/Denver
+        - `arizona`: America/Phoenix
+        - `pacific`, `pst`, `pdt`: America/Los_Angeles
+        - `alaska`: America/Anchorage
+        - `hawaii`: Pacific/Honolulu
+        - `uk`, `gmt`, `bst`: Europe/London
+        - `cet`, `cest`: Europe/Paris
+        - `eet`: Europe/Athens
+        - `jst`: Asia/Tokyo
+        - `aest`, `aedt`: Australia/Sydney
+        - `nzst`, `nzdt`: Pacific/Auckland
+
+        `est` is New York's time, which moves to summer time and back, not a clock fixed five hours behind UTC. A game may keep more short names: see `+help time settings`.
+
+        For example:
+
+        `+timezone pacific`
+
+        Output: `\[TIME\] Done: Your time zone is America/Los_Angeles \(UTC-07:00\). It is <the time there> for you.`
+
+        Your zone is your `TZ` attribute, as PennMUSH keeps it, so `time\(*<name>\)` reads it too. Everyone can read it unless you hide it, which clears the attribute's `visual` flag. A zone you hide stays hidden when you change it.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`TIME: |-
+        {{time_help}}
