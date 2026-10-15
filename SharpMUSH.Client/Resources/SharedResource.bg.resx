@@ -6179,4 +6179,10 @@
     <value>Получавайте известия на този телефон или компютър, когато порталът е затворен</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Само вие виждате това.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Известия за вас</value>
+  </data>
 </root>

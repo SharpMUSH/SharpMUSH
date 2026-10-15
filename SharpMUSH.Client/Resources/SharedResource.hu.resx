@@ -6179,4 +6179,10 @@
     <value>Értesítések erre a telefonra vagy számítógépre, amikor a portál zárva van</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Ezt csak te látod.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Értesítések neked</value>
+  </data>
 </root>

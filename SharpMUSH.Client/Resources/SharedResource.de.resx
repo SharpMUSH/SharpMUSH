@@ -6179,4 +6179,10 @@
     <value>Benachrichtigungen auf diesem Telefon oder Computer erhalten, wenn das Portal geschlossen ist</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Nur du siehst das.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Hinweise für dich</value>
+  </data>
 </root>

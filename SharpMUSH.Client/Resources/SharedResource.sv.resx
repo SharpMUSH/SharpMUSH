@@ -6179,4 +6179,10 @@
     <value>Få aviseringar på den här telefonen eller datorn när portalen är stängd</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Bara du ser detta.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Meddelanden till dig</value>
+  </data>
 </root>

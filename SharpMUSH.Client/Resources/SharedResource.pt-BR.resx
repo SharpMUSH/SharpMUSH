@@ -6179,4 +6179,10 @@
     <value>Receba notificações neste celular ou computador quando o portal estiver fechado</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Só você vê isto.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Avisos para você</value>
+  </data>
 </root>

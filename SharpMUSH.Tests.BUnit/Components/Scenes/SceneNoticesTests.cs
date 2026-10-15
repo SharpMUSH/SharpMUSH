@@ -60,6 +60,19 @@ public class SceneNoticesTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".scene-notice")).IsEmpty();
 	}
 
+	/// <summary>Switching character keeps the page mounted; one character's notices are not the next one's.</summary>
+	[Test]
+	public async Task Switching_character_drops_the_last_characters_notices()
+	{
+		var cut = Render<SceneNotices>(p => p.Add(x => x.SceneId, "42").Add(x => x.ViewerName, "Ann"));
+		_hub.RaiseScene(Event("42", "notice", "Someone in scene 42 asks to pause what is happening now."));
+		cut.WaitForAssertion(() => cut.Find(".scene-notice"));
+
+		cut.Render(p => p.Add(x => x.SceneId, "42").Add(x => x.ViewerName, "Bea"));
+
+		await Assert.That(cut.FindAll(".scene-notice")).IsEmpty();
+	}
+
 	[Test]
 	public async Task Poses_and_other_scenes_notices_are_not_shown()
 	{

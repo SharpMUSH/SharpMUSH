@@ -5473,4 +5473,10 @@
     <value>Recevoir des notifications sur ce téléphone ou cet ordinateur quand le portail est fermé</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Vous seul voyez ceci.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Avis pour vous</value>
+  </data>
 </root>

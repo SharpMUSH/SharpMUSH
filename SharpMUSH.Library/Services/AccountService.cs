@@ -163,8 +163,7 @@ public class AccountService(
 	/// </remarks>
 	public async ValueTask LinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
 	{
-		var wasHere = await HeldByAsync(accountId, characterRef, ct);
-		if (await database.LinkCharacterToAccountAsync(accountId, characterRef, ct) is null && !wasHere)
+		if (await database.LinkCharacterToAccountAsync(accountId, characterRef, ct) is Linked)
 			await RaiseLinkAsync(accountId, characterRef, ct);
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
@@ -212,11 +211,11 @@ public class AccountService(
 	{
 		// The store checks for another holder inside the write, so two claims racing for one character
 		// cannot both land.
-		var wasHere = await HeldByAsync(accountId, character.Object.DBRef, ct);
-		if (await database.LinkCharacterToAccountAsync(accountId, character.Object.DBRef, ct) is { } holder)
+		var written = await database.LinkCharacterToAccountAsync(accountId, character.Object.DBRef, ct);
+		if (written is SharpAccount holder)
 			return new LinkedElsewhere(character, holder);
 
-		if (!wasHere)
+		if (written is Linked)
 			await RaiseLinkAsync(accountId, character.Object.DBRef, ct);
 
 		if (claimsInvalidator is not null)
@@ -233,9 +232,7 @@ public class AccountService(
 		if (characterRef.Number == 1)
 			return new Error<string>("God cannot be unlinked from its account.");
 
-		var wasHere = await HeldByAsync(accountId, characterRef, ct);
-		await database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct);
-		if (wasHere)
+		if (await database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct))
 			await RaiseUnlinkAsync(accountId, characterRef, ct);
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
@@ -244,9 +241,6 @@ public class AccountService(
 
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default)
 		=> database.GetAccountForCharacterAsync(characterRef, ct);
-
-	private async ValueTask<bool> HeldByAsync(string accountId, DBRef characterRef, CancellationToken ct)
-		=> (await database.GetAccountForCharacterAsync(characterRef, ct))?.Id == accountId;
 
 	/// <summary>
 	/// <c>PLAYER`LINK</c> / <c>PLAYER`UNLINK</c>, raised here because every route to a link (commands, the portal,
