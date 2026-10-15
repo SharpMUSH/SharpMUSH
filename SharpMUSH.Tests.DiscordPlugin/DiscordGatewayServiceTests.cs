@@ -34,6 +34,8 @@ public class DiscordGatewayServiceTests
 		await gateway.StartAsync(cancellationToken);
 		await SettledAsync(gateway, cancellationToken);
 		gateway.Reconnect();
+		await Assert.That(gateway.State.Status).IsEqualTo(DiscordGatewayStatus.Connecting)
+			.Because("whoever asked reads the reconnect as under way, not the state it replaces");
 		while (gateway.State.Status is DiscordGatewayStatus.NoToken or DiscordGatewayStatus.Connecting)
 		{
 			await Task.Delay(10, cancellationToken);

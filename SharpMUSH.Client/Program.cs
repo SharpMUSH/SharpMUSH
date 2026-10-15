@@ -33,6 +33,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddSharedResourceLocalization();
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
@@ -48,6 +49,7 @@ builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<DiscordAccountService>();
+builder.Services.AddSingleton<DiscordAdminService>();
 builder.Services.AddSingleton<MailService>();
 builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 // Scene data is served by the server API; the WASM client has no local ISceneService

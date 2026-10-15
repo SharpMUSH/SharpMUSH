@@ -49,8 +49,30 @@ public sealed class DiscordGatewayService(
 
 	public DiscordGatewayState State => _state with { Guilds = _client?.Guilds.Count ?? 0 };
 
-	/// <summary>Drops the connection and logs in again with the token stored now.</summary>
-	public void Reconnect() => _reconnect.Writer.TryWrite(true);
+	/// <summary>
+	/// The text channels the bot can see in each server it is in, with the permissions a link needs there that it lacks;
+	/// empty while it is not connected.
+	/// </summary>
+	public IReadOnlyList<DiscordTextChannel> TextChannels()
+		=> _client is { ConnectionState: ConnectionState.Connected } client
+			? client.Guilds
+				.SelectMany(guild => guild.TextChannels
+					.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel) && guild.CurrentUser.GetPermissions(channel).ViewChannel)
+					.OrderBy(channel => channel.Position)
+					.Select(channel => new DiscordTextChannel(channel.Id, channel.Name, guild.Id, guild.Name,
+						DiscordSetup.MissingInChannel(guild.CurrentUser.GetPermissions(channel)))))
+				.ToList()
+			: [];
+
+	/// <summary>
+	/// Drops the connection and logs in again with the token stored now. The state reads connecting from here on, so
+	/// whoever asked sees the reconnect under way rather than the state it replaces.
+	/// </summary>
+	public void Reconnect()
+	{
+		_state = new DiscordGatewayState(DiscordGatewayStatus.Connecting);
+		_reconnect.Writer.TryWrite(true);
+	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
