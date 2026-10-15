@@ -1,0 +1,31 @@
+format: 1.2
+package: notifications-app
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers the notifications package's settings as a portal page at /apps/notifications, linked from Settings, Notifications."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, notifications, push]
+requires_server: ">=0.1"
+
+# An application package owns no objects. The notifications package serves the routes it points at:
+# GET /http/notifications/schema, which comes with the viewer's own settings, and POST
+# /http/notifications/save. The page has no sidebar link; Settings, Notifications links to it.
+depends:
+  - package: notifications
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/notifications/
+      branch: main
+
+application:
+  slug: notifications
+  display_name: Notifications
+  icon: notifications
+  type: page
+  schema_url: http/notifications/schema
+  submit_route: http/notifications/save
+  minimum_role: player
+  order: 60

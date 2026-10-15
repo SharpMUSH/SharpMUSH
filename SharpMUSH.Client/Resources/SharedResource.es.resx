@@ -6159,4 +6159,12 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Una imagen con aviso de contenido queda fuera de la biblioteca de imágenes. Quita el aviso para compartirla.</value>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificaciones</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Recibe notificaciones en este teléfono u ordenador cuando el portal está cerrado</value>
+    <comment>MT</comment>
+  </data>
 </root>

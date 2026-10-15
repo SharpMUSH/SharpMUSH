@@ -6159,4 +6159,12 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Изображение с предупреждение за съдържание остава извън библиотеката с изображения. Махнете предупреждението, за да го споделите.</value>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Известия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Получавайте известия на този телефон или компютър, когато порталът е затворен</value>
+    <comment>MT</comment>
+  </data>
 </root>

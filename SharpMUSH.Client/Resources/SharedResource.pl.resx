@@ -6159,4 +6159,12 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Obraz z ostrzeżeniem o treści nie trafia do biblioteki obrazów. Usuń ostrzeżenie, aby go udostępnić.</value>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Powiadomienia</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Otrzymuj powiadomienia na tym telefonie lub komputerze, gdy portal jest zamknięty</value>
+    <comment>MT</comment>
+  </data>
 </root>
