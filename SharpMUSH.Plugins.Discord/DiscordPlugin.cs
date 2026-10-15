@@ -12,6 +12,7 @@ using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Discord.Admin;
+using SharpMUSH.Plugins.Discord.Events;
 using SharpMUSH.Plugins.Discord.Links;
 using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Plugins.Discord.Outbox;
@@ -72,6 +73,9 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<DiscordSlashCommands>();
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordSlashCommands>());
+		services.AddSingleton<IDiscordEventStore, LightningDiscordEventStore>();
+		services.AddSingleton(provider => new DiscordScheduledEvents(provider.GetRequiredService<IDiscordEventStore>(), TimeProvider.System));
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordScheduledEvents>());
 		services.AddSingleton<IDiscordBanStore, LightningDiscordBanStore>();
 		services.AddSingleton(provider => new DiscordStandingSync(provider.GetRequiredService<IDiscordAccountStore>(),
 			provider.GetRequiredService<IDiscordBanStore>(), provider.GetRequiredService<IDiscordSettingsStore>(),
