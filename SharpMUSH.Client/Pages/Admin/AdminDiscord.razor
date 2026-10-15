@@ -9,6 +9,8 @@
 @inject RoleRegistryClient RoleRegistry
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
+@inject TimeProvider Time
+@implements IDisposable
 
 <PageTitle>@Loc["AdmDiscordTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
@@ -67,7 +69,7 @@
                             }
                             <a class="adm-discord-token" href="admin/config/secrets">@Loc["AdmDiscordToken"]</a>
                             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Class="adm-discord-reconnect" Disabled="@_busy"
-                                           OnClick="@(() => ActAsync(Discord.ReconnectAsync()))">@Loc["AdmDiscordReconnect"]</CapsuleButton>
+                                           OnClick="ReconnectAsync">@Loc["AdmDiscordReconnect"]</CapsuleButton>
                         </div>
                     </ChildContent>
                 </KitCard>
@@ -332,8 +334,13 @@
     /// <summary>Roles the game hands out itself, which the server refuses to map.</summary>
     private static readonly HashSet<string> Implicit = new(StringComparer.OrdinalIgnoreCase) { "everyone", "player", "god" };
 
+    /// <summary>How often the connection is read again while the bot is connecting.</summary>
+    public static readonly TimeSpan ConnectingInterval = TimeSpan.FromSeconds(2);
+
+    private readonly CancellationTokenSource _closed = new();
     private bool _loading = true;
     private bool _busy;
+    private bool _watching;
     private bool _forbidden;
     private DiscordConnectionView? _connection;
     private List<DiscordChannelView> _channels = [];
@@ -354,6 +361,59 @@
         await LoadAsync();
         _gameRoles = (await roles).Where(role => !Implicit.Contains(role.Slug)).OrderByDescending(role => role.Priority).ToList();
         _loading = false;
+        WatchConnecting();
+    }
+
+    private async Task ReconnectAsync()
+    {
+        await ActAsync(Discord.ReconnectAsync());
+        WatchConnecting();
+    }
+
+    /// <summary>
+    /// While the bot is connecting, reads its connection again until it settles, then everything else: the checklist
+    /// and the channels the bot can see follow the connection, and nothing else would show them without a reload.
+    /// </summary>
+    private void WatchConnecting()
+    {
+        if (_watching || _connection?.Status != "connecting")
+        {
+            return;
+        }
+
+        _watching = true;
+        _ = WatchAsync(_closed.Token);
+    }
+
+    private async Task WatchAsync(CancellationToken closed)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(ConnectingInterval, Time);
+            while (await timer.WaitForNextTickAsync(closed))
+            {
+                if (await Discord.ConnectionAsync() is DiscordConnectionView { Status: not "connecting" })
+                {
+                    await LoadAsync();
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The page closed.
+        }
+        finally
+        {
+            _watching = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _closed.Cancel();
+        _closed.Dispose();
     }
 
     private async Task LoadAsync()
