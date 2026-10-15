@@ -621,7 +621,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
+		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 
 		var stepText = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "1").ToPlainText();
 		if (!numbers.TryDouble(stepText, out var step) || double.IsNaN(step) || double.IsInfinity(step) || Math.Abs(step) < 1e-12)
@@ -654,7 +654,7 @@ public partial class Functions
 			}
 		}
 
-		return new CallState(string.Join(delim, results));
+		return new CallState(MarkupText.Join(delim, results.Select(MarkupText.Plain)));
 	}
 
 
