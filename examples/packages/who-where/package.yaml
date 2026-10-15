@@ -59,10 +59,10 @@ objects:
         100
       # %0 a screen: starts it, setting ww_view, and ww_key and ww_rs for a table.
       WW_FN_START: |-
-        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,chr(9246))]
-      # %0 a list, %1 how many to a run: the runs, split by |.
+        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,chr(9246))][setq(ww_after,v(WW_IDLE_AFTER))]
+      # %0 a list, %1 how many to a run, %2 the list's delimiter (a space when empty): the runs, split by |.
       WW_FN_SPLIT: |-
-        if(words(%0),iter(lnum(0,dec(ceil(fdiv(words(%0),%1)))),extract(%0,inc(mul(%i0,%1)),%1),,|))
+        setq(ww_d,if(strlen(%2),%2,%b))[if(words(%0,%q<ww_d>),iter(lnum(0,dec(ceil(fdiv(words(%0,%q<ww_d>),%1)))),extract(%0,inc(mul(%i0,%1)),%1,%q<ww_d>),,|))]
       # %0 a run from ww_parts, or - after the last: one @pemit of the screen's @dolist.
       WW_FN_PART: |-
         u(%!/WW_FN_%q<ww_view>_PART,%0)
@@ -90,9 +90,10 @@ objects:
       # Seconds idle after which a player's name is drawn muted.
       WW_IDLE_AFTER: |-
         3600
-      # %0 a player: their name, muted when they have been idle WW_IDLE_AFTER seconds or more.
+      # %0 a player, %1 their idle seconds: their name, muted when they have been idle WW_IDLE_AFTER
+      # seconds or more (ww_after, read once by WW_FN_START).
       WW_FN_NAME: |-
-        if(gte(idle(%0),v(WW_IDLE_AFTER)),tone(muted,name(%0)),name(%0))
+        if(gte(%1,%q<ww_after>),tone(muted,name(%0)),name(%0))
       # ---- +who ---------------------------------------------------------------------
       # +who: %0 the players, %1 the order (name when empty, or idle), %2 the start of a name, to show only
       # the players whose name or alias starts with it: name, alias, idle, connected, gender and location.
@@ -109,7 +110,7 @@ objects:
         if(strlen(%q<ww_prefix>),u(%!/WW_FN_MATCHING,%0,%q<ww_prefix>),%0)
       # %0 a player: their row.
       WW_FN_WHO_ROW: |-
-        [u(%!/WW_FN_NAME,%0)]%r[first(get(%0/ALIAS),;)]%r[etime(idle(%0),3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)]
+        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r[first(get(%0/ALIAS),;)]%r[etime(%q<ww_idle>,3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)]
       # %0 the rows: the box, or a warning when +who <name> matched nobody.
       WW_FN_WHO_SCREEN: |-
         if(strlen(%0),box([u(%!/WW_FN_WHO_TABLE,%0)][u(%!/WW_FN_FOOT,u(%!/WW_FN_WHO_COUNT,words(%0,%q<ww_rs>)))],Who's Online),notice(WHO,Nobody connected has a name starting with %q<ww_prefix>.,warn))
@@ -144,8 +145,9 @@ objects:
         iter(lattr(%!/FILTER`%0`*),%!/%i0)
       # ---- +where -------------------------------------------------------------------
       # One pass groups the players by room: json_group_by() looks up each player's room once and answers
-      # {"<room>":["<player>",...],...}, the players under each room in name order. Each room's players are
-      # then read by its key, so the cost grows with players plus rooms, never players times rooms.
+      # {"<room>":["<player>",...],...}, the players under each room in name order. One json_map() pass
+      # lists the rooms and keeps each room's players in a q-register (ww_in<number>), which the @dolist
+      # runs carry, so the cost grows with players plus rooms, never players times rooms.
       # %0 a player: the room they stand in, or #-1 when they or a place they are in is unfindable.
       # room() answers an objid, or #-1 PERMISSION DENIED; the dbref before the colon is the answer.
       WW_FN_ROOM: |-
@@ -153,26 +155,26 @@ objects:
       # %0 players: the groups, each room with its players by name.
       WW_FN_GROUPS: |-
         json_group_by(%!/WW_FN_ROOM,sort(%0,namei))
-      # json_map() over the groups: a room's key.
-      WW_FN_GROUP_KEY: |-
-        %2
+      # json_map() over the groups: a room's key, its players kept in ww_in<number> (ww_in-1 for #-1).
+      WW_FN_GROUP_KEEP: |-
+        setq(ww_in[after(%2,#)],%1)%2
       # %0 groups: their rooms, by name, and #-1 last when someone cannot be located.
       WW_FN_ROOMS: |-
-        setq(ww_rooms,json_map(%!/WW_FN_GROUP_KEY,%0))[trim(sort(remove(%q<ww_rooms>,#-1),namei)[if(member(%q<ww_rooms>,#-1),%b#-1)])]
-      # %0 a room from WW_FN_ROOMS, %1 groups: the players in it, by name. The group is a JSON array of
-      # dbrefs, which hold no character JSON escapes.
+        setq(ww_rooms,json_map(%!/WW_FN_GROUP_KEEP,%0))[trim(sort(remove(%q<ww_rooms>,#-1),namei)[if(member(%q<ww_rooms>,#-1),%b#-1)])]
+      # %0 a room from WW_FN_ROOMS: the players in it, by name. The group is a JSON array of dbrefs, which
+      # hold no character JSON escapes.
       WW_FN_IN: |-
-        edit(json_query(%1,get,%0),\[,,\],,",,\,,%b)
+        edit(r(ww_in[after(%0,#)]),\[,,\],,",,\,,%b)
       # %0 a room or #-1: its name, or - for a player who cannot be located.
       WW_FN_PLACE: |-
         case(%0,#-1,-,name(%0))
       # +where: the heading; its runs are locations, each a rule with its name on the left and how many are
       # there on the right, and the players there under it in as many columns as fit; the count is last.
       WW_FN_WHERE: |-
-        u(%!/WW_FN_START,WHERE)[setq(ww_groups,u(%!/WW_FN_GROUPS,%0))][setq(ww_rooms,u(%!/WW_FN_ROOMS,%q<ww_groups>))][setq(ww_parts,u(%!/WW_FN_SPLIT,%q<ww_rooms>,v(WW_PART_ROOMS)))][setq(ww_foot,u(%!/WW_FN_WHERE_COUNT,%0,%q<ww_rooms>))][rule(Where)]
+        u(%!/WW_FN_START,WHERE)[setq(ww_rooms,u(%!/WW_FN_ROOMS,u(%!/WW_FN_GROUPS,%0)))][setq(ww_parts,u(%!/WW_FN_SPLIT,%q<ww_rooms>,v(WW_PART_ROOMS)))][setq(ww_foot,u(%!/WW_FN_WHERE_COUNT,%0,%q<ww_rooms>))][rule(Where)]
       # %0 a run of rooms, or -: their groups, or the count.
       WW_FN_WHERE_PART: |-
-        case(%0,-,[rule()]%r[tone(muted,%q<ww_foot>)],iter(%0,u(%!/WW_FN_GROUP,%i0,u(%!/WW_FN_IN,%i0,%q<ww_groups>)),,%r))
+        case(%0,-,[rule()]%r[tone(muted,%q<ww_foot>)],iter(%0,u(%!/WW_FN_GROUP,%i0,u(%!/WW_FN_IN,%i0)),,%r))
       # %0 players, %1 their rooms: how many are connected, and in how many locations.
       WW_FN_WHERE_COUNT: |-
         setq(ww_places,words(remove(%1,#-1)))[words(%0)] connected in %q<ww_places> [if(eq(%q<ww_places>,1),location,locations)]
@@ -181,16 +183,16 @@ objects:
       # screen drops it first. Both brackets of the titles array are escaped, so the parser reads them
       # as text.
       WW_FN_GROUP: |-
-        rule(case(%0,#-1,Unfindable,name(%0)),,{{"title":"left","titles":\[{"text":"[setr(ww_count,words(%1))] [case(%q<ww_count>,1,player,players)]","side":"right"}\]}})%r[grid(iter(%1,u(%!/WW_FN_NAME,%i0),,|),|)]
+        rule(case(%0,#-1,Unfindable,name(%0)),,{{"title":"left","titles":\[{"text":"[setr(ww_count,words(%1))] [case(%q<ww_count>,1,player,players)]","side":"right"}\]}})%r[grid(iter(%1,u(%!/WW_FN_NAME,%i0,idle(%i0)),,|),|)]
       # +where/room: one row per player, by location and then by name; its runs are locations.
       WW_FN_WHERE_ROOM: |-
-        u(%!/WW_FN_START,WHERE_ROOM)[setq(ww_title,Where by location)][setq(ww_groups,u(%!/WW_FN_GROUPS,%0))][setq(ww_parts,u(%!/WW_FN_SPLIT,u(%!/WW_FN_ROOMS,%q<ww_groups>),v(WW_PART_ROOMS)))]
+        u(%!/WW_FN_START,WHERE_ROOM)[setq(ww_title,Where by location)][setq(ww_parts,u(%!/WW_FN_SPLIT,u(%!/WW_FN_ROOMS,u(%!/WW_FN_GROUPS,%0)),v(WW_PART_ROOMS)))]
       # %0 a run of rooms, or -: their rows, or the screen.
       WW_FN_WHERE_ROOM_PART: |-
         case(%0,-,u(%!/WW_FN_WHERE_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(%0,u(%!/WW_FN_ROOM_ROWS,%i0),,%q<ww_rs>))))
       # %0 a room: a row for each of its players, its name looked up once.
       WW_FN_ROOM_ROWS: |-
-        setq(ww_place,u(%!/WW_FN_PLACE,%0))[iter(u(%!/WW_FN_IN,%0,%q<ww_groups>),u(%!/WW_FN_WHERE_ROW,%i0,%q<ww_place>),,%q<ww_rs>)]
+        setq(ww_place,u(%!/WW_FN_PLACE,%0))[iter(u(%!/WW_FN_IN,%0),u(%!/WW_FN_WHERE_ROW,%i0,%q<ww_place>),,%q<ww_rs>)]
       # +where/name: one row per player, by name; its runs are players.
       WW_FN_WHERE_NAME: |-
         u(%!/WW_FN_START,WHERE_NAME)[setq(ww_title,Where by name)][setq(ww_parts,u(%!/WW_FN_SPLIT,sort(%0,namei),v(WW_PART_PLAYERS)))]
@@ -199,7 +201,7 @@ objects:
         case(%0,-,u(%!/WW_FN_WHERE_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(%0,u(%!/WW_FN_WHERE_ROW,%i0,u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%i0))),,%q<ww_rs>))))
       # %0 a player, %1 where they are: their row, with how long they have been idle.
       WW_FN_WHERE_ROW: |-
-        [u(%!/WW_FN_NAME,%0)]%r%1%r[etime(idle(%0),3)]
+        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r%1%r[etime(%q<ww_idle>,3)]
       # %0 the rows: the box with the table and the count.
       WW_FN_WHERE_SCREEN: |-
         box(ldatatable(u(%!/WW_FN_OPTS,1%r3,1%r1%r2,%r1,%r12),[tone(strong,Name)]%r[tone(strong,Location)]%r>[tone(strong,Idle)],%0,%q<ww_rs>)[u(%!/WW_FN_FOOT,[words(%0,%q<ww_rs>)] connected)],%q<ww_title>)

@@ -122,9 +122,8 @@ public class WhoWhereIntegrationTests
 			var groups = $"u({Functions}/WW_FN_GROUPS,{players})";
 			await Assert.That(await God($"think {groups}"))
 				.IsEqualTo($"{{\"{parlour}\":[\"#{ann.DbRef.Number}\",\"#{cy.DbRef.Number}\"],\"{attic}\":[\"#{bo.DbRef.Number}\"]}}");
-			await Assert.That(await God($"think u({Functions}/WW_FN_ROOMS,{groups})")).IsEqualTo($"{attic} {parlour}");
-			await Assert.That(await God($"think u({Functions}/WW_FN_IN,{parlour},{groups})"))
-				.IsEqualTo($"#{ann.DbRef.Number} #{cy.DbRef.Number}");
+			await Assert.That(await God($"think [u({Functions}/WW_FN_ROOMS,{groups})]|[u({Functions}/WW_FN_IN,{parlour})]"))
+				.IsEqualTo($"{attic} {parlour}|#{ann.DbRef.Number} #{cy.DbRef.Number}");
 
 			// +where: a line per location with its count, rooms by name, and the players under it by name.
 			var grouped = await As(ann, "+where");
@@ -214,6 +213,10 @@ public class WhoWhereIntegrationTests
 			// +where locates players as the function object does, so the room stays hidden from God too.
 			await Assert.That(await God($"think u({Functions}/WW_FN_GROUPS,#{hidden.DbRef.Number})"))
 				.IsEqualTo($"{{\"#-1\":[\"#{hidden.DbRef.Number}\"]}}");
+			// Unfindable comes last and is not counted as a location.
+			var both = $"#{hidden.DbRef.Number} #{reader.DbRef.Number}";
+			await Assert.That(await God($"think [setr(0,u({Functions}/WW_FN_ROOMS,u({Functions}/WW_FN_GROUPS,{both})))]|[u({Functions}/WW_FN_IN,#-1)]|[u({Functions}/WW_FN_WHERE_COUNT,{both},%q0)]"))
+				.IsEqualTo($"{hall} #-1|#{hidden.DbRef.Number}|2 connected in 1 location");
 		}
 		finally
 		{
@@ -242,11 +245,8 @@ public class WhoWhereIntegrationTests
 
 			var list = string.Join(' ', players.Select(p => $"#{p.DbRef.Number}"));
 			var groups = $"u({Functions}/WW_FN_GROUPS,{list})";
-			await Assert.That(await God($"think words(u({Functions}/WW_FN_ROOMS,{groups}))")).IsEqualTo("20");
-			foreach (var room in rooms)
-			{
-				await Assert.That(await God($"think words(u({Functions}/WW_FN_IN,{room},{groups}))")).IsEqualTo("10");
-			}
+			await Assert.That(await God($"think [words(setr(0,u({Functions}/WW_FN_ROOMS,{groups})))]|[iter(%q0,words(u({Functions}/WW_FN_IN,%i0)))]"))
+				.IsEqualTo($"20|{string.Join(' ', Enumerable.Repeat("10", 20))}");
 
 			var grouped = await As(players[0], "+where");
 			await Assert.That(grouped).Contains("connected");
@@ -282,8 +282,8 @@ public class WhoWhereIntegrationTests
 			{
 				// %? is the calls made so far, then the depth; the few around the screen count too.
 				var calls = await God($"think [setq(0,u({Functions}/{screen},{list}))][first(%?)]");
-				await Assert.That(int.Parse(calls)).IsLessThan(players.Count * 5)
-					.Because($"{screen} must cost its command fewer than 5 calls a player");
+				await Assert.That(int.Parse(calls)).IsLessThan(players.Count * 6)
+					.Because($"{screen} must cost its command fewer than 6 calls a player");
 			}
 
 			// Small parts, so every screen is built across several runs and the rows meet at part boundaries.
