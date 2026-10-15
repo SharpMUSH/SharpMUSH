@@ -38,7 +38,7 @@ public class ChargenSchemaTests
 	}
 
 	private static Task<string> ManifestAsync() =>
-		File.ReadAllTextAsync(Path.Combine(ExamplesRoot(), "chargen", "package.yaml"));
+		File.ReadAllTextAsync(Path.Join(ExamplesRoot(), "chargen", "package.yaml"));
 
 	[Test]
 	public async Task EveryRouteHandsOverToTheChargenObject()
