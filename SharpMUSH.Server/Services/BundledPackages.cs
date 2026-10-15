@@ -119,6 +119,8 @@ public static class BundledPackages
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +info and +journal are names a game may already use for its own code.
+		new("info", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
 		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins health and jobs, so +health shows staff load.
