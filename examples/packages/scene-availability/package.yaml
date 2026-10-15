@@ -205,16 +205,16 @@ objects:
           think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(AVAIL,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(AVAIL,+avail has no /%q<cmd_switch> switch. +help avail lists them.,warn); @assert hastype(%#,PLAYER)=@pemit %#=notice(AVAIL,Only a character keeps times.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument (spaces
-      # squeezed), cmd_left and cmd_right (either side of the first =), cmd_route (the INC` routine to run), now,
-      # viewer_key (where the reader's entries are kept), viewer_zone (their zone, else the game's) and
-      # viewer_today (the day it is for them).
+      # squeezed), cmd_left and cmd_right (either side of the first =; the right as typed, so a note keeps its
+      # spaces), cmd_route (the INC` routine to run), now, viewer_key (where the reader's entries are kept),
+      # viewer_zone (their zone, else the game's) and viewer_today (the day it is for them).
       FUN`COMMAND`PARSE:
         value: |-
           setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
           cmd_switch,first(%q<cmd_switch_list>),
           cmd_argument,trim(squish(%1)),
-          cmd_left,trim(before(%q<cmd_argument>,=)),
-          cmd_right,trim(after(%q<cmd_argument>,=)),
+          cmd_left,trim(squish(before(%1,=))),
+          cmd_right,trim(after(%1,=)),
           cmd_route,get(%!/DATA`ROUTE`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
           now,secs(),
           viewer_key,u(%!/FUN`KEY,%#),

@@ -274,11 +274,11 @@ public class SceneAvailabilityIntegrationTests
 			await Assert.That(await As(ann, "+avail/busy weekdays 9:00-17:00=Work"))
 				.Contains("[AVAIL] Done: Added 1, busy: Weekdays, 09:00-17:00.");
 			await Assert.That(await As(ann, "+avail/free sat sun 6pm-11pm")).Contains("Added 2, free: Weekends, 18:00-23:00.");
-			await Assert.That(await As(ann, "+avail/busy 2nd and 4th thu 19:00-21:00=Book club, [and] more"))
+			await Assert.That(await As(ann, "+avail/busy 2nd and 4th thu 19:00-21:00=Book club,  [and] more"))
 				.Contains("Added 3, busy: The 2nd and 4th Thu of each month, 19:00-21:00.");
 			// The note is kept as typed, never evaluated.
 			var annKey = await KeyOf(ann);
-			await Assert.That(await Think($"get({Calendar}/PLAYER`{annKey}`3`NOTE)")).IsEqualTo("Book club, [and] more");
+			await Assert.That(await Think($"get({Calendar}/PLAYER`{annKey}`3`NOTE)")).IsEqualTo("Book club,  [and] more");
 			await Assert.That(await Think($"get({Calendar}/PLAYER`{annKey}`1`ZONE)")).IsEqualTo("America/New_York");
 
 			var screen = await As(ann, "+avail");
