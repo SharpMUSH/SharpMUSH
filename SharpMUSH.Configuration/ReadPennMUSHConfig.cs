@@ -177,10 +177,10 @@ public static partial class ReadPennMushConfig
 			),
 			Dump = new DumpOptions(
 				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval),
-				String(Get(nameof(DumpOptions.DumpMessage)), d.Dump.DumpMessage),
-				String(Get(nameof(DumpOptions.DumpComplete)), d.Dump.DumpComplete),
-				String(Get(nameof(DumpOptions.DumpWarning5Min)), d.Dump.DumpWarning5Min),
-				String(Get(nameof(DumpOptions.DumpWarning1Min)), d.Dump.DumpWarning1Min)
+				Message(nameof(DumpOptions.DumpMessage), d.Dump.DumpMessage),
+				Message(nameof(DumpOptions.DumpComplete), d.Dump.DumpComplete),
+				Message(nameof(DumpOptions.DumpWarning5Min), d.Dump.DumpWarning5Min),
+				Message(nameof(DumpOptions.DumpWarning1Min), d.Dump.DumpWarning1Min)
 			),
 			File = new FileOptions(
 				RequiredString(Get(nameof(FileOptions.AccessFile)), d.File.AccessFile),
@@ -357,6 +357,15 @@ public static partial class ReadPennMushConfig
 			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal));
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
+
+		// A dump message line with nothing after it turns the message off, as in PennMUSH; only a missing line keeps
+		// the default.
+		string? Message(string property, string? fallback)
+		{
+			var key = propertyDictionary[property];
+			var lines = text.Where(line => line.Trim().Split([' ', '\t'], 2)[0] == key).ToArray();
+			return lines is [.., var last] ? DirectiveValue(last) : fallback;
+		}
 	}
 
 	/// <summary>

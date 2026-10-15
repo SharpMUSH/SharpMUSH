@@ -80,7 +80,7 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 
 	public ValueTask<Result<WorldBackupCheck>> CheckLatestAsync(CancellationToken ct = default)
 		=> List() is [var latest, ..]
-			? new ValueTask<Result<WorldBackupCheck>>(Task.Run(() => LightningBackupCheck.Check(latest), ct))
+			? new ValueTask<Result<WorldBackupCheck>>(Task.Run(() => LightningBackupCheck.Check(latest, ct), ct))
 			: ValueTask.FromResult<Result<WorldBackupCheck>>(new Error<string>("there is no backup to check yet; run @backup first"));
 
 	public int PackageOperationKeep => _packageOperationWriter?.Keep ?? 0;

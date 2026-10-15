@@ -19,7 +19,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 	private readonly IOptionsMonitor<SharpMUSHOptions> _config;
 	private readonly ISecretStore _secrets;
 	private readonly Lazy<IEventService>? _events;
-	private ConnectionState _state = ConnectionState.Unknown;
+	private int _state = (int)ConnectionState.Unknown;
 	private readonly SemaphoreSlim _providerLock = new(1, 1);
 	private ISqlProvider? _currentProvider;
 	private string? _currentConnectionString;
@@ -394,15 +394,14 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			var previous = _state;
-			_state = ConnectionState.Failed;
+			var previous = (ConnectionState)Interlocked.Exchange(ref _state, (int)ConnectionState.Failed);
 			await RaiseAsync(ex.Message, disconnected: previous == ConnectionState.Connected);
 			throw;
 		}
 
-		if (_state != ConnectionState.Connected)
+		// Exchanged, so two queries opening at once raise SQL`CONNECT once between them.
+		if ((ConnectionState)Interlocked.Exchange(ref _state, (int)ConnectionState.Connected) != ConnectionState.Connected)
 		{
-			_state = ConnectionState.Connected;
 			await RaiseAsync(null, disconnected: false);
 		}
 

@@ -11,7 +11,7 @@ namespace SharpMUSH.Database.Lightning;
 /// </summary>
 public static class LightningBackupCheck
 {
-	public static Result<WorldBackupCheck> Check(WorldBackup backup)
+	public static Result<WorldBackupCheck> Check(WorldBackup backup, CancellationToken cancellationToken = default)
 	{
 		try
 		{
@@ -23,7 +23,7 @@ public static class LightningBackupCheck
 			foreach (var table in Tables.All)
 			{
 				using var db = tx.OpenDatabase(table.Name, new DatabaseConfiguration { Flags = LightningStore.FlagsFor(table) });
-				entries += ReadThrough(tx, db, table.Name);
+				entries += ReadThrough(tx, db, table.Name, cancellationToken);
 			}
 
 			return new WorldBackupCheck(backup, Tables.All.Count, entries);
@@ -39,13 +39,15 @@ public static class LightningBackupCheck
 	}
 
 	/// <summary>Walks every entry of one table, which reads every page it is stored on.</summary>
-	private static long ReadThrough(LightningTransaction tx, LightningDB.LightningDatabase db, string table)
+	private static long ReadThrough(LightningTransaction tx, LightningDB.LightningDatabase db, string table,
+		CancellationToken cancellationToken)
 	{
 		using var cursor = tx.CreateCursor(db);
 		var read = 0L;
 		var code = cursor.First().resultCode;
 		while (code == MDBResultCode.Success)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			read++;
 			code = cursor.Next().resultCode;
 		}

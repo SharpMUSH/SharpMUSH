@@ -60,7 +60,15 @@ public sealed class WorldBackupScheduleService(
 		{
 			while (await timer.WaitForNextTickAsync(stoppingToken))
 			{
-				await TickAsync(time.GetUtcNow(), interval, stoppingToken);
+				// A warning or event that throws must not end the schedule: the next copy may well succeed.
+				try
+				{
+					await TickAsync(time.GetUtcNow(), interval, stoppingToken);
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException)
+				{
+					logger.LogError(ex, "Scheduled world backup tick failed");
+				}
 			}
 		}
 		catch (OperationCanceledException)
