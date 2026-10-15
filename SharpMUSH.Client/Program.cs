@@ -23,7 +23,7 @@ if (!MarkupRegistry.IsConfigured)
 	// policy as it is written — including markup built before it reached us.
 	// WithLayoutImages: a figure()'s picture is shown only when the game's image_hosts allows its host.
 	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal)
-		.WithLayoutImages(PortalImagePolicy.Allows);
+		.WithLayoutImages(PortalImagePolicy.Allows).WithListSeparators();
 }
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
