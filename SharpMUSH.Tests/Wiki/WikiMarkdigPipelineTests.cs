@@ -602,4 +602,35 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("<pre><code");
 		await Assert.That(html).DoesNotContain("class=\"mermaid\"");
 	}
+
+	/// <summary>A README's links into its own folder become text; links that leave it, anchors and wiki links stay.</summary>
+	[Test]
+	public async Task RenderReadmeToHtml_UnlinksPathsIntoThePackage()
+	{
+		var html = Pipeline().RenderReadmeToHtml(
+			"See [profile-handler](../profile-handler/), [setup](/docs/setup.md), [the site](https://sharpmush.com), "
+			+ "[below](#usage), [[Main:home|home]] and ![a coastal road](shot.png).");
+
+		await Assert.That(html).Contains("See profile-handler, setup, ");
+		await Assert.That(html).DoesNotContain("../profile-handler/");
+		await Assert.That(html).DoesNotContain("/docs/setup.md");
+		await Assert.That(html).Contains("href=\"https://sharpmush.com\"");
+		await Assert.That(html).Contains("href=\"#usage\"");
+		await Assert.That(html).Contains("href=\"/wiki/");
+		await Assert.That(html).Contains("a coastal road");
+		await Assert.That(html).DoesNotContain("<img");
+	}
+
+	/// <summary>The worked example in the Packages guide renders as the guide says.</summary>
+	[Test]
+	public async Task RenderReadmeToHtml_GuideExample()
+	{
+		var html = Pipeline().RenderReadmeToHtml(
+			"# coast-guide\n\nTravel notes for the coast road. Install it, then read [[Main:coast-road]].\n\n"
+			+ "See [the page format](docs/format.md) and [SharpMUSH](https://sharpmush.com).\n");
+
+		await Assert.That(html).Contains("<h1 id=\"coast-guide\">coast-guide</h1>");
+		await Assert.That(html).Contains("href=\"/wiki/main/coast-road\"");
+		await Assert.That(html).Contains("See the page format and <a href=\"https://sharpmush.com\">SharpMUSH</a>.");
+	}
 }

@@ -40,7 +40,8 @@ public class PluginUploadStoreTests
 		Yaml(PluginPackageFixture.Yaml(Id)),
 		(PluginPackageFixture.DllName, File.ReadAllBytes(PluginPackageFixture.DllPath)),
 		(PluginManifest.FileName, PluginPackageFixture.PluginJson(Id)),
-		("README.md", "not listed, not kept"u8.ToArray()),
+		("README.md", "# Upload sample\n\nKept for the Packages page."u8.ToArray()),
+		("NOTES.txt", "not listed, not kept"u8.ToArray()),
 	];
 
 	private static async Task InScratch(Func<PluginDirectories, Task> test)
@@ -57,7 +58,7 @@ public class PluginUploadStoreTests
 	}
 
 	[Test]
-	public Task PluginPackage_IsStaged_WithOnlyItsListedFiles() => InScratch(async directories =>
+	public Task PluginPackage_IsStaged_WithOnlyItsListedFilesAndReadme() => InScratch(async directories =>
 	{
 		var store = Store(directories);
 		var staged = (await store.StageAsync(Zip(PluginPackage()), CancellationToken.None)).Expect<PluginUploadResponse>();
@@ -67,8 +68,10 @@ public class PluginUploadStoreTests
 		await Assert.That(store.ManifestYaml(staged.Path)).IsNotNull();
 		var dll = await store.Files(staged.Path)!.ReadFileAsync(PluginPackageFixture.DllName);
 		await Assert.That(PluginPackageFixture.Sha256Of(dll!)).IsEqualTo(PluginPackageFixture.DllSha);
-		await Assert.That(await store.Files(staged.Path)!.ReadFileAsync("README.md")).IsNull()
-			.Because("only package.yaml and the files it lists are kept");
+		await Assert.That(await store.Files(staged.Path)!.ReadFileAsync("NOTES.txt")).IsNull()
+			.Because("only package.yaml, the files it lists and its README are kept");
+		var readme = (await PackageReadme.ReadAsync(store.Files(staged.Path))).Expect<string>();
+		await Assert.That(readme).StartsWith("# Upload sample");
 
 		store.Discard(staged.Path);
 		await Assert.That(store.ManifestYaml(staged.Path)).IsNull();
