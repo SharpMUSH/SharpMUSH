@@ -112,15 +112,17 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first: those in
 	/// <paramref name="state"/> (<c>live</c>, <c>upcoming</c>, <c>finished</c>) whose title, pitch or room holds
 	/// <paramref name="search"/> and that <paramref name="match"/> keeps, after the first <paramref name="offset"/> of them.
+	/// A <paramref name="sort"/> detail orders them by it instead, earliest first, as a character's timeline does.
 	/// </summary>
 	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5,
-		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null)
+		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null, string? sort = null)
 	{
 		var url = $"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}";
 		if (match is not null) url += $"&{match.Query}";
 		if (offset > 0) url += $"&offset={offset}";
 		if (!string.IsNullOrWhiteSpace(state)) url += $"&state={Uri.EscapeDataString(state)}";
 		if (!string.IsNullOrWhiteSpace(search)) url += $"&search={Uri.EscapeDataString(search.Trim())}";
+		if (!string.IsNullOrWhiteSpace(sort)) url += $"&sort={Uri.EscapeDataString(sort)}";
 		var result = await Client.GetFeatureApiAsync<List<SceneDto>>(serverInfo, GameFeatures.Scenes, url, "The server returned no scene list.");
 
 		return result switch
