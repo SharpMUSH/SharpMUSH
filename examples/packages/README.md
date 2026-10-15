@@ -40,6 +40,8 @@ which games can add as a remote in the admin panel.
 | [`time/`](time/) | Time zones and an IC clock: `+time` shows the game's time and the player's own, `+time 8pm Pacific` converts a time (with a Discord timestamp), `+timezone` keeps the player's zone in `TZ` as PennMUSH does, and a Clock object holds the IC calendar settings and the functions other packages read the time through |
 | [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (who-where and finger register theirs) |
 | [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
+| [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
+| [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
 
 ## The manifest: `package.yaml`
 
@@ -49,7 +51,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.6 the engine range)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.6 the engine range, 1.7 plugins)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -61,6 +63,7 @@ convention_prefix: BBS_         # optional — advisory attr prefix, not enforce
 requires_server: ">=0.1"        # optional — the lowest SharpMUSH version it runs on
 verified_server: "2.0"          # optional — the newest SharpMUSH version it was tested on (format 1.6)
 maximum_server: "2"             # optional — only for a known break: the newest it runs on (format 1.6)
+plugins: [scene]                # optional (format 1.7) — plugins its code calls; it installs only while they run
 
 depends:                        # optional — other packages this one requires
   - volund-core: ">=1.0"        # shorthand: id + version constraint

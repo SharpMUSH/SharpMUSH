@@ -105,7 +105,7 @@ public partial class PackageInstallService
 
 		return new PackagePlanInputs(
 			manifest, installed, installedObjects, baselines, allInstalled, otherManaged, live,
-			wellKnown, configureAnswers, crossPackageObjids, structureBaselines);
+			wellKnown, configureAnswers, crossPackageObjids, structureBaselines, RunningPlugins(manifest));
 	}
 
 	/// <summary>

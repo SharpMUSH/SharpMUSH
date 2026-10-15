@@ -18,6 +18,7 @@ public sealed record InstalledPackageRecord
 	public string? PastMaximumServer { get; init; }
 	public string? PastMaximum { get; init; }
 	public string? PastMaximumAt { get; init; }
+	public string[]? Plugins { get; init; }
 }
 
 /// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.PackageObjectRecord</c>.</summary>

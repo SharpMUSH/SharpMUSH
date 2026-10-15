@@ -11,7 +11,8 @@ public class AccountService(
 	IPasswordService passwordService,
 	IAccountSessionStore accountSessionStore,
 	IBanEnforcer? banEnforcer = null,
-	IAccountClaimsInvalidator? claimsInvalidator = null) : IAccountService
+	IAccountClaimsInvalidator? claimsInvalidator = null,
+	Lazy<IEventService>? events = null) : IAccountService
 {
 
 	public async ValueTask<AccountSignIn> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
@@ -162,7 +163,9 @@ public class AccountService(
 	/// </remarks>
 	public async ValueTask LinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
 	{
-		await database.LinkCharacterToAccountAsync(accountId, characterRef, ct);
+		var wasHere = await HeldByAsync(accountId, characterRef, ct);
+		if (await database.LinkCharacterToAccountAsync(accountId, characterRef, ct) is null && !wasHere)
+			await RaiseLinkAsync(accountId, characterRef, ct);
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
 	}
@@ -209,8 +212,12 @@ public class AccountService(
 	{
 		// The store checks for another holder inside the write, so two claims racing for one character
 		// cannot both land.
+		var wasHere = await HeldByAsync(accountId, character.Object.DBRef, ct);
 		if (await database.LinkCharacterToAccountAsync(accountId, character.Object.DBRef, ct) is { } holder)
 			return new LinkedElsewhere(character, holder);
+
+		if (!wasHere)
+			await RaiseLinkAsync(accountId, character.Object.DBRef, ct);
 
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
@@ -226,7 +233,10 @@ public class AccountService(
 		if (characterRef.Number == 1)
 			return new Error<string>("God cannot be unlinked from its account.");
 
+		var wasHere = await HeldByAsync(accountId, characterRef, ct);
 		await database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct);
+		if (wasHere)
+			await RaiseUnlinkAsync(accountId, characterRef, ct);
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
 		return new Success();
@@ -234,6 +244,29 @@ public class AccountService(
 
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default)
 		=> database.GetAccountForCharacterAsync(characterRef, ct);
+
+	private async ValueTask<bool> HeldByAsync(string accountId, DBRef characterRef, CancellationToken ct)
+		=> (await database.GetAccountForCharacterAsync(characterRef, ct))?.Id == accountId;
+
+	/// <summary>
+	/// <c>PLAYER`LINK</c> / <c>PLAYER`UNLINK</c>, raised here because every route to a link (commands, the portal,
+	/// claims, setup) passes through this service. The objid is read back so a caller holding a bare dbref still
+	/// hands softcode a full one.
+	/// </summary>
+	private async ValueTask RaiseLinkAsync(string accountId, DBRef characterRef, CancellationToken ct)
+	{
+		if (events is not null)
+			await events.Value.TriggerEventAsync(SharpEvents.PlayerLink, null, await ObjidAsync(characterRef, ct), accountId);
+	}
+
+	private async ValueTask RaiseUnlinkAsync(string accountId, DBRef characterRef, CancellationToken ct)
+	{
+		if (events is not null)
+			await events.Value.TriggerEventAsync(SharpEvents.PlayerUnlink, null, await ObjidAsync(characterRef, ct), accountId);
+	}
+
+	private async ValueTask<string> ObjidAsync(DBRef characterRef, CancellationToken ct)
+		=> (await objects.GetBaseObjectNodeAsync(characterRef, ct) is { } found ? found.DBRef : characterRef).ToString();
 
 	public async ValueTask<bool> IsGodsAccountAsync(string accountId, CancellationToken ct = default)
 		=> await database.GetAccountForCharacterAsync(new DBRef(1), ct) is { } holder && holder.Id == accountId;
