@@ -5453,6 +5453,90 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Une image avec un avertissement de contenu reste hors de la bibliothèque d'images. Retirez l'avertissement pour la partager.</value>
   </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Ajouter au calendrier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Ajouter le programme à votre calendrier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Votre application de calendrier affiche chaque scène à votre heure locale et vérifie les changements toutes les heures.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Fermer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Scènes publiques</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Toutes les scènes publiques du programme. Tout le monde peut utiliser cette adresse.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Votre lien privé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Ajoute les scènes privées que ce personnage peut voir. Toute personne ayant le lien peut le lire : gardez-le pour vous.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Seulement les scènes que je mène ou que j’ai rejointes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Cette adresse n’est affichée qu’une fois. Copiez-la dans votre application de calendrier avant de quitter la page.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Vous avez créé un lien privé le {0}. Créez-en un nouveau pour revoir son adresse ; l’ancien cessera de fonctionner.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Créer mon lien privé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Créer un nouveau lien</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Le désactiver</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Adresse du calendrier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Copier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Adresse du calendrier copiée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>S’abonner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Enregistrement du brouillon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Brouillon enregistré</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Brouillon sur cet appareil uniquement</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidGraph" xml:space="preserve">
     <value>Diagramme</value>
     <comment>MT</comment>
