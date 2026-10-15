@@ -268,6 +268,29 @@ public class StatsWidgetTests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("WidUnavailable");
 	}
 
+	/// <summary>The scene system turned on while the widget is shown: its tile appears without a reload.</summary>
+	[TUnit.Core.Test]
+	public async Task TheScenesTile_FollowsTheSceneSystemBeingTurnedOn()
+	{
+		Wire(this, new StatsHandler());
+		List<string> features = [];
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, features: features);
+		Services.AddSingleton<ServerInfoService>(serverInfo);
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (TileValue(cut.Markup, "WidPlayersOnline") == "—") throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).DoesNotContain("WidActiveScenes");
+
+		features.Add("scenes");
+		serverInfo.Refresh();
+
+		cut.WaitForAssertion(() => TileValue(cut.Markup, "WidActiveScenes"), TimeSpan.FromSeconds(5));
+		await Assert.That(TileValue(cut.Markup, "WidActiveScenes")).IsEqualTo("0");
+	}
+
 	/// <summary>A count that failed is asked for again, so the tile fills in once the game is back.</summary>
 	[TUnit.Core.Test]
 	public async Task AFailedCount_IsAskedForAgain_AndFillsInOnceTheGameAnswers()

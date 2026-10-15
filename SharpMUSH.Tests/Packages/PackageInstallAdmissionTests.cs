@@ -3,6 +3,7 @@ using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -487,6 +488,71 @@ public class PackageInstallAdmissionTests
 		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo(new[] { first["keep"], first["dropped"] }.Order().ToArray());
 		await Assert.That(await IsGoingAsync(first["dropped"])).IsFalse();
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
+
+	/// <summary>An installer that sees the plugins in <paramref name="running"/> running and no others.</summary>
+	private PackageInstallService InstallerRunning(ISet<string> running)
+	{
+		var services = WebAppFactoryArg.Services;
+		var plugins = Substitute.For<IPluginManager>();
+		plugins.Registration(Arg.Any<string>())
+			.Returns(call => running.Contains(call.Arg<string>()) ? new PluginRegistration(false, 0, 0) : null);
+		return new PackageInstallService(
+			Database, Database, Database, Database, Registry, Applications,
+			services.GetRequiredService<IPackagePlanService>(),
+			services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			services.GetRequiredService<IPackageLifecycleRunner>(),
+			services.GetRequiredService<IPluginPackageInstaller>(),
+			services.GetRequiredService<IMediator>(),
+			services.GetRequiredService<IPackageOperationGate>(),
+			services.GetRequiredService<ILockService>(),
+			services.GetRequiredService<IPackageDeclarationService>(),
+			services.GetRequiredService<IPackageSettingService>(),
+			services.GetRequiredService<IPackageWikiService>(),
+			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
+			services.GetRequiredService<EngineVersion>(),
+			new Lazy<IPluginManager>(plugins));
+	}
+
+	private async Task<IReadOnlyList<string>> PluginsOfAsync(string packageId) =>
+		(await Registry.GetInstalledPackageAsync(packageId)).Expect<InstalledPackageRecord>().Plugins ?? [];
+
+	/// <summary>A rollback puts back the plugins the revision named, so disabling a plugin finds what needs it.</summary>
+	[Test]
+	public async Task Rollback_RestoresThePluginsTheRevisionNamed()
+	{
+		const string id = "adm-rb-plugins";
+		var installer = InstallerRunning(new HashSet<string> { "adm-rb-plugin" });
+		(await installer.ApplyAsync(ObjectsManifest(id, "1.0", false, "keep"), Request())).Expect<PackageApplyResult>();
+		(await installer.ApplyAsync(ObjectsManifest(id, "2.0", false, "keep") with { Plugins = ["adm-rb-plugin"] },
+			Request(commit: "commit-2"))).Expect<PackageApplyResult>();
+		await Assert.That(await PluginsOfAsync(id)).IsEquivalentTo(["adm-rb-plugin"]);
+
+		(await installer.RollbackAsync(id, 1)).Expect<PackageRollbackResult>();
+		await Assert.That(await PluginsOfAsync(id)).IsEmpty();
+
+		(await installer.RollbackAsync(id, 2)).Expect<PackageRollbackResult>();
+		await Assert.That(await PluginsOfAsync(id)).IsEquivalentTo(["adm-rb-plugin"]);
+		(await installer.UninstallAsync(id)).Expect<Success>();
+	}
+
+	/// <summary>A revision whose code calls a plugin that is not running now is not rolled back to.</summary>
+	[Test]
+	public async Task Rollback_ToARevisionWhosePluginIsNotRunning_IsRefused()
+	{
+		const string id = "adm-rb-plugin-gone";
+		var running = new HashSet<string> { "adm-rb-gone" };
+		var installer = InstallerRunning(running);
+		(await installer.ApplyAsync(ObjectsManifest(id, "1.0", false, "keep") with { Plugins = ["adm-rb-gone"] }, Request()))
+			.Expect<PackageApplyResult>();
+		(await installer.ApplyAsync(ObjectsManifest(id, "2.0", false, "keep"), Request(commit: "commit-2")))
+			.Expect<PackageApplyResult>();
+		running.Clear();
+
+		await Assert.That((await installer.RollbackAsync(id, 1)).Expect<Error<string>>().Value)
+			.Contains("revision 1 needs the adm-rb-gone plugin, which is not running");
+		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().Version).IsEqualTo("2.0.0");
+		(await installer.UninstallAsync(id)).Expect<Success>();
 	}
 
 	[Test]
