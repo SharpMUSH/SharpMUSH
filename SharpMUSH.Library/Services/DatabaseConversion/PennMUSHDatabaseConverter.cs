@@ -5,12 +5,14 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Services.Interfaces;
 using DotNext.Threading;
 using System.Diagnostics;
@@ -34,6 +36,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly IPackageInstallService? _packageInstaller;
 	private readonly IBundledPackageBootstrap? _bundledPackages;
 	private readonly Lazy<IRuntimeRegistrationService>? _registrations;
+	private readonly Lazy<IRoleRegistryService>? _roleRegistry;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
@@ -44,7 +47,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IPackageRegistryService? packageRegistry = null,
 		IPackageInstallService? packageInstaller = null,
 		IBundledPackageBootstrap? bundledPackages = null,
-		Lazy<IRuntimeRegistrationService>? registrations = null)
+		Lazy<IRuntimeRegistrationService>? registrations = null,
+		Lazy<IRoleRegistryService>? roleRegistry = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
@@ -55,26 +59,19 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_packageInstaller = packageInstaller;
 		_bundledPackages = bundledPackages;
 		_registrations = registrations;
+		_roleRegistry = roleRegistry;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)
-	{
-		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
-
-		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
-		return await ConvertDatabaseAsync(pennDatabase, cancellationToken);
-	}
+		=> await ConvertDatabaseAsync(await ReadDatabaseAsync(new DatabaseImportFiles(databaseFilePath), cancellationToken),
+			cancellationToken);
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(
 		string databaseFilePath,
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default)
-	{
-		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
-
-		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
-		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
-	}
+		=> await ConvertDatabaseAsync(await ReadDatabaseAsync(new DatabaseImportFiles(databaseFilePath), cancellationToken),
+			progress, cancellationToken);
 
 	public Task<ConversionResult> ConvertDatabaseAsync(
 		string databaseFilePath,
@@ -83,15 +80,53 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		CancellationToken cancellationToken = default)
 		=> ConvertDatabaseAsync(databaseFilePath, mailDatabaseFilePath, null, progress, cancellationToken);
 
-	public async Task<ConversionResult> ConvertDatabaseAsync(
+	public Task<ConversionResult> ConvertDatabaseAsync(
 		string databaseFilePath,
 		string? mailDatabaseFilePath,
 		string? chatDatabaseFilePath,
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default)
-	{
-		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
+		=> ConvertDatabaseAsync(new DatabaseImportFiles(databaseFilePath, mailDatabaseFilePath, chatDatabaseFilePath), progress,
+			cancellationToken);
 
+	public async Task<ConversionResult> ConvertDatabaseAsync(
+		DatabaseImportFiles files,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+		=> await ConvertDatabaseAsync(await ReadDatabaseAsync(files, cancellationToken), progress, cancellationToken);
+
+	/// <summary>
+	/// Reads the files into the import's model, in the format asked for or the one the database's first lines
+	/// show: a PennMUSH outdb with its maildb and chatdb, a RhostMUSH flatfile with its mail dumps, or a TinyMUX
+	/// flatfile with its <c>mail.db</c> and <c>comsys.db</c>.
+	/// </summary>
+	private async Task<PennMUSHDatabase> ReadDatabaseAsync(DatabaseImportFiles files, CancellationToken cancellationToken)
+	{
+		var dialect = DatabaseFormatSniffer.Resolve(files);
+		_logger.LogInformation("Starting conversion of {Dialect} database from: {FilePath}", dialect, files.Database);
+
+		return dialect switch
+		{
+			DatabaseDialect.RhostMUSH => await ReadRhostDatabaseAsync(files, cancellationToken),
+			DatabaseDialect.TinyMUX => await ReadTinyMuxAsync(files, cancellationToken),
+			_ => await ReadPennDatabaseAsync(files.Database, files.Mail, files.Chat, cancellationToken)
+		};
+	}
+
+	private static async Task<PennMUSHDatabase> ReadRhostDatabaseAsync(DatabaseImportFiles files, CancellationToken cancellationToken)
+	{
+		var database = await RhostDatabaseTranslator.ReadAsync(files.Database, files.Mail, files.MailFolders, cancellationToken);
+		if (!string.IsNullOrEmpty(files.Chat))
+		{
+			database.ImportNotes.Add("The chat database that came with the RhostMUSH flatfile was not read: RhostMUSH has no chatdb.");
+		}
+
+		return database;
+	}
+
+	private async Task<PennMUSHDatabase> ReadPennDatabaseAsync(string databaseFilePath, string? mailDatabaseFilePath,
+		string? chatDatabaseFilePath, CancellationToken cancellationToken)
+	{
 		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
 		if (!string.IsNullOrEmpty(mailDatabaseFilePath))
 		{
@@ -121,7 +156,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
-		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+		return pennDatabase;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(PennMUSHDatabase pennDatabase, CancellationToken cancellationToken = default)
@@ -136,12 +171,18 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		// Per-conversion, never a field: the converter is a singleton, so state kept on it is shared
 		// with every other import running at the same time. See PennMUSHConversionContext.
-		var context = new PennMUSHConversionContext();
+		var context = new PennMUSHConversionContext { SourceName = pennDatabase.SourceName };
 		var errors = context.Errors;
 		var warnings = context.Warnings;
+		warnings.AddRange(pennDatabase.ImportNotes);
+		var rewrites = pennDatabase.SoftcodeRewrites;
+		if (rewrites.Count > 0)
+		{
+			warnings.Add(RewriteSummary(pennDatabase.SourceName, rewrites));
+		}
 
 		var stopwatch = Stopwatch.StartNew();
-		var result = new ConversionResult();
+		var result = new ConversionResult { SourceName = pennDatabase.SourceName, SoftcodeRewrites = rewrites };
 
 		var totalObjects = pennDatabase.Objects.Count;
 		var playersConverted = 0;
@@ -155,7 +196,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var channelsConverted = 0;
 		var channelMembersConverted = 0;
 
-		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
+		_logger.LogInformation("Converting {Count} {Source} objects to SharpMUSH format", totalObjects, pennDatabase.SourceName);
 
 		void ReportProgress(string phase, double percentComplete)
 		{
@@ -199,6 +240,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Objects created", 0.25);
 
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
+			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
@@ -217,7 +259,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Channels imported", 0.97);
 
 			await ReinstallPackagesAsync(context);
-			await EnablePennMUSHCompatibilityAsync(context, cancellationToken);
+			await EnableSourceOptionsAsync(pennDatabase, context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
 
@@ -257,41 +299,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return result;
 	}
 
-	/// <summary>
-	/// Turns on <c>paren_groups</c> and <c>http_qregisters</c> in the configuration of the world being
-	/// written. PennMUSH softcode writes a literal parenthesis inside a function's arguments unescaped,
-	/// which SharpMUSH reads as PennMUSH does only with paren_groups on, and reads an @http response's
-	/// status and content type from q-registers. Written through the Mediator, like the objects, so it
-	/// lands in the same world, and signalled so a running game rereads its configuration.
-	/// </summary>
-	/// <remarks>
-	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
-	/// and the options are left for the administrator to set.
-	/// </remarks>
-	private async ValueTask EnablePennMUSHCompatibilityAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
+	/// <summary>The warning that heads the report when the import rewrote softcode, pointing at the full list.</summary>
+	internal static string RewriteSummary(string sourceName, IReadOnlyCollection<SoftcodeRewrite> rewrites)
 	{
-		var warnings = context.Warnings;
-		try
-		{
-			var options = _options.CurrentValue;
-			if (options.Compatibility is { ParenGroups: true, HttpQRegisters: true }) return;
-
-			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
-				options with
-				{
-					Compatibility = options.Compatibility with { ParenGroups = true, HttpQRegisters = true },
-					Database = context.WrittenDatabaseOptions ?? options.Database
-				}), cancellationToken);
-			_configurationReload?.SignalChange();
-			_logger.LogInformation("Turned on paren_groups and http_qregisters for the imported PennMUSH softcode");
-		}
-		catch (Exception ex) when (ex is not OperationCanceledException)
-		{
-			_logger.LogWarning(ex, "Could not turn on paren_groups and http_qregisters for the imported PennMUSH softcode");
-			warnings.Add($"paren_groups and http_qregisters could not be turned on ({ex.Message}); imported softcode " +
-				"that writes literal parentheses unescaped or reads @http's %q<status> needs them: set both to yes in the " +
-				"configuration and reload it.");
-		}
+		var byHand = rewrites.Count(rewrite => rewrite.ByHand);
+		return $"Softcode was rewritten in {rewrites.Count} attribute(s) so SharpMUSH reads it as {sourceName} did; " +
+			"each one is listed under Rewritten softcode" +
+			(byHand > 0 ? $", and {byHand} of them say check by hand where the rewrite could not carry the code over exactly." : ".");
 	}
 
 	/// <summary>
@@ -345,7 +359,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			removed.Add((uint)number);
 			context.Warnings.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
-				"PennMUSH has no such object.");
+				$"{context.SourceName} has no such object.");
 		}
 
 		await _mediator.Send(new ReleaseTrailingDbrefsCommand(), cancellationToken);
@@ -1389,6 +1403,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await SetHomeOrDropToAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetFlagsAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetPowersAsync(pennObj, sharpObj, context, cancellationToken);
+		await DenyPowersAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetWarningsAsync(pennObj, sharpObj, context, cancellationToken);
 	}
 
@@ -1662,7 +1677,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (reusedSender.Count > 0)
 		{
 			context.Warnings.Add($"{reusedSender.Values.Sum()} mail message(s) name a sender whose creation time differs from " +
-				$"the one the message recorded, so PennMUSH showed them as from !Purged!; they are imported as from that dbref " +
+				$"the one the message recorded, so {context.SourceName} showed them as from !Purged!; they are imported as from that dbref " +
 				$"({Tally(reusedSender)})");
 		}
 
@@ -2169,6 +2184,39 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 	}
 
+	/// <summary>
+	/// Takes away the powers the source took from the object (a RhostMUSH depower): a deny on each power's
+	/// permission, which outweighs every role the object holds. Written straight to the role registry, as
+	/// the loader writes everything else, with no actor to check; the object's grants are then reread.
+	/// </summary>
+	private async Task DenyPowersAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (pennObj.DeniedPowers.Count == 0)
+		{
+			return;
+		}
+
+		if (_roleRegistry is null)
+		{
+			context.NoteUnconverted("Depowers, which need the role registry this import runs without", pennObj.DBRef);
+			return;
+		}
+
+		foreach (var name in pennObj.DeniedPowers)
+		{
+			if (GamePowers.Find(name) is not { } power)
+			{
+				context.NoteUnconverted($"Depower of {name}, which is not a SharpMUSH power", pennObj.DBRef);
+				continue;
+			}
+
+			await _roleRegistry.Value.SetObjectOverrideAsync(target.Object().Key, power.Scope, PermissionState.Deny);
+		}
+
+		await _mediator.Send(new InvalidateGrantsCommand(target.Object().Key), cancellationToken);
+	}
+
 	private async Task SetWarningsAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
@@ -2234,7 +2282,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
 
-			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions, listSeparators);
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions, listSeparators, pennDatabase.SharesPipingSubstitutions);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2299,22 +2347,22 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (pipedOutput.Count > 0)
 		{
 			var more = pipedOutput.Count > pipedOutput.Shown.Count ? $" and {pipedOutput.Count - pipedOutput.Shown.Count} more" : string.Empty;
-			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which PennMUSH evaluates to > and SharpMUSH to the last command's output; " +
+			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which {pennDatabase.SourceName} evaluates to > and SharpMUSH to the last command's output; " +
 				$"softcode is not rewritten, so write > where > was meant: {string.Join(", ", pipedOutput.Shown)}{more}");
 		}
 
 		if (piping.Count > 0)
 		{
 			var more = piping.Count > piping.Shown.Count ? $" and {piping.Count - piping.Shown.Count} more" : string.Empty;
-			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which PennMUSH reads as a plain | and SharpMUSH as command piping; " +
+			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which {pennDatabase.SourceName} reads as a plain | and SharpMUSH as command piping; " +
 				$"softcode is not rewritten, so write | where | was meant: {string.Join(", ", piping.Shown)}{more}");
 		}
 
-		if (tinyMuxSubstitutions.Count > 0)
+		if (tinyMuxSubstitutions.Count > 0 && pennDatabase.Dialect == DatabaseDialect.PennMUSH)
 		{
 			var more = tinyMuxSubstitutions.Count > tinyMuxSubstitutions.Shown.Count
 				? $" and {tinyMuxSubstitutions.Count - tinyMuxSubstitutions.Shown.Count} more" : string.Empty;
-			warnings.Add($"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which PennMUSH evaluates to m and =< and SharpMUSH " +
+			warnings.Add($"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which {pennDatabase.SourceName} evaluates to m and =< and SharpMUSH " +
 				"to the running command and an attribute or argument; softcode is not rewritten, so write m or =< where they were meant: " +
 				$"{string.Join(", ", tinyMuxSubstitutions.Shown)}{more}");
 		}
@@ -2360,16 +2408,28 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// Here they are the last command's output and command piping. It also records each that uses
 	/// <c>%m</c> or <c>%=&lt;</c>, which PennMUSH evaluates to <c>m</c> and <c>=&lt;</c> and SharpMUSH, as
 	/// TinyMUX does, to the running command and an attribute or argument; and each that uses <c>%*&lt;</c>,
-	/// which PennMUSH evaluates to <c>*&lt;</c> and SharpMUSH to a marked list separator.
+	/// which PennMUSH, RhostMUSH and TinyMUX evaluate to <c>*&lt;</c> and SharpMUSH to a marked list separator. A
+	/// source that reads the others as SharpMUSH does (<paramref name="sharesPiping"/>, TinyMUX) is checked only
+	/// for <c>%&gt;</c> and <c>%*&lt;</c>.
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
-		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions, AttributeMentions listSeparators)
+		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions, AttributeMentions listSeparators, bool sharesPiping)
 	{
 		foreach (var pennAttr in pennObj.Attributes)
 		{
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '>'))
 			{
 				pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (HasSubstitution(pennAttr.Value, "*<"))
+			{
+				listSeparators.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (sharesPiping)
+			{
+				continue;
 			}
 
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '|') || PipesCommand(pennAttr.Value))
@@ -2381,11 +2441,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				|| HasSubstitution(pennAttr.Value, "=<"))
 			{
 				tinyMuxSubstitutions.Add($"#{imported.Number}/{pennAttr.Name}");
-			}
-
-			if (HasSubstitution(pennAttr.Value, "*<"))
-			{
-				listSeparators.Add($"#{imported.Number}/{pennAttr.Name}");
 			}
 		}
 	}

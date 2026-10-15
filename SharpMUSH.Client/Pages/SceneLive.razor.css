@@ -117,6 +117,28 @@
     gap: 8px;
 }
 
+.scene-live-bar-end {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* Where the draft is kept: quiet, beside the format menu. */
+.scene-live-saved {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.scene-live-saved[data-state="DeviceOnly"] {
+    color: var(--warn);
+}
+
 .scene-live-compose--ooc ::deep .kit-chip--on {
     background: var(--ooc-icon-bg);
     color: var(--ooc-icon-fg);
@@ -223,7 +245,28 @@
     text-align: center;
 }
 
-/* Phone: tighter edges, the archive as an icon, and no keyboard hint where there is no keyboard. */
+/* While the on-screen keyboard is up the page is pinned to the part of the screen the keyboard leaves (shell.css,
+   which has the position: a fixed rule here would answer to the page's query container), as tall as that part; the
+   header gives that little room its title only. */
+.scene-live-page--keyboard {
+    height: var(--vv-height, 100%);
+}
+
+.scene-live-page--keyboard .scene-live-kicker {
+    display: none;
+}
+
+.scene-live-page--keyboard .scene-live-title {
+    margin: 0;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Phone: tighter edges, the archive as an icon, and no keyboard hint where there is no keyboard. Each pose is a
+   card, the portrait and name above the text so the text has the whole width, and the composer is a sheet: the
+   mode and the format menu in a row, the field beside a round Send. */
 @container page (max-width: 48rem) {
     .scene-live-header {
         padding: 10px 14px;
@@ -245,14 +288,101 @@
         padding: 8px 14px;
     }
     .scene-live-story {
-        padding: 12px 14px 16px;
+        padding: 8px 10px 12px;
     }
+
+    .scene-live-story ::deep .story-row--prose {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 6px;
+        margin: 8px 0;
+        padding: 12px 14px 14px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface);
+    }
+    .scene-live-story ::deep .story-row--prose .story-main {
+        display: contents;
+    }
+    .scene-live-story ::deep .story-row--prose .story-portrait-btn {
+        align-self: center;
+    }
+    .scene-live-story ::deep .story-row--prose .story-portrait {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+    }
+    .scene-live-story ::deep .story-row--prose .story-head {
+        align-items: center;
+    }
+    .scene-live-story ::deep .story-row--prose .story-body,
+    .scene-live-story ::deep .story-row--prose .story-editor {
+        grid-column: 1 / -1;
+    }
+    .scene-live-story ::deep .story-row--band {
+        margin: 8px 0;
+    }
+    .scene-live-story ::deep .kit-ooc {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 16px;
+    }
+
+    /* The sheet: edge to edge above the bottom bar, its top corners rounded. */
     .scene-live-compose {
-        padding: 0 8px 8px;
+        padding: 0;
+    }
+    .scene-live-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "bar bar"
+            "field send";
+        align-items: end;
+        gap: 6px 8px;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+        border-width: 1px 0 0;
+        border-radius: 18px 18px 0 0;
+        background: var(--surface-2);
+    }
+    .scene-live-bar {
+        grid-area: bar;
+    }
+    .scene-live-compose ::deep .scene-live-field {
+        grid-area: field;
+        min-width: 0;
+    }
+    .scene-live-foot {
+        display: contents;
+    }
+    .scene-live-send {
+        grid-area: send;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    .scene-live-send ::deep .mud-icon-root {
+        font-size: 20px;
+    }
+    .scene-live-send-label,
+    .scene-live-saved-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
     .scene-live-compose ::deep .scene-live-input {
-        min-height: calc(2lh + 4px);
-        max-height: calc(6lh + 4px);
+        min-height: calc(1lh + 20px);
+        max-height: calc(6lh + 20px);
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: var(--surface);
     }
     .scene-live-closed {
         width: calc(100% - 16px);

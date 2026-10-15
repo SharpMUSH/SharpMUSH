@@ -113,9 +113,8 @@ public static class ListSeparators
 
 		var parts = new List<MarkupText>(runs.Length * 2 + 1);
 		var position = 0;
-		foreach (var run in runs)
+		foreach (var run in runs.Where(run => run.Markups.Contains(ListSeparatorMarkup.Instance)))
 		{
-			if (!run.Markups.Contains(ListSeparatorMarkup.Instance)) continue;
 			if (run.Start > position) parts.Add(text.Substring(position, run.Start - position));
 			parts.Add(MarkupText.Wrap(Shown, text.Substring(run.Start, run.Length)));
 			position = run.End;

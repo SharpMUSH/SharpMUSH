@@ -160,6 +160,101 @@ internal static class DesCrypt
 		return new string(output);
 	}
 
+	/// <summary>
+	/// BSDi's extended DES <c>crypt(3)</c>: <c>_</c>, four characters of iteration count and four of salt
+	/// (each little-endian in the crypt alphabet), then eleven characters of hash. Every character of the
+	/// password counts: past the first eight, the key is encrypted with itself and the next eight are
+	/// folded in. The 24-bit salt swaps expansion bits as the two-character salt does, and the zero block
+	/// is encrypted <c>count</c> times rather than 25.
+	/// </summary>
+	public static string ExtendedCrypt(ReadOnlySpan<byte> key, string setting)
+	{
+		ArgumentOutOfRangeException.ThrowIfLessThan(setting.Length, 9, nameof(setting));
+
+		int count = 0, salt = 0;
+		for (var i = 0; i < 4; i++)
+		{
+			count |= FromCryptAlphabet(setting[1 + i]) << (6 * i);
+			salt |= FromCryptAlphabet(setting[5 + i]) << (6 * i);
+		}
+
+		Span<byte> keyBits = stackalloc byte[64];
+		keyBits.Clear();
+		FoldKey(keyBits, key[..Math.Min(key.Length, 8)]);
+		var subkeys = Subkeys(keyBits);
+
+		Span<byte> plain = stackalloc byte[48];
+		for (var i = 0; i < 48; i++)
+		{
+			plain[i] = (byte)(Expansion[i] - 1);
+		}
+
+		for (var rest = key.Length > 8 ? key[8..] : ReadOnlySpan<byte>.Empty; !rest.IsEmpty; rest = rest[Math.Min(rest.Length, 8)..])
+		{
+			// The key is encrypted with itself, unsalted, once; the next eight characters are folded in.
+			Encrypt(keyBits, subkeys, plain);
+			FoldKey(keyBits, rest[..Math.Min(rest.Length, 8)]);
+			foreach (var subkey in subkeys)
+			{
+				CryptographicOperations.ZeroMemory(subkey);
+			}
+
+			subkeys = Subkeys(keyBits);
+		}
+
+		Span<byte> expansion = stackalloc byte[48];
+		plain.CopyTo(expansion);
+		for (var bit = 0; bit < 24; bit++)
+		{
+			if (((salt >> bit) & 1) != 0)
+			{
+				(expansion[bit], expansion[bit + 24]) = (expansion[bit + 24], expansion[bit]);
+			}
+		}
+
+		Span<byte> block = stackalloc byte[66];
+		block.Clear();
+		// A count of zero runs once, as libxcrypt does.
+		for (var i = 0; i < Math.Max(count, 1); i++)
+		{
+			Encrypt(block[..64], subkeys, expansion);
+		}
+
+		CryptographicOperations.ZeroMemory(keyBits);
+		foreach (var subkey in subkeys)
+		{
+			CryptographicOperations.ZeroMemory(subkey);
+		}
+
+		Span<char> output = stackalloc char[20];
+		setting.AsSpan(0, 9).CopyTo(output);
+		for (var i = 0; i < 11; i++)
+		{
+			var value = 0;
+			for (var bit = 0; bit < 6; bit++)
+			{
+				value = (value << 1) | block[6 * i + bit];
+			}
+
+			output[i + 9] = ToCryptAlphabet(value);
+		}
+
+		return new string(output);
+	}
+
+	/// <summary>XORs each character, shifted left one bit as <c>crypt</c> uses it, into the key's bytes.</summary>
+	private static void FoldKey(Span<byte> keyBits, ReadOnlySpan<byte> characters)
+	{
+		for (var i = 0; i < characters.Length; i++)
+		{
+			var shifted = (byte)(characters[i] << 1);
+			for (var bit = 0; bit < 8; bit++)
+			{
+				keyBits[i * 8 + bit] ^= (byte)((shifted >> (7 - bit)) & 1);
+			}
+		}
+	}
+
 	private static byte[][] Subkeys(ReadOnlySpan<byte> keyBits)
 	{
 		Span<byte> c = stackalloc byte[28];

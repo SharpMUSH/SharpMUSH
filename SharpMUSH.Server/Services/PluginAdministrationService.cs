@@ -221,9 +221,10 @@ public sealed class PluginAdministrationService(
 
 	/// <summary>
 	/// The installed packages that need plugin <paramref name="pluginId"/>: those that name it in <c>plugins:</c>, the
-	/// packages that depend on the package that installed it, and so on down, nearest first.
+	/// packages that depend on the package that installed it, and so on down. Each comes after the listed packages it
+	/// depends on, so the list read backwards uninstalls a dependent before what it depends on.
 	/// </summary>
-	private static IReadOnlyList<string> Dependents(string pluginId, string? package,
+	public static IReadOnlyList<string> Dependents(string pluginId, string? package,
 		IReadOnlyList<InstalledPackageRecord> installedPackages, IReadOnlyList<PackageDependencyRecord> dependencies)
 	{
 		var installed = installedPackages.Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -253,7 +254,41 @@ public sealed class PluginAdministrationService(
 			}
 		}
 
-		return found;
+		return DependenciesFirst(found, dependencies);
+	}
+
+	/// <summary>
+	/// <paramref name="packages"/> with each one after those of them it depends on, otherwise in the order given. Two
+	/// packages that both name a plugin are both found first, though one may depend on the other.
+	/// </summary>
+	private static List<string> DependenciesFirst(List<string> packages, IReadOnlyList<PackageDependencyRecord> dependencies)
+	{
+		var ordered = new List<string>();
+		var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var package in packages)
+		{
+			Visit(package);
+		}
+
+		return ordered;
+
+		void Visit(string package)
+		{
+			if (!visiting.Add(package))
+			{
+				return;
+			}
+
+			foreach (var dependency in dependencies
+				.Where(d => string.Equals(d.PackageId, package, StringComparison.OrdinalIgnoreCase))
+				.Select(d => d.DependsOnId)
+				.Where(id => packages.Contains(id, StringComparer.OrdinalIgnoreCase)))
+			{
+				Visit(dependency);
+			}
+
+			ordered.Add(package);
+		}
 	}
 
 	private bool WasUnloaded(string pluginId)
