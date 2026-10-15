@@ -33,6 +33,17 @@ public static class ApiCall
 	public static Task<ApiResult<T>> GetApiAsync<T>(this HttpClient http, string url, string whenEmpty) =>
 		ReadingAsync<T>(() => http.GetAsync(url), whenEmpty);
 
+	/// <summary>
+	/// GETs from an optional application's API, only while the game has <paramref name="feature"/> (a
+	/// <c>GameFeatures</c> id) on: an application whose plugin is not running has nothing behind its routes, so
+	/// asking is answered without a request. A null <paramref name="serverInfo"/> asks regardless.
+	/// </summary>
+	public static async Task<ApiResult<T>> GetFeatureApiAsync<T>(
+		this HttpClient http, ServerInfoService? serverInfo, string feature, string url, string whenEmpty) =>
+		serverInfo is null || await serverInfo.HasFeatureAsync(feature)
+			? await http.GetApiAsync<T>(url, whenEmpty)
+			: ApiFailure.NotEnabled(feature);
+
 	/// <summary>GETs a <typeparamref name="T"/> read with <paramref name="options"/> rather than the web defaults.</summary>
 	public static Task<ApiResult<T>> GetApiAsync<T>(
 		this HttpClient http, string url, string whenEmpty, JsonSerializerOptions options) =>

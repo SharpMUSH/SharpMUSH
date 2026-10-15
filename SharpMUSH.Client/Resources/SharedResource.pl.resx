@@ -3916,6 +3916,10 @@
     <value>Na początek warto przeczytać wiki, przejrzeć postacie lub dołączyć do sceny.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Na początek warto przeczytać wiki lub przejrzeć postacie.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Czytaj wiki</value>
     <comment>MT</comment>

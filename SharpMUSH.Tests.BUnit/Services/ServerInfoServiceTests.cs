@@ -141,12 +141,13 @@ public class ServerInfoServiceTests
 	}
 
 	[Test]
-	public async Task AFailedReadAssumesANewGamesApplications()
+	public async Task AFailedReadAssumesNoApplication()
 	{
 		using var handler = new CapturingHttpHandler(Unavailable);
 		var service = new ServerInfoService(new SingleClientFactory(handler));
 
-		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse()
+			.Because("the Scene plugin may not be running, and the portal cannot tell");
 		await Assert.That(await service.HasFeatureAsync(GameFeatures.WikiReader)).IsFalse();
 	}
 

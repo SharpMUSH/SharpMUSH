@@ -15,7 +15,7 @@ public class PackagePlanService : IPackagePlanService
 		var manifest = inputs.Manifest;
 		var notes = new List<string>();
 
-		var dependencyIssues = CheckDependenciesAndConflicts(manifest, inputs.AllInstalledPackages);
+		var dependencyIssues = CheckDependenciesAndConflicts(manifest, inputs.AllInstalledPackages, inputs.RunningPlugins ?? new HashSet<string>());
 		var (objects, objidByRef, deletedObjids) = ClassifyObjects(inputs, notes);
 		var attributes = ClassifyAttributes(inputs, objidByRef, deletedObjids, notes);
 		var structure = ClassifyStructure(inputs, objidByRef, deletedObjids, notes);
@@ -46,13 +46,19 @@ public class PackagePlanService : IPackagePlanService
 
 	/// <summary>
 	/// The admission gate every package kind passes before anything is written: each declared
-	/// dependency must be installed at a satisfying version, and no declared conflict may be. The
-	/// plan engine reports these as blockers; a managed install, which has no plan, calls this directly.
+	/// dependency must be installed at a satisfying version, no declared conflict may be, and each
+	/// plugin in <c>plugins:</c> must be running. The plan engine reports these as blockers; a managed
+	/// install, which has no plan, calls this directly.
 	/// </summary>
 	public static IReadOnlyList<PackageDependencyIssue> CheckDependenciesAndConflicts(
-		PackageManifest manifest, IReadOnlyList<InstalledPackageRecord> allInstalled)
+		PackageManifest manifest, IReadOnlyList<InstalledPackageRecord> allInstalled, IReadOnlySet<string> runningPlugins)
 	{
 		var issues = new List<PackageDependencyIssue>();
+		foreach (var plugin in manifest.RequiredPlugins.Where(p => !runningPlugins.Contains(p)))
+		{
+			issues.Add(new PackageDependencyIssue(plugin, "", null, null, IsConflict: false, IsPlugin: true));
+		}
+
 		var installedById = allInstalled.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
 		foreach (var dependency in manifest.Dependencies)

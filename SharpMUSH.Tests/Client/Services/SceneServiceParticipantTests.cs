@@ -33,14 +33,50 @@ public class SceneServiceParticipantTests : IDisposable
 		}
 	}
 
-	private (SceneService, Handler) Build(Dictionary<string, string> bodies)
+	private (SceneService, Handler) Build(Dictionary<string, string> bodies, bool askFeatures = false)
 	{
 		var handler = new Handler(bodies);
 		var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		_clients.Add(http);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
-		return (new SceneService(factory, Substitute.For<IAccountAuthState>()), handler);
+		return (new SceneService(factory, Substitute.For<IAccountAuthState>(), askFeatures ? new ServerInfoService(factory) : null),
+			handler);
+	}
+
+	/// <summary>
+	/// The scene API is the Scene plugin's. A game without the Scene System, or a server the portal cannot ask, is not
+	/// asked for scenes at all: the read is a failure the caller already handles, and no request goes out.
+	/// </summary>
+	[Test]
+	[Arguments("""{"guestsEnabled":true,"mudName":"Test","features":[]}""")]
+	[Arguments(null)]
+	public async Task WithoutTheSceneSystem_NothingIsAsked(string? serverInfo)
+	{
+		var bodies = new Dictionary<string, string>
+		{
+			["/api/scenes/partners?participant=%23312&count=6"] = """[{"dbref":"#313","name":"Ilsa Varn","scenes":4}]""",
+		};
+		if (serverInfo is not null) bodies["/api/server-info"] = serverInfo;
+		var (service, handler) = Build(bodies, askFeatures: true);
+
+		await Assert.That((await service.GetPartnersAsync("#312", 6)).Expect<ApiFailure>().Kind).IsEqualTo(ApiFailureKind.NotFound);
+		await Assert.That((await service.GetActiveScenesAsync()).Expect<ApiFailure>()).IsNotNull();
+		await Assert.That((await service.StreamPosesAsync("42", _ => Task.CompletedTask)).Expect<ApiFailure>()).IsNotNull();
+		await Assert.That(handler.Paths.Where(p => p.StartsWith("/api/scenes"))).IsEmpty();
+	}
+
+	[Test]
+	public async Task WithTheSceneSystem_ScenesAreAsked()
+	{
+		var (service, handler) = Build(new()
+		{
+			["/api/server-info"] = """{"guestsEnabled":true,"mudName":"Test","features":["scenes"]}""",
+			["/api/scenes/partners?participant=%23312&count=6"] = """[{"dbref":"#313","name":"Ilsa Varn","scenes":4}]""",
+		}, askFeatures: true);
+
+		await Assert.That((await service.GetPartnersAsync("#312", 6)).Expect<IReadOnlyList<ScenePartner>>()).Count().IsEqualTo(1);
+		await Assert.That(handler.Paths).Contains("/api/scenes/partners?participant=%23312&count=6");
 	}
 
 	[Test]

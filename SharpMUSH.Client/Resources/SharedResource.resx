@@ -1701,6 +1701,9 @@
   <data name="PkgRequires" xml:space="preserve">
     <value>Requires</value>
   </data>
+  <data name="PkgNeedsPlugin" xml:space="preserve">
+    <value>Needs the {0} plugin, which is not running on this server.</value>
+  </data>
   <data name="PkgNotInstalledSuffix" xml:space="preserve">
     <value> — not installed.</value>
   </data>
@@ -3198,6 +3201,12 @@
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Only you see this.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notices for you</value>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
   </data>
@@ -3256,6 +3265,9 @@
   </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Get started by reading the wiki, browsing characters, or jumping into a scene.</value>
+  </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Get started by reading the wiki or browsing characters.</value>
   </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Read the Wiki</value>
