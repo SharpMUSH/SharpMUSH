@@ -42,20 +42,21 @@ Output: with `/inline` or `/inplace`, the output of the last command run; queued
 
 If `<expr>` is a regexp or a wildcard glob, then $0-$9 will be set with capture data. (In wildcard globbing, every wildcard captures.)
 
-In an `<action>` or the `<default>`, "#$" stands for the evaluated `<string>`, and a queued `<action>` keeps it. The value is never evaluated as code. In nested switches #$ refers to the outermost one whose `<action>` it is written in; for the current one, use %$0 or stext(0). Like switch()'s, #$ counts only in the `<action>` as written: in an `<expr>`, in the code of an attribute the `<action>` triggers or calls, and inside lit() or after \, it is plain text.
+In an `<action>` or the `<default>`, "#$" stands for the evaluated `<string>`, and a queued `<action>` keeps it. The value is never evaluated as code. In nested switches #$ refers to the outermost one whose `<action>` it is written in; for the current one, use %$0 or stext(0). Like switch()'s, #$ counts only in the `<action>` as written: in an `<expr>`, in the code of an attribute the `<action>` triggers or calls, and inside lit() or after \, it is plain text. With the `innermost_tokens` option on, #$ names the innermost switch instead, wherever it is written. See [compatibility config innermost loop tokens].
 
 `@switch/all` runs `<action>`s for all matching `<expr>`s. Default for @switch.<br>
 `@switch/first` runs `<action>` for the first matching `<expr>` only. Same as @select, and often the desired behaviour.<br>
 `@switch/notify` queues "@notify me" after the last `<action>`.<br>
 `@switch/inline` runs all actions in place, instead of creating a new queue entry for them.<br>
 `@switch/regexp` makes `<expr>`s case-insensitive regular expressions, not wildcard/glob patterns.
+`@switch/regall` is `@switch/all/regexp`, and `@switch/regfirst` is `@switch/first/regexp`. Both spellings come from RhostMUSH.
 
 ## Inline execution
 
 When using `@switch/inline`, an @break in an `<action>` will stop the calling action list (and any further `<action>`s) from running. Each `<action>` will also be able to see/alter the q-registers for the calling action list. The following switches can be used with `/inline` to alter this behaviour:
 - /nobreak: @breaks in `<action>` do not effect to the calling action list
 - /localize: q-registers are saved before each `<action>` is run, and restored after it completes
-- /clearreg: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize.
+- /clearregs: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize. `/clearreg`, RhostMUSH's spelling, is the same switch.
 
 `@switch/inplace` is an alias for `@switch/inline/nobreak/localize`.
 

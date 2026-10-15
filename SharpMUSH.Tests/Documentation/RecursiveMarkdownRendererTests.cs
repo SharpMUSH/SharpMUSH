@@ -783,6 +783,22 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	/// <summary>
+	/// A content pack's full link, <c>[[Blinded|Main:blinded]]</c>, runs <c>@wiki main:blinded</c> and shows
+	/// only its display text: <c>Main:</c> is read as the namespace, not as part of the page.
+	/// </summary>
+	[Test]
+	public async Task RenderWikiLink_UnderWikiCommand_FullMainLinkNamesTheMainPage()
+	{
+		var renderer = new SharpMUSH.Implementation.Commands.WikiCommand.WikiCommandRenderer();
+
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("See [[Blinded|Main:blinded]].", renderer);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("See Blinded.");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"@wiki main:blinded\"");
+	}
+
+	/// <summary>
 	/// <c>[[Display Text|Target]]</c> keeps the author's wording on screen while the command still names
 	/// the target page.
 	/// </summary>

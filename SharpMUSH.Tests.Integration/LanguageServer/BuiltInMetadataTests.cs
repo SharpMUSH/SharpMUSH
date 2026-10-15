@@ -106,7 +106,8 @@ public class BuiltInMetadataTests
 		await Assert.That(analyzer.Hover("@emit hello", 0, 2)!.Markdown).Contains("NOEVAL");
 		await Assert.That(analyzer.Complete("Ge", 0, 2).Any(item => item.Label == "get")).IsTrue();
 		var signature = analyzer.SignatureHelp("add(1,2)", 0, 6)!;
-		await Assert.That(signature.Label).IsEqualTo("add(number1, number2, ...)");
+		// add() takes one argument, as TinyMUX's does (add(5) is 5), so the second is optional.
+		await Assert.That(signature.Label).IsEqualTo("add(number1, [number2], ...)");
 		await Assert.That(signature.Parameters.Count).IsEqualTo(2);
 		await Assert.That(signature.ActiveParameter).IsEqualTo(1);
 		var third = analyzer.SignatureHelp("add(1,2,3)", 0, 8)!;

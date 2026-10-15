@@ -108,7 +108,7 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 		}
 
 		var player = connectionService.Get(message.Handle)?.Ref;
-		await eventService.TriggerEventAsync("SOCKET`GMCP", player,
+		await eventService.TriggerEventAsync(SharpEvents.SocketGmcp, player,
 			message.Handle.ToString(CultureInfo.InvariantCulture),
 			message.Package,
 			message.Info,

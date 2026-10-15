@@ -55,6 +55,13 @@ If the #lambda just calls one other function, the form
 
 can be used instead. If the argument count is left out, it defaults to 1.
 
+Inside the code, `%=` is `#LAMBDA/<code>`, the code as it was after the first parse, so a lambda can call itself with `ulambda(%=, ...)`:
+
+```sharp
+  > think ulambda(lit(#lambda/[if(lte(%0,1),1,mul(%0,ulambda(%=,dec(%0))))]),5)
+  120
+```
+
 These anonymous attributes should be used for short and simple pieces of code. Anything long or complicated should go in an actual attribute, for readability and maintainability.
 
 ## List mapping examples

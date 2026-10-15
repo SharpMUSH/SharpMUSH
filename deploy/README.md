@@ -91,6 +91,16 @@ kept beside the world, at `/app/data/lightning.dataprotection-keys`, so it outli
 container. `SHARPMUSH_DATAPROTECTION_PATH` moves it; every replica of the server must read the same one.
 If you move it, put the new path in the backup service's `RESTIC_BACKUP_SOURCES` as well.
 
+The key ring also decrypts the game's secrets (`@secret`: the SQL password, plugin tokens). The world
+holds them only encrypted, so a world restored without its key ring keeps them but cannot read them:
+`@secret` lists each as unreadable until it is set again. A copy of the world on its own opens none of
+them. The restic repository holds both, which is one more reason to keep its password apart from it.
+
+A secret can also come from outside the game, and then overrides the stored value: an environment
+variable `SHARPMUSH_SECRET_<NAME>` (`sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`) or a file named
+for the secret in `/run/secrets` (`SHARPMUSH_SECRETS_PATH` names another directory), where Compose's
+`secrets:` and Kubernetes mount them.
+
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
 

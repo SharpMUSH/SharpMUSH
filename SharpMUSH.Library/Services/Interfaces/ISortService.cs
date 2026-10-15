@@ -27,10 +27,18 @@ public interface ISortService
 		ModifiedTime,
 		AttributeName,
 		UncasedAttributeContent,
-		CasedAttributeContent
+		CasedAttributeContent,
+		/// <summary>Culture-invariant collation, as TinyMUX sorts text: <c>a A b B</c>.</summary>
+		Collated
 	}
 
 	SortInformation StringToSortType(string sortType);
+
+	/// <summary>
+	/// Whether <paramref name="sortType"/> names a sort type, rather than falling back to the
+	/// case-insensitive default as <see cref="StringToSortType"/> does.
+	/// </summary>
+	bool IsSortType(string sortType);
 
 	/// <summary>
 	/// Sorts a list of MStrings according to the specified sort type and order.

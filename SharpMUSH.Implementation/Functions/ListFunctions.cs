@@ -142,7 +142,8 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors,
+				extraArguments: ExtraPredicateArguments(parser, 4));
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.ToPlainText() == "1")
 				.Select(pair => pair.item);
@@ -174,7 +175,8 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors,
+				extraArguments: ExtraPredicateArguments(parser, 4));
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.Truthy(parser))
 				.Select(pair => pair.item);
@@ -548,7 +550,12 @@ public partial class Functions
 			MarkupText.Join(outputSep, list.Where((_, i) => !deleted.Contains(i))));
 	}
 
-	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
+	/// <summary>
+	/// map(): the attribute once per item, the item as %0. Arguments from position 4 on reach it as %1,
+	/// %2, ..., as RhostMUSH passes them. Without any, %1 is the item's position from 1, as PennMUSH
+	/// passes it, unless <c>rhost_map_args</c> is on, when %1 is empty as on RhostMUSH.
+	/// </summary>
+	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep", "argument..."])]
 	public async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -559,17 +566,20 @@ public partial class Functions
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var extras = ExtraPredicateArguments(parser, 4);
+		var withPosition = extras.Count == 0 && !Configuration.CurrentValue.Compatibility.RhostMapArgs;
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors, withPosition: true);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors,
+				withPosition, extras);
 			return errors.Complete(new CallState(MarkupText.Join(sep, lambdaResults)));
 		}
 
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
-				await CallAttributeForEachItemAsync(parser, function, list, errors, withPosition: true)))),
+				await CallAttributeForEachItemAsync(parser, function, list, errors, extras, withPosition)))),
 			CallState refusal => errors.Complete(refusal),
 		};
 	}
@@ -959,8 +969,12 @@ public partial class Functions
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MushText.SplitList(delimiter, list);
 
+		// Without a sort type, mux_collation sorts text the way TinyMUX does: a A b B, not A a b B.
+		var sortInformation = sortType.Length == 0 && Compatibility(parser).MuxCollation
+			? new ISortService.SortInformation(ISortService.SortType.Collated, MoreLinq.OrderByDirection.Ascending, null)
+			: SortService.StringToSortType(sortType);
 		var sorted = SortService.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
-			SortService.StringToSortType(sortType));
+			sortInformation);
 
 		return MarkupText.Join(outputSeparator, await sorted.ToArrayAsync());
 	}
@@ -1576,15 +1590,20 @@ public partial class Functions
 			delimiter = MarkupText.Space;
 		}
 
-		// With four arguments, a non-empty fourth is a sort type and an empty one is the
-		// output separator. With five, the fourth is the sort type and the fifth the separator.
-		var sortArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Empty);
-		var sortType = sortArg.ToPlainText();
-		var outputSeparator = args.Count switch
+		// PennMUSH: with four arguments a non-empty fourth is the sort type, whatever it says, and an
+		// empty one is the output separator. With five, the fourth is the sort type and the fifth the
+		// separator, unless the fourth is text that names no sort type and the fifth names one: that is
+		// TinyMUX's order (list1, list2, delimiter, separator, sort type).
+		var fourth = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Empty);
+		var fifth = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MarkupText.Empty);
+		var (sortType, outputSeparator) = args.Count switch
 		{
-			4 when sortArg.Length == 0 => MarkupText.Empty,
-			5 => args["4"].Message,
-			_ => delimiter
+			4 when fourth.Length == 0 => (string.Empty, MarkupText.Empty),
+			4 => (fourth.ToPlainText(), delimiter),
+			5 when fourth.Length > 0 && !SortService.IsSortType(fourth.ToPlainText())
+				&& SortService.IsSortType(fifth.ToPlainText()) => (fifth.ToPlainText(), fourth),
+			5 => (fourth.ToPlainText(), args["4"].Message),
+			_ => (string.Empty, delimiter)
 		};
 		if (sortType.Length == 0)
 		{
@@ -1610,7 +1629,8 @@ public partial class Functions
 
 	/// <summary>
 	/// Evaluates a #lambda or #apply expression for each item in a list, the item as %0 and, when
-	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them.
+	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them;
+	/// <paramref name="extraArguments"/>, when given, follow as %1, %2, ...
 	/// </summary>
 	private async ValueTask<List<MString>> EvaluateLambdaOrApplyForEachItemAsync(
 		IMUSHCodeParser parser,
@@ -1618,17 +1638,24 @@ public partial class Functions
 		MString rawAttrArg,
 		MString[] list,
 		ListEvaluationErrors errors,
-		bool withPosition = false)
+		bool withPosition = false,
+		Dictionary<string, CallState>? extraArguments = null)
 	{
 		var results = new List<MString>(list.Length);
 		for (var position = 0; position < list.Length; position++)
 		{
 			var item = list[position];
+			var arguments = ItemArguments(item, position, withPosition);
+			foreach (var (key, value) in extraArguments ?? [])
+			{
+				arguments.TryAdd(key, value);
+			}
+
 			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
 				parser,
 				executor,
 				rawAttrArg,
-				ItemArguments(item, position, withPosition));
+				arguments);
 			results.Add(errors.Record(evaluated));
 		}
 

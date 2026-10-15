@@ -84,6 +84,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IWorldBackupService WorldBackupService { get; }
 
+	private IBackupRunner BackupRunner { get; }
+
 	private IServerRestart ServerRestart { get; }
 
 	/// <summary>Lazy: the plugin administration reaches the package installer, which runs softcode through the parser.</summary>
@@ -103,6 +105,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IGameMessageService MessageService { get; }
 	private IConfigOptionWriter ConfigWriter { get; }
+
+	private ISecretStore Secrets { get; }
 
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
@@ -156,6 +160,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
+		IBackupRunner backupRunner,
 		IServerRestart serverRestart,
 		Lazy<IPluginAdministration> pluginAdministration,
 		IStorageCapacityService storageCapacity,
@@ -166,6 +171,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IMsspReportService msspReport,
 		IGameMessageService gameMessages,
 		IConfigOptionWriter configWriter,
+		ISecretStore secrets,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -210,6 +216,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
+		BackupRunner = backupRunner;
 		ServerRestart = serverRestart;
 		PluginAdministration = pluginAdministration;
 		StorageCapacity = storageCapacity;
@@ -220,6 +227,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		MsspReport = msspReport;
 		MessageService = gameMessages;
 		ConfigWriter = configWriter;
+		Secrets = secrets;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

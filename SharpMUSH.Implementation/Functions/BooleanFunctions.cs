@@ -18,33 +18,49 @@ namespace SharpMUSH.Implementation.Functions;
 /// </summary>
 public partial class Functions
 {
-	[SharpFunction(Name = "and", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
-	// Only lmath() can pass no arguments; PennMUSH's math_and answers 0 for them.
+	// One argument is TinyMUX's arity (and(1) is 1); PennMUSH refuses it, so accepting it only replaces
+	// an error. Only lmath() can pass no arguments; PennMUSH's math_and answers 0 for them.
+	[SharpFunction(Name = "and", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> And(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments.Count > 0
+	{
+		var truthy = LogicTest(parser);
+		return ValueTask.FromResult<CallState>(parser.CurrentState.Arguments.Count > 0
 			&& parser.CurrentState.Arguments
 				.Select(x => x.Value.Message)
-				.All(value => value.Truthy(parser))
+				.All(truthy)
 			? "1"
 			: "0");
+	}
 
-	[SharpFunction(Name = "cand", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "cand", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: true, truthy: true);
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: true, truthy: true, LogicTest(parser));
 
-	[SharpFunction(Name = "cor", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "cor", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingOr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: false, truthy: true);
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: false, truthy: true, LogicTest(parser));
+
+	/// <summary>
+	/// The test <c>and()</c>, <c>or()</c>, <c>xor()</c>, <c>cand()</c> and <c>cor()</c> apply to each
+	/// argument. With <c>mux_logic</c> on it is TinyMUX's: the leading signed integer decides, so
+	/// <c>and(1,abc)</c> is 0 (<c>xlate</c> in TinyMUX's <c>fun_and</c>). <c>t()</c>, <c>if()</c> and
+	/// the rest keep the game's boolean rule, as they do in TinyMUX.
+	/// </summary>
+	private static Func<MString, bool> LogicTest(IMUSHCodeParser parser)
+		=> Compatibility(parser).MuxLogic
+			? value => Predicates.Truthy(value, tinyBooleans: true)
+			: value => value.Truthy(parser);
 
 	private static async ValueTask<CallState> EvaluateLazyBoolean(IMUSHCodeParser parser,
-		IEnumerable<CallState> arguments, bool all, bool truthy)
+		IEnumerable<CallState> arguments, bool all, bool truthy, Func<MString, bool>? test = null)
 	{
 		var hadErrors = false;
+		var isTrue = test ?? (value => value.Truthy(parser));
 		async ValueTask<bool> Test(CallState argument, CancellationToken _)
 		{
 			var parsed = await parser.FunctionParse(argument.Message) ?? CallState.Empty;
 			hadErrors |= parsed.HadErrors;
-			return truthy ? parsed.Message.Truthy(parser) : parsed.Message.Falsy(parser);
+			return truthy == isTrue(parsed.Message);
 		}
 		var values = arguments.ToAsyncEnumerable();
 		var result = all ? await values.AllAsync(Test) : await values.AnyAsync(Test);
@@ -113,11 +129,11 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "or", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "or", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Or(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message)
-			.Any(value => value.Truthy(parser))
+			.Any(LogicTest(parser))
 			? "1"
 			: "0");
 
@@ -128,13 +144,20 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "xor", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	/// <summary>
+	/// PennMUSH's <c>xor()</c> is true when exactly one argument is (<c>math_xor</c>); TinyMUX's is true
+	/// when an odd number are, so <c>xor(1,1,1)</c> is 1 there. <c>mux_logic</c> picks TinyMUX's count
+	/// along with its test.
+	/// </summary>
+	[SharpFunction(Name = "xor", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Xor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
+	{
+		var trueCount = parser.CurrentState.Arguments
 			.Select(x => x.Value.Message)
-			.Count(value => value.Truthy(parser)) == 1
-			? "1"
-			: "0");
+			.Count(LogicTest(parser));
+		var mux = Compatibility(parser).MuxLogic;
+		return ValueTask.FromResult<CallState>((mux ? trueCount % 2 == 1 : trueCount == 1) ? "1" : "0");
+	}
 
 	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)

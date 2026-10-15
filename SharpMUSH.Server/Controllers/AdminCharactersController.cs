@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -177,7 +178,7 @@ public class AdminCharactersController(
 			? (await accounts.GetByIdAsync(accountId, ct))?.Username ?? ""
 			: "";
 		var reason = request.Reason.Trim();
-		await events.TriggerEventAsync("PLAYER`WARN", executor.Object().DBRef,
+		await events.TriggerEventAsync(SharpEvents.PlayerWarn, executor.Object().DBRef,
 			player.Object.DBRef.ToString(), reason, staff);
 		await audit.RecordPortalAsync(User, AuditActions.PlayerWarn, AuditTargets.Of(player),
 			AuditLog.WithReason(null, reason), ct);

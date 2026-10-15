@@ -547,7 +547,7 @@ public partial class TaskScheduler(
 		}
 	}
 
-	private static string? SourceAttribute(ParserState state) => state.CurrentEvaluation is { } current
+	private static string? SourceAttribute(ParserState state) => DBAttribute.Scope(state.CurrentEvaluation) is { } current
 		&& current.DB == state.Executor ? current.Name : null;
 	private async ValueTask<QueueAdmissionResult> RejectInvalidTarget(DBRef? executor, string kind)
 	{
@@ -867,6 +867,9 @@ public partial class TaskScheduler(
 
 	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
+
+	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, DBRef enactor, bool notifyOnRejection = true)
+	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection, enactor: enactor);
 
 	public ValueTask<QueueAdmissionResult> AdmitSocketWork(Func<ValueTask<CallState?>> action, string triggerName, string group, Action? onReleased = null)
 	 => Admit(action, triggerName, group, null, onReleased: onReleased, notifyOnRejection: false, chargesOwner: false);

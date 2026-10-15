@@ -26,7 +26,7 @@
 
 `@dolist[/<switches>][/notify][/delimit <delim>] <list>=<action list>`
 
-@dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list.
+@dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list. The `/space` switch asks for the default, a space-separated list, and changes nothing; it comes from RhostMUSH.
 
 Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
 
@@ -34,7 +34,7 @@ The %i0 substitution, or the function itext(0), can be used in the `<action list
 
 %d0 is the current element as well, %d1 the element of the @dolist around it, and %dL the outermost one's. Unlike %i, %d counts only @dolists, so an iter() inside the action list does not move it. The idea comes from RhostMUSH.
 
-For backwards compatibility, "##" also stands for the current element of the list, and "#@" for its position, counting from 1. In a nested @dolist they name the outermost one. The element is never evaluated as code. For the current @dolist, use %i0 or itext(0), and inum(0). Like iter()'s, they count only in the action list as written, not in the code of an attribute it triggers or calls.
+For backwards compatibility, "##" also stands for the current element of the list, and "#@" for its position, counting from 1. In a nested @dolist they name the outermost one. The element is never evaluated as code. For the current @dolist, use %i0 or itext(0), and inum(0). Like iter()'s, they count only in the action list as written, not in the code of an attribute it triggers or calls. With the `innermost_tokens` option on, they name the innermost @dolist or iter() instead, wherever they are written. See [compatibility config innermost loop tokens].
 
 ## Notification and delimiters
 
@@ -45,7 +45,9 @@ If the `/inline` switch is given, @dolist will run the new action lists instantl
 When using `@dolist/inline`, an @break in an `<action list>` will stop the calling action list (and any further `<action list>`s) from running. Each `<action list>` will also be able to see/alter the q-registers for the calling action list. The following switches can be used with `/inline` to alter this behaviour:
 - /nobreak: @breaks in `<action list>` do not effect to the calling action list
 - /localize: q-registers are saved before each `<action>` is run, and restored after it completes
-- /clearreg: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize.
+- /clearregs: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize. `/clearreg` is the same switch, as RhostMUSH spells it.
+
+Without `/inline` or `/inplace`, /localize and /clearregs do nothing: each queued `<action list>` starts with its own copy of the q-registers as they were when @dolist ran.
 
 `@dolist/inplace` is an alias for `@dolist/inline/nobreak/localize`.
 

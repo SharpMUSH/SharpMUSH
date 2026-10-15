@@ -118,6 +118,8 @@ public static class Tables
 	public static readonly TableDef PkgObj = TableDef.Node("pkg.obj");
 	public static readonly TableDef PkgAttr = TableDef.Node("pkg.attr");
 	public static readonly TableDef PkgStruct = TableDef.Node("pkg.struct");
+	/// <summary>The wiki pages a package owns, keyed by (package, namespace, slug), each with the fields it last wrote.</summary>
+	public static readonly TableDef PkgWiki = TableDef.Node("pkg.wiki");
 	public static readonly TableDef PkgRemote = TableDef.Node("pkg.remote");
 	public static readonly TableDef PkgRev = TableDef.Node("pkg.rev");
 	public static readonly TableDef PkgDep = TableDef.Index("pkg.dep", duplicates: true);

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -13,6 +14,7 @@ namespace SharpMUSH.Server.Services;
 /// </summary>
 public partial class WarningCheckService(
 	IWarningService warningService,
+	IEventService eventService,
 	IOptions<SharpMUSHOptions> options,
 	ILogger<WarningCheckService> logger) : BackgroundService
 {
@@ -78,6 +80,9 @@ public partial class WarningCheckService(
 				var objectsChecked = await warningService.CheckAllObjectsAsync();
 
 				logger.LogInformation("Completed automatic warning check - {Count} objects checked", objectsChecked);
+
+				// PennMUSH spec: db`wcheck, after the scheduled check only, never after a manual @wcheck.
+				await eventService.TriggerEventAsync(SharpEvents.DbWcheck, null);
 
 				await Task.Delay(_warnInterval, stoppingToken);
 			}

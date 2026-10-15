@@ -95,8 +95,8 @@ public class UiPackageDeploymentTests
 		};
 	}
 
-	private sealed class Bytes(Dictionary<string, byte[]> files) : IPluginPackageBinarySource
+	private sealed class Bytes(Dictionary<string, byte[]> files) : IPackageFileSource
 	{
-		public Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default) => Task.FromResult(files.GetValueOrDefault(fileName));
+		public Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default) => Task.FromResult(files.GetValueOrDefault(path));
 	}
 }

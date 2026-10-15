@@ -91,6 +91,27 @@ public class AttributeFunctionUnitTests
 		await Assert.That(await PronounAsync("M", input)).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// PennMUSH's get_gender reads only the first letter, in either case: M male, F or W female, T or P
+	/// plural. Anything else stays SharpMUSH's "they" (PennMUSH says "it").
+	/// </summary>
+	[Test]
+	[Arguments("male", "he him his his")]
+	[Arguments("m", "he him his his")]
+	[Arguments("Masculine", "he him his his")]
+	[Arguments("female", "she her her hers")]
+	[Arguments("f", "she her her hers")]
+	[Arguments("woman", "she her her hers")]
+	[Arguments("W", "she her her hers")]
+	[Arguments("plural", "they them their theirs")]
+	[Arguments("t", "they them their theirs")]
+	[Arguments("neuter", "they them their theirs")]
+	[Arguments("x", "they them their theirs")]
+	public async Task GenderFromFirstLetter(string gender, string expected)
+	{
+		await Assert.That(await PronounAsync(gender, "%s [obj(%#)] %p [aposs(%#)]")).IsEqualTo(expected);
+	}
+
 	/// <summary>Evaluates <paramref name="input"/> as a fresh player whose GENDER is <paramref name="gender"/>.</summary>
 	private async Task<string> PronounAsync(string? gender, string input)
 	{

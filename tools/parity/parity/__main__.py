@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import compare as cmp
 from . import coverage, report, runner, scenario, servers, world
+from .echo import EchoSite
 
 HERE = Path(__file__).resolve().parent.parent          # tools/parity
 REPO = HERE.parent.parent
@@ -84,10 +85,11 @@ def main(argv=None) -> int:
     work.mkdir(parents=True)
     penn = servers.PennMush(pennmush, work)
     sharp = servers.SharpMush(REPO, work, HERE / ".cache", args.dotnet, build=not args.no_build)
+    echo = EchoSite().start()
     try:
         print(f"[parity] starting PennMUSH from {pennmush}")
         penn.start()
-        ptarget = runner.Target("PennMUSH", "127.0.0.1", penn.port, "PSYNCp")
+        ptarget = runner.Target("PennMUSH", "127.0.0.1", penn.port, "PSYNCp", echo.url)
         print("[parity] building the world on PennMUSH from world/setup.mush")
         (work / "logs" / "setup-transcript.txt").write_text("\n".join(world.run_setup(ptarget, setup_cmds)), encoding="utf-8")
         flatfile = work / "world.db"
@@ -96,7 +98,7 @@ def main(argv=None) -> int:
         penn.dump_flatfile(flatfile)
         print("[parity] starting SharpMUSH and importing the flatfile")
         sharp.start(flatfile)
-        starget = runner.Target("SharpMUSH", "127.0.0.1", sharp.port, "PSYNCs")
+        starget = runner.Target("SharpMUSH", "127.0.0.1", sharp.port, "PSYNCs", echo.url)
 
         p_anchor, p_free = world.resolve_anchors(ptarget, anchors)
         s_anchor, s_free = world.resolve_anchors(starget, anchors)
@@ -168,6 +170,7 @@ def main(argv=None) -> int:
     finally:
         sharp.stop()
         penn.stop()
+        echo.stop()
 
 
 if __name__ == "__main__":

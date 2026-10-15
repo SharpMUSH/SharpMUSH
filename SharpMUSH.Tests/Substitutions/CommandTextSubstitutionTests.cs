@@ -61,6 +61,11 @@ public class CommandTextSubstitutionTests
 		return Factory.Notifications.For(_actor.DbRef).Skip(before).ToList();
 	}
 
+	/// <summary><c>%m</c> is TinyMUX's name for <c>%c</c> (TinyMUX 2.14 answers <c>think %m</c> with <c>think %m</c>).</summary>
+	[Test]
+	public async Task PercentMIsTinyMuxsNameForTheRunningCommand()
+		=> await Assert.That(await Direct("think %m|%c")).IsEquivalentTo(["think %m|%c|think %m|%c"]);
+
 	[Test]
 	public async Task DirectInputSeesTheTypedLineAndNoEvaluatedCommandYet()
 	{

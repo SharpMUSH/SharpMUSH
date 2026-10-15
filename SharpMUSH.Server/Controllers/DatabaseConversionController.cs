@@ -120,7 +120,7 @@ public class DatabaseConversionController(
 
 				var previous = await mushCnf.SnapshotAsync(cancellationToken);
 				restore = () => mushCnf.RestoreAsync(previous);
-				await mushCnf.ApplyAsync(import, cancellationToken);
+				await mushCnf.ApplyAsync(import, PortalSecretAuthor.Of(User), cancellationToken);
 			}
 
 			var sessionId = Guid.NewGuid().ToString();

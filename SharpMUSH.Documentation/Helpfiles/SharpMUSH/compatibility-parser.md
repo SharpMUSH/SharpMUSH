@@ -36,6 +36,11 @@
       "lookup": "compatibility parser in iter is data not code"
     },
     {
+      "id": "in-case-and-if",
+      "heading": "`#$` in `case()` and `if()`",
+      "lookup": "compatibility parser in case and if"
+    },
+    {
       "id": "function-names-cannot-be-produced-by-evaluation",
       "heading": "Function names cannot be produced by evaluation",
       "lookup": "compatibility parser function names cannot be produced by evaluation"
@@ -79,6 +84,16 @@
       "id": "and-pipe-a-command-s-output",
       "heading": "`;|` and `%|` pipe a command's output",
       "lookup": "compatibility parser and pipe a command s output"
+    },
+    {
+      "id": "m-is-the-running-command",
+      "heading": "`%m` is the running command",
+      "lookup": "compatibility parser m is the running command"
+    },
+    {
+      "id": "name-is-an-attribute-or-argument",
+      "heading": "`%=<name>` is an attribute or argument",
+      "lookup": "compatibility parser name is an attribute or argument"
     }
   ]
 }
@@ -189,7 +204,8 @@ text containing softcode executes.<br>
 `@dolist` they are written in, and does not re-evaluate element text. Inside `lit()` or after `\`
 they stay `##` and `#@`, where PennMUSH has already spliced the value. `#$` in `switch()`,
 `reswitch()`, `@switch` and `@select` works the same way: it reads the subject of the outermost one
-whose action it is written in, and the subject is never re-evaluated.<br>
+whose action it is written in, and the subject is never re-evaluated. The `innermost_tokens` option
+makes all three name the innermost loop or switch instead, as TinyMUX does.<br>
 **Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can
 influence becomes executable.<br>
 **Workaround.** Use `u()` or an explicit evaluation where you meant to run the element.
@@ -202,6 +218,34 @@ a b
 > &CODE me=[add(1,2)]
 > think iter(CODE,u(##))
 3
+```
+
+## `#$` in `case()` and `if()`
+
+**A choice.**
+
+**PennMUSH** replaces `#$` only in `switch()`, `switchall()`, `reswitch()`, `@switch` and `@select`. In
+`case()`, `caseall()`, `if()` and `ifelse()` it is plain text.<br>
+**SharpMUSH** also replaces it in the action of `case()` and `caseall()`, with their subject, and in the
+branch of `if()` and `ifelse()`, with the evaluated condition, as TinyMUX does. A `switch()` around them or
+inside them still takes `#$` first, so code written for PennMUSH reads the same switch it read there.
+The branch of an `if()` or `ifelse()` also counts as a switch for `stext()`, `%$<n>` and `slev()`, so
+`%$0` there is the condition and `%$1` the switch around it.<br>
+**Why.** The token then means the same thing in every function that matches or tests a value.<br>
+**Workaround.** Write `\#$` or `lit(#$)` where you want the text `#$`. Inside an `if()`, use `%$1` or
+`stext(1)` for the switch around it, or `%$L` for the outermost.
+
+```sharp
+> think case(moof,moof,#$)
+moof
+> think if(abc,<#$>)
+<abc>
+> think switch(a,*,case(b,b,#$))
+a
+> think case(b,b,\#$)
+#$
+> think switch(a,*,if(1,%$0 %$1 [slev()]))
+1 a 2
 ```
 
 ## Function names cannot be produced by evaluation
@@ -385,4 +429,42 @@ PennMUSH answers `a|b` to the first line:
 ab
 > think a|b
 a|b
+```
+
+## `%m` is the running command
+
+**A choice.**
+
+**PennMUSH** has no `%m` substitution, so it evaluates `%m` to a plain `m`.<br>
+**SharpMUSH** substitutes the running command as it was written, as TinyMUX does: `%m` is `%c`.<br>
+**Why.** TinyMUX code that reads the command runs unchanged.<br>
+**Workaround.** Write a plain `m`, which means the same on both servers, and `%c` for the command.
+Importing a PennMUSH database names every attribute that uses `%m`.
+
+PennMUSH answers `m|think %m|%c` to the line:
+
+```sharp
+> think %m|%c
+think %m|%c|think %m|%c
+```
+
+## `%=<name>` is an attribute or argument
+
+**A choice.**
+
+**PennMUSH** evaluates `%=` to the attribute being evaluated, such as `#1/FN`, and `<name>` after it
+is text, so `%=<desc>` in an attribute is `#1/FN<desc>`.<br>
+**SharpMUSH** reads `%=<name>` as TinyMUX does: the executor's attribute `<name>`, as `v(<name>)`
+would, or, when `<name>` is a number, that argument, as `%<name>` would. `%=` on its own is still
+PennMUSH's: the attribute being evaluated, such as `#1/FN`, or `#LAMBDA/<code>` inside a
+`#lambda`, and empty outside one.<br>
+**Why.** TinyMUX code that reads attributes, and arguments past `%9`, this way runs unchanged.<br>
+**Workaround.** Use `v(<name>)` for an attribute, which means the same on both servers, and
+`%<name>` for a numbered argument. Importing a PennMUSH database names every attribute that uses
+`%=<`.
+
+```sharp
+> &MUXDOC me=hello
+> think %=<muxdoc>
+hello
 ```

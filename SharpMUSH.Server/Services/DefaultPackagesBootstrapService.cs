@@ -209,6 +209,9 @@ public class DefaultPackagesBootstrapService(
 		var decisions = plan.Attributes
 			.Where(a => a.Action == PackageAttributeAction.Conflict)
 			.Select(a => new PackageConflictDecision(a.TargetRef, a.Attribute, PackageConflictResolution.KeepMine))
+			.Concat((plan.Wiki ?? [])
+				.Where(w => w.Action == PackageWikiAction.Conflict)
+				.Select(w => new PackageConflictDecision(w.TargetRef, w.Page, PackageConflictResolution.KeepMine)))
 			.ToList();
 
 		var source = new PackageApplySource(

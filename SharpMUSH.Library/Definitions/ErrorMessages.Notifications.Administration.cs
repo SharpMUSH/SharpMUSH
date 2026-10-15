@@ -172,6 +172,12 @@ public static partial class ErrorMessages
 		public const string BackupCompleteFormat = "Backup {0} written ({1}). Keeping {2}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BackupFailedFormat = "Backup failed: {0}";
+		/// <summary><c>@dbck</c>: the newest backup was read through. {0} its name, {1} tables, {2} entries.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupCheckedFormat = "Backup {0} checked: {1} tables, {2} entries read.";
+		/// <summary><c>@dbck</c>: the newest backup did not pass, or there is none. {0} why.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupCheckFailedFormat = "Check failed: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BackupListHeaderFormat = "Backups in {0}:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -219,6 +225,23 @@ public static partial class ErrorMessages
 		public const string AsciiTranslationBadCharacterFormat = "'{0}' is not one character outside ASCII.";
 		public const string AsciiTranslationBadText = "The text must be plain ASCII. Write a space as %b.";
 		public const string AsciiTranslationUsage = "Usage: @ascii[/remove] <character>[=<text>]";
+		public const string SecretUsage = "Usage: @secret[/list], @secret <name>=<value>, @secret/clear <name>, or @secret/host <name>=[<host> ...]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretHostsFormat = "@http may send {0} to: {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretNoHostsFormat = "@http may send {0} to no host.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretSetFormat = "{0} is set. Its value is never shown again.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretSetOverriddenFormat = "{0} is set, but {1} overrides it while that is there.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretClearedFormat = "{0} is cleared.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretClearedOverriddenFormat = "{0} is cleared, but {1} still sets it.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretNotStoredFormat = "{0} has no stored value.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretRefusedFormat = "{0}";
 		public const string SitelockNameListHeader = "Any name matching these wildcard patterns is banned:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockNameLockedFormat = "Name {0} locked.";

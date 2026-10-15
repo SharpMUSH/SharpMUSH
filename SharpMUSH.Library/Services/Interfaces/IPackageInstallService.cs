@@ -30,16 +30,16 @@ public interface IPackageInstallService
 	///
 	/// <para>For a <see cref="PackageKind.Plugin"/> package (Phase 4 — a compiled
 	/// C# plugin DLL), this instead verifies and deposits the carried binaries via
-	/// <paramref name="binarySource"/> into <c>plugins/&lt;id&gt;/</c> (subject to the
+	/// <paramref name="fileSource"/> into <c>plugins/&lt;id&gt;/</c> (subject to the
 	/// trust gate on <paramref name="request"/>) and records the deployed file
 	/// list; the plugin loads on the next boot. A managed apply requires a
-	/// <paramref name="binarySource"/>.</para>
+	/// <paramref name="fileSource"/>.</para>
 	/// </summary>
 	Task<Result<PackageApplyResult>> ApplyAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
-		IPluginPackageBinarySource? binarySource = null);
+		IPackageFileSource? fileSource = null);
 
 	/// <summary>
 	/// Uninstalls a package: blocks when dependents exist (unless

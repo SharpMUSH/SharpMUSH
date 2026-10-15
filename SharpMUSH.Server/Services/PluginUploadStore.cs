@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
@@ -113,8 +114,8 @@ public sealed partial class PluginUploadStore(
 			: null;
 
 	/// <summary>A reader over the staged upload <paramref name="token"/>'s files, or null when there is no such upload.</summary>
-	public IPluginPackageBinarySource? Binaries(string token) =>
-		Folder(token) is { } folder ? new FolderBinarySource(folder) : null;
+	public IPackageFileSource? Files(string token) =>
+		Folder(token) is { } folder ? new DirectoryPackageFileSource(folder) : null;
 
 	/// <summary>Removes the staged upload <paramref name="token"/>, once it is installed.</summary>
 	public void Discard(string token)
@@ -209,21 +210,6 @@ public sealed partial class PluginUploadStore(
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
 			logger.LogWarning(ex, "Could not remove the staged upload {Folder}.", LogSanitizer.Sanitize(folder));
-		}
-	}
-
-	private sealed class FolderBinarySource(string folder) : IPluginPackageBinarySource
-	{
-		public async Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default)
-		{
-			// File names come from a manifest that was parsed as flat, but the folder is ours: check anyway.
-			if (fileName.Contains('/') || fileName.Contains('\\') || fileName.StartsWith('.'))
-			{
-				return null;
-			}
-
-			var path = Path.Combine(folder, fileName);
-			return File.Exists(path) ? await File.ReadAllBytesAsync(path, cancellationToken) : null;
 		}
 	}
 }

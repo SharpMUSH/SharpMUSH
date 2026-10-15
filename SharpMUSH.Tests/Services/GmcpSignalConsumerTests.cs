@@ -69,7 +69,7 @@ public class GmcpSignalConsumerTests
 
 		await Receive(service, events, package, "");
 
-		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default!);
+		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default(string[])!);
 	}
 
 	[Test]

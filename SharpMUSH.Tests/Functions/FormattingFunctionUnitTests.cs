@@ -49,6 +49,14 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
+	public async Task RenderToMarkdownWritesATableAsAPipeTable()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("render(datacolumns({{}},Roll|1|2,Result|Rain|[ansi(h,Fog)]),markdown)"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("| Roll | Result |\n| --- | --- |\n| 1 | Rain |\n| 2 | **Fog** |");
+	}
+
+	[Test]
 	public async Task RenderToAnsiEmitsEscapeCodes()
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("render(ansi(r,red),ansi)"));
@@ -90,8 +98,14 @@ public class FormattingFunctionUnitTests
 	// A narrower first line, for softcode that puts a prefix in front of it.
 	[Arguments("wrap(This is a test of the wrap function,10,5)", "This\nis a test\nof the\nwrap\nfunction")]
 	[Arguments("wrap(one two three,10,10,|)", "one two|three")]
-	// A word longer than the column has to break somewhere.
-	[Arguments("wrap(aa abcdefghijkl bb,6)", "aa\nabcdef\nghijkl\nbb")]
+	// A word longer than the column is cut one short of it and hyphenated, as PennMUSH does.
+	[Arguments("wrap(aa abcdefghijkl bb,6)", "aa\nabcde-\nfghij-\nkl bb")]
+	// A word that ends exactly at the width, with more text after it, goes to the next line, or is
+	// cut when it has no space before it (PennMUSH's wraplen).
+	[Arguments("wrap(aaaa bbbbb ccc,10)", "aaaa\nbbbbb ccc")]
+	[Arguments("wrap(abc def,3,,|)", "ab-|c|def")]
+	// A line break forces a new line; one character after each line is dropped.
+	[Arguments("wrap(a%rb%r%rc,5,,|)", "a|b||c")]
 	// Widths are display cells, so a two-cell character takes two of them.
 	[Arguments("wrap(日本語です,4)", "日本\n語で\nす")]
 	public async Task Wrap(string str, string expected)

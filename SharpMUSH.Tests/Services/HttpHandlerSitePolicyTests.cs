@@ -88,7 +88,7 @@ public class HttpHandlerSitePolicyTests
 			});
 
 			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(),
-				new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(queue), options, NullLogger<EventService>.Instance),
+				new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(queue), new Lazy<IMUSHCodeParser>(Parser), options, NullLogger<EventService>.Instance),
 				InlineTaskScheduler.Create(),
 				options, NullLogger<HttpHandlerCommandService>.Instance);
 		}

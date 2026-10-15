@@ -27,7 +27,7 @@ public interface IPackageRegistryService
 
 	/// <summary>
 	/// Removes an installed package and ALL its registry data: created-object
-	/// records, managed attributes, dependency edges (both directions), and
+	/// records, managed attributes, owned wiki pages, dependency edges (both directions), and
 	/// revisions. Does not touch game objects — the uninstall engine does that.
 	/// </summary>
 	Task RemoveInstalledPackageAsync(string packageId);
@@ -67,6 +67,21 @@ public interface IPackageRegistryService
 
 	/// <summary>Removes one managed object-structure baseline.</summary>
 	Task RemoveManagedStructureAsync(string packageId, string objid);
+
+	/// <summary>Creates or replaces the baseline of a wiki page a package owns (keyed by package, namespace and slug).</summary>
+	Task UpsertPackageWikiPageAsync(PackageWikiPageRecord record);
+
+	/// <summary>Fetches the baseline of one page a package owns.</summary>
+	Task<Found<PackageWikiPageRecord>> GetPackageWikiPageAsync(string packageId, string ns, string slug);
+
+	/// <summary>Lists the wiki pages a package owns, ordered by namespace then slug.</summary>
+	Task<IReadOnlyList<PackageWikiPageRecord>> GetPackageWikiPagesAsync(string packageId);
+
+	/// <summary>Every wiki page any package owns, ordered by package, namespace and slug: who owns a page.</summary>
+	Task<IReadOnlyList<PackageWikiPageRecord>> GetAllPackageWikiPagesAsync();
+
+	/// <summary>Removes one owned-page baseline, when the package lets go of the page.</summary>
+	Task RemovePackageWikiPageAsync(string packageId, string ns, string slug);
 
 	/// <summary>
 	/// Replaces the dependency edges originating from a package (called per

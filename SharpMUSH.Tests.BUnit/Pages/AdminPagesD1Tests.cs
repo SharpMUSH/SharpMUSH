@@ -512,6 +512,40 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 	}
 
+	/// <summary>
+	/// A content pack shows its wiki pages instead of empty object and attribute cards, and a page staff changed is
+	/// kept by default, so the apply needs no decision before it can run.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_ShowsAContentPacksWikiPages_KeepingTheGamesPageByDefault()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("coast-guide", "1.0.0", "1.1.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Upgrade, [], [], [], [], [], [],
+			Wiki:
+			[
+				new("main", "coast_road", "Coast Road", SharpMUSH.Library.Models.Packages.PackageWikiAction.Conflict,
+					SharpMUSH.Library.Models.Packages.PackageConflictKind.ModifyModify, "base text", "game text", "new text",
+					"<<<<<<< game\ngame text\n=======\nnew text\n>>>>>>> coast-guide 1.1.0"),
+				new("category", "travel", "Travel", SharpMUSH.Library.Models.Packages.PackageWikiAction.Create,
+					Changes: ["title: 'Travel'"]),
+			]);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("coast-guide", "1.1.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=coast-guide");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".pkg-wiki"), TimeSpan.FromSeconds(5));
+		var rows = cut.FindAll(".pkg-wiki tbody tr").Select(r => r.TextContent).ToList();
+		await Assert.That(rows.Count).IsEqualTo(2);
+		await Assert.That(rows[1]).Contains("category:travel");
+		await Assert.That(cut.Find(".pkg-wiki").TextContent).Contains(">>>>>>> coast-guide 1.1.0");
+		await Assert.That(cut.Markup).DoesNotContain("PkgObjectsCount");
+		await Assert.That(cut.Markup).DoesNotContain("PkgAttributesCount");
+		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled")).IsFalse();
+	}
+
 	[Test]
 	public async Task Suggestions_EscapesTheWordWhenDeletingIt()
 	{

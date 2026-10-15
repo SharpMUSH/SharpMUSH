@@ -198,7 +198,8 @@ internal sealed class AttributeEvaluator(
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		var split = objAndAttribute.Split("/");
 		var obj = split.First();
-		var attribute = MarkupText.Concat(split.Skip(1));
+		// Everything after the first /, as PennMUSH splits it: a #lambda's code may hold more.
+		var attribute = MarkupText.Join(MarkupText.Plain("/"), split.Skip(1));
 		var objPlainText = obj.ToPlainText();
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
@@ -263,7 +264,7 @@ internal sealed class AttributeEvaluator(
 					},
 					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
-						logger)
+						logger, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag)
 				);
 
 				return result;
@@ -282,7 +283,9 @@ internal sealed class AttributeEvaluator(
 			var result = await parser.With(s => s with
 			{
 				Arguments = args,
-				EnvironmentRegisters = args
+				EnvironmentRegisters = args,
+				CurrentEvaluation = new LambdaEvaluation(executor.Object().DBRef, attribute.ToPlainText(),
+					DBAttribute.Scope(s.CurrentEvaluation))
 			},
 				async np => await np.FunctionParse(attribute));
 			return result ?? CallState.Empty;

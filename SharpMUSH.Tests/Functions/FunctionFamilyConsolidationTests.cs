@@ -21,13 +21,13 @@ public class FunctionFamilyConsolidationTests
 	/// <c>SETQ</c> and <c>SETR</c> are both <c>fun_setq</c>, which rejects an odd argument count
 	/// for either name (<c>src/funmisc.c:327-332</c>). Only <c>setr</c> carried
 	/// <c>EvenArgsOnly</c>, so an odd-argument <c>setq</c> reached the pairing loop and read past
-	/// the last argument.
+	/// the last argument. Three arguments are RhostMUSH's labelled form (<see cref="RegisterLabelTests"/>).
 	/// </summary>
 	[Test]
 	[Arguments("setq")]
 	[Arguments("setr")]
 	public async Task RegisterSettersRejectAnOddArgumentCount(string function)
-		=> await Assert.That(await Eval($"{function}(a,1,b)"))
+		=> await Assert.That(await Eval($"{function}(a,1,b,2,c)"))
 			.IsEqualTo($"#-1 FUNCTION ({function.ToUpperInvariant()}) EXPECTS AN EVEN NUMBER OF ARGUMENTS");
 
 	/// <summary>

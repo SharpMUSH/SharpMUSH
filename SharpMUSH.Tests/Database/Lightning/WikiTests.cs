@@ -257,4 +257,31 @@ public class WikiTests
 		await Assert.That((await wiki.GetByCategoryAsync("lore")).Select(p => p.Id)).IsEquivalentTo(new[] { keep.Id });
 		await Assert.That((await wiki.CreateAsync("Cascade Me", "fresh", "#1", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
 	});
+
+	/// <summary>
+	/// A package retitles its page without a revision, and the slug stays: the page is still where every link to it
+	/// points, and a category listing sorts it by its new title.
+	/// </summary>
+	[Test]
+	public async Task SetTitleKeepsTheSlugAndWritesNoRevision() => await WithDatabaseAsync(async (db, wiki) =>
+	{
+		var page = (await wiki.CreateAsync("Coast Road", "v1", "#1", WikiNamespace.Main, "en", ["Travel"], slug: "coast_road")).Expect<WikiPage>();
+		var other = (await wiki.CreateAsync("Harbour", "v1", "#1", WikiNamespace.Main, "en", ["Travel"])).Expect<WikiPage>();
+		await Assert.That((await wiki.GetByCategoryAsync("travel")).Select(p => p.Id).SequenceEqual([page.Id, other.Id])).IsTrue();
+
+		var retitled = (await wiki.SetTitleAsync(page.Id, "  The Old Coast Road ")).Expect<WikiPage>();
+
+		await Assert.That(retitled.Title).IsEqualTo("The Old Coast Road");
+		await Assert.That(retitled.Slug).IsEqualTo("coast_road");
+		await Assert.That(retitled.RevisionNumber).IsEqualTo(page.RevisionNumber);
+		await Assert.That((await wiki.GetRevisionsAsync(page.Id)).Count).IsEqualTo(1);
+		await Assert.That((await wiki.GetBySlugAsync("coast_road", WikiNamespace.Main)).Expect<WikiPage>().Title)
+			.IsEqualTo("The Old Coast Road");
+		await Assert.That(db.Store.Read(tx => tx.TryGet(Tables.WikiSlug, SlugKey("main", "the_old_coast_road"), out _))).IsFalse();
+		await Assert.That((await wiki.GetByCategoryAsync("travel")).Select(p => p.Id).SequenceEqual([other.Id, page.Id])).IsTrue();
+
+		await Assert.That((await wiki.SetTitleAsync(page.Id, " ")).Value).IsTypeOf<Error<string>>();
+		await Assert.That((await wiki.SetTitleAsync(page.Id, "Two\nlines")).Value).IsTypeOf<Error<string>>();
+		await Assert.That((await wiki.SetTitleAsync("no-such-page", "Anything")).Value).IsTypeOf<NotFound>();
+	});
 }

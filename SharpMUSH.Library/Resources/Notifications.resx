@@ -2594,9 +2594,12 @@
     <value>I don't understand what you want to @list.</value>
   </data>
 
-  <!-- @dump -->
-  <data name="DumpDoesNothing" xml:space="preserve">
-    <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
+  <!-- the inactivity check -->
+  <data name="InactivityTimeout" xml:space="preserve">
+    <value>*** Inactivity timeout ***</value>
+  </data>
+  <data name="InactivityHidden" xml:space="preserve">
+    <value>*** Inactivity limit reached. You are now HIDDEN. ***</value>
   </data>
 
   <!-- @backup -->
@@ -2611,6 +2614,12 @@
   </data>
   <data name="BackupFailedFormat" xml:space="preserve">
     <value>Backup failed: {0}</value>
+  </data>
+  <data name="BackupCheckedFormat" xml:space="preserve">
+    <value>Backup {0} checked: {1} tables, {2} entries read.</value>
+  </data>
+  <data name="BackupCheckFailedFormat" xml:space="preserve">
+    <value>Check failed: {0}</value>
   </data>
   <data name="BackupListHeaderFormat" xml:space="preserve">
     <value>Backups in {0}:</value>
@@ -3072,5 +3081,32 @@ PLAYERS:</value>
   </data>
   <data name="AsciiTranslationUsage" xml:space="preserve">
     <value>Usage: @ascii[/remove] &lt;character&gt;[=&lt;text&gt;]</value>
+  </data>
+  <data name="SecretUsage" xml:space="preserve">
+    <value>Usage: @secret[/list], @secret &lt;name&gt;=&lt;value&gt;, @secret/clear &lt;name&gt;, or @secret/host &lt;name&gt;=[&lt;host&gt; ...]</value>
+  </data>
+  <data name="SecretHostsFormat" xml:space="preserve">
+    <value>@http may send {0} to: {1}</value>
+  </data>
+  <data name="SecretNoHostsFormat" xml:space="preserve">
+    <value>@http may send {0} to no host.</value>
+  </data>
+  <data name="SecretSetFormat" xml:space="preserve">
+    <value>{0} is set. Its value is never shown again.</value>
+  </data>
+  <data name="SecretSetOverriddenFormat" xml:space="preserve">
+    <value>{0} is set, but {1} overrides it while that is there.</value>
+  </data>
+  <data name="SecretClearedFormat" xml:space="preserve">
+    <value>{0} is cleared.</value>
+  </data>
+  <data name="SecretClearedOverriddenFormat" xml:space="preserve">
+    <value>{0} is cleared, but {1} still sets it.</value>
+  </data>
+  <data name="SecretNotStoredFormat" xml:space="preserve">
+    <value>{0} has no stored value.</value>
+  </data>
+  <data name="SecretRefusedFormat" xml:space="preserve">
+    <value>{0}</value>
   </data>
 </root>

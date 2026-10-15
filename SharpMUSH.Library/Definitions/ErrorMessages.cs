@@ -120,6 +120,10 @@ public static partial class ErrorMessages
 		public const string OutputTooLarge = "#-1 OUTPUT EXCEEDED MAXIMUM SIZE";
 		public const string RegisterRange = "#-1 REGISTER OUT OF RANGE";
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
+		/// <summary>RhostMUSH's answer for a q-register label it cannot take (<c>process_setqs</c>).</summary>
+		public const string InvalidLabel = "#-1 INVALID LABEL";
+		/// <summary>RhostMUSH's nameq() answer for a label another register already has.</summary>
+		public const string LabelInUseFormat = "#-1 LABEL [{0}] ALREADY IN USE";
 		public const string BadArgumentName = "#-1 ARGUMENT NAME INVALID";
 		public const string NamedArgumentsComeInPairs = "#-1 NAMED ARGUMENTS COME IN PAIRS";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
@@ -128,6 +132,7 @@ public static partial class ErrorMessages
 		public const string NumberOutOfRange = "#-1 NUMBER OUT OF RANGE";
 		/// <summary><c>fun_wrap</c>'s answer for a width below 2 (<c>src/funstr.c:1666-1668</c>).</summary>
 		public const string WidthTooSmall = "#-1 WIDTH TOO SMALL";
+		public const string InvalidJustification = "#-1 INVALID JUSTIFICATION SPECIFIED";
 
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";
@@ -376,7 +381,7 @@ public static partial class ErrorMessages
 		public const string NoTextGiven = "#-1 NO TEXT GIVEN";
 		public const string NoSuchLockType = "#-1 NO SUCH LOCK TYPE";
 		public const string ChannelPermissionDenied = "#-1 CHANNEL PERMISSION DENIED";
-		public const string GetRequestsCannotHaveBody = "#-1 GET REQUESTS CANNOT HAVE A BODY";
+		public const string InvalidHttpHeader = "#-1 INVALID HEADER";
 		public const string CannotRenameInbox = "#-1 CANNOT RENAME THE INBOX FOLDER";
 		public const string InvalidMailArguments = "#-1 INVALID ARGUMENTS FOR MAIL COMMAND";
 		public const string InvalidMailFolderArguments = "#-1 INVALID ARGUMENTS FOR MAIL FOLDER COMMAND";
@@ -1451,7 +1456,9 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
 		public const string ListNotUnderstood = "I don't understand what you want to @list.";
 
-		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
+		public const string InactivityTimeout = "*** Inactivity timeout ***";
+
+		public const string InactivityHidden = "*** Inactivity limit reached. You are now HIDDEN. ***";
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";

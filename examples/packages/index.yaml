@@ -29,6 +29,11 @@ packages:
     package: starter-area
     version: 1.0.0
     description: Two rooms and linked exits
+  - path: coast-guide/
+    name: Coast Guide
+    package: coast-guide
+    version: 1.0.0
+    description: Content pack (format 1.4) — wiki pages only, one of them pinned to the wiki home
   - path: http-handler/
     package: http-handler
     version: 1.0.2
@@ -39,11 +44,11 @@ packages:
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
-    version: 1.0.1
+    version: 1.1.0
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: comm-feed/
     package: comm-feed
-    version: 1.1.0
+    version: 1.2.0
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen

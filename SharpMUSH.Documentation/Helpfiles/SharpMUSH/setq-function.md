@@ -22,6 +22,11 @@
       "id": "command-thread-lifetime",
       "heading": "Command thread lifetime",
       "lookup": "setq command thread lifetime"
+    },
+    {
+      "id": "register-labels",
+      "heading": "Register labels",
+      "lookup": "setq register labels"
     }
   ],
   "redirects": {
@@ -34,13 +39,17 @@
 # setq()
 
 `setq(<register1>, <string1>[, ... , <registerN>, <stringN>])`<br>
-`setr(<register1>, <string1>[, ... , <registerN>, <stringN>])`
+`setr(<register1>, <string1>[, ... , <registerN>, <stringN>])`<br>
+`setq(<register>, <string>, <label>)`<br>
+`setr(<register>, <string>, <label>)`
 
 The setq() and setr() functions are used to copy strings into local registers assigned arbitrary names (Much like variables in other programming languages.) setq() returns a null string; it is a purely "side effect" function. setr() returns the value stored. Multiple registers can be assigned with a single setq() or setr(), with additional pairs of registers and values in the function's arguments. In this case, setr() returns the value stored in the first register listed. All arguments are evaluated before any registers are set; to use a register set earlier in the same call, use setqm() or setrm(), which set them in order.
 
 Registers set via setq() or setr() can be accessed via the r() function. Single-character registers can also be accessed via the %qN substitution, and ones with longer names via %q`<NAME>` (Note that the <>'s are required.) Attempting to access a register that hasn't been set results in an empty string.
 
 Register names are case insensitive: setq(A, foo) and setq(a, foo) both set the same register, and %qA and %qa both fetch its value.
+
+With exactly three arguments, the third is a label: another name for the register (see 'help setq register labels').
 
 ::: seealso
 - [setqm()]
@@ -51,6 +60,7 @@ Register names are case insensitive: setq(A, foo) and setq(a, foo) both set the 
 - [LOCALIZE()]
 - [ulocal()]
 - [REGISTERS()]
+- [nameq()]
 :::
 
 ## Register names and limits
@@ -91,4 +101,23 @@ say setr(what,foo); @wait 0=say %q<what>; say setr(what,bar)
 Object says "foo"
 Object says "bar"
 Object says "foo"
+```
+
+## Register labels
+
+`setq(<register>, <string>, <label>)` sets the register and gives it `<label>` as a second name. From then on `%q<label>`, `r(label)` and `setq(label, ...)` read and write that same register, until the register is given another label or the registers are cleared. A register has one label at a time, and a label names one register: giving it to a second register takes it from the first. Labels are saved and restored with the registers by localize(), ulocal() and the `/localize` switches.
+
+A label is at least two characters long, is not a number and has no `>` in it. With a third argument that is not a label, the call is PennMUSH's odd-argument error; `nameq()` answers `#-1 INVALID LABEL` instead. The register may also be `+` (the register the label already names, else the first of 0-9 and A-Z with no label and no value) or `!` (the same, but a register that holds a value may be taken).
+
+nameq() reads and changes labels, and setqm() takes `<register>><label>` to do the same in order.
+
+Labels come from RhostMUSH. One difference: RhostMUSH lets two registers carry the same label, and the label then reads the first of them.
+
+```sharp
+> think [setq(0, 15, damage)]%q<damage> %q0
+15 15
+> think [setq(0, 15, damage)][setq(damage, 20)]%q0
+20
+> think [setq(+, north, exit)][nameq(exit, , 1)]: %q<exit>
+0: north
 ```

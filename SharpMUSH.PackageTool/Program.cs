@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using YamlDotNet.Serialization;
@@ -12,7 +13,8 @@ using YamlDotNet.Serialization;
 // file directly. The manifest is parsed and validated with the same engine the
 // server uses (PackageManifestService.ParseManifest) — no server, DB, or network
 // required. For a `kind: plugin` manifest, each declared binary file is also
-// verified to exist in the package directory and to match its declared SHA-256.
+// verified to exist in the package directory and to match its declared SHA-256,
+// and each `file:` wiki page of a content pack is read as the server reads it.
 //
 // Exit codes:
 //   0  all inputs valid (warnings allowed, unless --strict)
@@ -110,7 +112,10 @@ internal static class PackageToolApp
 		var warningsFail = strict && parsed.Warnings.Count > 0;
 		PrintIssues(label, parsed.Warnings);
 
-		var binariesOk = VerifyBinaries(yaml, packageDir, label);
+		// Both checks run, so one report names every problem.
+		var binariesVerified = VerifyBinaries(yaml, packageDir, label);
+		var wikiVerified = VerifyWikiPages(parsed.Manifest, packageDir, label, strict);
+		var binariesOk = binariesVerified && wikiVerified;
 
 		if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
 		{
@@ -122,6 +127,26 @@ internal static class PackageToolApp
 		}
 
 		return binariesOk && !warningsFail;
+	}
+
+	/// <summary>
+	/// Verifies that every <c>file:</c> wiki page of a content pack is in the package directory, UTF-8 text and
+	/// within the size limit, and links every page in full, read the way the server reads it. True when there is
+	/// nothing to read or all of it reads; a link that looks like a typo is a warning, which fails under strict.
+	/// </summary>
+	private static bool VerifyWikiPages(PackageManifest manifest, string packageDir, string label, bool strict)
+	{
+		switch (PackageWikiBodies.LoadAsync(manifest, new DirectoryPackageFileSource(packageDir)).GetAwaiter().GetResult())
+		{
+			case Error<string> error:
+				Console.WriteLine($"ERROR {label}: {error.Value}");
+				return false;
+			case PackageWikiLoad loaded:
+				PrintIssues(label, loaded.Warnings);
+				return !(strict && loaded.Warnings.Count > 0);
+		}
+
+		return false;
 	}
 
 	private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder().Build();

@@ -46,7 +46,7 @@ public class PluginPackageInstallerTests
 		new Dictionary<string, string>(), [], 10, AllowPluginCode: allow);
 
 	private static Task<Result<IReadOnlyList<string>>> DeployAsync(PluginPackageInstaller installer, string yaml,
-		bool allow = true, IPluginPackageBinarySource? source = null) =>
+		bool allow = true, IPackageFileSource? source = null) =>
 		installer.DeployAsync(Parse(yaml), Request(allow), source ?? new PluginPackageFixture.BinarySource(PackageId));
 
 	[Test]
@@ -107,10 +107,10 @@ public class PluginPackageInstallerTests
 		finally { PluginPackageFixture.Delete(directories); }
 	}
 
-	private sealed class RefuseReadSource : IPluginPackageBinarySource
+	private sealed class RefuseReadSource : IPackageFileSource
 	{
 		public int Reads { get; private set; }
-		public Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default)
+		public Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default)
 		{
 			Reads++;
 			return Task.FromResult<byte[]?>(null);

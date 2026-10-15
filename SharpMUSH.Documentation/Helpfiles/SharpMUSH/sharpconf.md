@@ -96,10 +96,10 @@ These options affect database saves and other periodic checks.
 - `dump_complete=<string>`: Notification message for the end of a save.
 - `dump_warning_1min=<string>`: Notification one minute before a save.
 - `dump_warning_5min=<string>`: Notification five minutes before a save.
-- `dump_interval=<time>`: Seconds between database saves.
 - `warn_interval=<time>`: Seconds between automatic @wchecks.
 - `purge_interval=<time>`: Seconds between automatic @purges.
-- `dbck_interval=<time>`: Seconds between automatic @dbcks.
+
+A save is a backup: the messages are shown around every `@backup`, `@dump` and scheduled backup, and an empty one is not shown. How often backups are scheduled is the server's SHARPMUSH_BACKUP_INTERVAL setting, not an option, so PennMUSH's dump_interval is read and ignored; so is dbck_interval, since `@dbck` runs only when asked (see [event dump] and [event db]).
 
 # @config flags
 These options set the default flags for newly-created objects and channels. Each is a
@@ -158,3 +158,16 @@ Options that help control compability with TinyMUSH servers.
 - `tiny_math=<boolean>`: Is a string where a number is expected considered a 0?
 - `silent_pemit=<boolean>`: Does @pemit default to @pemit/silent?
 - `paren_groups=<boolean>`: Does an unescaped `(` that starts no function call open a literal group, as in PennMUSH? Its commas are text and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments. When off, escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`. Importing a PennMUSH database turns it on.
+- `mux_logic=<boolean>`: Do and(), or(), xor(), cand() and cor() test each argument by its leading signed integer, as TinyMUX does, and does xor() answer 1 for an odd number of true arguments? See [compatibility config].
+- `mux_justify=<boolean>`: Do ljust(), rjust() and center() cut text longer than the width, as TinyMUX does?
+- `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
+- `mux_list=<boolean>`: Is list() with two or three arguments TinyMUX's, which tells the enactor each result of a loop?
+- `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
+
+The `rhost_` options below are for a game moved from RhostMUSH. Each is off by default, and off leaves the function as PennMUSH has it. See [compatibility config].
+
+- `rhost_edit=<boolean>`: Are edit()'s fourth and fifth arguments RhostMUSH's first-only and ANSI modes, rather than another from/to pair?
+- `rhost_lattr=<boolean>`: Do lattr() and lattrp() take RhostMUSH's target, type, flags, regexp and tree arguments, rather than an output separator?
+- `rhost_printf=<boolean>`: Does printf() read RhostMUSH's `$`-fields, rather than SharpMUSH's `%` directives?
+- `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?
+- `sidefx_flag=<boolean>`: Do side-effect functions work only for an object with the SIDEFX flag or the `softcode.sidefx` permission, as on RhostMUSH? Others get `#-1 FUNCTION DISABLED`.

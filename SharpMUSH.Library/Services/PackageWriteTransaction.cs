@@ -39,6 +39,9 @@ public sealed class PackageWriteTransaction(
 	ILockService locks,
 	SharpPlayer packageManager) : IAsyncDisposable
 {
+	/// <summary>The Package Manager wizard this operation writes as.</summary>
+	public SharpPlayer PackageManager => packageManager;
+
 	private readonly Stack<(string What, Func<Task> Revert)> _undo = new();
 	private readonly HashSet<int> _created = [];
 	private bool _settled;
@@ -485,6 +488,23 @@ public sealed class PackageWriteTransaction(
 			() => ManagedStructureAsync(packageId, objid),
 			() => registry.RemoveManagedStructureAsync(packageId, objid),
 			registry.UpsertManagedStructureAsync,
+			() => Task.CompletedTask);
+
+	private async Task<PackageWikiPageRecord?> PackageWikiPageAsync(string packageId, string ns, string slug) =>
+		await registry.GetPackageWikiPageAsync(packageId, ns, slug) is PackageWikiPageRecord found ? found : null;
+
+	public Task UpsertPackageWikiPageAsync(PackageWikiPageRecord record) =>
+		WriteRowAsync($"{record.PackageId} wiki page {record.Namespace}:{record.Slug}",
+			() => PackageWikiPageAsync(record.PackageId, record.Namespace, record.Slug),
+			() => registry.UpsertPackageWikiPageAsync(record),
+			registry.UpsertPackageWikiPageAsync,
+			() => registry.RemovePackageWikiPageAsync(record.PackageId, record.Namespace, record.Slug));
+
+	public Task RemovePackageWikiPageAsync(string packageId, string ns, string slug) =>
+		WriteRowAsync($"{packageId} wiki page {ns}:{slug}",
+			() => PackageWikiPageAsync(packageId, ns, slug),
+			() => registry.RemovePackageWikiPageAsync(packageId, ns, slug),
+			registry.UpsertPackageWikiPageAsync,
 			() => Task.CompletedTask);
 
 	/// <summary>

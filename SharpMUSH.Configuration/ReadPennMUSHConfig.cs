@@ -119,7 +119,17 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), d.Compatibility.TinyMath),
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), d.Compatibility.SilentPEmit),
 				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), d.Compatibility.ParenGroups),
-				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters)
+				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters),
+				Boolean(Get(nameof(CompatibilityOptions.MuxLogic)), d.Compatibility.MuxLogic),
+				Boolean(Get(nameof(CompatibilityOptions.MuxJustify)), d.Compatibility.MuxJustify),
+				Boolean(Get(nameof(CompatibilityOptions.MuxCollation)), d.Compatibility.MuxCollation),
+				Boolean(Get(nameof(CompatibilityOptions.MuxList)), d.Compatibility.MuxList),
+				Boolean(Get(nameof(CompatibilityOptions.InnermostTokens)), d.Compatibility.InnermostTokens),
+				Boolean(Get(nameof(CompatibilityOptions.RhostEdit)), d.Compatibility.RhostEdit),
+				Boolean(Get(nameof(CompatibilityOptions.RhostLattr)), d.Compatibility.RhostLattr),
+				Boolean(Get(nameof(CompatibilityOptions.RhostPrintf)), d.Compatibility.RhostPrintf),
+				Boolean(Get(nameof(CompatibilityOptions.RhostMapArgs)), d.Compatibility.RhostMapArgs),
+				Boolean(Get(nameof(CompatibilityOptions.SidefxFlag)), d.Compatibility.SidefxFlag)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
@@ -175,7 +185,11 @@ public static partial class ReadPennMushConfig
 				DatabaseReference(Get(nameof(DatabaseOptions.MessagesObject)), d.Database.MessagesObject)
 			),
 			Dump = new DumpOptions(
-				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval)
+				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval),
+				Message(nameof(DumpOptions.DumpMessage), d.Dump.DumpMessage),
+				Message(nameof(DumpOptions.DumpComplete), d.Dump.DumpComplete),
+				Message(nameof(DumpOptions.DumpWarning5Min), d.Dump.DumpWarning5Min),
+				Message(nameof(DumpOptions.DumpWarning1Min), d.Dump.DumpWarning1Min)
 			),
 			File = new FileOptions(
 				RequiredString(Get(nameof(FileOptions.AccessFile)), d.File.AccessFile),
@@ -271,7 +285,6 @@ public static partial class ReadPennMushConfig
 				String(Get(nameof(NetOptions.SqlHost)), d.Net.SqlHost),
 				String(Get(nameof(NetOptions.SqlDatabase)), d.Net.SqlDatabase),
 				String(Get(nameof(NetOptions.SqlUsername)), d.Net.SqlUsername),
-				String(Get(nameof(NetOptions.SqlPassword)), d.Net.SqlPassword),
 				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), d.Net.JsonUnsafeUnescape),
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), d.Net.SslRequireClientCert)
 			),
@@ -337,9 +350,31 @@ public static partial class ReadPennMushConfig
 
 		var named = configDictionary.Where(entry => entry.Value.Length > 0).Select(entry => entry.Key)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		return new PennMushConfigImport(work, skipped, named);
+		// A secret directive takes its last line, as an option does. An empty one, as in PennMUSH's shipped
+		// mush.cnf, means no password: there is nothing to store.
+		var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var (line, key) in text
+							 .Select(line => (Line: line, Match: splitter.Match(line.Trim())))
+							 .Where(entry => entry.Match.Success)
+							 .Select(entry => (entry.Line, Key: entry.Match.Groups["Key"].Value))
+							 .Where(entry => PennMushConfigImport.SecretDirectives.ContainsKey(entry.Key)))
+		{
+			secrets[PennMushConfigImport.SecretDirectives[key]] = DirectiveValue(line);
+		}
+
+		return new PennMushConfigImport(work, skipped, named,
+			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal));
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
+
+		// A dump message line with nothing after it turns the message off, as in PennMUSH; only a missing line keeps
+		// the default.
+		string? Message(string property, string? fallback)
+		{
+			var key = propertyDictionary[property];
+			var lines = text.Where(line => line.Trim().Split([' ', '\t'], 2)[0] == key).ToArray();
+			return lines is [.., var last] ? DirectiveValue(last) : fallback;
+		}
 	}
 
 	/// <summary>

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
@@ -48,7 +49,25 @@ foreach (var manifestPath in manifestPaths)
 		case ParsedPackageManifest parsed:
 			Report(relative, parsed.Warnings);
 			manifestsByDir[Path.GetRelativePath(root, Path.GetDirectoryName(manifestPath)!)] = parsed.Manifest;
-			Console.WriteLine($"OK    {relative}: {parsed.Manifest.Name} {parsed.Manifest.Version}");
+
+			// A content pack's file: pages must be in its directory, UTF-8, within the size limit, and link in full.
+			var pages = parsed.Manifest.WikiPages.Count;
+			if (pages > 0)
+			{
+				switch (await PackageWikiBodies.LoadAsync(parsed.Manifest, new DirectoryPackageFileSource(Path.GetDirectoryName(manifestPath)!)))
+				{
+					case Error<string> unreadable:
+						failed = true;
+						Console.WriteLine($"ERROR {relative}: {unreadable.Value}");
+						continue;
+					case PackageWikiLoad loaded:
+						Report(relative, loaded.Warnings);
+						break;
+				}
+			}
+
+			Console.WriteLine($"OK    {relative}: {parsed.Manifest.Name} {parsed.Manifest.Version}"
+				+ (pages > 0 ? $" (format {parsed.Manifest.Format}, {pages} wiki page{(pages == 1 ? "" : "s")})" : ""));
 			break;
 		case PackageManifestFailure failure:
 			Report(relative, failure.Issues);

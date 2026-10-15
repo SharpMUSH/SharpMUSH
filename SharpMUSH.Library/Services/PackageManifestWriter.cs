@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Globalization;
 using System.Text;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Library.Services;
 
@@ -39,6 +40,7 @@ public static class PackageManifestWriter
 		WriteConfigure(yaml, manifest.Configure);
 		WriteDeclarations(yaml, manifest.Declared);
 		WriteSettings(yaml, manifest.Settings ?? []);
+		WriteWiki(yaml, manifest.WikiPages);
 
 		switch (manifest.Kind)
 		{
@@ -50,6 +52,9 @@ public static class PackageManifestWriter
 				break;
 			case PackageKind.Plugin when manifest.Binary is { } binary:
 				WriteBinaries(yaml, binary);
+				break;
+			// A content pack is its wiki pages alone, and reads back without an objects: block.
+			case PackageKind.Softcode when manifest.Objects.Count == 0 && manifest.WikiPages.Count > 0:
 				break;
 			default:
 				WriteObjects(yaml, manifest.Objects);
@@ -93,6 +98,7 @@ public static class PackageManifestWriter
 		}
 
 		AppendOptional(yaml, "replaces", manifest.Replaces);
+		AppendOptional(yaml, "locale", manifest.Locale);
 	}
 
 	private static void WriteRelations(
@@ -210,6 +216,64 @@ public static class PackageManifestWriter
 		{
 			// Quoted always: an unquoted yes, 40 or #12 would come back as a bool, a number or a comment.
 			yaml.Append("  ").Append(setting.Option).Append(": ").AppendLine(Quoted(setting.Value));
+		}
+	}
+
+	private static void WriteWiki(StringBuilder yaml, IReadOnlyList<PackageWikiPageSpec> pages)
+	{
+		if (pages.Count == 0)
+		{
+			return;
+		}
+
+		yaml.AppendLine();
+		yaml.AppendLine("wiki:");
+		foreach (var page in pages)
+		{
+			// namespace:slug is a plain scalar: a slug has no space, '#' or second colon.
+			yaml.Append("  - page: ").AppendLine(page.Label);
+
+			yaml.Append("    title: ").AppendLine(Scalar(page.Title));
+			if (page.Categories.Count > 0)
+			{
+				yaml.Append("    categories: ").AppendLine(Flow(page.Categories));
+			}
+
+			if (!page.Published)
+			{
+				yaml.AppendLine("    published: false");
+			}
+
+			if (page.Pin)
+			{
+				yaml.AppendLine("    pin: true");
+			}
+
+			if (!page.Requires.IsEmpty)
+			{
+				yaml.AppendLine("    requires:");
+				AppendRequires(yaml, "view", page.Requires.View);
+				AppendRequires(yaml, "edit", page.Requires.Edit);
+				AppendRequires(yaml, "delete", page.Requires.Delete);
+			}
+
+			// A page whose body was read from its file is written back as that file, which is where it lives.
+			if (page.File is { } file)
+			{
+				yaml.Append("    file: ").AppendLine(Scalar(file));
+			}
+			else
+			{
+				AppendValue(yaml, "markdown", page.Markdown ?? "", "    ");
+			}
+		}
+	}
+
+	private static void AppendRequires(StringBuilder yaml, string action, IReadOnlyList<string> scopes)
+	{
+		if (scopes.Count > 0)
+		{
+			yaml.Append("      ").Append(action).Append(": ").AppendLine(Flow(scopes));
 		}
 	}
 
@@ -332,7 +396,7 @@ public static class PackageManifestWriter
 			// reader accepts any non-whitespace name. A bare key that leads with a YAML indicator,
 			// or carries a colon, is not the name that went in.
 			yaml.Append("      ").Append(Scalar(name)).AppendLine(":");
-			AppendValue(yaml, spec.Value, "        ");
+			AppendValue(yaml, "value", spec.Value, "        ");
 			if (spec.Flags.Count > 0)
 			{
 				yaml.Append("        flags: ").AppendLine(Flow(spec.Flags));
@@ -357,8 +421,8 @@ public static class PackageManifestWriter
 	}
 
 	/// <summary>
-	/// Writes an attribute value. MUSHcode rides in a literal block scalar so diffs stay readable and
-	/// nothing inside it can be re-typed by the YAML parser — a block scalar is always a string, so
+	/// Writes an attribute value or a page's Markdown under <paramref name="key"/>. MUSHcode rides in a literal
+	/// block scalar so diffs stay readable and nothing inside it can be re-typed by the YAML parser — a block scalar is always a string, so
 	/// <c>12345</c> and <c>true</c> come back as text without any quoting of their own.
 	/// </summary>
 	/// <remarks>
@@ -375,21 +439,31 @@ public static class PackageManifestWriter
 	/// where the break is an explicit <c>\n</c> escape, carries both.
 	/// </para>
 	/// </remarks>
-	private static void AppendValue(StringBuilder yaml, string value, string indent)
+	private static void AppendValue(StringBuilder yaml, string key, string value, string indent)
 	{
 		var normalized = value.Replace("\r\n", "\n");
+
+		// One line end at the end, as a Markdown file has, is what clip chomping (|) keeps.
+		var chomp = "|-";
+		if (normalized.EndsWith('\n') && normalized.Length > 1 && !char.IsWhiteSpace(normalized[^2]))
+		{
+			normalized = normalized[..^1];
+			chomp = "|";
+		}
+
 		var blockScalarFits = normalized.Length > 0
 			&& !char.IsWhiteSpace(normalized[0])
 			&& !char.IsWhiteSpace(normalized[^1]);
 
 		if (!blockScalarFits)
 		{
-			yaml.Append(indent).Append("value: ")
-				.AppendLine(normalized.Contains('\n') ? DoubleQuoted(normalized) : Quoted(normalized));
+			var whole = value.Replace("\r\n", "\n");
+			yaml.Append(indent).Append(key).Append(": ")
+				.AppendLine(whole.Contains('\n') ? DoubleQuoted(whole) : Quoted(whole));
 			return;
 		}
 
-		yaml.Append(indent).AppendLine("value: |-");
+		yaml.Append(indent).Append(key).Append(": ").AppendLine(chomp);
 		var text = normalized.AsSpan();
 		foreach (var line in text.Split('\n'))
 		{

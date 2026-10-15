@@ -154,6 +154,18 @@ public class LimitExceededFlag
 }
 
 /// <summary>
+/// RhostMUSH's <c>privatize()</c> switch, shared by every frame of one evaluation: while it is on,
+/// code that localizes the q-registers (<c>localize()</c>, <c>ulocal()</c> and the like) starts with
+/// them empty instead of with a copy of the caller's. A reference type for the same reason as
+/// <see cref="LimitExceededFlag"/>.
+/// </summary>
+public class RegisterPrivacyFlag
+{
+	/// <summary>Whether localized code starts with empty q-registers.</summary>
+	public bool Enabled { get; set; }
+}
+
+/// <summary>
 /// HTTP response context for building HTTP responses
 /// </summary>
 public class HttpResponseContext
@@ -229,7 +241,7 @@ public class IterationWrapper<T>
 
 /// <summary>
 /// One switch's subject, which <c>stext()</c> and <c>%$&lt;n&gt;</c> read, and which <c>#$</c> reads while one of
-/// its actions runs.
+/// its actions runs. An <c>if()</c> or <c>ifelse()</c> pushes one too, whose subject is its evaluated condition.
 /// </summary>
 public sealed class SwitchFrame
 {
@@ -237,8 +249,10 @@ public sealed class SwitchFrame
 	public required MString Text { get; init; }
 
 	/// <summary>
-	/// Whether <c>#$</c> reads this switch: true for <c>switch()</c>, <c>reswitch()</c>, <c>@switch</c> and
-	/// <c>@select</c>, which PennMUSH splices it into, and false for <c>case()</c>, which it does not.
+	/// Whether PennMUSH splices <c>#$</c> into this switch's action: true for <c>switch()</c>, <c>reswitch()</c>,
+	/// <c>@switch</c> and <c>@select</c>, false for <c>case()</c>, <c>if()</c> and <c>ifelse()</c>, which leave it
+	/// as text there. <c>#$</c> reads an unspliced one only when no spliced one binds it, so code written for
+	/// PennMUSH reads the same switch it did there.
 	/// </summary>
 	public bool Spliced { get; init; }
 
@@ -435,6 +449,9 @@ public sealed record EvaluationContext
 	/// <summary>Set once a limit has been exceeded.</summary>
 	public LimitExceededFlag? LimitExceeded { get; init; }
 
+	/// <summary>Whether localized code starts with empty q-registers (<c>privatize()</c>).</summary>
+	public RegisterPrivacyFlag? RegisterPrivacy { get; init; }
+
 	/// <inheritdoc cref="ParserState.MoveDepth"/>
 	public InvocationCounter? MoveDepth { get; init; }
 
@@ -550,6 +567,13 @@ public partial record ParserState
 	{
 		get => Context.LimitExceeded;
 		init => Context = Context with { LimitExceeded = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.RegisterPrivacy"/>
+	public RegisterPrivacyFlag? RegisterPrivacy
+	{
+		get => Context.RegisterPrivacy;
+		init => Context = Context with { RegisterPrivacy = value };
 	}
 
 	/// <summary>
@@ -751,6 +775,7 @@ public partial record ParserState
 			FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations = new(),
 			LimitExceeded = new(),
+			RegisterPrivacy = new(),
 			MoveDepth = new(),
 			CommandText = null,
 			QueuedOutput = PipedOutput,
@@ -795,6 +820,7 @@ public partial record ParserState
 			FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations = new InvocationCounter(),
 			LimitExceeded = new LimitExceededFlag(),
+			RegisterPrivacy = new RegisterPrivacyFlag(),
 			MoveDepth = new InvocationCounter()
 		},
 		Arguments = new Dictionary<string, CallState>()
@@ -862,6 +888,7 @@ public partial record ParserState
 				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations = new InvocationCounter(),
 				LimitExceeded = new LimitExceededFlag(),
+				RegisterPrivacy = new RegisterPrivacyFlag(),
 				MoveDepth = new InvocationCounter(),
 				CommandText = commandText,
 				OutputLimit = outputLimit
@@ -1012,16 +1039,19 @@ public partial record ParserState
 	/// <returns>Success if it was a valid register.</returns>
 	public bool AddRegister(string register, MString value)
 	{
-		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
-		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
-		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
-		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
+		var canPeek = Registers.TryPeek(out var top);
+		if (!canPeek || string.IsNullOrEmpty(register))
 		{
 			return false;
 		}
 
-		var canPeek = Registers.TryPeek(out var top);
-		if (!canPeek)
+		// A RhostMUSH label (setq()'s third argument) writes the register it names.
+		register = RegisterLabels.Resolve(top!, register);
+
+		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
+		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
+		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
+		if (!RegisterNameRegex().IsMatch(register))
 		{
 			return false;
 		}
@@ -1044,7 +1074,7 @@ public partial record ParserState
 	/// </summary>
 	private IEnumerable<Dictionary<string, MString>> VisibleRegexpFrames
 		=> RegexRegisters.TakeWhile(frame => frame is not RegexpCaptureFrame owned
-			|| ReferenceEquals(owned.Evaluation, CurrentEvaluation));
+			|| ReferenceEquals(DBAttribute.Scope(owned.Evaluation), DBAttribute.Scope(CurrentEvaluation)));
 
 	/// <summary>
 	/// Whether <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> are substitutions here rather than text:

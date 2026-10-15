@@ -120,8 +120,9 @@ public class McpIsolatedTransportTests
 				? RateLimitPartition.GetFixedWindowLimiter("fixture", _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })
 				: RateLimitPartition.GetNoLimiter("fixture"));
 		});
+		builder.Services.AddSingleton(_ => new FixtureDirectory(fixture));
 		var app = builder.Build();
-		app.Lifetime.ApplicationStopped.Register(() => Directory.Delete(fixture, true));
+		app.Services.GetRequiredService<FixtureDirectory>();
 		app.UseAuthentication();
 		app.UseRateLimiter();
 		app.UseAuthorization();

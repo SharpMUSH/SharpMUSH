@@ -1,0 +1,9 @@
+{
+  "id": "discord",
+  "name": "Discord",
+  "description": "Links the game's feeds to Discord channels, through a bot the game runs itself.",
+  "entry": "SharpMUSH.Plugins.Discord.dll",
+  "version": "0.1.0",
+  "dependencies": [],
+  "priority": 0
+}

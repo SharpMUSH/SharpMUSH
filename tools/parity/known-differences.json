@@ -86,11 +86,11 @@
       "scenario": "20-admin-commands",
       "case": "admin.lists",
       "step": 0,
-      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB, Send_Image and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
+      "reason": "SharpMUSH defines the SCENE_ROOM, SIDEFX and TRUECOLOR flags and the See_OOB, Send_Image and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these six are the only difference accepted.",
       "tracking": "#1406",
       "profile": "SharpMUSH-only flags and powers",
       "command": "@list flags",
-      "sharp": "Flags: ABODE (A), ANSI (A), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SCENE_ROOM (S), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUECOLOR, TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)",
+      "sharp": "Flags: ABODE (A), ANSI (A), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SCENE_ROOM (S), SHARED (Z), SIDEFX, STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUECOLOR, TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)",
       "penn": "Flags: ABODE (A), ANSI (A), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)"
     },
     {
@@ -98,7 +98,7 @@
       "scenario": "20-admin-commands",
       "case": "admin.lists",
       "step": 1,
-      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB, Send_Image and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
+      "reason": "SharpMUSH defines the SCENE_ROOM, SIDEFX and TRUECOLOR flags and the See_OOB, Send_Image and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these six are the only difference accepted.",
       "tracking": "#1406",
       "profile": "SharpMUSH-only flags and powers",
       "command": "@list powers",
@@ -194,6 +194,76 @@
       "tracking": "#1641",
       "profile": "Mail listings are drawn as titled sections",
       "command": "@mail/folder"
+    },
+    {
+      "id": "KD-0019",
+      "scenario": "30-softcode",
+      "case": "sc.subjectcaseif",
+      "step": 0,
+      "reason": "SharpMUSH binds #$ in case(), caseall(), if() and ifelse() as TinyMUX does, and counts an if() branch as a switch for %$0, stext() and slev(); PennMUSH leaves #$ as text there and counts only switches.",
+      "tracking": "#1849",
+      "profile": "`#$` in `case()` and `if()`",
+      "command": "think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)] [switch(a,*,if(1,%$0 [slev()]))]"
+    },
+    {
+      "id": "KD-0020",
+      "scenario": "38-tinymux-forms",
+      "case": "mux.forms",
+      "step": 0,
+      "reason": "PennMUSH refuses a lone switch() default, one-argument add() and and(), and lnum() and itext() without an argument; SharpMUSH answers them as TinyMUX does.",
+      "tracking": "#1854",
+      "profile": "TinyMUX's forms of shared functions",
+      "command": "think [switch(x,default)]|[add(5)]|[and(1)]|[lnum()]|[iter(a b,itext())]",
+      "sharp": "default|5|1||a b",
+      "penn": "#-1 FUNCTION (SWITCH) EXPECTS AT LEAST 3 ARGUMENTS BUT GOT 2|#-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1|#-1 FUNCTION (AND) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1|#-1 ARGUMENT MUST BE NUMBER|#-1 ARGUMENT MUST BE INTEGER #-1 ARGUMENT MUST BE INTEGER"
+    },
+    {
+      "id": "KD-0021",
+      "scenario": "38-tinymux-forms",
+      "case": "mux.forms",
+      "step": 1,
+      "reason": "A wrap() whose third argument starts with a letter is TinyMUX's justified wrap(); PennMUSH's third argument must be a number.",
+      "tracking": "#1854",
+      "profile": "TinyMUX's forms of shared functions",
+      "command": "think wrap(aaa bbb ccc,5,right)",
+      "sharp": "  aaa\n  bbb\n  ccc",
+      "penn": "#-1 ARGUMENT MUST BE INTEGER"
+    },
+    {
+      "id": "KD-0022",
+      "scenario": "38-tinymux-forms",
+      "case": "mux.forms",
+      "step": 2,
+      "reason": "When only the fifth argument names a sort type, SharpMUSH takes TinyMUX's order (separator, then sort type); PennMUSH takes the fifth as the separator.",
+      "tracking": "#1854",
+      "profile": "TinyMUX's forms of shared functions",
+      "command": "think setunion(B a c,b, ,|,a)",
+      "sharp": "B|a|b|c",
+      "penn": "Baaabac"
+    },
+    {
+      "id": "KD-0023",
+      "scenario": "38-tinymux-forms",
+      "case": "mux.percent-m",
+      "step": 0,
+      "reason": "%m is TinyMUX's name for the running command; PennMUSH has no %m and prints m.",
+      "tracking": "#1854",
+      "profile": "`%m` is the running command",
+      "command": "think %m|%c",
+      "sharp": "think %m|%c|think %m|%c",
+      "penn": "m|think %m|%c"
+    },
+    {
+      "id": "KD-0024",
+      "scenario": "38-tinymux-forms",
+      "case": "mux.attribute-sub",
+      "step": 1,
+      "reason": "%=<name> is TinyMUX's attribute substitution; PennMUSH evaluates %= (empty at the command line) and prints <name>.",
+      "tracking": "#1854",
+      "profile": "`%=<name>` is an attribute or argument",
+      "command": "think %=<muxsub>",
+      "sharp": "hello",
+      "penn": "<muxsub>"
     }
   ]
 }

@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -130,4 +131,11 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 			}
 		}
 	}
+
+	/// <summary>
+	/// The compatibility options as the running parser sees them, read on every call so a change
+	/// made with @config takes effect at once.
+	/// </summary>
+	private static CompatibilityOptions Compatibility(IMUSHCodeParser parser)
+		=> parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Compatibility;
 }

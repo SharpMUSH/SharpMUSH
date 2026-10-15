@@ -144,6 +144,53 @@ validators and reload as `@config/set`). The decisions:
   the installer to confirm when an option would change.
 - **Rollback** leaves options as they are.
 
+### Wiki pages (format 1.4)
+
+`wiki:` lists pages a package ships: each `page: namespace:slug` (one key; the namespace, required and
+lower case, is `main`, `help` or `category`; the slug already in slug form), a title, categories, the per-page `requires:` (view, edit, delete) and the pin of a category page,
+with its body in a package file or inline. A package with `wiki:` may leave out `objects:`: a
+content pack. The reference is `examples/packages/README.md`. The decisions:
+
+- **Bodies are read once.** `file:` bodies come through `IPackageFileSource` (a git commit, the
+  upload folder, a directory for the validators) when the manifest is fetched, through
+  `PackageWikiBodies`, strict UTF-8, at most 1 MB each. The plan carries the text, so review and
+  apply see the same pages. The bundled catalogue embeds manifests only and has no file source:
+  no bundled package ships wiki pages.
+- **Links are full.** `PackageWikiLinks` walks each body with the wiki's own Markdig pipeline
+  (`WikiLinkInline.Target`) and requires every `[[Target]]` / `[[Display|Target]]` to be
+  `Namespace:slug`: a bare or title-cased target is an error naming the file and the link. A
+  full link to an unshipped page that looks like a typo for a shipped one is a warning; links
+  outside the package are allowed. Inline bodies are checked when the manifest is read, file
+  bodies when `PackageWikiBodies` reads them, so the server and both validators agree.
+- **Softcode never reads wiki data.** Page text is literal Markdown with no `{{ref}}`
+  substitution, and there is no function that reads it. A table softcode rolls on is attributes in
+  a softcode package.
+- **Ownership.** `IPackageWikiService` (pass 4d, after settings, so a page may require a
+  permission the package's own `permissions:` creates in pass 4b) records each owned page in the
+  Lightning table `pkg.wiki` as a `PackageWikiPageRecord`: every field as the package last wrote
+  it, which is the baseline. One page has one package: a page another package owns blocks the plan.
+- **Plan.** `PackageWikiPlanner` is pure, one row per page. No baseline: create when absent, adopt
+  when the game has it exactly so, otherwise an add-add conflict (keep mine leaves the page
+  unowned). With a baseline: a field-wise three-way merge — the body by line diff3 (`LineMerge`,
+  LCS with the shared ends trimmed), title and published as values, categories, requirements and
+  the pin as sets. A clash in the body, title or published flag is a modify-modify conflict; the
+  review screen shows base, live, new and the merge with each clash marked, and keep mine takes
+  every non-clashing change of the version while keeping the game's side of each clash. A page
+  staff deleted stays deleted when the version did not change it, and is a delete-modify conflict
+  when it did. The baseline always advances to the new version.
+- **Conflicts** travel as `PackageConflictDecision` with `TargetRef = "wiki:<namespace>"` and the
+  page as `Attribute`, so the apply endpoint takes them like attribute conflicts.
+- **Writes.** Pages are written through `IWikiService` as the Package Manager wizard, the revision
+  summary naming the package and version; a title change uses `SetTitleAsync`, which writes no
+  revision and never moves the slug. Each write is tracked by `PackageWriteTransaction` with an
+  inverse that applies only while the field still holds what the apply wrote.
+- **Release.** A page the version drops, and every page on uninstall, is deleted when untouched
+  (every field equals the baseline and no translation exists), and its category unpinned if the
+  package pinned it and it is still pinned. A changed page stays as the game's and its row goes.
+  Deletes run after the operation commits, since a deleted page keeps neither id nor history; the
+  pre-package backup covers them.
+- **Rollback** leaves wiki pages as they are; a page's history is the way back for its text.
+
 ## Repo Structure
 
 A package is a directory. A repo contains one or more packages.

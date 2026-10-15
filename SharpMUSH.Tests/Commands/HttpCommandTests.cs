@@ -34,6 +34,7 @@ public class HttpCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HttpAdmission");
+		await GrantHttpAsync(player.DbRef);
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Arguments = new()
@@ -74,6 +75,7 @@ public class HttpCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HttpCapacityNotice");
+		await GrantHttpAsync(player.DbRef);
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Arguments = new()
@@ -146,6 +148,299 @@ public class HttpCommandTests
 		{
 			if (reason != QueueRejectionReason.ShuttingDown) await scheduler.DisposeAsync();
 		}
+	}
+
+	/// <summary>Answers every request with <paramref name="reply"/>, keeping what was sent.</summary>
+	private sealed class RecordingHandler(string reply, string replyType = "text/plain") : HttpMessageHandler
+	{
+		public HttpRequestMessage? Request { get; private set; }
+		public byte[]? Body { get; private set; }
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			Request = request;
+			Body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+			var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+			{
+				Content = new StringContent(reply, System.Text.Encoding.UTF8, replyType)
+			};
+			response.Headers.TryAddWithoutValidation("Retry-After", "30");
+			response.Headers.TryAddWithoutValidation("Link", ["<https://example.invalid/2>; rel=\"next\"", "<https://example.invalid/9>; rel=\"last\""]);
+			return response;
+		}
+
+		public string? Header(string name)
+			=> Request!.Headers.TryGetValues(name, out var values)
+				|| Request.Content?.Headers.TryGetValues(name, out values) == true
+				? string.Join(", ", values!)
+				: null;
+	}
+
+	/// <summary>What one <c>@http</c> run sent and the state its callback was queued with.</summary>
+	private sealed record HttpRun(CallState Result, RecordingHandler Handler, ParserState? Callback, bool ClientCreated, string? ClientName);
+
+	/// <summary>
+	/// Runs <c>@http</c> with <paramref name="arguments"/> (from %1 on) as a player of its own, sending through
+	/// <see cref="RecordingHandler"/> and running the callback's state factory in place of the queue.
+	/// </summary>
+	private async Task<HttpRun> RunHttpAsync(string name, string[] switches, string[] arguments,
+		bool qRegisters = false, Dictionary<string, string>? registers = null, string reply = "ok", int? outputLimit = null,
+		bool canHttp = true, ISecretStore? secrets = null)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, name);
+		if (canHttp) await GrantHttpAsync(player.DbRef);
+		var args = new Dictionary<string, CallState> { ["0"] = new(player.DbRef + "/CALLBACK") };
+		for (var i = 0; i < arguments.Length; i++) args[(i + 1).ToString()] = new CallState(arguments[i]);
+		var state = ParserState.RootFor(player.DbRef) with { Arguments = args, Switches = switches };
+		if (outputLimit is { } limit) state = state with { OutputLimit = limit };
+		foreach (var (register, value) in registers ?? [])
+			state.AddRegister(register, MarkupText.Plain(value));
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+
+		ParserState? callback = null;
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => Admit(call.Arg<AdmitAttributeRequest>()));
+		var handler = new RecordingHandler(reply);
+		string? clientName = null;
+		var clients = Substitute.For<IHttpClientFactory>();
+		clients.CreateClient(Arg.Any<string>()).Returns(call =>
+		{
+			clientName = call.Arg<string>();
+			return new HttpClient(handler);
+		});
+		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { HttpQRegisters = qRegisters } });
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+			WebAppFactoryArg.Services, mediator, clients, options, secrets ?? Substitute.For<ISecretStore>());
+
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
+		return new HttpRun(result, handler, callback, clientName is not null, clientName);
+
+		async ValueTask<QueueAdmissionResult> Admit(AdmitAttributeRequest request)
+		{
+			callback = await request.Input();
+			return new QueueAdmissionResult(1, QueueRejectionReason.None);
+		}
+	}
+
+	/// <summary>@http is for wizards and holders of the Can_HTTP power, as in PennMUSH.</summary>
+	private Task GrantHttpAsync(DBRef player)
+		=> Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player}=CAN_HTTP")).AsTask();
+
+	[Test]
+	public async Task HttpIsRefusedWithoutTheCanHttpPower()
+	{
+		var run = await RunHttpAsync("HttpNoPower", [], ["https://example.invalid/get"], canHttp: false);
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(run.ClientCreated).IsFalse();
+		await Assert.That(run.Callback).IsNull();
+	}
+
+	[Test]
+	public async Task HttpGetSendsTheHeadersAfterTheUrl()
+	{
+		var run = await RunHttpAsync("HttpGetHeaders", [], ["https://example.invalid/get", "{\"X-One\":\"1\",\"X-Two\":\"two words\"}"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Get);
+		await Assert.That(run.Handler.Header("X-One")).IsEqualTo("1");
+		await Assert.That(run.Handler.Header("X-Two")).IsEqualTo("two words");
+		await Assert.That(run.Handler.Header("User-Agent")).IsEqualTo("SharpMUSH");
+		await Assert.That(run.Handler.Body).IsNull();
+	}
+
+	[Test]
+	public async Task HttpPostTakesTheHeadersAfterTheData()
+	{
+		var run = await RunHttpAsync("HttpPostHeaders", ["POST"],
+			["https://example.invalid/post", "{\"a\":1}", "{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer abc\",\"User-Agent\":\"Bot/2\"}"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Post);
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/json");
+		await Assert.That(run.Handler.Header("Authorization")).IsEqualTo("Bearer abc");
+		await Assert.That(run.Handler.Header("User-Agent")).IsEqualTo("Bot/2");
+		await Assert.That(System.Text.Encoding.UTF8.GetString(run.Handler.Body!)).IsEqualTo("{\"a\":1}");
+	}
+
+	[Test]
+	public async Task HttpBodyDefaultsToAFormInUtf8()
+	{
+		var run = await RunHttpAsync("HttpFormDefault", ["PUT"], ["https://example.invalid/put", "name=caf\u00e9"]);
+
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");
+		await Assert.That(run.Handler.Body!).IsEquivalentTo(System.Text.Encoding.UTF8.GetBytes("name=caf\u00e9"));
+	}
+
+	[Test]
+	public async Task HttpBodyIsEncodedInTheCharsetItsTypeNames()
+	{
+		var run = await RunHttpAsync("HttpCharset", ["POST"],
+			["https://example.invalid/post", "caf\u00e9", "{\"Content-Type\":\"text/plain; charset=ISO-8859-1\"}"]);
+
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("text/plain; charset=ISO-8859-1");
+		await Assert.That(run.Handler.Body!).IsEquivalentTo(new byte[] { (byte)'c', (byte)'a', (byte)'f', 0xE9 });
+	}
+
+	[Test]
+	public async Task HttpHeadersTakeListsForRepeatedHeaders()
+	{
+		var run = await RunHttpAsync("HttpListHeaders", ["POST"],
+			["https://example.invalid/post", "{\"a\":1}",
+				"{\"Content-Type\":\"application/json\",\"X-One\":\" 1 \",\"Accept\":[\"text/plain\",\"application/json\"]}"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Post);
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/json");
+		await Assert.That(run.Handler.Header("X-One")).IsEqualTo("1");
+		await Assert.That(run.Handler.Header("Accept")).IsEqualTo("text/plain, application/json");
+	}
+
+	[Test]
+	[Arguments("X-One:1")]
+	[Arguments("{\"\":\"1\"}")]
+	[Arguments("{\"X-One\":null}")]
+	[Arguments("[\"X-One\",\"1\"]")]
+	[Arguments("{\"X-One\":1}")]
+	[Arguments("{\"X-One\":[\"1\",2]}")]
+	[Arguments("{\"Bad Name\":\"1\"}")]
+	[Arguments("{\"Content-Length\":\"12\"}")]
+	[Arguments("{\"X-One\":\"a\\nb\"}")]
+	public async Task HttpRefusesHeadersItCannotSend(string json)
+	{
+		var run = await RunHttpAsync("HttpBadHeader", ["POST"], ["https://example.invalid/post", "data", json]);
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
+		await Assert.That(run.ClientCreated).IsFalse();
+		await Assert.That(run.Callback).IsNull();
+	}
+
+	/// <summary>A store holding <paramref name="name"/> = <paramref name="value"/>, which @http may send to <paramref name="hosts"/>.</summary>
+	private static ISecretStore SecretFor(string name, string value, params string[] hosts)
+	{
+		var secrets = FixedSecrets.With(name, value);
+		secrets.HostsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromResult<IReadOnlyList<string>>(call.ArgAt<string>(0) == name ? hosts : []));
+		return secrets;
+	}
+
+	[Test]
+	public async Task HttpFillsASecretIntoAHeaderForItsHost()
+	{
+		var secrets = SecretFor("http.test.token", "s3cret", "api.example.invalid");
+		var run = await RunHttpAsync("HttpSecretBearer", [], ["https://api.example.invalid/get",
+			"{\"Authorization\":{\"secret\":\"http.test.token\",\"scheme\":\"Bearer\"},\"X-Key\":{\"secret\":\"http.test.token\"}}"],
+			secrets: secrets);
+
+		await Assert.That(run.Handler.Header("Authorization")).IsEqualTo("Bearer s3cret");
+		await Assert.That(run.Handler.Header("X-Key")).IsEqualTo("s3cret");
+		await Assert.That(run.ClientName).IsEqualTo(SharpMUSH.Implementation.Commands.Commands.SecretHttpClient);
+	}
+
+	[Test]
+	public async Task HttpSendsABasicSecretBase64Encoded()
+	{
+		var secrets = SecretFor("http.test.login", "user:pass", "*.example.invalid");
+		var run = await RunHttpAsync("HttpSecretBasic", [], ["https://api.example.invalid/get",
+			"{\"Authorization\":{\"secret\":\"http.test.login\",\"scheme\":\"basic\"}}"], secrets: secrets);
+
+		await Assert.That(run.Handler.Header("Authorization")).IsEqualTo("Basic " + Convert.ToBase64String("user:pass"u8.ToArray()));
+	}
+
+	[Test]
+	public async Task HttpWithoutASecretFollowsRedirects()
+	{
+		var run = await RunHttpAsync("HttpPlainClient", [], ["https://api.example.invalid/get", "{\"X-One\":\"1\"}"]);
+
+		await Assert.That(run.ClientName).IsEqualTo("api");
+	}
+
+	[Test]
+	[Arguments("https://other.example.invalid/get", "http.test.token")]
+	[Arguments("https://example.invalid/get", "http.test.token")]
+	[Arguments("http://api.example.invalid/get", "http.test.token")]
+	[Arguments("https://api.example.invalid/get", "test.token")]
+	[Arguments("https://api.example.invalid/get", "http.test.unset")]
+	public async Task HttpRefusesASecretOffItsHostsOrOutsideHttp(string url, string secret)
+	{
+		var secrets = SecretFor("http.test.token", "s3cret", "api.example.invalid");
+		secrets.HostsAsync("test.token", Arg.Any<CancellationToken>()).Returns(ValueTask.FromResult<IReadOnlyList<string>>(["api.example.invalid"]));
+		secrets.HostsAsync("http.test.unset", Arg.Any<CancellationToken>()).Returns(ValueTask.FromResult<IReadOnlyList<string>>(["api.example.invalid"]));
+		var run = await RunHttpAsync("HttpSecretRefused", [], [url, $"{{\"X-Key\":{{\"secret\":\"{secret}\"}}}}"], secrets: secrets);
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
+		await Assert.That(run.ClientCreated).IsFalse();
+	}
+
+	[Test]
+	[Arguments("{\"Content-Type\":{\"secret\":\"http.test.token\"}}")]
+	[Arguments("{\"X-Key\":{\"secret\":\"http.test.token\",\"other\":\"x\"}}")]
+	[Arguments("{\"X-Key\":{\"secret\":\"HTTP.Bad Name\"}}")]
+	[Arguments("{\"X-Key\":{\"secret\":\"http.test.token\",\"scheme\":\"Two words\"}}")]
+	public async Task HttpRefusesASecretItCannotRead(string json)
+	{
+		var run = await RunHttpAsync("HttpSecretBad", ["POST"], ["https://api.example.invalid/post", "data", json],
+			secrets: SecretFor("http.test.token", "s3cret", "api.example.invalid"));
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
+		await Assert.That(run.ClientCreated).IsFalse();
+	}
+
+	[Test]
+	public async Task HttpHandsTheResponseHeadersToTheCallback()
+	{
+		var run = await RunHttpAsync("HttpResponseHeaders", [], ["https://example.invalid/get"]);
+
+		var headers = System.Text.Json.JsonDocument.Parse(run.Callback!.Argument("headers").ToPlainText()).RootElement;
+		await Assert.That(headers.GetProperty("retry-after").GetString()).IsEqualTo("30");
+		await Assert.That(headers.GetProperty("link").GetArrayLength()).IsEqualTo(2);
+		await Assert.That(headers.GetProperty("content-type").GetString()).IsEqualTo("text/plain; charset=utf-8");
+	}
+
+	[Test]
+	public async Task HttpReadsContentTypeAndUserpassRegistersOnlyWithHttpQRegisters()
+	{
+		var registers = new Dictionary<string, string> { ["CONTENT-TYPE"] = "text/csv", ["USERPASS"] = "user:secret" };
+
+		var penn = await RunHttpAsync("HttpQRegsOn", ["POST"], ["https://example.invalid/post", "a,b"], qRegisters: true, registers: registers);
+		var sharp = await RunHttpAsync("HttpQRegsOff", ["POST"], ["https://example.invalid/post", "a,b"], registers: registers);
+
+		await Assert.That(penn.Handler.Header("Content-Type")).IsEqualTo("text/csv");
+		await Assert.That(penn.Handler.Header("Authorization")).IsEqualTo("Basic " + Convert.ToBase64String("user:secret"u8.ToArray()));
+		await Assert.That(sharp.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");
+		await Assert.That(sharp.Handler.Header("Authorization")).IsNull();
+	}
+
+	[Test]
+	public async Task HttpHeadersArgumentReplacesTheContentTypeRegister()
+	{
+		// PennMUSH #1398: given headers, the content-type q-register is ignored, even with no Content-Type line.
+		var run = await RunHttpAsync("HttpHeadersOverReg", ["POST"], ["https://example.invalid/post", "x=1", "{\"X-One\":\"1\"}"],
+			qRegisters: true, registers: new() { ["CONTENT-TYPE"] = "text/csv" });
+
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HttpOverflowSaysWhetherTheBodyWasCut(bool qRegisters)
+	{
+		var whole = await RunHttpAsync("HttpWhole", [], ["https://example.invalid/get"], qRegisters, reply: "0123456789", outputLimit: 10);
+		var cut = await RunHttpAsync("HttpCut", [], ["https://example.invalid/get"], qRegisters, reply: "0123456789AB", outputLimit: 10);
+
+		await Assert.That(whole.Callback!.Argument("0").ToPlainText()).IsEqualTo("0123456789");
+		await Assert.That(whole.Callback.Argument("http-overflow").ToPlainText()).IsEqualTo("0");
+		await Assert.That(cut.Callback!.Argument("0").ToPlainText()).IsEqualTo("0123456789");
+		await Assert.That(cut.Callback.Argument("http-overflow").ToPlainText()).IsEqualTo("1");
+		await Assert.That(cut.Callback.Registers.TryPeek(out var registers) && registers.ContainsKey("HTTP-OVERFLOW"))
+			.IsEqualTo(qRegisters);
 	}
 
 	/// <summary>

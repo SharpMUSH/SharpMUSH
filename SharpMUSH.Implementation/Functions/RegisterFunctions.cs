@@ -84,7 +84,7 @@ public partial class Functions
 
 		if (kinds.HasFlag(RegisterKinds.QRegisters) && state.Registers.TryPeek(out var qregs))
 			foreach (var (name, value) in qregs)
-				if (value.Length > 0)
+				if (value.Length > 0 && !RegisterLabels.IsLabelKey(name))
 					yield return ($"Q{name}", name);
 
 		if (kinds.HasFlag(RegisterKinds.Regexp) && state.RegexpCaptures is { } rxregs)
@@ -108,9 +108,28 @@ public partial class Functions
 	/// <c>fun_setq</c> and tells them apart by <c>called_as</c>, which decides only whether the
 	/// first value is echoed back (<c>src/funmisc.c:321-352</c>).
 	/// </summary>
-	private static CallState SetRegisters(IMUSHCodeParser parser, bool echoFirstValue)
+	/// <remarks>
+	/// Three arguments are RhostMUSH's labelled form, <c>setq(&lt;register&gt;, &lt;value&gt;, &lt;label&gt;)</c>
+	/// (<c>process_setqs</c>, <c>Server/src/functions.c</c>). Any other odd count is PennMUSH's
+	/// <c>(nargs % 2) != 0</c> refusal (<c>src/funmisc.c:327</c>), checked here rather than by
+	/// <c>EvenArgsOnly</c> so the three-argument call gets through; Penn checks it after evaluating
+	/// the arguments too. A third argument that cannot be a label keeps PennMUSH's refusal, so a
+	/// PennMUSH call such as <c>setr(A,1,B)</c> answers as it does there.
+	/// </remarks>
+	private static CallState SetRegisters(IMUSHCodeParser parser, bool echoFirstValue, string calledAs)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
+		if (arguments.Count == 3 && RegisterLabels.IsValidLabel(arguments["2"].Message.ToPlainText()))
+		{
+			var labelled = SetLabelledRegister(parser.CurrentState,
+				arguments["0"].Message.ToPlainText(), arguments["1"].Message, arguments["2"].Message.ToPlainText());
+			if (labelled.Length > 0) return new CallState(labelled);
+			return echoFirstValue ? new CallState(arguments["1"].Message) : new CallState(string.Empty);
+		}
+
+		if (arguments.Count % 2 != 0)
+			return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, calledAs));
+
 		var everythingIsOkay = true;
 
 		for (var i = 0; i < arguments.Count; i += 2)
@@ -126,32 +145,64 @@ public partial class Functions
 	}
 
 	/// <remarks>
-	/// <c>EvenArgsOnly</c> is PennMUSH's <c>(nargs % 2) != 0</c> guard (<c>src/funmisc.c:327</c>),
-	/// which <c>fun_setq</c> applies to both names. Declared on <c>setr</c> alone, an odd-argument
-	/// <c>setq</c> reached the pairing loop and read past the last argument.
+	/// Both names share <see cref="SetRegisters"/>, which applies PennMUSH's odd-count guard
+	/// (<c>src/funmisc.c:327</c>) to each; it once sat on <c>setr</c> alone, and an odd-argument
+	/// <c>setq</c> read past the last argument.
 	/// </remarks>
-	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.EvenArgsOnly)]
+	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> setq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: false));
+		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: false, "SETQ"));
 
-	[SharpFunction(Name = "setr", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.EvenArgsOnly)]
+	[SharpFunction(Name = "setr", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true));
+		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true, "SETR"));
+
+	/// <summary>
+	/// Sets <paramref name="register"/> to <paramref name="value"/> and gives it <paramref name="label"/>,
+	/// RhostMUSH's labelled setq(). The register may be named by a label it already has, or be <c>+</c>
+	/// (the register <paramref name="label"/> names, else the first of 0-9 and A-Z with neither label
+	/// nor value) or <c>!</c> (the same, but a register holding a value may be taken).
+	/// </summary>
+	/// <returns>Empty when set; otherwise the error to return.</returns>
+	private static string SetLabelledRegister(ParserState state, string register, MString value, string label)
+	{
+		if (!RegisterLabels.IsValidLabel(label)) return ErrorMessages.Returns.InvalidLabel;
+		if (!state.Registers.TryPeek(out var frame)) return ErrorMessages.Returns.BadRegName;
+
+		var name = register.ToUpper();
+		if (name is "+" or "!")
+		{
+			if (!RegisterLabels.TryPick(frame, label, skipSet: name == "+", out name))
+				return ErrorMessages.Returns.BadRegName;
+		}
+		else name = RegisterLabels.Resolve(frame, name);
+
+		if (!state.AddRegister(name, value)) return ErrorMessages.Returns.BadRegName;
+		RegisterLabels.Set(frame, name, label);
+		return string.Empty;
+	}
 
 	/// <summary>
 	/// The one body behind <c>setqm</c> and <c>setrm</c>, RhostMUSH's in-order setq()/setr()
 	/// (<c>fun_setqm</c>/<c>fun_setrm</c>, <c>Server/src/functions.c</c>). Each pair's name and value are
 	/// evaluated only after the pair before it is set, so a value can read the registers set to its left.
 	/// </summary>
+	/// <remarks>
+	/// A name of the form <c>&lt;register&gt;&gt;&lt;label&gt;</c> also gives the register a label, as
+	/// setq()'s third argument does. RhostMUSH splits the name at the <c>&gt;</c> before evaluating it;
+	/// this splits the evaluated name, since a register name with a <c>&gt;</c> in it was already
+	/// refused, and a <c>&gt;</c> written inside a function call in the name keeps its meaning.
+	/// </remarks>
 	/// <returns>
-	/// The values set, in order, whether every name was valid, and whether evaluating any argument hit
-	/// an error, which the caller carries on its result as an eager function's dispatcher would.
+	/// The values set, in order, the first error a pair gave (empty when none), and whether evaluating
+	/// any argument hit an error, which the caller carries on its result as an eager function's
+	/// dispatcher would.
 	/// </returns>
 	private static async ValueTask<OrderedRegisters> SetRegistersInOrder(IMUSHCodeParser parser, int pairArguments)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<MString>(pairArguments / 2);
-		var everythingIsOkay = true;
+		var error = string.Empty;
 		var hadErrors = false;
 
 		for (var i = 0; i < pairArguments; i += 2)
@@ -160,20 +211,25 @@ public partial class Functions
 			var value = await arguments[(i + 1).ToString()].GetParsedResultAsync();
 			hadErrors |= name.HadErrors || value.HadErrors;
 			var valueText = value.Message ?? MarkupText.Empty;
-			everythingIsOkay &= parser.CurrentState.AddRegister((name.Message ?? MarkupText.Empty).ToPlainText().ToUpper(), valueText);
+			var nameText = (name.Message ?? MarkupText.Empty).ToPlainText();
+			var separator = nameText.IndexOf('>');
+			var pairError = separator < 0
+				? parser.CurrentState.AddRegister(nameText.ToUpper(), valueText) ? string.Empty : ErrorMessages.Returns.BadRegName
+				: SetLabelledRegister(parser.CurrentState, nameText[..separator], valueText, nameText[(separator + 1)..]);
+			if (error.Length == 0) error = pairError;
 			values.Add(valueText);
 		}
 
-		return new OrderedRegisters(values, everythingIsOkay, hadErrors);
+		return new OrderedRegisters(values, error, hadErrors);
 	}
 
-	private sealed record OrderedRegisters(List<MString> Values, bool NamesValid, bool HadErrors);
+	private sealed record OrderedRegisters(List<MString> Values, string Error, bool HadErrors);
 
 	[SharpFunction(Name = "setqm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.EvenArgsOnly)]
 	public async ValueTask<CallState> SetQM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var set = await SetRegistersInOrder(parser, parser.CurrentState.ArgumentsOrdered.Count);
-		var result = set.NamesValid ? CallState.Empty : new CallState(ErrorMessages.Returns.BadRegName);
+		var result = set.Error.Length == 0 ? CallState.Empty : new CallState(set.Error);
 		return result with { HadErrors = set.HadErrors };
 	}
 
@@ -195,9 +251,9 @@ public partial class Functions
 			: new CallState(MarkupText.Space);
 
 		var set = await SetRegistersInOrder(parser, hasDelimiter ? arguments.Count - 1 : arguments.Count);
-		var result = set.NamesValid
+		var result = set.Error.Length == 0
 			? JoinWithinOutputLimit(parser, set.Values, delimiter.Message ?? MarkupText.Empty)
-			: new CallState(ErrorMessages.Returns.BadRegName);
+			: new CallState(set.Error);
 		return result with { HadErrors = set.HadErrors || delimiter.HadErrors };
 	}
 
@@ -233,7 +289,7 @@ public partial class Functions
 			case "qregisters":
 				return ValueTask.FromResult(
 					parser.CurrentState.Registers.TryPeek(out var qregs)
-					&& qregs.TryGetValue(registerName.ToUpper(), out var qval)
+					&& qregs.TryGetValue(RegisterLabels.Resolve(qregs, registerName.ToUpper()), out var qval)
 						? new CallState(qval)
 						: CallState.Empty);
 
@@ -370,12 +426,111 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(new(string.Empty));
 	}
 
-	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	/// <summary>
+	/// RhostMUSH's <c>nameq()</c> (<c>fun_nameq</c>, <c>Server/src/functions.c</c>): reads, sets or lists
+	/// the labels setq()'s third argument gives registers.
+	/// <list type="bullet">
+	/// <item><c>nameq(&lt;register&gt;)</c>: the register's label; given a label, the label.</item>
+	/// <item><c>nameq(&lt;register&gt;, &lt;label&gt;)</c>: sets the label, or clears it when empty. A label
+	/// of one character is ignored, and one another register has is refused.</item>
+	/// <item><c>nameq(&lt;label&gt;, , &lt;number&gt;)</c>: the register the label names.</item>
+	/// <item><c>nameq(&lt;pattern&gt;, , &lt;type&gt;)</c>: the registers whose label (<c>l</c>), name
+	/// (<c>n</c>), value (<c>v</c>), label or value (<c>u</c>) match the wildcard pattern, and those
+	/// with both label and value whose label or value (<c>b</c>), label or name (<c>f</c>), or any of
+	/// the three (<c>a</c>) match. Rhost's capital letters pick its letter-or-number display, which
+	/// named registers do not have, so they mean the same here.</item>
+	/// </list>
+	/// </summary>
+	[SharpFunction(Name = "nameq", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> NameQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var name = args["0"].Message.ToPlainText();
+		var second = args.TryGetValue("1", out var labelArg) ? labelArg.Message.ToPlainText() : string.Empty;
+		var mode = args.TryGetValue("2", out var modeArg) ? modeArg.Message.ToPlainText().Trim() : string.Empty;
+		if (!parser.CurrentState.Registers.TryPeek(out var frame) || name.Length == 0)
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
+
+		// Any other text is a number to Rhost's atoi(), and so 0.
+		if (mode.Length > 0 && "lnvubfa".Contains(char.ToLowerInvariant(mode[0])))
+			return ValueTask.FromResult(new CallState(ListLabelledRegisters(frame, name, char.ToLowerInvariant(mode[0]))));
+
+		var upper = name.ToUpper();
+		var register = RegisterLabels.Resolve(frame, upper);
+		var isLabel = register != upper;
+		if (!isLabel && !IsRegisterName(register))
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
+
+		if (args.Count == 2)
+			return ValueTask.FromResult(new CallState(RenameRegister(frame, register, second)));
+
+		var wantsRegister = ArgHelpers.ParseInteger(mode) != 0;
+		RegisterLabels.TryGetLabel(frame, register, out var label);
+		return ValueTask.FromResult(new CallState(wantsRegister && isLabel ? register : label));
+	}
+
+	private static bool IsRegisterName(string name)
+		=> name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-');
+
+	/// <summary>nameq()'s two-argument form: sets, or with an empty label clears, a register's label.</summary>
+	private static string RenameRegister(Dictionary<string, MString> frame, string register, string label)
+	{
+		if (label.Length == 0)
+		{
+			RegisterLabels.Clear(frame, register);
+			return string.Empty;
+		}
+
+		if (label.Length < 2) return string.Empty;
+		if (!RegisterLabels.IsValidLabel(label)) return ErrorMessages.Returns.InvalidLabel;
+		if (RegisterLabels.IsInUse(frame, label)) return string.Format(ErrorMessages.Returns.LabelInUseFormat, label);
+		RegisterLabels.Set(frame, register, label);
+		return string.Empty;
+	}
+
+	/// <summary>nameq()'s listing form: the registers, by name, that <paramref name="type"/> and the pattern pick.</summary>
+	private static string ListLabelledRegisters(Dictionary<string, MString> frame, string pattern, char type)
+	{
+		var matcher = SoftcodeRegex.Wildcard(pattern);
+		bool Matches(string text) => text.Length > 0 && matcher.IsMatch(text);
+
+		var picked = RegisterLabels.Registers(frame)
+			.OrderBy(register => register, StringComparer.Ordinal)
+			.Where(register =>
+			{
+				RegisterLabels.TryGetLabel(frame, register, out var label);
+				var value = frame.TryGetValue(register, out var held) ? held.ToPlainText() : string.Empty;
+				var both = label.Length > 0 && value.Length > 0;
+				return type switch
+				{
+					'l' => Matches(label),
+					'n' => value.Length > 0 && matcher.IsMatch(register),
+					'v' => Matches(value),
+					'u' => Matches(label) || Matches(value),
+					'b' => both && (Matches(label) || Matches(value)),
+					'f' => both && (Matches(label) || matcher.IsMatch(register)),
+					'a' => both && (Matches(label) || Matches(value) || matcher.IsMatch(register)),
+					_ => false
+				};
+			});
+		return string.Join(" ", picked);
+	}
+
+	[SharpFunction(Name = "itext", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message.ToPlainText();
+		var levelArg = args.Count == 0 ? string.Empty : args["0"].Message.ToPlainText();
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		// itext() is TinyMUX's itext(0), and empty outside a loop; PennMUSH refuses an empty level, so
+		// this replaces only an error.
+		if (levelArg.Length == 0)
+		{
+			return ValueTask.FromResult(maxCount == 0
+				? new CallState(MarkupText.Empty)
+				: new CallState(parser.CurrentState.IterationRegisters.First().Value));
+		}
 
 		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
 		{

@@ -713,8 +713,12 @@ sql_database mush
 # What username to access the database?
 sql_username mush
 
-# What password for that user? Change this!
-sql_password mush
+# The password for that user is not set here: it is the sql.password
+# secret, which the world keeps encrypted. Set it with
+# @secret sql.password=<password>, or give it as the environment
+# variable SHARPMUSH_SECRET_SQL_PASSWORD or the file
+# /run/secrets/sql.password. Importing a mush.cnf that has an
+# sql_password line stores that line's value as the secret.
 
 ###
 ### Options affecting commands and functions

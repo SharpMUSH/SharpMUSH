@@ -40,7 +40,7 @@ public sealed class PluginPackageInstaller(
 	public async Task<Result<IReadOnlyList<string>>> DeployAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		IPluginPackageBinarySource binarySource,
+		IPackageFileSource fileSource,
 		CancellationToken cancellationToken = default)
 	{
 		if (!IsPackageId(manifest.Name)) return new Error<string>("Invalid package id; expected a lowercase package slug.");
@@ -78,7 +78,7 @@ public sealed class PluginPackageInstaller(
 		var verified = new List<(string FileName, byte[] Bytes)>();
 		foreach (var file in manifest.Binary.Files)
 		{
-			var bytes = await binarySource.ReadBinaryAsync(file.FileName, cancellationToken);
+			var bytes = await fileSource.ReadFileAsync(file.FileName, cancellationToken);
 			if (bytes is null)
 			{
 				return new Error<string>(

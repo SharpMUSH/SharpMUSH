@@ -46,6 +46,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(PackageObjectRecord))]
 [JsonSerializable(typeof(ManagedAttributeRecord))]
 [JsonSerializable(typeof(ManagedStructureRecord))]
+[JsonSerializable(typeof(PackageWikiPageRecord))]
 [JsonSerializable(typeof(PackageDependencyRecord))]
 [JsonSerializable(typeof(PackageRemoteRecord))]
 [JsonSerializable(typeof(PackageRevisionRecord))]

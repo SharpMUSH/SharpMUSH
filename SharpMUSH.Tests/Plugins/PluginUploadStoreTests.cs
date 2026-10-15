@@ -65,9 +65,9 @@ public class PluginUploadStoreTests
 		await Assert.That(staged.Remote).IsEqualTo(PluginUploadStore.RemoteName);
 		await Assert.That(staged.PackageId).IsEqualTo(Id);
 		await Assert.That(store.ManifestYaml(staged.Path)).IsNotNull();
-		var dll = await store.Binaries(staged.Path)!.ReadBinaryAsync(PluginPackageFixture.DllName);
+		var dll = await store.Files(staged.Path)!.ReadFileAsync(PluginPackageFixture.DllName);
 		await Assert.That(PluginPackageFixture.Sha256Of(dll!)).IsEqualTo(PluginPackageFixture.DllSha);
-		await Assert.That(await store.Binaries(staged.Path)!.ReadBinaryAsync("README.md")).IsNull()
+		await Assert.That(await store.Files(staged.Path)!.ReadFileAsync("README.md")).IsNull()
 			.Because("only package.yaml and the files it lists are kept");
 
 		store.Discard(staged.Path);
@@ -125,6 +125,6 @@ public class PluginUploadStoreTests
 
 		await Assert.That(store.ManifestYaml("../elsewhere")).IsNull();
 		await Assert.That(store.ManifestYaml(new string('a', 32))).IsNull();
-		await Assert.That(store.Binaries("..")).IsNull();
+		await Assert.That(store.Files("..")).IsNull();
 	});
 }

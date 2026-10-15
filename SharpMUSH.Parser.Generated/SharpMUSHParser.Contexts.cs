@@ -216,12 +216,16 @@ public partial class SharpMUSHParser
 	{
 		ITerminalNode REG_STARTCARET() => SoftcodeTree.Token(this, SharpMUSHParser.REG_STARTCARET, 0);
 		ITerminalNode ARG_STARTCARET() => SoftcodeTree.Token(this, SharpMUSHParser.ARG_STARTCARET, 0);
+		ITerminalNode ATTR_STARTCARET() => SoftcodeTree.Token(this, SharpMUSHParser.ATTR_STARTCARET, 0);
 		IExplicitEvaluationStringContext explicitEvaluationString() => SoftcodeTree.Rule<IExplicitEvaluationStringContext>(this, 0);
 		ITerminalNode CCARET() => SoftcodeTree.Token(this, SharpMUSHParser.CCARET, 0);
 		ITerminalNode REG_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.REG_NUM, 0);
 		ITerminalNode REG_ALPHA() => SoftcodeTree.Token(this, SharpMUSHParser.REG_ALPHA, 0);
 		ITerminalNode ITEXT_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.ITEXT_NUM, 0);
 		ITerminalNode ITEXT_LAST() => SoftcodeTree.Token(this, SharpMUSHParser.ITEXT_LAST, 0);
+		ITerminalNode ITEXT_POS_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.ITEXT_POS_NUM, 0);
+		ITerminalNode ITEXT_POS_LAST() => SoftcodeTree.Token(this, SharpMUSHParser.ITEXT_POS_LAST, 0);
+		ITerminalNode ARG_DASH_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.ARG_DASH_NUM, 0);
 		ITerminalNode DTEXT_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.DTEXT_NUM, 0);
 		ITerminalNode DTEXT_LAST() => SoftcodeTree.Token(this, SharpMUSHParser.DTEXT_LAST, 0);
 		ITerminalNode STEXT_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.STEXT_NUM, 0);

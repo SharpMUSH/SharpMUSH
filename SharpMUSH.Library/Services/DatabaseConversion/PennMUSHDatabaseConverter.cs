@@ -2217,6 +2217,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new AttributeMentions());
 		var pipedOutput = new AttributeMentions();
 		var piping = new AttributeMentions();
+		var tinyMuxSubstitutions = new AttributeMentions();
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -2232,7 +2233,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
 
-			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping);
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2308,6 +2309,15 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				$"softcode is not rewritten, so write | where | was meant: {string.Join(", ", piping.Shown)}{more}");
 		}
 
+		if (tinyMuxSubstitutions.Count > 0)
+		{
+			var more = tinyMuxSubstitutions.Count > tinyMuxSubstitutions.Shown.Count
+				? $" and {tinyMuxSubstitutions.Count - tinyMuxSubstitutions.Shown.Count} more" : string.Empty;
+			warnings.Add($"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which PennMUSH evaluates to m and =< and SharpMUSH " +
+				"to the running command and an attribute or argument; softcode is not rewritten, so write m or =< where they were meant: " +
+				$"{string.Join(", ", tinyMuxSubstitutions.Shown)}{more}");
+		}
+
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
 	}
@@ -2337,10 +2347,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// Records each of the object's attributes whose text uses <c>%&gt;</c>, and each that pipes with
 	/// <c>%|</c> or <c>;|</c>. PennMUSH has none of these: it evaluates <c>%&gt;</c> to <c>&gt;</c> and
 	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> (or <c>; |</c>) as a <c>;</c> before a command starting with <c>|</c>.
-	/// Here they are the last command's output and command piping.
+	/// Here they are the last command's output and command piping. It also records each that uses
+	/// <c>%m</c> or <c>%=&lt;</c>, which PennMUSH evaluates to <c>m</c> and <c>=&lt;</c> and SharpMUSH, as
+	/// TinyMUX does, to the running command and an attribute or argument.
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
-		AttributeMentions piping)
+		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions)
 	{
 		foreach (var pennAttr in pennObj.Attributes)
 		{
@@ -2352,6 +2364,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '|') || PipesCommand(pennAttr.Value))
 			{
 				piping.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second is 'm' or 'M')
+				|| HasSubstitution(pennAttr.Value, "=<"))
+			{
+				tinyMuxSubstitutions.Add($"#{imported.Number}/{pennAttr.Name}");
 			}
 		}
 	}
@@ -2390,6 +2408,21 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		for (var i = 0; i < text.Length - 1; i++)
 		{
 			if (matches(text[i], text[i + 1])) return true;
+			if (text[i] is '%' or '\\') i++;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Whether the text has an unescaped <c>%</c> followed by <paramref name="after"/>, read as
+	/// <see cref="HasPair"/> reads its pairs.
+	/// </summary>
+	private static bool HasSubstitution(string text, string after)
+	{
+		for (var i = 0; i < text.Length - 1; i++)
+		{
+			if (text[i] == '%' && text.AsSpan(i + 1).StartsWith(after, StringComparison.Ordinal)) return true;
 			if (text[i] is '%' or '\\') i++;
 		}
 

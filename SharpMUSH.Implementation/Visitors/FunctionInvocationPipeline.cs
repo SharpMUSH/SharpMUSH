@@ -124,13 +124,14 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			}
 
 			// PennMUSH compat: if minargs=0 and we got 1 empty arg from func(), treat as 0 args
-			if (attribute.MinArgs == 0 && args is [null])
+			var emptyCall = args is [null];
+			if (attribute.MinArgs == 0 && emptyCall)
 			{
 				args = [];
 			}
 
 			// The only arity check a parsed call gets: InvokeValidatedAsync below does not repeat it.
-			if (FunctionDispatcher.ValidateArgumentCount(attribute, name, args.Length) is { } arityError)
+			if (FunctionDispatcher.ValidateArgumentCount(attribute, name, args.Length, emptyCall) is { } arityError)
 			{
 				success = false;
 				return new CallState(arityError, contextDepth);
@@ -200,7 +201,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			var result = await FunctionDispatcher.InvokeValidatedAsync(newParser,
 				definition, executor,
 				configuration.CurrentValue.Function.FunctionSideEffects, services.NotifyService, visitor.Logger,
-				argumentCount: args.Length);
+				argumentCount: args.Length, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag);
 
 			return Bounded(result, currentState, limitExceeded, contextDepth);
 		}

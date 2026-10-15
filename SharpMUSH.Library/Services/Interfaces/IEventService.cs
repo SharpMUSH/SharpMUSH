@@ -36,9 +36,16 @@ public interface IEventService
 	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args);
 
 	/// <summary>
+	/// As <see cref="TriggerEventAsync(string, DBRef?, string[])"/>, with arguments that keep their markup: the
+	/// SharpMUSH events whose catalogue entry gives an argument the markup kind pass it this way.
+	/// </summary>
+	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, IReadOnlyList<MString> args);
+
+	/// <summary>
 	/// Whether the configured event handler has its own attribute named <paramref name="eventName"/>, or a
-	/// package's child of it (<c>GALLERY`REPORT`JOBS</c>), so a trigger would queue something. A surface that only makes sense when the game answers an event (the
-	/// portal's Report button and <c>GALLERY`REPORT</c>) asks first.
+	/// package's child of it (<c>GALLERY`REPORT`JOBS</c>), so a trigger would queue something. A surface that only makes
+	/// sense when the game answers an event (the portal's Report button and <c>GALLERY`REPORT</c>), or the server's
+	/// own reaction to a signal nobody hears, asks first.
 	/// </summary>
 	ValueTask<bool> HasHandlerAsync(string eventName);
 }

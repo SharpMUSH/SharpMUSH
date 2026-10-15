@@ -71,11 +71,14 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
 		string? sourceLocale = null,
-		IEnumerable<string>? categories = null)
+		IEnumerable<string>? categories = null,
+		string? slug = null,
+		string? editSummary = null)
 		=> SourceLocaleToStamp(sourceLocale) switch
 		{
 			string stampedLocale => await store.CreatePageAsync(NewPage(title, Render(markdown), authorDbref, ns, stampedLocale,
-				WikiHelpers.NormalizeCategories(categories, ns))),
+				WikiHelpers.NormalizeCategories(categories, ns)) with
+			{ Slug = WikiHelpers.Slugify(slug ?? title) }, editSummary),
 			Error<string> error => error,
 		};
 
@@ -113,6 +116,21 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 
 	public Task<Found<WikiPage>> UpdateAsync(string id, string markdown, string editorDbref, string? editSummary = null)
 		=> store.UpdatePageBodyAsync(id, Render(markdown), editorDbref, editSummary, DateTimeOffset.UtcNow);
+
+	public async Task<FoundResult<WikiPage>> SetTitleAsync(string id, string title)
+	{
+		var trimmed = title.Trim();
+		if (trimmed.Length == 0 || trimmed.Any(char.IsControl))
+		{
+			return new Error<string>("A page needs a title on one line.");
+		}
+
+		return await store.SetPageTitleAsync(id, trimmed) switch
+		{
+			WikiPage page => page,
+			NotFound notFound => notFound,
+		};
+	}
 
 	public async Task<Found<None>> DeleteAsync(string id, string editorDbref)
 	{

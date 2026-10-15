@@ -79,12 +79,20 @@ PIPED_OUTPUT: '>' -> popMode;
 INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
 ITEXT_NUM: [iI] BANG? [0-9]+ -> popMode;
-ITEXT_LAST: [iI] 'L' -> popMode;
+// %iL, and RhostMUSH's %il and %i!L. PennMUSH has only %iL; %il was the text "il".
+ITEXT_LAST: [iI] BANG? [lL] -> popMode;
+// RhostMUSH's %i_<n> and %i_L: the position of an iteration's element, like inum(). Text in PennMUSH.
+ITEXT_POS_NUM: [iI] '_' BANG? [0-9]+ -> popMode;
+ITEXT_POS_LAST: [iI] '_' BANG? [lL] -> popMode;
+// RhostMUSH's %-<n>: argument n, 0-999, up to three digits. PennMUSH prints "-<n>".
+ARG_DASH_NUM: '-' BANG? [0-9] [0-9]? [0-9]? -> popMode;
 DTEXT_NUM: [dD] BANG? [0-9]+ -> popMode;
 DTEXT_LAST: [dD][lL] -> popMode;
 STEXT_NUM: '$' [0-9]+ -> popMode;
 STEXT_LAST: '$' 'L' -> popMode;
 ARG_STARTCARET: '<' -> popMode;
+// %=<name>, from TinyMUX: the executor's attribute <name>, or argument <n> when it is a number.
+ATTR_STARTCARET: '=<' -> popMode;
 OTHER_SUB: . -> popMode;
 
 // --------------- ESCAPING MODE -----------------

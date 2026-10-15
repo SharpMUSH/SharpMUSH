@@ -362,10 +362,10 @@ name the plugin's own DLL in `entry`.
 ### Distribution: bytes alongside `package.yaml`
 
 The DLL bytes live in the **package source** — the git directory `package.yaml` is in. `IPackageSourceService`
-gained `GetBinarySourceAsync(remote, path, commit, …)`, which reads the package directory's blobs from the
+gained `GetFileSourceAsync(remote, path, commit, …)`, which reads the package directory's blobs from the
 **exact commit** the manifest was fetched at (a moved tag therefore cannot smuggle different bytes than the
-SHA-256 the manifest signed off on) and returns an `IPluginPackageBinarySource` — a tiny `ReadBinaryAsync(fileName)`
-seam. Tests back it with a directory; the controller backs it with the git commit snapshot, or, for a portal
+SHA-256 the manifest signed off on) and returns an `IPackageFileSource` — a tiny `ReadFileAsync(path)`
+seam, which also reads a content pack's wiki page bodies. Tests back it with a directory; the controller backs it with the git commit snapshot, or, for a portal
 upload, with the staged upload (remote `upload`; see **Plugin administration**).
 
 ### Install / verify / trust / uninstall flow

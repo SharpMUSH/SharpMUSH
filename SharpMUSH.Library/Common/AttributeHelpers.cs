@@ -147,12 +147,12 @@ public static class AttributeHelpers
 		AnySharpObject onObject,
 		string? genderAttribute,
 		string? pronounAttribute,
-		Func<string, string> defaultEvaluator)
+		PronounCase pronounCase)
 	{
 		var ga = await GetGenderAttribute(attributeService, await HelperFunctions.GetGod(mediator), onObject,
 			genderAttribute);
 		return await EvaluatePronounIndicatingAttribute(attributeService, mediator, parser, pronounAttribute,
-			defaultEvaluator(ga));
+			Pronouns.For(ga, pronounCase));
 	}
 
 	/// <summary>

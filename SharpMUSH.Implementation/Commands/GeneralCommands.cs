@@ -52,7 +52,33 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor);
+		await LogHuhAsync(executor, parser.CurrentState.CommandText?.Raw.ToPlainText() ?? string.Empty);
+
 		return new CallState(ErrorMessages.Returns.Huh);
+	}
+
+	/// <summary>
+	/// PennMUSH's huh log line (src/log.c:580-589), raised as <c>LOG`HUH</c>: only for a command typed somewhere
+	/// the executor does not control.
+	/// </summary>
+	private async ValueTask LogHuhAsync(AnySharpObject executor, string command)
+	{
+		if (executor.AsOptionalContent is not AnySharpContent content)
+		{
+			return;
+		}
+
+		var location = await content.Location();
+		if (await PermissionService.Controls(executor, location.WithExitOption()))
+		{
+			return;
+		}
+
+		var self = executor.Object();
+		var place = location.Object();
+		var owner = (await place.Owner.WithCancellation(CancellationToken.None)).Object;
+		await EventService.TriggerEventAsync(SharpEvents.LogHuh, self.DBRef,
+			$"HUH: {self.Name}(#{self.DBRef.Number}) in {place.Name}(#{place.DBRef.Number}) [{owner.Name}]: {command}");
 	}
 
 	[SharpCommand(Name = "LOOK", Output = CommandOutput.Value, Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]

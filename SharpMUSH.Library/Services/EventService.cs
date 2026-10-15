@@ -24,6 +24,7 @@ public class EventService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	Lazy<ITaskScheduler> scheduler,
+	Lazy<IMUSHCodeParser> parser,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<EventService> logger) : IEventService
 {
@@ -40,7 +41,11 @@ public class EventService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args)
+	public ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args)
+		=> TriggerEventAsync(eventName, enactor, args.Select(MarkupText.Plain).ToArray());
+
+	/// <inheritdoc />
+	public async ValueTask TriggerEventAsync(string eventName, DBRef? enactor, IReadOnlyList<MString> args)
 	{
 		try
 		{
@@ -78,13 +83,19 @@ public class EventService(
 					? eventEnactor
 					: new DBRef(1, null);
 
+			var handlerRef = eventHandler.Object().DBRef;
+			var arguments = EventArguments.Of(name, args);
+			if (EventCatalogue.Find(name) is { Stoppable: true })
+			{
+				await QueueInTurnAsync(name, handlerRef, resolvedEnactorRef, arguments, hearers);
+				return;
+			}
+
 			// queue_event (src/cque.c:392-517) queues the handler's attribute as an entry of its own, run
 			// by the handler and charged to it, so the code that raised the event never waits on it or
 			// shares its time limit. Each attribute below it is queued the same way, as @trigger would.
 			// The handler runs with its own permissions: the seeded Event Handler (#9) is a WIZARD object;
 			// a custom, non-wizard handler runs unprivileged.
-			var handlerRef = eventHandler.Object().DBRef;
-			var arguments = EventArguments.Of(name, args);
 			foreach (var hearer in hearers)
 			{
 				var admission = await QueueHold.AdmitAsync(scheduler.Value, Body(hearer),
@@ -137,6 +148,41 @@ public class EventService(
 		}
 
 		return hearers;
+	}
+
+	/// <summary>
+	/// A stoppable event's attributes run in turn in one queue entry, as @include would run them, so one may call
+	/// <c>stopevent()</c> to keep the ones after it from running.
+	/// </summary>
+	private async ValueTask QueueInTurnAsync(string eventName, DBRef handler, DBRef enactor,
+		Dictionary<string, CallState> arguments, IReadOnlyList<Hearer> hearers)
+	{
+		var admission = await scheduler.Value.AdmitWork(async () =>
+		{
+			CallState? result = null;
+			foreach (var hearer in hearers)
+			{
+				var stop = new EventStop();
+				using (EventStop.Enter(stop))
+				{
+					result = await parser.Value
+						.FromState(State(handler, enactor, arguments, hearer) with { ExecutionBudget = ExecutionBudget.Current })
+						.CommandListParse(Body(hearer));
+				}
+
+				if (stop.Requested)
+				{
+					break;
+				}
+			}
+
+			return result;
+		}, $"event:{eventName}", "event", handler, enactor, notifyOnRejection: false);
+
+		if (!admission.Accepted)
+		{
+			logger.LogWarning("Event {EventName} was not queued: {Reason}", eventName, admission.Reason);
+		}
 	}
 
 	/// <summary>

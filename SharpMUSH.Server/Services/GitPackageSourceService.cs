@@ -228,7 +228,7 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
-	public async Task<Result<IPluginPackageBinarySource>> GetBinarySourceAsync(
+	public async Task<Result<IPackageFileSource>> GetFileSourceAsync(
 		PackageRemoteRecord remote, string path, string commit, CancellationToken cancellationToken = default)
 	{
 		return await WithRepoAsync(remote, repository =>
@@ -236,39 +236,53 @@ public class GitPackageSourceService(
 			var resolved = repository.Lookup<Commit>(commit);
 			if (resolved is null)
 			{
-				return new Result<IPluginPackageBinarySource>(
+				return new Result<IPackageFileSource>(
 					new Error<string>($"Remote '{remote.Name}': commit '{commit}' is not in the cache."));
 			}
 
-			// Snapshot the bytes of every blob directly under the package directory
-			// at this commit, so the reader needs no further repo access (and the
-			// repo handle here is disposed when WithRepoAsync returns).
+			// Snapshot the bytes of every blob under the package directory at this commit, by its path within
+			// it, so the reader needs no further repo access (and the repo handle here is disposed when
+			// WithRepoAsync returns).
 			var directory = path.TrimEnd('/');
 			var tree = directory.Length == 0 ? resolved.Tree : resolved[directory]?.Target as Tree;
-			var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+			var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
 			if (tree is not null)
 			{
-				foreach (var entry in tree)
-				{
-					if (entry.TargetType == TreeEntryTargetType.Blob && entry.Target is Blob blob)
-					{
-						using var stream = blob.GetContentStream();
-						using var memory = new MemoryStream();
-						stream.CopyTo(memory);
-						files[entry.Name] = memory.ToArray();
-					}
-				}
+				Snapshot(tree, "", files);
 			}
 
-			return new Result<IPluginPackageBinarySource>(new GitCommitBinarySource(files));
+			return new Result<IPackageFileSource>(new GitCommitFileSource(files));
 		}, cancellationToken);
 	}
 
-	/// <summary>An in-memory snapshot of a package directory's blob bytes at one commit.</summary>
-	private sealed class GitCommitBinarySource(IReadOnlyDictionary<string, byte[]> files) : IPluginPackageBinarySource
+	/// <summary>Every blob under <paramref name="tree"/>, keyed by its path below it with <c>/</c> between folders.</summary>
+	private static void Snapshot(Tree tree, string prefix, Dictionary<string, byte[]> files)
 	{
-		public Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default) =>
-			Task.FromResult(files.GetValueOrDefault(fileName));
+		foreach (var entry in tree)
+		{
+			switch (entry.Target)
+			{
+				case Blob blob when entry.TargetType == TreeEntryTargetType.Blob && entry.Mode != Mode.SymbolicLink:
+					using (var stream = blob.GetContentStream())
+					using (var memory = new MemoryStream())
+					{
+						stream.CopyTo(memory);
+						files[prefix + entry.Name] = memory.ToArray();
+					}
+
+					break;
+				case Tree subtree:
+					Snapshot(subtree, $"{prefix}{entry.Name}/", files);
+					break;
+			}
+		}
+	}
+
+	/// <summary>An in-memory snapshot of a package directory's blob bytes at one commit.</summary>
+	private sealed class GitCommitFileSource(IReadOnlyDictionary<string, byte[]> files) : IPackageFileSource
+	{
+		public Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default) =>
+			Task.FromResult(Library.Services.PackageFilePath.Normalize(path) is { } normalized ? files.GetValueOrDefault(normalized) : null);
 	}
 
 	private async Task<Result<T>> WithRepoAsync<T>(

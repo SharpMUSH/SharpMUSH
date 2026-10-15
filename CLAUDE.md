@@ -80,7 +80,9 @@ Key environment variables:
 - `SHARPMUSH_DATABASE_PROVIDER` — accepts only `lightning` (the default when unset); any other value fails startup
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
-- `SHARPMUSH_DATAPROTECTION_PATH` — directory for ASP.NET Core's Data Protection key ring (default: `<world path>.dataprotection-keys`, beside the world so it lands on the same volume)
+- `SHARPMUSH_DATAPROTECTION_PATH` — directory for ASP.NET Core's Data Protection key ring (default: `<world path>.dataprotection-keys`, beside the world so it lands on the same volume). It also decrypts the stored secrets
+- `SHARPMUSH_SECRET_<NAME>` — overrides the stored secret `<name>` (upper case, `.` as `_`: `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`)
+- `SHARPMUSH_SECRETS_PATH` — directory of one file per secret, named for it, that overrides the stored value (default: `/run/secrets`); the environment variable wins over the file
 - `SHARPMUSH_PLUGINS_PATH` — directory for plugins installed from plugin packages, one folder per plugin id, plus `plugins.state.json` and `.uploads/` (default: `<world path>.plugins`, beside the world so an image update keeps them); shipped plugins stay in `<app>/plugins/`
 - `SHARPMUSH_PLUGIN_INSTALL` — whether the server installs plugin packages at all, from a remote or by portal upload (default: on; only `false` turns it off). Each apply still needs the administrator's `AllowPluginCode` confirmation
 - `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
@@ -345,6 +347,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 
 - **Logging**: Serilog, configured through `appsettings.json`
 - **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091; plain HTTP, `/metrics` only, never redirected to HTTPS — `MetricsListener`, `ConnectionServerOptions.MetricsPort`)
+- **Secrets**: a password, token or signing key is never a configuration option or an attribute. Server code reads it through `ISecretStore.GetAsync` (`SharpMUSH.Library/Secrets`): stored encrypted with the Data Protection key ring, set and cleared by `@secret` and `api/secrets` (`config.admin`, or the `ManagedBy` permission of its `SecretDefinition`), never shown again, never readable from softcode. A plugin declares the secrets it reads by registering a `SecretDefinition` singleton. A `mush.cnf` import stores the secret directives it names (`PennMushConfigImport.SecretDirectives`: `sql_password`) in the store, never in the options
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
 - **Rate limiting**: `"public-api"` — fixed window per client IP (30 req/min, `RateLimiting:PublicApi:*`) on the credential/claim endpoints that opt in with `[EnableRateLimiting]`; `"mcp"` — per client IP on `/mcp`; `"softcode-http"` — one global `http_per_second` budget on `/http/*`. Portal assets, the boot reads (`api/setup/status`, `api/server-info`) and `api/help` are not limited
 - **CORS**: Configured via `Cors:AllowedOrigins` in `appsettings.json`; development allows all origins with credentials (required for SignalR)

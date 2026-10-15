@@ -102,7 +102,17 @@ public record SharpMUSHOptions
 			TinyMath: false,
 			TinyTrimFun: false,
 			ParenGroups: false,
-			HttpQRegisters: false
+			HttpQRegisters: false,
+			MuxLogic: false,
+			MuxJustify: false,
+			MuxCollation: false,
+			MuxList: false,
+			InnermostTokens: false,
+			RhostEdit: false,
+			RhostLattr: false,
+			RhostPrintf: false,
+			RhostMapArgs: false,
+			SidefxFlag: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,
@@ -165,7 +175,11 @@ public record SharpMUSHOptions
 			ParserPredictionMode: ParserPredictionMode.TwoStage
 		),
 		Dump = new DumpOptions(
-			PurgeInterval: "10m1s"
+			PurgeInterval: "10m1s",
+			DumpMessage: "GAME: Saving database. Game may freeze for a few moments.",
+			DumpComplete: "GAME: Save complete.",
+			DumpWarning5Min: "GAME: Database save in 5 minutes.",
+			DumpWarning1Min: "GAME: Database save in 1 minute."
 		),
 		File = new FileOptions(
 			AccessFile: "access.cnf",
@@ -265,7 +279,6 @@ public record SharpMUSHOptions
 			SocketFile: "netmush.sock",
 			SqlHost: null,
 			SqlPlatform: null,
-			SqlPassword: null,
 			SqlDatabase: null,
 			SqlUsername: null,
 			SslIpAddr: null,

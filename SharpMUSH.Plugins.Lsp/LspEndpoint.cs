@@ -46,6 +46,9 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 		private readonly CancellationTokenSource _absolute = new();
 		private readonly SemaphoreSlim _writes = new(1);
 		private readonly ConcurrentDictionary<string, Work> _pending = new(StringComparer.Ordinal);
+		// Work whose analysis has not finished. A reply already on its way no longer counts, so a client
+		// that sends its next request as soon as a reply arrives is never refused for want of room.
+		private int _analysing;
 		private volatile bool _initialized;
 		private bool _initializing;
 		private bool _shutdown;
@@ -231,14 +234,15 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 		private async Task StartAsync(JsonElement? id, string? uri, LspDocument? snapshot, Func<CancellationToken, Task<object?>> operation)
 		{
 			var key = id?.GetRawText() ?? "notification/" + Guid.NewGuid().ToString("N");
-			if (_pending.Count >= _options.MaxPendingRequests)
+			if (Interlocked.Increment(ref _analysing) > _options.MaxPendingRequests)
 			{
+				Interlocked.Decrement(ref _analysing);
 				if (id is not null) await Error(id.Value, -32000, "Session work capacity exceeded");
 				else _stop.Cancel(); // Never silently accept a document update whose diagnostics cannot be serviced.
 				return;
 			}
 			var work = new Work(CancellationTokenSource.CreateLinkedTokenSource(_stop.Token));
-			if (!_pending.TryAdd(key, work)) { work.Dispose(); throw new InvalidDataException("Duplicate active request id."); }
+			if (!_pending.TryAdd(key, work)) { Interlocked.Decrement(ref _analysing); work.Dispose(); throw new InvalidDataException("Duplicate active request id."); }
 			work.Task = ProcessAsync(key, work, id, uri, snapshot, operation);
 		}
 
@@ -248,7 +252,7 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 			{
 				try
 				{
-					var result = await _execution.ExecuteAsync(() => operation(SharpMUSH.Library.ParserInterfaces.ExecutionBudget.CurrentToken), work.Token);
+					var result = await AnalyseAsync(operation, work.Token);
 					if (id is not null) await Result(id.Value, result);
 					else if (uri is not null && snapshot is not null && _documents.Get(uri)?.Generation == snapshot.Generation)
 						await Diagnostics(uri, snapshot.Version, ((IReadOnlyList<SharpMUSH.Library.Models.Diagnostic>)result!).Take(1000).Select(diagnostic => new
@@ -278,6 +282,12 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 			}
 			catch (Exception) { _stop.Cancel(); } // Observe failed error replies before releasing work.
 			finally { _pending.TryRemove(key, out _); work.Dispose(); }
+		}
+
+		private async Task<object?> AnalyseAsync(Func<CancellationToken, Task<object?>> operation, CancellationToken cancellation)
+		{
+			try { return await _execution.ExecuteAsync(() => operation(SharpMUSH.Library.ParserInterfaces.ExecutionBudget.CurrentToken), cancellation); }
+			finally { Interlocked.Decrement(ref _analysing); }
 		}
 
 		private Task Result(JsonElement id, object? result) => Send(new { jsonrpc = "2.0", id, result });

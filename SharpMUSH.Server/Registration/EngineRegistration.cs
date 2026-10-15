@@ -38,6 +38,7 @@ using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -165,6 +166,11 @@ internal static class EngineRegistration
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();
+		// Secrets the server holds for itself, encrypted with the Data Protection key ring; a plugin
+		// declares the ones it reads with a SecretDefinition singleton of its own.
+		services.AddSingleton(_ => SecretStoreOptions.FromEnvironment());
+		services.AddSingleton(SecretDefinition.SqlPassword);
+		services.AddSingleton<ISecretStore, SecretStore>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
@@ -190,6 +196,7 @@ internal static class EngineRegistration
 		// A package's roles, permissions, categories and @job schedules (manifest format 1.2).
 		services.AddSingleton<IPackageDeclarationService, PackageDeclarationService>();
 		services.AddSingleton<IPackageSettingService, PackageSettingService>();
+		services.AddSingleton<IPackageWikiService, PackageWikiService>();
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
@@ -215,6 +222,7 @@ internal static class EngineRegistration
 		// the command library, which reaches nearly every service.
 		services.AddSingleton<IRuntimeRegistrationService, Implementation.Services.RuntimeRegistrationService>();
 		services.AddSingleton<IEventService, EventService>();
+		services.AddSingleton<IBackupRunner, BackupRunner>();
 		services.AddSingleton<IFeedService, FeedService>();
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();
@@ -349,6 +357,15 @@ internal static class EngineRegistration
 		services.AddHttpClient("api")
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
+				AutomaticDecompression = System.Net.DecompressionMethods.GZip
+																 | System.Net.DecompressionMethods.Deflate
+																 | System.Net.DecompressionMethods.Brotli
+			});
+		// @http with a secret in its headers: no redirects, so the secret goes only to the host it is bound to.
+		services.AddHttpClient(SharpMUSH.Implementation.Commands.Commands.SecretHttpClient)
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+			{
+				AllowAutoRedirect = false,
 				AutomaticDecompression = System.Net.DecompressionMethods.GZip
 																 | System.Net.DecompressionMethods.Deflate
 																 | System.Net.DecompressionMethods.Brotli
