@@ -404,7 +404,7 @@ public class BackupTests
 		{
 			await db.Migrate();
 			var backup = (await backups.CreateAsync()).Expect<WorldBackup>();
-			await using (var file = File.OpenWrite(Path.Combine(backup.Path, "data.mdb")))
+			await using (var file = File.OpenWrite(Path.Join(backup.Path, "data.mdb")))
 			{
 				await file.WriteAsync(new byte[8192]);
 			}
