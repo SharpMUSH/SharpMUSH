@@ -32,8 +32,45 @@ public partial class PackageInstallService
 			Settings = await PlanSettingsAsync(inputs, changeset),
 			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),
 				cancellationToken),
-			Compatibility = PackageServerCompatibility.Check(manifest, engine.Current)
+			Compatibility = PackageServerCompatibility.Check(manifest, engine.Current),
+			LocalHooks = await PlanLocalHooksAsync(changeset, cancellationToken)
 		};
+	}
+
+	/// <summary>
+	/// The lifecycle hooks the game's own objects hold without the package shipping them, which the apply runs too.
+	/// What the package ships is on <see cref="PackageChangeset.Attributes"/> already.
+	/// </summary>
+	private async Task<IReadOnlyList<PackageLocalHook>> PlanLocalHooksAsync(PackageChangeset changeset,
+		CancellationToken cancellationToken)
+	{
+		if (changeset.LifecycleHook is not { } hook)
+		{
+			return [];
+		}
+
+		var shipped = changeset.Attributes
+			.Where(a => string.Equals(a.Attribute, hook, StringComparison.OrdinalIgnoreCase))
+			.Select(a => a.TargetRef)
+			.ToHashSet(StringComparer.Ordinal);
+
+		var hooks = new List<PackageLocalHook>();
+		foreach (var change in changeset.Objects.Where(o => o.Objid is not null && !shipped.Contains(o.Ref)))
+		{
+			if (HelperFunctions.ParseDbRef(change.Objid!) is not DBRef dbref)
+			{
+				continue;
+			}
+
+			var leaf = await attributeStore.GetAttributeAsync(dbref, [hook], cancellationToken)
+				.LastOrDefaultAsync(cancellationToken);
+			if (leaf is not null)
+			{
+				hooks.Add(new PackageLocalHook(change.Ref, change.Objid!, hook, leaf.Value.ToPlainText()));
+			}
+		}
+
+		return hooks;
 	}
 
 	/// <summary>The custom permissions the manifest declares, which its wiki pages may require before they exist.</summary>
@@ -105,7 +142,7 @@ public partial class PackageInstallService
 
 		return new PackagePlanInputs(
 			manifest, installed, installedObjects, baselines, allInstalled, otherManaged, live,
-			wellKnown, configureAnswers, crossPackageObjids, structureBaselines);
+			wellKnown, configureAnswers, crossPackageObjids, structureBaselines, RunningPlugins(manifest));
 	}
 
 	/// <summary>

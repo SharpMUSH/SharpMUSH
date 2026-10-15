@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
-		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki",
+		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
 		"attributes"
 	};
 
@@ -151,6 +151,8 @@ public partial class PackageManifestService : IPackageManifestService
 				$"'{conflict.PackageId}' is listed in both 'depends' and 'conflicts'."));
 		}
 
+		var plugins = ReadPlugins(doc, issues);
+
 		var configure = ReadConfigure(doc, issues);
 
 		var kind = ReadKind(doc, issues);
@@ -209,9 +211,38 @@ public partial class PackageManifestService : IPackageManifestService
 			locale,
 			wiki.Count == 0 ? null : wiki,
 			verifiedServer,
-			maximumServer);
+			maximumServer,
+			plugins.Count == 0 ? null : plugins);
 
 		return new ParsedPackageManifest(manifest, issues);
+	}
+
+	/// <summary>
+	/// Reads <c>plugins:</c> (format 1.7): the ids of the plugins the package's code calls into, such as <c>scene</c>
+	/// for a package that runs <c>+scene</c> or <c>scenewhere()</c>. A plugin id is a package id, so it is held to the
+	/// same rule.
+	/// </summary>
+	private static IReadOnlyList<string> ReadPlugins(Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
+	{
+		var plugins = new List<string>();
+		foreach (var id in ReadStringList(doc, "plugins", issues).Select(id => id.Trim().ToLowerInvariant()))
+		{
+			if (!PackageSlugRegex().IsMatch(id) || id.Length > MaxPackageIdLength)
+			{
+				issues.Add(PackageManifestIssue.Error("plugins", $"'{id}' is not a valid plugin id."));
+				continue;
+			}
+
+			if (plugins.Contains(id))
+			{
+				issues.Add(PackageManifestIssue.Warning("plugins", $"Plugin '{id}' is listed twice."));
+				continue;
+			}
+
+			plugins.Add(id);
+		}
+
+		return plugins;
 	}
 
 	public PackageManifestResult<PackageIndex> ParseIndex(string yaml)

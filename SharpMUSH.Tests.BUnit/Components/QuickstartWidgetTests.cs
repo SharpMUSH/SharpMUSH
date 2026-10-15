@@ -134,6 +134,18 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 			.IsEquivalentTo(new[] { "/login?tab=register" });
 	}
 
+	/// <summary>A game without the Scene System neither links to scenes nor offers one in the opening line.</summary>
+	[TUnit.Core.Test]
+	public async Task WithoutTheSceneSystem_OffersNoScene()
+	{
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true, features: []));
+		var cut = RenderWidget(BuildAuth([]));
+
+		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/wiki", "/characters" });
+		await Assert.That(cut.Find(".quickstart-text").TextContent).IsEqualTo("WidQuickstartIntroNoScenes");
+	}
+
 	[TUnit.Core.Test]
 	public async Task LoggedIn_ZeroCharacters_ShowsCreateHero()
 	{

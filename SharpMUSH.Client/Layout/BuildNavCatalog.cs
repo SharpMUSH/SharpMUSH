@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using MudBlazor;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Setup;
 using System.Security.Claims;
 
 namespace SharpMUSH.Client.Layout;
@@ -43,6 +45,10 @@ public static class BuildNavCatalog
 	/// <param name="PermClaims">Or any one of these <c>perm</c> claims.</param>
 	/// <param name="Roles">Or any one of these roles.</param>
 	/// <param name="ExactMatch">Current only on exactly this path (the overview at <c>/admin</c>).</param>
+	/// <param name="Feature">
+	/// The optional application (a <c>GameFeatures</c> id) the page belongs to; it is listed only while the game has it
+	/// on, since without its plugin nothing serves the page's data.
+	/// </param>
 	public sealed record Entry(
 		string Href,
 		string Icon,
@@ -52,7 +58,8 @@ public static class BuildNavCatalog
 		IReadOnlyList<string> Policies,
 		IReadOnlyList<string>? PermClaims = null,
 		IReadOnlyList<string>? Roles = null,
-		bool ExactMatch = false);
+		bool ExactMatch = false,
+		string? Feature = null);
 
 	/// <summary>
 	/// The policy the overview page sits behind: the viewer may open some staff page outside Build.
@@ -95,7 +102,8 @@ public static class BuildNavCatalog
 		new("/admin/media", Icons.Material.Filled.PermMedia, "AdmMediaTitle", "AdmCardMedia", Group.Content, ["media.admin"]),
 		new("/admin/suggestions", Icons.Material.Filled.Spellcheck, "AdmSuggestionsLabel", "AdmCardSuggestions", Group.Content, ["config.admin"]),
 		new("/admin/messages", Icons.Material.Filled.Campaign, "AdmMessagesTitle", "AdmCardMessages", Group.Content, ["config.admin"]),
-		new("/admin/scenes/types", Icons.Material.Filled.TheaterComedy, "AdmPoseTypesTitle", "AdmCardPoseTypes", Group.Content, ["layout.admin"]),
+		new("/admin/scenes/types", Icons.Material.Filled.TheaterComedy, "AdmPoseTypesTitle", "AdmCardPoseTypes", Group.Content, ["layout.admin"],
+			Feature: GameFeatures.Scenes),
 
 		new("/admin/applications", Icons.Material.Filled.Apps, "AdmApplicationsTitle", "AdmCardApplications", Group.Portal, ["applications.admin"]),
 		new("/admin/layout", Icons.Material.Filled.Dashboard, "AdmLayoutTitle", "AdmCardLayout", Group.Portal, ["layout.admin"]),
@@ -124,12 +132,14 @@ public static class BuildNavCatalog
 	/// The entries <paramref name="user"/> may see, in menu order: the overview first when anything
 	/// outside Build is visible, since that is where the rail's link and the configuration's way back go.
 	/// </summary>
-	public static async Task<IReadOnlyList<Entry>> VisibleAsync(IAuthorizationService authorization, ClaimsPrincipal user)
+	public static async Task<IReadOnlyList<Entry>> VisibleAsync(IAuthorizationService authorization, ClaimsPrincipal user,
+		ServerInfoService features)
 	{
 		var visible = new List<Entry>();
 		foreach (var entry in All)
 		{
-			if (await IsVisibleAsync(authorization, user, entry))
+			if ((entry.Feature is null || await features.HasFeatureAsync(entry.Feature))
+				&& await IsVisibleAsync(authorization, user, entry))
 			{
 				visible.Add(entry);
 			}

@@ -191,6 +191,14 @@ public class PackageManifestWriterTests
 	}
 
 	[Test]
+	public async Task PluginsRoundTrip()
+	{
+		var again = RoundTrip(Maximal() with { Plugins = ["scene", "discord"] });
+
+		await Assert.That(again.RequiredPlugins).IsEquivalentTo(new[] { "scene", "discord" });
+	}
+
+	[Test]
 	public async Task DependenciesAndConflictsRoundTrip()
 	{
 		var original = Maximal();
