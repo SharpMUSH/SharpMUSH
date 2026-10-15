@@ -114,3 +114,62 @@ test('ready handshake rejects wrong source, origin, nonce and port count', async
     assert.equal(pair.port1.received[0].type, 'init');
     instance.dispose();
 });
+
+test('a room document request names the rooms and coordinates and gets its own reply type', async () => {
+    const h = harness(), a = h.frame('a'), calls = [];
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' },
+        { invokeMethodAsync: async (...args) => { calls.push(args); return { document: { rooms: [] } }; } }, h.environment);
+    h.connect(a);
+    await a.port.postMessage({ type: 'document', channel: a.sent[0].channel, requestId: 7, rooms: [10], coordinates: ['MAP`X', 'MAP`Y', 'MAP`Z'] });
+    assert.deepEqual(calls, [['ReadRoomDocument', [10], ['MAP`X', 'MAP`Y', 'MAP`Z']]]);
+    assert.equal(a.port.received[1].type, 'document-result');
+    assert.equal(a.port.received[1].requestId, 7);
+    instance.dispose();
+});
+
+test('coordinates must be three attribute names', async () => {
+    const h = harness(), a = h.frame('a'); let calls = 0;
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' }, { invokeMethodAsync: async () => calls++ }, h.environment);
+    h.connect(a);
+    for (const coordinates of [[], ['X', 'Y'], ['X', 'Y', 'Z', 'W'], ['X', 'Y', 'a b'], ['X', 'Y', 3], 'XYZ', null])
+        await a.port.postMessage({ type: 'topology', channel: a.sent[0].channel, requestId: 1, rooms: [10], coordinates });
+    assert.equal(calls, 0); instance.dispose();
+});
+
+test('the host saves a package file only under a plain .json name', async () => {
+    const h = harness(), a = h.frame('a'), saved = [];
+    h.environment.Blob = class { constructor(parts, options) { this.parts = parts; this.type = options.type; } };
+    h.environment.URL = { createObjectURL: blob => { saved.push(blob); return 'blob:1'; }, revokeObjectURL() {} };
+    h.environment.setTimeout = () => {};
+    const clicked = [];
+    h.environment.document.createElement = () => ({ click() { clicked.push(this.download); }, remove() {} });
+    h.environment.document.body = { append() {} };
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' }, {}, h.environment);
+    h.connect(a);
+    for (const name of ['../x.json', 'x.html', '.json', 'a/b.json', 'x'.repeat(90) + '.json'])
+        await a.port.postMessage({ type: 'save-file', channel: a.sent[0].channel, name, text: '{}' });
+    await a.port.postMessage({ type: 'save-file', channel: a.sent[0].channel, name: 'east.rooms.json', text: 'x'.repeat(2 * 1024 * 1024 + 1) });
+    assert.deepEqual(clicked, []);
+    await a.port.postMessage({ type: 'save-file', channel: a.sent[0].channel, name: 'east.rooms.json', text: '{"rooms":[]}' });
+    assert.deepEqual(clicked, ['east.rooms.json']);
+    assert.equal(saved[0].type, 'application/json');
+    instance.dispose();
+});
+
+test('a plan or an apply carries only a plain JSON object to the host, which confirms an apply itself', async () => {
+    const h = harness(), a = h.frame('a'), calls = [];
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' },
+        { invokeMethodAsync: async (...args) => { calls.push(args); return { cancelled: true }; } }, h.environment);
+    h.connect(a);
+    const cyclic = {}; cyclic.self = cyclic;
+    for (const document of [null, [], 'rooms', 3, cyclic, { rooms: 'x'.repeat(4 * 1024 * 1024) }])
+        for (const type of ['plan', 'apply'])
+            await a.port.postMessage({ type, channel: a.sent[0].channel, requestId: 1, document });
+    assert.deepEqual(calls, []);
+    const document = { format: 'sharpmush-rooms', version: 1, rooms: [] };
+    await a.port.postMessage({ type: 'plan', channel: a.sent[0].channel, requestId: 2, document });
+    await a.port.postMessage({ type: 'apply', channel: a.sent[0].channel, requestId: 3, document });
+    assert.deepEqual(calls.map(call => call[0]), ['PlanRoomDocument', 'ApplyRoomDocument']);
+    assert.deepEqual(a.port.received.slice(1).map(reply => [reply.type, reply.requestId]), [['plan-result', 2], ['apply-result', 3]]);
+    instance.dispose();
+});

@@ -191,7 +191,7 @@
                 @foreach (var group in PackageGroups)
                 {
                     <h3 class="setup-group-title">
-                        @(group.Title ?? Loc["AdmSetupPkgGroupOther"])
+                        @group.Title
                         <span class="setup-group-count">@Loc["AdmSetupPkgGroupCount", group.Packages.Count(p => Effective.Contains(p.Package.Id)), group.Packages.Count]</span>
                     </h3>
                     <ul class="setup-apps">
@@ -642,7 +642,7 @@
         _busy = false;
     }
 
-    private IEnumerable<SetupPackageGroup> PackageGroups => SetupPackageGroups.For(_packages);
+    private IEnumerable<SetupPackageGroup> PackageGroups => SetupPackageGroups.For(_packages, Loc["AdmSetupPkgGroupUncategorized"]);
 
     private string HandlerTitle(string kind) => kind == HandlerKinds.Http
         ? Loc["AdmSetupHandlerHttpTitle"]
