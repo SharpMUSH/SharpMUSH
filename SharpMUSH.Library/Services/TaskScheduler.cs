@@ -1122,7 +1122,7 @@ public partial class TaskScheduler(
 				// A cancelled acknowledgement does not prove the provider failed to commit.
 				counterWriteAttempted = true;
 				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-					MarkupString.MarkupText.Plain(nextCount.ToString()), god), ExecutionBudget.CurrentToken))
+					MarkupString.MarkupText.Plain(nextCount.ToString()), god, state.Executor), ExecutionBudget.CurrentToken))
 					throw new InvalidOperationException("Semaphore count update failed.");
 				if (attribute is null)
 					await SemaphoreAttributes.InitializeAsync(mediator, fullTarget, dbRefAttribute.Attribute);
@@ -1181,9 +1181,9 @@ public partial class TaskScheduler(
 					}
 				}
 				var restored = counterCreated
-					? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
+					? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute, state.Executor), ExecutionBudget.CurrentToken)
 					: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-						MarkupString.MarkupText.Plain(currentCount.ToString()), god!), ExecutionBudget.CurrentToken);
+						MarkupString.MarkupText.Plain(currentCount.ToString()), god!, state.Executor), ExecutionBudget.CurrentToken);
 				if (!restored) throw new InvalidOperationException("Semaphore admission rollback failed.");
 			}
 			try

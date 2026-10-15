@@ -174,6 +174,37 @@ public class WatchedAttributeEventTests : ServerTestBase
 	}
 
 	/// <summary>
+	/// <c>USE</c> spends a charge by writing <c>CHARGES</c> under the attribute's owner; the player who used the
+	/// object is still the change's enactor.
+	/// </summary>
+	[Test]
+	public async Task UsingAnObjectNamesItsUserAsTheChargesEnactor()
+	{
+		var god = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(new DBRef(1))))
+			.Expect<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject>().Expect<SharpPlayer>();
+		var room = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand(
+			TestIsolationHelpers.GenerateUniqueName("WatchUseRoom"), god));
+		var user = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WatchUser", room);
+		var watch = await WatchThing("WatchUse");
+		try
+		{
+			await Cmd($"@tel #{watch.Thing.Number}=#{room.Number}");
+			await Cmd($"&CHARGES #{watch.Thing.Number}=2");
+			await Cmd($"@set #{watch.Thing.Number}/CHARGES=watched");
+			await CmdAs(user.DbRef, user.Handle, $"use #{watch.Thing.Number}");
+
+			await Assert.That(await Logged(watch)).IsEqualTo($"|CHARGES:2:1:#{user.DbRef.Number}")
+				.Because("the charge is spent by the player's USE, not by God, whose name the write is made under");
+		}
+		finally
+		{
+			await Forget(watch);
+			await ConnectionService.Disconnect(user.Handle);
+		}
+	}
+
+	/// <summary>
 	/// A hearer that raises the attribute it heard about runs again for its own change, until the chain is
 	/// <see cref="AttributeChangeChain.MaxDepth"/> events long: the change the last one makes is written and
 	/// announced to nobody.

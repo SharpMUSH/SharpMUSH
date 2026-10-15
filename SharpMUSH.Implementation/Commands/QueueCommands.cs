@@ -526,7 +526,8 @@ public partial class Commands
 		if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
 		var semaphores = parser.ServiceProvider.GetRequiredService<ISemaphoreQueue>();
 		return await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
-			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false) switch
+			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false,
+			executor.Object().DBRef) switch
 		{
 			SemaphoreAccounting counted => await NotifySemaphoreAsync(parser, executor, semaphores, dbRefAttribute, notifyType,
 				notifyCount, qRegisters, counted),
@@ -874,7 +875,8 @@ public partial class Commands
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
 			if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
 			return await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
-				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true) switch
+				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true,
+				executor.Object().DBRef) switch
 			{
 				SemaphoreAccounting counted => await DrainCounted(target, counted),
 				Error<string> accountingError => await ReportSemaphoreCommandError(executor, accountingError.Value),
