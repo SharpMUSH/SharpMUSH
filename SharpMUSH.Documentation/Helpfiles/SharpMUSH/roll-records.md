@@ -33,19 +33,19 @@ Output: the room sees the roll and its number, 57.
 
 ## Keeping a roll from softcode
 
-roll() keeps a roll when its options say `"record":true`, and then returns JSON with the roll's number as `id`.
+roll() keeps a roll when its options are `record`, and then returns JSON with the roll's number as `id`.
 
 ```sharp
-> think roll(1d20+5,,lit({"record":true}))
+> think roll(1d20+5,,record)
 {"id":58,"at":"2026-10-15T20:16:40.007Z","roller":"#12:1760558400000","name":"Alice","formula":"1d20+5","total":11,"text":"1d20[6] + 5 = 11","dice":[{"formula":"1d20","faces":20,"total":6,"results":[{"result":6,"active":true}]}]}
-> &cmd`roll #20=$+roll *:@remit %l=[setq(r,roll(%0,%#,lit({"record":true})))][notice(DICE,[name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)]))]
+> &cmd`roll #20=$+roll *:@remit %l=[setq(r,roll(%0,%#,record))][notice(DICE,[name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)]))]
 > +roll 2d6
 [DICE] Alice rolls 2d6[3, 1] = 4 (roll 59)
 ```
 
 Output: the JSON, then a +roll command on #20 that shows its own line with the number. The roll is Alice's, and rollinfo() names #20 as `by`.
 
-Only a roll is kept: `min` and `max` are refused with `#-1 ONLY A ROLL CAN BE RECORDED`, and asking for `total` or `text` with `"record":true` returns `#-1 A RECORDED ROLL ANSWERS IN JSON`.
+Only a roll is kept: `{"output":"record","mode":"max"}` returns `#-1 ONLY A ROLL CAN BE RECORDED`.
 
 ## Checking a roll
 

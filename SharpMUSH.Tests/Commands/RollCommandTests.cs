@@ -121,7 +121,7 @@ public partial class RollCommandTests
 	[Test]
 	public async Task ARecordedRollAnswersJsonThatRollInfoGivesBack()
 	{
-		var recorded = await Evaluate("""roll(1d1+1,,lit({"record":true}))""");
+		var recorded = await Evaluate("roll(1d1+1,,record)");
 
 		using var json = JsonDocument.Parse(recorded);
 		var id = json.RootElement.GetProperty("id").GetInt64();
@@ -139,7 +139,7 @@ public partial class RollCommandTests
 		var command = DBRef.Parse(created.Message.ToPlainText().Trim());
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain($"@set #{command.Number}=!no_command"));
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain(
-			$$"""&cmd`roll #{{command.Number}}=$+roll *:@remit %l=[setq(r,roll(%0,%#,lit({"record":true})))][notice(DICE,[name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)]))]"""));
+			$$"""&cmd`roll #{{command.Number}}=$+roll *:@remit %l=[setq(r,roll(%0,%#,record))][notice(DICE,[name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)]))]"""));
 
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("+roll 2d1+1"));
 
@@ -152,8 +152,7 @@ public partial class RollCommandTests
 	}
 
 	[Test]
-	[Arguments("""roll(1d6,,lit({"record":true,"mode":"max"}))""", ErrorMessages.Returns.RollRecordOnlyRolls)]
-	[Arguments("""roll(1d6,,lit({"record":true,"output":"total"}))""", ErrorMessages.Returns.RollRecordAnswersJson)]
+	[Arguments("""roll(1d6,,lit({"output":"record","mode":"max"}))""", ErrorMessages.Returns.RollRecordOnlyRolls)]
 	[Arguments("rollinfo(abc)", ErrorMessages.Returns.NoSuchRoll)]
 	[Arguments("rollinfo(0)", ErrorMessages.Returns.NoSuchRoll)]
 	public async Task RefusalsSayWhy(string softcode, string error)

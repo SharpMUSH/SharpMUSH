@@ -426,12 +426,11 @@ public static partial class ErrorMessages
 		public const string RollFormulaTooLarge = "#-1 ROLL FORMULA TOO LARGE";
 		public const string RollFormulaTooDeep = "#-1 ROLL FORMULA NESTED TOO DEEPLY";
 		public const string RollRecordOnlyRolls = "#-1 ONLY A ROLL CAN BE RECORDED";
-		public const string RollRecordAnswersJson = "#-1 A RECORDED ROLL ANSWERS IN JSON";
 		public const string NoSuchRoll = "#-1 NO SUCH ROLL";
 		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
 		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
 		public const string RollInvalidJson = "#-1 INVALID JSON";
-		public const string RollOutputMode = "#-1 ROLL OUTPUT MUST BE TOTAL, TEXT, JSON, MIN OR MAX";
+		public const string RollOutputMode = "#-1 ROLL OUTPUT MUST BE TOTAL, TEXT, JSON, RECORD, MIN OR MAX";
 		public const string RollDataMustBeObject = "#-1 ROLL DATA MUST BE A JSON OBJECT OR AN OBJECT";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DuplicateKeysFormat = "#-1 DUPLICATE KEYS: {0}";

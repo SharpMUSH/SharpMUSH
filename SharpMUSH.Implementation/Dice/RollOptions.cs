@@ -8,15 +8,16 @@ public enum RollOutput
 {
 	Total,
 	Text,
-	Json
+	Json,
+	Record
 }
 
 /// <summary>
-/// roll()'s third argument: a word (<c>total</c>, <c>text</c>, <c>json</c>, <c>min</c>, <c>max</c>)
-/// or a JSON object, <c>{"output":"json","mode":"max","record":true}</c>, as the layout functions take
-/// options. A recorded roll answers in JSON, which carries its id.
+/// roll()'s third argument: a word (<c>total</c>, <c>text</c>, <c>json</c>, <c>record</c>, <c>min</c>,
+/// <c>max</c>) or a JSON object, <c>{"output":"text","mode":"max"}</c>, as the layout functions take
+/// options. <c>record</c> keeps the roll and answers in JSON, which carries its id; only a roll is kept.
 /// </summary>
-public sealed record RollOptions(RollOutput Output, DiceRollMode Mode, bool Record = false)
+public sealed record RollOptions(RollOutput Output, DiceRollMode Mode)
 {
 	public static Result<RollOptions> Read(string options)
 	{
@@ -27,18 +28,7 @@ public sealed record RollOptions(RollOutput Output, DiceRollMode Mode, bool Reco
 			using var document = JsonDocument.Parse(options);
 			var root = document.RootElement;
 			if (root.ValueKind != JsonValueKind.Object) return new Error<string>(ErrorMessages.Returns.RollOutputMode);
-			var output = Member(root, "output");
-			var read = FromWords(output, Member(root, "mode"));
-			if (!root.TryGetProperty("record", out var record) || record.ValueKind != JsonValueKind.True) return read;
-
-			return read switch
-			{
-				RollOptions { Mode: not DiceRollMode.Random } => new Error<string>(ErrorMessages.Returns.RollRecordOnlyRolls),
-				RollOptions { Output: not RollOutput.Json } when output.Length > 0
-					=> new Error<string>(ErrorMessages.Returns.RollRecordAnswersJson),
-				RollOptions rolled => rolled with { Output = RollOutput.Json, Record = true },
-				Error<string> error => error
-			};
+			return FromWords(Member(root, "output"), Member(root, "mode"));
 		}
 		catch (JsonException)
 		{
@@ -67,6 +57,8 @@ public sealed record RollOptions(RollOutput Output, DiceRollMode Mode, bool Reco
 			("" or "total", DiceRollMode given) => new RollOptions(RollOutput.Total, given),
 			("text", DiceRollMode given) => new RollOptions(RollOutput.Text, given),
 			("json", DiceRollMode given) => new RollOptions(RollOutput.Json, given),
+			("record", DiceRollMode.Random) => new RollOptions(RollOutput.Record, DiceRollMode.Random),
+			("record", _) => new Error<string>(ErrorMessages.Returns.RollRecordOnlyRolls),
 			("min", DiceRollMode.Random) => new RollOptions(RollOutput.Total, DiceRollMode.Minimize),
 			("max", DiceRollMode.Random) => new RollOptions(RollOutput.Total, DiceRollMode.Maximize),
 			_ => new Error<string>(ErrorMessages.Returns.RollOutputMode)

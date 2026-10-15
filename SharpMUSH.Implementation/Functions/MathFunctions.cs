@@ -1473,7 +1473,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await RollData.RollAsync(parser, executor, LocateService, AttributeService, formula, data, options.Mode) switch
 		{
-			DiceRollResult result when options.Record => await RecordedRollAnswerAsync(parser, executor, result),
+			DiceRollResult result when options.Output is RollOutput.Record => await RecordedRollAnswerAsync(parser, executor, result),
 			DiceRollResult result => options.Output switch
 			{
 				RollOutput.Text => new CallState(result.Text),
