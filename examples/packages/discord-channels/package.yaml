@@ -35,6 +35,7 @@ objects:
   # send on Discord feeds owned by the Discord Bridge.
   #
   #   LINK`<discord channel id>   the game channel's name
+  #   BY`<discord channel id>     the objid of whoever linked it, who may remove it once the channel is gone
   - ref: links
     type: thing
     name: Discord Channels
@@ -53,17 +54,22 @@ objects:
       # %0 the game channel as typed, %1 the Discord channel id, %2 1 when the player confirmed that a channel
       # with a see or join lock goes to Discord.
       INC`LINK: |-
-        @assert not(strmatch(setr(chan,cinfo(%0,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %0.,warn); @assert u(me/FUN`MAYLINK,%#,%q<chan>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<chan> to Discord.,warn); @assert cand(regmatch(%1,^\\d+$),gte(strlen(%1),17),lte(strlen(%1),20))=@pemit %#=notice(DISCORD,%1 is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(LINK`%1)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(LINK`%1)].,warn); @assert not(strlen(u(me/FUN`LINKOF,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> already goes to Discord channel [u(me/FUN`LINKOF,%q<chan>)]. +discord/channel/remove %q<chan> first.,warn); @assert cor(%2,not(u(me/FUN`PRIVATE,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<chan>=%1 links it anyway.,warn); &LINK`%1 me=%q<chan>; @pemit %#=notice(DISCORD,%q<chan> goes to Discord channel %1%, and what is posted there comes back. If @discord does not list that channel%, link it with @discord/link.,ok)
+        @assert not(strmatch(setr(chan,cinfo(%0,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %0.,warn); @assert u(me/FUN`MAYLINK,%#,%q<chan>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<chan> to Discord.,warn); @assert cand(regmatch(%1,^\\d+$),gte(strlen(%1),17),lte(strlen(%1),20))=@pemit %#=notice(DISCORD,%1 is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(LINK`%1)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(LINK`%1)].,warn); @assert not(strlen(u(me/FUN`LINKOF,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> already goes to Discord channel [u(me/FUN`LINKOF,%q<chan>)]. +discord/channel/remove %q<chan> first.,warn); @assert cor(%2,not(u(me/FUN`PRIVATE,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> is for staff only or has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<chan>=%1 links it anyway.,warn); &LINK`%1 me=%q<chan>; &BY`%1 me=objid(%#); @pemit %#=notice(DISCORD,%q<chan> goes to Discord channel %1%, and what is posted there comes back. If @discord does not list that channel%, link it with @discord/link.,ok)
       # %0 the game channel as typed, or the name it had when it was linked.
       INC`REMOVE: |-
-        @assert strlen(setr(id,u(me/FUN`LINKOF,firstof(cinfo(%0,name),%0))))=@pemit %#=notice(DISCORD,%0 does not go to Discord.,warn); @assert u(me/FUN`MAYLINK,%#,v(LINK`%q<id>))=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin unlink [v(LINK`%q<id>)].,warn); @pemit %#=notice(DISCORD,[v(LINK`%q<id>)] no longer goes to Discord channel %q<id>.,ok); &LINK`%q<id> me
+        @assert strlen(setr(id,u(me/FUN`LINKOF,firstof(cinfo(%0,name),%0))))=@pemit %#=notice(DISCORD,%0 does not go to Discord.,warn); @assert u(me/FUN`MAYREMOVE,%#,%q<id>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin unlink [v(LINK`%q<id>)].,warn); @pemit %#=notice(DISCORD,[v(LINK`%q<id>)] no longer goes to Discord channel %q<id>.,ok); &LINK`%q<id> me; &BY`%q<id> me
 
       # %0 a player, %1 a game channel: whether they may link it.
       FUN`MAYLINK: |-
         cor(permission(%0,chat.admin),not(comp(objid(cowner(%1)),objid(%0))))
-      # %0 a game channel: whether it has a see or join lock, so not everyone reads it.
+      # %0 a player, %1 a Discord channel id: whether they may remove its link. Once the game channel is renamed
+      # or gone, cowner() has nothing to answer, so whoever linked it may.
+      FUN`MAYREMOVE: |-
+        cor(u(me/FUN`MAYLINK,%0,v(LINK`%1)),cand(strmatch(cinfo(v(LINK`%1),name),#-*),not(comp(v(BY`%1),objid(%0)))))
+      # %0 a game channel: whether not everyone reads it, because it is an Admin or Wizard channel or has a see or
+      # join lock.
       FUN`PRIVATE: |-
-        cor(strlen(clock(%0/see)),strlen(clock(%0/join)))
+        cor(strlen(clock(%0/see)),strlen(clock(%0/join)),match(clflags(%0),Admin),match(clflags(%0),Wizard))
       # %0 a game channel: the Discord channel id it goes to, or nothing.
       FUN`LINKOF: |-
         first(iter(lattr(me/LINK`*),if(not(comp(lcstr(v(%i0)),lcstr(%0))),last(%i0,`))))
@@ -114,9 +120,9 @@ objects:
         - `+discord/channel/remove <channel>` takes it apart again.
 
         Only the channel's owner, or staff with `chat.admin`, joins or parts a channel. A game channel
-        goes to one Discord channel, and a Discord channel to one game channel. A channel with a see or
-        join lock is refused until you give `/confirm`, because everyone who can read the Discord
-        channel reads what is said on it.
+        goes to one Discord channel, and a Discord channel to one game channel. A staff-only (Admin or
+        Wizard) channel, or one with a see or join lock, is refused until you give `/confirm`, because
+        everyone who can read the Discord channel reads what is said on it.
 
         Example:
 
@@ -129,7 +135,8 @@ objects:
 
         A line said in the game reaches Discord only if its speaker passes the Discord feed's send
         lock. Connect and disconnect lines stay in the game. Renaming the game channel parts it from
-        Discord; join it again under its new name.
+        Discord: whoever joined it removes the old name with `+discord/channel/remove <old name>`, then
+        joins it again under its new name.
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
