@@ -1,0 +1,457 @@
+format: 1
+package: health
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [health, activity, staff, statistics, retention]
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and calls
+  # activity(), which needs players.view. Every reader must hold players.view as well: the numbers name players.
+  #
+  # The numbers come from activity(), as JSON; this package only draws them. activity() counts poses, says,
+  # semiposes and @emits by approved characters, and scenes when the Scene plugin is running. It never stores
+  # what anyone wrote, and never counts connection time.
+  #
+  # +health is added with /noparse/rsnoparse and hooked to CMD`HEALTH, so what a player types reaches the code
+  # exactly as typed.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the parse and dispatch, INC`VIEW`<switch> one routine per view
+  # (another package adds one by attaching INC`VIEW`<name>), FUN`READ` reads activity(), FUN`SCREEN` draws each
+  # view, FUN`DISPLAY` the shared pieces. FILTER`HEALTH`SCREEN`<name>, when another package adds one, adds to the
+  # summary.
+  - ref: health
+    type: thing
+    name: Health
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # The settings +config shows and changes (plus-config). Code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG:
+        value: |-
+          The window +health counts over, when a player counts as drifting, and how far back cohorts and dead rooms go.
+        flags: [no_command]
+      DATA`CONFIG`DAYS: |-
+        30
+      DATA`CONFIG`DAYS`TYPE: |-
+        integer
+      DATA`CONFIG`DAYS`DEFAULT: |-
+        30
+      DATA`CONFIG`DAYS`MIN: |-
+        1
+      DATA`CONFIG`DAYS`MAX: |-
+        366
+      DATA`CONFIG`DAYS`DESCRIPTION: |-
+        How many days +health counts back from today, when the command names none.
+      DATA`CONFIG`BASELINE: |-
+        60
+      DATA`CONFIG`BASELINE`TYPE: |-
+        integer
+      DATA`CONFIG`BASELINE`DEFAULT: |-
+        60
+      DATA`CONFIG`BASELINE`MIN: |-
+        1
+      DATA`CONFIG`BASELINE`MAX: |-
+        366
+      DATA`CONFIG`BASELINE`DESCRIPTION: |-
+        How many days before the window a player's usual pace is read from, for the drifting list.
+      DATA`CONFIG`MINIMUM: |-
+        4
+      DATA`CONFIG`MINIMUM`TYPE: |-
+        integer
+      DATA`CONFIG`MINIMUM`DEFAULT: |-
+        4
+      DATA`CONFIG`MINIMUM`MIN: |-
+        1
+      DATA`CONFIG`MINIMUM`MAX: |-
+        366
+      DATA`CONFIG`MINIMUM`CHECK: |-
+        CHECK`MINIMUM
+      DATA`CONFIG`MINIMUM`DESCRIPTION: |-
+        How many days a player must have posed in the baseline to count as a regular who can drift.
+      DATA`CONFIG`MONTHS: |-
+        12
+      DATA`CONFIG`MONTHS`TYPE: |-
+        integer
+      DATA`CONFIG`MONTHS`DEFAULT: |-
+        12
+      DATA`CONFIG`MONTHS`MIN: |-
+        1
+      DATA`CONFIG`MONTHS`MAX: |-
+        36
+      DATA`CONFIG`MONTHS`DESCRIPTION: |-
+        How many approval months +health/cohorts shows.
+      DATA`CONFIG`DEAD-DAYS: |-
+        90
+      DATA`CONFIG`DEAD-DAYS`TYPE: |-
+        integer
+      DATA`CONFIG`DEAD-DAYS`DEFAULT: |-
+        90
+      DATA`CONFIG`DEAD-DAYS`MIN: |-
+        1
+      DATA`CONFIG`DEAD-DAYS`MAX: |-
+        3650
+      DATA`CONFIG`DEAD-DAYS`DESCRIPTION: |-
+        How many days without a pose make a room dead.
+      DATA`CONFIG`LIMIT: |-
+        20
+      DATA`CONFIG`LIMIT`TYPE: |-
+        integer
+      DATA`CONFIG`LIMIT`DEFAULT: |-
+        20
+      DATA`CONFIG`LIMIT`MIN: |-
+        1
+      DATA`CONFIG`LIMIT`MAX: |-
+        1000
+      DATA`CONFIG`LIMIT`DESCRIPTION: |-
+        How many rows each list shows: drifting players, busiest rooms, dead rooms.
+      DATA`CONFIG`ZONE: |-
+        UTC
+      DATA`CONFIG`ZONE`TYPE: |-
+        timezone
+      DATA`CONFIG`ZONE`DEFAULT: |-
+        UTC
+      DATA`CONFIG`ZONE`DESCRIPTION: |-
+        The time zone +health/when shows hours in, for a reader with no TZ attribute of their own.
+      # %0 the minimum as stored: nothing when it fits the baseline, else why not.
+      CHECK`MINIMUM:
+        value: |-
+          if(gt(%0,get(%!/DATA`CONFIG`BASELINE)),The minimum can be no more than the baseline\, [get(%!/DATA`CONFIG`BASELINE)] days.)
+        flags: [funsyntax]
+
+      # ---- command ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`HEALTH:
+        value: |-
+          $(?is)^\+health(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Checks the reader, parses the command into registers every view shares, and runs the view.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert permission(%#,players.view)=@pemit %#=notice(HEALTH,+health needs the players.view permission.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(HEALTH,Use one switch at a time.,warn); @assert hasattr(%!,INC`VIEW`%q<cmd_view>)=@pemit %#=notice(HEALTH,+health has no /[lcstr(%q<cmd_view>)] switch. It takes [u(%!/FUN`DISPLAY`VIEWS)].,warn); @assert cor(not(strlen(%q<cmd_argument>)),cand(isint(%q<cmd_argument>),gte(%q<cmd_argument>,1),lte(%q<cmd_argument>,366)))=@pemit %#=notice(HEALTH,Give a number of days from 1 to 366%, such as +health 90.,warn); @include %!/INC`VIEW`%q<cmd_view>
+        flags: [cmdsyntax]
+      # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_view (the INC`VIEW` leaf, SUMMARY
+      # for none), cmd_argument, days (the argument, else the setting) and zone (the reader's TZ when it is a
+      # zone, else the setting).
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
+          cmd_view,ucstr(firstof(first(%q<cmd_switch_list>),summary)),
+          cmd_argument,trim(squish(%1)),
+          days,firstof(%q<cmd_argument>,get(%!/DATA`CONFIG`DAYS)),
+          zone,if(valid(timezone,get(%#/TZ)),get(%#/TZ),firstof(get(%!/DATA`CONFIG`ZONE),UTC)))
+        flags: [funsyntax]
+
+      # ---- reading activity() --------------------------------------------------
+      # %0 the report: activity()'s JSON for it, over %q<days> days in %q<zone>, with every other setting.
+      FUN`READ:
+        value: |-
+          activity(%0,u(%!/FUN`READ`OPTIONS))
+        flags: [funsyntax]
+      FUN`READ`OPTIONS:
+        value: |-
+          json(object,
+          days,json(number,%q<days>),
+          baseline,json(number,get(%!/DATA`CONFIG`BASELINE)),
+          minimum,json(number,get(%!/DATA`CONFIG`MINIMUM)),
+          months,json(number,get(%!/DATA`CONFIG`MONTHS)),
+          dead,json(number,get(%!/DATA`CONFIG`DEAD-DAYS)),
+          limit,json(number,get(%!/DATA`CONFIG`LIMIT)),
+          zone,json(string,%q<zone>))
+        flags: [funsyntax]
+      # %0 JSON and %1 a path such as $.posed: the value there, empty for null.
+      FUN`READ`AT:
+        value: |-
+          json_query(%0,extract,%1)
+        flags: [funsyntax]
+      # %0 JSON and %1 the path of an array: its positions, 0 up, or nothing when it is empty.
+      FUN`READ`INDEXES:
+        value: |-
+          if(setr(read_size,json_query(json_query(%0,extract,%1),size)),lnum(0,dec(%q<read_size>)))
+        flags: [funsyntax]
+
+      # ---- shared pieces --------------------------------------------------------
+      # %0 a count now and %1 the count before: the count, and the one before when it differs.
+      FUN`DISPLAY`TREND:
+        value: |-
+          %0[if(neq(%0,%1),%b[tone(muted,was %1)])]
+        flags: [funsyntax]
+      # %0 a moment as activity() writes it: the day in the reader's zone, or never.
+      FUN`DISPLAY`DAY:
+        value: |-
+          if(strlen(%0),timefmt($a $d $b,convtime(%0),%q<zone>),tone(muted,never))
+        flags: [funsyntax]
+      # %0 a share from 0 to 1: a percentage, or a dash when it is not known yet.
+      FUN`DISPLAY`SHARE:
+        value: |-
+          if(strlen(%0),[round(mul(%0,100),0)]%%,tone(muted,-))
+        flags: [funsyntax]
+      # %0 a weekday, 0 for Sunday: its short name.
+      FUN`DISPLAY`WEEKDAY:
+        value: |-
+          extract(Sun Mon Tue Wed Thu Fri Sat,inc(%0),1)
+        flags: [funsyntax]
+      # The footer every view ends with.
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          tone(muted,Last %q<days> days to [timefmt($d $b,convtime(%q<as_of>T00:00:00Z),UTC)] · +health [u(%!/FUN`DISPLAY`VIEWS)])
+        flags: [funsyntax]
+      # The switches, one per INC`VIEW` leaf but the summary: /cohorts /drifting ...
+      FUN`DISPLAY`VIEWS:
+        value: |-
+          squish(iter(lattr(%!/INC`VIEW`*),if(comp(last(%i0,`),SUMMARY),/[lcstr(last(%i0,`))])))
+        flags: [funsyntax]
+      # The FILTER`HEALTH`SCREEN`<name> attributes on this object, in name order, for chain().
+      FUN`DISPLAY`FILTERS:
+        value: |-
+          iter(lattr(%!/FILTER`HEALTH`SCREEN`*),%!/%i0)
+        flags: [funsyntax]
+
+      # ---- +health ----------------------------------------------------------------
+      INC`VIEW`SUMMARY:
+        value: |-
+          think setq(report,u(%!/FUN`READ,summary)); @assert not(strmatch(%q<report>,#-*))=@pemit %#=notice(HEALTH,%q<report>,error); @pemit %#=u(%!/FUN`SCREEN`SUMMARY,%q<report>)
+        flags: [cmdsyntax]
+      # %0 the summary report.
+      FUN`SCREEN`SUMMARY:
+        value: |-
+          setq(as_of,u(%!/FUN`READ`AT,%0,$.asOf))[box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`SUMMARYFIELDS,%0),%#,%q<days>)%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER)],Health)]
+        flags: [funsyntax]
+      # The summary's fields, split by chr(30). Scenes appear only when something records them.
+      FUN`SCREEN`SUMMARYFIELDS:
+        value: |-
+          setqm(scenes,u(%!/FUN`READ`AT,%0,$.scenes),
+          peak_players,u(%!/FUN`READ`AT,%0,$.peak.players))[lfields(,
+          Approved[chr(30)]Posed[chr(30)]Poses[if(strlen(%q<scenes>),[chr(30)]Scenes)][chr(30)]New approvals[chr(30)]Rooms used[chr(30)]Dead rooms[chr(30)]Drifting[chr(30)]Busiest hour,
+          [u(%!/FUN`READ`AT,%0,$.approved)][chr(30)][u(%!/FUN`DISPLAY`TREND,u(%!/FUN`READ`AT,%0,$.posed),u(%!/FUN`READ`AT,%0,$.posedBefore))][chr(30)][u(%!/FUN`DISPLAY`TREND,u(%!/FUN`READ`AT,%0,$.poses),u(%!/FUN`READ`AT,%0,$.posesBefore))][if(strlen(%q<scenes>),[chr(30)][u(%!/FUN`DISPLAY`TREND,%q<scenes>,u(%!/FUN`READ`AT,%0,$.scenesBefore))])][chr(30)][u(%!/FUN`READ`AT,%0,$.newApprovals)][chr(30)][u(%!/FUN`READ`AT,%0,$.roomsUsed)][chr(30)][u(%!/FUN`READ`AT,%0,$.roomsDead)][chr(30)][u(%!/FUN`READ`AT,%0,$.drifting)][chr(30)][if(strlen(%q<peak_players>),[u(%!/FUN`DISPLAY`WEEKDAY,u(%!/FUN`READ`AT,%0,$.peak.weekday))] [rjust(u(%!/FUN`READ`AT,%0,$.peak.hour),2,0)]:00 [tone(muted,· [round(%q<peak_players>,1)] posing · [u(%!/FUN`READ`AT,%0,$.zone)])],tone(muted,nobody posed))],
+          chr(30))]
+        flags: [funsyntax]
+
+      # ---- +health/drifting -------------------------------------------------------
+      INC`VIEW`DRIFTING:
+        value: |-
+          think setq(report,u(%!/FUN`READ,drifting)); @assert not(strmatch(%q<report>,#-*))=@pemit %#=notice(HEALTH,%q<report>,error); @pemit %#=u(%!/FUN`SCREEN`DRIFTING,%q<report>)
+        flags: [cmdsyntax]
+      # %0 the drifting report: a row per player whose pace fell to half or less.
+      FUN`SCREEN`DRIFTING:
+        value: |-
+          setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
+          rows,u(%!/FUN`READ`INDEXES,%0,$.players))[box(if(words(%q<rows>),ldatatable(json(object,nowrap,json(string,2|3|4),priority,json(string,1|1|2|2),grow,json(string,1)),Name|Last pose|>Days now|>Days before,iter(%q<rows>,uargs(%!/FUN`SCREEN`DRIFTINGROW,report,%0,row,%i0),,^),^),tone(muted,Nobody who posed regularly has slowed down.))%r[rule()]%r[u(%!/FUN`READ`AT,%0,$.total)] drifting: posed on [u(%!/FUN`READ`AT,%0,$.minimumDays)] or more of the [u(%!/FUN`READ`AT,%0,$.baseline)] days before\, and half as often or less since.%r[u(%!/FUN`DISPLAY`FOOTER)],Drifting away)]
+        flags: [funsyntax]
+      # %<report> and %<row>: one row, its cells split by |.
+      FUN`SCREEN`DRIFTINGROW:
+        value: |-
+          setq(row_path,$.players\[%<row>\])[u(%!/FUN`READ`AT,%<report>,%q<row_path>.name)]|[u(%!/FUN`DISPLAY`DAY,u(%!/FUN`READ`AT,%<report>,%q<row_path>.lastPose))]|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.recentDays)]/%q<days>|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.baselineDays)]/[u(%!/FUN`READ`AT,%<report>,$.baseline)]
+        flags: [funsyntax]
+
+      # ---- +health/cohorts --------------------------------------------------------
+      INC`VIEW`COHORTS:
+        value: |-
+          think setq(report,u(%!/FUN`READ,cohorts)); @assert not(strmatch(%q<report>,#-*))=@pemit %#=notice(HEALTH,%q<report>,error); @pemit %#=u(%!/FUN`SCREEN`COHORTS,%q<report>)
+        flags: [cmdsyntax]
+      # %0 the cohorts report: a row per approval month, newest first, with the share still posing 30, 60 ... 180
+      # days on.
+      FUN`SCREEN`COHORTS:
+        value: |-
+          setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
+          rows,u(%!/FUN`READ`INDEXES,%0,$.cohorts))[box(if(words(%q<rows>),ldatatable(json(object,nowrap,json(string,1|2|3|4|5|6|7|8|9),priority,json(string,1|1|1|1|2|2|3|3|3)),Month|>Approved|>Active|>30d|>60d|>90d|>120d|>150d|>180d,iter(%q<rows>,uargs(%!/FUN`SCREEN`COHORTROW,report,%0,row,%i0),,^),^),tone(muted,Nobody was approved in these months.))%r[rule()]%rActive: posed in the last %q<days> days. 30d to 180d: the share who posed in each 30 days after their approval month ended.[if(u(%!/FUN`READ`AT,%0,$.undated),%r[u(%!/FUN`READ`AT,%0,$.undated)] approved with no date on record are counted by the month they were created.)]%r[u(%!/FUN`DISPLAY`FOOTER)],Cohorts)]
+        flags: [funsyntax]
+      FUN`SCREEN`COHORTROW:
+        value: |-
+          setq(row_path,$.cohorts\[%<row>\])[u(%!/FUN`READ`AT,%<report>,%q<row_path>.month)]|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.approved)]|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.active)][iter(lnum(0,5),|[u(%!/FUN`DISPLAY`SHARE,u(%!/FUN`READ`AT,%<report>,%q<row_path>.retained\[%i0\]))],,)]
+        flags: [funsyntax]
+
+      # ---- +health/rooms ----------------------------------------------------------
+      INC`VIEW`ROOMS:
+        value: |-
+          think setq(report,u(%!/FUN`READ,rooms)); @assert not(strmatch(%q<report>,#-*))=@pemit %#=notice(HEALTH,%q<report>,error); @pemit %#=u(%!/FUN`SCREEN`ROOMS,%q<report>)
+        flags: [cmdsyntax]
+      # %0 the rooms report: the busiest rooms, then the dead ones. The Scenes column appears only when something
+      # records scenes.
+      FUN`SCREEN`ROOMS:
+        value: |-
+          setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
+          used,u(%!/FUN`READ`INDEXES,%0,$.used),
+          dead,u(%!/FUN`READ`INDEXES,%0,$.dead),
+          scenes,if(words(%q<used>),strlen(u(%!/FUN`READ`AT,%0,$.used\[0\].scenes))))[box(rule(Busiest)%r[if(words(%q<used>),ldatatable(json(object,nowrap,json(string,2|3|4|5|6),priority,json(string,1|1|2|2|2|3),grow,json(string,1)),Room|>Poses|>Days|>People[if(%q<scenes>,|>Scenes)]|Last pose,iter(%q<used>,uargs(%!/FUN`SCREEN`USEDROW,report,%0,row,%i0),,^),^),tone(muted,Nobody posed in a room.))]%r[rule(Dead)]%r[if(words(%q<dead>),ldatatable(json(object,nowrap,json(string,2),grow,json(string,1)),Room|Last pose,iter(%q<dead>,uargs(%!/FUN`SCREEN`DEADROW,report,%0,row,%i0),,^),^),tone(muted,Every room had a pose.))]%r[rule()]%rRooms with a pose: [u(%!/FUN`READ`AT,%0,$.usedTotal)]. Rooms with none in [u(%!/FUN`READ`AT,%0,$.deadDays)] days: [u(%!/FUN`READ`AT,%0,$.deadTotal)].%r[u(%!/FUN`DISPLAY`FOOTER)],Rooms)]
+        flags: [funsyntax]
+      FUN`SCREEN`USEDROW:
+        value: |-
+          setq(row_path,$.used\[%<row>\])[u(%!/FUN`READ`AT,%<report>,%q<row_path>.name)]|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.poses)]|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.days)]|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.people)][if(%q<scenes>,|[u(%!/FUN`READ`AT,%<report>,%q<row_path>.scenes)])]|[u(%!/FUN`DISPLAY`DAY,u(%!/FUN`READ`AT,%<report>,%q<row_path>.lastPose))]
+        flags: [funsyntax]
+      FUN`SCREEN`DEADROW:
+        value: |-
+          setq(row_path,$.dead\[%<row>\])[u(%!/FUN`READ`AT,%<report>,%q<row_path>.name)]|[u(%!/FUN`DISPLAY`DAY,u(%!/FUN`READ`AT,%<report>,%q<row_path>.lastPose))]
+        flags: [funsyntax]
+
+      # ---- +health/when -----------------------------------------------------------
+      INC`VIEW`WHEN:
+        value: |-
+          think setq(report,u(%!/FUN`READ,hours)); @assert not(strmatch(%q<report>,#-*))=@pemit %#=notice(HEALTH,%q<report>,error); @pemit %#=u(%!/FUN`SCREEN`WHEN,%q<report>)
+        flags: [cmdsyntax]
+      # %0 the hours report: a row per weekday from Monday, a mark per hour in %q<zone>, a space between.
+      # The mark says how busy the hour is next to the busiest one, so it reads without colour too.
+      FUN`SCREEN`WHEN:
+        value: |-
+          setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
+          grid,iter(lnum(0,6),u(%!/FUN`READ`ROW,%0,%i0),,|),
+          busiest,lmath(max,edit(%q<grid>,|,%b)))[box(%b%b%b%b[iter(lnum(0,21,%b,3),rjust(%i0,2,0),,%b%b%b%b)]%r[iter(1 2 3 4 5 6 0,[u(%!/FUN`DISPLAY`WEEKDAY,%i0)]%b[iter(extract(%q<grid>,inc(%i0),1,|),u(%!/FUN`DISPLAY`CELL,%i0))],,%r)]%r[rule()]%r[tone(subtle,.)] nobody · [tone(muted,-)] under a quarter of the busiest · [tone(info,+)] under half · [tone(primary,*)] under three quarters · [tone(strong,\#)] the busiest%r[if(%q<busiest>,The busiest hour averages [round(%q<busiest>,1)] players posing. Hours are [u(%!/FUN`READ`AT,%0,$.zone)].,Nobody posed in these days.)]%r[u(%!/FUN`DISPLAY`FOOTER)],When people play)]
+        flags: [funsyntax]
+      # %0 the hours report and %1 a weekday, 0 for Sunday: its 24 averages, split by spaces.
+      FUN`READ`ROW:
+        value: |-
+          squish(edit(json_query(%0,extract,$.players\[%1\]),\[,,\],,\,,%b))
+        flags: [funsyntax]
+      # %0 an hour's average: its mark, against %q<busiest>.
+      FUN`DISPLAY`CELL:
+        value: |-
+          switch(if(%0,inc(min(3,floor(fdiv(mul(%0,4),%q<busiest>))))),1,tone(muted,-),2,tone(info,+),3,tone(primary,*),4,tone(strong,\#),tone(subtle,.))
+        flags: [funsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +health; @hook/override/inline +health=%!,CMD`HEALTH
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: health_help
+    type: thing
+    name: Health Help
+    location: "{{health}}"
+    attributes:
+      HELP: |-
+        Staff numbers on how the game is doing: +health.
+      HELP`HEALTH: |-
+        `+health` shows staff how the game is doing, counted from poses and scenes rather than from time connected. It needs the `players.view` permission.
+
+        - `+health` sums up the last 30 days: how many approved characters posed, how many poses and scenes there were, next to the 30 days before, with new approvals, rooms used and dead, how many players are drifting, and the busiest hour.
+        - `+health/drifting` lists regulars who have slowed down.
+        - `+health/cohorts` shows, for each month's new approvals, how many still pose.
+        - `+health/rooms` lists the busiest rooms and the ones nobody uses.
+        - `+health/when` maps the hours people pose, by weekday.
+
+        Give a number of days after any of them to count over that many instead: `+health/rooms 90`.
+
+        A pose is a pose, say, semipose or `@emit` by an approved character, or a pose added to a scene. Nothing anyone wrote is kept: only how many times each character posed each day, the hours of the day they posed in, and in which rooms.
+
+        For example:
+
+        `+health`
+
+        Output: a box titled `Health` with the counts for the last 30 days, each followed by the count for the 30 days before when it differs, such as `Posed 18 was 21`.
+      HELP`HEALTH`DRIFTING: |-
+        `+health/drifting` lists the players who used to pose regularly and now pose half as often or less.
+
+        A regular is an approved character who posed on at least 4 of the 60 days before the window. They are drifting when the share of days they posed in the window is half their share in those 60 days or less. A regular who stopped altogether is on the list too.
+
+        The list is longest drop first. `Days now` is the days they posed in the window, `Days before` the days they posed in the 60 before.
+
+        For example, with the window at 30 days:
+
+        `+health/drifting`
+
+        Output: a table with a row per player, such as `Ann | Mon 07 Sep | 2/30 | 40/60`.
+
+        The 60 days and the 4 are settings: see `+help health settings`.
+      HELP`HEALTH`COHORTS: |-
+        `+health/cohorts` groups approved characters by the month they were approved, newest first, and shows how many of each month still pose.
+
+        - `Approved` is how many were approved that month.
+        - `Active` is how many of them posed in the window.
+        - `30d` to `180d` are the share who posed in each 30 days after their month ended: `30d` the first 30 days, `60d` the next, and so on. A dash means those days have not all passed yet.
+
+        The month comes from the audit log, the first time the character, or its account, was given the `approved` role. A character approved before the audit log kept that is counted by the month it was created, and the screen says how many.
+
+        For example:
+
+        `+health/cohorts`
+
+        Output: a table with a row per month, such as `2026-07 | 12 | 8 | 92% | 75% | -`.
+      HELP`HEALTH`ROOMS: |-
+        `+health/rooms` lists the rooms with the most poses in the window, then the dead rooms: rooms older than 90 days that have had no pose in 90 days.
+
+        For each busy room: its poses, the days it had any, how many people posed there, the scenes started there when the game records scenes, and the day of its last pose.
+
+        A dead room is a candidate for tidying, not a fault: a room people pass through but do not pose in is dead here too.
+
+        For example:
+
+        `+health/rooms 90`
+
+        Output: a box titled `Rooms` with a `Busiest` table, a `Dead` table and a line counting both.
+      HELP`HEALTH`WHEN: |-
+        `+health/when` maps when people pose: a row per weekday, a column per hour.
+
+        Each cell is how many approved characters posed in that hour, on average, over the days in the window. Each mark compares it with the busiest hour: `.` nobody, `-` under a quarter of the busiest, `+` under half, `*` under three quarters, `\#` the busiest. The marks are coloured from your theme, and read the same without colour.
+
+        Hours are shown in your time zone, from your `TZ` attribute, or the game's when you have none. `+timezone` sets it when the time package is installed.
+
+        For example:
+
+        `+health/when`
+
+        Output: a box titled `When people play` with a line of hours, `00` to `21` every three hours, and a row of marks for each day from Monday.
+      HELP`HEALTH`SETTINGS: |-
+        `+config health` shows the settings and changes them:
+
+        - `days`: how many days `+health` counts over when you give none. 30.
+        - `baseline`: how many days before the window a player's usual pace comes from. 60.
+        - `minimum`: how many of those days a player must have posed on to be a regular. 4.
+        - `months`: how many months `+health/cohorts` shows. 12.
+        - `dead-days`: how many days without a pose make a room dead. 90.
+        - `limit`: how many rows each list shows. 20.
+        - `zone`: the time zone for a reader with no `TZ` of their own. UTC.
+
+        For example:
+
+        `+config health/baseline=90`
+
+        Output: `\[CONFIG\] Done: health/baseline is 90, was 60.`
+      HELP`HEALTH`CODE: |-
+        The numbers come from `activity\(\)`, which returns them as JSON: see `help activity\(\)`. Your own code can draw them another way.
+
+        ## Adding to +health
+
+        Another package adds lines to the `+health` summary with a filter on the Health object: an attribute named `` FILTER`HEALTH`SCREEN`<name> ``. Filters run in name order with `chain\(\)`, each given the summary so far as `%%0`, the reader as `%%1` and the days as `%%2`, and each returns the summary with its own lines added.
+
+        A package adds a view by attaching `` INC`VIEW`<name> `` to the Health object: `+health/<name>` runs it, after the permission check, with `%%q<days>` and `%%q<zone>` set. The health-jobs package adds `+health/staff` this way.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`HEALTH: |-
+        {{health_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`HEALTH: |-
+        {{health}}

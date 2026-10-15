@@ -3054,6 +3054,8 @@ Deleting things frees space inside the file for reuse. It never shrinks the file
 - **scene.edits**: every version of every scene pose.
 - **scene.deleted**: poses deleted from a scene but still stored. Deleting a pose only hides it.
 - **audit**: the log of staff actions.
+- **rolls**: rolls kept by `@roll` and roll() with `record`.
+- **activity**: poses counted per character and room per day, behind [activity()]. Each day is one stream.
 
 A *stream* is one page's text in one language, or one pose.
 

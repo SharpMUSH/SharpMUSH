@@ -147,6 +147,16 @@ packages:
     package: time
     version: 1.1.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
+  - path: health/
+    name: Health
+    package: health
+    version: 1.0.0
+    description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
+  - path: health-jobs/
+    name: Health Staff Load
+    package: health-jobs
+    version: 1.0.0
+    description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
   - path: timeline/
     name: Timeline
     package: timeline
