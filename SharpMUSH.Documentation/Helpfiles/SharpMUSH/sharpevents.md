@@ -58,7 +58,7 @@ Event Types:
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
 - **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink
-- **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp
+- **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp, socket\`timezone
 - **http**: http\`blocked, http\`fail, http\`command
 - **room**: room\`contents
 - **channel**: channel\`message, channel\`who
@@ -68,7 +68,7 @@ Event Types:
 - **backup**: backup\`complete, backup\`error
 - **gallery**: gallery\`add, gallery\`report
 
-The room, channel, page, mail, scene, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, the gallery events tell the game about the web portal's profile pictures, and scene\`status lets a package act when a scene starts or ends.
+The room, channel, page, mail, scene, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink, socket\`gmcp and socket\`timezone are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, socket\`timezone the time zone a client reports, the gallery events tell the game about the web portal's profile pictures, and scene\`status lets a package act when a scene starts or ends.
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.
 
@@ -224,6 +224,9 @@ To mimic old behaviour:
 
 - **socket\`gmcp** (*descriptor*, *package*, *message*, *player*)
 - Stoppable. Triggered when a telnet client sends a GMCP package, such as Mudlet's External.Discord.Hello when it connects. *<message>* is the package's JSON, empty when it sent none. *<player>* is whoever is logged in on the descriptor, empty at the connect screen; %# is that player too, or #1 before login. Answer with oob() on the descriptor, which reaches the client before anyone logs in. Core.Ping and Core.KeepAlive are answered by the server and do not trigger this. The client chooses everything it sends, so check *<package>* before acting on *<message>*. The modules a client lists in Core.Supports are visible to softcode as the connection's GMCP_SUPPORTS, through gmcpsupports(). That list is recorded apart from this event, so the event for a Core.Supports package may still see the list from before it; read the list in a later event, such as player\`connect.
+
+- **socket\`timezone** (*descriptor*, *zone*, *player*)
+- Triggered when a client reports its time zone, such as Europe/Paris: the web portal reports the browser's, and a telnet client its TZ through NEW-ENVIRON. *<zone>* is always a zone the server knows; anything else a client sends is dropped. It is raised once per zone a connection reports, usually before login, when *<player>* is empty and %# is #1; afterwards *<player>* and %# are whoever is logged in on the descriptor. clientzone() reads the zone at any time, so a handler that acts at login reads it from player\`connect's *<descriptor>* instead. The zone is only what the client said, and says roughly where someone is.
 
 # HTTP Events
 # Event HTTP

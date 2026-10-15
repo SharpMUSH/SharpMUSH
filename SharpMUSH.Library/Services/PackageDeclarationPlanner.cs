@@ -10,14 +10,29 @@ namespace SharpMUSH.Library.Services;
 /// <param name="Permissions">Every custom permission.</param>
 /// <param name="Roles">Every role.</param>
 /// <param name="HeldRoles">The slugs, among the roles the package owns, that an account or object holds.</param>
-/// <param name="OtherOwners">Items other installed packages own, keyed by kind and lowercase name, to the owning package.</param>
+/// <param name="OtherOwners">
+/// Items other installed packages own, keyed by kind and name (lowercase, or upper case for an attribute entry), to
+/// the owning package.
+/// </param>
+/// <param name="AttributeEntries">The game's standard attribute table.</param>
+/// <param name="AttributeFlags">The attribute flags the game has, lowercase; null to take every flag as known.</param>
+/// <param name="AttributeCopies">
+/// For each attribute the package declares retroactive: the flags, lowercase, of every copy of it already on an
+/// object.
+/// </param>
 public sealed record PackageDeclarationLiveState(
 	IReadOnlyList<RoleCategory> RoleCategories,
 	IReadOnlyList<RoleCategory> PermissionCategories,
 	IReadOnlyList<CustomPermission> Permissions,
 	IReadOnlyList<SharpRole> Roles,
 	IReadOnlySet<string> HeldRoles,
-	IReadOnlyDictionary<(PackageDeclarationKind Kind, string Name), string> OtherOwners);
+	IReadOnlyDictionary<(PackageDeclarationKind Kind, string Name), string> OtherOwners,
+	IReadOnlyList<SharpAttributeEntry>? AttributeEntries = null,
+	IReadOnlySet<string>? AttributeFlags = null,
+	IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>>? AttributeCopies = null);
+
+/// <summary>An attribute entry an apply writes, and whether its default flags then go to every existing copy.</summary>
+public sealed record PackageAttributeEntryWrite(PackageAttributeEntrySpec Entry, bool Retroactive);
 
 /// <summary>A declaration plan: what is shown, what is written, and what the package owns afterwards.</summary>
 public sealed record PackageDeclarationPlan(
@@ -28,6 +43,8 @@ public sealed record PackageDeclarationPlan(
 	IReadOnlyList<string> RoleRemovals,
 	IReadOnlyList<string> PermissionRemovals,
 	IReadOnlyList<(CategoryKind Kind, string Name)> CategoryRemovals,
+	IReadOnlyList<PackageAttributeEntryWrite> AttributeEntryWrites,
+	IReadOnlyList<string> AttributeEntryRemovals,
 	PackageDeclarations Owned)
 {
 	/// <summary>True when an item cannot be applied.</summary>
@@ -38,7 +55,7 @@ public sealed record PackageDeclarationPlan(
 /// The pure half of <see cref="IPackageDeclarationService"/>: diffs what a package declares against
 /// what it owned at its last apply and what the game has now. See that interface for the rules.
 /// </summary>
-public static class PackageDeclarationPlanner
+public static partial class PackageDeclarationPlanner
 {
 	private static readonly StringComparer NoCase = StringComparer.OrdinalIgnoreCase;
 
@@ -284,9 +301,13 @@ public static class PackageDeclarationPlanner
 			}
 		}
 
+		var (attributeWrites, attributeRemovals, ownedAttributes) = PlanAttributeEntries(declared, owned, live, changes);
+
 		return new PackageDeclarationPlan(
 			changes, categoryWrites, permissionWrites, roleWrites, roleRemovals, permissionRemovals, categoryRemovals,
-			new PackageDeclarations(ownedRoleCategories, ownedPermissionCategories, ownedPermissions, ownedRoles));
+			attributeWrites, attributeRemovals,
+			new PackageDeclarations(ownedRoleCategories, ownedPermissionCategories, ownedPermissions, ownedRoles,
+				ownedAttributes.Count == 0 ? null : ownedAttributes));
 	}
 
 	/// <summary>The three-way merge of one field: the package's new value when it changed it, else the game's.</summary>

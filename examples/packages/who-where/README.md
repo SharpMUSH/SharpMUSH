@@ -11,3 +11,7 @@ Both cross-object references use the `~internal` ref form
 install engine substitutes with the real dbref at apply time.
 
 The `WW_` convention prefix marks this package's attribute namespace.
+
+## Command palette
+
+`+who` and `+where` are palette staples (``PALETTE`WHO`` and ``PALETTE`WHERE`` on `ww_global`): the portal's Ctrl+K lists them under Always.

@@ -90,6 +90,9 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, 
 		{
 			foreach (var tag in message.CacheTags) versions.BumpTag(tag);
 			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+			// Again once the entries are gone: an answer kept outside the cache that read the first bump
+			// and then a not-yet-removed entry would otherwise stand under the version it read.
+			foreach (var tag in message.CacheTags) versions.BumpTag(tag);
 		}
 	}
 
@@ -113,6 +116,9 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, 
 			if (isObject)
 			{
 				await cache.RemoveByTagAsync(CacheKeys.ObjectTag(number), token: cancellationToken);
+
+				// And after it, for the answers kept outside the cache (see the tag pass above).
+				versions.Bump(number);
 			}
 		}
 	}
