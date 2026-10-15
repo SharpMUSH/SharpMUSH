@@ -100,7 +100,7 @@ packages:
   - path: radio-scene/
     name: Radio in scenes
     package: radio-scene
-    version: 1.2.1
+    version: 1.3.0
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
   - path: scene-here/
     name: Scene here
@@ -110,7 +110,7 @@ packages:
   - path: scene-verse/
     name: Verse and canon in scenes
     package: scene-verse
-    version: 1.0.1
+    version: 1.1.0
     description: Verse, canon and content warnings on scenes, a content warning told to whoever joins, and +scene/verses (requires scene)
   - path: bboards/
     name: BBoards
@@ -147,3 +147,23 @@ packages:
     package: discord
     version: 1.0.0
     description: The discord feed kind and the discord.admin permission, for the Discord plugin's linked channels (@discord/link)
+  - path: notifications/
+    name: Notifications
+    package: notifications
+    version: 1.0.0
+    description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
+  - path: notifications-app/
+    name: Notifications in the portal
+    package: notifications-app
+    version: 1.0.0
+    description: Registers the notification settings as a portal page at /apps/notifications (requires notifications)
+  - path: roster/
+    name: Roster
+    package: roster
+    version: 1.0.1
+    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
+  - path: roster-jobs/
+    name: Roster applications in jobs
+    package: roster-jobs
+    version: 1.0.0
+    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs and plus-help)

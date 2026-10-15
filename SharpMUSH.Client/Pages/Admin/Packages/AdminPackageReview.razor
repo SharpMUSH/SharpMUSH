@@ -52,7 +52,11 @@ else
     @foreach (var issue in _plan.Changeset.DependencyIssues)
     {
         <MudAlert Severity="Severity.Error">
-            @if (issue.IsConflict)
+            @if (issue.IsPlugin)
+            {
+                <text>@Loc["PkgNeedsPlugin", issue.PackageId]</text>
+            }
+            else if (issue.IsConflict)
             {
                 <text>@Loc["PkgConflictsWithInstalled"] <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
             }
@@ -158,6 +162,26 @@ else
         </KitCard>
     }
 
+    @* ── What this game changed ──────────────────────────────────────── *@
+    @if (_localEditRows.Count > 0)
+    {
+        <KitCard Title="@Loc["PkgLocalEditsCount", _localEditRows.Count]" Sub="@Loc["PkgLocalEditsSub"]" Class="pkg-local-edits">
+            <div class="pkg-review-body">
+                <MudTable Items="_localEditRows" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgLocalEditWhat"]</MudTh><MudTh>@Loc["PkgLocalEditOutcome"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgLocalEditWhat"]"><code>@context.What</code></MudTd>
+                        <MudTd data-label="@Loc["PkgLocalEditOutcome"]">
+                            <MudChip T="string" Size="Size.Small" Color="@context.Color">@context.Outcome</MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        </KitCard>
+    }
+
     @* ── Objects ──────────────────────────────────────────────────────── *@
     @if (!IsContentPack)
     {
@@ -245,7 +269,7 @@ else
             <Controls>
                 @if (_wikiConflicts.Count > 0)
                 {
-                    <Pill Tag="true" Warn="true">@Loc["PkgConflictCount", _wikiConflicts.Count]</Pill>
+                    <Pill Tag="true" Warn="true">@Loc.Plural("PkgConflictCount", "count", _wikiConflicts.Count)</Pill>
                 }
             </Controls>
             <ChildContent>
@@ -355,16 +379,21 @@ else
         <Controls>
             @if (_conflicts.Count > 0)
             {
-                <Pill Tag="true" Warn="true">@Loc["PkgConflictCount", _conflicts.Count]</Pill>
+                <Pill Tag="true" Warn="true">@Loc.Plural("PkgConflictCount", "count", _conflicts.Count)</Pill>
+            }
+            @if (HasLocalEdits)
+            {
+                <MudSwitch T="bool" @bind-Value="_onlyLocalEdits" Color="Color.Primary" id="pkg-only-local-edits"
+                           Label="@Loc["PkgOnlyLocalEdits"]" />
             }
         </Controls>
         <ChildContent>
         <div class="pkg-review-body">
             <MudExpansionPanels MultiExpansion="true" Dense="true">
-                @foreach (var change in _plan.Changeset.Attributes)
+                @foreach (var change in _plan.Changeset.Attributes.Where(a => !_onlyLocalEdits || !HasLocalEdits || a.IsLocalEdit))
                 {
                     var render = RenderFor(change);
-                    <MudExpansionPanel Expanded="@(change.Action == PackageAttributeAction.Conflict)">
+                    <MudExpansionPanel Expanded="@(change.Action is PackageAttributeAction.Conflict or PackageAttributeAction.Merge)">
                         <TitleContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <code>@change.TargetRef/@change.Attribute</code>
@@ -409,6 +438,15 @@ else
                                         <pre class="mush-pane">@((MarkupString)render.NewHtml)</pre>
                                     </MudItem>
                                 }
+                                @if (render?.MergedHtml is not null)
+                                {
+                                    <MudItem xs="12">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @(change.Action == PackageAttributeAction.Merge ? Loc["PkgMergedWritten"] : Loc["PkgWikiMerged"])
+                                        </MudText>
+                                        <pre class="mush-pane">@((MarkupString)render.MergedHtml)</pre>
+                                    </MudItem>
+                                }
                             </MudGrid>
 
                             @if (change.Action == PackageAttributeAction.Conflict)
@@ -426,7 +464,7 @@ else
                                 @if (_decisions.GetValueOrDefault(key) == "UseCustom")
                                 {
                                     <MudTextField T="string"
-                                                  Value="@(_customValues.GetValueOrDefault(key) ?? change.LiveValue ?? change.NewValue ?? "")"
+                                                  Value="@(_customValues.GetValueOrDefault(key) ?? AttributeStartingText(change))"
                                                   ValueChanged="@(v => _customValues[key] = v)"
                                                   Label="@Loc["PkgMergedValueLabel"]" Lines="4" Variant="Variant.Outlined" />
                                 }
@@ -438,6 +476,80 @@ else
         </div>
         </ChildContent>
     </KitCard>
+    }
+
+    @* ── Lock conflicts ───────────────────────────────────────────────── *@
+    @if (_lockConflicts.Count > 0)
+    {
+        <KitCard Title="@Loc["PkgLockConflictsCount", _lockConflicts.Count]" Sub="@Loc["PkgLockConflictsSub"]" Class="pkg-lock-conflicts">
+            <div class="pkg-review-body">
+                @foreach (var change in _lockConflicts)
+                {
+                    var key = LockDecisionKey(change);
+                    <div class="pkg-lock-conflict">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <code>@change.TargetRef @Loc["PkgStructLock", change.Element]</code>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                @Loc["PkgConflictLabel", change.Conflict?.ToString() ?? string.Empty]
+                            </MudChip>
+                        </MudStack>
+                        <MudGrid>
+                            @if (change.BaseValue is not null)
+                            {
+                                <MudItem xs="12" md="4">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgBaseAsInstalled"]</MudText>
+                                    <pre class="mush-pane">@change.BaseValue</pre>
+                                </MudItem>
+                            }
+                            @if (change.LiveValue is not null)
+                            {
+                                <MudItem xs="12" md="4">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgLiveYourVersion"]</MudText>
+                                    <pre class="mush-pane">@change.LiveValue</pre>
+                                </MudItem>
+                            }
+                            @if (change.NewValue is not null)
+                            {
+                                <MudItem xs="12" md="4">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgNewVersion", _plan.Version]</MudText>
+                                    <pre class="mush-pane">@change.NewValue</pre>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                        <MudRadioGroup T="string"
+                                       Value="@(_decisions.GetValueOrDefault(key) ?? "")"
+                                       ValueChanged="@(v => _decisions[key] = v)">
+                            <MudRadio T="string" Value="@("KeepMine")">@Loc["PkgKeepMine"]</MudRadio>
+                            <MudRadio T="string" Value="@("TakeTheirs")">@Loc["PkgTakeTheirs"]</MudRadio>
+                            <MudRadio T="string" Value="@("UseCustom")">@Loc["PkgEditMergedValue"]</MudRadio>
+                        </MudRadioGroup>
+                        @if (_decisions.GetValueOrDefault(key) == "UseCustom")
+                        {
+                            <MudTextField T="string"
+                                          Value="@(_customValues.GetValueOrDefault(key) ?? change.LiveValue ?? change.NewValue ?? "")"
+                                          ValueChanged="@(v => _customValues[key] = v)"
+                                          Label="@Loc["PkgLockValueLabel"]" Variant="Variant.Outlined" />
+                        }
+                    </div>
+                }
+            </div>
+        </KitCard>
+    }
+
+    @* ── What runs after the apply ───────────────────────────────────── *@
+    @if (Hooks() is { Count: > 0 } hooks)
+    {
+        <KitCard Title="@Loc["PkgHooksCount", _plan.Changeset.LifecycleHook!, hooks.Count]" Sub="@Loc["PkgHooksSub"]" Class="pkg-hooks">
+            <div class="pkg-review-body">
+                @foreach (var hook in hooks)
+                {
+                    <div class="pkg-hook">
+                        <MudText Typo="Typo.subtitle2"><code>@hook.Where</code></MudText>
+                        <pre class="mush-pane">@hook.Code</pre>
+                    </div>
+                }
+            </div>
+        </KitCard>
     }
 }
 </div>
@@ -457,6 +569,21 @@ else
     private Dictionary<(string, string), AttributeRenderDto> _renders = new();
     private List<PackageAttributeChange> _conflicts = [];
     private List<PackageWikiChange> _wikiConflicts = [];
+    private List<PackageStructureChange> _lockConflicts = [];
+
+    /// <summary>One thing the game changed since the package last installed it, and what the upgrade does with it.</summary>
+    private sealed record LocalEditRow(string What, string Outcome, Color Color);
+
+    private List<LocalEditRow> _localEditRows = [];
+
+    /// <summary>Whether the attribute list shows only what this game changed.</summary>
+    private bool _onlyLocalEdits;
+
+    /// <summary>
+    /// Whether the plan has an attribute this game changed. The filter applies only then: a replan can leave none,
+    /// and the switch is hidden with nothing to turn it off.
+    /// </summary>
+    private bool HasLocalEdits => _plan?.Changeset.Attributes.Any(a => a.IsLocalEdit) == true;
 
     private bool _settingsConfirmed;
 
@@ -487,7 +614,8 @@ else
         && (!PastMaximum || _pastMaximumConfirmed)
         && (!IsPlugin || _pluginTrusted)
         && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))))
-        && _wikiConflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(WikiDecisionKey(c))));
+        && _wikiConflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(WikiDecisionKey(c))))
+        && _lockConflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(LockDecisionKey(c))));
 
     protected override async Task OnInitializedAsync()
     {
@@ -528,10 +656,25 @@ else
                 .Where(w => w.Action == PackageWikiAction.Conflict)
                 .ToList();
 
-            // A page staff edited is kept by default; the administrator chooses to take the package's instead.
+            _lockConflicts = plan.Changeset.Structure
+                .Where(s => s.Action == PackageStructureAction.Conflict && s.Kind == PackageStructureKind.Lock)
+                .ToList();
+            _localEditRows = LocalEditRows(plan.Changeset);
+
+            // What staff changed is kept by default; the administrator chooses to take the package's instead.
+            foreach (var change in _conflicts)
+            {
+                _decisions.TryAdd(DecisionKey(change), "KeepMine");
+            }
+
             foreach (var change in _wikiConflicts)
             {
                 _decisions.TryAdd(WikiDecisionKey(change), "KeepMine");
+            }
+
+            foreach (var change in _lockConflicts)
+            {
+                _decisions.TryAdd(LockDecisionKey(change), "KeepMine");
             }
         }
         finally
@@ -545,6 +688,74 @@ else
 
     private static string DecisionKey(PackageAttributeChange change) =>
         $"{change.TargetRef}\0{change.Attribute}";
+
+    /// <summary>One lifecycle hook the apply runs afterwards, as it will read once the apply has written it.</summary>
+    private sealed record HookRow(string Where, string Code);
+
+    /// <summary>
+    /// The hooks the apply runs: the package's own, as the review's choices leave them, and any the game's objects
+    /// hold that the package does not ship.
+    /// </summary>
+    private List<HookRow> Hooks()
+    {
+        if (_plan?.Changeset is not { LifecycleHook: { } hook } changeset)
+        {
+            return [];
+        }
+
+        return changeset.Attributes
+            .Where(a => string.Equals(a.Attribute, hook, StringComparison.OrdinalIgnoreCase))
+            .Select(a => (Where: $"{a.TargetRef}/{a.Attribute}", Code: HookCode(a)))
+            .Concat((changeset.LocalHooks ?? []).Select(h => (Where: $"{h.TargetRef}/{h.Attribute}", Code: (string?)h.Value)))
+            .Where(h => !string.IsNullOrWhiteSpace(h.Code))
+            .Select(h => new HookRow(h.Where, h.Code!))
+            .ToList();
+    }
+
+    /// <summary>What an attribute holds after the apply, under the decision chosen for it.</summary>
+    private string? HookCode(PackageAttributeChange change) => change.Action switch
+    {
+        PackageAttributeAction.Delete or PackageAttributeAction.RemoveBaseline => null,
+        PackageAttributeAction.KeepLocal => change.LiveValue,
+        PackageAttributeAction.Merge => change.MergedValue,
+        PackageAttributeAction.Conflict => _decisions.GetValueOrDefault(DecisionKey(change)) switch
+        {
+            "TakeTheirs" => change.NewValue,
+            "UseCustom" => _customValues.GetValueOrDefault(DecisionKey(change)) ?? AttributeStartingText(change),
+            _ => change.LiveValue
+        },
+        _ => change.NewValue
+    };
+
+    /// <summary>The installer keys a lock decision as the attribute <c>@LOCK`&lt;type&gt;</c> on its object.</summary>
+    private static string LockDecisionAttribute(PackageStructureChange change) => $"@LOCK`{change.Element}";
+
+    private static string LockDecisionKey(PackageStructureChange change) =>
+        $"{change.TargetRef}\0{LockDecisionAttribute(change)}";
+
+    /// <summary>Where an edited attribute starts: the merge with its clashes marked, else the game's value, else the package's.</summary>
+    private static string AttributeStartingText(PackageAttributeChange change) =>
+        change.MergedValue ?? change.LiveValue ?? change.NewValue ?? "";
+
+    private List<LocalEditRow> LocalEditRows(PackageChangeset changeset) =>
+        changeset.Attributes.Where(a => a.IsLocalEdit)
+            .Select(a => new LocalEditRow($"{a.TargetRef}/{a.Attribute}", LocalOutcome(a.Action == PackageAttributeAction.Merge, a.Action == PackageAttributeAction.Conflict), LocalColor(a.Action == PackageAttributeAction.Conflict)))
+            .Concat(changeset.Structure.Where(s => s.IsLocalEdit)
+                .Select(s => new LocalEditRow($"{s.TargetRef} {StructureLabel(s)}", LocalOutcome(merged: false, s.Action == PackageStructureAction.Conflict), LocalColor(s.Action == PackageStructureAction.Conflict))))
+            .ToList();
+
+    private string LocalOutcome(bool merged, bool conflict) =>
+        conflict ? Loc["PkgLocalDecide"] : merged ? Loc["PkgLocalMerged"] : Loc["PkgLocalKept"];
+
+    private static Color LocalColor(bool conflict) => conflict ? Color.Warning : Color.Tertiary;
+
+    private string StructureLabel(PackageStructureChange change) => change.Kind switch
+    {
+        PackageStructureKind.ObjectFlag => Loc["PkgStructFlag", change.Element],
+        PackageStructureKind.ObjectPower => Loc["PkgStructPower", change.Element],
+        PackageStructureKind.AttributeFlag => Loc["PkgStructAttrFlag", change.Element, change.Attribute ?? string.Empty],
+        _ => Loc["PkgStructLock", change.Element]
+    };
 
     private static string WikiDecisionKey(PackageWikiChange change) =>
         $"{change.TargetRef}\0{change.Page}";
@@ -573,9 +784,18 @@ else
                 return new PackageConflictDecision(
                     c.TargetRef, c.Attribute, resolution,
                     resolution == PackageConflictResolution.UseCustom
-                        ? _customValues.GetValueOrDefault(key) ?? c.LiveValue ?? ""
+                        ? _customValues.GetValueOrDefault(key) ?? AttributeStartingText(c)
                         : null);
-            }).Concat(_wikiConflicts.Select(c =>
+            }).Concat(_lockConflicts.Select(c =>
+            {
+                var key = LockDecisionKey(c);
+                var resolution = Enum.Parse<PackageConflictResolution>(_decisions[key]);
+                return new PackageConflictDecision(
+                    c.TargetRef, LockDecisionAttribute(c), resolution,
+                    resolution == PackageConflictResolution.UseCustom
+                        ? _customValues.GetValueOrDefault(key) ?? c.LiveValue ?? c.NewValue ?? ""
+                        : null);
+            })).Concat(_wikiConflicts.Select(c =>
             {
                 var key = WikiDecisionKey(c);
                 var resolution = Enum.Parse<PackageConflictResolution>(_decisions[key]);
@@ -650,7 +870,7 @@ else
         PackageAttributeAction.Conflict => Color.Warning,
         PackageAttributeAction.Create or PackageAttributeAction.AutoUpgrade => Color.Info,
         PackageAttributeAction.Delete or PackageAttributeAction.RemoveBaseline => Color.Error,
-        PackageAttributeAction.KeepLocal or PackageAttributeAction.Adopt => Color.Tertiary,
+        PackageAttributeAction.KeepLocal or PackageAttributeAction.Adopt or PackageAttributeAction.Merge => Color.Tertiary,
         _ => Color.Default
     };
 }
