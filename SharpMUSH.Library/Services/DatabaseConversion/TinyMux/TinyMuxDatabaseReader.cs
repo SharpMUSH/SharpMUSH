@@ -722,7 +722,8 @@ public static partial class TinyMuxDatabaseReader
 		/// <summary>
 		/// The attribute's text with its <c>%c</c>/<c>%x</c> colour substitutions written as <c>ansi()</c>, which
 		/// SharpMUSH reads as the last command and an attribute; each attribute that changed, or that holds
-		/// colour the rewrite could not carry over exactly, is a note of its own. It runs on the text as stored,
+		/// colour the rewrite could not carry over exactly, is a line of its own in
+		/// <see cref="PennMUSHDatabase.SoftcodeRewrites"/>. It runs on the text as stored,
 		/// before the stored colour becomes escapes, so an escape's <c>[</c> is never read as a function call.
 		/// </summary>
 		private string Rewritten(string value, int dbref, string name)
@@ -766,7 +767,7 @@ public static partial class TinyMuxDatabaseReader
 				notes.Add($"{what} ({dbrefs.Count} time(s), on {sample}{(distinct.Count > 10 ? " ..." : "")})");
 			}
 
-			notes.AddRange(_rewrites);
+			_database.SoftcodeRewrites.AddRange(_rewrites);
 		}
 	}
 

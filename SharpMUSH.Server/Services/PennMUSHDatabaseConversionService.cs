@@ -91,6 +91,16 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 						_logger.LogWarning("  ... and {Count} more warnings", result.Warnings.Count - 10);
 					}
 				}
+
+				// Every one, not the first ten: an administrator reads this list to check the rewritten code.
+				if (result.SoftcodeRewrites.Count > 0)
+				{
+					_logger.LogWarning("Rewritten softcode, {Count} attribute(s):", result.SoftcodeRewrites.Count);
+					foreach (var rewrite in result.SoftcodeRewrites)
+					{
+						_logger.LogWarning("  {Rewrite}", rewrite);
+					}
+				}
 			}
 			else
 			{

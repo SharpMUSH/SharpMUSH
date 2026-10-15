@@ -109,6 +109,9 @@ public class TinyMuxImportTests
 		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Imported from a TinyMUX flatfile") && w.Contains("rhost_list"));
 		// %m is a register in TinyMUX as here, so its softcode is not warned about.
 		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("%m"));
+		await Assert.That(result.SoftcodeRewrites).IsNotEmpty();
+		await Assert.That(result.Warnings).Contains(w =>
+			w.StartsWith($"Softcode was rewritten in {result.SoftcodeRewrites.Count} attribute(s) so SharpMUSH reads it as TinyMUX did"));
 
 		var widget = await NodeAsync(world, 5);
 		await Assert.That(widget.Object().Name).IsEqualTo("Widget");

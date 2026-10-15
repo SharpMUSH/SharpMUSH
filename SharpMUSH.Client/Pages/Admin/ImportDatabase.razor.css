@@ -47,6 +47,13 @@
 	color: var(--warn);
 }
 
+/* A rewritten attribute's line names an object, an attribute and softcode, so it reads as code. */
+.dbimport-body ::deep .dbimport-rewrite {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
 /* Said in place of the file row while no mush.cnf is chosen: what leaving it out means. */
 .dbimport-config-hint {
 	font-size: 13px;

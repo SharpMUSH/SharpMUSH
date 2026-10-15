@@ -288,6 +288,22 @@
                             </div>
                         }
 
+                        @if (_result.SoftcodeRewrites.Any())
+                        {
+                            <div class="dbimport-tile dbimport-tile-wide">
+                                <SectionLabel Class="dbimport-label dbimport-label-warning">@Loc["AdmImportRewrites", _result.SoftcodeRewrites.Count]</SectionLabel>
+                                <MudText Typo="Typo.body2">@Loc["AdmImportRewritesLead"]</MudText>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var rewrite in _result.SoftcodeRewrites)
+                                    {
+                                        <MudListItem T="string">
+                                            <MudText Class="dbimport-rewrite">@rewrite</MudText>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            </div>
+                        }
+
                         @if (_result.Warnings.Any())
                         {
                             <div class="dbimport-tile dbimport-tile-wide">

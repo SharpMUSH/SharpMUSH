@@ -115,6 +115,11 @@ public class RhostImportTests
 		await Assert.That(result.Warnings[0]).StartsWith("Read a RhostMUSH flatfile");
 		// %m is TinyMUX's and RhostMUSH's last command, as it is here: no PennMUSH warning about it.
 		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("use %m or %=<"));
+		// Rewritten softcode is a list of its own, with one warning pointing at it.
+		await Assert.That(result.SoftcodeRewrites).IsNotEmpty();
+		await Assert.That(result.SoftcodeRewrites).DoesNotContain(line => result.Warnings.Contains(line));
+		await Assert.That(result.Warnings).Contains(w =>
+			w.StartsWith($"Softcode was rewritten in {result.SoftcodeRewrites.Count} attribute(s) so SharpMUSH reads it as RhostMUSH did"));
 	}
 
 	/// <summary>A format chosen by the caller is the one the file is read in.</summary>

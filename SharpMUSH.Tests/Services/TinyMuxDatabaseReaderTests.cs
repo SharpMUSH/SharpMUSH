@@ -225,8 +225,8 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(limbo).Contains("\u001b[");
 		await Assert.That(Object(database, 1).Attributes.First(a => a.Name == "AWAY").Value).IsEqualTo("[setq(0,)]%q0Gone");
 
-		await Assert.That(database.ImportNotes).Contains("#0/DESCRIBE: %c/%x colour written as ansi()");
-		await Assert.That(database.ImportNotes).Contains("#1/AWAY: %c/%x colour written as ansi(); " +
+		await Assert.That(database.SoftcodeRewrites).Contains("#0/DESCRIBE: %c/%x colour written as ansi()");
+		await Assert.That(database.SoftcodeRewrites).Contains("#1/AWAY: %c/%x colour written as ansi(); " +
 			"check by hand: colour-code-in-register; check by hand: trailing-codes-dropped");
 	}
 

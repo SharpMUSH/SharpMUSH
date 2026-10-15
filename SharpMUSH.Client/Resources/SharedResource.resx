@@ -696,6 +696,12 @@
   <data name="AdmImportFormatAuto" xml:space="preserve">
     <value>Tell from the file</value>
   </data>
+  <data name="AdmImportRewrites" xml:space="preserve">
+    <value>Rewritten softcode ({0})</value>
+  </data>
+  <data name="AdmImportRewritesLead" xml:space="preserve">
+    <value>The import changed the softcode in these attributes so SharpMUSH reads it as the old server did. Test each one before players connect, and fix by hand any line that says check by hand.</value>
+  </data>
   <data name="AdmImportMailFoldersOptional" xml:space="preserve">
     <value>Mail folders (optional): RhostMUSH's .dump.folder, which says which folder each message is in</value>
   </data>

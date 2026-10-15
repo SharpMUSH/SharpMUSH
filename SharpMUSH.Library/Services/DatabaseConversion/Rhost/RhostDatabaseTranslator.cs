@@ -116,6 +116,7 @@ public static partial class RhostDatabaseTranslator
 			"rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and rhost_list, so the imported softcode reads its " +
 			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count.");
 		database.ImportNotes = report.Finish();
+		database.SoftcodeRewrites = report.Rewrites;
 		return database;
 	}
 
@@ -493,7 +494,7 @@ public static partial class RhostDatabaseTranslator
 		return flags;
 	}
 
-	/// <summary>The value with the softcode rewrites made, each attribute that changed noted on its own line.</summary>
+	/// <summary>The value with the softcode rewrites made, each attribute that changed listed on its own line.</summary>
 	private static string Rewritten(string value, int dbref, string name, Report report)
 	{
 		var colour = ColourSubstitutionRewriter.Rewrite(value,
@@ -510,7 +511,7 @@ public static partial class RhostDatabaseTranslator
 		said.AddRange(rest.Notes);
 		if (said.Count > 0)
 		{
-			report.Line($"#{dbref}/{name}: {string.Join("; ", said)}");
+			report.Rewrites.Add($"#{dbref}/{name}: {string.Join("; ", said)}");
 		}
 
 		return rest.Text;
@@ -598,6 +599,9 @@ public static partial class RhostDatabaseTranslator
 		private readonly SortedDictionary<string, List<int>> _decisions = new(StringComparer.Ordinal);
 
 		public List<string> Lines { get; } = [];
+
+		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
+		public List<string> Rewrites { get; } = [];
 
 		public void Line(string line) => Lines.Add(line);
 

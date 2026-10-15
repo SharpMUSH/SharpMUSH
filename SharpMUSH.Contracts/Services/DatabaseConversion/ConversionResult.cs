@@ -17,6 +17,13 @@ public record ConversionResult
 	public int ChannelMembersConverted { get; init; }
 	public List<string> Errors { get; init; } = [];
 	public List<string> Warnings { get; init; } = [];
+
+	/// <summary>
+	/// Every attribute whose softcode the import rewrote so SharpMUSH reads it as the source server did, one line
+	/// each (<c>#9/DESCRIBE: %c/%x colour written as ansi()</c>); a line saying <c>check by hand</c> names code
+	/// the rewrite could not carry over exactly. Empty for a PennMUSH import, whose softcode is kept as written.
+	/// </summary>
+	public List<string> SoftcodeRewrites { get; init; } = [];
 	public TimeSpan Duration { get; init; }
 
 	public int TotalObjects => PlayersConverted + RoomsConverted + ThingsConverted + ExitsConverted;

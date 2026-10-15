@@ -191,9 +191,9 @@ public class RhostDatabaseTranslatorTests
 		// list() is not rewritten: the rhost_list option reads it the RhostMUSH way.
 		await Assert.That(gadget.Attributes.First(a => a.Name == "CMD_HELLO").Value).IsEqualTo("[list(a b,##)]");
 
-		await Assert.That(database.ImportNotes).Contains(n => n.StartsWith("#9/DESCRIBE: %c/%x colour written as ansi()") && n.Contains("%<065> written as A"));
-		await Assert.That(database.ImportNotes).Contains(n => n.StartsWith("#10/DATA:") && n.Contains("timefmt() format %0 left as written"));
-		await Assert.That(database.ImportNotes).Contains(n => n.StartsWith("#10/DESCRIBE:") && n.Contains("check by hand: colour-code-in-register"));
+		await Assert.That(database.SoftcodeRewrites).Contains(n => n.StartsWith("#9/DESCRIBE: %c/%x colour written as ansi()") && n.Contains("%<065> written as A"));
+		await Assert.That(database.SoftcodeRewrites).Contains(n => n.StartsWith("#10/DATA:") && n.Contains("timefmt() format %0 left as written"));
+		await Assert.That(database.SoftcodeRewrites).Contains(n => n.StartsWith("#10/DESCRIBE:") && n.Contains("check by hand: colour-code-in-register"));
 	}
 
 	[Test]

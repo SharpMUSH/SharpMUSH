@@ -166,6 +166,37 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
 	}
 
+	/// <summary>
+	/// Softcode the import rewrote is listed on its own, every attribute, apart from the warnings, so an
+	/// administrator can go through the list and test each one.
+	/// </summary>
+	[Test]
+	public async Task DatabaseImport_ListsTheRewrittenSoftcode()
+	{
+		const string rewritten = "#9/DESCRIBE: %c/%x colour written as ansi()";
+		const string byHand = "#10/AWAY: %c/%x colour written as ansi(); check by hand: colour-code-in-register";
+		AddServices((_, path) => path switch
+		{
+			"api/databaseconversion/upload" => Started(),
+			"api/databaseconversion/progress/s1" => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionProgress
+			{
+				TotalObjects = 10, ProcessedObjects = 10, CurrentPhase = "Done", PercentageComplete = 100
+			})),
+			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionResult
+			{
+				Warnings = ["Softcode was rewritten in 2 attribute(s)"],
+				SoftcodeRewrites = [rewritten, byHand]
+			}))
+		});
+
+		var cut = await StartConversion();
+
+		cut.WaitForAssertion(() => cut.Find(".dbimport-rewrite"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".dbimport-rewrite").Select(line => line.TextContent))
+			.IsEquivalentTo([rewritten, byHand]);
+		await Assert.That(cut.Markup).Contains("AdmImportRewrites(2)").And.Contains("AdmImportRewritesLead");
+	}
+
 	[Test]
 	public async Task ConfigHome_SaysWhyItHasNoCounts()
 	{
