@@ -56,6 +56,16 @@
 	text-overflow: ellipsis;
 }
 
+.adm-media-sharing {
+	margin-top: 4px;
+}
+
+.adm-media-sharing-form {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
 .adm-media-card-foot {
 	display: flex;
 	align-items: center;

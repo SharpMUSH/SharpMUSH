@@ -1,0 +1,581 @@
+format: 1.2
+package: rp-finder
+version: 1.0.0
+authors: [SharpMUSH]
+description: "RP Finder: +lfrp sets a looking-for-RP status, shown in +who, and +watch tells you when the people you follow connect."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [lfrp, roleplay, watch, friends, status]
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: who-where
+    version: ">=1.3 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/
+      branch: main
+
+# One permission, for the people who keep the finder tidy: clear anyone's +lfrp status. A game hands it out with the role below (@role/assign <player>=rp-moderator)
+# or to one player (@permission/allow <player>=softcode.rp_finder.moderate).
+categories:
+  roles:
+    - name: RP Finder
+      description: Roles for the people who look after +lfrp statuses.
+  permissions:
+    - name: RP Finder
+      description: Looking after +lfrp statuses.
+permissions:
+  - name: softcode.rp_finder.moderate
+    category: RP Finder
+    description: Clear anyone's +lfrp status.
+roles:
+  - slug: rp-moderator
+    name: RP Moderator
+    category: RP Finder
+    priority: 10
+    permissions:
+      softcode.rp_finder.moderate: allow
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), owns
+  # reads every player's connection, idle time and page lock, and hears every connect
+  # and disconnect through ACONNECT and ADISCONNECT, which run on master room objects for everyone.
+  #
+  # +lfrp, +watch and +friend are added with /noparse/rsnoparse and hooked to CMD`<word>, so
+  # what a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`LFRP` and INC`WATCH`
+  # one routine per switch, INC`CONNECT`/INC`DISCONNECT` the login and logout steps. FUN` reads:
+  # FUN`LFRP` and FUN`WATCH` per feature, FUN`DISPLAY` and FUN`PAGE` for screens. DATA` the settings,
+  # one leaf each. Every record is kept on the RP Finder Store, never on a player, so nobody can rewrite
+  # someone else's watch list or status.
+  - ref: finder
+    type: thing
+    name: RP Finder
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings. One leaf per setting.
+      # How long a +lfrp status lasts without being touched, in hours. Logging off ends it sooner.
+      DATA`LFRP`HOURS: |-
+        4
+      # The longest +lfrp line, note and place, in characters.
+      DATA`LFRP`LENGTH`IC: |-
+        100
+      DATA`LFRP`LENGTH`NOTE: |-
+        400
+      DATA`LFRP`LENGTH`PLACE: |-
+        60
+      # How many people one player may watch, and how many seconds pass before a player's connect is
+      # announced again, so a connection that drops and comes back does not announce itself every time.
+      DATA`WATCH`MAX: |-
+        100
+      DATA`WATCH`QUIET: |-
+        300
+      # Which INC` routine each command runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch. +friend uses the WATCH table.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`LFRP`BARE: |-
+        LFRP`LIST
+      DATA`ROUTE`LFRP`ARG: |-
+        LFRP`SET
+      DATA`ROUTE`LFRP`NOTE: |-
+        LFRP`NOTE
+      DATA`ROUTE`LFRP`PLACE: |-
+        LFRP`PLACE
+      DATA`ROUTE`LFRP`OFF: |-
+        LFRP`OFF
+      DATA`ROUTE`LFRP`SHOW: |-
+        LFRP`SHOW
+      DATA`ROUTE`WATCH`BARE: |-
+        WATCH`ONLINE
+      DATA`ROUTE`WATCH`ARG: |-
+        WATCH`USAGE
+      DATA`ROUTE`WATCH`LIST: |-
+        WATCH`LIST
+      DATA`ROUTE`WATCH`ADD: |-
+        WATCH`ADD
+      DATA`ROUTE`WATCH`DEL: |-
+        WATCH`DEL
+      DATA`ROUTE`WATCH`DELETE: |-
+        WATCH`DEL
+      DATA`ROUTE`WATCH`REMOVE: |-
+        WATCH`DEL
+      DATA`ROUTE`WATCH`HIDE: |-
+        WATCH`HIDE
+      DATA`ROUTE`WATCH`UNHIDE: |-
+        WATCH`UNHIDE
+      DATA`ROUTE`WATCH`MUTE: |-
+        WATCH`MUTE
+      DATA`ROUTE`WATCH`UNMUTE: |-
+        WATCH`UNMUTE
+      DATA`ROUTE`WATCH`WATCHERS: |-
+        WATCH`WATCHERS
+      # The routines that take a page as a last switch: +lfrp/2, +watch/list/3.
+      DATA`PAGED: |-
+        LFRP`LIST WATCH`ONLINE WATCH`LIST WATCH`WATCHERS
+
+      # ---- commands -------------------------------------------------------------
+      # Each command word: %1 the switches and %2 what follows, exactly as typed.
+      CMD`LFRP:
+        value: |-
+          $(?is)^\+lfrp(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,lfrp,table,LFRP,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`WATCH:
+        value: |-
+          $(?is)^\+watch(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,watch,table,WATCH,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`FRIEND:
+        value: |-
+          $(?is)^\+friend(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,friend,table,WATCH,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch and the page, and runs the
+      # routine. Only players use the finder.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(RP,Only players use the RP finder.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(RP,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(RP,+%q<cmd_word> has no /%q<cmd_switch> switch. +help [u(%!/FUN`COMMAND`HELPTOPIC,%q<cmd_table>)] lists them.,warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(RP,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(RP,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_table,
+      # cmd_switch_list (every switch but a page), page_given and page_number (a last switch of digits, else 1), cmd_switch (the
+      # one other switch), cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the first =,
+      # cmd_route (the INC` routine to run), page_size (rows on one page), viewer_objid and viewer_key.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_table,%1,
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          page_given,isint(last(%q<cmd_switch_list>)),
+          page_number,if(%q<page_given>,last(%q<cmd_switch_list>),1),
+          cmd_switch_list,if(%q<page_given>,ldelete(%q<cmd_switch_list>,words(%q<cmd_switch_list>)),%q<cmd_switch_list>),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          page_size,u(%!/FUN`PAGE`SIZE),
+          viewer_objid,objid(%#),
+          viewer_key,u(%!/FUN`KEY,%#))
+        flags: [funsyntax]
+      # %0 a route table: the +help topic that explains it.
+      FUN`COMMAND`HELPTOPIC:
+        value: |-
+          switch(%0,LFRP,lfrp,watch)
+        flags: [funsyntax]
+      # 1 when the player running the command may moderate the finder.
+      FUN`IS`MODERATOR:
+        value: |-
+          permission(%#,softcode.rp_finder.moderate)
+        flags: [funsyntax]
+
+      # ---- shared reads ---------------------------------------------------------
+      # %0 an object: the key its records are filed under. An objid cannot be part of an attribute name,
+      # so #12:1790888816538 is filed as 12_1790888816538.
+      FUN`KEY:
+        value: |-
+          edit(objid(%0),#,,:,_)
+        flags: [funsyntax]
+      # %0 typed text: the objid of the player it names, or nothing.
+      FUN`PLAYER:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+      # %0 seconds: a short duration, 5m or 2h.
+      FUN`DISPLAY`DURATION:
+        value: |-
+          trim(etime(max(0,%0),3))
+        flags: [funsyntax]
+      # %0 text, %1 a length: the text cut to that length, ending ... when it was cut.
+      FUN`DISPLAY`SHORT:
+        value: |-
+          if(gt(strlen(%0),%1),left(%0,sub(%1,3))...,%0)
+        flags: [funsyntax]
+      # %0 objids: their names, joined into a sentence.
+      FUN`DISPLAY`NAMES:
+        value: |-
+          itemize(iter(%0,name(%i0),,|),|)
+        flags: [funsyntax]
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
+      # priority, %2 each column's share of the spare width, %3 each column's least width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+        flags: [funsyntax]
+      # How many rows fit on the reader's screen, under a heading, a table's own heading and a footer.
+      FUN`PAGE`SIZE:
+        value: |-
+          max(5,sub(height(%#,24),6))
+        flags: [funsyntax]
+      # %0 a list: how many pages it takes.
+      FUN`PAGE`COUNT:
+        value: |-
+          max(1,ceil(fdiv(words(%0),%q<page_size>)))
+        flags: [funsyntax]
+      # %0 a list: the items on page %q<page_number>, %q<page_size> to a page.
+      FUN`PAGE`ITEMS:
+        value: |-
+          extract(%0,inc(mul(dec(%q<page_number>),%q<page_size>)),%q<page_size>)
+        flags: [funsyntax]
+      # %0 a list, %1 the command for its pages as typed, %2 the hint when there is one page: the closing rule.
+      FUN`PAGE`FOOTER:
+        value: |-
+          setq(page_count,u(%!/FUN`PAGE`COUNT,%0))[rule(if(gt(%q<page_count>,1),page %q<page_number> of %q<page_count>[if(lt(%q<page_number>,%q<page_count>),%b· %1/[inc(%q<page_number>)])],%2))]
+        flags: [funsyntax]
+      # Stops a command whose list %<list> has no page %q<page_number>.
+      INC`PAGE`CHECK:
+        value: |-
+          think setq(page_count,u(%!/FUN`PAGE`COUNT,%<list>)); @assert lte(%q<page_number>,%q<page_count>)=@pemit %#=notice(RP,There [if(eq(%q<page_count>,1),is only one page,are only %q<page_count> pages)].,warn)
+        flags: [cmdsyntax]
+
+      # ---- looking for RP ------------------------------------------------------
+      # A status is LFRP`<key> on the store (the player's objid), with IC, NOTE, PLACE, SET (when it was last
+      # set, in seconds) and UNTIL (when it runs out) beneath it. UNTIL is kept on the store so the +who filter
+      # reads everything it needs from there.
+      # %0 a key: 1 when that player's status is set and has not run out. %1, when given, is secs().
+      FUN`LFRP`ACTIVE:
+        value: |-
+          gt(get({{store}}/LFRP`%0`UNTIL),firstof(%1,secs()))
+        flags: [funsyntax]
+      # %0 a player: 1 when they are looking for RP.
+      FUN`LFRP`LOOKING:
+        value: |-
+          u(%!/FUN`LFRP`ACTIVE,u(%!/FUN`KEY,%0))
+        flags: [funsyntax]
+      # %0 a player: where their status says to find them. "here" is wherever they are standing now.
+      FUN`LFRP`PLACE:
+        value: |-
+          setq(lfrp_place,get({{store}}/LFRP`[u(%!/FUN`KEY,%0)]`PLACE))[if(strmatch(%q<lfrp_place>,here),name(room(%0)),%q<lfrp_place>)]
+        flags: [funsyntax]
+      # %0 the keys of the statuses that have not run out: the connected players the reader can see among
+      # them, least idle first.
+      FUN`LFRP`PLAYERS:
+        value: |-
+          sort(setinter(iter(%0,num(get({{store}}/LFRP`%i0))),lwho(%#)),idle)
+        flags: [funsyntax]
+      # Stops a command whose player is not looking for RP.
+      INC`LFRP`NEEDACTIVE:
+        value: |-
+          @assert u(%!/FUN`LFRP`ACTIVE,%q<viewer_key>)=@pemit %#=notice(RP,Say what you are looking for first: +lfrp <what you would like to play>,warn)
+        flags: [cmdsyntax]
+      # Starts or renews the player's status: a status that had run out loses its note and place first.
+      INC`LFRP`TOUCH:
+        value: |-
+          @if not(u(%!/FUN`LFRP`ACTIVE,%q<viewer_key>))={@include/args %!/INC`LFRP`CLEAR=key,%q<viewer_key>}; &LFRP`%q<viewer_key> {{store}}=%q<viewer_objid>; &LFRP`%q<viewer_key>`SET {{store}}=secs(); &LFRP`%q<viewer_key>`UNTIL {{store}}=add(secs(),mul(get(%!/DATA`LFRP`HOURS),3600))
+        flags: [cmdsyntax]
+      # Clears the status filed under %<key>, leaves first.
+      INC`LFRP`CLEAR:
+        value: |-
+          &LFRP`%<key>`IC {{store}}; &LFRP`%<key>`NOTE {{store}}; &LFRP`%<key>`PLACE {{store}}; &LFRP`%<key>`SET {{store}}; &LFRP`%<key>`UNTIL {{store}}; &LFRP`%<key> {{store}}
+        flags: [cmdsyntax]
+      # +lfrp <text>
+      INC`LFRP`SET:
+        value: |-
+          @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LFRP`LENGTH`IC))=@pemit %#=notice(RP,Keep it to [get(%!/DATA`LFRP`LENGTH`IC)] characters. +lfrp/note takes the rest.,warn); @include %!/INC`LFRP`TOUCH; &LFRP`%q<viewer_key>`IC {{store}}=%q<cmd_argument>; @pemit %#=notice(RP,You are looking for RP: %q<cmd_argument>,ok)%r[u(%!/FUN`LFRP`LASTS)]
+        flags: [cmdsyntax]
+      FUN`LFRP`LASTS:
+        value: |-
+          tone(muted,It lasts [get(%!/DATA`LFRP`HOURS)] hours or until you log off. +lfrp/note adds an OOC note%, +lfrp/place where to find you%, and +lfrp/off ends it.)
+        flags: [funsyntax]
+      # +lfrp/note [<text>]
+      INC`LFRP`NOTE:
+        value: |-
+          @include %!/INC`LFRP`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LFRP`LENGTH`NOTE))=@pemit %#=notice(RP,Keep the note to [get(%!/DATA`LFRP`LENGTH`NOTE)] characters.,warn); @include %!/INC`LFRP`TOUCH; @break strlen(%q<cmd_argument>)={&LFRP`%q<viewer_key>`NOTE {{store}}=%q<cmd_argument>; @pemit %#=notice(RP,Your note: %q<cmd_argument>,ok)}; &LFRP`%q<viewer_key>`NOTE {{store}}; @pemit %#=notice(RP,Your note is cleared.,ok)
+        flags: [cmdsyntax]
+      # +lfrp/place [<text>|here]
+      INC`LFRP`PLACE:
+        value: |-
+          @include %!/INC`LFRP`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LFRP`LENGTH`PLACE))=@pemit %#=notice(RP,Keep the place to [get(%!/DATA`LFRP`LENGTH`PLACE)] characters.,warn); @include %!/INC`LFRP`TOUCH; @break strmatch(%q<cmd_argument>,here)={&LFRP`%q<viewer_key>`PLACE {{store}}=here; @pemit %#=notice(RP,Others see where you are standing%, wherever you go.,ok)}; @break strlen(%q<cmd_argument>)={&LFRP`%q<viewer_key>`PLACE {{store}}=%q<cmd_argument>; @pemit %#=notice(RP,Where to find you: %q<cmd_argument>,ok)}; &LFRP`%q<viewer_key>`PLACE {{store}}; @pemit %#=notice(RP,Your place is cleared.,ok)
+        flags: [cmdsyntax]
+      # +lfrp/off [<player>]: your own status, or anyone's for a moderator.
+      INC`LFRP`OFF:
+        value: |-
+          @break strlen(%q<cmd_argument>)={@include %!/INC`LFRP`OFFOTHER}; @assert hasattr({{store}},LFRP`%q<viewer_key>)=@pemit %#=notice(RP,You are not looking for RP.,warn); @include/args %!/INC`LFRP`CLEAR=key,%q<viewer_key>; @pemit %#=notice(RP,You are no longer looking for RP.,ok)
+        flags: [cmdsyntax]
+      INC`LFRP`OFFOTHER:
+        value: |-
+          @assert u(%!/FUN`IS`MODERATOR)=@pemit %#=notice(RP,Only an RP moderator can clear someone else's status.,error); @assert strlen(setr(lfrp_target,u(%!/FUN`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(RP,There is no player called '%q<cmd_argument>'.,warn); think setq(lfrp_target_key,u(%!/FUN`KEY,%q<lfrp_target>)); @assert hasattr({{store}},LFRP`%q<lfrp_target_key>)=@pemit %#=notice(RP,[name(%q<lfrp_target>)] is not looking for RP.,warn); @include/args %!/INC`LFRP`CLEAR=key,%q<lfrp_target_key>; @pemit %#=notice(RP,[name(%q<lfrp_target>)] is no longer looking for RP.,ok); @pemit %q<lfrp_target>=notice(RP,[name(%#)] cleared your +lfrp status.)
+        flags: [cmdsyntax]
+      # +lfrp/show [<player>]
+      INC`LFRP`SHOW:
+        value: |-
+          think setq(lfrp_target,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<lfrp_target>)=@pemit %#=notice(RP,There is no player called '%q<cmd_argument>'.,warn); @assert cand(u(%!/FUN`LFRP`LOOKING,%q<lfrp_target>),member(lwho(%#),num(%q<lfrp_target>)))=@pemit %#=notice(RP,if(strmatch(%q<lfrp_target>,%q<viewer_objid>),You are not looking for RP.,[name(%q<lfrp_target>)] is not looking for RP.)); @pemit %#=u(%!/FUN`LFRP`CARD,%q<lfrp_target>)
+        flags: [cmdsyntax]
+      # %0 a player who is looking: their status as labelled values.
+      FUN`LFRP`CARD:
+        value: |-
+          setq(lfrp_card_key,u(%!/FUN`KEY,%0))[rule(name(%0))]%r[fields(,Looking for,get({{store}}/LFRP`%q<lfrp_card_key>`IC),Note,firstof(get({{store}}/LFRP`%q<lfrp_card_key>`NOTE),-),Where,firstof(u(%!/FUN`LFRP`PLACE,%0),-),Since,[u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/LFRP`%q<lfrp_card_key>`SET)))] ago,Idle,u(%!/FUN`DISPLAY`DURATION,idle(%0)))]%r[rule()]
+        flags: [funsyntax]
+      # +lfrp[/<page>]: who is looking. Statuses that ran out are cleared as the list is drawn.
+      INC`LFRP`LIST:
+        value: |-
+          @include %!/INC`LFRP`SWEEP; think setq(lfrp_players,u(%!/FUN`LFRP`PLAYERS,%q<lfrp_live>)); @assert words(%q<lfrp_players>)=@pemit %#=notice(RP,Nobody is looking for RP right now. +lfrp <what you would like to play> puts you on the list.); @include/args %!/INC`PAGE`CHECK=list,%q<lfrp_players>; @pemit %#=u(%!/FUN`LFRP`TABLE,u(%!/FUN`PAGE`ITEMS,%q<lfrp_players>))%r[u(%!/FUN`PAGE`FOOTER,%q<lfrp_players>,+lfrp,+lfrp/show <name> shows a note)][if(hasattr(%!,DATA`LFRP`MORE),%r[tone(muted,get(%!/DATA`LFRP`MORE))])]
+        flags: [cmdsyntax]
+      # %0 players: the table of their statuses.
+      FUN`LFRP`TABLE:
+        value: |-
+          rule(Looking for RP)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r4,1%r1%r2%r3,%r1,%r20%r10),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Looking for)]%r[iter(%0,get({{store}}/LFRP`[u(%!/FUN`KEY,%i0)]`IC),,%r)],[ansi(h,Where)]%r[iter(%0,firstof(u(%!/FUN`LFRP`PLACE,%i0),-),,%r)],>[ansi(h,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)])]
+        flags: [funsyntax]
+      # Clears every status that has run out, or whose player is gone, and sets lfrp_live to the keys of the rest.
+      INC`LFRP`SWEEP:
+        value: |-
+          think setq(lfrp_keys,iter(lattr({{store}}/LFRP`*),after(%i0,`))); think setq(lfrp_live,filterbool(%!/FUN`LFRP`LIVE,%q<lfrp_keys>,,,secs())); @dolist/inline setdiff(%q<lfrp_keys>,%q<lfrp_live>)={@include/args %!/INC`LFRP`CLEAR=key,##}
+        flags: [cmdsyntax]
+      # %0 a key, %1 secs(): 1 when the status has not run out and its player still exists.
+      FUN`LFRP`LIVE:
+        value: |-
+          cand(gt(get({{store}}/LFRP`%0`UNTIL),%1),isdbref(get({{store}}/LFRP`%0)))
+        flags: [cmdsyntax]
+
+      # ---- watch list -----------------------------------------------------------
+      # Under WATCH`<key> on the store (the player's objid): LIST (whom they watch), BY (who watches them),
+      # HIDE (nobody hears of them), MUTE (they hear of nobody), ANNOUNCED (their connect was announced, so
+      # their disconnect will be) and SAID (when a connect of theirs was last announced). LIST and BY are kept
+      # together: adding or removing a watch changes both.
+      #
+      # %0 a player's key: the players they watch who still exist.
+      FUN`WATCH`LIST:
+        value: |-
+          filterbool(%!/FUN`WATCH`EXISTS,get({{store}}/WATCH`%0`LIST))
+        flags: [funsyntax]
+      FUN`WATCH`EXISTS:
+        value: |-
+          cand(isdbref(%0),hastype(%0,player))
+        flags: [funsyntax]
+      # %0 a list of objids: the ones connected and in the reader's who list who have not hidden from watchers,
+      # as dbrefs, by name.
+      FUN`WATCH`ONLINE:
+        value: |-
+          sort(filterbool(%!/FUN`WATCH`SHOWN,setinter(iter(%0,num(%i0)),lwho(%#))),namei)
+        flags: [funsyntax]
+      FUN`WATCH`SHOWN:
+        value: |-
+          not(get({{store}}/WATCH`[u(%!/FUN`KEY,%0)]`HIDE))
+        flags: [funsyntax]
+      # %0 a connected watcher, %1 the player who connected or left: 1 when the watcher is told. They must not
+      # have muted the list, and must be let through the player's page lock.
+      FUN`WATCH`HEARS:
+        value: |-
+          cand(not(get({{store}}/WATCH`[u(%!/FUN`KEY,%0)]`MUTE)),elock(%1/page,%0))
+        flags: [funsyntax]
+      # %0 a list of objids: the ones connected, as dbrefs.
+      FUN`WATCH`CONNECTED:
+        value: |-
+          setinter(iter(%0,num(%i0)),lwho())
+        flags: [funsyntax]
+      # Sets watch_target and watch_target_key from %q<cmd_argument>, a player on the watcher's list (by any
+      # part of their name) or any player.
+      INC`WATCH`NEEDTARGET:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(RP,Whom? +%q<cmd_word>/%q<cmd_switch> <name>,warn); think setq(watch_target,firstof(first(squish(iter(u(%!/FUN`WATCH`LIST,%q<viewer_key>),if(strmatch(name(%i0),%q<cmd_argument>*),%i0)))),u(%!/FUN`PLAYER,%q<cmd_argument>))); @assert strlen(%q<watch_target>)=@pemit %#=notice(RP,There is no player called '%q<cmd_argument>'.,warn); think setq(watch_target_key,u(%!/FUN`KEY,%q<watch_target>))
+        flags: [cmdsyntax]
+      INC`WATCH`USAGE:
+        value: |-
+          @pemit %#=notice(RP,+%q<cmd_word> lists who you watch that is on. +%q<cmd_word>/add <name> watches someone. +help watch lists the rest.,warn)
+        flags: [cmdsyntax]
+      # +watch/add <player>
+      INC`WATCH`ADD:
+        value: |-
+          @include %!/INC`WATCH`NEEDTARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(RP,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(RP,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`WATCH`MAX))=@pemit %#=notice(RP,You watch [get(%!/DATA`WATCH`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>); @pemit %#=notice(RP,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
+        flags: [cmdsyntax]
+      # +watch/del <player>
+      INC`WATCH`DEL:
+        value: |-
+          @include %!/INC`WATCH`NEEDTARGET; @assert member(get({{store}}/WATCH`%q<viewer_key>`LIST),%q<watch_target>)=@pemit %#=notice(RP,You do not watch [name(%q<watch_target>)].,warn); &WATCH`%q<viewer_key>`LIST {{store}}=remove(get({{store}}/WATCH`%q<viewer_key>`LIST),%q<watch_target>); &WATCH`%q<watch_target_key>`BY {{store}}=remove(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>); @pemit %#=notice(RP,You no longer watch [name(%q<watch_target>)].,ok)
+        flags: [cmdsyntax]
+      # +watch[/<page>]: whom the player watches who is on now.
+      INC`WATCH`ONLINE:
+        value: |-
+          think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert words(%q<watch_list>)=@pemit %#=notice(RP,You watch nobody. +%q<cmd_word>/add <name> watches someone.); think setq(watch_online,u(%!/FUN`WATCH`ONLINE,%q<watch_list>)); @assert words(%q<watch_online>)=@pemit %#=notice(RP,Nobody you watch is on. +%q<cmd_word>/list shows them all.); @include/args %!/INC`PAGE`CHECK=list,%q<watch_online>; @pemit %#=u(%!/FUN`WATCH`ONLINETABLE,u(%!/FUN`PAGE`ITEMS,%q<watch_online>))%r[u(%!/FUN`PAGE`FOOTER,%q<watch_online>,+%q<cmd_word>,[words(%q<watch_online>)] of [words(%q<watch_list>)] on · +%q<cmd_word>/list shows them all)]
+        flags: [cmdsyntax]
+      # %0 players: name, idle, where they are when the reader may locate them, and what they look for.
+      FUN`WATCH`ONLINETABLE:
+        value: |-
+          rule(Watched and on)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r3%r2,%r%r%r1,%r%r%r20),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)],[ansi(h,Where)]%r[iter(%0,if(findable(%#,%i0),name(room(%i0)),-),,%r)],[ansi(h,Looking for RP)]%r[iter(%0,if(u(%!/FUN`LFRP`LOOKING,%i0),get({{store}}/LFRP`[u(%!/FUN`KEY,%i0)]`IC),-),,%r)])]
+        flags: [funsyntax]
+      # +watch/list[/<page>]: everyone the player watches, on or not.
+      INC`WATCH`LIST:
+        value: |-
+          think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert words(%q<watch_list>)=@pemit %#=notice(RP,You watch nobody. +%q<cmd_word>/add <name> watches someone.); think setqm(watch_online,iter(u(%!/FUN`WATCH`ONLINE,%q<watch_list>),objid(%i0)),watch_list,u(%!/FUN`WATCH`SORTED,%q<watch_list>)); @include/args %!/INC`PAGE`CHECK=list,%q<watch_list>; @pemit %#=u(%!/FUN`WATCH`LISTTABLE,u(%!/FUN`PAGE`ITEMS,%q<watch_list>))%r[u(%!/FUN`PAGE`FOOTER,%q<watch_list>,+%q<cmd_word>/list,[words(%q<watch_list>)] watched · [if(get({{store}}/WATCH`%q<viewer_key>`MUTE),muted: +%q<cmd_word>/unmute,+%q<cmd_word>/mute stops the notices)])]
+        flags: [cmdsyntax]
+      # %0 objids: the same, by name.
+      FUN`WATCH`SORTED:
+        value: |-
+          iter(sort(iter(%0,num(%i0)),namei),objid(%i0))
+        flags: [funsyntax]
+      # %0 objids: name, and on or when last on. Who is on comes from %q<watch_online>.
+      FUN`WATCH`LISTTABLE:
+        value: |-
+          rule(Watched)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2,1%r1,,),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Last on)]%r[iter(%0,if(member(%q<watch_online>,%i0),tone(success,on now),u(%!/FUN`WATCH`LASTON,%i0)),,%r)])]
+        flags: [funsyntax]
+      # %0 a player who is not on, as far as the reader knows: how long ago they left.
+      FUN`WATCH`LASTON:
+        value: |-
+          if(isint(setr(watch_left,convtime(get(%0/LASTLOGOUT)))),[u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<watch_left>))] ago,-)
+        flags: [funsyntax]
+      # +watch/watchers[/<page>]: who watches the player.
+      INC`WATCH`WATCHERS:
+        value: |-
+          think setq(watch_by,u(%!/FUN`WATCH`SORTED,filterbool(%!/FUN`WATCH`EXISTS,get({{store}}/WATCH`%q<viewer_key>`BY)))); @assert words(%q<watch_by>)=@pemit %#=notice(RP,Nobody watches you.); think setq(page_size,mul(%q<page_size>,3)); @include/args %!/INC`PAGE`CHECK=list,%q<watch_by>; @pemit %#=rule(Watching you)%r[grid(iter(u(%!/FUN`PAGE`ITEMS,%q<watch_by>),name(%i0),,|),|)]%r[u(%!/FUN`PAGE`FOOTER,%q<watch_by>,+%q<cmd_word>/watchers,[words(%q<watch_by>)] watching · [if(get({{store}}/WATCH`%q<viewer_key>`HIDE),hidden: +%q<cmd_word>/unhide,+%q<cmd_word>/hide stops them hearing of you)])]
+        flags: [cmdsyntax]
+      INC`WATCH`HIDE:
+        value: |-
+          @assert not(get({{store}}/WATCH`%q<viewer_key>`HIDE))=@pemit %#=notice(RP,You are already hidden from watchers.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`HIDE {{store}}=1; @pemit %#=notice(RP,Nobody hears when you connect or leave%, and you are left out of everyone's +%q<cmd_word>. +%q<cmd_word>/unhide undoes it.,ok)
+        flags: [cmdsyntax]
+      INC`WATCH`UNHIDE:
+        value: |-
+          @assert get({{store}}/WATCH`%q<viewer_key>`HIDE)=@pemit %#=notice(RP,You are not hidden from watchers.,warn); &WATCH`%q<viewer_key>`HIDE {{store}}; @pemit %#=notice(RP,Those who watch you hear when you connect and leave again.,ok)
+        flags: [cmdsyntax]
+      INC`WATCH`MUTE:
+        value: |-
+          @assert not(get({{store}}/WATCH`%q<viewer_key>`MUTE))=@pemit %#=notice(RP,You already hear of nobody.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`MUTE {{store}}=1; @pemit %#=notice(RP,You no longer hear when the people you watch connect and leave. +%q<cmd_word> still lists them.,ok)
+        flags: [cmdsyntax]
+      INC`WATCH`UNMUTE:
+        value: |-
+          @assert get({{store}}/WATCH`%q<viewer_key>`MUTE)=@pemit %#=notice(RP,You already hear of the people you watch.,warn); &WATCH`%q<viewer_key>`MUTE {{store}}; @pemit %#=notice(RP,You hear when the people you watch connect and leave again.,ok)
+        flags: [cmdsyntax]
+      # Tells %<target>'s watchers that they connected or left (%<event>, connected or disconnected). A
+      # connect is announced unless the player is hidden from watchers, DARK, or connected hidden, or had a
+      # connect announced in the last DATA`WATCH`QUIET seconds, and counts as announced only once someone hears
+      # it. A disconnect is announced only when its connect was and the player has not since hidden or gone DARK.
+      INC`WATCH`ANNOUNCE:
+        value: |-
+          think setq(watch_key,u(%!/FUN`KEY,%<target>)); @break strmatch(%<event>,disconnected)={@include/args %!/INC`WATCH`ANNOUNCEOFF=target,%<target>,key,%q<watch_key>}; @break get({{store}}/WATCH`%q<watch_key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); @assert gte(sub(secs(),default({{store}}/WATCH`%q<watch_key>`SAID,0)),get(%!/DATA`WATCH`QUIET)); think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%q<watch_key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); &WATCH`%q<watch_key>`SAID {{store}}=secs(); &WATCH`%q<watch_key>`ANNOUNCED {{store}}=1; @pemit/list %q<watch_hearers>=notice(RP,name(%<target>) has connected.)
+        flags: [cmdsyntax]
+      INC`WATCH`ANNOUNCEOFF:
+        value: |-
+          @assert get({{store}}/WATCH`%<key>`ANNOUNCED); &WATCH`%<key>`ANNOUNCED {{store}}; @break get({{store}}/WATCH`%<key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%<key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); @pemit/list %q<watch_hearers>=notice(RP,name(%<target>) has disconnected.)
+        flags: [cmdsyntax]
+
+      # ---- connect and disconnect -----------------------------------------------
+      # Master room ACONNECT and ADISCONNECT run for every player, as this object, with %# the player and %1
+      # how many connections they have. Only the first connection and the last disconnection count.
+      ACONNECT:
+        value: |-
+          @assert cand(eq(%1,1),hastype(%#,player)); @include/nobreak/args %!/INC`WATCH`ANNOUNCE=target,%#,event,connected; @include/nobreak %!/INC`CONNECT`WATCHED
+        flags: [cmdsyntax]
+      ADISCONNECT:
+        value: |-
+          @assert cand(eq(%1,0),hastype(%#,player)); think setq(viewer_key,u(%!/FUN`KEY,%#)); @include/nobreak/args %!/INC`WATCH`ANNOUNCE=target,%#,event,disconnected; @assert hasattr({{store}},LFRP`%q<viewer_key>); @include/args %!/INC`LFRP`CLEAR=key,%q<viewer_key>
+        flags: [cmdsyntax]
+      # At login: who of those the player watches is on, unless they muted the watch list.
+      INC`CONNECT`WATCHED:
+        value: |-
+          think setq(viewer_key,u(%!/FUN`KEY,%#)); @break get({{store}}/WATCH`%q<viewer_key>`MUTE); think setq(watch_online,u(%!/FUN`WATCH`ONLINE,u(%!/FUN`WATCH`LIST,%q<viewer_key>))); @assert words(%q<watch_online>); @pemit %#=notice(RP,On now of those you watch: [u(%!/FUN`DISPLAY`NAMES,%q<watch_online>)].)
+        flags: [cmdsyntax]
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @dolist/inline lfrp watch friend={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # Every record: statuses and watch lists. Inside the RP Finder, so no
+  # player can reach it, and no_command, so nothing kept on it is ever matched as a command.
+  - ref: store
+    type: thing
+    name: RP Finder Store
+    location: "{{finder}}"
+    flags: [no_command]
+    attributes:
+      LFRP: |-
+        Looking-for-RP statuses, one branch per player key.
+      WATCH: |-
+        Watch lists, one branch per player key.
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: finder_help
+    type: thing
+    name: RP Finder Help
+    location: "{{finder}}"
+    attributes:
+      HELP: |-
+        Finding roleplay: +lfrp and the watch list.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`LFRP: |-
+        watch
+      SEE`WATCH: |-
+        lfrp
+      HELP`LFRP: |-
+        `+lfrp` tells the game you are looking for roleplay, and shows who else is.
+
+        - `+lfrp <text>` says what you would like to play, in a line others read in character: `+lfrp Stacking wood by the cabin, glad of company`.
+        - `+lfrp/note <text>` adds an OOC note: what kind of scene, how long you have, what you would rather not play.
+        - `+lfrp/place <text>` says where to find you. `+lfrp/place here` shows wherever you are standing, as you move.
+        - `+lfrp/off` ends it.
+
+        While you are looking, your line shows in the Status column of `+who`.
+
+        Leave the text out of `/note` or `/place` to clear it. Your status lasts a few hours from when you last changed it \(four, unless the game changed it\), and ends when you log off.
+
+        ## Finding someone
+
+        - `+lfrp` lists everyone connected who is looking, least idle first. A long list comes in pages: `+lfrp/2`.
+        - `+lfrp/show <name>` shows one person's status with their note. `+lfrp/show` on its own shows yours.
+
+        The list shows only who you could see in `WHO`.
+      HELP`WATCH: |-
+        The **watch list** tells you when people you want to play with connect and leave.
+
+        - `+watch/add <name>` watches someone, and `+watch/del <name>` stops.
+        - `+watch` lists the people you watch who are on, with where they are and what they are looking for. `+watch/list` lists them all, with when each was last on.
+        - `+watch/mute` stops the connect and disconnect lines but keeps your list, and `+watch/unmute` starts them again.
+
+        `+friend` is the same command, so `+friend/add` and `+friend/del` work too.
+
+        ## Privacy
+
+        - `+watch/watchers` shows who watches you.
+        - `+watch/hide` keeps you out of everyone's watch lines and their `+watch`. `+watch/unhide` undoes it.
+        - Someone your page lock keeps out is never told when you connect. See `help @lock/page`.
+        - Nobody hears of you while you are DARK or connected hidden, and someone who cannot locate you sees no room for you in `+watch`.
+      HELP`RP: |-
+        The RP finder helps you find someone to play with.
+
+        - `+lfrp` says what you are looking for, and lists who else is looking. `+help lfrp` has more.
+        - `+watch` tells you when the people you follow connect. `+help watch` has more.
+      HELP`RP`STAFF: |-
+        Staff with the `softcode.rp_finder.moderate` permission, which the `rp-moderator` role allows, look after the finder:
+
+        - `+lfrp/off <name>` clears someone's status, and tells them.
+
+        ## Settings
+
+        Each setting is an attribute on the RP Finder object in the master room:
+
+        - `` DATA`LFRP`HOURS ``: how long a status lasts from when it is set. 4 by default.
+        - `` DATA`WATCH`MAX ``: how many people one player may watch. 100.
+        - `` DATA`WATCH`QUIET ``: seconds before a player's connect is announced again, so a dropped connection does not announce itself each time. 300.
+        - `` DATA`LFRP`MORE ``: a line shown under `+lfrp`, such as where longer requests are posted. Unset by default.
+
+  # The +who Status column (who-where 1.3): a player looking for RP shows their +lfrp line, cut to 40
+  # characters. The filter runs as the Who-Where Function Object, so it reads the store and nothing else.
+  - ref: who_status
+    target: "{{who-where/ww_functions}}"
+    attributes:
+      FILTER`WHO`STATUS`LFRP: |-
+        setq(lfrp_who_key,LFRP`[edit(objid(%1),#,,:,_)])[if(gt(get({{store}}/%q<lfrp_who_key>`UNTIL),secs()),setq(lfrp_who_line,get({{store}}/%q<lfrp_who_key>`IC))[if(gt(strlen(%q<lfrp_who_line>),40),left(%q<lfrp_who_line>,37)...,%q<lfrp_who_line>)],%0)]
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`RP-FINDER: |-
+        {{finder_help}}

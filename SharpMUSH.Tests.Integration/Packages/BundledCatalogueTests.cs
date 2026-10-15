@@ -124,7 +124,7 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 	/// session is shared, so leaving it installed would change what every later test's game looks
 	/// like.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel("WikiReaderInstall")]
 	public async Task WikiReader_ShipsUninstalled_AndInstallsFromTheImage()
 	{
 		var controller = Controller();

@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Components.Scenes
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
+@inject SceneDetailService SceneDetails
 @inject GameCommandService Commands
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
@@ -12,7 +13,9 @@
 
 @* The scene archive in the D1 kit: the plain header with Schedule and Start scene, and the scenes as cards. Which
    scenes is the address the sidebar links to (ScenesFilter): every scene, the acting character's
-   (?mine=1), the scheduled ones (as an agenda by day and time) or the finished ones. The live list is its own page, /scenes/active. *@
+   (?mine=1), the scheduled ones (as an agenda by day and time) or the finished ones. The live list is its own page, /scenes/active.
+   ?detail=<key>&value=<value>, where a detail's value on a card or in the sidebar links, keeps only the scenes giving
+   that detail that value, and says so above the list with a way back to every scene. *@
 <div class="scenes-page">
     <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@Heading" Description="@Description">
         <Actions>
@@ -86,6 +89,15 @@
         </KitCard>
     }
 
+    @if (_match is { } match)
+    {
+        <div class="scenes-match">
+            <span class="scenes-match-text">@string.Format(Loc["RolSceneDetailShowing"], MatchLabel(match), match.Value)</span>
+            <CapsuleButton Class="scenes-match-clear" Icon="@Icons.Material.Outlined.Close"
+                           Href="@ScenesFilter.Href(_filter)">@Loc["RolSceneDetailClear"]</CapsuleButton>
+        </div>
+    }
+
     @if (_scheduledNote is not null)
     {
         <MudAlert Severity="Severity.Warning" Dense="true" ShowCloseIcon="true" CloseIconClicked="@(() => _scheduledNote = null)"
@@ -146,6 +158,10 @@
     private bool _newPublic = true;
 
     private string _filter = ScenesFilter.All;
+
+    /// <summary>The detail value the address narrows the list to, or null for every scene the filter lists.</summary>
+    private SceneDetailMatch? _match;
+
     private IReadOnlyList<SceneSummary>? _scenes;
     private string? _error;
 
@@ -176,6 +192,8 @@
         Nav.LocationChanged += OnLocationChanged;
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
         _filter = ScenesFilter.FromUri(Nav.Uri);
+        _match = ScenesFilter.MatchFromUri(Nav.Uri);
+        _ = LoadCatalogueAsync();
         await AccountAuth.InitAsync();
         _acting = ActingCharacter();
         await LoadAsync();
@@ -191,8 +209,9 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         var filter = ScenesFilter.FromUri(e.Location);
-        if (filter == _filter) return;
-        _filter = filter;
+        var match = ScenesFilter.MatchFromUri(e.Location);
+        if (filter == _filter && match == _match) return;
+        (_filter, _match) = (filter, match);
         _ = InvokeAsync(async () =>
         {
             await LoadAsync();
@@ -207,6 +226,17 @@
         StateHasChanged();
     });
 
+    /// <summary>The catalogue names the detail a narrowed list is for; the line above it redraws once it answers.</summary>
+    private async Task LoadCatalogueAsync()
+    {
+        await SceneDetails.LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>What the game calls <paramref name="match"/>'s detail, or its key while the catalogue is unread or does not list it.</summary>
+    private string MatchLabel(SceneDetailMatch match) =>
+        SceneDetails.Catalogue.Details.FirstOrDefault(d => d.Key == match.Key)?.Label ?? SceneDetailInfo.Unlisted(match.Key).Label;
+
     private AccountAuthService.CharacterSummary? ActingCharacter() =>
         AccountAuth.IsLoggedIn ? AccountAuth.ActiveCharacter : null;
 
@@ -214,15 +244,15 @@
     {
         _loading = true;
         var generation = ++_loadGeneration;
-        var filter = _filter;
+        var (filter, match) = (_filter, _match);
         (var scenes, var error) = filter switch
         {
-            ScenesFilter.Mine when _acting is { } acting => Listed(await SceneService.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize)),
+            ScenesFilter.Mine when _acting is { } acting => Listed(await SceneService.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize, match: match)),
             ScenesFilter.Mine => (null, null),
             // The schedule leaves out a scene whose time passed (an hour's grace for a late start) and that never ran.
-            ScenesFilter.Scheduled => Listed(await SceneService.ListScenesAsync(ScenesFilter.Upcoming, ScenesFilter.PageSize)),
-            ScenesFilter.Finished => Listed(await SceneService.ListScenesAsync(filter, ScenesFilter.PageSize)),
-            _ => Listed(await SceneService.GetRecentScenesAsync(ScenesFilter.PageSize)),
+            ScenesFilter.Scheduled => Listed(await SceneService.ListScenesAsync(ScenesFilter.Upcoming, ScenesFilter.PageSize, match)),
+            ScenesFilter.Finished => Listed(await SceneService.ListScenesAsync(filter, ScenesFilter.PageSize, match)),
+            _ => Listed(await SceneService.GetRecentScenesAsync(ScenesFilter.PageSize, match)),
         };
 
         // A slower answer must not overwrite a newer one: the reader may have left the filter, or — on

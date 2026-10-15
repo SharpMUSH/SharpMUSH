@@ -23,7 +23,7 @@ which games can add as a remote in the admin panel.
 | Package | Demonstrates |
 |---|---|
 | [`hello-world/`](hello-world/) | The minimal manifest: one object, one command attribute |
-| [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, a convention prefix |
+| [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, a convention prefix, and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
 | [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
 | [`coast-guide/`](coast-guide/) | A content pack (format 1.4): wiki pages and nothing else — bodies in files and inline, a category pinned to the wiki home, a page that requires a permission the package declares |
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
@@ -31,8 +31,10 @@ which games can add as a remote in the admin panel.
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 | [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
 | [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
+| [`scene-verse/`](scene-verse/) | Extends another package's output without editing it: scene details on the Scene Logger, and ``FILTER`<point>`<name>`` attributes that `+scene` runs with `chain()` over what it shows (requires scene) |
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
+| [`rp-finder/`](rp-finder/) | Finding roleplay: a `+lfrp` status that runs out and ends at logoff, shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter, and a watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global (requires who-where) |
 
 ## The manifest: `package.yaml`
 

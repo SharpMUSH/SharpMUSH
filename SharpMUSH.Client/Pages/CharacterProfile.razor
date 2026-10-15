@@ -123,7 +123,8 @@ else
         <GalleryImagePicker @bind-Open="_pickerOpen" Items="_gallery" Busy="_busy"
                             Title="@(_pickFor == GalleryUse.Avatar ? Loc["NavCharChangeAvatar"] : Loc["NavCharChangeBanner"])"
                             SelectedAssetId="@(_pickFor == GalleryUse.Avatar ? _gallery.FirstOrDefault(g => g.IsIcon)?.AssetId : _gallery.FirstOrDefault(g => g.IsBanner)?.AssetId)"
-                            OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync" />
+                            OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync"
+                            OnPickLibrary="@(asset => WriteAsync(Gallery.AddFromLibraryAsync(Name, asset.Id, _pickFor), "GalleryUploadFailed"))" />
     }
 }
 
@@ -334,7 +335,8 @@ else
         return urls
             .Where(u => ImageUrlPolicy.IsRenderable(u.Url))
             .DistinctBy(u => u.Url)
-            .Select(u => new ImageViewer.Item(u.Url, DisplayName, u.Caption ?? _gallery.FirstOrDefault(g => g.Url == u.Url)?.Caption))
+            .Select(u => (u.Url, u.Caption, Entry: _gallery.FirstOrDefault(g => g.Url == u.Url)))
+            .Select(u => new ImageViewer.Item(u.Url, DisplayName, u.Caption ?? u.Entry?.Caption) { Warning = u.Entry?.Warning, Tags = u.Entry?.Tags })
             .ToList();
     }
 

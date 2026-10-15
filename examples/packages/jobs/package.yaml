@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -135,6 +135,9 @@ objects:
       # How many jobs a bucket being deleted moves per queue entry; the rest move in the next one.
       DATA`MOVE`BATCH: |-
         10
+      # Where a report of a profile gallery image from the web portal files (GALLERY`REPORT, below).
+      DATA`GALLERY`BUCKET: |-
+        Staff
       # +bug, +typo, +pitch and +apply each file in one bucket.
       DATA`SHORTCUT`BUG: |-
         Bugs
@@ -861,6 +864,11 @@ objects:
       # new run and the old one stops at its next tick.
       TICK: |-
         @assert strmatch(%0,get({{jobs}}/TICK`ID)); @dolist/inline [u({{jobs}}/FUN`DUE`NOW)]={&OVERDUE`FIRED ##=[secs()]; @trigger/args [get(##/BUCKET)]/ON`OVERDUE=0,[get(##/NUM)],2,[get(##/DUE)],job,[get(##/NUM)],due,[get(##/DUE)]; think [setq(_tj,##)][setq(_th,squish(iter(u({{jobs}}/FUN`HLIST,##,HANDLER),if(strmatch(%i0,role:*),,%i0))))][if(strlen(%q<_th>),pemit(%q<_th>,[notice(JOBS,Job [get(%q<_tj>/NUM)] is overdue: [get(%q<_tj>/TITLE)],warn)]))]}; @dolist/inline [u({{jobs}}/FUN`EXPIRED)]={&INDEX`[get(##/NUM)] {{store}}; @tel ##={{jobs}}; @nuke ##}; @wait [get({{jobs}}/DATA`TICK)]=@trigger {{jobs}}/TICK=%0
+      # A report of a profile gallery image, handed on by the event handler's GALLERY`REPORT`JOBS: files a job
+      # as the reporter in the bucket DATA`GALLERY`BUCKET names. The reason is the reporter's own text and
+      # arrives as data, never evaluated.
+      GALLERY`REPORT: |-
+        @include/args {{jobs}}/INC`API`FILE=player,%<reporter>,bucket,[v(DATA`GALLERY`BUCKET)],title,Image report: [name(%<objid>)],text,Image: %<url>%r%rCaption: %<caption>%r%rReason: %<reason>
       # One line at login: what needs staff, for those who work a bucket, and what is new for everyone.
       ACONNECT: |-
         think [setq(_q,words(u({{jobs}}/FUN`SELECT,%#,QUEUE)))][setq(_o,words(u({{jobs}}/FUN`SELECT,%#,OVERDUE)))][setq(_u,words(u({{jobs}}/FUN`SELECT,%#,UNREAD)))]; @assert cor(%q<_q>,%q<_u>); @pemit %#=[notice(JOBS,[if(%q<_q>,%q<_q> need staff[if(%q<_o>,%b[chr(40)]%q<_o> overdue[chr(41)])])][if(cand(%q<_q>,%q<_u>),[chr(44)]%b)][if(%q<_u>,%q<_u> with something new)]. +jobs lists them.)]
@@ -1536,6 +1544,17 @@ objects:
       POST`JOBS`ACT: |-
         think [setq(body,%<body>)]; @force {{jobs}}=@include/args/nobreak {{jobs}}/WEB`ACT=viewer,%<viewer>; @respond/type application/json; think %q<out>
 
+  # A report of a profile gallery image, sent from the web portal's image viewer: jobs' subscription to
+  # the GALLERY`REPORT event, beside any other package's. The portal offers Report only while the event
+  # handler answers that event. It hands the report to the Jobs object,
+  # which files it (GALLERY`REPORT there): INC`API`FILE finds the job store through the Jobs object's
+  # own references, so it must run as Jobs, not as the handler.
+  - ref: gallery_reports
+    target: "{{$event_handler}}"
+    attributes:
+      GALLERY`REPORT`JOBS: |-
+        @trigger/args {{jobs}}/GALLERY`REPORT=reporter,%#,objid,%<objid>,url,%<url>,caption,%<caption>,reason,%<reason>
+
   # ---- help storage -------------------------------------------------------------------
   # A plain thing, not the WIZARD Jobs object: the librarian cannot u() a privileged object's
   # attributes. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
@@ -1830,6 +1849,8 @@ objects:
         ## The portal
 
         The jobs-app package puts the same queue in the web portal at `/apps/jobs`, reading these jobs through the HTTP handler.
+
+        A report of a profile gallery image, sent from the portal's image viewer, files a job in the Staff bucket as whoever reported it, with the image's address, its caption and the reason. `` &DATA`GALLERY`BUCKET Jobs=<bucket> `` sends them elsewhere.
 
   # ---- +help registration -------------------------------------------------------------
   - ref: help_registration

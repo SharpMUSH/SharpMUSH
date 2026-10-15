@@ -238,6 +238,10 @@
       <Link>BundledPackages\radio-scene.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.radio-scene.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-verse\package.yaml">
+      <Link>BundledPackages\scene-verse.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-verse.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\bboards\package.yaml">
       <Link>BundledPackages\bboards.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.bboards.package.yaml</LogicalName>
@@ -245,6 +249,14 @@
     <EmbeddedResource Include="..\examples\packages\bboards-app\package.yaml">
       <Link>BundledPackages\bboards-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.bboards-app.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\who-where\package.yaml">
+      <Link>BundledPackages\who-where.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.who-where.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\rp-finder\package.yaml">
+      <Link>BundledPackages\rp-finder.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.rp-finder.package.yaml</LogicalName>
     </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the

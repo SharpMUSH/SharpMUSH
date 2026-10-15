@@ -41,6 +41,7 @@ public class CompatibilityProfileStructureTests
 		["Boolean compatibility: `tiny_booleans`"] = "describes a setting PennMUSH also has",
 		["Numeric compatibility: `tiny_math`, `null_eq_zero`"] = "describes settings PennMUSH also has",
 		["Trim argument order: `tiny_trim_fun`"] = "describes a setting PennMUSH also has",
+		["Innermost loop tokens"] = "describes a setting for TinyMUX code; off, the default, matches PennMUSH",
 		["`ansi()` and `lit()`"] = "only the declared maximum differs; behaviour matches",
 		["Time precision"] = "the consequence of the choice *A trailing `<precision>` on the time functions*",
 		["Objids and stamped dbrefs"] = "the representation decision is tracked in #1006 item 13",

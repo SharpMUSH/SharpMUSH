@@ -1,0 +1,272 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject GalleryService Gallery
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A character's gallery in the image viewer, with what may be done to the image on screen. Whoever may
+   edit the profile moves it, makes it the portrait or the banner, edits its caption, tags and warning,
+   or deletes it; anyone else signed in may report it, when the game takes reports (the server asks
+   them to choose a character first when they have none). Every
+   write answers with the gallery as the server now holds it, handed up through OnChanged. *@
+<ImageViewer Items="@ViewerItems" Open="@Open" OpenChanged="OnOpenChanged" @bind-Index="_index" Label="@Label"
+             Compact="@(_editing is not null || _reporting is not null)">
+    <Actions>
+        @if (CanEdit && ByKey(context.Key) is { } entry)
+        {
+            @if (Items.Count > 1)
+            {
+                <CapsuleButton Class="gallery-move-earlier" Icon="@Icons.Material.Outlined.ArrowBack" AriaLabel="@Loc["NavGalleryMoveEarlier"]" Disabled="@(_busy || Shown(entry) == 0)" OnClick="@(() => MoveAsync(entry, -1))" />
+                <CapsuleButton Class="gallery-move-later" Icon="@Icons.Material.Outlined.ArrowForward" AriaLabel="@Loc["NavGalleryMoveLater"]" Disabled="@(_busy || Shown(entry) == Items.Count - 1)" OnClick="@(() => MoveAsync(entry, 1))" />
+            }
+            @if (entry.Warning is null)
+            {
+                @if (!entry.IsIcon)
+                {
+                    <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => SetIconAsync(entry))">@Loc["SetAsIcon"]</CapsuleButton>
+                }
+                @if (entry.IsBanner)
+                {
+                    <CapsuleButton Class="gallery-make-banner" Pressed="true" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@(() => SetBannerAsync(null))">@Loc["NavGalleryRemoveBanner"]</CapsuleButton>
+                }
+                else
+                {
+                    <CapsuleButton Class="gallery-make-banner" Pressed="false" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@(() => SetBannerAsync(entry))">@Loc["NavGalleryMakeBanner"]</CapsuleButton>
+                }
+            }
+            <CapsuleButton Class="gallery-edit" Icon="@Icons.Material.Outlined.Edit" Pressed="@(_editing == entry.AssetId)" Disabled="_busy" OnClick="@(() => StartEditing(entry))">@Loc["NavGalleryEdit"]</CapsuleButton>
+            <CapsuleButton Class="gallery-delete" Icon="@Icons.Material.Outlined.Delete" Disabled="_busy" OnClick="@(() => DeleteAsync(entry))">@Loc["Delete"]</CapsuleButton>
+        }
+        else if (_canReport && ByKey(context.Key) is { } reported)
+        {
+            <CapsuleButton Class="gallery-report" Icon="@Icons.Material.Outlined.Flag" Pressed="@(_reporting == reported.AssetId)" Disabled="_busy" OnClick="@(() => StartReporting(reported))">@Loc["NavGalleryReport"]</CapsuleButton>
+        }
+    </Actions>
+    <Details>
+        @if (_editing is not null && _editing == context.Key && ByKey(context.Key) is { } editing)
+        {
+            <form class="gallery-details" @onsubmit="@(() => SaveDetailsAsync(editing))" @onsubmit:preventDefault="true">
+                <label class="gallery-field">
+                    <span>@Loc["NavGalleryCaption"]</span>
+                    <input class="gallery-caption-input" type="text" maxlength="300" @bind="_caption" />
+                </label>
+                <label class="gallery-field">
+                    <span>@Loc["NavGalleryTags"]</span>
+                    <input class="gallery-tags-input" type="text" @bind="_tags" aria-describedby="gallery-tags-help" />
+                    <small id="gallery-tags-help">@Loc["NavGalleryTagsHelp"]</small>
+                </label>
+                <label class="gallery-field">
+                    <span>@Loc["NavGalleryWarning"]</span>
+                    <input class="gallery-warning-input" type="text" maxlength="100" @bind="_warning" aria-describedby="gallery-warning-help" />
+                    <small id="gallery-warning-help">@Loc["NavGalleryWarningHelp"]</small>
+                </label>
+                <div class="gallery-share">
+                    @if (editing.Shared == true)
+                    {
+                        <small class="gallery-share-state">@Loc["NavGalleryShared"]</small>
+                    }
+                    else if (editing.Warning is not null)
+                    {
+                        <small class="gallery-share-warned">@Loc["NavGalleryShareWarned"]</small>
+                    }
+                    else
+                    {
+                        <button type="button" class="gallery-share-button" disabled="@_busy" aria-describedby="gallery-share-help" @onclick="@(() => ShareAsync(editing))">@Loc["NavGalleryShare"]</button>
+                        <small id="gallery-share-help">@Loc["NavGalleryShareHelp"]</small>
+                    }
+                </div>
+                <div class="gallery-form-actions">
+                    <button type="button" class="gallery-details-cancel" disabled="@_busy" @onclick="@(() => _editing = null)">@Loc["Cancel"]</button>
+                    <button type="submit" class="gallery-details-save" disabled="@_busy">@Loc["Save"]</button>
+                </div>
+            </form>
+        }
+        else if (_reporting is not null && _reporting == context.Key && ByKey(context.Key) is { } reporting)
+        {
+            <form class="gallery-details" @onsubmit="@(() => ReportAsync(reporting))" @onsubmit:preventDefault="true">
+                <label class="gallery-field">
+                    <span>@Loc["NavGalleryReportReason"]</span>
+                    <textarea class="gallery-report-reason" maxlength="500" rows="3" @bind="_reason" @bind:event="oninput"></textarea>
+                </label>
+                <div class="gallery-form-actions">
+                    <button type="button" class="gallery-report-cancel" disabled="@_busy" @onclick="@(() => _reporting = null)">@Loc["Cancel"]</button>
+                    <button type="submit" class="gallery-report-send" disabled="@(_busy || string.IsNullOrWhiteSpace(_reason))">@Loc["NavGalleryReportSend"]</button>
+                </div>
+            </form>
+        }
+    </Details>
+</ImageViewer>
+
+@code {
+    /// <summary>Whose gallery this is.</summary>
+    [Parameter, EditorRequired] public string CharacterName { get; set; } = string.Empty;
+
+    /// <summary>The images the viewer pages through, in order: the whole gallery, or the ones a filter kept.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<GalleryEntry> Items { get; set; } = [];
+
+    /// <summary>The whole gallery, which a write sends; <see cref="Items"/> when the viewer shows all of it.</summary>
+    [Parameter] public IReadOnlyList<GalleryEntry>? WholeGallery { get; set; }
+
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    /// <summary>The image the viewer opens on.</summary>
+    [Parameter] public int Index { get; set; }
+
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>A write the server took: the gallery as it now holds it.</summary>
+    [Parameter] public EventCallback<List<GalleryEntry>> OnChanged { get; set; }
+
+    private IReadOnlyList<GalleryEntry> Whole => WholeGallery ?? Items;
+
+    private int Shown(GalleryEntry entry) => Items.ToList().FindIndex(i => i.AssetId == entry.AssetId);
+
+    private int _index;
+    private bool _wasOpen;
+    private bool _busy;
+
+    /// <summary>The image whose details are being edited, and the values typed so far.</summary>
+    private string? _editing;
+    private string? _caption;
+    private string? _tags;
+    private string? _warning;
+
+    /// <summary>The image being reported, and why.</summary>
+    private string? _reporting;
+    private string? _reason;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    /// <summary>Someone signed in, who may not edit this gallery, reports instead; asked when the viewer opens.</summary>
+    private bool _canReport;
+
+    private IReadOnlyList<ImageViewer.Item> ViewerItems =>
+        Items.Select(i => new ImageViewer.Item(i.Url, i.Warning is null ? i.Caption : null, i.Caption, i.AssetId) { Warning = i.Warning, Tags = i.Tags }).ToList();
+
+    private GalleryEntry? ByKey(string? assetId) => Items.FirstOrDefault(i => i.AssetId == assetId);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Open && !_wasOpen)
+        {
+            _index = Index;
+            (_editing, _reporting) = (null, null);
+            var signedIn = AuthState is not null && (await AuthState).User.Identity?.IsAuthenticated == true;
+            _canReport = !CanEdit && signedIn && await Gallery.ReportsTakenAsync();
+        }
+        _wasOpen = Open;
+    }
+
+    private Task OnOpenChanged(bool open)
+    {
+        _wasOpen = open;
+        return OpenChanged.InvokeAsync(open);
+    }
+
+    private void StartEditing(GalleryEntry entry)
+    {
+        if (_editing == entry.AssetId)
+        {
+            _editing = null;
+            return;
+        }
+        (_editing, _caption, _tags, _warning) = (entry.AssetId, entry.Caption, string.Join(", ", entry.Tags ?? []), entry.Warning);
+    }
+
+    private void StartReporting(GalleryEntry entry)
+    {
+        _reporting = _reporting == entry.AssetId ? null : entry.AssetId;
+        _reason = null;
+    }
+
+    private async Task SaveDetailsAsync(GalleryEntry entry)
+    {
+        if (await WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithDetails(Whole, entry.AssetId, _caption, _tags, _warning)), "NavGallerySaveFailed"))
+        {
+            _editing = null;
+        }
+    }
+
+    private async Task MoveAsync(GalleryEntry entry, int delta)
+    {
+        // The viewer follows the image it moved, so the next click moves it again.
+        var target = Math.Clamp(Shown(entry) + delta, 0, Items.Count - 1);
+        if (await WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.Moved(Whole, entry.AssetId, MovedBy(entry, delta))), "NavGalleryMoveFailed"))
+        {
+            _index = target;
+        }
+    }
+
+    /// <summary>
+    /// How far to move the image in the whole gallery so it passes its neighbour among the images shown:
+    /// with a filter on, that neighbour may be several places away.
+    /// </summary>
+    private int MovedBy(GalleryEntry entry, int delta)
+    {
+        var neighbour = Shown(entry) + delta;
+        if (neighbour < 0 || neighbour >= Items.Count) return 0;
+        var whole = Whole.ToList();
+        return whole.FindIndex(i => i.AssetId == Items[neighbour].AssetId) - whole.FindIndex(i => i.AssetId == entry.AssetId);
+    }
+
+    private Task SetIconAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithIcon(Whole, entry.AssetId)), "GallerySetIconFailed");
+
+    /// <summary>Makes <paramref name="entry"/> the banner, or removes the banner when it is null.</summary>
+    private Task SetBannerAsync(GalleryEntry? entry) =>
+        WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithBanner(Whole, entry?.AssetId)), "GallerySetBannerFailed");
+
+    /// <summary>Puts the image in the shared image library, for good.</summary>
+    private Task ShareAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.ShareAsync(CharacterName, entry.AssetId), "NavGalleryShareFailed");
+
+    private Task DeleteAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.DeleteAsync(CharacterName, entry.AssetId), "GalleryDeleteFailed");
+
+    private async Task ReportAsync(GalleryEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(_reason)) return;
+        _busy = true;
+        try
+        {
+            switch (await Gallery.ReportAsync(CharacterName, entry.AssetId, _reason.Trim()))
+            {
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["NavGalleryReportFailed", failure.Message], Severity.Error);
+                    break;
+                default:
+                    Snackbar.Add(Loc["NavGalleryReported"], Severity.Success);
+                    (_reporting, _reason) = (null, null);
+                    break;
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    /// <summary>
+    /// Runs a write; true when the server took it. A refusal says what the server said, rather than
+    /// leaving the page as it was with nothing said.
+    /// </summary>
+    private async Task<bool> WriteAsync(Task<ApiResult<List<GalleryEntry>>> write, string failedKey)
+    {
+        _busy = true;
+        ApiResult<List<GalleryEntry>> result;
+        try { result = await write; }
+        finally { _busy = false; }
+
+        switch (result)
+        {
+            case List<GalleryEntry> updated:
+                await OnChanged.InvokeAsync(updated);
+                return true;
+            case ApiFailure failure:
+                Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);
+                return false;
+            default:
+                return false;
+        }
+    }
+}

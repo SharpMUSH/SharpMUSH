@@ -4,7 +4,7 @@ packages:
   - path: softcode-editor/
     name: Softcode Editor
     package: softcode-editor
-    version: 1.0.0
+    version: 1.0.1
     description: "@editor — an @input-driven line editor for function and command softcode"
   - path: builder-graph/
     name: Builder Graph
@@ -18,8 +18,8 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.2.0
-    description: +who and +where commands
+    version: 1.3.0
+    description: +who and +where commands; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
     package: bbs-lite
@@ -60,7 +60,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
   - path: scene/
     package: scene
-    version: 1.5.4
+    version: 1.6.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -80,7 +80,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.6.1
+    version: 1.7.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -102,6 +102,11 @@ packages:
     package: radio-scene
     version: 1.2.0
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
+  - path: scene-verse/
+    name: Verse and canon in scenes
+    package: scene-verse
+    version: 1.0.0
+    description: Verse, canon and content warnings on scenes, a content warning told to whoever joins, and +scene/verses (requires scene)
   - path: bboards/
     name: BBoards
     package: bboards
@@ -112,3 +117,8 @@ packages:
     package: bboards-app
     version: 1.0.1
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
+  - path: rp-finder/
+    name: RP Finder
+    package: rp-finder
+    version: 1.0.0
+    description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)

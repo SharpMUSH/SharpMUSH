@@ -4387,10 +4387,6 @@
     <value>Kleine bewerking</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Nog geen bestanden geüpload.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Geen bestanden gevonden.</value>
     <comment>MT</comment>
@@ -4784,6 +4780,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Alles bekijken</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Terug naar {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Bijschrift</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Details bewerken</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Naar voren</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Naar achteren</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Geen afbeelding heeft deze tag.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galerij van {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Melden</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>De melding kon niet worden verzonden: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Wat is er mis met deze afbeelding?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Melding versturen</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Je melding is naar het team gestuurd.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Afbeelding tonen</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filteren op tag</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Scheid tags met komma's.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Inhoudswaarschuwing</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Bedekt de afbeelding tot iemand ervoor kiest haar te zien. Een afbeelding met een waarschuwing kan geen avatar of banner zijn.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Inhoudswaarschuwing: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>De details van de afbeelding konden niet worden opgeslagen: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>De afbeelding kon niet worden verplaatst: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portret</value>
   </data>
@@ -4999,6 +5061,12 @@
   </data>
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Details</value>
+  </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Scènes waar {0} {1} is</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Alle scènes tonen</value>
   </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Begonnen</value>
@@ -6023,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Herschikken</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Doorzoek de afbeeldingenbibliotheek</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Nog geen afbeeldingen in de bibliotheek.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Geen bestandsnaam komt overeen.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Of kies uit de afbeeldingenbibliotheek</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>In de gedeelde afbeeldingenbibliotheek. Bij verwijderen uit de galerij blijft het bestand bewaard.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Delen in de afbeeldingenbibliotheek</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Iedereen die is aangemeld kan het dan gebruiken op een wikipagina of in een galerij. Dit kan niet ongedaan worden gemaakt.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Kon de afbeelding niet delen: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliotheek</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Delen in de bibliotheek</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>In de gedeelde bibliotheek</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Iedereen die is aangemeld kan het kiezen voor een wikipagina of een galerij. Dit kan niet ongedaan worden gemaakt.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Beperken tot een recht</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Alleen wie dit recht heeft vindt het in de bibliotheek. Laat leeg voor iedereen.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Eén galerij</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Iedereen</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Vergrendeld: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Opslaan mislukt: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Een afbeelding met een inhoudswaarschuwing blijft buiten de afbeeldingenbibliotheek. Haal de waarschuwing weg om haar te delen.</value>
   </data>
 </root>

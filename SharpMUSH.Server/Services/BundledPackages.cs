@@ -84,11 +84,19 @@ public static class BundledPackages
 		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins radio and scene, so +radio/log puts a frequency into a scene.
 		new("radio-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: the scene package keeps any detail an owner sets, and a game chooses whether
+		// it wants a verse, a canon and content warnings named for it.
+		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
 		new("bboards", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +who and +where are names a game may already use for its own code.
+		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +lfrp, +watch and +friend are global commands, and +watch and +friend are names
+		// a game may already use for its own code. Its status shows in who-where's +who.
+		new("rp-finder", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

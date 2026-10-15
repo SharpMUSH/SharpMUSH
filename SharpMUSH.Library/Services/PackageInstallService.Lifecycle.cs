@@ -166,7 +166,7 @@ public partial class PackageInstallService
 
 		foreach (var record in ownObjects)
 		{
-			await MarkGoingAsync(writes, record.Objid, notes, cancellationToken);
+			await ReleaseObjectAsync(writes, record.Objid, notes, cancellationToken);
 		}
 
 		// Application packages own portal registrations rather than objects;
@@ -304,8 +304,8 @@ public partial class PackageInstallService
 	/// </summary>
 	/// <param name="Wanted">The registry records the revision implies.</param>
 	/// <param name="Stale">Current records the revision does not have (a later object, or a later ref for one).</param>
-	/// <param name="Revive">Owned at the revision, not now: removed later and marked GOING then.</param>
-	/// <param name="Release">Owned now, not at the revision: added later, so marked GOING now.</param>
+	/// <param name="Revive">Owned at the revision, not now: removed later and released then.</param>
+	/// <param name="Release">Owned now, not at the revision: added later, so released now.</param>
 	private sealed record ObjectRollback(
 		IReadOnlyList<PackageObjectRecord> Wanted,
 		IReadOnlyList<PackageObjectRecord> Stale,
@@ -391,7 +391,7 @@ public partial class PackageInstallService
 
 		foreach (var revived in objects.Revive)
 		{
-			await ClearGoingAsync(writes, revived.Objid, notes, cancellationToken);
+			await ReviveObjectAsync(writes, revived.Objid, notes, cancellationToken);
 		}
 
 		foreach (var attribute in snapshot.Attributes)
@@ -431,7 +431,7 @@ public partial class PackageInstallService
 
 		foreach (var released in objects.Release)
 		{
-			await MarkGoingAsync(writes, released.Objid, notes, cancellationToken);
+			await ReleaseObjectAsync(writes, released.Objid, notes, cancellationToken);
 		}
 
 		if (installed.Owned is not null)

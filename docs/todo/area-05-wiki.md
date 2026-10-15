@@ -33,6 +33,7 @@
 - [x] Batch administration — `POST /api/wiki/batch/protect` + `batch/delete` (Wizard), `{Succeeded, Failed}` result; `/admin/wiki` is a full multi-select grid (paging, namespace filter, protect/unprotect/delete, per-row metadata dialog)
 - [x] Editor — "add category" toolbar button and the categories the text names in `WikiEdit.razor`; published switch saved via `PUT …/published` only when changed
 - [x] Asset uploads — `POST/GET/DELETE /api/wiki-assets` (`WikiAssetController.cs`): 10 MB cap, image whitelist, SVG script-scan; filesystem store with sha256 + sidecar metadata (`FileSystemWikiAssetService.cs`); `/admin/media` image library; `WikiAssetPicker.razor` + "Insert image" button in the editor
+- [x] Shared image library — `GET /api/wiki-assets/library` lists every shared file a signed-in player may pick (wiki editor, gallery Add image, avatar/banner picker; `ImageLibraryGrid.razor`), so a picture is used again rather than uploaded twice. Gallery uploads stay private to their gallery until shared; a file can be locked to a permission (`PUT /api/wiki-assets/{id}/sharing`, `/admin/media`), which hides it from the library, not from pages that show it (`WikiAssetLibrary`)
 - [x] Markdown directives — `WikiDirectiveExtension.cs`: `::: category X`, `::: pagelist NS`, `::: recent N` render live listings client-side (`WikiDirectiveBlock.razor`); args validated/escaped, unknown containers keep default rendering
 - [x] SEO — `/sitemap.xml` (published pages only) + `/robots.txt` (`SeoController.cs`); JSON-LD schema.org Article in bot prerender HTML
 

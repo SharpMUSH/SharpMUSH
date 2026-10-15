@@ -52,7 +52,13 @@ public partial class PackageInstallService(
 	private PackageWriteTransaction BeginWrites(SharpPlayer packageManager) =>
 		new(mediator, database, attributeStore, flags, registry, applications, locks, packageManager);
 
-	private async Task MarkGoingAsync(
+	/// <summary>
+	/// Lets go of an object the package no longer owns: GOING, so the purge frees it, and HALT, so it
+	/// stops answering at once. GOING alone leaves it matching <c>$</c>-commands, <c>^</c>-listens and
+	/// ACONNECT until the purge, as PennMUSH does for a <c>@destroy</c>ed object, and a reinstalled
+	/// package would then answer every command twice.
+	/// </summary>
+	private async Task ReleaseObjectAsync(
 		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)
 	{
 		if (await GetKnownAsync(objid, cancellationToken) is not { } node)
@@ -60,17 +66,23 @@ public partial class PackageInstallService(
 			return;
 		}
 
-		if (await flags.GetObjectFlagAsync("GOING", cancellationToken) is not SharpObjectFlag going)
+		if (await flags.GetObjectFlagAsync("GOING", cancellationToken) is not SharpObjectFlag going
+			|| await flags.GetObjectFlagAsync("HALT", cancellationToken) is not SharpObjectFlag halt)
 		{
-			notes.Add($"{objid}: GOING flag unavailable; object left in place.");
+			notes.Add($"{objid}: GOING or HALT flag unavailable; object left in place.");
 			return;
 		}
 
 		await writes.SetFlagAsync(node, going, cancellationToken);
-		notes.Add($"{objid}: marked GOING for garbage collection.");
+		await writes.SetFlagAsync(node, halt, cancellationToken);
+		notes.Add($"{objid}: halted and marked GOING for garbage collection.");
 	}
 
-	private async Task ClearGoingAsync(
+	/// <summary>
+	/// Takes back an object <see cref="ReleaseObjectAsync"/> let go of. HALT is cleared with GOING; a
+	/// rollback then sets the flags its revision recorded, so a package that ships a HALT object keeps it.
+	/// </summary>
+	private async Task ReviveObjectAsync(
 		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)
 	{
 		if (await GetKnownAsync(objid, cancellationToken) is not { } node
@@ -81,7 +93,12 @@ public partial class PackageInstallService(
 		}
 
 		await writes.UnsetFlagAsync(node, going, cancellationToken);
-		notes.Add($"{objid}: GOING cleared; restored to the package.");
+		if (await flags.GetObjectFlagAsync("HALT", cancellationToken) is SharpObjectFlag halt)
+		{
+			await writes.UnsetFlagAsync(node, halt, cancellationToken);
+		}
+
+		notes.Add($"{objid}: GOING and HALT cleared; restored to the package.");
 	}
 
 	private async Task<AnySharpObject?> GetKnownAsync(string objid, CancellationToken cancellationToken)

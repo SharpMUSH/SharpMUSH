@@ -1,4 +1,5 @@
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Gallery;
@@ -10,8 +11,8 @@ namespace SharpMUSH.Tests.Gallery;
 /// </summary>
 public class GalleryRulesTests
 {
-	private static GalleryEntry Entry(string id, int order, bool icon = false, bool banner = false, string? caption = null) =>
-		new(id, $"{id}.jpg", $"/api/wiki-assets/{id}/{id}.jpg", caption, order, icon, banner);
+	private static GalleryEntry Entry(string id, int order, bool icon = false, bool banner = false, string? caption = null, string? warning = null) =>
+		new(id, $"{id}.jpg", $"/api/wiki-assets/{id}/{id}.jpg", caption, order, icon, banner, Warning: warning);
 
 	[Test]
 	public async Task Normalize_OrdersAndRenumbers()
@@ -85,4 +86,65 @@ public class GalleryRulesTests
 		await Assert.That(mirror.Banner).IsEqualTo(string.Empty);
 		await Assert.That(mirror.Alt).IsEqualTo(string.Empty);
 	}
+
+	[Test]
+	public async Task Normalize_AWarnedImage_IsNeitherIconNorBanner()
+	{
+		var result = GalleryRules.Normalize([Entry("a", 0, icon: true, banner: true, warning: "blood"), Entry("b", 1)]);
+		await Assert.That(result[0].IsIcon).IsFalse().Because("the avatar shows everywhere without a click");
+		await Assert.That(result[0].IsBanner).IsFalse();
+		await Assert.That(result[1].IsIcon).IsTrue().Because("the first image without a warning becomes the avatar");
+	}
+
+	[Test]
+	public async Task Normalize_AGalleryOfOnlyWarnedImages_HasNoAvatar()
+	{
+		var result = GalleryRules.Normalize([Entry("a", 0, warning: "blood")]);
+		await Assert.That(result[0].IsIcon).IsFalse();
+		await Assert.That(GalleryRules.Mirror(result).Image).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task Clean_TrimsAndLowerCasesTags_EachOnce_AndBlankIsNull()
+	{
+		var cleaned = GalleryRules.Clean(Entry("a", 0, caption: "  At the docks ", warning: "   ") with { Tags = [" Night", "night", "", "Docks "] })
+			.Expect<GalleryEntry>();
+		await Assert.That(cleaned.Caption).IsEqualTo("At the docks");
+		await Assert.That(cleaned.Warning).IsNull();
+		await Assert.That(cleaned.Tags!).IsEquivalentTo(new[] { "night", "docks" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task Clean_NoTags_IsNull()
+		=> await Assert.That(GalleryRules.Clean(Entry("a", 0) with { Tags = ["  "] }).Expect<GalleryEntry>().Tags).IsNull();
+
+	[Test]
+	[Arguments(GalleryRules.MaxCaptionLength + 1, 0, 1, 0, "caption")]
+	[Arguments(0, GalleryRules.MaxWarningLength + 1, 1, 0, "warning")]
+	[Arguments(0, 0, GalleryRules.MaxTags + 1, 3, "at most")]
+	[Arguments(0, 0, 1, GalleryRules.MaxTagLength + 1, "each tag")]
+	public async Task Clean_RefusesWhatIsTooLong(int captionLength, int warningLength, int tagCount, int tagLength, string says)
+	{
+		var entry = Entry("a", 0, caption: new string('c', captionLength), warning: new string('w', warningLength)) with
+		{
+			Tags = Enumerable.Range(0, tagCount).Select(i => $"{i}{new string('t', Math.Max(0, tagLength - 1))}").ToList(),
+		};
+		var refused = GalleryRules.Clean(entry).Expect<Error<string>>();
+		await Assert.That(refused.Value).Contains(says);
+	}
+
+	[Test]
+	[Arguments("iVBORw0KGgoAAAANSUhEUg==", "image/png")]
+	[Arguments("/9j/4AAQSkZJRgABAQ==", "image/jpeg")]
+	[Arguments("R0lGODlhAQABAA==", "image/gif")]
+	[Arguments("UklGRiQAAABXRUJQVlA4", "image/webp")]
+	public async Task SniffImageType_NamesTheTypeFromTheBytes(string base64, string type)
+		=> await Assert.That(GalleryRules.SniffImageType(Convert.FromBase64String(base64)).Expect<string>()).IsEqualTo(type);
+
+	[Test]
+	[Arguments("PGh0bWw+PHNjcmlwdD4=")]
+	[Arguments("PHN2ZyB4bWxucz0i")]
+	[Arguments("")]
+	public async Task SniffImageType_RefusesAnythingElse(string base64)
+		=> await Assert.That(GalleryRules.SniffImageType(Convert.FromBase64String(base64)) is NotFound).IsTrue();
 }

@@ -13,6 +13,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
@@ -118,7 +119,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 						SqlHost = ExtractSqlHost(sqlConnectionString),
 						SqlDatabase = ExtractSqlDatabase(sqlConnectionString),
 						SqlUsername = ExtractSqlUsername(sqlConnectionString),
-						SqlPassword = ExtractSqlPassword(sqlConnectionString),
 						SqlPlatform = sqlPlatform
 					}
 				};
@@ -148,7 +148,8 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				}
 
 				sc.RemoveAll<ISqlService>();
-				sc.AddSingleton<ISqlService>(new SqlService(sqlOptionsMonitor));
+				sc.AddSingleton<ISqlService>(new SqlService(sqlOptionsMonitor,
+					FixedSecrets.With(SecretDefinition.SqlPassword.Name, ExtractSqlPassword(sqlConnectionString))));
 			}
 		);
 	}
