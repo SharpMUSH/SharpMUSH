@@ -208,4 +208,28 @@ public class PackageAttributeEntryPlannerTests
 		await Assert.That(change.Retroactive).IsNull();
 		await Assert.That(plan.AttributeEntryWrites.Single().Retroactive).IsFalse();
 	}
+
+	[Test]
+	public async Task AVersionThatTurnsRetroactiveOnChangesTheCopies()
+	{
+		var retro = Status with { Retroactive = true };
+		IReadOnlyList<IReadOnlyList<string>> found = [["no_command"], []];
+		var copies = new Dictionary<string, IReadOnlyList<IReadOnlyList<string>>> { ["JOB`STATUS"] = found };
+		var plan = PackageDeclarationPlanner.Plan(Declared(retro), Declared(Status), Live([Entry(Status)], copies: copies), 5);
+
+		var change = ChangeOf(plan, "JOB`STATUS");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Update);
+		await Assert.That(change.Retroactive).IsEqualTo(1);
+		await Assert.That(plan.AttributeEntryWrites.Single().Retroactive).IsTrue();
+	}
+
+	[Test]
+	public async Task AnEntryAlreadyRetroactiveWithNothingChangedStays()
+	{
+		var retro = Status with { Retroactive = true };
+		var plan = PackageDeclarationPlanner.Plan(Declared(retro), Declared(retro), Live([Entry(retro)]), 5);
+
+		await Assert.That(ChangeOf(plan, "JOB`STATUS").Action).IsEqualTo(PackageDeclarationAction.NoChange);
+		await Assert.That(plan.AttributeEntryWrites).IsEmpty();
+	}
 }

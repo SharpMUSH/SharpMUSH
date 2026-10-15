@@ -94,20 +94,23 @@ public static partial class PackageDeclarationPlanner
 
 			var flagsChange = FlagKey(merged.Flags) != FlagKey(current.DefaultFlags);
 			var restrictionChange = Restriction.Of(merged) != Restriction.Of(current);
-			if (!flagsChange && !restrictionChange)
+			// A version that turns retroactive on gives the existing copies the flags even when the table is unchanged.
+			var retroactive = spec.Retroactive && (flagsChange || baseline is { Retroactive: false });
+			if (!flagsChange && !restrictionChange && !retroactive)
 			{
 				changes.Add(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.NoChange));
 				continue;
 			}
 
-			var update = new PackageAttributeEntryWrite(merged, spec.Retroactive && flagsChange);
+			var update = new PackageAttributeEntryWrite(merged, retroactive);
 			writes.Add(update);
 			string[] what =
 			[
 				.. flagsChange ? [$"Default flags {ShowFlags(current.DefaultFlags)} become {ShowFlags(merged.Flags)}."] : Array.Empty<string>(),
 				.. restrictionChange ? [$"Its {Restriction.Of(current)} becomes {Restriction.Of(merged)}."] : Array.Empty<string>()
 			];
-			changes.Add(Retroactively(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Update, string.Join(" ", what)),
+			changes.Add(Retroactively(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Update,
+				what.Length > 0 ? string.Join(" ", what) : null),
 				update, live));
 		}
 

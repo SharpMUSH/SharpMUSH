@@ -531,7 +531,7 @@ live table, and its flags against the game's attribute flags.
   package owns blocks the plan.
 - **Retroactive.** Default flags reach new copies of the attribute only,
   unless the entry sets `retroactive: true`: then, whenever the apply writes
-  the entry's flags, every copy already on an object gets exactly those flags
+  the entry's flags, or a new version turns `retroactive` on, every copy already on an object gets exactly those flags
   (its `branch` flag kept, its owner unchanged). The review screen shows how
   many existing copies change, and asks the installer to confirm first.
 - **Upgrade.** The package's entries are merged field by field against what

@@ -214,7 +214,7 @@ default `flags`, and a `limit` or an `enum` (with its `delimiter`). The referenc
 - **Removal** (a dropped entry, or uninstall) deletes the entry, whatever relies on it; stored values
   on objects are left alone, since an entry only sets defaults and checks.
 - **Retroactive.** Default flags apply to new copies only, unless the entry sets `retroactive: true`
-  and the apply writes its flags. The plan counts the existing copies whose flags differ
+  and the apply writes its flags, or a version turns `retroactive` on. The plan counts the existing copies whose flags differ
   (`PackageDeclarationChange.Retroactive`), the review screen shows the count and waits for a
   confirm, and the apply gives each copy exactly the entry's flags through the operation's
   `PackageWriteTransaction` (so a failed apply undoes them), keeping `branch` and the copy's owner.
