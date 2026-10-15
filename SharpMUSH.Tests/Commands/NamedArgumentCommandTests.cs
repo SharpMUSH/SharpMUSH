@@ -58,6 +58,16 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	public async Task TriggeredLoopBindsItsOwnIterationTokens()
+	{
+		var thing = await NewThing("TrigLoop");
+		await Run($"&INNER {thing}=@dolist/inline x y=&OUT {thing}=[get({thing}/OUT)]##");
+		await Run($"&OUTER {thing}=@dolist/inline a={{@trigger/inline {thing}/INNER}}");
+		await Run($"@trigger/inline {thing}/OUTER");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("xy");
+	}
+
+	[Test]
 	public async Task TriggerArgsRefusesAnUnpairedName()
 	{
 		var thing = await NewThing("TrigOdd");

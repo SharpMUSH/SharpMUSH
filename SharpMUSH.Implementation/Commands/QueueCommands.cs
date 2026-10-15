@@ -1369,7 +1369,10 @@ public partial class Commands
 			Enactor = executionEnactor,
 			Caller = parser.CurrentState.Executor,
 			Registers = registerStack,
-			EnvironmentRegisters = envRegisters
+			EnvironmentRegisters = envRegisters,
+			// A loop or switch the trigger ran inside does not bind ##, #@ or #$ written in the attribute it runs:
+			// PennMUSH queues that attribute, and splices those tokens only into the loop's own text.
+			CurrentEvaluation = new DBAttribute(targetObject.Object().DBRef, attribute.LongName)
 		};
 
 		var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
