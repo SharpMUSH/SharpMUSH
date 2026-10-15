@@ -135,12 +135,11 @@ public static class SchemaGraphLayout
 		var queue = new Queue<string>([focus.Id]);
 		while (queue.TryDequeue(out var id))
 		{
-			foreach (var next in edges.Where(e => e.From == id || e.To == id).Select(e => e.From == id ? e.To : e.From))
+			var neighbours = edges.Where(e => e.From == id || e.To == id).Select(e => e.From == id ? e.To : e.From);
+			foreach (var next in neighbours.Where(n => !rings.ContainsKey(n)))
 			{
-				if (rings.TryAdd(next, rings[id] + 1))
-				{
-					queue.Enqueue(next);
-				}
+				rings[next] = rings[id] + 1;
+				queue.Enqueue(next);
 			}
 		}
 

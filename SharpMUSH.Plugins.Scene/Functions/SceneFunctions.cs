@@ -249,12 +249,10 @@ public static class SceneFunctions
 	{
 		var args = parser.CurrentState.Arguments;
 		var count = 1;
-		if (args.TryGetValue("2", out var countArg) && countArg.Message.ToPlainText().Trim() is { Length: > 0 } countText)
+		if (args.TryGetValue("2", out var countArg) && countArg.Message.ToPlainText().Trim() is { Length: > 0 } countText
+			&& (!int.TryParse(countText, out count) || count < 1))
 		{
-			if (!int.TryParse(countText, out count) || count < 1)
-			{
-				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENESHARED"));
-			}
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENESHARED"));
 		}
 
 		if (await SceneLocate.PlayerAsync(parser, args["0"].Message.ToPlainText().Trim()) is not { } player
