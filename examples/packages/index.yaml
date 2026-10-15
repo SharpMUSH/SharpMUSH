@@ -255,8 +255,8 @@ packages:
   - path: gmcp-char/
     name: GMCP Char
     package: gmcp-char
-    version: 1.0.0
-    description: Char.Name, Char.Vitals and Char.Status from the attributes its settings name, sent again on ATTRIBUTE`CHANGE; flags those attributes watched (requires plus-help and plus-config)
+    version: 1.1.0
+    description: Char.Name, Char.Vitals and Char.Status from the attributes its settings name, sent again whenever one changes; watches those attributes with @attribute/watch (requires plus-help and plus-config)
   - path: mudlet-client/
     name: Mudlet Client
     package: mudlet-client

@@ -488,13 +488,23 @@ public class MudKitIntegrationTests
 	[Test]
 	public async Task GmcpChar_AWatchedStatSendsVitals_AndStatusFollowsItsSetting()
 	{
-		var before = await ClientAsync("GvBefore", await Dig("GvBeforeRoom"));
-		await God($"&HP {before.Number}=7");
+		// MP is already in the table with a flag of its own, and MAXMP is watched by someone else.
+		await God("@attribute/access MP=no_command");
+		await God("@attribute/access MAXMP=none");
+		await God("@attribute/watch MAXMP=WATCH`MAXMP`STAFF");
 		try
 		{
 			await ApplyAsync("gmcp-char");
-			await Assert.That(await Think($"hasflag({before.Number}/HP,watched)")).IsEqualTo("1")
-				.Because("AINSTALL watches the vitals a player already has");
+			var gmcpChar = await PackageObject("gmcp-char", "gmcp_char");
+			await Assert.That(await Think("attrwatch(HP)")).IsEqualTo("WATCH`HP WATCH`HP`*")
+				.Because("AINSTALL adds HP to the table and watches it with the default pattern");
+			await Assert.That(await Think("hasattr(#9,WATCH`HP`GMCPCHAR)")).IsEqualTo("1");
+			await Assert.That((await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetAttributeEntryQuery("MP")))!.DefaultFlags
+				.Select(flag => flag.ToLowerInvariant())).Contains("no_command").Because("an entry the game already has keeps its flags");
+			await Assert.That(await Think("attrwatch(MAXMP)")).IsEqualTo("WATCH`MAXMP`STAFF")
+				.Because("a watch with another pattern belongs to someone else");
+			await Assert.That(await Think("hasattr(#9,WATCH`MAXMP`GMCPCHAR)")).IsEqualTo("0");
+			await Assert.That(await Think($"get({gmcpChar}/DATA`FOREIGN)")).IsEqualTo("MAXMP");
 
 			var room = await Dig("GvRoom");
 			var player = await ClientAsync("GvPlayer", room, "Char 1");
@@ -509,7 +519,8 @@ public class MudKitIntegrationTests
 
 			await God("+config gmcp-char/status=LEVEL CLASS");
 			await WebAppFactoryArg.QueueBarrierAsync();
-			await Assert.That(await Think($"get({await PackageObject("gmcp-char", "gmcp_char")}/DATA`CONFIG`STATUS)")).IsEqualTo("LEVEL CLASS");
+			await Assert.That(await Think($"get({gmcpChar}/DATA`CONFIG`STATUS)")).IsEqualTo("LEVEL CLASS");
+			await Assert.That(await Think("attrwatch(LEVEL)")).IsEqualTo("WATCH`LEVEL WATCH`LEVEL`*");
 			await God($"&CLASS {player.Number}=Wanderer");
 			var status = await watch.SentWhile(() => God($"&LEVEL {player.Number}=3"), player.Handle);
 			var body = Single(status[player.Handle], "Char.Status");
@@ -525,20 +536,33 @@ public class MudKitIntegrationTests
 				.IsEquivalentTo(new[] { "Char.Name", "Char.Vitals", "Char.Status" });
 			await Assert.That(Single(connected[player.Handle], "Char.Name")["fullname"]!.GetValue<string>()).IsEqualTo(player.Name);
 
-			await Assert.That(await Think($"hasflag({player.Number}/MAXHP,watched)")).IsEqualTo("1")
-				.Because("a copy made while watch-new is on takes the watched default");
-			await God("+config gmcp-char/watch-new=off");
+			// Dropping LEVEL and CLASS from status: CLASS has a handler of someone else's, so it stays watched.
+			await God("&WATCH`CLASS`MINE #9=think");
+			await God("+config gmcp-char/status=");
 			await WebAppFactoryArg.QueueBarrierAsync();
-			await God($"&MP {player.Number}=5");
-			await Assert.That(await Think($"hasflag({player.Number}/MP,watched)")).IsEqualTo("0")
-				.Because("turning watch-new off takes back the defaults the package gave");
-			await Assert.That(await Think($"get({await PackageObject("gmcp-char", "gmcp_char")}/DATA`WATCHING)")).IsEqualTo(string.Empty);
+			await Assert.That(await Think("hasattr(#9,WATCH`LEVEL`GMCPCHAR) hasattr(#9,WATCH`CLASS`GMCPCHAR)")).IsEqualTo("0 0");
+			await Assert.That(await Think("attrwatch(LEVEL)")).IsEqualTo(string.Empty)
+				.Because("nothing else answers LEVEL's watch");
+			await Assert.That(await Think("attrwatch(CLASS)")).IsEqualTo("WATCH`CLASS WATCH`CLASS`*")
+				.Because("WATCH`CLASS`MINE still answers it");
+			await Assert.That(await Think($"get({gmcpChar}/DATA`WATCHING)")).IsEqualTo("HP MAXHP MP");
+
+			// Uninstalling runs no softcode; the next change to HP finds the package gone and cleans up.
+			await UninstallAsync("gmcp-char");
+			await God($"&HP {player.Number}=20");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(await Think("hasattr(#9,WATCH`HP`GMCPCHAR)")).IsEqualTo("0");
+			await Assert.That(await Think("attrwatch(HP)")).IsEqualTo(string.Empty);
 		}
 		finally
 		{
 			await UninstallAsync("gmcp-char");
+			await God("&WATCH`CLASS`MINE #9");
 			foreach (var attribute in new[] { "HP", "MAXHP", "MP", "MAXMP", "LEVEL", "CLASS" })
+			{
+				await God($"@wipe #9/WATCH`{attribute}`GMCPCHAR");
 				await God($"@attribute/delete {attribute}");
+			}
 		}
 	}
 

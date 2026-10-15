@@ -9,7 +9,7 @@ so a game takes only what it uses.
 | [`gmcp-room`](../gmcp-room/) | Room.Info, Room.Players, Room.AddPlayer, Room.RemovePlayer | `` OBJECT`MOVE ``, `` PLAYER`CONNECT ``, `` PLAYER`DISCONNECT `` |
 | [`gmcp-comm`](../gmcp-comm/) | Comm.Channel.Text, Comm.Channel.List | `` CHANNEL`MESSAGE ``, `` PAGE`MESSAGE ``, `` PLAYER`CHANNELS `` |
 | [`gmcp-items`](../gmcp-items/) | Char.Items.List, Add, Remove | `` OBJECT`MOVE ``, `` PLAYER`CONNECT ``, `` SOCKET`GMCP `` (Char.Items.Inv and Room) |
-| [`gmcp-char`](../gmcp-char/) | Char.Name, Char.Vitals, Char.Status | `` ATTRIBUTE`CHANGE `` on the attributes its settings name, `` PLAYER`CONNECT ``, `` OBJECT`RENAME `` |
+| [`gmcp-char`](../gmcp-char/) | Char.Name, Char.Vitals, Char.Status | `` WATCH`<attribute>`GMCPCHAR `` for the attributes its settings name, which it watches with `@attribute/watch`; `` PLAYER`CONNECT ``, `` OBJECT`RENAME `` |
 | [`mudlet-client`](../mudlet-client/) | Client.GUI, Client.Map, External.Discord.Info and Status; `+gui` | `` SOCKET`GMCP `` (Core.Hello, External.Discord.Hello and Get), `` PLAYER`CONNECT `` |
 
 ## How they fit together

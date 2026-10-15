@@ -1,6 +1,6 @@
 format: 1.7
 package: gmcp-char
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Char package: Char.Name, Char.Vitals for a client's gauges and Char.Status, from the attributes its settings name, each sent again the moment one of them changes."
 license: MIT
@@ -33,19 +33,33 @@ depends:
 # A game keeps its own stats; which attributes are vitals and which are status is the vitals and
 # status settings. An attribute the player does not have is left out.
 #
-# Nothing polls. The engine raises ATTRIBUTE`CHANGE only for an attribute flagged watched, and this
-# package flags the ones its settings name:
+# Nothing polls. @attribute/watch makes the engine run the event handler's WATCH`<attribute>`* attributes
+# whenever any copy of a watched attribute is set, cleared or wiped (help @attribute watch). For each
+# attribute its vitals and status settings name, the GMCP Char object (from AINSTALL, AUPDATE, and
+# ACONFIG when +config changes vitals or status):
 #
-#   - @attribute/access <attribute>=watched, so every copy made from then on is watched. That replaces
-#     the attribute's default flags, so the watch-new setting turns it off for a game whose stat
-#     attributes already carry flags of their own (help @attribute).
-#   - @set <player>/<attribute>=watched on every player who already has one, at install and whenever the
-#     vitals or status setting changes (the GMCP Char object's ACONFIG), and on each player as they
-#     connect, which catches a copy made before the attribute was watched.
+#   - adds it to the attribute table with @attribute/access <attribute>=none, only when attrwatch()
+#     says it is not in the table, so an entry the game already has keeps its flags;
+#   - watches it with @attribute/watch <attribute> when it is not watched, which is the default
+#     pattern WATCH`<attribute> WATCH`<attribute>`*;
+#   - copies its handler, FN`GMCPCHAR`HANDLER, to WATCH`<attribute>`GMCPCHAR on the event handler.
 #
-# The GMCP Char object is WIZARD because those two commands need it; its AINSTALL and ACONFIG run as
-# it. It runs nothing else. The help is on a separate plain object, because the +help librarian cannot
-# read a privileged object's topics.
+# An attribute already watched with some other pattern belongs to another package or to staff: it is
+# left as it is, gets no handler, and is listed in the GMCP Char object's DATA`FOREIGN.
+#
+# An attribute dropped from the settings loses its WATCH`<attribute>`GMCPCHAR, and stops being watched
+# only when it is watched with the default pattern and nothing else is left under WATCH`<attribute> on
+# the event handler. Its table entry stays.
+#
+# The handlers are made at run time, because their names come from the settings; that is also why
+# the attributes are not format 1.9 watch: entries, which would also make the package own each table
+# entry. Uninstalling runs no softcode, so the package manager cannot remove them. Instead each one
+# checks that the package is still there when it runs: if not, it removes itself and stops the watch
+# as above.
+#
+# The GMCP Char object is WIZARD because @attribute needs config.admin and the handlers go on the event
+# handler; its AINSTALL, AUPDATE and ACONFIG run as it. It runs nothing else. The help is on a separate
+# plain object, because the +help librarian cannot read a privileged object's topics.
 #
 # Every send is oob(..., supported): Mudlet lists Char; a client that listed nothing is sent everything.
 objects:
@@ -55,9 +69,6 @@ objects:
       # ── Settings ─────────────────────────────────────────────────────────
       FN`GMCPCHAR`SETTING: |-
         get({{gmcp_char}}/DATA`CONFIG`%0)
-      # The attributes that are vitals or status, together.
-      FN`GMCPCHAR`WATCHED: |-
-        setunion(u(me/FN`GMCPCHAR`SETTING,VITALS),u(me/FN`GMCPCHAR`SETTING,STATUS))
 
       # ── Who ──────────────────────────────────────────────────────────────
       # %0 an object: a connected player, the only thing anything is sent to.
@@ -99,27 +110,24 @@ objects:
       # %0 an attribute: which packages it is in, as FN`GMCPCHAR`SEND takes them.
       FN`GMCPCHAR`CHANGED: |-
         trim(if(match(u(me/FN`GMCPCHAR`SETTING,VITALS),%0),vitals) [if(match(u(me/FN`GMCPCHAR`SETTING,STATUS),%0),status)])
-      # %0 a player: the named attributes they have that are not watched yet.
-      FN`GMCPCHAR`UNWATCHED: |-
-        filterbool(me/FN`GMCPCHAR`NEEDSWATCH,u(me/FN`GMCPCHAR`WATCHED),,,%0)
-      # %0 an attribute, %1 a player.
-      FN`GMCPCHAR`NEEDSWATCH: |-
-        cand(hasattr(%1,%0),not(hasflag(%1/%0,watched)))
 
       # ── The handlers ─────────────────────────────────────────────────────
-      # attribute is the full name in upper case. A thing's stats have no client to go to.
-      ATTRIBUTE`CHANGE`GMCPCHAR: |-
-        @assert u(me/FN`GMCPCHAR`VIEWER,%<objid>); @assert strlen(setr(gmcpchar_which,u(me/FN`GMCPCHAR`CHANGED,%<attribute>))); think u(me/FN`GMCPCHAR`SEND,%<objid>,%<objid>,%q<gmcpchar_which>)
-      # A new connection is sent all three on its own descriptor, and any stat the player has that is not
-      # watched yet is watched from now on.
+      # What the GMCP Char object copies to WATCH`<attribute>`GMCPCHAR for each attribute it watches. A
+      # watch handler gets %0 the object, %1 the attribute's full name in upper case. A thing's stats have
+      # no client to go to. If the package has been uninstalled (FN`GMCPCHAR`SEND is gone), it removes
+      # itself, and stops the watch when it is the default pattern and nothing else is left under
+      # WATCH`<attribute>.
+      FN`GMCPCHAR`HANDLER: |-
+        @assert hasattr(me,FN`GMCPCHAR`SEND)={@wipe me/WATCH`%1`GMCPCHAR; @assert not(comp(attrwatch(%1),WATCH`%1 WATCH`%1`*)); @assert not(words(iter(lattr(me/WATCH`%1) [lattr(me/WATCH`%1`*)],if(strlen(get(me/%i0)),%i0)))); @attribute/watch %1=}; @assert u(me/FN`GMCPCHAR`VIEWER,%0); @assert strlen(setr(gmcpchar_which,u(me/FN`GMCPCHAR`CHANGED,%1))); think u(me/FN`GMCPCHAR`SEND,%0,%0,%q<gmcpchar_which>)
+      # A new connection is sent all three on its own descriptor.
       PLAYER`CONNECT`GMCPCHAR: |-
-        think u(me/FN`GMCPCHAR`SEND,%<descriptor>,%<objid>,name vitals status); @dolist/inline u(me/FN`GMCPCHAR`UNWATCHED,%<objid>)={@set %<objid>/##=watched}
+        think u(me/FN`GMCPCHAR`SEND,%<descriptor>,%<objid>,name vitals status)
       # A new name is a new Char.Name, and Char.Status carries it too.
       OBJECT`RENAME`GMCPCHAR: |-
         @assert u(me/FN`GMCPCHAR`VIEWER,%<objid>); think u(me/FN`GMCPCHAR`SEND,%<objid>,%<objid>,name status)
 
   # ---- settings, and the watching -------------------------------------------
-  # WIZARD for @attribute/access and for @set on players it does not own. AINSTALL and AUPDATE watch the
+  # WIZARD for @attribute and for the handlers on the event handler. AINSTALL and AUPDATE watch the
   # named attributes when the package is installed or upgraded, ACONFIG when the vitals or status
   # setting changes.
   - ref: gmcp_char
@@ -173,42 +181,46 @@ objects:
         Full name attribute
       DATA`CONFIG`FULLNAME`EXAMPLE: |-
         TITLE
-      DATA`CONFIG`WATCH-NEW: |-
-        1
-      DATA`CONFIG`WATCH-NEW`TYPE: |-
-        boolean
-      DATA`CONFIG`WATCH-NEW`DEFAULT: |-
-        1
-      DATA`CONFIG`WATCH-NEW`DESCRIPTION: |-
-        Whether each vitals and status attribute is made watched wherever it is created, with @attribute/access, which replaces its default flags. Off, a copy is watched when its player connects, and the defaults this package gave go back to none.
-      DATA`CONFIG`WATCH-NEW`LABEL: |-
-        Watch new copies
-      DATA`CONFIG`WATCH-NEW`EXAMPLE: |-
-        off
       # ── Watching ──────────────────────────────────────────────────────────
-      # The vitals and status attributes, together.
+      # DATA`WATCHING: the attributes this package has a WATCH`<attribute>`GMCPCHAR handler for.
+      # DATA`FOREIGN: those it left alone because they are watched with another pattern.
+      FUN`HANDLER: |-
+        config(event_handler)
+      # The vitals and status attributes, together, upper case.
       FUN`ATTRIBUTES: |-
-        setunion(v(DATA`CONFIG`VITALS),v(DATA`CONFIG`STATUS))
-      # The attributes that should carry a watched default: none while watch-new is off.
-      FUN`WANTED: |-
-        if(v(DATA`CONFIG`WATCH-NEW),u(%!/FUN`ATTRIBUTES))
-      # Defaults this package gave earlier that are no longer wanted.
-      FUN`UNWANTED: |-
-        setdiff(v(DATA`WATCHING),u(%!/FUN`WANTED))
-      # DATA`WATCHING records the defaults this package gave, so turning watch-new off, or dropping an
-      # attribute from vitals or status, puts each one back to no default flags.
+        ucstr(setunion(v(DATA`CONFIG`VITALS),v(DATA`CONFIG`STATUS)))
+      # %0 an attribute: the pattern @attribute/watch gives it by default.
+      FUN`DEFAULT: |-
+        WATCH`%0 WATCH`%0`*
+      # %0 an attribute: 1 when it is watched with the default pattern.
+      FUN`DEFAULTWATCH: |-
+        not(comp(attrwatch(%0),u(%!/FUN`DEFAULT,%0)))
+      # %0 an attribute: 1 when it is watched with a pattern of someone else's.
+      FUN`FOREIGNWATCH: |-
+        cand(strlen(setr(gmcpchar_watch,attrwatch(%0))),not(strmatch(%q<gmcpchar_watch>,#-1*)),not(u(%!/FUN`DEFAULTWATCH,%0)))
+      # %0 an attribute: 1 when the event handler has its WATCH`<attribute>`GMCPCHAR.
+      FUN`HANDLED: |-
+        hasattr(u(%!/FUN`HANDLER),WATCH`%0`GMCPCHAR)
+      # %0 an attribute: the event handler's attributes with a value that its default pattern runs.
+      FUN`LEFT: |-
+        iter(lattr(setr(gmcpchar_eh,u(%!/FUN`HANDLER))/WATCH`%0) [lattr(%q<gmcpchar_eh>/WATCH`%0`*)],if(strlen(get(%q<gmcpchar_eh>/%i0)),%i0))
       INC`WATCH: |-
-        @dolist/inline u(%!/FUN`UNWANTED)=@attribute/access ##=none; @dolist/inline u(%!/FUN`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##; &DATA`WATCHING %!=u(%!/FUN`WANTED)
-      # %<attribute> one attribute: watched wherever it is made from now on, and on every player who has it.
+        @dolist/inline setdiff(v(DATA`WATCHING),u(%!/FUN`ATTRIBUTES))=@include/args %!/INC`UNWATCH=attribute,##; @dolist/inline u(%!/FUN`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##,by,%<by>; &DATA`WATCHING %!=filterbool(%!/FUN`HANDLED,u(%!/FUN`ATTRIBUTES)); &DATA`FOREIGN %!=filterbool(%!/FUN`FOREIGNWATCH,u(%!/FUN`ATTRIBUTES))
+      # %<attribute> one attribute: in the table, watched, and handled, unless someone else watches it.
+      # %<by> whoever changed the setting, told when it is left alone; empty at install.
       INC`WATCH`ATTRIBUTE: |-
-        @if v(DATA`CONFIG`WATCH-NEW)={@attribute/access %<attribute>=watched}; @dolist/inline lsearch(all,type,player)={@if cand(hasattr(##,%<attribute>),not(hasflag(##/%<attribute>,watched)))={@set ##/%<attribute>=watched}}
+        @if strmatch(attrwatch(%<attribute>),#-1*)={@attribute/access %<attribute>=none}; @if not(strlen(attrwatch(%<attribute>)))={@attribute/watch %<attribute>}; @if u(%!/FUN`DEFAULTWATCH,%<attribute>)={@cpattr [u(%!/FUN`HANDLER)]/FN`GMCPCHAR`HANDLER=[u(%!/FUN`HANDLER)]/WATCH`%<attribute>`GMCPCHAR}, {@if hasattr(u(%!/FUN`HANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe [u(%!/FUN`HANDLER)]/WATCH`%<attribute>`GMCPCHAR}; @pemit strfirstof(%<by>,%#)=GMCP Char: %<attribute> is already watched with [attrwatch(%<attribute>)], so it is left as it is and its changes are not sent.}
+      # %<attribute> one attribute no longer named: its handler goes (and the empty WATCH`<attribute> left
+      # above it), and its watch too if it is the default one and nothing else is left that it runs.
+      INC`UNWATCH: |-
+        @if hasattr(u(%!/FUN`HANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe [u(%!/FUN`HANDLER)]/WATCH`%<attribute>`GMCPCHAR}; @if cand(hasattr(u(%!/FUN`HANDLER),WATCH`%<attribute>),not(hasattrval(u(%!/FUN`HANDLER),WATCH`%<attribute>)),not(words(lattr([u(%!/FUN`HANDLER)]/WATCH`%<attribute>`*))))={@wipe [u(%!/FUN`HANDLER)]/WATCH`%<attribute>}; @if cand(u(%!/FUN`DEFAULTWATCH,%<attribute>),not(words(u(%!/FUN`LEFT,%<attribute>))))={@attribute/watch %<attribute>=}
       AINSTALL: |-
         @include %!/INC`WATCH
       AUPDATE: |-
         @include %!/INC`WATCH
       # +config triggers this after a change, with %<setting>.
       ACONFIG: |-
-        @assert match(vitals status watch-new,%<setting>); @include %!/INC`WATCH
+        @assert match(vitals status,%<setting>); @include %!/INC`WATCH
 
   - ref: gmcp_char_help
     type: thing
@@ -234,7 +246,7 @@ objects:
 
         ## For staff
 
-        The engine tells this package about a change only for an attribute flagged `watched`. The package flags the attributes its settings name, on every player who has one and on each player as they connect, and with `@attribute/access` on every copy made from then on. The `watch-new` setting turns the last off for attributes whose default flags matter: see `help @attribute`.
+        The package hears about a change through `@attribute/watch`: each vitals and status attribute is watched (added to the attribute table first when it is not there), and ``WATCH`<attribute>`GMCPCHAR`` on the event handler sends the update. An attribute already watched with another pattern is left alone and not sent; the GMCP Char object's ``DATA`FOREIGN`` lists them. See `help @attribute watch`.
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"

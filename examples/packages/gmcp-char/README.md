@@ -19,32 +19,44 @@ Every send is `oob(..., supported)`. Mudlet lists `Char`.
 
 ## No polling: watched attributes
 
-The engine raises `` ATTRIBUTE`CHANGE `` only for an attribute flagged `watched`
-(`help attribute flags`), so an attribute nobody watches costs nothing. The package flags the
-attributes its `vitals` and `status` settings name:
+Nothing polls. `@attribute/watch` makes the engine run the event handler's `` WATCH`<attribute>`* ``
+attributes whenever any copy of a watched attribute is set, cleared or wiped (`help @attribute watch`),
+so an attribute nobody watches costs nothing. For each attribute its `vitals` and `status` settings name,
+the package, at install, on an upgrade and whenever `+config` changes `vitals` or `status`:
 
-1. `@attribute/access <attribute>=watched`, so every copy made from then on is watched, when the
-   `watch-new` setting is on (the default). **This replaces the attribute's default flags.** A game
-   whose stat attributes are already standard attributes with flags of their own turns `watch-new` off,
-   or writes `@attribute/access HP=watched <its flags>` itself.
-   Turning `watch-new` off, or dropping an attribute from `vitals` or `status`, puts the defaults
-   the package gave back to none.
-2. `@set <player>/<attribute>=watched` on every player who already has one, from `AINSTALL`, `AUPDATE`,
-   and `ACONFIG` when `vitals`, `status` or `watch-new` changes (`+config` triggers it).
-3. The same on each player as they connect (`` PLAYER`CONNECT`GMCPCHAR ``), which catches a copy made
-   while the attribute was not watched.
+1. Adds it to the attribute table with `@attribute/access <attribute>=none`, but only when `attrwatch()`
+   says it is not there. An entry the game already has keeps its flags.
+2. Watches it with `@attribute/watch <attribute>` when it is not watched yet, which gives it the default
+   pattern `` WATCH`<attribute> WATCH`<attribute>`* ``.
+3. Puts its handler, `` WATCH`<attribute>`GMCPCHAR ``, on the event handler. It sends `Char.Vitals` or
+   `Char.Status` to the player whose attribute changed.
 
-To watch one by hand: `@set <player>/HP=watched`. Uninstalling leaves the flags; they cost nothing
-without a handler.
+An attribute that is already watched with another pattern belongs to another package or to staff. The
+package leaves it as it is and gives it no handler, so its changes are not sent; whoever changed the
+setting is told, and the GMCP Char object's `` DATA`FOREIGN `` lists it.
 
-The **GMCP Char** object is `WIZARD` because `@attribute/access` and `@set` on other players need it,
-and it runs nothing but those. Its help is on the separate **GMCP Char Help** object, because the
-`+help` librarian cannot read a privileged object's topics.
+An attribute dropped from `vitals` or `status` loses its `` WATCH`<attribute>`GMCPCHAR ``. It stops being
+watched (`@attribute/watch <attribute>=`) only when its pattern is still the default and nothing else
+is left under `` WATCH`<attribute> `` on the event handler, so another package's `` WATCH`HP`GAUGE `` keeps
+HP watched. Its table entry stays.
+
+**Uninstalling** runs no softcode, so the package manager cannot remove the handlers it made. Each
+handler checks that the package is still installed when it runs: if not, it removes itself and stops
+the watch the same way. Until an attribute next changes, its handler sits there doing nothing.
+
+The handlers are made at run time because their names come from the settings. That is also why the
+manifest has no format 1.9 `watch:` entries: those would name the attributes in the manifest, and
+would make the package own each table entry, so uninstalling would delete a game's `HP` entry.
+
+The **GMCP Char** object is `WIZARD` because `@attribute` needs config.admin and the handlers go on the
+event handler, and it runs nothing but those. Its help is on the separate **GMCP Char Help** object,
+because the `+help` librarian cannot read a privileged object's topics.
 
 ## Events
 
-On the configured event handler: `` ATTRIBUTE`CHANGE`GMCPCHAR ``, `` PLAYER`CONNECT`GMCPCHAR `` and
-`` OBJECT`RENAME`GMCPCHAR ``. The payloads are `` FN`GMCPCHAR`* `` on the event handler.
+On the configured event handler: `` PLAYER`CONNECT`GMCPCHAR `` and `` OBJECT`RENAME`GMCPCHAR ``, and one
+`` WATCH`<attribute>`GMCPCHAR `` for each attribute it watches, copied from `` FN`GMCPCHAR`HANDLER ``. The
+payloads are `` FN`GMCPCHAR`* `` on the event handler.
 
 ## Settings: `+config gmcp-char`
 
@@ -53,4 +65,3 @@ On the configured event handler: `` ATTRIBUTE`CHANGE`GMCPCHAR ``, `` PLAYER`CONN
 | `vitals` | `HP MAXHP MP MAXMP` | The attributes sent as `Char.Vitals` |
 | `status` | (none) | The attributes sent as `Char.Status`, such as `LEVEL CLASS` |
 | `fullname` | `FULLNAME` | The attribute holding the name shown in full |
-| `watch-new` | on | Whether `@attribute/access` watches every new copy |
