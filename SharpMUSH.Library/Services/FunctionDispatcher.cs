@@ -145,7 +145,7 @@ public static class FunctionDispatcher
 						using (InvocationClock.PauseRunning())
 							result = await localized.FunctionParse(pair.Value.Message) ?? CallState.Empty;
 						return flags.HasFlag(FunctionFlags.StripAnsi)
-							? result with { Message = MarkupText.Plain(result.Message.ToPlainText()) } : result;
+							? result with { Message = result.Message.WithoutVisualMarkup() } : result;
 					}
 					return pair.Value with
 					{

@@ -220,7 +220,7 @@ def generate(grammar_name):
 		w(f'bracketPattern__{n}: OBRACK evaluationString__{n}? CBRACK;')
 		w(f'regexpCapture__{n}: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__{n}? CCARET?;')
 		w(f'validSubstitution__{n}: complexSubstitutionSymbol__{n} | substitutionSymbol;')
-		w(f'complexSubstitutionSymbol__{n}: (REG_STARTCARET explicitEvaluationString__{n} CCARET | ARG_STARTCARET explicitEvaluationString__{n} CCARET | ATTR_STARTCARET explicitEvaluationString__{n} CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST | ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);')
+		w(f'complexSubstitutionSymbol__{n}: (REG_STARTCARET explicitEvaluationString__{n} CCARET | ARG_STARTCARET explicitEvaluationString__{n} CCARET | ATTR_STARTCARET explicitEvaluationString__{n} CCARET | DELIM_STARTCARET explicitEvaluationString__{n} CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST | ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);')
 		# With paren_groups, a '(' or a name's '(' that starts no call opens a group instead of being text.
 		w(f'genericText__{n}: beginGenericText__{n}' + ('' if c.G else ' | FUNCHAR') + ';')
 		tokens = list(text_tokens(c)) + ([] if c.G else ['OPAREN'])
@@ -307,7 +307,7 @@ ACCESSORS = {
 	'bracketPattern': [('OBRACK', False), ('evaluationString', False), ('CBRACK', False)],
 	'function': [('FUNCHAR', False), ('evaluationString', True), ('COMMAWS', True), ('CPAREN', False)],
 	'validSubstitution': [('complexSubstitutionSymbol', False), ('substitutionSymbol', False)],
-	'complexSubstitutionSymbol': [('REG_STARTCARET', False), ('ARG_STARTCARET', False), ('ATTR_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False),
+	'complexSubstitutionSymbol': [('REG_STARTCARET', False), ('ARG_STARTCARET', False), ('ATTR_STARTCARET', False), ('DELIM_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False),
 		('REG_NUM', False), ('REG_ALPHA', False), ('ITEXT_NUM', False), ('ITEXT_LAST', False), ('ITEXT_POS_NUM', False), ('ITEXT_POS_LAST', False), ('ARG_DASH_NUM', False), ('DTEXT_NUM', False),
 		('DTEXT_LAST', False), ('STEXT_NUM', False),
 		('STEXT_LAST', False), ('VWX', False)],
