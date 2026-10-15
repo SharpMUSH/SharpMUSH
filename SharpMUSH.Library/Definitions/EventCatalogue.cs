@@ -213,6 +213,9 @@ public static class EventCatalogue
 		new("SOCKET`GMCP", Args(("descriptor", N), ("package", T), ("message", J), ("player", O)),
 			"Whoever is logged in on the descriptor, or God (#1) before login",
 			"A client sent a GMCP package.", EventPrivacy.Private, true, Sharp),
+		new(SharpEvents.SocketTimeZone, Args(("descriptor", N), ("zone", T), ("player", O)),
+			"Whoever is logged in on the descriptor, or God (#1) before login",
+			"A client reported its time zone.", EventPrivacy.Private, false, Sharp),
 
 		new("HTTP`BLOCKED", Args(("descriptor", N), ("ip", Ip), ("method", W), ("path", T), ("reason", T)), Nobody,
 			"A sitelock refused an HTTP request.", EventPrivacy.Private, false, Penn),

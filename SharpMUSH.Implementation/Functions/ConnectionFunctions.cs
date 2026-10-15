@@ -712,6 +712,27 @@ public partial class Functions
 			: new CallState("-1");
 	}
 
+	/// <summary>
+	/// The time zone the connection's client reported (NEW-ENVIRON <c>TZ</c>, or the web portal's browser zone), empty
+	/// when it reported none. A SharpMUSH function, failing as <c>ssl()</c> does: no descriptor is
+	/// <c>#-1 NOT CONNECTED</c>, one the caller may not read a permission error.
+	/// </summary>
+	[SharpFunction(Name = "clientzone", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	public async ValueTask<CallState> ClientZone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var descriptor = await LookupDescriptorAsync(parser, executor);
+
+		if (descriptor is null)
+		{
+			return new CallState(ErrorMessages.Returns.NotConnected);
+		}
+
+		return await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
+			? new CallState(descriptor.Metadata.GetValueOrDefault(ConnectionTimeZone.Key, string.Empty))
+			: new CallState(ErrorMessages.Returns.PermissionDenied);
+	}
+
 	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> SecureSocketLayer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

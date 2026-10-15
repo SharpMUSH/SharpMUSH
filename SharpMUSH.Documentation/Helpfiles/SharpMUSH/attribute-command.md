@@ -14,6 +14,11 @@
       "id": "registry-permissions",
       "heading": "Registry permissions",
       "lookup": "@attribute registry permissions"
+    },
+    {
+      "id": "attribute-packages",
+      "heading": "Attribute entries from packages",
+      "lookup": "@attribute packages"
     }
   ],
   "redirects": {
@@ -66,6 +71,23 @@ Only Wizards can modify the attribute table.
 @attribute/limit score=^\\d+$    <-- @score can only contain digits. (Remember, Penn's parser eats a \)
 ```
 
+## Attribute entries from packages
+
+A package can add standard attributes to the table itself, in the `attributes:` block of its manifest (format 1.5), instead of running `@attribute` from its install code. Each entry names the attribute and gives what `@attribute` would set: default `flags`, and a `limit` or an `enum` (with a `delimiter` when a choice holds a space).
+
+Example, in a package's manifest:
+```
+format: 1.5
+attributes:
+  JOB`STATUS:
+    flags: [no_command]
+    enum: [new, staff, held, closed]
+```
+Output: once the package is installed, ``@attribute JOB`STATUS`` shows the default flag no_command and the choices new staff held closed, and ``&JOB`STATUS me=open`` is refused because open is not one of them.
+
+An entry the game already has is the game's: the package uses it and never changes it, and if its limit or enum differs from the manifest's, the package cannot be installed until the two agree. An entry the package created follows it: an upgrade changes only what the new version changed, so your own `@attribute/access` on it survives, and uninstalling the package deletes the entry. Values already stored on objects stay.
+
+Default flags reach new copies of the attribute only. An entry with `retroactive: true` also gives them to every copy already on an object, like `@attribute/access/retroactive` but keeping each copy's owner; the portal's review screen shows how many copies change and asks you to confirm before it applies.
 
 ::: seealso
 - [attributes]

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
@@ -34,7 +35,7 @@ public class AccountClaimsCacheTests
 		var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
 
 		var svc = new AccountClaimsService(capabilities, cache,
-			new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
+			new AccountClaimsInvalidator(cache, new ObjectVersions()), NullLogger<AccountClaimsService>.Instance);
 
 		return (svc, accountSvc, capabilities);
 	}
