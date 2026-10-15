@@ -89,6 +89,11 @@ public static partial class Substitutions
 			// %m is TinyMUX's name for the same thing; PennMUSH has no %m and prints m.
 			"C" or "c" or "M" or "m" => CommandBeforeEvaluation(parser),
 			"U" or "u" => CommandAfterEvaluation(parser),
+			// %=: the attribute being evaluated, as #<dbref>/<name> (PennMUSH's pe_info->attrname); empty
+			// outside one. %=<name> is TinyMUX's attribute substitution, read before it gets here.
+			"=" => parser.CurrentState.CurrentEvaluation is { } evaluation
+				? $"#{evaluation.DB.Number}/{evaluation.Name}"
+				: string.Empty,
 			// %>: the logical output of the last command run in this queue entry (help command output).
 			// PennMUSH has no %> and prints a literal >.
 			">" => parser.CurrentState.PipedOutput,

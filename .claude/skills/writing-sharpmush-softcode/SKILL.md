@@ -284,3 +284,5 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | `width(%#)` passed to a layout function | Leave it empty; each reader gets their own width |
 | `{{"delim":"\n"}}` inline | `json(object,delim,json(string,%r))` |
 | One attribute that branches on every line it gets | A pattern and attribute per key (`` q,INPUT`READER`QUIT,*,INPUT`READER`KEY ``); the exit attribute runs after the session has ended, and also at the timeout (`r(reason,args)`) |
+| `setunion(<a>,<b>, ,\|)` (any set function) with the separator fourth, as in TinyMUX | The fourth argument is a sort type, as in PennMUSH, so `\|` is read as one. Leave the sort type empty and give the separator fifth: `setunion(<a>,<b>, ,,\|)`. TinyMUX's order, separator then sort type, works when both are given: `setunion(<a>,<b>, ,\|,a)` |
+| `%m` or `%=<name>` in PennMUSH code, meant as `m` or as `%=` followed by text | `%m` is the running command and `%=<name>` the executor's attribute (or `%=<0>` an argument), as in TinyMUX. `%=` on its own is still the attribute being evaluated. Write `m`, or `[%=]<name>` |

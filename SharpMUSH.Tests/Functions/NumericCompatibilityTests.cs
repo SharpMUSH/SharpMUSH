@@ -134,7 +134,7 @@ public class NumericCompatibilityTests
 	[Arguments(false, false, "wrap(abc,x)", "#-1 ARGUMENT MUST BE INTEGER")]
 	[Arguments(false, false, "wrap(abc def,)", "abc def")]
 	[Arguments(false, true, "wrap(abc def,)", "#-1 WIDTH TOO SMALL")]
-	[Arguments(false, false, "wrap(abc def,3,0)", "abc\ndef")]
+	[Arguments(false, false, "wrap(abc def,3,0)", "ab-\nc\ndef")]
 	// timestring: a pad is_uinteger refuses is e_uints (src/funtime.c:494-497).
 	[Arguments(false, false, "timestring(5,x)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
 	[Arguments(false, false, "timestring(5,-1)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]

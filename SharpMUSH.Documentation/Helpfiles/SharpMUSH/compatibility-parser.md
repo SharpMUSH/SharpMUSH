@@ -421,8 +421,9 @@ think %m|%c|think %m|%c
 **PennMUSH** evaluates `%=` to the attribute being evaluated, such as `#1/FN`, and `<name>` after it
 is text, so `%=<desc>` in an attribute is `#1/FN<desc>`.<br>
 **SharpMUSH** reads `%=<name>` as TinyMUX does: the executor's attribute `<name>`, as `v(<name>)`
-would, or, when `<name>` is a number, that argument, as `%<name>` would. `%=` on its own is not
-affected.<br>
+would, or, when `<name>` is a number, that argument, as `%<name>` would. `%=` on its own is still
+PennMUSH's: the attribute being evaluated, such as `#1/FN`, and empty outside one. Inside a
+`#lambda` it names the attribute around the lambda, where PennMUSH gives `#LAMBDA/<code>`.<br>
 **Why.** TinyMUX code that reads attributes, and arguments past `%9`, this way runs unchanged.<br>
 **Workaround.** Use `v(<name>)` for an attribute, which means the same on both servers, and
 `%<name>` for a numbered argument. Importing a PennMUSH database names every attribute that uses

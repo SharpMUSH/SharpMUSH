@@ -88,7 +88,16 @@ public class MuxCompatibilityTests
 		await Evaluate(Mux.None, $"set(me,{name}:hello)");
 
 		await Assert.That(await Evaluate(Mux.None, $"%=<{name}>|%=<{name.ToLowerInvariant()}>|%=<NO_SUCH_{name}>|%=x"))
-			.IsEqualTo("hello|hello||=x");
+			.IsEqualTo("hello|hello||x");
+	}
+
+	[Test]
+	public async Task PercentEqualsIsTheAttributeBeingEvaluated()
+	{
+		var thing = TestIsolationHelpers.GenerateUniqueName("PennEquals");
+		await Assert.That(await Evaluate(Mux.None,
+				$"[setq(0,create({thing}))][attrib_set(%q0/FN`SUB,lit(%=))][strmatch(u(%q0/FN`SUB),#*/FN`SUB)]|[eq(after(before(u(%q0/FN`SUB),/),#),after(num(%q0),#))]|%="))
+			.IsEqualTo("1|1|");
 	}
 
 	[Test]

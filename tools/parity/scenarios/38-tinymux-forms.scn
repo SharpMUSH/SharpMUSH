@@ -25,3 +25,15 @@ think %=<muxsub>
 ::case mux.options-off  the mux_ options are off by default and SharpMUSH answers as PennMUSH
 think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]|[ljust(abcdef,3)]|[center(abcdefg,3)]|[sort(b A a B)]|[comp(a,B)]
 think [gt(words(list(functions)),100)]
+
+::case penn.wrap  PennMUSH's wrap(): a word with no space inside the width is cut one short and hyphenated, and a word that ends exactly at the width moves to the next line
+think wrap(abc def,3,,|)
+think wrap(aa abcdefghijkl bb,6,,|)
+think wrap(aaaa bbbbb ccc,10,,|)
+think wrap(a%rb%r%rc,5,,|)
+
+::case penn.percent-equals  %= is the attribute being evaluated, as #<dbref>/<name>, and empty outside one
+&PEQ me=%=
+think u(me/PEQ)
+think [%=]x
+&PEQ me=

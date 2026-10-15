@@ -2037,26 +2037,121 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Word-wraps <paramref name="text"/> to <paramref name="width"/> display cells, with a first
-	/// line of <paramref name="firstLineWidth"/> cells.
+	/// PennMUSH's <c>wrap()</c> (fun_wrap and wraplen, src/funstr.c), measured in display cells: the first
+	/// line is <paramref name="firstLineWidth"/> cells and the rest <paramref name="width"/>.
 	/// </summary>
 	/// <remarks>
-	/// The two widths are done as two passes rather than one, because the first line is wrapped
-	/// against a width the rest of the text never sees. The break between them consumed exactly
-	/// one space, which is what the second pass has to step over to pick up where the first
-	/// stopped.
+	/// A line runs to a line break, or to the end of the text when that fits; otherwise it ends at the
+	/// last space inside the width, so a word that ends exactly at the width, with more text after it,
+	/// goes to the next line. One character after a line, the space or the line break, is dropped. A
+	/// word with no space inside the width is cut one cell short and given a hyphen, as PennMUSH does.
+	/// Wide characters (CJK) are not hyphenated: a run of them is cut at the width.
 	/// </remarks>
-	private static MarkupText[] WrapLines(MarkupText text, int width, int firstLineWidth)
+	private static List<MarkupText> WrapLines(MarkupText text, int width, int firstLineWidth)
 	{
-		if (firstLineWidth == width) return text.WrapLines(width, WrapMode.Word);
+		var plain = text.Text;
+		var lines = new List<MarkupText>();
+		var position = 0;
+		while (position < plain.Length)
+		{
+			var lineWidth = lines.Count == 0 ? firstLineWidth : width;
+			if (LineLength(text, position, lineWidth) is { } length)
+			{
+				lines.Add(text.Substring(position, length));
+				position += length;
+				if (position < plain.Length && plain[position] == '\r')
+				{
+					position++;
+				}
 
-		var head = text.WrapLines(firstLineWidth, WrapMode.Word);
-		if (head.Length <= 1) return head;
+				position++;
+				continue;
+			}
 
-		var consumed = head[0].Length;
-		if (consumed < text.Length && text.Text[consumed] == ' ') consumed++;
+			var (cut, hyphenate) = CutWord(text, position, lineWidth);
+			lines.Add(hyphenate ? MarkupText.Concat([text.Substring(position, cut), MarkupText.Plain("-")]) : text.Substring(position, cut));
+			position += cut;
+		}
 
-		return [head[0], .. text.Substring(consumed).WrapLines(width, WrapMode.Word)];
+		return lines;
+	}
+
+	/// <summary>
+	/// PennMUSH's wraplen: the length of the line starting at <paramref name="start"/>, or null when
+	/// it holds no space to break at and its word has to be cut.
+	/// </summary>
+	private static int? LineLength(MarkupText text, int start, int width)
+	{
+		var plain = text.Text;
+		int? lastSpace = null;
+		var cells = 0;
+		var index = start;
+		while (index < plain.Length)
+		{
+			if (plain[index] is '\n' or '\r')
+			{
+				return index - start;
+			}
+
+			var (length, cellWidth) = Grapheme(text, index);
+			if (cells + cellWidth > width)
+			{
+				return lastSpace;
+			}
+
+			if (plain[index] == ' ')
+			{
+				lastSpace = index - start;
+			}
+
+			cells += cellWidth;
+			index += length;
+		}
+
+		return index - start;
+	}
+
+	/// <summary>
+	/// Where to cut a word that does not fit on its line: one cell short of the width, for the hyphen,
+	/// when the characters either side of the cut are narrow; at the width, without one, otherwise.
+	/// Always at least one character, so a line always moves on.
+	/// </summary>
+	private static (int Length, bool Hyphenate) CutWord(MarkupText text, int start, int width)
+	{
+		var (narrowCut, lastWidth) = TakeCells(text, start, width - 1);
+		var hyphenate = narrowCut > 0
+			&& lastWidth == 1
+			&& start + narrowCut < text.Text.Length
+			&& Grapheme(text, start + narrowCut).Width == 1;
+		return hyphenate ? (narrowCut, true) : (Math.Max(1, TakeCells(text, start, width).Length), false);
+	}
+
+	private static (int Length, int LastWidth) TakeCells(MarkupText text, int start, int cells)
+	{
+		var index = start;
+		var used = 0;
+		var lastWidth = 0;
+		while (index < text.Text.Length)
+		{
+			var (length, cellWidth) = Grapheme(text, index);
+			if (used + cellWidth > cells)
+			{
+				break;
+			}
+
+			used += cellWidth;
+			lastWidth = cellWidth;
+			index += length;
+		}
+
+		return (index - start, lastWidth);
+	}
+
+	/// <summary>The text element at <paramref name="index"/>: its length and the cells it takes.</summary>
+	private static (int Length, int Width) Grapheme(MarkupText text, int index)
+	{
+		var length = StringInfo.GetNextTextElementLength(text.Text, index);
+		return (length, text.Substring(index, length).GetDisplayWidth(ControlCharacterWidth.One));
 	}
 
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
