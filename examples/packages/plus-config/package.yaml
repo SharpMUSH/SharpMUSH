@@ -203,10 +203,11 @@ objects:
         value: |-
           if(cand(u(%!/FUN`NAME`VALID,%0),isdbref(setr(system_found,u(%!/SYSTEM`%0)))),num(%q<system_found>))
         flags: [funsyntax]
-      # %0 a system: 1 when a package wrote its leaf. An installed {{ref}} is a recall of PM`REFS.
+      # %0 a system: 1 when a package wrote its leaf. An installed {{ref}} is a recall of PM`REFS`<ref>, or of
+      # PM`ATTACHED_REFS`<package>`<ref> on an object the package attaches to, as the registry is.
       FUN`SYSTEM`PACKAGED:
         value: |-
-          strmatch(get(%!/SYSTEM`%0),*PM`REFS*)
+          strmatch(get(%!/SYSTEM`%0),*PM`*REFS`*)
         flags: [funsyntax]
       # %0 an object: the line describing its system.
       FUN`SYSTEM`DESCRIPTION:
@@ -424,7 +425,7 @@ objects:
         flags: [funsyntax]
       FUN`TYPE`LIST`ALLOWED:
         value: |-
-          if(strlen(trim(setr(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1)))),Items separated by %q<list_delim>,Words)[if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),%, from [itemize(%q<list_choices>,%q<list_delim>)])][if(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, each matching %q<list_pattern>)][if(cor(strlen(setr(list_min,u(%!/FUN`SETTING`META,%0,%1,MIN))),strlen(setr(list_max,u(%!/FUN`SETTING`META,%0,%1,MAX)))),%,[u(%!/FUN`DISPLAY`RANGE,,%q<list_min>,%q<list_max>)] items)]
+          if(strlen(trim(setr(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1)))),Items separated by %q<list_delim>,Words)[if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),%, from [itemize(%q<list_choices>,%q<list_delim>)])][if(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, each matching %q<list_pattern>)][setq(list_min,u(%!/FUN`SETTING`META,%0,%1,MIN),list_max,u(%!/FUN`SETTING`META,%0,%1,MAX))][if(cor(strlen(%q<list_min>),strlen(%q<list_max>)),%,[u(%!/FUN`DISPLAY`RANGE,,%q<list_min>,%q<list_max>)] [if(cand(xor(strlen(%q<list_min>),strlen(%q<list_max>)),eq(firstof(%q<list_max>,%q<list_min>),1)),item,items)])]
         flags: [funsyntax]
 
       # pattern: a regular expression the game can read.
