@@ -48,6 +48,7 @@ which games can add as a remote in the admin panel.
 | [`notifications/`](notifications/) + [`notifications-app/`](notifications-app/) | The rules behind push notifications: subscriptions to the ``PAGE`MESSAGE`` and ``MAIL`RECEIVED`` events on the event handler call `@push` when the player wants that kind, the same settings are a `+notify` command and a portal form, and other packages add a kind and send it with ``@trigger/args`` on ``API`SEND`` |
 | [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
 | [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
+| [`scene-availability/`](scene-availability/) | When characters are free: `+avail/busy` and `+avail/free` keep dates, ranges and repeating patterns (weekly, every 2 weeks, the 2nd Tuesday, until a date, with dates skipped) in the player's own zone, `+avail/find` lists the times a group is all free, and a ``FILTER`CARD`` on the Scene Logger shows who of a scheduled scene's cast is free at its time (requires scene and time) |
 
 ## The manifest: `package.yaml`
 

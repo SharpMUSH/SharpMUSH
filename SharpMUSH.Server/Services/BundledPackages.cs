@@ -136,6 +136,8 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it builds on scene and time, which a game chooses first.
+		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>
