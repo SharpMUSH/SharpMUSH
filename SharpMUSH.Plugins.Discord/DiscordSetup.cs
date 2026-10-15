@@ -31,6 +31,10 @@ public sealed record DiscordGatewayState(
 	int Guilds = 0,
 	string? Detail = null);
 
+/// <summary>A text channel the bot can see.</summary>
+/// <param name="Missing">The permissions a link uses there that the bot lacks, by the names Discord's settings use.</param>
+public sealed record DiscordTextChannel(ulong ChannelId, string Name, ulong GuildId, string GuildName, IReadOnlyList<string> Missing);
+
 /// <summary>One item of the admin page's checklist.</summary>
 /// <param name="Todo">What the admin does next, when the item is not done.</param>
 /// <param name="Link">Where they do it.</param>

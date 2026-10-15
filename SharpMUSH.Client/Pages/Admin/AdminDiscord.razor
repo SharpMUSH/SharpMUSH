@@ -1,0 +1,464 @@
+@page "/admin/discord"
+@* discord.admin is declared by the discord package, not built in, so the page asks the server: every call behind it
+   needs that permission, and a refusal shows here. *@
+@attribute [Authorize]
+@using System.Globalization
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Library.Models.Portal.Discord
+@inject DiscordAdminService Discord
+@inject RoleRegistryClient RoleRegistry
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmDiscordTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+<FeatureGate Feature="@GameFeatures.Discord">
+    <div class="page-stack page-stack--padded adm-discord">
+        <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
+
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+        }
+        else if (_forbidden)
+        {
+            <p class="adm-discord-empty adm-discord-forbidden">@Loc["AdmDiscordForbidden"]</p>
+        }
+        else
+        {
+            @if (_connection is { } connection)
+            {
+                <KitCard Class="adm-discord-connection" Title="@Loc["AdmDiscordConnection"]" Sub="@ConnectionLine(connection)">
+                    <Controls>
+                        <Pill Tag="true" Warn="@(connection.Status != "connected")" Class="adm-discord-status">@StatusLabel(connection.Status)</Pill>
+                    </Controls>
+                    <ChildContent>
+                        <ol class="adm-discord-steps">
+                            @foreach (var step in connection.Steps)
+                            {
+                                <li class="adm-discord-step @(step.Done ? "adm-discord-step--done" : null)" data-step="@step.Key">
+                                    <MudIcon Icon="@(step.Done ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.RadioButtonUnchecked)"
+                                             Size="Size.Small" Class="adm-discord-step-icon" aria-hidden="true" />
+                                    <div class="adm-discord-step-text">
+                                        <span class="adm-discord-step-title">@step.Title</span>
+                                        @if (!step.Done && step.Todo is { } todo)
+                                        {
+                                            <span class="adm-discord-sub">
+                                                @todo
+                                                @if (step.Link is { } link)
+                                                {
+                                                    <a href="@link" target="_blank" rel="noopener">@Loc["AdmDiscordOpen"]</a>
+                                                }
+                                            </span>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                        <div class="adm-discord-actions">
+                            @if (connection.InviteUrl is { } invite)
+                            {
+                                <a class="adm-discord-invite" href="@invite" target="_blank" rel="noopener">@Loc["AdmDiscordInvite"]</a>
+                            }
+                            <a class="adm-discord-token" href="admin/config/secrets">@Loc["AdmDiscordToken"]</a>
+                            <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Class="adm-discord-reconnect" Disabled="@_busy"
+                                           OnClick="@(() => ActAsync(Discord.ReconnectAsync()))">@Loc["AdmDiscordReconnect"]</CapsuleButton>
+                        </div>
+                    </ChildContent>
+                </KitCard>
+            }
+
+            <KitCard Class="adm-discord-channels" Title="@Loc["AdmDiscordChannels"]" Sub="@Loc["AdmDiscordChannelsSub"]">
+                <Controls>
+                    <Pill Tag="true">@_channels.Count</Pill>
+                </Controls>
+                <ChildContent>
+                    @if (_channels.Count == 0)
+                    {
+                        <p class="adm-discord-empty">@Loc["AdmDiscordChannelsNone"]</p>
+                    }
+                    else
+                    {
+                        <ul class="adm-discord-rows">
+                            @foreach (var channel in _channels)
+                            {
+                                <li class="adm-discord-row" data-channel="@channel.ChannelId">
+                                    <div class="adm-discord-row-text">
+                                        <span class="adm-discord-row-head">
+                                            <span class="adm-discord-name">#@channel.ChannelName</span>
+                                            <span class="adm-discord-sub">@channel.GuildName</span>
+                                            <Pill Tag="true" Warn="@(channel.State != "ok")">@ChannelState(channel)</Pill>
+                                            @if (channel.OpenTo is [_, ..] open)
+                                            {
+                                                <Pill Tag="true" Warn="true" Class="adm-discord-open">@string.Format(Loc["AdmDiscordOpenTo"], string.Join(", ", open))</Pill>
+                                            }
+                                        </span>
+                                        <span class="adm-discord-sub"><code>@channel.Feed</code> · @string.Format(Loc["AdmDiscordLinkedOn"], Date(channel.LinkedAt))</span>
+                                        @if (channel.Fault is { } fault)
+                                        {
+                                            <span class="adm-discord-sub adm-discord-fault">@fault</span>
+                                        }
+                                    </div>
+                                    <div class="adm-discord-row-actions">
+                                        @if (channel.State == "stopped")
+                                        {
+                                            <CapsuleButton Class="adm-discord-resume" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.ResumeAsync(channel.ChannelId)))">@Loc["AdmDiscordResume"]</CapsuleButton>
+                                        }
+                                        @if (channel.OpenTo is [_, ..])
+                                        {
+                                            <CapsuleButton Class="adm-discord-gate" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.GateAsync(channel.ChannelId)))">@Loc["AdmDiscordGate"]</CapsuleButton>
+                                        }
+                                        @if (_confirm == channel.ChannelId)
+                                        {
+                                            <CapsuleButton Class="adm-discord-cancel" OnClick="@(() => _confirm = null)">@Loc["Cancel"]</CapsuleButton>
+                                            <CapsuleButton Primary="true" Class="adm-discord-unlink-confirm" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.UnlinkAsync(channel.ChannelId)))">@Loc["AdmDiscordUnlink"]</CapsuleButton>
+                                        }
+                                        else
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Small" Color="Color.Error" Class="adm-discord-unlink"
+                                                           aria-label="@Loc["AdmDiscordUnlink"]" title="@Loc["AdmDiscordUnlink"]"
+                                                           OnClick="@(() => _confirm = channel.ChannelId)" />
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @if (_available.Count > 0)
+                    {
+                        <div class="adm-discord-form">
+                            <MudSelect T="string" @bind-Value="_linkChannel" Label="@Loc["AdmDiscordLinkChannel"]" Variant="Variant.Outlined"
+                                       Margin="Margin.Dense" Class="adm-discord-field adm-discord-link-select">
+                                @foreach (var channel in _available)
+                                {
+                                    <MudSelectItem T="string" Value="@channel.ChannelId">
+                                        #@channel.Name · @channel.GuildName
+                                        @if (channel.Missing.Count > 0)
+                                        {
+                                            <span class="adm-discord-missing">@string.Format(Loc["AdmDiscordMissing"], string.Join(", ", channel.Missing))</span>
+                                        }
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Link" Class="adm-discord-link"
+                                           Disabled="@(_busy || _linkChannel is null)" OnClick="LinkAsync">@Loc["AdmDiscordLink"]</CapsuleButton>
+                        </div>
+                    }
+                </ChildContent>
+            </KitCard>
+
+            <KitCard Class="adm-discord-roles" Title="@Loc["AdmDiscordRoles"]" Sub="@Loc["AdmDiscordRolesSub"]">
+                <Controls>
+                    <Pill Tag="true">@(_roles?.Mappings.Count ?? 0)</Pill>
+                </Controls>
+                <ChildContent>
+                    @if (_roles is not { Mappings: [_, ..] mappings })
+                    {
+                        <p class="adm-discord-empty">@Loc["AdmDiscordRolesNone"]</p>
+                    }
+                    else
+                    {
+                        <ul class="adm-discord-rows">
+                            @foreach (var mapping in mappings)
+                            {
+                                <li class="adm-discord-row" data-role="@mapping.RoleId">
+                                    <div class="adm-discord-row-text">
+                                        <span class="adm-discord-row-head">
+                                            <span class="adm-discord-name">@@@mapping.RoleName</span>
+                                            <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" Class="adm-discord-arrow" aria-hidden="true" />
+                                            <code>@mapping.Slug</code>
+                                            <Pill Tag="true" Warn="@(mapping.Problem is not null || mapping.Drift > 0)">@MappingState(mapping)</Pill>
+                                        </span>
+                                        @if (mapping.Problem is { } problem)
+                                        {
+                                            <span class="adm-discord-sub adm-discord-fault">@problem</span>
+                                        }
+                                    </div>
+                                    <div class="adm-discord-row-actions">
+                                        <MudSelect T="string" Value="@mapping.Mode" ValueChanged="@(mode => ActAsync(Discord.ModeAsync(mapping.RoleId, mode)))"
+                                                   Label="@Loc["AdmDiscordByHand"]" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                                                   Disabled="@_busy" Class="adm-discord-mode">
+                                            <MudSelectItem T="string" Value="@("report")">@Loc["AdmDiscordModeReport"]</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("enforce")">@Loc["AdmDiscordModeEnforce"]</MudSelectItem>
+                                        </MudSelect>
+                                        @if (_confirm == mapping.RoleId)
+                                        {
+                                            <CapsuleButton Class="adm-discord-cancel" OnClick="@(() => _confirm = null)">@Loc["Cancel"]</CapsuleButton>
+                                            <CapsuleButton Primary="true" Class="adm-discord-unmap-confirm" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.UnmapAsync(mapping.RoleId)))">@Loc["AdmDiscordUnmap"]</CapsuleButton>
+                                        }
+                                        else
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error" Class="adm-discord-unmap"
+                                                           aria-label="@Loc["AdmDiscordUnmap"]" title="@Loc["AdmDiscordUnmap"]"
+                                                           OnClick="@(() => _confirm = mapping.RoleId)" />
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <div class="adm-discord-form">
+                        @if (_gameRoles.Count > 0)
+                        {
+                            <MudSelect T="string" @bind-Value="_mapRole" Label="@Loc["AdmDiscordGameRole"]" Variant="Variant.Outlined"
+                                       Margin="Margin.Dense" Class="adm-discord-field adm-discord-map-role">
+                                @foreach (var role in _gameRoles)
+                                {
+                                    <MudSelectItem T="string" Value="@role.Slug">@role.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else
+                        {
+                            <MudTextField T="string" @bind-Value="_mapRole" Label="@Loc["AdmDiscordGameRole"]" Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" Immediate="true" Class="adm-discord-field adm-discord-map-role" />
+                        }
+                        <MudTextField T="string" @bind-Value="_mapDiscordRole" Label="@Loc["AdmDiscordDiscordRole"]" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Immediate="true" HelperText="@Loc["AdmDiscordDiscordRoleHint"]"
+                                      Class="adm-discord-field adm-discord-map-discord" />
+                        @if (_mapRole is "wizard" or "royalty")
+                        {
+                            <MudCheckBox T="bool" @bind-Value="_mapConfirm" Label="@Loc["AdmDiscordConfirmStaff"]" Class="adm-discord-map-confirm" />
+                        }
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Add" Class="adm-discord-map"
+                                       Disabled="@(_busy || string.IsNullOrWhiteSpace(_mapRole) || string.IsNullOrWhiteSpace(_mapDiscordRole))"
+                                       OnClick="MapAsync">@Loc["AdmDiscordMap"]</CapsuleButton>
+                    </div>
+                </ChildContent>
+            </KitCard>
+
+            <KitCard Class="adm-discord-drift" Title="@Loc["AdmDiscordDrift"]" Sub="@Loc["AdmDiscordDriftSub"]">
+                <Controls>
+                    @if (_roles is { Drift: [_, ..] })
+                    {
+                        <CapsuleButton Class="adm-discord-settle-all" Disabled="@_busy"
+                                       OnClick="@(() => ActAsync(Discord.SettleAsync(null)))">@Loc["AdmDiscordSettleAll"]</CapsuleButton>
+                    }
+                </Controls>
+                <ChildContent>
+                    @if (_roles is not { Drift: [_, ..] drift })
+                    {
+                        <p class="adm-discord-empty">@Loc["AdmDiscordDriftNone"]</p>
+                    }
+                    else
+                    {
+                        <ul class="adm-discord-rows">
+                            @foreach (var member in drift)
+                            {
+                                <li class="adm-discord-row" data-member="@member.UserId">
+                                    <div class="adm-discord-row-text">
+                                        <span class="adm-discord-row-head">
+                                            <span class="adm-discord-name">@member.UserName</span>
+                                            <span>@string.Format(Loc[member.Added ? "AdmDiscordDriftGiven" : "AdmDiscordDriftTaken"], member.RoleName, member.Slug)</span>
+                                        </span>
+                                        <span class="adm-discord-sub">@Date(member.At)</span>
+                                    </div>
+                                    <div class="adm-discord-row-actions">
+                                        <CapsuleButton Class="adm-discord-settle" Disabled="@_busy"
+                                                       OnClick="@(() => ActAsync(Discord.SettleAsync(member.RoleId)))">@string.Format(Loc["AdmDiscordSettle"], member.RoleName)</CapsuleButton>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                        <p class="adm-discord-hint">@Loc["AdmDiscordDriftHint"]</p>
+                    }
+                </ChildContent>
+            </KitCard>
+
+            <KitCard Class="adm-discord-members" Title="@Loc["AdmDiscordMembers"]" Sub="@Loc["AdmDiscordMembersSub"]">
+                <Controls>
+                    <Pill Tag="true">@_members.Count</Pill>
+                </Controls>
+                <ChildContent>
+                    <div class="adm-discord-form">
+                        <MudTextField T="string" Value="@_search" ValueChanged="SearchAsync" Label="@Loc["AdmDiscordSearch"]" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" Immediate="true" DebounceInterval="300" Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search" Class="adm-discord-field adm-discord-search" />
+                    </div>
+                    @if (_members.Count == 0)
+                    {
+                        <p class="adm-discord-empty">@Loc[string.IsNullOrEmpty(_search) ? "AdmDiscordMembersNone" : "AdmDiscordMembersNoMatch"]</p>
+                    }
+                    else
+                    {
+                        <ul class="adm-discord-rows">
+                            @foreach (var member in _members)
+                            {
+                                <li class="adm-discord-row" data-member="@member.UserId">
+                                    <div class="adm-discord-row-text">
+                                        <span class="adm-discord-row-head">
+                                            <span class="adm-discord-name">@member.Username</span>
+                                            <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" Class="adm-discord-arrow" aria-hidden="true" />
+                                            <span>@(member.AccountName ?? Loc["AdmDiscordAccountGone"])</span>
+                                        </span>
+                                        <span class="adm-discord-sub">@string.Format(Loc["AdmDiscordLinkedOn"], Date(member.LinkedAt))</span>
+                                    </div>
+                                    <div class="adm-discord-row-actions">
+                                        @if (_confirm == member.UserId)
+                                        {
+                                            <CapsuleButton Class="adm-discord-cancel" OnClick="@(() => _confirm = null)">@Loc["Cancel"]</CapsuleButton>
+                                            <CapsuleButton Primary="true" Class="adm-discord-unlink-member-confirm" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.UnlinkMemberAsync(member.UserId)))">@Loc["AdmDiscordUnlink"]</CapsuleButton>
+                                        }
+                                        else
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Small" Color="Color.Error" Class="adm-discord-unlink-member"
+                                                           aria-label="@Loc["AdmDiscordUnlink"]" title="@Loc["AdmDiscordUnlink"]"
+                                                           OnClick="@(() => _confirm = member.UserId)" />
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </ChildContent>
+            </KitCard>
+        }
+    </div>
+</FeatureGate>
+
+@code {
+    /// <summary>Roles the game hands out itself, which the server refuses to map.</summary>
+    private static readonly HashSet<string> Implicit = new(StringComparer.OrdinalIgnoreCase) { "everyone", "player", "god" };
+
+    private bool _loading = true;
+    private bool _busy;
+    private bool _forbidden;
+    private DiscordConnectionView? _connection;
+    private List<DiscordChannelView> _channels = [];
+    private List<DiscordTextChannelView> _available = [];
+    private DiscordRolesView? _roles;
+    private List<DiscordMemberView> _members = [];
+    private IReadOnlyList<PortalRoleModel> _gameRoles = [];
+    private string? _confirm;
+    private string? _linkChannel;
+    private string? _mapRole;
+    private string? _mapDiscordRole;
+    private bool _mapConfirm;
+    private string _search = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var roles = RoleRegistry.ListAsync();
+        await LoadAsync();
+        _gameRoles = (await roles).Where(role => !Implicit.Contains(role.Slug)).OrderByDescending(role => role.Priority).ToList();
+        _loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        var connection = Discord.ConnectionAsync();
+        var channels = Discord.ChannelsAsync();
+        var available = Discord.AvailableAsync();
+        var roles = Discord.RolesAsync();
+        var members = Discord.MembersAsync(_search);
+        switch (await connection)
+        {
+            case DiscordConnectionView view:
+                _connection = view;
+                break;
+            case ApiFailure { Kind: ApiFailureKind.Forbidden }:
+                _forbidden = true;
+                return;
+            case ApiFailure failure:
+                Snackbar.Add(string.Format(Loc["AdmDiscordLoadFailed"], failure.Message), Severity.Error);
+                break;
+        }
+
+        _channels = await channels is List<DiscordChannelView> linked ? linked : [];
+        _available = await available is List<DiscordTextChannelView> seen ? seen.Where(channel => !channel.Linked).ToList() : [];
+        _roles = await roles is DiscordRolesView mapped ? mapped : null;
+        _members = await members is List<DiscordMemberView> found ? found : [];
+    }
+
+    private async Task SearchAsync(string search)
+    {
+        _search = search ?? string.Empty;
+        _members = await Discord.MembersAsync(_search) is List<DiscordMemberView> found ? found : [];
+    }
+
+    private async Task LinkAsync()
+    {
+        if (_linkChannel is { } channel && await ActAsync(Discord.LinkAsync(channel)))
+        {
+            _linkChannel = null;
+        }
+    }
+
+    private async Task MapAsync()
+    {
+        if (await ActAsync(Discord.MapAsync(new DiscordMapRequest(_mapRole!.Trim(), _mapDiscordRole!.Trim(), _mapConfirm))))
+        {
+            _mapDiscordRole = null;
+            _mapConfirm = false;
+        }
+    }
+
+    /// <summary>Runs one admin action, says what it did, and reads everything again.</summary>
+    /// <returns>Whether it did what was asked.</returns>
+    private async Task<bool> ActAsync(Task<ApiResult<DiscordAdminAnswer>> action)
+    {
+        _busy = true;
+        try
+        {
+            switch (await action)
+            {
+                case DiscordAdminAnswer answer:
+                    Snackbar.Add(answer.Message, answer.Kind switch
+                    {
+                        "ok" => Severity.Success,
+                        "warn" => Severity.Warning,
+                        _ => Severity.Error,
+                    });
+                    _confirm = null;
+                    await LoadAsync();
+                    return answer.Kind == "ok" || answer.Kind == "warn";
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
+                    return false;
+                default:
+                    return false;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string ConnectionLine(DiscordConnectionView connection) => connection.BotName is { } bot
+        ? string.Format(Loc["AdmDiscordConnectionAs"], bot, connection.Guilds)
+        : Loc["AdmDiscordConnectionSub"];
+
+    private string StatusLabel(string status) => status switch
+    {
+        "connected" => Loc["AdmDiscordStatusConnected"],
+        "connecting" => Loc["AdmDiscordStatusConnecting"],
+        "noToken" => Loc["AdmDiscordStatusNoToken"],
+        "badToken" => Loc["AdmDiscordStatusBadToken"],
+        "intentsOff" => Loc["AdmDiscordStatusIntentsOff"],
+        _ => Loc["AdmDiscordStatusUnreachable"],
+    };
+
+    private string ChannelState(DiscordChannelView channel) => channel.State switch
+    {
+        "stopped" => Loc["AdmDiscordStateStopped"],
+        "backlogged" => string.Format(Loc["AdmDiscordStateBacklogged"], channel.Waiting),
+        _ => Loc["AdmDiscordStatePosting"],
+    };
+
+    private string MappingState(DiscordRoleMappingView mapping) => mapping switch
+    {
+        { Problem: not null } => Loc["AdmDiscordStateBroken"],
+        { Drift: > 0 } => string.Format(Loc["AdmDiscordStateDrift"], mapping.Drift),
+        _ => Loc["AdmDiscordStateApplied"],
+    };
+
+    private static string Date(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+}

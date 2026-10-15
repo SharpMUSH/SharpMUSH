@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models.Portal.Discord;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Discord.Admin;
 using SharpMUSH.Plugins.Discord.Links;
 using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Plugins.Discord.Outbox;
@@ -92,26 +93,8 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 
 	public void MapEndpoints(IEndpointRouteBuilder endpoints)
 	{
+		DiscordAdminEndpoints.Map(endpoints);
 		var group = endpoints.MapGroup("api/discord").RequireAuthorization();
-
-		group.MapGet("setup", async (ClaimsPrincipal user, DiscordGatewayService gateway,
-			IAdministrativeCapabilityService capabilities, CancellationToken cancellationToken)
-			=> await MayAdministerAsync(user, capabilities, cancellationToken)
-				? Results.Ok(DiscordSetup.View(gateway.State))
-				: Results.Forbid());
-
-		// After the token is set or replaced, or an intent turned on in the developer portal.
-		group.MapPost("connect", async (ClaimsPrincipal user, DiscordGatewayService gateway,
-			IAdministrativeCapabilityService capabilities, CancellationToken cancellationToken) =>
-		{
-			if (!await MayAdministerAsync(user, capabilities, cancellationToken))
-			{
-				return Results.Forbid();
-			}
-
-			gateway.Reconnect();
-			return Results.Accepted();
-		});
 
 		// A member confirming the ticket /link gave them in Discord, while signed in to their game account.
 		group.MapGet("link/{ticket}", (string ticket, DiscordAccounts accounts)
@@ -156,9 +139,4 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		=> user.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } account ? account : null;
 
 	private static DiscordAccountView View(DiscordAccountLink? link) => new(link?.Username, link?.LinkedAt);
-
-	private static async Task<bool> MayAdministerAsync(ClaimsPrincipal user, IAdministrativeCapabilityService capabilities,
-		CancellationToken cancellationToken)
-		=> Account(user) is { } account
-			&& await capabilities.AuthorizeAsync(new CapabilityActor(account), AdminPermission, cancellationToken);
 }

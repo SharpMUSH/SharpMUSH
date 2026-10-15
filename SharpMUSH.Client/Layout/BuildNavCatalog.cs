@@ -114,6 +114,8 @@ public static class BuildNavCatalog
 		new("/admin/server", Icons.Material.Filled.Dns, "AdmServerStatusLabel", "AdmCardServer", Group.Server, ["server.admin"]),
 		new("/admin/config", Icons.Material.Filled.Tune, "Configuration", "AdmCardConfig", Group.Server, ["config.admin"]),
 		new("/admin/import", Icons.Material.Filled.CloudUpload, "AdmImportLabel", "AdmCardImport", Group.Server, ["server.admin"]),
+		// discord.admin exists only while the discord package is installed, so the claim gates the page on it too.
+		new("/admin/discord", Icons.Material.Filled.Forum, "AdmDiscordTitle", "AdmCardDiscord", Group.Server, [], PermClaims: ["discord.admin"]),
 	];
 
 	/// <summary>The <c>SharedResource</c> heading of a group; the overview has none.</summary>
