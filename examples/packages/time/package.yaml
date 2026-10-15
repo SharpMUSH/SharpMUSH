@@ -1,6 +1,6 @@
 format: 1
 package: time
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -142,10 +142,10 @@ objects:
         value: |-
           box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`NOWFIELDS),%#,%q<now>)%r[rule()]%r[tone(muted,+time <time> converts a time · +timezone <zone> sets yours)],Time,,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
-      # Game time, your time and, when the game shows one, the IC date, split by chr(30).
+      # Game time, your time and, when the game shows one, the IC date, split by a marked separator, %*<|>.
       FUN`SCREEN`NOWFIELDS:
         value: |-
-          lfields(,Game time[chr(30)]Your time[if(get({{clock}}/DATA`CONFIG`IC-SHOW),[chr(30)]IC date)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<game_zone>)][chr(30)][if(strlen(%q<viewer_zone>),u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>),tone(muted,not set · +timezone <zone> sets it))][if(get({{clock}}/DATA`CONFIG`IC-SHOW),[chr(30)][u({{clock}}/FUN`IC`DATE,%q<now>)])],chr(30))
+          lfields(,Game time%*<|>Your time[if(get({{clock}}/DATA`CONFIG`IC-SHOW),%*<|>IC date)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<game_zone>)]%*<|>[if(strlen(%q<viewer_zone>),u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>),tone(muted,not set · +timezone <zone> sets it))][if(get({{clock}}/DATA`CONFIG`IC-SHOW),%*<|>[u({{clock}}/FUN`IC`DATE,%q<now>)])],%*<|>)
         flags: [funsyntax]
       # +time <time> or +time <name>: a time when it reads as one, or when it starts with a digit or a date and no
       # player has that name (a name may start with a digit, as 7of9 does); else a player.
@@ -162,7 +162,7 @@ objects:
       # The time where %q<target> is, the reader's own, and how far apart they are.
       FUN`SCREEN`PLAYER:
         value: |-
-          box(lfields(,[name(%q<target>)][chr(30)]You[if(strlen(%q<viewer_zone>),[chr(30)]Difference)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<target_zone>)][chr(30)][if(strlen(%q<viewer_zone>),[u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>)][chr(30)][u(%!/FUN`DISPLAY`DIFFERENCE,sub(u({{clock}}/FUN`ZONE`OFFSET,%q<target_zone>,%q<now>),u({{clock}}/FUN`ZONE`OFFSET,%q<viewer_zone>,%q<now>)),name(%q<target>))],tone(muted,not set · +timezone <zone> sets it))],chr(30)),Time for [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))
+          box(lfields(,[name(%q<target>)]%*<|>You[if(strlen(%q<viewer_zone>),%*<|>Difference)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<target_zone>)]%*<|>[if(strlen(%q<viewer_zone>),[u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>)]%*<|>[u(%!/FUN`DISPLAY`DIFFERENCE,sub(u({{clock}}/FUN`ZONE`OFFSET,%q<target_zone>,%q<now>),u({{clock}}/FUN`ZONE`OFFSET,%q<viewer_zone>,%q<now>)),name(%q<target>))],tone(muted,not set · +timezone <zone> sets it))],%*<|>),Time for [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
 
       # ---- +time <time> -----------------------------------------------------------
@@ -214,7 +214,7 @@ objects:
       # timestamp, which Discord shows to each reader in their own time.
       FUN`SCREEN`CONVERT:
         value: |-
-          box(lfields(,%q<read_zone>[if(comp(%q<read_zone>,%q<game_zone>),[chr(30)]Game time)][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),[chr(30)]Your time)][chr(30)]When[chr(30)]Discord,[u({{clock}}/FUN`OOC`SHOW,%q<read_instant>,%q<read_zone>)] [tone(muted,· UTC[timefmt($Z,%q<read_instant>,%q<read_zone>)])][if(comp(%q<read_zone>,%q<game_zone>),[chr(30)][u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<game_zone>)])][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),[chr(30)][u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<viewer_zone>)])][chr(30)][u(%!/FUN`DISPLAY`FROMNOW,%q<read_instant>)][chr(30)]<t:%q<read_instant>:F>,chr(30))%r[rule()]%r[tone(muted,Paste the Discord line into Discord: each reader sees it in their own time.)],[timefmt($H:$M,%q<read_instant>,%q<read_zone>)] on [timefmt($a $d $b,%q<read_instant>,%q<read_zone>)],,u(%!/FUN`DISPLAY`FRAME))
+          box(lfields(,%q<read_zone>[if(comp(%q<read_zone>,%q<game_zone>),%*<|>Game time)][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),%*<|>Your time)]%*<|>When%*<|>Discord,[u({{clock}}/FUN`OOC`SHOW,%q<read_instant>,%q<read_zone>)] [tone(muted,· UTC[timefmt($Z,%q<read_instant>,%q<read_zone>)])][if(comp(%q<read_zone>,%q<game_zone>),%*<|>[u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<game_zone>)])][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),%*<|>[u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<viewer_zone>)])]%*<|>[u(%!/FUN`DISPLAY`FROMNOW,%q<read_instant>)]%*<|><t:%q<read_instant>:F>,%*<|>)%r[rule()]%r[tone(muted,Paste the Discord line into Discord: each reader sees it in their own time.)],[timefmt($H:$M,%q<read_instant>,%q<read_zone>)] on [timefmt($a $d $b,%q<read_instant>,%q<read_zone>)],,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
 
       # ---- +timezone --------------------------------------------------------------
@@ -300,7 +300,7 @@ objects:
       # The zones FUN`MATCH`FIND found, each a link that sets it.
       FUN`SCREEN`MATCH:
         value: |-
-          notice(TIME,It is [timefmt($H:$M,%q<now>,first(%q<match_found>))] now in [if(eq(words(%q<match_found>),1),this zone,these zones)]. Choose yours:)%r[bullets(iter(%q<match_found>,[cmdlink(+timezone %i0,+timezone %i0,Set your time zone to %i0)] [tone(muted,· UTC[timefmt($Z,%q<now>,%i0)])],,chr(30)),chr(30))]
+          notice(TIME,It is [timefmt($H:$M,%q<now>,first(%q<match_found>))] now in [if(eq(words(%q<match_found>),1),this zone,these zones)]. Choose yours:)%r[bullets(iter(%q<match_found>,[cmdlink(+timezone %i0,+timezone %i0,Set your time zone to %i0)] [tone(muted,· UTC[timefmt($Z,%q<now>,%i0)])],,%*<|>),%*<|>)]
         flags: [funsyntax]
 
       # ---- detected zones ---------------------------------------------------------

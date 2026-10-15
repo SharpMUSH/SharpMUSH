@@ -1,6 +1,6 @@
 format: 1.2
 package: chargen
-version: 2.0.0
+version: 2.0.1
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -573,7 +573,7 @@ objects:
       # a reviewer: the section's title, its answers and its comments. An empty answer shows the field's help.
       FUN`DISPLAY`SECTION:
         value: |-
-          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,[u(%!/FUN`FIELD`NAME,%i0)][if(member(%3,%i0),%b[tone(warning,*)])],%b,chr(30)),iter(%q<section_fields>,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,firstof(get({{store}}/FIELD`%i0`HELP),-))),%b,chr(30)),chr(30))])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
+          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,[u(%!/FUN`FIELD`NAME,%i0)][if(member(%3,%i0),%b[tone(warning,*)])],%b,%*<|>),iter(%q<section_fields>,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,firstof(get({{store}}/FIELD`%i0`HELP),-))),%b,%*<|>),%*<|>)])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
         flags: [funsyntax]
       # %0 a key, %1 1 when the reader is its owner, %2 1 for a reviewer, %3 the character: the whole application in a box.
       # The owner reads the draft and sees * on what they changed since they last submitted; a reviewer reads the
@@ -585,7 +585,7 @@ objects:
           display_source,if(cor(%1,not(%q<display_round>)),,%q<display_round>),
           display_changed,switch(1,%1,if(cand(%q<display_round>,u(%!/FUN`STATE`EDITABLE,%q<display_state>)),u(%!/FUN`APP`CHANGED,%0,%q<display_round>,)),gt(%q<display_round>,1),u(%!/FUN`APP`CHANGED,%0,dec(%q<display_round>),%q<display_round>),),
           display_queue,if(cor(%2,get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/FUN`QUEUE`TEXT,%0)),
-          display_general,u(%!/FUN`APP`COMMENTS,%0,,%2))[box(lfields(,State[chr(30)]Submitted[if(strlen(%q<display_queue>),[chr(30)]Queue)],[tone(u(%!/FUN`STATE`TONE,%q<display_state>),u(%!/FUN`STATE`LABEL,%q<display_state>))][if(%q<display_round>,%b· round %q<display_round>)][chr(30)][u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`SUBMITTED))][if(strlen(%q<display_queue>),[chr(30)]%q<display_queue>)],chr(30))[if(words(%q<display_general>),%r[rule(Messages)][u(%!/FUN`DISPLAY`COMMENTS,%0,%q<display_general>)])]%r[iter(u(%!/FUN`FORM`SECTIONS),u(%!/FUN`DISPLAY`SECTION,%0,%i0,%q<display_source>,%q<display_changed>,%2),%b,%r)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`HINT,%0,%1,%q<display_state>,%q<display_round>,words(%q<display_changed>)))],Application: [name(%3)])]
+          display_general,u(%!/FUN`APP`COMMENTS,%0,,%2))[box(lfields(,State%*<|>Submitted[if(strlen(%q<display_queue>),%*<|>Queue)],[tone(u(%!/FUN`STATE`TONE,%q<display_state>),u(%!/FUN`STATE`LABEL,%q<display_state>))][if(%q<display_round>,%b· round %q<display_round>)]%*<|>[u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`SUBMITTED))][if(strlen(%q<display_queue>),%*<|>%q<display_queue>)],%*<|>)[if(words(%q<display_general>),%r[rule(Messages)][u(%!/FUN`DISPLAY`COMMENTS,%0,%q<display_general>)])]%r[iter(u(%!/FUN`FORM`SECTIONS),u(%!/FUN`DISPLAY`SECTION,%0,%i0,%q<display_source>,%q<display_changed>,%2),%b,%r)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`HINT,%0,%1,%q<display_state>,%q<display_round>,words(%q<display_changed>)))],Application: [name(%3)])]
         flags: [funsyntax]
       # %0 a key, %1 1 for its owner, %2 its state, %3 its round, %4 how many fields are marked changed: what to do
       # next, in a line.
@@ -597,7 +597,7 @@ objects:
       # said and what it says.
       FUN`DISPLAY`DIFF:
         value: |-
-          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,[rule([u(%!/FUN`FIELD`LABEL,%i0)] · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`%i0`SECTION)]),-)])]%r[lfields(,Was[chr(30)]Now,[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%1),tone(muted,empty))][chr(30)][firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,empty))],chr(30))],%b,%r),Nothing changed.),%3)]
+          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,[rule([u(%!/FUN`FIELD`LABEL,%i0)] · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`%i0`SECTION)]),-)])]%r[lfields(,Was%*<|>Now,[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%1),tone(muted,empty))]%*<|>[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,empty))],%*<|>)],%b,%r),Nothing changed.),%3)]
         flags: [funsyntax]
 
       # ---- telling people -------------------------------------------------------
