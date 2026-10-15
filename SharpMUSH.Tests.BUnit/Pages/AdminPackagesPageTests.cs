@@ -47,6 +47,14 @@ file sealed class AdminPackagesApiHandler : HttpMessageHandler
 			return Task.FromResult(okResponse);
 		}
 
+		if (request.Method == HttpMethod.Get && path == "api/packages/who-where/readme")
+		{
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new ReadmeResponse("# who-where", "<h1>who-where readme</h1>"))
+			});
+		}
+
 		var notFoundResponse = new HttpResponseMessage(HttpStatusCode.NotFound);
 		return Task.FromResult(notFoundResponse);
 	}
@@ -108,6 +116,34 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Markup).Contains("v1.2.0");
 		await Assert.That(cut.Markup).DoesNotContain("@p.Package.Version");
+	}
+
+	/// <summary>An installed package's README button opens its README, as the server rendered it.</summary>
+	[TUnit.Core.Test]
+	public async Task ReadmeButton_ShowsTheInstalledPackagesReadme()
+	{
+		var cut = Render(builder =>
+		{
+			builder.OpenComponent<MudBlazor.MudDialogProvider>(0);
+			builder.CloseComponent();
+			builder.OpenComponent<MudHarness>(1);
+			builder.AddAttribute(2, nameof(MudHarness.ChildContent), (Microsoft.AspNetCore.Components.RenderFragment)(b =>
+			{
+				b.OpenComponent<SharpMUSH.Client.Pages.Admin.Packages.AdminPackages>(0);
+				b.CloseComponent();
+			}));
+			builder.CloseComponent();
+		});
+		const string button = "button[aria-label='PkgShowReadme(who-where)']";
+		cut.WaitForAssertion(() => cut.Find(button), TimeSpan.FromSeconds(5));
+
+		await cut.Find(button).ClickAsync();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("<h1>who-where readme</h1>"))
+				throw new InvalidOperationException("README not shown yet");
+		}, TimeSpan.FromSeconds(5));
 	}
 
 	public new async ValueTask DisposeAsync()

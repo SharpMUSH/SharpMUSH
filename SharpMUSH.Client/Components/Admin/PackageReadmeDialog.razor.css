@@ -1,0 +1,109 @@
+/* The README is HTML the server rendered from Markdown, so every rule that reaches inside it needs
+   ::deep. MudBlazor's reset takes every margin off, so without these a blank line between two
+   paragraphs, a heading and a list all run together as one block. */
+.package-readme {
+    max-width: 72ch;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.package-readme ::deep :is(p, ul, ol, pre, table, blockquote, hr) {
+    margin: 0 0 1em;
+}
+
+.package-readme ::deep :is(h1, h2, h3, h4) {
+    margin: 1.5em 0 0.5em;
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+}
+
+.package-readme ::deep h1 {
+    font-size: 1.375rem;
+}
+
+.package-readme ::deep h2 {
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 1.125rem;
+}
+
+.package-readme ::deep :is(h3, h4) {
+    font-size: 1rem;
+}
+
+.package-readme ::deep > :first-child {
+    margin-top: 0;
+}
+
+.package-readme ::deep > :last-child {
+    margin-bottom: 0;
+}
+
+.package-readme ::deep :is(ul, ol) {
+    padding-left: 1.5em;
+}
+
+.package-readme ::deep ul {
+    list-style: disc;
+}
+
+.package-readme ::deep ol {
+    list-style: decimal;
+}
+
+.package-readme ::deep li + li {
+    margin-top: 0.25em;
+}
+
+.package-readme ::deep li > :is(p, ul, ol) {
+    margin: 0.25em 0;
+}
+
+.package-readme ::deep a {
+    color: var(--accent);
+}
+
+.package-readme ::deep code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+}
+
+.package-readme ::deep :not(pre) > code {
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.package-readme ::deep pre {
+    overflow-x: auto;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    line-height: 1.45;
+}
+
+.package-readme ::deep blockquote {
+    padding-left: 1em;
+    border-left: 3px solid var(--border);
+    color: var(--text-dim);
+}
+
+.package-readme ::deep hr {
+    border: none;
+    border-top: 1px solid var(--border-soft);
+}
+
+.package-readme ::deep table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    border-collapse: collapse;
+}
+
+.package-readme ::deep :is(td, th) {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--border-soft);
+    text-align: left;
+}

@@ -216,8 +216,13 @@ public class DefaultPackagesBootstrapService(
 
 		var source = new PackageApplySource(
 			BundledPackages.SourceRepo, packageId, BundledPackages.SourceCommit, null);
+		var readme = BundledPackages.Find(packageId) switch
+		{
+			BundledPackages.Descriptor descriptor => BundledPackages.Readme(descriptor, manifest),
+			NotFound => null
+		};
 		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
-			source, new Dictionary<string, string>(), decisions), cancellationToken);
+			source, new Dictionary<string, string>(), decisions, Readme: readme), cancellationToken);
 
 		switch (result)
 		{

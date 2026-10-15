@@ -209,6 +209,36 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- The READMEs of the bundled packages that have one: the Packages page shows them
+         (BundledPackages.Readme). A bundled package without one gets a README written from its manifest. -->
+    <EmbeddedResource Include="..\examples\packages\http-handler\README.md">
+      <Link>BundledPackages\http-handler.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.http-handler.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\profile-handler\README.md">
+      <Link>BundledPackages\profile-handler.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.profile-handler.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\room-contents\README.md">
+      <Link>BundledPackages\room-contents.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.room-contents.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\comm-feed\README.md">
+      <Link>BundledPackages\comm-feed.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.comm-feed.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\plus-help\README.md">
+      <Link>BundledPackages\plus-help.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.plus-help.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\messages\README.md">
+      <Link>BundledPackages\messages.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.messages.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\who-where\README.md">
+      <Link>BundledPackages\who-where.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.who-where.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\softcode-editor\package.yaml">
       <Link>BundledPackages\softcode-editor.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.softcode-editor.package.yaml</LogicalName>

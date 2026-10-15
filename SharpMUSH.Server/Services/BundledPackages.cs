@@ -1,5 +1,7 @@
 using System.Reflection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server.Services;
 
@@ -123,6 +125,73 @@ public static class BundledPackages
 
 	/// <inheritdoc cref="BundledPackageSource.IsCatalogueSource"/>
 	public static bool IsCatalogueSource(string? sourceRepo) => BundledPackageSource.IsCatalogueSource(sourceRepo);
+
+	/// <summary>
+	/// The README a bundled package ships, in Markdown: its <c>examples/packages/&lt;id&gt;/README.md</c> when this
+	/// build embeds one, else one written from <paramref name="manifest"/> — what it is, whether a new game gets it,
+	/// what it needs and what it creates.
+	/// </summary>
+	public static string Readme(Descriptor descriptor, PackageManifest manifest) =>
+		EmbeddedReadme(descriptor.PackageId) switch
+		{
+			string readme => readme,
+			NotFound => DescribedReadme(descriptor, manifest)
+		};
+
+	/// <summary>The <c>README.md</c> embedded beside a bundled package's manifest, or <see cref="NotFound"/>.</summary>
+	public static Found<string> EmbeddedReadme(string packageId)
+	{
+		using var stream = Assembly.GetExecutingAssembly()
+			.GetManifestResourceStream($"SharpMUSH.Server.BundledPackages.{packageId}.README.md");
+		if (stream is null)
+		{
+			return new NotFound();
+		}
+
+		using var buffer = new MemoryStream();
+		stream.CopyTo(buffer);
+		return PackageReadme.Decode(buffer.ToArray());
+	}
+
+	private static string DescribedReadme(Descriptor descriptor, PackageManifest manifest)
+	{
+		var lines = new List<string>
+		{
+			$"# {manifest.Name} {manifest.Version}",
+			"",
+			manifest.Description,
+			"",
+			descriptor.InstallAtFirstBoot
+				? "Installed at a new game's first boot unless declined."
+				: "Shipped with this server and not installed automatically."
+		};
+
+		if (manifest.Dependencies.Count > 0)
+		{
+			lines.Add("");
+			lines.Add("## Requires");
+			lines.AddRange(manifest.Dependencies.Select(d => $"- `{d.PackageId}` {d.Constraint}"));
+		}
+
+		// An attach entry adds attributes to an object the package does not create.
+		var created = manifest.Objects.Where(o => !o.IsAttach).ToList();
+		if (created.Count > 0)
+		{
+			lines.Add("");
+			lines.Add("## Creates");
+			lines.AddRange(created.Select(o => $"- {(string.IsNullOrEmpty(o.Name) ? o.Ref : o.Name)} (`{o.Type}`)"));
+		}
+
+		return string.Join('\n', lines);
+	}
+
+	/// <summary>The descriptor of the bundled package <paramref name="packageId"/>, or <see cref="NotFound"/>.</summary>
+	public static Found<Descriptor> Find(string packageId) =>
+		All.FirstOrDefault(d => string.Equals(d.PackageId, packageId, StringComparison.OrdinalIgnoreCase)) switch
+		{
+			{ PackageId: not null } descriptor => descriptor,
+			_ => new NotFound()
+		};
 
 	/// <summary>The raw YAML of one bundled package manifest (embedded resource).</summary>
 	public static string ManifestYaml(string packageId)
