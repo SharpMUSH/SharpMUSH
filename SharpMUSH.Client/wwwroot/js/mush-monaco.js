@@ -48,6 +48,9 @@
                         // Use (?:...|@) alternation so @ appears outside char classes.
                         // Iteration and @dolist levels: %i0 %iL %d0 %dL (a bare %d is the letter d)
                         [/%[iIdD](?:[0-9]+|[lL])/, 'variable.other'],
+                        // RhostMUSH's %i_0 %i_L (iteration position) and %-12 (argument 12), bangs included
+                        [/%[iI]_!{0,2}[$^]?(?:[0-9]+|[lL])/, 'variable.other'],
+                        [/%-!{0,2}[$^]?[0-9]{1,3}/, 'variable.other'],
                         [/%(?:[#!]|@|[nNlLsSrRjJcCpPtT]|[0-9])/, 'variable.other'],
 
                         // Object dbrefs: #123, #-1

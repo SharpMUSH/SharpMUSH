@@ -35,7 +35,7 @@ Output: 1 or 0.
 
 A bang works only where a function call is recognised: at the start of an argument or a command's text, or right after `[`. It works on any function, @functions included. Anywhere else, and before a name that is not a function, the `!` is plain text, so `!wow`, `x!strlen(abc)` and `![strlen(abc)]` stay as they are.
 
-The same bangs work before the name in `%q<name>`, and before the number in `%i<n>` and `%d<n>`: `%q<!!$name>` is 1 when the register is set to something, `%i!0` is 1 when the iteration's element is 0.
+The same bangs work before the name in `%q<name>`, and before the number in `%i<n>`, `%i_<n>`, `%-<n>` and `%d<n>` (or the `L` of `%iL` and `%i_L`): `%q<!!$name>` is 1 when the register is set to something, `%i!0` is 1 when the iteration's element is 0, `%-!!$1` is 1 when there is a second argument.
 
 The idea comes from RhostMUSH. PennMUSH has no bangs: there `!strlen(abc)` is text, and `[!strlen(abc)]` is an unknown function.
 

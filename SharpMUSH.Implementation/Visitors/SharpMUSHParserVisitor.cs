@@ -1315,6 +1315,10 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (context.REG_NUM() is not null
 				|| context.REG_ALPHA() is not null
 				|| context.ITEXT_NUM() is not null
+				|| context.ITEXT_LAST() is not null
+				|| context.ITEXT_POS_NUM() is not null
+				|| context.ITEXT_POS_LAST() is not null
+				|| context.ARG_DASH_NUM() is not null
 				|| context.DTEXT_NUM() is not null
 				|| context.STEXT_NUM() is not null)
 		{
