@@ -1,0 +1,98 @@
+.list-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.list-editor-label {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+/* the chips and the field share one outlined box, so the list reads as one input */
+.list-editor-box {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-height: 40px;
+	padding: 6px 6px 6px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface);
+	box-sizing: border-box;
+}
+
+.list-editor-box:focus-within {
+	border-color: var(--accent);
+	outline: 1px solid var(--accent);
+}
+
+.list-editor-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	height: 26px;
+	padding: 0 2px 0 10px;
+	border-radius: 13px;
+	background: var(--surface-2);
+	color: var(--text);
+	font-size: 13px;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.list-editor-x,
+.list-editor-add {
+	width: 24px;
+	height: 24px;
+	flex-shrink: 0;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	color: inherit;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0.7;
+}
+
+.list-editor-x:hover,
+.list-editor-x:focus-visible,
+.list-editor-add:not(:disabled):hover,
+.list-editor-add:focus-visible {
+	opacity: 1;
+	background: var(--border);
+}
+
+.list-editor-add:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+
+.list-editor-input {
+	flex: 1 1 120px;
+	min-width: 80px;
+	height: 26px;
+	border: 0;
+	outline: none;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+}
+
+.list-editor-chip--mono,
+.list-editor-input.list-editor-input--mono {
+	font-family: var(--font-mono);
+}
+
+.list-editor-input::placeholder {
+	color: var(--text-faint);
+}
+
+.list-editor-help {
+	font-size: 12px;
+	color: var(--text-dim);
+}

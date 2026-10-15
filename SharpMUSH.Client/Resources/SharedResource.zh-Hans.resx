@@ -21,7 +21,7 @@
     <comment>MT — the rule literals are values the admin types; left in English.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>访问规则（以逗号分隔）</value>
+    <value>访问规则</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>作者（以逗号分隔）</value>
+    <value>作者</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>对象 id（每行一个，例如 #847:1778518155494）</value>
+    <value>对象 id</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — the flag literals are values the admin types; left in English.</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>限制规则（以逗号分隔）</value>
+    <value>限制规则</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

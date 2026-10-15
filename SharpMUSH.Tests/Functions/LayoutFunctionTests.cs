@@ -150,6 +150,27 @@ public class LayoutFunctionTests
 			.IsEqualTo(Lines("    Sex: Male", "Species: Human"));
 	}
 
+	/// <summary>lfields() is fields() with the labels and values as two lists, split on a space or the delimiter given.</summary>
+	[Test]
+	public async Task ListFields_PairEachLabelWithTheValueAtItsPlace()
+	{
+		await Assert.That(TrimLines(await Eval("lfields({{\"width\":40}},Sex Species,Male Human)")))
+			.IsEqualTo(Lines("Sex:     Male", "Species: Human"));
+		await Assert.That(TrimLines(await Eval("lfields({{\"width\":40}},Full Name|Origin,Mannaz Byron|Super Robot Wars AG,|)")))
+			.IsEqualTo(Lines("Full Name: Mannaz Byron", "Origin:    Super Robot Wars AG"));
+		await Assert.That((await Eval("lfields(,,)")).ToPlainText()).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>A value is any text or layout, as in fields(), and the lists are split before the values are laid out.</summary>
+	[Test]
+	public async Task ListFields_TakeLayoutsAndOptionsAsFieldsDoes()
+		=> await Assert.That(TrimLines(await Eval("box(lfields({{\"cols\":2}},Sex|Species|Job|Online,Male|Human|Dark Warrior|1h,|),Mannaz Byron,60)")))
+			.IsEqualTo(Lines(
+				"+=====================< Mannaz Byron >=====================+",
+				"| Sex:     Male                 Job:    Dark Warrior       |",
+				"| Species: Human                Online: 1h                 |",
+				"+==========================================================+"));
+
 	/// <summary>The finger box the layout functions were made for, with its key/value pairs as fields.</summary>
 	[Test]
 	public async Task Fields_InsideABox_MakeAFingerSheet()
@@ -188,6 +209,47 @@ public class LayoutFunctionTests
 			.IsEqualTo(Lines("Mail", "|- Inbox", "`- Sent"));
 		await Assert.That(TrimLines(await Eval("tree({{\"width\":30,\"branch\":\"+> \",\"last\":\"*> \"}},node(Mail,Inbox,Sent))")))
 			.IsEqualTo(Lines("Mail", "+> Inbox", "*> Sent"));
+	}
+
+	/// <summary>A list form draws what its variadic form draws given the same items, in a terminal and in the portal.</summary>
+	[Test]
+	[Arguments("lflex({{\"sep\":\" | \",\"width\":40}},iter(Strength Agility,item(##,12),,^),^)", "flex({{\"sep\":\" | \",\"width\":40}},item(Strength,12),item(Agility,12))")]
+	[Arguments("ltree({{\"width\":30}},iter(Public Staff,lnode(##,switch(##,Public,+chat +ooc,+admin)),,^),^)", "tree({{\"width\":30}},node(Public,+chat,+ooc),node(Staff,+admin))")]
+	[Arguments("lnode(Mail,Inbox^Sent,^)", "node(Mail,Inbox,Sent)")]
+	[Arguments("ldatatable({{\"width\":30}},Name|>Idle,Mannaz|0s Raya|5m)", "datatable({{\"width\":30}},Name|>Idle,Mannaz|0s,Raya|5m)")]
+	[Arguments("ldatatable({{\"width\":30,\"delim\":\";\"}},Name;Doing,Raya;In the garden%rMannaz;Hooooo?,%r)", "datatable({{\"width\":30,\"delim\":\";\"}},Name;Doing,Raya;In the garden,Mannaz;Hooooo?)")]
+	public async Task AListForm_DrawsWhatItsVariadicFormDraws(string listForm, string variadic)
+	{
+		var fromList = await Eval(listForm);
+		var fromArguments = await Eval(variadic);
+
+		await Assert.That(fromList.ToPlainText()).IsEqualTo(fromArguments.ToPlainText());
+		await Assert.That(fromList.Render(MarkupFormat.Html)).IsEqualTo(fromArguments.Render(MarkupFormat.Html));
+	}
+
+	/// <summary>An empty list draws nothing, a node alone or a table's headings alone, once the options are read.</summary>
+	[Test]
+	public async Task AListForm_GivenAnEmptyList_DrawsWhatItHas()
+	{
+		await Assert.That((await Eval("lflex({{\"width\":20}},)")).ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That((await Eval("ltree(,%b)")).ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That((await Eval("lnode(Mail,)")).ToPlainText()).IsEqualTo((await Eval("node(Mail)")).ToPlainText());
+		await Assert.That(TrimLines(await Eval("ldatatable({{\"width\":20}},Name|Idle,)"))).IsEqualTo(TrimLines(await Eval("datatable({{\"width\":20}},Name|Idle)")));
+		await Assert.That((await Eval("lflex({{\"width\":0}},)")).ToPlainText()).IsEqualTo(ErrorMessages.Returns.ArgRange);
+		await Assert.That((await Eval("ltree({{\"guide\":\"nope\"}},a b)")).ToPlainText()).IsEqualTo("#-1 UNKNOWN GUIDE STYLE");
+	}
+
+	/// <summary>A list holding only a sound is not empty: the sound reaches the client as it does from the variadic form.</summary>
+	[Test]
+	[Arguments("lflex(,sound(door.wav))", "flex(,sound(door.wav))")]
+	[Arguments("ltree(,sound(door.wav))", "tree(,sound(door.wav))")]
+	[Arguments("ldatatable(,Sound,sound(door.wav))", "datatable(,Sound,sound(door.wav))")]
+	public async Task AListForm_KeepsAListOfOnlyASound(string listForm, string variadic)
+	{
+		var fromList = (await Eval(listForm)).Render(MarkupFormat.Mxp);
+
+		await Assert.That(fromList).Contains("<SOUND door.wav>");
+		await Assert.That(fromList).IsEqualTo((await Eval(variadic)).Render(MarkupFormat.Mxp));
 	}
 
 	[Test]
@@ -472,6 +534,8 @@ public class LayoutFunctionTests
 	[Arguments("fields(,Sex,Male,Species)", "#-1 FUNCTION (FIELDS) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
 	[Arguments("fields({{\"cols\":0}},Sex,Male)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("fields({{\"cols\":\"x\"}},Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("lfields(,Sex Species,Male)", ErrorMessages.Returns.NumberOfWordsMustBeEqual)]
+	[Arguments("lfields({{\"cols\":0}},Sex,Male)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("tree({{\"guide\":\"wavy\"}},a)", "#-1 UNKNOWN GUIDE STYLE")]
 	[Arguments("tree({{\"colour\":\"red\"}},a)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("gauge(a,12)", ErrorMessages.Returns.Numbers)]

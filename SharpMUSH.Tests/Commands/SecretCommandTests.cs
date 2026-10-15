@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -49,7 +49,9 @@ public class SecretCommandTests
 		try
 		{
 			var set = await AsGod($"@secret {name}={value}");
-			var listed = string.Join("\n", await AsGod("@secret"));
+			// The listing wraps a long host across lines of its column; read the column's text back joined.
+			var listed = new string(string.Join("\n", await AsGod("@secret"))
+				.Where(c => !char.IsWhiteSpace(c) && c != '│' && c != '|').ToArray());
 
 			await Assert.That(set).Contains($"{name} is set. Its value is never shown again.");
 			await Assert.That(listed).Contains(name);
@@ -71,12 +73,15 @@ public class SecretCommandTests
 		try
 		{
 			var set = await AsGod($"@secret/host {name}=api.example.com *.example.org");
-			var listed = string.Join("\n", await AsGod("@secret"));
+			// The listing wraps a long host across lines of its column; read the column's text back joined.
+			var listed = new string(string.Join("\n", await AsGod("@secret"))
+				.Where(c => !char.IsWhiteSpace(c) && c != '│' && c != '|').ToArray());
 			var cleared = await AsGod($"@secret/host {name}=");
 
 			await Assert.That(set).Contains($"@http may send {name} to: *.example.org api.example.com");
-			// The table wraps a long cell, and how narrow the column gets depends on the other secrets stored.
-			await Assert.That(Regex.Replace(listed, @"[\s│]", string.Empty)).Contains("api.example.com");
+			// The listing is a table whose columns are as wide as the secrets other tests have stored, so a
+			// host may wrap across lines: compare with the table's layout taken out.
+			await Assert.That(Regex.Replace(listed, @"[\s│]", "")).Contains("api.example.com");
 			await Assert.That(cleared).Contains($"@http may send {name} to no host.");
 			await Assert.That(await Secrets.HostsAsync(name)).IsEmpty();
 		}

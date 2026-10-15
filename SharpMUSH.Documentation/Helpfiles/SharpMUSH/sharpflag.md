@@ -344,12 +344,13 @@ The INHERIT flag is used internally by the MUSH. It cannot be set or cleared man
 
 **Flag: JUMP_OK (rooms)**
 
-If a room is set JUMP_OK, anyone can link exits to it, if they pass its `@lock/link`. This flag is often used in conjunction with LINK_OK.
+If a room is set JUMP_OK, anyone who passes its `@lock/teleport` can `@teleport` into it.
 
 
 ::: seealso
-- [@link]
+- [@teleport]
 - [LINK_OK]
+- [ABODE]
 :::
 
 # KEEPALIVE
@@ -371,14 +372,33 @@ Objects which are set LIGHT show up in the contents list of DARK rooms. They do 
 
 # LINK_OK
 
-**Flag: LINK_OK (rooms)**
+**Flag: LINK_OK (rooms, things)**
 
-If a room is set LINK_OK, anyone can make it their home, if they pass its `@lock/link`. This flag is often used in conjunction with JUMP_OK.
+If a room is set LINK_OK, anyone who passes its `@lock/link` can link exits to it, but not from it. A thing set LINK_OK takes exits too when the `link_to_object` @config option is on.
+
+Anyone who passes a LINK_OK object's `@lock/parent` can `@parent` an object to it.
+
+LINK_OK does not let others make it their home; that is ABODE.
 
 
 ::: seealso
 - [@link]
+- [@parent]
+- [ABODE]
 - [JUMP_OK]
+- [OPEN_OK]
+:::
+
+# OPEN_OK
+
+**Flag: OPEN_OK (rooms)**
+
+If a room is set OPEN_OK, anyone who passes its `@lock/open` can `@open` exits in it.
+
+
+::: seealso
+- [@open]
+- [LINK_OK]
 :::
 
 # MONITOR
@@ -479,9 +499,16 @@ A SAFE object cannot be destroyed with `@destroy`. Only a Wizard can remove the 
 
 # SHARED
 
-**Flag: SHARED (exits)**
+**Flag: SHARED (players)**
 
-A SHARED exit can be triggered from either end. When someone uses a SHARED exit from its destination, they go to its source. This is useful for creating two-way passages with a single exit.
+A player set SHARED is a shared player (also called a Zone Master): anyone who passes its `@lock/zone` controls the objects it owns. A player who passes that lock can also `@chown` what they own to it.
+
+
+::: seealso
+- [zone masters]
+- [@chown]
+- [@lock]
+:::
 
 # SIDEFX
 

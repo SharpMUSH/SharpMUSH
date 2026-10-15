@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Layout;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -13,7 +14,8 @@ namespace SharpMUSH.Implementation.Functions;
 
 /// <summary>
 /// SharpMUSH's own layout functions: <c>box()</c>, <c>rule()</c>, <c>flex()</c>, <c>item()</c>,
-/// <c>figure()</c>, <c>fields()</c>, <c>tree()</c> and <c>node()</c>. Each returns the text a terminal
+/// <c>figure()</c>, <c>fields()</c>, <c>tree()</c> and <c>node()</c>, and the list forms <c>lflex()</c>,
+/// <c>ltree()</c> and <c>lnode()</c>. Each returns the text a terminal
 /// shows — the same box art <c>align()</c> and <c>repeat()</c> would draw — with the block it was
 /// drawn from riding on it, so the portal draws a bordered card whose columns wrap on a phone, and a
 /// telnet client is sent the box again at its own width. A function given another's result nests that
@@ -156,6 +158,23 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// <c>lflex(&lt;options&gt;, &lt;items&gt;[, &lt;delimiter&gt;])</c> — <c>flex()</c> with its items given as
+	/// one list, split on the delimiter (a space when none is given), so a list another function made is
+	/// a row as it stands.
+	/// </summary>
+	[SharpFunction(Name = "lflex", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["options", "items", "delimiter"])]
+	public ValueTask<CallState> ListFlex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var items = ListItems(Arg(args, 1), Arg(args, 2));
+		return ValueTask.FromResult(FlexSchema.Apply(Arg(args, 0), new Laid<Flex>(new Flex([.. items.Select(FlexItemOf)]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
+		{
+			Laid<Flex> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
+			Error<string> error => new CallState(error.Value),
+		});
+	}
+
+	/// <summary>
 	/// <c>item(&lt;content&gt;[, &lt;width&gt;[, &lt;min&gt;[, &lt;grow&gt;]]])</c> — one item of a <c>flex()</c>:
 	/// <c>auto</c>, a number of cells or a percentage, after <c>align()</c>'s <c>&lt;</c>, <c>-</c> or
 	/// <c>&gt;</c> to place the text; the fewest cells it can be drawn in before the items stack; and its
@@ -225,6 +244,24 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// <c>lfields(&lt;options&gt;, &lt;labels&gt;, &lt;values&gt;[, &lt;delimiter&gt;])</c> — <c>fields()</c> with the
+	/// labels and the values given as two lists, as <c>lalign()</c> is <c>align()</c> with its columns in one: the
+	/// form for softcode that only knows its fields when it runs.
+	/// </summary>
+	[SharpFunction(Name = "lfields", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["options", "labels", "values", "delimiter"])]
+	public ValueTask<CallState> ListFields(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
+		var labels = Arg(args, 1).Length == 0 ? [] : MushText.SplitList(delimiter, Arg(args, 1));
+		var values = Arg(args, 2).Length == 0 && labels.Length == 0 ? [] : MushText.SplitList(delimiter, Arg(args, 2));
+		if (labels.Length != values.Length) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
+
+		Field[] fields = [.. labels.Zip(values, (label, value) => new Field(label, Body(value)))];
+		return ValueTask.FromResult(Laidout(parser, FieldsSchema, Arg(args, 0), new Fields([.. fields])));
+	}
+
+	/// <summary>
 	/// <c>tree([&lt;options&gt;], &lt;item1&gt;[, ... &lt;itemN&gt;])</c> — items with the items under them,
 	/// joined by guide lines. An item is text, or a <c>node()</c> that has items of its own.
 	/// </summary>
@@ -236,6 +273,24 @@ public partial class Functions
 		return ValueTask.FromResult(TreeSchema.Apply(Arg(args, 0), new Laid<Tree>(tree, MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
 		{
 			Laid<Tree> laid => Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width, laid.Border, laid.Theme),
+			Error<string> error => new CallState(error.Value),
+		});
+	}
+
+	/// <summary>
+	/// <c>ltree(&lt;options&gt;, &lt;items&gt;[, &lt;delimiter&gt;])</c> — <c>tree()</c> with its top-level items
+	/// given as one list, split on the delimiter (a space when none is given).
+	/// </summary>
+	[SharpFunction(Name = "ltree", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["options", "items", "delimiter"])]
+	public ValueTask<CallState> ListTree(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var items = ListItems(Arg(args, 1), Arg(args, 2));
+		return ValueTask.FromResult(TreeSchema.Apply(Arg(args, 0), new Laid<Tree>(new Tree([.. items.SelectMany(TreeItemsOf)]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
+		{
+			Laid<Tree> laid => items.Length == 0
+				? EmptyUnlessBadWidth(parser, laid.Width)
+				: Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -267,6 +322,20 @@ public partial class Functions
 		if (LayoutWidth(parser, MarkupText.Empty) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 
 		var item = new TreeItem(Body(Arg(args, 0)), [.. Rest(args, 1).SelectMany(TreeItemsOf)]);
+		return ValueTask.FromResult(new CallState(Build(new Tree([item]), width, fluid)));
+	}
+
+	/// <summary>
+	/// <c>lnode(&lt;content&gt;, &lt;children&gt;[, &lt;delimiter&gt;])</c> — <c>node()</c> with its children
+	/// given as one list, split on the delimiter (a space when none is given).
+	/// </summary>
+	[SharpFunction(Name = "lnode", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["content", "children", "delimiter"])]
+	public ValueTask<CallState> ListNode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (LayoutWidth(parser, MarkupText.Empty) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
+
+		var item = new TreeItem(Body(Arg(args, 0)), [.. ListItems(Arg(args, 1), Arg(args, 2)).SelectMany(TreeItemsOf)]);
 		return ValueTask.FromResult(new CallState(Build(new Tree([item]), width, fluid)));
 	}
 

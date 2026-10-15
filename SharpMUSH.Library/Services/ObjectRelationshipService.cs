@@ -22,24 +22,58 @@ public class ObjectRelationshipService(
 {
 	public async ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj)
-				|| !await permissionService.Controls(executor, newOwner))
+		if (!await CanChown(executor, obj, newOwner))
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		// Ownership transfer logic confirmed:
-		// - Executor must control the object being transferred (prevents unauthorized changes)
-		// - Executor must control the new owner (prevents forcing ownership on others)
-		// This matches PennMUSH behavior where @chown requires control of both parties
-
 		await mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
 
 		return true;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>chown_ok</c> (<c>src/set.c:243-290</c>). A wizard may give anything to anyone.
+	/// Anyone else must control <paramref name="newOwner"/>, or it must be a Zone Master (SHARED) whose
+	/// zone lock they pass; and then they must own <paramref name="obj"/>, or control its owner while
+	/// that owner passes the Zone Master's lock, or <paramref name="obj"/> must be CHOWN_OK, carried if
+	/// it is a thing, with a chown lock they pass.
+	/// </summary>
+	public async ValueTask<bool> CanChown(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner)
+	{
+		if (await executor.IsWizard())
+		{
+			return true;
+		}
+
+		var receiver = new AnySharpObject(newOwner);
+		var zoneMaster = await receiver.HasFlag("SHARED");
+		if (!await permissionService.Controls(executor, receiver)
+			&& !(zoneMaster && await permissionService.PassesLock(executor, receiver, LockType.Zone)))
+		{
+			return false;
+		}
+
+		if (await executor.Owns(obj))
+		{
+			return true;
+		}
+
+		var currentOwner = new AnySharpObject(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+		if (zoneMaster && await permissionService.Controls(executor, currentOwner)
+			&& await permissionService.PassesLock(currentOwner, receiver, LockType.Zone))
+		{
+			return true;
+		}
+
+		return (obj is not SharpThing thing
+				|| (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef == executor.Object().DBRef)
+			&& await obj.HasFlag("CHOWN_OK")
+			&& await permissionService.PassesLock(executor, obj, LockType.ChOwn);
 	}
 
 	public async ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,

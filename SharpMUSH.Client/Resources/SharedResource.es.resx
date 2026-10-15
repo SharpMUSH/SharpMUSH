@@ -21,7 +21,7 @@
     <comment>MT — example values left untranslated</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Reglas de acceso (separadas por comas)</value>
+    <value>Reglas de acceso</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT — "Author a Package" rendered as the action of authoring/creating a package</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Autores (separados por comas)</value>
+    <value>Autores</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations for objeto / atributo, kept short like the English</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Ids de objeto (uno por línea, p. ej. #847:1778518155494)</value>
+    <value>Ids de objeto</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Restricciones (separadas por comas)</value>
+    <value>Restricciones</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

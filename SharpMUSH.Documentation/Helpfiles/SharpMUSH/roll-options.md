@@ -27,6 +27,7 @@
 | `total` | the total (the default) |
 | `text` | each dice term with its dice in square brackets, then `=` and the total |
 | `json` | every term and die, for a program to read |
+| `record` | the roll as JSON, kept under a number; see [ROLL RECORDS] |
 | `min` | the lowest total the formula can come to |
 | `max` | the highest total the formula can come to |
 

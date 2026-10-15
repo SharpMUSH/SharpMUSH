@@ -144,6 +144,57 @@ public class LookFormatInheritanceTests
 	}
 
 	/// <summary>
+	/// PennMUSH shows its built-in look for a halted room, and a room is halted by @chown. The Ancestor
+	/// Room's formats are SharpMUSH's built-in look, so a halted room shows the default name and its
+	/// description instead of that code. Its own format still shows unevaluated, as in PennMUSH, where a
+	/// halted executor evaluates nothing (<c>parse.c:2092</c>).
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task HaltedRoom_ShowsTheBuiltInLookInsteadOfTheAncestorsCode()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("halt");
+		var (player, parser, room) = await MortalInOwnRoom(token);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@describe here=Desc_{token}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {room}=HALT"));
+
+		var original = (await GodParser.EvaluateAsync(MarkupText.Plain($"[get({AncestorRoom}/NAMEFORMAT)]"))).ToPlainText();
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}=[if(strmatch(name(%0),Room_{token}),ANAME_{token})]"));
+		try
+		{
+			var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+			var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+			await Assert.That(heard).Contains((string line) => line.StartsWith($"Room_{token}(", StringComparison.Ordinal));
+			await Assert.That(heard).Contains((string line) => line.Contains($"Desc_{token}", StringComparison.Ordinal));
+			await Assert.That(heard).DoesNotContain((string line) => line.Contains($"ANAME_{token}", StringComparison.Ordinal));
+			await Assert.That(heard).DoesNotContain((string line) => line.Contains("localize(", StringComparison.Ordinal));
+
+			// The same formats reached through an @parent set to the Ancestor Room are still the built-in look.
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {room}={AncestorRoom}"));
+			before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+			heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+			await Assert.That(heard).Contains((string line) => line.StartsWith($"Room_{token}(", StringComparison.Ordinal));
+			await Assert.That(heard).DoesNotContain((string line) => line.Contains($"ANAME_{token}", StringComparison.Ordinal));
+
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&NAMEFORMAT here=OWN_{token}:[name(%0)]"));
+			before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+			await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before))
+				.Contains($"OWN_{token}:[name(%0)]");
+		}
+		finally
+		{
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}={original}"));
+		}
+	}
+
+	/// <summary>
 	/// <c>can_see</c> (<c>predicat.c:338-344</c>): "your own body isn't listed in a 'look'", so a player
 	/// alone in a room sees no Contents section at all.
 	/// </summary>

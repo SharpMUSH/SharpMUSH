@@ -13,7 +13,7 @@ requires_server: ">=0.1"
 # the GET/POST verbs that the bundled `http-handler` package provides.
 depends:
   - package: http-handler
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: http-handler/

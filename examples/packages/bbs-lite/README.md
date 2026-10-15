@@ -3,8 +3,8 @@
 A deliberately tiny bulletin board that exercises every manifest feature
 beyond the basics:
 
-- **Dependency with a range constraint and a source hint** — requires
-  `who-where` at any 1.x version (`>=1.0 <2.0`). Install is blocked until it's
+- **Dependency with a version constraint and a source hint** — requires
+  `who-where` 1.0 or newer (`>=1.0`). Install is blocked until it's
   present, but because the dependency declares a `source:` (repo, directory
   path, branch), the installer can offer to fetch it from there rather than
   just reporting it missing.

@@ -78,6 +78,11 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 			$"api/packages/remotes/{Uri.EscapeDataString(remote)}/readme{suffix}", "That package has no readme.");
 	}
 
+	/// <summary>The README an installed package was applied with.</summary>
+	public Task<ApiResult<ReadmeResponse>> GetInstalledReadmeAsync(string id) =>
+		Client.GetApiAsync<ReadmeResponse>(
+			$"api/packages/{Uri.EscapeDataString(id)}/readme", "That package has no readme.");
+
 	public Task<ApiResult<PackageRepoSnapshot>> BrowseAsync(string remote) =>
 		Client.GetApiAsync<PackageRepoSnapshot>(
 			$"api/packages/remotes/{Uri.EscapeDataString(remote)}/browse", "The server returned no repository listing.");

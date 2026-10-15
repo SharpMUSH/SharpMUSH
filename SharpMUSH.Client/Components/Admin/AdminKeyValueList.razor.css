@@ -17,6 +17,11 @@
 	font-family: var(--font-mono);
 }
 
+/* a value list's box sits under its own label, so the row lines up on the boxes' bottom edge */
+.kvl-add--pair {
+	align-items: flex-end;
+}
+
 .kvl-add ::deep .kvl-add-btn {
 	flex-shrink: 0;
 }

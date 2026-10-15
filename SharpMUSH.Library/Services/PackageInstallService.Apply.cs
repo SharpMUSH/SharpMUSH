@@ -58,6 +58,12 @@ public partial class PackageInstallService
 		IPackageFileSource? fileSource,
 		CancellationToken cancellationToken)
 	{
+		var compatibility = PackageServerCompatibility.Check(manifest, engine.Current);
+		if (RefuseServerVersion(compatibility, request) is { } refused)
+		{
+			return refused;
+		}
+
 		// Managed packages (Phase 4) carry a compiled C# plugin DLL rather than
 		// softcode: there is no plan/changeset to compute. Verify + trust-gate +
 		// deposit the binaries, then record the install (with the deployed file
@@ -539,10 +545,11 @@ public partial class PackageInstallService
 		// its edges silently.
 		var revision = (run.Inputs.Installed?.CurrentRevision ?? 0) + 1;
 		var source = run.Request.Source;
+		var pastMaximum = PastMaximum(manifest, run.Notes);
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
 			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
-			Kind: manifest.Kind));
+			Kind: manifest.Kind, PastMaximum: pastMaximum));
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -561,7 +568,9 @@ public partial class PackageInstallService
 					o.IsAttach ? PackageObjectRelation.Attached : PackageObjectRelation.Owned))
 				.ToList(),
 			run.FinalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
-			structureSnapshot);
+			structureSnapshot,
+			pastMaximum,
+			run.Request.Readme);
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
@@ -613,6 +622,33 @@ public partial class PackageInstallService
 		};
 	}
 
+	/// <summary>
+	/// The engine-version gate every apply passes: a server below <c>requires_server</c> is refused, and one newer
+	/// than <c>maximum_server</c> only with the administrator's confirmation. <c>verified_server</c> only warns.
+	/// </summary>
+	private static Error<string>? RefuseServerVersion(PackageServerCompatibility compatibility, PackageApplyRequest request)
+		=> compatibility.Fit switch
+		{
+			PackageServerFit.BelowMinimum => new Error<string>(
+				$"Plan is blocked: requires SharpMUSH {compatibility.Minimum}; this server is {compatibility.Server}."),
+			PackageServerFit.AboveMaximum when !request.AllowPastMaximum => new Error<string>(
+				$"This package runs on SharpMUSH up to {compatibility.Maximum}; this server is {compatibility.Server}. "
+				+ "Confirm that you want to apply it anyway."),
+			_ => null
+		};
+
+	/// <summary>The confirmation to record when this apply goes past the package's <c>maximum_server</c>, with a note saying so.</summary>
+	private PackageMaximumOverride? PastMaximum(PackageManifest manifest, List<string> notes)
+	{
+		if (manifest.MaximumServer is not { } maximum || !maximum.IsExceededBy(engine.Current))
+		{
+			return null;
+		}
+
+		notes.Add($"Applied past maximum_server {maximum}: this server is {engine.Current}. The choice is recorded on the package.");
+		return new PackageMaximumOverride(engine.Current.ToString(), maximum.ToString(), DateTimeOffset.UtcNow);
+	}
+
 	private static Error<string> Blocked(IEnumerable<PackageDependencyIssue> issues) =>
 		new($"Plan is blocked: {string.Join("; ", issues.Select(i =>
 			i.IsConflict
@@ -630,11 +666,17 @@ public partial class PackageInstallService
 	{
 		var installed = await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord found ? found : null;
 		var revision = (installed?.CurrentRevision ?? 0) + 1;
+		var notes = new List<string>
+		{
+			manifest.Kind == PackageKind.Ui
+				? $"Installed UI definition {manifest.Name} with {deployed.Count} verified files; create applications referring to this definition."
+				: $"Installed {deployed.Count} verified file(s) for plugin {manifest.Name}. It starts when the server restarts."
+		};
 
 		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
 			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed,
-			Kind: manifest.Kind));
+			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, notes)));
 
 		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -643,7 +685,7 @@ public partial class PackageInstallService
 		// A minimal revision snapshot: a managed package has no objects/attributes,
 		// so history records only the version + commit it deposited.
 		var snapshot = new PackageRevisionSnapshot(
-			manifest.Version.ToString(), [], [], []);
+			manifest.Version.ToString(), [], [], [], Readme: request.Readme);
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
 			installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,
@@ -654,12 +696,6 @@ public partial class PackageInstallService
 			DateTimeOffset.UtcNow));
 		await registry.PrunePackageRevisionsAsync(manifest.Name, request.KeepRevisions);
 
-		var notes = new List<string>
-		{
-			manifest.Kind == PackageKind.Ui
-				? $"Installed UI definition {manifest.Name} with {deployed.Count} verified files; create applications referring to this definition."
-				: $"Installed {deployed.Count} verified file(s) for plugin {manifest.Name}. It starts when the server restarts."
-		};
 		return new PackageApplyResult(revision, new Dictionary<string, string>(StringComparer.Ordinal), notes);
 	}
 

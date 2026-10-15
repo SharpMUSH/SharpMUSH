@@ -21,7 +21,7 @@
     <comment>MT — rule literals are values the admin types, left untranslated.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Zugriffsregeln (kommagetrennt)</value>
+    <value>Zugriffsregeln</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Autoren (kommagetrennt)</value>
+    <value>Autoren</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — Abkürzungen wie im Englischen</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Objekt-IDs (eine pro Zeile, z. B. #847:1778518155494)</value>
+    <value>Objekt-IDs</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — privilege-level values left untranslated: they are typed by the admin.</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Einschränkungen (kommagetrennt)</value>
+    <value>Einschränkungen</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

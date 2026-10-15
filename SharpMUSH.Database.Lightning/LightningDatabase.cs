@@ -213,6 +213,7 @@ public partial class LightningDatabase(
 			RecomputeNextDbref(tx);
 			RecomputeCounter(tx, "next_mail", Tables.Mail);
 			RecomputeCounter(tx, "next_wiki", Tables.WikiPage);
+			RecomputeCounter(tx, "next_roll", Tables.Roll);
 			RecomputeAccountCounter(tx);
 		}, ct);
 

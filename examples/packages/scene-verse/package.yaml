@@ -1,6 +1,6 @@
 format: 1.2
 package: scene-verse
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Verse, canon and content warnings on scenes: three scene details for +scene/set, a content warning told to whoever joins, and +scene/verses."
 license: MIT
@@ -13,7 +13,7 @@ requires_server: ">=0.1"
 # the values they were given, and they then show under their keys.
 depends:
   - package: scene
-    version: ">=1.6 <2.0"
+    version: ">=1.6"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/

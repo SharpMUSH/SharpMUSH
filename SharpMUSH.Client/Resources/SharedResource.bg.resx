@@ -21,7 +21,7 @@
     <comment>MT — rule tokens left in English: config values / machine identifiers</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Правила за достъп (разделени със запетая)</value>
+    <value>Правила за достъп</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT — «Author a Package» read as a verb heading</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Автори (разделени със запетая)</value>
+    <value>Автори</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations kept as short as the English «obj / attr»; abbreviating also sidesteps the masculine бройна форма, which this string has no plural rule for</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Идентификатори на обекти (по един на ред, напр. #847:1778518155494)</value>
+    <value>Идентификатори на обекти</value>
     <comment>MT — example id left as-is</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — flag names left in English: config values / privilege levels per glossary</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Ограничения (разделени със запетая)</value>
+    <value>Ограничения</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

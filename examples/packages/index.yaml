@@ -13,17 +13,17 @@ packages:
     description: Read-only room topology in the reusable HTML/JavaScript host
   - path: hello-world/
     package: hello-world
-    version: 1.0.0
+    version: 1.0.1
     description: Minimal example — one object, one command
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.3.0
-    description: +who and +where commands; other packages add a Status column to +who with filters
+    version: 1.5.2
+    description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
     package: bbs-lite
-    version: 0.9.1-beta
+    version: 0.9.2-beta
     description: Tiny bulletin board — dependencies, configure, cross-package refs
   - path: starter-area/
     package: starter-area
@@ -40,7 +40,7 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.0.3
+    version: 1.0.4
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
@@ -52,15 +52,15 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 1.0.3
+    version: 1.0.4
     description: Dynamic Application (Area 21) — a character-application form (requires http-handler)
   - path: chargen-app/
     package: chargen-app
-    version: 1.0.0
+    version: 1.0.1
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
   - path: scene/
     package: scene
-    version: 1.6.0
+    version: 1.6.1
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -75,17 +75,17 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.6.1
+    version: 1.6.2
     description: +wiki — paged listings, a rendered article view, and an editorial audit
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.7.0
+    version: 1.7.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
     package: jobs-app
-    version: 1.0.1
+    version: 1.0.2
     description: Application package — the job queue as a portal page at /apps/jobs (requires jobs)
   - path: messages/
     name: Messages
@@ -95,33 +95,53 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.2.2
+    version: 1.2.3
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-scene/
     name: Radio in scenes
     package: radio-scene
-    version: 1.2.0
+    version: 1.2.1
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
   - path: scene-verse/
     name: Verse and canon in scenes
     package: scene-verse
-    version: 1.0.0
+    version: 1.0.1
     description: Verse, canon and content warnings on scenes, a content warning told to whoever joins, and +scene/verses (requires scene)
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.2.1
+    version: 1.2.2
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help and http-handler)
   - path: bboards-app/
     name: BBoards in the portal
     package: bboards-app
-    version: 1.0.1
+    version: 1.0.2
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
-  - path: rp-finder/
-    name: RP Finder
-    package: rp-finder
+  - path: status/
+    name: Status
+    package: status
     version: 1.0.0
-    description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)
+    description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
+  - path: watch/
+    name: Watch
+    package: watch
+    version: 1.0.0
+    description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
+  - path: finger/
+    name: Finger
+    package: finger
+    version: 1.0.1
+    description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
+  - path: time/
+    name: Time
+    package: time
+    version: 1.0.0
+    description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
+  - path: discord/
+    name: Discord
+    package: discord
+    version: 1.0.0
+    description: The discord feed kind and the discord.admin permission, for the Discord plugin's linked channels (@discord/link)
   - path: notifications/
     name: Notifications
     package: notifications

@@ -154,6 +154,8 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().WikiHistory);
 		services.AddSingleton<IAuditStore>(sp => sp.GetRequiredService<LightningDatabase>());
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().AuditHistory);
+		services.AddSingleton<IRollStore>(sp => sp.GetRequiredService<LightningDatabase>());
+		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().RollHistory);
 		AddHistoryRetention(services);
 
 		return services;

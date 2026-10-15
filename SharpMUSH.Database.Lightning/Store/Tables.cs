@@ -92,6 +92,8 @@ public static class Tables
 	public static readonly TableDef FeedTap = TableDef.Node("feed.tap");
 	/// <summary>Staff actions: big-endian millis + big-endian sequence → the entry, so the log reads newest first and a date range is one key range.</summary>
 	public static readonly TableDef Audit = TableDef.Node("audit");
+	/// <summary>Recorded rolls: big-endian id → the roll. Ids come from <c>next_roll</c> and only grow, so the table is in the order rolled.</summary>
+	public static readonly TableDef Roll = TableDef.Node("roll");
 	public static readonly TableDef State = TableDef.Node("state");
 	public static readonly TableDef ExpandedObj = TableDef.Node("x.obj");
 	public static readonly TableDef ExpandedSrv = TableDef.Node("x.srv");

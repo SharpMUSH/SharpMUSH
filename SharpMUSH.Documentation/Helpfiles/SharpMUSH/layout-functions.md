@@ -217,8 +217,29 @@ Three      |
 
 ::: seealso
 - [ITEM()]
+- [LFLEX()]
 - [BOX()]
 - [ALIGN()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# lflex()
+
+`lflex(<options>, <items>[, <delimiter>])`
+
+[FLEX()] with its items given as one list, split on *<delimiter>* (a space when none is given), so a row can be as long as a list another function made. Each item is text, a layout or an [ITEM()], as in flex(). It takes flex()'s options. An empty list draws nothing.
+
+The text of a layout is its box art, so a list of layouts needs a delimiter its art never holds: `^` rather than `|` or a space.
+
+### Example
+```sharp
+> think lflex({{"sep":" | ","width":40}},iter(Strength Agility Wits,item(##,10),,^),^)
+Strength   | Agility    | Wits
+```
+
+::: seealso
+- [FLEX()]
+- [ITEM()]
 - [LAYOUT FUNCTIONS]
 :::
 
@@ -291,8 +312,38 @@ Species:
 ```
 
 ::: seealso
+- [LFIELDS()]
 - [BOX()]
 - [FLEX()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# lfields()
+
+`lfields(<options>, <labels>, <values>[, <delimiter>])`
+
+[FIELDS()] with the labels in one list and the values in another, the way [LALIGN()] takes [ALIGN()]'s columns as a list. The first label goes with the first value, and so on. Use it when the fields are only known when the code runs, such as a sheet built from a list of attributes.
+
+*<delimiter>* splits both lists; a space by default. Labels such as `Full Name` need another one. The two lists must have as many items as each other, or it returns `#-1 NUMBER OF WORDS MUST BE EQUAL`. Two empty lists draw nothing.
+
+*<options>* are [FIELDS()]'s.
+
+### Examples
+```sharp
+> think lfields({{"width":40}},Sex Species,Male Human)
+Sex:     Male
+Species: Human
+> think lfields({{"width":40}},Sex|Species|Origin,Male|Human|Super Robot Wars AG,|)
+Sex:     Male
+Species: Human
+Origin:  Super Robot Wars AG
+> think lfields({{"width":40}},Sex Species,Male)
+#-1 NUMBER OF WORDS MUST BE EQUAL
+```
+
+::: seealso
+- [FIELDS()]
+- [LALIGN()]
 - [LAYOUT FUNCTIONS]
 :::
 
@@ -343,7 +394,32 @@ Mail
 
 ::: seealso
 - [NODE()]
+- [LTREE()]
 - [LAYOUT BORDERS]
+- [LAYOUT FUNCTIONS]
+:::
+
+# ltree()
+
+`ltree(<options>, <items>[, <delimiter>])`
+
+[TREE()] with its top-level items given as one list, split on *<delimiter>* (a space when none is given). Each item is text, a layout or a [NODE()] or [LNODE()], as in tree(). It takes tree()'s options. An empty list draws nothing.
+
+A tree's guide lines hold `|` and spaces, so a list of nodes needs another delimiter, such as `^`.
+
+### Example
+```sharp
+> think ltree({{"width":40}},iter(Public Staff,lnode(##,switch(##,Public,+chat +ooc,+admin)),,^),^)
+Public
+|- +chat
+`- +ooc
+Staff
+`- +admin
+```
+
+::: seealso
+- [TREE()]
+- [LNODE()]
 - [LAYOUT FUNCTIONS]
 :::
 
@@ -363,6 +439,27 @@ Mail
 
 ::: seealso
 - [TREE()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# lnode()
+
+`lnode(<content>, <children>[, <delimiter>])`
+
+[NODE()] with its children given as one list, split on *<delimiter>* (a space when none is given). Each child is text, a layout or another node. Used on its own, lnode() draws a tree with *<content>* at the top; an empty list draws *<content>* alone.
+
+### Example
+```sharp
+> think lnode(Mail,Inbox Sent Drafts)
+Mail
+|- Inbox
+|- Sent
+`- Drafts
+```
+
+::: seealso
+- [NODE()]
+- [LTREE()]
 - [LAYOUT FUNCTIONS]
 :::
 
@@ -560,8 +657,41 @@ Raya    Writing a
 
 ::: seealso
 - [DATACOLUMNS()]
+- [LDATATABLE()]
 - [GRID()]
 - [FIELDS()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# ldatatable()
+
+`ldatatable(<options>, <headings>, <rows>[, <delimiter>])`
+
+[DATATABLE()] with its rows given as one list, split on *<delimiter>* (a space when none is given), so one [ITER()] can make a row for each record. The headings and each row's cells are split by `|`, or by the `delim` option, as in datatable(). It takes datatable()'s options and gives way on a narrow screen the same way. An empty list draws the headings alone.
+
+### Examples
+```sharp
+> think ldatatable({{"width":30}},Name|>Score,iter(Ann:10 Bob:7,[before(##,:)]|[after(##,:)]))
+Name  Score
+-----------
+Ann      10
+Bob       7
+```
+
+Cells that hold spaces need another delimiter between the rows:
+
+```sharp
+> think ldatatable({{"width":30}},Name|Doing,Mannaz|Hooooo?%rRaya|Writing a scene,%r)
+Name    Doing
+-----------------------
+Mannaz  Hooooo?
+Raya    Writing a scene
+```
+
+::: seealso
+- [DATATABLE()]
+- [DATACOLUMNS()]
+- [ITER()]
 - [LAYOUT FUNCTIONS]
 :::
 

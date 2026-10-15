@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.CodeAnalysis.Catalog;
 using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Middleware;
@@ -204,6 +205,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IPackageDeclarationService, PackageDeclarationService>();
 		services.AddSingleton<IPackageSettingService, PackageSettingService>();
 		services.AddSingleton<IPackageWikiService, PackageWikiService>();
+		services.AddSingleton(EngineVersion.FromAssemblyVersion(Implementation.Generated.VersionInfo.SharpMUSHVersion));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();

@@ -21,7 +21,7 @@
     <comment>MT — example values kept in English</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Reguli de acces (separate prin virgulă)</value>
+    <value>Reguli de acces</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Autori (separați prin virgulă)</value>
+    <value>Autori</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations kept short to match the English column</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>ID-uri de obiecte (câte unul pe linie, ex. #847:1778518155494)</value>
+    <value>ID-uri de obiecte</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — privilege-level values kept in English</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Restricții (separate prin virgulă)</value>
+    <value>Restricții</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

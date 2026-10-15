@@ -218,6 +218,23 @@ public partial class PackageInstallService
 		}
 	}
 
+	// ── README ───────────────────────────────────────────────────────────────
+
+	public async Task<Found<string>> GetReadmeAsync(string packageId)
+	{
+		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed
+			|| await registry.GetPackageRevisionAsync(packageId, installed.CurrentRevision) is not PackageRevisionRecord revision)
+		{
+			return new NotFound();
+		}
+
+		return JsonSerializer.Deserialize<PackageRevisionSnapshot>(revision.ManifestSnapshotJson, SnapshotJson) switch
+		{
+			{ Readme: { Length: > 0 } readme } => readme,
+			_ => new NotFound()
+		};
+	}
+
 	// ── Rollback ─────────────────────────────────────────────────────────────
 
 	public Task<Result<PackageRollbackResult>> RollbackAsync(
@@ -453,6 +470,7 @@ public partial class PackageInstallService
 		await writes.UpsertInstalledPackageAsync(installed with
 		{
 			Version = snapshot.Version,
+			PastMaximum = snapshot.PastMaximum,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});
