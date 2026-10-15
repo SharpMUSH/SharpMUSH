@@ -64,8 +64,15 @@ public sealed class DiscordGatewayService(
 				.ToList()
 			: [];
 
-	/// <summary>Drops the connection and logs in again with the token stored now.</summary>
-	public void Reconnect() => _reconnect.Writer.TryWrite(true);
+	/// <summary>
+	/// Drops the connection and logs in again with the token stored now. The state reads connecting from here on, so
+	/// whoever asked sees the reconnect under way rather than the state it replaces.
+	/// </summary>
+	public void Reconnect()
+	{
+		_state = new DiscordGatewayState(DiscordGatewayStatus.Connecting);
+		_reconnect.Writer.TryWrite(true);
+	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{

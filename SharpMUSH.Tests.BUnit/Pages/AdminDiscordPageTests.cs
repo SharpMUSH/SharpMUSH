@@ -22,6 +22,7 @@ public class AdminDiscordPageTests : TrackingBunitContext
 	private static readonly DateTimeOffset At = new(2026, 10, 15, 9, 0, 0, TimeSpan.Zero);
 
 	private readonly DiscordApi _api = new();
+	private readonly ManualTime _time = new();
 
 	public AdminDiscordPageTests()
 	{
@@ -31,6 +32,7 @@ public class AdminDiscordPageTests : TrackingBunitContext
 		Services.AddMudServices()
 			.AddSingleton(factory)
 			.AddLogging()
+			.AddSingleton<TimeProvider>(_time)
 			.AddSingleton<DiscordAdminService>()
 			.AddSingleton<RoleRegistryClient>()
 			.AddSingleton<ServerInfoService>(new StubServerInfoService(true, features: [GameFeatures.Discord]))
@@ -44,6 +46,8 @@ public class AdminDiscordPageTests : TrackingBunitContext
 		public bool Forbidden { get; set; }
 
 		public string ChannelState { get; set; } = "stopped";
+
+		public string Status { get; set; } = "connected";
 
 		public List<string> Calls { get; } = [];
 
@@ -75,7 +79,7 @@ public class AdminDiscordPageTests : TrackingBunitContext
 
 			return path switch
 			{
-				"/api/discord/admin/connection" => Json(new DiscordConnectionView("connected", "Lantern", "https://discord.com/invite", 1,
+				"/api/discord/admin/connection" => Json(new DiscordConnectionView(Status, "Lantern", "https://discord.com/invite", 1,
 					[
 						new DiscordSetupStepView("token", "Bot token", true, null, null),
 						new DiscordSetupStepView("intents", "Privileged intents", false, "Turn on Server Members Intent.", "https://discord.com/developers"),
@@ -112,6 +116,39 @@ public class AdminDiscordPageTests : TrackingBunitContext
 		private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
 	}
 
+	/// <summary>Time that moves only when the test says: each tick fires every timer once.</summary>
+	private sealed class ManualTime : TimeProvider
+	{
+		private readonly List<(TimerCallback Callback, object? State)> _timers = [];
+
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			lock (_timers) _timers.Add((callback, state));
+			return new Stopped();
+		}
+
+		public void Tick()
+		{
+			(TimerCallback Callback, object? State)[] timers;
+			lock (_timers) timers = [.. _timers];
+			foreach (var (callback, state) in timers)
+			{
+				callback(state);
+			}
+		}
+
+		private sealed class Stopped : ITimer
+		{
+			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+
+			public void Dispose()
+			{
+			}
+
+			public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+		}
+	}
+
 	private IRenderedComponent<MudHarness> RenderPage(string ready = ".adm-discord-connection")
 	{
 		var cut = Render<MudHarness>(p => p.AddChildContent<AdminDiscord>());
@@ -136,6 +173,25 @@ public class AdminDiscordPageTests : TrackingBunitContext
 		await Assert.That(cut.Find(".adm-discord-roles .adm-discord-row").GetAttribute("data-role")).IsEqualTo("1427000000000000102");
 		await Assert.That(cut.Find(".adm-discord-drift .adm-discord-row").TextContent).Contains("bob.k");
 		await Assert.That(cut.Find(".adm-discord-members .adm-discord-row").TextContent).Contains("Grave");
+	}
+
+	/// <summary>A reconnect finishes after the request that asked for it; the page follows it without a reload.</summary>
+	[Test]
+	public async Task WhileConnecting_ThePageReadsTheConnectionAgainUntilItSettles()
+	{
+		_api.Status = "connecting";
+		var cut = RenderPage();
+		await Assert.That(cut.Find(".adm-discord-status").TextContent).Contains("connecting");
+
+		_api.Status = "connected";
+		_time.Tick();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".adm-discord-status").TextContent.Trim() != "connected")
+			{
+				throw new InvalidOperationException("still connecting");
+			}
+		}, TimeSpan.FromSeconds(5));
 	}
 
 	[Test]

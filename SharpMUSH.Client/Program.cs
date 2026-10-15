@@ -33,6 +33,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddSharedResourceLocalization();
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
