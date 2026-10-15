@@ -928,6 +928,9 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("sortkey(test/KEY_SORTKEY,abc ab a)", "a ab abc")]
+	[Arguments("sortkey(test/KEY_SORTKEY,ab abc a,n)", "a ab abc")]
+	// A leading - reverses the order, and items whose keys tie keep their order.
+	[Arguments("sortkey(test/KEY_SORTKEY,ab a abc cd,-n)", "abc ab cd a")]
 	public async Task SortKey(string str, string expected)
 	{
 		var objNum = await CreateObjectWithAttribute("sortkey_obj", "KEY_SORTKEY", "strlen(%0)");

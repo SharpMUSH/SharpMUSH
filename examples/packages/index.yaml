@@ -122,6 +122,16 @@ packages:
     package: scene-safety
     version: 1.0.2
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
+  - path: highlights/
+    name: Highlights
+    package: highlights
+    version: 1.0.0
+    description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
+  - path: highlights-app/
+    name: Highlights in the portal
+    package: highlights-app
+    version: 1.0.0
+    description: Registers the highlights as a portal page at /apps/highlights, with a button under each pose (requires highlights)
   - path: bboards/
     name: BBoards
     package: bboards
