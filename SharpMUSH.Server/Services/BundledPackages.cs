@@ -103,6 +103,9 @@ public static class BundledPackages
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: joins game channels to linked Discord channels, so it needs the discord package and
+		// the event handler.
+		new("discord-channels", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

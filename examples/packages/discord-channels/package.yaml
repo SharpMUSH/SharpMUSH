@@ -1,0 +1,138 @@
+format: 1.2
+package: discord-channels
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Joins a game channel to a linked Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel links one, +discord/channels lists them."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [discord, chat, channels, bridge, feed]
+requires_server: ">=0.1"
+
+# Neither side knows about the other. The discord package's feed kind carries a Discord channel's lines (the
+# feed discord/<channel id>), and the Discord plugin posts them; the game's channels carry their own. This
+# package passes lines between the two: the CHANNEL`MESSAGE event sends a game channel's lines to its Discord
+# feed, and a tap on the discord kind emits the lines Discord members posted onto the game channel.
+#
+# A line goes one way only, so nothing comes back round. The event skips the lines this package emitted, and
+# the tap passes on only lines that came from Discord (%<origin> is discord/<message id>), not the ones the
+# event sent there.
+depends:
+  - package: discord
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/discord/
+      branch: main
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  # The links and the commands. WIZARD because it emits onto channels it is not on, and its tap and the event
+  # send on Discord feeds owned by the Discord Bridge.
+  #
+  #   LINK`<discord channel id>   the game channel's name
+  - ref: links
+    type: thing
+    name: Discord Channels
+    flags: [WIZARD]
+    location: "{{$master_room}}"
+    attributes:
+      CMD`LIST: |-
+        $+discord/channels:@pemit %#=u(me/FUN`LIST)
+      CMD`LINK: |-
+        $+discord/channel *=*:@include me/INC`LINK=%0,%1,0
+      CMD`LINK`CONFIRM: |-
+        $+discord/channel/confirm *=*:@include me/INC`LINK=%0,%1,1
+      CMD`REMOVE: |-
+        $+discord/channel/remove *:@include me/INC`REMOVE=%0
+
+      # %0 the game channel as typed, %1 the Discord channel id, %2 1 when the player confirmed that a channel
+      # with a see or join lock goes to Discord.
+      INC`LINK: |-
+        @assert not(strmatch(setr(chan,cinfo(%0,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %0.,warn); @assert u(me/FUN`MAYLINK,%#,%q<chan>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<chan> to Discord.,warn); @assert cand(regmatch(%1,^\\d+$),gte(strlen(%1),17),lte(strlen(%1),20))=@pemit %#=notice(DISCORD,%1 is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(LINK`%1)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(LINK`%1)].,warn); @assert not(strlen(u(me/FUN`LINKOF,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> already goes to Discord channel [u(me/FUN`LINKOF,%q<chan>)]. +discord/channel/remove %q<chan> first.,warn); @assert cor(%2,not(u(me/FUN`PRIVATE,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<chan>=%1 links it anyway.,warn); &LINK`%1 me=%q<chan>; @pemit %#=notice(DISCORD,%q<chan> goes to Discord channel %1%, and what is posted there comes back. If @discord does not list that channel%, link it with @discord/link.,ok)
+      # %0 the game channel as typed, or the name it had when it was linked.
+      INC`REMOVE: |-
+        @assert strlen(setr(id,u(me/FUN`LINKOF,firstof(cinfo(%0,name),%0))))=@pemit %#=notice(DISCORD,%0 does not go to Discord.,warn); @assert u(me/FUN`MAYLINK,%#,v(LINK`%q<id>))=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin unlink [v(LINK`%q<id>)].,warn); @pemit %#=notice(DISCORD,[v(LINK`%q<id>)] no longer goes to Discord channel %q<id>.,ok); &LINK`%q<id> me
+
+      # %0 a player, %1 a game channel: whether they may link it.
+      FUN`MAYLINK: |-
+        cor(permission(%0,chat.admin),not(comp(objid(cowner(%1)),objid(%0))))
+      # %0 a game channel: whether it has a see or join lock, so not everyone reads it.
+      FUN`PRIVATE: |-
+        cor(strlen(clock(%0/see)),strlen(clock(%0/join)))
+      # %0 a game channel: the Discord channel id it goes to, or nothing.
+      FUN`LINKOF: |-
+        first(iter(lattr(me/LINK`*),if(not(comp(lcstr(v(%i0)),lcstr(%0))),last(%i0,`))))
+      # %0 a style, %1 the speaker's name, %2 the text: the line as the game channel shows it.
+      FUN`LINE: |-
+        switch(%0,pose,%1 %2,semipose,%1%2,emit,%2,%1 says%, "%2")
+      FUN`LIST: |-
+        if(words(lattr(me/LINK`*)),box(datacolumns(json(object,delim,json(string,%r),grow,json(string,1)),[tone(strong,Game channel)]%r[iter(lattr(me/LINK`*),u(me/FUN`CHANNELNAME,v(%i0)),,%r)],[tone(strong,Discord channel)]%r[iter(lattr(me/LINK`*),last(%i0,`),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
+      # %0 a linked channel's name: the name, or a note that no channel has it any more.
+      FUN`CHANNELNAME: |-
+        if(strmatch(cinfo(%0,name),#-*),%0 [tone(error,no such channel)],%0)
+
+      # A tap on the discord kind. It hears every line sent on a Discord feed, after it is delivered, with the
+      # speaker as enactor (help @feed taps), and passes on the lines Discord members posted.
+      TAP: |-
+        @assert cand(strmatch(%<origin>,discord/*),strlen(setr(chan,v(LINK`[after(%<feed>,/)])))); @cemit %q<chan>=u(me/FUN`LINE,%<style>,firstof(%<name>,name(%<speaker>)),%<text>)
+
+      # Taps are stored, so this only puts the tap back after the discord kind was undefined and defined again.
+      STARTUP: |-
+        @feed/tap discord={{links}}/TAP
+      AINSTALL: |-
+        @trigger {{links}}/STARTUP
+
+  # A game channel's lines to its Discord channel. The event runs as the event handler with the speaker as
+  # enactor, so @feed/send sends as the speaker, who must pass the Discord feed's send lock (help @feed
+  # sending). A connect or disconnect line stays in the game, and so does a line this package emitted. An
+  # emit names no speaker in the game, so in Discord it goes under the channel's name.
+  - ref: event
+    target: "{{$event_handler}}"
+    attributes:
+      CHANNEL`MESSAGE`DISCORDCHANNELS: |-
+        @assert cand(comp(%<style>,presence),comp(objid(%#),objid({{links}})),strlen(setr(id,u({{links}}/FUN`LINKOF,%<channel>)))); @switch %<style>=emit,{@feed/send/emit/as discord/%q<id>=%<channel>/%<message>},pose,{@feed/send/pose discord/%q<id>=%<message>},semipose,{@feed/send/semipose discord/%q<id>=%<message>},{@feed/send/say discord/%q<id>=%<message>}
+
+  - ref: help
+    type: thing
+    name: Discord Channels Help
+    attributes:
+      HELP: |-
+        Joining game channels to Discord channels.
+      HELP`DISCORD`CHANNELS: |-
+        A game channel can be joined to a Discord channel the game has linked with `@discord/link`. What
+        is said on the game channel is posted in Discord under the speaker's name, and what Discord
+        members post comes back onto the game channel as the character they speak as there.
+
+        - `+discord/channels` lists the game channels that go to Discord.
+        - `+discord/channel <channel>=<Discord channel id>` joins a game channel to a Discord channel.
+          `@discord` lists the linked Discord channels with their ids.
+        - `+discord/channel/remove <channel>` takes it apart again.
+
+        Only the channel's owner, or staff with `chat.admin`, joins or parts a channel. A game channel
+        goes to one Discord channel, and a Discord channel to one game channel. A channel with a see or
+        join lock is refused until you give `/confirm`, because everyone who can read the Discord
+        channel reads what is said on it.
+
+        Example:
+
+        ```
+        > +discord/channel Public=1427000000000000001
+        DISCORD: Public goes to Discord channel 1427000000000000001, and what is posted there comes back.
+        ```
+
+        Output: one line saying the channel is joined.
+
+        A line said in the game reaches Discord only if its speaker passes the Discord feed's send
+        lock. Connect and disconnect lines stay in the game. Renaming the game channel parts it from
+        Discord; join it again under its new name.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`DISCORD-CHANNELS: |-
+        {{help}}

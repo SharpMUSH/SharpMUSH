@@ -97,7 +97,7 @@ public class FeedService(
 		var audience = members.Where(member => !member.Gag).Select(member => member.Member).ToList();
 		var recipients = await RouteAsync(parser, owner, message, audience, to);
 		var delivered = await DeliverAsync(parser, owner, speaker, message, recipients);
-		await TapAsync(message, delivered);
+		await TapAsync(message, delivered, origin);
 		await HandOnAsync(new FeedLine(message, delivered, stored, origin, to));
 		return new FeedDelivery(id, delivered, stored);
 	}
@@ -231,7 +231,7 @@ public class FeedService(
 	/// Every tap on the kind and on <c>*</c>, queued as the tap's object with the speaker as enactor, so a slow
 	/// tap never holds the line up. A tap whose object or attribute is gone is skipped.
 	/// </summary>
-	private async ValueTask TapAsync(SharpFeedMessage message, IReadOnlyList<DBRef> recipients)
+	private async ValueTask TapAsync(SharpFeedMessage message, IReadOnlyList<DBRef> recipients, string origin)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var taps = (await mediator.Send(new GetFeedTapsQuery(message.Kind), ct))
@@ -246,7 +246,7 @@ public class FeedService(
 			}
 
 			var arguments = Arguments(("id", message.Id), ("feed", message.Feed), ("recipients", Objids(recipients)),
-				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName));
+				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName), ("origin", origin));
 			var state = ParserState.RootFor(tapObject.Object().DBRef) with
 			{
 				Enactor = message.Speaker,
