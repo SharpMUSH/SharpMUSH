@@ -382,9 +382,3 @@ objects:
     attributes:
       SYSTEM`WHO-WHERE: |-
         {{ww_functions}}
-
-  - ref: ww_help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`WHO-WHERE: |-
-        {{ww_help}}
