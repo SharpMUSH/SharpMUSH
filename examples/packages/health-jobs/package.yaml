@@ -1,0 +1,127 @@
+format: 1
+package: health-jobs
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Staff load in +health: how many open jobs each staffer handles, how many wait on staff, and the oldest one waiting. Joins the health and jobs packages."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [health, jobs, staff, load]
+requires_server: ">=0.1"
+
+# Neither package knows about the other. Jobs keeps the jobs; health draws the numbers. This one reads the
+# jobs and adds a section to the +health summary and a +health/staff view.
+depends:
+  - package: health
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/health/
+      branch: main
+  - package: jobs
+    version: ">=1.7"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/jobs/
+      branch: main
+
+objects:
+  # The reader. WIZARD because it reads every job, in every bucket, on the jobs store.
+  #
+  # A job waits on staff while its state is new or staff, and has waited since its TURN`AT. Its handlers are
+  # people (objids) or every holder of a role (role:<slug>), as jobs keeps them.
+  - ref: staffload
+    type: thing
+    name: Health Staff Load
+    location: "{{health/health}}"
+    flags: [WIZARD]
+    attributes:
+      # Every open job on the store.
+      FUN`JOBS`OPEN:
+        value: |-
+          squish(iter(lcon({{jobs/store}}),if(cand(not(hasflag(%i0,GOING)),comp(get(%i0/STATE),closed)),%i0)))
+        flags: [funsyntax]
+      # %0 jobs: the ones waiting on staff.
+      FUN`JOBS`WAITING:
+        value: |-
+          squish(iter(%0,if(match(new staff,get(%i0/STATE)),%i0)))
+        flags: [funsyntax]
+      # %0 jobs: the one that has waited longest, or nothing.
+      FUN`JOBS`OLDEST:
+        value: |-
+          first(sortkey(%!/FUN`JOBS`TURNKEY,%0,n))
+        flags: [funsyntax]
+      FUN`JOBS`TURNKEY:
+        value: |-
+          firstof(get(%0/TURN`AT),0)
+        flags: [funsyntax]
+      # %0 a job: its handlers, or none when it has nobody.
+      FUN`JOBS`HANDLERS:
+        value: |-
+          firstof(u({{jobs/jobs}}/FUN`HLIST,%0,HANDLER),none)
+        flags: [funsyntax]
+      # %0 a job: how long it has waited, and its number.
+      FUN`DISPLAY`WAITED:
+        value: |-
+          if(strlen(%0),[trim(etime(sub(secs(),firstof(get(%0/TURN`AT),secs())),6))] [tone(muted,job [get(%0/NUM)])],tone(muted,-))
+        flags: [funsyntax]
+      # %0 a handler as jobs keeps it: a name, +<role> for a role, or Nobody.
+      FUN`DISPLAY`HANDLER:
+        value: |-
+          case(1,strmatch(%0,none),tone(muted,Nobody),strmatch(%0,role:*),+[after(%0,:)],name(%0))
+        flags: [funsyntax]
+
+      # %0 the +health summary so far: it, with the staff load added.
+      FUN`SUMMARY:
+        value: |-
+          setqm(open,u(%!/FUN`JOBS`OPEN),
+          waiting,u(%!/FUN`JOBS`WAITING,%q<open>))%0%r[rule(Staff load)]%r[fields(,Open jobs,words(%q<open>),Waiting on staff,words(%q<waiting>),Oldest waiting,u(%!/FUN`DISPLAY`WAITED,u(%!/FUN`JOBS`OLDEST,%q<waiting>)),Unhandled,words(squish(iter(%q<open>,if(not(strlen(u({{jobs/jobs}}/FUN`HLIST,%i0,HANDLER))),%i0)))))]
+        flags: [funsyntax]
+
+      # +health/staff: a row per handler, most waiting first, then Nobody for the jobs no one handles.
+      FUN`SCREEN:
+        value: |-
+          setqm(open,u(%!/FUN`JOBS`OPEN),
+          pairs,iter(%q<open>,iter(u(%!/FUN`JOBS`HANDLERS,%i0),%i0~%i1)),
+          handlers,setunion(iter(%q<pairs>,before(%i0,~)),),
+          rows,iter(%q<handlers>,u(%!/FUN`SCREEN`ROW,%i0),,^))[box(if(words(%q<open>),ldatatable(json(object,nowrap,json(string,2|3|4),priority,json(string,1|1|1|2),grow,json(string,1)),Staff|>Open|>Waiting|Oldest waiting,revwords(sortby(%!/FUN`SCREEN`ORDER,%q<rows>,^),^),^),tone(muted,No job is open.))%r[rule()]%rA job with several handlers counts for each. Waiting: new\, or waiting on staff.,Staff load)]
+        flags: [funsyntax]
+      # %0 a handler: Staff|Open|Waiting|Oldest waiting, from the open jobs in %q<pairs>.
+      FUN`SCREEN`ROW:
+        value: |-
+          setqm(row_jobs,squish(iter(%q<pairs>,if(strmatch(before(%i0,~),%0),after(%i0,~)))),
+          row_waiting,u(%!/FUN`JOBS`WAITING,%q<row_jobs>))[u(%!/FUN`DISPLAY`HANDLER,%0)]|[words(%q<row_jobs>)]|[words(%q<row_waiting>)]|[u(%!/FUN`DISPLAY`WAITED,u(%!/FUN`JOBS`OLDEST,%q<row_waiting>))]
+        flags: [funsyntax]
+      # sortby(): 1 when row %0 goes after row %1, by waiting then open, so revwords() puts the busiest first.
+      FUN`SCREEN`ORDER:
+        value: |-
+          setqm(order_a,extract(%0,3,1,|) [extract(%0,2,1,|)],
+          order_b,extract(%1,3,1,|) [extract(%1,2,1,|)])[if(eq(first(%q<order_a>),first(%q<order_b>)),comp(rest(%q<order_a>),rest(%q<order_b>),n),comp(first(%q<order_a>),first(%q<order_b>),n))]
+        flags: [funsyntax]
+
+  # Attached to the Health object: the summary's section, and the /staff view. Both hand the work to the reader
+  # above with u(), so it runs there, where this package's refs live.
+  - ref: health_attach
+    target: "{{health/health}}"
+    attributes:
+      FILTER`HEALTH`SCREEN`JOBS:
+        value: |-
+          u({{staffload}}/FUN`SUMMARY,%0)
+        flags: [funsyntax]
+      INC`VIEW`STAFF:
+        value: |-
+          @pemit %#=u({{staffload}}/FUN`SCREEN)
+        flags: [cmdsyntax]
+
+  - ref: help_attach
+    target: "{{health/health_help}}"
+    attributes:
+      HELP`HEALTH`STAFF: |-
+        `+health/staff` shows staff load from the jobs package: a row for each staffer handling an open job, with how many they handle, how many of those wait on staff, and how long the oldest has waited. `Nobody` counts the open jobs with no handler. A role a job is assigned to shows as `+<role>`.
+
+        A job waits on staff while it is new, or after the player answered, until staff answer or put it on hold. The `+health` summary carries the same totals under `Staff load`.
+
+        For example:
+
+        `+health/staff`
+
+        Output: a table with a row per staffer, such as `Ann | 4 | 2 | 3d 4h job 17`, busiest first.

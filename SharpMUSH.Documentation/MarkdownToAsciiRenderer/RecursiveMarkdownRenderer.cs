@@ -177,8 +177,7 @@ public partial class RecursiveMarkdownRenderer
 		var result = new List<MString> { items[0].rendered };
 		for (var i = 1; i < items.Count; i++)
 		{
-			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
-										 + (items[i].block.LinesBefore?.Count ?? 0);
+			var blankLines = TrailingBlankLines(items[i - 1].block) + (items[i].block.LinesBefore?.Count ?? 0);
 			// Pipe tables and flex layouts keep no trivia, but either always stands apart from its neighbours in
 			// the source; and a heading starts a section, which a blank line sets off from the one before.
 			if (blankLines == 0 && (items[i - 1].block is Table or FlexBlock || items[i].block is Table or FlexBlock or HeadingBlock))
@@ -192,6 +191,17 @@ public partial class RecursiveMarkdownRenderer
 
 		return MarkupText.Concat(result);
 	}
+
+	/// <summary>
+	/// The blank lines after <paramref name="block"/>. Markdig keeps those that end a list or a quote on the
+	/// innermost block it closes (a list's last item's last paragraph), not on the container itself.
+	/// </summary>
+	private static int TrailingBlankLines(Markdig.Syntax.Block block) => block switch
+	{
+		{ LinesAfter.Count: > 0 and var count } => count,
+		ContainerBlock { LastChild: { } last } => TrailingBlankLines(last),
+		_ => 0
+	};
 
 	private MString RenderInlines(Inline? inline)
 	{
