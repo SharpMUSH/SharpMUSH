@@ -1,6 +1,6 @@
 format: "1.10"
 package: health-jobs
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Staff load in +health: how many open jobs each staffer handles, how many wait on staff, and the oldest one waiting. Joins the health and jobs packages."
 license: MIT
@@ -39,12 +39,12 @@ objects:
       # Every open job on the store.
       FUN`JOBS`OPEN:
         value: |-
-          squish(iter(lcon({{jobs/store}}),if(cand(not(hasflag(%i0,GOING)),comp(get(%i0/STATE),closed)),%i0)))
+          squish(iter(lcon({{jobs/store}}),if(cand(not(hasflag(%i0,GOING)),comp(get(%i0/JOB`STATE),closed)),%i0)))
         flags: [funsyntax]
       # %0 jobs: the ones waiting on staff.
       FUN`JOBS`WAITING:
         value: |-
-          squish(iter(%0,if(match(new staff,get(%i0/STATE)),%i0)))
+          squish(iter(%0,if(match(new staff,get(%i0/JOB`STATE)),%i0)))
         flags: [funsyntax]
       # %0 jobs: the one that has waited longest, or nothing.
       FUN`JOBS`OLDEST:
@@ -53,7 +53,7 @@ objects:
         flags: [funsyntax]
       FUN`JOBS`TURNKEY:
         value: |-
-          firstof(get(%0/TURN`AT),0)
+          firstof(get(%0/JOB`TURN`AT),0)
         flags: [funsyntax]
       # %0 a job: its handlers, or none when it has nobody.
       FUN`JOBS`HANDLERS:
@@ -63,7 +63,7 @@ objects:
       # %0 a job: how long it has waited, and its number.
       FUN`DISPLAY`WAITED:
         value: |-
-          if(strlen(%0),[trim(etime(sub(secs(),firstof(get(%0/TURN`AT),secs())),6))] [tone(muted,job [get(%0/NUM)])],tone(muted,-))
+          if(strlen(%0),[trim(etime(sub(secs(),firstof(get(%0/JOB`TURN`AT),secs())),6))] [tone(muted,job [get(%0/JOB`NUM)])],tone(muted,-))
         flags: [funsyntax]
       # %0 a handler as jobs keeps it: a name, +<role> for a role, or Nobody.
       FUN`DISPLAY`HANDLER:

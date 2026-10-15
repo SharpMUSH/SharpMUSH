@@ -175,6 +175,33 @@ public partial class BBoardsIntegrationTests
 		}
 	}
 
+	/// <summary>A removed comment without replies is gone: the comments after it move up one.</summary>
+	[Test]
+	public async Task ARemovedCommentIsGoneAndTheNextMovesUp()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbRmAdm", "bboard-admin");
+			var mira = await Player("BbRmMira");
+			var board = await Board(admin, "BbRemove");
+
+			var post = await Post(mira, board, "Gone", "A post with two comments.");
+			await As(mira, $"+bbcomment {post}=Alpha comment.");
+			await As(mira, $"+bbcomment {post}=Beta comment.");
+
+			await Assert.That(await As(mira, $"+bbremove {post}/1")).Contains("[2] is now [1].");
+			var read = await As(mira, $"+bbread {post}");
+			await Assert.That(read).DoesNotContain("Alpha comment.").And.Contains("Beta comment.");
+			await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Beta comment.")
+				.Because("the comment after the removed one is number 1 now");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	/// <summary>
 	/// A board's ON` hooks are a contract with the game's own code: each argument comes by name and by
 	/// place, so a hook written either way hears the same thing.

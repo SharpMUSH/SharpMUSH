@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -189,6 +190,8 @@ public class HealthIntegrationTests
 			await Assert.That(await As(staff, "+health")).Contains("Staff load").And.Contains("Waiting on staff");
 			var load = await As(staff, "+health/staff");
 			await Assert.That(load).Contains("Staff load").And.Contains("Nobody");
+			// The oldest waiting job is named by its number, read from the job's JOB`NUM.
+			await Assert.That(Regex.IsMatch(load, @"job \d+")).IsTrue();
 			await Assert.That(await As(staff, "+health/bogus")).Contains("/staff");
 		}
 		finally

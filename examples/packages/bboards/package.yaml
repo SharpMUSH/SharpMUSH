@@ -1,6 +1,6 @@
 format: "1.10"
 package: bboards
-version: 1.3.1
+version: 1.3.2
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -556,9 +556,9 @@ objects:
       # conversation, the comment before it now does. Sets %q<remove_thread_root>, %q<remove_thread>, %q<remove_previous_comment>.
       INC`REMOVECOMMENT`THREAD: |-
         think [setqm(remove_thread_root,get(%q<path_post>/C`%q<path_comment_key>`ROOT),remove_thread,get(%q<path_post>/THREAD),remove_previous_comment,extract(%q<remove_thread>,dec(match(%q<remove_thread>,%q<path_comment_key>)),1))];&THREAD %q<path_post>=[remove(%q<remove_thread>,%q<path_comment_key>)];@if cand(not(strmatch(%q<remove_thread_root>,%q<path_comment_key>)),strmatch(get(%q<path_post>/C`%q<remove_thread_root>`END),%q<path_comment_key>))={&C`%q<remove_thread_root>`END %q<path_post>=%q<remove_previous_comment>}
-      # Clears comment %q<path_comment_key>'s leaves on post %q<path_post>, and the comment itself.
+      # Removes comment %q<path_comment_key> from post %q<path_post>, with its leaves.
       INC`REMOVECOMMENT`CLEAR: |-
-        @dolist/inline [lattr(%q<path_post>/C`%q<path_comment_key>`**)]=&## %q<path_post>=;&C`%q<path_comment_key> %q<path_post>=
+        @wipe %q<path_post>/C`%q<path_comment_key>
       # Tells the reader the comment is gone and which numbers moved up, and runs the board's ON`REMOVE hook.
       INC`REMOVECOMMENT`ANNOUNCE: |-
         @pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`OK,Removed [if(%q<item_moderator_acting>,%q<remove_author_display>'s,your)] comment %[%q<path_comment_number>%] on %q<remove_post_path>.[switch(sub(%q<remove_total_count>,%q<path_comment_number>),0,,1,%b%[%q<remove_total_count>%] is now %[%q<path_comment_number>%].,%b%[[inc(%q<path_comment_number>)]%]-%[%q<remove_total_count>%] are now %[%q<path_comment_number>%]-%[[dec(%q<remove_total_count>)]%].)])];@trigger/args %q<path_current>/ON`REMOVE=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,3,[get(%q<path_post>/TITLE)],post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>,title,[get(%q<path_post>/TITLE)]

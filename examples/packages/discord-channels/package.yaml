@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: discord-channels
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Joins a game channel to a linked Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel links one, +discord/channels lists them."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, chat, channels, bridge, feed]
+category: Community
 requires_server: ">=0.1"
 
 # Neither side knows about the other. The discord package's feed kind carries a Discord channel's lines (the

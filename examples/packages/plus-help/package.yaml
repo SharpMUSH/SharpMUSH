@@ -1,6 +1,6 @@
 format: "1.10"
 package: plus-help
-version: 1.5.2
+version: 1.5.3
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -502,7 +502,7 @@ objects:
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
       INC`SW`SOURCE:
         value: |-
-          @@ %q<rest> — <name>=<object>; @include %!/INC`IS`STAFF; @assert cand(strlen(trim(before(%q<rest>,=))),strlen(trim(after(%q<rest>,=))))=@include %!/INC`DISPLAY`USAGE; think [setq(name,ucstr(trim(before(%q<rest>,=))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is made of letters and digits and _ . -; @assert isdbref(setr(o,locate(%#,trim(after(%q<rest>,=)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[notice(HELP,[lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.,ok)]
+          @@ %q<rest> — <name>=<object>; @include %!/INC`IS`STAFF; @assert cand(strlen(trim(before(%q<rest>,=))),strlen(trim(after(%q<rest>,=))))=@include %!/INC`DISPLAY`USAGE; think [setq(name,ucstr(trim(before(%q<rest>,=))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is made of letters and digits and _ . -; @assert isdbref(setr(o,locate(%#,trim(after(%q<rest>,=)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,objid(%q<o>))]; @pemit %#=[notice(HELP,[lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.,ok)]
         flags: [cmdsyntax]
       INC`SW`UNSOURCE:
         value: |-
