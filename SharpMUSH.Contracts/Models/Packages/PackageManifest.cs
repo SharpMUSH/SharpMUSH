@@ -25,6 +25,8 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Plugin"/>; otherwise null.</param>
 /// <param name="Declarations">The roles, permissions and categories the package declares, or null for none (see <see cref="Declared"/>).</param>
 /// <param name="Settings">The configuration options the package sets (<c>settings:</c>, format 1.3), or null for none.</param>
+/// <param name="Locale">The locale the package's wiki pages are written in (<c>locale:</c>, format 1.4), canonical, or null for the game's <c>wiki_default_locale</c>.</param>
+/// <param name="Wiki">The wiki pages the package ships (<c>wiki:</c>, format 1.4), or null for none.</param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -45,10 +47,15 @@ public sealed record PackageManifest(
 	PackageApplicationSpec? Application = null,
 	PackageBinarySpec? Binary = null,
 	PackageDeclarations? Declarations = null,
-	IReadOnlyList<PackageSettingSpec>? Settings = null)
+	IReadOnlyList<PackageSettingSpec>? Settings = null,
+	string? Locale = null,
+	IReadOnlyList<PackageWikiPageSpec>? Wiki = null)
 {
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
+
+	/// <summary>The wiki pages the package ships; never null.</summary>
+	public IReadOnlyList<PackageWikiPageSpec> WikiPages => Wiki ?? [];
 }
 
 /// <summary>
@@ -64,7 +71,10 @@ public sealed record PackageManifest(
 /// </summary>
 public enum PackageKind
 {
-	/// <summary>Objects and attributes (the default). Requires <c>objects:</c>; forbids <c>application:</c>/<c>binaries:</c>.</summary>
+	/// <summary>
+	/// Objects and attributes (the default). Requires <c>objects:</c>, unless it ships wiki pages (a content pack);
+	/// forbids <c>application:</c>/<c>binaries:</c>.
+	/// </summary>
 	Softcode,
 
 	/// <summary>A portal application registration. Requires <c>application:</c>; forbids <c>objects:</c>/<c>binaries:</c>.</summary>
@@ -153,7 +163,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 3);
+	public static PackageFormatVersion Supported { get; } = new(1, 4);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

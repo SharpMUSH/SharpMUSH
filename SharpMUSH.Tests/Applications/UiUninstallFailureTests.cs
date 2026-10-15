@@ -29,7 +29,7 @@ public class UiUninstallFailureTests
 		files.RemoveAsync("graph-proof", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>()).Returns(new Error<string>("Removal refused: ambiguous directories."));
 		var service = new PackageInstallService(Substitute.For<IObjectStore>(), Substitute.For<IAttributeStore>(), Substitute.For<IFlagAndPowerStore>(), Substitute.For<INavigationStore>(),
 			registry, apps, Substitute.For<IPackagePlanService>(), new TestSharpMushOptions.FixedWrapper(TestSharpMushOptions.Create()), Substitute.For<IPackageLifecycleRunner>(), files,
-			Substitute.For<IMediator>(), new PackageOperationGate(), Substitute.For<ILockService>(), Substitute.For<IPackageDeclarationService>(), Substitute.For<IPackageSettingService>(),
+			Substitute.For<IMediator>(), new PackageOperationGate(), Substitute.For<ILockService>(), Substitute.For<IPackageDeclarationService>(), Substitute.For<IPackageSettingService>(), Substitute.For<IPackageWikiService>(),
 			new Lazy<IRuntimeRegistrationService>(() => Substitute.For<IRuntimeRegistrationService>()));
 		await Assert.That(await service.UninstallAsync("graph-proof", force: true) is Error<string>).IsTrue();
 		await Assert.That((await apps.GetApplicationsAsync()).Count).IsEqualTo(2);

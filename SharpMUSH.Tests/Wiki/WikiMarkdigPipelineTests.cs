@@ -18,6 +18,24 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("<strong>world</strong>");
 	}
 
+	/// <summary>
+	/// A content pack links in full, <c>[[Display|Main:slug]]</c>: the <c>Main:</c> prefix is a namespace like any
+	/// other, so the link goes to the main page and shows its display text, not <c>/wiki/main/main:blinded</c>.
+	/// </summary>
+	[Test]
+	[Arguments("[[Blinded|Main:blinded]]")]
+	[Arguments("[[Blinded|main:blinded]]")]
+	public async Task RenderToHtml_FullMainLink_GoesToTheMainPage(string markdown)
+	{
+		var html = Pipeline().RenderToHtml(markdown);
+
+		await Assert.That(html).Contains("href=\"/wiki/main/blinded\"");
+		await Assert.That(html).Contains(">Blinded</a>");
+		await Assert.That(html).DoesNotContain("main:");
+		await Assert.That(WikiHelpers.SplitTitle("Main:blinded"))
+			.IsEqualTo((SharpMUSH.Library.Models.Wiki.WikiNamespace.Main, "blinded"));
+	}
+
 	/// <summary>An attribute block keeps ids and plain class names, never event handlers or styles.</summary>
 	[Test]
 	[Arguments("# Title {onclick=\"alert(1)\" style=\"position:fixed\"}")]

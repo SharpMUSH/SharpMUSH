@@ -204,4 +204,46 @@ public class RegistriesTests
 
 		await registry.RemoveInstalledPackageAsync("pkg-b");
 	});
+
+	/// <summary>
+	/// The wiki pages a package owns (<c>pkg.wiki</c>), keyed package/namespace/slug: one page per key, every field
+	/// back as written, and gone with the package.
+	/// </summary>
+	[Test]
+	public async Task Package_WikiPages_RoundTrip() => await WithDatabaseAsync(async db =>
+	{
+		IPackageRegistryService registry = db;
+		var installed = new InstalledPackageRecord(
+			"pkg-wiki", "1.0.0", "https://example.com/repo", null, "commit-1", "main",
+			new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), 1);
+		await registry.UpsertInstalledPackageAsync(installed);
+
+		var road = new PackageWikiPageRecord("pkg-wiki", "page-1", "main", "coast_road", "Coast Road", "# Coast Road\nText.",
+			["travel"], true, PackageWikiRequires.Of(["coast.gm"], ["wiki.admin"], null), false, "1.0.0");
+		var travel = new PackageWikiPageRecord("pkg-wiki", "page-2", "category", "travel", "Travel", "Roads.",
+			[], false, PackageWikiRequires.None, true, "1.0.0");
+		await registry.UpsertPackageWikiPageAsync(road);
+		await registry.UpsertPackageWikiPageAsync(travel);
+		await registry.UpsertPackageWikiPageAsync(travel with { PackageId = "pkg-other", Slug = "harbour", PageId = "page-3" });
+
+		var back = (await registry.GetPackageWikiPageAsync("pkg-wiki", "main", "coast_road")).Expect<PackageWikiPageRecord>();
+		await Assert.That(back.Content.SameAs(road.Content)).IsTrue();
+		await Assert.That(back.PageId).IsEqualTo("page-1");
+		await Assert.That(back.BaselineVersion).IsEqualTo("1.0.0");
+		await Assert.That((await registry.GetPackageWikiPageAsync("pkg-wiki", "category", "coast_road")).Value).IsTypeOf<NotFound>();
+
+		await registry.UpsertPackageWikiPageAsync(road with { Title = "The Coast Road", BaselineVersion = "1.1.0" });
+		await Assert.That((await registry.GetPackageWikiPagesAsync("pkg-wiki")).Count).IsEqualTo(2);
+		await Assert.That((await registry.GetAllPackageWikiPagesAsync()).Count).IsEqualTo(3);
+		await Assert.That((await registry.GetPackageWikiPageAsync("pkg-wiki", "main", "coast_road")).Expect<PackageWikiPageRecord>().Title)
+			.IsEqualTo("The Coast Road");
+
+		await registry.RemovePackageWikiPageAsync("pkg-wiki", "category", "travel");
+		await Assert.That((await registry.GetPackageWikiPagesAsync("pkg-wiki")).Select(p => p.Slug).ToArray())
+			.IsEquivalentTo((string[])["coast_road"]);
+
+		await registry.RemoveInstalledPackageAsync("pkg-wiki");
+		await Assert.That((await registry.GetPackageWikiPagesAsync("pkg-wiki")).Count).IsEqualTo(0);
+		await Assert.That((await registry.GetPackageWikiPagesAsync("pkg-other")).Count).IsEqualTo(1);
+	});
 }

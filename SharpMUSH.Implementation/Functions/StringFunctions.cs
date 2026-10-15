@@ -2274,13 +2274,15 @@ public partial class Functions
 
 		var ansi = false;
 		var html = false;
+		var markdown = false;
 		var noAccents = false;
 
 		foreach (var format in args["1"].Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
-			// PennMUSH prefix-matches "noaccents" alone; the other three are spelled in full.
+			// PennMUSH prefix-matches "noaccents" alone; the others are spelled in full.
 			if (format.Equals("ansi", StringComparison.OrdinalIgnoreCase)) ansi = true;
 			else if (format.Equals("html", StringComparison.OrdinalIgnoreCase)) html = true;
+			else if (format.Equals("markdown", StringComparison.OrdinalIgnoreCase)) markdown = true;
 			else if ("noaccents".StartsWith(format, StringComparison.OrdinalIgnoreCase)) noAccents = true;
 			else if (format.Equals("markup", StringComparison.OrdinalIgnoreCase)) { }
 			else return new CallState(ErrorMessages.Returns.InvalidSecondArgument);
@@ -2292,10 +2294,11 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var rendered = (html, ansi) switch
+		var rendered = (html, markdown, ansi) switch
 		{
-			(true, _) => text.Render(MarkupFormat.Html),
-			(_, true) => text.Render(MarkupFormat.Ansi),
+			(true, _, _) => text.Render(MarkupFormat.Html),
+			(_, true, _) => text.Render(MarkupFormat.Markdown),
+			(_, _, true) => text.Render(MarkupFormat.Ansi),
 			_ => text.ToPlainText()
 		};
 

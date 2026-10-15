@@ -29,6 +29,11 @@ packages:
     package: starter-area
     version: 1.0.0
     description: Two rooms and linked exits
+  - path: coast-guide/
+    name: Coast Guide
+    package: coast-guide
+    version: 1.0.0
+    description: Content pack (format 1.4) — wiki pages only, one of them pinned to the wiki home
   - path: http-handler/
     package: http-handler
     version: 1.0.2

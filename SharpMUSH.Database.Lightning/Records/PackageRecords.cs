@@ -46,6 +46,27 @@ public sealed record ManagedStructureRecord
 	public string BaselineVersion { get; init; } = "";
 }
 
+/// <summary>
+/// The stored form of <c>SharpMUSH.Library.Models.Packages.PackageWikiPageRecord</c>: a page a package owns, with
+/// every field as the package last wrote it. The requirement lists are lowercase and sorted.
+/// </summary>
+public sealed record PackageWikiPageRecord
+{
+	public string PackageId { get; init; } = "";
+	public string PageId { get; init; } = "";
+	public string Namespace { get; init; } = "";
+	public string Slug { get; init; } = "";
+	public string Title { get; init; } = "";
+	public string Markdown { get; init; } = "";
+	public string[]? Categories { get; init; }
+	public bool Published { get; init; } = true;
+	public string[]? RequiresView { get; init; }
+	public string[]? RequiresEdit { get; init; }
+	public string[]? RequiresDelete { get; init; }
+	public bool Pinned { get; init; }
+	public string BaselineVersion { get; init; } = "";
+}
+
 /// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.PackageDependencyRecord</c>.</summary>
 public sealed record PackageDependencyRecord
 {

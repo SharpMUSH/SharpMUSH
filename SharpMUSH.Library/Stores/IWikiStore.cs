@@ -55,9 +55,10 @@ public interface IWikiStore
 
 	/// <summary>
 	/// Stores <paramref name="page"/> under a newly allocated id, ignoring the one it carries, with its
-	/// body as source revision 1. <c>Error</c> when its <c>(namespace, slug)</c> is taken.
+	/// body as source revision 1, summarised as <paramref name="editSummary"/>. <c>Error</c> when its
+	/// <c>(namespace, slug)</c> is taken.
 	/// </summary>
-	Task<Result<WikiPage>> CreatePageAsync(WikiPage page);
+	Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null);
 
 	/// <summary>Replaces the page's body and appends it as the next source revision.</summary>
 	Task<Found<WikiPage>> UpdatePageBodyAsync(string id, WikiBody body, string editorDbref, string? editSummary,
@@ -74,6 +75,9 @@ public interface IWikiStore
 	/// target that names no page is <c>NotFound</c>.
 	/// </summary>
 	Task<Found<None>> SetRequirementsAsync(WikiRequirementSet set);
+
+	/// <summary>Sets the page's title without a revision; its slug, and so its identity, stays.</summary>
+	Task<Found<WikiPage>> SetPageTitleAsync(string id, string title);
 
 	/// <summary>Sets the page's categories and published flag without a revision.</summary>
 	Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published);

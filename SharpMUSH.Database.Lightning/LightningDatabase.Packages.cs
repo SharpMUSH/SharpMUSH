@@ -80,6 +80,7 @@ public partial class LightningDatabase
 			tx.DeletePrefix(Tables.PkgObj, Keys.Composite(packageId, ""));
 			tx.DeletePrefix(Tables.PkgAttr, Keys.Composite(packageId, ""));
 			tx.DeletePrefix(Tables.PkgStruct, Keys.Composite(packageId, ""));
+			tx.DeletePrefix(Tables.PkgWiki, Keys.Composite(packageId, ""));
 			tx.DeletePrefix(Tables.PkgRev, Keys.Composite(packageId, ""));
 
 			// Dependency edges in both directions: outbound is an exact-key delete (all dups under
@@ -211,6 +212,55 @@ public partial class LightningDatabase
 
 	public async Task RemoveManagedStructureAsync(string packageId, string objid)
 		=> await Store.WriteAsync(tx => tx.Delete(Tables.PkgStruct, Keys.Composite(packageId, objid)));
+
+	#endregion
+
+	#region Wiki Pages
+
+	public async Task UpsertPackageWikiPageAsync(PackageWikiPageRecord record)
+	{
+		var stored = new Records.PackageWikiPageRecord
+		{
+			PackageId = record.PackageId,
+			PageId = record.PageId,
+			Namespace = record.Namespace,
+			Slug = record.Slug,
+			Title = record.Title,
+			Markdown = record.Markdown,
+			Categories = [.. record.Categories],
+			Published = record.Published,
+			RequiresView = record.Requires.View.Count > 0 ? [.. record.Requires.View] : null,
+			RequiresEdit = record.Requires.Edit.Count > 0 ? [.. record.Requires.Edit] : null,
+			RequiresDelete = record.Requires.Delete.Count > 0 ? [.. record.Requires.Delete] : null,
+			Pinned = record.Pinned,
+			BaselineVersion = record.BaselineVersion
+		};
+		await Store.WriteAsync(tx =>
+			tx.Put(Tables.PkgWiki, Keys.Composite(record.PackageId, record.Namespace, record.Slug), Codec.Serialize(stored)));
+	}
+
+	private static PackageWikiPageRecord MapPackageWikiPage(Records.PackageWikiPageRecord r) => new(
+		r.PackageId, r.PageId, r.Namespace, r.Slug, r.Title, r.Markdown, r.Categories ?? [], r.Published,
+		PackageWikiRequires.Of(r.RequiresView, r.RequiresEdit, r.RequiresDelete), r.Pinned, r.BaselineVersion);
+
+	public Task<Found<PackageWikiPageRecord>> GetPackageWikiPageAsync(string packageId, string ns, string slug)
+		=> Task.FromResult(Store.Read<Found<PackageWikiPageRecord>>(tx =>
+			tx.TryGet(Tables.PkgWiki, Keys.Composite(packageId, ns, slug), out var bytes)
+				? MapPackageWikiPage(Codec.Deserialize<Records.PackageWikiPageRecord>(bytes))
+				: new NotFound()));
+
+	public Task<IReadOnlyList<PackageWikiPageRecord>> GetPackageWikiPagesAsync(string packageId)
+		=> Task.FromResult<IReadOnlyList<PackageWikiPageRecord>>(Store.Read(tx => tx.Range(Tables.PkgWiki, Keys.Composite(packageId, ""))
+			.Select(e => MapPackageWikiPage(Codec.Deserialize<Records.PackageWikiPageRecord>(e.Value)))
+			.ToList()));
+
+	public Task<IReadOnlyList<PackageWikiPageRecord>> GetAllPackageWikiPagesAsync()
+		=> Task.FromResult<IReadOnlyList<PackageWikiPageRecord>>(Store.Read(tx => tx.Range(Tables.PkgWiki, [])
+			.Select(e => MapPackageWikiPage(Codec.Deserialize<Records.PackageWikiPageRecord>(e.Value)))
+			.ToList()));
+
+	public async Task RemovePackageWikiPageAsync(string packageId, string ns, string slug)
+		=> await Store.WriteAsync(tx => tx.Delete(Tables.PkgWiki, Keys.Composite(packageId, ns, slug)));
 
 	#endregion
 

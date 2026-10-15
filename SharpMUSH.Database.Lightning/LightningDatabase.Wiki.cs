@@ -376,7 +376,7 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
 			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));
 
-	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page)
+	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)
 	{
 		var record = new WikiPageRecord
 		{
@@ -412,7 +412,7 @@ public partial class LightningDatabase : IWikiStore
 			tx.Put(Tables.WikiSlug, slugKey, Keys.Dbref(key));
 
 			var stored = MapWikiPage(key, record);
-			AppendWikiRevision(tx, stored.Id, string.Empty, 1, record.MarkdownSource, record.AuthorDbref, null, page.CreatedAt);
+			AppendWikiRevision(tx, stored.Id, string.Empty, 1, record.MarkdownSource, record.AuthorDbref, editSummary, page.CreatedAt);
 			return stored;
 		});
 	}
@@ -457,6 +457,17 @@ public partial class LightningDatabase : IWikiStore
 			tx.Delete(Tables.WikiPage, WikiPageKey(found.Key));
 			tx.Delete(Tables.WikiRequirement, WikiRequirementKey(WikiRuleScope.Page, pageId));
 			return new None();
+		});
+
+	public async Task<Found<WikiPage>> SetPageTitleAsync(string id, string title)
+		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
+		{
+			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
+
+			// The category index is ordered by title, so PutWikiPage moves the page's entries with it.
+			var updated = found.Record with { Title = title };
+			PutWikiPage(tx, found.Key, found.Record, updated);
+			return MapWikiPage(found.Key, updated);
 		});
 
 	public async Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)

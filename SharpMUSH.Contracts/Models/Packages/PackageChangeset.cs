@@ -16,6 +16,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Notes">Free-form reviewer notes (recreated objects, contents warnings, unresolved-at-apply values).</param>
 /// <param name="Declarations">What happens to the roles, permissions and categories the package declares or owned; a blocked one blocks the apply.</param>
 /// <param name="Settings">What happens to the configuration options the package sets or set; a blocked one blocks the apply.</param>
+/// <param name="Wiki">What happens to the wiki pages the package ships or shipped (format 1.4); a blocked one blocks the apply.</param>
 public sealed record PackageChangeset(
 	string PackageId,
 	string? FromVersion,
@@ -28,7 +29,8 @@ public sealed record PackageChangeset(
 	IReadOnlyList<PackageCommandCollision> CommandCollisions,
 	IReadOnlyList<string> Notes,
 	IReadOnlyList<PackageDeclarationChange>? Declarations = null,
-	IReadOnlyList<PackageSettingChange>? Settings = null)
+	IReadOnlyList<PackageSettingChange>? Settings = null,
+	IReadOnlyList<PackageWikiChange>? Wiki = null)
 {
 	/// <summary>
 	/// True when dependency/conflict issues, or a declared item or setting that cannot be applied, prevent applying
@@ -36,12 +38,14 @@ public sealed record PackageChangeset(
 	/// </summary>
 	public bool IsBlocked => DependencyIssues.Count > 0
 		|| (Declarations?.Any(d => d.Action == PackageDeclarationAction.Blocked) ?? false)
-		|| (Settings?.Any(s => s.Action == PackageSettingAction.Blocked) ?? false);
+		|| (Settings?.Any(s => s.Action == PackageSettingAction.Blocked) ?? false)
+		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Blocked) ?? false);
 
-	/// <summary>True when at least one attribute or structure element needs an admin decision.</summary>
+	/// <summary>True when at least one attribute, structure element or wiki page needs an admin decision.</summary>
 	public bool HasConflicts =>
 		Attributes.Any(a => a.Action == PackageAttributeAction.Conflict)
-		|| Structure.Any(s => s.Action == PackageStructureAction.Conflict);
+		|| Structure.Any(s => s.Action == PackageStructureAction.Conflict)
+		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Conflict) ?? false);
 }
 
 /// <summary>Object-level classification.</summary>

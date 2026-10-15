@@ -1,0 +1,41 @@
+format: 1.4
+package: coast-guide
+version: 1.0.0
+authors: [SharpMUSH project]
+description: A content pack - three wiki pages about a coast road, and a category pinned to the wiki home
+license: CC-BY-4.0
+keywords: [wiki, content, example]
+locale: en
+
+permissions:
+  - name: coast.gm
+    category: Coast Guide
+    description: Read the game master's notes on the coast road.
+
+categories:
+  permissions:
+    - name: Coast Guide
+      description: Permissions of the coast-guide content pack.
+
+wiki:
+  - page: main:coast_road
+    title: Coast Road
+    categories: [Travel]
+    file: wiki/coast-road.md
+
+  - page: category:travel
+    title: Travel
+    pin: true
+    file: wiki/category/travel.md
+
+  - page: main:smugglers
+    title: Smugglers
+    categories: [Travel]
+    requires:
+      view: [coast.gm]
+      edit: [wiki.admin]
+    markdown: |
+      # Smugglers
+
+      Game master's notes. The smugglers use the sea caves below the
+      [[Coast Road|main:coast_road]] at low tide, and pay the toll keeper to look away.

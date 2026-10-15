@@ -49,6 +49,14 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
+	public async Task RenderToMarkdownWritesATableAsAPipeTable()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("render(datacolumns({{}},Roll|1|2,Result|Rain|[ansi(h,Fog)]),markdown)"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("| Roll | Result |\n| --- | --- |\n| 1 | Rain |\n| 2 | **Fog** |");
+	}
+
+	[Test]
 	public async Task RenderToAnsiEmitsEscapeCodes()
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("render(ansi(r,red),ansi)"));

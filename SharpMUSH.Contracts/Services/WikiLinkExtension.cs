@@ -19,6 +19,12 @@ public sealed class WikiLinkInline : LeafInline
 	public required string Slug { get; init; }
 
 	/// <summary>
+	/// The target as written, after the display text and MediaWiki's leading colon: <c>Help:Getting Started</c>.
+	/// A package's page bodies must spell it in full, <c>namespace:slug</c> (see <c>PackageWikiLinks</c>).
+	/// </summary>
+	public string Target { get; init; } = "";
+
+	/// <summary>
 	/// The portal path this link points at. Character biographies resolve to their
 	/// <c>/character/{slug}</c> alias rather than the wiki route they are stored under;
 	/// see <see cref="WikiRoutes.PathFor"/>.
@@ -120,6 +126,7 @@ internal sealed class WikiLinkParser : InlineParser
 		var node = new WikiLinkInline
 		{
 			Slug = $"{WikiHelpers.NamespaceName(ns)}/{slug}",
+			Target = target,
 			Href = WikiRoutes.PathFor(ns, slug),
 			Title = title,
 			DisplayText = displayText,
