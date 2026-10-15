@@ -27,7 +27,7 @@ public class AuthControllerDebugOttTests
 			new SharpMUSH.Server.Authentication.AccountClaimsService(
 				Substitute.For<SharpMUSH.Library.Authorization.IAdministrativeCapabilityService>(),
 				claimsCache,
-				new SharpMUSH.Server.Authentication.AccountClaimsInvalidator(claimsCache),
+				new SharpMUSH.Server.Authentication.AccountClaimsInvalidator(claimsCache, new SharpMUSH.Library.Behaviors.ObjectVersions()),
 				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.AccountClaimsService>>()),
 			options,
 			env,
