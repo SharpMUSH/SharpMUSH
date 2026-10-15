@@ -64,6 +64,22 @@ public interface IPennMUSHDatabaseConverter
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Convert a database and the files that came with it, with progress reporting: a PennMUSH outdb with its
+	/// maildb and chatdb, a RhostMUSH flatfile with its mail dumps, or a TinyMUX flatfile with its mail.db and
+	/// comsys.db, in the format
+	/// <see cref="DatabaseImportFiles.Format"/> names or, left on <see cref="DatabaseImportFormat.Auto"/>, the one
+	/// the database's first lines show. The path overloads above are this with <see cref="DatabaseImportFormat.Auto"/>.
+	/// </summary>
+	/// <param name="files">The database, its side files and its format</param>
+	/// <param name="progress">Progress reporter for real-time updates</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>Conversion statistics</returns>
+	Task<ConversionResult> ConvertDatabaseAsync(
+		DatabaseImportFiles files,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Convert a parsed PennMUSH database to SharpMUSH objects with progress reporting.
 	/// </summary>
 	/// <param name="pennDatabase">Parsed PennMUSH database</param>

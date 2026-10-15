@@ -18,12 +18,15 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 	private HttpClient Client => httpClient.CreateClient("api");
 
 	/// <summary>
-	/// Uploads the object database and, when given, the maildb (sent as <c>mailFile</c>) and the chatdb
-	/// (sent as <c>chatFile</c>). Answers the id of the conversion session it started.
+	/// Uploads the object database and, when given, the maildb (sent as <c>mailFile</c>), the chatdb
+	/// (sent as <c>chatFile</c>) and RhostMUSH's mail folder dump (sent as <c>mailFolderFile</c>), with the
+	/// database's <paramref name="format"/> (<c>auto</c>, <c>pennmush</c>, <c>rhostmush</c> or <c>tinymux</c>). Answers the id
+	/// of the conversion session it started.
 	/// </summary>
 	public async Task<ApiResult<string>> UploadDatabaseAsync(Stream fileStream, string fileName, Stream? mailStream = null,
 		string? mailFileName = null, Stream? chatStream = null, string? chatFileName = null, Stream? configStream = null,
-		string? configFileName = null)
+		string? configFileName = null, Stream? mailFolderStream = null, string? mailFolderFileName = null,
+		string? format = null)
 	{
 		using var content = new MultipartFormDataContent();
 		content.Add(new StreamContent(fileStream), "file", fileName);
@@ -40,6 +43,16 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 		if (chatStream is not null)
 		{
 			content.Add(new StreamContent(chatStream), "chatFile", chatFileName ?? "chatdb");
+		}
+
+		if (mailFolderStream is not null)
+		{
+			content.Add(new StreamContent(mailFolderStream), "mailFolderFile", mailFolderFileName ?? "dump.folder");
+		}
+
+		if (!string.IsNullOrEmpty(format))
+		{
+			content.Add(new StringContent(format), "format");
 		}
 
 		var response = await Client.PostContentApiAsync<UploadResponse>(
