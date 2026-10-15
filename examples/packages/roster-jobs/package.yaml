@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: roster-jobs
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Roster applications through the job queue: +roster/apply files a job in a Roster bucket, and approving the job gives the character to the applicant's account."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [roster, jobs, applications, characters]
+category: Characters
 requires_server: ">=0.1"
 
 # The roster defines no way to apply. Installing this package is how a game chooses the job queue for it;

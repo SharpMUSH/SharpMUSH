@@ -1,11 +1,12 @@
-format: 1.7
+format: "1.10"
 package: relationships-scene
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Adds Last scene together to the +rel card and the portal's name card: the latest scene you and that character both belong to, linked to its log."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [relationships, scene, card]
+category: Characters
 requires_server: ">=0.1"
 
 # sceneshared() is the Scene plugin's: the package installs only while that plugin is running.

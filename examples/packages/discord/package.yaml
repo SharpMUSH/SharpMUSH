@@ -1,4 +1,4 @@
-format: 1.7
+format: "1.10"
 package: discord
 version: 1.1.0
 authors: [SharpMUSH]
@@ -6,6 +6,7 @@ description: "The game's side of the Discord link: the discord.admin permission,
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, chat, bridge, feed]
+category: Community
 requires_server: ">=0.1"
 
 # The Discord plugin posts the feed's lines and runs @discord. Without it running the package does not
