@@ -113,6 +113,10 @@ public static class BundledPackages
 		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
+		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
+		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

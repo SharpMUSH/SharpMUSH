@@ -95,6 +95,8 @@ objects:
         value: |-
           What +finger and +oocfinger show, and who sets which field.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Finger profiles
       DATA`CONFIG`SECTIONS: |-
         QUOTE RPPREFS
       DATA`CONFIG`SECTIONS`TYPE: |-
@@ -105,6 +107,10 @@ objects:
         CHECK`FIELDS
       DATA`CONFIG`SECTIONS`DESCRIPTION: |-
         Fields shown under the rest, each below a line with its label: for text longer than a line.
+      DATA`CONFIG`SECTIONS`LABEL: |-
+        Sections
+      DATA`CONFIG`SECTIONS`EXAMPLE: |-
+        QUOTE RPPREFS PLAYTIMES
       DATA`CONFIG`LOCKED: |-
 
       DATA`CONFIG`LOCKED`TYPE: |-
@@ -115,6 +121,10 @@ objects:
         CHECK`FIELDS
       DATA`CONFIG`LOCKED`DESCRIPTION: |-
         Fields only staff set.
+      DATA`CONFIG`LOCKED`LABEL: |-
+        Staff-only fields
+      DATA`CONFIG`LOCKED`EXAMPLE: |-
+        OCCUPATION
       DATA`CONFIG`COLUMNS: |-
         2
       DATA`CONFIG`COLUMNS`TYPE: |-
@@ -127,6 +137,10 @@ objects:
         4
       DATA`CONFIG`COLUMNS`DESCRIPTION: |-
         How many columns the other fields are dealt into. They stack on a narrow screen.
+      DATA`CONFIG`COLUMNS`LABEL: |-
+        Columns
+      DATA`CONFIG`COLUMNS`EXAMPLE: |-
+        3
       DATA`CONFIG`LENGTH: |-
         1000
       DATA`CONFIG`LENGTH`TYPE: |-
@@ -139,6 +153,10 @@ objects:
         8000
       DATA`CONFIG`LENGTH`DESCRIPTION: |-
         The longest value a field takes, in characters.
+      DATA`CONFIG`LENGTH`LABEL: |-
+        Longest value
+      DATA`CONFIG`LENGTH`EXAMPLE: |-
+        2000
       # %0 a list of field keys, as +config stores it: why some are not fields, or nothing.
       CHECK`FIELDS:
         value: |-

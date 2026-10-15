@@ -1,6 +1,6 @@
 format: 1.7
 package: scene
-version: 1.7.0
+version: 1.8.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -78,6 +78,8 @@ objects:
         value: |-
           What a new scene starts as, which details players may set, and how much +scene/recall shows.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Scenes
       DATA`CONFIG`DEFAULT-STATUS: |-
         active
       DATA`CONFIG`DEFAULT-STATUS`TYPE: |-
@@ -88,6 +90,10 @@ objects:
         active new scheduled
       DATA`CONFIG`DEFAULT-STATUS`DESCRIPTION: |-
         What +scene/create makes: an active scene logs at once; new or scheduled waits for +scene/start.
+      DATA`CONFIG`DEFAULT-STATUS`LABEL: |-
+        New scene status
+      DATA`CONFIG`DEFAULT-STATUS`EXAMPLE: |-
+        new
       DATA`CONFIG`OPEN-DETAILS: |-
         1
       DATA`CONFIG`OPEN-DETAILS`TYPE: |-
@@ -96,6 +102,10 @@ objects:
         1
       DATA`CONFIG`OPEN-DETAILS`DESCRIPTION: |-
         Whether an owner may set scene details the game does not list.
+      DATA`CONFIG`OPEN-DETAILS`LABEL: |-
+        Open details
+      DATA`CONFIG`OPEN-DETAILS`EXAMPLE: |-
+        no
       DATA`CONFIG`RECALL-ROUNDS: |-
         2
       DATA`CONFIG`RECALL-ROUNDS`TYPE: |-
@@ -108,6 +118,10 @@ objects:
         20
       DATA`CONFIG`RECALL-ROUNDS`DESCRIPTION: |-
         How many rounds of poses a bare +scene/recall shows.
+      DATA`CONFIG`RECALL-ROUNDS`LABEL: |-
+        Recall rounds
+      DATA`CONFIG`RECALL-ROUNDS`EXAMPLE: |-
+        3
 
       # ---- owner / wizard guard -------------------------------------------------
       FUN`OWNS: |-
