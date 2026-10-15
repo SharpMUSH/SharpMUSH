@@ -7,6 +7,7 @@
 @inject NavigationManager Nav
 @inject ApplicationRegistryClient Registry
 @inject IAuthorizationService Authorization
+@inject ServerInfoService ServerInfo
 @implements IDisposable
 
 @* D1 §3 Build & manage page sidebar: the overview, then each group of destinations the viewer may
@@ -75,7 +76,7 @@
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
-        _entries = await BuildNavCatalog.VisibleAsync(Authorization, user);
+        _entries = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
         var all = await Registry.ListAsync();
         _apps = [.. PortalNavSections.AppsForSection(all, user, "Build"), .. PortalNavSections.AppsForSection(all, user, "Manage")];
     }

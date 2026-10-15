@@ -91,11 +91,26 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task NewerFormatMinor_Warns_NewerMajor_Rejects()
 	{
-		var minor = _service.ParseManifest(MinimalManifest("format: 1.5")).Expect<ParsedPackageManifest>();
+		var minor = _service.ParseManifest(MinimalManifest("format: 1.6")).Expect<ParsedPackageManifest>();
 		await Assert.That(minor.Warnings.Any(w => w.Path == "format")).IsTrue();
 
 		var major = _service.ParseManifest(MinimalManifest("format: 2")).Expect<PackageManifestFailure>();
 		await Assert.That(major.Errors.Any(e => e.Path == "format")).IsTrue();
+	}
+
+	[Test]
+	public async Task Plugins_ParseLowerCased_AndRejectABadId()
+	{
+		var parsed = _service.ParseManifest(MinimalManifest("format: 1.5\nplugins: [Scene, discord, scene]"))
+			.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.RequiredPlugins).IsEquivalentTo(new[] { "scene", "discord" });
+		await Assert.That(parsed.Warnings.Any(w => w.Path == "plugins")).IsTrue();
+
+		await Assert.That(_service.ParseManifest(MinimalManifest()).Expect<ParsedPackageManifest>().Manifest.RequiredPlugins)
+			.IsEmpty();
+
+		var bad = _service.ParseManifest(MinimalManifest("plugins: [\"no such/plugin\"]")).Expect<PackageManifestFailure>();
+		await Assert.That(bad.Errors.Any(e => e.Path == "plugins")).IsTrue();
 	}
 
 	#region Versions & constraints

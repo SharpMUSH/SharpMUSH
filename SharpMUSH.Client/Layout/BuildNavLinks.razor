@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject IStringLocalizer<SharedResource> Loc
 @inject IAuthorizationService Authorization
+@inject ServerInfoService ServerInfo
 
 @* One group of the drawer's Build & manage destinations, from BuildNavCatalog: the gates are the same
    ones the rail and the section sidebar read. *@
@@ -34,6 +35,6 @@
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
-        _entries = await BuildNavCatalog.VisibleAsync(Authorization, user);
+        _entries = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
     }
 }

@@ -141,7 +141,7 @@
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
-        _build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+        _build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
         await LoadAppsAsync(user);
     }
 

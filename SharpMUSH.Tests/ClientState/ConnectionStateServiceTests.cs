@@ -26,6 +26,42 @@ public class ConnectionStateServiceTests
 		return (svc, factory, hub);
 	}
 
+	/// <summary>Answers <c>api/server-info</c> with the given features, and nothing else.</summary>
+	private sealed class ServerInfoHandler(string features) : HttpMessageHandler
+	{
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+			Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+			{
+				Content = new StringContent($$"""{"guestsEnabled":true,"mudName":"Test","features":[{{features}}]}""",
+					System.Text.Encoding.UTF8, "application/json")
+			});
+	}
+
+	private static ServerInfoService ServerInfo(string features)
+	{
+		var http = new HttpClient(new ServerInfoHandler(features)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(http);
+		return new ServerInfoService(factory);
+	}
+
+	/// <summary>
+	/// <c>/hubs/scene</c> is the Scene plugin's. Without the Scene System on, the scene connection is not opened, so
+	/// the game connection does not go on failing to reach a hub nothing serves.
+	/// </summary>
+	[Test]
+	[Arguments("", 0)]
+	[Arguments("\"scenes\"", 1)]
+	public async Task TheSceneConnection_OpensOnlyWithTheSceneSystem(string features, int opened)
+	{
+		var (_, factory, _) = MakeService();
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance, ServerInfo(features));
+
+		await svc.ConnectAsync();
+
+		factory.Received(opened).CreateScene();
+	}
+
 	[Test]
 	public async Task InitialState_IsDisconnected_NotConnected()
 	{

@@ -1,5 +1,6 @@
 using System.Reflection;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
 
@@ -121,6 +122,17 @@ public static class BundledPackages
 
 	/// <inheritdoc cref="BundledPackageSource.IsCatalogueSource"/>
 	public static bool IsCatalogueSource(string? sourceRepo) => BundledPackageSource.IsCatalogueSource(sourceRepo);
+
+	/// <summary>
+	/// The plugins a bundled package names in <c>plugins:</c>: without each of them running, its commands call into
+	/// nothing, so it is neither installed nor offered.
+	/// </summary>
+	public static IReadOnlyList<string> RequiredPlugins(string packageId, IPackageManifestService manifests)
+		=> manifests.ParseManifest(ManifestYaml(packageId)) switch
+		{
+			ParsedPackageManifest parsed => parsed.Manifest.RequiredPlugins,
+			_ => []
+		};
 
 	/// <summary>The raw YAML of one bundled package manifest (embedded resource).</summary>
 	public static string ManifestYaml(string packageId)

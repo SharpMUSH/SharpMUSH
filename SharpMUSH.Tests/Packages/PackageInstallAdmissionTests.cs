@@ -89,7 +89,8 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IPackageDeclarationService>(),
 				services.GetRequiredService<IPackageSettingService>(),
 				services.GetRequiredService<IPackageWikiService>(),
-				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>())
+				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
+				services.GetRequiredService<Lazy<IPluginManager>>())
 		};
 	}
 
@@ -114,6 +115,50 @@ public class PackageInstallAdmissionTests
 		await Assert.That((await Registry.GetInstalledPackageAsync(packageId)).Value).IsTypeOf<NotFound>();
 		await Assert.That(await Registry.GetPackageRevisionsAsync(packageId)).IsEmpty();
 		await Assert.That(await Registry.GetPackageDependenciesAsync(packageId)).IsEmpty();
+	}
+
+	// ── plugins: a package over a plugin that is not running ───────────────
+
+	/// <summary>
+	/// A package that names a plugin this server is not running is refused before anything is written, whichever
+	/// kind it is: its code would call commands and functions that are not there.
+	/// </summary>
+	[Test]
+	public async Task Softcode_OverAPluginThatIsNotRunning_IsRejectedAndWritesNothing()
+	{
+		var manifest = Parse("""
+			format: 1.5
+			package: adm-over-absent-plugin
+			version: "1.0.0"
+			plugins: [adm-absent-plugin]
+			objects:
+			  - ref: marker
+			    type: thing
+			    name: adm marker
+			""");
+
+		var plan = await Installer.PlanAsync(manifest);
+		await Assert.That(plan.IsBlocked).IsTrue();
+		await Assert.That(plan.DependencyIssues.Single()).IsEqualTo(
+			new PackageDependencyIssue("adm-absent-plugin", "", null, null, IsConflict: false, IsPlugin: true));
+
+		var result = await Installer.ApplyAsync(manifest, Request());
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("needs the adm-absent-plugin plugin, which is not running");
+		await AssertNothingRecordedAsync("adm-over-absent-plugin");
+	}
+
+	[Test]
+	public async Task Managed_OverAPluginThatIsNotRunning_IsRejectedAndDepositsNothing()
+	{
+		using var scope = CreateManagedScope();
+		var manifest = ManagedManifest("adm-managed-over-absent", "1.0.0") with { Plugins = ["adm-absent-plugin"] };
+
+		var result = await scope.Installer.ApplyAsync(
+			manifest, Request(allowManagedCode: true), CancellationToken.None, new PluginPackageFixture.BinarySource(manifest.Name));
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("needs the adm-absent-plugin plugin");
+		await Assert.That(scope.Deposited("adm-managed-over-absent")).IsFalse();
+		await AssertNothingRecordedAsync("adm-managed-over-absent");
 	}
 
 	// ── #1169: managed installs honour dependencies and conflicts ───────────

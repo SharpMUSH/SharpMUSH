@@ -2213,7 +2213,7 @@ Needs the `packages.admin` permission. A plugin is compiled C# that adds command
 
 `@plugin` lists every plugin the server found: its version, whether it shipped with the server or came from a package, and its state. `@plugin <plugin>` shows one, with what it adds, which packages need it, and why it did not start if it failed.
 
-`@plugin/disable <plugin>` turns a plugin off. The packages that need it are uninstalled first, after a backup; a package that shipped with the server is not reinstalled while the plugin is off. A plugin that only adds commands and functions stops at once. Any other plugin stops at the next restart (`@shutdown/reboot`), because what it registered at start-up stays until then.
+`@plugin/disable <plugin>` turns a plugin off. The packages that need it are uninstalled first, after a backup: those that name it under `plugins:` in their package.yaml, and the packages that depend on those. While a plugin is not running, a package that names it cannot be installed, and a package that shipped with the server is not reinstalled. A plugin that only adds commands and functions stops at once. Any other plugin stops at the next restart (`@shutdown/reboot`), because what it registered at start-up stays until then.
 
 `@plugin/enable <plugin>` turns it on again. It starts at the next restart, and the packages that shipped with it are reinstalled then.
 

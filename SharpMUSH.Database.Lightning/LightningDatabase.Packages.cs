@@ -41,7 +41,8 @@ public partial class LightningDatabase
 		DeployedFiles = package.DeployedFiles?.ToArray(),
 		Owned = package.Owned is { IsEmpty: false } owned ? owned.ToJson() : null,
 		Settings = package.Settings is { Count: > 0 } settings ? PackageSettingRecord.ToJson(settings) : null,
-		Kind = package.Kind == PackageKind.Softcode ? null : package.Kind.ToString().ToLowerInvariant()
+		Kind = package.Kind == PackageKind.Softcode ? null : package.Kind.ToString().ToLowerInvariant(),
+		Plugins = package.Plugins?.ToArray()
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
@@ -50,7 +51,8 @@ public partial class LightningDatabase
 		r.DeployedFiles is { Length: > 0 } ? r.DeployedFiles : null,
 		r.Owned is { Length: > 0 } owned ? PackageDeclarations.FromJson(owned) : null,
 		r.Settings is { Length: > 0 } settings ? PackageSettingRecord.FromJson(settings) : null,
-		Enum.TryParse<PackageKind>(r.Kind, ignoreCase: true, out var kind) ? kind : PackageKind.Softcode);
+		Enum.TryParse<PackageKind>(r.Kind, ignoreCase: true, out var kind) ? kind : PackageKind.Softcode,
+		r.Plugins is { Length: > 0 } ? r.Plugins : null);
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 		=> await Store.WriteAsync(tx =>

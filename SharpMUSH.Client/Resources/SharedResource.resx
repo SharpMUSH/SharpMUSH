@@ -1701,6 +1701,9 @@
   <data name="PkgRequires" xml:space="preserve">
     <value>Requires</value>
   </data>
+  <data name="PkgNeedsPlugin" xml:space="preserve">
+    <value>Needs the {0} plugin, which is not running on this server.</value>
+  </data>
   <data name="PkgNotInstalledSuffix" xml:space="preserve">
     <value> — not installed.</value>
   </data>

@@ -52,7 +52,11 @@ else
     @foreach (var issue in _plan.Changeset.DependencyIssues)
     {
         <MudAlert Severity="Severity.Error">
-            @if (issue.IsConflict)
+            @if (issue.IsPlugin)
+            {
+                <text>@Loc["PkgNeedsPlugin", issue.PackageId]</text>
+            }
+            else if (issue.IsConflict)
             {
                 <text>@Loc["PkgConflictsWithInstalled"] <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
             }

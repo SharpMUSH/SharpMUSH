@@ -26,6 +26,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// </param>
 /// <param name="Settings">The configuration options this package set and still owns. Null when it owns none.</param>
 /// <param name="Kind">What the package is: softcode, a portal application, or a plugin.</param>
+/// <param name="Plugins">The plugins the package declared it needs (<c>plugins:</c>), or null for none.</param>
 public sealed record InstalledPackageRecord(
 	string Id,
 	string Version,
@@ -38,7 +39,8 @@ public sealed record InstalledPackageRecord(
 	IReadOnlyList<string>? DeployedFiles = null,
 	PackageDeclarations? Owned = null,
 	IReadOnlyList<PackageSettingRecord>? Settings = null,
-	PackageKind Kind = PackageKind.Softcode);
+	PackageKind Kind = PackageKind.Softcode,
+	IReadOnlyList<string>? Plugins = null);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

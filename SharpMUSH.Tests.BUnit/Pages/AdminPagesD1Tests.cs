@@ -513,6 +513,29 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// A package over a plugin the server is not running says which plugin it needs, and cannot be applied.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_NamesAMissingPlugin_AndCannotApply()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("scene-verse", null, "1.1.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Install, [], [], [],
+			[new("scene", "", null, null, IsConflict: false, IsPlugin: true)], [], []);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("scene-verse", "1.1.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=scene-verse");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
+		var alert = cut.Find(".mud-alert").TextContent;
+		await Assert.That(alert).Contains("PkgNeedsPlugin");
+		await Assert.That(alert).DoesNotContain("PkgRequires");
+		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled")).IsTrue();
+	}
+
+	/// <summary>
 	/// A content pack shows its wiki pages instead of empty object and attribute cards, and a page staff changed is
 	/// kept by default, so the apply needs no decision before it can run.
 	/// </summary>

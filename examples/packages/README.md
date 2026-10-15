@@ -44,7 +44,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 plugins)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -54,6 +54,7 @@ homepage: https://example.com   # optional
 keywords: [bbs, boards]         # optional — up to 5, feeds browse/search
 convention_prefix: BBS_         # optional — advisory attr prefix, not enforced
 requires_server: ">=0.1"        # optional — SharpMUSH version constraint
+plugins: [scene]                # optional (format 1.5) — plugins its code calls; it installs only while they run
 
 depends:                        # optional — other packages this one requires
   - volund-core: ">=1.0"        # shorthand: id + version constraint

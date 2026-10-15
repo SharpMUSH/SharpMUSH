@@ -52,8 +52,7 @@ public class DefaultPackagesBootstrapService(
 		foreach (var package in BundledPackages.All.Where(HasHandler))
 		{
 			// A package over a plugin that is turned off or failed to load would install commands that call into nothing.
-			if (GameFeatureService.All.FirstOrDefault(a => a.PackageId == package.PackageId)?.RequiredPlugin is { } plugin
-					&& !plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)))
+			if (BundledPackages.RequiredPlugins(package.PackageId, manifests).FirstOrDefault(p => !PluginRunning(p)) is { } plugin)
 			{
 				logger.LogInformation("Bundled {PackageId} needs the {Plugin} plugin, which is not running; not installing it.",
 					package.PackageId, plugin);
@@ -110,6 +109,9 @@ public class DefaultPackagesBootstrapService(
 
 		return installed;
 	}
+
+	private bool PluginRunning(string pluginId)
+		=> plugins.Plugins.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase));
 
 	/// <inheritdoc />
 	public string? RequiredHandlerOption(string packageId)
@@ -201,7 +203,7 @@ public class DefaultPackagesBootstrapService(
 		var plan = await installer.PlanAsync(manifest, cancellationToken: cancellationToken);
 		if (plan.IsBlocked)
 		{
-			logger.LogWarning("Cannot install {PackageId} (unresolved target or unmet dependency): {Issues}",
+			logger.LogWarning("Cannot install {PackageId} (unresolved target, unmet dependency or missing plugin): {Issues}",
 				packageId, string.Join("; ", plan.DependencyIssues.Select(i => i.PackageId)));
 			return;
 		}
