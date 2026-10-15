@@ -218,7 +218,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID"], ParameterNames = ["list", "command"])]
+		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID"], ParameterNames = ["list", "command"])]
 	public async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
@@ -274,6 +274,13 @@ public partial class Commands
 			};
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
+			// /localize and /clearregs (RhostMUSH spells it /clearreg) wrap each inline run, as PennMUSH's
+			// do_entry does around each inplace entry @dolist queues (src/cmds.c cmd_dolist,
+			// src/cque.c:1183-1195): the same RegisterScope as an inline @switch action. /inplace is
+			// QUEUE_RECURSE, which includes QUEUE_PRESERVE_QREG. cmd_dolist ignores both switches on a
+			// queued @dolist, and so does this.
+			var localizeRegisters = switches.Contains("LOCALIZE") || switches.Contains("INPLACE");
+			var clearRegisters = switches.Contains("CLEARREGS") || switches.Contains("CLEARREG");
 			var lastCallState = CallState.Empty;
 			var hadErrors = false;
 			var visitorFunc = parser.CommandListParseVisitor(command);
@@ -284,7 +291,10 @@ public partial class Commands
 
 				// Note: Command is parsed once (line above loop), then the visitor is called
 				// multiple times with different iteration register values. This is optimized.
-				lastCallState = await visitorFunc();
+				using (RegisterScope.Enter(parser.CurrentState.Registers, localizeRegisters, clearRegisters))
+				{
+					lastCallState = await visitorFunc();
+				}
 				hadErrors |= lastCallState?.HadErrors == true;
 			}
 
