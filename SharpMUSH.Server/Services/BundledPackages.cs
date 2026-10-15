@@ -160,8 +160,8 @@ public static class BundledPackages
 			manifest.Description,
 			"",
 			descriptor.InstallAtFirstBoot
-				? "Installed at first boot — every new game has this."
-				: "Shipped with this server, not installed. Installing it is your call."
+				? "Installed at a new game's first boot unless declined."
+				: "Shipped with this server and not installed automatically."
 		};
 
 		if (manifest.Dependencies.Count > 0)

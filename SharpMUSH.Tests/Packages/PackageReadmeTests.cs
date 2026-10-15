@@ -78,7 +78,7 @@ public class PackageReadmeTests
 		var readme = BundledPackages.Readme(descriptor, manifest);
 
 		await Assert.That(readme).StartsWith($"# wiki-reader {manifest.Version}");
-		await Assert.That(readme).Contains("Shipped with this server, not installed.");
+		await Assert.That(readme).Contains("Shipped with this server and not installed automatically.");
 	}
 
 	/// <summary>A written README lists the objects a package creates, not the ones it only attaches attributes to.</summary>
