@@ -95,6 +95,11 @@ public static class BundledPackages
 		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +safety is a name a game may already use, and a game chooses its own safety tools.
 		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: favourite poses and the highlights they make add +scene/fav and its kin to the
+		// Scene Logger, and a game chooses whether its players rank poses at all. Its portal page is a separate
+		// application package, as jobs-app is for jobs.
+		new("highlights", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("highlights-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
