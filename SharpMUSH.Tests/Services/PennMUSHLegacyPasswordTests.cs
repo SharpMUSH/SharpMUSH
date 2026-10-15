@@ -127,6 +127,42 @@ public class PennMUSHLegacyPasswordTests
 		await Assert.That(Service.NeedsRehash(stored)).IsTrue();
 	}
 
+	// ---- SHA-crypt --------------------------------------------------------------------------------
+
+	/// <summary>
+	/// <c>$6$</c> and <c>$5$</c> crypt(3) values, as RhostMUSH and glibc write them. The first two are what
+	/// an unmodified RhostMUSH stored in a player's password attribute for <c>hunter2</c>, at its default
+	/// rounds and at <c>sha2rounds</c> 6000; the rest are <c>openssl passwd -6/-5</c>.
+	/// </summary>
+	[Test]
+	[Arguments("$6$rNJk6nKeO$isTkJZFSZzOIqUyiiEf.NXwZlhXi49Y4B/u0U3mAk843Fo0bEpzHOFaAyBz0nlipBE/aYVozVIlMOUEAZvjWo/")]
+	[Arguments("$6$rounds=6000$JGvUVAMJKDgEXk$/t7CppVuc3V5tAfPh43aqAscxUtl6Y4HBzUEuv2nzBvhtuZH9/XSZ56IrxXhzBwLB0zR7OaBgroCUglPtRXsD.")]
+	[Arguments("$6$saltstring$q2.778Y7vt0Ij2OIl01VlxEE6SEh8ZCtgFbyJX8fYkl5S7gx32QO24FVg.rs4DkoAs9t6R19x4z8g69teXFxA0")]
+	[Arguments("$5$saltstring$9JBjAeLRHX/Lm/1Njo98nbLiUsNRFEuARumLKkxJMm7")]
+	[Arguments("$5$rounds=1000$x$pgi2F.tEkz1M7RxxpBu9HS8hxAsjsRCvgjiI66p7SH9")]
+	public async Task AShaCryptPasswordValidates(string stored)
+	{
+		await Assert.That(Valid(stored)).IsTrue();
+		await Assert.That(Valid(stored, "wrongpass")).IsFalse();
+		await Assert.That(Service.NeedsRehash(stored)).IsTrue();
+	}
+
+	/// <summary>
+	/// A value no crypt(3) writes does not match: rounds below the minimum (which crypt raises to 1000 and
+	/// writes as such), leading zeros, a salt over 16 characters, a cut-off hash.
+	/// </summary>
+	[Test]
+	[Arguments("$5$rounds=999$x$pgi2F.tEkz1M7RxxpBu9HS8hxAsjsRCvgjiI66p7SH9")]
+	[Arguments("$5$rounds=01000$x$pgi2F.tEkz1M7RxxpBu9HS8hxAsjsRCvgjiI66p7SH9")]
+	[Arguments("$5$rounds=$x$pgi2F.tEkz1M7RxxpBu9HS8hxAsjsRCvgjiI66p7SH9")]
+	[Arguments("$5$saltstringsaltstring$5B8vYYiY.CVt1RlTTf8KbXBH3hsxY/GNooZaBBGWEc5")]
+	[Arguments("$5$saltstring$9JBjAeLRHX/Lm/1Njo98nbLiUsNRFEuARumLKkxJMm")]
+	[Arguments("$6$saltstring")]
+	public async Task AMalformedShaCryptValueDoesNotValidate(string stored)
+	{
+		await Assert.That(Valid(stored)).IsFalse();
+	}
+
 	// ---- plaintext --------------------------------------------------------------------------------
 
 	[Test]

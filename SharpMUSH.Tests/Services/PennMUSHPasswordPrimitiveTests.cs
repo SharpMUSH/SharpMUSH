@@ -57,3 +57,50 @@ public class DesCryptTests
 		await Assert.That(DesCrypt.Crypt(Encoding.UTF8.GetBytes(password), salt)).IsEqualTo(expected);
 	}
 }
+
+/// <summary>
+/// SHA-256-crypt and SHA-512-crypt, from Ulrich Drepper's specification "Unix crypt using SHA-256 and
+/// SHA-512": its own test vectors, then values from <c>openssl passwd -5/-6</c> (OpenSSL 3).
+/// </summary>
+public class ShaCryptTests
+{
+	/// <summary>Longer than a SHA-512 digest, so the password spans more than one block of B.</summary>
+	private const string HundredXs =
+		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+
+	/// <summary>The specification's vectors, including a salt cut to 16 characters and rounds raised to 1000.</summary>
+	[Test]
+	[Arguments("Hello world!", "saltstring", null,
+		"$6$saltstring$svn8UoSVapNtMuq1ukKS4tPQd8iKwSMHWjl/O817G3uBnIFNjnQJuesI68u4OTLiBFdcbYEdFCoEOfaS35inz1")]
+	[Arguments("Hello world!", "saltstringsaltst", 10000,
+		"$6$rounds=10000$saltstringsaltst$OW1/O6BYHV6BcXZu8QVeXbDWra3Oeqh0sbHbbMCVNSnCM/UrjmM0Dp8vOuZeHBy/YTBmSK6H9qs/y3RnOaw5v.")]
+	[Arguments("This is just a test", "toolongsaltstrin", 5000,
+		"$6$rounds=5000$toolongsaltstrin$lQ8jolhgVRVhY4b5pZKaysCLi0QBxGoNeKQzQ3glMhwllF7oGDZxUhx1yxdYcz/e1JSbq3y6JMxxl8audkUEm0")]
+	[Arguments("the minimum number is still observed", "roundstoolow", 1000,
+		"$6$rounds=1000$roundstoolow$kUMsbe306n21p9R.FRkW3IGn.S9NPN0x50YhH1xhLsPuWGsUSklZt58jaTfF4ZEQpyUNGc0dqbpBYYBaHHrsX.")]
+	[Arguments(HundredXs, "abcdefghijklmnop", null,
+		"$6$abcdefghijklmnop$r/HtRGuCzMNedONV3I8Xz8Qm4Qy85pQ/RigX0agmbAzWsa3BCc1B564NfCD/Giyliby36KbTMkrVLsmFYtbTu1")]
+	[Arguments("Pässwörd", "utf8", null,
+		"$6$utf8$ZpofdsFxm77zz7Q8QPs5tq8mbKLW6kJzUJo4oEx61H6QKpovxbG21BBHp2dDIG2X2JEuNO29ts65OJG5nRPRy.")]
+	[Arguments("hunter2", "saltstring", null,
+		"$6$saltstring$q2.778Y7vt0Ij2OIl01VlxEE6SEh8ZCtgFbyJX8fYkl5S7gx32QO24FVg.rs4DkoAs9t6R19x4z8g69teXFxA0")]
+	public async Task Sha512MatchesTheVectors(string password, string salt, int? rounds, string expected)
+	{
+		await Assert.That(ShaCrypt.Crypt(System.Security.Cryptography.HashAlgorithmName.SHA512,
+			Encoding.UTF8.GetBytes(password), Encoding.ASCII.GetBytes(salt), rounds)).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("Hello world!", "saltstring", null, "$5$saltstring$5B8vYYiY.CVt1RlTTf8KbXBH3hsxY/GNooZaBBGWEc5")]
+	[Arguments("Hello world!", "saltstringsaltst", 10000,
+		"$5$rounds=10000$saltstringsaltst$3xv.VbSHBb41AL9AvLeujZkZRBAwqFMz2.opqey6IcA")]
+	[Arguments("This is just a test", "toolongsaltstrin", 5000,
+		"$5$rounds=5000$toolongsaltstrin$Un/5jzAHMgOGZ5.mWJpuVolil07guHPvOW8mGRcvxa5")]
+	[Arguments(HundredXs, "abcdefghijklmnop", null, "$5$abcdefghijklmnop$eq0z.PIuAZvCCSUXhAcrIS5rtAk4zxY4tlzXoWXdQO5")]
+	[Arguments("hunter2", "x", 1000, "$5$rounds=1000$x$pgi2F.tEkz1M7RxxpBu9HS8hxAsjsRCvgjiI66p7SH9")]
+	public async Task Sha256MatchesTheVectors(string password, string salt, int? rounds, string expected)
+	{
+		await Assert.That(ShaCrypt.Crypt(System.Security.Cryptography.HashAlgorithmName.SHA256,
+			Encoding.UTF8.GetBytes(password), Encoding.ASCII.GetBytes(salt), rounds)).IsEqualTo(expected);
+	}
+}
