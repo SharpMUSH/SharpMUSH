@@ -49,7 +49,7 @@
 	aspect-ratio: 1;
 	min-height: 8px;
 	border-radius: 3px;
-	background: color-mix(in oklab, var(--accent) calc(var(--heat) * 92%), var(--card-bg));
+	background: color-mix(in oklab, var(--accent) calc(var(--heat) * 92%), var(--surface));
 	box-shadow: inset 0 0 0 1px var(--border-soft);
 }
 

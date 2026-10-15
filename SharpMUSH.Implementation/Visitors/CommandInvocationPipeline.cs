@@ -111,8 +111,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		}
 
 		// A pose is counted here, before /override can replace the command: a logger that hooks POSE still
-		// lets the line through, and it is the same pose to the activity reports either way.
-		await CountPoseAsync(run);
+		// lets the line through, and it is the same pose to the activity reports either way. The scope keeps
+		// the logger's own record of the line, made while the rest of the command runs, from counting twice.
+		using var poseScope = await CountPoseAsync(run) ? services.Activity?.PoseScope() : null;
 
 		// 3. Check for /override hook with $-command matching
 		if (await OverriddenByHookAsync(run) is CallState overridden)
@@ -359,15 +360,15 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// <summary>Whether the command's /ignore hook answered false, so the command does not run.</summary>
 	/// <summary>
 	/// Counts a pose in the activity ledger when a character runs a command marked
-	/// <see cref="CommandBehavior.Pose"/>, against the room they stand in.
+	/// <see cref="CommandBehavior.Pose"/>, against the room they stand in. True when it was counted.
 	/// </summary>
-	private async ValueTask CountPoseAsync(BuiltInRun run)
+	private async ValueTask<bool> CountPoseAsync(BuiltInRun run)
 	{
 		if (!run.Definition.Attribute.Behavior.HasFlag(CommandBehavior.Pose)
 			|| services.Activity is not { } ledger
 			|| run.Executor is not AnySharpObject { IsPlayer: true } player)
 		{
-			return;
+			return false;
 		}
 
 		var dbref = player.Object().DBRef;
@@ -377,6 +378,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			_ => (long?)null
 		};
 		ledger.RecordPose(dbref.Number, room);
+		return true;
 	}
 
 	private async ValueTask<bool> IgnoredByHookAsync(BuiltInRun run)

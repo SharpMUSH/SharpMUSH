@@ -8117,7 +8117,7 @@
     <value>Cohorts by approval month</value>
   </data>
   <data name="AdmActivityCohortsSub" xml:space="preserve">
-    <value>Of the characters approved each month, the share who posed in each 30 days after approval.</value>
+    <value>Of the characters approved each month, the share who posed in each 30 days after that month ended.</value>
   </data>
   <data name="AdmActivityMonth" xml:space="preserve">
     <value>Month</value>

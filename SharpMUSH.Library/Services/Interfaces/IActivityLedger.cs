@@ -7,14 +7,23 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </summary>
 /// <remarks>
 /// The same pose often arrives twice: the engine counts the POSE/SAY/SEMIPOSE/@EMIT a character types, and
-/// the Scene plugin counts what its logger records, which for a typed pose is that same line. A pose by the
-/// same character in the same room within <see cref="SharpMUSH.Library.Services.ActivityLedger.SamePoseWindow"/> of the last one counted
-/// is taken for the same pose and not counted again.
+/// the Scene plugin counts what its logger records, which for a typed pose is that same line, recorded by
+/// the logger's hook while the command runs. The engine opens <see cref="PoseScope"/> around the rest of the
+/// command once it has counted it, and a pose recorded inside that scope is not counted again.
 /// </remarks>
 public interface IActivityLedger
 {
-	/// <summary>Counts one pose by <paramref name="player"/> (a dbref number) in <paramref name="room"/>, or nowhere.</summary>
+	/// <summary>
+	/// Counts one pose by <paramref name="player"/> (a dbref number) in <paramref name="room"/>, or nowhere.
+	/// Not counted inside an open <see cref="PoseScope"/>.
+	/// </summary>
 	void RecordPose(long player, long? room);
+
+	/// <summary>
+	/// Marks the rest of this flow as part of a pose already counted, until the scope is disposed. Call it from
+	/// the method that runs the rest of the command, not from one it awaits: the mark lives in the async flow.
+	/// </summary>
+	IDisposable PoseScope();
 
 	/// <summary>Counts one scene started in <paramref name="room"/>, or in no room.</summary>
 	void RecordScene(long? room);

@@ -111,6 +111,10 @@ public static class BundledPackages
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
+		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: joins health and jobs, so +health shows staff load.
+		new("health-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a

@@ -10,12 +10,10 @@ namespace SharpMUSH.Library.Services;
 public sealed class ActivityLedger(Lazy<IMediator> mediator, TimeProvider clock, ILogger<ActivityLedger> logger)
 	: IActivityLedger
 {
-	/// <summary>How close together two poses by one character in one room must be to be taken for one.</summary>
-	public static readonly TimeSpan SamePoseWindow = TimeSpan.FromSeconds(2);
+	private static readonly AsyncLocal<bool> InPose = new();
 
 	private readonly Lock _gate = new();
 	private Pending _pending = new();
-	private readonly Dictionary<long, (long Room, long At)> _lastCounted = [];
 
 	public void RecordPose(long player, long? room) => RecordPose(player, room, clock.GetUtcNow());
 
@@ -24,21 +22,14 @@ public sealed class ActivityLedger(Lazy<IMediator> mediator, TimeProvider clock,
 	/// <summary><see cref="RecordPose(long, long?)"/> at a given moment.</summary>
 	public void RecordPose(long player, long? room, DateTimeOffset at)
 	{
+		if (InPose.Value) return;
+
 		var ms = at.ToUnixTimeMilliseconds();
-		var where = room ?? -1;
 		var day = DateOnly.FromDateTime(at.UtcDateTime).DayNumber;
 		var hour = 1 << at.UtcDateTime.Hour;
 
 		lock (_gate)
 		{
-			if (_lastCounted.TryGetValue(player, out var last) && last.Room == where
-				&& ms - last.At >= 0 && ms - last.At < SamePoseWindow.TotalMilliseconds)
-			{
-				return;
-			}
-
-			_lastCounted[player] = (where, ms);
-
 			var playerDay = _pending.Players.GetValueOrDefault((day, player));
 			_pending.Players[(day, player)] = (playerDay.Poses + 1, playerDay.Hours | hour);
 			_pending.Last[player] = Math.Max(_pending.Last.GetValueOrDefault(player), ms);
@@ -60,6 +51,18 @@ public sealed class ActivityLedger(Lazy<IMediator> mediator, TimeProvider clock,
 			// A scene in no room still counts toward the game's total, under room -1.
 			RoomDay(day, room ?? -1).Scenes++;
 		}
+	}
+
+	public IDisposable PoseScope()
+	{
+		var outer = InPose.Value;
+		InPose.Value = true;
+		return new Scope(() => InPose.Value = outer);
+	}
+
+	private sealed class Scope(Action close) : IDisposable
+	{
+		public void Dispose() => close();
 	}
 
 	public async ValueTask FlushAsync(CancellationToken cancellationToken = default)
