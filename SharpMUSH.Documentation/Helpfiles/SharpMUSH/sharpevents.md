@@ -48,25 +48,25 @@ Event syntax in the help is of the form:<br>
 
 The handler gets each argument by position, the first as %0, and by the name shown, as %`\<name\>` (see [named arguments]). `&OBJECT\`MOVE #9=...` can read the destination as %1 or as %`\<destination\>`. A name of the form *received/sent/commands* names the parts of a value made of numbers joined by `/`: %`\<received\>`, %`\<sent\>` and %`\<commands\>` are each one number, and the position holds the whole value, as in PennMUSH.
 
-These are the events a SharpMUSH game raises. To see the help for a type, type [event <type>].
+These are the events a SharpMUSH game raises. To see the help for a type, type `help event <type>`.
 
 Event Types:
-- **dump**: dump\`5min, dump\`1min, dump\`complete, dump\`error
-- **db**: db\`dbck, db\`purge, db\`wcheck
-- **log**: log\`err, log\`cmd, log\`wiz, log\`conn, log\`trace, log\`check, log\`huh
-- **object**: object\`create, object\`destroy, object\`move, object\`rename, object\`flag
-- **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
-- **signal**: signal\`usr1, signal\`usr2
-- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink
-- **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp, socket\`timezone
-- **http**: http\`blocked, http\`fail, http\`command
-- **room**: room\`contents
-- **channel**: channel\`message, channel\`who
-- **page**: page\`message
-- **mail**: mail\`received
-- **scene**: scene\`status
-- **backup**: backup\`complete, backup\`error
-- **gallery**: gallery\`add, gallery\`report
+- [event dump] - dump\`5min, dump\`1min, dump\`complete, dump\`error
+- [event db] - db\`dbck, db\`purge, db\`wcheck
+- [event log] - log\`err, log\`cmd, log\`wiz, log\`conn, log\`trace, log\`check, log\`huh
+- [event object] - object\`create, object\`destroy, object\`move, object\`rename, object\`flag
+- [event sql] - sql\`connect, sql\`connectfail, sql\`disconnect
+- [event signal] - signal\`usr1, signal\`usr2
+- [event player] - player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink
+- [event socket] - socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp, socket\`timezone
+- [event http] - http\`blocked, http\`fail, http\`command
+- [event room] - room\`contents
+- [event channel] - channel\`message, channel\`who
+- [event page] - page\`message
+- [event mail] - mail\`received
+- [event scene] - scene\`status
+- [event backup] - backup\`complete, backup\`error
+- [event gallery] - gallery\`add, gallery\`report
 
 The room, channel, page, mail, scene, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink, socket\`gmcp and socket\`timezone are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, socket\`timezone the time zone a client reports, the gallery events tell the game about the web portal's profile pictures, and scene\`status lets a package act when a scene starts or ends.
 

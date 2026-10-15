@@ -1,4 +1,5 @@
 # help
+# &help
 This is the index to the MUSH online help files.
 
   For an explanation of the help system, type:    help [newbie]<br>
@@ -16,7 +17,7 @@ This is the index to the MUSH online help files.
   For a list of attributes:                       help [attributes]<br>
   To see the configuration of this MUSH:          `@config`
 
-  On many MUSHes, list local commands with:       `+help`
+  For this game's own commands and topics:        help [+help]
 
   If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 
@@ -588,7 +589,7 @@ This is the index to the MUSH online help files.
 
   There is also a 'garbage' type, used for objects which have been created and then `@destroyed`. Garbage objects cannot be used in any way, and their dbrefs will be recycled (with a new objid) when something new is created.
 
-  For more information on any of the types, see [`<type>`].
+  For more information on each type, see [players], [things], [rooms], [exits] and [garbage].
 
   The `@stats` command lists how many objects of each type currently exits in the database.
 
@@ -751,9 +752,6 @@ This is the index to the MUSH online help files.
   In commands that take a list of space-separated names (like page), you'll need to enclose names with spaces in "double quotes". The same is true on the login screen. For example:<br>
     page "Leeroy Jenkins"=Stop doing that.
 
-# &HELP
-This is the AHELP index.
-
 # Descriptor
 # Port
   A descriptor (also called a port or socket descriptor) is a unique (though reusable) number assigned to each connection to the MUSH. The descriptor for each connection is shown on the Wizard WHO in the 'Des' column.
@@ -764,7 +762,6 @@ This is the AHELP index.
 - [who]
 - [%]
 - [LPORTS()]
-- [LPORTS()]
 - [PLAYER()]
 - [@boot]
 - [Connection functions]
@@ -772,16 +769,8 @@ This is the AHELP index.
 
 # Unicode
 
-At the moment, SharpMUSH has very minimal support for Unicode. Almost all text is treated internally as being in the Latin-1 character set. Clients that support telnet character set negotiation can send and receive UTF-8, but only characters in the Basic Latin and Latin-1 Supplement blocks are accepted (Others are replaced with question marks).
+SharpMUSH text is Unicode: strings are UTF-16 inside the server, and network text supports UTF-8. A client that is not sent UTF-8 gets each character it cannot show as the nearest one it can; see [CHARSET] and [@ascii].
 
-A few functions support Unicode-aware text transformations:
+A column, a character and a code unit are not always the same. [STRLEN()] and [DISPLAYWIDTH()] count terminal columns, so a wide CJK character counts as two and a combining accent as none. [GRAPHEMECOUNT()] and [GRAPHEMES()] work on whole grapheme clusters, such as a letter with its accent or a joined emoji.
 
-- [STRIPACCENTS()]
-
-When the MUSH is compiled with the ICU library (See `@config` compile), additional functions support Unicode-aware text transformations:
-
-- [LCSTR()]
-- [UCSTR()]
-
-When using these functions, do not assume that they return the same number of characters as their argument.
-
+[ACCENT()] and [STRIPACCENTS()] add and remove accents, and the NOACCENTS flag strips them for older clients. See also [internationalization].

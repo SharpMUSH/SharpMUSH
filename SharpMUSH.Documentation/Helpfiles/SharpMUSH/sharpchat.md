@@ -86,11 +86,12 @@ cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respec
 
 The `@channel` command is used to add, join, list and modify channels in the chat system. It takes many different switches.
 
-Help for `@channel` is split into a number of topics. Please see [@channel \<topic\>] for more, where *\<topic\>* is one of the words below. For help on a specific switch to `@channel`, use [@channel/<switch>].
+Help for `@channel` is split into a number of topics. For help on a specific switch to `@channel`, use `help @channel/<switch>`.
 
-- **Joining** - How to find, join, and leave channels
-- **Other** - Setting channel titles, recalling previous chat messages
-- **Admin** - Adding, deleting and modifying channels
+- [@channel joining] - How to find, join, and leave channels
+- [@channel other] - Setting channel titles, recalling previous chat messages
+- [@channel admin] - Adding, deleting and modifying channels
+- [@channel clock] - Locking who may join, speak on, see or moderate a channel
 
 ::: seealso
 - [CHAT]

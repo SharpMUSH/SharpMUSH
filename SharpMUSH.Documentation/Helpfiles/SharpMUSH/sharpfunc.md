@@ -13,15 +13,18 @@
   [HTML FUNCTIONS]: output HTML tags for Pueblo and WebSocket clients <br>
   [Information functions]: find out something about objects (FLAGS, MONEY) <br>
   [JSON FUNCTIONS]: create and manipulate JSON objects (JSON, JSON_MAP) <br>
+  [Layout functions]: boxes, tables, columns and trees the portal draws as layout (BOX, DATATABLE) <br>
   [List functions]: manipulate lists (REVWORDS, FIRST) <br>
   [Mail Functions]: manipulate @mail (MAIL, FOLDERSTATS) <br>
   [Math functions]: number manipulation, generic or integers only (ADD, DIV) <br>
   [MEDIA FUNCTIONS]: sounds, pictures and panes, written once for every client (SOUND, IMAGE) <br>
+  [Page functions]: read your own page log (PAGERECALL, PAGECONVERSATIONS) <br>
   [Regular expression functions]: Regular expressions (REGMATCH, REGEDIT) <br>
   [SQL functions]: access SQL databases (SQL, SQLESCAPE) <br>
   [String functions]: string manipulation (ESCAPE, FLIP) <br>
   [Time functions]: formatting and display of time (TIME, CONVSECS) <br>
   [Utility functions]: general utilities (ISINT, COMP) <br>
+  [Vector functions]: arithmetic on lists of numbers as vectors (VADD, VMAG) <br>
   [Wiki functions]: read the shared wiki (WIKI, WIKILIST) <br>
 
   The command "@list/functions" lists all functions on the game.<br>
@@ -32,18 +35,18 @@
 
 |                       |                       |                       |                       |
 |-----------------------|-----------------------|-----------------------|-----------------------|
-| [APOSS()]             | [ATTRIB_SET()]        | [ATTRWATCH()]         | [DEFAULT()]           |
-| [EDEFAULT()]          | [EVAL()]              | [FLAGS()]             | [GET()]               |
-| [GREP()]              | [GREPI()]             | [HASATTR()]           | [HASATTRP()]          |
-| [HASATTRVAL()]        | [HASFLAG()]           | [LATTR()]             | [LFLAGS()]            |
-| [NATTR()]             | [OBJ()]               | [OWNER()]             | [PFUN()]              |
-| [POSS()]              | [REGLATTR()]          | [REGREP()]            | [REGREPI()]           |
-| [REGXATTR()]          | [SET()]               | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] |
-| [U()]                 | [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        |
-| [U2LOCAL()]           | [UARGS()]             | [UDEFAULT()]          | [UFUN()]              |
-| [ULAMBDA()]           | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 |
-| [WILDGREP()]          | [WILDGREPI()]         | [XATTR()]             | [XGET()]              |
-| [ZFUN()]              |                       |                       |                       |
+| [APOSS()]             | [ATTRIB_SET#()]       | [ATTRIB_SET()]        | [ATTRWATCH()]         |
+| [DEFAULT()]           | [EDEFAULT()]          | [EVAL()]              | [FLAGS()]             |
+| [GET()]               | [GREP()]              | [GREPI()]             | [HASATTR()]           |
+| [HASATTRP()]          | [HASATTRVAL()]        | [HASFLAG()]           | [INDEXED()]           |
+| [LATTR()]             | [LFLAGS()]            | [NATTR()]             | [OBJ()]               |
+| [OWNER()]             | [PFUN()]              | [POSS()]              | [REGLATTR()]          |
+| [REGREP()]            | [REGREPI()]           | [REGXATTR()]          | [SET()]               |
+| [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 | [U2()]                |
+| [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           | [UARGS()]             |
+| [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         |
+| [ULOCAL()]            | [V()]                 | [WILDGREP()]          | [WILDGREPI()]         |
+| [XATTR()]             | [XGET()]              | [ZFUN()]              |                       |
 
 ::: seealso
 - [attributes]
@@ -117,9 +120,11 @@
 | [LCON()]      | [LEXITS()]    | [LOC()]       | [LOCATE()]    |
 | [LPARENT()]   | [LPLAYERS()]  | [LSEARCH()]   | [LTHINGS()]   |
 | [LVCON()]     | [LVEXITS()]   | [LVPLAYERS()] | [LVTHINGS()]  |
-| [NAMELIST()]  | [NEXT()]      | [NEXTDBREF()] | [NUM()]       |
+| [NAMELIST()]  | [NCON()]      | [NEXITS()]    | [NEXT()]      |
+| [NEXTDBREF()] | [NPLAYERS()]  | [NTHINGS()]   | [NUM()]       |
 | [OWNER()]     | [PARENT()]    | [PMATCH()]    | [RLOC()]      |
-| [RNUM()]      | [ROOM()]      | [WHERE()]     | [ZFIND()]     |
+| [RNUM()]      | [ROOM()]      | [WHERE()]     | [XCON()]      |
+| [XEXITS()]    | [XPLAYERS()]  | [XTHINGS()]   | [ZFIND()]     |
 | [ZONE()]      |               |               |               |
 
 ::: seealso
@@ -129,24 +134,24 @@
 # Information Functions
   Information functions return values related to objects or the game.
 
-|                |                |                |                |
-|----------------|----------------|----------------|----------------|
-| [ACCNAME()]    | [ACTIVITY()]   | [ALIAS()]      | [ANDFLAGS()]   |
-| [ANDLFLAGS()]  | [ANDLPOWERS()] | [CONFIG()]     | [CONTEXT()]    |
-| [CONTROLS()]   | [CSECS()]      | [CTIME()]      | [DOWNMOTD()]   |
-| [ELOCK()]      | [FINDABLE()]   | [FLAGS()]      | [FULLALIAS()]  |
-| [FULLMOTD()]   | [FULLNAME()]   | [GETPIDS()]    | [HASATTR()]    |
-| [HASATTRP()]   | [HASFLAG()]    | [HASPOWER()]   | [HASROLE()]    |
-| [HASTYPE()]    | [INAME()]      | [ISAPPROVED()] | [LFLAGS()]     |
-| [LOCK()]       | [LOCKFLAGS()]  | [LOCKOWNER()]  | [LOCKS()]      |
-| [LPIDS()]      | [LSTATS()]     | [MONEY()]      | [MONIKER()]    |
-| [MOTD()]       | [MSECS()]      | [MTIME()]      | [MUDNAME()]    |
-| [MUDURL()]     | [NAME()]       | [NATTR()]      | [NEARBY()]     |
-| [OBJID()]      | [OBJMEM()]     | [ORFLAGS()]    | [ORLFLAGS()]   |
-| [ORLPOWERS()]  | [PERMISSION()] | [PIDINFO()]    | [PLAYERMEM()]  |
-| [POLL()]       | [POWERS()]     | [QUOTA()]      | [RESTARTS()]   |
-| [ROLES()]      | [TYPE()]       | [VERSION()]    | [VISIBLE()]    |
-| [WIZMOTD()]    |                |                |                |
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACTIVITY()]     |
+| [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    | [ANDLPOWERS()]   |
+| [CONFIG()]       | [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        |
+| [CTIME()]        | [DOWNMOTD()]     | [ELOCK()]        | [FINDABLE()]     |
+| [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
+| [GETPIDS()]      | [HASATTR()]      | [HASATTRP()]     | [HASFLAG()]      |
+| [HASPOWER()]     | [HASROLE()]      | [HASTYPE()]      | [INAME()]        |
+| [ISAPPROVED()]   | [LFLAGS()]       | [LLOCKFLAGS()]   | [LOCK()]         |
+| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        |
+| [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MOTD()]         |
+| [MSECS()]        | [MTIME()]        | [MUDNAME()]      | [MUDURL()]       |
+| [NAME()]         | [NATTR()]        | [NEARBY()]       | [OBJID()]        |
+| [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    |
+| [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    | [POLL()]         |
+| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
+| [TYPE()]         | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
 
 ::: seealso
 - [Dbref functions]
@@ -166,12 +171,12 @@
 | [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         |
 | [MATCH()]       | [MATCHALL()]    | [MEMBER()]      | [MIX()]         |
 | [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] | [NSITER()]      |
-| [RANDWORD()]    | [REMOVE()]      | [REST()]        | [REVWORDS()]    |
-| [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  | [SETUNION()]    |
-| [SHUFFLE()]     | [SOME()]        | [SORT()]        | [SORTBY()]      |
-| [SORTKEY()]     | [SPLICE()]      | [STEP()]        | [STEPARGS()]    |
-| [TABLE()]       | [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     |
-| [WORDS()]       |                 |                 |                 |
+| [RANDEXTRACT()] | [RANDWORD()]    | [REMOVE()]      | [REST()]        |
+| [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  |
+| [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
+| [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
+| [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      | [WHILE()]       |
+| [WORDPOS()]     | [WORDS()]       |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -230,11 +235,11 @@
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
 | [REGEDIT()]      | [REGEDITALL()]   | [REGEDITALLI()]  | [REGEDITI()]     |
-| [REGLATTR()]     | [REGLATTRP()]    | [REGMATCH()]     | [REGMATCHI()]    |
-| [REGNATTR()]     | [REGNATTRP()]    | [REGRAB()]       | [REGRABALL()]    |
-| [REGRABALLI()]   | [REGRABI()]      | [REGREP()]       | [REGREPI()]      |
-| [REGREPLACE()]   | [REGXATTR()]     | [REGXATTRP()]    | [RESWITCH()]     |
-| [RESWITCHALL()]  | [RESWITCHALLI()] | [RESWITCHI()]    |                  |
+| [REGLATTR()]     | [REGLATTRP()]    | [REGLMATCH()]    | [REGMATCH()]     |
+| [REGMATCHI()]    | [REGNATTR()]     | [REGNATTRP()]    | [REGRAB()]       |
+| [REGRABALL()]    | [REGRABALLI()]   | [REGRABI()]      | [REGREP()]       |
+| [REGREPI()]      | [REGREPLACE()]   | [REGXATTR()]     | [REGXATTRP()]    |
+| [RESWITCH()]     | [RESWITCHALL()]  | [RESWITCHALLI()] | [RESWITCHI()]    |
 
 ::: seealso
 - [String functions]
@@ -266,14 +271,15 @@
 | [IF()]                   | [IFELSE()]               | [LCSTR()]                | [LEFT()]                 |
 | [LIT()]                  | [LJUST()]                | [LPOS()]                 | [MERGE()]                |
 | [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
-| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDERMARKDOWN()]       |
-| [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                | [RJUST()]                |
-| [SCRAMBLE()]             | [SECURE()]               | [SPACE()]                | [SPELLNUM()]             |
-| [SQUISH()]               | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
-| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         |
-| [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           |
-| [SWITCH()]               | [TR()]                   | [TRIM()]                 | [UCSTR()]                |
-| [UNMARK()]               | [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |
+| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDER()]               |
+| [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                |
+| [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               | [SHA0()]                 |
+| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
+| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
+| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
+| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
+| [TRIM()]                 | [UCSTR()]                | [UNMARK()]               | [URLDECODE()]            |
+| [URLENCODE()]            | [WRAP()]                 |                          |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -302,21 +308,23 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 |--------------------|--------------------|--------------------|--------------------|
 | [@@()]             | [ALLOF()]          | [ANSI()]           | [ATRLOCK()]        |
 | [BEEP()]           | [BENCHMARK()]      | [CHECKPASS()]      | [CLONE()]          |
-| [CMDLINK()]        | [CREATE()]         | [DIE()]            | [DIG()]            |
-| [ENDTAG()]         | [FIRSTOF()]        | [FN()]             | [FUNCTIONS()]      |
-| [HTML()]           | [IBREAK()]         | [ILEV()]           | [INUM()]           |
-| [ISDBREF()]        | [ISINT()]          | [ISNUM()]          | [ISOBJID()]        |
-| [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          | [LETQ()]           |
-| [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
-| [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
-| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      |
-| [R()]              | [RAND()]           | [RESTRICTEDEXPR()] | [ROLL()]           |
+| [CMDLINK()]        | [COLORS()]         | [CREATE()]         | [DIE()]            |
+| [DIG()]            | [ENDTAG()]         | [FIRSTOF()]        | [FN()]             |
+| [FUNCTIONS()]      | [HTML()]           | [IBREAK()]         | [ILEV()]           |
+| [INUM()]           | [ISDBREF()]        | [ISINT()]          | [ISNUM()]          |
+| [ISOBJID()]        | [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          |
+| [LETQ()]           | [LINK()]           | [LIST()]           | [LISTQ()]          |
+| [LNUM()]           | [LOCALIZE()]       | [LSET()]           | [NAMEQ()]          |
+| [NULL()]           | [NUMVERSION()]     | [OBJEVAL()]        | [OBJEVALS()]       |
+| [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      | [R()]              |
+| [RAND()]           | [REGISTERS()]      | [RESTRICTEDEXPR()] | [ROLL()]           |
 | [ROLLINFO()]       | [S()]              | [SCAN()]           | [SET()]            |
 | [SETQ()]           | [SETQM()]          | [SETR()]           | [SETRM()]          |
 | [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          |
-| [STEXT()]          | [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        |
-| [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       |
-| [UNSETQ()]         | [UPTIME()]         | [VALID()]          | [WIPE()]           |
+| [STEXT()]          | [STOPEVENT()]      | [SUGGEST()]        | [TAG()]            |
+| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
+| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
+| [WIPE()]           |                    |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
@@ -420,7 +428,7 @@ Ariel Brand
 
   Returns the angle that has the given `<cosine>` (arc-cosine), with the angle expressed in the given `<angle type>`, or radians by default.
 
-  See 'HELP ANGLES' for more on the `<angle type>`.
+  See [angles] for more on the `<angle type>`.
 
 
 ::: seealso
@@ -592,7 +600,7 @@ You say, "r baz"
 
   Returns the angle with the given `<sine>` (arc-sine), with the angle expressed in the given `<angle type>`, or radians by default.
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 
 ::: seealso
@@ -612,7 +620,7 @@ You say, "r baz"
 
   atan2(x, y) is like atan(fdiv(x, y)), except y can be 0, and the signs of both arguments are used in determining the sign of the result. It is useful in converting between cartesian and polar coordinates.
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 
 ::: seealso
@@ -1167,7 +1175,7 @@ You say, "0"
     You say, "0"
 ```
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 ::: seealso
 - [ACOS()]
@@ -5160,7 +5168,7 @@ You say, "-1"
 
   Returns the sine of `<angle>`, which should be expressed in the given angle type, or radians by default.
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 
 ::: seealso
@@ -6044,12 +6052,16 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 # JSON Functions
   JSON functions are used to create and modify JSON objects.
 
-`isjson()    json()     json_array()     json_fill()     json_group_by()     json_map()     json_query()     json_mod()`
+|                   |                   |                   |                   |
+|-------------------|-------------------|-------------------|-------------------|
+| [ISJSON()]        | [JSON()]          | [JSON_ARRAY()]    | [JSON_FILL()]     |
+| [JSON_GROUP_BY()] | [JSON_MAP()]      | [JSON_MOD()]      | [JSON_QUERY()]    |
 
   oob() sends a JSON object to GMCP and WebSocket connections. gmcpsupports() says which GMCP packages a client asked for, and exitmap() builds the exits object a client's mapper reads.
 
-`exitmap()     gmcpsupports()     oob()`
-
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [EXITMAP()]      | [GMCPSUPPORTS()] | [OOB()]          |                  |
 
 ::: seealso
 - [JSON PATHS]

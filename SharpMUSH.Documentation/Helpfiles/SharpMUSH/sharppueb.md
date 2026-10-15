@@ -41,11 +41,10 @@ When used with a *<player>* argument, the most recently active connection is use
 
 HTML Functions are used to output HTML tags to HTML capable users: Pueblo and MXP clients, and the web portal. These tags will be stripped by the system for anything non-HTML related.
 
-Available functions:
-- tagwrap()
-- cmdlink()
-- wshtml()
-- html(), tag() and endtag() (see their entries)
+|                    |                    |                    |                    |
+|--------------------|--------------------|--------------------|--------------------|
+| [CMDLINK()]        | [ENDTAG()]         | [HTML()]           | [TAG()]            |
+| [TAGWRAP()]        | [WEBSOCKET_HTML()] | [WSHTML()]         |                    |
 
 Things a client may have that are not tags (a sound, a picture, a pane, a screen to clear) are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
 
@@ -155,16 +154,13 @@ Clicking a link sends *<command>* as if the reader had typed it, so it runs as w
 
 Sounds, pictures, panes and the rest are said once, and each client is told about them in the way that client has. An MXP client gets MXP's elements, a Pueblo client its `xch_` ones, the web portal an HTML element it can act on, and a plain telnet client either nothing or the words that stand in for what it cannot show.
 
-Available functions:
-- sound() and music()
-- stopsound()
-- image()
-- figure() (a picture with text art and text flowing round it; see [LAYOUT FUNCTIONS])
-- pane()
-- preformat()
-- clearscreen()
-- prefetch()
-- expirelinks()
+|                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|
+| [CLEARSCREEN()] | [EXPIRELINKS()] | [FIGURE()]      | [IMAGE()]       |
+| [MUSIC()]       | [PANE()]        | [PREFETCH()]    | [PREFORMAT()]   |
+| [SOUND()]       | [STOPSOUND()]   |                 |                 |
+
+figure() is a picture with text art and text flowing round it; it is described with the [LAYOUT FUNCTIONS].
 
 None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before, except where a function stands words in for what a client cannot show, such as a picture's description.
 

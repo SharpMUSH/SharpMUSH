@@ -1,16 +1,20 @@
 # Commands
 Help is available for the following MUSH commands:
 
-|            |            |            |            |            |
-|------------|------------|------------|------------|------------|
-| [ahelp]    | [anews]    | [brief]    | [DOING]    | [drop]     |
-| [enter]    | [events]   | [examine]  | [follow]   | [get]      |
-| [give]     | [go]       | [leave]    | [LOGOUT]   | [look]     |
-| [move]     | [news]     | [page]     | [pose]     | [QUIT]     |
-| [read]     | [say]      | [score]    | [teach]    | [think]    |
-| [unfollow] | [use]      | [whisper]  | [WHO]      | [with]     |
-| ["]        | [:]        | [;]        | [+]        | [&]        |
-| [~]        | [}]        |            |            |            |
+|             |             |             |             |             |
+|-------------|-------------|-------------|-------------|-------------|
+| [ahelp]     | [anews]     | [brief]     | [buy]       | [desert]    |
+| [dismiss]   | [DOING]     | [drop]      | [empty]     | [enter]     |
+| [events]    | [examine]   | [follow]    | [get]       | [give]      |
+| [go]        | [help]      | [home]      | [inventory] | [leave]     |
+| [LOGOUT]    | [look]      | [move]      | [news]      | [page]      |
+| [pose]      | [QUIT]      | [read]      | [say]       | [score]     |
+| [teach]     | [think]     | [unfollow]  | [use]       | [whisper]   |
+| [WHO]       | [with]      |             |             |             |
+| ["]         | [:]         | [;]         | [+]         | [&]         |
+| [~]         | [}]         |             |             |             |
+
+The `]` prefix runs a command without evaluating its arguments; see [literal command].
 
 
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
@@ -23,7 +27,9 @@ In addition to these, there are several types of '@' commands. @-commands are us
 
 At the login screen, [connect] reaches a character. On a game with web-portal accounts, [register] and [login] reach your account, [make] and [play] create and connect its characters, and [claim] adds a character you already have. See [accounts].
 
-Commands that act on your connection rather than your character are listed in [socket commands].
+Commands that act on your connection rather than your character are listed in [socket commands]. Players used to MUX can also use its channel commands; see [MUX Comsys].
+
+The game runs two commands itself, and either can be @hooked: [HUH_COMMAND] for a line no command matches, and [WARN_ON_MISSING] for a line that starts with a function. [UNIMPLEMENTED_COMMAND] says a command has not been implemented.
 
 # @-attributes
 These '@' commands set standard message/action sets on objects. Each comes in 3 versions: `@<whatever>`, `@o<whatever>`, and `@a<whatever>`. Only the `@<whatever>` version is listed below, but help is available for each:
@@ -40,13 +46,13 @@ These '@' command set other standard attributes on objects that don't follow the
 
 |                |                |                |                |                |
 |----------------|----------------|----------------|----------------|----------------|
-| [@aahear]      | [@aclone]      | [@aconnect]    | [@adisconnect] | [@amail]       |
-| [@amhear]      | [@away]        | [@charges]     | [@chatformat]  | [@conformat]   |
-| [@cost]        | [@descformat]  | [@ealias]      | [@exitformat]  | [@filter]      |
-| [@forwardlist] | [@haven]       | [@idescformat] | [@idle]        | [@infilter]    |
-| [@inprefix]    | [@lalias]      | [@listen]      | [@nameformat]  | [@oxenter]     |
-| [@oxleave]     | [@oxmove]      | [@oxtport]     | [@pageformat]  | [@prefix]      |
-| [@runout]      | [@sex]         | [@startup]     |                |                |
+| [@aahear]      | [@aclone]      | [@aconnect]    | [@adestroy]    | [@adisconnect] |
+| [@amail]       | [@amhear]      | [@away]        | [@charges]     | [@chatformat]  |
+| [@conformat]   | [@cost]        | [@descformat]  | [@ealias]      | [@exitformat]  |
+| [@filter]      | [@forwardlist] | [@gender]      | [@haven]       | [@idescformat] |
+| [@idle]        | [@infilter]    | [@inprefix]    | [@lalias]      | [@listen]      |
+| [@nameformat]  | [@oxenter]     | [@oxleave]     | [@oxmove]      | [@oxtport]     |
+| [@pageformat]  | [@prefix]      | [@runout]      | [@sex]         | [@startup]     |
 
 
 ::: seealso
@@ -59,12 +65,12 @@ These '@' commands are building-related (they create or modify objects):
 
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|
-| [@atrchown]  | [@atrlock]   | [@chown]     | [@chzone]    | [@clone]     |
-| [@cpattr]    | [@create]    | [@destroy]   | [@dig]       | [@elock]     |
-| [@eunlock]   | [@firstexit] | [@link]      | [@lock]      | [@moniker]   |
-| [@mvattr]    | [@name]      | [@nuke]      | [@open]      | [@parent]    |
-| [@recycle]   | [@set]       | [@ulock]     | [@undestroy] | [@unlink]    |
-| [@unlock]    | [@uunlock]   | [@wipe]      |              |              |
+| [@atrchown]  | [@atrlock]   | [@attribute] | [@chown]     | [@chzone]    |
+| [@clone]     | [@cpattr]    | [@create]    | [@destroy]   | [@dig]       |
+| [@elock]     | [@eunlock]   | [@firstexit] | [@link]      | [@lock]      |
+| [@lset]      | [@moniker]   | [@mvattr]    | [@name]      | [@nuke]      |
+| [@open]      | [@parent]    | [@recycle]   | [@set]       | [@ulock]     |
+| [@undestroy] | [@unlink]    | [@unlock]    | [@uunlock]   | [@wipe]      |
 
 # @-general
 These '@' commands are general utility and programming commands:
@@ -72,34 +78,37 @@ These '@' commands are general utility and programming commands:
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|
 | [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
-| [@chat]      | [@command]   | [@config]    | [@context]   | [@decompile] |
-| [@doing]     | [@dolist]    | [@drain]     | [@edit]      | [@emit]      |
-| [@entrances] | [@find]      | [@force]     | [@function]  | [@gedit]     |
-| [@grep]      | [@halt]      | [@if]        | [@input]     | [@job]       |
-| [@lemit]     | [@listmotd]  | [@locale]    | [@mail]      | [@map]       |
-| [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   |
-| [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  |
-| [@pemit]     | [@profile]   | [@prompt]    | [@ps]        | [@queue]     |
-| [@remit]     | [@restart]   | [@roll]      | [@scan]      | [@search]    |
-| [@select]    | [@stats]     | [@sweep]     | [@switch]    | [@teleport]  |
-| [@trigger]   | [@verb]      | [@version]   | [@wait]      | [@whereis]   |
-| [@wiki]      | [@zemit]     |              |              |              |
+| [@chat]      | [@clist]     | [@clock]     | [@command]   | [@config]    |
+| [@context]   | [@decompile] | [@doing]     | [@dolist]    | [@drain]     |
+| [@edit]      | [@emit]      | [@entrances] | [@find]      | [@force]     |
+| [@function]  | [@gedit]     | [@grep]      | [@halt]      | [@if]        |
+| [@include]   | [@input]     | [@job]       | [@lemit]     | [@list]      |
+| [@listmotd]  | [@locale]    | [@mail]      | [@malias]    | [@map]       |
+| [@message]   | [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   |
+| [@nspemit]   | [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     |
+| [@password]  | [@pemit]     | [@profile]   | [@prompt]    | [@ps]        |
+| [@queue]     | [@remit]     | [@restart]   | [@retry]     | [@roll]      |
+| [@scan]      | [@search]    | [@select]    | [@sockset]   | [@stats]     |
+| [@sweep]     | [@switch]    | [@teleport]  | [@theme]     | [@trigger]   |
+| [@verb]      | [@version]   | [@wait]      | [@warnings]  | [@wcheck]    |
+| [@whereis]   | [@wiki]      | [@zemit]     |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
 
 |                |                |                |                |                |
 |----------------|----------------|----------------|----------------|----------------|
-| [@account]     | [@allhalt]     | [@allquota]    | [@backup]      | [@boot]        |
-| [cd]           | [ch]           | [@chownall]    | [@chzoneall]   | [@comment]     |
-| [cv]           | [@dbck]        | [@disable]     | [@dump]        | [@enable]      |
-| [@feed]        | [@flag]        | [@hide]        | [@hook]        | [@http]        |
-| [@kick]        | [@log]         | [@motd]        | [@newpassword] | [@package]     |
+| [@account]     | [@allhalt]     | [@allquota]    | [@ascii]       | [@backup]      |
+| [@boot]        | [@chownall]    | [@chzoneall]   | [@comment]     | [@dbck]        |
+| [@disable]     | [@dump]        | [@enable]      | [@feed]        | [@flag]        |
+| [@hide]        | [@hook]        | [@http]        | [@kick]        | [@log]         |
+| [@logwipe]     | [@mapsql]      | [@motd]        | [@newpassword] | [@package]     |
 | [@pcreate]     | [@permission]  | [@plugin]      | [@poll]        | [@poor]        |
 | [@power]       | [@purge]       | [@push]        | [@quota]       | [@readcache]   |
-| [@reality]     | [@rejectmotd]  | [@respond]     | [@role]        | [@shutdown]    |
-| [@sitelock]    | [@snapshot]    | [@sql]         | [@squota]      | [@storage]     |
-| [@suggest]     | [@uptime]      | [@wall]        | [@wizmotd]     | [@wizwall]     |
+| [@reality]     | [@rejectmotd]  | [@respond]     | [@role]        | [@secret]      |
+| [@shutdown]    | [@sitelock]    | [@slave]       | [@snapshot]    | [@sql]         |
+| [@squota]      | [@storage]     | [@suggest]     | [@uptime]      | [@wall]        |
+| [@wizmotd]     | [@wizwall]     | [cd]           | [ch]           | [cv]           |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.
@@ -838,71 +847,6 @@ Show just the object names (with no ansi) in a table:
 - [@idescformat]
 :::
 
-# @input
-# @input/start
-# @input/prompt
-# @input/cancel
-# @input/rescue
-
-`@input/start[/wild|/regex] <prompt>=<exit pattern>,<exit attribute>[,<pattern>,<attribute>...][,<timeout-seconds>]`<br>
-`@input/prompt <prompt>`<br>
-`@input/cancel`<br>
-`@input/rescue <player>`
-
-  Starts a guided input session on the current Telnet or WebSocket connection, shows the player `<prompt>`, and sends each line they type to an attribute picked by pattern. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. Omitting `/start` also starts a session.
-
-  After the prompt come pattern and attribute pairs, up to ten, then an optional timeout. Each attribute is `<attribute>` on the executor or `<object>/<attribute>`; the executor must control that object and have read and execute access to the attribute, which must be stored directly on it. Patterns are tried in order and the first match runs its attribute:
-
-- The first pair is the exit, and it is required. A line matching it ends the session, and then its attribute runs; that is where the work is saved, or the player told goodbye. It is also what runs when the time runs out.
-- Every later pair keeps the session open.
-- A pattern of `*` takes any line no other pattern matched.
-- A line nothing matches runs nothing. The player is told the exit pattern, and the session stays open.
-
-  Patterns match the whole line, with spaces around it trimmed and case ignored. With `/wild` they are wildcard patterns and with `/regex` regular expressions, and what they capture is passed as in a `$`-command: wildcards from `%0`; for a regular expression, the whole match in `%0` and its groups from `%1`. An exact pattern or `*` passes the line in `%0` exactly as typed. The named argument `reason`, read with `r(reason,args)`, is `exit` for the exit pattern, `input` for any other, and `timeout` when the time ran out. Like a regular expression's named group it lasts only for that run, so nothing has to clear it; it replaces a group named `reason`.
-
-  The command is refused with `#-1 INPUT NEEDS AN EXIT PATTERN AND ATTRIBUTE` without a first pair, `#-1 INPUT PATTERNS AND ATTRIBUTES COME IN PAIRS` when a pattern has no attribute, and `#-1 INVALID INPUT PATTERN` for a pattern that does not compile. `@input/cancel` cannot be the exit pattern (`#-1 INPUT EXIT PATTERN CANNOT BE @INPUT/CANCEL`), since that line always leaves without running anything.
-
-  An attribute gets the line and nothing else: brackets, semicolons, percent substitutions, and newlines are literal data, not commands or expressions. Empty input and whitespace are lines too. A transport that sends a paste as separate lines sends each line, and capture continues until the exit, so later pasted lines do not become commands.
-
-  Each attribute runs as the initiating executor, with the connected character as enactor. `%@` is kept from the code that ran `@input/start`: from a $-command, that is the player who typed it. It gets fresh registers and evaluation limits on each line. A line uses the normal admitted input entry and its execution budget. Queue rejection consumes no execution capacity; it never turns captured input into ordinary commands. A timeout run also requires normal queue admission.
-
-  From an attribute, use `@input/prompt` to send another prompt to this connection, or `@input/start` to replace the session; a replacement may name different patterns. A new session invalidates queued responses to the former session. Replies waiting behind session startup, including blank replies, belong to the first session opened after they were queued. Replacing that session discards its remaining queued replies, including queued cancel messages. If that session ends before they execute, they are discarded rather than run as commands. `@input/cancel` ends capture without running anything and restores ordinary commands. Cancellation prevents attributes already running on this connection from reopening or managing capture; a later independent start is still allowed. A player can always leave by sending exactly `@input/cancel` (case-insensitive) as a complete input message. This escape is checked before queue admission, even when the queue is full. Extra spaces or appended commands make it ordinary literal session data.
-
-  Timeout defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends and the exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`. Sending the cancel escape after expiry does not suppress an already pending timeout run. Starting another session is refused while the expired generation still owes its timeout run; the exit attribute itself may start the next session. An attribute is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without running anything. A halted executor, an unhandled failure, or an exhausted execution budget also ends capture.
-
-  `@input/rescue <player>` is for staff with the `players.moderate` permission. It ends every open session on that player's connections as if its time had run out: capture stops at once, the player is told a staff member ended it, and each exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`, within about a second. Use it when a player is stuck in a session whose code has no way out. The command returns how many sessions it ended.
-
-  Every delivery rechecks the connection incarnation, full character and object identities, ownership, control, and attribute access. These checks share the line's execution budget. Prompts are bound to the original connection and are discarded if that connection is replaced before delivery. Changed ownership, deleted/recycled objects, or revoked permission end the session safely. Two connections playing the same character have independent sessions and cannot consume one another's input. There may be at most 1024 sessions globally, 64 per initiating owner, and one per connection. An input message may contain at most 65,536 UTF-16 code units; longer input is rejected while capture remains active.
-
-  **Warning:** while a session is open, every line the player sends goes to your attributes, and nothing they type runs as a command. That is the point of `@input`: a player can write plain text without setting off other commands. The exit pattern is the player's way out, so name it in the first prompt and in every later one, and pick one nobody types as ordinary text (`.done` rather than `done`). Do not rely on the timeout to end a session. It is a safety net for a player who walked away: it fires a fixed time after the start, whether or not the player is still typing. The built-in `@input/cancel` escape ends the session without running anything, so whatever the exit attribute saves is never saved.
-
-  This example is a notepad with a `+note` command that takes a note of any number of lines. A line of just `.done` ends the session and runs `` INPUT`NOTE`DONE ``, which saves the note; `.undo` runs `` INPUT`NOTE`UNDO ``, which drops the last line; any other line goes to `` INPUT`NOTE`LINE ``, which adds it. If the time runs out, `` INPUT`NOTE`DONE `` still saves what was written:
-
-```sharp
-@create Notepad
-@set Notepad=!no_command
-&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start Type your note. Send .done on a line by itself to save it.=.done,INPUT`NOTE`DONE,.undo,INPUT`NOTE`UNDO,*,INPUT`NOTE`LINE,1800
-&INPUT`NOTE`LINE Notepad=&DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, .undo to drop the last, or .done to save:
-&INPUT`NOTE`UNDO Notepad=&DATA`DRAFT me=[ldelete(v(DATA`DRAFT),words(v(DATA`DRAFT),%r),%r)]; @input/prompt Dropped. Next line, or .done to save:
-&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(r(reason,args),timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
-```
-
-  Output: a player carrying the notepad types `+note`, then `Hello [there]`, `oops`, `.undo`, `look` and `.done`. `` get(Notepad/DATA`NOTE) `` returns the two lines `Hello [there]` and `look`; none was evaluated or run. The player sees `Note saved.` and is back at ordinary commands.
-
-  Typed text is never evaluated: storing it, or substituting `%0` or a register holding it, keeps it exactly as typed. To evaluate it on purpose, do it once, as the player who typed it, with `objevals()`; never as the object, which may belong to someone with far more power. Do it in the exit attribute, over the whole text, or in the `*` attribute, a line at a time, to show the player each result as they type. `objeval()` will not do: it evaluates its expression once, which only substitutes the register and gives the typed text back as it was. In the notepad, this exit attribute evaluates the note as the player before saving it:
-
-```sharp
-&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=[objevals(%#,v(DATA`DRAFT))]; @pemit %#=Note saved.
-```
-
-  Output: a note typed as `[add(1,2)] for %n` is saved as `3 for` and the player's name. `objevals()` evaluates as the player only when the object controls them, as a wizard-owned object does; otherwise it evaluates as the object itself, so evaluate typed text only from an object that controls its players.
-
-::: seealso
-- [@prompt]
-- [@trigger]
-- [@include]
-:::
-
 # @editor
 
 `@editor <object>/<attribute>[=function|command]`
@@ -1419,100 +1363,6 @@ The same, reading the exits by name:
 - [@conformat]
 - [@nameformat]
 - [@descformat]
-:::
-# @http
-`@http <obj>/<attr>=<URL>[,<headers>]`<br>
-`@http/<verb> <obj>/<attr>=<URL>[,<data>[,<headers>]]`
-
-Sends an HTTP request to `<URL>` and, when the reply arrives, queues the action list in `<obj>/<attr>`. Without a switch the request is a GET. The other verbs are switches: /post, /put, /delete, /patch, /head, /options, /trace and /connect. Any commas in the URL or the data need to be escaped.
-
-The action list receives:
-- %0: the body of the reply.
-- %`<status>`: the HTTP status, such as 200.
-- %`<content-type>`: the reply's Content-Type header.
-- %`<headers>`: every header of the reply, as a JSON object. Each name is in lower case, and its value is a string, or a list of strings when the header came more than once. Read one with json_query().
-- %`<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
-
-These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>`, %q`<content-type>` and %q`<http-overflow>`, as PennMUSH does.
-
-`<data>` is the body of the request. It is sent as `application/x-www-form-urlencoded` unless a Content-Type header says otherwise, encoded in the charset that type names, or UTF-8 when it names none. A GET has no body, so its headers follow the URL.
-
-`<headers>` is a JSON object, best built with json(). Each member is a header name, and its value is a string, a secret (below), or a list of those to send that header once for each. They are sent as given, except:
-- Content-Type sets the type of `<data>`; on a request with no data it is not sent. It cannot be a secret.
-- User-Agent replaces SharpMUSH's own.
-- Anything that is not an object of names and values, a name with a space in it, or a Content-Length header refuses the whole command with "Headers must be a JSON object of header names and values. Aborting."
-
-A JSON object typed into the command needs an extra pair of braces around it, because the outer pair only groups the argument.
-
-To log in to the remote site, send an Authorization header. For HTTP Basic, that is `json(object,Authorization,"Basic [encode64(<user>:<password>)]")`.
-
-A password or token kept in softcode can be read by anyone who can read that attribute. Store it with @secret instead, and name it in a header as an object: `json(object,secret,"<name>",scheme,"Bearer")`. The server puts the value in as the request leaves; softcode never sees it. `scheme` is optional: without it the header is the value alone, `Basic` sends the value (`<user>:<password>`) base64-encoded after `Basic `, and any other scheme is written before the value, as `Bearer <value>`. A secret is only sent when:
-- its name starts with `http.`;
-- the URL is https;
-- the URL's host is one @secret/host named for that secret.
-
-Otherwise the whole command is refused with "A secret in the headers may not be sent to that URL. Aborting." A request carrying a secret does not follow redirects, so the secret never reaches another host; the action list gets the redirect itself. A site that echoes the request, such as postman-echo.com, sends the value back in %0, and so in reach of softcode: bind a secret only to the hosts that need it.
-
-With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: %q`<content-type>` sets the type of `<data>` when no `<headers>` are given, and %q`<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
-
-Restricted to objects set Wizard or with the Can_HTTP @Power.
-
-### Examples
-postman-echo.com answers with the request it received, so these show what @http sent.
-
-Sending JSON with a header of your own:
-```sharp
-> &SHOW me=think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]
-> @http/post me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),json(object,Content-Type,"application/json",Game,"MyMUSH")
-```
-Output: `200 baz MyMUSH`
-
-Headers typed as JSON, in their extra braces:
-```sharp
-> &SHOW me=think %<status> [json_query(%0,extract,$.headers.game)]
-> @http me/SHOW=https://postman-echo.com/get,{{"Game":"MyMUSH"}}
-```
-Output: `200 MyMUSH`
-
-Logging in with HTTP Basic:
-```sharp
-> &SHOW me=think %<status> %0
-> @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,"Basic [encode64(postman:password)]")
-```
-Output: `200 {"authenticated":true}`
-
-Logging in with a stored secret, as a wizard:
-```sharp
-> @secret http.postman.login=postman:password
-> @secret/host http.postman.login=postman-echo.com
-> &SHOW me=think %<status> %0
-> @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,json(object,secret,"http.postman.login",scheme,"Basic"))
-```
-Output: `200 {"authenticated":true}`
-
-Reading a header of the reply:
-```sharp
-> &SHOW me=think [json_query(json_query(%<headers>,get,content-type),unescape)]
-> @http me/SHOW=https://postman-echo.com/get
-```
-Output: `application/json; charset=utf-8`
-
-Checking whether the reply was cut short:
-```sharp
-> &SHOW me=think [if(%<http-overflow>,Reply too long.,Reply complete.)]
-> @http me/SHOW=https://postman-echo.com/get
-```
-Output: `Reply complete.`
-
-
-::: seealso
-- [URLENCODE()]
-- [URLDECODE()]
-- [ENCODE64()]
-- [JSON()]
-- [JSON_QUERY()]
-- [@secret]
-- [named arguments]
 :::
 # @firstexit
 `@firstexit <exit1>[, ... , <exitN>]`
@@ -3968,19 +3818,19 @@ Output: the output of the command run. See [command output].
 # Socket Commands
 These commands can only be entered through a client, on the connection they are typed into. They act on that connection rather than on a game object, so they work whether or not you have connected to a character, and would be meaningless if run by an object or from a queued action.
 
-- IDLE
-- INFO
-- LOGOUT
-- OUTPUTPREFIX
-- OUTPUTSUFFIX
-- PROMPT_NEWLINES
-- QUIT
-- SCREENREADER
-- SCREENWIDTH
-- SCREENHEIGHT
-- SOCKSET
-- MSSP-REQUEST
-- VERSION
+- [IDLE]
+- [INFO]
+- [LOGOUT]
+- [OUTPUTPREFIX]
+- [OUTPUTSUFFIX]
+- [PROMPT_NEWLINES]
+- [QUIT]
+- [SCREENREADER]
+- [SCREENWIDTH]
+- [SCREENHEIGHT]
+- [SOCKSET]
+- [MSSP-REQUEST]
+- [VERSION]
 
 PennMUSH handles these before it decides whether a descriptor has a player behind
 it, and SharpMUSH does the same, which is why they answer at the connect screen
@@ -3998,18 +3848,18 @@ settings you made on that connection, so the next login on it starts clean.
 
 In addition, the following commands can only be used at the login screen:
 
-- cd
-- ch
-- cv
-- claim
-- connect
-- create
-- login
-- make
-- play
-- register
+- [cd]
+- [ch]
+- [cv]
+- [claim]
+- [connect]
+- `create`
+- [login]
+- [make]
+- [play]
+- [register]
 
-The WHO command can also be used at the login screen. Please note that this is different to the in-game WHO command. DOING and SESSION show that same login-screen listing when you are not connected, and their own in-game output once you are.
+The [WHO] command can also be used at the login screen. Please note that this is different to the in-game WHO command. [DOING] and [SESSION] show that same login-screen listing when you are not connected, and their own in-game output once you are.
 # MSSP-REQUEST
 `MSSP-REQUEST`
 

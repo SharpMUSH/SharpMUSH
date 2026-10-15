@@ -77,7 +77,7 @@ The following switches are available:
 * `/silent` - no notification to sender that mail was sent
 * `/nosig` - no mail signature
 
-If you have an @mailsignature attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
+If you have an [@mailsignature] attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
 
 - `@mail/fwd <msg-list>=<player-list>`
 * This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded".
@@ -253,19 +253,11 @@ The /nuke switch destroys the post office, erasing all @mail everywhere. It may 
 
 Mail functions work with @mail.
 
-Available functions:
-* [folderstats]
-* [MAIL]
-* [maildstats]
-* [mailfrom]
-* [mailfstats]
-* [maillist]
-* [mailsend]
-* [mailstats]
-* [mailstatus]
-* [mailsubject]
-* [mailtime]
-* [malias]
+|                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|
+| [FOLDERSTATS()] | [MAIL()]        | [MAILDSTATS()]  | [MAILFROM()]    |
+| [MAILFSTATS()]  | [MAILLIST()]    | [MAILSEND()]    | [MAILSTATS()]   |
+| [MAILSTATUS()]  | [MAILSUBJECT()] | [MAILTIME()]    | [MALIAS()]      |
 
 # folderstats()
 

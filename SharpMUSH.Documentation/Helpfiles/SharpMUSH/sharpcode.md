@@ -50,7 +50,7 @@ always the prefix, and the rest is always valid JSON.
 # Translation
 SharpMUSH supports Unicode: server strings use UTF-16 internally, and network
 text supports UTF-8. The `accent()` and `stripaccents()` functions and the
-NOACCENTS flag provide compatibility with older clients.
+NOACCENTS flag provide compatibility with older clients. See [unicode].
 
 Server messages use the existing locale-based resource system. The portal has
 its own translated resources and language picker. Help translations use

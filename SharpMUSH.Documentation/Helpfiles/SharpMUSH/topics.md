@@ -27,12 +27,13 @@ Help is available on the following topics:
 | [BOOLEAN VALUES]              | [CHAT]                        | [CLIENTS]                     |
 | [COMMAND OUTPUT]              | [CONTROL]                     | [COPYRIGHT]                   |
 | [COSTS]                       | [CREDITS]                     | [DBREFS]                      |
-| [DROP-TOS]                    | [ENACTOR]                     | [EVALUATION ORDER]            |
-| [EVENTS]                      | [EXECUTION BUDGET]            | [EXECUTOR]                    |
-| [EXITS]                       | [FAILURE]                     | [FLAGS]                       |
-| [FUNCTIONS]                   | [GENDER]                      | [GLOBALS]                     |
-| [HERE]                        | [HOMES]                       | [HTTP]                        |
-| [IMAGE ATTRIBUTES]            | [INTERIORS]                   | [LINKING]                     |
+| [DESCRIPTOR]                  | [DROP-TOS]                    | [ENACTOR]                     |
+| [EVALUATION ORDER]            | [EVENTS]                      | [EXECUTION BUDGET]            |
+| [EXECUTOR]                    | [EXITS]                       | [FAILURE]                     |
+| [FLAGS]                       | [FUNCTIONS]                   | [GALLERY]                     |
+| [GENDER]                      | [GLOBALS]                     | [HERE]                        |
+| [HOMES]                       | [HTTP]                        | [IMAGE ATTRIBUTES]            |
+| [INTERIORS]                   | [INTERNATIONALIZATION]        | [LINKING]                     |
 | [LISTENING]                   | [LISTS]                       | [LOOPING]                     |
 | [MASTER ROOM]                 | [MATCHING]                    | [ME]                          |
 
@@ -49,9 +50,10 @@ Help is available on the following topics:
 | [SETTING-ATTRIBUTES]      | [SHARPMUSH FEATURES]      | [SPOOFING]                |
 | [STACK]                   | [STRINGS]                 | [SUBSTITUTIONS]           |
 | [SUCCESS]                 | [SWITCHES]                | [TIMEZONES]               |
-| [TYPES OF OBJECTS]        | [USER-DEFINED COMMANDS]   | [VERBS]                   |
-| [WARNINGS]                | [WIKI]                    | [WILDCARDS]               |
-| [ZONE MASTER ROOMS]       | [ZONE MASTERS]            | [ZONES]                   |
+| [TYPES OF OBJECTS]        | [UNICODE]                 | [USER-DEFINED COMMANDS]   |
+| [VERBS]                   | [WARNINGS]                | [WIKI]                    |
+| [WILDCARDS]               | [ZONE MASTER ROOMS]       | [ZONE MASTERS]            |
+| [ZONES]                   |                           |                           |
 
 Type 'help `<topic name>`' for help.<br>
 For a list of all topics, see [help search]. For what SharpMUSH adds to PennMUSH, see [sharpmush features].

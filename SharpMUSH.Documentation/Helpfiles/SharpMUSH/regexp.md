@@ -45,4 +45,4 @@ The '+' sign in the command has to be escaped out, or it is taken as a regexp to
 
 However, keep in mind that players who attempt to use the command and give invalid input (such as "`+setnum` cookies=thirty") will receive the normal, non-descriptive Huh? message. Using a broader match and validating the input in softcode, so you can give more descriptive error messages, may be desirable.
 
-Regular expression syntax is explained in [regexp syntax].
+Regular expression syntax is explained in [regexp syntax], and [regexp examples] has a few short patterns.

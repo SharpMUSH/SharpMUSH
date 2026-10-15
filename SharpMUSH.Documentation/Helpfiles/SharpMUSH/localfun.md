@@ -1,3 +1,23 @@
+<!-- help-article
+{
+  "corpus": "help",
+  "id": "localfun",
+  "lookup": "localfun",
+  "aliases": [],
+  "sections": [
+    {
+      "id": "function-local",
+      "heading": "@function/local",
+      "lookup": "@function/local"
+    },
+    {
+      "id": "startup",
+      "heading": "Local Function Startup",
+      "lookup": "local function startup"
+    }
+  ]
+}
+-->
 # localfun
 
 `localfun(<name>[,<argument>...])` calls an owner-local function. The executing
@@ -30,7 +50,7 @@ budgets apply. The body executes as the backing object, following ordinary
 attribute evaluation. A privileged caller has no switch for selecting another
 owner's scope.
 
-# @function/local
+## @function/local
 
 `@function/local` lists your owner's local entries, including disabled entries.
 `@function/local <name>` shows one entry. The following operations use that same
@@ -58,7 +78,7 @@ recycled object numbers cannot inherit code. A calling object's new owner
 selects the new scope immediately. Definitions are never cached in the shared
 built-in function table.
 
-# Local Function Startup
+## Local Function Startup
 
 The registry is in memory. Re-register local functions from the backing object's
 `STARTUP` attribute after each engine restart, using the same `@function/local`
