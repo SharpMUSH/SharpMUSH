@@ -1,11 +1,12 @@
-format: 1.6
+format: "1.10"
 package: alts
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [alts, account, characters, privacy]
+category: Characters
 requires_server: ">=0.1"
 
 depends:

@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: relationships
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [relationships, roleplay, character, card, web]
+category: Characters
 requires_server: ">=0.1"
 
 # plus-help carries the +help topics, http-handler the verb routers the portal routes hang off, plus-config the

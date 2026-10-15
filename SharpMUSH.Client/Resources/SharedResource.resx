@@ -5102,11 +5102,11 @@
   <data name="AdmSetupPackagesLead" xml:space="preserve">
     <value>Every package this server ships. Add or remove any of them; what a package needs comes with it. You can change them later under Packages.</value>
   </data>
-  <data name="AdmSetupPkgGroupPortal" xml:space="preserve">
-    <value>Built on your handlers</value>
+  <data name="AdmSetupPkgGroupOther" xml:space="preserve">
+    <value>Other</value>
   </data>
-  <data name="AdmSetupPkgGroupGame" xml:space="preserve">
-    <value>In the game</value>
+  <data name="AdmSetupPkgGroupCount" xml:space="preserve">
+    <value>{0} of {1}</value>
   </data>
   <data name="AdmSetupPkgNeededBy" xml:space="preserve">
     <value>Needed by {0}.</value>

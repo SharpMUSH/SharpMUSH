@@ -1,12 +1,13 @@
-format: 1.2
+format: "1.10"
 package: highlights-app
-version: 1.0.0
+version: 1.0.1
 kind: application
 authors: [SharpMUSH]
 description: "Registers the highlights (the highlights package) as a portal page at /apps/highlights: the poses players favourited most, each credited to its writer with a link to its scene, the viewer's own favourites at /apps/highlights/mine, and a button under each pose to favourite it or take it back."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [portal, application, scene, highlights, favourites]
+category: Scenes
 requires_server: ">=0.1"
 
 # An application package owns no objects. The highlights package serves the routes it points at:
