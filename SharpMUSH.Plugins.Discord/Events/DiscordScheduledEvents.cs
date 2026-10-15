@@ -42,6 +42,11 @@ public sealed class DiscordScheduledEvents(IDiscordEventStore store, TimeProvide
 			}
 
 			var options = new RequestOptions { CancelToken = cancellationToken };
+			if (await ElsewhereAsync(key, guild, options) is { } other)
+			{
+				return new Error<string>($"{key} is published in {other.Name}. @discord/event/end {key} there first, then publish it in {guild.Name}.");
+			}
+
 			var existing = store.Get(key) is { } record && record.GuildId == guild.Id
 				? await FindAsync(guild, record.EventId, options)
 				: null;
@@ -163,6 +168,17 @@ public sealed class DiscordScheduledEvents(IDiscordEventStore store, TimeProvide
 			_ => new Error<string>("The bot is in more than one server. Give the server's id as server."),
 		};
 	}
+
+	/// <summary>
+	/// The other server <paramref name="key"/>'s event is still scheduled or running in, or null. Publishing the key again
+	/// keeps one event id, so moving it to another server first needs the old event ended; one in a server the bot has
+	/// left, or that is over, is let go.
+	/// </summary>
+	private async Task<SocketGuild?> ElsewhereAsync(string key, SocketGuild guild, RequestOptions options)
+		=> store.Get(key) is { } record && record.GuildId != guild.Id && _client?.GetGuild(record.GuildId) is { } other
+			&& await FindAsync(other, record.EventId, options) is { Status: GuildScheduledEventStatus.Scheduled or GuildScheduledEventStatus.Active }
+				? other
+				: null;
 
 	private static async Task<IGuildScheduledEvent?> FindAsync(SocketGuild guild, ulong eventId, RequestOptions options)
 	{

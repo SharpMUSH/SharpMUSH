@@ -68,6 +68,12 @@ public sealed record DiscordEventSpec(
 			return new Error<string>("The event's start has passed. Discord takes only events still to come.");
 		}
 
+		// An end left out, or empty, is the default length; one given that is not a time is refused, not replaced.
+		if (Text(root, "end") is { Length: > 0 } && Seconds(root, "end") is null)
+		{
+			return new Error<string>("The event's end must be in seconds since 1970 UTC, as secs() gives it.");
+		}
+
 		var end = Seconds(root, "end") ?? start + DefaultLength;
 		if (end <= start)
 		{

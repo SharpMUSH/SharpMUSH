@@ -53,6 +53,7 @@ public class DiscordEventSpecTests
 	[Arguments("""{"name":"N","location":"L"}""", "needs a start")]
 	[Arguments("""{"name":"N","start":1700000000,"location":"L"}""", "start has passed")]
 	[Arguments("""{"name":"N","start":1999999999,"end":1999999000,"location":"L"}""", "end must come after its start")]
+	[Arguments("""{"name":"N","start":1999999999,"end":"tomorrow","location":"L"}""", "end must be in seconds")]
 	[Arguments("""{"name":"N","start":1999999999,"location":"L","server":"Harbour"}""", "server takes")]
 	public async Task WhatDiscordWouldRefuse_IsRefusedFirst(string json, string reason)
 	{
