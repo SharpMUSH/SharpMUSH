@@ -176,6 +176,8 @@ public class WhoWhereIntegrationTests
 			await Assert.That(byAlias).DoesNotContain(ann.Name).And.Contains("1 of ");
 			await Assert.That(await As(ann, $"+who {ann.Name}")).Contains(ann.Name).And.DoesNotContain(cy.Name);
 			await Assert.That(await As(ann, "+who WzNobodyHasThis")).Contains("Nobody connected has a name starting with WzNobodyHasThis.");
+			// A * is a character to match, not a wildcard.
+			await Assert.That(await As(ann, "+who Wz*")).Contains("Nobody connected has a name starting with Wz*.");
 
 			await Assert.That(await As(ann, "+who/idle")).Contains(ann.Name).And.Contains(cy.Name);
 			await Assert.That(await As(ann, "+who/bogus")).Contains("+who has no /bogus switch.");

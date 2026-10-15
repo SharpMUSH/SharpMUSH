@@ -98,9 +98,13 @@ objects:
         sortkey(%!/WW_FN_IDLE_OF,sort(%0,namei),n)
       WW_FN_IDLE_OF: |-
         idle(%0)
-      # %0 players, %1 the start of a name: the players whose name or first alias starts with it.
+      # %0 players, %1 the start of a name: the players whose name or first alias starts with it, ignoring
+      # case. Compared as text, so a * or ? in it is a character, not a wildcard.
       WW_FN_MATCHING: |-
-        squish(iter(%0,if(or(strmatch(name(%i0),%1*),strmatch(first(get(%i0/ALIAS),;),%1*)),%i0)))
+        squish(iter(%0,if(or(u(%!/WW_FN_STARTS,name(%i0),%1),u(%!/WW_FN_STARTS,first(get(%i0/ALIAS),;),%1)),%i0)))
+      # %0 a name, %1 a start: whether %0 starts with %1, ignoring case.
+      WW_FN_STARTS: |-
+        not(comp(lcstr(left(%0,strlen(%1))),lcstr(%1)))
       # %0 the players shown: how many, and of how many when +who <name> left some out.
       WW_FN_WHO_COUNT: |-
         [words(%0)][if(neq(words(%0),words(mwho())),%bof [words(mwho())])] connected
