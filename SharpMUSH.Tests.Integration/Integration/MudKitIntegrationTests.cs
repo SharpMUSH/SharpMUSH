@@ -540,7 +540,7 @@ public class MudKitIntegrationTests
 			await God("&WATCH`CLASS`MINE #9=think");
 			await God("+config gmcp-char/status=");
 			await WebAppFactoryArg.QueueBarrierAsync();
-			await Assert.That(await Think("hasattr(#9,WATCH`LEVEL`GMCPCHAR) hasattr(#9,WATCH`CLASS`GMCPCHAR)")).IsEqualTo("0 0");
+			await Assert.That(await Think("[hasattr(#9,WATCH`LEVEL`GMCPCHAR)] [hasattr(#9,WATCH`CLASS`GMCPCHAR)]")).IsEqualTo("0 0");
 			await Assert.That(await Think("attrwatch(LEVEL)")).IsEqualTo(string.Empty)
 				.Because("nothing else answers LEVEL's watch");
 			await Assert.That(await Think("attrwatch(CLASS)")).IsEqualTo("WATCH`CLASS WATCH`CLASS`*")
