@@ -68,7 +68,7 @@ remain isolated even with the same principal and URI. Metadata is refreshed per 
 | MaxDocumentsPerSession | 8 |
 | MaxBytesPerSession | 33,554,432 UTF-8 bytes |
 | MaxStoredBytes | 134,217,728 UTF-8 bytes across LSP sessions |
-| MaxPendingRequests | 8 per session |
+| MaxPendingRequests | 8 per session, counting requests still being analysed (a reply being sent no longer counts) |
 | MaxConcurrentReaders | 2 globally for fragmented message growth |
 | MessageReadTimeout | 00:00:10 |
 | IdleTimeout | 00:05:00 |

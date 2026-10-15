@@ -69,13 +69,14 @@ public class LspIsolatedTransportTests
 		builder.Services.AddAnalysisTransportPolicy(builder.Configuration);
 		builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 		builder.Services.AddRateLimiter(options => options.AddPolicy("mcp", _ => System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("fixture")));
+		builder.Services.AddSingleton(_ => new FixtureDirectory(fixture));
 		var app = builder.Build();
+		app.Services.GetRequiredService<FixtureDirectory>();
 		app.UseWebSockets();
 		app.UseAuthentication();
 		app.UseRateLimiter();
 		app.UseAuthorization();
 		foreach (var contributor in catalog.EndpointContributors) contributor.MapEndpoints(app);
-		app.Lifetime.ApplicationStopped.Register(() => Directory.Delete(fixture, true));
 		app.MapAnalysisTransportFallback(app.Configuration);
 		app.MapFallback(() => Microsoft.AspNetCore.Http.Results.Content("<html>portal</html>", "text/html"));
 		await app.StartAsync();
@@ -159,7 +160,9 @@ public class LspIsolatedTransportTests
 			{
 				await Send(socket, new { jsonrpc = "2.0", id, method = "textDocument/hover", @params = new { textDocument = new { uri }, position = new { line = 0, character = 2 } } });
 				await Send(socket, new { jsonrpc = "2.0", method = "$/cancelRequest", @params = new { id } });
-				await Response(socket, id);
+				// Nothing else is outstanding once the previous reply has arrived, so the session has room.
+				var answer = await Response(socket, id);
+				await Assert.That(answer.TryGetProperty("error", out var error) ? error.GetProperty("code").GetInt32() : 0).IsNotEqualTo(-32000);
 				await Send(socket, new { jsonrpc = "2.0", method = "$/cancelRequest", @params = new { id } });
 			}
 			await Send(socket, new { jsonrpc = "2.0", id = 200, method = "unknown" });
