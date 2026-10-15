@@ -6171,6 +6171,6 @@
     <value>只有你能看到这条。</value>
   </data>
   <data name="RolSceneNotices" xml:space="preserve">
-    <value>给你的提示</value>
+    <value>发给你的通知</value>
   </data>
 </root>

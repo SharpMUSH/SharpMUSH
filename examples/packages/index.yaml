@@ -115,7 +115,7 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.0.1
+    version: 1.0.2
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: bboards/
     name: BBoards
