@@ -4387,10 +4387,6 @@
     <value>Mindre endring</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Ingen filer er lastet opp ennå.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Fant ingen filer.</value>
     <comment>MT</comment>
@@ -4783,6 +4779,72 @@
   </data>
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Se alle</value>
+  </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Tilbake til {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Bildetekst</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Rediger detaljer</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Flytt fram</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Flytt bak</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Ingen bilder har denne taggen.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galleri for {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Rapporter</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Rapporten kunne ikke sendes: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Hva er galt med dette bildet?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Send rapport</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Rapporten din er sendt til staben.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Vis bilde</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtrer etter tagg</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tagger</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Skill taggene med komma.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Innholdsadvarsel</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Dekker bildet til noen velger å se det. Et bilde med advarsel kan ikke være avatar eller banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Innholdsadvarsel: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Bildets detaljer kunne ikke lagres: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Bildet kunne ikke flyttes: {0}</value>
   </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portrett</value>
@@ -6029,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Omorganiser</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Søk i bildebiblioteket</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Ingen bilder i biblioteket ennå.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Ingen filnavn passer.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Eller velg fra bildebiblioteket</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>I det delte bildebiblioteket. Fjernes det fra galleriet, beholdes filen.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Del i bildebiblioteket</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Alle som er logget inn kan da bruke det på en wikiside eller i et galleri. Dette kan ikke angres.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Kunne ikke dele bildet: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliotek</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Deling i biblioteket</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>I det delte biblioteket</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Alle som er logget inn kan velge det til en wikiside eller et galleri. Dette kan ikke angres.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Begrens til en tillatelse</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Bare de med denne tillatelsen finner det i biblioteket. La feltet stå tomt for alle.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Ett galleri</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Låst: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Kunne ikke lagre: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Et bilde med innholdsadvarsel holdes utenfor bildebiblioteket. Fjern advarselen for å dele det.</value>
   </data>
 </root>

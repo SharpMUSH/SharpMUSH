@@ -4387,10 +4387,6 @@
     <value>Manja izmjena</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Još nema prenesenih resursa.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nema pronađenih resursa.</value>
     <comment>MT</comment>
@@ -4783,6 +4779,72 @@
   </data>
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Prikaži sve</value>
+  </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Sve</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Natrag na {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Opis slike</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Uredi pojedinosti</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Pomakni ranije</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Pomakni kasnije</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Nijedna slika nema ovu oznaku.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galerija: {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Prijavi</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Prijava nije poslana: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Što nije u redu s ovom slikom?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Pošalji prijavu</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Tvoja prijava poslana je osoblju.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Prikaži sliku</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtriraj po oznaci</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Oznake</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Odvoji oznake zarezima.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Upozorenje o sadržaju</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Prekriva sliku dok gledatelj ne odluči da je želi vidjeti. Slika s upozorenjem ne može biti avatar ni naslovna slika.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Upozorenje o sadržaju: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Pojedinosti slike nisu spremljene: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Slika nije pomaknuta: {0}</value>
   </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portret</value>
@@ -6029,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Preuredi</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Pretraži knjižnicu slika</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>U knjižnici još nema slika.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Nijedan naziv datoteke ne odgovara.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Ili odaberite iz knjižnice slika</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>U zajedničkoj knjižnici slika. Uklanjanjem iz galerije datoteka ostaje.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Podijeli u knjižnici slika</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Svatko prijavljen moći će je koristiti na wiki stranici ili u galeriji. To se ne može poništiti.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Slika se nije mogla podijeliti: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Knjižnica</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Dijeljenje u knjižnici</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>U zajedničkoj knjižnici</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Svatko prijavljen može je odabrati za wiki stranicu ili galeriju. To se ne može poništiti.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Ograniči na dopuštenje</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Samo imatelji ovog dopuštenja nalaze je u knjižnici. Ostavite prazno za sve.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Jedna galerija</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Svi</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Zaključano: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Spremanje nije uspjelo: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Slika s upozorenjem o sadržaju ostaje izvan knjižnice slika. Uklonite upozorenje da biste je podijelili.</value>
   </data>
 </root>

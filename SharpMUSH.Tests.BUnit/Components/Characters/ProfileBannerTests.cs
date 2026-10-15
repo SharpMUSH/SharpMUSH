@@ -317,6 +317,50 @@ public class ProfileBannerTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// A picture already in the shared image library becomes the avatar without being uploaded again; the
+	/// library leaves out what the gallery already holds and the SVG drawings a gallery does not take.
+	/// </summary>
+	[Test]
+	public async Task TheOwner_PicksTheAvatarFromTheImageLibrary()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":"Docks","order":0,"isIcon":false,"isBanner":true}]
+			""";
+		_fake.Extra["/api/wiki-assets/library?skip=0&take=100&search="] = """
+			[{"id":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","contentType":"image/jpeg","sizeBytes":3,"uploadedAt":"2026-10-01T00:00:00Z","lock":null,"canManage":true},
+			 {"id":"m","fileName":"map.svg","url":"/api/wiki-assets/m/map.svg","contentType":"image/svg+xml","sizeBytes":3,"uploadedAt":"2026-10-01T00:00:00Z","lock":null,"canManage":false},
+			 {"id":"l","fileName":"lamp.png","url":"/api/wiki-assets/l/lamp.png","contentType":"image/png","sizeBytes":3,"uploadedAt":"2026-10-01T00:00:00Z","lock":null,"canManage":false}]
+			""";
+		string? sent = null;
+		_fake.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Post) sent = await request.Content!.ReadAsStringAsync();
+		};
+		_fake.Extra["POST /api/profile/Tomas%20Reyes/gallery/library"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":"Docks","order":0,"isIcon":false,"isBanner":true},
+			 {"assetId":"l","fileName":"lamp.png","url":"/api/wiki-assets/l/lamp.png","caption":null,"order":1,"isIcon":true,"isBanner":false,"shared":true}]
+			""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-change-avatar"), TimeSpan.FromSeconds(5));
+		await cut.Find(".char-profile-change-avatar").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("[role='dialog'] .kit-library-item"), TimeSpan.FromSeconds(5));
+
+		var offered = cut.FindAll(".kit-library-item").Select(i => i.GetAttribute("aria-label")).ToList();
+		await Assert.That(offered).IsEquivalentTo(["lamp.png"]);
+		await cut.Find(".kit-library-item[aria-label='lamp.png']").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-lead img.char-profile-portrait"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-banner-lead img.char-profile-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/l/lamp.png");
+		var body = System.Text.Json.JsonDocument.Parse(sent!).RootElement;
+		await Assert.That(body.GetProperty("assetId").GetString()).IsEqualTo("l");
+		await Assert.That(body.GetProperty("use").GetString()).IsEqualTo("avatar");
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task ThePicker_MarksTheCurrentBanner()
 	{

@@ -4387,10 +4387,6 @@
     <value>Drobna zmiana</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Nie przesłano jeszcze żadnych zasobów.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nie znaleziono zasobów.</value>
     <comment>MT</comment>
@@ -4783,6 +4779,72 @@
   </data>
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Zobacz wszystkie</value>
+  </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Wszystkie</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Wróć do {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Podpis</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Edytuj szczegóły</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Przesuń wcześniej</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Przesuń później</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Żaden obraz nie ma tego tagu.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galeria: {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Zgłoś</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Nie udało się wysłać zgłoszenia: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Co jest nie tak z tym obrazem?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Wyślij zgłoszenie</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Twoje zgłoszenie trafiło do obsługi.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Pokaż obraz</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtruj według tagu</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tagi</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Oddziel tagi przecinkami.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Ostrzeżenie o treści</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Zasłania obraz, dopóki ktoś nie zechce go zobaczyć. Obraz z ostrzeżeniem nie może być awatarem ani banerem.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Ostrzeżenie o treści: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Nie udało się zapisać szczegółów obrazu: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Nie udało się przesunąć obrazu: {0}</value>
   </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portret</value>
@@ -6029,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Zmień kolejność</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Szukaj w bibliotece obrazów</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>W bibliotece nie ma jeszcze obrazów.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Żadna nazwa pliku nie pasuje.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Albo wybierz z biblioteki obrazów</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>We wspólnej bibliotece obrazów. Usunięcie z galerii zachowuje plik.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Udostępnij w bibliotece obrazów</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Każdy zalogowany będzie mógł go użyć na stronie wiki lub w galerii. Nie można tego cofnąć.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Nie udało się udostępnić obrazu: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Biblioteka</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Udostępnianie w bibliotece</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>We wspólnej bibliotece</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Każdy zalogowany może go wybrać do strony wiki lub galerii. Nie można tego cofnąć.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Ogranicz do uprawnienia</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Tylko posiadacze tego uprawnienia znajdą go w bibliotece. Zostaw puste dla wszystkich.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Jedna galeria</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Wszyscy</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Zablokowane: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Nie udało się zapisać: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Obraz z ostrzeżeniem o treści nie trafia do biblioteki obrazów. Usuń ostrzeżenie, aby go udostępnić.</value>
   </data>
 </root>

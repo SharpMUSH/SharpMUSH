@@ -67,6 +67,7 @@ Limits and other constants.
 ## Connection and alias limits
 
 - `max_aliases=<number>`: The maximum number of aliases a player can have.
+- `max_gallery_images=<number>`: The most images one character's profile gallery may hold. An upload past it is refused.
 - `keepalive_timeout=<time>`: How often should an 'Are you still there?' query be sent to clients, to stop players' routers booting idle connections?
 - `max_parents=<number>`: The maximum number of levels of parenting allowed.
 - `call_limit=<number>`: The maximum number of times the parser can be called recursively for any one expression.

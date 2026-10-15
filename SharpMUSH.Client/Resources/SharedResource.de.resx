@@ -4387,10 +4387,6 @@
     <value>Kleine Änderung</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Noch keine Dateien hochgeladen.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Keine Dateien gefunden.</value>
     <comment>MT</comment>
@@ -4783,6 +4779,72 @@
   </data>
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Alle ansehen</value>
+  </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Zurück zu {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Bildunterschrift</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Details bearbeiten</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Nach vorn</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Nach hinten</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Kein Bild trägt diesen Tag.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galerie von {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Melden</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Die Meldung konnte nicht gesendet werden: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Was stimmt mit diesem Bild nicht?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Meldung senden</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Deine Meldung wurde an das Team gesendet.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Bild anzeigen</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Nach Tag filtern</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Tags mit Kommas trennen.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Inhaltswarnung</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Verdeckt das Bild, bis jemand es sehen möchte. Ein Bild mit Warnung kann weder Avatar noch Banner sein.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Inhaltswarnung: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Die Bilddetails konnten nicht gespeichert werden: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Das Bild konnte nicht verschoben werden: {0}</value>
   </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Porträt</value>
@@ -6029,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Neu ordnen</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Bildbibliothek durchsuchen</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Noch keine Bilder in der Bibliothek.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Kein Dateiname passt.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Oder aus der Bildbibliothek wählen</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>In der gemeinsamen Bildbibliothek. Beim Entfernen aus der Galerie bleibt die Datei erhalten.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>In der Bildbibliothek teilen</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Alle Angemeldeten können es dann auf einer Wiki-Seite oder in einer Galerie verwenden. Das lässt sich nicht rückgängig machen.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Das Bild konnte nicht geteilt werden: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Freigabe in der Bibliothek</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>In der gemeinsamen Bibliothek</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Alle Angemeldeten können es für eine Wiki-Seite oder eine Galerie wählen. Das lässt sich nicht rückgängig machen.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>An eine Berechtigung binden</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Nur wer diese Berechtigung hat, findet es in der Bibliothek. Leer lassen für alle.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Eine Galerie</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Gesperrt: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Ein Bild mit Inhaltswarnung bleibt aus der Bildbibliothek heraus. Entferne die Warnung, um es zu teilen.</value>
   </data>
 </root>
