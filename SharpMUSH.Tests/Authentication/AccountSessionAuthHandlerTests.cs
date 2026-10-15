@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -92,7 +93,7 @@ public class AccountSessionAuthHandlerTests
 		var cache = new FusionCache(
 			new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
 		return new AccountClaimsService(capabilities,
-			cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
+			cache, new AccountClaimsInvalidator(cache, new ObjectVersions()), NullLogger<AccountClaimsService>.Instance);
 	}
 
 	/// <summary>A guard with no rules, so the sitelock re-check never fires for tests about other things.</summary>

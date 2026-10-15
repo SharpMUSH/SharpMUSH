@@ -82,9 +82,9 @@ public partial class TelnetServer
 				// MUSHclient look for; otherwise in IAC GA as before. A client's own EOR means nothing to a
 				// server, so the callback is only a sampling point.
 				.AddPlugin<EORProtocol>().OnPrompt(async () => await AnnounceTelnetIfNegotiatedAsync())
-				// MNES: the client's name and version, for clients that keep them out of TTYPE. IPADDRESS is
-				// not read: any client can send one, and believing it would let a client choose the address
-				// sitelock and bans see.
+				// MNES: the client's name and version, for clients that keep them out of TTYPE, and TZ, the zone a
+				// BSD telnet (environ export TZ) or PuTTY sends. IPADDRESS is not read: any client can send one, and
+				// believing it would let a client choose the address sitelock and bans see.
 				.AddPlugin<NewEnvironProtocol>().OnEnvironmentVariables(OnEnvironmentVariablesAsync)
 				.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
 				// What the client agreed to read: output is written in it, each character it lacks replaced.
@@ -195,10 +195,17 @@ public partial class TelnetServer
 
 			var name = Lookup("CLIENT_NAME");
 			var version = Lookup("CLIENT_VERSION");
-			if (name is null && version is null) return;
+			if (name is not null || version is not null)
+			{
+				await held.PublishAsync(
+					() => server._publishEndpoint.Publish(new ClientIdentityMessage(handle, name, version), ct));
+			}
 
-			await held.PublishAsync(
-				() => server._publishEndpoint.Publish(new ClientIdentityMessage(handle, name, version), ct));
+			if (Lookup("TZ") is { Length: > 0 } zone)
+			{
+				await held.PublishAsync(
+					() => server._publishEndpoint.Publish(new ClientTimeZoneMessage(handle, zone), ct));
+			}
 
 			// MNES sends these as VAR, but a client that sends them as USERVAR means the same thing.
 			string? Lookup(string variable) =>
@@ -329,9 +336,11 @@ public partial class TelnetServer
 		public async Task RegisterAsync()
 		{
 			var telnet = _telnet!;
+			// The address alone, as PennMUSH's ipaddr() and a WebSocket connection give it: sitelock rules, @ban and
+			// softcode read it as an address.
 			var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 				? "unknown"
-				: $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
+				: WebSocketServer.ClientAddress(remoteEndpoint.Address);
 
 			// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
 			// terminated TLS, so this is the handshake that happened rather than anything the client says

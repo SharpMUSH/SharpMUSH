@@ -33,6 +33,13 @@ public record GMCPSupportsMessage(long Handle, IReadOnlyList<string> Modules) : 
 public record ClientIdentityMessage(long Handle, string? Name, string? Version) : IHandleMessage;
 
 /// <summary>
+/// Message sent from ConnectionServer to MainProcess when a client reports its time zone: NEW-ENVIRON <c>TZ</c> from a
+/// telnet client, or the browser's zone from the web portal. The text is the client's own; the main process checks it
+/// names a zone before recording it.
+/// </summary>
+public record ClientTimeZoneMessage(long Handle, string Zone) : IHandleMessage;
+
+/// <summary>
 /// Message sent from ConnectionServer to MainProcess when a client sets an MSDP configurable variable
 /// (<c>CLIENT_NAME</c>, <c>CLIENT_VERSION</c>, <c>PLUGIN_ID</c>).
 /// </summary>
