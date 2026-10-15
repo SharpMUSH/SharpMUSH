@@ -139,7 +139,10 @@ public class GalleryDetailsTests : TrackingBunitContext
 		await cut.Find(".kit-viewer-actions button.gallery-edit").ClickAsync();
 
 		await cut.Find("input.gallery-caption-input").ChangeAsync(new() { Value = "  The ferry  " });
-		await cut.Find("input.gallery-tags-input").ChangeAsync(new() { Value = "Night, ferry, night" });
+		// The editor opens with the image's tags, docks and night; drop docks, then type the rest.
+		await cut.FindAll(".gallery-tags-editor .list-editor-x")[0].ClickAsync();
+		await cut.Find(".gallery-tags-editor .list-editor-input").InputAsync(new() { Value = "Night, ferry, night" });
+		await cut.Find(".gallery-tags-editor .list-editor-input").ChangeAsync(new());
 		await cut.Find("input.gallery-warning-input").ChangeAsync(new() { Value = "spiders" });
 		await cut.Find("form.gallery-details").SubmitAsync();
 

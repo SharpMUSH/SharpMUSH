@@ -145,8 +145,12 @@ public class SecretsPageTests : TrackingBunitContext
 
 		await cut.FindAll(".secret-row")[2].QuerySelector(".mud-icon-button[title='Hosts @http may send it to']")!
 			.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
-		await cut.Find(".secret-hosts-form input").InputAsync(
-			new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "api.github.com  uploads.github.com" });
+		// The space ends the first host; the second is added when the field loses focus to Save.
+		await cut.Find(".secret-hosts-form .list-editor-input").InputAsync(
+			new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "API.github.com  uploads.github.com" });
+		await cut.Find(".secret-hosts-form .list-editor-input").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs());
+		await Assert.That(cut.FindAll(".secret-hosts-form .list-editor-chip").Select(chip => chip.FirstChild!.TextContent.Trim()))
+			.IsEquivalentTo(new[] { "api.github.com", "uploads.github.com" });
 		await cut.Find(".secret-hosts-save").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
 		cut.WaitForState(() => _api.PutPath is not null);
@@ -163,14 +167,15 @@ public class SecretsPageTests : TrackingBunitContext
 
 		await cut.FindAll(".secret-form input")[0].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "sql.password" });
 		await Assert.That(cut.FindAll(".secret-form input").Count).IsEqualTo(2);
-		await Assert.That(cut.FindAll(".secret-advice")).IsEmpty();
+		await Assert.That(cut.FindAll(".secret-hosts-editor")).IsEmpty();
 
 		await cut.FindAll(".secret-form input")[0].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "http.github.token" });
 		await Assert.That(cut.FindAll(".secret-form input").Count).IsEqualTo(3);
-		await Assert.That(cut.Find(".secret-advice").TextContent).Contains("only to the hosts named for it");
+		await Assert.That(cut.Find(".secret-hosts-editor .list-editor-help").TextContent).Contains("only to the hosts named for it");
 
 		await cut.FindAll(".secret-form input")[1].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "ghp_example" });
-		await cut.FindAll(".secret-form input")[2].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "api.github.com" });
+		await cut.Find(".secret-form .list-editor-input").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "api.github.com" });
+		await cut.Find(".secret-form .list-editor-input").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
 		await cut.Find(".secret-save").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
 		cut.WaitForState(() => _api.Puts.Count == 2);

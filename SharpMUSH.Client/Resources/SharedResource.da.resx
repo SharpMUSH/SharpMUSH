@@ -21,7 +21,7 @@
     <comment>MT — rule tokens are machine values; kept English</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Adgangsregler (kommasepareret)</value>
+    <value>Adgangsregler</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Forfattere (kommasepareret)</value>
+    <value>Forfattere</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations kept as in the source</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Objekt-id'er (ét pr. linje, f.eks. #847:1778518155494)</value>
+    <value>Objekt-id'er</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Begrænsninger (kommasepareret)</value>
+    <value>Begrænsninger</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

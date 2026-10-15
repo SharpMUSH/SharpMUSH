@@ -21,7 +21,7 @@
     <comment>MT — '!connect' and 'suspect' are sitelock rule keywords, left as-is</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Reguły dostępu (oddzielone przecinkami)</value>
+    <value>Reguły dostępu</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Autorzy (oddzieleni przecinkami)</value>
+    <value>Autorzy</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations kept short to match the English chip; no plural agreement possible with raw numbers</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Identyfikatory obiektów (po jednym w wierszu, np. #847:1778518155494)</value>
+    <value>Identyfikatory obiektów</value>
     <comment>MT — sample dbref left verbatim</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — privilege-level/config values left in English</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Ograniczenia (oddzielone przecinkami)</value>
+    <value>Ograniczenia</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">
