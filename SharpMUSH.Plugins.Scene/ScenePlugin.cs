@@ -51,6 +51,9 @@ public sealed class ScenePlugin
 	{
 		services.AddSceneSystem();
 
+		// Tells the staff activity reports that scenes are counted, so they show scene numbers.
+		services.AddSingleton(new Library.Services.Interfaces.ActivitySource(Library.Services.Interfaces.ActivitySource.Scenes));
+
 		// Phase 9 — the scene REST controller now lives in THIS plugin assembly. Register it as an MVC
 		// ApplicationPart so the host's controller discovery finds it across the plugin ALC; the route
 		// (api/scenes) is unchanged. AddControllers()/AddApplicationPart are idempotent — the host also
@@ -116,7 +119,7 @@ public sealed class ScenePlugin
 			var hub = SceneHubContextHolder.HubContext;
 			if (hub is null) continue;
 
-			var group = SceneHub.SceneGroupName(msg.Data.SceneId);
+			var group = SceneHub.GroupFor(msg.Data);
 			try
 			{
 				await hub.Clients.Group(group).SendAsync(SceneHub.ReceiveSceneMessageMethod, msg.Data, ct);
