@@ -38,11 +38,16 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<DiscordGatewayService>();
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordGatewayService>());
 		services.AddSingleton<IDiscordLinkStore, LightningDiscordLinkStore>();
+		services.AddSingleton<DiscordMessages>();
+		services.AddSingleton<IDiscordMessages>(provider => provider.GetRequiredService<DiscordMessages>());
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordMessages>());
+		services.AddSingleton<IDiscordMessagePairs, LightningDiscordMessagePairs>();
 		services.AddSingleton(provider =>
 		{
 			var secrets = provider.GetRequiredService<ISecretStore>();
 			return new DiscordRelay(provider.GetRequiredService<IDiscordLinkStore>(), secrets,
-				provider.GetRequiredService<DiscordGatewayService>(),
+				provider.GetRequiredService<DiscordGatewayService>(), provider.GetRequiredService<IDiscordMessagePairs>(),
+				provider.GetRequiredService<IDiscordMessages>(),
 				link => new DiscordWebhookPoster(link.ChannelId, link.WebhookId, secrets),
 				new DiscordOutboxOptions(), TimeProvider.System, provider.GetRequiredService<ILogger<DiscordRelay>>());
 		});
@@ -50,16 +55,25 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordRelay>());
 
 		services.AddSingleton<IDiscordAccountStore, LightningDiscordAccountStore>();
+		services.AddSingleton<IDiscordSpeakerStore, LightningDiscordSpeakerStore>();
 		services.AddSingleton(provider => new DiscordLinkTickets(TimeProvider.System));
 		services.AddSingleton<DiscordLinkedRole>();
 		services.AddSingleton<IDiscordLinkedRole>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton(provider => new DiscordAccounts(provider.GetRequiredService<IDiscordAccountStore>(),
-			provider.GetRequiredService<DiscordLinkTickets>(), provider.GetRequiredService<IAccountService>(),
-			provider.GetRequiredService<IDiscordLinkedRole>(), TimeProvider.System,
+			provider.GetRequiredService<IDiscordSpeakerStore>(), provider.GetRequiredService<DiscordLinkTickets>(),
+			provider.GetRequiredService<IAccountService>(), provider.GetRequiredService<IDiscordLinkedRole>(), TimeProvider.System,
 			provider.GetRequiredService<ILogger<DiscordAccounts>>()));
+		services.AddSingleton<IDiscordChannelGate>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton<DiscordSlashCommands>();
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordSlashCommands>());
+
+		services.AddSingleton<DiscordIdentities>();
+		services.AddSingleton<IDiscordFeedInput, DiscordFeedInput>();
+		services.AddSingleton<DiscordInbound>();
+		services.AddSingleton<DiscordInboundHandler>();
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordInboundHandler>());
+		services.AddHostedService(provider => provider.GetRequiredService<DiscordInboundHandler>());
 	}
 
 	public void MapEndpoints(IEndpointRouteBuilder endpoints)

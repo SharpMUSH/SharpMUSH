@@ -27,7 +27,7 @@ public class DiscordSlashCommandsTests
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		var defaults = SharpMUSHOptions.Default();
 		options.CurrentValue.Returns(defaults with { Net = defaults.Net with { MudUrl = site } });
-		var accounts = new DiscordAccounts(Substitute.For<IDiscordAccountStore>(), new DiscordLinkTickets(TimeProvider.System),
+		var accounts = new DiscordAccounts(Substitute.For<IDiscordAccountStore>(), Substitute.For<IDiscordSpeakerStore>(), new DiscordLinkTickets(TimeProvider.System),
 			Substitute.For<IAccountService>(), Substitute.For<IDiscordLinkedRole>(), TimeProvider.System,
 			NullLogger<DiscordAccounts>.Instance);
 		return new DiscordSlashCommands(accounts, options, services, NullLogger<DiscordSlashCommands>.Instance);
