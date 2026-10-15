@@ -127,14 +127,14 @@ public class GameFeatureServiceTests
 	[Test]
 	public async Task WithoutTheScenePlugin_NoPackageOverItIsAvailable()
 	{
-		var features = new Game().Features(scenePlugin: false);
-		var packages = await features.PackagesAsync();
+		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
 
-		// The Discord plugin is not loaded here either; its packages are someone else's test.
-		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id).Except(features.PackagesOver("discord")))
-			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline"]);
+		// The Discord plugin is not loaded here either; the discord packages are someone else's test.
+		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)).Select(p => p.Id))
+			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-here", "scene-availability"])
+			.Because("highlights-app calls no plugin itself, but the package it shows does");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights"]);
 	}
 
 	/// <summary>

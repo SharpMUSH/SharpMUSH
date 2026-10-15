@@ -378,6 +378,9 @@ public sealed class ConnectionPump(
 		else if (WebSocketControlFrame.TryParseTerminalTypes(message, out var types))
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new TerminalTypeNegotiatedMessage(handle, types), ct);
+		else if (WebSocketControlFrame.TryParseTimeZone(message, out var zone))
+			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
+				handle, new ClientTimeZoneMessage(handle, zone), ct);
 		else
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new WebSocketInputMessage(handle, message, connectionService.Get(handle)?.SessionId), ct);

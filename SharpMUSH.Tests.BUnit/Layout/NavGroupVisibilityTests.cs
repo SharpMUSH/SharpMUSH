@@ -176,7 +176,7 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(Group(cut, "NavBuildManage").QuerySelector("a[href='/admin']")).IsNotNull();
 		await Assert.That(LinkCount(Group(cut, "NavSectionBuild"))).IsGreaterThan(0);
 		await Assert.That(Group(cut, "AdmGroupPeople").QuerySelectorAll("a.phosphor-nav-link").Select(a => a.GetAttribute("href")))
-			.IsEquivalentTo(new[] { "/admin/accounts", "/admin/characters", "/admin/guests", "/admin/roles" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			.IsEquivalentTo(new[] { "/admin/accounts", "/admin/characters", "/admin/guests", "/admin/activity", "/admin/roles" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(LinkCount(Group(cut, "AdmGroupServer"))).IsEqualTo(0);
 	}
 

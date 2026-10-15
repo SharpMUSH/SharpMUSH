@@ -390,7 +390,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cards = cut.FindAll("a.adm-dash-card").Select(c => c.GetAttribute("href")).ToList();
 		await Assert.That(cards).IsEquivalentTo(new[]
 		{
-			"/softcode", "/admin/characters", "/admin/guests", "/admin/moderation", "/admin/audit",
+			"/softcode", "/admin/characters", "/admin/guests", "/admin/activity", "/admin/moderation", "/admin/audit",
 			"/admin/wiki", "/admin/suggestions", "/admin/messages", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -524,6 +524,38 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(ApplyDisabled()).IsTrue();
 
 		await cut.Find("input#pkg-settings-confirm, #pkg-settings-confirm input").ChangeAsync(true);
+		cut.WaitForAssertion(() =>
+		{
+			if (ApplyDisabled()) throw new InvalidOperationException("apply still waits");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// A package's attribute entries (format 1.5) have a card of their own, and a retroactive one that changes
+	/// attributes already on objects says how many and waits for the admin to confirm.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_ListsItsAttributeEntries_AndWaitsForARetroactiveConfirmation()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("jobs", null, "1.0.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Install, [], [], [], [], [], [],
+			Declarations: [new(SharpMUSH.Library.Models.Packages.PackageDeclarationKind.Attribute, "JOB`STATUS",
+				SharpMUSH.Library.Models.Packages.PackageDeclarationAction.Create, "Retroactive: 7 existing copies.", 7)]);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("jobs", "1.0.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=jobs");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".pkg-attribute-entries"), TimeSpan.FromSeconds(5));
+		var row = cut.Find(".pkg-attribute-entries tbody tr").TextContent;
+		await Assert.That(row).Contains("JOB`STATUS");
+		await Assert.That(row).Contains("7");
+		bool ApplyDisabled() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled");
+		await Assert.That(ApplyDisabled()).IsTrue();
+
+		await cut.Find("input#pkg-retroactive-confirm, #pkg-retroactive-confirm input").ChangeAsync(true);
 		cut.WaitForAssertion(() =>
 		{
 			if (ApplyDisabled()) throw new InvalidOperationException("apply still waits");
