@@ -127,6 +127,13 @@ internal sealed class AttributeWriter(
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
+		// atr_add refuses a name good_atr_name rejects (AE_BADNAME), so a name get() could never read back
+		// (one holding a ':', say) is never written.
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrBadName);
+		}
+
 		// A player's alias list is validated right after controls(), where do_set_atr validates it
 		// (src/attrib.c:2268-2316).
 		if (isPlayerAlias
