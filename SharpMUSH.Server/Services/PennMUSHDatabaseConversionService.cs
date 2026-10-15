@@ -7,7 +7,9 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Background service that handles PennMUSH database conversion on startup if configured.
+/// Background service that imports a database on startup if configured: <c>PENNMUSH_DATABASE_PATH</c> names a
+/// PennMUSH outdb, a RhostMUSH flatfile or a TinyMUX flatfile, told apart by its first lines unless
+/// <c>PENNMUSH_DATABASE_FORMAT</c> (<c>pennmush</c>, <c>rhostmush</c> or <c>tinymux</c>) says which.
 /// </summary>
 public class PennMUSHDatabaseConversionService : BackgroundService
 {
@@ -17,6 +19,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 	private readonly IHostApplicationLifetime _lifetime;
 	private readonly bool _stopOnFailure;
 	private readonly string? _databaseFilePath;
+	private readonly string? _databaseFormat;
 
 	public PennMUSHDatabaseConversionService(
 		IPennMUSHDatabaseConverter converter,
@@ -33,32 +36,41 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			"true",
 			StringComparison.OrdinalIgnoreCase);
 		_databaseFilePath = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_PATH");
+		_databaseFormat = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_FORMAT");
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		if (string.IsNullOrWhiteSpace(_databaseFilePath))
 		{
-			_logger.LogInformation("PennMUSH database conversion not configured (PENNMUSH_DATABASE_PATH not set)");
+			_logger.LogInformation("Database import not configured (PENNMUSH_DATABASE_PATH not set)");
 			return;
 		}
 
 		if (!File.Exists(_databaseFilePath))
 		{
-			_logger.LogError("PennMUSH database file not found: {FilePath}", _databaseFilePath);
+			_logger.LogError("Database file to import not found: {FilePath}", _databaseFilePath);
 			return;
 		}
 
-		_logger.LogInformation("Starting PennMUSH database conversion from: {FilePath}", _databaseFilePath);
+		if (!Enum.TryParse<DatabaseImportFormat>(string.IsNullOrWhiteSpace(_databaseFormat) ? nameof(DatabaseImportFormat.Auto) : _databaseFormat,
+				ignoreCase: true, out var format) || !Enum.IsDefined(format))
+		{
+			_logger.LogError("PENNMUSH_DATABASE_FORMAT is {Format}; it takes auto, pennmush, rhostmush or tinymux", _databaseFormat);
+			return;
+		}
+
+		_logger.LogInformation("Starting database conversion from: {FilePath}", _databaseFilePath);
 
 		try
 		{
-			var result = await _converter.ConvertDatabaseAsync(_databaseFilePath, stoppingToken);
+			var result = await _converter.ConvertDatabaseAsync(new DatabaseImportFiles(_databaseFilePath, Format: format),
+				new Progress<ConversionProgress>(), stoppingToken);
 
 			if (result.IsSuccessful)
 			{
 				_logger.LogInformation(
-					"PennMUSH database conversion completed successfully in {Duration}. " +
+					"Database conversion completed successfully in {Duration}. " +
 					"Converted: {Players} players, {Rooms} rooms, {Things} things, {Exits} exits, {Attributes} attributes",
 					result.Duration,
 					result.PlayersConverted,
@@ -83,7 +95,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			else
 			{
 				_logger.LogError(
-					"PennMUSH database conversion failed with {ErrorCount} errors",
+					"Database conversion failed with {ErrorCount} errors",
 					result.Errors.Count);
 
 				foreach (var error in result.Errors.Take(10))
@@ -104,7 +116,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Fatal error during PennMUSH database conversion");
+			_logger.LogError(ex, "Fatal error during database conversion");
 
 			if (_stopOnFailure)
 			{

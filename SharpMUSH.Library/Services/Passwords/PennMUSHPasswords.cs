@@ -21,6 +21,10 @@ namespace SharpMUSH.Library.Services.Passwords;
 ///   <item>SHA-crypt, <c>$6$[rounds=N$]SALT$HASH</c> or <c>$5$...</c> (<see cref="ShaCrypt"/>): not
 ///   PennMUSH's, but what RhostMUSH and glibc's <c>crypt(3)</c> write, so a password carried over from
 ///   such a game verifies too.</item>
+///   <item>MD5-crypt, <c>$1$SALT$HASH</c> (<see cref="Md5Crypt"/>): a TinyMUX or RhostMUSH game's
+///   <c>crypt(3)</c> may have written it.</item>
+///   <item>BSDi extended DES, <c>_CCCCSSSSHHHHHHHHHHH</c>: what a TinyMUX game's <c>crypt(3)</c> may have
+///   written.</item>
 ///   <item>A TinyMUX password, <c>$ALGO$SALT$HASH</c> (<c>check_mux_password</c>).</item>
 ///   <item>Plaintext.</item>
 /// </list>
@@ -39,6 +43,8 @@ internal static partial class PennMUSHPasswords
 				|| MatchesSha0(stored, bytes)
 				|| MatchesCrypt(stored, bytes)
 				|| ShaCrypt.Verify(stored, bytes)
+				|| Md5Crypt.Verify(stored, bytes)
+				|| MatchesExtendedDes(stored, bytes)
 				|| MatchesMux(stored, bytes)
 				|| MatchesPlaintext(stored, bytes);
 		}
@@ -101,10 +107,24 @@ internal static partial class PennMUSHPasswords
 		return AsciiEquals(littleEndian, stored) | AsciiEquals(bigEndian, stored);
 	}
 
+	/// <summary>Whether the value has extended DES's shape: <c>_</c> and nineteen crypt-alphabet characters.</summary>
+	private static bool IsExtendedDes(string stored)
+		=> stored.Length == 20 && stored[0] == '_'
+			&& !stored.AsSpan(1).ContainsAnyExcept(CryptAlphabet);
+
+	private static bool MatchesExtendedDes(string stored, ReadOnlySpan<byte> attempt)
+		=> IsExtendedDes(stored) && AsciiEquals(DesCrypt.ExtendedCrypt(attempt, stored[..9]), stored);
+
+	/// <summary>
+	/// <c>crypt(password, salt)</c>. PennMUSH always salts with <c>XX</c>; a TinyMUX built with
+	/// <c>ENABLE_PROPER_DES</c> chose a random salt, which is the stored value's first two characters.
+	/// </summary>
 	private static bool MatchesCrypt(string stored, ReadOnlySpan<byte> attempt)
 		=> stored.Length == 13
-			&& stored.StartsWith("XX", StringComparison.Ordinal)
-			&& AsciiEquals(DesCrypt.Crypt(attempt, "XX"), stored);
+			&& !stored.AsSpan().ContainsAnyExcept(CryptAlphabet)
+			&& AsciiEquals(DesCrypt.Crypt(attempt, stored[..2]), stored);
+
+	private const string CryptAlphabet = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 	/// <summary>
 	/// <c>$ALGO$SALT$HASH</c>. PennMUSH digests the salt as the base64 text it is stored as, followed
@@ -112,7 +132,7 @@ internal static partial class PennMUSHPasswords
 	/// </summary>
 	private static bool MatchesMux(string stored, ReadOnlySpan<byte> attempt)
 	{
-		if (!stored.StartsWith('$') || ShaCrypt.IsShaCrypt(stored))
+		if (!stored.StartsWith('$') || ShaCrypt.IsShaCrypt(stored) || Md5Crypt.IsMd5Crypt(stored))
 		{
 			return false;
 		}
@@ -148,7 +168,7 @@ internal static partial class PennMUSHPasswords
 		}
 
 		if (FormattedPattern().IsMatch(stored) || stored.StartsWith("XX", StringComparison.Ordinal)
-			|| stored.StartsWith('$'))
+			|| stored.StartsWith('$') || IsExtendedDes(stored))
 		{
 			return false;
 		}
