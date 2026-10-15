@@ -109,8 +109,8 @@ public class MuxCompatibilityTests
 	{
 		var thing = TestIsolationHelpers.GenerateUniqueName("PennLambda");
 		await Assert.That(await Evaluate(Mux.None,
-				$"[setq(0,create({thing}))][attrib_set(%q0/FN`SUB,lit([ulambda(#lambda/\\%=)]|[strmatch(%=,#*/FN`SUB)]))][u(%q0/FN`SUB)]|[ulambda(#lambda/\\%=)]|[ulambda(#lambda/[add(1,2)]\\%=)]"))
-			.IsEqualTo("#LAMBDA/%=|1|#LAMBDA/%=|3#LAMBDA/3%=");
+				$"[setq(0,create({thing}))][attrib_set(%q0/FN`SUB,lit([ulambda(#lambda/\\%=)]|[strmatch(%=,#*/FN`SUB)]))][u(%q0/FN`SUB)]|[ulambda(#lambda/\\%=)]|[ulambda(#lambda/[add(1,2)]\\%=)]|[ulambda(lit(#lambda/[div(10,2)]/%=))]"))
+			.IsEqualTo("#LAMBDA/%=|1|#LAMBDA/%=|3#LAMBDA/3%=|5/#LAMBDA/[div(10,2)]/%=");
 	}
 
 	/// <summary>
