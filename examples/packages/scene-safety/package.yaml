@@ -58,6 +58,8 @@ objects:
         value: |-
           The topics +safety suggests, which scene detail holds content warnings, and how often a player may signal.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Scene safety
       DATA`CONFIG`TOPICS: |-
         Animal harm|Body horror|Child harm|Death|Drug use|Gore|Racism|Self-harm|Sexual content|Slavery|Spiders|Suicide|Torture|Violence
       DATA`CONFIG`TOPICS`TYPE: |-
@@ -68,6 +70,10 @@ objects:
         |
       DATA`CONFIG`TOPICS`DESCRIPTION: |-
         The topics +safety/topics suggests. Players may also name their own.
+      DATA`CONFIG`TOPICS`LABEL: |-
+        Suggested topics
+      DATA`CONFIG`TOPICS`EXAMPLE: |-
+        Gore|Spiders|Clowns
       DATA`CONFIG`WARNING-DETAIL: |-
         warning
       DATA`CONFIG`WARNING-DETAIL`TYPE: |-
@@ -78,6 +84,10 @@ objects:
         ^[a-z][a-z0-9_-]*$
       DATA`CONFIG`WARNING-DETAIL`DESCRIPTION: |-
         The scene detail that holds a scene's content warnings, split by |. scene-verse names it warning.
+      DATA`CONFIG`WARNING-DETAIL`LABEL: |-
+        Warning detail
+      DATA`CONFIG`WARNING-DETAIL`EXAMPLE: |-
+        cw
       DATA`CONFIG`TOPIC-LENGTH: |-
         40
       DATA`CONFIG`TOPIC-LENGTH`TYPE: |-
@@ -90,6 +100,10 @@ objects:
         200
       DATA`CONFIG`TOPIC-LENGTH`DESCRIPTION: |-
         The longest line or veil, in characters.
+      DATA`CONFIG`TOPIC-LENGTH`LABEL: |-
+        Topic length
+      DATA`CONFIG`TOPIC-LENGTH`EXAMPLE: |-
+        60
       DATA`CONFIG`NOTE-LENGTH: |-
         200
       DATA`CONFIG`NOTE-LENGTH`TYPE: |-
@@ -102,6 +116,10 @@ objects:
         1000
       DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
         The longest note a pause or skip may carry, in characters. 0 allows none.
+      DATA`CONFIG`NOTE-LENGTH`LABEL: |-
+        Note length
+      DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
+        0
       DATA`CONFIG`SIGNAL-WAIT: |-
         60
       DATA`CONFIG`SIGNAL-WAIT`TYPE: |-
@@ -114,6 +132,10 @@ objects:
         3600
       DATA`CONFIG`SIGNAL-WAIT`DESCRIPTION: |-
         How long a player waits between one pause or skip and the next.
+      DATA`CONFIG`SIGNAL-WAIT`LABEL: |-
+        Wait between signals
+      DATA`CONFIG`SIGNAL-WAIT`EXAMPLE: |-
+        30s
       # Which INC` routine each switch runs: DATA`ROUTE`<switch>. BARE is the command alone, ARG the command with
       # something after it and no switch.
       DATA`ROUTE: |-
