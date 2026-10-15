@@ -122,7 +122,7 @@ public class LspIsolatedTransportTests
 		using var socket = await Connect(app); await Initialize(socket);
 		const string uri = "file:///projection.fun";
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "slow[" } } });
-		if (!analyzer.Entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
+		await analyzer.Entered(TimeSpan.FromSeconds(3));
 		try
 		{
 			await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didClose", @params = new { textDocument = new { uri } } });
@@ -147,7 +147,7 @@ public class LspIsolatedTransportTests
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "get" } } });
 		await Receive(socket);
 		await Send(socket, new { jsonrpc = "2.0", id = 2, method = "textDocument/completion", @params = new { textDocument = new { uri }, position = new { line = 0, character = 3 } } });
-		if (!analyzer.Entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
+		await analyzer.Entered(TimeSpan.FromSeconds(3));
 		try
 		{
 			for (var id = 3; id < 35; id++) await Send(socket, new { jsonrpc = "2.0", id, method = "textDocument/hover", @params = new { textDocument = new { uri }, position = new { line = 0, character = 2 } } });
@@ -205,7 +205,7 @@ public class LspIsolatedTransportTests
 		using var socket = await Connect(app); await Initialize(socket);
 		const string uri = "file:///pressure.fun";
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "slow[" } } });
-		if (!analyzer.Entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
+		await analyzer.Entered(TimeSpan.FromSeconds(3));
 		try
 		{
 			await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didChange", @params = new { textDocument = new { uri, version = 2 }, contentChanges = new[] { new { text = "get" } } } });
@@ -256,7 +256,7 @@ public class LspIsolatedTransportTests
 		await Receive(socket);
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didChange", @params = new { textDocument = new { uri, version = 2 }, contentChanges = new[] { new { text = "get" } } } });
 		await Send(socket, new { jsonrpc = "2.0", id = 2, method = "textDocument/completion", @params = new { textDocument = new { uri }, position = new { line = 0, character = 3 } } });
-		if (!analyzer.Entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
+		await analyzer.Entered(TimeSpan.FromSeconds(3));
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didChange", @params = new { textDocument = new { uri, version = 3 }, contentChanges = new[] { new { text = "nomatchzz" } } } });
 		analyzer.Release.Set();
 		var response = await Response(socket, 2);
@@ -274,7 +274,7 @@ public class LspIsolatedTransportTests
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, languageId = "mush", version = 1, text = "get" } } });
 		await Receive(socket);
 		await Send(socket, new { jsonrpc = "2.0", id = 2, method = "textDocument/completion", @params = new { textDocument = new { uri }, position = new { line = 0, character = 3 } } });
-		if (!analyzer.Entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
+		await analyzer.Entered(TimeSpan.FromSeconds(3));
 		await Send(socket, new { jsonrpc = "2.0", method = "$/cancelRequest", @params = new { id = 2 } });
 		await Assert.That((await Response(socket, 2)).GetProperty("error").GetProperty("code").GetInt32()).IsEqualTo(-32800);
 		await Send(socket, new { jsonrpc = "2.0", method = "$/cancelRequest", @params = new { id = 2 } });
@@ -294,7 +294,7 @@ public class LspIsolatedTransportTests
 		await Initialize(socket);
 		const string uri = "file:///reopen.fun";
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, languageId = "mush", version = 1, text = "slow[" } } });
-		if (!analyzer.Entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
+		await analyzer.Entered(TimeSpan.FromSeconds(3));
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didClose", @params = new { textDocument = new { uri } } });
 		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, languageId = "mush", version = 1, text = "get(#1/DESC)" } } });
 		await Assert.That((await Receive(socket)).GetProperty("params").GetProperty("diagnostics").GetArrayLength()).IsEqualTo(0);
@@ -395,18 +395,23 @@ public class LspIsolatedTransportTests
 	[Test]
 	public async Task OversizeMessageAndIdleTimeout_CloseSessionWithoutAffectingHost()
 	{
-		await using var app = await StartApp(options => { options.MaxMessageBytes = 1024; options.IdleTimeout = TimeSpan.FromMilliseconds(150); });
-		using var first = await Connect(app);
-		await Initialize(first);
-		await first.SendAsync(new byte[2048], WebSocketMessageType.Text, true, CancellationToken.None);
+		await using var app = await StartApp(options => options.MaxMessageBytes = 1024);
+		using var oversized = await Connect(app);
+		await Initialize(oversized);
+		await oversized.SendAsync(new byte[2048], WebSocketMessageType.Text, true, CancellationToken.None);
 		using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-		await Assert.That(await LspFrames.ReadWebSocketAsync(first, 1024, cancellation.Token)).IsNull();
-		using var second = await Connect(app);
-		await Initialize(second);
-		await Assert.That(await LspFrames.ReadWebSocketAsync(second, 1024, cancellation.Token)).IsNull();
-		using var http = app.GetTestClient();
-		using var response = await http.GetAsync("/unrelated");
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(await LspFrames.ReadWebSocketAsync(oversized, 1024, cancellation.Token)).IsNull();
+		// The idle session sends nothing: a request would race the short idle window.
+		await using var idleApp = await StartApp(options => options.IdleTimeout = TimeSpan.FromMilliseconds(150));
+		using var idle = await Connect(idleApp);
+		using var idleCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+		await Assert.That(await LspFrames.ReadWebSocketAsync(idle, 1024, idleCancellation.Token)).IsNull();
+		foreach (var host in new[] { app, idleApp })
+		{
+			using var http = host.GetTestClient();
+			using var response = await http.GetAsync("/unrelated");
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		}
 	}
 
 	[Test]
