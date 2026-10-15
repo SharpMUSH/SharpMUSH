@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
 
@@ -251,4 +252,117 @@ public class TimeIntegrationTests
 			await UninstallAsync();
 		}
 	}
+
+	/// <summary>What <paramref name="player"/> was told while God ran <paramref name="command"/> and the queue drained.</summary>
+	private async Task<string> Told(TestIsolationHelpers.TestPlayer player, string command)
+	{
+		var before = Notifications.CountFor(player.DbRef);
+		await God(command);
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
+	}
+
+	/// <summary>The event handler's player`connect, as the engine runs it when the player logs in.</summary>
+	private Task<string> LogsIn(TestIsolationHelpers.TestPlayer player) =>
+		Told(player, $"@trigger/args #9/PLAYER`CONNECT`TIME=objid,#{player.DbRef.Number},connections,1,descriptor,{player.Handle}");
+
+	[Test]
+	public async Task AZoneTheClientReportedFillsAnEmptyOne()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("CzAnn");
+			var number = ann.DbRef.Number;
+
+			// No client zone: nothing happens, and +timezone points at /match.
+			await Assert.That(await LogsIn(ann)).DoesNotContain("[TIME]");
+			await Assert.That(await As(ann, "+timezone")).Contains("+timezone/match <your time> finds yours");
+			await Assert.That(await As(ann, "+timezone/detect")).Contains("Your client has not reported a time zone.");
+
+			// The client reported one: filled in, hidden, and the player is told.
+			ConnectionService.Update(ann.Handle, ConnectionTimeZone.Key, "Asia/Tokyo");
+			await Assert.That(await Think($"clientzone(#{number})")).IsEqualTo("Asia/Tokyo");
+			await Assert.That(await LogsIn(ann)).Contains("Your time zone is now Asia/Tokyo (UTC+09:00), from your client. Only you and staff see it");
+			await Assert.That(await God($"think get(#{number}/TZ)")).IsEqualTo("Asia/Tokyo");
+			await Assert.That(await Think($"hasflag(#{number}/TZ,visual)")).IsEqualTo("0");
+
+			// A zone the player set is never replaced.
+			await As(ann, "+timezone UTC");
+			ConnectionService.Update(ann.Handle, ConnectionTimeZone.Key, "Europe/Paris");
+			await Assert.That(await LogsIn(ann)).DoesNotContain("[TIME]");
+			await Assert.That(await Told(ann, $"@trigger/args #9/SOCKET`TIMEZONE`TIME=descriptor,{ann.Handle},zone,Europe/Paris,player,#{number}"))
+				.DoesNotContain("[TIME]");
+			await Assert.That(await God($"think get(#{number}/TZ)")).IsEqualTo("UTC");
+
+			// +timezone/detect takes it on request.
+			await Assert.That(await As(ann, "+timezone/detect")).Contains("Your time zone is Europe/Paris (UTC+0");
+			await Assert.That(await As(ann, "+timezone/detect")).Contains("Your time zone is already Europe/Paris.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task OfferAndOffLeaveTheZoneToThePlayer()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("OfAnn");
+			var number = ann.DbRef.Number;
+			ConnectionService.Update(ann.Handle, ConnectionTimeZone.Key, "Asia/Tokyo");
+			var staff = await Player("OfStaff");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			await Assert.That(await As(staff, "+config time/detect=offer")).Contains("time/detect is now offer, was set.");
+			await Assert.That(await LogsIn(ann)).Contains("Your client says your time zone is Asia/Tokyo. +timezone/detect sets it.");
+			// After login a report is not offered again.
+			await Assert.That(await Told(ann, $"@trigger/args #9/SOCKET`TIMEZONE`TIME=descriptor,{ann.Handle},zone,Asia/Tokyo,player,#{number}"))
+				.DoesNotContain("[TIME]");
+			await Assert.That(await God($"think hasattr(#{number},TZ)")).IsEqualTo("0");
+			await Assert.That(await As(ann, "+timezone")).Contains("Your client says yours is Asia/Tokyo: +timezone/detect sets it.");
+
+			await As(staff, "+config time/detect=off");
+			await Assert.That(await LogsIn(ann)).DoesNotContain("[TIME]");
+			await Assert.That(await God($"think hasattr(#{number},TZ)")).IsEqualTo("0");
+
+			await Assert.That(await As(staff, "+config time/match-zones=Asia/Tokyo Nowhere/Land")).Contains("Nowhere/Land");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task MatchListsTheZonesAtATypedTime()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("MtAnn");
+
+			await Assert.That(await As(ann, "+timezone/match")).Contains("Give the time where you are");
+			await Assert.That(await As(ann, "+timezone/match soon")).Contains("'soon' is not a time.");
+			await Assert.That(await As(ann, "+timezone/match 8pm pacific")).Contains("'8pm pacific' is not a time.");
+
+			// The time in Tokyo now, typed as a player there would: Tokyo and Seoul share it, Darwin is half an hour off.
+			var tokyo = await Think("timefmt($H:$M,secs(),Asia/Tokyo)");
+			var listed = await As(ann, $"+timezone/match {tokyo}");
+			await Assert.That(listed).Contains("Choose yours:").And.Contains("+timezone Asia/Tokyo · UTC+09:00")
+				.And.Contains("+timezone Asia/Seoul").And.DoesNotContain("Australia/Darwin");
+
+			// Only zones on the list are offered.
+			await God($"&DATA`CONFIG`MATCH-ZONES {Clock}=UTC");
+			await Assert.That(await As(ann, $"+timezone/match {tokyo}")).Contains("No zone on the game's list is at");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
 }
+

@@ -145,7 +145,7 @@ packages:
   - path: time/
     name: Time
     package: time
-    version: 1.1.0
+    version: 1.2.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: timeline/
     name: Timeline

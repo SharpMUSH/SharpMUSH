@@ -1,6 +1,6 @@
 format: 1
 package: time
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -59,6 +59,10 @@ objects:
         ZONE`HIDE
       DATA`ROUTE`TIMEZONE`UNHIDE: |-
         ZONE`UNHIDE
+      DATA`ROUTE`TIMEZONE`DETECT: |-
+        ZONE`DETECT
+      DATA`ROUTE`TIMEZONE`MATCH: |-
+        ZONE`MATCH
 
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
@@ -222,7 +226,7 @@ objects:
         flags: [funsyntax]
       INC`ZONE`SHOW:
         value: |-
-          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. +timezone <zone> sets it%, such as +timezone America/New_York.); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
+          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
         flags: [cmdsyntax]
       # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
       # the Clock. God is beyond any object's reach, so the write is checked.
@@ -242,6 +246,54 @@ objects:
       INC`ZONE`CLEAR:
         value: |-
           @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); &TZ %#; @pemit %#=notice(TIME,Your time zone is cleared. Times are shown in the game's.,ok)
+        flags: [cmdsyntax]
+
+      # %0 a player: the zone their client reported (clientzone()), or nothing.
+      FUN`ZONE`CLIENT:
+        value: |-
+          u({{clock}}/FUN`ZONE`CHECK,clientzone(%0))
+        flags: [funsyntax]
+      # +timezone/detect: the zone the player's client reported, set as if they had typed it.
+      INC`ZONE`DETECT:
+        value: |-
+          think setq(client_zone,u(%!/FUN`ZONE`CLIENT,%#)); @assert strlen(%q<client_zone>)=@pemit %#=notice(TIME,Your client has not reported a time zone. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @assert comp(%q<client_zone>,%q<viewer_zone>)=@pemit %#=notice(TIME,Your time zone is already %q<client_zone>.); &TZ %#=%q<client_zone>; @assert strmatch(get(%#/TZ),%q<client_zone>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<client_zone> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<client_zone>,%q<now>)]%, from your client. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<client_zone>)] for you.,ok)
+        flags: [cmdsyntax]
+      # +timezone/match <time>: the zones on the Clock's match-zones list whose clock reads that time now, each a
+      # link to +timezone <zone>. A player types a round time a few minutes off, so the nearest time within half an
+      # hour counts; zones that share an offset share it, so every zone at the nearest one is listed.
+      INC`ZONE`MATCH:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(TIME,Give the time where you are: +timezone/match 8:15pm.,warn); think u(%!/FUN`READ`TIME,%q<cmd_argument>); @assert cand(u(%!/FUN`READ`CLOCKOK),not(strlen(%q<read_zone_typed>)),not(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>))))=@pemit %#=notice(TIME,'%q<cmd_argument>' is not a time. Write the time where you are%, such as 20:15%, 8pm or 8:15 pm.,warn); think u(%!/FUN`MATCH`FIND,add(mul(%q<read_hour24>,60),%q<read_minute>)); @assert words(%q<match_found>)=@pemit %#=notice(TIME,No zone on the game's list is at [rjust(%q<read_hour24>,2,0)]:%q<read_minute> now. +timezone <zone> sets yours by name: +help timezone.,warn); @pemit %#=u(%!/FUN`SCREEN`MATCH)
+        flags: [cmdsyntax]
+      # %0 a time of day in minutes. Sets match_minutes, match_zones (the Clock's list), match_offsets (how many
+      # minutes each zone's clock is ahead of that time, -720 to 719), match_nearest (the offset nearest 0) and
+      # match_found (the zones at it, or nothing when it is half an hour or more away).
+      FUN`MATCH`FIND:
+        value: |-
+          setqm(match_minutes,%0,
+          match_zones,filterbool({{clock}}/FUN`ZONE`VALID,get({{clock}}/DATA`CONFIG`MATCH-ZONES)),
+          match_offsets,iter(%q<match_zones>,u(%!/FUN`MATCH`OFFSET,%i0)),
+          match_nearest,extract(%q<match_offsets>,match(iter(%q<match_offsets>,abs(%i0)),first(sort(iter(%q<match_offsets>,abs(%i0)),n))),1),
+          match_found,if(lt(abs(%q<match_nearest>),30),squish(iter(%q<match_zones>,if(eq(extract(%q<match_offsets>,inum(0),1),%q<match_nearest>),%i0)))))
+        flags: [funsyntax]
+      # %0 a zone: how many minutes its clock is ahead of %q<match_minutes> now, -720 to 719.
+      FUN`MATCH`OFFSET:
+        value: |-
+          sub(mod(add(mul(timefmt($H,%q<now>,%0),60),timefmt($M,%q<now>,%0),sub(2160,%q<match_minutes>)),1440),720)
+        flags: [funsyntax]
+      # The zones FUN`MATCH`FIND found, each a link that sets it.
+      FUN`SCREEN`MATCH:
+        value: |-
+          notice(TIME,It is [timefmt($H:$M,%q<now>,first(%q<match_found>))] now in [if(eq(words(%q<match_found>),1),this zone,these zones)]. Choose yours:)%r[bullets(iter(%q<match_found>,[cmdlink(+timezone %i0,+timezone %i0,Set your time zone to %i0)] [tone(muted,· UTC[timefmt($Z,%q<now>,%i0)])],,chr(30)),chr(30))]
+        flags: [funsyntax]
+
+      # ---- detected zones ---------------------------------------------------------
+      # A client's zone, from player`connect (login 1) and socket`timezone (login 0), with %<player> and %<zone>.
+      # Fills an empty TZ when DATA`CONFIG`DETECT is set, hidden, since the player did not choose to share where
+      # they are; when it is offer, says so once a login. A zone the player set is never touched.
+      EVENT`ZONE:
+        value: |-
+          think setq(zone_detect,get({{clock}}/DATA`CONFIG`DETECT)); @break cor(strmatch(%q<zone_detect>,off),not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(u({{clock}}/FUN`ZONE`VALID,%<zone>))); @break cand(strmatch(%q<zone_detect>,offer),not(%<login>)); @assert strmatch(%q<zone_detect>,set)=@pemit %<player>=notice(TIME,Your client says your time zone is %<zone>. +timezone/detect sets it.); &TZ %<player>=%<zone>; @set %<player>/TZ=!visual; @assert strmatch(get(%<player>/TZ),%<zone>); @pemit %<player>=notice(TIME,Your time zone is now [u({{clock}}/FUN`ZONE`LABEL,%<zone>,secs())]%, from your client. Only you and staff see it: +timezone/unhide shares it%, and +timezone <zone> changes it.,ok)
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -396,6 +448,39 @@ objects:
         The seven IC weekday names, Sunday's first. Empty uses the real ones.
       DATA`CONFIG`IC-WEEKDAYS`LABEL: |-
         IC weekday names
+      DATA`CONFIG`DETECT: |-
+        set
+      DATA`CONFIG`DETECT`TYPE: |-
+        choice
+      DATA`CONFIG`DETECT`CHOICES: |-
+        set offer off
+      DATA`CONFIG`DETECT`DEFAULT: |-
+        set
+      DATA`CONFIG`DETECT`DESCRIPTION: |-
+        What a zone a player's client reports does when they set none: set fills it in, hidden; offer tells them at login; off does nothing.
+      DATA`CONFIG`DETECT`LABEL: |-
+        Zone from the client
+      DATA`CONFIG`DETECT`EXAMPLE: |-
+        offer
+      DATA`CONFIG`MATCH-ZONES: |-
+        Pacific/Honolulu America/Anchorage America/Los_Angeles America/Vancouver America/Phoenix America/Denver America/Mexico_City America/Chicago America/Bogota America/New_York America/Toronto America/Halifax America/St_Johns America/Sao_Paulo America/Argentina/Buenos_Aires Atlantic/Azores UTC Europe/London Europe/Dublin Europe/Lisbon Africa/Lagos Europe/Paris Europe/Berlin Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Stockholm Europe/Warsaw Africa/Johannesburg Africa/Cairo Europe/Athens Europe/Helsinki Europe/Istanbul Europe/Moscow Asia/Tehran Asia/Dubai Asia/Karachi Asia/Kolkata Asia/Kathmandu Asia/Dhaka Asia/Bangkok Asia/Jakarta Asia/Singapore Asia/Shanghai Asia/Manila Australia/Perth Asia/Seoul Asia/Tokyo Australia/Darwin Australia/Adelaide Australia/Brisbane Australia/Sydney Pacific/Auckland
+      DATA`CONFIG`MATCH-ZONES`TYPE: |-
+        list
+      DATA`CONFIG`MATCH-ZONES`DEFAULT: |-
+        Pacific/Honolulu America/Anchorage America/Los_Angeles America/Vancouver America/Phoenix America/Denver America/Mexico_City America/Chicago America/Bogota America/New_York America/Toronto America/Halifax America/St_Johns America/Sao_Paulo America/Argentina/Buenos_Aires Atlantic/Azores UTC Europe/London Europe/Dublin Europe/Lisbon Africa/Lagos Europe/Paris Europe/Berlin Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Stockholm Europe/Warsaw Africa/Johannesburg Africa/Cairo Europe/Athens Europe/Helsinki Europe/Istanbul Europe/Moscow Asia/Tehran Asia/Dubai Asia/Karachi Asia/Kolkata Asia/Kathmandu Asia/Dhaka Asia/Bangkok Asia/Jakarta Asia/Singapore Asia/Shanghai Asia/Manila Australia/Perth Asia/Seoul Asia/Tokyo Australia/Darwin Australia/Adelaide Australia/Brisbane Australia/Sydney Pacific/Auckland
+      DATA`CONFIG`MATCH-ZONES`MIN: |-
+        1
+      DATA`CONFIG`MATCH-ZONES`CHECK: |-
+        CHECK`ZONES
+      DATA`CONFIG`MATCH-ZONES`DESCRIPTION: |-
+        The zones +timezone/match offers, in the order it lists them.
+      DATA`CONFIG`MATCH-ZONES`LABEL: |-
+        Zones to match a time against
+      DATA`CONFIG`MATCH-ZONES`EXAMPLE: |-
+        America/New_York Europe/London Asia/Tokyo
+      # +config's CHECK for MATCH-ZONES (%0 the zones): every one a zone the server knows.
+      CHECK`ZONES: |-
+        if(every(%!/FUN`ZONE`VALID,%0,%b,zone_unknown),,The server knows no zone called [itemize(%q<zone_unknown>)].)
       # +config's CHECK for IC-MONTHS and IC-WEEKDAYS (%0 the names, %1 the setting): every name or none.
       CHECK`IC`NAMES: |-
         setq(ic_need,if(strmatch(%1,ic-months),12,7))[if(cand(words(%0,|),neq(words(%0,|),%q<ic_need>)),Give all %q<ic_need> names%, or none for the real ones.)]
@@ -591,6 +676,8 @@ objects:
 
         - `zone`: the game's time zone, the one `+time` calls game time. `UTC` by default.
         - `format`: how a time is written, in `timefmt\(\)`'s codes. `$a $d $b $Y, $H:$M` by default, which writes `Thu 15 Oct 2026, 20:00`.
+        - `detect`: what a zone a player's client reports does when they set none. `set`, the default, fills it in, hidden, and tells them; `offer` tells them at login, and `+timezone/detect` sets it; `off` does nothing. See `+help timezone client`.
+        - `match-zones`: the zones `+timezone/match` offers, in the order it lists them. Each must be a zone the server knows. About fifty by default, at least one for each offset most players live in.
 
         Short names a player may give `+timezone` or `+time` are attributes on the Clock object, inside the Time object in the master room: `` ALIAS`<name> ``, one each, its value the zone. A short name wins over a zone of the same name.
 
@@ -657,6 +744,8 @@ objects:
         - `+timezone <zone>` sets it: `+timezone America/New_York`.
         - `+timezone/clear` clears it. Times are then shown and read in the game's.
         - `+timezone/hide` keeps your zone to you and staff: `+time <name>` tells anyone else you keep it to yourself, and other packages read nothing. `+timezone/unhide` shows it again.
+        - `+timezone/detect` sets the zone your client reported.
+        - `+timezone/match <time>` lists the zones where it is that time now, each a link that sets it: `+timezone/match 8:15pm`.
 
         A zone is named the way the tz database names it: a region and a city, such as `America/Chicago`, `Europe/Berlin` or `Australia/Perth`, or `UTC`. Capitals are put in for you, so `america/new_york` works. Short names work too:
 
@@ -682,7 +771,26 @@ objects:
 
         Output: `\[TIME\] Done: Your time zone is America/Los_Angeles \(UTC-07:00\). It is <the time there> for you.`
 
+        `+timezone/match` suits a client that reports no zone: type the time where you are, rounded as you like, and pick your zone from the list.
+
+        `+timezone/match 9pm`
+
+        Output: `\[TIME\] It is 21:04 now in these zones. Choose yours:` and a line for each zone, such as `+timezone Europe/Paris · UTC+02:00`.
+
+        See `+help timezone client` for the zone your client reports.
+
         Your zone is your `TZ` attribute, as PennMUSH keeps it, so `time\(*<name>\)` reads it too. Everyone can read it unless you hide it, which clears the attribute's `visual` flag. A zone you hide stays hidden when you change it.
+      HELP`TIMEZONE`CLIENT: |-
+        Some clients tell the game which time zone they are in. When you have not set one, the game uses it:
+
+        - The web portal always reports your browser's zone.
+        - BSD telnet and inetutils telnet report it when you type `environ define TZ Europe/Paris` and then `environ export TZ` at the `telnet>` prompt, before you open the game.
+        - PuTTY reports it when you add `TZ` with your zone, such as `Europe/Paris`, under Connection, Data, Environment variables.
+        - Mudlet, TinTin++, MUSHclient and most other MUD clients report none. Use `+timezone/match` or `+timezone <zone>`.
+
+        A zone set this way is hidden, since you did not choose to share it: `+timezone/unhide` shares it. A zone you set yourself is never changed. A game may only tell you what your client reported, and leave setting it to `+timezone/detect`, or ignore it: see `+help time settings`.
+
+        Output, on logging in from the web portal in Paris with no zone set: `\[TIME\] Done: Your time zone is now Europe/Paris \(UTC+02:00\), from your client. Only you and staff see it: +timezone/unhide shares it, and +timezone <zone> changes it.`
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
@@ -695,3 +803,12 @@ objects:
     attributes:
       SYSTEM`TIME: |-
         {{clock}}
+
+  # A client's zone (clientzone()), at login and whenever a client reports one, handed to the Time object.
+  - ref: events
+    target: "{{$event_handler}}"
+    attributes:
+      PLAYER`CONNECT`TIME: |-
+        @trigger/args {{time}}/EVENT`ZONE=player,%<objid>,zone,clientzone(%<descriptor>),login,1
+      SOCKET`TIMEZONE`TIME: |-
+        @assert strlen(%<player>); @trigger/args {{time}}/EVENT`ZONE=player,%<player>,zone,%<zone>,login,0
