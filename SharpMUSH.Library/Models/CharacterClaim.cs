@@ -17,3 +17,15 @@ public union CharacterClaim(SharpPlayer, LinkedElsewhere, NotFound);
 /// <see cref="LinkedElsewhere"/> when another account holds it and has to let it go first.
 /// </summary>
 public union CharacterLink(SharpPlayer, LinkedElsewhere);
+
+/// <summary>A link write that added the character to the account.</summary>
+public readonly record struct Linked;
+
+/// <summary>A link write that found the character already on the account, and changed nothing.</summary>
+public readonly record struct AlreadyLinked;
+
+/// <summary>
+/// What a link write did, decided inside the write: <see cref="Linked"/>, <see cref="AlreadyLinked"/>, or the
+/// other account that holds the character, in which case nothing was written.
+/// </summary>
+public union CharacterLinkWrite(Linked, AlreadyLinked, SharpAccount);

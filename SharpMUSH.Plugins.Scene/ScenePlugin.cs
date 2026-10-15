@@ -116,7 +116,7 @@ public sealed class ScenePlugin
 			var hub = SceneHubContextHolder.HubContext;
 			if (hub is null) continue;
 
-			var group = SceneHub.SceneGroupName(msg.Data.SceneId);
+			var group = SceneHub.GroupFor(msg.Data);
 			try
 			{
 				await hub.Clients.Group(group).SendAsync(SceneHub.ReceiveSceneMessageMethod, msg.Data, ct);

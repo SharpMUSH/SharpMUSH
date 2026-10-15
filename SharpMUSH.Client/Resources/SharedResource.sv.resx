@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Visa fler</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tidslinje</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Inte daterad</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Visa alla</value>
   </data>
@@ -6152,5 +6158,19 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>En bild med innehållsvarning hålls utanför bildbiblioteket. Ta bort varningen för att dela den.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Aviseringar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Få aviseringar på den här telefonen eller datorn när portalen är stängd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Bara du ser detta.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Meddelanden till dig</value>
   </data>
 </root>

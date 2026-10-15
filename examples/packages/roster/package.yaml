@@ -1,6 +1,6 @@
 format: 1.2
 package: roster
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -249,7 +249,7 @@ objects:
       # @trigger/inline/nobreak/args Roster/INC`API`ASSIGN=character,<name or objid>,to,<character or account>,actor,<objid>[,reason,<text>]
       INC`API`ASSIGN:
         value: |-
-          @include {{roster}}/INC`API`START; @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)={think setq(roster_error,name(%q<roster_char>) is not on the roster.)}; @assert not(strlen(account(%q<roster_char>)))={think setq(roster_error,name(%q<roster_char>) is already held by account [account(%q<roster_char>,name)]. Return it to the roster first.)}; @assert strlen(setr(roster_to,u({{roster}}/FUN`ACCOUNT`NAMED,%<to>)))={think setq(roster_error,'%<to>' is not a character on an account%, or an account's name.)}; @include {{roster}}/INC`API`LIMIT; @force/inline me=@account/link %q<roster_to>=%q<roster_char>; @assert strlen(setr(roster_account,account(%q<roster_char>)))={think setq(roster_error,There is no account called '%q<roster_to>'.)}; @include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,%<reason>; @if words(setr(roster_told,u({{roster}}/FUN`ACCOUNT`CONNECTED,%q<roster_char>)))={@pemit/list %q<roster_told>=notice(ROSTER,name(%q<roster_char>) is yours now. Play it from your account: play [name(%q<roster_char>)])}
+          @include {{roster}}/INC`API`START; @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)={think setq(roster_error,name(%q<roster_char>) is not on the roster.)}; @assert not(strlen(account(%q<roster_char>)))={think setq(roster_error,name(%q<roster_char>) is already held by account [account(%q<roster_char>,name)]. Return it to the roster first.)}; @assert strlen(setr(roster_to,u({{roster}}/FUN`ACCOUNT`NAMED,%<to>)))={think setq(roster_error,'%<to>' is not a character on an account%, or an account's name.)}; @include {{roster}}/INC`API`LIMIT; think setq(roster_key,u({{roster}}/FUN`KEY,%q<roster_char>)); &ENTRY`%q<roster_key>`STATE {{store}}=assigning; @force/inline me=@account/link %q<roster_to>=%q<roster_char>; @assert strlen(setr(roster_account,account(%q<roster_char>)))={think setq(roster_error,There is no account called '%q<roster_to>'.); &ENTRY`%q<roster_key>`STATE {{store}}=available}; @include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,%<reason>; @if words(setr(roster_told,u({{roster}}/FUN`ACCOUNT`CONNECTED,%q<roster_char>)))={@pemit/list %q<roster_told>=notice(ROSTER,name(%q<roster_char>) is yours now. Play it from your account: play [name(%q<roster_char>)])}
         flags: [cmdsyntax]
       # Stops an assign that would give account %q<roster_to> more roster characters than DATA`MAX`PER`ACCOUNT.
       INC`API`LIMIT:
@@ -306,7 +306,7 @@ objects:
       # assigned when not given) and runs the ON`ASSIGN steps.
       INC`STATE`HELD:
         value: |-
-          think setq(roster_key,u({{roster}}/FUN`KEY,%<character>)); &ENTRY`%q<roster_key>`STATE {{store}}=held; &ENTRY`%q<roster_key>`HOLDER {{store}}=%<account>; &ENTRY`%q<roster_key>`ACCOUNTNAME {{store}}=account(%<character>,name); &ENTRY`%q<roster_key>`SINCE {{store}}=secs(); @include/args {{roster}}/INC`HISTORY`ADD=character,%<character>,event,firstof(%<event>,assigned),actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,firstof(%<step>,ASSIGN),character,%<character>,actor,%<actor>,reason,%<reason>
+          think setq(roster_key,u({{roster}}/FUN`KEY,%<character>)); &ENTRY`%q<roster_key>`HOLDER {{store}}=%<account>; &ENTRY`%q<roster_key>`STATE {{store}}=held; &ENTRY`%q<roster_key>`ACCOUNTNAME {{store}}=account(%<character>,name); &ENTRY`%q<roster_key>`SINCE {{store}}=secs(); @include/args {{roster}}/INC`HISTORY`ADD=character,%<character>,event,firstof(%<event>,assigned),actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,firstof(%<step>,ASSIGN),character,%<character>,actor,%<actor>,reason,%<reason>
         flags: [cmdsyntax]
       # %<character> has left account %<account> (%<accountname>): available again, its password changed so
       # nobody logs in to it by name, its connections dropped, the history line added (%<event>) and the
@@ -335,7 +335,7 @@ objects:
       # claim or @account. One the roster made itself is already recorded, and changes nothing.
       EVENT`LINK:
         value: |-
-          @assert u({{roster}}/FUN`ENTRY`HAS,%<objid>); @break strmatch(u({{roster}}/FUN`ENTRY`GET,%<objid>,HOLDER),%<account>); @include/args {{roster}}/INC`STATE`HELD=character,%<objid>,account,%<account>,reason,Linked outside the roster.,event,linked
+          @assert u({{roster}}/FUN`ENTRY`HAS,%<objid>); @break strmatch(u({{roster}}/FUN`ENTRY`GET,%<objid>,STATE),assigning); @break strmatch(u({{roster}}/FUN`ENTRY`GET,%<objid>,HOLDER),%<account>); @include/args {{roster}}/INC`STATE`HELD=character,%<objid>,account,%<account>,reason,Linked outside the roster.,event,linked
         flags: [cmdsyntax]
       EVENT`UNLINK:
         value: |-

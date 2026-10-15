@@ -102,7 +102,7 @@ line no verb matches answers with the switch's usage line instead of `Huh?`.
 | `+scene/title [<id>=]<text>` · `/pitch [<id>=]<text>` | rename it · set the scene blurb (the focused scene, or the one named) |
 | `+scene/public [<id>]` · `/private [<id>]` | visibility |
 | `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` · `/ooc` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it, and the room sees it framed as a captured pose |
-| `+scene/recall [<n>]` · `/recall <id>=[<n>]` · `/log [<id>]` | print the last `<n>` poses, each under a rule naming its poser and id, and `<OOC>` before an out-of-character line; bare, ``DATA`RECALL_ROUNDS`` rounds of the cast (2 × its size). Named, any scene you can read; `/log` the whole of it |
+| `+scene/recall [<n>]` · `/recall <id>=[<n>]` · `/log [<id>]` | print the last `<n>` poses, each under a rule naming its poser and id, and `<OOC>` before an out-of-character line; bare, ``DATA`CONFIG`RECALL-ROUNDS`` rounds (`+config scene/recall-rounds`) of the cast (2 × its size). Named, any scene you can read; `/log` the whole of it |
 | `+scene/edit <id>=<before>^^^<after>` · `/rewrite <id>=<text>` | fix a typo in your pose · replace its text |
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |

@@ -75,6 +75,13 @@ public static class PortalPermission
 	public const string FeedAdmin = "feed.admin";
 
 	/// <summary>
+	/// Sends push notifications to players' devices with <c>@push</c> (<c>help @push</c>). Meant for the object of
+	/// a package that decides what notifies, such as the bundled <c>notifications</c> package. The <c>wizard</c>
+	/// role allows it.
+	/// </summary>
+	public const string NotifyPush = "notify.push";
+
+	/// <summary>
 	/// Calls side-effect functions (pemit(), set(), create() and the like) when the <c>sidefx_flag</c>
 	/// option asks for the SIDEFX flag, as RhostMUSH does. The <c>wizard</c> role allows it.
 	/// </summary>
@@ -153,6 +160,7 @@ public static class PortalPermission
 		new(GameRoyalty, "EnumPermGameRoyalty", GroupGame, "EnumPermGameRoyaltyDesc"),
 		new(ChatAdmin, "EnumPermChatAdmin", GroupGame, "EnumPermChatAdminDesc"),
 		new(FeedAdmin, "EnumPermFeedAdmin", GroupGame, "EnumPermFeedAdminDesc"),
+		new(NotifyPush, "EnumPermNotifyPush", GroupGame, "EnumPermNotifyPushDesc"),
 		new(SideFx, "EnumPermSideFx", GroupGame, "EnumPermSideFxDesc"),
 		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),

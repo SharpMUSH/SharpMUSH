@@ -4207,6 +4207,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Afficher plus</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Chronologie</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Non daté</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Tout voir</value>
   </data>
@@ -5446,5 +5452,19 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Une image avec un avertissement de contenu reste hors de la bibliothèque d'images. Retirez l'avertissement pour la partager.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notifications</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Recevoir des notifications sur ce téléphone ou cet ordinateur quand le portail est fermé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Vous seul voyez ceci.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Avis pour vous</value>
   </data>
 </root>

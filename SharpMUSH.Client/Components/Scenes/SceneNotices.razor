@@ -1,0 +1,65 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject ISceneHubControl SceneHub
+@implements IDisposable
+
+@* Notices the scene hub sent to this reader alone (@scene/notice), such as scene-safety's anonymous pause
+   signal to a scene's owner. The hub delivers them only to that member's connections; each stays until
+   dismissed, newest last. *@
+@if (_notices.Count > 0)
+{
+    <section class="scene-notices" role="alert" aria-label="@Loc["RolSceneNotices"]">
+        @foreach (var notice in _notices)
+        {
+            <div class="scene-notice" @key="notice">
+                <span class="scene-notice-text">@notice.Content</span>
+                <span class="scene-notice-only">@Loc["RolSceneNoticeOnlyYou"]</span>
+                <MudIconButton Class="scene-notice-dismiss" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               aria-label="@Loc["Dismiss"]" OnClick="() => Dismiss(notice)" />
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string SceneId { get; set; }
+
+    /// <summary>The character reading. Switching character keeps the page mounted, and one character's
+    /// notices are not the next one's.</summary>
+    [Parameter] public string? ViewerName { get; set; }
+
+    private readonly List<SceneEventMessage> _notices = [];
+
+    private string? _shownScene;
+
+    private string? _shownViewer;
+
+    protected override void OnInitialized() => SceneHub.OnSceneEventReceived += OnSceneEvent;
+
+    // The page is reused when the route moves to another scene or the reader switches character: the
+    // notices shown so far go with it.
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_shownScene, SceneId, StringComparison.Ordinal)
+            && string.Equals(_shownViewer, ViewerName, StringComparison.Ordinal)) return;
+        _shownScene = SceneId;
+        _shownViewer = ViewerName;
+        _notices.Clear();
+    }
+
+    private void OnSceneEvent(SceneEventMessage msg)
+    {
+        if (msg.EventType != "notice") return;
+        _ = InvokeAsync(() =>
+        {
+            if (!string.Equals(msg.SceneId, SceneId, StringComparison.Ordinal)) return;
+            _notices.Add(msg);
+            StateHasChanged();
+        });
+    }
+
+    private void Dismiss(SceneEventMessage notice) => _notices.Remove(notice);
+
+    public void Dispose() => SceneHub.OnSceneEventReceived -= OnSceneEvent;
+}

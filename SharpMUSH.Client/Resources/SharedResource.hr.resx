@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Prikaži više</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Vremenska crta</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Bez datuma</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Prikaži sve</value>
   </data>
@@ -6152,5 +6158,19 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Slika s upozorenjem o sadržaju ostaje izvan knjižnice slika. Uklonite upozorenje da biste je podijelili.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Obavijesti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primajte obavijesti na ovom telefonu ili računalu kada je portal zatvoren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Samo vi ovo vidite.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Obavijesti za vas</value>
   </data>
 </root>

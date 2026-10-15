@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Arată mai multe</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Cronologie</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Fără dată</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Vezi tot</value>
   </data>
@@ -6152,5 +6158,19 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>O imagine cu avertisment de conținut rămâne în afara bibliotecii de imagini. Scoate avertismentul ca s-o partajezi.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primește notificări pe acest telefon sau computer când portalul este închis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Doar tu vezi asta.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notificări pentru tine</value>
   </data>
 </root>
