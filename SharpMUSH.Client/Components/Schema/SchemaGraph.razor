@@ -1,0 +1,140 @@
+@using System.Globalization
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Applications
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A schema graph element: nodes and the edges between them, drawn as rings around the focus node. Each node
+   links through the element's link template; each edge carries its label at the middle and, when directed, an
+   arrow at the node it points to. A screen reader gets the edges as a list rather than the picture. *@
+
+@if (_drawing.Edges.Count == 0)
+{
+    @if (!string.IsNullOrWhiteSpace(Element.Empty))
+    {
+        <div class="schema-empty">@Element.Empty</div>
+    }
+}
+else
+{
+    <figure class="schema-graph">
+        <svg viewBox="@Num(_drawing.Left) @Num(_drawing.Top) @Num(_drawing.Width) @Num(_drawing.Height)" class="schema-graph-svg" aria-hidden="true" focusable="false">
+            <defs>
+                @foreach (var (key, token) in Markers())
+                {
+                    <marker id="@MarkerId(key)" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M0,0 L10,5 L0,10 z" style="@ToneStyle(token, "fill")" class="schema-graph-arrow" />
+                    </marker>
+                }
+                <clipPath id="@ClipId" clipPathUnits="objectBoundingBox">
+                    <circle cx="0.5" cy="0.5" r="0.5" />
+                </clipPath>
+            </defs>
+            @foreach (var edge in _drawing.Edges)
+            {
+                <line class="schema-graph-edge" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
+                      style="@ToneStyle(edge.ToneToken, "stroke")"
+                      marker-end="@(edge.Edge.Directed ? $"url(#{MarkerId(edge.ToneToken ?? string.Empty)})" : null)" />
+            }
+            <g class="schema-graph-edge-labels">
+                @foreach (var edge in _drawing.Edges.Where(e => !string.IsNullOrEmpty(e.Edge.Label)))
+                {
+                    @EdgeLabel(edge)
+                }
+            </g>
+            @foreach (var node in _drawing.Nodes)
+            {
+                var r = SchemaGraphLayout.NodeRadius;
+                <g class="@(node.Ring == 0 ? "schema-graph-node schema-graph-node--focus" : "schema-graph-node")">
+                    <circle cx="@Num(node.X)" cy="@Num(node.Y)" r="@Num(r)" class="schema-graph-disc" />
+                    @if (ImageUrlPolicy.IsRenderable(node.Node.Image))
+                    {
+                        <image href="@ApiUrl.Resolve(node.Node.Image!)" x="@Num(node.X - r)" y="@Num(node.Y - r)" width="@Num(2 * r)" height="@Num(2 * r)"
+                               clip-path="url(#@ClipId)" preserveAspectRatio="xMidYMid slice" />
+                    }
+                    else
+                    {
+                        @NodeInitial(node)
+                    }
+                    <text class="@NameClass(node)" x="@Num(node.X)" y="@Num(NameY(node))">@node.Node.Label</text>
+                </g>
+            }
+        </svg>
+        @* The names are the links, over the drawing, so they take focus and read in order. *@
+        <div class="schema-graph-links">
+            @foreach (var node in _drawing.Nodes)
+            {
+                var href = Element.Link is null ? null : SchemaRendering.FillLink(Element.Link, node.Node.Source);
+                var style = $"left: {Percent(node.X - _drawing.Left, _drawing.Width)}%; top: {Percent(node.Y - _drawing.Top, _drawing.Height)}%; width: {Percent(2 * SchemaGraphLayout.NodeRadius, _drawing.Width)}%;";
+                @if (href is not null)
+                {
+                    <a class="schema-graph-hit" href="@href" style="@style" aria-label="@node.Node.Label"></a>
+                }
+            }
+        </div>
+        <figcaption class="visually-hidden">
+            @(Element.Label ?? Loc["WidGraph"].Value)
+            <ul>
+                @foreach (var edge in _drawing.Edges)
+                {
+                    <li>@Loc["WidGraphEdge", edge.From.Node.Label, edge.To.Node.Label, edge.Edge.Label]</li>
+                }
+            </ul>
+        </figcaption>
+    </figure>
+}
+
+@code {
+    [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
+
+    /// <summary>The graph's value: <c>{ nodes, edges }</c> from the element's <c>src_field</c>.</summary>
+    [Parameter] public JsonElement? Value { get; set; }
+
+    private SchemaGraphLayout.Drawing _drawing = new(0, [], []);
+
+    // SVG <text> written straight inside a Razor code block reads as Razor's own <text> tag, so these are drawn
+    // from fragments whose first element is a group.
+    private RenderFragment EdgeLabel(SchemaGraphLayout.PlacedEdge edge) => __builder =>
+    {
+        <g><text class="schema-graph-edge-label" x="@Num(edge.MidX)" y="@Num(edge.MidY)" style="@ToneStyle(edge.ToneToken, "fill")">@edge.Edge.Label</text></g>
+    };
+
+    private RenderFragment NodeInitial(SchemaGraphLayout.PlacedNode node) => __builder =>
+    {
+        <g><text class="schema-graph-initial" x="@Num(node.X)" y="@Num(node.Y)">@Initial(node.Node.Label)</text></g>
+    };
+
+    // Ids in the page are shared by every graph on it, so each drawing names its own.
+    private readonly string _id = Guid.NewGuid().ToString("N")[..8];
+
+    private string ClipId => $"schema-graph-{_id}-clip";
+
+    protected override void OnParametersSet()
+    {
+        var (nodes, edges) = SchemaGraphLayout.Read(Value);
+        _drawing = SchemaGraphLayout.Place(nodes, edges);
+    }
+
+    // One arrowhead per tone the directed edges use, keyed by token ("" for the theme's own colour).
+    private IEnumerable<(string Key, string? Token)> Markers()
+        => _drawing.Edges.Where(e => e.Edge.Directed).Select(e => e.ToneToken).Distinct().Select(t => (t ?? string.Empty, t));
+
+    private string MarkerId(string token) => $"schema-graph-{_id}-arrow{token.Replace("-", string.Empty)}";
+
+    private static string? ToneStyle(string? token, string property) => token is null ? null : $"{property}: var({token});";
+
+    // A name sits on the far side of its node from the centre, clear of the lines that run inward to it: below a
+    // node in the lower half (and the focus), above one in the upper half.
+    private bool NameAbove(SchemaGraphLayout.PlacedNode node) => node.Ring > 0 && node.Y < _drawing.Centre - 1;
+
+    private double NameY(SchemaGraphLayout.PlacedNode node)
+        => NameAbove(node) ? node.Y - SchemaGraphLayout.NodeRadius - 8 : node.Y + SchemaGraphLayout.NodeRadius + 8;
+
+    private string NameClass(SchemaGraphLayout.PlacedNode node)
+        => NameAbove(node) ? "schema-graph-name schema-graph-name--above" : "schema-graph-name";
+
+    private static string Initial(string label) => label.Length == 0 ? "?" : char.ToUpperInvariant(label[0]).ToString();
+
+    private static string Percent(double at, double of) => Num(of <= 0 ? 50 : at / of * 100);
+
+    private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

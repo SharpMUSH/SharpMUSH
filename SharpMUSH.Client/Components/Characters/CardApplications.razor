@@ -1,0 +1,40 @@
+@using SharpMUSH.Library.Models.Portal.Applications
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Client.Services
+@inject ApplicationCatalog Catalog
+
+@* The widget applications registered for the name card (scope "card"), each about the character named, for
+   the viewer's role and permissions. A package adds a line to every name card by registering one. *@
+@foreach (var app in _apps)
+{
+    <div class="card-app">
+        <CascadingValue Value="@_context">
+            <SchemaWidget WidgetName="@app.Slug" Application="app" QuietWhenEmpty="true" />
+        </CascadingValue>
+    </div>
+}
+
+@code {
+    /// <summary>The character the card is about.</summary>
+    [Parameter, EditorRequired] public string CharacterName { get; set; } = string.Empty;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<PortalApplication> _apps = [];
+    private ProfilePageContext _context = new(string.Empty, false);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(_context.CharacterName, CharacterName, StringComparison.Ordinal))
+        {
+            _context = new ProfilePageContext(CharacterName, false);
+        }
+
+        await Catalog.Loaded;
+        var user = AuthState is null ? null : (await AuthState).User;
+        _apps = Catalog.ForScope(LayoutScopes.Card)
+            .Where(a => a.KindEnum == ApplicationKind.Widget && a.Admits(user))
+            .ToList();
+    }
+}
