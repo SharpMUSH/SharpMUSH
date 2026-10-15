@@ -808,6 +808,8 @@ public class SceneVerbSurfaceIntegrationTests
 
 		var card = string.Join("\n", await RunAs(ownerHandle, $"+scene {sceneId}"));
 		await Assert.That(card).Contains("Jan 05 08:00PM (America/New_York)");
+		await Assert.That(card.Split("(America/New_York)").Length).IsEqualTo(2)
+			.Because("the zone is named once, after the scheduled time");
 		await Assert.That(string.Join("\n", await RunAs(otherHandle, $"+scene {sceneId}"))).Contains("(game time)");
 		await Assert.That(string.Join("\n", await RunAs(oddHandle, $"+scene {sceneId}"))).Contains("(game time)");
 
@@ -819,6 +821,13 @@ public class SceneVerbSurfaceIntegrationTests
 		await Assert.That(await Eval($"scene({sceneId},scheduledfor)")).IsEqualTo("4087065600000")
 			.Because("in July New York keeps summer time, four hours behind UTC");
 		await RunAs(ownerHandle, $"+scene/cancel {sceneId}");
+
+		await RunAs(ownerHandle, $"+scene/create Unscheduled {Tag}");
+		var unscheduled = await Eval($"scenefocus({Num(owner)})");
+		var created = string.Join("\n", await RunAs(ownerHandle, $"+scene {unscheduled}"))
+			.Split('\n').First(line => line.Contains("Created"));
+		await Assert.That(created).Contains("(America/New_York)")
+			.Because("with nothing scheduled, the creation time names the zone");
 	}
 
 	/// <summary>

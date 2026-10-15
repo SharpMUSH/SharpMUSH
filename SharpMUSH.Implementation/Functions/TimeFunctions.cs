@@ -966,9 +966,12 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(
 			TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
 
-		string InZone(DateTime wallClock, TimeZoneInfo inZone) =>
-			TimePrecisions.Format(new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
-				precision);
+		// A wall-clock time the zone skips when summer time starts names no instant.
+		CallState InZone(DateTime wallClock, TimeZoneInfo inZone) =>
+			inZone.IsInvalidTime(wallClock)
+				? ErrorMessages.Returns.InvalidTime
+				: TimePrecisions.Format(new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
+					precision);
 	}
 
 	[SharpFunction(Name = "CONVUTCSECS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
