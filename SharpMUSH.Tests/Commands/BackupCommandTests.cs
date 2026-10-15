@@ -29,7 +29,7 @@ public class BackupCommandTests : ServerTestBase
 	/// would have passed the test. That branch makes no copy either, so nothing downstream of the
 	/// lock can stand in for the lock.
 	/// </remarks>
-	[Test]
+	[Test, NotInParallel(nameof(BackupCommandTests))]
 	public async Task AMortalCannotRunIt()
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -74,9 +74,10 @@ public class BackupCommandTests : ServerTestBase
 
 	/// <summary>
 	/// <c>@dump</c> is a backup with PennMUSH's dump events around it, and <c>@dbck</c> reads the newest copy
-	/// through and raises <c>DB`DBCK</c>. Both are heard on the event handler as God, who ran them.
+	/// through and raises <c>DB`DBCK</c>. Both are heard on the event handler as God, who ran them. It runs apart
+	/// from <see cref="AMortalCannotRunIt"/>, which counts the copies on disk.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel(nameof(BackupCommandTests))]
 	public async Task DumpRaisesDumpCompleteAndDbckRaisesDbDbck()
 	{
 		if (!BackupService.IsSupported)
