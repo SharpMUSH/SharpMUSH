@@ -120,6 +120,16 @@ public class GameFeatureServiceTests
 		await Assert.That(scene.Available).IsFalse();
 	}
 
+	/// <summary>The wizard groups packages by the category their manifests give.</summary>
+	[Test]
+	public async Task EachPackage_CarriesItsManifestsCategory()
+	{
+		var packages = await new Game().Features().PackagesAsync();
+
+		await Assert.That(packages.Single(p => p.Id == "jobs").Category).IsEqualTo("Staff");
+		await Assert.That(packages.Single(p => p.Id == "jobs-app").Category).IsEqualTo("Staff");
+	}
+
 	/// <summary>
 	/// Every bundled package that calls the Scene plugin names it in <c>plugins:</c>, so without the plugin none of
 	/// them is offered, and the packages that do not need it still are.
@@ -129,11 +139,12 @@ public class GameFeatureServiceTests
 	{
 		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
 
-		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app"])
+		// The Discord plugin is not loaded here either; the discord packages are someone else's test.
+		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)).Select(p => p.Id))
+			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here", "relationships-scene"])
 			.Because("highlights-app calls no plugin itself, but the package it shows does");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes"]);
 	}
 
 	/// <summary>
@@ -259,7 +270,7 @@ public class GameFeatureServiceTests
 	{
 		var game = new Game("scene");
 
-		var result = await game.Features().ApplyPackagesAsync(["chargen"], CancellationToken.None);
+		var result = await game.Features().ApplyPackagesAsync(["no-such-package"], CancellationToken.None);
 
 		await Assert.That(result is Error<string>).IsTrue();
 		await Assert.That(game.Calls).IsEmpty();

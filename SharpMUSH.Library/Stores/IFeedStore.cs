@@ -101,6 +101,9 @@ public interface IFeedStore
 	ValueTask<int> PurgeFeedAsync(string kind, string key, DateTimeOffset? before,
 		CancellationToken cancellationToken = default);
 
+	/// <summary>Drops one line from its feed's recall. False when there is no line <paramref name="id"/>.</summary>
+	ValueTask<bool> DeleteFeedMessageAsync(long id, CancellationToken cancellationToken = default);
+
 	/// <summary>The taps on <paramref name="kind"/> (or on <c>*</c>), or every tap when null.</summary>
 	ValueTask<IReadOnlyList<SharpFeedTap>> GetFeedTapsAsync(string? kind, CancellationToken cancellationToken = default);
 

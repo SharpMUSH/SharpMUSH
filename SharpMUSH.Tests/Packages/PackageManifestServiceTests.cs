@@ -91,11 +91,29 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task NewerFormatMinor_Warns_NewerMajor_Rejects()
 	{
-		var minor = _service.ParseManifest(MinimalManifest("format: 1.8")).Expect<ParsedPackageManifest>();
+		var minor = _service.ParseManifest(MinimalManifest("format: 1.99")).Expect<ParsedPackageManifest>();
 		await Assert.That(minor.Warnings.Any(w => w.Path == "format")).IsTrue();
 
 		var major = _service.ParseManifest(MinimalManifest("format: 2")).Expect<PackageManifestFailure>();
 		await Assert.That(major.Errors.Any(e => e.Path == "format")).IsTrue();
+	}
+
+	[Test]
+	public async Task Category_IsReadFromFormat110_AndIgnoredBelowIt()
+	{
+		var parsed = _service.ParseManifest(MinimalManifest("format: \"1.10\"\ncategory: \"  Staff   tools \""))
+			.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Format).IsEqualTo(new PackageFormatVersion(1, 10));
+		await Assert.That(parsed.Manifest.Category).IsEqualTo("Staff tools");
+		await Assert.That(parsed.Warnings.Any(w => w.Path is "category" or "format")).IsFalse();
+
+		var older = _service.ParseManifest(MinimalManifest("format: 1.9\ncategory: Staff")).Expect<ParsedPackageManifest>();
+		await Assert.That(older.Manifest.Category).IsNull();
+		await Assert.That(older.Warnings.Any(w => w.Path == "category")).IsTrue();
+
+		var tooLong = _service.ParseManifest(MinimalManifest($"format: \"1.10\"\ncategory: {new string('x', 41)}"))
+			.Expect<PackageManifestFailure>();
+		await Assert.That(tooLong.Errors.Any(e => e.Path == "category")).IsTrue();
 	}
 
 	[Test]

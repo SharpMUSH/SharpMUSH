@@ -1,10 +1,11 @@
-format: 1
+format: "1.10"
 package: softcode-editor
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "@editor — an @input-driven line editor for function and command softcode."
 license: MIT
 keywords: [editor, softcode, input]
+category: Essentials
 requires_server: ">=0.1"
 
 # Active editors call these attributes by name. Finish them before upgrading,

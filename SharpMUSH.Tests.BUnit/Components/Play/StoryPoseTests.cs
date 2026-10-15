@@ -53,6 +53,17 @@ public class StoryPoseTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheNameCard_IsTheAuthors_AndAPersonaOpensNone()
+	{
+		var own = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()));
+		var persona = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(showAs: "Mysterious Stranger")));
+
+		await Assert.That(own.FindComponent<SharpMUSH.Client.Components.Characters.NameCard>().Instance.CharacterName).IsEqualTo("Tomas Reyes");
+		await Assert.That(persona.Find(".story-name").TextContent).IsEqualTo("Mysterious Stranger");
+		await Assert.That(persona.FindComponent<SharpMUSH.Client.Components.Characters.NameCard>().Instance.CharacterName).IsEqualTo(string.Empty);
+	}
+
+	[Test]
 	public async Task WithoutAPicture_ThePortraitIsInitials_OnTheNamesTint()
 	{
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.ImageUrl, "javascript:alert(1)"));

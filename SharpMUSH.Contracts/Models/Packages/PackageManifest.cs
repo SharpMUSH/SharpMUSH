@@ -36,6 +36,10 @@ namespace SharpMUSH.Library.Models.Packages;
 /// The plugins the package's code calls into (<c>plugins:</c>, format 1.7), by plugin id, or null for none. The package
 /// installs only while each of them runs, and turning one off uninstalls it.
 /// </param>
+/// <param name="Category">
+/// The group the package is listed under where packages are offered together, such as <c>Staff</c> (<c>category:</c>,
+/// format 1.10), or null for none.
+/// </param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -61,7 +65,8 @@ public sealed record PackageManifest(
 	IReadOnlyList<PackageWikiPageSpec>? Wiki = null,
 	PackageVersion? VerifiedServer = null,
 	PackageVersionCeiling? MaximumServer = null,
-	IReadOnlyList<string>? Plugins = null)
+	IReadOnlyList<string>? Plugins = null,
+	string? Category = null)
 {
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
@@ -178,7 +183,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 7);
+	public static PackageFormatVersion Supported { get; } = new(1, 10);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

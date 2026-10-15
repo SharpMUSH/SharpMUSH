@@ -1,11 +1,12 @@
-format: 1.7
+format: "1.10"
 package: scene
-version: 1.11.0
+version: 1.11.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [scene, rp, logging, capture, hooks]
+category: Scenes
 requires_server: ">=0.1"
 
 # +scene, the capture hooks and every scene*() call run on the Scene plugin. Without it running the

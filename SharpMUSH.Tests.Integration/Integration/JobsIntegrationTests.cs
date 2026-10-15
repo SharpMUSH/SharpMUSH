@@ -707,6 +707,34 @@ public class JobsIntegrationTests
 		}
 	}
 
+	[Test]
+	public async Task ListsReadTheIndexesAndOnlyJobsInTheStore()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsIdxP");
+			var requests = await Bucket("Requests");
+			await As(player, "+request Room=A room, please.");
+			await Assert.That(await God($"think [words(indexed(JOB`BUCKET,=,objid({requests})))]")).IsEqualTo("1")
+				.Because("installing the package indexes JOB`BUCKET");
+
+			var forged = await God("think [create(JobsForged)]");
+			var bucketId = await God($"think [objid({requests})]");
+			await God($"&JOB`STATE {forged}=new");
+			await God($"&JOB`BUCKET {forged}={bucketId}");
+			await God($"&JOB`NUM {forged}=99");
+			await Assert.That(await God($"think [words(indexed(JOB`BUCKET,=,objid({requests})))]")).IsEqualTo("2");
+			await Assert.That(await God("think [jobs(Requests)]")).IsEqualTo("1")
+				.Because("a thing outside the store is not a job, whatever it holds");
+			await God($"@destroy/override {forged}");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	private async Task<string> Bucket(string name) =>
 		await God($"think [first(iter(lsearch(all,type,thing),if(cand(strmatch(name(%i0),{name}),hasattr(%i0,SLUG),not(hasflag(%i0,GOING))),%i0)))]");
 

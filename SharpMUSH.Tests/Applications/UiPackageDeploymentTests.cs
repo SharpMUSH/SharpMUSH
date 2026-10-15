@@ -80,6 +80,19 @@ public class UiPackageDeploymentTests
 			var definition = await store.GetAsync("builder-graph");
 			await Assert.That(definition).IsNotNull();
 			await Assert.That(definition!.ValidateConfig(1, System.Text.Json.JsonSerializer.SerializeToElement(new { title = "East", rooms = new[] { 10, 20 } }))).IsNull();
+			await Assert.That(definition.ValidateConfig(1, System.Text.Json.JsonSerializer.SerializeToElement(new
+			{
+				title = "East",
+				rooms = new[] { 10, 20 },
+				coordinates = new[] { "MAP`X", "MAP`Y", "MAP`Z" },
+				warnings = new[] { "room-desc", "exit-oneway" }
+			}))).IsNull();
+			await Assert.That(definition.ValidateConfig(1, System.Text.Json.JsonSerializer.SerializeToElement(new
+			{
+				title = "East",
+				rooms = new[] { 10 },
+				coordinates = new[] { "X", "Y" }
+			}))).IsNotNull();
 		}
 		finally { PluginPackageFixture.Delete(directories); }
 	}

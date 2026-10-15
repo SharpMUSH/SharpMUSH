@@ -112,7 +112,8 @@ public record UpdatePlayerPreferencesMessage(
 	bool AnsiEnabled,
 	bool ColorEnabled,
 	bool Xterm256Enabled,
-	bool TruecolorEnabled = false
+	bool TruecolorEnabled = false,
+	bool ShowSeparators = false
 ) : IHandleMessage;
 
 /// <summary>
