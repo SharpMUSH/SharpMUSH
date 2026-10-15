@@ -307,12 +307,12 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
 | [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      |
 | [R()]              | [RAND()]           | [RESTRICTEDEXPR()] | [ROLL()]           |
-| [S()]              | [SCAN()]           | [SET()]            | [SETQ()]           |
-| [SETQM()]          | [SETR()]           | [SETRM()]          | [SLEV()]           |
-| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
-| [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        | [TEL()]            |
-| [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         |
-| [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
+| [ROLLINFO()]       | [S()]              | [SCAN()]           | [SET()]            |
+| [SETQ()]           | [SETQM()]          | [SETR()]           | [SETRM()]          |
+| [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          |
+| [STEXT()]          | [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        |
+| [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       |
+| [UNSETQ()]         | [UPTIME()]         | [VALID()]          | [WIPE()]           |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
