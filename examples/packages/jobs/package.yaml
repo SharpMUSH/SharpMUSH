@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.7.1
+version: 1.8.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -8,9 +8,15 @@ homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [jobs, requests, tickets, staff, anomaly]
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics;
+# plus-help carries the +help topics; plus-config the +config settings;
 # http-handler owns the GET/POST verb routers the portal routes hang off.
 depends:
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
   - package: plus-help
     version: ">=1.0"
     source:
@@ -150,9 +156,34 @@ objects:
       # Seconds between the checks for overdue jobs and for closed jobs past their bucket's keep.
       DATA`TICK: |-
         300
+      # Settings a game changes with +config, in its layout: the value, then what +config needs to explain
+      # and check it. Read with get({{jobs}}/DATA`CONFIG`<NAME>).
+      DATA`CONFIG:
+        value: |-
+          How the job queue measures its buckets.
+        flags: [no_command]
+      DATA`CONFIG`WAIT-SAMPLE: |-
+        25
+      DATA`CONFIG`WAIT-SAMPLE`DESCRIPTION: |-
+        How many of a bucket's latest jobs its usual wait is measured over.
+      DATA`CONFIG`WAIT-SAMPLE`TYPE: |-
+        integer
+      DATA`CONFIG`WAIT-SAMPLE`DEFAULT: |-
+        25
+      DATA`CONFIG`WAIT-SAMPLE`MIN: |-
+        3
+      DATA`CONFIG`WAIT-SAMPLE`MAX: |-
+        200
+      # The first reply a new job gets from its bucket (ACKNOWLEDGE): what each shipped bucket and each
+      # +bucket/create bucket starts with. Each bucket keeps its own, so emptying one sends none.
+      DATA`ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
+      # The closing message of a job approved as it is filed, in a bucket that approves at once.
+      DATA`AUDIT`TEXT: |-
+        Approved at once. Staff look over approvals like this one afterwards, and may undo it.
       # The bucket hooks, each an ON`<name> attribute on every bucket.
       DATA`HOOKS: |-
-        FILE REPLY CLAIM TURN APPROVE DENY COMPLETE CANCEL REOPEN TRANSFER DUE PRIORITY OVERDUE DELETE
+        FILE REPLY CLAIM TURN APPROVE DENY COMPLETE CANCEL REOPEN TRANSFER DUE PRIORITY OVERDUE DELETE CHECK REVERT
       # What +bucket/create writes on a new bucket.
       DATA`HOOKDOC`FILE: |-
         @@ {Runs after a job is filed in this bucket. %<job> (%0): job number. %<filer> (%1): objid of whoever filed it. %<title> (%2): the job's title. %<how> (%3): how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %<filer>=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
@@ -182,6 +213,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       DATA`HOOKDOC`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      DATA`HOOKDOC`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      DATA`HOOKDOC`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
       # Switch spellings from AnomalyJobs and Volund that mean a switch with another name here.
       # /add and /comment are staff-only notes, /tag watches, /revive reopens, /bucket moves, /esc sets the
       # priority. approve, deny, complete and cancel share one routine.
@@ -213,7 +248,7 @@ objects:
         view
       # What +bucket/set says about a value it refuses.
       DATA`SETTINGS: |-
-        description turnaround reopen anonymous hidden priority keep
+        description turnaround reopen anonymous hidden priority keep acknowledge audit checklist
       DATA`SETTING`DESCRIPTION: |-
         A description is up to 200 characters.
       DATA`SETTING`TURNAROUND: |-
@@ -228,6 +263,12 @@ objects:
         Priority is low, normal or high.
       DATA`SETTING`KEEP: |-
         Keep is how many days closed jobs stay, or empty to keep them forever.
+      DATA`SETTING`ACKNOWLEDGE: |-
+        Acknowledge is the first reply every new job gets, up to 500 characters. Empty sends none.
+      DATA`SETTING`AUDIT: |-
+        Audit is yes or no. With yes, a job filed here is approved at once and staff check it afterwards.
+      DATA`SETTING`CHECKLIST: |-
+        Checklist is up to 20 steps of up to 100 characters, separated by |. Start a step with scene: to ask for a scene log. Empty has none.
 
       # ---- commands -------------------------------------------------------------
       # +job, +jobs, +myjob, +myjobs, +ticket and +tickets: one command. Which word is typed changes
@@ -267,7 +308,7 @@ objects:
         [if(cand(gte(strlen(%0),3),regmatch(%0,^\[a-z\]+$)),switch(1,strmatch(softcode,%0*),softcode,strmatch(markdown,%0*),markdown,))]
       # Every switch of +job (JOB) and +bucket (BUCKET), the AnomalyJobs and Volund spellings included.
       DATA`SWITCHES`JOB: |-
-        act add addhelper all approve assign brief bucket cancel catchup claim comment complete create delete deny due edit esc format from held hold last list mail merge mine name new next note old options overdue player priority query read remhelper reopen reply revive scan search source state tag trans unclaim untag unwatch view watch who
+        act add addhelper all approve assign audit brief bucket cancel catchup check claim comment complete create delete deny due edit esc format from held hold last list mail merge mine name new next note old options overdue player priority query read remhelper reopen reply revert revive scan scene search source state status tag trans uncheck unclaim untag unwatch view watch who
       DATA`SWITCHES`BUCKET: |-
         create delete disable enable info list lock rename set
       # The switches of %1 (JOB or BUCKET) that switch %0 is a prefix of.
@@ -278,9 +319,10 @@ objects:
       FUN`SWITCH: |-
         [switch(1,not(regmatch(%0,^\[a-z\]+$)),,t(member(get({{jobs}}/DATA`SWITCHES`%1),%0)),%0,eq(words(setr(_sl,u({{jobs}}/FUN`SWITCH`LIKE,%0,%1))),1),%q<_sl>,)]
       # %0 switch (a full name), %1 argument. The INC`JOB` routine to run. No switch reads a job when given
-      # a number and lists otherwise; /all with a number reads a job with its log.
+      # a number and lists otherwise; /all with a number reads a job with its log, and /audit without one
+      # lists the approvals waiting to be checked.
       FUN`ROUTE: |-
-        [switch(1,not(strlen(%0)),if(isint(%1),view,list),cand(strmatch(%0,all),isint(%q<lhs>)),view,t(strlen(get({{jobs}}/DATA`SW`%0))),get({{jobs}}/DATA`SW`%0),%0)]
+        [switch(1,not(strlen(%0)),if(isint(%1),view,list),cand(strmatch(%0,all),isint(%q<lhs>)),view,cand(strmatch(%0,audit),not(isint(%q<lhs>))),audits,t(strlen(get({{jobs}}/DATA`SW`%0))),get({{jobs}}/DATA`SW`%0),%0)]
       # %<switch> as typed to %<command>, which has the switches of %<kind> (JOB or BUCKET) and its help
       # in topic %<topic>: the switches it could be short for, or that it is none.
       FUN`ERR`SWITCH: |-
@@ -345,6 +387,18 @@ objects:
         <player>
       DATA`USAGE`FROM: |-
         <player>
+      DATA`USAGE`STATUS: |-
+        <#>=<what the player should know>, or nothing to clear it
+      DATA`USAGE`CHECK: |-
+        <#>=<step>
+      DATA`USAGE`UNCHECK: |-
+        <#>=<step>
+      DATA`USAGE`SCENE: |-
+        <#>=<scene number>
+      DATA`USAGE`AUDIT: |-
+        <#>
+      DATA`USAGE`REVERT: |-
+        <#>[=<why>]
 
       # ---- reads ----------------------------------------------------------------
       # A person's key in attribute names: their objid with # dropped and : as _.
@@ -412,11 +466,13 @@ objects:
       # %<self> (is %<person>), for %<person> on %<job>.
       FUN`WHO: |-
         [uargs({{jobs}}/FUN`WHO`AS,person,%0,job,%1,staff,u({{jobs}}/FUN`CAN`WORK,get(%1/BUCKET),%2),self,strmatch(%0,objid(%2)))]
+      # A bucket writing (an acknowledgement, an approval at once) is named as itself.
       FUN`WHO`AS: |-
-        [switch(1,not(strlen(%<person>)),Nobody,%<self>,name(%<person>),cand(strmatch(%<person>,get(%<job>/FILED`BY)),strmatch(get(get(%<job>/BUCKET)/ANONYMOUS),filer)),Anonymous,cand(not(%<staff>),strmatch(get(get(%<job>/BUCKET)/ANONYMOUS),staff),not(strmatch(%<person>,get(%<job>/FILED`BY)))),Staff,hastype(%<person>,PLAYER),name(%<person>),Someone)]
+        [switch(1,not(strlen(%<person>)),Nobody,%<self>,name(%<person>),strmatch(objid(loc(%<person>)),{{buckets}}),name(%<person>),cand(strmatch(%<person>,get(%<job>/FILED`BY)),strmatch(get(get(%<job>/BUCKET)/ANONYMOUS),filer)),Anonymous,cand(not(%<staff>),strmatch(get(get(%<job>/BUCKET)/ANONYMOUS),staff),not(strmatch(%<person>,get(%<job>/FILED`BY)))),Staff,hastype(%<person>,PLAYER),name(%<person>),Someone)]
       # Job %0 state as the list shows it; %1 is 1 for someone who works the bucket.
+      # An approval at once that staff have not checked yet tells staff so.
       FUN`STATE`TEXT: |-
-        [switch(get(%0/STATE),new,New,staff,if(%1,Needs staff,With staff),player,if(%1,With player,Waiting on you),held,On hold,closed,capstr(get(%0/OUTCOME)),?)]
+        [switch(get(%0/STATE),new,New,staff,if(%1,Needs staff,With staff),player,if(%1,With player,Waiting on you),held,On hold,closed,[capstr(get(%0/OUTCOME))][if(cand(%1,strmatch(get(%0/AUDIT`STATE),pending)),\, to check)],?)]
       FUN`STATE`NAME: |-
         [switch(%0,new,new,staff,needs staff,player,waiting on the player,held,on hold,closed,closed,%0)]
       # Overdue only counts while it is staff's turn, so a job waiting on its player is never overdue.
@@ -460,6 +516,103 @@ objects:
       FUN`BODY: |-
         [if(strmatch(get(%0/ENTRY`%1`FORMAT),softcode),get(%0/ENTRY`%1`TEXT),rendermarkdown(u({{jobs}}/FUN`MDTEXT,get(%0/ENTRY`%1`TEXT)),%2))]
 
+      # ---- how long a bucket takes ---------------------------------------------------
+      # Measured, not set: each bucket keeps how long its latest jobs waited for staff's first answer
+      # (STATS`ANSWER) and to close (STATS`CLOSE), in seconds, DATA`CONFIG`WAIT-SAMPLE of each. A job
+      # staff filed, a /query and an approval at once are left out (STATS`SKIP on the job).
+      # List %0 with %1 added at the end, cut to the latest DATA`CONFIG`WAIT-SAMPLE.
+      FUN`STATS`ADD: |-
+        [setq(_sa,squish(%0 %1))][setq(_sn,get({{jobs}}/DATA`CONFIG`WAIT-SAMPLE))][extract(%q<_sa>,max(1,sub(words(%q<_sa>),dec(%q<_sn>))),%q<_sn>)]
+      # The median of bucket %0's STATS`%1 (ANSWER or CLOSE), in seconds, once three jobs have been measured.
+      FUN`WAIT`OF: |-
+        [if(gte(words(setr(_ws,get(%0/STATS`%1))),3),round(lmath(median,%q<_ws>),0))]
+      # %0 seconds in words: under an hour, about 5 hours, about 3 days.
+      FUN`DURATION: |-
+        [switch(1,lt(%0,3600),under an hour,lt(%0,129600),about [setr(_h,max(1,round(fdiv(%0,3600),0)))] hour[if(neq(%q<_h>,1),s)],about [setr(_d,round(fdiv(%0,86400),0))] day[if(neq(%q<_d>,1),s)])]
+      # How soon bucket %0 answers a new job: at once when it approves at once (unless %1 is 1), what it
+      # measured (about 2 days), or its turnaround (within 3 days) until it has, or nothing.
+      FUN`WAIT`SHORT: |-
+        [setq(_wa,u({{jobs}}/FUN`WAIT`OF,%0,ANSWER))][setq(_wt,firstof(get(%0/TURNAROUND),0))][switch(1,cand(get(%0/AUDIT),not(%1)),at once,isint(%q<_wa>),u({{jobs}}/FUN`DURATION,%q<_wa>),gt(%q<_wt>,0),within %q<_wt> day[if(neq(%q<_wt>,1),s)],)]
+      FUN`WAIT: |-
+        [capstr(u({{jobs}}/FUN`WAIT`SHORT,%0,1))]
+      # The same as a sentence, for the filer.
+      FUN`EXPECT: |-
+        [setq(_ew,u({{jobs}}/FUN`WAIT`SHORT,%0,1))][switch(%q<_ew>,within *,Staff aim to answer %q<_ew>.,,,Staff usually answer in %q<_ew>.)]
+      # Bucket %0's measured wait of kind %1 (ANSWER or CLOSE), with how many jobs it comes from.
+      FUN`WAIT`MEASURED: |-
+        [if(isint(setr(_wm,u({{jobs}}/FUN`WAIT`OF,%0,%1))),[capstr(u({{jobs}}/FUN`DURATION,%q<_wm>))] [chr(40)]the last [words(get(%0/STATS`%1))] jobs[chr(41)],Not measured yet)]
+
+      # ---- checklists -----------------------------------------------------------------
+      # A bucket's CHECKLIST is copied onto each job filed in it, so changing it later leaves the jobs
+      # already filed alone. Steps are separated by |; a step starting scene: asks for a scene log. On the
+      # job, CHECK`<n>`DONE (when), `BY (who) and `SCENE (the scene that ticked it) mark step <n> done.
+      # Scene logs exist only while the scene plugin runs: without it, scene steps are left out.
+      FUN`HAS`SCENES: |-
+        [t(member(functions(),SCENE))]
+      FUN`STEP`RAW: |-
+        [trim(extract(get(%0/CHECKLIST),%1,1,|))]
+      FUN`STEP`ISSCENE: |-
+        [strmatch(u({{jobs}}/FUN`STEP`RAW,%0,%1),scene:*)]
+      # Step %1 of job %0 as it reads, without its scene: mark.
+      FUN`STEP`TEXT: |-
+        [setq(_si,u({{jobs}}/FUN`STEP`RAW,%0,%1))][if(strmatch(%q<_si>,scene:*),trim(after(%q<_si>,:)),%q<_si>)]
+      # The numbers of job %0's steps that show: all of them, less the scene steps while there are no scene logs.
+      FUN`STEPS: |-
+        [if(strlen(get(%0/CHECKLIST)),squish(iter(lnum(1,words(get(%0/CHECKLIST),|)),if(cor(not(u({{jobs}}/FUN`STEP`ISSCENE,%0,%i0)),u({{jobs}}/FUN`HAS`SCENES)),%i0))))]
+      FUN`STEPS`DONE: |-
+        [squish(iter(u({{jobs}}/FUN`STEPS,%0),if(get(%0/CHECK`%i0`DONE),%i0)))]
+      # The first scene step of job %0 that is not done, or nothing.
+      FUN`STEP`SCENE`OPEN: |-
+        [first(squish(iter(u({{jobs}}/FUN`STEPS,%0),if(cand(u({{jobs}}/FUN`STEP`ISSCENE,%0,%i0),not(get(%0/CHECK`%i0`DONE))),%i0))))]
+      # Job %0's checklist for %1, a step a line: [x] done, with who did it and when, or [ ] to do.
+      FUN`CHECKLIST: |-
+        [iter(u({{jobs}}/FUN`STEPS,%0),%i0. [if(setr(_cd,get(%0/CHECK`%i0`DONE)),[chr(91)]x[chr(93)],[chr(91)]%b[chr(93)])] [u({{jobs}}/FUN`STEP`TEXT,%0,%i0)][if(%q<_cd>,%b[chr(183)] [u({{jobs}}/FUN`WHO,get(%0/CHECK`%i0`BY),%0,%1)]\, [u({{jobs}}/FUN`DATE,%q<_cd>)][if(strlen(get(%0/CHECK`%i0`SCENE)),%b[chr(183)] scene [get(%0/CHECK`%i0`SCENE)])],if(u({{jobs}}/FUN`STEP`ISSCENE,%0,%i0),%b[chr(183)] +job/scene [get(%0/NUM)]=<scene>))],%b,%r)]
+      # A bucket's checklist (%0, as stored) as one line, for +bucket.
+      FUN`CHECKLIST`LINE: |-
+        [if(strlen(%0),itemize(iter(%0,if(strmatch(trim(%i0),scene:*),[trim(after(%i0,:))] [chr(40)]a scene log[chr(41)],trim(%i0)),|,|),|),None)]
+
+      # ---- a job's fields ---------------------------------------------------------------
+      # What +job and the portal show above a job's messages: FUN`FIELD`<key> for job %0, viewer %1 (%2 1
+      # when they work the bucket), shown only when it has something to say. Staff read every key in
+      # DATA`FIELDS`STAFF, everyone else DATA`FIELDS`PLAYER.
+      DATA`FIELDS`STAFF: |-
+        BUCKET STATUS UPDATE CHECKLIST PRIORITY FILED WAIT DUE AUDIT HANDLERS WATCHERS HELPERS
+      DATA`FIELDS`PLAYER: |-
+        BUCKET STATUS UPDATE CHECKLIST PRIORITY FILED WAIT HANDLERS HELPERS
+      DATA`LABEL`WAIT: |-
+        First answer
+      FUN`LABEL: |-
+        [firstof(get({{jobs}}/DATA`LABEL`%0),capstr(lcstr(%0)))]
+      # The keys that have something to say about job %0 for viewer %1 (%2 staff).
+      FUN`FIELD`KEYS: |-
+        [squish(iter(get({{jobs}}/DATA`FIELDS`[if(%2,STAFF,PLAYER)]),if(strlen(u({{jobs}}/FUN`FIELD`%i0,%0,%1,%2)),%i0)))]
+      FUN`FIELD`BUCKET: |-
+        [name(get(%0/BUCKET))]
+      FUN`FIELD`STATUS: |-
+        [u({{jobs}}/FUN`STATE`TEXT,%0,%2)][if(cand(%2,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[tone(error,Overdue)])]
+      # The line staff set with +job/status for the player to read.
+      FUN`FIELD`UPDATE: |-
+        [if(strlen(get(%0/STATUS)),[edit(get(%0/STATUS),%r,%b)] [chr(183)] [u({{jobs}}/FUN`DATE,get(%0/STATUS`AT))])]
+      FUN`FIELD`CHECKLIST: |-
+        [if(words(setr(_fs,u({{jobs}}/FUN`STEPS,%0))),[words(u({{jobs}}/FUN`STEPS`DONE,%0))] of [words(%q<_fs>)] done)]
+      FUN`FIELD`PRIORITY: |-
+        [capstr(get(%0/PRIORITY))]
+      FUN`FIELD`FILED: |-
+        [u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)]
+      # How soon the bucket usually answers, while the job waits on staff for an answer.
+      FUN`FIELD`WAIT: |-
+        [if(cand(match(new staff,get(%0/STATE)),not(get(%0/ANSWERED`AT))),u({{jobs}}/FUN`WAIT,get(%0/BUCKET)))]
+      FUN`FIELD`DUE: |-
+        [if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None)]
+      FUN`FIELD`AUDIT: |-
+        [switch(get(%0/AUDIT`STATE),pending,Approved at once\, not checked yet,passed,Checked by [u({{jobs}}/FUN`WHO,get(%0/AUDIT`BY),%0,%1)],reverted,Reverted by [u({{jobs}}/FUN`WHO,get(%0/AUDIT`BY),%0,%1)],)]
+      FUN`FIELD`HANDLERS: |-
+        [u({{jobs}}/FUN`NAMES,%0,%1,HANDLER)]
+      FUN`FIELD`WATCHERS: |-
+        [if(words(lattr(%0/WATCHER`*)),u({{jobs}}/FUN`NAMES,%0,%1,WATCHER))]
+      FUN`FIELD`HELPERS: |-
+        [if(words(lattr(%0/HELPER`*)),u({{jobs}}/FUN`NAMES,%0,%1,HELPER))]
+
       # ---- lists ----------------------------------------------------------------
       # Every job person %0 gets from predicate FUN`P`%1 (job, person, %2).
       FUN`SELECT: |-
@@ -470,9 +623,12 @@ objects:
       # Open, and theirs.
       FUN`P`OWN: |-
         [cand(not(strmatch(get(%0/STATE),closed)),u({{jobs}}/FUN`IS`PARTY,%0,%1))]
-      # What +jobs shows: the queue, and your own open jobs.
+      # Approved at once and not checked yet, in a bucket the person works.
+      FUN`P`AUDIT: |-
+        [cand(strmatch(get(%0/AUDIT`STATE),pending),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+      # What +jobs shows: the queue, approvals to check, and your own open jobs.
       FUN`P`DEFAULT: |-
-        [cor(u({{jobs}}/FUN`P`QUEUE,%0,%1),u({{jobs}}/FUN`P`OWN,%0,%1))]
+        [cor(u({{jobs}}/FUN`P`QUEUE,%0,%1),u({{jobs}}/FUN`P`AUDIT,%0,%1),u({{jobs}}/FUN`P`OWN,%0,%1))]
       FUN`P`OPEN: |-
         [cand(not(strmatch(get(%0/STATE),closed)),u({{jobs}}/FUN`CAN`SEE,%0,%1))]
       FUN`P`SEEN: |-
@@ -533,7 +689,7 @@ objects:
       # A list longer than the reader's screen comes in pages, and the page is a last switch: +jobs/2,
       # +job/old/3 Requests. No page is the first. The routes that list, and so take one:
       DATA`PAGED: |-
-        list all mine new overdue player held scan search who from old
+        list all mine new overdue player held scan search who from old audits
       # Rows a page holds: what fits the reader's screen under the title, headings and footer.
       FUN`PAGE`ROWS: |-
         [max(5,sub(height(%#,24),9))]
@@ -571,10 +727,11 @@ objects:
       # the full width, since the box has no sides. Staff also see Due and Watchers; fields() takes its
       # pairs as arguments, so the two readers get two calls (FUN`SHOW`FIELDS).
       FUN`SHOW: |-
-        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%<job>/BUCKET),%<viewer>))][setq(_nl,u({{jobs}}/FUN`NUMBERED,%<job>,%q<_s>))][setq(_v,squish(iter(lnum(1,firstof(get(%<job>/ENTRIES),0)),if(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%<job>,entry,%i0,staff,%q<_s>,mode,%<mode>),%i0))))][if(strmatch(%<mode>,last:*),setq(_v,revwords(extract(revwords(%q<_v>),1,after(%<mode>,:)))))][box([u({{jobs}}/FUN`SHOW`FIELDS,%<job>,%<viewer>,%q<_s>)][iter(%q<_v>,%r[uargs({{jobs}}/FUN`ENTRY,job,%<job>,entry,%i0,viewer,%<viewer>,width,max(10,%<width>),number,member(%q<_nl>,%i0))],%b,)]%r[rule()]%r+job/reply [get(%<job>/NUM)]=<text> answers,Job [get(%<job>/NUM)]: [get(%<job>/TITLE)],,u({{jobs}}/FUN`FRAME))]
-      # Job %0's fields for person %1; %2 is 1 for someone who works its bucket.
+        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%<job>/BUCKET),%<viewer>))][setq(_nl,u({{jobs}}/FUN`NUMBERED,%<job>,%q<_s>))][setq(_v,squish(iter(lnum(1,firstof(get(%<job>/ENTRIES),0)),if(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%<job>,entry,%i0,staff,%q<_s>,mode,%<mode>),%i0))))][if(strmatch(%<mode>,last:*),setq(_v,revwords(extract(revwords(%q<_v>),1,after(%<mode>,:)))))][box([u({{jobs}}/FUN`SHOW`FIELDS,%<job>,%<viewer>,%q<_s>)][if(words(u({{jobs}}/FUN`STEPS,%<job>)),%r[rule(Checklist)]%r[u({{jobs}}/FUN`CHECKLIST,%<job>,%<viewer>)])][iter(%q<_v>,%r[uargs({{jobs}}/FUN`ENTRY,job,%<job>,entry,%i0,viewer,%<viewer>,width,max(10,%<width>),number,member(%q<_nl>,%i0))],%b,)]%r[rule()]%r+job/reply [get(%<job>/NUM)]=<text> answers,Job [get(%<job>/NUM)]: [get(%<job>/TITLE)],,u({{jobs}}/FUN`FRAME))]
+      # Job %0's fields for person %1; %2 is 1 for someone who works its bucket. The keys come from
+      # FUN`FIELD`KEYS, so lfields() takes the labels and values as two lists.
       FUN`SHOW`FIELDS: |-
-        [setq(_st,[u({{jobs}}/FUN`STATE`TEXT,%0,%2)][if(cand(%2,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[tone(error,Overdue)])])][setq(_fi,[u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)])][if(%2,fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Due,if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None),Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Watchers,u({{jobs}}/FUN`NAMES,%0,%1,WATCHER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)),fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)))]
+        [setq(_fk,u({{jobs}}/FUN`FIELD`KEYS,%0,%1,%2))][lfields(,iter(%q<_fk>,u({{jobs}}/FUN`LABEL,%i0),%b,%r),iter(%q<_fk>,u({{jobs}}/FUN`FIELD`%i0,%0,%1,%2),%b,%r),%r)]
 
       # ---- guards ---------------------------------------------------------------
       # The job numbered %q<lhs>, as %q<jo>, %q<n>, its bucket %q<b> and %q<staff>. A job the person may
@@ -594,6 +751,14 @@ objects:
       INC`NEED`ENTRY: |-
         @assert cand(strmatch(%q<lhs>,*/*),isint(trim(after(%q<lhs>,/))))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; think [setq(entn,trim(after(%q<lhs>,/)))][setq(lhs,trim(before(%q<lhs>,/)))]; @include {{jobs}}/INC`NEED`JOB; @assert strlen(setr(ent,u({{jobs}}/FUN`ENTRY`REAL,%q<jo>,%q<entn>,%q<staff>)))=@pemit %#=[notice(JOBS,Job %q<n> has no message %q<entn>. +job %q<n> numbers them.,warn)]
 
+      # <#>=<step>: a step of the job's checklist that shows, as %q<step>.
+      INC`NEED`STEP: |-
+        @assert cand(%q<eq>,isint(trim(%q<rhs>)))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; @assert member(u({{jobs}}/FUN`STEPS,%q<jo>),setr(step,trim(%q<rhs>)))=@pemit %#=[notice(JOBS,Job %q<n> has no step %q<step>. +job %q<n> lists them.,warn)]
+      # Why scene %0 can't be attached by %1 (%2 1 for staff) to job %3, or nothing. The scene must be one %1
+      # can see, and someone not staff must have been in it.
+      FUN`ERR`SCENE: |-
+        [setq(_sc,trim(%0))][switch(1,not(regmatch(%q<_sc>,^\[A-Za-z0-9_-\]+$)),Give the scene's number\, as its page /scenes/<number> shows it.,strmatch(scene(%q<_sc>,status),#-1*),There is no scene %q<_sc>.,cand(not(%2),strmatch(scenemember(%q<_sc>,%1),#-1*)),You were not in scene %q<_sc>.,t(member(get(%3/SCENES),%q<_sc>)),Scene %q<_sc> is on job [get(%3/NUM)] already.,)]
+
       # ---- +job lists ------------------------------------------------------------
       # +jobs: what needs staff in the buckets you work, and your own open jobs. +jobs <bucket> (and +jobs/list <bucket>): one bucket.
       INC`JOB`LIST: |-
@@ -612,6 +777,9 @@ objects:
         @include/args {{jobs}}/INC`SHOW`LIST=select,PLAYER,selarg,,title,Jobs waiting on players,footer,
       INC`JOB`HELD: |-
         @include/args {{jobs}}/INC`SHOW`LIST=select,HELD,selarg,,title,Jobs on hold,footer,
+      # +jobs/audit: what a bucket approved at once and staff have not checked yet.
+      INC`JOB`AUDITS: |-
+        @include/args {{jobs}}/INC`SHOW`LIST=select,AUDIT,selarg,,title,Approvals to check,footer,+job/audit <#> keeps one [chr(183)] +job/revert <#>=<why> undoes it
       INC`JOB`SCAN: |-
         @include/args {{jobs}}/INC`SHOW`LIST=select,UNREAD,selarg,,title,Jobs with something new,footer,+job/next reads the first
       INC`JOB`SEARCH: |-
@@ -626,7 +794,7 @@ objects:
       INC`JOB`NEXT: |-
         @assert words(setr(nx,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,UNREAD))))=@pemit %#=[notice(JOBS,Nothing is unread.)]; think [setq(lhs,get(first(%q<nx>)/NUM))][setq(sw,)]; @include {{jobs}}/INC`JOB`VIEW
       INC`JOB`BRIEF: |-
-        @pemit %#=[notice(JOBS,[words(u({{jobs}}/FUN`SELECT,%#,QUEUE))] need staff\, [words(u({{jobs}}/FUN`SELECT,%#,OVERDUE))] overdue\, [words(u({{jobs}}/FUN`SELECT,%#,UNREAD))] unread\, [words(u({{jobs}}/FUN`SELECT,%#,OWN))] of yours open.)]
+        @pemit %#=[notice(JOBS,[words(u({{jobs}}/FUN`SELECT,%#,QUEUE))] need staff\, [words(u({{jobs}}/FUN`SELECT,%#,OVERDUE))] overdue\, [words(u({{jobs}}/FUN`SELECT,%#,AUDIT))] to check\, [words(u({{jobs}}/FUN`SELECT,%#,UNREAD))] unread\, [words(u({{jobs}}/FUN`SELECT,%#,OWN))] of yours open.)]
       INC`JOB`CATCHUP: |-
         @dolist/inline [u({{jobs}}/FUN`SELECT,%#,UNREAD)]=&READ`%q<me> ##=[secs()]; @pemit %#=[notice(JOBS,Every job is marked read.,ok)]
 
@@ -711,10 +879,29 @@ objects:
       # Each person turns job @mail on or off. Staff /mail reaches them either way.
       INC`JOB`OPTIONS: |-
         @break not(strlen(%q<arg>))=@pemit %#=[notice(JOBS,Job mail is [setr(_mo,firstof(get({{store}}/OPT`MAIL`%q<me>),on))]. +job/options mail=[if(strmatch(%q<_mo>,off),on starts,off stops)] it.)]; @assert cand(strmatch(%q<lhs>,mail),match(on off,lcstr(%q<rhs>)))=@pemit %#=[notice(JOBS,+job/options mail=on or mail=off,warn)]; &OPT`MAIL`%q<me> {{store}}=[if(strmatch(%q<rhs>,off),off)]; @pemit %#=[notice(JOBS,Job mail is [lcstr(%q<rhs>)].,ok)]
+      # /status <#>=<text>: a line the player reads on the job, saying where it stands. Empty clears it.
+      INC`JOB`STATUS: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert %q<eq>=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; @assert lte(strlen(%q<rhs>),120)=@pemit %#=[notice(JOBS,Keep the update to 120 characters.,warn)]; @include/nobreak/args {{jobs}}/INC`DO`STATUS=text,%q<rhs>; @pemit %#=[notice(JOBS,if(strlen(%q<rhs>),The player reads on job %q<n>: %q<rhs>,Job %q<n> has no update now.),ok)]
+      # /check <#>=<step> and /uncheck: staff tick a step of the job's checklist, or untick it.
+      INC`JOB`CHECK: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @include {{jobs}}/INC`NEED`STEP; @assert not(get(%q<jo>/CHECK`%q<step>`DONE))=@pemit %#=[notice(JOBS,Step %q<step> of job %q<n> is done already.,warn)]; @include/args {{jobs}}/INC`DO`CHECK=step,%q<step>,done,1,scene,; @pemit %#=[notice(JOBS,Step %q<step> of job %q<n> is done: [u({{jobs}}/FUN`STEP`TEXT,%q<jo>,%q<step>)],ok)]
+      INC`JOB`UNCHECK: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @include {{jobs}}/INC`NEED`STEP; @assert get(%q<jo>/CHECK`%q<step>`DONE)=@pemit %#=[notice(JOBS,Step %q<step> of job %q<n> is not done.,warn)]; @include/args {{jobs}}/INC`DO`CHECK=step,%q<step>,done,0,scene,; @pemit %#=[notice(JOBS,Step %q<step> of job %q<n> is not done now: [u({{jobs}}/FUN`STEP`TEXT,%q<jo>,%q<step>)],ok)]
+      # /scene <#>=<scene>: the filer, a helper or staff attach the log of a scene to a job, as a reply
+      # linking it, and it ticks the job's first scene step not done yet. Only with the scene plugin; the
+      # filer and helpers attach only scenes they were in.
+      INC`JOB`SCENE: |-
+        @include {{jobs}}/INC`NEED`JOB; @assert u({{jobs}}/FUN`HAS`SCENES)=@pemit %#=[notice(JOBS,This game keeps no scene logs.,warn)]; @assert cor(%q<staff>,u({{jobs}}/FUN`IS`PARTY,%q<jo>,%#))=@pemit %#=[notice(JOBS,Only staff or whoever filed job %q<n> can attach a scene to it.,error)]; @include {{jobs}}/INC`NEED`OPEN; @assert cand(%q<eq>,strlen(%q<rhs>))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`SCENE,%q<rhs>,%#,%q<staff>,%q<jo>))))=@pemit %#=[notice(JOBS,%q<err>,warn)]; @include/nobreak/args {{jobs}}/INC`DO`SCENE=scene,[trim(%q<rhs>)]; @pemit %#=[notice(JOBS,The log of scene [trim(%q<rhs>)] is on job %q<n> now.[if(strlen(%q<sstep>),%bStep %q<sstep> is done.)],ok)]
+      # /audit <#>: staff have looked over an approval made at once, and it stands.
+      INC`JOB`AUDIT: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strmatch(get(%q<jo>/AUDIT`STATE),pending)=@pemit %#=[notice(JOBS,Job %q<n> is not an approval waiting to be checked. +jobs/audit lists those.,warn)]; @include {{jobs}}/INC`DO`AUDIT`PASS; @pemit %#=[notice(JOBS,Job %q<n> is checked: its approval stands.,ok)]
+      # /revert <#>[=<why>]: undo an approval made at once. The bucket's ON`REVERT does the undoing.
+      INC`JOB`REVERT: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert match(pending passed,get(%q<jo>/AUDIT`STATE))=@pemit %#=[notice(JOBS,Only an approval made at once can be reverted\, and job %q<n> is not one[if(strmatch(get(%q<jo>/AUDIT`STATE),reverted),%bany more)].,warn)]; @assert strmatch(get(%q<jo>/STATE),closed)=@pemit %#=[notice(JOBS,Job %q<n> was opened again. Close it as denied instead.,warn)]; @include/args {{jobs}}/INC`DO`REVERT=text,%q<rhs>,format,%q<fmt>; @pemit %#=[notice(JOBS,Job %q<n> is reverted. [name(%q<b>)] runs its ON`REVERT to undo the approval.,ok)]
       # %<bucket> (an objid, or empty when there is none), %<title> and %<text>, from +request, +bug and
       # friends, and /create; the /softcode switch is %q<fmt>, as FUN`PARSE left it.
       INC`FILE`CHECKED: |-
-        @assert strlen(%<bucket>)=@pemit %#=[notice(JOBS,There is no such bucket. +buckets lists them.,warn)]; @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=[notice(JOBS,You can't file in [name(%<bucket>)].,error)]; @assert u({{jobs}}/FUN`TAKES`JOBS,%<bucket>)=@pemit %#=[notice(JOBS,[name(%<bucket>)] is not taking new jobs. +buckets lists the buckets.,warn)]; @assert strlen(%<title>)=@pemit %#=[notice(JOBS,Give it a title: +request <title>=<text>,warn)]; @assert lte(strlen(%<title>),80)=@pemit %#=[notice(JOBS,Keep the title to 80 characters. The rest goes after the =.,warn)]; @assert strlen(%<text>)=@pemit %#=[notice(JOBS,Say what you need after the =.,warn)]; @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<fmt>,how,command; @pemit %#=[notice(JOBS,Filed job %q<n> in [name(%<bucket>)]: %<title>. +job %q<n> shows it.,ok)]
+        @assert strlen(%<bucket>)=@pemit %#=[notice(JOBS,There is no such bucket. +buckets lists them.,warn)]; @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=[notice(JOBS,You can't file in [name(%<bucket>)].,error)]; @assert u({{jobs}}/FUN`TAKES`JOBS,%<bucket>)=@pemit %#=[notice(JOBS,[name(%<bucket>)] is not taking new jobs. +buckets lists the buckets.,warn)]; @assert strlen(%<title>)=@pemit %#=[notice(JOBS,Give it a title: +request <title>=<text>,warn)]; @assert lte(strlen(%<title>),80)=@pemit %#=[notice(JOBS,Keep the title to 80 characters. The rest goes after the =.,warn)]; @assert strlen(%<text>)=@pemit %#=[notice(JOBS,Say what you need after the =.,warn)]; @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<fmt>,how,command; @pemit %#=[notice(JOBS,Filed job %q<n> in [name(%<bucket>)]: %<title>.[if(strmatch(get(%q<jo>/AUDIT`STATE),pending),%bIt is approved at once\, and staff look it over later.,if(strlen(setr(_fe,u({{jobs}}/FUN`EXPECT,%<bucket>))),%b%q<_fe>))] +job %q<n> shows it.,ok)]
 
       # ---- writes, shared with the portal routes and the API -------------------
       # Each takes what it writes as named arguments (@include/args): text with commas in it arrives
@@ -734,11 +921,49 @@ objects:
       # %<priority> (empty for the bucket's) and %<author> (who wrote the opening text, when not the
       # filer). Leaves the number in %q<n> and the job in %q<jo>.
       INC`DO`FILE: |-
-        think [setq(n,inc(firstof(get({{store}}/COUNTER),0)))]; &COUNTER {{store}}=%q<n>; think [setq(jo,objid(create(Job %q<n>)))]; @tel %q<jo>={{store}}; @set %q<jo>=NO_COMMAND; &INDEX`%q<n> {{store}}=%q<jo>; &NUM %q<jo>=%q<n>; &BUCKET %q<jo>=%<bucket>; &TITLE %q<jo>=%<title>; &STATE %q<jo>=new; &PRIORITY %q<jo>=[firstof(%<priority>,get(%<bucket>/PRIORITY),normal)]; &FILED`AT %q<jo>=[secs()]; &FILED`BY %q<jo>=%<filer>; &TURN`AT %q<jo>=[secs()]; &DUE %q<jo>=[u({{jobs}}/FUN`DUE`DEFAULT,%<bucket>)]; think [setq(_fw,firstof(%<author>,%<filer>))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,reply,action,,by,%q<_fw>,text,%<text>,format,%<format>; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<_fw>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<_fw>,if(strlen(%<author>),opened,filed))],verb,[if(strlen(%<author>),opened)],mail,[t(strlen(%<author>))],mailtext,%<text>,mailforce,0; @trigger/args %<bucket>/ON`FILE=0,%q<n>,1,%<filer>,2,%<title>,3,[firstof(%<how>,command)],job,%q<n>,filer,%<filer>,title,%<title>,how,[firstof(%<how>,command)]
+        think [setq(n,inc(firstof(get({{store}}/COUNTER),0)))]; &COUNTER {{store}}=%q<n>; think [setq(jo,objid(create(Job %q<n>)))]; @tel %q<jo>={{store}}; @set %q<jo>=NO_COMMAND; &INDEX`%q<n> {{store}}=%q<jo>; &NUM %q<jo>=%q<n>; &BUCKET %q<jo>=%<bucket>; &TITLE %q<jo>=%<title>; &STATE %q<jo>=new; &PRIORITY %q<jo>=[firstof(%<priority>,get(%<bucket>/PRIORITY),normal)]; &FILED`AT %q<jo>=[secs()]; &FILED`BY %q<jo>=%<filer>; &TURN`AT %q<jo>=[secs()]; &DUE %q<jo>=[u({{jobs}}/FUN`DUE`DEFAULT,%<bucket>)]; &CHECKLIST %q<jo>=[get(%<bucket>/CHECKLIST)]; &STATS`SKIP %q<jo>=[if(cor(strmatch(%<how>,query),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%<filer>)),1)]; think [setq(_fw,firstof(%<author>,%<filer>))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,reply,action,,by,%q<_fw>,text,%<text>,format,%<format>; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<_fw>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<_fw>,if(strlen(%<author>),opened,filed))],verb,[if(strlen(%<author>),opened)],mail,[t(strlen(%<author>))],mailtext,%<text>,mailforce,0; @trigger/args %<bucket>/ON`FILE=0,%q<n>,1,%<filer>,2,%<title>,3,[firstof(%<how>,command)],job,%q<n>,filer,%<filer>,title,%<title>,how,[firstof(%<how>,command)]; @include/nobreak/args {{jobs}}/INC`DO`ARRIVE=filer,%<filer>,bucket,%<bucket>,how,%<how>
+      # What a new job gets from its bucket, once it is filed: approval at once in a bucket that audits
+      # (unless a lock says otherwise), else the bucket's acknowledgement. Nothing for a job staff filed in
+      # a bucket they work, or a /query. Include with /nobreak.
+      INC`DO`ARRIVE: |-
+        @break cor(strmatch(%<how>,query),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%<filer>)); @break cand(get(%<bucket>/AUDIT),elock(%<bucket>/audit,%<filer>))={@include/args {{jobs}}/INC`DO`AUDIT`APPLY=bucket,%<bucket>}; @include/nobreak/args {{jobs}}/INC`DO`ACK=bucket,%<bucket>,filer,%<filer>
+      # The bucket's ACKNOWLEDGE as the job's first reply from staff, written by the bucket, with how soon
+      # it usually answers. It passes no turn and is not staff's answer. The filer was told on filing, so
+      # it is not new to them.
+      INC`DO`ACK: |-
+        @break not(strlen(setr(_ak,get(%<bucket>/ACKNOWLEDGE)))); @include/args {{jobs}}/INC`DO`ENTRY=kind,reply,action,ack,by,%<bucket>,text,%q<_ak>[if(strlen(setr(_ae,u({{jobs}}/FUN`EXPECT,%<bucket>))),%r%r%q<_ae>)],format,markdown; &READ`[u({{jobs}}/FUN`KEY,%<filer>)] %q<jo>=[secs()]
+      # Approves %q<jo> as its bucket %<bucket>, at once: the bucket's ON`APPROVE runs as for any approval,
+      # and the job waits for staff to check it (+jobs/audit). Kept out of the bucket's measured wait.
+      INC`DO`AUDIT`APPLY: |-
+        think [setq(_au,%q<actor>)][setq(actor,%<bucket>)]; &STATS`SKIP %q<jo>=1; &AUDIT`STATE %q<jo>=pending; @include/args {{jobs}}/INC`DO`CLOSE=outcome,approved,text,[get({{jobs}}/DATA`AUDIT`TEXT)],format,markdown,quiet,1; think [setq(actor,%q<_au>)]
+      INC`DO`AUDIT`PASS: |-
+        &AUDIT`STATE %q<jo>=passed; &AUDIT`BY %q<jo>=%q<actor>; &AUDIT`AT %q<jo>=[secs()]; @include/args {{jobs}}/INC`DO`LOG=line,Checked: the approval stands.,code,audit
+      # Undoes the approval at once of %q<jo>, with the reason %<text> (%<format>) for its filer. The job stays
+      # closed, as reverted; its bucket's ON`REVERT does the undoing.
+      INC`DO`REVERT: |-
+        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(_rt,firstof(%<text>,Reverted.))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,reply,action,outcome:reverted,by,%q<actor>,text,%q<_rt>,format,[firstof(%<format>,markdown)]; &OUTCOME %q<jo>=reverted; &AUDIT`STATE %q<jo>=reverted; &AUDIT`BY %q<jo>=%q<actor>; &AUDIT`AT %q<jo>=[secs()]; &CLOSED`AT %q<jo>=[secs()]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,reverted)],verb,reverted,mail,1,mailtext,%q<_rt>,mailforce,0; @trigger/args %q<b>/ON`REVERT=0,%q<n>,1,%q<actor>,2,[get(%q<jo>/FILED`BY)],3,%q<entry>,job,%q<n>,actor,%q<actor>,filer,[get(%q<jo>/FILED`BY)],entry,%q<entry>
+      # Staff's first answer on %q<jo>: when it came, and how long it took, into its bucket's measured wait.
+      INC`DO`ANSWERED: |-
+        @break cor(get(%q<jo>/ANSWERED`AT),get(%q<jo>/STATS`SKIP)); &ANSWERED`AT %q<jo>=[secs()]; &STATS`ANSWER [get(%q<jo>/BUCKET)]=[u({{jobs}}/FUN`STATS`ADD,get(get(%q<jo>/BUCKET)/STATS`ANSWER),sub(secs(),get(%q<jo>/FILED`AT)))]
+      # How long %q<jo> took to close, into its bucket's measured time to close, the first time it closes.
+      INC`DO`CLOSED: |-
+        @break cor(get(%q<jo>/STATS`CLOSED),get(%q<jo>/STATS`SKIP),strmatch(get(%q<jo>/OUTCOME),canceled)); &STATS`CLOSED %q<jo>=1; &STATS`CLOSE [get(%q<jo>/BUCKET)]=[u({{jobs}}/FUN`STATS`ADD,get(get(%q<jo>/BUCKET)/STATS`CLOSE),sub(secs(),get(%q<jo>/FILED`AT)))]
+      # The line staff set for %q<jo>'s player to read, %<text>, or none when it is empty. The filer and
+      # helpers hear of a new one.
+      INC`DO`STATUS: |-
+        &STATUS %q<jo>=%<text>; &STATUS`AT %q<jo>=[if(strlen(%<text>),secs())]; @include/args {{jobs}}/INC`DO`LOG=line,[if(strlen(%<text>),Update: %<text>,Update cleared.)],code,status; @break not(strlen(%<text>)); &PUBLIC`AT %q<jo>=[secs()]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,updated the status of)],verb,updated the status of,mail,0,mailtext,,mailforce,0
+      # Ticks (%<done> 1) or unticks step %<step> of %q<jo>; %<scene> is the scene whose log ticked it.
+      INC`DO`CHECK: |-
+        &CHECK`%<step>`DONE %q<jo>=[if(%<done>,secs())]; &CHECK`%<step>`BY %q<jo>=[if(%<done>,%q<actor>)]; &CHECK`%<step>`SCENE %q<jo>=[if(%<done>,%<scene>)]; @include/args {{jobs}}/INC`DO`LOG=line,[if(%<done>,Done,Not done)]: [u({{jobs}}/FUN`STEP`TEXT,%q<jo>,%<step>)],code,check; &PUBLIC`AT %q<jo>=[secs()]; @trigger/args [get(%q<jo>/BUCKET)]/ON`CHECK=0,[get(%q<jo>/NUM)],1,%q<actor>,2,%<step>,3,%<done>,job,[get(%q<jo>/NUM)],actor,%q<actor>,step,%<step>,done,%<done>
+      # Attaches scene %<scene>'s log to %q<jo>: a reply linking it, as %q<actor>, then the first scene step not
+      # done yet is ticked. Leaves that step in %q<sstep>, or nothing.
+      INC`DO`SCENE: |-
+        think [setq(_stt,edit(scene(%<scene>,title),chr(91),,chr(93),))][setq(sstep,u({{jobs}}/FUN`STEP`SCENE`OPEN,%q<jo>))]; &SCENES %q<jo>=[trim(get(%q<jo>/SCENES) %<scene>)]; @include/args {{jobs}}/INC`DO`REPLY=kind,reply,text,Attached the log of [chr(91)]scene %<scene>[if(strlen(%q<_stt>),: %q<_stt>)][chr(93)](/scenes/%<scene>).,format,markdown,mailforce,0,keep,1; @break not(strlen(%q<sstep>)); @include/args {{jobs}}/INC`DO`CHECK=step,%q<sstep>,done,1,scene,%<scene>
       # A reply or staff note (%<kind>) of %<text> (%<format>) on %q<jo>, with the turn and reopening rules
-      # of +job/reply. %<mailforce> 1 mails the filer even when they turned job mail off.
+      # of +job/reply. %<mailforce> 1 mails the filer even when they turned job mail off. %<keep> 1 from
+      # staff leaves the turn and the first-answer time alone, as attaching a scene log does.
       INC`DO`REPLY: |-
-        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(astaff,u({{jobs}}/FUN`CAN`WORK,get(%q<jo>/BUCKET),%q<actor>))][setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,%<kind>,action,,by,%q<actor>,text,%<text>,format,%<format>; think [setq(rentry,%q<entry>)]; @if cand(strmatch(%<kind>,reply),%q<wasclosed>,not(%q<astaff>))={@include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,1}; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,[if(cand(strmatch(%<kind>,reply),not(match(closed held,get(%q<jo>/STATE)))),if(%q<astaff>,player,staff))]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,if(strmatch(%<kind>,note),added a staff note to,replied to))],verb,[if(strmatch(%<kind>,reply),replied to)],mail,1,mailtext,%<text>,mailforce,%<mailforce>; @trigger/args %q<b>/ON`REPLY=0,%q<n>,1,%q<actor>,2,%q<rentry>,3,[if(strmatch(%<kind>,reply),1,0)],job,%q<n>,actor,%q<actor>,entry,%q<rentry>,public,[if(strmatch(%<kind>,reply),1,0)]
+        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(astaff,u({{jobs}}/FUN`CAN`WORK,get(%q<jo>/BUCKET),%q<actor>))][setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))][setq(rkeep,cand(%<keep>,%q<astaff>))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,%<kind>,action,,by,%q<actor>,text,%<text>,format,%<format>; think [setq(rentry,%q<entry>)]; @if cand(strmatch(%<kind>,reply),%q<astaff>,not(%q<rkeep>))={@include/nobreak {{jobs}}/INC`DO`ANSWERED}; @if cand(strmatch(%<kind>,reply),%q<wasclosed>,not(%q<astaff>))={@include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,1}; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,[if(cand(strmatch(%<kind>,reply),not(%q<rkeep>),not(match(closed held,get(%q<jo>/STATE)))),if(%q<astaff>,player,staff))]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,if(strmatch(%<kind>,note),added a staff note to,replied to))],verb,[if(strmatch(%<kind>,reply),replied to)],mail,1,mailtext,%<text>,mailforce,%<mailforce>; @trigger/args %q<b>/ON`REPLY=0,%q<n>,1,%q<actor>,2,%q<rentry>,3,[if(strmatch(%<kind>,reply),1,0)],job,%q<n>,actor,%q<actor>,entry,%q<rentry>,public,[if(strmatch(%<kind>,reply),1,0)]
       # Moves %q<jo> to state %<to>; nothing when it is there already or %<to> is empty. Include with /nobreak.
       INC`DO`TURN: |-
         @break cor(not(strlen(%<to>)),strmatch(get(%q<jo>/STATE),%<to>)); think [setq(_from,get(%q<jo>/STATE))]; &STATE %q<jo>=%<to>; &TURN`AT %q<jo>=[secs()]; @include/args {{jobs}}/INC`DO`LOG=line,Moved from [u({{jobs}}/FUN`STATE`NAME,%q<_from>)] to [u({{jobs}}/FUN`STATE`NAME,%<to>)].,code,state:%<to>; @trigger/args [get(%q<jo>/BUCKET)]/ON`TURN=0,[get(%q<jo>/NUM)],1,%q<actor>,2,%q<_from>,3,%<to>,job,[get(%q<jo>/NUM)],actor,%q<actor>,from,%q<_from>,to,%<to>
@@ -746,9 +971,9 @@ objects:
       INC`DO`REOPEN: |-
         @break not(strmatch(get(%q<jo>/STATE),closed)); &OUTCOME %q<jo>; &CLOSED`AT %q<jo>; &STATE %q<jo>=staff; &TURN`AT %q<jo>=[secs()]; &OVERDUE`FIRED %q<jo>; &DUE %q<jo>=[u({{jobs}}/FUN`DUE`DEFAULT,get(%q<jo>/BUCKET))]; @include/args {{jobs}}/INC`DO`LOG=line,Opened again.,code,reopen; @trigger/args [get(%q<jo>/BUCKET)]/ON`REOPEN=0,[get(%q<jo>/NUM)],1,%q<actor>,2,[if(%<byfiler>,1,0)],job,[get(%q<jo>/NUM)],actor,%q<actor>,byfiler,[if(%<byfiler>,1,0)]
       # Closes %q<jo> with %<outcome> (approved, denied, completed, canceled) and the public %<text>
-      # (%<format>), which is the outcome when empty.
+      # (%<format>), which is the outcome when empty. %<quiet> 1 tells only staff, as an approval at filing does.
       INC`DO`CLOSE: |-
-        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(_ct,firstof(%<text>,[capstr(%<outcome>)].))][setq(hk,u({{jobs}}/FUN`OUTCOME`HOOK,%<outcome>))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,reply,action,outcome:%<outcome>,by,%q<actor>,text,%q<_ct>,format,[firstof(%<format>,markdown)]; &STATE %q<jo>=closed; &OUTCOME %q<jo>=%<outcome>; &CLOSED`AT %q<jo>=[secs()]; &TURN`AT %q<jo>=[secs()]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,%<outcome>)],verb,%<outcome>,mail,1,mailtext,%q<_ct>,mailforce,0; @trigger/args %q<b>/ON`%q<hk>=0,%q<n>,1,%q<actor>,2,[get(%q<jo>/FILED`BY)],3,%q<entry>,job,%q<n>,actor,%q<actor>,filer,[get(%q<jo>/FILED`BY)],entry,%q<entry>
+        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(_ct,firstof(%<text>,[capstr(%<outcome>)].))][setq(hk,u({{jobs}}/FUN`OUTCOME`HOOK,%<outcome>))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,reply,action,outcome:%<outcome>,by,%q<actor>,text,%q<_ct>,format,[firstof(%<format>,markdown)]; &STATE %q<jo>=closed; &OUTCOME %q<jo>=%<outcome>; &CLOSED`AT %q<jo>=[secs()]; &TURN`AT %q<jo>=[secs()]; @if u({{jobs}}/FUN`CAN`WORK,%q<b>,%q<actor>)={@include/nobreak {{jobs}}/INC`DO`ANSWERED}; @include/nobreak {{jobs}}/INC`DO`CLOSED; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,%<outcome>)],verb,[if(%<quiet>,,%<outcome>)],mail,1,mailtext,%q<_ct>,mailforce,0; @trigger/args %q<b>/ON`%q<hk>=0,%q<n>,1,%q<actor>,2,[get(%q<jo>/FILED`BY)],3,%q<entry>,job,%q<n>,actor,%q<actor>,filer,[get(%q<jo>/FILED`BY)],entry,%q<entry>
       # Adds (%<add> 1) or removes %<handler>: an objid or role:<role>. A new job someone claims needs staff.
       INC`DO`CLAIM: |-
         think [setq(_ha,u({{jobs}}/FUN`HATTR,%<handler>))]; think [if(%<add>,attrib_set(%q<jo>/%q<_ha>,secs()),attrib_set(%q<jo>/%q<_ha>))]; @include/args {{jobs}}/INC`DO`LOG=line,[if(%<add>,Handler added,Handler removed)]: [u({{jobs}}/FUN`HNAME,%<handler>)].,code,[if(%<add>,claim,unclaim)]; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,[if(cand(%<add>,strmatch(get(%q<jo>/STATE),new)),staff)]; @trigger/args [get(%q<jo>/BUCKET)]/ON`CLAIM=0,[get(%q<jo>/NUM)],1,%q<actor>,2,%<handler>,3,%<add>,job,[get(%q<jo>/NUM)],actor,%q<actor>,handler,%<handler>,added,%<add>
@@ -781,7 +1006,7 @@ objects:
       # ---- buckets --------------------------------------------------------------
       # Buckets %0 as person %1 sees them; a * marks one they work.
       FUN`BTABLE: |-
-        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,%r%r12),grow,json(string,%r%r1)),[ansi(h,Bucket)]%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)][if(not(u({{jobs}}/FUN`TAKES`JOBS,%i0)),%b[chr(40)]disabled[chr(41)])],,%r)],>[ansi(h,Open)]%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],[ansi(h,What it is for)]%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
+        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r3),min,json(string,%r%r%r12),priority,json(string,1%r1%r2%r1),grow,json(string,%r%r%r1)),[ansi(h,Bucket)]%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)][if(not(u({{jobs}}/FUN`TAKES`JOBS,%i0)),%b[chr(40)]disabled[chr(41)])],,%r)],>[ansi(h,Open)]%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],[ansi(h,First answer)]%r[iter(%0,firstof(u({{jobs}}/FUN`WAIT`SHORT,%i0),-),,%r)],[ansi(h,What it is for)]%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
       INC`BUCKET`LIST: |-
         @pemit %#=[box([u({{jobs}}/FUN`BTABLE,u({{jobs}}/FUN`BUCKETS`SEEN,%#),%#)]%r[rule()]%r[if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,Job buckets,,u({{jobs}}/FUN`FRAME))]
       # One bucket. Its permission, role, locks and hooks are for the people who work it; everyone else
@@ -790,17 +1015,17 @@ objects:
         @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=[notice(JOBS,There is no bucket called %q<arg>.,warn)]; @pemit %#=[box([if(cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#)),u({{jobs}}/FUN`BUCKET`FIELDS`STAFF,%q<bk>)%r[rule()]%r+bucket/set [name(%q<bk>)]/<setting>=<value>,u({{jobs}}/FUN`BUCKET`FIELDS,%q<bk>)%r[rule()]%r+request [name(%q<bk>)]/<title>=<text>)],Bucket: [name(%q<bk>)],,u({{jobs}}/FUN`FRAME))]
       # Bucket %0's settings as anyone who can see it reads them.
       FUN`BUCKET`FIELDS: |-
-        [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no))]
+        [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,First answer,u({{jobs}}/FUN`WAIT`MEASURED,%0,ANSWER),Closed in,u({{jobs}}/FUN`WAIT`MEASURED,%0,CLOSE),Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Approve at once,if(get(%0/AUDIT),yes,no),Checklist,u({{jobs}}/FUN`CHECKLIST`LINE,get(%0/CHECKLIST)),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no))]
       # The same with what only the people who work it need.
       FUN`BUCKET`FIELDS`STAFF: |-
-        [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Hidden,if(get(%0/HIDDEN),yes,no),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no),Priority,firstof(get(%0/PRIORITY),normal),Keep,if(get(%0/KEEP),[get(%0/KEEP)] days,forever),Permission,softcode.jobs.[get(%0/SLUG)],Role,job-admin-[get(%0/SLUG)],File lock,lock(%0/file),Work lock,lock(%0/work),Hooks,firstof(itemize(squish(iter(lattr(%0/ON`*),if(strmatch(get(%0/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]
+        [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,First answer,u({{jobs}}/FUN`WAIT`MEASURED,%0,ANSWER),Closed in,u({{jobs}}/FUN`WAIT`MEASURED,%0,CLOSE),Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Hidden,if(get(%0/HIDDEN),yes,no),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no),Priority,firstof(get(%0/PRIORITY),normal),Keep,if(get(%0/KEEP),[get(%0/KEEP)] days,forever),Acknowledge,firstof(edit(get(%0/ACKNOWLEDGE),%r,%b),none),Approve at once,if(get(%0/AUDIT),yes[if(cand(strlen(setr(_al,lock(%0/audit))),comp(%q<_al>,*UNLOCKED*)),%b[chr(40)]for those passing the audit lock: %q<_al>[chr(41)],%b[chr(40)]for everyone[chr(41)])],no),Checklist,u({{jobs}}/FUN`CHECKLIST`LINE,get(%0/CHECKLIST)),Permission,softcode.jobs.[get(%0/SLUG)],Role,job-admin-[get(%0/SLUG)],File lock,lock(%0/file),Work lock,lock(%0/work),Hooks,firstof(itemize(squish(iter(lattr(%0/ON`*),if(strmatch(get(%0/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]
       FUN`SETTING`OK: |-
-        [switch(%0,description,lte(strlen(%1),200),turnaround,cand(isint(%1),gte(%1,0)),reopen,cand(isint(%1),gte(%1,0)),keep,cor(not(strlen(%1)),cand(isint(%1),gt(%1,0))),anonymous,t(match(none filer staff,lcstr(%1))),hidden,t(match(yes no on off 1 0,lcstr(%1))),priority,t(strlen(u({{jobs}}/FUN`PRIORITY`PARSE,%1))),0)]
+        [switch(%0,description,lte(strlen(%1),200),acknowledge,lte(strlen(%1),500),audit,t(match(yes no on off 1 0,lcstr(%1))),checklist,cor(not(strlen(trim(%1))),cand(lte(words(%1,|),20),not(words(squish(iter(%1,if(cand(strlen(trim(if(strmatch(trim(%i0),scene:*),after(%i0,:),%i0))),lte(strlen(trim(%i0)),100)),,x),|,%b)))))),turnaround,cand(isint(%1),gte(%1,0)),reopen,cand(isint(%1),gte(%1,0)),keep,cor(not(strlen(%1)),cand(isint(%1),gt(%1,0))),anonymous,t(match(none filer staff,lcstr(%1))),hidden,t(match(yes no on off 1 0,lcstr(%1))),priority,t(strlen(u({{jobs}}/FUN`PRIORITY`PARSE,%1))),0)]
       FUN`SETTING`VALUE: |-
-        [switch(%0,hidden,t(match(yes on 1,lcstr(%1))),anonymous,lcstr(%1),priority,u({{jobs}}/FUN`PRIORITY`PARSE,%1),%1)]
+        [switch(%0,hidden,t(match(yes on 1,lcstr(%1))),audit,t(match(yes on 1,lcstr(%1))),checklist,if(strlen(trim(%1)),iter(%1,trim(%i0),|,|)),anonymous,lcstr(%1),priority,u({{jobs}}/FUN`PRIORITY`PARSE,%1),%1)]
       # Settings only. Hook code (ON`*) is written by whoever controls the bucket object, not through here.
       INC`BUCKET`SET: |-
-        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/set <bucket>/<setting>=<value>,warn)]; @assert cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#))=@pemit %#=[notice(JOBS,Only a Job Admin or someone who works [name(%q<bk>)] can change it.,error)]; @assert match(description turnaround reopen anonymous hidden priority keep,setr(set,lcstr(trim(after(%q<lhs>,/)))))=@pemit %#=[notice(JOBS,The settings are description\, turnaround\, reopen\, anonymous\, hidden\, priority and keep.,warn)]; @assert u({{jobs}}/FUN`SETTING`OK,%q<set>,%q<rhs>)=@pemit %#=[notice(JOBS,[get({{jobs}}/DATA`SETTING`%q<set>)],warn)]; &%q<set> %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,%q<set>,%q<rhs>)]; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<set> is [firstof(get(%q<bk>/%q<set>),nothing)].)]
+        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/set <bucket>/<setting>=<value>,warn)]; @assert cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#))=@pemit %#=[notice(JOBS,Only a Job Admin or someone who works [name(%q<bk>)] can change it.,error)]; @assert match(get({{jobs}}/DATA`SETTINGS),setr(set,lcstr(trim(after(%q<lhs>,/)))))=@pemit %#=[notice(JOBS,The settings are [itemize(get({{jobs}}/DATA`SETTINGS))].,warn)]; @assert u({{jobs}}/FUN`SETTING`OK,%q<set>,%q<rhs>)=@pemit %#=[notice(JOBS,[get({{jobs}}/DATA`SETTING`%q<set>)],warn)]; &%q<set> %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,%q<set>,%q<rhs>)]; think [setq(_sv,switch(%q<set>,hidden,if(get(%q<bk>/HIDDEN),yes,no),audit,if(get(%q<bk>/AUDIT),yes,no),checklist,u({{jobs}}/FUN`CHECKLIST`LINE,get(%q<bk>/CHECKLIST)),firstof(get(%q<bk>/%q<set>),nothing)))]; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<set> is %q<_sv>[if(not(match(. ! ?,right(%q<_sv>,1))),.)])]
       # What is wrong with %0 as the name of a new bucket, or of bucket %1 renamed; nothing when it will do.
       FUN`ERR`NAME: |-
         [setq(_en,u({{jobs}}/FUN`BUCKET,%0))][switch(1,not(cand(strlen(%0),lte(strlen(%0),20),valid(name,%0),valid(permission,softcode.jobs.[u({{jobs}}/FUN`SLUG,%0)]))),A bucket name is up to 20 letters\, digits\, spaces and dashes\, starting with a letter.,cand(strlen(%q<_en>),comp(%q<_en>,%1)),There is a [name(%q<_en>)] bucket already.,cand(not(strlen(%1)),strlen(u({{jobs}}/FUN`BUCKET`BYSLUG,u({{jobs}}/FUN`SLUG,%0)))),[name(u({{jobs}}/FUN`BUCKET`BYSLUG,u({{jobs}}/FUN`SLUG,%0)))] already has the permission softcode.jobs.[u({{jobs}}/FUN`SLUG,%0)]. Pick another name.,)]
@@ -828,7 +1053,7 @@ objects:
       # %q<bk>, the bucket a command works on, is the command's own register, as %q<jo> is.
       # %<name>, %<description>: makes the bucket, its permission and role. Leaves %q<bk> and %q<slug>.
       INC`DO`BUCKET`CREATE: |-
-        think [setq(slug,u({{jobs}}/FUN`SLUG,%<name>))][setq(bk,objid(create(%<name>)))]; @tel %q<bk>={{buckets}}; @parent %q<bk>={{buckets}}; @set %q<bk>=NO_COMMAND; &DESCRIPTION %q<bk>=%<description>; &SLUG %q<bk>=%q<slug>; @lock/user:file %q<bk>=#TRUE; @lock/user:work %q<bk>=perm^softcode.jobs.admin|perm^softcode.jobs.%q<slug>; @dolist/inline [get({{jobs}}/DATA`HOOKS)]=&ON`## %q<bk>=[get({{jobs}}/DATA`HOOKDOC`##)]; @permission/define softcode.jobs.%q<slug>=Jobs/Work jobs in the %<name> bucket.; @role/create job-admin-%q<slug>=Jobs/Job Admin - %<name>; @role/allow job-admin-%q<slug>=softcode.jobs.%q<slug>
+        think [setq(slug,u({{jobs}}/FUN`SLUG,%<name>))][setq(bk,objid(create(%<name>)))]; @tel %q<bk>={{buckets}}; @parent %q<bk>={{buckets}}; @set %q<bk>=NO_COMMAND; &DESCRIPTION %q<bk>=%<description>; &SLUG %q<bk>=%q<slug>; &ACKNOWLEDGE %q<bk>=[get({{jobs}}/DATA`ACKNOWLEDGE)]; @lock/user:file %q<bk>=#TRUE; @lock/user:work %q<bk>=perm^softcode.jobs.admin|perm^softcode.jobs.%q<slug>; @dolist/inline [get({{jobs}}/DATA`HOOKS)]=&ON`## %q<bk>=[get({{jobs}}/DATA`HOOKDOC`##)]; @permission/define softcode.jobs.%q<slug>=Jobs/Work jobs in the %<name> bucket.; @role/create job-admin-%q<slug>=Jobs/Job Admin - %<name>; @role/allow job-admin-%q<slug>=softcode.jobs.%q<slug>
       # %q<bk> is called %<name> from now on; its slug, permission and role id stay. Renaming the
       # default bucket points DATA`DEFAULT`BUCKET at the new name.
       INC`DO`BUCKET`RENAME: |-
@@ -850,9 +1075,13 @@ objects:
       # Whoever deleted it hears when it is gone.
       TRIG`BUCKET`DRAIN: |-
         @assert cand(isdbref(%0),strlen(get(%0/DELETING`TO))); think [setq(bk,%0)][setq(nb,get(%0/DELETING`TO))][setq(actor,get(%0/DELETING`BY))][setq(bname,name(%0))][setq(_bs,get({{jobs}}/DATA`MOVE`BATCH))][setq(_dj,u({{jobs}}/FUN`SELECT,%q<actor>,INBUCKET,%0))]; @assert isdbref(%q<nb>)={&DELETING`TO %0; @pemit %q<actor>=[notice(JOBS,Stopped deleting bucket %q<bname>: the bucket its jobs were moving to is gone. It takes no new jobs. Delete it again to move the rest.,warn)]}; @dolist/inline [extract(%q<_dj>,1,%q<_bs>)]={think [setq(jo,##)]; @include/args {{jobs}}/INC`DO`TRANSFER=bucket,%q<nb>}; @break gt(words(%q<_dj>),%q<_bs>)=@trigger {{jobs}}/TRIG`BUCKET`DRAIN=%0; think [setq(_dm,get(%0/DELETING`MOVED))][setq(_dn,name(%q<nb>))]; @include {{jobs}}/INC`DO`BUCKET`GONE; @pemit %q<actor>=[notice(JOBS,Bucket %q<bname> is deleted\, with its role and permission. [u({{jobs}}/FUN`NJOBS,%q<_dm>)] moved to %q<_dn>.,ok)]
-      # +bucket/lock <bucket>/file|work=<lock>: ordinary locks, so perm^, role^ and the rest all work.
+      # +bucket/lock <bucket>/file|work|audit=<lock>: ordinary locks, so perm^, role^ and the rest all work.
       INC`BUCKET`LOCK: |-
-        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/lock <bucket>/file|work=<lock>,warn)]; @assert match(file work,setr(lk,lcstr(trim(after(%q<lhs>,/)))))=@pemit %#=[notice(JOBS,A bucket has a file lock \(who may file\) and a work lock \(who works it\).,warn)]; @lock/user:%q<lk> %q<bk>=%q<rhs>; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)])]
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/lock <bucket>/file|work|audit=<lock>,warn)]; @assert match(file work audit,setr(lk,lcstr(trim(after(%q<lhs>,/)))))=@pemit %#=[notice(JOBS,A bucket has a file lock \(who may file\)\, a work lock \(who works it\) and an audit lock \(whose jobs it approves at once\).,warn)]; @include/nobreak/args {{jobs}}/INC`DO`BUCKET`LOCK=kind,%q<lk>,key,%q<rhs>; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)])]
+      # Sets bucket %q<bk>'s %<kind> lock (file, work or audit) to %<key>. A command's switches are not
+      # evaluated, so each lock is named in full.
+      INC`DO`BUCKET`LOCK: |-
+        @break strmatch(%<kind>,file)={@lock/user:file %q<bk>=%<key>}; @break strmatch(%<kind>,work)={@lock/user:work %q<bk>=%<key>}; @lock/user:audit %q<bk>=%<key>
 
       # ---- timer, login, functions, API ----------------------------------------------
       FUN`DUE`NOW: |-
@@ -871,14 +1100,14 @@ objects:
         @include/args {{jobs}}/INC`API`FILE=player,%<reporter>,bucket,[v(DATA`GALLERY`BUCKET)],title,Image report: [name(%<objid>)],text,Image: %<url>%r%rCaption: %<caption>%r%rReason: %<reason>
       # One line at login: what needs staff, for those who work a bucket, and what is new for everyone.
       ACONNECT: |-
-        think [setq(_q,words(u({{jobs}}/FUN`SELECT,%#,QUEUE)))][setq(_o,words(u({{jobs}}/FUN`SELECT,%#,OVERDUE)))][setq(_u,words(u({{jobs}}/FUN`SELECT,%#,UNREAD)))]; @assert cor(%q<_q>,%q<_u>); @pemit %#=[notice(JOBS,[if(%q<_q>,%q<_q> need staff[if(%q<_o>,%b[chr(40)]%q<_o> overdue[chr(41)])])][if(cand(%q<_q>,%q<_u>),[chr(44)]%b)][if(%q<_u>,%q<_u> with something new)]. +jobs lists them.)]
+        think [setq(_q,words(u({{jobs}}/FUN`SELECT,%#,QUEUE)))][setq(_o,words(u({{jobs}}/FUN`SELECT,%#,OVERDUE)))][setq(_a,words(u({{jobs}}/FUN`SELECT,%#,AUDIT)))][setq(_u,words(u({{jobs}}/FUN`SELECT,%#,UNREAD)))]; @assert cor(%q<_q>,%q<_a>,%q<_u>); @pemit %#=[notice(JOBS,[itemize(squish([if(%q<_q>,%q<_q> need staff[if(%q<_o>,%b[chr(40)]%q<_o> overdue[chr(41)])])]|[if(%q<_a>,%q<_a> to check)]|[if(%q<_u>,%q<_u> with something new)],|),|)]. +jobs lists them.)]
       # Whether calling object %1 may read job %0 through job(), jobs() and jobentries(): someone who may
       # see it, a see_all holder, or a bucket's own hook.
       FUN`CALLER`OK: |-
         [cor(u({{jobs}}/FUN`CAN`SEE,%0,%1),permission(%1,game.see_all),strmatch(objid(loc(%1)),{{buckets}}))]
       # job(<#>, <field>): see +help jobs api.
       FUN`API`JOB: |-
-        [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/NUM),bucket,name(get(%q<_j>/BUCKET)),title,get(%q<_j>/TITLE),state,get(%q<_j>/STATE),outcome,get(%q<_j>/OUTCOME),priority,get(%q<_j>/PRIORITY),filer,if(u({{jobs}}/FUN`FILER`SHOWN,%q<_j>,%@),get(%q<_j>/FILED`BY)),filed,get(%q<_j>/FILED`AT),due,get(%q<_j>/DUE),updated,get(%q<_j>/UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/ENTRIES),#-1 NO SUCH FIELD))]
+        [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/NUM),bucket,name(get(%q<_j>/BUCKET)),title,get(%q<_j>/TITLE),state,get(%q<_j>/STATE),outcome,get(%q<_j>/OUTCOME),priority,get(%q<_j>/PRIORITY),filer,if(u({{jobs}}/FUN`FILER`SHOWN,%q<_j>,%@),get(%q<_j>/FILED`BY)),filed,get(%q<_j>/FILED`AT),due,get(%q<_j>/DUE),updated,get(%q<_j>/UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/ENTRIES),update,get(%q<_j>/STATUS),steps,words(u({{jobs}}/FUN`STEPS,%q<_j>)),done,words(u({{jobs}}/FUN`STEPS`DONE,%q<_j>)),scenes,get(%q<_j>/SCENES),audit,get(%q<_j>/AUDIT`STATE),answered,get(%q<_j>/ANSWERED`AT),#-1 NO SUCH FIELD))]
       # jobs([<bucket>[, open|all|<state>]]): job numbers, newest first.
       FUN`API`JOBS: |-
         [setq(_ab,if(strlen(%0),u({{jobs}}/FUN`BUCKET,%0)))][setq(_as,lcstr(firstof(%1,open)))][u({{jobs}}/FUN`SORT`NUM,squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),cor(not(strlen(%0)),strmatch(get(%i0/BUCKET),%q<_ab>)),switch(%q<_as>,all,1,open,not(strmatch(get(%i0/STATE),closed)),strmatch(get(%i0/STATE),%q<_as>)),u({{jobs}}/FUN`CALLER`OK,%i0,%@)),get(%i0/NUM)))))]
@@ -965,11 +1194,11 @@ objects:
       WEB`SCHEMA`ANON: |-
         [setq(_an,u({{jobs}}/WEB`MD,Sign in with a character to file and read jobs.))][u({{jobs}}/WEB`DOC,view,,u({{jobs}}/WEB`SEC,,1,%q<_an>))]
       WEB`FILTERS: |-
-        [if(u({{jobs}}/WEB`STAFF,%0),default mine new overdue all old,default old)]
+        [if(u({{jobs}}/WEB`STAFF,%0),default mine new overdue audit all old,default old)]
       WEB`FLABEL: |-
-        [switch(%0,default,if(%1,Needs attention,My open jobs),mine,Handled by me,new,New,overdue,Overdue,all,All open,old,Closed)]
+        [switch(%0,default,if(%1,Needs attention,My open jobs),mine,Handled by me,new,New,overdue,Overdue,audit,To check,all,All open,old,Closed)]
       WEB`FPRED: |-
-        [switch(%0,mine,MINE,new,NEW,overdue,OVERDUE,all,OPEN,old,OLD,DEFAULT)]
+        [switch(%0,mine,MINE,new,NEW,overdue,OVERDUE,audit,AUDIT,all,OPEN,old,OLD,DEFAULT)]
       WEB`COLS: |-
         [get({{jobs}}/DATA`WEB`COLS)]
       # The job table's columns, as JSON.
@@ -990,7 +1219,7 @@ objects:
         [squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))]
       # The new-request form. Its hidden op field makes the submit a file.
       WEB`SCHEMA`NEW: |-
-        [setq(_n1,json(object,kind,json(string,field),key,json(string,op),type,json(string,hidden),default,json(string,file)))][setq(_no,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`FILEABLE,%0),u({{jobs}}/WEB`OPT,name(%i0),[name(%i0)]: [get(%i0/DESCRIPTION)]),%b,%r)))][setq(_n2,json(object,kind,json(string,field),key,json(string,bucket),label,json(string,Bucket),type,json(string,select),options,%q<_no>,default,json(string,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(_n3,json(object,kind,json(string,field),key,json(string,title),label,json(string,Title),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,80))))][setq(_n4,json(object,kind,json(string,field),key,json(string,text),label,json(string,What do you need?),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP)),validation,json(object,required,json(boolean,true))))][setq(_n5,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean),help,json(string,get({{jobs}}/DATA`WEB`CODEHELP))))][setq(_ns,u({{jobs}}/WEB`SEC,,1,%q<_n1>%r%q<_n2>%r%q<_n3>%r%q<_n4>%r%q<_n5>))][u({{jobs}}/WEB`DOC,form,New request,%q<_ns>,json(object,submit,u({{jobs}}/WEB`ACTION)))]
+        [setq(_n1,json(object,kind,json(string,field),key,json(string,op),type,json(string,hidden),default,json(string,file)))][setq(_no,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`FILEABLE,%0),u({{jobs}}/WEB`OPT,name(%i0),[name(%i0)]: [get(%i0/DESCRIPTION)][if(strlen(setr(_nw,u({{jobs}}/FUN`WAIT`SHORT,%i0))),%b[chr(183)] first answer %q<_nw>)]),%b,%r)))][setq(_n2,json(object,kind,json(string,field),key,json(string,bucket),label,json(string,Bucket),type,json(string,select),options,%q<_no>,default,json(string,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(_n3,json(object,kind,json(string,field),key,json(string,title),label,json(string,Title),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,80))))][setq(_n4,json(object,kind,json(string,field),key,json(string,text),label,json(string,What do you need?),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP)),validation,json(object,required,json(boolean,true))))][setq(_n5,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean),help,json(string,get({{jobs}}/DATA`WEB`CODEHELP))))][setq(_ns,u({{jobs}}/WEB`SEC,,1,%q<_n1>%r%q<_n2>%r%q<_n3>%r%q<_n4>%r%q<_n5>))][u({{jobs}}/WEB`DOC,form,New request,%q<_ns>,json(object,submit,u({{jobs}}/WEB`ACTION)))]
       DATA`WEB`MDHELP: |-
         Markdown works: **bold**, *italic*, lists and links.
       DATA`WEB`CODEHELP: |-
@@ -1004,16 +1233,23 @@ objects:
       WEB`SCHEMA`NOJOB: |-
         [setq(_nj,u({{jobs}}/WEB`MD,There is no job %0.))][u({{jobs}}/WEB`DOC,view,Job %0,u({{jobs}}/WEB`SEC,,1,%q<_nj>))]
       # Job object %1 for viewer %0: its details, the messages, the reply box and the buttons.
+      # Its checklist sits under the details when it has one; staff get the update box, and anyone who may
+      # attach a scene log gets that field while the scene plugin runs and the job is open.
       WEB`SCHEMA`JOB`SEEN: |-
-        [u({{jobs}}/WEB`DOC,form,Job [get(%1/NUM)]: [get(%1/TITLE)],[u({{jobs}}/WEB`SEC,,1,json(object,kind,json(string,keyvalue),fields,u({{jobs}}/WEB`KEYS,%1,%0)))]%r[u({{jobs}}/WEB`SEC,Messages,2,json(object,kind,json(string,timeline),rows_field,json(string,entries),empty,json(string,No messages.)))]%r[u({{jobs}}/WEB`SEC`REPLY,%1,%0)][if(strlen(setr(_ab,u({{jobs}}/WEB`BUTTONS,%1,%0))),%r[u({{jobs}}/WEB`SEC,,4,%q<_ab>,4)])],json(object,act,u({{jobs}}/WEB`ACTION)))]
+        [setq(_js,u({{jobs}}/FUN`CAN`WORK,get(%1/BUCKET),%0))][setq(_jo,not(strmatch(get(%1/STATE),closed)))][u({{jobs}}/WEB`DOC,form,Job [get(%1/NUM)]: [get(%1/TITLE)],[u({{jobs}}/WEB`SEC,,1,json(object,kind,json(string,keyvalue),fields,u({{jobs}}/WEB`KEYS,%1,%0)))][if(words(u({{jobs}}/FUN`STEPS,%1)),%r[u({{jobs}}/WEB`SEC,Checklist,2,json(object,kind,json(string,timeline),rows_field,json(string,steps)))])]%r[u({{jobs}}/WEB`SEC,Messages,3,json(object,kind,json(string,timeline),rows_field,json(string,entries),empty,json(string,No messages.)))]%r[u({{jobs}}/WEB`SEC`REPLY,%1,%0)][if(cand(%q<_jo>,u({{jobs}}/FUN`HAS`SCENES),cor(%q<_js>,u({{jobs}}/FUN`IS`PARTY,%1,%0))),%r[u({{jobs}}/WEB`SEC,Attach a scene log,5,[u({{jobs}}/WEB`FIELD,scene,Scene number,text,The number on the scene's page. [if(strlen(u({{jobs}}/FUN`STEP`SCENE`OPEN,%1)),It ticks the checklist's scene step.)])]%r[u({{jobs}}/WEB`BTN,Attach,json(object,op,json(string,scene),job,json(number,get(%1/NUM))))])])][if(cand(%q<_jo>,%q<_js>),%r[u({{jobs}}/WEB`SEC,Update for the player,6,[u({{jobs}}/WEB`FIELD,update,Where it stands,text,One line the player reads on the job. Empty clears it.)]%r[u({{jobs}}/WEB`BTN,Save update,json(object,op,json(string,status),job,json(number,get(%1/NUM))))])])][if(strlen(setr(_ab,u({{jobs}}/WEB`BUTTONS,%1,%0))),%r[u({{jobs}}/WEB`SEC,,7,%q<_ab>,4)])],json(object,act,u({{jobs}}/WEB`ACTION)))]
+      # The labels of job %0's fields for viewer %1, as the keyvalue element lists them.
       WEB`KEYS: |-
-        [setq(_ks,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][u({{jobs}}/WEB`ARR,iter(squish(Bucket Status Priority Filed [if(%q<_ks>,Due)] Handlers [if(%q<_ks>,Watchers)] [if(words(lattr(%0/HELPER`*)),Helpers)]),json(string,%i0),%b,%r))]
+        [setq(_ks,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][u({{jobs}}/WEB`ARR,iter(u({{jobs}}/FUN`FIELD`KEYS,%0,%1,%q<_ks>),json(string,u({{jobs}}/FUN`LABEL,%i0)),%b,%r))]
       # The reply box; a player whose job closed longer ago than the bucket reopens gets a note instead.
       WEB`SEC`REPLY: |-
         [setq(_rs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_rc,strmatch(get(%0/STATE),closed))][setq(_rt,json(object,kind,json(string,field),key,json(string,text),label,json(string,Message),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP))))][setq(_rk,if(%q<_rs>,json(object,kind,json(string,field),key,json(string,kind),label,json(string,Send as),type,json(string,select),options,json(array,u({{jobs}}/WEB`OPT,reply,A reply the player sees),u({{jobs}}/WEB`OPT,note,A staff note)),default,json(string,reply))))][setq(_rf,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean)))][setq(_rb,u({{jobs}}/WEB`BTN,Send,json(object,op,json(string,reply),job,json(number,get(%0/NUM))),primary))][setq(_rl,%q<_rt>%r[if(%q<_rs>,%q<_rk>%r)]%q<_rf>%r%q<_rb>)][setq(_rm,u({{jobs}}/WEB`MD,This job closed too long ago to answer. File a new request and mention job [get(%0/NUM)].))][if(cand(%q<_rc>,not(%q<_rs>),not(u({{jobs}}/FUN`CAN`REOPEN,%0))),u({{jobs}}/WEB`SEC,,3,%q<_rm>),u({{jobs}}/WEB`SEC,if(cand(%q<_rc>,not(%q<_rs>)),Reply to open it again,Reply),3,%q<_rl>))]
-      # Staff: claim or unclaim, then approve, deny and complete; the filer: cancel; staff on a closed job: reopen.
+      # Staff: claim or unclaim, then approve, deny and complete; the filer: cancel; staff on a closed job:
+      # keep or revert an approval made at once that is not checked yet, else reopen.
       WEB`BUTTONS: |-
-        [setq(_bs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_bn,get(%0/NUM))][setq(_bo,not(strmatch(get(%0/STATE),closed)))][setq(_bc,if(hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%1)]),Unclaim,Claim))][switch(1,cand(%q<_bs>,%q<_bo>),u({{jobs}}/WEB`BUTTONS`STAFF,%q<_bn>,%q<_bc>),cand(%q<_bo>,u({{jobs}}/FUN`IS`PARTY,%0,%1)),u({{jobs}}/WEB`BTN,Cancel job,json(object,op,json(string,close),outcome,json(string,canceled),job,json(number,%q<_bn>)),default,Cancel job %q<_bn>?),%q<_bs>,u({{jobs}}/WEB`BTN,Reopen,json(object,op,json(string,reopen),job,json(number,%q<_bn>))),)]
+        [setq(_bs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_bn,get(%0/NUM))][setq(_bo,not(strmatch(get(%0/STATE),closed)))][setq(_bc,if(hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%1)]),Unclaim,Claim))][switch(1,cand(%q<_bs>,%q<_bo>),u({{jobs}}/WEB`BUTTONS`STAFF,%q<_bn>,%q<_bc>),cand(%q<_bo>,u({{jobs}}/FUN`IS`PARTY,%0,%1)),u({{jobs}}/WEB`BTN,Cancel job,json(object,op,json(string,close),outcome,json(string,canceled),job,json(number,%q<_bn>)),default,Cancel job %q<_bn>?),cand(%q<_bs>,strmatch(get(%0/AUDIT`STATE),pending)),u({{jobs}}/WEB`BUTTONS`AUDIT,%q<_bn>,name(get(%0/BUCKET))),%q<_bs>,u({{jobs}}/WEB`BTN,Reopen,json(object,op,json(string,reopen),job,json(number,%q<_bn>))),)]
+      # Job %0, approved at once by bucket %1: keep the approval, or revert it with the message box as the reason.
+      WEB`BUTTONS`AUDIT: |-
+        [u({{jobs}}/WEB`BTN,Keep approval,json(object,op,json(string,audit),job,json(number,%0)),success)]%r[u({{jobs}}/WEB`BTN,Revert,json(object,op,json(string,revert),job,json(number,%0)),error,Revert job %0? %1 undoes the approval\, and what is in the message box goes to the player as the reason.)]
 
       # data: GET /http/jobs/data?at=<path>[&filter=<filter>|&bucket=<slug>]
       # Job %0 to staff on an open job: %1 (Claim or Unclaim), then approve, deny and complete.
@@ -1029,13 +1265,18 @@ objects:
         [setq(_w,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][json(object,number,json(number,get(%0/NUM)),num,json(string,get(%0/NUM)),unread,json(string,if(u({{jobs}}/FUN`UNREAD,%0,%1),Unread)),unread_color,json(string,info),title,json(string,get(%0/TITLE)),bucket,json(string,name(get(%0/BUCKET))),status,json(string,if(cand(%q<_w>,u({{jobs}}/FUN`IS`OVERDUE,%0)),Overdue,u({{jobs}}/FUN`STATE`TEXT,%0,%q<_w>))),color,json(string,u({{jobs}}/WEB`COLOR,%0,%q<_w>)),priority,json(string,capstr(get(%0/PRIORITY))),updated,json(string,u({{jobs}}/FUN`DATE,get(%0/[if(%q<_w>,UPDATED`AT,PUBLIC`AT)]))))]
       # Whatever waits on the viewer is warning; overdue is error.
       WEB`COLOR: |-
-        [switch(get(%0/STATE),closed,switch(get(%0/OUTCOME),approved,success,completed,success,denied,error,default),held,secondary,player,if(%1,info,warning),if(cand(%1,u({{jobs}}/FUN`IS`OVERDUE,%0)),error,if(%1,warning,info)))]
+        [switch(get(%0/STATE),closed,if(cand(%1,strmatch(get(%0/AUDIT`STATE),pending)),warning,switch(get(%0/OUTCOME),approved,success,completed,success,denied,error,reverted,error,default)),held,secondary,player,if(%1,info,warning),if(cand(%1,u({{jobs}}/FUN`IS`OVERDUE,%0)),error,if(%1,warning,info)))]
       # Job %1 for viewer %0. Staff-only details go out hidden to everyone else.
       WEB`DATA`JOB: |-
         [setq(_j,u({{jobs}}/FUN`JOB,%1))][if(cand(strlen(%q<_j>),u({{jobs}}/FUN`CAN`SEE,%q<_j>,%0)),u({{jobs}}/WEB`DATA`JOB`SEEN,%0,%q<_j>),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
-      # Job object %1 for viewer %0. Staff-only details go out hidden to everyone else.
+      # Job object %1 for viewer %0: the fields +job shows them, by label, then its checklist (steps), its
+      # messages (entries) and, for staff, the update box's current text (update).
       WEB`DATA`JOB`SEEN: |-
-        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%1/BUCKET),%0))][setq(_d1,[u({{jobs}}/FUN`STATE`TEXT,%1,%q<_s>)][if(cand(%q<_s>,u({{jobs}}/FUN`IS`OVERDUE,%1)),%b[chr(40)]overdue[chr(41)])])][setq(_d2,[u({{jobs}}/FUN`WHEN,get(%1/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%1/FILED`BY),%1,%0)])][setq(_d3,if(isint(get(%1/DUE)),u({{jobs}}/FUN`WHEN,get(%1/DUE)),None))][setq(_d4,u({{jobs}}/WEB`ENTRIES,%1,%0,%q<_s>))][json(object,fields,json(object,Bucket,u({{jobs}}/WEB`V,json(string,name(get(%1/BUCKET))),1),Status,u({{jobs}}/WEB`V,json(string,%q<_d1>),1),Priority,u({{jobs}}/WEB`V,json(string,capstr(get(%1/PRIORITY))),1),Filed,u({{jobs}}/WEB`V,json(string,%q<_d2>),1),Due,u({{jobs}}/WEB`V,json(string,%q<_d3>),%q<_s>),Handlers,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`NAMES,%1,%0,HANDLER)),1),Watchers,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`NAMES,%1,%0,WATCHER)),%q<_s>),Helpers,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`NAMES,%1,%0,HELPER)),1),entries,u({{jobs}}/WEB`V,%q<_d4>,1)))]
+        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%1/BUCKET),%0))][setq(_df,iter(u({{jobs}}/FUN`FIELD`KEYS,%1,%0,%q<_s>),[json(string,u({{jobs}}/FUN`LABEL,%i0))]:[u({{jobs}}/WEB`V,json(string,stripansi(u({{jobs}}/FUN`FIELD`%i0,%1,%0,%q<_s>))),1)],%b,[chr(44)]))][setq(_dx,[json(string,steps)]:[u({{jobs}}/WEB`V,u({{jobs}}/WEB`STEPS,%1,%0,%q<_s>),1)][chr(44)][json(string,entries)]:[u({{jobs}}/WEB`V,u({{jobs}}/WEB`ENTRIES,%1,%0,%q<_s>),1)][chr(44)][json(string,update)]:[u({{jobs}}/WEB`V,json(string,get(%1/STATUS)),%q<_s>)])][json(object,fields,[chr(123)][if(strlen(%q<_df>),%q<_df>[chr(44)])]%q<_dx>[chr(125)])]
+      # Job %0's checklist for viewer %1 (%2 1 for staff) as timeline rows: when a step was done and by whom,
+      # the scene that ticked it, and for staff the button that ticks or unticks it while the job is open.
+      WEB`STEPS: |-
+        [setq(_wo,cand(%2,not(strmatch(get(%0/STATE),closed))))][u({{jobs}}/WEB`ARR,iter(u({{jobs}}/FUN`STEPS,%0),[setq(_wd,get(%0/CHECK`%i0`DONE))][setq(_wc,get(%0/CHECK`%i0`SCENE))][json(object,author,json(string,Step %i0[if(%q<_wd>,%b[chr(183)] [u({{jobs}}/FUN`WHO,get(%0/CHECK`%i0`BY),%0,%1)])]),time,if(%q<_wd>,json(number,%q<_wd>),json(null)),body,json(string,[u({{jobs}}/FUN`STEP`TEXT,%0,%i0)][if(strlen(%q<_wc>),: [chr(91)]scene %q<_wc>[chr(93)][chr(40)]/scenes/%q<_wc>[chr(41)])]),format,json(string,markdown),tag,json(string,if(%q<_wd>,Done,if(u({{jobs}}/FUN`STEP`ISSCENE,%0,%i0),Scene log,To do))),tag_color,json(string,if(%q<_wd>,success,default)),actions,if(%q<_wo>,json(array,json(object,label,json(string,if(%q<_wd>,Mark not done,Mark done)),action,json(string,act),values,json(object,op,json(string,if(%q<_wd>,uncheck,check)),job,json(number,get(%0/NUM)),step,json(number,%i0)))),json_array()))],%b,%r))]
       # The messages viewer %1 may read (%2: works the bucket, and so also sees notes and the log).
       WEB`ENTRIES: |-
         [setq(_ev,squish(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%0,entry,%i0,staff,%2,mode,if(%2,all,)),%i0))))][u({{jobs}}/WEB`ARR,iter(%q<_ev>,uargs({{jobs}}/WEB`ENTRY,job,%0,entry,%i0,viewer,%1,staff,%2),%b,%r))]
@@ -1054,7 +1295,7 @@ objects:
       # Runs the posted op as %<viewer> and leaves the answer in %q<out>. Checks mirror the +job and
       # +bucket commands; the writes are the same INC`DO` routines and settings.
       WEB`ACT: |-
-        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%<viewer>)][setq(me,if(strlen(%<viewer>),u({{jobs}}/FUN`KEY,%<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode))),softcode,markdown))]; @assert strlen(%<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert match(file reply claim unclaim close reopen format bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<op>)=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
+        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%<viewer>)][setq(me,if(strlen(%<viewer>),u({{jobs}}/FUN`KEY,%<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode))),softcode,markdown))]; @assert strlen(%<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert match(file reply claim unclaim close reopen format status check uncheck scene audit revert bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<op>)=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
       WEB`ACT`FILE: |-
         think [setq(fb,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`GET,bucket),%<viewer>))][setq(title,trim(u({{jobs}}/WEB`GET,title)))]; @assert cand(strlen(%q<fb>),u({{jobs}}/FUN`CAN`FILE,%q<fb>,%<viewer>))=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,Pick a bucket you can file in.))]; @assert u({{jobs}}/FUN`TAKES`JOBS,%q<fb>)=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,[name(%q<fb>)] is not taking new jobs.))]; @assert strlen(%q<title>)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Give it a title.))]; @assert lte(strlen(%q<title>),80)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Keep the title to 80 characters.))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Say what you need.))]; @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<fb>,title,%q<title>,text,%q<text>,format,%q<fmt>,how,portal; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Filed job %q<n>.),redirect,json(string,/apps/jobs/%q<n>)))]
       # The posted job, as INC`NEED`JOB finds one for a command.
@@ -1078,9 +1319,28 @@ objects:
       WEB`ACT`FORMAT: |-
         @include {{jobs}}/WEB`NEED`JOB; think [setq(ent,u({{jobs}}/WEB`GET,entry))][setq(fmt,lcstr(u({{jobs}}/WEB`GET,fmt)))]; @assert cand(isint(%q<ent>),hasattr(%q<jo>,ENTRY`%q<ent>`KIND),not(strmatch(get(%q<jo>/ENTRY`%q<ent>`KIND),action)),uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%q<jo>,entry,%q<ent>,staff,%q<staff>))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> has no message %q<ent>.))]; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=think [setq(out,u({{jobs}}/WEB`ERR,Only its author or staff can change how a message shows.))]; @assert match(markdown softcode,%q<fmt>)=think [setq(out,u({{jobs}}/WEB`ERR,A message shows as markdown or softcode.))]; @include/args {{jobs}}/INC`DO`FORMAT=entry,%q<ent>,format,%q<fmt>; think [setq(out,u({{jobs}}/WEB`DONE,Message %q<ent> shows [if(strmatch(%q<fmt>,softcode),as typed,as markdown)] now.,%<viewer>))]
 
-      # The bucket page's Save: every setting at once, checked as +bucket/set checks one.
+      # The update box, as +job/status.
+      WEB`ACT`STATUS: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @include {{jobs}}/WEB`NEED`OPEN; think [setq(upd,trim(u({{jobs}}/WEB`GETS,update)))]; @assert lte(strlen(%q<upd>),120)=think [setq(out,u({{jobs}}/WEB`ERRF,update,Keep the update to 120 characters.))]; @include/nobreak/args {{jobs}}/INC`DO`STATUS=text,%q<upd>; think [setq(out,u({{jobs}}/WEB`DONE,if(strlen(%q<upd>),Update saved.,Update cleared.),%<viewer>))]
+      # A checklist step's Done and Not done, as +job/check and /uncheck.
+      WEB`ACT`CHECK: |-
+        @include/args {{jobs}}/WEB`ACT`STEP=done,1
+      WEB`ACT`UNCHECK: |-
+        @include/args {{jobs}}/WEB`ACT`STEP=done,0
+      WEB`ACT`STEP: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @include {{jobs}}/WEB`NEED`OPEN; think [setq(step,u({{jobs}}/WEB`GET,step))]; @assert member(u({{jobs}}/FUN`STEPS,%q<jo>),%q<step>)=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> has no step %q<step>.))]; @assert comp(t(get(%q<jo>/CHECK`%q<step>`DONE)),%<done>)=think [setq(out,u({{jobs}}/WEB`ERR,Step %q<step> is [if(%<done>,done already,not done)].))]; @include/args {{jobs}}/INC`DO`CHECK=step,%q<step>,done,%<done>,scene,; think [setq(out,u({{jobs}}/WEB`DONE,Step %q<step> is [if(%<done>,done,not done)].,%<viewer>))]
+      # The scene field's Attach, as +job/scene.
+      WEB`ACT`SCENE: |-
+        @include {{jobs}}/WEB`NEED`JOB; @assert u({{jobs}}/FUN`HAS`SCENES)=think [setq(out,u({{jobs}}/WEB`ERR,This game keeps no scene logs.))]; @assert cor(%q<staff>,u({{jobs}}/FUN`IS`PARTY,%q<jo>,%<viewer>))=think [setq(out,u({{jobs}}/WEB`ERR,Only staff or whoever filed job %q<n> can attach a scene to it.))]; @include {{jobs}}/WEB`NEED`OPEN; think [setq(sc,trim(u({{jobs}}/WEB`GETS,scene)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`SCENE,%q<sc>,%<viewer>,%q<staff>,%q<jo>))))=think [setq(out,u({{jobs}}/WEB`ERRF,scene,%q<err>))]; @include/nobreak/args {{jobs}}/INC`DO`SCENE=scene,%q<sc>; think [setq(out,u({{jobs}}/WEB`DONE,Scene %q<sc> is attached.[if(strlen(%q<sstep>),%bStep %q<sstep> is done.)],%<viewer>))]
+      # Keep approval and Revert, as +job/audit and +job/revert; the message box is the reason.
+      WEB`ACT`AUDIT: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert strmatch(get(%q<jo>/AUDIT`STATE),pending)=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> is not an approval waiting to be checked.))]; @include {{jobs}}/INC`DO`AUDIT`PASS; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is checked: its approval stands.,%<viewer>))]
+      WEB`ACT`REVERT: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert cand(match(pending passed,get(%q<jo>/AUDIT`STATE)),strmatch(get(%q<jo>/STATE),closed))=think [setq(out,u({{jobs}}/WEB`ERR,Only an approval made at once can be reverted.))]; @include/args {{jobs}}/INC`DO`REVERT=text,%q<text>,format,%q<fmt>; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is reverted.,%<viewer>))]
+      # The bucket page's Save: every setting posted at once, checked as +bucket/set checks one. A setting
+      # left out of the post stays as it is.
       WEB`ACT`BUCKET: |-
-        think [setq(bk,u({{jobs}}/WEB`QBUCKET,%<viewer>,u({{jobs}}/WEB`GET,bucket)))]; @assert strlen(%q<bk>)=think [setq(out,u({{jobs}}/WEB`ERR,Only a Job Admin or someone who works that bucket can change it.))]; think [setq(bad,first(squish(iter(get({{jobs}}/DATA`SETTINGS),if(u({{jobs}}/FUN`SETTING`OK,%i0,u({{jobs}}/WEB`SETTING,%i0)),,%i0)))))]; @assert not(strlen(%q<bad>))=think [setq(out,u({{jobs}}/WEB`ERRF,%q<bad>,get({{jobs}}/DATA`SETTING`%q<bad>)))]; @dolist/inline [get({{jobs}}/DATA`SETTINGS)]=&## %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,##,u({{jobs}}/WEB`SETTING,##))]; think [setq(out,json(object,ok,json(boolean,true),message,json(string,[name(%q<bk>)] is saved.)))]
+        think [setq(bk,u({{jobs}}/WEB`QBUCKET,%<viewer>,u({{jobs}}/WEB`GET,bucket)))][setq(posted,squish(iter(get({{jobs}}/DATA`SETTINGS),if(strlen(json_query(%q<body>,get,%i0)),%i0))))]; @assert strlen(%q<bk>)=think [setq(out,u({{jobs}}/WEB`ERR,Only a Job Admin or someone who works that bucket can change it.))]; think [setq(bad,first(squish(iter(%q<posted>,if(u({{jobs}}/FUN`SETTING`OK,%i0,u({{jobs}}/WEB`SETTING,%i0)),,%i0)))))]; @assert not(strlen(%q<bad>))=think [setq(out,u({{jobs}}/WEB`ERRF,%q<bad>,get({{jobs}}/DATA`SETTING`%q<bad>)))]; @dolist/inline %q<posted>=&## %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,##,u({{jobs}}/WEB`SETTING,##))]; think [setq(out,json(object,ok,json(boolean,true),message,json(string,[name(%q<bk>)] is saved.)))]
       # Field %0 as posted, empty when it was not.
       WEB`GETS: |-
         [setq(_v,u({{jobs}}/WEB`GET,%0))][if(strmatch(%q<_v>,null),,%q<_v>)]
@@ -1105,9 +1365,12 @@ objects:
         @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=think [setq(out,u({{jobs}}/WEB`ERR,[name(%q<bk>)] takes new jobs already.))]; @assert not(strlen(get(%q<bk>/DELETING`TO)))=think [setq(out,u({{jobs}}/WEB`ERR,[name(%q<bk>)] is being deleted.))]; @include/args {{jobs}}/INC`DO`BUCKET`STATE=disabled,0; think [setq(out,u({{jobs}}/WEB`BDONE,[name(%q<bk>)] takes new jobs again.,%<viewer>))]
       WEB`ACT`DELETEBUCKET: |-
         @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; think [setq(_to,u({{jobs}}/WEB`GETS,moveto))][setq(mv,if(strlen(%q<_to>),u({{jobs}}/FUN`BUCKET`BYSLUG,%q<_to>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%<viewer>,INBUCKET,%q<bk>)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<_to>))))=think [setq(out,u({{jobs}}/WEB`ERRF,if(%q<_nj>,moveto,_global),%q<err>))]; @include/nobreak/args {{jobs}}/INC`DO`BUCKET`DELETE=to,%q<mv>; think [setq(out,json(object,ok,json(boolean,true),message,json(string,uargs({{jobs}}/FUN`DELETED,name,%q<bname>,moved,%q<moved>,to,%q<mv>,pending,%q<pending>)),redirect,json(string,/apps/jobs/buckets)))]
-      # Setting %0 as posted, in the words +bucket/set takes.
+      # Setting %0 as posted, in the words +bucket/set takes. The checklist comes as a list of steps.
       WEB`SETTING: |-
-        [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(match(true 1 yes on,lcstr(%q<_v>)),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
+        [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(match(true 1 yes on,lcstr(%q<_v>)),yes,no),audit,if(match(true 1 yes on,lcstr(%q<_v>)),yes,no),checklist,u({{jobs}}/WEB`STEPLIST,%q<_v>),if(strmatch(%q<_v>,null),,%q<_v>))]
+      # A posted JSON list of steps as the |-separated list +bucket/set takes; a | inside a step becomes a /.
+      WEB`STEPLIST: |-
+        [if(cand(strmatch(json_query(%0),array),gt(json_query(%0,size),0)),iter(lnum(0,dec(json_query(%0,size))),edit(json_query(json_query(%0,get,%i0),unescape),|,/),%b,|),if(strmatch(%0,null),,%0))]
 
       # sidebar: GET /http/jobs/nav
       # Viewer %0's sidebar: staff get the queue's views and the buckets they work, players their own
@@ -1115,7 +1378,7 @@ objects:
       WEB`NAV: |-
         [json(object,groups,if(strlen(%0),u({{jobs}}/WEB`ARR,u({{jobs}}/WEB`NAV`[if(u({{jobs}}/WEB`STAFF,%0),STAFF,PLAYER)],%0)),json_array()))]
       WEB`NAV`STAFF: |-
-        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,Needs attention,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Handled by me,/apps/jobs?filter=mine,person,u({{jobs}}/WEB`COUNT,%0,MINE)),u({{jobs}}/WEB`LINK,New,/apps/jobs?filter=new,fiber_new,u({{jobs}}/WEB`COUNT,%0,NEW)),u({{jobs}}/WEB`LINK,Overdue,/apps/jobs?filter=overdue,alarm,u({{jobs}}/WEB`COUNT,%0,OVERDUE)),u({{jobs}}/WEB`LINK,All open,/apps/jobs?filter=all,view_list,u({{jobs}}/WEB`COUNT,%0,OPEN)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]%r[json(object,label,json(string,Buckets),items,u({{jobs}}/WEB`ARR,[iter(u({{jobs}}/WEB`WORKED,%0),u({{jobs}}/WEB`LINK,name(%i0),/apps/jobs?bucket=[get(%i0/SLUG)],if(u({{jobs}}/FUN`TAKES`JOBS,%i0),folder_open,folder_off),u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),%b,%r)]%r[u({{jobs}}/WEB`LINK,Bucket settings,/apps/jobs/buckets,tune)]))]
+        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,Needs attention,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Handled by me,/apps/jobs?filter=mine,person,u({{jobs}}/WEB`COUNT,%0,MINE)),u({{jobs}}/WEB`LINK,New,/apps/jobs?filter=new,fiber_new,u({{jobs}}/WEB`COUNT,%0,NEW)),u({{jobs}}/WEB`LINK,Overdue,/apps/jobs?filter=overdue,alarm,u({{jobs}}/WEB`COUNT,%0,OVERDUE)),u({{jobs}}/WEB`LINK,To check,/apps/jobs?filter=audit,fact_check,u({{jobs}}/WEB`COUNT,%0,AUDIT)),u({{jobs}}/WEB`LINK,All open,/apps/jobs?filter=all,view_list,u({{jobs}}/WEB`COUNT,%0,OPEN)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]%r[json(object,label,json(string,Buckets),items,u({{jobs}}/WEB`ARR,[iter(u({{jobs}}/WEB`WORKED,%0),u({{jobs}}/WEB`LINK,name(%i0),/apps/jobs?bucket=[get(%i0/SLUG)],if(u({{jobs}}/FUN`TAKES`JOBS,%i0),folder_open,folder_off),u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),%b,%r)]%r[u({{jobs}}/WEB`LINK,Bucket settings,/apps/jobs/buckets,tune)]))]
       WEB`NAV`PLAYER: |-
         [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,My open jobs,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]
       # A sidebar link: label %0, path %1, Material icon %2, and count %3 when there is one.
@@ -1135,7 +1398,7 @@ objects:
         [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),u({{jobs}}/WEB`SCHEMA`BUCKET`SEEN,%q<_bk>,%0),u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,u({{jobs}}/WEB`MD,You do not work a bucket called %1.))))]
       # Bucket %0's page for viewer %1: what it is, its settings, and for a Job Admin, managing it.
       WEB`SCHEMA`BUCKET`SEEN: |-
-        [setq(_s1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Status),json(string,Open jobs),json(string,Permission),json(string,Role),json(string,Hooks))))][setq(_s2,[u({{jobs}}/WEB`FIELD,description,About,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`FIELD,turnaround,Turnaround in days,number,A new job is due this many days after it is filed. 0 sets no due date.)]%r[u({{jobs}}/WEB`FIELD,reopen,Reopen window in days,number,A player's reply opens a closed job again for this many days. 0 never.)]%r[u({{jobs}}/WEB`SELECT,anonymous,Hide who is talking,none None|filer The filer\, from staff|staff Staff\, from the filer)]%r[u({{jobs}}/WEB`SELECT,priority,Priority of new jobs,low Low|normal Normal|high High)]%r[u({{jobs}}/WEB`FIELD,keep,Keep closed jobs for days,text,Empty keeps them forever.)]%r[u({{jobs}}/WEB`FIELD,hidden,Hidden from players,boolean,Players do not see the bucket or file in it.)])][setq(_s3,json(object,kind,json(string,button),label,json(string,Save),action,json(string,save),values,json(object,op,json(string,bucket),bucket,json(string,get(%0/SLUG))),color,json(string,primary),variant,json(string,filled)))][u({{jobs}}/WEB`DOC,form,name(%0),[u({{jobs}}/WEB`SEC,,1,%q<_s1>)]%r[u({{jobs}}/WEB`SEC,Settings,2,%q<_s2>)]%r[u({{jobs}}/WEB`SEC,,3,%q<_s3>)][if(u({{jobs}}/FUN`IS`ADMIN,%1),%r[u({{jobs}}/WEB`SEC,Manage,4,u({{jobs}}/WEB`MANAGE,%0))])],json(object,save,u({{jobs}}/WEB`ACTION`KEEP)))]
+        [setq(_s1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Status),json(string,Open jobs),json(string,First answer),json(string,Closed in),json(string,Permission),json(string,Role),json(string,Hooks))))][setq(_s2,[u({{jobs}}/WEB`FIELD,description,About,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`FIELD,turnaround,Turnaround in days,number,A new job is due this many days after it is filed. 0 sets no due date.)]%r[u({{jobs}}/WEB`FIELD,reopen,Reopen window in days,number,A player's reply opens a closed job again for this many days. 0 never.)]%r[u({{jobs}}/WEB`SELECT,anonymous,Hide who is talking,none None|filer The filer\, from staff|staff Staff\, from the filer)]%r[u({{jobs}}/WEB`SELECT,priority,Priority of new jobs,low Low|normal Normal|high High)]%r[u({{jobs}}/WEB`FIELD,keep,Keep closed jobs for days,text,Empty keeps them forever.)]%r[u({{jobs}}/WEB`FIELD,hidden,Hidden from players,boolean,Players do not see the bucket or file in it.)]%r[u({{jobs}}/WEB`FIELD,acknowledge,First reply to a new job,textarea,Sent at once on every new job\, with how soon the bucket usually answers. Empty sends none.)]%r[u({{jobs}}/WEB`FIELD,checklist,Checklist,list,Steps every new job here gets. Start a step with scene: to ask for a scene log.)]%r[u({{jobs}}/WEB`FIELD,audit,Approve at once\, check later,boolean,A job filed here is approved as soon as it is filed and its ON`APPROVE runs. Staff check it under To check\, and Revert runs ON`REVERT to undo it.)])][setq(_s3,json(object,kind,json(string,button),label,json(string,Save),action,json(string,save),values,json(object,op,json(string,bucket),bucket,json(string,get(%0/SLUG))),color,json(string,primary),variant,json(string,filled)))][u({{jobs}}/WEB`DOC,form,name(%0),[u({{jobs}}/WEB`SEC,,1,%q<_s1>)]%r[u({{jobs}}/WEB`SEC,Settings,2,%q<_s2>)]%r[u({{jobs}}/WEB`SEC,,3,%q<_s3>)][if(u({{jobs}}/FUN`IS`ADMIN,%1),%r[u({{jobs}}/WEB`SEC,Manage,4,u({{jobs}}/WEB`MANAGE,%0))])],json(object,save,u({{jobs}}/WEB`ACTION`KEEP)))]
       # The Manage section's elements for bucket %0: rename it, stop or start its new jobs, delete it.
       # The bucket +request files in can do neither of the last two.
       WEB`MANAGE: |-
@@ -1160,7 +1423,7 @@ objects:
       DATA`WEB`ACTION`KEEP: |-
         {"transport":"http","method":"POST","route":"/http/jobs/act","payload":"fields","on_error":{"bind_field_errors":true}}
       WEB`DATA`BUCKET: |-
-        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Status,u({{jobs}}/WEB`V,json(string,if(u({{jobs}}/FUN`TAKES`JOBS,%q<_bk>),Taking new jobs,Disabled: no new jobs)),1),rename,u({{jobs}}/WEB`V,json(string,name(%q<_bk>)),1),Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Status,u({{jobs}}/WEB`V,json(string,if(u({{jobs}}/FUN`TAKES`JOBS,%q<_bk>),Taking new jobs,Disabled: no new jobs)),1),rename,u({{jobs}}/WEB`V,json(string,name(%q<_bk>)),1),Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),First answer,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`WAIT`MEASURED,%q<_bk>,ANSWER)),1),Closed in,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`WAIT`MEASURED,%q<_bk>,CLOSE)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1),acknowledge,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/ACKNOWLEDGE)),1),audit,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/AUDIT)),1),checklist,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(get(%q<_bk>/CHECKLIST),json(string,trim(%i0)),|,%r)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
 
       # ---- lifecycle ------------------------------------------------------------
       # Commands added with @command/add and their hooks, and @functions, last until a restart, so STARTUP
@@ -1206,6 +1469,9 @@ objects:
         0
       PRIORITY: |-
         normal
+      # 1: a job filed here is approved at once (its ON`APPROVE runs), and staff check it afterwards.
+      AUDIT: |-
+        0
 
   # A bucket. Its work lock says who works its jobs, its file lock who may file in it. Every
   # ON`<EVENT> hook starts as a comment naming its arguments, with an example: replace the comment
@@ -1226,8 +1492,12 @@ objects:
         Character applications.
       SLUG: |-
         applications
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       TURNAROUND: |-
         3
+      CHECKLIST: |-
+        Sheet checked|Background read|scene:A log of a scene you played
       ON`FILE: |-
         @@ {Runs after a job is filed in this bucket. %<job> (%0): job number. %<filer> (%1): objid of whoever filed it. %<title> (%2): the job's title. %<how> (%3): how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %<filer>=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
       ON`REPLY: |-
@@ -1256,6 +1526,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   - ref: requests
     type: thing
@@ -1271,6 +1545,8 @@ objects:
         Anything you need from staff.
       SLUG: |-
         requests
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       TURNAROUND: |-
         3
       ON`FILE: |-
@@ -1301,6 +1577,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   - ref: building
     type: thing
@@ -1316,6 +1596,8 @@ objects:
         Rooms, objects, descriptions and typos.
       SLUG: |-
         building
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       ON`FILE: |-
         @@ {Runs after a job is filed in this bucket. %<job> (%0): job number. %<filer> (%1): objid of whoever filed it. %<title> (%2): the job's title. %<how> (%3): how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %<filer>=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
       ON`REPLY: |-
@@ -1344,6 +1626,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   - ref: bugs
     type: thing
@@ -1359,6 +1645,8 @@ objects:
         Problems with code or the server.
       SLUG: |-
         bugs
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       PRIORITY: |-
         high
       ON`FILE: |-
@@ -1389,6 +1677,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   - ref: plots
     type: thing
@@ -1404,6 +1696,8 @@ objects:
         Plot and scene proposals.
       SLUG: |-
         plots
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       ON`FILE: |-
         @@ {Runs after a job is filed in this bucket. %<job> (%0): job number. %<filer> (%1): objid of whoever filed it. %<title> (%2): the job's title. %<how> (%3): how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %<filer>=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
       ON`REPLY: |-
@@ -1432,6 +1726,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   - ref: feedback
     type: thing
@@ -1447,6 +1745,8 @@ objects:
         Suggestions and complaints. Staff do not see who sent them.
       SLUG: |-
         feedback
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       ANONYMOUS: |-
         filer
       ON`FILE: |-
@@ -1477,6 +1777,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   - ref: staff
     type: thing
@@ -1492,6 +1796,8 @@ objects:
         Work among staff. Players do not see it.
       SLUG: |-
         staff
+      ACKNOWLEDGE: |-
+        Thanks. Staff have your request and will answer here.
       HIDDEN: |-
         1
       ON`FILE: |-
@@ -1522,6 +1828,10 @@ objects:
         @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %<job> (%0): job number. %1: empty, since nobody acted. %<due> (%2): the due date, in seconds. Example, telling the job's handlers: @dolist [job(%<job>,handlers)]=@pemit ##=Job %<job> is overdue.}
       ON`DELETE: |-
         @@ {Runs after a job in this bucket is deleted. %<job> (%0): job number. %<actor> (%1): objid of whoever deleted it. %<title> (%2): the job's title. Example: @cemit Staff=Job %<job> was deleted by [name(%<actor>)].}
+      ON`CHECK: |-
+        @@ {Runs after a checklist step of a job in this bucket is ticked or unticked, by staff or by attaching a scene log. %<job> (%0): job number. %<actor> (%1): objid of whoever did it. %<step> (%2): the step's number. %<done> (%3): 1 when ticked, 0 when unticked. Example, telling the handlers once every step is done: @if cand(%<done>,eq(job(%<job>,done),job(%<job>,steps)))=@dolist [job(%<job>,handlers)]=@pemit ##=Every step of job %<job> is done.}
+      ON`REVERT: |-
+        @@ {Runs after staff revert a job this bucket approved at once (+bucket/set <bucket>/audit=yes). Undo here what ON`APPROVE did. %<job> (%0): job number. %<actor> (%1): objid of whoever reverted it. %<filer> (%2): objid of whoever filed it. %<entry> (%3): number of the entry holding the reason. Example: @role/unassign %<filer>=approved; @pemit %<filer>=Job %<job> was reverted. +job %<job> says why.}
 
   # ---- portal routes ------------------------------------------------------------------
   # Routes on the HTTP handler, as children of http-handler's GET and POST verbs. The portal's jobs
@@ -1568,15 +1878,15 @@ objects:
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree.
       SEE`JOBS: |-
-        request|jobs staff|jobs format|buckets
+        request|jobs staff|jobs format|buckets|jobs checklist
       SEE`REQUEST: |-
         jobs|jobs format
       SEE`JOBS`STAFF: |-
-        jobs commands|buckets
+        jobs commands|buckets|jobs audit|jobs checklist
       SEE`JOBS`HOOKS: |-
         buckets|jobs api
       SEE`BUCKETS: |-
-        jobs roles|jobs hooks
+        jobs roles|jobs hooks|jobs audit|jobs checklist
       SEE`JOBS`ROLES: |-
         buckets
       HELP`JOBS: |-
@@ -1594,6 +1904,16 @@ objects:
         - **Closed**: approved, denied, completed or canceled.
 
         Replying passes the turn. When you reply to a job closed a short while ago, it opens again.
+
+        ## After you file
+
+        - Most buckets answer at once with a first reply saying how soon staff usually answer there. That
+          is measured from the bucket's last few jobs; until there are enough, it is the bucket's turnaround.
+        - A bucket can approve some requests as soon as they are filed. Staff look them over afterwards and
+          can undo one, saying why.
+        - Staff may leave an **Update** on the job: one line saying where it stands.
+        - A bucket can give each job a **checklist**, such as the steps an application goes through. `+job <#>`
+          shows which are done.
 
         ## Commands
 
@@ -1617,6 +1937,8 @@ objects:
         - `+job <#>`: read one.
         - A list longer than your screen comes in pages, and the page is a last switch: `+jobs/old/2`.
         - `+job/reply <#>=<text>`: answer. Within a few days of a job closing, a reply opens it again.
+        - `+job/scene <#>=<scene>`: attach the log of a scene you were in, when a checklist asks for one. It
+          shows only on games that keep scene logs.
         - `+job/cancel <#>`: withdraw a job you filed.
         - `+job/addhelper <#>=<player>`: let someone else read and answer it. `+job/remhelper <#>=<player>` takes it back; a helper can remove themselves.
         - `+jobs/catchup`: mark everything read.
@@ -1647,6 +1969,9 @@ objects:
         - `+job/watch <#>` \(or `/tag`\): hear about every change without handling it.
         - `+job/approve`, `/deny`, `/complete`, `/cancel <#>\[=<text>\]`; `+job/reopen <#>`.
         - `+job/due <#>=+3d`, `+job/priority <#>=high`, `+job/trans <#>=<bucket>`.
+        - `+job/status <#>=<text>`: the **Update** line the player reads on the job. Empty clears it.
+        - `+job/check <#>=<step>` and `/uncheck`: tick a checklist step, or untick it. See \[jobs checklist\].
+        - `+jobs/audit`, `+job/audit <#>`, `+job/revert <#>=<why>`: approvals made at once. See \[jobs audit\].
 
         Every switch is in \[jobs commands\].
       HELP`JOBS`COMMANDS: |-
@@ -1672,6 +1997,11 @@ objects:
         | `/source <#>` | who filed it \(Job Admin\) |
         | `/state <#>=staff/player/held`, `/hold <#>` | whose turn it is |
         | `/approve` `/deny` `/complete` `/cancel <#>\[=<text>\]` | close it |
+        | `/status <#>=<text>` | the one-line update the player reads; empty clears it |
+        | `/check` `/uncheck <#>=<step>` | tick or untick a checklist step |
+        | `/scene <#>=<scene>` | attach a scene log \(the filer, a helper or staff\) |
+        | `/audit` | approvals made at once that nobody has checked |
+        | `/audit <#>` `/revert <#>=<why>` | keep one, or undo it |
         | `/reopen`, `/revive <#>` | open it again |
         | `/delete <#>` | remove it \(Job Admin\) |
         | `/due <#>=<when>` | `+3d`, `+12h`, `+1w`, a date, or `none` |
@@ -1739,6 +2069,17 @@ objects:
         - `hidden`: `yes` shows the bucket only to those who work it
         - `priority`: what new jobs start at
         - `keep`: days a closed job stays; empty keeps them
+        - `acknowledge`: the first reply every new job gets at once, followed by how soon the bucket usually answers. Empty sends none.
+        - `checklist`: the steps every new job here gets, separated by `|`. Start a step with `scene:` to ask for a scene log. See \[jobs checklist\].
+        - `audit`: `yes` approves a job as soon as it is filed and checks it later. See \[jobs audit\].
+
+        ## How soon
+
+        `+bucket <name>` shows **First answer**, the middle of how long the bucket's last jobs waited for
+        staff's first reply, and **Closed in**, the same for closing them. Each counts the last 25 jobs, once
+        there are 3; `+config jobs/wait-sample` changes how many. Jobs filed by staff, `/query` jobs and
+        approvals made at once are left out. Until a bucket has measured enough, players are told its
+        turnaround instead.
 
         ## Making and removing
 
@@ -1749,7 +2090,7 @@ objects:
         - `+bucket/disable <bucket>`: nothing new is filed in it or moved into it. Its jobs stay and are worked as before. `+bucket/enable <bucket>` takes new jobs again.
         - `+bucket/delete <bucket>`: an empty bucket. Its role and permission go with it.
         - `+bucket/delete <bucket>=<other bucket>`: moves its jobs, open and closed, to the other bucket first. A bucket with more than 10 jobs stops taking new ones and moves them 10 at a time; it is deleted, and you are told, once the last has moved.
-        - `+bucket/lock <bucket>/file=<lock>` and `/work=<lock>`: who may file, and who works it. They are ordinary locks.
+        - `+bucket/lock <bucket>/file=<lock>`, `/work=<lock>` and `/audit=<lock>`: who may file, who works it, and whose jobs it approves at once when `audit` is on. They are ordinary locks.
 
         The bucket `+request` files in can be neither disabled nor deleted. Renaming it keeps `+request` filing there.
 
@@ -1802,12 +2143,14 @@ objects:
         - `` ON`PRIORITY ``: Runs after a job's priority in this bucket changes. %%\\<job> \(%%0\): job number. %%\\<actor> \(%%1\): objid of whoever changed it. %%\\<old> \(%%2\): the old priority. %%\\<new> \(%%3\): the new one: low, normal or high.
         - `` ON`OVERDUE ``: Runs once when a job in this bucket passes its due date while waiting on staff. %%\\<job> \(%%0\): job number. %%1: empty, since nobody acted. %%\\<due> \(%%2\): the due date, in seconds.
         - `` ON`DELETE ``: Runs after a job in this bucket is deleted. %%\\<job> \(%%0\): job number. %%\\<actor> \(%%1\): objid of whoever deleted it. %%\\<title> \(%%2\): the job's title.
+        - `` ON`CHECK ``: Runs after a checklist step is ticked or unticked, by staff or by attaching a scene log. %%\\<job> \(%%0\): job number. %%\\<actor> \(%%1\): objid of whoever did it. %%\\<step> \(%%2\): the step's number. %%\\<done> \(%%3\): 1 when ticked, 0 when unticked.
+        - `` ON`REVERT ``: Runs after staff revert a job this bucket approved at once. %%\\<job> \(%%0\): job number. %%\\<actor> \(%%1\): objid of whoever reverted it. %%\\<filer> \(%%2\): objid of whoever filed it. %%\\<entry> \(%%3\): number of the entry holding the reason.
 
         `job\(%%<job>, <field>\)` reads the job from inside a hook: see \[jobs api\].
 
         ## Examples
 
-        Grant an approved role when an application is approved \(first `@permission/allow Applications=roles.admin`, or the narrowest permission that lets it assign the role\):
+        Grant the approved role when an application is approved. The bucket must hold `roles.admin` through a role ranked above `approved`, since nobody can manage a role at or above their own highest; \[jobs audit\] shows how:
 
         ```
         &ON`APPROVE Applications=@role/assign %%<filer>=approved; @pemit %%<filer>=Your application, job %%<job>, was approved.
@@ -1824,10 +2167,16 @@ objects:
         ```
         &ON`COMPLETE Bugs=@cemit Staff=Bug %%<job> is fixed: \[job\(%%<job>,title\)\]
         ```
+
+        Undo what an approval made at once did, in a bucket with `audit` on:
+
+        ```
+        &ON`REVERT Applications=@role/unassign %%<filer>=approved
+        ```
       HELP`JOBS`API: |-
         ## Reading
 
-        - `job\(<#>, <field>\)`: `number`, `bucket`, `title`, `state`, `outcome`, `priority`, `filer` \(empty when the bucket hides the filer, except to the filer, a Job Admin or the bucket's hooks\), `filed`, `due`, `updated`, `overdue`, `handlers`, `watchers`, `helpers`, `entries`.
+        - `job\(<#>, <field>\)`: `number`, `bucket`, `title`, `state`, `outcome`, `priority`, `filer` \(empty when the bucket hides the filer, except to the filer, a Job Admin or the bucket's hooks\), `filed`, `due`, `updated`, `overdue`, `handlers`, `watchers`, `helpers`, `entries`, `update` \(the line players read\), `steps` and `done` \(how many checklist steps it has and has done\), `scenes` \(the scene logs attached\), `audit` \(`pending`, `passed` or `reverted` for an approval made at once\), `answered` \(when staff first replied, in seconds\).
         - `jobs\(\[<bucket>\[, open/all/<state>\]\]\)`: job numbers, newest first.
         - `jobentries\(<#>\[, <viewer>\]\)`: the numbers of the messages `<viewer>` may read.
 
@@ -1851,6 +2200,86 @@ objects:
         The jobs-app package puts the same queue in the web portal at `/apps/jobs`, reading these jobs through the HTTP handler.
 
         A report of a profile gallery image, sent from the portal's image viewer, files a job in the Staff bucket as whoever reported it, with the image's address, its caption and the reason. `` &DATA`GALLERY`BUCKET Jobs=<bucket> `` sends them elsewhere.
+      HELP`JOBS`AUDIT: |-
+        A bucket with `audit` on approves a job as soon as it is filed, and staff check it afterwards. Use
+        it for requests that are almost always granted, where waiting costs more than the odd mistake.
+
+        ```
+        +bucket/set Building/audit=yes
+        ```
+
+        Filing in such a bucket closes the job as approved at once, by the bucket, and runs its
+        `` ON`APPROVE `` hook the same way staff approving it would. The player is told it is approved and
+        that staff look approvals over later.
+
+        `+bucket/lock <bucket>/audit=<lock>` limits who gets it: anyone else's job waits for staff as
+        usual. With no lock, everyone does.
+
+        ## Checking
+
+        - `+jobs/audit` lists the approvals nobody has checked yet, in the buckets you work. `+jobs`
+          lists them too, as **Approved, to check**.
+        - `+job/audit <#>`: the approval stands.
+        - `+job/revert <#>=<why>`: undo it. The job shows **Reverted**, the reason goes to the player, and
+          the bucket's `` ON`REVERT `` hook runs.
+
+        ## Undoing
+
+        Each bucket undoes its own approvals in `` ON`REVERT ``, since only it knows what `` ON`APPROVE ``
+        did. A bucket that grants a role on approval takes it back:
+
+        ```
+        &ON`APPROVE Applications=@role/assign %%<filer>=approved
+        &ON`REVERT Applications=@role/unassign %%<filer>=approved
+        ```
+
+        The hooks run as the bucket, so the bucket needs `roles.admin` through a role of its own, ranked
+        above the role it grants:
+
+        ```
+        @role/create grants-approved=Jobs/Grants Approved
+        @role/priority grants-approved=12
+        @role/allow grants-approved=roles.admin
+        @role/assign Applications=grants-approved
+        ```
+
+        A bucket with `audit` on and no `` ON`REVERT `` written can still be reverted; nothing is undone
+        but the job's outcome.
+      HELP`JOBS`CHECKLIST: |-
+        A bucket can give every new job the same steps to go through, such as what staff check on an
+        application:
+
+        ```
+        +bucket/set Applications/checklist=Sheet checked|Background read|scene:A log of a scene you played
+        ```
+
+        Each job keeps the checklist its bucket had when it was filed. `+job <#>` shows the steps, and
+        which are done, by whom and when:
+
+        ```
+        1. [x] Sheet checked · God, Oct 15
+        2. [ ] Background read
+        3. [ ] A log of a scene you played · +job/scene 4=<scene>
+        ```
+
+        - `+job/check <#>=<step>` ticks a step; `+job/uncheck <#>=<step>` unticks it. Staff only.
+        - The bucket's `` ON`CHECK `` hook runs after each, so code can act once every step is done.
+
+        ## Scene logs
+
+        A step starting with `scene:` asks for the log of a scene. The filer, a helper or staff attach
+        one with `+job/scene <#>=<scene>`: it goes on the job as a reply with a link to the log, and ticks
+        the first scene step still open. The filer and helpers can attach only scenes they were in.
+
+        Scene logs need the Scene plugin. Without it, `scene:` steps are left out of every job's
+        checklist and `+job/scene` is refused.
+
+  # ---- +config registration -----------------------------------------------------------
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`JOBS: |-
+        {{jobs}}
 
   # ---- +help registration -------------------------------------------------------------
   - ref: help_registration

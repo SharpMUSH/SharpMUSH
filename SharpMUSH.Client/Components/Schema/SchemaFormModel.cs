@@ -62,11 +62,11 @@ public sealed class SchemaFormModel
 
 			if (data?.Fields is not null && data.Fields.TryGetValue(key, out var datum) && datum.Value is { } value)
 			{
-				_values[key] = SchemaViewRenderer.ValueToString(value);
+				_values[key] = Seed(value);
 			}
 			else if (field.Default is { } fallback)
 			{
-				_values[key] = SchemaViewRenderer.ValueToString(fallback);
+				_values[key] = Seed(fallback);
 			}
 		}
 	}
@@ -102,7 +102,13 @@ public sealed class SchemaFormModel
 		}
 	}
 
-	public string GetString(string key) => _values.TryGetValue(key, out var v) ? v?.ToString() ?? "" : "";
+	public string GetString(string key) => _values.TryGetValue(key, out var v)
+		? v switch
+		{
+			IEnumerable<string> list => string.Join(", ", list),
+			_ => v?.ToString() ?? ""
+		}
+		: "";
 
 	public void SetString(string key, string? value) => Set(key, value);
 
@@ -214,9 +220,19 @@ public sealed class SchemaFormModel
 	{
 		foreach (var (key, value) in fields)
 		{
-			_values[key] = SchemaViewRenderer.ValueToString(value);
+			_values[key] = Seed(value);
 		}
 	}
+
+	/// <summary>A value as the form holds it: a JSON list as its items (multiselect, list), a JSON
+	/// boolean as a bool (boolean), anything else as text.</summary>
+	private static object Seed(JsonElement value) => value.ValueKind switch
+	{
+		JsonValueKind.Array => value.EnumerateArray().Select(item => SchemaViewRenderer.ValueToString(item)).ToList(),
+		JsonValueKind.True => true,
+		JsonValueKind.False => false,
+		_ => SchemaViewRenderer.ValueToString(value)
+	};
 
 	/// <summary>The width, out of 12, of one element in an N-column section, honouring its span.</summary>
 	public static int ColumnWidth(int columns, int span)
