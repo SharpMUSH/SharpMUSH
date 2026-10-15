@@ -50,4 +50,22 @@ public sealed record AttributeEntryRecord
 	public string? Limit { get; init; }
 	public string[]? Enum { get; init; }
 	public string? EnumDelimiter { get; init; }
+
+	/// <summary>The index on the attribute's values, or null; see <c>LightningDatabase.AttributeIndex.cs</c>.</summary>
+	public AttributeIndexRecord? Index { get; init; }
+}
+
+/// <summary>Mirrors <c>SharpMUSH.Library.Models.AttributeIndexDefinition</c>.</summary>
+public sealed record AttributeIndexRecord
+{
+	public bool Exact { get; init; }
+	public bool Numeric { get; init; }
+	public string? Split { get; init; }
+	public string? Type { get; init; }
+
+	/// <summary>Every existing copy has been indexed.</summary>
+	public bool Ready { get; init; }
+
+	/// <summary>While building, the dbref the next batch starts at.</summary>
+	public long ResumeAt { get; init; }
 }

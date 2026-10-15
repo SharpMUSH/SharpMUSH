@@ -58,7 +58,7 @@ public sealed record SchemaSection(
 
 /// <summary>
 /// A single element. <c>Kind</c> discriminates: "field" (an input/value) or a display element
-/// ("markdown", "image", "table", "keyvalue", "timeline", "divider", "button"). Unused properties stay null.
+/// ("markdown", "image", "table", "keyvalue", "timeline", "graph", "divider", "button"). Unused properties stay null.
 /// </summary>
 /// <remarks>
 /// <c>Empty</c> is a table's or timeline's text for no rows. <c>Confirm</c>, <c>Values</c>, <c>Color</c> and
@@ -66,7 +66,8 @@ public sealed record SchemaSection(
 /// values it posts, and its MudBlazor color and variant. <c>TriggersAction</c> belongs to a field: the action
 /// dispatched whenever its value changes. <c>Format</c> belongs to markdown: "mstring" draws <c>Value</c> as a
 /// serialized MString, the way an mstring field is drawn. <c>Reorder</c> belongs to a table: the row group whose
-/// rows the viewer may drag into a new order.
+/// rows the viewer may drag into a new order. A graph draws <c>SrcField</c>'s <c>{ nodes, edges }</c>, and its
+/// <c>Link</c> is the href template each node follows, filled from that node like a table column's.
 /// </remarks>
 public sealed record SchemaElement(
 	string? Kind = null,
@@ -96,7 +97,8 @@ public sealed record SchemaElement(
 	string? Variant = null,
 	[property: JsonPropertyName("triggers_action")] string? TriggersAction = null,
 	string? Format = null,
-	SchemaReorder? Reorder = null);
+	SchemaReorder? Reorder = null,
+	string? Link = null);
 
 /// <summary>
 /// The rows of a table's <c>Group</c> (rows whose <c>group</c> field holds it) that the viewer may put in a new

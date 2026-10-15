@@ -43,7 +43,12 @@ which games can add as a remote in the admin panel.
 | [`info/`](info/) | Files and notes: `+info` and `+pinfo` keep public and private files on the character under trees flagged `wizard` and `no_command` on first write, and `+journal` shares entries one by one; long texts are written a line at a time through `@input`, lists come in pages, and settings register with `+config` |
 | [`health/`](health/) | Staff numbers counted from poses and scenes, drawn from `activity()`: `+health` sums up a window against the one before, `/drifting` lists regulars who slowed down, `/cohorts` how each approval month stayed, `/rooms` busy and dead rooms, `/when` a weekday-by-hour map. Settings through `+config health` |
 | [`health-jobs/`](health-jobs/) | Joins health and jobs: a Staff load section in `+health` and `+health/staff`, open jobs and the oldest waiting on staff per staffer, attached as a summary filter and an `` INC`VIEW`STAFF `` view (requires health and jobs) |
-| [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (discord-scenes, finger, health, highlights, info, scene, scene-safety, status, time, timeline and who-where register theirs) |
+| [`summary/`](summary/) | `+summary`: one line summing up a player's last pose, told to their location with `@remit` so the scene package's pose hooks never record it, kept nowhere, with its length limit a `+config` setting (requires plus-config) |
+| [`relationships/`](relationships/) | Relationships: `+rel/set` asks, `+rel/confirm` takes the pair of the type (Parent and Child), `+rel/hide` keeps one between the two players and staff, `+rel/note` a private note; the type table is ``DATA`TYPE`<KEY>`` with its pair and tone, a card's lines are ``LINE`<order>`<KEY>`` with ``SHOW`<KEY>``, and the portal reads the web and the card from HTTP routes |
+| [`relationships-scene/`](relationships-scene/) | Last scene together on the `+rel` card and the name card, from `sceneshared()`; a package of its own so a game without the Scene System never calls it |
+| [`relationships-app/`](relationships-app/) | The relationship web on the profile page: a widget application of scope `profile` drawn with the schema `graph` element |
+| [`relationships-card/`](relationships-card/) | The name card's relationship lines: a widget application of scope `card`, drawn on the hover card and the Play sheet |
+| [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (discord-scenes, finger, health, highlights, info, relationships, scene, scene-safety, status, time, timeline and who-where register theirs) |
 | [`timeline/`](timeline/) | IC dates on scenes and a timeline per character: a scene gets the time package's IC date when it starts (through the Scene plugin's ``SCENE`STATUS`` event), `+scene/date` dates a flashback, and `+timeline` lists a character's finished scenes in IC order, as the portal's character timeline does (requires scene and time) |
 | [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and the Discord Admin role that allows it, and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
 | [`discord-scenes/`](discord-scenes/) | Scheduled scenes in the Discord server's Events tab: through the Scene plugin's ``SCENE`STATUS`` and ``SCENE`CHANGE`` events, a scene with a time still to come is published with `@discord/event`, moved when it is rescheduled, shown as happening when it starts and ended when it finishes or is cancelled. Settings through `+config discord-scenes` (requires discord, scene, plus-help and plus-config, and both plugins) |
@@ -51,6 +56,7 @@ which games can add as a remote in the admin panel.
 | [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
 | [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
 | [`scene-availability/`](scene-availability/) | When characters are free: `+avail/busy` and `+avail/free` keep dates, ranges and repeating patterns (weekly, every 2 weeks, the 2nd Tuesday, until a date, with dates skipped) in the player's own zone, `+avail/find` lists the times a group is all free, and a ``FILTER`CARD`` on the Scene Logger shows who of a scheduled scene's cast is free at its time (requires scene and time) |
+| [`alts/`](alts/) | Privacy by account: `+alts` reads `account()` and `accountchars()` from a WIZARD object and decides itself who sees what, keeps each account's choices on a store keyed by account id rather than on a character, and hears `` PLAYER`UNLINK `` beside other packages through ``PLAYER`UNLINK`ALTS`` on the event handler |
 
 ## The manifest: `package.yaml`
 
@@ -60,7 +66,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.6 the engine range, 1.7 plugins)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -531,9 +537,8 @@ attributes:                     # attribute name: the entry @attribute would mak
 The name is one `@attribute` takes, upper-cased, with `` ` `` only between
 branches. Each flag must be an attribute flag (`branch` is structure, not a
 default). A `limit` must compile as `@attribute/limit` compiles it, and an
-entry takes a limit or an enum, not both, since each replaces the other. An
-`index:` key is reserved for a later format and ignored. A plugin package
-cannot declare `attributes:`. The plan checks each entry against the game's
+entry takes a limit or an enum, not both, since each replaces the other. A
+plugin package cannot declare `attributes:`. The plan checks each entry against the game's
 live table, and its flags against the game's attribute flags.
 
 - **Install.** An entry the game lacks is created and becomes the package's.
@@ -547,12 +552,33 @@ live table, and its flags against the game's attribute flags.
   the entry's flags, or a new version turns `retroactive` on, every copy already on an object gets exactly those flags
   (its `branch` flag kept, its owner unchanged). The review screen shows how
   many existing copies change, and asks the installer to confirm first.
+- **Index (format 1.8).** `index:` puts an index on the attribute's values, as
+  `@attribute/index` does, so `indexed()` and `lsearch INDEX` can find them:
+  `true` for the default (text without case, whole
+  values, every object), or the option words as a string or a list
+  (`exact`, `numeric`, `split[:<delimiter>]`, `type:<type>`). An entry with
+  `internal` in its flags cannot have one. Applying it builds the index in the
+  background over the copies already on objects, and the review screen says
+  how many ("Builds an index ... on N objects."); until it is done, `indexed()`
+  answers `#-1 INDEX BUILDING`. An entry the game already has must already have
+  the same index, or the plan is blocked and names the `@attribute/index` line
+  that fixes it, since the package's queries rely on its order. The key needs
+  `format: 1.8`; in an older manifest it is ignored with a warning, as it was
+  before 1.8 gave it a meaning.
+
+  ```yaml
+  format: 1.8
+  attributes:
+    JOB`LEVEL:
+      index: numeric type:thing
+  ```
 - **Upgrade.** The package's entries are merged field by field against what
-  the previous version declared: the default flags, and the limit-or-enum. A
+  the previous version declared: the default flags, the limit-or-enum, and the
+  index. A
   field the new version changes takes the new value; the other keeps what the
   game has, so an administrator's `@attribute/access` survives.
-- **Dropped entries and uninstall.** The entry is deleted from the table.
-  Values already stored on objects stay as they are.
+- **Dropped entries and uninstall.** The entry is deleted from the table,
+  with its index. Values already stored on objects stay as they are.
 - **Rollback** restores objects and attributes only; attribute entries stay as
   they are.
 
