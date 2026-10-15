@@ -96,11 +96,33 @@ public class HealthIntegrationTests
 		await As(ann, "say Hello.");
 		await As(ann, "@emit The lamps flicker.");
 		await As(ann, "think Not a pose.");
+		// Refused before it runs: an unknown switch says nothing, so it is no pose.
+		await As(ann, "say/bogus Not said.");
 
 		var row = (await RoomRow(room)).GetValueOrDefault();
 		await Assert.That(row.ValueKind).IsEqualTo(JsonValueKind.Object).Because("the room must have had poses");
 		await Assert.That(row.GetProperty("poses").GetInt64()).IsEqualTo(3);
 		await Assert.That(row.GetProperty("people").GetInt32()).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ASceneCountsOnceWhenItFirstGoesActive()
+	{
+		var (eve, room) = await Player("ActEve");
+		await As(eve, "pose sets the stage.");
+		var where = $"#{(await Mediator.Send(new GetLocationQuery(eve.DbRef))).Expect<AnySharpContainer>().Object().DBRef.Number}";
+
+		var made = await God($"think scenecreate({where},#1,{TestIsolationHelpers.GenerateUniqueName("Act")})");
+		await God($"@scene/set {made}/status=active");
+		await God($"@scene/set {made}/status=paused");
+		await God($"@scene/set {made}/status=active");
+		var planned = await God($"think scenecreate({where},#1,{TestIsolationHelpers.GenerateUniqueName("Act")})");
+		await God($"@scene/set {planned}/status=scheduled");
+		await God($"think sceneset({planned},status,active)");
+
+		var row = (await RoomRow(room)).GetValueOrDefault();
+		await Assert.That(row.ValueKind).IsEqualTo(JsonValueKind.Object).Because("the room must have had a pose");
+		await Assert.That(row.GetProperty("scenes").GetInt64()).IsEqualTo(2);
 	}
 
 	[Test]

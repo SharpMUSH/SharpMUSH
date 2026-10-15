@@ -23,7 +23,13 @@ public sealed class ActivityLedger(Lazy<IMediator> mediator, TimeProvider clock,
 	public void RecordPose(long player, long? room, DateTimeOffset at)
 	{
 		if (InPose.Value) return;
+		AddPose(player, room, at);
+	}
 
+	private void AddPose(long player, long? room) => AddPose(player, room, clock.GetUtcNow());
+
+	private void AddPose(long player, long? room, DateTimeOffset at)
+	{
 		var ms = at.ToUnixTimeMilliseconds();
 		var day = DateOnly.FromDateTime(at.UtcDateTime).DayNumber;
 		var hour = 1 << at.UtcDateTime.Hour;
@@ -53,16 +59,25 @@ public sealed class ActivityLedger(Lazy<IMediator> mediator, TimeProvider clock,
 		}
 	}
 
-	public IDisposable PoseScope()
+	public IPoseScope PoseScope(long player, long? room)
 	{
 		var outer = InPose.Value;
 		InPose.Value = true;
-		return new Scope(() => InPose.Value = outer);
+		return new Scope(this, player, room, outer);
 	}
 
-	private sealed class Scope(Action close) : IDisposable
+	private sealed class Scope(ActivityLedger ledger, long player, long? room, bool outer) : IPoseScope
 	{
-		public void Dispose() => close();
+		private bool _counted;
+
+		public void Count()
+		{
+			if (_counted) return;
+			_counted = true;
+			ledger.AddPose(player, room);
+		}
+
+		public void Dispose() => InPose.Value = outer;
 	}
 
 	public async ValueTask FlushAsync(CancellationToken cancellationToken = default)

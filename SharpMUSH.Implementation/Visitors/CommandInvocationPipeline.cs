@@ -110,18 +110,23 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			return run.PreserveHookErrors(CallState.Empty);
 		}
 
-		// A pose is counted here, before /override can replace the command: a logger that hooks POSE still
-		// lets the line through, and it is the same pose to the activity reports either way. The scope keeps
-		// the logger's own record of the line, made while the rest of the command runs, from counting twice.
-		using var poseScope = await CountPoseAsync(run) ? services.Activity?.PoseScope() : null;
+		// A pose's scope opens before /override can replace the command, so a logger's own record of the line,
+		// made while the rest of the command runs, does not count twice. The pose itself counts once the
+		// command is admitted: overridden (a logger that hooks POSE still lets the line through), or past the
+		// switch and restriction checks below.
+		using var pose = await PoseScopeAsync(run);
 
 		// 3. Check for /override hook with $-command matching
 		if (await OverriddenByHookAsync(run) is CallState overridden)
+		{
+			pose?.Count();
 			return run.PreserveHookErrors(overridden);
+		}
 
 		if (pluginHooks is { HasCommandInterceptors: true }
 			&& await OverriddenByPluginAsync(run, pluginHooks) is { } pluginOverride)
 		{
+			pose?.Count();
 			return run.PreserveHookErrors(pluginOverride);
 		}
 
@@ -134,6 +139,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			await NotifyRestrictedAsync(run.Definition.Attribute, lockedExecutor);
 			return run.PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
 		}
+
+		pose?.Count();
 
 		// 5. Execute the built-in command
 		var commandSuccess = true;
@@ -357,18 +364,17 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		}
 	}
 
-	/// <summary>Whether the command's /ignore hook answered false, so the command does not run.</summary>
 	/// <summary>
-	/// Counts a pose in the activity ledger when a character runs a command marked
-	/// <see cref="CommandBehavior.Pose"/>, against the room they stand in. True when it was counted.
+	/// The pose a character's command marked <see cref="CommandBehavior.Pose"/> makes, against the room they
+	/// stand in, as an open scope in the activity ledger; null for any other command.
 	/// </summary>
-	private async ValueTask<bool> CountPoseAsync(BuiltInRun run)
+	private async ValueTask<IPoseScope?> PoseScopeAsync(BuiltInRun run)
 	{
 		if (!run.Definition.Attribute.Behavior.HasFlag(CommandBehavior.Pose)
 			|| services.Activity is not { } ledger
 			|| run.Executor is not AnySharpObject { IsPlayer: true } player)
 		{
-			return false;
+			return null;
 		}
 
 		var dbref = player.Object().DBRef;
@@ -377,10 +383,10 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			AnySharpContainer { IsRoom: true } location => location.Object().DBRef.Number,
 			_ => (long?)null
 		};
-		ledger.RecordPose(dbref.Number, room);
-		return true;
+		return ledger.PoseScope(dbref.Number, room);
 	}
 
+	/// <summary>Whether the command's /ignore hook answered false, so the command does not run.</summary>
 	private async ValueTask<bool> IgnoredByHookAsync(BuiltInRun run)
 		=> await services.HookService.GetHookAsync(run.HookedCommand, "IGNORE") is CommandHook ignoreCode
 			&& await EvaluateHookAsync(run, ignoreCode) is CallState ignoreValue

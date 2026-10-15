@@ -52,6 +52,16 @@ public static class ActivityReports
 	/// <summary>The length of one retention period.</summary>
 	public const int PeriodDays = 30;
 
+	/// <summary>
+	/// The day a character counts as approved from, when its account was approved on <paramref name="approved"/>:
+	/// that day, or the day the character was made (<paramref name="createdMs"/>) when that is later.
+	/// </summary>
+	public static DateOnly ApprovedFrom(DateOnly approved, long createdMs)
+	{
+		var created = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeMilliseconds(createdMs).UtcDateTime);
+		return created > approved ? created : approved;
+	}
+
 	/// <summary>The first day any report needs for <paramref name="options"/>, ending on <paramref name="asOf"/>.</summary>
 	public static int FirstDayNeeded(DateOnly asOf, ActivityOptions options)
 	{

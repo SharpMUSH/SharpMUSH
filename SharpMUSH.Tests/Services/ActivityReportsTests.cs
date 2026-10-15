@@ -131,6 +131,15 @@ public class ActivityReportsTests
 	}
 
 	[Test]
+	public async Task AnAccountApprovalDatesACharacterFromNoEarlierThanItWasMade()
+	{
+		var approved = new DateOnly(2026, 3, 1);
+		await Assert.That(ActivityReports.ApprovedFrom(approved, Ms(new DateOnly(2026, 1, 1)))).IsEqualTo(approved);
+		await Assert.That(ActivityReports.ApprovedFrom(approved, Ms(new DateOnly(2026, 8, 9), 23)))
+			.IsEqualTo(new DateOnly(2026, 8, 9));
+	}
+
+	[Test]
 	public async Task RoomsSplitIntoUsedAndDead()
 	{
 		var rooms = ActivityReports.Rooms(Data(), Options);
@@ -187,14 +196,23 @@ public class ActivityReportsTests
 		var sent = new List<MergeActivityCommand>();
 		mediator.When(m => m.Send(Arg.Any<MergeActivityCommand>(), Arg.Any<CancellationToken>()))
 			.Do(call => sent.Add(call.Arg<MergeActivityCommand>()));
-		var ledger = new ActivityLedger(new Lazy<IMediator>(mediator), TimeProvider.System, NullLogger<ActivityLedger>.Instance);
 		var at = new DateTimeOffset(2026, 10, 15, 21, 0, 0, TimeSpan.Zero);
+		var ledger = new ActivityLedger(new Lazy<IMediator>(mediator), new Secrets.SecretStoreTests.FixedClock(at),
+			NullLogger<ActivityLedger>.Instance);
 
-		// A pose, and the scene's copy of it made while the command runs, count once; the next pose counts again.
-		ledger.RecordPose(7, 3, at);
-		using (ledger.PoseScope())
+		// A typed pose counts through its scope, once however often it is counted, and the scene's copy of it
+		// made while the command runs does not count; the next pose counts again.
+		using (var pose = ledger.PoseScope(7, 3))
 		{
+			pose.Count();
 			ledger.RecordPose(7, 3, at.AddMilliseconds(500));
+			pose.Count();
+		}
+
+		// A refused command's scope closes without counting.
+		using (ledger.PoseScope(7, 3))
+		{
+			ledger.RecordPose(7, 3, at.AddMilliseconds(700));
 		}
 
 		ledger.RecordPose(7, 3, at.AddSeconds(1));

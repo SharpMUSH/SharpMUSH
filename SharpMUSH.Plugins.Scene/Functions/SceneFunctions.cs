@@ -805,11 +805,13 @@ public static class SceneFunctions
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(service, id);
+		var statusBefore = await SceneActivity.StatusBeforeAsync(service, id, key);
 		if (await service.SetSceneMetaAsync(id, key, value) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
+		SceneActivity.AfterSet(parser, key, statusBefore, scene);
 		await SceneRoomRefresh.AfterSetAsync(parser, key, roomBefore, scene);
 		return new CallState(scene.Id);
 	}

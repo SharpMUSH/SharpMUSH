@@ -106,7 +106,8 @@ public sealed class ActivityReportService(
 
 	/// <summary>
 	/// The first day the audit log shows each character given the <c>approved</c> role, by dbref number: on
-	/// the character itself, or on its account (which approves every character the account holds now).
+	/// the character itself, or on its account (which approves every character the account holds now, each
+	/// from no earlier than the day it was made).
 	/// </summary>
 	private async ValueTask<Dictionary<long, DateOnly>> ApprovalDaysAsync(CancellationToken ct)
 	{
@@ -120,10 +121,9 @@ public sealed class ActivityReportService(
 			{
 				if (entry.Details != Authorization.BuiltInRoles.ApprovedSlug || entry.Target is not { } target) continue;
 				var day = DateOnly.FromDateTime(entry.At.UtcDateTime);
-				foreach (var dbref in await ApprovedCharactersAsync(target, ct))
+				foreach (var (dbref, from) in await ApprovedCharactersAsync(target, day, ct))
 				{
-					// Newest first, so the last one seen is the earliest.
-					days[dbref] = day;
+					days[dbref] = days.TryGetValue(dbref, out var earlier) && earlier < from ? earlier : from;
 				}
 			}
 
@@ -133,11 +133,14 @@ public sealed class ActivityReportService(
 		return days;
 	}
 
-	private async ValueTask<IEnumerable<long>> ApprovedCharactersAsync(AuditTarget target, CancellationToken ct)
+	/// <summary>The characters an approval of <paramref name="target"/> on <paramref name="day"/> approved, and from which day.</summary>
+	private async ValueTask<IEnumerable<(long Dbref, DateOnly From)>> ApprovedCharactersAsync(
+		AuditTarget target, DateOnly day, CancellationToken ct)
 		=> target.Kind switch
 		{
-			AuditTargetKinds.Character when DBRef.TryParse(target.Id, out var dbref) && dbref is { } found => [found.Number],
-			AuditTargetKinds.Account => (await accounts.GetCharactersAsync(target.Id, ct)).Select(p => (long)p.Object.Key),
+			AuditTargetKinds.Character when DBRef.TryParse(target.Id, out var dbref) && dbref is { } found => [(found.Number, day)],
+			AuditTargetKinds.Account => (await accounts.GetCharactersAsync(target.Id, ct))
+				.Select(p => ((long)p.Object.Key, ActivityReports.ApprovedFrom(day, p.Object.CreationTime))),
 			_ => []
 		};
 }

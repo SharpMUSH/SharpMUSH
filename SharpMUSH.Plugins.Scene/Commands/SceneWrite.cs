@@ -34,9 +34,6 @@ public static class SceneWrite
 		}
 
 		var scene = await sceneService.CreateSceneAsync(roomDbref, ownerDbref, title);
-		// Counted for the staff activity reports: a scene started, in its room or in none.
-		parser.ServiceProvider.GetService<IActivityLedger>()?.RecordScene(
-			DBRef.TryParse(scene.RoomDbref, out var room) && room is { } where ? where.Number : null);
 		await notifyService.Notify(executor,
 			SceneCommandHelper.Notice($"Created scene #{scene.Id} owned by {scene.OwnerName}.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);
@@ -59,12 +56,14 @@ public static class SceneWrite
 		}
 
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(sceneService, sceneId);
+		var statusBefore = await SceneActivity.StatusBeforeAsync(sceneService, sceneId, key!);
 		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
 		{
 			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
+		SceneActivity.AfterSet(parser, key!, statusBefore, scene);
 		await SceneRoomRefresh.AfterSetAsync(parser, key!, roomBefore, scene);
 
 		await notifyService.Notify(executor, SceneCommandHelper.Notice($"#{scene.Id} {key} set.", NoticeKind.Ok));
