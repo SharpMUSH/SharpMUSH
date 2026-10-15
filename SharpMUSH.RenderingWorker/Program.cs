@@ -42,6 +42,7 @@ public static class Program
 			sp.GetRequiredService<TerminalPictureStore>(), sp.GetRequiredService<ConnectionPictures>()));
 		var app = builder.Build();
 		app.MapGet("/health", () => Results.Ok());
+		var droppedFramesLogged = 0;
 		app.MapPost("/render", async (RenderRequest request, MarkupOutputRenderer renderer, HttpResponse response, CancellationToken ct) =>
 		{
 			if (request.Context is null || request.Context.Capabilities is null ||
@@ -53,8 +54,18 @@ public static class Program
 			var bytes = rendered.ApplyOutputTransform
 				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities, request.Context.AsciiTranslations)
 				: rendered.Data;
-			// Beside the body rather than in it: a socket server that does not read it still gets the text.
-			if (rendered.Gmcp is { Count: > 0 } frames) response.Headers[ClientMediaFrames.Header] = ClientMediaFrames.Encode(frames);
+			// Beside the body rather than in it: a socket server that does not read it still gets the text. Capped, so
+			// a line full of sounds can never make the response one the socket server refuses.
+			if (rendered.Gmcp is { Count: > 0 } frames)
+			{
+				if (ClientMediaFrames.Encode(frames, out var dropped) is { } header) response.Headers[ClientMediaFrames.Header] = header;
+				if (dropped > 0 && Interlocked.Exchange(ref droppedFramesLogged, 1) == 0)
+				{
+					app.Logger.LogWarning(
+						"A line held more GMCP media messages than fit beside it: {Dropped} of {Count} were not sent. Logged once",
+						dropped, frames.Count);
+				}
+			}
 			return Results.Bytes(bytes, "application/octet-stream");
 		});
 		return app;

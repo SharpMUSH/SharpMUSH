@@ -133,18 +133,91 @@ public class ClientMediaFramesTests
 	{
 		GmcpFrame[] frames = [new("Client.Media.Play", """{"name":"a.wav"}"""), new("Client.Media.Stop", "{}")];
 
-		await Assert.That(ClientMediaFrames.Decode(ClientMediaFrames.Encode(frames))).IsEquivalentTo(frames,
+		await Assert.That(ClientMediaFrames.Decode(ClientMediaFrames.Encode(frames, out var dropped))).IsEquivalentTo(frames,
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(dropped).IsEqualTo(0);
 		await Assert.That(ClientMediaFrames.Decode(null)).IsNull();
 		await Assert.That(ClientMediaFrames.Decode("not base64!")).IsNull();
 	}
 
 	/// <summary>
-	/// The whole path, over the rendering socket: a sound in a line reaches the connection's GMCP writer before
-	/// the line's text does.
+	/// The header stops at <see cref="ClientMediaFrames.MaxHeaderLength"/>, keeping the first frames in order, so it can
+	/// never pass the 64 KB the socket server's HTTP client accepts.
 	/// </summary>
 	[Test]
-	public async Task FramesAreSentBeforeTheLineThroughTheRenderingWorker()
+	public async Task TheHeaderKeepsTheFirstFramesThatFit()
+	{
+		var frames = Enumerable.Range(0, 400)
+			.Select(i => new GmcpFrame("Client.Media.Play", $$"""{"name":"{{i}}-{{new string('x', 200)}}.wav"}"""))
+			.ToArray();
+
+		var header = ClientMediaFrames.Encode(frames, out var dropped);
+		var decoded = ClientMediaFrames.Decode(header);
+
+		await Assert.That(header!.Length).IsLessThanOrEqualTo(ClientMediaFrames.MaxHeaderLength);
+		await Assert.That(dropped).IsGreaterThan(0);
+		await Assert.That(decoded!.Count).IsEqualTo(frames.Length - dropped);
+		await Assert.That(decoded).IsEquivalentTo(frames.Take(decoded.Count), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		GmcpFrame[] huge = [new("Client.Media.Play", $$"""{"name":"{{new string('y', 70_000)}}.wav"}""")];
+		await Assert.That(ClientMediaFrames.Encode(huge, out var hugeDropped)).IsNull();
+		await Assert.That(hugeDropped).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A line with more sound than fits beside it still reaches the player, through the rendering worker: the frames
+	/// past the cap are left out rather than the response growing past what the socket server reads.
+	/// </summary>
+	[Test]
+	public async Task ALineFullOfSoundsStillArrivesThroughTheRenderingWorker()
+	{
+		var sounds = Enumerable.Range(0, 1000).Select(i => MarkupText.Sound($"{i}-{new string('z', 300)}.wav"));
+		var (written, gmcp) = await RenderThroughWorkerAsync(44,
+			MarkupText.Concat([.. sounds, MarkupText.Plain("A cacophony.")]));
+
+		await Assert.That(written).Contains("text:A cacophony.");
+		await Assert.That(gmcp).IsGreaterThan(0);
+		await Assert.That(gmcp).IsLessThan(1000);
+	}
+
+	/// <summary>
+	/// <c>media_base_url</c> arriving or changing reaches every connection that already agreed to GMCP, once: a repeat of
+	/// the same address sends nothing, and a connection without GMCP is not sent it.
+	/// </summary>
+	[Test]
+	public async Task TheMediaDefaultReachesAgreedConnectionsWhenTheAddressChanges()
+	{
+		var sent = new List<(long Handle, string Package, string Url)>();
+		ConnectionServerService.ConnectionData Client(long handle, string? modules, string type = "telnet") =>
+			new(handle, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, () => { },
+				(package, json) =>
+				{
+					lock (sent) sent.Add((handle, package, Field(JsonNode.Parse(json)!.AsObject(), "url")!));
+					return ValueTask.CompletedTask;
+				},
+				new ProtocolCapabilities(GmcpModules: modules), null, type);
+		var connections = Substitute.For<IConnectionServerService>();
+		connections.GetAll().Returns([Client(1, ""), Client(2, "Client.Media 1"), Client(3, null), Client(4, "", "websocket")]);
+		var consumer = new OutputSettingsConsumer(new OutputSettingsHolder(), connections, NullLogger<OutputSettingsConsumer>.Instance);
+		var none = new Dictionary<string, string>();
+
+		await consumer.HandleAsync(new OutputSettingsMessage(none));
+		await consumer.HandleAsync(new OutputSettingsMessage(none, "https://example.com/a"));
+		await consumer.HandleAsync(new OutputSettingsMessage(none, "https://example.com/a"));
+		await consumer.HandleAsync(new OutputSettingsMessage(none, "https://example.com/b/"));
+
+		await Assert.That(sent).IsEquivalentTo([
+			(1L, "Client.Media.Default", "https://example.com/a/"), (2L, "Client.Media.Default", "https://example.com/a/"),
+			(1L, "Client.Media.Default", "https://example.com/b/"), (2L, "Client.Media.Default", "https://example.com/b/")
+		], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// Sends <paramref name="markup"/> to a telnet connection that listed Client.Media, through a real rendering worker,
+	/// and returns what reached the connection in order, and how many GMCP frames did.
+	/// </summary>
+	private static async Task<(List<string> Written, int Gmcp)> RenderThroughWorkerAsync(long handle, MarkupText markup)
 	{
 		var directory = Path.Combine(Path.GetTempPath(), "sm-media-" + Guid.NewGuid().ToString("N"));
 		var socketPath = Path.Combine(directory, "render.sock");
@@ -157,9 +230,10 @@ public class ClientMediaFramesTests
 		using var renderer = new RemoteOutputRenderer(config, Substitute.For<IHostApplicationLifetime>(),
 			NullLogger<RemoteOutputRenderer>.Instance);
 		var written = new List<string>();
+		var gmcp = 0;
 		var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var connections = Substitute.For<IConnectionServerService>();
-		connections.Get(43).Returns(new ConnectionServerService.ConnectionData(43, null,
+		connections.Get(handle).Returns(new ConnectionServerService.ConnectionData(handle, null,
 			ConnectionServerService.ConnectionState.Connected,
 			data =>
 			{
@@ -170,6 +244,7 @@ public class ClientMediaFramesTests
 			_ => ValueTask.CompletedTask, () => Encoding.UTF8, () => { },
 			(package, json) =>
 			{
+				gmcp++;
 				written.Add(package + ":" + Field(JsonNode.Parse(json)!.AsObject(), "name"));
 				return ValueTask.CompletedTask;
 			},
@@ -178,17 +253,28 @@ public class ClientMediaFramesTests
 		try
 		{
 			await worker.StartAsync(timeout.Token);
-			var markup = MarkupText.Concat([MarkupText.Sound("door.wav", 80), MarkupText.Plain("The door creaks open.")]);
-			await consumer.HandleAsync(new MarkupOutputMessage(43, MarkupTextSerializer.Serialize(markup)), timeout.Token);
+			await consumer.HandleAsync(new MarkupOutputMessage(handle, MarkupTextSerializer.Serialize(markup)), timeout.Token);
 			await done.Task.WaitAsync(timeout.Token);
-
-			await Assert.That(written).IsEquivalentTo(["Client.Media.Play:door.wav", "text:The door creaks open."],
-				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			return (written, gmcp);
 		}
 		finally
 		{
 			await worker.StopAsync(CancellationToken.None);
 			if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
 		}
+	}
+
+	/// <summary>
+	/// The whole path, over the rendering socket: a sound in a line reaches the connection's GMCP writer before
+	/// the line's text does.
+	/// </summary>
+	[Test]
+	public async Task FramesAreSentBeforeTheLineThroughTheRenderingWorker()
+	{
+		var (written, _) = await RenderThroughWorkerAsync(43,
+			MarkupText.Concat([MarkupText.Sound("door.wav", 80), MarkupText.Plain("The door creaks open.")]));
+
+		await Assert.That(written).IsEquivalentTo(["Client.Media.Play:door.wav", "text:The door creaks open."],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 }

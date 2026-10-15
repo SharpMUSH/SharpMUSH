@@ -130,9 +130,37 @@ public static class ClientMediaFrames
 	/// </summary>
 	public const string Header = "X-SharpMUSH-Gmcp";
 
-	/// <summary>The frames as <see cref="Header"/> carries them: a JSON array, base64 encoded.</summary>
-	public static string Encode(IReadOnlyList<GmcpFrame> frames) =>
-		Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(frames.Select(frame => new[] { frame.Package, frame.Json })));
+	/// <summary>
+	/// The most <see cref="Header"/> may hold. The socket server's HTTP client refuses a response whose headers pass
+	/// 64 KB, and would take that for a worker outage and ask again for ever, so a render's frames stop well short.
+	/// </summary>
+	public const int MaxHeaderLength = 16 * 1024;
+
+	/// <summary>
+	/// The frames as <see cref="Header"/> carries them: a JSON array, base64 encoded, of as many of them, in order, as
+	/// fit in <see cref="MaxHeaderLength"/>; null when none does. <paramref name="dropped"/> is how many were left out.
+	/// The line is sent either way.
+	/// </summary>
+	public static string? Encode(IReadOnlyList<GmcpFrame> frames, out int dropped)
+	{
+		// The array's brackets, then each pair and the comma before it.
+		var length = 2;
+		var kept = 0;
+		foreach (var frame in frames)
+		{
+			var pair = JsonSerializer.SerializeToUtf8Bytes(new[] { frame.Package, frame.Json }).Length + (kept > 0 ? 1 : 0);
+			if (Base64Length(length + pair) > MaxHeaderLength) break;
+			length += pair;
+			kept++;
+		}
+
+		dropped = frames.Count - kept;
+		return kept == 0
+			? null
+			: Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(frames.Take(kept).Select(frame => new[] { frame.Package, frame.Json })));
+	}
+
+	private static int Base64Length(int bytes) => (bytes + 2) / 3 * 4;
 
 	/// <summary>The frames in a <see cref="Header"/> value; null for none, or for one that does not read.</summary>
 	public static IReadOnlyList<GmcpFrame>? Decode(string? header)
