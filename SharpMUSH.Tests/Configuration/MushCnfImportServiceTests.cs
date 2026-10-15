@@ -78,7 +78,7 @@ public class MushCnfImportServiceTests
 		var secrets = Secrets();
 		var service = Service(new MemoryStore(), secrets);
 
-		var import = await service.ReadAsync("sql_username mush\nsql_password hunter2 \n");
+		var import = await service.ReadAsync("sql_username mush\nsql_password hunter2 # the reporting database\n");
 		var applied = await service.ApplyAsync(import, Importer);
 
 		await Assert.That(applied.StoredSecrets).IsEquivalentTo([SecretDefinition.SqlPassword.Name]);

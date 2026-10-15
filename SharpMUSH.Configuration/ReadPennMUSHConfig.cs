@@ -340,13 +340,13 @@ public static partial class ReadPennMushConfig
 		// A secret directive takes its last line, as an option does. An empty one, as in PennMUSH's shipped
 		// mush.cnf, means no password: there is nothing to store.
 		var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
-		foreach (var groups in text
-							 .Select(line => splitter.Match(line.Trim()))
-							 .Where(match => match.Success)
-							 .Select(match => match.Groups)
-							 .Where(groups => PennMushConfigImport.SecretDirectives.ContainsKey(groups["Key"].Value)))
+		foreach (var (line, key) in text
+							 .Select(line => (Line: line, Match: splitter.Match(line.Trim())))
+							 .Where(entry => entry.Match.Success)
+							 .Select(entry => (entry.Line, Key: entry.Match.Groups["Key"].Value))
+							 .Where(entry => PennMushConfigImport.SecretDirectives.ContainsKey(entry.Key)))
 		{
-			secrets[PennMushConfigImport.SecretDirectives[groups["Key"].Value]] = groups["Value"].Value.Trim();
+			secrets[PennMushConfigImport.SecretDirectives[key]] = DirectiveValue(line);
 		}
 
 		return new PennMushConfigImport(work, skipped, named,
