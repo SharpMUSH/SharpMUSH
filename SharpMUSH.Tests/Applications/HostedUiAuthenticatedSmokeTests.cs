@@ -91,7 +91,7 @@ public class HostedUiAuthenticatedSmokeTests
 			builder.Services.AddSingleton<IConnectionService>(Substitute.For<IConnectionService>());
 			builder.Services.AddSingleton(capabilities); builder.Services.AddSingleton<IVisibleWorldProjection, VisibleWorldProjection>();
 			builder.Services.AddSingleton(accounts); builder.Services.AddSingleton<IAccountSessionStore>(sessions);
-			builder.Services.AddSingleton(new AccountClaimsService(capabilities, cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance));
+			builder.Services.AddSingleton(new AccountClaimsService(capabilities, cache, new AccountClaimsInvalidator(cache, new SharpMUSH.Library.Behaviors.ObjectVersions()), NullLogger<AccountClaimsService>.Instance));
 			builder.Services.AddSingleton<SitelockGuard>(); builder.Services.AddHttpContextAccessor();
 			builder.Services.AddTransient<IClaimsTransformation, FreshPermissionClaimsTransformation>();
 			builder.Services.AddAuthentication(AccountSessionAuthenticationHandler.SchemeName).AddScheme<AuthenticationSchemeOptions, AccountSessionAuthenticationHandler>(AccountSessionAuthenticationHandler.SchemeName, _ => { });
