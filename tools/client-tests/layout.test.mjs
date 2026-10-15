@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 // The command palette's ⌘K / Ctrl+K hook (layout.js). It must not fire while the reader is typing:
-// the terminal input and every text field keep their keys, except the Play composer, where the
-// palette is how a player finds a command.
+// every text field keeps its keys, except the two a player types commands into (the Play composer and
+// the terminal's line), where the palette is how they find one.
 const root = new URL('../../SharpMUSH.Client/wwwroot/', import.meta.url);
 
 function boot() {
@@ -59,17 +59,20 @@ test('a text field or an editor keeps its own K', () => {
     assert.deepEqual(calls, [], 'no chord, or typing: nothing opens');
 });
 
-test('the Play composer opens the palette', () => {
+test('the Play composer and the terminal line open the palette', () => {
     const { layout, listeners } = boot();
     const calls = [];
     layout.registerPaletteHotkey({ invokeMethodAsync: name => calls.push(name) });
 
-    const composer = { tagName: 'TEXTAREA', isContentEditable: false, closest: selector => selector === '.composer-scope' ? {} : null };
-    const press = key(composer, { ctrlKey: true });
-    listeners.get('keydown')(press.event);
+    const within = selector => ({ closest: wanted => wanted === '.composer-scope, .term-input' ? { selector } : null });
+    for (const target of [{ tagName: 'TEXTAREA', isContentEditable: false, ...within('.composer-scope') },
+        { tagName: 'INPUT', isContentEditable: false, ...within('.term-input') }]) {
+        const press = key(target, { ctrlKey: true });
+        listeners.get('keydown')(press.event);
+        assert.ok(press.prevented());
+    }
 
-    assert.deepEqual(calls, ['OpenPaletteFromHotkey']);
-    assert.ok(press.prevented());
+    assert.deepEqual(calls, ['OpenPaletteFromHotkey', 'OpenPaletteFromHotkey']);
 });
 
 test('registering twice keeps one listener', () => {
