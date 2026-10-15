@@ -55,5 +55,37 @@ public record CompatibilityOptions(
 		Description = "Also hand HTTP softcode q-registers, as PennMUSH does, besides the named arguments: STATUS and CONTENT-TYPE to an @http callback, and HDR.<name> and HEADERS to the http_handler. A PennMUSH database import turns it on",
 		Group = "PennMUSH Compatibility",
 		Order = 2)]
-	bool HttpQRegisters
+	bool HttpQRegisters,
+
+	[property: SharpConfig(
+		Name = "rhost_edit",
+		Category = "Compatibility",
+		Description = "Read edit()'s fourth and fifth arguments as RhostMUSH's mode flags (a nonzero fourth replaces only the first match) instead of another from/to pair",
+		Group = "RhostMUSH Compatibility",
+		Order = 1)]
+	bool RhostEdit,
+
+	[property: SharpConfig(
+		Name = "rhost_lattr",
+		Category = "Compatibility",
+		Description = "Read lattr()'s and lattrp()'s arguments as RhostMUSH lays them out: a target to list as, then a type, attribute flags, a regular expression switch and a tree switch, instead of an output delimiter",
+		Group = "RhostMUSH Compatibility",
+		Order = 2)]
+	bool RhostLattr,
+
+	[property: SharpConfig(
+		Name = "rhost_printf",
+		Category = "Compatibility",
+		Description = "Read printf()'s format with RhostMUSH's $-code grammar ($-10s, $^20:-:s ...) instead of SharpMUSH's %-code grammar",
+		Group = "RhostMUSH Compatibility",
+		Order = 3)]
+	bool RhostPrintf,
+
+	[property: SharpConfig(
+		Name = "rhost_map_args",
+		Category = "Compatibility",
+		Description = "In map(), leave %1 empty when no extra arguments are given, as RhostMUSH does, instead of passing the item's position",
+		Group = "RhostMUSH Compatibility",
+		Order = 4)]
+	bool RhostMapArgs
 );

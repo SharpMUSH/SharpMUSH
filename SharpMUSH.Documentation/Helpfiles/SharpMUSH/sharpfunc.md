@@ -1525,6 +1525,8 @@ You say "I think this is an exam."
 
   edit() can not replace a literal single ^ or $. Use regedit() for that.
 
+  With the `rhost_edit` option on, edit() takes RhostMUSH's form, `edit(<string>, <search>, <replace>[, <first only>[, <ansi mode>]])`: a fourth argument starting with a nonzero number replaces only the first match, and the fifth is accepted and ignored. This form comes from RhostMUSH; see [compatibility config].
+
 
 ::: seealso
 - [@edit]
@@ -2646,6 +2648,8 @@ You say, "One|PLAYER"
 # reglattrp()
 `lattr(<object>[/<attribute pattern>][, <output separator>])`<br>
 `lattrp(<object>[/<attribute pattern>][, <output separator>])`<br>
+`lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`<br>
+`lattrp(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`<br>
 `reglattr(<object>[/<regexp>][, <output separator>])`<br>
 `reglattrp(<object>[/<regexp>][, <output separator>])`
 
@@ -2658,6 +2662,8 @@ You say, "One|PLAYER"
   lattrp() and reglattrp() also include attributes inherited from parents.
 
   When returning large numbers of attributes, the results may be truncated due to buffer limits. In these cases, you can use nattr() and xattr() to retrieve the results in smaller pieces.
+
+  With the `rhost_lattr` option on, lattr() and lattrp() take RhostMUSH's arguments instead of an output separator: `lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`. This form comes from RhostMUSH; see [compatibility config] for what each argument does.
 
 
 ::: seealso
@@ -3356,11 +3362,12 @@ th lt(1,3,2)
 
   This function works much like ITER(). The given `<attribute>` is evaluated once for each element of `<list>`, and the results of the evaluations are returned. For each evaluation, the current list element is passed to the attribute as %0, and its position in the list as %1. Elements of `<list>` are separated by `<delim>`, or a space if none is given, and the results are returned separated by `<osep>`, if given, or the delimiter otherwise.
 
-  Any arguments after `<osep>` are passed to the attribute as %1, %2 and so on, in place of the position. Passing them comes from RhostMUSH.
+  Any arguments after `<osep>` are passed to the attribute as %1, %2 and so on, in place of the position. Passing them comes from RhostMUSH. With the `rhost_map_args` option on, %1 is empty when there are none, as on RhostMUSH, rather than the position (see [compatibility config]).
 
   Example:
 ```sharp
-> think map(#lambda/<%0:%1:%2>, a b,,, x, y)
+> &show_args me=<%0:%1:%2>
+> think map(show_args, a b,,, x, y)
 <a:x:y> <b:x:y>
 ```
 
@@ -5580,6 +5587,8 @@ strdistance(,e[chr(769)][chr(128512)])
   Numeric values use a strict invariant grammar: an optional sign, ASCII digits, and (for decimals) a decimal point. Spaces, separators, exponent notation, and Tiny math coercions are not accepted. Values outside signed 64-bit integer or .NET decimal range return the usual number error. Literal and string-value markup survives. Generated numeric text inherits the first input character's markup; markup on a directive's percent sign wraps its field. Padding is plain unless covered by that directive markup. Controls and newlines in strings are retained and use the library's display-width policy.
 
   The format may contain at most 65,536 UTF-16 code units, 1,024 directives including percent escapes, and 128 value fields. Width and string/integer precision are at most 65,536; decimal precision is at most 28. Exceeding these bounds returns `#-1 PRINTF FIELD LIMIT EXCEEDED` before large padding is allocated. Directives cannot cut through a grapheme cluster. The shared 5,242,880 UTF-16-unit result ceiling also applies; exceeding it stops evaluation with `#-1 OUTPUT EXCEEDED MAXIMUM SIZE`.
+
+  With the `rhost_printf` option on, printf() reads RhostMUSH's fields instead of these directives: a field is `$`, its codes, then `s`, as in `printf(|$-5s|$5s|,ab,cd)`, which returns `|ab   |   cd|`. That form wants at least one value, and the fields can wrap a value over several rows. This grammar comes from RhostMUSH; see [compatibility config] for its codes.
 
   Examples:
 ```sharp

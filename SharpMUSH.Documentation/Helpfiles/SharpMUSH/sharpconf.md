@@ -158,3 +158,10 @@ Options that help control compability with TinyMUSH servers.
 - `tiny_math=<boolean>`: Is a string where a number is expected considered a 0?
 - `silent_pemit=<boolean>`: Does @pemit default to @pemit/silent?
 - `paren_groups=<boolean>`: Does an unescaped `(` that starts no function call open a literal group, as in PennMUSH? Its commas are text and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments. When off, escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`. Importing a PennMUSH database turns it on.
+
+The `rhost_` options below are for a game moved from RhostMUSH. Each is off by default, and off leaves the function as PennMUSH has it. See [compatibility config].
+
+- `rhost_edit=<boolean>`: Are edit()'s fourth and fifth arguments RhostMUSH's first-only and ANSI modes, rather than another from/to pair?
+- `rhost_lattr=<boolean>`: Do lattr() and lattrp() take RhostMUSH's target, type, flags, regexp and tree arguments, rather than an output separator?
+- `rhost_printf=<boolean>`: Does printf() read RhostMUSH's `$`-fields, rather than SharpMUSH's `%` directives?
+- `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?

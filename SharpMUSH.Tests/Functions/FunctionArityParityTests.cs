@@ -75,7 +75,12 @@ public class FunctionArityParityTests : ServerTestBase
 
 		// RhostMUSH's map() passes arguments after <osep> to the attribute as %1 onwards. PennMUSH
 		// refuses a fifth argument, so no PennMUSH call reaches them.
-		["map"] = "arguments past <osep> are passed as %1 onwards (from RhostMUSH)"
+		["map"] = "arguments past <osep> are passed as %1 onwards (from RhostMUSH)",
+
+		// RhostMUSH's six-argument lattr(), reachable only with rhost_lattr on. With it off, more than
+		// two arguments answer PennMUSH's own too-many-arguments error.
+		["lattr"] = "RhostMUSH's six arguments under rhost_lattr; off, more than two are refused as in PennMUSH",
+		["lattrp"] = "RhostMUSH's six arguments under rhost_lattr; off, more than two are refused as in PennMUSH"
 	};
 
 	/// <summary>

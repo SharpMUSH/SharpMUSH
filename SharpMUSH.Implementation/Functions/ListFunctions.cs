@@ -553,7 +553,7 @@ public partial class Functions
 	/// <summary>
 	/// map(): the attribute once per item, the item as %0. Arguments from position 4 on reach it as %1,
 	/// %2, ..., as RhostMUSH passes them. Without any, %1 is the item's position from 1, as PennMUSH
-	/// passes it.
+	/// passes it, unless <c>rhost_map_args</c> is on, when %1 is empty as on RhostMUSH.
 	/// </summary>
 	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep", "argument..."])]
 	public async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -567,7 +567,7 @@ public partial class Functions
 		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 		var extras = ExtraPredicateArguments(parser, 4);
-		var withPosition = extras.Count == 0;
+		var withPosition = extras.Count == 0 && !Configuration.CurrentValue.Compatibility.RhostMapArgs;
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
