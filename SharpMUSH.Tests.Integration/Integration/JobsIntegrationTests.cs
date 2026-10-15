@@ -859,6 +859,24 @@ public class JobsIntegrationTests
 			await Assert.That(cleared.GetProperty("ok").GetBoolean()).IsTrue().Because(cleared.ToString());
 			await Assert.That(await God($"think [get({applications}/CHECKLIST)]")).IsEqualTo(string.Empty)
 				.Because("removing every step in the portal clears the checklist");
+
+			await Assert.That(await As(staff, "+bucket/lock Applications/audit=(((")).Contains("That is not a lock.");
+			await Assert.That(await As(staff, "+bucket/lock Applications/work=")).Contains("Someone has to work Applications");
+			var badLock = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","audit_lock":"((("}""", staff);
+			await Assert.That(badLock.GetProperty("errors").GetProperty("audit_lock").GetString()).IsEqualTo("That is not a lock.");
+			var noWorkers = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","work_lock":""}""", staff);
+			await Assert.That(noWorkers.GetProperty("errors").GetProperty("work_lock").GetString()).StartsWith("Someone has to work the bucket");
+			var locked = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","audit_lock":"role^approved"}""", staff);
+			await Assert.That(locked.GetProperty("ok").GetBoolean()).IsTrue().Because(locked.ToString());
+			await Assert.That(await God($"think [lock({applications}/audit)]")).IsEqualTo("ROLE^approved");
+			var lockForm = await Http("GET", "/jobs/data?at=buckets/applications", "", staff);
+			await Assert.That(lockForm.GetProperty("fields").GetProperty("audit_lock").GetProperty("value").GetString()).IsEqualTo("ROLE^approved");
+
+			var worker = await Player("JobsChkW", "job-admin-applications");
+			var refused = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","audit_lock":""}""", worker);
+			await Assert.That(refused.GetProperty("errors").GetProperty("_global").GetString()).IsEqualTo("Only a Job Admin can change a bucket's locks.")
+				.Because("someone who works a bucket may change its settings, but not who works it");
+			await Assert.That(await God($"think [lock({applications}/audit)]")).IsEqualTo("ROLE^approved");
 		}
 		finally
 		{
