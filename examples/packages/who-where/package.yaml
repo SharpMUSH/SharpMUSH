@@ -1,8 +1,8 @@
 format: 1
 package: who-where
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
-description: "+who and +where commands with a shared formatting object, drawn as layout tables."
+description: "+who and +where commands with a shared formatting object, drawn as layout tables. +where groups players by location, or lists them by location or by name."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [who, where, social]
@@ -27,7 +27,10 @@ objects:
       CMD_+WHO: |-
         $+who:@pemit %#=[u({{ww_functions}}/WW_FN_WHO,mwho())]
       CMD_+WHERE: |-
-        $+where:@pemit %#=[u({{ww_functions}}/WW_FN_WHERE,mwho())]
+        $+where:@pemit %#=u({{ww_functions}}/WW_FN_WHERE,mwho())
+      # +where/room and +where/name: a switch is the WW_FN_WHERE_<SWITCH> it runs.
+      CMD_+WHERE_SWITCH: |-
+        $+where/*:@assert member(room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/room lists by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho())
 
   - ref: ww_functions
     type: thing
@@ -38,17 +41,20 @@ objects:
       # so every reader gets it at their own width, and the web portal draws a card with a table.
       # Columns are joined with %r and the delimiter is a newline (WW_FN_OPTS), so a room name with a |
       # in it stays one cell; WW_FN_OPTS takes the nowrap columns and the priorities split the same way.
-      # Every column is nowrap, so a narrow screen drops the lower-priority columns instead of breaking
-      # names across lines. Headings are bold, and the count under the table is in the muted theme colour.
+      # Names are nowrap, so a narrow screen drops a lower-priority column instead of breaking a name
+      # across lines; only +where's Who and Location lists wrap, taking the spare width. Headings are
+      # bold, and the count under the table is in the muted theme colour.
+      # %0 the nowrap columns, %1 the priorities, %2 each column's share of spare width and %3 each
+      # column's least width; leave %2 and %3 out for a table with no wrapping column.
       WW_FN_OPTS: |-
-        json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1))
+        json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
       WW_FN_FOOT: |-
         %r[rule()]%r[tone(muted,[words(%0)] connected)]
       # A Status column joins the table when some player has a status. Another package fills it without
       # editing this one: it attaches FILTER`WHO`STATUS`<NAME> to this object, and chain() runs every such
       # filter in name order, each getting the status so far as %0 and the player as %1.
       WW_FN_WHO: |-
-        setq(ww_filters,u(%!/WW_FN_FILTERS,WHO`STATUS))[setq(ww_status,iter(%0,chain(%q<ww_filters>,,%i0),,%r))][box(if(strlen(trim(edit(%q<ww_status>,%r,))),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2%r3),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[ansi(h,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)],[ansi(h,Status)]%r%q<ww_status>),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[ansi(h,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)]))[u(%!/WW_FN_FOOT,%0)],Who's Online)]
+        setq(ww_filters,u(%!/WW_FN_FILTERS,WHO`STATUS))[setq(ww_status,iter(%0,chain(%q<ww_filters>,,%i0),,%r))][box(if(strlen(trim(edit(%q<ww_status>,%r,))),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2%r3),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],>[tone(strong,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[tone(strong,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)],[tone(strong,Status)]%r%q<ww_status>),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],>[tone(strong,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[tone(strong,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)]))[u(%!/WW_FN_FOOT,%0)],Who's Online)]
       # %0 a point, %1 what would be shown, %2 the player: what every FILTER`<point>`<NAME> on this object
       # makes of it, in name order. With no filters, %1 unchanged.
       WW_FN_FILTER: |-
@@ -56,8 +62,37 @@ objects:
       # %0 a point: its filters, as the chain() list.
       WW_FN_FILTERS: |-
         iter(lattr(%!/FILTER`%0`*),%!/%i0)
+      # ---- +where ---------------------------------------------------------------
+      # Each player's room is looked up once, into a list of <room>:<player> pairs sorted by player name;
+      # grouping and sorting then work on that list with graball(), not by asking every player again.
+      # %0 a player: the room they stand in, or #-1 when they or a place they are in is unfindable.
+      # room() answers an objid, or #-1 PERMISSION DENIED; the dbref before the colon is the answer.
+      WW_FN_ROOM: |-
+        first(first(room(%0)),:)
+      # %0 players: <room>:<player> for each, by player name.
+      WW_FN_PAIRS: |-
+        iter(sort(%0,namei),[u(%!/WW_FN_ROOM,%i0)]:%i0)
+      # %0 pairs: the rooms in them, by name, and #-1 last when someone cannot be located.
+      WW_FN_ROOMS: |-
+        setq(ww_rooms,setunion(iter(%0,before(%i0,:)),))[trim(sort(remove(%q<ww_rooms>,#-1),namei)[if(member(%q<ww_rooms>,#-1),%b#-1)])]
+      # %0 a room from WW_FN_ROOMS, %1 pairs: the players in it, by name.
+      WW_FN_IN: |-
+        iter(graball(%1,%0:*),after(%i0,:))
+      # %0 a room or #-1: its name, or - for a player who cannot be located.
+      WW_FN_PLACE: |-
+        if(isdbref(%0),name(%0),-)
+      # +where: one row per location, with how many are there and who.
       WW_FN_WHERE: |-
-        box(datacolumns(u(%!/WW_FN_OPTS,1%r2,1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Location)]%r[iter(%0,firstof(name(loc(%i0)),-),,%r)])[u(%!/WW_FN_FOOT,%0)],Where)
+        setq(ww_pairs,u(%!/WW_FN_PAIRS,%0))[setq(ww_rooms,u(%!/WW_FN_ROOMS,%q<ww_pairs>))][box(datacolumns(u(%!/WW_FN_OPTS,1%r2,1%r2%r1,%r%r1,%r%r20),[tone(strong,Location)]%r[iter(%q<ww_rooms>,u(%!/WW_FN_PLACE,%i0),,%r)],>[tone(strong,Players)]%r[iter(%q<ww_rooms>,words(u(%!/WW_FN_IN,%i0,%q<ww_pairs>)),,%r)],[tone(strong,Who)]%r[iter(%q<ww_rooms>,iter(u(%!/WW_FN_IN,%i0,%q<ww_pairs>),name(%i0),,%,%b),,%r)])[u(%!/WW_FN_FOOT,%0)],Where)]
+      # %0 players, in the order shown, %1 the title: one row per player, with where they are.
+      WW_FN_WHERE_LIST: |-
+        box(datacolumns(u(%!/WW_FN_OPTS,1,1%r1,%r1,%r12),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],[tone(strong,Location)]%r[iter(%0,u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%i0)),,%r)])[u(%!/WW_FN_FOOT,%0)],%1)
+      # +where/room: by location, then by name.
+      WW_FN_WHERE_ROOM: |-
+        setq(ww_pairs,u(%!/WW_FN_PAIRS,%0))[u(%!/WW_FN_WHERE_LIST,iter(u(%!/WW_FN_ROOMS,%q<ww_pairs>),u(%!/WW_FN_IN,%i0,%q<ww_pairs>)),Where by location)]
+      # +where/name: by name.
+      WW_FN_WHERE_NAME: |-
+        u(%!/WW_FN_WHERE_LIST,sort(%0,namei),Where by name)
 
   # ---- +help topics ---------------------------------------------------------
   # On the function object, which is unflagged — the librarian cannot u() a privileged object's
@@ -95,10 +130,14 @@ objects:
 
         A filter a package attaches goes away when the package is uninstalled.
       HELP`WHERE: |-
-        `+where` lists everyone connected and the room each is standing in.
+        `+where` shows where everyone connected is standing.
 
-        A player in an unfindable room, or one who has made themselves unfindable, is listed without
-        a location rather than being hidden outright.
+        - `+where` lists each location once, with everyone there.
+        - `+where/room` lists one player per line, sorted by location.
+        - `+where/name` lists one player per line, sorted by name.
+
+        A player who is unfindable, or is in an unfindable room, is listed at `-` rather than left
+        out.
 
   - ref: ww_help_registration
     target: "{{plus-help/librarian}}"

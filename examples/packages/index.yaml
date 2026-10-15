@@ -18,8 +18,8 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.3.0
-    description: +who and +where commands; other packages add a Status column to +who with filters
+    version: 1.4.0
+    description: +who and +where commands; +where groups by location or sorts by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
     package: bbs-lite
