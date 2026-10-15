@@ -99,7 +99,8 @@ public class StatusIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
@@ -196,12 +197,23 @@ public class StatusIntegrationTests
 			await InstallAsync();
 			var ann = await Player("GaAnn");
 			var bo = await Player("GaBo");
+			var admin = await Player("GaAdm");
+			await God($"@permission/allow #{admin.DbRef.Number}=config.admin");
 			// A short room name keeps Location to one line, so only the Status cell wraps and Unwrapped reads it whole.
 			await God($"@name {await God($"think loc(#{ann.DbRef.Number})")}=GaR");
 
-			await God($"&STATUS`SCENE {Store}=In a scene, but come and join.");
-			await God($"&STATUS`SCENE`TAG {Store}=Open scene");
-			await God($"&STATUS`SCENE`HOURS {Store}=1");
+			// Only staff who change the game's configuration change the statuses on offer.
+			await Assert.That(await As(ann, "+status/add scene=x")).Contains("Only staff who change the game's configuration");
+			await Assert.That(await As(ann, "+status/options lfrp/hours=1")).Contains("Only staff who change the game's configuration");
+			await Assert.That(await As(admin, "+status/add scene=In a scene, but come and join.")).Contains("Added scene.");
+			await Assert.That(await As(admin, "+status/add scene=again")).Contains("There is already a status called scene.");
+			await Assert.That(await As(admin, "+status/add two words=x")).Contains("one word of up to 20 letters");
+			await Assert.That(await As(admin, "+status/options scene/tag=Open scene")).Contains("scene shows as Open scene.");
+			await Assert.That(await As(admin, "+status/options scene/hours=1")).Contains("It lasts 1 hour.");
+			await Assert.That(await As(admin, "+status/options scene/hours=x")).Contains("Hours are a whole number");
+			await Assert.That(await As(admin, "+status/options scene/colour=red")).Contains("A status has hours, logoff, tag and means.");
+			await Assert.That(await As(admin, "+status/options scene/logoff=on")).Contains("It lasts 1 hour or until you log off.");
+			await Assert.That(await As(admin, "+status/options scene/logoff=off")).Contains("It lasts 1 hour.");
 			await Assert.That(await As(ann, "+status")).Contains("scene").And.Contains("In a scene, but come and join.").And.Contains("1h");
 			await Assert.That(await As(ann, "+status scene=The tavern")).Contains("Your status: Open scene: The tavern")
 				.And.Contains("It lasts 1 hour.");
@@ -213,7 +225,8 @@ public class StatusIntegrationTests
 			await God($"&DATA`LIST`MORE {StatusObject}");
 
 			// Removing a status takes it from everyone who had it.
-			await God($"@wipe {Store}/STATUS`SCENE");
+			await Assert.That(await As(admin, "+status/remove scene")).Contains("Removed scene, and cleared it from 1 player.");
+			await Assert.That(await God($"think lattr({Store}/STATUS`SCENE*)")).IsEqualTo(string.Empty);
 			await Assert.That(await As(ann, "+status")).Contains("You have no status.").And.DoesNotContain("Open scene");
 			await Assert.That(Unwrapped(await As(bo, "+who"))).DoesNotContain("Openscene");
 		}
@@ -237,7 +250,7 @@ public class StatusIntegrationTests
 			await Assert.That(await As(ann, "+status/list/0")).Contains("Pages start at 1");
 
 			await Assert.That(await As(ann, "+help status")).Contains("+status lfrp=").And.Contains("+status/list");
-			await Assert.That(await As(ann, "+help status staff")).Contains("STATUS`<NAME>`TAG");
+			await Assert.That(await As(ann, "+help status staff")).Contains("+status/options <name>/hours=<hours>");
 		}
 		finally
 		{

@@ -88,6 +88,12 @@ objects:
         STATUS`SHOW
       DATA`ROUTE`STATUS`LIST: |-
         STATUS`LIST
+      DATA`ROUTE`STATUS`OPTIONS: |-
+        STATUS`OPTIONS
+      DATA`ROUTE`STATUS`ADD: |-
+        STATUS`ADD
+      DATA`ROUTE`STATUS`REMOVE: |-
+        STATUS`REMOVE
       # The routines that take a page as a last switch: +status/list/2.
       DATA`PAGED: |-
         STATUS`LIST
@@ -130,6 +136,12 @@ objects:
       FUN`IS`MODERATOR:
         value: |-
           permission(%#,softcode.status.moderate)
+        flags: [funsyntax]
+      # 1 when the player running the command may change the statuses on offer: staff who change the game's
+      # configuration.
+      FUN`IS`ADMIN:
+        value: |-
+          permission(%#,config.admin)
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
@@ -268,7 +280,7 @@ objects:
       # The statuses a player may choose, as a table.
       FUN`STATUS`CHOICES:
         value: |-
-          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),[tone(strong,Name)]%r[iter(%q<status_names>,lcstr(%i0),,%r)],[tone(strong,Means)]%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],[tone(strong,Lasts)]%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTSSHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)]
+          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),[tone(strong,Name)]%r[iter(%q<status_names>,lcstr(%i0),,%r)],[tone(strong,Means)]%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],[tone(strong,Lasts)]%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTSSHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)][if(u(%!/FUN`IS`ADMIN),%r[tone(muted,Staff: +status/options <name>/hours=<hours> changes how long one lasts. +help status staff has the rest.)])]
         flags: [funsyntax]
       # +status <name>[=<line>]
       INC`STATUS`SET:
@@ -326,6 +338,49 @@ objects:
           cand(u(%!/FUN`STATUS`ACTIVE,%0,%1),isdbref(get({{store}}/PLAYER`%0)))
         flags: [funsyntax]
 
+      # ---- staff: the statuses on offer -------------------------------------------
+      # Stops a command whose player may not change the statuses on offer.
+      INC`STATUS`NEEDADMIN:
+        value: |-
+          @assert u(%!/FUN`IS`ADMIN)=@pemit %#=notice(STATUS,Only staff who change the game's configuration can change the statuses on offer.,error)
+        flags: [cmdsyntax]
+      # +status/options <name>/<option>=<value>: hours, logoff, tag or means. Each option is its own routine.
+      INC`STATUS`OPTIONS:
+        value: |-
+          @include %!/INC`STATUS`NEEDADMIN; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(STATUS,+status/options <name>/hours=<hours>%, /logoff=on or off%, /tag=<text> or /means=<text>,warn); think setq(status_typed,trim(before(%q<cmd_left_side>,/))); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_option,lcstr(trim(after(%q<cmd_left_side>,/)))); @assert member(hours logoff tag means,%q<status_option>)=@pemit %#=notice(STATUS,A status has hours%, logoff%, tag and means.,warn); @include %!/INC`STATUS`OPTION`[ucstr(%q<status_option>)]
+        flags: [cmdsyntax]
+      INC`STATUS`OPTION`HOURS:
+        value: |-
+          @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0))=@pemit %#=notice(STATUS,Hours are a whole number: 0 lasts until it is changed.,warn); &STATUS`%q<status_name>`HOURS {{store}}=%q<cmd_right_side>; @pemit %#=notice(STATUS,[lcstr(%q<status_name>)]: [u(%!/FUN`STATUS`LASTS,%q<status_name>)] A status set before now keeps the time it had.,ok)
+        flags: [cmdsyntax]
+      INC`STATUS`OPTION`LOGOFF:
+        value: |-
+          @assert member(on off,lcstr(%q<cmd_right_side>))=@pemit %#=notice(STATUS,+status/options [lcstr(%q<status_name>)]/logoff=on ends it at logoff%, =off keeps it.,warn); &STATUS`%q<status_name>`LOGOFF {{store}}=if(strmatch(%q<cmd_right_side>,on),1,0); @pemit %#=notice(STATUS,[lcstr(%q<status_name>)]: [u(%!/FUN`STATUS`LASTS,%q<status_name>)],ok)
+        flags: [cmdsyntax]
+      INC`STATUS`OPTION`TAG:
+        value: |-
+          @assert cand(strlen(%q<cmd_right_side>),lte(strlen(%q<cmd_right_side>),20))=@pemit %#=notice(STATUS,A tag is 1 to 20 characters.,warn); &STATUS`%q<status_name>`TAG {{store}}=%q<cmd_right_side>; @pemit %#=notice(STATUS,[lcstr(%q<status_name>)] shows as %q<cmd_right_side>.,ok)
+        flags: [cmdsyntax]
+      INC`STATUS`OPTION`MEANS:
+        value: |-
+          @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(STATUS,Say what it means after the =.,warn); &STATUS`%q<status_name> {{store}}=%q<cmd_right_side>; @pemit %#=notice(STATUS,[lcstr(%q<status_name>)] means: %q<cmd_right_side>,ok)
+        flags: [cmdsyntax]
+      # +status/add <name>=<what it means>: a new status, lasting until it is changed, shown as its name.
+      INC`STATUS`ADD:
+        value: |-
+          @include %!/INC`STATUS`NEEDADMIN; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(STATUS,+status/add <name>=<what it means>,warn); @assert cand(regmatch(%q<cmd_left_side>,^\[A-Za-z0-9_\]+$),lte(strlen(%q<cmd_left_side>),20))=@pemit %#=notice(STATUS,A status name is one word of up to 20 letters%, digits and _.,warn); think setq(status_name,ucstr(%q<cmd_left_side>)); @assert not(hasattr({{store}},STATUS`%q<status_name>))=@pemit %#=notice(STATUS,There is already a status called [lcstr(%q<status_name>)].,warn); &STATUS`%q<status_name> {{store}}=%q<cmd_right_side>; &STATUS`%q<status_name>`TAG {{store}}=%q<cmd_left_side>; &STATUS`%q<status_name>`HOURS {{store}}=0; &STATUS`%q<status_name>`LOGOFF {{store}}=0; @pemit %#=notice(STATUS,Added [lcstr(%q<status_name>)]. It lasts until it is changed. +status/options [lcstr(%q<status_name>)]/hours=<hours> changes that.,ok)
+        flags: [cmdsyntax]
+      # +status/remove <name>: takes the status away, and from everyone who has it.
+      INC`STATUS`REMOVE:
+        value: |-
+          @include %!/INC`STATUS`NEEDADMIN; @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<cmd_argument>)))=@pemit %#=notice(STATUS,There is no status '%q<cmd_argument>'. +status lists them.,warn); think setq(status_holders,filterbool(%!/FUN`STATUS`HOLDS,iter(lattr({{store}}/PLAYER`*),after(%i0,`)),,,%q<status_name>)); @dolist/inline %q<status_holders>={@include/args %!/INC`STATUS`CLEAR=key,##}; @wipe {{store}}/STATUS`%q<status_name>; @pemit %#=notice(STATUS,Removed [lcstr(%q<status_name>)][if(words(%q<status_holders>),%, and cleared it from [words(%q<status_holders>)] player[if(neq(words(%q<status_holders>),1),s)])].,ok)
+        flags: [cmdsyntax]
+      # %0 a key, %1 a status: 1 when that player's status is it.
+      FUN`STATUS`HOLDS:
+        value: |-
+          not(comp(get({{store}}/PLAYER`%0`NAME),%1))
+        flags: [funsyntax]
+
       # ---- disconnect -----------------------------------------------------------
       # Master room ADISCONNECT runs for every player, as this object, with %# the player and %1 how many
       # connections they have left. A status whose LOGOFF is set ends with the last connection.
@@ -353,7 +408,7 @@ objects:
   #
   # A status is STATUS`<NAME>, its value what it means, with TAG (what +who shows), HOURS (how long it lasts
   # from when it is set; 0 until it is changed) and LOGOFF (1 when logging off ends it) beneath. A game adds,
-  # changes or removes statuses here.
+  # changes or removes statuses with +status/add, /options and /remove.
   - ref: store
     type: thing
     name: Status Store
@@ -424,13 +479,17 @@ objects:
 
         ## Statuses
 
-        The statuses are kept on the Status Store, inside the Status object in the master room. Each is an attribute named for the status, holding what it means, with three beneath it:
+        Staff who can change the game's configuration \(the `config.admin` permission\) choose the statuses on offer:
 
-        - `` STATUS`<NAME>`TAG ``: what `+who` shows, such as `LFRP`.
-        - `` STATUS`<NAME>`HOURS ``: how many hours it lasts from when it is set; 0 lasts until it is changed.
-        - `` STATUS`<NAME>`LOGOFF ``: 1 when logging off ends it.
+        - `+status/options <name>/hours=<hours>` sets how long it lasts from when it is set. 0 lasts until it is changed.
+        - `+status/options <name>/logoff=on` ends it at logoff, and `=off` keeps it.
+        - `+status/options <name>/tag=<text>` sets what `+who` shows, such as `LFRP`.
+        - `+status/options <name>/means=<text>` sets what `+status` says it means.
+        - `+status/add <name>=<what it means>` adds one, lasting until it is changed. `+status/remove <name>` takes one away, and from everyone who has it.
 
-        Removing a status's attribute takes it away from everyone who had it.
+        `+status` shows each status and how long it lasts. A new hours applies to statuses set after the change.
+
+        They are kept on the Status Store, inside the Status object in the master room, as `` STATUS`<NAME> `` with `TAG`, `HOURS` and `LOGOFF` beneath.
 
         ## Settings
 
