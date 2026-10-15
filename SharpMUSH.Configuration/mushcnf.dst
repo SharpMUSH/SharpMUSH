@@ -287,6 +287,17 @@ use_ws true
 ws_url /wsclient
 
 ###
+### MUD client media
+###
+
+# Web address a GMCP client such as Mudlet fetches the game's sounds and
+# music from, when sound() or music() names a file rather than a full
+# address. Sent to each client as GMCP Client.Media.Default. Leave it
+# empty to send nothing.
+# media_base_url https://example.com/media/
+media_base_url
+
+###
 ### Limits, costs, and other constants
 ###
 

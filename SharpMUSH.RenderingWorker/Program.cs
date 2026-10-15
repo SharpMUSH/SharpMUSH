@@ -42,7 +42,7 @@ public static class Program
 			sp.GetRequiredService<TerminalPictureStore>(), sp.GetRequiredService<ConnectionPictures>()));
 		var app = builder.Build();
 		app.MapGet("/health", () => Results.Ok());
-		app.MapPost("/render", async (RenderRequest request, MarkupOutputRenderer renderer, CancellationToken ct) =>
+		app.MapPost("/render", async (RenderRequest request, MarkupOutputRenderer renderer, HttpResponse response, CancellationToken ct) =>
 		{
 			if (request.Context is null || request.Context.Capabilities is null ||
 				(request.Markup is null) == (request.Data is null))
@@ -53,6 +53,8 @@ public static class Program
 			var bytes = rendered.ApplyOutputTransform
 				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities, request.Context.AsciiTranslations)
 				: rendered.Data;
+			// Beside the body rather than in it: a socket server that does not read it still gets the text.
+			if (rendered.Gmcp is { Count: > 0 } frames) response.Headers[ClientMediaFrames.Header] = ClientMediaFrames.Encode(frames);
 			return Results.Bytes(bytes, "application/octet-stream");
 		});
 		return app;

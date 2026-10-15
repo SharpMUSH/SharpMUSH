@@ -16,12 +16,16 @@ public sealed class OutputSettingsHolder
 	/// <summary>The <c>ascii_translations</c> table; empty for none.</summary>
 	public IReadOnlyDictionary<string, string> AsciiTranslations => _asciiTranslations;
 
+	/// <summary><c>media_base_url</c>, sent to a GMCP client as <c>Client.Media.Default</c>; null for none.</summary>
+	public string? MediaBaseUrl { get; private set; }
+
 	/// <summary>Completes when the first settings from the main process arrive.</summary>
 	public Task Received => _received.Task;
 
 	public void Replace(OutputSettingsMessage message)
 	{
 		_asciiTranslations = message.AsciiTranslations ?? new Dictionary<string, string>();
+		MediaBaseUrl = string.IsNullOrWhiteSpace(message.MediaBaseUrl) ? null : message.MediaBaseUrl;
 		_received.TrySetResult();
 	}
 }

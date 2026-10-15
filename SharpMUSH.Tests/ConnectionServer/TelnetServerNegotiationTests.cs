@@ -238,7 +238,8 @@ public class TelnetServerNegotiationTests
 			ConnectionServerOptions? options = null,
 			IConnectionServerService? connectionService = null,
 			Func<object, Task>? beforePublish = null,
-			Action<IReadOnlyList<object>>? afterPublish = null)
+			Action<IReadOnlyList<object>>? afterPublish = null,
+			OutputSettingsHolder? settings = null)
 	{
 		var clientToServer = new Pipe();
 		var serverToClient = new Pipe();
@@ -272,7 +273,8 @@ public class TelnetServerNegotiationTests
 			new ServerBuilderFactory(),
 			options ?? new ConnectionServerOptions(),
 			new MsspReportHolder(),
-			new TerminalProbes());
+			new TerminalProbes(),
+			settings);
 
 		var context = new FakeConnectionContext(
 			new PipeDuplex(clientToServer.Reader, serverToClient.Writer), cts.Token);
@@ -1297,6 +1299,60 @@ public class TelnetServerNegotiationTests
 
 			await Assert.That(message).IsNotNull();
 			await Assert.That(message!.Modules).IsEquivalentTo(["Room 1", "Client.Media 1"]);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
+	/// The renderer sends Client.Media only to a client that agreed to GMCP and listed it, so the connection keeps
+	/// the list: empty once GMCP is agreed, then what Core.Supports says. With <c>media_base_url</c> set, the client
+	/// is told where the game's sounds are as soon as it agrees.
+	/// </summary>
+	[Test]
+	public async Task GmcpModules_AreKeptOnTheConnectionAndTheMediaDefaultIsSent()
+	{
+		var capabilities = new ProtocolCapabilities();
+		var listed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var seen = new List<string?>();
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				lock (seen)
+				{
+					capabilities = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(capabilities);
+					seen.Add(capabilities.GmcpModules);
+					if (capabilities.GmcpModules?.Contains("Client.Media") == true) listed.TrySetResult();
+				}
+
+				return true;
+			});
+		var settings = new OutputSettingsHolder();
+		settings.Replace(new OutputSettingsMessage(new Dictionary<string, string>(), "https://example.com/media"));
+
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: connectionService, settings: settings);
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, GMCP));
+			await WriteAsync(toServer, IAC, DO, GMCP);
+			var sent = await ReadUntilAsync(fromServer, bytes => Contains(bytes, "Client.Media.Default"u8.ToArray()));
+			await Assert.That(Encoding.UTF8.GetString(sent)).Contains("https://example.com/media/");
+
+			await WriteAsync(toServer,
+				[IAC, SB, GMCP, .. "Core.Supports.Set [\"Room 1\", \"Client.Media 1\"]"u8.ToArray(), IAC, SE]);
+			await listed.Task.WaitAsync(Timeout);
+
+			string?[] recorded;
+			lock (seen) recorded = [.. seen.Where(modules => modules is not null)];
+			await Assert.That(recorded.First()).IsEqualTo(string.Empty);
+			await Assert.That(recorded.Last()).IsEqualTo("Room 1 Client.Media 1");
 		}
 		finally
 		{
