@@ -1,6 +1,6 @@
 format: 1.2
 package: bboards-app
-version: 1.0.1
+version: 1.0.2
 kind: application
 authors: [SharpMUSH]
 description: "Registers the bulletin boards (the bboards package) as a portal page at /apps/boards: every board by category, each board's posts, each post with its comments as conversations, and forms to post, comment, reply and edit."
@@ -16,7 +16,7 @@ requires_server: ">=0.1"
 # read the signed-in character as the named argument %<viewer>.
 depends:
   - package: bboards
-    version: ">=1.2 <2.0"
+    version: ">=1.2"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: bboards/

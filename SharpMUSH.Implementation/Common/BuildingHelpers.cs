@@ -728,6 +728,34 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
+	/// The quota half of <c>can_pay_fees(newowner, ...)</c> that PennMUSH's <c>do_chown</c> asks
+	/// (<c>src/set.c:226</c>), around the transfer itself: <paramref name="transfer"/> runs only when
+	/// <paramref name="receiver"/> has a slot, under the receiver's gate in <see cref="QuotaGates"/>, so
+	/// two transfers, or a transfer and a build, cannot both take the last slot.
+	/// </summary>
+	public static async ValueTask<bool> WithReceivingQuotaAsync(IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration, SharpPlayer receiver, Func<ValueTask> transfer)
+	{
+		var gate = QuotaGates.GetOrAdd(receiver.Object.DBRef.Number, _ => new SemaphoreSlim(1, 1));
+
+		await gate.WaitAsync();
+		try
+		{
+			if (!await AdmitsBuildAsync(mediator, configuration, new AnySharpObject(receiver), receiver))
+			{
+				return false;
+			}
+
+			await transfer();
+			return true;
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
+	/// <summary>
 	/// <c>pay_quota</c> (<c>src/predicat.c:601-613</c>): <c>USE_QUOTA &amp;&amp; !NoQuota(who) &amp;&amp;
 	/// (curr - cost &lt; 0)</c> is the refusal, so the system being off and the holder being exempt
 	/// each let anything through.

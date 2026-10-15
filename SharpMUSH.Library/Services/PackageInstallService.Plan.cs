@@ -31,7 +31,8 @@ public partial class PackageInstallService
 			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken),
 			Settings = await PlanSettingsAsync(inputs, changeset),
 			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),
-				cancellationToken)
+				cancellationToken),
+			Compatibility = PackageServerCompatibility.Check(manifest, engine.Current)
 		};
 	}
 

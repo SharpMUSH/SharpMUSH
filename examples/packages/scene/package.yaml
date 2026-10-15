@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -12,7 +12,7 @@ requires_server: ">=0.1"
 # attach target, and it is what makes uninstalling scene take its help registration with it.
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/

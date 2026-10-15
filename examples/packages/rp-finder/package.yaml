@@ -1,6 +1,6 @@
 format: 1.2
 package: rp-finder
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "RP Finder: +lfrp sets a looking-for-RP status, shown in +who, and +watch tells you when the people you follow connect."
 license: MIT
@@ -10,13 +10,13 @@ requires_server: ">=0.1"
 
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
   - package: who-where
-    version: ">=1.3 <2.0"
+    version: ">=1.3"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/who-where/

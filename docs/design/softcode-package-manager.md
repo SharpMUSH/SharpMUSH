@@ -191,6 +191,26 @@ content pack. The reference is `examples/packages/README.md`. The decisions:
   pre-package backup covers them.
 - **Rollback** leaves wiki pages as they are; a page's history is the way back for its text.
 
+### Engine version range (format 1.6)
+
+`requires_server` (lower-bound clauses only), `verified_server` (a version) and `maximum_server` (one to
+three components; the ones left out match anything, `PackageVersionCeiling`) place a package against
+the server's `EngineVersion`, registered from `VersionInfo.SharpMUSHVersion`, the version `version()`
+reports. Format 1.5 is reserved for the attribute-entries block. The reference is
+`examples/packages/README.md`; the decisions:
+
+- **Only the minimum blocks.** A server below `requires_server` blocks the plan
+  (`PackageChangeset.Compatibility`, `IsBlocked`) and the apply. A server a major version past
+  `verified_server` warns. A server past `maximum_server` warns and the apply is refused without
+  `PackageApplyRequest.AllowPastMaximum`, the review screen's "Install it anyway".
+- **The choice is recorded.** A confirmed apply past the maximum sets
+  `InstalledPackageRecord.PastMaximum` (server version, maximum, time), shown on the Packages page,
+  and the portal writes a `package.past-maximum` audit entry. An apply inside the range clears it.
+- **Both apply paths gate.** The check runs before the managed (plugin, UI) branch, so a plugin
+  package is held to the same range as a softcode one.
+- **Bounds are for known breaks.** Bundled packages state no `maximum_server` and no dependency upper
+  bound; the SharpMUSH.Docs guide "Versioning packages" says what counts as breaking.
+
 ## Repo Structure
 
 A package is a directory. A repo contains one or more packages.
