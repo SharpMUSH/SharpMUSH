@@ -1,9 +1,11 @@
 using Discord;
 using Discord.Net;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Discord.Members;
@@ -12,13 +14,18 @@ namespace SharpMUSH.Plugins.Discord.Members;
 /// The bot's slash commands. <c>/link</c> answers, only to the member who typed it, with a portal link that links
 /// their Discord account to the game account they confirm it from; <c>/unlink</c> undoes it.
 /// </summary>
+/// <remarks>The host's services are resolved when first used: some are built after the plugin's.</remarks>
 public sealed class DiscordSlashCommands(
 	DiscordAccounts accounts,
 	IOptionsWrapper<SharpMUSHOptions> options,
+	IServiceProvider services,
 	ILogger<DiscordSlashCommands> logger) : IDiscordClientHandler
 {
 	public const string Link = "link";
 	public const string Unlink = "unlink";
+
+	/// <summary>The bundled package that turns Discord on; the portal shows the confirm page only while it is installed.</summary>
+	public const string PackageId = "discord";
 
 	/// <summary>The portal page a ticket is confirmed on.</summary>
 	public const string ConfirmPath = "account/discord/link";
@@ -41,17 +48,24 @@ public sealed class DiscordSlashCommands(
 	];
 
 	/// <summary>What <c>/link</c> tells the member, given the game's web address (<c>mud_url</c>).</summary>
-	public string LinkAnswer(DiscordUserCard user)
+	public async Task<string> LinkAnswerAsync(DiscordUserCard user)
 	{
-		if (options.CurrentValue.Net.MudUrl is not { Length: > 0 } site)
+		if (await services.GetRequiredService<IPackageRegistryService>().GetInstalledPackageAsync(PackageId)
+			is not InstalledPackageRecord)
 		{
-			return "This game has no web address set, so linking cannot finish. Ask the game's staff to set mud_url.";
+			return "Linking is turned off on this game.";
+		}
+
+		if (!Uri.TryCreate(options.CurrentValue.Net.MudUrl?.Trim(), UriKind.Absolute, out var site)
+			|| (site.Scheme != Uri.UriSchemeHttps && site.Scheme != Uri.UriSchemeHttp))
+		{
+			return "This game has no web address set, so linking cannot finish. Ask the game's staff to set mud_url to the website's address.";
 		}
 
 		return accounts.StartLink(user) switch
 		{
 			DiscordLinkTicket ticket =>
-				$"Open this link while signed in to the game's website to confirm. It works once, for {DiscordLinkTickets.Lifetime.TotalMinutes:0} minutes:\n{site.TrimEnd('/')}/{ConfirmPath}?ticket={ticket.Id}",
+				$"Open this link while signed in to the game's website to confirm. It works once, for {DiscordLinkTickets.Lifetime.TotalMinutes:0} minutes:\n{site.GetLeftPart(UriPartial.Path).TrimEnd('/')}/{ConfirmPath}?ticket={ticket.Id}",
 			Error<string> error => error.Value,
 		};
 	}
@@ -81,7 +95,7 @@ public sealed class DiscordSlashCommands(
 		{
 			case Link:
 				var user = new DiscordUserCard(command.User.Id, command.User.Username, command.User.GetDisplayAvatarUrl());
-				await command.RespondAsync(LinkAnswer(user), ephemeral: true);
+				await command.RespondAsync(await LinkAnswerAsync(user), ephemeral: true);
 				break;
 			case Unlink:
 				// Taking the Linked role can outlast the three seconds Discord waits for an answer.

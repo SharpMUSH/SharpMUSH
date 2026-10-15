@@ -224,6 +224,7 @@ public sealed class DiscordRelay(
 		}
 		catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
 		{
+			// Stopping: tomorrow's pass, after the next start, forgets them instead.
 		}
 		catch (Exception exception)
 		{
