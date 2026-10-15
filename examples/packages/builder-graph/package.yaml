@@ -12,6 +12,6 @@ binaries:
     - file: index.html
       sha256: dcd17006342429509cdd639c017692ef9a84dfe5f177a0d1b0226fd42e1303e9
     - file: graph.js
-      sha256: e9d8a4768ae260625f9004b53a7c26847cb09787e03b4d21e65f53f58a5d68eb
+      sha256: a7e41b2fc789076e3be858ece14d467a002777916d97af02e7e6ee688691c224
     - file: graph.css
       sha256: af7f1151cd7cc8d222fdb5fe9f66be3a1c6f7972f420c1489d5fa023783edce4

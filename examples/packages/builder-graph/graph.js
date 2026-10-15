@@ -76,7 +76,9 @@
         layout = { minX: 0, maxY: 0 };
         if (placed.length) {
             const onLevel = placed.filter(r => levelOf(r) === level);
-            const xs = placed.map(r => coordsOf(r)[0]), ys = placed.map(r => coordsOf(r)[1]);
+            // The grid spans the level on show, so a level far from the others is not drawn as a speck.
+            const basis = onLevel.length ? onLevel : placed;
+            const xs = basis.map(r => coordsOf(r)[0]), ys = basis.map(r => coordsOf(r)[1]);
             const minX = Math.min(...xs), maxY = Math.max(...ys);
             layout = { minX, maxY };
             for (const room of onLevel) positions.set(room.dbref, [(coordsOf(room)[0] - minX) * grid + 60, (maxY - coordsOf(room)[1]) * grid + 60]);
@@ -180,8 +182,15 @@
 
     function applyView() { svg.setAttribute('viewBox', view.join(' ')); }
     function zoom(factor) { view = [view[0] + view[2] * (1 - factor) / 2, view[1] + view[3] * (1 - factor) / 2, view[2] * factor, view[3] * factor]; applyView(); }
+    // The host answers nothing to a request it refuses, so a config naming attributes it would refuse is reported here.
+    const validCoordinates = names => names === undefined
+        || (Array.isArray(names) && names.length === 3 && names.every(name => typeof name === 'string' && /^[A-Za-z0-9_`-]{1,64}$/.test(name)));
     function ask(type) {
         if (pending !== null) return false;
+        if (!validCoordinates(config.coordinates)) {
+            document.getElementById('status').textContent = 'The "coordinates" config must name three attributes, each of letters, digits, _, ` or -.';
+            return false;
+        }
         pending = { id: ++request, type };
         connection.postMessage({ type, channel, requestId: pending.id, rooms: config.rooms, ...(config.coordinates ? { coordinates: config.coordinates } : {}) });
         return true;
