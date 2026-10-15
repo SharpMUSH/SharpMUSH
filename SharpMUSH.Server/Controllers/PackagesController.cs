@@ -132,7 +132,7 @@ public class PackagesController(
 
 		return await source.GetReadmeAsync(remote, "", null, cancellationToken) switch
 		{
-			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown))),
+			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderReadmeToHtml(markdown))),
 			Error<string> error => NotFound(error.Value)
 		};
 	}
@@ -192,6 +192,18 @@ public class PackagesController(
 			.Select(r => new RevisionDto(r.Revision, r.Kind.ToString().ToLowerInvariant(), r.Version, r.Commit, r.AppliedAt))
 			.ToList());
 	}
+
+	/// <summary>
+	/// Renders the README an installed package was applied with: what its current revision kept, so it
+	/// matches the installed version and needs no remote.
+	/// </summary>
+	[HttpGet("{id}/readme")]
+	public async Task<ActionResult<ReadmeResponse>> GetInstalledReadme(string id)
+		=> await installer.GetReadmeAsync(id) switch
+		{
+			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderReadmeToHtml(markdown))),
+			Library.DiscriminatedUnions.NotFound => NotFound($"'{id}' is not installed with a README.")
+		};
 
 	/// <summary>
 	/// Rolls back to a prior revision (recorded as a NEW revision, decision 20.13), as a queue entry
@@ -489,7 +501,8 @@ public class PackagesController(
 			request.ConfigureAnswers ?? new Dictionary<string, string>(),
 			request.Decisions ?? [],
 			request.KeepRevisions,
-			request.AllowPluginCode);
+			request.AllowPluginCode,
+			fetched.Readme);
 
 		var outcome = await operations.RunAsync("apply",
 			token => installer.ApplyAsync(manifest, applyRequest, token, fileSource), cancellationToken);
@@ -523,7 +536,11 @@ public class PackagesController(
 
 	/// <summary>A parsed manifest, the warnings its parse raised, and where it was read from.</summary>
 	private readonly record struct FetchedManifest(
-		PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source);
+		PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source)
+	{
+		/// <summary>The README beside the manifest, read from the same place; null when it has none.</summary>
+		public string? Readme { get; init; }
+	}
 
 	private async Task<ValueOrResponse<FetchedManifest>> FetchManifestAsync(
 		string remoteName, string path, string? version, CancellationToken cancellationToken)
@@ -562,7 +579,7 @@ public class PackagesController(
 		{
 			PackageManifestSource manifestSource => ParseFetchedManifest(manifestSource, isCatalogue, version) switch
 			{
-				FetchedManifest parsed => await ReadWikiPagesAsync(parsed, remoteName, configured, path, cancellationToken),
+				FetchedManifest parsed => await ReadPackageFilesAsync(parsed, remoteName, configured, path, cancellationToken),
 				ActionResult response => response,
 			},
 			ActionResult response => response,
@@ -570,15 +587,17 @@ public class PackagesController(
 	}
 
 	/// <summary>
-	/// Reads the bodies of a content pack's <c>file:</c> wiki pages from where the manifest came from, so the plan
-	/// and the apply carry the same text. The catalogue embeds manifests only, so it has no files to read.
+	/// Reads the files a manifest brings with it from where the manifest came from, so the plan and the apply
+	/// carry the same text: the bodies of a content pack's <c>file:</c> wiki pages, and the package's README.
+	/// The catalogue embeds no package files; its README is <see cref="BundledPackages.Readme"/>.
 	/// </summary>
-	private async Task<ValueOrResponse<FetchedManifest>> ReadWikiPagesAsync(
+	private async Task<ValueOrResponse<FetchedManifest>> ReadPackageFilesAsync(
 		FetchedManifest fetched, string remoteName, PackageRemoteRecord? remote, string path, CancellationToken cancellationToken)
 	{
-		if (!PackageWikiBodies.NeedsFiles(fetched.Manifest))
+		if (BundledPackages.IsCatalogueRemote(remoteName)
+			&& BundledPackages.Find(fetched.Manifest.Name) is BundledPackages.Descriptor descriptor)
 		{
-			return fetched;
+			return fetched with { Readme = BundledPackages.Readme(descriptor, fetched.Manifest) };
 		}
 
 		IPackageFileSource? files = null;
@@ -590,17 +609,35 @@ public class PackagesController(
 		{
 			switch (await source.GetFileSourceAsync(remote, path, fetched.Source.Commit, cancellationToken))
 			{
-				case Error<string> error:
+				// Only the wiki pages are needed to install; a package whose files cannot be read installs without
+				// its README.
+				case Error<string> error when PackageWikiBodies.NeedsFiles(fetched.Manifest):
 					return BadRequest(error.Value);
+				case Error<string>:
+					break;
 				case IPackageFileSource found:
 					files = found;
 					break;
 			}
 		}
 
+		var withReadme = fetched with
+		{
+			Readme = await PackageReadme.ReadAsync(files, cancellationToken) switch
+			{
+				string readme => readme,
+				Library.DiscriminatedUnions.NotFound => null
+			}
+		};
+
+		if (!PackageWikiBodies.NeedsFiles(fetched.Manifest))
+		{
+			return withReadme;
+		}
+
 		return await PackageWikiBodies.LoadAsync(fetched.Manifest, files, cancellationToken) switch
 		{
-			PackageWikiLoad loaded => fetched with
+			PackageWikiLoad loaded => withReadme with
 			{
 				Manifest = loaded.Manifest,
 				Warnings = [.. fetched.Warnings, .. loaded.Warnings.Select(w => w.ToString())]
@@ -682,8 +719,8 @@ public class PackagesController(
 	}
 
 	/// <summary>
-	/// A README synthesized from a catalogue manifest: the package's own description, what it
-	/// creates, and whether a new game gets it. Null when <paramref name="path"/> names something
+	/// A catalogue package's README: the one it ships, or one written from its manifest
+	/// (<see cref="BundledPackages.Readme"/>). Null when <paramref name="path"/> names something
 	/// this build does not ship. An empty path asks for the "repo root" README — the catalogue's
 	/// own index.
 	/// </summary>
@@ -703,45 +740,16 @@ public class PackagesController(
 					$"- **{d.PackageId}**{(d.InstallAtFirstBoot ? " — installed at first boot" : "")}")));
 		}
 
-		if (!BundledPackages.Contains(packageId))
+		if (BundledPackages.Find(packageId) is not BundledPackages.Descriptor descriptor)
 		{
 			return null;
 		}
 
-		if (manifests.ParseManifest(BundledPackages.ManifestYaml(packageId)) is not ParsedPackageManifest { Manifest: var manifest })
+		return manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)) switch
 		{
-			return $"# {packageId}\n\nThis build's manifest for `{packageId}` could not be read.";
-		}
-
-		var descriptor = BundledPackages.All.Single(d =>
-			string.Equals(d.PackageId, packageId, StringComparison.OrdinalIgnoreCase));
-
-		var lines = new List<string>
-		{
-			$"# {manifest.Name} {manifest.Version}",
-			"",
-			manifest.Description,
-			"",
-			descriptor.InstallAtFirstBoot
-				? "Installed at first boot — every new game has this."
-				: "Shipped with this server, not installed. Installing it is your call."
+			ParsedPackageManifest { Manifest: var manifest } => BundledPackages.Readme(descriptor, manifest),
+			PackageManifestFailure => $"# {packageId}\n\nThis build's manifest for `{packageId}` could not be read."
 		};
-
-		if (manifest.Dependencies.Count > 0)
-		{
-			lines.Add("");
-			lines.Add("## Requires");
-			lines.AddRange(manifest.Dependencies.Select(d => $"- `{d.PackageId}` {d.Constraint}"));
-		}
-
-		if (manifest.Objects.Count > 0)
-		{
-			lines.Add("");
-			lines.Add("## Creates");
-			lines.AddRange(manifest.Objects.Select(o => $"- {o.Name ?? o.Ref} (`{o.Type}`)"));
-		}
-
-		return string.Join('\n', lines);
 	}
 
 	/// <summary>
@@ -783,14 +791,14 @@ public class PackagesController(
 	public async Task<ActionResult<ReadmeResponse>> GetRemoteReadme(
 		string name, [FromQuery] string? path, [FromQuery] string? version, CancellationToken cancellationToken)
 	{
-		// The image embeds manifests, not READMEs. Rather than 404 the browse screen's description
-		// pane for every bundled package, render what the manifest itself says.
+		// A bundled package without a README of its own gets one written from its manifest, rather
+		// than a 404 in the browse screen's description pane.
 		if (BundledPackages.IsCatalogueRemote(name))
 		{
 			var markdown = CatalogueReadme(path);
 			return markdown is null
 				? NotFound($"'{path}' is not shipped with this server.")
-				: Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown)));
+				: Ok(new ReadmeResponse(markdown, Markdown.RenderReadmeToHtml(markdown)));
 		}
 
 		if (await registry.GetPackageRemoteAsync(name) is not PackageRemoteRecord remote)
@@ -800,7 +808,7 @@ public class PackagesController(
 
 		return await source.GetReadmeAsync(remote, path ?? "", version, cancellationToken) switch
 		{
-			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown))),
+			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderReadmeToHtml(markdown))),
 			Error<string> error => NotFound(error.Value)
 		};
 	}

@@ -46,7 +46,8 @@ public sealed partial class PluginUploadStore(
 
 	/// <summary>
 	/// Unpacks <paramref name="archive"/> into a new staging folder and returns how to plan and apply it, or why it
-	/// is not a plugin package. Only <c>package.yaml</c> and the files its <c>binaries:</c> block lists are kept.
+	/// is not a plugin package. Only <c>package.yaml</c>, the files its <c>binaries:</c> block lists and its
+	/// <c>README.md</c> are kept.
 	/// </summary>
 	public async Task<Result<PluginUploadResponse>> StageAsync(Stream archive, CancellationToken cancellationToken)
 	{
@@ -101,6 +102,12 @@ public sealed partial class PluginUploadStore(
 		foreach (var file in binary.Files)
 		{
 			await File.WriteAllBytesAsync(Path.Combine(folder, file.FileName), files[file.FileName], cancellationToken);
+		}
+
+		// The README rides along so the install keeps it (PackageReadme); the first name found wins, as from a remote.
+		if (PackageReadme.FileNames.FirstOrDefault(files.ContainsKey) is { } readme)
+		{
+			await File.WriteAllBytesAsync(Path.Combine(folder, readme), files[readme], cancellationToken);
 		}
 
 		logger.LogInformation("Staged uploaded plugin package {PackageId} v{Version} as {Token}.", manifest.Name, manifest.Version, token);

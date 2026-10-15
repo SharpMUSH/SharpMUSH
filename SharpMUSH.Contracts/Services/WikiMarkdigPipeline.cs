@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Markdig;
+using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 
 namespace SharpMUSH.Library.Services;
 
@@ -56,6 +58,42 @@ public sealed class WikiMarkdigPipeline
 	{
 		ArgumentNullException.ThrowIfNull(markdown);
 		return Markdown.ToHtml(markdown, _pipeline);
+	}
+
+	/// <summary>
+	/// Renders a package's README. A README is written for the package's own folder, so a link or image whose
+	/// URL is not absolute (<c>../profile-handler/</c>, <c>docs/setup.md</c>, <c>shot.png</c>) points at a file
+	/// that is not served here: the link becomes its text and the image its description. Absolute
+	/// <c>http</c>/<c>https</c>/<c>mailto</c> links, in-page <c>#</c> anchors and <c>[[wiki links]]</c> stay.
+	/// </summary>
+	public string RenderReadmeToHtml(string markdown)
+	{
+		ArgumentNullException.ThrowIfNull(markdown);
+		var document = Markdown.Parse(markdown, _pipeline);
+		foreach (var link in document.Descendants<LinkInline>().Where(l => !Reachable(l.Url)).ToList())
+		{
+			Unlink(link);
+		}
+
+		return document.ToHtml(_pipeline);
+	}
+
+	private static bool Reachable(string? url) =>
+		url is not null
+		&& (url.StartsWith('#')
+			|| (Uri.TryCreate(url, UriKind.Absolute, out var absolute)
+				&& absolute.Scheme is "http" or "https" or "mailto"));
+
+	/// <summary>Puts <paramref name="link"/>'s text where it stood, without the link.</summary>
+	private static void Unlink(LinkInline link)
+	{
+		while (link.FirstChild is { } child)
+		{
+			child.Remove();
+			link.InsertBefore(child);
+		}
+
+		link.Remove();
 	}
 
 	/// <summary>
