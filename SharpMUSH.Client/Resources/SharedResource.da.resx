@@ -6149,4 +6149,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Et billede med en indholdsadvarsel holdes uden for billedbiblioteket. Fjern advarslen for at dele det.</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Denne prompt</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Nu</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Fastgjort</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Her</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Altid</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Gå til</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Forlad</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Hjælp til {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Fastgør</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Frigør</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>{0} mere</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Udfyld felterne, og tryk på Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Kør bufferen</value>
+  </data>
 </root>

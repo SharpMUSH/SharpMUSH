@@ -6149,4 +6149,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Uma imagem com aviso de conteúdo fica fora da biblioteca de imagens. Remova o aviso para compartilhá-la.</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Este prompt</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Agora</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Fixados</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Aqui</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Sempre</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Ir para</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Sair</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Ajuda sobre {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Fixar</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Desafixar</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Mais {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Preencha os campos e pressione Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Executar o buffer</value>
+  </data>
 </root>

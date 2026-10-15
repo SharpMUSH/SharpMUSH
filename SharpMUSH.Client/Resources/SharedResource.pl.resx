@@ -6149,4 +6149,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Obraz z ostrzeżeniem o treści nie trafia do biblioteki obrazów. Usuń ostrzeżenie, aby go udostępnić.</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Ten monit</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Teraz</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Przypięte</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Tutaj</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Zawsze</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Przejdź do</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Wyjdź</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Pomoc: {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Przypnij</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Odepnij</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Jeszcze {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Uzupełnij pola i naciśnij Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Uruchom bufor</value>
+  </data>
 </root>

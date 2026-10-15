@@ -6149,4 +6149,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Изображение с предупреждением о содержимом не попадает в библиотеку изображений. Уберите предупреждение, чтобы поделиться им.</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Этот запрос</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Сейчас</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Закреплённые</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Здесь</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Всегда</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Перейти</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Выйти</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Справка по {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Закрепить</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Открепить</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Ещё {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Заполните поля и нажмите Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Выполнить буфер</value>
+  </data>
 </root>

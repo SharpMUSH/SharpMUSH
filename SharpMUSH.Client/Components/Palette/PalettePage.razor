@@ -1,0 +1,23 @@
+@using SharpMUSH.Client.Services
+@inject IServiceProvider Services
+@implements IDisposable
+
+@* Tells the command palette which page this is: placed in a page's markup, it sets the palette's page
+   context while the page is open and clears it when the page goes. Renders nothing. *@
+
+@code {
+    /// <summary>The page's kind: <c>play</c>, <c>scene</c>, <c>wiki</c>, <c>editor</c>, <c>app:&lt;slug&gt;</c>.</summary>
+    [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
+
+    /// <summary>What the page is about: a scene id, a wiki page, an object.</summary>
+    [Parameter] public string? Subject { get; set; }
+
+    /// <summary>Rows of the page's own (Edit, History, Run, Save).</summary>
+    [Parameter] public IReadOnlyList<PaletteRow>? Rows { get; set; }
+
+    private PaletteContext? Context => Services.GetService<PaletteContext>();
+
+    protected override void OnParametersSet() => Context?.Set(Kind, Subject, Rows);
+
+    public void Dispose() => Context?.Clear(Kind);
+}

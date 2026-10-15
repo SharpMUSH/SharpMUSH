@@ -5444,4 +5444,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Une image avec un avertissement de contenu reste hors de la bibliothèque d'images. Retirez l'avertissement pour la partager.</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Cette invite</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Maintenant</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Épinglés</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Ici</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Toujours</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Aller à</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Quitter</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Aide sur {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Épingler</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Désépingler</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>{0} de plus</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Remplissez les champs, puis appuyez sur Entrée.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Exécuter le tampon</value>
+  </data>
 </root>

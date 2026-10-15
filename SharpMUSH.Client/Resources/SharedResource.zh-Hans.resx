@@ -6149,4 +6149,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>带有内容警告的图片不会进入图片库。移除警告后才能分享。</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>此提示</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>现在</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>已置顶</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>此处</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>始终</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>前往</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>离开</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>{0} 的帮助</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>置顶</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>取消置顶</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>还有 {0} 项</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>填写空白处，然后按 Enter。</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>运行缓冲区</value>
+  </data>
 </root>

@@ -6149,4 +6149,43 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Ein Bild mit Inhaltswarnung bleibt aus der Bildbibliothek heraus. Entferne die Warnung, um es zu teilen.</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Diese Eingabe</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Jetzt</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Angeheftet</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Immer</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Gehe zu</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Verlassen</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Hilfe zu {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Anheften</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Lösen</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>{0} weitere</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Fülle die Lücken aus und drücke Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Puffer ausführen</value>
+  </data>
 </root>
