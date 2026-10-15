@@ -337,7 +337,8 @@ public static partial class ReadPennMushConfig
 
 		var named = configDictionary.Where(entry => entry.Value.Length > 0).Select(entry => entry.Key)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		// A secret directive takes its last line, as an option does.
+		// A secret directive takes its last line, as an option does. An empty one, as in PennMUSH's shipped
+		// mush.cnf, means no password: there is nothing to store.
 		var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (var groups in text
 							 .Select(line => splitter.Match(line.Trim()))
@@ -348,7 +349,8 @@ public static partial class ReadPennMushConfig
 			secrets[PennMushConfigImport.SecretDirectives[groups["Key"].Value]] = groups["Value"].Value.Trim();
 		}
 
-		return new PennMushConfigImport(work, skipped, named, secrets);
+		return new PennMushConfigImport(work, skipped, named,
+			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal));
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
 	}

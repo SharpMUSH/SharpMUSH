@@ -62,7 +62,7 @@ public class MushCnfImportServiceTests
 		var snapshot = await service.SnapshotAsync();
 		var imported = await service.ApplyAsync(await service.ReadAsync("mud_name Elsewhere\nevent_handler 42\n"), Importer);
 
-		await Assert.That(imported.Net.MudName).IsEqualTo("Elsewhere");
+		await Assert.That(imported.Options.Net.MudName).IsEqualTo("Elsewhere");
 		await Assert.That(((MushCnfObjectReferences)store.Server[nameof(MushCnfObjectReferences)])
 			.Named(nameof(DatabaseOptions.EventHandler), 42)).IsTrue();
 
@@ -79,13 +79,29 @@ public class MushCnfImportServiceTests
 		var service = Service(new MemoryStore(), secrets);
 
 		var import = await service.ReadAsync("sql_username mush\nsql_password hunter2 \n");
-		await service.ApplyAsync(import, Importer);
+		var applied = await service.ApplyAsync(import, Importer);
+
+		await Assert.That(applied.StoredSecrets).IsEquivalentTo([SecretDefinition.SqlPassword.Name]);
 
 		await Assert.That(PennMushConfigImport.SecretDirectives["sql_password"]).IsEqualTo(SecretDefinition.SqlPassword.Name);
 		await Assert.That((await secrets.GetAsync(SecretDefinition.SqlPassword.Name)).Expect<string>()).IsEqualTo("hunter2");
 		await Assert.That((await secrets.ListAsync()).Single(s => s.Name == SecretDefinition.SqlPassword.Name).SetBy)
 			.IsEqualTo(Importer);
 		await Assert.That(import.Skipped).DoesNotContain(line => line.Contains("hunter2"));
+	}
+
+	/// <summary>PennMUSH's shipped mush.cnf has an empty <c>sql_password</c>: no password, and nothing to store.</summary>
+	[Test]
+	public async Task An_empty_sql_password_stores_nothing()
+	{
+		var secrets = Secrets();
+		var service = Service(new MemoryStore(), secrets);
+		await secrets.SetAsync(SecretDefinition.SqlPassword.Name, "kept", Importer);
+
+		var applied = await service.ApplyAsync(await service.ReadAsync("sql_password\n"), Importer);
+
+		await Assert.That(applied.StoredSecrets).IsEmpty();
+		await Assert.That((await secrets.GetAsync(SecretDefinition.SqlPassword.Name)).Expect<string>()).IsEqualTo("kept");
 	}
 
 	[Test]

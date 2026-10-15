@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -40,6 +41,18 @@ public class SqlProviderSelectionTests
 		var service = new SqlService(optionsMonitor, Secrets);
 
 		await Assert.That(service.IsAvailable).IsTrue();
+	}
+
+	/// <summary>A stored password this host cannot decrypt is not a missing one: SQL stays off rather than connecting without it.</summary>
+	[Test]
+	public async Task An_unreadable_password_leaves_sql_unavailable()
+	{
+		var secrets = Substitute.For<ISecretStore>();
+		secrets.GetAsync(SecretDefinition.SqlPassword.Name, Arg.Any<CancellationToken>())
+			.Returns(new FoundResult<string>(new Error<string>("cannot be decrypted")));
+		var service = new SqlService(CreateTestConfig("localhost", "test", "test", "mysql"), secrets);
+
+		await Assert.That(service.IsAvailable).IsFalse();
 	}
 
 	[Test]

@@ -56,24 +56,31 @@ public class MushCnfImportService(
 
 	/// <summary>
 	/// Persists <paramref name="import"/> over the current options and tells their readers, and stores its secrets
-	/// as set by <paramref name="author"/>.
+	/// as set by <paramref name="author"/>. A secret the store refuses is logged and left out of
+	/// <see cref="MushCnfApplied.StoredSecrets"/>.
 	/// </summary>
-	public async Task<SharpMUSHOptions> ApplyAsync(PennMushConfigImport import, SecretAuthor author,
+	public async Task<MushCnfApplied> ApplyAsync(PennMushConfigImport import, SecretAuthor author,
 		CancellationToken cancellationToken = default)
 	{
 		var imported = await config.UpdateAsync(import.Over, cancellationToken);
 		await database.SetExpandedServerData(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(import),
 			cancellationToken);
+		var stored = new List<string>();
 		foreach (var (name, value) in import.Secrets)
 		{
-			if (await secrets.SetAsync(name, value, author, cancellationToken) is Error<string> error)
+			switch (await secrets.SetAsync(name, value, author, cancellationToken))
 			{
-				logger.LogWarning("Configuration import did not store the secret {Secret}: {Reason}", name, error.Value);
+				case Error<string> error:
+					logger.LogWarning("Configuration import did not store the secret {Secret}: {Reason}", name, error.Value);
+					break;
+				default:
+					stored.Add(name);
+					break;
 			}
 		}
 
 		logger.LogInformation("Configuration imported and persisted successfully");
-		return imported;
+		return new MushCnfApplied(imported, stored);
 	}
 
 	/// <summary>What <see cref="RestoreAsync"/> puts back.</summary>
@@ -92,3 +99,6 @@ public class MushCnfImportService(
 		logger.LogInformation("Configuration restored to what it was before the import");
 	}
 }
+
+/// <summary>The options a <c>mush.cnf</c> import left in force, and the secrets it stored.</summary>
+public sealed record MushCnfApplied(SharpMUSHOptions Options, IReadOnlyList<string> StoredSecrets);

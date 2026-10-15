@@ -54,14 +54,22 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
-		var password = platform is "sqlite"
-			? null
-			: await _secrets.GetAsync(SecretDefinition.SqlPassword.Name) switch
-			{
-				string value => value,
-				_ => null
-			};
+		FoundResult<string> password = platform is "sqlite"
+			? new NotFound()
+			: await _secrets.GetAsync(SecretDefinition.SqlPassword.Name);
 
+		// A stored password this host cannot decrypt leaves SQL unavailable rather than connecting without one,
+		// which would hide the key ring problem behind an authentication failure. The store logs why.
+		return password switch
+		{
+			Error<string> => null,
+			string value => await ProviderAsync(cvn, platform, value),
+			NotFound => await ProviderAsync(cvn, platform, null)
+		};
+	}
+
+	private async ValueTask<ISqlProvider?> ProviderAsync(NetOptions cvn, string platform, string? password)
+	{
 		var connectionString = platform switch
 		{
 			"mysql" or "mariadb" =>
