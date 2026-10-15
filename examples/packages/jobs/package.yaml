@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: jobs
-version: 1.9.0
+version: 1.10.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [jobs, requests, tickets, staff, anomaly]
+category: Staff
 requires_server: ">=0.1"
 
 # plus-help carries the +help topics; plus-config the +config settings;
@@ -115,6 +116,18 @@ roles:
     priority: 11
     permissions:
       softcode.jobs.staff: allow
+
+# Indexes on what the lists filter by, so a list reads the jobs it can show instead of every job
+# ever filed (FUN`CANDIDATES). Only things carry them; the lists still check each job is in the store.
+attributes:
+  JOB`STATE:
+    index: type:thing
+  JOB`BUCKET:
+    index: type:thing
+  JOB`AUDIT`STATE:
+    index: type:thing
+  JOB`DUE:
+    index: numeric type:thing
 
 objects:
   # The command object. WIZARD because it creates and changes the job objects, adds the commands
@@ -623,7 +636,17 @@ objects:
       # ---- lists ----------------------------------------------------------------
       # Every job person %0 gets from predicate FUN`P`%1 (job, person, %2).
       FUN`SELECT: |-
-        [squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),u({{jobs}}/FUN`P`%1,%i0,%0,%2)),%i0)))]
+        [squish(iter(u({{jobs}}/FUN`CANDIDATES,%1,%2),if(cand(u({{jobs}}/FUN`IN`STORE,%i0),u({{jobs}}/FUN`P`%1,%i0,%0,%2)),%i0)))]
+      # The jobs predicate FUN`P`%0 (with %1) can match, read from the indexes: open jobs sort after
+      # "closed", so > closed is every open state.
+      FUN`CANDIDATES: |-
+        [switch(%0,NEW,u({{jobs}}/FUN`INDEXED,JOB`STATE,=,new),PLAYER,u({{jobs}}/FUN`INDEXED,JOB`STATE,=,player),HELD,u({{jobs}}/FUN`INDEXED,JOB`STATE,=,held),OLD,u({{jobs}}/FUN`INDEXED,JOB`STATE,=,closed),OVERDUE,u({{jobs}}/FUN`INDEXED,JOB`DUE,<,secs()),AUDIT,u({{jobs}}/FUN`INDEXED,JOB`AUDIT`STATE,=,pending),DEFAULT,setunion(u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),u({{jobs}}/FUN`INDEXED,JOB`AUDIT`STATE,=,pending)),BUCKET,u({{jobs}}/FUN`INDEXED,JOB`BUCKET,=,%1),INBUCKET,u({{jobs}}/FUN`INDEXED,JOB`BUCKET,=,%1),QUEUE,u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),OWN,u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),OPEN,u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),MINE,u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),WHO,u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),lcon({{store}}))]
+      # indexed() on a JOB` index, or every job in the store while the index is still being built.
+      FUN`INDEXED: |-
+        [if(strmatch(setr(_ix,indexed(%0,%1,%2)),#-1*),lcon({{store}}),%q<_ix>)]
+      # A job: a live object in the store, so a JOB`STATE set anywhere else is never listed.
+      FUN`IN`STORE: |-
+        [cand(not(hasflag(%0,GOING)),strmatch(objid(loc(%0)),{{store}}))]
       # Needs staff, in a bucket the person works.
       FUN`P`QUEUE: |-
         [cand(match(new staff,get(%0/JOB`STATE)),u({{jobs}}/FUN`CAN`WORK,get(%0/JOB`BUCKET),%1))]
@@ -1092,9 +1115,9 @@ objects:
 
       # ---- timer, login, functions, API ----------------------------------------------
       FUN`DUE`NOW: |-
-        [squish(iter(lcon({{store}}),if(cand(u({{jobs}}/FUN`IS`OVERDUE,%i0),not(get(%i0/JOB`OVERDUE`FIRED))),%i0)))]
+        [squish(iter(u({{jobs}}/FUN`INDEXED,JOB`DUE,<,secs()),if(cand(u({{jobs}}/FUN`IN`STORE,%i0),u({{jobs}}/FUN`IS`OVERDUE,%i0),not(get(%i0/JOB`OVERDUE`FIRED))),%i0)))]
       FUN`EXPIRED: |-
-        [squish(iter(lcon({{store}}),if(cand(strmatch(get(%i0/JOB`STATE),closed),gt(setr(_k,firstof(get(get(%i0/JOB`BUCKET)/KEEP),0)),0),lt(get(%i0/JOB`CLOSED`AT),sub(secs(),mul(%q<_k>,86400)))),%i0)))]
+        [squish(iter(u({{jobs}}/FUN`INDEXED,JOB`STATE,=,closed),if(cand(u({{jobs}}/FUN`IN`STORE,%i0),strmatch(get(%i0/JOB`STATE),closed),gt(setr(_k,firstof(get(get(%i0/JOB`BUCKET)/KEEP),0)),0),lt(get(%i0/JOB`CLOSED`AT),sub(secs(),mul(%q<_k>,86400)))),%i0)))]
       # Every DATA`TICK seconds: run ON`OVERDUE once for each job newly overdue and tell its handlers,
       # and remove closed jobs older than their bucket's keep. %0 is the run's id; a second STARTUP starts a
       # new run and the old one stops at its next tick.
@@ -1117,7 +1140,7 @@ objects:
         [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/JOB`NUM),bucket,name(get(%q<_j>/JOB`BUCKET)),title,get(%q<_j>/JOB`TITLE),state,get(%q<_j>/JOB`STATE),outcome,get(%q<_j>/JOB`OUTCOME),priority,get(%q<_j>/JOB`PRIORITY),filer,if(u({{jobs}}/FUN`FILER`SHOWN,%q<_j>,%@),get(%q<_j>/JOB`FILED`BY)),filed,get(%q<_j>/JOB`FILED`AT),due,get(%q<_j>/JOB`DUE),updated,get(%q<_j>/JOB`UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/JOB`ENTRIES),update,get(%q<_j>/JOB`STATUS),steps,words(u({{jobs}}/FUN`STEPS,%q<_j>)),done,words(u({{jobs}}/FUN`STEPS`DONE,%q<_j>)),scenes,get(%q<_j>/JOB`SCENES),audit,get(%q<_j>/JOB`AUDIT`STATE),answered,get(%q<_j>/JOB`ANSWERED`AT),#-1 NO SUCH FIELD))]
       # jobs([<bucket>[, open|all|<state>]]): job numbers, newest first.
       FUN`API`JOBS: |-
-        [setq(_ab,if(strlen(%0),u({{jobs}}/FUN`BUCKET,%0)))][setq(_as,lcstr(firstof(%1,open)))][u({{jobs}}/FUN`SORT`NUM,squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),cor(not(strlen(%0)),strmatch(get(%i0/JOB`BUCKET),%q<_ab>)),switch(%q<_as>,all,1,open,not(strmatch(get(%i0/JOB`STATE),closed)),strmatch(get(%i0/JOB`STATE),%q<_as>)),u({{jobs}}/FUN`CALLER`OK,%i0,%@)),get(%i0/JOB`NUM)))))]
+        [setq(_ab,if(strlen(%0),u({{jobs}}/FUN`BUCKET,%0)))][setq(_as,lcstr(firstof(%1,open)))][u({{jobs}}/FUN`SORT`NUM,squish(iter(if(strlen(%0),u({{jobs}}/FUN`INDEXED,JOB`BUCKET,=,%q<_ab>),switch(%q<_as>,all,lcon({{store}}),open,u({{jobs}}/FUN`INDEXED,JOB`STATE,>,closed),u({{jobs}}/FUN`INDEXED,JOB`STATE,=,%q<_as>))),if(cand(u({{jobs}}/FUN`IN`STORE,%i0),cor(not(strlen(%0)),strmatch(get(%i0/JOB`BUCKET),%q<_ab>)),switch(%q<_as>,all,1,open,not(strmatch(get(%i0/JOB`STATE),closed)),strmatch(get(%i0/JOB`STATE),%q<_as>)),u({{jobs}}/FUN`CALLER`OK,%i0,%@)),get(%i0/JOB`NUM)))))]
       # jobentries(<#>[, <viewer>]): the numbers of the messages <viewer> may read.
       FUN`API`JOBENTRIES: |-
         [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,squish(iter(lnum(1,firstof(get(%q<_j>/JOB`ENTRIES),0)),if(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%q<_j>,entry,%i0,staff,u({{jobs}}/FUN`CAN`WORK,get(%q<_j>/JOB`BUCKET),firstof(%1,%@))),%i0))))]

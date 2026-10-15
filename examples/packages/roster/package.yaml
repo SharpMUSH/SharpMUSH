@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: roster
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [roster, characters, accounts, canon, staff]
+category: Characters
 requires_server: ">=0.1"
 
 depends:
