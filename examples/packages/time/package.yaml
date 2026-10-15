@@ -380,8 +380,6 @@ objects:
         The twelve IC month names, January's first. Empty uses the real ones.
       DATA`CONFIG`IC-MONTHS`LABEL: |-
         IC month names
-      DATA`CONFIG`IC-MONTHS`EXAMPLE: |-
-        Deepwinter|Thaw|Seedtime|Rains|Bloom|Highsun|Hay|Harvest|Leafall|Mist|Frost|Longnight
       DATA`CONFIG`IC-WEEKDAYS: |-
 
       DATA`CONFIG`IC-WEEKDAYS`TYPE: |-
@@ -398,8 +396,6 @@ objects:
         The seven IC weekday names, Sunday's first. Empty uses the real ones.
       DATA`CONFIG`IC-WEEKDAYS`LABEL: |-
         IC weekday names
-      DATA`CONFIG`IC-WEEKDAYS`EXAMPLE: |-
-        Sunsday|Moonsday|Tirsday|Wodensday|Thorsday|Freyday|Starday
       # +config's CHECK for IC-MONTHS and IC-WEEKDAYS (%0 the names, %1 the setting): every name or none.
       CHECK`IC`NAMES: |-
         setq(ic_need,if(strmatch(%1,ic-months),12,7))[if(cand(words(%0,|),neq(words(%0,|),%q<ic_need>)),Give all %q<ic_need> names%, or none for the real ones.)]
