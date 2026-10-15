@@ -23,12 +23,12 @@ public interface IDiscordChannelGate
 }
 
 /// <summary>
-/// The Linked role: the bot makes it in every server it is in, gives it to each member linked to a game account and
-/// takes it from everyone else. A linked channel lets only this role post, so an unlinked member cannot speak into the
+/// The Linked role: the bot makes it in every server it is in, gives it to each member linked to an active game account
+/// and takes it from everyone else, a member whose account is banned, disabled or closed among them. A linked channel lets only this role post, so an unlinked member cannot speak into the
 /// game. Each time a server becomes available the bot goes over all its members, which repairs anything missed while
 /// it was away.
 /// </summary>
-public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<DiscordLinkedRole> logger)
+public sealed class DiscordLinkedRole(IDiscordAccountStore store, IDiscordStandings standings, ILogger<DiscordLinkedRole> logger)
 	: IDiscordClientHandler, IDiscordLinkedRole, IDiscordChannelGate
 {
 	public const string RoleName = "Linked";
@@ -156,7 +156,7 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 				continue;
 			}
 
-			var options = new RequestOptions { CancelToken = cancellationToken, AuditLogReason = give ? "Linked to a game account" : "Unlinked from the game" };
+			var options = new RequestOptions { CancelToken = cancellationToken, AuditLogReason = give ? "Linked to an active game account" : "Unlinked, or the game account is not active" };
 			if (give && member.Roles.All(held => held.Id != role.Id))
 			{
 				await member.AddRoleAsync(role.Id, options);
@@ -170,13 +170,15 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 
 	private async Task JoinedAsync(SocketGuildUser member)
 	{
-		if (store.Get(member.Id) is { Linked: true } && await RoleAsync(member.Guild) is { } role)
+		if (store.Get(member.Id) is { Linked: true } link
+			&& await standings.StandingAsync(link.AccountId, CancellationToken.None) == DiscordStanding.Active
+			&& await RoleAsync(member.Guild) is { } role)
 		{
 			await member.AddRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Linked to a game account" });
 		}
 	}
 
-	/// <summary>Gives the role to every linked member who lacks it, and takes it from every unlinked one who holds it.</summary>
+	/// <summary>Gives the role to every member linked to an active account who lacks it, and takes it from everyone else who holds it.</summary>
 	private async Task ReconcileAsync(SocketGuild guild)
 	{
 		if (await RoleAsync(guild) is not { } role)
@@ -185,7 +187,15 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 		}
 
 		await guild.DownloadUsersAsync();
-		var linked = store.List().Where(link => link.Linked).Select(link => link.UserId).ToHashSet();
+		HashSet<ulong> linked = [];
+		foreach (var link in store.List().Where(link => link.Linked))
+		{
+			if (await standings.StandingAsync(link.AccountId, CancellationToken.None) == DiscordStanding.Active)
+			{
+				linked.Add(link.UserId);
+			}
+		}
+
 		foreach (var member in guild.Users.Where(member => !member.IsBot))
 		{
 			var holds = member.Roles.Any(held => held.Id == role.Id);
@@ -195,7 +205,7 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 			}
 			else if (!linked.Contains(member.Id) && holds)
 			{
-				await member.RemoveRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Not linked to a game account" });
+				await member.RemoveRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Not linked to an active game account" });
 			}
 		}
 	}

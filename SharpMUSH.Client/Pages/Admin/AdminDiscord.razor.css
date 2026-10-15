@@ -47,6 +47,13 @@
 	color: var(--text);
 }
 
+.adm-discord-bans {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 16px 0;
+}
+
 .adm-discord-actions {
 	display: flex;
 	align-items: center;

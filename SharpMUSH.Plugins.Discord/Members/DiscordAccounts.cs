@@ -93,6 +93,13 @@ public sealed class DiscordAccounts(
 				: new Error<string>($"This account is already linked to Discord as {own.Username}. Unlink it first.");
 		}
 
+		// While a ban stands, the Discord user who was linked to the banned account cannot link another one.
+		if (store.Get(ticket.User.UserId) is { } before && before.AccountId != accountId
+			&& await accounts.GetBanAsync(before.AccountId, cancellationToken) is not null)
+		{
+			return new Error<string>("That Discord account was linked to a game account that is banned.");
+		}
+
 		var now = time.GetUtcNow();
 		switch (store.Get(ticket.User.UserId))
 		{

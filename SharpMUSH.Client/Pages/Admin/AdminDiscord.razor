@@ -55,6 +55,11 @@
                                 </li>
                             }
                         </ol>
+                        <div class="adm-discord-bans">
+                            <MudSwitch T="bool" Value="@connection.MirrorBans" ValueChanged="@(on => ActAsync(Discord.MirrorBansAsync(on)))"
+                                       Disabled="@_busy" Color="Color.Primary" Label="@Loc["AdmDiscordMirrorBans"]" />
+                            <span class="adm-discord-sub">@Loc["AdmDiscordMirrorBansSub"]</span>
+                        </div>
                         <div class="adm-discord-actions">
                             @if (connection.InviteUrl is { } invite)
                             {

@@ -49,6 +49,8 @@ public class AdminDiscordPageTests : TrackingBunitContext
 
 		public DiscordMapRequest? Mapped { get; private set; }
 
+		public DiscordSettingsRequest? Settings { get; private set; }
+
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			var path = request.RequestUri!.AbsolutePath;
@@ -58,6 +60,11 @@ public class AdminDiscordPageTests : TrackingBunitContext
 				if (path == "/api/discord/admin/roles" && request.Method == HttpMethod.Post)
 				{
 					Mapped = await request.Content!.ReadFromJsonAsync<DiscordMapRequest>(cancellationToken);
+				}
+
+				if (path == "/api/discord/admin/settings")
+				{
+					Settings = await request.Content!.ReadFromJsonAsync<DiscordSettingsRequest>(cancellationToken);
 				}
 
 				if (path.EndsWith("/resume", StringComparison.Ordinal))
@@ -182,6 +189,21 @@ public class AdminDiscordPageTests : TrackingBunitContext
 			.Instance.ValueChanged.InvokeAsync("wizard"));
 
 		cut.WaitForAssertion(() => cut.Find(".adm-discord-map-confirm"), TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task TurningOnBanMirroring_PutsTheSetting()
+	{
+		var cut = RenderPage();
+
+		await cut.InvokeAsync(() => cut.FindComponent<MudBlazor.MudSwitch<bool>>().Instance.ValueChanged.InvokeAsync(true));
+
+		cut.WaitForAssertion(() =>
+		{
+			if (_api.Settings is null) throw new InvalidOperationException("not set yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(_api.Settings).IsEqualTo(new DiscordSettingsRequest(true));
+		await Assert.That(_api.Calls).Contains("PUT /api/discord/admin/settings");
 	}
 
 	[Test]

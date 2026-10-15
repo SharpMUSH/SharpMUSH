@@ -28,7 +28,7 @@ namespace SharpMUSH.Plugins.Discord.Commands;
 /// and deletes its webhook, <c>/resume</c> starts a stopped link again, and <c>/connect</c> logs the bot in again after
 /// its token or intents change. <c>/gate</c> lets only linked members post in a linked channel again, as linking does.
 /// These need <c>discord.admin</c>. <c>/speak &lt;channel id&gt;</c>, run by any character on a linked account, makes it the
-/// character its Discord user speaks as there; <c>/speak/off</c> stops that.
+/// character its Discord user speaks as there; <c>/speak/off</c> stops that. <c>/bans on|off</c> mirrors game bans to Discord bans.
 /// Linking, unlinking, resuming and gating return the channel id at once and tell the admin how it went when it is done.
 /// </summary>
 public static class DiscordCommandModule
@@ -42,7 +42,7 @@ public static class DiscordCommandModule
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
 	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "SPEAK", "OFF", "MAP", "UNMAP",
-			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY"],
+			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY", "BANS"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "role"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -68,8 +68,14 @@ public static class DiscordCommandModule
 			return await DiscordRoleCommands.RunAsync(parser, executor, switches, argument, right);
 		}
 
+		if (switches.Contains("BANS"))
+		{
+			return await BansAsync(services, notify, executor, argument);
+		}
+
 		var relay = services.GetRequiredService<DiscordRelay>();
 		var gateway = services.GetRequiredService<DiscordGatewayService>();
+		var mirrorBans = services.GetRequiredService<IDiscordSettingsStore>().Get().MirrorBans;
 		if (switches.Contains("CONNECT"))
 		{
 			gateway.Reconnect();
@@ -82,11 +88,11 @@ public static class DiscordCommandModule
 		if (action is null)
 		{
 			var state = gateway.State;
-			await notify.Notify(executor, Overview(state, relay.Links(), gate));
+			await notify.Notify(executor, Overview(state, mirrorBans, relay.Links(), gate));
 			// Outside the panel, so it copies whole.
 			if (state.ApplicationId is { } applicationId)
 			{
-				await notify.Notify(executor, MarkupText.Plain($"Add the bot to a server: {DiscordSetup.InviteUrl(applicationId)}"));
+				await notify.Notify(executor, MarkupText.Plain($"Add the bot to a server: {DiscordSetup.InviteUrl(applicationId, mirrorBans)}"));
 			}
 
 			return CallState.Empty;
@@ -249,13 +255,59 @@ public static class DiscordCommandModule
 			: Notice($"{linked} It is still open to everyone: {gateProblem} Fix that, then @discord/gate {link.FeedKey}.", NoticeKind.Warn);
 	}
 
-	private static MString Overview(DiscordGatewayState gateway, IReadOnlyList<DiscordLinkStatus> links, IDiscordChannelGate gate)
+	/// <summary>
+	/// <c>@discord/bans</c> says whether game bans are mirrored and lists who the bot banned; <c>/bans on</c> and
+	/// <c>/bans off</c> turn mirroring on and off. Turning it off leaves the bans already made until their game bans end.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> BansAsync(IServiceProvider services, INotifyService notify,
+		AnySharpObject executor, string argument)
+	{
+		switch (argument.ToLowerInvariant())
+		{
+			case "on" or "off":
+				var on = argument.Equals("on", StringComparison.OrdinalIgnoreCase);
+				await services.GetRequiredService<DiscordStandingSync>().SetMirrorBansAsync(on, CancellationToken.None);
+				await notify.Notify(executor, Notice(on
+					? "A game ban now bans the account's Discord member in every server the bot is in. The bot needs Ban Members there."
+					: "Game bans are no longer mirrored. Bans the bot already made are lifted when their game bans end.", NoticeKind.Ok));
+				return new CallState(on ? "1" : "0");
+			case "":
+				await notify.Notify(executor, MirroredBans(services.GetRequiredService<IDiscordSettingsStore>().Get().MirrorBans,
+					services.GetRequiredService<IDiscordBanStore>().List()));
+				return CallState.Empty;
+			default:
+				await notify.Notify(executor, Notice("@discord/bans takes on or off.", NoticeKind.Warn));
+				return new CallState("#-1 ON OR OFF");
+		}
+	}
+
+	private static MString MirroredBans(bool mirrorBans, IReadOnlyList<DiscordMirroredBan> bans)
+	{
+		var setting = ServerLayout.Body(MarkupText.Plain(mirrorBans
+			? "A game ban bans the account's Discord member in every server the bot is in. @discord/bans off stops that."
+			: "Game bans are not mirrored to Discord. @discord/bans on mirrors them."));
+		Block banned = bans.Count == 0
+			? ServerLayout.Body(MarkupText.Plain("The bot has banned nobody."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Discord user")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Servers")) { Priority = 2 },
+					new TableColumn(MarkupText.Plain("Since")) { Wrap = false },
+				],
+				bans.Select(ban => ImmutableArray.Create(ban.UserId.ToString(CultureInfo.InvariantCulture),
+					ban.Guilds.Count.ToString(CultureInfo.InvariantCulture), ban.At.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).AsEnumerable()));
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord bans"), setting, banned), 78);
+	}
+
+	private static MString Overview(DiscordGatewayState gateway, bool mirrorBans, IReadOnlyList<DiscordLinkStatus> links,
+		IDiscordChannelGate gate)
 	{
 		var connection = ServerLayout.KeyValues(
 		[
 			("Bot", MarkupText.Plain(gateway.BotName ?? "-")),
 			("Connection", MarkupText.Plain(Connection(gateway))),
 			("Servers", MarkupText.Plain(gateway.Guilds.ToString(CultureInfo.InvariantCulture))),
+			("Game bans", MarkupText.Plain(mirrorBans ? BansMirrored(gateway) : "not mirrored to Discord")),
 		]);
 
 		Block linked = links.Count == 0
@@ -273,6 +325,10 @@ public static class DiscordCommandModule
 
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord"), connection, linked), 78);
 	}
+
+	private static string BansMirrored(DiscordGatewayState gateway) => gateway.CannotBanIn is [_, ..] servers
+		? $"mirrored, but the bot lacks Ban Members in {string.Join(", ", servers)}"
+		: "mirrored to Discord bans";
 
 	private static string Connection(DiscordGatewayState gateway) => gateway.Status switch
 	{

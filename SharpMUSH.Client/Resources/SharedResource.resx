@@ -8125,6 +8125,12 @@
   <data name="AdmDiscordToken" xml:space="preserve">
     <value>Set the bot token</value>
   </data>
+  <data name="AdmDiscordMirrorBans" xml:space="preserve">
+    <value>Mirror game bans to Discord</value>
+  </data>
+  <data name="AdmDiscordMirrorBansSub" xml:space="preserve">
+    <value>A banned account's member is banned in every server the bot is in, and unbanned when the game ban ends. The bot needs Ban Members.</value>
+  </data>
   <data name="AdmDiscordReconnect" xml:space="preserve">
     <value>Reconnect</value>
   </data>

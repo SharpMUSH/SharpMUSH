@@ -229,4 +229,24 @@ public class DiscordAccountsTests
 
 		await Assert.That(again.Expect<DiscordAccountLink>().UnlinkedAt).IsNull();
 	}
+
+	[Test]
+	public async Task WhileABanStands_ItsDiscordUserCannotLinkAnotherAccount()
+	{
+		var game = new Game();
+		game.Account("acct-1");
+		game.Account("acct-2");
+		await game.LinkAsync(Ann, "acct-1");
+		await game.Discord.UnlinkUserAsync(Ann.UserId, CancellationToken.None);
+		game.Clock.Now = Start + DiscordAccounts.RelinkCooldown;
+		game.Accounts.GetBanAsync("acct-1", Arg.Any<CancellationToken>())
+			.Returns(new AccountBan("acct-1", "griefing", null, Start, null));
+
+		var banned = await game.LinkAsync(Ann, "acct-2");
+		game.Accounts.GetBanAsync("acct-1", Arg.Any<CancellationToken>()).Returns((AccountBan?)null);
+		var lifted = await game.LinkAsync(Ann, "acct-2");
+
+		await Assert.That(banned.Expect<Error<string>>().Value).IsEqualTo("That Discord account was linked to a game account that is banned.");
+		await Assert.That(lifted.Expect<DiscordAccountLink>().AccountId).IsEqualTo("acct-2");
+	}
 }
