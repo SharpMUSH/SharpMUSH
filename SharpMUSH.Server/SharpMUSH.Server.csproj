@@ -238,6 +238,10 @@
       <Link>BundledPackages\radio-scene.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.radio-scene.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-verse\package.yaml">
+      <Link>BundledPackages\scene-verse.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-verse.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\bboards\package.yaml">
       <Link>BundledPackages\bboards.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.bboards.package.yaml</LogicalName>

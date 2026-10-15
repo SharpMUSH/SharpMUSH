@@ -18,12 +18,17 @@ public interface IWikiAssetService
 	/// Stores a new asset from <paramref name="content"/>, computing its SHA-256 while writing.
 	/// Returns the stored metadata, or <c>Error&lt;string&gt;</c> with a human-readable message on failure.
 	/// </summary>
+	/// <param name="isPrivate">Keep the file out of the shared library (<see cref="WikiAsset.Private"/>).</param>
 	Task<Result<WikiAsset>> SaveAsync(
 		string fileName,
 		string contentType,
 		Stream content,
 		string uploaderDbref,
+		bool isPrivate = false,
 		CancellationToken ct = default);
+
+	/// <summary>An asset's metadata; <c>NotFound</c> when no asset with <paramref name="id"/> exists.</summary>
+	Task<Found<WikiAsset>> FindAsync(string id, CancellationToken ct = default);
 
 	/// <summary>
 	/// Opens an asset for reading. The caller owns (and must dispose) the returned stream.
@@ -34,7 +39,14 @@ public interface IWikiAssetService
 	/// <summary>
 	/// Lists stored asset metadata, newest first, with skip/take pagination.
 	/// </summary>
-	Task<IReadOnlyList<WikiAsset>> ListAsync(int skip = 0, int take = 100);
+	/// <param name="where">Keeps only the assets it admits, before paging.</param>
+	Task<IReadOnlyList<WikiAsset>> ListAsync(int skip = 0, int take = 100, Func<WikiAsset, bool>? where = null);
+
+	/// <summary>
+	/// Replaces an asset's <see cref="WikiAsset.Private"/> and <see cref="WikiAsset.Lock"/>, returning the
+	/// stored metadata; <c>NotFound</c> when no asset with <paramref name="id"/> exists.
+	/// </summary>
+	Task<Found<WikiAsset>> SetSharingAsync(string id, bool isPrivate, string? lockPermission, CancellationToken ct = default);
 
 	/// <summary>
 	/// Deletes an asset and its metadata.

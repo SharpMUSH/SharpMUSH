@@ -24,6 +24,31 @@
       "id": "parenthesis-groups-paren-groups",
       "heading": "Parenthesis groups: `paren_groups`",
       "lookup": "compatibility config parenthesis groups paren groups"
+    },
+    {
+      "id": "logical-functions-mux-logic",
+      "heading": "Logical functions: `mux_logic`",
+      "lookup": "compatibility config logical functions mux logic"
+    },
+    {
+      "id": "justification-mux-justify",
+      "heading": "Justification: `mux_justify`",
+      "lookup": "compatibility config justification mux justify"
+    },
+    {
+      "id": "text-order-mux-collation",
+      "heading": "Text order: `mux_collation`",
+      "lookup": "compatibility config text order mux collation"
+    },
+    {
+      "id": "tinymux-s-list-mux-list",
+      "heading": "TinyMUX's `list()`: `mux_list`",
+      "lookup": "compatibility config tinymux s list mux list"
+    },
+    {
+      "id": "innermost-loop-tokens",
+      "heading": "Innermost loop tokens",
+      "lookup": "compatibility config innermost loop tokens"
     }
   ]
 }
@@ -116,4 +141,113 @@ With the option on, the unescaped form groups as PennMUSH's does:
 ```sharp paren_groups
 > think cat(x,(a,b)c)
 x (a,b)c
+```
+
+## Logical functions: `mux_logic`
+
+With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way
+`t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer,
+as TinyMUX does, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then
+true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and
+the other functions keep the game's own rule, as they do in TinyMUX.
+
+```sharp
+> think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]
+1|1|0
+```
+
+With `mux_logic` on:
+
+```sharp mux_logic
+> think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]
+0|0|1
+> think t(abc)
+1
+```
+
+## Justification: `mux_justify`
+
+With `mux_justify` off, `ljust()`, `rjust()` and `center()` leave text longer than the width as it
+is, unless `ljust()` or `rjust()` is given a fourth argument of 1. With it on they cut it to the
+width, as TinyMUX does, unless the fourth argument is 0.
+
+```sharp
+> think [ljust(abcdef,3)]|[center(abcdefg,3)]
+abcdef|abcdefg
+```
+
+With `mux_justify` on:
+
+```sharp mux_justify
+> think [ljust(abcdef,3)]|[rjust(abcdef,3)]|[center(abcdefg,3)]
+abc|abc|abc
+> think ljust(abcdef,3,,0)
+abcdef
+```
+
+## Text order: `mux_collation`
+
+With `mux_collation` off, `sort()` with no sort type orders text ignoring case and keeps equal
+items in the order they came, and `comp()` with no type compares character codes, so `B` comes
+before `a`. With it on, both order text as TinyMUX does: by letter first, then lower case before
+upper case. A sort type or a `comp()` type given in the call is unchanged.
+
+```sharp
+> think [sort(b A a B)]|[comp(a,B)]
+A a b B|1
+```
+
+With `mux_collation` on:
+
+```sharp mux_collation
+> think [sort(b A a B)]|[comp(a,B)]|[sort(b A a B,a)]
+a A b B|-1|A B a b
+```
+
+## TinyMUX's `list()`: `mux_list`
+
+PennMUSH's `list()` names the game's functions, commands, flags and so on. TinyMUX's
+`list(<list>, <action>[, <delimiter>])` evaluates `<action>` for each element, as `iter()` does,
+and tells each result to the enactor instead of returning it. With `mux_list` on, `list()` is
+TinyMUX's, and `list(functions)` is an argument-count error.
+
+With `mux_list` on, this tells you `xa` and then `xb`, and `list()` itself returns nothing:
+
+```sharp unchecked mux_list
+> think list(a b,x%i0)
+xa
+xb
+```
+
+## Innermost loop tokens
+
+The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches
+PennMUSH.
+
+With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$`
+names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action
+they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the
+code of an attribute that the loop or switch calls, they are plain text.
+
+With it on, `##` and `#@` name the innermost `iter()` or `@dolist` that is running, and `#$` names
+the innermost switch, `case()`, `if()` or `ifelse()` whose action is running. This also applies in the code of an attribute that
+the loop or switch calls. Either way, the value is inserted as text and is never evaluated as code.
+
+To get the same result with either setting, use `%i0` or `itext(0)` for the current element,
+`inum(0)` for its position, and `%$0` or `stext(0)` for the current switch.
+
+```sharp
+> think iter(a b,iter(x y,##))
+a a b b
+> think switch(a,*,switch(b,*,#$))
+a
+```
+
+With the option on, the same lines read the inner loop and the inner switch:
+
+```sharp innermost_tokens
+> think iter(a b,iter(x y,##))
+x y x y
+> think switch(a,*,switch(b,*,#$))
+b
 ```

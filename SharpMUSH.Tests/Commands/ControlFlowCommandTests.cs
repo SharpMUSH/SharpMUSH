@@ -359,6 +359,29 @@ public class ControlFlowCommandTests
 	}
 
 	/// <summary>
+	/// With <c>innermost_tokens</c> on, a nested @dolist's ## and a nested @switch's #$ name the inner one, as
+	/// TinyMUX's do.
+	/// </summary>
+	[Test]
+	public async ValueTask InnermostTokens_NestedDolistAndSwitch()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { InnermostTokens = true }
+		});
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dolist/inline a=@dolist/inline x=@pemit #1=DolInner{id}_##_#@_%i1"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch/inline outer{id}=*,{{@switch/inline inner=*,{{@pemit #1=SwInner{id}_#$_%$1}}}}"));
+
+		await Assert.That(await WaitForMessage(executor, $"DolInner{id}_x_1_a")).IsTrue();
+		await Assert.That(await WaitForMessage(executor, $"SwInner{id}_inner_outer{id}")).IsTrue();
+	}
+
+	/// <summary>
 	/// ## and #$ insert the element's or subject's text, which is never evaluated again: PennMUSH splices it
 	/// into the action and evaluates the result, so code in the data would run there.
 	/// </summary>

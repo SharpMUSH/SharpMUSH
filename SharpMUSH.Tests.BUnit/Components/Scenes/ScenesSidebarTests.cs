@@ -203,4 +203,32 @@ public class ScenesSidebarTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".scenes-side-live a.kit-row--collapsed").Count).IsEqualTo(2);
 		await Assert.That(cut.FindAll(".kit-row-label").Count).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task EachListedDetail_BrowsesItsValues_MostScenesFirst()
+	{
+		_api.Extra["/api/scenes/details"] = """
+			{"details":[{"key":"warning","label":"Content warning","hint":"","choices":[],"many":true,"listed":true,"tone":"warning","order":5},
+			            {"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10},
+			            {"key":"canon","label":"Canon","hint":"","choices":[],"many":true,"listed":false,"order":20}],
+			 "problems":[]}
+			""";
+		_api.Extra["/api/scenes/details/values"] = """
+			[{"key":"warning","values":[]},
+			 {"key":"verse","values":[{"value":"Marvel 616","scenes":3},{"value":"Star Wars","scenes":1}]}]
+			""";
+
+		var cut = RenderAt("/scenes?detail=verse&value=Marvel%20616", CharactersApiFake.Anonymous(this));
+		cut.WaitForAssertion(() => cut.Find(".scenes-side-detail a.kit-row"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".scenes-side-detail").Count).IsEqualTo(1).Because("a detail no scene gives has no section");
+		var rows = cut.FindAll(".scenes-side-detail a.kit-row");
+		await Assert.That(rows.Select(r => r.QuerySelector(".kit-row-label")!.TextContent.Trim()))
+			.IsEquivalentTo(new[] { "Marvel 616", "Star Wars" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(rows.Select(r => r.QuerySelector(".kit-row-count")!.TextContent)).IsEquivalentTo(new[] { "3", "1" });
+		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/scenes?detail=verse&value=Marvel%20616");
+		await Assert.That(rows[0].GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(cut.FindAll(".scenes-side-browse a.kit-row[aria-current='page']").Count).IsEqualTo(0)
+			.Because("the list is narrowed to Marvel 616, not every scene");
+	}
 }

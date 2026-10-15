@@ -209,6 +209,10 @@
    "command": "Wiz wizpass"
   },
   {
+   "key": "38-tinymux-forms/mux.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "40-compat-choices/choice.dropto#0",
    "command": "Wiz wizpass"
   },
@@ -283,6 +287,10 @@
   {
    "key": "70-edit/edit.set#0",
    "command": "Alice alicepass"
+  },
+  {
+   "key": "75-http/http.login#0",
+   "command": "Wiz wizpass"
   }
  ]
 }

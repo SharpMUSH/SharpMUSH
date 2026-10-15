@@ -6,7 +6,8 @@
    closes and the arrow keys page, from anywhere in the dialog; the close button takes focus when
    the viewer opens. An image whose URL the policy refuses shows only its caption. Owner actions
    (make icon, make banner, delete) come in through Actions for the current item. A click outside
-   the frame closes it. *@
+   the frame closes it. An image with a warning is covered by it until the viewer chooses to see it;
+   what the viewer has chosen to see stays seen while the viewer is open. *@
 @if (Open && Items.Count > 0)
 {
     var item = Current;
@@ -16,7 +17,7 @@
          @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
         @* Tab cycles inside the dialog; Close takes focus when it opens (see OnAfterRenderAsync). *@
         <MudFocusTrap DefaultFocus="DefaultFocus.None">
-        <div class="kit-viewer-frame">
+        <div class="kit-viewer-frame@(Compact ? " kit-viewer--compact" : "")">
             <div class="kit-viewer-bar">
                 <span class="kit-viewer-count">@Loc["NavViewerCount", _index + 1, Items.Count]</span>
                 <span class="kit-viewer-spacer"></span>
@@ -31,7 +32,15 @@
                 {
                     <CapsuleButton Class="kit-viewer-prev" Icon="@Icons.Material.Outlined.ChevronLeft" AriaLabel="@Loc["NavViewerPrevious"]" OnClick="@(() => StepAsync(-1))" />
                 }
-                @if (ImageUrlPolicy.IsRenderable(item.Url))
+                @if (IsCovered(item))
+                {
+                    <div class="kit-viewer-cover" role="group" aria-label="@Loc["NavGalleryWarningLabel", item.Warning!]">
+                        <MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" />
+                        <span class="kit-viewer-cover-warning">@item.Warning</span>
+                        <CapsuleButton Class="kit-viewer-reveal" Primary="true" OnClick="@(() => Reveal(item))">@Loc["NavGalleryShowImage"]</CapsuleButton>
+                    </div>
+                }
+                else if (ImageUrlPolicy.IsRenderable(item.Url))
                 {
                     <img class="kit-viewer-img" src="@ApiUrl.Resolve(item.Url)" alt="@(item.Alt ?? string.Empty)" />
                 }
@@ -48,6 +57,23 @@
             {
                 <div class="kit-viewer-caption">@item.Caption</div>
             }
+            @if (item.Tags is { Count: > 0 } tags || item.Warning is not null)
+            {
+                <div class="kit-viewer-tags">
+                    @if (item.Warning is not null && !IsCovered(item))
+                    {
+                        <span class="kit-viewer-tag kit-viewer-tag--warning">@item.Warning</span>
+                    }
+                    @foreach (var tag in item.Tags ?? [])
+                    {
+                        <span class="kit-viewer-tag">@tag</span>
+                    }
+                </div>
+            }
+            @if (Details is not null)
+            {
+                @Details(item)
+            }
         </div>
         </MudFocusTrap>
     </div>
@@ -56,7 +82,14 @@
 
 @code {
     /// <summary>One image: URL (raw; the policy decides whether it renders), alt text and caption.</summary>
-    public sealed record Item(string Url, string? Alt, string? Caption, string? Key = null);
+    public sealed record Item(string Url, string? Alt, string? Caption, string? Key = null)
+    {
+        /// <summary>A content warning: the image is covered by it until the viewer chooses to see it.</summary>
+        public string? Warning { get; init; }
+
+        /// <summary>The image's tags, shown under the caption.</summary>
+        public IReadOnlyList<string>? Tags { get; init; }
+    }
 
     [Parameter, EditorRequired] public IReadOnlyList<Item> Items { get; set; } = [];
     [Parameter] public bool Open { get; set; }
@@ -70,7 +103,23 @@
     /// <summary>Controls for the image on screen, in the top bar before Close.</summary>
     [Parameter] public RenderFragment<Item>? Actions { get; set; }
 
+    /// <summary>Anything more about the image on screen, under its caption (the gallery's edit and report forms).</summary>
+    [Parameter] public RenderFragment<Item>? Details { get; set; }
+
+    /// <summary>Shows the image smaller, so what <see cref="Details"/> shows fits under it.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    /// <summary>The warned images the viewer chose to see since it opened, by URL.</summary>
+    private readonly HashSet<string> _revealed = new(StringComparer.Ordinal);
+
+    private bool IsCovered(Item item) => item.Warning is not null && !_revealed.Contains(item.Url);
+
+    private void Reveal(Item item) => _revealed.Add(item.Url);
+
     private int _index;
+
+    /// <summary>The Index the parent last handed in, so a change to it is told from a re-render.</summary>
+    private int _givenIndex;
     private bool _wasOpen;
     private bool _focusClose;
     private bool _rememberFocus;
@@ -86,15 +135,18 @@
     {
         if (Open && !_wasOpen)
         {
+            _revealed.Clear();
             _index = Items.Count == 0 ? 0 : Math.Clamp(Index, 0, Items.Count - 1);
             _focusClose = true;
             _rememberFocus = true;
         }
         else if (Items.Count > 0)
         {
-            _index = Math.Clamp(_index, 0, Items.Count - 1);
+            // A parent that moves the image on screen (the gallery's Move earlier) hands the new place in.
+            _index = Math.Clamp(Index != _givenIndex ? Index : _index, 0, Items.Count - 1);
         }
         _wasOpen = Open;
+        _givenIndex = Index;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

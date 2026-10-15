@@ -1,0 +1,23 @@
+@using SharpMUSH.Client.Models
+
+@* A scene detail's values, each a link to the scenes giving the detail that value, in the detail's tone: a
+   content warning in the theme's warning colour. The scene cards and a scene's page both show details this way. *@
+<span class="detail-values" data-detail="@Detail.Key" style="@Style">
+    @foreach (var (value, index) in Values.Select((value, index) => (value, index)))
+    {
+        @if (index > 0)
+        {
+            <span class="detail-values-sep">, </span>
+        }
+        <a class="detail-value" href="@ScenesFilter.Href(new SceneDetailMatch(Detail.Key, value))">@value</a>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public required SceneDetailInfo Detail { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<string> Values { get; set; }
+
+    /// <summary><c>--detail-tone</c> when the detail has a tone this portal knows; otherwise the text keeps its colour.</summary>
+    private string? Style => PoseTypeStyle.ToneToken(Detail.Tone) is { } token ? $"--detail-tone: var({token});" : null;
+}

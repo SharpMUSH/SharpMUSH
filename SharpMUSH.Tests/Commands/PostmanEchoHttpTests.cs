@@ -97,7 +97,8 @@ public class PostmanEchoHttpTests
 		}
 
 		throw new TimeoutException(
-			$"Timed out after {timeoutSeconds}s waiting for expected @http callback notification from postman-echo.");
+			$"Timed out after {timeoutSeconds}s waiting for expected @http callback notification from postman-echo; heard: "
+			+ string.Join(" | ", WebAppFactoryArg.Notifications.For(recipient).TakeLast(3)));
 	}
 
 	/// <summary>How many announcements <paramref name="recipient"/> made to themselves that match <paramref name="predicate"/>.</summary>
@@ -269,19 +270,46 @@ public class PostmanEchoHttpTests
 	}
 
 	[Test]
-	public async ValueTask HttpCommand_GetWithBody_RejectsImmediately()
+	public async ValueTask HttpCommand_GetWithBadHeaders_RejectsImmediately()
 	{
 		// The refusal is not unique to this test, so it is read from a player of its own.
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService, "HttpGetBody");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player.DbRef}=CAN_HTTP"));
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGERR");
 
+		// A GET's third argument is its headers; a line with no colon is refused before the task is queued.
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@http/get me/{attrName}={PostmanEchoBase}/get,{token}"));
 
-		// GET with a body is refused before the task is queued — error message is immediate.
-		await Assert.That(Announced(player.DbRef, msg => msg == "GET requests cannot have a body.")).IsEqualTo(1);
+		await Assert.That(Announced(player.DbRef, msg => msg == "Header value has a bad key:value set. Aborting.")).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The examples in <c>help @http</c>, run as written by a player of their own, who must hear the
+	/// output the help shows.
+	/// </summary>
+	[Test]
+	[Arguments("think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]",
+		"@http/post me/SHOW=https://postman-echo.com/post,json(object,bar,\"baz\"),Content-Type:application/json%rGame:MyMUSH",
+		"200 baz MyMUSH")]
+	[Arguments("think %<status> %0",
+		"@http me/SHOW=https://postman-echo.com/basic-auth,Authorization:Basic [encode64(postman:password)]",
+		"200 {\"authenticated\":true}")]
+	[Arguments("think [if(%<http-overflow>,Reply too long.,Reply complete.)]",
+		"@http me/SHOW=https://postman-echo.com/get",
+		"Reply complete.")]
+	public async ValueTask HelpExamplesProduceTheirOutput(string show, string request, string expected)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService, "HttpHelp");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player.DbRef}=CAN_HTTP"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&SHOW me={show}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(request));
+
+		await WaitForNotify(player.DbRef, msg => msg == expected);
 	}
 
 	[Test]

@@ -56,6 +56,8 @@ builder.Services.AddSingleton<SceneService>();
 builder.Services.AddSingleton<GameCommandService>();
 // The pose types (api/scenes/types), read once per acting character; hiding one runs +scene/hide.
 builder.Services.AddSingleton<PoseTypeService>();
+// The scene details (api/scenes/details): the verse, canon and other fields a scene can carry, read once.
+builder.Services.AddSingleton<SceneDetailService>();
 builder.Services.AddSingleton<ChannelBrowserService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
@@ -67,6 +69,7 @@ builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<MsspService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<AsciiTranslationsService>();
+builder.Services.AddSingleton<SecretsService>();
 builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();
 builder.Services.AddSingleton<GameMessagesService>();

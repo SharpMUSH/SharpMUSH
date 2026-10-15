@@ -34,6 +34,7 @@ public class HttpCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HttpAdmission");
+		await GrantHttpAsync(player.DbRef);
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Arguments = new()
@@ -74,6 +75,7 @@ public class HttpCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HttpCapacityNotice");
+		await GrantHttpAsync(player.DbRef);
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Arguments = new()
@@ -146,6 +148,196 @@ public class HttpCommandTests
 		{
 			if (reason != QueueRejectionReason.ShuttingDown) await scheduler.DisposeAsync();
 		}
+	}
+
+	/// <summary>Answers every request with <paramref name="reply"/>, keeping what was sent.</summary>
+	private sealed class RecordingHandler(string reply, string replyType = "text/plain") : HttpMessageHandler
+	{
+		public HttpRequestMessage? Request { get; private set; }
+		public byte[]? Body { get; private set; }
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			Request = request;
+			Body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+			return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+			{
+				Content = new StringContent(reply, System.Text.Encoding.UTF8, replyType)
+			};
+		}
+
+		public string? Header(string name)
+			=> Request!.Headers.TryGetValues(name, out var values)
+				|| Request.Content?.Headers.TryGetValues(name, out values) == true
+				? string.Join(", ", values!)
+				: null;
+	}
+
+	/// <summary>What one <c>@http</c> run sent and the state its callback was queued with.</summary>
+	private sealed record HttpRun(CallState Result, RecordingHandler Handler, ParserState? Callback, bool ClientCreated);
+
+	/// <summary>
+	/// Runs <c>@http</c> with <paramref name="arguments"/> (from %1 on) as a player of its own, sending through
+	/// <see cref="RecordingHandler"/> and running the callback's state factory in place of the queue.
+	/// </summary>
+	private async Task<HttpRun> RunHttpAsync(string name, string[] switches, string[] arguments,
+		bool qRegisters = false, Dictionary<string, string>? registers = null, string reply = "ok", int? outputLimit = null,
+		bool canHttp = true)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, name);
+		if (canHttp) await GrantHttpAsync(player.DbRef);
+		var args = new Dictionary<string, CallState> { ["0"] = new(player.DbRef + "/CALLBACK") };
+		for (var i = 0; i < arguments.Length; i++) args[(i + 1).ToString()] = new CallState(arguments[i]);
+		var state = ParserState.RootFor(player.DbRef) with { Arguments = args, Switches = switches };
+		if (outputLimit is { } limit) state = state with { OutputLimit = limit };
+		foreach (var (register, value) in registers ?? [])
+			state.AddRegister(register, MarkupText.Plain(value));
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+
+		ParserState? callback = null;
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => Admit(call.Arg<AdmitAttributeRequest>()));
+		var handler = new RecordingHandler(reply);
+		var clientCreated = false;
+		var clients = Substitute.For<IHttpClientFactory>();
+		clients.CreateClient("api").Returns(_ =>
+		{
+			clientCreated = true;
+			return new HttpClient(handler);
+		});
+		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { HttpQRegisters = qRegisters } });
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+			WebAppFactoryArg.Services, mediator, clients, options);
+
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
+		return new HttpRun(result, handler, callback, clientCreated);
+
+		async ValueTask<QueueAdmissionResult> Admit(AdmitAttributeRequest request)
+		{
+			callback = await request.Input();
+			return new QueueAdmissionResult(1, QueueRejectionReason.None);
+		}
+	}
+
+	/// <summary>@http is for wizards and holders of the Can_HTTP power, as in PennMUSH.</summary>
+	private Task GrantHttpAsync(DBRef player)
+		=> Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player}=CAN_HTTP")).AsTask();
+
+	[Test]
+	public async Task HttpIsRefusedWithoutTheCanHttpPower()
+	{
+		var run = await RunHttpAsync("HttpNoPower", [], ["https://example.invalid/get"], canHttp: false);
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(run.ClientCreated).IsFalse();
+		await Assert.That(run.Callback).IsNull();
+	}
+
+	[Test]
+	public async Task HttpGetSendsTheHeadersAfterTheUrl()
+	{
+		var run = await RunHttpAsync("HttpGetHeaders", [], ["https://example.invalid/get", "X-One:1\nX-Two: two words\n"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Get);
+		await Assert.That(run.Handler.Header("X-One")).IsEqualTo("1");
+		await Assert.That(run.Handler.Header("X-Two")).IsEqualTo("two words");
+		await Assert.That(run.Handler.Header("User-Agent")).IsEqualTo("SharpMUSH");
+		await Assert.That(run.Handler.Body).IsNull();
+	}
+
+	[Test]
+	public async Task HttpPostTakesTheHeadersAfterTheData()
+	{
+		var run = await RunHttpAsync("HttpPostHeaders", ["POST"],
+			["https://example.invalid/post", "{\"a\":1}", "Content-Type:application/json\r\nAuthorization:Bearer abc\r\nUser-Agent:Bot/2"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Post);
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/json");
+		await Assert.That(run.Handler.Header("Authorization")).IsEqualTo("Bearer abc");
+		await Assert.That(run.Handler.Header("User-Agent")).IsEqualTo("Bot/2");
+		await Assert.That(System.Text.Encoding.UTF8.GetString(run.Handler.Body!)).IsEqualTo("{\"a\":1}");
+	}
+
+	[Test]
+	public async Task HttpBodyDefaultsToAFormInUtf8()
+	{
+		var run = await RunHttpAsync("HttpFormDefault", ["PUT"], ["https://example.invalid/put", "name=caf\u00e9"]);
+
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");
+		await Assert.That(run.Handler.Body!).IsEquivalentTo(System.Text.Encoding.UTF8.GetBytes("name=caf\u00e9"));
+	}
+
+	[Test]
+	public async Task HttpBodyIsEncodedInTheCharsetItsTypeNames()
+	{
+		var run = await RunHttpAsync("HttpCharset", ["POST"],
+			["https://example.invalid/post", "caf\u00e9", "Content-Type: text/plain; charset=ISO-8859-1"]);
+
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("text/plain; charset=ISO-8859-1");
+		await Assert.That(run.Handler.Body!).IsEquivalentTo(new byte[] { (byte)'c', (byte)'a', (byte)'f', 0xE9 });
+	}
+
+	[Test]
+	[Arguments("no colon here")]
+	[Arguments("Bad Name:value")]
+	[Arguments(":value")]
+	[Arguments("Content-Length:12")]
+	public async Task HttpRefusesAHeaderLineItCannotSend(string line)
+	{
+		var run = await RunHttpAsync("HttpBadHeader", ["POST"], ["https://example.invalid/post", "data", "X-Fine:1\n" + line]);
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
+		await Assert.That(run.ClientCreated).IsFalse();
+		await Assert.That(run.Callback).IsNull();
+	}
+
+	[Test]
+	public async Task HttpReadsContentTypeAndUserpassRegistersOnlyWithHttpQRegisters()
+	{
+		var registers = new Dictionary<string, string> { ["CONTENT-TYPE"] = "text/csv", ["USERPASS"] = "user:secret" };
+
+		var penn = await RunHttpAsync("HttpQRegsOn", ["POST"], ["https://example.invalid/post", "a,b"], qRegisters: true, registers: registers);
+		var sharp = await RunHttpAsync("HttpQRegsOff", ["POST"], ["https://example.invalid/post", "a,b"], registers: registers);
+
+		await Assert.That(penn.Handler.Header("Content-Type")).IsEqualTo("text/csv");
+		await Assert.That(penn.Handler.Header("Authorization")).IsEqualTo("Basic " + Convert.ToBase64String("user:secret"u8.ToArray()));
+		await Assert.That(sharp.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");
+		await Assert.That(sharp.Handler.Header("Authorization")).IsNull();
+	}
+
+	[Test]
+	public async Task HttpHeadersArgumentReplacesTheContentTypeRegister()
+	{
+		// PennMUSH #1398: given headers, the content-type q-register is ignored, even with no Content-Type line.
+		var run = await RunHttpAsync("HttpHeadersOverReg", ["POST"], ["https://example.invalid/post", "x=1", "X-One:1"],
+			qRegisters: true, registers: new() { ["CONTENT-TYPE"] = "text/csv" });
+
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HttpOverflowSaysWhetherTheBodyWasCut(bool qRegisters)
+	{
+		var whole = await RunHttpAsync("HttpWhole", [], ["https://example.invalid/get"], qRegisters, reply: "0123456789", outputLimit: 10);
+		var cut = await RunHttpAsync("HttpCut", [], ["https://example.invalid/get"], qRegisters, reply: "0123456789AB", outputLimit: 10);
+
+		await Assert.That(whole.Callback!.Argument("0").ToPlainText()).IsEqualTo("0123456789");
+		await Assert.That(whole.Callback.Argument("http-overflow").ToPlainText()).IsEqualTo("0");
+		await Assert.That(cut.Callback!.Argument("0").ToPlainText()).IsEqualTo("0123456789");
+		await Assert.That(cut.Callback.Argument("http-overflow").ToPlainText()).IsEqualTo("1");
+		await Assert.That(cut.Callback.Registers.TryPeek(out var registers) && registers.ContainsKey("HTTP-OVERFLOW"))
+			.IsEqualTo(qRegisters);
 	}
 
 	/// <summary>

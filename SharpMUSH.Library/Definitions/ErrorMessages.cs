@@ -132,6 +132,7 @@ public static partial class ErrorMessages
 		public const string NumberOutOfRange = "#-1 NUMBER OUT OF RANGE";
 		/// <summary><c>fun_wrap</c>'s answer for a width below 2 (<c>src/funstr.c:1666-1668</c>).</summary>
 		public const string WidthTooSmall = "#-1 WIDTH TOO SMALL";
+		public const string InvalidJustification = "#-1 INVALID JUSTIFICATION SPECIFIED";
 
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";
@@ -380,7 +381,7 @@ public static partial class ErrorMessages
 		public const string NoTextGiven = "#-1 NO TEXT GIVEN";
 		public const string NoSuchLockType = "#-1 NO SUCH LOCK TYPE";
 		public const string ChannelPermissionDenied = "#-1 CHANNEL PERMISSION DENIED";
-		public const string GetRequestsCannotHaveBody = "#-1 GET REQUESTS CANNOT HAVE A BODY";
+		public const string InvalidHttpHeader = "#-1 INVALID HEADER";
 		public const string CannotRenameInbox = "#-1 CANNOT RENAME THE INBOX FOLDER";
 		public const string InvalidMailArguments = "#-1 INVALID ARGUMENTS FOR MAIL COMMAND";
 		public const string InvalidMailFolderArguments = "#-1 INVALID ARGUMENTS FOR MAIL FOLDER COMMAND";
@@ -415,6 +416,25 @@ public static partial class ErrorMessages
 		public const string JsonFillBooleanFormat = "#-1 VALUE FOR {0} MUST BE A BOOLEAN";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string JsonFillJsonFormat = "#-1 VALUE FOR {0} MUST BE JSON";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollSyntaxErrorFormat = "#-1 ROLL SYNTAX ERROR AT CHARACTER {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollNoSuchVariableFormat = "#-1 NO SUCH ROLL VARIABLE: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollVariableNotANumberFormat = "#-1 ROLL VARIABLE {0} IS NOT A NUMBER OR FORMULA";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollCircularVariableFormat = "#-1 ROLL VARIABLE {0} REFERS TO ITSELF";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RollUnknownFunctionFormat = "#-1 NO SUCH ROLL FUNCTION: {0}";
+		public const string RollVariablesTooDeep = "#-1 ROLL VARIABLES NESTED TOO DEEPLY";
+		public const string RollTooManyDice = "#-1 TOO MANY DICE";
+		public const string RollFormulaTooLarge = "#-1 ROLL FORMULA TOO LARGE";
+		public const string RollFormulaTooDeep = "#-1 ROLL FORMULA NESTED TOO DEEPLY";
+		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
+		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
+		public const string RollInvalidJson = "#-1 INVALID JSON";
+		public const string RollOutputMode = "#-1 ROLL OUTPUT MUST BE TOTAL, TEXT, JSON, MIN OR MAX";
+		public const string RollDataMustBeObject = "#-1 ROLL DATA MUST BE A JSON OBJECT OR AN OBJECT";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DuplicateKeysFormat = "#-1 DUPLICATE KEYS: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

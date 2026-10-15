@@ -43,8 +43,11 @@ public static class FunctionDispatcher
 	/// against <see cref="FunctionFlags.EvenArgsOnly"/>.
 	/// </summary>
 	/// <param name="name">The name the call was written with, which is what the error names.</param>
-	public static string? ValidateArgumentCount(SharpFunctionAttribute attribute, string name, int count)
+	/// <param name="emptyCall">Whether the call is <c>f()</c>, which <see cref="SharpFunctionAttribute.EmptyCallMinArgs"/> may refuse.</param>
+	public static string? ValidateArgumentCount(SharpFunctionAttribute attribute, string name, int count, bool emptyCall = false)
 	{
+		if (emptyCall && count < attribute.EmptyCallMinArgs)
+			return string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.EmptyCallMinArgs, count);
 		if (count > attribute.MaxArgs)
 			return string.Format(ErrorMessages.Returns.TooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, count);
 		if (count < attribute.MinArgs)
@@ -91,7 +94,8 @@ public static class FunctionDispatcher
 		}
 		var count = argumentCount ?? parser.CurrentState.Arguments.Count;
 
-		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count) is { } arityError)
+		var emptyCall = count == 1 && parser.CurrentState.ArgumentsOrdered.Values.First().Message.Length == 0;
+		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count, emptyCall) is { } arityError)
 			return new CallState(arityError);
 		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);

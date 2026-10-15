@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Dice;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -1407,22 +1408,38 @@ public partial class Functions
 	/// <c>#-1</c>. Names come back upper-case, except flags and powers, which keep their own casing as
 	/// <c>@list flags</c> shows them.
 	/// </summary>
-	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	/// <summary>
+	/// PennMUSH's list(): names of functions, commands, attributes and so on. Under mux_list it is
+	/// TinyMUX's instead, iter() that tells the enactor each result in turn and returns nothing,
+	/// which is why the arguments are not evaluated before the call.
+	/// </summary>
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (Compatibility(parser).MuxList)
+		{
+			return await TellEachAsync(parser);
+		}
+
 		var args = parser.CurrentState.Arguments;
-		var option = args.TryGetValue("0", out var a0) ? a0.Message.ToPlainText() : string.Empty;
+		if (args.Count > 2)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, "LIST", 2, args.Count));
+		}
+
+		var errors = new ListEvaluationErrors();
+		var option = args.TryGetValue("0", out var a0) ? errors.Record(await a0.GetParsedResultAsync()).ToPlainText() : string.Empty;
 		var type = "all";
 		if (args.TryGetValue("1", out var a1))
 		{
-			type = a1.Message.ToPlainText().ToLowerInvariant();
+			type = errors.Record(await a1.GetParsedResultAsync()).ToPlainText().ToLowerInvariant();
 			if (type is not ("builtin" or "local" or "all"))
-				return new CallState(ErrorMessages.Returns.Nothing);
+				return errors.Complete(new CallState(ErrorMessages.Returns.Nothing));
 		}
 
 		bool Names(string full) => full.StartsWith(option, StringComparison.OrdinalIgnoreCase);
 
-		return option switch
+		return errors.Complete(option switch
 		{
 			"" => new CallState(ErrorMessages.Returns.Nothing),
 			_ when option.Equals("motd", StringComparison.OrdinalIgnoreCase) => await Motd(parser, default!),
@@ -1438,7 +1455,7 @@ public partial class Functions
 			_ when Names("powers") => new CallState(await FlagListAsync(parser,
 				Mediator.CreateStream(new GetPowersQuery()).Select(p => (p.Name, p.Symbol, p.SetPermissions, p.Disabled)))),
 			_ => new CallState(ErrorMessages.Returns.Nothing)
-		};
+		});
 
 		static async ValueTask<CallState> UpperSorted(IAsyncEnumerable<string> names)
 			=> new(string.Join(' ', (await names.ToArrayAsync())
@@ -1461,6 +1478,53 @@ public partial class Functions
 				_ => await FullMotd(parser, default!)
 			};
 		}
+	}
+
+	/// <summary>
+	/// TinyMUX's list(list, action[, delimiter]): the action is evaluated for each element, as by
+	/// iter(), and each result is told to the enactor. The call itself returns nothing.
+	/// </summary>
+	private async ValueTask<CallState> TellEachAsync(IMUSHCodeParser parser)
+	{
+		var args = parser.CurrentState.Arguments;
+		if (args.Count < 2)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "LIST", 2, args.Count));
+		}
+
+		var errors = new ListEvaluationErrors();
+		var list = errors.Record(await args["0"].GetParsedResultAsync());
+		var delimiter = args.TryGetValue("2", out var a2) && a2.Message.Length > 0
+			? errors.Record(await a2.GetParsedResultAsync())
+			: MarkupText.Space;
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var iteration = new IterationWrapper<MString>
+		{
+			Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0,
+			Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
+		};
+
+		parser.CurrentState.IterationRegisters.Push(iteration);
+		try
+		{
+			foreach (var item in MushText.SplitList(delimiter, list))
+			{
+				iteration.Value = item;
+				iteration.Iteration++;
+				await NotifyService.Notify(enactor, errors.Record(await args["1"].GetParsedResultAsync()), executor);
+				if (iteration.Break)
+				{
+					break;
+				}
+			}
+		}
+		finally
+		{
+			parser.CurrentState.IterationRegisters.TryPop(out _);
+		}
+
+		return errors.Complete(CallState.Empty);
 	}
 
 	/// <summary>Command names of one type — "builtin", "local", or anything else for both — sorted, upper-case.</summary>
@@ -1618,6 +1682,12 @@ public partial class Functions
 		// context, relative to the executor (PennMUSH matches function arguments to the executor) — not
 		// the caller one frame up the u() chain.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// A SharpMUSH category: whether roll() can read a formula, whatever its names turn out to hold.
+		if (category == "roll")
+		{
+			return new CallState(DiceParser.IsValid(str.ToPlainText()) ? "1" : "0");
+		}
 
 		var validationType = category switch
 		{

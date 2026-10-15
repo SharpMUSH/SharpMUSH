@@ -1,0 +1,10 @@
+.detail-value {
+	color: var(--detail-tone, inherit);
+	text-decoration: none;
+	border-radius: 4px;
+}
+
+.detail-value:hover,
+.detail-value:focus-visible {
+	text-decoration: underline;
+}

@@ -19,7 +19,7 @@ Offline unit tests for the harness itself (no servers): `python3 -m unittest dis
 ## Requirements
 
 - Python 3.10+ (standard library only).
-- A **built** PennMUSH checkout (`src/netmud` present). Found via `--pennmush-dir`, `$PENNMUSH_DIR`,
+- A **built** PennMUSH checkout (`src/netmud` present), with `patches/*.patch` applied and libcurl found by `./configure`. Found via `--pennmush-dir`, `$PENNMUSH_DIR`,
   `<repo>/pennmush`, or (in a git worktree) the main checkout's `pennmush/`. To build one:
   `git clone https://github.com/pennmush/pennmush && cd pennmush && ./configure && make`.
 - The .NET SDK pinned by `global.json` (see `CLAUDE.md`). The harness uses `$DOTNET`, then
@@ -61,8 +61,22 @@ with `::`):
 ::as alice                             switch the acting session
 think [add(1,2)]                       a command on the acting session
 ::settle                               wait for queued work (@wait, @trigger, @dolist...)
+::until HTTPDONE                       the next command's step also waits for a line ending in HTTPDONE
 ::logout wiz
 ```
+
+`::until` is for output that arrives after the command has run, such as an `@http` reply: the step
+reads up to that line before it sends its sentinel, so the late output lands in the same step on both
+servers however fast each one is. `{{echo}}` in a command becomes, as it is sent, the URL of a local
+HTTP site the harness runs (`parity/echo.py`), which answers with one line describing the request it
+received (method, Content-Type, Authorization, `X-` headers, body).
+
+## Upstream pull requests in the reference
+
+`tools/parity/patches/*.patch` are applied to the reference PennMUSH before it is built: upstream pull
+requests that SharpMUSH follows before they are merged. Each patch says in its header which pull request
+it is and what, if anything, was changed. `75-http` needs `pennmush-1398-http-headers.patch` and a
+PennMUSH built with libcurl.
 
 **Adding a regression case for a parity fix**: add a `::case` (or steps) to the matching scenario file
 using the PennMUSH behaviour as the spec, run it, confirm the diff shows the bug, and after the fix

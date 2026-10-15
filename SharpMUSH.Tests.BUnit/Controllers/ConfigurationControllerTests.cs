@@ -28,7 +28,10 @@ public class ConfigurationControllerTests
 		var logger = Substitute.For<ILogger<ConfigurationController>>();
 		var config = StoreConfigOptionWriter.Create(database, wrapper, reloadService);
 		return new ConfigurationController(wrapper, config,
-			new MushCnfImportService(config, database, NullLogger<MushCnfImportService>.Instance), Substitute.For<IAuditLog>(), logger);
+			new MushCnfImportService(config, database, Substitute.For<ISecretStore>(), NullLogger<MushCnfImportService>.Instance), Substitute.For<IAuditLog>(), logger)
+		{
+			ControllerContext = new() { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() }
+		};
 	}
 
 	[TUnit.Core.Test]
@@ -232,7 +235,7 @@ public class ConfigurationControllerTests
 		var config = StoreConfigOptionWriter.Create(database, wrapper, new ConfigurationReloadService());
 		var controller = new ConfigurationController(
 			wrapper, config,
-			new MushCnfImportService(config, database, NullLogger<MushCnfImportService>.Instance),
+			new MushCnfImportService(config, database, Substitute.For<ISecretStore>(), NullLogger<MushCnfImportService>.Instance),
 			Substitute.For<IAuditLog>(),
 			Substitute.For<ILogger<ConfigurationController>>());
 

@@ -4387,10 +4387,6 @@
     <value>Edição menor</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Nenhum arquivo enviado ainda.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nenhum arquivo encontrado.</value>
     <comment>MT</comment>
@@ -4784,6 +4780,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Ver tudo</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Todas</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Voltar para {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Legenda</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Editar detalhes</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Mover para antes</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Mover para depois</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Nenhuma imagem tem esta tag.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galeria de {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Denunciar</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>Não foi possível enviar a denúncia: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Qual é o problema com esta imagem?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Enviar denúncia</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>Sua denúncia foi enviada à equipe.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Mostrar imagem</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Filtrar por tag</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>Separe as tags com vírgulas.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Aviso de conteúdo</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Cobre a imagem até que alguém escolha vê-la. Uma imagem com aviso não pode ser o avatar nem o banner.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Aviso de conteúdo: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>Não foi possível salvar os detalhes da imagem: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>Não foi possível mover a imagem: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Retrato</value>
   </data>
@@ -4999,6 +5061,12 @@
   </data>
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Detalhes</value>
+  </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Cenas em que {0} é {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Mostrar todas as cenas</value>
   </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Iniciada</value>
@@ -6023,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Reordenar</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Pesquisar na biblioteca de imagens</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Ainda não há imagens na biblioteca.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Nenhum nome de arquivo corresponde.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Ou escolher da biblioteca de imagens</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>Na biblioteca de imagens compartilhada. Remover da galeria mantém o arquivo.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Compartilhar na biblioteca de imagens</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Qualquer pessoa conectada poderá usá-la em uma página wiki ou em uma galeria. Não é possível desfazer.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Não foi possível compartilhar a imagem: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Biblioteca</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Compartilhamento na biblioteca</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>Na biblioteca compartilhada</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Qualquer pessoa conectada pode escolhê-lo para uma página wiki ou uma galeria. Não é possível desfazer.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Restringir a uma permissão</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Só quem tem esta permissão o encontra na biblioteca. Deixe vazio para todos.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Uma galeria</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Todos</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Bloqueado: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Não foi possível salvar: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Uma imagem com aviso de conteúdo fica fora da biblioteca de imagens. Remova o aviso para compartilhá-la.</value>
   </data>
 </root>

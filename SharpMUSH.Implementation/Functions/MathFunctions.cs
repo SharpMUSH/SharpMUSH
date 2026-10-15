@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Utilities;
 using MoreLinq;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Dice;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -12,6 +13,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using SharpMUSH.Library.Services;
 using System.Globalization;
+using System.Text.Json;
 using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 using SharpMUSH.Library.Markup;
@@ -22,7 +24,9 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "add", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
+	// add() and mul() take one argument as TinyMUX's do (add(5) is 5); PennMUSH refuses it, so this
+	// replaces only an error; add() itself stays PennMUSH's error. sub() stays at two, as in both.
+	[SharpFunction(Name = "add", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc + sub);
 
@@ -30,7 +34,7 @@ public partial class Functions
 	public ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc - sub);
 
-	[SharpFunction(Name = "mul", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
+	[SharpFunction(Name = "mul", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc * sub);
 
@@ -577,14 +581,20 @@ public partial class Functions
 			: await operation.Invoke(this, operands, attribute);
 	}
 
-	[SharpFunction(Name = "lnum", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
+	[SharpFunction(Name = "lnum", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
 	public async ValueTask<CallState> LNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await Task.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var arg0Text = args["0"].Message.ToPlainText();
+		var arg0Text = args.Count == 0 ? string.Empty : args["0"].Message.ToPlainText();
+
+		// lnum() is an empty list in TinyMUX; PennMUSH refuses it, so this replaces only an error.
+		if (args.Count <= 1 && arg0Text.Length == 0)
+		{
+			return new CallState(MarkupText.Empty);
+		}
 
 		// Single arg: lnum(count) -> 0..count-1, count must be integer-like
 		if (args.Count == 1)
@@ -1445,6 +1455,95 @@ public partial class Functions
 			? string.Join(" ", rolls)
 			: rolls.Sum().ToString(CultureInfo.InvariantCulture)));
 	}
+
+	/// <summary>
+	/// Rolls a dice formula (<c>4d6kh3+2</c>, <c>1dF+DEXTERITY</c>), with
+	/// values from a JSON object or from an object's attributes, and answers the total, a one-line
+	/// account, every die as JSON, or the lowest or highest the formula can come to.
+	/// </summary>
+	/// <remarks>
+	/// A SharpMUSH addition; PennMUSH has only <c>die()</c>. See <see cref="DiceRoll"/>. Attribute
+	/// values are read as get() reads them and never evaluated: a value is a number or a formula.
+	/// </remarks>
+	[SharpFunction(Name = "roll", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["formula", "data", "options"])]
+	public async ValueTask<CallState> Roll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var formula = args["0"].Message.ToPlainText();
+		var data = args.TryGetValue("1", out var dataArg) ? dataArg.Message.ToPlainText().Trim() : string.Empty;
+		var options = args.TryGetValue("2", out var optionsArg) ? optionsArg.Message.ToPlainText().Trim() : string.Empty;
+
+		return RollOptions.Read(options) switch
+		{
+			RollOptions read => await RollWithDataAsync(parser, formula, data, read),
+			Error<string> error => new CallState(error.Value)
+		};
+	}
+
+	private async ValueTask<CallState> RollWithDataAsync(IMUSHCodeParser parser, string formula, string data, RollOptions options)
+	{
+		if (data.Length == 0) return RollAnswer(await DiceRoll.RollAsync(formula, NoDiceData, RollDie, options.Mode), options);
+		if (data[0] is '{' or '[') return RollAnswer(await RollWithJsonAsync(formula, data, options.Mode), options);
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, data, All,
+			async holder => RollAnswer(
+				await DiceRoll.RollAsync(formula, name => DiceValueFromAttributeAsync(executor, holder, name), RollDie, options.Mode),
+				options));
+	}
+
+	private static async ValueTask<Result<DiceRollResult>> RollWithJsonAsync(string formula, string data, DiceRollMode mode)
+	{
+		JsonDocument document;
+		try
+		{
+			document = JsonDocument.Parse(data);
+		}
+		catch (JsonException)
+		{
+			return new Error<string>(ErrorMessages.Returns.RollInvalidJson);
+		}
+
+		using (document)
+		{
+			var root = document.RootElement;
+			return root.ValueKind == JsonValueKind.Object
+				? await DiceRoll.RollAsync(formula, name => ValueTask.FromResult(DiceRoll.FromJson(root, name)), RollDie, mode)
+				: new Error<string>(ErrorMessages.Returns.RollDataMustBeObject);
+		}
+	}
+
+	/// <summary>
+	/// <c>stat.dex</c> is the attribute <c>STAT`DEX</c>, read with the visibility get() checks and
+	/// never evaluated.
+	/// </summary>
+	private async ValueTask<DiceValue> DiceValueFromAttributeAsync(AnySharpObject executor, AnySharpObject holder, string name)
+	{
+		var attribute = name.Replace('.', '`').ToUpperInvariant();
+		return await AttributeService.GetAttributeAsync(executor, holder, attribute,
+				mode: Library.Services.Interfaces.IAttributeService.AttributeMode.Read, parent: true) switch
+		{
+			SharpAttribute[] chain when chain.Last().Value.ToPlainText().Trim() is { Length: > 0 } text => new DiceFormula(text),
+			SharpAttribute[] or None => new NotFound(),
+			Error<string> error => error
+		};
+	}
+
+	private static CallState RollAnswer(Result<DiceRollResult> rolled, RollOptions options) => rolled switch
+	{
+		DiceRollResult result => options.Output switch
+		{
+			RollOutput.Text => new CallState(result.Text),
+			RollOutput.Json => new CallState(result.ToJson()),
+			_ => new CallState(result.Total)
+		},
+		Error<string> error => new CallState(error.Value)
+	};
+
+	private static ValueTask<DiceValue> NoDiceData(string name) => ValueTask.FromResult<DiceValue>(new NotFound());
+
+	private static int RollDie(int sides) => Random.Shared.Next(1, sides + 1);
 
 	/// <summary>
 	/// A random number: a real in [0,1) with no argument, otherwise an integer in the given range.

@@ -4387,10 +4387,6 @@
     <value>小修改</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>尚未上传任何资源。</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>未找到资源。</value>
     <comment>MT</comment>
@@ -4784,6 +4780,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>查看全部</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>返回 {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>说明</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>编辑详情</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>前移</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>后移</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>没有图片带有此标签。</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>{0} 的图库</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>举报</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>无法发送举报：{0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>这张图片有什么问题？</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>发送举报</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>你的举报已发送给管理人员。</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>显示图片</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>按标签筛选</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>用逗号分隔标签。</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>内容警告</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>在观看者选择查看前遮住图片。带有警告的图片不能作为头像或横幅。</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>内容警告：{0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>无法保存图片详情：{0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>无法移动图片：{0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>头像</value>
   </data>
@@ -4999,6 +5061,12 @@
   </data>
   <data name="NavSceneDetails" xml:space="preserve">
     <value>详情</value>
+  </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>{0}为{1}的场景</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>显示全部场景</value>
   </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>开始于</value>
@@ -6023,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>重新排序</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>搜索图片库</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>图片库中还没有图片。</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>没有匹配的文件名。</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>或从图片库中选择</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>已在共享图片库中。从相册移除后文件仍会保留。</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>分享到图片库</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>登录的任何人都可以在维基页面或相册中使用它。此操作无法撤销。</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>无法分享图片：{0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>图片库</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>图片库共享</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>在共享图片库中</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>登录的任何人都可以为维基页面或相册选择它。此操作无法撤销。</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>限定权限</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>只有拥有此权限的人能在图片库中找到它。留空则所有人可见。</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>仅一个相册</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>所有人</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>已锁定：{0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>无法保存：{0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>带有内容警告的图片不会进入图片库。移除警告后才能分享。</value>
   </data>
 </root>

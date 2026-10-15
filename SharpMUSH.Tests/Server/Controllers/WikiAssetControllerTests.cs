@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
@@ -16,19 +22,37 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 public class WikiAssetControllerTests
 {
-	private static (WikiAssetController Controller, DirectoryInfo Root) MakeController()
+	private static (WikiAssetController Controller, DirectoryInfo Root) MakeController() =>
+		MakeController(Directory.CreateTempSubdirectory("wiki-asset-controller-test-"), "#42");
+
+	/// <summary>
+	/// A controller over <paramref name="root"/> for an account playing <paramref name="dbref"/> and holding
+	/// <paramref name="scopes"/>; the game defines one custom permission, <c>lore.secret</c>.
+	/// </summary>
+	private static (WikiAssetController Controller, DirectoryInfo Root) MakeController(DirectoryInfo root, string dbref, params string[] scopes)
 	{
-		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
+			.Returns(new HashSet<string>(scopes));
+		var roles = Substitute.For<IRoleRegistryService>();
+		roles.GetCustomPermissionsAsync(Arg.Any<CancellationToken>())
+			.Returns([new CustomPermission("lore.secret", "Lore", "Lore secrets", 0)]);
 		var controller = new WikiAssetController(
 			new FileSystemWikiAssetService(root.FullName),
+			capabilities,
+			roles,
 			NullLogger<WikiAssetController>.Instance);
 
-		var claims = new List<Claim> { new(GameHub.CharacterDbrefClaim, "#42") };
+		var claims = new List<Claim>
+		{
+			new(GameHub.CharacterDbrefClaim, dbref),
+			new(ClaimTypes.NameIdentifier, $"account-{dbref}"),
+		};
 		controller.ControllerContext = new ControllerContext
 		{
 			HttpContext = new DefaultHttpContext
 			{
-				User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"))
+				User = new ClaimsPrincipal(new ClaimsIdentity(claims, AccountSessionAuthenticationHandler.SchemeName))
 			}
 		};
 		return (controller, root);
@@ -201,6 +225,173 @@ public class WikiAssetControllerTests
 		{
 			var result = await controller.Delete(Guid.NewGuid().ToString("N"));
 			await Assert.That(result).IsTypeOf<NotFoundResult>();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	/// <summary>Stores a file directly, as an upload through the wiki (shared) or a gallery (private) would.</summary>
+	private static async Task<WikiAsset> StoreAsync(DirectoryInfo root, string fileName, string uploader, bool isPrivate = false, string? lockPermission = null)
+	{
+		var service = new FileSystemWikiAssetService(root.FullName);
+		var asset = (await service.SaveAsync(fileName, "image/png", new MemoryStream([1, 2, 3]), uploader, isPrivate)).Expect<WikiAsset>();
+		return lockPermission is null
+			? asset
+			: (await service.SetSharingAsync(asset.Id, isPrivate, lockPermission)).Expect<WikiAsset>();
+	}
+
+	private static async Task<IReadOnlyList<string>> LibraryNamesAsync(WikiAssetController controller)
+	{
+		var ok = (OkObjectResult)await controller.Library();
+		return [.. ((IEnumerable<WikiAssetController.LibraryAssetDto>)ok.Value!).Select(a => a.FileName).Order()];
+	}
+
+	[Test]
+	public async Task Library_ListsSharedFiles_NotOnesKeptToAGallery_NorOnesLockedAway()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			await StoreAsync(root, "harbour.png", "#7");
+			await StoreAsync(root, "portrait.png", "#7", isPrivate: true);
+			await StoreAsync(root, "secret.png", "#7", lockPermission: "lore.secret");
+			var (controller, _) = MakeController(root, "#42");
+
+			await Assert.That(await LibraryNamesAsync(controller)).IsEquivalentTo(["harbour.png"]);
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task Library_ALockedFile_IsFoundByItsPermission_ItsUploader_AndMediaAdmin()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			await StoreAsync(root, "secret.png", "#7", lockPermission: "lore.secret");
+			await StoreAsync(root, "portrait.png", "#7", isPrivate: true);
+
+			await Assert.That(await LibraryNamesAsync(MakeController(root, "#42", "lore.secret").Controller)).IsEquivalentTo(["secret.png"]);
+			await Assert.That(await LibraryNamesAsync(MakeController(root, "#7").Controller)).IsEquivalentTo(["secret.png"])
+				.Because("a file kept to a gallery is not in the library, even for its uploader");
+			await Assert.That(await LibraryNamesAsync(MakeController(root, "#42", PortalPermission.MediaAdmin).Controller)).IsEquivalentTo(["secret.png"]);
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task Library_Search_NarrowsByFileName()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			await StoreAsync(root, "harbour-day.png", "#7");
+			await StoreAsync(root, "forest.png", "#7");
+			var (controller, _) = MakeController(root, "#42");
+
+			var ok = (OkObjectResult)await controller.Library(search: "HARBOUR");
+			await Assert.That(((IEnumerable<WikiAssetController.LibraryAssetDto>)ok.Value!).Select(a => a.FileName)).IsEquivalentTo(["harbour-day.png"]);
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task SetSharing_TheUploaderLocksAFile_ToADefinedPermission()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			var asset = await StoreAsync(root, "map.png", "#7");
+			var (controller, _) = MakeController(root, "#7");
+
+			var result = await controller.SetSharing(asset.Id, new WikiAssetController.SharingRequest(true, " Lore.Secret "), CancellationToken.None);
+
+			var dto = (WikiAssetController.LibraryAssetDto)((OkObjectResult)result).Value!;
+			await Assert.That(dto.Lock).IsEqualTo("lore.secret");
+			await Assert.That(await LibraryNamesAsync(MakeController(root, "#42").Controller)).IsEmpty();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task SetSharing_SomeoneElse_IsRefused()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			var asset = await StoreAsync(root, "map.png", "#7");
+			var (controller, _) = MakeController(root, "#42");
+
+			var result = await controller.SetSharing(asset.Id, new WikiAssetController.SharingRequest(true, PortalPermission.MediaAdmin), CancellationToken.None);
+			await Assert.That(result).IsTypeOf<ForbidResult>();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task SetSharing_AnUndefinedPermission_IsRefused()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			var asset = await StoreAsync(root, "map.png", "#7");
+			var (controller, _) = MakeController(root, "#42", PortalPermission.MediaAdmin);
+
+			var result = await controller.SetSharing(asset.Id, new WikiAssetController.SharingRequest(true, "lore.typo"), CancellationToken.None);
+			await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task SetSharing_ASharedFile_IsNeverMadePrivateAgain()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			var asset = await StoreAsync(root, "map.png", "#7");
+			var (controller, _) = MakeController(root, "#7");
+
+			var result = await controller.SetSharing(asset.Id, new WikiAssetController.SharingRequest(false, null), CancellationToken.None);
+			await Assert.That(result).IsTypeOf<ConflictObjectResult>();
+		}
+		finally
+		{
+			root.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task SetSharing_SharesAFileKeptToAGallery()
+	{
+		var root = Directory.CreateTempSubdirectory("wiki-asset-controller-test-");
+		try
+		{
+			var asset = await StoreAsync(root, "portrait.png", "#7", isPrivate: true);
+			var (controller, _) = MakeController(root, "#7");
+
+			await controller.SetSharing(asset.Id, new WikiAssetController.SharingRequest(true, null), CancellationToken.None);
+			await Assert.That(await LibraryNamesAsync(MakeController(root, "#42").Controller)).IsEquivalentTo(["portrait.png"]);
 		}
 		finally
 		{

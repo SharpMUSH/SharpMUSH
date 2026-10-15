@@ -91,6 +91,8 @@ DTEXT_LAST: [dD][lL] -> popMode;
 STEXT_NUM: '$' [0-9]+ -> popMode;
 STEXT_LAST: '$' 'L' -> popMode;
 ARG_STARTCARET: '<' -> popMode;
+// %=<name>, from TinyMUX: the executor's attribute <name>, or argument <n> when it is a number.
+ATTR_STARTCARET: '=<' -> popMode;
 OTHER_SUB: . -> popMode;
 
 // --------------- ESCAPING MODE -----------------

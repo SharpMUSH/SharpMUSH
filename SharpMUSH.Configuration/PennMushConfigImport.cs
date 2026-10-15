@@ -13,8 +13,20 @@ namespace SharpMUSH.Configuration;
 /// The configuration names (<c>http_handler</c>, <c>master_room</c>, ...) the file gave a value. Every other
 /// option holds its default in <see cref="Options"/>, which is not the same as the file asking for it.
 /// </param>
-public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<string> Skipped, IReadOnlySet<string> Named)
+/// <param name="Secrets">
+/// The secrets the file gave a value, by secret name (<c>sql.password</c> for <c>sql_password</c>). They are not
+/// options: the importer stores them in the secret store, never in the configuration.
+/// </param>
+public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<string> Skipped, IReadOnlySet<string> Named,
+	IReadOnlyDictionary<string, string> Secrets)
 {
+	/// <summary>
+	/// The <c>mush.cnf</c> directives whose value is a secret, and the secret each one becomes. Names are
+	/// <c>SecretDefinition</c> names, which this project cannot reference.
+	/// </summary>
+	public static readonly IReadOnlyDictionary<string, string> SecretDirectives =
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["sql_password"] = "sql.password" };
+
 	/// <summary>Whether the file gave <paramref name="name"/> (a configuration name) a value.</summary>
 	public bool Sets(string name) => Named.Contains(name);
 

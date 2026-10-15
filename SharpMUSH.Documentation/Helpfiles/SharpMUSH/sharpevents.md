@@ -44,8 +44,9 @@ Event Types:
 - **room**: room\`contents
 - **channel**: channel\`message, channel\`who
 - **page**: page\`message
+- **gallery**: gallery\`add, gallery\`report
 
-The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is SharpMUSH's own too: it is how a warning from the web portal reaches the game. So is socket\`gmcp, which hands softcode what a client sends over GMCP.
+The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is SharpMUSH's own too: it is how a warning from the web portal reaches the game. So is socket\`gmcp, which hands softcode what a client sends over GMCP, and so are the gallery events, which tell the game about the web portal's profile pictures.
 
 # Database Events
 # Event DB
@@ -201,3 +202,17 @@ To mimic old behaviour:
 - **page\`message** (*speaker*, *recipients*, *style*, *name*, *message*, *time*, *id*)
 - Triggered after a page reaches at least one recipient. *<recipients>* is the objids of the players it reached: one who is not connected, is HAVEN, refuses pages from the pager, or whose page lock the pager fails is not among them. *<style>* is one of say, pose or semipose. *<name>* is as the recipients' terminal shows it, with the page alias when page_aliases is on. *<message>* is plain text. *<time>* is milliseconds since 1970. *<id>* is the page's id, from the sequence channel line ids come from; when the page_log option is on, it is the id the page log keeps the page under (see [page log]).
 
+# Gallery Events
+# Event Gallery
+- **gallery\`add** (*objid*, *asset*, *url*, *use*)
+- Triggered after an image is added to a character's profile gallery on the web portal. %# is the character who uploaded it, *<objid>* the character whose gallery it is, *<asset>* the stored file's id, *<url>* its site-relative address, and *<use>* one of gallery, avatar or banner: what it was uploaded as.
+
+- **gallery\`report** (*objid*, *asset*, *url*, *reason*, *caption*)
+- Triggered when someone signed in to the web portal reports a gallery image. %# is the reporter's character, *<objid>* the character whose gallery holds the image, *<reason>* what the reporter wrote, and *<caption>* the image's caption, empty when it has none. SharpMUSH keeps no report of its own: the handler decides what one does. The portal offers Report only while the event handler has GALLERY\`REPORT or a package's attribute under it; the bundled jobs package sets GALLERY\`REPORT\`JOBS, which files a job. *<reason>* is the reporter's own text, so use it as text and never evaluate it.
+
+### Example
+```sharp
+&GALLERY`ADD #9=@wizwall/emit New picture for [name(%<objid>)]: %<url> as %<use>
+```
+
+See [gallery].
