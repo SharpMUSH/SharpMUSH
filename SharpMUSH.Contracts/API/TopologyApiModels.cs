@@ -30,6 +30,7 @@ public sealed record RoomDocumentRoomDto(string Id, string Name, string Descript
 /// <param name="Name">The exit's name followed by its aliases, <c>North;n</c>, as <c>@name</c> and <c>@open</c> take it.</param>
 /// <param name="To">
 /// Where the exit leads: a room's dbref, <c>home</c>, <c>variable</c> (a destination worked out when it is used),
-/// <c>unlinked</c>, or <c>hidden</c> when the reader may not see its destination.
+/// <c>unlinked</c>, <c>non-room</c> when it leads to a player or thing, or <c>hidden</c> when the reader may not see
+/// its destination.
 /// </param>
 public sealed record RoomDocumentExitDto(string Id, string Name, string To, string Description);
