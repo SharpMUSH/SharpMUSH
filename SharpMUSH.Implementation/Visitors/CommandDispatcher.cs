@@ -500,7 +500,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 
 		for (var scope = CommandScope.Nearby; scope <= CommandScope.MasterRoom; scope++)
 		{
-			if (await CandidatesIn(scope, executorObject, visitor.Configuration)
+			if (await CommandScopes.CandidatesIn(services.Mediator, scope, executorObject, visitor.Configuration)
 					is not IAsyncEnumerable<AnySharpObject> candidates)
 			{
 				continue;
@@ -515,6 +515,14 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 
 			if (userDefinedCommandMatches.TryGetValue(out var matches))
 			{
+				// A line the player typed puts the system it used on their context stack, before it runs, so
+				// anything the command pushes itself lands above it.
+				if (inPlace && services.ContextUse is { } contextUse)
+				{
+					await contextUse.RecordAsync(executorObject,
+						matches.Select(match => match.SObject.Object().DBRef), ExecutionBudget.CurrentToken);
+				}
+
 				return await services.Commands.UserDefinedAsync(parser, matches, inPlace);
 			}
 		}
@@ -572,102 +580,6 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		});
 
 		return await parser.CommandLibrary["HUH_COMMAND"].LibraryInformation.Command.Invoke(newParser);
-	}
-
-	/// <summary>Where a <c>$</c>-command is looked for, in the order PennMUSH looks.</summary>
-	private enum CommandScope
-	{
-		/// <summary>Step 9: the executor, its location's contents and its own contents.</summary>
-		Nearby,
-
-		/// <summary>Step 11: the contents of the zone master room of the executor's location.</summary>
-		LocationZone,
-
-		/// <summary>Step 12: the executor's location itself.</summary>
-		Location,
-
-		/// <summary>Step 13: the contents of the executor's personal zone master room.</summary>
-		PersonalZone,
-
-		/// <summary>Steps 14-15: the master room and its contents.</summary>
-		MasterRoom
-	}
-
-	/// <summary>
-	/// The objects <paramref name="scope"/> searches for <paramref name="executor"/>'s <c>$</c>-commands,
-	/// or <see cref="NotFound"/> when the scope does not apply: no location for something that is not
-	/// content, no zone master room, or no master room.
-	/// </summary>
-	private async ValueTask<Found<IAsyncEnumerable<AnySharpObject>>> CandidatesIn(CommandScope scope,
-		AnySharpObject executor, IOptionsWrapper<SharpMUSHOptions> configuration)
-	{
-		switch (scope)
-		{
-			case CommandScope.Nearby:
-				return Found(NearbyObjects.ForAsync(services.Mediator, executor));
-
-			case CommandScope.LocationZone when executor.AsOptionalContent is AnySharpContent zoned:
-				{
-					// Step 10: Zone Exit Name and Aliases - handled in LocateService
-					var executorLocation = await zoned.Location();
-					var locationZone =
-						await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-
-					// If the location has a zone that is a room (ZMR), check for $-commands in ZMR contents
-					if (locationZone is AnySharpObject and SharpRoom zoneMasterRoom)
-					{
-						AnySharpContainer zmr = zoneMasterRoom;
-						return Found(zmr
-							.Content(services.Mediator)
-							.Select(x => x.WithRoomOption()));
-					}
-
-					return new NotFound();
-				}
-
-			case CommandScope.Location when executor.AsOptionalContent is AnySharpContent located:
-				{
-					AnySharpObject[] item = [(await located.Location()).WithExitOption()];
-					return Found(item.ToAsyncEnumerable());
-				}
-
-			case CommandScope.PersonalZone:
-				{
-					var executorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
-					if (executorZone is AnySharpObject and SharpRoom personalZoneRoom)
-					{
-						// If player has a ZMR as their personal zone, check for $-commands in ZMR contents
-						AnySharpContainer personalZMR = personalZoneRoom;
-						return Found(personalZMR
-							.Content(services.Mediator)
-							.Select(x => x.WithRoomOption()));
-					}
-
-					return new NotFound();
-				}
-
-			case CommandScope.MasterRoom:
-				{
-					var goConfig = configuration.CurrentValue.Database.MasterRoom;
-					// A master room that does not exist has no global commands to offer.
-					if (await services.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig)))) is AnySharpObject { AsOptionalContainer: AnySharpContainer masterRoom } globalObject)
-					{
-						AnySharpObject[] globalObjects = [globalObject];
-						var globalObjectContent = masterRoom
-							.Content(services.Mediator)
-							.Select(x => x.WithRoomOption());
-
-						return Found(globalObjects.ToAsyncEnumerable().Union(globalObjectContent));
-					}
-
-					return new NotFound();
-				}
-
-			default:
-				return new NotFound();
-		}
-
-		static Found<IAsyncEnumerable<AnySharpObject>> Found(IAsyncEnumerable<AnySharpObject> candidates) => candidates;
 	}
 
 	/// <summary>

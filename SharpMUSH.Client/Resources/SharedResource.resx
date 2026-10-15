@@ -8401,4 +8401,49 @@
   <data name="NotifyChoose" xml:space="preserve">
     <value>Choose what notifies you</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>This prompt</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Now</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Pinned</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Here</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Always</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Go to</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Help on {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Pin</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Unpin</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>{0} more</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Fill in the blanks, then press Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Run the buffer</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Palette entries that are not valid:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} palette entries were left out, past the limits.</value>
+  </data>
 </root>
