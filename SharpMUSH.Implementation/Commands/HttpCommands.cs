@@ -17,7 +17,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@HTTP",
-		Switches = ["DELETE", "POST", "PUT", "GET", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH", "JSONHEADERS"],
+		Switches = ["DELETE", "POST", "PUT", "GET", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged | CB.NoGuest, MinArgs = 0, MaxArgs = 4, ParameterNames = ["url", "code"])]
 	public async ValueTask<Option<CallState>> Http(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -61,7 +61,7 @@ public partial class Commands
 			LocateFlags.All,
 			async found =>
 			{
-				var method = switches.FirstOrDefault(s => s != "JSONHEADERS") switch
+				var method = switches.FirstOrDefault() switch
 				{
 					"DELETE" => HttpMethod.Delete,
 					"POST" => HttpMethod.Post,
@@ -84,13 +84,10 @@ public partial class Commands
 				// A GET has no body, so its headers follow the URL; every other verb takes them after the data.
 				var isGet = method == HttpMethod.Get;
 				var headersText = (isGet ? dataArg : headersArg)?.Message.ToPlainText();
-				var jsonHeaders = switches.Contains("JSONHEADERS");
-				var parsedHeaders = jsonHeaders ? ParseJsonHeaders(headersText) : ParseRequestHeaders(headersText);
-				if (parsedHeaders is not RequestHeaders headers)
+				if (ParseRequestHeaders(headersText) is not RequestHeaders headers)
 				{
-					await NotifyService.Notify(executor, jsonHeaders
-						? "Headers must be a JSON object of names and string values. Aborting."
-						: "Header value has a bad key:value set. Aborting.", executor);
+					await NotifyService.Notify(executor,
+						"Headers must be a JSON object of names and string values. Aborting.", executor);
 					return new CallState(ErrorMessages.Returns.InvalidHttpHeader);
 				}
 
@@ -168,37 +165,18 @@ public partial class Commands
 			});
 	}
 
-	/// <summary>The headers argument of <c>@http</c>: its lines in order, less the Content-Type line, which sets the body's type.</summary>
-	private sealed record RequestHeaders(List<(string Name, string Value)> Lines, string? ContentType);
+	/// <summary>The headers argument of <c>@http</c>: its headers in order, less Content-Type, which sets the body's type.</summary>
+	private sealed record RequestHeaders(List<(string Name, string Value)> Headers, string? ContentType);
 
 	/// <summary>What <c>@http</c> read of a response: the text up to the output limit, and whether there was more.</summary>
 	private readonly record struct ResponseBody(string Text, bool Overflowed);
 
 	/// <summary>
-	/// Reads <c>Key:value</c> lines, one per line (PennMUSH #1398). A line with no colon, a name that is not an
-	/// HTTP token, a value holding a control character, or a Content-Length line (the body sets that) fails
-	/// the whole argument. Blank lines are skipped.
+	/// Reads the headers argument: a JSON object whose members are header names, each with a string value or an
+	/// array of strings (the header sent once per string). Anything else fails the whole argument, as do the
+	/// names and values <see cref="CheckHeaders"/> refuses. Empty text sends no headers.
 	/// </summary>
 	private static Result<RequestHeaders> ParseRequestHeaders(string? text)
-	{
-		var pairs = new List<(string Name, string Value)>();
-		foreach (var line in (text ?? string.Empty).Split('\n',
-			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-		{
-			var colon = line.IndexOf(':');
-			if (colon < 0) return new Error<string>(line);
-			pairs.Add((line[..colon].Trim(), line[(colon + 1)..].Trim()));
-		}
-
-		return CheckHeaders(pairs);
-	}
-
-	/// <summary>
-	/// Reads <c>@http/jsonheaders</c>' headers: a JSON object whose members are header names, each with a string
-	/// value or an array of strings (the header sent once per string). Anything else fails the whole argument,
-	/// as do the names and values <see cref="ParseRequestHeaders"/> refuses. Empty text sends no headers.
-	/// </summary>
-	private static Result<RequestHeaders> ParseJsonHeaders(string? text)
 	{
 		if (string.IsNullOrWhiteSpace(text)) return new RequestHeaders([], null);
 
@@ -242,7 +220,7 @@ public partial class Commands
 	/// </summary>
 	private static Result<RequestHeaders> CheckHeaders(List<(string Name, string Value)> pairs)
 	{
-		var lines = new List<(string Name, string Value)>();
+		var accepted = new List<(string Name, string Value)>();
 		string? contentType = null;
 		foreach (var (name, value) in pairs)
 		{
@@ -253,10 +231,10 @@ public partial class Commands
 			if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
 				contentType = value;
 			else
-				lines.Add((name, value));
+				accepted.Add((name, value));
 		}
 
-		return new RequestHeaders(lines, contentType);
+		return new RequestHeaders(accepted, contentType);
 
 		// RFC 9110 token characters.
 		static bool IsTokenChar(char c) => char.IsAsciiLetterOrDigit(c) || "!#$%&'*+-.^_`|~".Contains(c);
@@ -264,7 +242,7 @@ public partial class Commands
 
 	/// <summary>
 	/// The request <c>@http</c> sends. A body goes out in the charset its content type names (UTF-8 when it names
-	/// none), as <c>application/x-www-form-urlencoded</c> unless a content type is given. A header line replaces
+	/// none), as <c>application/x-www-form-urlencoded</c> unless a content type is given. A header replaces
 	/// the engine's own User-Agent and the <c>userpass</c> Authorization; a body header on a request with no body is dropped.
 	/// </summary>
 	private static HttpRequestMessage BuildRequest(HttpMethod method, Uri uri, string? body, string? contentType,
@@ -285,14 +263,14 @@ public partial class Commands
 			message.Headers.Authorization = new AuthenticationHeaderValue("Basic",
 				Convert.ToBase64String(Encoding.UTF8.GetBytes(userPass)));
 
-		foreach (var (name, _) in headers.Lines)
+		foreach (var (name, _) in headers.Headers)
 		{
 			if (name.Equals("User-Agent", StringComparison.OrdinalIgnoreCase)
 				|| name.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
 				message.Headers.Remove(name);
 		}
 
-		foreach (var (name, value) in headers.Lines)
+		foreach (var (name, value) in headers.Headers)
 		{
 			if (!message.Headers.TryAddWithoutValidation(name, value))
 				message.Content?.Headers.TryAddWithoutValidation(name, value);

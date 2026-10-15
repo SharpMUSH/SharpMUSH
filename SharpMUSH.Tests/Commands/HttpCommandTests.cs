@@ -245,7 +245,7 @@ public class HttpCommandTests
 	[Test]
 	public async Task HttpGetSendsTheHeadersAfterTheUrl()
 	{
-		var run = await RunHttpAsync("HttpGetHeaders", [], ["https://example.invalid/get", "X-One:1\nX-Two: two words\n"]);
+		var run = await RunHttpAsync("HttpGetHeaders", [], ["https://example.invalid/get", "{\"X-One\":\"1\",\"X-Two\":\"two words\"}"]);
 
 		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Get);
 		await Assert.That(run.Handler.Header("X-One")).IsEqualTo("1");
@@ -258,7 +258,7 @@ public class HttpCommandTests
 	public async Task HttpPostTakesTheHeadersAfterTheData()
 	{
 		var run = await RunHttpAsync("HttpPostHeaders", ["POST"],
-			["https://example.invalid/post", "{\"a\":1}", "Content-Type:application/json\r\nAuthorization:Bearer abc\r\nUser-Agent:Bot/2"]);
+			["https://example.invalid/post", "{\"a\":1}", "{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer abc\",\"User-Agent\":\"Bot/2\"}"]);
 
 		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Post);
 		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/json");
@@ -280,30 +280,16 @@ public class HttpCommandTests
 	public async Task HttpBodyIsEncodedInTheCharsetItsTypeNames()
 	{
 		var run = await RunHttpAsync("HttpCharset", ["POST"],
-			["https://example.invalid/post", "caf\u00e9", "Content-Type: text/plain; charset=ISO-8859-1"]);
+			["https://example.invalid/post", "caf\u00e9", "{\"Content-Type\":\"text/plain; charset=ISO-8859-1\"}"]);
 
 		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("text/plain; charset=ISO-8859-1");
 		await Assert.That(run.Handler.Body!).IsEquivalentTo(new byte[] { (byte)'c', (byte)'a', (byte)'f', 0xE9 });
 	}
 
 	[Test]
-	[Arguments("no colon here")]
-	[Arguments("Bad Name:value")]
-	[Arguments(":value")]
-	[Arguments("Content-Length:12")]
-	public async Task HttpRefusesAHeaderLineItCannotSend(string line)
+	public async Task HttpHeadersTakeListsForRepeatedHeaders()
 	{
-		var run = await RunHttpAsync("HttpBadHeader", ["POST"], ["https://example.invalid/post", "data", "X-Fine:1\n" + line]);
-
-		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
-		await Assert.That(run.ClientCreated).IsFalse();
-		await Assert.That(run.Callback).IsNull();
-	}
-
-	[Test]
-	public async Task HttpJsonHeadersTakeAnObjectOfNamesAndValues()
-	{
-		var run = await RunHttpAsync("HttpJsonHeaders", ["POST", "JSONHEADERS"],
+		var run = await RunHttpAsync("HttpListHeaders", ["POST"],
 			["https://example.invalid/post", "{\"a\":1}",
 				"{\"Content-Type\":\"application/json\",\"X-One\":\" 1 \",\"Accept\":[\"text/plain\",\"application/json\"]}"]);
 
@@ -314,28 +300,22 @@ public class HttpCommandTests
 	}
 
 	[Test]
-	public async Task HttpJsonHeadersFollowTheUrlOnAGet()
-	{
-		var run = await RunHttpAsync("HttpJsonGet", ["JSONHEADERS"], ["https://example.invalid/get", "{\"X-Game\":\"MyMUSH\"}"]);
-
-		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Get);
-		await Assert.That(run.Handler.Header("X-Game")).IsEqualTo("MyMUSH");
-	}
-
-	[Test]
 	[Arguments("X-One:1")]
+	[Arguments("{\"\":\"1\"}")]
+	[Arguments("{\"X-One\":null}")]
 	[Arguments("[\"X-One\",\"1\"]")]
 	[Arguments("{\"X-One\":1}")]
 	[Arguments("{\"X-One\":[\"1\",2]}")]
 	[Arguments("{\"Bad Name\":\"1\"}")]
 	[Arguments("{\"Content-Length\":\"12\"}")]
 	[Arguments("{\"X-One\":\"a\\nb\"}")]
-	public async Task HttpJsonHeadersRefuseAnythingButNamesAndStrings(string json)
+	public async Task HttpRefusesHeadersItCannotSend(string json)
 	{
-		var run = await RunHttpAsync("HttpJsonBad", ["POST", "JSONHEADERS"], ["https://example.invalid/post", "data", json]);
+		var run = await RunHttpAsync("HttpBadHeader", ["POST"], ["https://example.invalid/post", "data", json]);
 
 		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
 		await Assert.That(run.ClientCreated).IsFalse();
+		await Assert.That(run.Callback).IsNull();
 	}
 
 	[Test]
@@ -356,7 +336,7 @@ public class HttpCommandTests
 	public async Task HttpHeadersArgumentReplacesTheContentTypeRegister()
 	{
 		// PennMUSH #1398: given headers, the content-type q-register is ignored, even with no Content-Type line.
-		var run = await RunHttpAsync("HttpHeadersOverReg", ["POST"], ["https://example.invalid/post", "x=1", "X-One:1"],
+		var run = await RunHttpAsync("HttpHeadersOverReg", ["POST"], ["https://example.invalid/post", "x=1", "{\"X-One\":\"1\"}"],
 			qRegisters: true, registers: new() { ["CONTENT-TYPE"] = "text/csv" });
 
 		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/x-www-form-urlencoded");

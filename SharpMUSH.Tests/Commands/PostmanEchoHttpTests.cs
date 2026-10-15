@@ -279,11 +279,11 @@ public class PostmanEchoHttpTests
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGERR");
 
-		// A GET's third argument is its headers; a line with no colon is refused before the task is queued.
+		// A GET's third argument is its headers; text that is not a JSON object is refused before the task is queued.
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@http/get me/{attrName}={PostmanEchoBase}/get,{token}"));
 
-		await Assert.That(Announced(player.DbRef, msg => msg == "Header value has a bad key:value set. Aborting.")).IsEqualTo(1);
+		await Assert.That(Announced(player.DbRef, msg => msg == "Headers must be a JSON object of names and string values. Aborting.")).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -292,16 +292,13 @@ public class PostmanEchoHttpTests
 	/// </summary>
 	[Test]
 	[Arguments("think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]",
-		"@http/post me/SHOW=https://postman-echo.com/post,json(object,bar,\"baz\"),Content-Type:application/json%rGame:MyMUSH",
-		"200 baz MyMUSH")]
-	[Arguments("think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]",
-		"@http/post/jsonheaders me/SHOW=https://postman-echo.com/post,json(object,bar,\"baz\"),json(object,Content-Type,\"application/json\",Game,\"MyMUSH\")",
+		"@http/post me/SHOW=https://postman-echo.com/post,json(object,bar,\"baz\"),json(object,Content-Type,\"application/json\",Game,\"MyMUSH\")",
 		"200 baz MyMUSH")]
 	[Arguments("think %<status> [json_query(%0,extract,$.headers.game)]",
-		"@http/jsonheaders me/SHOW=https://postman-echo.com/get,{{\"Game\":\"MyMUSH\"}}",
+		"@http me/SHOW=https://postman-echo.com/get,{{\"Game\":\"MyMUSH\"}}",
 		"200 MyMUSH")]
 	[Arguments("think %<status> %0",
-		"@http me/SHOW=https://postman-echo.com/basic-auth,Authorization:Basic [encode64(postman:password)]",
+		"@http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,\"Basic [encode64(postman:password)]\")",
 		"200 {\"authenticated\":true}")]
 	[Arguments("think [if(%<http-overflow>,Reply too long.,Reply complete.)]",
 		"@http me/SHOW=https://postman-echo.com/get",
