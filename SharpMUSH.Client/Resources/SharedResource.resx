@@ -7868,10 +7868,10 @@
     <value>Hosts @http may send it to</value>
   </data>
   <data name="AdmSecretHostsAdvice" xml:space="preserve">
-    <value>@http sends a secret named http.… in a request header, but only over https and only to the hosts named for it. Name the hosts that need it, separated by spaces; *.example.com covers every host under example.com. A site that echoes requests back returns the value to softcode, so leave such sites out.</value>
+    <value>@http can send this secret in a request header, but only over https and only to the hosts named for it. Name the hosts that need it, separated by spaces; *.example.com covers every host under example.com. A site that echoes requests back returns the value to softcode, so leave such sites out.</value>
   </data>
   <data name="AdmSecretHostsList" xml:space="preserve">
-    <value>@http may send it to {0}</value>
+    <value>@http may send it to</value>
   </data>
   <data name="AdmSecretNoHosts" xml:space="preserve">
     <value>no hosts</value>
