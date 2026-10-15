@@ -6269,4 +6269,49 @@
   <data name="RolSceneNotices" xml:space="preserve">
     <value>Notificări pentru tine</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Acest prompt</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Acum</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Fixate</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Aici</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Întotdeauna</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Mergi la</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Ieși</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Ajutor pentru {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Fixează</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Anulează fixarea</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Încă {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Completează spațiile, apoi apasă Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Rulează bufferul</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Intrări de paletă care nu sunt valide:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} intrări de paletă au fost omise, peste limite.</value>
+  </data>
 </root>

@@ -6269,4 +6269,49 @@
   <data name="RolSceneNotices" xml:space="preserve">
     <value>Értesítések neked</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Ez a kérdés</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Most</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Kitűzve</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Itt</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Mindig</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Ugrás ide</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Kilépés</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Súgó: {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Kitűzés</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Kitűzés megszüntetése</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>További {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Töltsd ki a mezőket, majd nyomj Entert.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Puffer futtatása</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Érvénytelen palettabejegyzések:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} palettabejegyzés kimaradt, mert túllépte a korlátokat.</value>
+  </data>
 </root>

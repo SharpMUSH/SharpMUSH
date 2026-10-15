@@ -6269,4 +6269,49 @@
   <data name="RolSceneNotices" xml:space="preserve">
     <value>Известия за вас</value>
   </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Тази подкана</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Сега</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Закачени</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Тук</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Винаги</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Отиди на</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Изход</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Помощ за {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Закачи</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Откачи</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Още {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Попълнете празните места и натиснете Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Изпълни буфера</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Невалидни записи в палитрата:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} записи в палитрата бяха пропуснати заради ограниченията.</value>
+  </data>
 </root>

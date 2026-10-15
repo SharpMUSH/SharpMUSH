@@ -311,6 +311,10 @@
       <Link>BundledPackages\scene-verse.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-verse.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-here\package.yaml">
+      <Link>BundledPackages\scene-here.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-here.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-safety\package.yaml">
       <Link>BundledPackages\scene-safety.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety.package.yaml</LogicalName>
