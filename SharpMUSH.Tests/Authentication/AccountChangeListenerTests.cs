@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Server.Authentication;
 using ZiggyCreatures.Caching.Fusion;
@@ -35,7 +36,7 @@ public class AccountChangeListenerTests
 	{
 		var first = new Recording();
 		var second = new Recording();
-		var invalidator = new AccountClaimsInvalidator(Cache(), new Lazy<IEnumerable<IAccountChangeListener>>(() => [first, second]));
+		var invalidator = new AccountClaimsInvalidator(Cache(), new ObjectVersions(), new Lazy<IEnumerable<IAccountChangeListener>>(() => [first, second]));
 
 		await invalidator.InvalidateAsync("account-1");
 
@@ -47,7 +48,7 @@ public class AccountChangeListenerTests
 	public async Task AListenerThatThrows_DoesNotKeepTheNextFromHearing()
 	{
 		var after = new Recording();
-		var invalidator = new AccountClaimsInvalidator(Cache(), new Lazy<IEnumerable<IAccountChangeListener>>(() => [new Throwing(), after]));
+		var invalidator = new AccountClaimsInvalidator(Cache(), new ObjectVersions(), new Lazy<IEnumerable<IAccountChangeListener>>(() => [new Throwing(), after]));
 
 		await invalidator.InvalidateAsync("account-2");
 

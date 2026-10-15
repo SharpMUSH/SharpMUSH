@@ -65,6 +65,8 @@ public static partial class ErrorMessages
 		public const string AttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
 		public const string AttrEvalPermissions = "#-1 NO PERMISSION TO EVALUATE ATTRIBUTE";
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
+		/// <summary>PennMUSH <c>do_set_atr</c> on <c>AE_BADNAME</c>.</summary>
+		public const string AttrBadName = "That's not a good name for an attribute.";
 
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";

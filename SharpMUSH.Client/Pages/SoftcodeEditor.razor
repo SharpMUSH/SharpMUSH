@@ -17,6 +17,7 @@
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["TermSoftcodeEditorTitle"] — @Loc["AppTitle"]</PageTitle>
+<PalettePage Kind="editor" Subject="@(_selectedObject is null ? null : $"#{_selectedObject.Dbref}")" Rows="@PaletteRows" />
 
 @* Three-pane layout. IMPORTANT: no CSS transition on widths — Chrome freezes when
    transitioning between px and 1fr. Collapse is an instant class swap. *@
@@ -330,6 +331,15 @@
     private ObjectBrowser? _objectBrowser;
     private HelpDrawer? _helpDrawer;
     private MushObject? _selectedObject;
+
+    // The buffer's own actions, offered while an attribute is open.
+    private IReadOnlyList<PaletteRow> PaletteRows => ActiveTab is null
+        ? []
+        :
+        [
+            PaletteRow.Page("editor-run", Icons.Material.Outlined.PlayArrow, Loc["NavPaletteRunBuffer"], RunBufferAsync, Loc["TermEvalTooltip"]),
+            PaletteRow.Page("editor-save", Icons.Material.Outlined.Save, Loc["Save"], SaveAsync)
+        ];
     private bool _loadingAttrs;
     private string? _saveMessage;
     private Severity _saveSeverity = Severity.Success;

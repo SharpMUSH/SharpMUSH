@@ -133,6 +133,13 @@ internal static class EngineRegistration
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
+		// The command palette: each character's context stack in memory, what a typed line used pushed
+		// onto it, and the entries the palette offers (docs/design/command-palette.md).
+		services.AddSingleton<IContextStack, ContextStack>();
+		services.AddSingleton<ISystemNames, SystemNames>();
+		services.AddSingleton<ContextUse>();
+		services.AddSingleton<ICommandPermission, Implementation.Services.CommandPermission>();
+		services.AddSingleton<IPaletteService, Implementation.Services.PaletteService>();
 		services.AddHostedService<Services.InputSessionTimeoutService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<HubConnectionRegistry>();
@@ -418,6 +425,7 @@ internal static class EngineRegistration
 				x.AddConsumer<Consumers.GMCPSignalConsumer, GMCPSignalMessage>();
 				x.AddConsumer<Consumers.GMCPNegotiatedConsumer, GMCPNegotiatedMessage>();
 				x.AddConsumer<Consumers.ClientIdentityConsumer, ClientIdentityMessage>();
+				x.AddConsumer<Consumers.ClientTimeZoneConsumer, ClientTimeZoneMessage>();
 				x.AddConsumer<Consumers.MSDPUpdateConsumer, MSDPUpdateMessage>();
 				x.AddConsumer<Consumers.NAWSUpdateConsumer, NAWSUpdateMessage>();
 				x.AddConsumer<Consumers.ConnectionEstablishedConsumer, ConnectionEstablishedMessage>();
