@@ -500,7 +500,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[NotInParallel(nameof(Test_Edit_RegexAll_LargeInputCopiesLinearly))]
 	public async ValueTask Test_Edit_RegexAll_LargeInputCopiesLinearly()
 	{
 		const int matches = 20_000;
@@ -511,9 +510,9 @@ public class AttributeCommandTests
 
 		// Rebuilding the whole value once per match copies matches × length characters: about 24 GB
 		// here. A single splice copies the value once, so what remains is the per-match evaluation.
-		var before = GC.GetTotalAllocatedBytes(precise: true);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp/all {objDbRef}/EDIT_REGEX_LARGE=x,Y"));
-		var allocated = GC.GetTotalAllocatedBytes(precise: true) - before;
+		// Counted on the one thread the command resumes on, so tests running alongside add nothing.
+		var allocated = await AllocatedOnOneThreadAsync(() =>
+			Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp/all {objDbRef}/EDIT_REGEX_LARGE=x,Y")).AsTask());
 
 		var attrList = await Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_LARGE"])!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo(text.Replace('x', 'Y'));
@@ -579,5 +578,60 @@ public class AttributeCommandTests
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr.IsAttribute).IsFalse()
 			.Because("strict (~) parse mode should reject the command on syntax error");
+	}
+
+	/// <summary>
+	/// Bytes allocated by <paramref name="work"/> on a thread of its own, with every continuation posted
+	/// back to that thread. A continuation that skips the context (<c>ConfigureAwait(false)</c> in a
+	/// provider) runs elsewhere until it returns to an await in the engine, which resumes here.
+	/// </summary>
+	private static Task<long> AllocatedOnOneThreadAsync(Func<Task> work)
+	{
+		var result = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var thread = new Thread(() =>
+		{
+			try
+			{
+				var pump = new SingleThreadContext();
+				SynchronizationContext.SetSynchronizationContext(pump);
+				var before = GC.GetAllocatedBytesForCurrentThread();
+				var task = work();
+				task.ContinueWith(_ => pump.Complete(), TaskScheduler.Default);
+				pump.Run();
+				var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+				task.GetAwaiter().GetResult();
+				result.SetResult(allocated);
+			}
+			catch (Exception ex)
+			{
+				result.SetException(ex);
+			}
+		});
+		thread.IsBackground = true;
+		thread.Start();
+		return result.Task;
+	}
+
+	private sealed class SingleThreadContext : SynchronizationContext
+	{
+		private readonly System.Collections.Concurrent.BlockingCollection<(SendOrPostCallback Callback, object? State)> _queue = new();
+		public override void Post(SendOrPostCallback d, object? state)
+		{
+			// Something the work started may resume after the pump has stopped; it runs on the pool.
+			try
+			{
+				_queue.Add((d, state));
+			}
+			catch (InvalidOperationException)
+			{
+				ThreadPool.QueueUserWorkItem(_ => d(state));
+			}
+		}
+
+		public void Run()
+		{
+			foreach (var (callback, state) in _queue.GetConsumingEnumerable()) callback(state);
+		}
+		public void Complete() => _queue.CompleteAdding();
 	}
 }
