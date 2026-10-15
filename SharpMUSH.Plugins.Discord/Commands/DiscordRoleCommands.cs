@@ -97,8 +97,8 @@ public static class DiscordRoleCommands
 					new TableColumn(MarkupText.Plain("Discord role")) { Wrap = false },
 					new TableColumn(MarkupText.Plain("Game role")) { Wrap = false },
 					new TableColumn(MarkupText.Plain("Id")) { Wrap = false, Priority = 3 },
-					new TableColumn(MarkupText.Plain("Changes by hand")) { Priority = 2 },
-					new TableColumn(MarkupText.Plain("State")) { Min = 10 },
+					new TableColumn(MarkupText.Plain("By hand")) { Wrap = false, Priority = 2 },
+					new TableColumn(MarkupText.Plain("State")) { Min = 17 },
 				],
 				mappings.Select(status => ImmutableArray.Create(
 					"@" + status.Mapping.RoleName,
