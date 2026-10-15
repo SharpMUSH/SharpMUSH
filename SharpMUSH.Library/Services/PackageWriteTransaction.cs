@@ -124,7 +124,7 @@ public sealed class PackageWriteTransaction(
 		var objid = node.Object().DBRef;
 		OnRevert($"{objid} (created)", async () =>
 		{
-			if (await CurrentAsync(objid) is AnySharpObject current
+			if (await CurrentAsync(objid) is { } current
 				&& await flags.GetObjectFlagAsync("GOING") is SharpObjectFlag going)
 			{
 				await mediator.Send(new SetObjectFlagCommand(current, going));
@@ -148,7 +148,7 @@ public sealed class PackageWriteTransaction(
 	public async Task SetNameAsync(AnySharpObject node, string name, CancellationToken cancellationToken)
 	{
 		var dbref = node.Object().DBRef;
-		if (await CurrentAsync(dbref) is not AnySharpObject current || current.Object().Name == name)
+		if (await CurrentAsync(dbref) is not { } current || current.Object().Name == name)
 		{
 			return;
 		}
@@ -157,7 +157,7 @@ public sealed class PackageWriteTransaction(
 		await mediator.Send(new SetNameCommand(node, MarkupText.Plain(name)), cancellationToken);
 		OnRevert($"{dbref} name", async () =>
 		{
-			if (await CurrentAsync(dbref) is AnySharpObject now)
+			if (await CurrentAsync(dbref) is { } now)
 			{
 				await mediator.Send(new SetNameCommand(now, MarkupText.Plain(previous)));
 			}
@@ -171,7 +171,7 @@ public sealed class PackageWriteTransaction(
 		await mediator.Send(new SetObjectParentCommand(node, parent), cancellationToken);
 		OnRevert($"{dbref} parent", async () =>
 		{
-			if (await CurrentAsync(dbref) is not AnySharpObject now)
+			if (await CurrentAsync(dbref) is not { } now)
 			{
 				return;
 			}
@@ -195,7 +195,7 @@ public sealed class PackageWriteTransaction(
 
 	private async Task WriteFlagAsync(DBRef dbref, SharpObjectFlag flag, bool set, CancellationToken cancellationToken)
 	{
-		if (await CurrentAsync(dbref) is not AnySharpObject current
+		if (await CurrentAsync(dbref) is not { } current
 			|| (await current.Object().ReadOwnFlagNamesAsync(cancellationToken)).Contains(flag.Name) == set)
 		{
 			return;
@@ -204,7 +204,7 @@ public sealed class PackageWriteTransaction(
 		await SendFlagAsync(current, flag, set, cancellationToken);
 		OnRevert($"{dbref} flag {flag.Name}", async () =>
 		{
-			if (await CurrentAsync(dbref) is AnySharpObject now)
+			if (await CurrentAsync(dbref) is { } now)
 			{
 				await SendFlagAsync(now, flag, !set, CancellationToken.None);
 			}
@@ -231,7 +231,7 @@ public sealed class PackageWriteTransaction(
 
 	private async Task WritePowerAsync(DBRef dbref, SharpPower power, bool set, CancellationToken cancellationToken)
 	{
-		if (await CurrentAsync(dbref) is not AnySharpObject current
+		if (await CurrentAsync(dbref) is not { } current
 			|| (await current.Object().ReadOwnPowerNamesAsync(cancellationToken)).Contains(power.Name) == set)
 		{
 			return;
@@ -240,7 +240,7 @@ public sealed class PackageWriteTransaction(
 		await SendPowerAsync(current, power, set, cancellationToken);
 		OnRevert($"{dbref} power {power.Name}", async () =>
 		{
-			if (await CurrentAsync(dbref) is AnySharpObject now)
+			if (await CurrentAsync(dbref) is { } now)
 			{
 				await SendPowerAsync(now, power, !set, CancellationToken.None);
 			}
@@ -273,7 +273,7 @@ public sealed class PackageWriteTransaction(
 	/// </summary>
 	private async Task<Result<Success>> WriteLockAsync(DBRef dbref, Func<ValueTask<Result<Success>>> write)
 	{
-		if (await CurrentAsync(dbref) is not AnySharpObject current)
+		if (await CurrentAsync(dbref) is not { } current)
 		{
 			return await write();
 		}
@@ -284,7 +284,7 @@ public sealed class PackageWriteTransaction(
 		{
 			OnRevert($"{dbref} locks", async () =>
 			{
-				if (await CurrentAsync(dbref) is not AnySharpObject now)
+				if (await CurrentAsync(dbref) is not { } now)
 				{
 					return;
 				}

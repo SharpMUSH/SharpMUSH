@@ -1,5 +1,6 @@
 @using System.Text.Json
 @using Microsoft.AspNetCore.Components.Forms
+@using SharpMUSH.Client.Components.Characters
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
@@ -7,16 +8,17 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-@* D1 §6.3 Gallery aside card (board 25): "Gallery · N" with View all; the portrait large with a star,
-   two more small. Every image opens the viewer; the owner's actions (make portrait, use as banner,
-   remove banner, delete) are in the viewer beside the image they act on, and Add image sits under
-   the tiles. A gallery the server could not read says so rather than looking empty. *@
+@* D1 §6.3 Gallery aside card (board 25): "Gallery · N" with View all, which opens the gallery page;
+   the portrait large with a star, two more small. Every image opens the viewer; the owner's actions
+   (move, make portrait, use as banner, edit details, delete) are in the viewer beside the image they
+   act on, and Add image sits under the tiles. An image with a warning is covered by it here. A
+   gallery the server could not read says so rather than looking empty. *@
 <div class="character-gallery-widget">
     <KitCard Aside="true" Title="@Title">
         <Controls>
             @if (_items.Count > 0)
             {
-                <button type="button" class="gallery-view-all" @onclick="@(() => OpenViewer(0))">@Loc["NavGalleryViewAll"]</button>
+                <a class="gallery-view-all" href="@GalleryHref">@Loc["NavGalleryViewAll"]</a>
             }
         </Controls>
         <ChildContent>
@@ -35,8 +37,12 @@
             else
             {
                 var hero = Hero;
-                <button type="button" class="gallery-hero" aria-label="@(hero.Caption ?? hero.FileName)" @onclick="@(() => OpenViewer(IndexOf(hero)))">
-                    @if (ImageUrlPolicy.IsRenderable(hero.Url))
+                <button type="button" class="gallery-hero" aria-label="@TileLabel(hero)" @onclick="@(() => OpenViewer(IndexOf(hero)))">
+                    @if (hero.Warning is { } heroWarning)
+                    {
+                        <span class="gallery-cover"><MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" Size="Size.Small" />@heroWarning</span>
+                    }
+                    else if (ImageUrlPolicy.IsRenderable(hero.Url))
                     {
                         <img src="@ApiUrl.Resolve(hero.Url)" alt="@(hero.Caption ?? string.Empty)" loading="lazy" />
                     }
@@ -52,8 +58,12 @@
                     <div class="gallery-small">
                         @foreach (var e in Small)
                         {
-                            <button type="button" class="gallery-small-tile" aria-label="@(e.Caption ?? e.FileName)" @onclick="@(() => OpenViewer(IndexOf(e)))">
-                                @if (ImageUrlPolicy.IsRenderable(e.Url))
+                            <button type="button" class="gallery-small-tile" aria-label="@TileLabel(e)" @onclick="@(() => OpenViewer(IndexOf(e)))">
+                                @if (e.Warning is { } warning)
+                                {
+                                    <span class="gallery-cover"><MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" Size="Size.Small" />@warning</span>
+                                }
+                                else if (ImageUrlPolicy.IsRenderable(e.Url))
                                 {
                                     <img src="@ApiUrl.Resolve(e.Url)" alt="@(e.Caption ?? string.Empty)" loading="lazy" />
                                 }
@@ -65,37 +75,20 @@
             @if (EffectiveCanEdit && _error is null && !_loading)
             {
                 <div class="gallery-upload">
-                    <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes">
-                        <CustomContent>
-                            <CapsuleButton Class="gallery-add" Icon="@Icons.Material.Outlined.AddPhotoAlternate" Disabled="_busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavGalleryAdd"]</CapsuleButton>
-                        </CustomContent>
-                    </MudFileUpload>
+                    <CapsuleButton Class="gallery-add" Icon="@Icons.Material.Outlined.AddPhotoAlternate" Disabled="_busy" OnClick="@(() => _pickerOpen = true)">@Loc["NavGalleryAdd"]</CapsuleButton>
                 </div>
             }
         </ChildContent>
     </KitCard>
 </div>
 
-<ImageViewer Items="@ViewerItems" @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Title">
-    <Actions>
-        @if (EffectiveCanEdit && ByKey(context.Key) is { } entry)
-        {
-            @if (!entry.IsIcon)
-            {
-                <CapsuleButton Class="gallery-make-icon" Icon="@Icons.Material.Outlined.StarBorder" Disabled="_busy" OnClick="@(() => SetIconAsync(entry))">@Loc["SetAsIcon"]</CapsuleButton>
-            }
-            @if (entry.IsBanner)
-            {
-                <CapsuleButton Class="gallery-make-banner" Pressed="true" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@(() => SetBannerAsync(null))">@Loc["NavGalleryRemoveBanner"]</CapsuleButton>
-            }
-            else
-            {
-                <CapsuleButton Class="gallery-make-banner" Pressed="false" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@(() => SetBannerAsync(entry))">@Loc["NavGalleryMakeBanner"]</CapsuleButton>
-            }
-            <CapsuleButton Class="gallery-delete" Icon="@Icons.Material.Outlined.Delete" Disabled="_busy" OnClick="@(() => DeleteAsync(entry))">@Loc["Delete"]</CapsuleButton>
-        }
-    </Actions>
-</ImageViewer>
+<GalleryViewer CharacterName="@(_resolvedName ?? string.Empty)" Items="@_items" CanEdit="@EffectiveCanEdit"
+               @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Title" OnChanged="OnChanged" />
+@if (EffectiveCanEdit)
+{
+    <GalleryImagePicker @bind-Open="_pickerOpen" Items="_items" ShowGallery="false" Busy="_busy" Title="@Loc["NavGalleryAdd"]"
+                        OnUpload="UploadAsync" OnPickLibrary="AddFromLibraryAsync" />
+}
 
 @code {
     [Parameter] public string? CharacterName { get; set; }
@@ -112,6 +105,7 @@
     private bool _loading = true;
     private bool _busy;
     private bool _viewerOpen;
+    private bool _pickerOpen;
     private int _viewerIndex;
 
     /// <summary>Why the gallery could not be read — which is not the same as it having no images.</summary>
@@ -125,12 +119,12 @@
 
     private IReadOnlyList<GalleryEntry> Small => _items.Where(i => i != Hero).Take(2).ToList();
 
-    private IReadOnlyList<ImageViewer.Item> ViewerItems =>
-        _items.Select(i => new ImageViewer.Item(i.Url, i.Caption, i.Caption, i.AssetId)).ToList();
+    private string GalleryHref => $"/character/{Uri.EscapeDataString(_resolvedName ?? string.Empty)}/gallery";
+
+    private string TileLabel(GalleryEntry entry) =>
+        entry.Warning is { } warning ? Loc["NavGalleryWarningLabel", warning] : entry.Caption ?? entry.FileName;
 
     private int IndexOf(GalleryEntry entry) => Math.Max(0, _items.ToList().FindIndex(i => i.AssetId == entry.AssetId));
-
-    private GalleryEntry? ByKey(string? assetId) => _items.FirstOrDefault(i => i.AssetId == assetId);
 
     private void OpenViewer(int index)
     {
@@ -188,23 +182,20 @@
         await WriteAsync(Gallery.UploadAsync(_resolvedName, file), "GalleryUploadFailed");
     }
 
-    private async Task DeleteAsync(GalleryEntry item)
+    /// <summary>A file from the shared image library, added without being copied.</summary>
+    private async Task AddFromLibraryAsync(LibraryAssetInfo asset)
     {
         if (_resolvedName is null) return;
-        await WriteAsync(Gallery.DeleteAsync(_resolvedName, item.AssetId), "GalleryDeleteFailed");
+        await WriteAsync(Gallery.AddFromLibraryAsync(_resolvedName, asset.Id), "GalleryUploadFailed");
     }
 
-    private async Task SetIconAsync(GalleryEntry item)
+    /// <summary>A write from the viewer: the gallery as the server now holds it.</summary>
+    private void OnChanged(List<GalleryEntry> updated)
     {
-        if (_resolvedName is null) return;
-        await WriteAsync(Gallery.ReplaceAsync(_resolvedName, GalleryService.WithIcon(_items, item.AssetId)), "GallerySetIconFailed");
-    }
-
-    /// <summary>Makes <paramref name="item"/> the banner, or removes the banner when it is null.</summary>
-    private async Task SetBannerAsync(GalleryEntry? item)
-    {
-        if (_resolvedName is null) return;
-        await WriteAsync(Gallery.ReplaceAsync(_resolvedName, GalleryService.WithBanner(_items, item?.AssetId)), "GallerySetBannerFailed");
+        _items = updated;
+        _error = null;
+        if (_items.Count == 0) _viewerOpen = false;
+        PageContext?.GalleryChanged?.Invoke(updated);
     }
 
     /// <summary>
@@ -221,10 +212,7 @@
         switch (result)
         {
             case List<GalleryEntry> updated:
-                _items = updated;
-                _error = null;
-                if (_items.Count == 0) _viewerOpen = false;
-                PageContext?.GalleryChanged?.Invoke(updated);
+                OnChanged(updated);
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);

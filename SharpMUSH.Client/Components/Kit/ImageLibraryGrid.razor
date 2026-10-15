@@ -1,0 +1,94 @@
+@using SharpMUSH.Client.Services
+@inject WikiAssetService Library
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The shared image library: every stored file the viewer may pick, newest first, so a picture already
+   on the wiki or in a gallery is used again instead of uploaded twice. A file locked to a permission
+   the viewer lacks is not listed; one the viewer finds anyway (its uploader, staff) shows a lock.
+   The search narrows by file name. *@
+<div class="kit-library">
+    <MudTextField T="string" Value="@_search" ValueChanged="SearchAsync" DebounceInterval="300" Immediate="true"
+                  Placeholder="@Loc["NavLibrarySearch"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="kit-library-search" aria-label="@Loc["NavLibrarySearch"]" />
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_error is not null)
+    {
+        <div class="kit-library-empty">@_error</div>
+    }
+    else if (Shown.Count == 0)
+    {
+        <div class="kit-library-empty">@(string.IsNullOrWhiteSpace(_search) ? Loc["NavLibraryEmpty"] : Loc["NavLibraryNoMatch"])</div>
+    }
+    else
+    {
+        <div class="kit-library-grid">
+            @foreach (var asset in Shown)
+            {
+                <button type="button" class="kit-library-item" title="@asset.FileName" aria-label="@asset.FileName"
+                        disabled="@Disabled" @onclick="@(() => OnPick.InvokeAsync(asset))">
+                    @if (ImageUrlPolicy.IsRenderable(asset.Url))
+                    {
+                        <img src="@ApiUrl.Resolve(asset.Url)" alt="" loading="lazy" />
+                    }
+                    <span class="kit-library-name">
+                        @if (asset.Lock is { } permission)
+                        {
+                            <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" Class="kit-library-lock" title="@Loc["WkLibraryLocked", permission]" />
+                        }
+                        @asset.FileName
+                    </span>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>A file was chosen.</summary>
+    [Parameter] public EventCallback<LibraryAssetInfo> OnPick { get; set; }
+
+    /// <summary>Files not offered, such as those already in the gallery being added to.</summary>
+    [Parameter] public IReadOnlySet<string> Exclude { get; set; } = new HashSet<string>();
+
+    /// <summary>When set, only files of these types are offered (a gallery takes no SVG).</summary>
+    [Parameter] public IReadOnlySet<string>? ContentTypes { get; set; }
+
+    /// <summary>A write is running; the choices wait for it.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    private IReadOnlyList<LibraryAssetInfo> _assets = [];
+    private string _search = string.Empty;
+    private bool _loading = true;
+    private string? _error;
+
+    /// <summary>Bumped on every search: an answer for an older one is dropped.</summary>
+    private int _generation;
+
+    private IReadOnlyList<LibraryAssetInfo> Shown =>
+        [.. _assets.Where(a => !Exclude.Contains(a.Id) && (ContentTypes is null || ContentTypes.Contains(a.ContentType)))];
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private Task SearchAsync(string? search)
+    {
+        _search = search ?? string.Empty;
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var generation = ++_generation;
+        _loading = true;
+        var result = await Library.LibraryAsync(_search);
+        if (generation != _generation) return;
+        (_assets, _error) = result switch
+        {
+            List<LibraryAssetInfo> assets => (assets, (string?)null),
+            ApiFailure failure => ([], failure.Message),
+        };
+        _loading = false;
+    }
+}

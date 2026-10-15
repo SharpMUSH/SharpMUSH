@@ -5748,7 +5748,7 @@ You say, "abcdefgh"
 
   reswitch() and reswitchi() return the `<list>` which corresponds to the first matched `<re>`, while reswitchall() and reswitchalli() return the `<list>`s corresponding to all matched `<re>`s. If no `<re>`s match, all four functions return `<default>`.
 
-  The string "#$" in the `<list>`s will be replaced with the value of `<str>`, /before/ `<list>` is evaluated. You can also use $N in `<list>` to refer to the Nth subpattern which matched in `<re>`, with $0 being the entire matching string. Use $`<name>` (the '<>' are literal) to refer to named subpatterns.
+  In the `<list>` that is evaluated, or the `<default>`, "#$" stands for `<str>`, as it does in switch(). You can also use $N in `<list>` to refer to the Nth subpattern which matched in `<re>`, with $0 being the entire matching string. Use $`<name>` (the '<>' are literal) to refer to named subpatterns.
 
 
 ::: seealso
@@ -5784,7 +5784,7 @@ You say, "abcdefgh"
 `stext([\<n\>])`<br>
   %$`\<n\>`
 
-  slev() returns the current nesting depth of switch*(), reswitch*() and @switch/@selects. stext() returns the `<string>` being matched for the current switch, or the `\<n\>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. It is a safer replacement for the "#$" token, which (because it is replaced before evaluation) is unsafe with user input, and unsuitable for use in nested switches.
+  slev() returns the current nesting depth of switch*(), reswitch*() and @switch/@selects. stext() returns the `<string>` being matched for the current switch, or the `\<n\>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. Unlike the "#$" token, which names the outermost switch it is written in, it can name any level.
 
   stext(L) returns the `<string>` for the outermost switch, and is equivilent to stext(slev()). %$`\<n\>` is equivilent to stext(`\<n\>`), for `\<n\>`s of 0-9 or L.
 

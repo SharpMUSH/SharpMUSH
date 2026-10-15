@@ -204,6 +204,10 @@ public static class EventCatalogue
 			"A connected player's channel list may have changed.", EventPrivacy.Staff, false, Sharp),
 		new("PLAYER`WARN", Args(("objid", O), ("reason", T), ("account", T)), "The staff member's character",
 			"Staff warned a character from the web portal.", EventPrivacy.Private, true, Sharp),
+		new(SharpEvents.GalleryAdd, Args(("objid", O), ("asset", W), ("url", T), ("use", W)), "The character who uploaded it",
+			"An image was added to a character's profile gallery on the web portal.", EventPrivacy.Public, false, Sharp),
+		new(SharpEvents.GalleryReport, Args(("objid", O), ("asset", W), ("url", T), ("reason", T), ("caption", T)), "The reporter's character",
+			"Someone reported a gallery image on the web portal.", EventPrivacy.Private, false, Sharp),
 
 		new("SOCKET`CONNECT", Args(("descriptor", N), ("ip", Ip)), Nobody,
 			"A connection reached the connect screen.", EventPrivacy.Private, false, Penn),

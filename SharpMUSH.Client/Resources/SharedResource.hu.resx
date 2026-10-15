@@ -4387,10 +4387,6 @@
     <value>Apró módosítás</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Még nincs feltöltött fájl.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nem található fájl.</value>
     <comment>MT</comment>
@@ -4784,6 +4780,72 @@
   <data name="NavGalleryViewAll" xml:space="preserve">
     <value>Összes</value>
   </data>
+  <data name="NavGalleryAllTags" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavGalleryBack" xml:space="preserve">
+    <value>Vissza ide: {0}</value>
+  </data>
+  <data name="NavGalleryCaption" xml:space="preserve">
+    <value>Képaláírás</value>
+  </data>
+  <data name="NavGalleryEdit" xml:space="preserve">
+    <value>Részletek szerkesztése</value>
+  </data>
+  <data name="NavGalleryMoveEarlier" xml:space="preserve">
+    <value>Előrébb</value>
+  </data>
+  <data name="NavGalleryMoveLater" xml:space="preserve">
+    <value>Hátrébb</value>
+  </data>
+  <data name="NavGalleryNoMatch" xml:space="preserve">
+    <value>Egyik képen sincs ez a címke.</value>
+  </data>
+  <data name="NavGalleryPageTitle" xml:space="preserve">
+    <value>Galéria: {0}</value>
+  </data>
+  <data name="NavGalleryReport" xml:space="preserve">
+    <value>Jelentés</value>
+  </data>
+  <data name="NavGalleryReportFailed" xml:space="preserve">
+    <value>A jelentést nem sikerült elküldeni: {0}</value>
+  </data>
+  <data name="NavGalleryReportReason" xml:space="preserve">
+    <value>Mi a baj ezzel a képpel?</value>
+  </data>
+  <data name="NavGalleryReportSend" xml:space="preserve">
+    <value>Jelentés küldése</value>
+  </data>
+  <data name="NavGalleryReported" xml:space="preserve">
+    <value>A jelentésedet elküldtük a stábnak.</value>
+  </data>
+  <data name="NavGalleryShowImage" xml:space="preserve">
+    <value>Kép megjelenítése</value>
+  </data>
+  <data name="NavGalleryTagFilter" xml:space="preserve">
+    <value>Szűrés címke szerint</value>
+  </data>
+  <data name="NavGalleryTags" xml:space="preserve">
+    <value>Címkék</value>
+  </data>
+  <data name="NavGalleryTagsHelp" xml:space="preserve">
+    <value>A címkéket vesszővel válaszd el.</value>
+  </data>
+  <data name="NavGalleryWarning" xml:space="preserve">
+    <value>Tartalmi figyelmeztetés</value>
+  </data>
+  <data name="NavGalleryWarningHelp" xml:space="preserve">
+    <value>Eltakarja a képet, amíg a néző meg nem nézi. Figyelmeztetéssel ellátott kép nem lehet avatar vagy borítókép.</value>
+  </data>
+  <data name="NavGalleryWarningLabel" xml:space="preserve">
+    <value>Tartalmi figyelmeztetés: {0}</value>
+  </data>
+  <data name="NavGallerySaveFailed" xml:space="preserve">
+    <value>A kép részleteit nem sikerült menteni: {0}</value>
+  </data>
+  <data name="NavGalleryMoveFailed" xml:space="preserve">
+    <value>A képet nem sikerült áthelyezni: {0}</value>
+  </data>
   <data name="NavGalleryPortrait" xml:space="preserve">
     <value>Portré</value>
   </data>
@@ -4999,6 +5061,12 @@
   </data>
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Részletek</value>
+  </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Jelenetek, ahol {0}: {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Összes jelenet</value>
   </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Kezdés</value>
@@ -6023,5 +6091,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Átrendezés</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Keresés a képtárban</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Még nincs kép a képtárban.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Egy fájlnév sem egyezik.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Vagy válasszon a képtárból</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>A közös képtárban van. A galériából eltávolítva a fájl megmarad.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Megosztás a képtárban</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Bármely bejelentkezett felhasználó használhatja wikioldalon vagy galériában. Nem vonható vissza.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Nem sikerült megosztani a képet: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Képtár</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Megosztás a képtárban</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>A közös képtárban</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Bármely bejelentkezett felhasználó kiválaszthatja wikioldalhoz vagy galériához. Nem vonható vissza.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Jogosultsághoz kötés</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Csak e jogosultság birtokosai találják meg a képtárban. Hagyja üresen, ha mindenkinek szól.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Egy galéria</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Mindenki</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Zárolva: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Nem sikerült menteni: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>A tartalmi figyelmeztetéssel ellátott kép kimarad a képtárból. Vegye le a figyelmeztetést a megosztáshoz.</value>
   </data>
 </root>

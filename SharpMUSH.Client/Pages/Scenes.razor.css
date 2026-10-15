@@ -75,3 +75,13 @@
 	color: var(--text-faint);
 	text-align: center;
 }
+
+/* "Scenes where Verse is Marvel", over a list narrowed to one detail value, and the way back to every scene */
+.scenes-match {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	font-size: 13px;
+	color: var(--text-dim);
+}

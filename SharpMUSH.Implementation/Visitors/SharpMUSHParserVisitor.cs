@@ -428,7 +428,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 	internal bool BeginsRestrictedEvaluation(IFunctionContext context)
 	{
-		var name = FunctionNameOf(context);
+		// !restrictedexpr(...) runs restrictedexpr(), so it opens restricted evaluation the same way.
+		var name = Bang.FunctionName(FunctionNameOf(context));
 		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
 		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
 			|| definition.LibraryInformation.RestrictedOperation == "fn"
@@ -541,6 +542,16 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		}
 
 		var functionName = FunctionNameOf(context);
+		// !name(...): the bang answers 1 or 0 about the result. Only a name that is a function takes one;
+		// any other stays as written, so !text(...) is prose or an unknown function, as it was.
+		Bang? bang = null;
+		if (Bang.Read(functionName, out var readBang) is > 0 and var bangLength
+				&& _services.Functions.IsFunction(parser, functionName[bangLength..]))
+		{
+			functionName = functionName[bangLength..];
+			bang = readBang;
+		}
+
 		// Reject oversized calls before ANTLR child-array and argument-map materialization.
 		var restricted = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
 		if (restricted) DemandBoundedArguments(context);
@@ -620,6 +631,10 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (shouldDebug) _debugNestDepth++;
 
 		var result = await _services.Functions.InvokeAsync(this, functionName, context, arguments);
+		if (bang is { } applied)
+		{
+			result = result with { Message = applied.Apply(result.Message, parser) };
+		}
 
 		if (shouldDebug) _debugNestDepth--;
 
@@ -1117,6 +1132,27 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	}
 
 	/// <summary>
+	/// <c>#$</c>: the subject of the outermost <c>switch()</c>, <c>switchall()</c>, <c>reswitch()</c>, <c>@switch</c>
+	/// or <c>@select</c> this evaluation started whose action is running. PennMUSH splices it into the action
+	/// before evaluating it, so the outermost switch takes every one written inside its action, a nested switch's
+	/// included, and none in its patterns or in the code of an attribute it calls. <c>case()</c> splices nothing.
+	/// With no such switch, or in a pass that does not evaluate, it is text.
+	/// </summary>
+	public override ValueTask<CallState?> VisitSwitchSubject([NotNull] SwitchSubjectContext context)
+	{
+		var state = parser.CurrentState;
+		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval
+				|| state.SwitchStack.LastOrDefault(frame => frame is { Spliced: true, InAction: true }
+					&& ReferenceEquals(frame.Evaluation, state.CurrentEvaluation)) is not { } subject)
+		{
+			return ValueTask.FromResult<CallState?>(new CallState(GetContextText(context), context.Depth()));
+		}
+
+		EvaluationRestrictions.DemandSubstitution(context.GetText(), state.Restrictions);
+		return ValueTask.FromResult<CallState?>(new CallState(subject.Text, context.Depth()));
+	}
+
+	/// <summary>
 	/// Decodes <c>\x</c> to <c>x</c> — but only in an evaluating pass. A NoParse/NoEval pass keeps the
 	/// backslash, exactly as it keeps <c>%#</c> and <c>[fn()]</c> raw: its text is either shown or stored
 	/// as written (<c>]think</c>, <c>/noeval</c>, <c>&amp;</c>) or evaluated later, and that later
@@ -1279,6 +1315,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (context.REG_NUM() is not null
 				|| context.REG_ALPHA() is not null
 				|| context.ITEXT_NUM() is not null
+				|| context.DTEXT_NUM() is not null
 				|| context.STEXT_NUM() is not null)
 		{
 			return new CallState(

@@ -68,8 +68,8 @@ public class GalleryRefusalTests : TrackingBunitContext
 		var cut = Render<CharacterGalleryWidget>(p => p
 			.Add(w => w.CharacterName, "Gandalf")
 			.Add(w => w.CanEdit, true));
-		cut.WaitForAssertion(() => cut.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
-		await cut.Find("button.gallery-view-all").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("button.gallery-hero"), TimeSpan.FromSeconds(5));
+		await cut.Find("button.gallery-hero").ClickAsync();
 		return cut;
 	}
 

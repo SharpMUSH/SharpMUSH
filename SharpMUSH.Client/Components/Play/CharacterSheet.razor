@@ -66,7 +66,7 @@
                     {
                         <div class="sheet-gallery-head">
                             <SectionLabel>@($"{Loc["NavPlayGallery"]} · {_gallery.Count}")</SectionLabel>
-                            <a class="sheet-gallery-all" href="@ProfileHref">@Loc["NavPlayViewAll"]</a>
+                            <a class="sheet-gallery-all" href="@(ProfileHref + "/gallery")">@Loc["NavPlayViewAll"]</a>
                         </div>
                         <div class="sheet-gallery">
                             @for (var i = 0; i < Math.Min(3, _gallery.Count); i++)
@@ -74,8 +74,12 @@
                                 var index = i;
                                 var entry = _gallery[i];
                                 <button type="button" class="sheet-gallery-item @(entry.IsIcon ? "sheet-gallery-item--icon" : null)"
-                                        aria-label="@(entry.Caption ?? entry.FileName)" @onclick="() => OpenViewer(index + _portraitOffset)">
-                                    @if (ImageUrlPolicy.IsRenderable(entry.Url))
+                                        aria-label="@(entry.Warning is { } label ? Loc["NavGalleryWarningLabel", label].Value : entry.Caption ?? entry.FileName)" @onclick="() => OpenViewer(index + _portraitOffset)">
+                                    @if (entry.Warning is { } warning)
+                                    {
+                                        <span class="sheet-gallery-cover"><MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" Size="Size.Small" />@warning</span>
+                                    }
+                                    else if (ImageUrlPolicy.IsRenderable(entry.Url))
                                     {
                                         <img src="@ApiUrl.Resolve(entry.Url)" alt="" loading="lazy" />
                                     }
@@ -220,7 +224,7 @@
     /// <summary>One list for the viewer, built once per character: the portrait first when the gallery lacks it.</summary>
     private void BuildViewerItems()
     {
-        var gallery = _gallery.Select(g => new ImageViewer.Item(g.Url, g.Caption, g.Caption, g.AssetId)).ToList();
+        var gallery = _gallery.Select(g => new ImageViewer.Item(g.Url, g.Warning is null ? g.Caption : null, g.Caption, g.AssetId) { Warning = g.Warning, Tags = g.Tags }).ToList();
         var portrait = Portrait;
         var own = portrait is not null && !_gallery.Any(g => string.Equals(g.Url, portrait, StringComparison.Ordinal));
         _portraitOffset = own ? 1 : 0;

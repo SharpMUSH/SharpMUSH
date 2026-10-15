@@ -37,7 +37,8 @@ public static class GalleryWriter
 		(string Attribute, string Value)[] mirrored = [("IMAGE", mirror.Image), ("IMAGE`BANNER", mirror.Banner), ("IMAGE`ALT", mirror.Alt)];
 		var steps = mirrored.Where(m => m.Value.Length > 0)
 			.Concat(mirrored.Where(m => m.Value.Length == 0).Reverse())
-			.Prepend((GalleryAttribute, JsonSerializer.Serialize(entries)))
+			// Whether a file is shared is the file's to say; a copy here would go stale.
+			.Prepend((GalleryAttribute, JsonSerializer.Serialize(entries.Select(e => e with { Shared = null }))))
 			.ToList();
 
 		var before = new Dictionary<string, MString?>(StringComparer.Ordinal);

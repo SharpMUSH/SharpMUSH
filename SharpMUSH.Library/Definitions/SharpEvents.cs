@@ -105,4 +105,17 @@ public static class SharpEvents
 
 	/// <summary>A copy of the world could not be written. Args: (reason).</summary>
 	public const string BackupError = "BACKUP`ERROR";
+
+	/// <summary>
+	/// Fired after an image is added to a character's profile gallery on the web portal. Args: (character
+	/// objid, asset id, site-relative url, use). The enactor is the uploader; use is <c>gallery</c>,
+	/// <c>avatar</c> or <c>banner</c>.
+	/// </summary>
+	public const string GalleryAdd = "GALLERY`ADD";
+
+	/// <summary>
+	/// Fired when someone signed in to the web portal reports a gallery image. Args: (character objid, asset
+	/// id, site-relative url, reason, caption). The enactor is the reporter; the reason is their own text.
+	/// </summary>
+	public const string GalleryReport = "GALLERY`REPORT";
 }

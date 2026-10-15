@@ -115,7 +115,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			return run.PreserveHookErrors(overridden);
 
 		if (pluginHooks is { HasCommandInterceptors: true }
-			&& await OverriddenByPluginAsync(run, pluginHooks) is Option<CallState> pluginOverride)
+			&& await OverriddenByPluginAsync(run, pluginHooks) is { } pluginOverride)
 		{
 			return run.PreserveHookErrors(pluginOverride);
 		}

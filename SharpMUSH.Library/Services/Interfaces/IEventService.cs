@@ -43,8 +43,9 @@ public interface IEventService
 
 	/// <summary>
 	/// Whether the configured event handler has its own attribute named <paramref name="eventName"/>, or a
-	/// package's child of it (<c>GALLERY`REPORT`JOBS</c>), so a trigger would queue something. What the server does
-	/// when nobody hears an event (PennMUSH's own reaction to a signal) asks first.
+	/// package's child of it (<c>GALLERY`REPORT`JOBS</c>), so a trigger would queue something. A surface that only makes
+	/// sense when the game answers an event (the portal's Report button and <c>GALLERY`REPORT</c>), or the server's
+	/// own reaction to a signal nobody hears, asks first.
 	/// </summary>
 	ValueTask<bool> HasHandlerAsync(string eventName);
 }

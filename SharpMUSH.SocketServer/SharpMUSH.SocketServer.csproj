@@ -7,6 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>default</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Serves no browser assets. Without this the .NET 11 rc.2 Web SDK adds a dotnet-watch JS
+         initializer, and a Web project referencing this one fails with "scoped css bundles do not
+         have matching endpoints". -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
   <ItemGroup>

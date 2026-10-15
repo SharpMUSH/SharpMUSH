@@ -6,6 +6,7 @@
 @inject IAccountAuthState AccountAuth
 @inject GameCommandService Commands
 @inject PoseTypeService PoseTypes
+@inject SceneDetailService SceneDetails
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -116,6 +117,40 @@
                                   Margin="Margin.Dense" Class="scene-edit-title" />
                     <MudTextField @bind-Value="_editPitch" Label="@Loc["RolScenePitchLabel"]" HelperText="@Loc["RolScenePitchHint"]"
                                   Lines="3" Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-pitch" />
+                    @foreach (var detail in SceneDetails.Catalogue.Details)
+                    {
+                        var key = detail.Key;
+                        var hint = string.IsNullOrWhiteSpace(detail.Hint) ? null : detail.Hint;
+                        @if (detail.Choices.Count > 0 && detail.Many)
+                        {
+                            <MudSelect T="string" Label="@detail.Label" HelperText="@hint" MultiSelection="true" Clearable="true"
+                                       SelectedValues="@detail.Values(EditedDetail(key))"
+                                       SelectedValuesChanged="@(values => _editDetails[key] = string.Join(SceneDetailInfo.Separator, values))"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-detail">
+                                @foreach (var choice in detail.Choices)
+                                {
+                                    <MudSelectItem Value="@choice">@choice</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else if (detail.Choices.Count > 0)
+                        {
+                            <MudSelect T="string" Label="@detail.Label" HelperText="@hint" Clearable="true"
+                                       Value="@EditedDetail(key)" ValueChanged="@(value => _editDetails[key] = value ?? "")"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-detail">
+                                @foreach (var choice in detail.Choices)
+                                {
+                                    <MudSelectItem Value="@choice">@choice</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else
+                        {
+                            <MudTextField T="string" Label="@detail.Label" HelperText="@hint"
+                                          Value="@EditedDetail(key)" ValueChanged="@(value => _editDetails[key] = value ?? "")"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-edit-detail" />
+                        }
+                    }
                     <MudSwitch @bind-Value="_editPublic" Label="@Loc["RolScenePublicLabel"]" Color="Color.Primary" Class="scene-edit-public" />
                     @if (!scene.IsLive)
                     {
@@ -228,6 +263,12 @@
                         @* A scene that has not started has no start, length or activity to tell: when it is due and
                            who hosts it are what a reader comes for. *@
                         <dl class="scene-detail-facts">
+                            @* The scene's own details first, its verse and canon, as the owner set them with +scene/set. *@
+                            @foreach (var (detail, values) in SceneDetails.Catalogue.Of(scene))
+                            {
+                                <dt>@detail.Label</dt>
+                                <dd class="scene-detail-value"><DetailValueLinks Detail="detail" Values="values" /></dd>
+                            }
                             @if (!NotStarted(scene))
                             {
                                 <dt>@Loc["NavSceneStarted"]</dt>
@@ -383,7 +424,10 @@
         _pausing = false;
         _actionError = null;
 
+        // The detail catalogue goes out beside the scene, read again so staff changes show: the header names its details with it.
+        var details = SceneDetails.LoadAsync(refresh: true);
         var found = await SceneService.GetSceneAsync(Id);
+        await details;
         if (!_reload.IsCurrent(ticket)) return;
         switch (found)
         {
@@ -538,6 +582,18 @@
     private DateTime? _editDate;
     private TimeSpan? _editTime;
 
+    /// <summary>The form's value for each detail the game lists, by key; several values joined by the separator.</summary>
+    private readonly Dictionary<string, string> _editDetails = new(StringComparer.Ordinal);
+
+    private string EditedDetail(string key) => _editDetails.TryGetValue(key, out var value) ? value : "";
+
+    /// <summary>The scene's value for <paramref name="detail"/>, written as the server keeps it.</summary>
+    private static string DetailValue(SceneSummary scene, SceneDetailInfo detail) =>
+        scene.Meta.TryGetValue(detail.Key, out var value) ? Kept(detail, value) : "";
+
+    /// <summary><paramref name="value"/> as the server keeps it: each value trimmed, several joined by the separator.</summary>
+    private static string Kept(SceneDetailInfo detail, string value) => string.Join(SceneDetailInfo.Separator, detail.Values(value));
+
     /// <summary>The pitch the owner set with +scene/pitch, or null when there is none.</summary>
     private static string? Pitch(SceneSummary scene) =>
         scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch : null;
@@ -551,6 +607,8 @@
         _editTitle = scene.Meta.TryGetValue("title", out var title) ? title : "";
         _editPitch = Pitch(scene) ?? "";
         _editPublic = scene.IsPublic;
+        _editDetails.Clear();
+        foreach (var detail in SceneDetails.Catalogue.Details) _editDetails[detail.Key] = DetailValue(scene, detail);
         var due = scene.ScheduledForUtc?.ToLocalTime();
         _editDate = due?.Date;
         _editTime = due?.TimeOfDay;
@@ -578,6 +636,12 @@
         var pitch = _editPitch.Trim();
         if (pitch != (Pitch(scene) ?? ""))
             changes.Add(($"+scene/pitch {id}={MushComposeEncoder.Encode(pitch)}", $"scene({id},summary)", pitch));
+        foreach (var detail in SceneDetails.Catalogue.Details)
+        {
+            var value = Kept(detail, EditedDetail(detail.Key));
+            if (value != DetailValue(scene, detail))
+                changes.Add(($"+scene/set {id}/{detail.Key}={MushComposeEncoder.Encode(value)}", $"scene({id},{detail.Key})", value));
+        }
         if (_editPublic != scene.IsPublic)
             changes.Add((_editPublic ? $"+scene/public {id}" : $"+scene/private {id}", $"scene({id},public)", _editPublic ? "1" : "0"));
         if (!scene.IsLive && EditedTime() is { } at && at * 1000 != scene.ScheduledFor)

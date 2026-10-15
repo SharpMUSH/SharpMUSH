@@ -65,8 +65,9 @@ Event Types:
 - **page**: page\`message
 - **mail**: mail\`received
 - **backup**: backup\`complete, backup\`error
+- **gallery**: gallery\`add, gallery\`report
 
-The room, channel, page, mail and backup events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, and socket\`gmcp hands softcode what a client sends over GMCP.
+The room, channel, page, mail, backup and gallery events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
 
 The dump, sql and signal events, db\`dbck, log\`huh, player\`inactivity and http\`fail are raised only while the compatibility_events option is on. It is off in a new game and turned on by a PennMUSH database import (see [compatibility events]).
 
@@ -274,3 +275,18 @@ To mimic old behaviour:
 ```sharp
 > &BACKUP`ERROR #9=@cemit Admin=Backup failed: %<reason>
 ```
+
+# Gallery Events
+# Event Gallery
+- **gallery\`add** (*objid*, *asset*, *url*, *use*)
+- Triggered after an image is added to a character's profile gallery on the web portal. %# is the character who uploaded it, *<objid>* the character whose gallery it is, *<asset>* the stored file's id, *<url>* its site-relative address, and *<use>* one of gallery, avatar or banner: what it was uploaded as.
+
+- **gallery\`report** (*objid*, *asset*, *url*, *reason*, *caption*)
+- Triggered when someone signed in to the web portal reports a gallery image. %# is the reporter's character, *<objid>* the character whose gallery holds the image, *<reason>* what the reporter wrote, and *<caption>* the image's caption, empty when it has none. SharpMUSH keeps no report of its own: the handler decides what one does. The portal offers Report only while the event handler has GALLERY\`REPORT or a package's attribute under it; the bundled jobs package sets GALLERY\`REPORT\`JOBS, which files a job. *<reason>* is the reporter's own text, so use it as text and never evaluate it.
+
+### Example
+```sharp
+&GALLERY`ADD #9=@wizwall/emit New picture for [name(%<objid>)]: %<url> as %<use>
+```
+
+See [gallery].

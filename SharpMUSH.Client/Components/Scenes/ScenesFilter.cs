@@ -1,3 +1,5 @@
+using SharpMUSH.Client.Models;
+
 namespace SharpMUSH.Client.Components.Scenes;
 
 /// <summary>
@@ -19,6 +21,23 @@ public static class ScenesFilter
 	public const int PageSize = 50;
 
 	public static string Href(string filter) => filter == All ? "/scenes" : $"/scenes?{filter}=1";
+
+	/// <summary>Every scene giving a detail one value: what a detail's value on a card links to.</summary>
+	public static string Href(SceneDetailMatch match) => $"/scenes?{match.Query}";
+
+	/// <summary>The detail and value an address narrows the list to, or null when it names neither.</summary>
+	public static SceneDetailMatch? MatchFromUri(string uri)
+	{
+		var query = new Uri(uri).Query.TrimStart('?')
+			.Split('&', StringSplitOptions.RemoveEmptyEntries)
+			.Select(pair => pair.Split('=', 2))
+			.Where(pair => pair.Length == 2)
+			.GroupBy(pair => pair[0], StringComparer.Ordinal)
+			.ToDictionary(g => g.Key, g => Uri.UnescapeDataString(g.First()[1].Replace('+', ' ')).Trim(), StringComparer.Ordinal);
+		return query.GetValueOrDefault("detail") is { Length: > 0 } key && query.GetValueOrDefault("value") is { Length: > 0 } value
+			? new SceneDetailMatch(key.ToLowerInvariant(), value)
+			: null;
+	}
 
 	/// <summary>The filter an address names; the first of <c>mine</c>, <c>scheduled</c>, <c>finished</c> set to 1.</summary>
 	public static string FromUri(string uri)

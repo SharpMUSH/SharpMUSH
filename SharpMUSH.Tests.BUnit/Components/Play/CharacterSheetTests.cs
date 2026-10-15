@@ -138,13 +138,13 @@ public class CharacterSheetTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task TheGalleryStrip_ShowsThree_AndViewAllLinksTheProfile()
+	public async Task TheGalleryStrip_ShowsThree_AndViewAllLinksTheGalleryPage()
 	{
 		var cut = RenderSheet(occupant: Tomas);
 		cut.WaitForAssertion(() => cut.Find(".sheet-gallery img"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".sheet-gallery button").Count).IsEqualTo(3);
 		await Assert.That(cut.Find(".sheet-gallery-head").TextContent).Contains("4");
-		await Assert.That(cut.Find("a.sheet-gallery-all").GetAttribute("href")).IsEqualTo("/character/Tomas%20Reyes");
+		await Assert.That(cut.Find("a.sheet-gallery-all").GetAttribute("href")).IsEqualTo("/character/Tomas%20Reyes/gallery");
 	}
 
 	[Test]
