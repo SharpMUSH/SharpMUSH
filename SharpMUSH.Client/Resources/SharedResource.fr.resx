@@ -5444,4 +5444,12 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Une image avec un avertissement de contenu reste hors de la bibliothèque d'images. Retirez l'avertissement pour la partager.</value>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notifications</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Recevoir des notifications sur ce téléphone ou cet ordinateur quand le portail est fermé</value>
+    <comment>MT</comment>
+  </data>
 </root>

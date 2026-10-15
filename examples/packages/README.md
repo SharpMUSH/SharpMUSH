@@ -35,6 +35,7 @@ which games can add as a remote in the admin panel.
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 | [`rp-finder/`](rp-finder/) | Finding roleplay: a `+lfrp` status that runs out and ends at logoff, shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter, and a watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global (requires who-where) |
+| [`notifications/`](notifications/) + [`notifications-app/`](notifications-app/) | The rules behind push notifications: subscriptions to the ``PAGE`MESSAGE`` and ``MAIL`RECEIVED`` events on the event handler call `@push`, each player's choices are kept on a plain object the WIZARD handlers read, and the same settings are a `+notify` command and a portal form; other packages add a kind and send it with ``INC`SEND`` |
 
 ## The manifest: `package.yaml`
 

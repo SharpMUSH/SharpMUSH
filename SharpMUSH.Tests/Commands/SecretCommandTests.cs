@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -74,7 +75,8 @@ public class SecretCommandTests
 			var cleared = await AsGod($"@secret/host {name}=");
 
 			await Assert.That(set).Contains($"@http may send {name} to: *.example.org api.example.com");
-			await Assert.That(listed).Contains("api.example.com");
+			// The table wraps a long cell, and how narrow the column gets depends on the other secrets stored.
+			await Assert.That(Regex.Replace(listed, @"[\s│]", string.Empty)).Contains("api.example.com");
 			await Assert.That(cleared).Contains($"@http may send {name} to no host.");
 			await Assert.That(await Secrets.HostsAsync(name)).IsEmpty();
 		}

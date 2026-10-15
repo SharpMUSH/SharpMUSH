@@ -97,6 +97,11 @@ public static class BundledPackages
 		// Available, not installed: +lfrp, +watch and +friend are global commands, and +watch and +friend are names
 		// a game may already use for its own code. Its status shows in who-where's +who.
 		new("rp-finder", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: which game events notify a player's phone or browser (@push) is the game's
+		// choice, and +notify lands an object in the master room. Its settings page is a separate application
+		// package, as jobs-app is for jobs.
+		new("notifications", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("notifications-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

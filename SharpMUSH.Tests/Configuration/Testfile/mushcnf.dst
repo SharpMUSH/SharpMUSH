@@ -351,6 +351,13 @@ guest_output_limit 65536
 # is refused until an image is removed.
 max_gallery_images 50
 
+# Seconds without input after which @push treats a player as away, unless a
+# portal tab of theirs is in view. A player who is not away is not notified.
+push_idle_seconds 300
+
+# The most push notifications @push sends one player in a minute.
+push_limit 10
+
 # How much MUSH money do players get when they're created?
 starting_money 150
 

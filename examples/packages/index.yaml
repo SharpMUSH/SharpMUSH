@@ -122,3 +122,13 @@ packages:
     package: rp-finder
     version: 1.0.0
     description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)
+  - path: notifications/
+    name: Notifications
+    package: notifications
+    version: 1.0.0
+    description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
+  - path: notifications-app/
+    name: Notifications in the portal
+    package: notifications-app
+    version: 1.0.0
+    description: Registers the notification settings as a portal page at /apps/notifications (requires notifications)
