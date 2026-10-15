@@ -92,6 +92,32 @@ public class SecretsControllerTests
 	}
 
 	[Test]
+	public async Task ConfigAdminNamesTheHostsASecretMayGoTo()
+	{
+		var (controller, store) = Create(PortalPermission.ConfigAdmin);
+
+		var set = await controller.SetHosts("http.github.token", new SecretHostsRequest(["uploads.github.com", "API.github.com"]));
+		var bad = await controller.SetHosts("http.github.token", new SecretHostsRequest(["not a host"]));
+
+		await Assert.That(Ok(set).Hosts).IsEqualTo("api.github.com uploads.github.com");
+		await Assert.That(bad.Result).IsTypeOf<BadRequestObjectResult>();
+		await Assert.That(await store.HostsAsync("http.github.token")).IsEquivalentTo(new[] { "api.github.com", "uploads.github.com" });
+	}
+
+	[Test]
+	public async Task HostsNeedThePermissionThatManagesTheSecret()
+	{
+		var (controller, store) = Create("discord.admin");
+
+		var token = await controller.SetHosts("discord.token", new SecretHostsRequest(["discord.com"]));
+		var other = await controller.SetHosts("http.github.token", new SecretHostsRequest(["api.github.com"]));
+
+		await Assert.That(token.Result).IsTypeOf<OkObjectResult>();
+		await Assert.That(other.Result).IsTypeOf<ForbidResult>();
+		await Assert.That(await store.HostsAsync("http.github.token")).IsEmpty();
+	}
+
+	[Test]
 	public async Task TheControllerNeedsASignedInUser()
 		=> await Assert.That(Attribute.IsDefined(typeof(SecretsController), typeof(AuthorizeAttribute))).IsTrue();
 }
