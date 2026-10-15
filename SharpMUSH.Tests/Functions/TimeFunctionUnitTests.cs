@@ -45,7 +45,8 @@ public class TimeFunctionUnitTests
 	/// <summary>
 	/// convtime() reads a date and time with no offset of its own in the zone it is given, whatever the format: 20:00
 	/// on 30 October 2026 is 00:00 UTC the next day in New York (summer time) and 20:00 UTC in London (not).
-	/// A time that names its offset keeps it, and one the zone skips when summer time starts is refused.
+	/// A time that names its offset keeps it, and one the zone skips when summer time starts is refused, except in
+	/// PennMUSH's own format, which moves it past the gap as PennMUSH does.
 	/// </summary>
 	[Test]
 	[Arguments("convtime(2026-10-30 20:00,America/New_York)", "1793404800")]
@@ -56,6 +57,7 @@ public class TimeFunctionUnitTests
 	[Arguments("convtime(2026-10-30T20:00:00+02:00,UTC)", "1793383200")]
 	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIMEZONE")]
 	[Arguments("convtime(2027-03-14 02:30,America/New_York)", "#-1 INVALID TIME")]
+	[Arguments("convtime(Sun Mar 14 02:30:00 2027,America/New_York)", "1805009400")]
 	public async Task ConvTimeReadsAWallClockInTheZone(string call, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(call));

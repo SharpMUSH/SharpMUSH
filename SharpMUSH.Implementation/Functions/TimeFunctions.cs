@@ -949,7 +949,8 @@ public partial class Functions
 		if (DateTime.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
 			DateTimeStyles.None, out var pennTime))
 		{
-			return ValueTask.FromResult<CallState>(InZone(pennTime, zone));
+			// PennMUSH's mktime() moves a time the clocks skip on past the gap; code that reads this format relies on it.
+			return ValueTask.FromResult<CallState>(Instant(pennTime, zone));
 		}
 
 		if (DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var local)
@@ -966,12 +967,13 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(
 			TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
 
-		// A wall-clock time the zone skips when summer time starts names no instant.
+		// Any other format: a wall-clock time the zone skips when summer time starts names no instant.
 		CallState InZone(DateTime wallClock, TimeZoneInfo inZone) =>
-			inZone.IsInvalidTime(wallClock)
-				? ErrorMessages.Returns.InvalidTime
-				: TimePrecisions.Format(new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
-					precision);
+			inZone.IsInvalidTime(wallClock) ? ErrorMessages.Returns.InvalidTime : Instant(wallClock, inZone);
+
+		CallState Instant(DateTime wallClock, TimeZoneInfo inZone) =>
+			TimePrecisions.Format(new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
+				precision);
 	}
 
 	[SharpFunction(Name = "CONVUTCSECS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
