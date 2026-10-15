@@ -34,6 +34,8 @@ namespace SharpMUSH.Server.Controllers;
 /// beyond being authenticated with a character.
 ///
 /// Routes:
+///   GET    api/objects/topology?rooms=N[&coordinates=X…]   — rooms, exits, coordinates, warnings
+///   GET    api/objects/topology/document?rooms=N           — the same rooms as a room document
 ///   GET    api/objects/{dbref}                              — name, type, owner, flags
 ///   GET    api/objects/{dbref}/attributes[?depth=N]         — visible attributes
 ///   GET    api/objects/{dbref}/attributes/{name}            — one attribute
@@ -114,17 +116,53 @@ public class ObjectsController(
 			: Ok(new CreatedObjectDto(message));
 	}
 
+	/// <summary>
+	/// The selected rooms and their exits, with each room's coordinates read from <paramref name="coordinates"/>
+	/// (default X, Y and Z) and what <c>@wcheck</c> would say about each room and exit.
+	/// </summary>
 	[HttpGet("topology")]
-	public async Task<IActionResult> GetTopology([FromQuery] int[] rooms, CancellationToken ct)
+	public async Task<IActionResult> GetTopology([FromQuery] int[] rooms, [FromServices] IWarningService warnings,
+		CancellationToken ct, [FromQuery] string[]? coordinates = null)
 	{
-		if (rooms.Length is < 1 or > RoomTopologyReader.MaxRooms || rooms.Any(id => id < 0))
-			return BadRequest(new ApiErrorDto("Select 1–100 non-negative room dbrefs."));
+		if (Unselectable(rooms, coordinates) is { } refused) return refused;
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		var result = await new RoomTopologyReader(mediator, permissionService, reality, attributeService).ReadAsync(executor, rooms, ct);
+		var result = await Reader(warnings).ReadAsync(executor, rooms, ct, Coordinates(coordinates));
 		// Unlinking or recycling the selected character during the scan cannot retain access.
 		if (await ResolveExecutorAsync(ct) is not { } current || current.Object().DBRef != executor.Object().DBRef) return Unauthorized();
 		Response.Headers.CacheControl = "no-store";
 		return Ok(result);
+	}
+
+	/// <summary>The selected rooms and their exits as a <see cref="RoomDocumentDto"/>, the text a builder keeps and diffs.</summary>
+	[HttpGet("topology/document")]
+	public async Task<IActionResult> GetRoomDocument([FromQuery] int[] rooms, [FromServices] IWarningService warnings,
+		CancellationToken ct, [FromQuery] string[]? coordinates = null)
+	{
+		if (Unselectable(rooms, coordinates) is { } refused) return refused;
+		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
+		var result = await Reader(warnings).ExportAsync(executor, rooms, Coordinates(coordinates), ct);
+		if (await ResolveExecutorAsync(ct) is not { } current || current.Object().DBRef != executor.Object().DBRef) return Unauthorized();
+		Response.Headers.CacheControl = "no-store";
+		return result switch
+		{
+			RoomDocumentDto document => Ok(document),
+			Error<string> error => Conflict(new ApiErrorDto(error.Value))
+		};
+	}
+
+	private RoomTopologyReader Reader(IWarningService warnings) =>
+		new(mediator, permissionService, reality, attributeService, warnings);
+
+	private static IReadOnlyList<string> Coordinates(string[]? coordinates) =>
+		coordinates is { Length: > 0 } ? coordinates : RoomTopologyReader.DefaultCoordinates;
+
+	private BadRequestObjectResult? Unselectable(int[] rooms, string[]? coordinates)
+	{
+		if (rooms.Length is < 1 or > RoomTopologyReader.MaxRooms || rooms.Any(id => id < 0))
+			return BadRequest(new ApiErrorDto("Select 1–100 non-negative room dbrefs."));
+		return RoomTopologyReader.ValidCoordinates(Coordinates(coordinates))
+			? null
+			: BadRequest(new ApiErrorDto("Name three coordinate attributes, such as X, Y and Z."));
 	}
 
 	[HttpGet("{dbref:int}")]
