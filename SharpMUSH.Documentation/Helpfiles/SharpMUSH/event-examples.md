@@ -14,6 +14,11 @@
       "id": "discord-presence-example",
       "heading": "Discord presence example",
       "lookup": "event examples discord presence example"
+    },
+    {
+      "id": "gauge-example",
+      "heading": "Gauge example",
+      "lookup": "event examples gauge example"
     }
   ],
   "redirects": {
@@ -46,6 +51,7 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 ::: seealso
 - [event examples player creation example]
 - [event examples discord presence example]
+- [event examples gauge example]
 :::
 
 ## Player creation example
@@ -71,3 +77,17 @@ Then say what each player is doing once they log in, from player\`connect:
 > &PLAYER`CONNECT #9=think oob(%<descriptor>,External.Discord.Status,json(object,details,json(string,Playing [name(%<objid>)])))
 ```
 If #9 already has a PLAYER\`CONNECT, add the oob() to it rather than replacing it. Nothing is sent to a client that did not agree to GMCP, so both are safe on every connection.
+
+## Gauge example
+
+A client such as Mudlet can draw a health bar from the GMCP package Char.Vitals. Instead of checking every player's HP over and over, flag the attributes `watched` and send the bar from attribute\`change whenever one of them changes:
+```sharp
+> @attribute/access HP=watched
+> @attribute/access MAXHP=watched
+> &ATTRIBUTE`CHANGE`GAUGE #9=@assert match(HP MAXHP,%<attribute>) ; think oob(num(%<objid>),Char.Vitals,json(object,hp,json(number,default(%<objid>/HP,0)),maxhp,json(number,default(%<objid>/MAXHP,0))))
+> &MAXHP me=40
+> &HP me=25
+```
+Output: after the last line your client is sent Char.Vitals {"hp":25,"maxhp":40}. The line before it sent one too, with an hp of 0.
+
+`@attribute/access` makes every HP and MAXHP created from then on watched. An HP a player already had keeps its own flags: flag it with `@set <player>/HP=watched`. The handler reads both values again rather than using %<new>, so each message carries the whole gauge. It is sent to the player whose attribute changed, and oob() sends nothing to a connection that did not agree to GMCP. If the attribute is on a thing rather than a player, nobody is connected as it and nothing is sent.

@@ -55,6 +55,7 @@ Event Types:
 - **db**: db\`dbck, db\`purge, db\`wcheck
 - **log**: log\`err, log\`cmd, log\`wiz, log\`conn, log\`trace, log\`check, log\`huh
 - **object**: object\`create, object\`destroy, object\`move, object\`rename, object\`flag
+- **attribute**: attribute\`change
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
 - **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn
@@ -67,7 +68,7 @@ Event Types:
 - **backup**: backup\`complete, backup\`error
 - **gallery**: gallery\`add, gallery\`report
 
-The room, channel, page, mail, backup and gallery events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
+The attribute, room, channel, page, mail, backup and gallery events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. attribute\`change tells the game an attribute flagged `watched` changed, so a gauge or a character sheet need not check it over and over, player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.
 
@@ -148,6 +149,28 @@ Message logged to Wizard log.
 ```sharp
 &OBJECT`FLAG #9=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
 ```
+
+# Attribute Events
+# Event Attribute
+- **attribute\`change** (*objid*, *attribute*, *old*, *new*, *enactor*)
+- Triggered after an attribute flagged `watched` is changed: set with `&` or `@set`, by set() or another function, copied or moved onto with `@cpattr` or `@mvattr`, cleared, or wiped. *<objid>* is the object the attribute is on, *<attribute>* its full name in upper case (HP, or STATS\`HP), *<old>* the value it had and *<new>* the value it has now, both keeping their colour. A new attribute's *<old>* is empty, and a cleared or wiped attribute's *<new>* is empty; a `@wipe` triggers once for each watched attribute it removes. *<enactor>* is whoever changed it, which %# is too, or #1 when the server changed it for its own bookkeeping. Setting an attribute to the value it already has still triggers it.
+
+Only attributes flagged `watched` trigger it (see [attribute flags]), so attributes nobody watches cost nothing. Mark one with `@set <object>/<attribute>=watched`, or a standard attribute wherever it is created from then on with `@attribute/access <attribute>=watched`. The flag watches the attribute it is set on, not the ones below it. Loading a PennMUSH database triggers nothing.
+
+The handler runs after the change has happened, so the event cannot be stopped, and it is private: the values may be hidden from everyone but the owner.
+
+**Changes made by the handler:** a handler that changes a watched attribute (the one it heard about, or another) triggers attribute\`change again, and so does anything the handler queues with `@trigger`, `@wait` or `@force`. To keep a handler that changes what it heard about, or two handlers that change each other's attributes, from running for ever, a chain stops after 10 events: a change made by the handler of the tenth is still made, but triggers nothing, and the server logs a warning. A change typed by a player or made by any other code starts a new chain.
+
+### Example
+```sharp
+> &HP me=20
+> @set me/HP=watched
+> &ATTRIBUTE`CHANGE`LOG #9=@assert strmatch(%<attribute>,HP) ; @pemit %<objid>=HP went from %<old> to %<new>.
+> &HP me=15
+```
+Output: after the last line you are told "HP went from 20 to 15."
+
+See [event examples gauge example] for a health gauge sent to the player's client.
 
 # SQL Events
 # Event SQL

@@ -111,7 +111,7 @@ public class AttributesTests
 		await _db.SetAttributeAsync(new DBRef(1), ["KEEP"], MarkupText.Plain("parent"), god);
 		await _db.SetAttributeAsync(new DBRef(1), ["KEEP", "CHILD"], MarkupText.Plain("child"), god);
 
-		await Assert.That(await _db.ClearAttributeAsync(new DBRef(1), ["KEEP"])).IsTrue();
+		await Assert.That((await _db.ClearAttributeAsync(new DBRef(1), ["KEEP"])).Written()).IsTrue();
 
 		var kept = await _db.GetAttributeAsync(new DBRef(1), ["KEEP"]).ToListAsync();
 		await Assert.That(kept.Count).IsEqualTo(1);
@@ -125,7 +125,7 @@ public class AttributesTests
 		var god = await God();
 		await _db.SetAttributeAsync(new DBRef(1), ["ROOT", "ONLY"], MarkupText.Plain("leaf"), god);
 
-		await Assert.That(await _db.ClearAttributeAsync(new DBRef(1), ["ROOT", "ONLY"])).IsTrue();
+		await Assert.That((await _db.ClearAttributeAsync(new DBRef(1), ["ROOT", "ONLY"])).Written()).IsTrue();
 
 		await Assert.That(await _db.GetAttributeAsync(new DBRef(1), ["ROOT", "ONLY"]).ToListAsync()).IsEmpty();
 		var root = await _db.GetAttributeAsync(new DBRef(1), ["ROOT"]).FirstAsync();
@@ -140,7 +140,7 @@ public class AttributesTests
 		await _db.SetAttributeAsync(new DBRef(1), ["TREE", "C"], MarkupText.Plain("2"), god);
 		await _db.SetAttributeAsync(new DBRef(1), ["TREEZ"], MarkupText.Plain("sibling"), god);
 
-		await Assert.That(await _db.WipeAttributeAsync(new DBRef(1), ["TREE", "A"])).IsTrue();
+		await Assert.That((await _db.WipeAttributeAsync(new DBRef(1), ["TREE", "A"])).Written()).IsTrue();
 
 		var left = await _db.GetAttributesByRegexAsync(new DBRef(1), "^TREE").Select(a => a.LongName).ToListAsync();
 		await Assert.That(left).IsEquivalentTo(new[] { "TREE", "TREE`C", "TREEZ" });

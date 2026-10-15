@@ -190,7 +190,7 @@ public abstract class ExtendedDatabaseBenchmarks
 	}
 
 	[Benchmark(Description = "WipeAttributeAsync over a freshly-created 50-leaf subtree")]
-	public async Task<bool> WipeSubtree() =>
+	public async Task<SharpMUSH.Library.DiscriminatedUnions.AttributeWriteOutcome> WipeSubtree() =>
 		await Database.WipeAttributeAsync(_wipeTarget, ["SUB"]);
 
 	// --- DeleteObject ----------------------------------------------------------------------------

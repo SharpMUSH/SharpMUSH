@@ -286,6 +286,7 @@ public partial class LightningDatabase
 		=> WriteAttributePath(tx, dbref, new PreparedAttributeWrite(
 			longName.Split('`'),
 			Keys.Str(MarkupTextSerializer.Serialize(MString.Plain(value))),
+			MString.Plain(value),
 			1,
 			[]));
 

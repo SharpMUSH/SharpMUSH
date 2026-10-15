@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library;
 
@@ -139,8 +140,12 @@ public interface IAttributeStore
 	/// <param name="value">The value to place into the attribute</param>
 	/// <param name="owner">Attribute Owner</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>Success or Failure</returns>
-	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
+	/// <returns>
+	/// <see cref="NotFound"/> when the object does not exist; otherwise the leaf's change when it carries
+	/// <c>watched</c> (after the write, so a leaf created with an entry's default flags counts), else
+	/// <see cref="Success"/>.
+	/// </returns>
+	ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
 
 	/// <summary>Changes only the existing leaf attribute owner, preserving all values and flags.</summary>
 	ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default);
@@ -225,8 +230,11 @@ public interface IAttributeStore
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>Success or Failure</returns>
-	ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	/// <returns>
+	/// <see cref="NotFound"/> when the path does not exist; the leaf's change, with an empty new value, when
+	/// it carried <c>watched</c>; else <see cref="Success"/>.
+	/// </returns>
+	ValueTask<AttributeWriteOutcome> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Wipe an attribute and all of its children.
@@ -235,6 +243,10 @@ public interface IAttributeStore
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>Success or Failure</returns>
-	ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	/// <returns>
+	/// <see cref="NotFound"/> when the path does not exist; a change, with an empty new value, for each removed
+	/// attribute that carried <c>watched</c> (the node and its descendants, parent first); else
+	/// <see cref="Success"/>.
+	/// </returns>
+	ValueTask<AttributeWriteOutcome> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 }

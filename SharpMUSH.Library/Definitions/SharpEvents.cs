@@ -96,6 +96,15 @@ public static class SharpEvents
 	/// </summary>
 	public const string ChannelWho = "CHANNEL`WHO";
 
+	/// <summary>
+	/// Fired after a write changes an attribute flagged <c>watched</c>: a set, a clear or a wipe, by any command
+	/// or function. Args: (object objid, attribute name, old value, new value, enactor objid). A cleared or
+	/// wiped attribute's new value is empty, as is a new attribute's old value. Not raised for attributes
+	/// without the flag, nor past <see cref="Services.AttributeChangeChain.MaxDepth"/> changes made by the
+	/// handlers of earlier ones.
+	/// </summary>
+	public const string AttributeChange = "ATTRIBUTE`CHANGE";
+
 	/// <summary>A player received @mail. Args: (recipient objid, sender objid, message number, subject, urgent).</summary>
 	public const string MailReceived = "MAIL`RECEIVED";
 
