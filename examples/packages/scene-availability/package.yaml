@@ -30,6 +30,12 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
 
 objects:
   # The command object, in the master room. WIZARD because it adds +avail (@command/add, @hook) and reads every
@@ -56,10 +62,12 @@ objects:
     location: "{{$master_room}}"
     flags: [WIZARD]
     attributes:
-      # Settings, in the layout +config reads: the value in DATA`CONFIG`<NAME>, and beside it what it means,
-      # its type, its default and its bounds. Durations are in seconds.
+      # The settings +config shows and changes (plus-config): the value in DATA`CONFIG`<NAME>, and beside it what
+      # it means, its type, its default and its bounds. Durations are in seconds.
       DATA`CONFIG: |-
         When characters are busy or free, and finding times a group is all free.
+      DATA`CONFIG`LABEL: |-
+        Availability
       DATA`CONFIG`SLOT: |-
         30
       DATA`CONFIG`SLOT`DESCRIPTION: |-
@@ -959,20 +967,22 @@ objects:
 
         **Scene cards.** `+scene <id>` for a scene scheduled for a time still to come shows, under its cast, who is free at its time, who is busy, and who has set no times. A scene is taken to last two hours.
       HELP`AVAIL`SETTINGS: |-
-        The settings are attributes on the Availability object in the master room, each value in `` DATA`CONFIG`<NAME> `` with what it means beside it in `` DATA`CONFIG`<NAME>`DESCRIPTION ``. Lengths are in seconds.
+        `+config avail` lists the settings and `+config avail/<setting>=<value>` changes one \(`config.admin`\). Lengths take `2h`, `90m` or seconds.
 
-        - `` DATA`CONFIG`SLOT ``: minutes in one step free time is counted in: 15, 20, 30 or 60. `30` as shipped.
-        - `` DATA`CONFIG`FIND-DAYS ``: how many days ahead `+avail/find` looks, 1 to 28. `7`.
-        - `` DATA`CONFIG`FIND-LENGTH ``: the length `+avail/find` looks for when none is given. `7200`, two hours.
-        - `` DATA`CONFIG`FIND-RESULTS ``: how many times it lists at most. `10`.
-        - `` DATA`CONFIG`FIND-PLAYERS ``: how many players it takes at once, the one asking included. `12`.
-        - `` DATA`CONFIG`SCENE-LENGTH ``: how long a scene is taken to last on its card. `7200`.
-        - `` DATA`CONFIG`ENTRIES ``: how many entries one character may keep. `30`.
-        - `` DATA`CONFIG`NOTE-LENGTH ``: how long a note may be. `60`.
+        - `slot`: minutes in one step free time is counted in: 15, 20, 30 or 60. `30` as shipped.
+        - `find-days`: how many days ahead `+avail/find` looks, 1 to 28. `7`.
+        - `find-length`: the length `+avail/find` looks for when none is given. Two hours.
+        - `find-results`: how many times it lists at most. `10`.
+        - `find-players`: how many players it takes at once, the one asking included. `12`.
+        - `scene-length`: how long a scene is taken to last on its card. Two hours.
+        - `entries`: how many entries one character may keep. `30`.
+        - `note-length`: how long a note may be. `60`.
 
         For example, to look two weeks ahead:
 
-        `` &DATA`CONFIG`FIND-DAYS <Availability>=14 ``
+        `+config avail/find-days=14`
+
+        Output: `\[CONFIG\] Done: avail/find-days is now 14, was 7.`
 
         Entries are kept on the Availability Calendar inside it, `` PLAYER`<key>`<n>`<leaf> ``, one leaf per fact: `KIND`, `REPEAT`, `EVERY`, `DAYS`, `DATE`, `TIME`, `MINUTES`, `UNTIL`, `ZONE`, `SKIP` and `NOTE`.
       HELP`AVAIL`CODE: |-
@@ -993,3 +1003,9 @@ objects:
     attributes:
       SRC`AVAIL: |-
         {{availability_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`AVAIL: |-
+        {{availability}}

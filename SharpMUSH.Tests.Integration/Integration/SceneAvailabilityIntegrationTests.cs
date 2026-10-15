@@ -317,6 +317,29 @@ public class SceneAvailabilityIntegrationTests
 	}
 
 	[Test]
+	public async Task SettingsAreChangedThroughConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var staff = await Player("AvCfg");
+			await God($"@role/assign #{staff.DbRef.Number}=wizard");
+
+			await Assert.That(await As(staff, "+config avail")).Contains("find-days").And.Contains("find-length");
+			await Assert.That(await As(staff, "+config avail/find-days=14")).Contains("avail/find-days is now 14, was 7.");
+			await Assert.That(await Think($"get({Avail}/DATA`CONFIG`FIND-DAYS)")).IsEqualTo("14");
+			await Assert.That(await As(staff, "+config avail/find-days=99")).DoesNotContain("is now");
+			await Assert.That(await As(staff, "+config avail/find-length=3h")).Contains("avail/find-length is now 3h");
+			await Assert.That(await Think($"get({Avail}/DATA`CONFIG`FIND-LENGTH)")).IsEqualTo("10800");
+			await Assert.That(await As(staff, "+config avail/slot=45")).DoesNotContain("is now");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task AScheduledScenesCardShowsWhoIsFree()
 	{
 		try
