@@ -112,6 +112,9 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +alts is a name a game may already use for its own code. It hears PLAYER`UNLINK
+		// on the event handler, so an account forgets a hidden character that leaves it.
+		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

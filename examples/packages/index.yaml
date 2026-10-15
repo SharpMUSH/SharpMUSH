@@ -152,3 +152,8 @@ packages:
     package: roster-jobs
     version: 1.0.0
     description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs and plus-help)
+  - path: alts/
+    name: Alts
+    package: alts
+    version: 1.0.0
+    description: +alts — the characters on your account, private until you make the list public, with any one kept off it (requires plus-help)
