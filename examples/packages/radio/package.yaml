@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: radio
-version: 1.2.3
+version: 1.2.4
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [radio, channels, comms, feed]
+category: Community
 requires_server: ">=0.1"
 
 depends:

@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: info
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [info, journal, notes]
+category: Characters
 requires_server: ">=0.1"
 
 depends:

@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: who-where
-version: 1.7.1
+version: 1.7.2
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [who, where, social]
+category: Community
 convention_prefix: WW_
 requires_server: ">=0.1"
 

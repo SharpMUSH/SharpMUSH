@@ -66,7 +66,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.10 category)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -74,6 +74,7 @@ description: "Bulletin Board"   # optional
 license: MIT                    # optional — SPDX expression recommended
 homepage: https://example.com   # optional
 keywords: [bbs, boards]         # optional — up to 5, feeds browse/search
+category: Community             # optional (format "1.10", quoted) — the group the setup wizard lists it under
 convention_prefix: BBS_         # optional — advisory attr prefix, not enforced
 requires_server: ">=0.1"        # optional — the lowest SharpMUSH version it runs on
 verified_server: "2.0"          # optional — the newest SharpMUSH version it was tested on (format 1.6)
@@ -623,6 +624,15 @@ counts as a breaking change.
 On a 2.9.0 server, a package with the range above installs without a warning.
 On 3.1.0 it is past its maximum: the review screen warns, and Apply turns on
 only once the administrator ticks "Install it anyway". On 1.9.0 it is refused.
+
+## Category (format 1.10)
+
+`category:` is the group a package is listed under where packages are offered
+together. The setup wizard lists the bundled packages by it; within a category, a
+package that needs another of the same category is listed under it (`jobs-app`
+under `jobs`), and packages with none come last under Other. One name, up to 40
+characters. Write the format quoted, `format: "1.10"`, so YAML tools that type
+numbers do not read it as 1.1; below 1.10 `category:` is ignored with a warning.
 
 ## Application packages (`kind: application`)
 
