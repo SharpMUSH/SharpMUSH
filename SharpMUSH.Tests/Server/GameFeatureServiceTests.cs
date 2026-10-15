@@ -120,6 +120,16 @@ public class GameFeatureServiceTests
 		await Assert.That(scene.Available).IsFalse();
 	}
 
+	/// <summary>The wizard groups packages by the category their manifests give.</summary>
+	[Test]
+	public async Task EachPackage_CarriesItsManifestsCategory()
+	{
+		var packages = await new Game().Features().PackagesAsync();
+
+		await Assert.That(packages.Single(p => p.Id == "jobs").Category).IsEqualTo("Staff");
+		await Assert.That(packages.Single(p => p.Id == "jobs-app").Category).IsEqualTo("Staff");
+	}
+
 	/// <summary>
 	/// Every bundled package that calls the Scene plugin names it in <c>plugins:</c>, so without the plugin none of
 	/// them is offered, and the packages that do not need it still are.

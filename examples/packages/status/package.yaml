@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: status
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [status, lfrp, roleplay, who]
+category: Community
 requires_server: ">=0.1"
 
 depends:
