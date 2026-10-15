@@ -65,9 +65,11 @@ jobs:
       - name: Build reference PennMUSH
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libssl-dev zlib1g-dev libpcre2-dev libicu-dev
+          sudo apt-get install -y --no-install-recommends libssl-dev zlib1g-dev libpcre2-dev libicu-dev libcurl4-openssl-dev
           git clone https://github.com/pennmush/pennmush pennmush
           git -C pennmush checkout "$PENNMUSH_REF"
+          # Upstream pull requests SharpMUSH follows ahead of their merge (see each patch's header).
+          for patch in tools/parity/patches/*.patch; do git -C pennmush apply "$PWD/$patch"; done
           cd pennmush
           ./configure
           make -j"$(nproc)"

@@ -250,12 +250,12 @@ public class ReadPennMushConfigRestrictionTests
 		var game = GameDirectory();
 		try
 		{
-			var serverFile = Write(game, "secret.cnf", "sql_password hunter2", "restrict_command @dig nobody");
+			var serverFile = Write(game, "secret.cnf", "sql_username hunter2", "restrict_command @dig nobody");
 			var uploaded = Write(game, "uploaded.cnf", "mud_name Uploaded", $"include {serverFile}");
 
 			var import = ReadPennMushConfig.Import(uploaded, followIncludes: false);
 
-			await Assert.That(import.Options.Net.SqlPassword).IsNotEqualTo("hunter2");
+			await Assert.That(import.Options.Net.SqlUsername).IsNotEqualTo("hunter2");
 			await Assert.That(import.Options.Restriction.CommandRestrictions).IsEmpty();
 			await Assert.That(import.Skipped).IsEquivalentTo(new[]
 			{

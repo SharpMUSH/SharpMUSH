@@ -95,6 +95,10 @@ class Session:
             text, self._partial = split_telnet(self._partial + chunk)
             self._text += text
 
+    def read_line_ending(self, text: str) -> str:
+        """Everything up to and including the first line that ends in `text`."""
+        return (self._read_until(text.encode() + b"\r\n") + text.encode() + b"\r\n").decode("utf-8", errors="replace")
+
     def sync_start(self) -> str:
         """Queue the sentinel; pair with `sync_finish`. Sending to every session first lets
         cross-session output that is already in flight land before its sentinel."""

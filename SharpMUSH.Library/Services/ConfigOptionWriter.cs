@@ -19,11 +19,12 @@ public sealed class ConfigOptionWriter(
 {
 	/// <summary>
 	/// PennMUSH's CP_GODONLY options (<c>src/conf.c:153-158</c>): the SQL credentials, which
-	/// <c>can_view_config_option</c> hides from everyone but God.
+	/// <c>can_view_config_option</c> hides from everyone but God. The password is not among them: it is
+	/// the <c>sql.password</c> secret (<see cref="ISecretStore"/>), which nobody can view.
 	/// </summary>
 	public static readonly IReadOnlySet<string> GodOnlyOptions = new HashSet<string>(StringComparer.Ordinal)
 	{
-		nameof(NetOptions.SqlUsername), nameof(NetOptions.SqlPassword), nameof(NetOptions.SqlDatabase)
+		nameof(NetOptions.SqlUsername), nameof(NetOptions.SqlDatabase)
 	};
 
 	// Every write reads the stored options, changes part of them and stores them all: two at once must not
