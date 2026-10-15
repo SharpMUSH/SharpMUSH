@@ -150,7 +150,8 @@ public sealed partial class RoomTopologyReader(IMediator mediator, IPermissionSe
 				if (!describe) continue;
 				descriptions[dbref] = await DescriptionAsync(actor, target, ct);
 				exitNames[dbref] = string.Join(';', [exit.Object.Name, .. target.Aliases ?? []]);
-				exitTargets[dbref] = readableDestination ?? status switch
+				// A player or thing is no room to draw or build to, so only its kind is named.
+				exitTargets[dbref] = status == "non-room" ? "non-room" : readableDestination ?? status switch
 				{
 					"dynamic" => "variable",
 					"home" => "home",

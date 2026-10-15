@@ -68,7 +68,7 @@ Export saves the selected rooms as `<title>.rooms.json`, a room document:
 }
 ```
 
-Rooms and exits are in dbref order, so exporting an unchanged world twice gives the same file. An exit's `name` carries its aliases after `;`, as `@open` takes it. `to` is a room's dbref, or `home`, `variable` (worked out when the exit is used), `unlinked`, or `hidden` when you may not see where it leads. Descriptions are the rooms' and exits' own DESCRIBE attributes as plain text. An export of rooms with more than 500 exits between them is refused; export fewer rooms at a time.
+Rooms and exits are in dbref order, so exporting an unchanged world twice gives the same file. An exit's `name` carries its aliases after `;`, as `@open` takes it. `to` is a room's dbref, or `home`, `variable` (worked out when the exit is used), `unlinked`, `non-room` when it leads to a player or thing, or `hidden` when you may not see where it leads. Descriptions are the rooms' and exits' own DESCRIBE attributes as plain text. An export of rooms with more than 500 exits between them, or that comes to more than 2 MiB, is refused; export fewer rooms at a time.
 
 ## Definition contract
 
