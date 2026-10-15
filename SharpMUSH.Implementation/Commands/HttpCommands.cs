@@ -178,18 +178,17 @@ public partial class Commands
 	{
 		var lines = new List<(string Name, string Value)>();
 		string? contentType = null;
-		foreach (var trimmed in (text ?? string.Empty).Split('\n').Select(line => line.Trim()))
+		foreach (var line in (text ?? string.Empty).Split('\n',
+			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
 		{
-			if (trimmed.Length == 0) continue;
+			var colon = line.IndexOf(':');
+			if (colon < 0) return new Error<string>(line);
 
-			var colon = trimmed.IndexOf(':');
-			if (colon < 0) return new Error<string>(trimmed);
-
-			var name = trimmed[..colon].Trim();
-			var value = trimmed[(colon + 1)..].Trim();
+			var name = line[..colon].Trim();
+			var value = line[(colon + 1)..].Trim();
 			if (name.Length == 0 || !name.All(IsTokenChar) || value.Any(c => char.IsControl(c) && c != '\t')
 				|| name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-				return new Error<string>(trimmed);
+				return new Error<string>(line);
 
 			if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
 				contentType = value;
