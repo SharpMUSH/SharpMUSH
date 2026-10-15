@@ -66,21 +66,20 @@ public partial class Commands
 		}
 
 		var receiver = new AnySharpObject(newOwner);
-		if (!await receiver.HasFlag("SHARED") && await CantReceiveAsync(receiver, newOwner) is { } why)
+		if (await receiver.IsGuest())
 		{
-			// can_pay_fees (src/predicat.c:435-463) tells the new owner why; do_chown adds a line for
-			// whoever gave it, when that is someone else.
-			await NotifyService.NotifyLocalized(newOwner.Object.DBRef, why, executor);
-			if (newOwner.Object.DBRef != executor.Object().DBRef)
-			{
-				await NotifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.ChownReceiverHasNoQuota), executor);
-			}
-
-			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+			return await CantReceive(nameof(ErrorMessages.Notifications.GuestCantBuild));
 		}
 
-		await Mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
+		Func<ValueTask> transfer = async () => await Mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
+		if (await receiver.HasFlag("SHARED"))
+		{
+			await transfer();
+		}
+		else if (!await BuildingHelpers.WithReceivingQuotaAsync(Mediator, Configuration, newOwner, transfer))
+		{
+			return await CantReceive(nameof(ErrorMessages.Notifications.BuildingQuotaExhausted));
+		}
 
 		if (!preserve)
 		{
@@ -91,12 +90,19 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OwnerChanged), executor);
 		return true;
 
-		async ValueTask<string?> CantReceiveAsync(AnySharpObject who, SharpPlayer player)
-			=> await who.IsGuest()
-				? nameof(ErrorMessages.Notifications.GuestCantBuild)
-				: await BuildingHelpers.CanReceiveAsync(Mediator, Configuration, player)
-					? null
-					: nameof(ErrorMessages.Notifications.BuildingQuotaExhausted);
+		// can_pay_fees (src/predicat.c:435-463) tells the new owner why; do_chown adds a line for whoever
+		// gave it, when that is someone else.
+		async ValueTask<CallState> CantReceive(string why)
+		{
+			await NotifyService.NotifyLocalized(newOwner.Object.DBRef, why, executor);
+			if (newOwner.Object.DBRef != executor.Object().DBRef)
+			{
+				await NotifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.ChownReceiverHasNoQuota), executor);
+			}
+
+			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+		}
 
 		async ValueTask<CallState> Refused(string key)
 		{
