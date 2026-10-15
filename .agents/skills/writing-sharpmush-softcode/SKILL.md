@@ -257,6 +257,24 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 
 `%0` is data: storing or substituting it never evaluates brackets or runs `;`. To evaluate typed text on purpose, evaluate it as the player, once, in the exit attribute: `` objevals(%#,v(DATA`DRAFT)) ``. `objeval()` would only substitute the attribute and give the text back. Never `s()` typed text, and only do this from an object that controls its players (wizard-owned), since `objevals()` otherwise falls back to the object's own privileges. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
 
+## Command palette and contexts
+
+The portal's palette (Ctrl+K) offers a command when its object holds a `` PALETTE`<NAME> `` attribute: a JSON object, at least `label` and `line`, usually `attr` naming the `$`-command. The value is data; only `lock` is evaluated. A `<word>` in `line` is a slot the player fills, or a context value of that name fills. Entries are one level deep: `` PALETTE`KEY_NEXT ``, never `` PALETTE`KEY`NEXT ``. `help palette keys` lists every key.
+
+What comes first is the player's context stack. A typed `$`-command pushes its package (or its object) on its own; push anything else with `@context/push <player>=<name>[,<values>[,<lifetime>[,<info>]]]` and take it off with `@context/drop`. Values are a JSON object built with `json()`, never `{…}` (the parser removes braces), and text needs `json(string,…)`: `` @context/push %#=combat,[json(object,target,json(string,%0))],10m,You are fighting %0. ``. An entry with `"when":["combat"]` rises while `combat` is on the stack; add `"urgent":true` for "do this now". `context(<player>[,<count>[,<osep>[,<obj>/<attr>]]])` returns the same list to softcode.
+
+Context names are shared by every package, so an add-on can raise its commands on a name it does not push. Reuse these before inventing one:
+
+| Name | Values | Means |
+|---|---|---|
+| `scene_here` | `scene` | A scene is running in the player's room (scene-here) |
+| `scene_focus` | `scene` | The player joined or created a scene and has not left it (scene) |
+| `combat` | your own | The player is in a fight |
+| `my_turn` | your own | The player must act now; push with a short lifetime and `urgent` entries |
+| `<package id>` | none | The engine's push when the player types one of that package's commands |
+
+Push and drop from the commands and events that change the state (`` OBJECT`MOVE`<PKG> `` on `#9` for "where the player is"), not from a timer.
+
 ## Common mistakes (all observed in practice)
 
 | Mistake | Fix |
