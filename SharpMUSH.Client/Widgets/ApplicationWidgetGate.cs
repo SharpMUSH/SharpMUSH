@@ -97,6 +97,12 @@ public sealed class ApplicationWidgetGate(IWidgetRegistry? registry, IServicePro
 		return true;
 	}
 
+	/// <summary>
+	/// Forgets which optional applications the game has on, after the server's answer changed (an administrator
+	/// installed or removed one), so the next <see cref="ResolveAsync"/> asks again.
+	/// </summary>
+	public void ForgetFeatures() => _features.Clear();
+
 	/// <summary>The application fetched for <paramref name="name"/>'s check, if one was.</summary>
 	public PortalApplication? Fetched(string name) => _fetched.GetValueOrDefault(name);
 

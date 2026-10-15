@@ -3,6 +3,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject IAuthorizationService Authorization
 @inject ServerInfoService ServerInfo
+@implements IDisposable
 
 @* One group of the drawer's Build & manage destinations, from BuildNavCatalog: the gates are the same
    ones the rail and the section sidebar read. *@
@@ -34,7 +35,23 @@
         // opening) passes new callbacks and would otherwise re-ask every policy.
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
+        await LoadEntriesAsync();
+    }
+
+    protected override void OnInitialized() => ServerInfo.Changed += OnServerInfoChanged;
+
+    private async Task LoadEntriesAsync()
+    {
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _entries = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
     }
+
+    /// <summary>An application was switched on or off: an entry that belongs to one (Pose types) follows it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadEntriesAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
 }

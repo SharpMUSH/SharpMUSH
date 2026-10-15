@@ -37,9 +37,8 @@ public class ConnectionStateServiceTests
 			});
 	}
 
-	private static ServerInfoService ServerInfo(string features)
+	private static ServerInfoService ServerInfo(HttpClient http)
 	{
-		var http = new HttpClient(new ServerInfoHandler(features)) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
 		return new ServerInfoService(factory);
@@ -55,7 +54,8 @@ public class ConnectionStateServiceTests
 	public async Task TheSceneConnection_OpensOnlyWithTheSceneSystem(string features, int opened)
 	{
 		var (_, factory, _) = MakeService();
-		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance, ServerInfo(features));
+		using var http = new HttpClient(new ServerInfoHandler(features)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var svc = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance, ServerInfo(http));
 
 		await svc.ConnectAsync();
 

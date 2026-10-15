@@ -161,7 +161,7 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 /// </summary>
 public class ZoneRendererFeatureTests : ZoneRendererTestBase
 {
-	private void Register(IReadOnlyList<string> features)
+	private StubServerInfoService Register(IReadOnlyList<string> features)
 	{
 		var reg = Substitute.For<IWidgetRegistry>();
 		var healthy = Substitute.For<IPortalWidget>();
@@ -170,7 +170,9 @@ public class ZoneRendererFeatureTests : ZoneRendererTestBase
 		healthy.Feature.Returns("scenes");
 		reg.GetWidget("Healthy").Returns(healthy);
 		Services.AddSingleton(reg);
-		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true, features: features));
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, features: features);
+		Services.AddSingleton<ServerInfoService>(serverInfo);
+		return serverInfo;
 	}
 
 	private static LayoutConfiguration Layout() => new(
@@ -200,6 +202,22 @@ public class ZoneRendererFeatureTests : ZoneRendererTestBase
 		Register(["scenes"]);
 
 		var cut = Render<ZoneRenderer>(p => p.Add(c => c.Zone, WidgetZone.TopBar).Add(c => c.Layout, Layout()));
+
+		cut.WaitForState(() => cut.Markup.Contains("healthy-widget"));
+		await Assert.That(cut.Markup).Contains("healthy-widget");
+	}
+
+	/// <summary>An administrator turns the application on in the same session: the widget appears without a reload.</summary>
+	[TUnit.Core.Test]
+	public async Task AnApplicationTurnedOnLater_ShowsItsWidget()
+	{
+		List<string> features = [];
+		var serverInfo = Register(features);
+		var cut = Render<ZoneRenderer>(p => p.Add(c => c.Zone, WidgetZone.TopBar).Add(c => c.Layout, Layout()));
+		await Assert.That(cut.Markup).DoesNotContain("healthy-widget");
+
+		features.Add("scenes");
+		serverInfo.Refresh();
 
 		cut.WaitForState(() => cut.Markup.Contains("healthy-widget"));
 		await Assert.That(cut.Markup).Contains("healthy-widget");
