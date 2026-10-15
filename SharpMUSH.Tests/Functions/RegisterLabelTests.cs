@@ -30,13 +30,15 @@ public class RegisterLabelTests
 	public async Task LabelIsAnotherNameForTheRegister(string code, string expected)
 		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
 
+	// RhostMUSH answers #-1 INVALID LABEL; PennMUSH's odd-count refusal is kept, since these are
+	// calls PennMUSH code can make.
 	[Test]
-	[Arguments("setq(0,v,l)")]
-	[Arguments("setq(0,v,12)")]
-	[Arguments("setq(0,v,a>b)")]
-	[Arguments("setr(0,v,)")]
-	public async Task LabelMustBeTwoCharactersAndNotANumber(string code)
-		=> await Assert.That(await Eval(code)).IsEqualTo("#-1 INVALID LABEL");
+	[Arguments("setq(0,v,l)", "SETQ")]
+	[Arguments("setq(0,v,12)", "SETQ")]
+	[Arguments("setq(0,v,a>b)", "SETQ")]
+	[Arguments("setr(0,v,)", "SETR")]
+	public async Task LabelMustBeTwoCharactersAndNotANumber(string code, string name)
+		=> await Assert.That(await Eval(code)).IsEqualTo($"#-1 FUNCTION ({name}) EXPECTS AN EVEN NUMBER OF ARGUMENTS");
 
 	[Test]
 	[Arguments("setq(a,1,b,2,c)", "SETQ")]

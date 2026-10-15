@@ -113,12 +113,13 @@ public partial class Functions
 	/// (<c>process_setqs</c>, <c>Server/src/functions.c</c>). Any other odd count is PennMUSH's
 	/// <c>(nargs % 2) != 0</c> refusal (<c>src/funmisc.c:327</c>), checked here rather than by
 	/// <c>EvenArgsOnly</c> so the three-argument call gets through; Penn checks it after evaluating
-	/// the arguments too.
+	/// the arguments too. A third argument that cannot be a label keeps PennMUSH's refusal, so a
+	/// PennMUSH call such as <c>setr(A,1,B)</c> answers as it does there.
 	/// </remarks>
 	private static CallState SetRegisters(IMUSHCodeParser parser, bool echoFirstValue, string calledAs)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
-		if (arguments.Count == 3)
+		if (arguments.Count == 3 && RegisterLabels.IsValidLabel(arguments["2"].Message.ToPlainText()))
 		{
 			var labelled = SetLabelledRegister(parser.CurrentState,
 				arguments["0"].Message.ToPlainText(), arguments["1"].Message, arguments["2"].Message.ToPlainText());

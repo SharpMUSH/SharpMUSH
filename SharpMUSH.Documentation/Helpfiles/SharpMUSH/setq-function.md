@@ -107,7 +107,7 @@ Object says "foo"
 
 `setq(<register>, <string>, <label>)` sets the register and gives it `<label>` as a second name. From then on `%q<label>`, `r(label)` and `setq(label, ...)` read and write that same register, until the register is given another label or the registers are cleared. A register has one label at a time, and a label names one register: giving it to a second register takes it from the first. Labels are saved and restored with the registers by localize(), ulocal() and the `/localize` switches.
 
-A label is at least two characters long, is not a number and has no `>` in it; anything else is `#-1 INVALID LABEL`. The register may also be `+` (the register the label already names, else the first of 0-9 and A-Z with no label and no value) or `!` (the same, but a register that holds a value may be taken). Any odd number of arguments other than three is still an error.
+A label is at least two characters long, is not a number and has no `>` in it. With a third argument that is not a label, the call is PennMUSH's odd-argument error; `nameq()` answers `#-1 INVALID LABEL` instead. The register may also be `+` (the register the label already names, else the first of 0-9 and A-Z with no label and no value) or `!` (the same, but a register that holds a value may be taken).
 
 nameq() reads and changes labels, and setqm() takes `<register>><label>` to do the same in order.
 
