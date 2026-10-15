@@ -78,9 +78,9 @@ public sealed class PluginAdministrationService(
 		if (enabled)
 		{
 			// A shipped package over this plugin comes back at the next start, once the plugin runs again.
-			foreach (var application in GameFeatureService.All.Where(a => string.Equals(a.RequiredPlugin, plugin.Id, StringComparison.OrdinalIgnoreCase)))
+			foreach (var packageId in features.PackagesOver(plugin.Id))
 			{
-				await features.SetDeclinedAsync(application.PackageId, declined: false);
+				await features.SetDeclinedAsync(packageId, declined: false);
 			}
 		}
 		else if (plugin.Unloadable && manager.Registration(plugin.Id) is not null)
@@ -168,7 +168,6 @@ public sealed class PluginAdministrationService(
 			.ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
 		var installed = await registry.GetInstalledPackagesAsync();
-		var installedIds = installed.Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
 		var dependencies = await registry.GetAllPackageDependenciesAsync();
 
 		var ids = booted.Keys.Concat(onDisk.Keys).Distinct(StringComparer.OrdinalIgnoreCase)
@@ -214,24 +213,24 @@ public sealed class PluginAdministrationService(
 				package,
 				registration?.Commands ?? 0,
 				registration?.Functions ?? 0,
-				Dependents(id, package, installedIds, dependencies)));
+				Dependents(id, package, installed, dependencies)));
 		}
 
 		return result;
 	}
 
 	/// <summary>
-	/// The installed packages that need plugin <paramref name="pluginId"/>: the shipped packages built over it, the
+	/// The installed packages that need plugin <paramref name="pluginId"/>: those that name it in <c>plugins:</c>, the
 	/// packages that depend on the package that installed it, and so on down, nearest first.
 	/// </summary>
-	private static IReadOnlyList<string> Dependents(string pluginId, string? package, IReadOnlySet<string> installed,
-		IReadOnlyList<PackageDependencyRecord> dependencies)
+	private static IReadOnlyList<string> Dependents(string pluginId, string? package,
+		IReadOnlyList<InstalledPackageRecord> installedPackages, IReadOnlyList<PackageDependencyRecord> dependencies)
 	{
+		var installed = installedPackages.Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
 		var found = new List<string>();
-		var queue = new Queue<string>(GameFeatureService.All
-			.Where(a => string.Equals(a.RequiredPlugin, pluginId, StringComparison.OrdinalIgnoreCase))
-			.Select(a => a.PackageId)
-			.Where(installed.Contains));
+		var queue = new Queue<string>(installedPackages
+			.Where(p => p.Plugins?.Contains(pluginId, StringComparer.OrdinalIgnoreCase) ?? false)
+			.Select(p => p.Id));
 		if (package is not null)
 		{
 			foreach (var dependent in dependencies.Where(d => string.Equals(d.DependsOnId, package, StringComparison.OrdinalIgnoreCase)))

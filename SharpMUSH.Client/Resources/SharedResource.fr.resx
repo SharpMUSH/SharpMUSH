@@ -2182,6 +2182,9 @@
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Commencez par lire le wiki, parcourir les personnages ou rejoindre une scène.</value>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Commencez par lire le wiki ou parcourir les personnages.</value>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Lire le wiki</value>
   </data>

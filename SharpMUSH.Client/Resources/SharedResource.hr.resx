@@ -3916,6 +3916,10 @@
     <value>Započnite čitanjem wikija, pregledavanjem likova ili uključivanjem u scenu.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Započnite čitanjem wikija ili pregledavanjem likova.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Pročitajte wiki</value>
     <comment>MT</comment>

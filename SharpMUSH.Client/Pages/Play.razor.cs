@@ -228,6 +228,7 @@ public partial class Play
 			command => InvokeAsync(async () => { await SendFromSheetAsync(command); StateHasChanged(); }),
 			InSheet: true);
 		Layouts.OnLayoutChanged += OnLayoutChanged;
+		ServerInfo.Changed += OnServerInfoChanged;
 	}
 
 	protected override async Task OnInitializedAsync()
@@ -480,6 +481,15 @@ public partial class Play
 	private PlayAsideEntry? AsideEntry(string name, JsonElement? config, bool placed)
 		=> Widgets.GetWidget(name) is { } widget ? new PlayAsideEntry(name, widget, config, placed) : null;
 
+	/// <summary>An application was switched on or off: the room's scene and the aside's widgets follow it.</summary>
+	private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+	{
+		AsideGate.ForgetFeatures();
+		_scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
+		await LoadAsideAsync();
+		StateHasChanged();
+	});
+
 	private void OnLayoutChanged(string scope)
 	{
 		if (!string.Equals(scope, LayoutScopes.Play, StringComparison.OrdinalIgnoreCase)) return;
@@ -647,6 +657,7 @@ public partial class Play
 	public async ValueTask DisposeAsync()
 	{
 		Layouts.OnLayoutChanged -= OnLayoutChanged;
+		ServerInfo.Changed -= OnServerInfoChanged;
 		PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
 		Comms.Changed -= OnCommsChanged;

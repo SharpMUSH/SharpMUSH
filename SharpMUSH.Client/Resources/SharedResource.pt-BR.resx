@@ -3916,6 +3916,10 @@
     <value>Comece lendo o wiki, vendo os personagens ou entrando em uma cena.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Comece lendo o wiki ou vendo os personagens.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Ler o wiki</value>
     <comment>MT</comment>

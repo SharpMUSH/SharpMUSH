@@ -3,6 +3,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject IAuthorizationService Authorization
 @inject SetupWizardService SetupWizard
+@inject ServerInfoService ServerInfo
 
 <PageTitle>@Loc["AdmOverview"] — @Loc["NavBuildManage"] — @Loc["AppTitle"]</PageTitle>
 
@@ -51,7 +52,7 @@
         var setup = (await Authorization.AuthorizeAsync(user, "server.admin")).Succeeded
             ? SetupWizard.GetAsync()
             : null;
-        _groups = (await BuildNavCatalog.VisibleAsync(Authorization, user))
+        _groups = (await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo))
             .Where(e => e.Group != BuildNavCatalog.Group.Overview)
             .GroupBy(e => e.Group)
             .ToList();

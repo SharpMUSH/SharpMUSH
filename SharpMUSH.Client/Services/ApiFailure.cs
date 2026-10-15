@@ -44,6 +44,10 @@ public sealed record ApiFailure(ApiFailureKind Kind, string Message, HttpStatusC
 	public static ApiFailure Transport(Exception ex) =>
 		new(ApiFailureKind.Transport, $"Could not reach the server: {ex.Message}");
 
+	/// <summary>The game does not have optional application <paramref name="feature"/> on, so nothing was asked.</summary>
+	public static ApiFailure NotEnabled(string feature) =>
+		new(ApiFailureKind.NotFound, $"This game does not have {feature} on.");
+
 	/// <summary>A response arrived but could not be used — an unreadable or malformed body.</summary>
 	public static ApiFailure Malformed(Exception ex, HttpStatusCode? status = null) =>
 		new(ApiFailureKind.Unexpected, $"The server's response could not be read: {ex.Message}", status);

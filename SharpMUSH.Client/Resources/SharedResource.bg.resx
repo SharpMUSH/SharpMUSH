@@ -3916,6 +3916,10 @@
     <value>Започнете, като прочетете wiki, разгледате героите или се включите в сцена.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Започнете, като прочетете wiki или разгледате героите.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Прочети Wiki</value>
     <comment>MT — `Wiki` kept untranslated, case copied from source</comment>
