@@ -10,7 +10,7 @@
 @* D1 §5.7 the character sheet drawer (board 08): a modal from the right with the full-height portrait
    and Full image (the portrait viewer, board 09), the name in its colour, the role line, pills (in
    this scene, idle, dbref), Look · Page · Mail · Profile, the Details (the page supplies the profile
-   schema) and a gallery strip. Escape and Close close it and hand focus back. *@
+   schema), the name card's applications and a gallery strip. Escape and Close close it and hand focus back. *@
 @if (Name is not null)
 {
     <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Style="@ScrimStyle">
@@ -62,6 +62,7 @@
                         <SectionLabel>@Loc["NavPlayDetails"]</SectionLabel>
                         <div class="sheet-details">@Details(Name)</div>
                     }
+                    <CardApplications CharacterName="@Name" />
                     @if (_gallery.Count > 0)
                     {
                         <div class="sheet-gallery-head">

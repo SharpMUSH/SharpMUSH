@@ -1,0 +1,159 @@
+format: "1.10"
+package: summary
+version: 1.0.1
+authors: [SharpMUSH]
+description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [summary, pose, roleplay, rp]
+category: Scenes
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  # The one setting is registered with +config: +config summary lists it.
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and
+  # tells any room the summary with @remit/spoof, which shows the player, not this object, to a reader with
+  # NOSPOOF.
+  #
+  # +summary is added with /noparse/rsnoparse and hooked to CMD`SUMMARY, so what a player types reaches the
+  # code exactly as typed and is never evaluated: it is substituted into the line as text.
+  #
+  # A summary is local and kept nowhere. The scene package records what its hooks on POSE, SAY, SEMIPOSE
+  # and @EMIT see, and its own +scene/<mode> verbs; +summary runs none of those, and @remit is not hooked,
+  # so a scene running in the room never records a summary.
+  #
+  # Trees: CMD` the hooked command, INC` the routine, FUN` the line. DATA`CONFIG` the settings
+  # +config summary shows. FILTER`SUMMARY`LINE`<name>, when another package adds one, changes the line.
+  - ref: summary
+    type: thing
+    name: Summary
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- Settings: +config summary ------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code
+      # reads the value with v(); see plus-config's README.
+      DATA`CONFIG:
+        value: |-
+          How long a +summary may be.
+        flags: [no_command]
+      DATA`CONFIG`MAX-LENGTH: |-
+        200
+      DATA`CONFIG`MAX-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-LENGTH`DEFAULT: |-
+        200
+      DATA`CONFIG`MAX-LENGTH`MIN: |-
+        20
+      DATA`CONFIG`MAX-LENGTH`MAX: |-
+        2000
+      DATA`CONFIG`MAX-LENGTH`DESCRIPTION: |-
+        The longest summary, in characters. A longer one is refused, not cut.
+
+      # ---- command --------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SUMMARY:
+        value: |-
+          $(?is)^\+summary(/\S*)?(?\: +(.*))?$:@include/args %!/INC`SUMMARY=switches,%1,text,trim(%2)
+        flags: [regexp, cmdsyntax]
+      # Checks the summary and tells the room. %<switches> and %<text> are as typed; %<text> is only ever
+      # substituted, never evaluated.
+      INC`SUMMARY:
+        value: |-
+          @assert not(strlen(%<switches>))=@pemit %#=notice(SUMMARY,+summary takes no switches. +summary <text> sums up your last pose.,warn); @assert strlen(%<text>)=@pemit %#=notice(SUMMARY,What happened? +summary <text> sums up your last pose in a line for the room.,warn); think setq(summary_max,v(DATA`CONFIG`MAX-LENGTH)); @assert lte(strlen(%<text>),%q<summary_max>)=@pemit %#=notice(SUMMARY,Keep a summary to %q<summary_max> characters. That one is [strlen(%<text>)].,warn); @assert isdbref(setr(summary_room,loc(%#)))=@pemit %#=notice(SUMMARY,You are nowhere to sum anything up.,warn); @assert not(hasflag(%#,GAGGED))=@pemit %#=notice(SUMMARY,You cannot speak while gagged.,error); @assert elock(%q<summary_room>/Speech,%#)=@pemit %#=notice(SUMMARY,You may not speak there.,error); @remit/spoof/silent %q<summary_room>=uargs(%!/FUN`LINE,player,%#,text,%<text>)
+        flags: [cmdsyntax]
+      # %<player> and %<text>: the line the room is told, through every FILTER`SUMMARY`LINE`<name> on this
+      # object in name order, each given the line so far as %0, the player as %1 and the summary as %2.
+      FUN`LINE:
+        value: |-
+          chain(iter(lattr(%!/FILTER`SUMMARY`LINE`*),%!/%i0),notice(SUMMARY,[tone(strong,name(%<player>))]: %<text>),%<player>,%<text>)
+        flags: [funsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +summary; @hook/override/inline +summary=%!,CMD`SUMMARY
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The +help topic, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: summary_help
+    type: thing
+    name: Summary Help
+    location: "{{summary}}"
+    attributes:
+      HELP: |-
+        Summing up a pose for the room: +summary.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SUMMARY: |-
+        scene
+      HELP`SUMMARY: |-
+        `+summary <text>` sums up your last pose in a line, for the people in the room with you now.
+        Use it after a long pose, so someone who arrives late or reads quickly can follow.
+
+        - Only the room you are in hears it. Nobody elsewhere does.
+        - It is not kept: a scene running in the room does not record it, and it is not in `+scene/recall`.
+        - What you type is shown as you typed it. Nothing in it is evaluated.
+        - A summary can be up to 200 characters, or as many as the game sets.
+
+        Example:
+
+        ```
+        > +summary Bars the door and will not let anyone leave.
+        \[SUMMARY\] Mira: Bars the door and will not let anyone leave.
+        ```
+
+        Output: the one line, told to everyone in the room, you included.
+      HELP`SUMMARY`STAFF: |-
+        Staff change how long a summary may be with `+config summary`:
+
+        - `max-length`: the longest summary, in characters. 200 by default, from 20 to 2000.
+
+        Example:
+
+        ```
+        > +config summary/max-length=300
+        \[CONFIG\] Done: summary/max-length is now 300, was 200.
+        ```
+
+        Output: one line saying what the setting is now and what it was.
+
+        Another package can change the line with a filter on the Summary object: an attribute named
+        `` FILTER`SUMMARY`LINE`<name> ``. Filters run in name order with `chain\(\)`, each given the line
+        so far as `%%0`, the player as `%%1` and the summary as typed as `%%2`, and each returns the line.
+
+  - ref: summary_config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`SUMMARY: |-
+        {{summary}}
+
+  - ref: summary_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SUMMARY: |-
+        {{summary_help}}
