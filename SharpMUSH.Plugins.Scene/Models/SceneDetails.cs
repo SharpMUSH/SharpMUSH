@@ -20,8 +20,17 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// surrounding text's colour. A content warning takes <c>warning</c>.
 /// </param>
 /// <param name="Order">Its place in lists, lowest first.</param>
+/// <param name="Hidden">
+/// Whether it is kept for code only: never shown on a scene's card, in its log or lists, or in the portal, and never
+/// searched. A sort key (<paramref name="Sort"/>) is one.
+/// </param>
+/// <param name="Sort">
+/// The key of the detail that puts scenes in this one's order, a number for each scene, or empty when this one's own
+/// value orders them. The timeline package's <c>icdate</c> is the words a scene's IC date is written in and sorts by
+/// <c>icsecs</c>, the IC moment in seconds.
+/// </param>
 public sealed record SceneDetail(string Key, string Label, string Hint, IReadOnlyList<string> Choices, bool Many, bool Listed,
-	string Tone, int Order);
+	string Tone, int Order, bool Hidden = false, string Sort = "");
 
 /// <summary>A <c>DETAIL`</c> attribute the catalogue left out, and why.</summary>
 public sealed record SceneDetailProblem(string Key, string Reason);
@@ -117,7 +126,17 @@ public static partial class SceneDetails
 					"order" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var order)
 						? detail with { Order = order }
 						: Bad("order must be a whole number"),
-					_ => Bad($"'{property.Name}' is not a field; the fields are label, hint, choices, many, listed, tone, order"),
+					"hidden" => value.ValueKind is JsonValueKind.True or JsonValueKind.False
+						? detail with { Hidden = value.GetBoolean() }
+						: Bad("hidden must be true or false"),
+					"sort" => Text(value) is { } sort
+						? SortKey(normal, sort) switch
+						{
+							string key => detail with { Sort = key },
+							Error<string> error => error,
+						}
+						: Bad("sort must be text"),
+					_ => Bad($"'{property.Name}' is not a field; the fields are label, hint, choices, many, listed, tone, order, hidden, sort"),
 				};
 				switch (read)
 				{
@@ -150,6 +169,27 @@ public static partial class SceneDetails
 		}
 		return string.Join(Separator, accepted);
 	}
+
+	/// <summary>The key <paramref name="sort"/> names for detail <paramref name="key"/> to sort by: empty, or another detail's key.</summary>
+	private static Result<string> SortKey(string key, string sort)
+	{
+		if (sort.Length == 0) return string.Empty;
+		return Normalize(sort) switch
+		{
+			string other when other == key => new Error<string>("sort names another detail, not this one"),
+			string other => other,
+			Error<string> error => new Error<string>($"sort: {error.Value}"),
+		};
+	}
+
+	/// <summary>
+	/// The number <paramref name="value"/> holds as a sort key, or null when it holds none: a scene with no number sorts
+	/// after every scene with one.
+	/// </summary>
+	public static decimal? SortValue(string? value) =>
+		decimal.TryParse(value?.Trim(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var number)
+			? number
+			: null;
 
 	private static IReadOnlyList<string>? Choices(JsonElement value)
 	{

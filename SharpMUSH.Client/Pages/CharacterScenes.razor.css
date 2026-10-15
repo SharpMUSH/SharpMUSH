@@ -47,3 +47,20 @@
 		width: 100%;
 	}
 }
+
+.char-scenes-dated {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.char-scenes-date {
+	color: var(--text);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.char-scenes-undated {
+	color: var(--text-dim);
+	font-weight: 400;
+}
