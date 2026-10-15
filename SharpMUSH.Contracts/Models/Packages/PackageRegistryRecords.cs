@@ -30,6 +30,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// Set when the administrator confirmed applying this version on a server newer than its <c>maximum_server</c>; null
 /// when the last apply was inside the range.
 /// </param>
+/// <param name="Plugins">The plugins the package declared it needs (<c>plugins:</c>), or null for none.</param>
 public sealed record InstalledPackageRecord(
 	string Id,
 	string Version,
@@ -43,7 +44,8 @@ public sealed record InstalledPackageRecord(
 	PackageDeclarations? Owned = null,
 	IReadOnlyList<PackageSettingRecord>? Settings = null,
 	PackageKind Kind = PackageKind.Softcode,
-	PackageMaximumOverride? PastMaximum = null);
+	PackageMaximumOverride? PastMaximum = null,
+	IReadOnlyList<string>? Plugins = null);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

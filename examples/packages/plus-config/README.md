@@ -55,8 +55,14 @@ objects:
         14400
       DATA`CONFIG`HOURS`MIN: |-
         600
+      DATA`CONFIG`LABEL: |-
+        My System
       DATA`CONFIG`HOURS`DESCRIPTION: |-
         How long a status lasts.
+      DATA`CONFIG`HOURS`LABEL: |-
+        Status length
+      DATA`CONFIG`HOURS`EXAMPLE: |-
+        2h
 
   - ref: my_config_registration
     target: "{{plus-config/registry}}"
@@ -70,6 +76,7 @@ The code reads the setting where it lives: `v(DATA`CONFIG`HOURS)` on that object
 a package works with its defaults even where `+config` is not installed.
 
 `<setting>` and `<system>` are letters, digits, `-` and `_`; `+config` matches them in any case.
+`DATA`CONFIG`LABEL` is the system's display name (`Who and Where`), so no setting is called `label`.
 `no_command` on `DATA`CONFIG` reaches every leaf below it.
 
 ### Leaves
@@ -80,6 +87,8 @@ a package works with its defaults even where `+config` is not installed.
 | `TYPE` | Required. One of the types below |
 | `DEFAULT` | What `/reset` writes, in stored form |
 | `DESCRIPTION` | One line: what the setting changes |
+| `LABEL` | Its display name, such as `Idle after`, shown beside the description and at the top of its screen |
+| `EXAMPLE` | A value to show as an example, in typed form: `45m` shows `+config <system>/<setting>=45m` |
 | `MIN`, `MAX` | Bounds: a number's value, a duration in seconds, a text's length, a list's size |
 | `CHOICES` | The words a `choice` takes, or the words a `list` may hold |
 | `PATTERN` | A regular expression a `text`, or each word of a `list`, must match |

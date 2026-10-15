@@ -25,6 +25,8 @@ public static class SharpEvents
 	public const string PlayerConnect = "PLAYER`CONNECT";
 	public const string PlayerDisconnect = "PLAYER`DISCONNECT";
 	public const string PlayerWarn = "PLAYER`WARN";
+	public const string PlayerLink = "PLAYER`LINK";
+	public const string PlayerUnlink = "PLAYER`UNLINK";
 	public const string SocketConnect = "SOCKET`CONNECT";
 	public const string SocketDisconnect = "SOCKET`DISCONNECT";
 	public const string SocketLoginFail = "SOCKET`LOGINFAIL";
@@ -117,4 +119,11 @@ public static class SharpEvents
 	/// id, site-relative url, reason, caption). The enactor is the reporter; the reason is their own text.
 	/// </summary>
 	public const string GalleryReport = "GALLERY`REPORT";
+
+	/// <summary>
+	/// Fired by the Scene plugin when a scene is made or its status changes: <c>@scene/create</c>,
+	/// <c>scenecreate()</c>, and <c>@scene/set</c> or <c>sceneset()</c> of a new status. Args: (scene id, status,
+	/// previous status, empty for a scene just made). The enactor is whoever caused it.
+	/// </summary>
+	public const string SceneStatus = "SCENE`STATUS";
 }

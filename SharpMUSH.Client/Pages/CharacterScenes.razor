@@ -4,6 +4,7 @@
 @using SharpMUSH.Client.Services
 @inject CharacterDirectoryService Directory
 @inject SceneService Scenes
+@inject SceneDetailService SceneDetails
 @inject AccountAuthService AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
@@ -12,8 +13,11 @@
 
 @* Every scene the character belongs to that the viewer may see, newest first, as the scene archive's
    cards: the profile's Recent scenes card links here with View all. A state and a search narrow the
-   list on the server (api/scenes?participant=), which hands it over a page at a time. *@
+   list on the server (api/scenes?participant=), which hands it over a page at a time. When a detail
+   orders scenes in the game's own calendar (the timeline package's IC date), a Timeline chip lists the
+   finished scenes in that order instead, earliest first, each under its date. *@
 <FeatureGate Feature="@GameFeatures.Scenes">
+<ChildContent>
 <div class="char-scenes-page">
     <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@string.Format(Loc["NavCharScenesTitle"], Name)">
         <DescriptionContent>
@@ -53,7 +57,24 @@
         <div class="char-scenes-list">
             @foreach (var scene in _scenes)
             {
-                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null)" />
+                @if (TimelineDetail is { } dated)
+                {
+                    <div class="char-scenes-dated" @key="scene.Id">
+                        @if (scene.Meta.GetValueOrDefault(dated.Key) is { Length: > 0 } date)
+                        {
+                            <div class="char-scenes-date">@date</div>
+                        }
+                        else
+                        {
+                            <div class="char-scenes-date char-scenes-undated">@Loc["NavCharScenesNotDated"]</div>
+                        }
+                        <SceneCard Scene="scene" CanJoin="@(AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null)" />
+                    </div>
+                }
+                else
+                {
+                    <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null)" />
+                }
             }
         </div>
         @if (_failed)
@@ -66,6 +87,8 @@
         }
     }
 </div>
+</ChildContent>
+<Otherwise><ScenesNotEnabled /></Otherwise>
 </FeatureGate>
 
 @code {
@@ -75,6 +98,9 @@
     public const int PageSize = 25;
 
     private const string AllStates = "";
+
+    /// <summary>The chip that lists finished scenes in the order of the catalogue's chronology detail.</summary>
+    private const string Timeline = "timeline";
 
     private string? _dbref;
     private string? _loadedFor;
@@ -95,12 +121,20 @@
         ("live", Loc["NavCharScenesLive"]),
         ("upcoming", Loc["NavCharScenesUpcoming"]),
         ("finished", Loc["NavCharScenesFinished"]),
+        .. SceneDetails.Catalogue.Chronology is null ? [] : new[] { (Timeline, (string)Loc["NavCharScenesTimeline"]) },
     ];
+
+    /// <summary>The detail the list is ordered by while the Timeline chip is chosen, else null.</summary>
+    private SceneDetailInfo? TimelineDetail => _state == Timeline ? SceneDetails.Catalogue.Chronology : null;
 
     private string ProfileHref => $"/character/{Uri.EscapeDataString(Name)}";
 
-    protected override void OnInitialized() =>
+    protected override void OnInitialized()
+    {
         _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await ReloadAsync(); StateHasChanged(); }), Scenes);
+        // The catalogue says whether there is a timeline to offer; the list does not wait for it.
+        _ = InvokeAsync(async () => { await SceneDetails.LoadAsync(); StateHasChanged(); });
+    }
 
     public void Dispose() => _reload.Dispose();
 
@@ -170,7 +204,10 @@
     {
         if (_dbref is not { } dbref) return;
 
-        var read = await Scenes.GetParticipantScenesAsync(dbref, PageSize + 1, _scenes.Count, _state, _search);
+        var timeline = TimelineDetail;
+        var read = timeline is null
+            ? await Scenes.GetParticipantScenesAsync(dbref, PageSize + 1, _scenes.Count, _state, _search)
+            : await Scenes.GetParticipantScenesAsync(dbref, PageSize + 1, _scenes.Count, "finished", _search, sort: timeline.Key);
         if (!_reload.IsCurrent(ticket)) return;
         switch (read)
         {

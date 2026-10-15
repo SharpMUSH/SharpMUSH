@@ -3916,6 +3916,10 @@
     <value>Kom igång genom att läsa wikin, bläddra bland karaktärer eller hoppa in i en scen.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Kom igång genom att läsa wikin eller bläddra bland karaktärer.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Läs wikin</value>
     <comment>MT</comment>
@@ -4908,6 +4912,12 @@
   </data>
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Visa fler</value>
+  </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tidslinje</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Inte daterad</value>
   </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Visa alla</value>
@@ -6148,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>En bild med innehållsvarning hålls utanför bildbiblioteket. Ta bort varningen för att dela den.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Aviseringar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Få aviseringar på den här telefonen eller datorn när portalen är stängd</value>
+    <comment>MT</comment>
   </data>
 </root>

@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
+using SharpMUSH.Library.Models.Portal.Setup;
 
 namespace SharpMUSH.Client.Services;
 
@@ -8,9 +9,10 @@ namespace SharpMUSH.Client.Services;
 /// Client-side scene service. All reads go through the server REST API
 /// (GET /api/scenes/...) — the WASM client has no local scene service. The portal
 /// never writes scenes through this service: pose authoring happens via a normal
-/// game command (POSE/SAY/SEMIPOSE) sent on the GameHub connection.
+/// game command (POSE/SAY/SEMIPOSE) sent on the GameHub connection. The API is the Scene plugin's: while the game
+/// does not have the Scene System on, nothing is asked and every read answers <see cref="ApiFailure.NotEnabled"/>.
 /// </summary>
-public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthState accountAuth)
+public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthState accountAuth, ServerInfoService? serverInfo = null)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
@@ -97,7 +99,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 
 	private async Task<ApiResult<IReadOnlyList<SceneSummary>>> FetchScenesAsync(string url)
 	{
-		var result = await Client.GetApiAsync<List<SceneDto>>(url, "The server returned no scene list.");
+		var result = await Client.GetFeatureApiAsync<List<SceneDto>>(serverInfo, GameFeatures.Scenes, url, "The server returned no scene list.");
 
 		return result switch
 		{
@@ -110,16 +112,18 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first: those in
 	/// <paramref name="state"/> (<c>live</c>, <c>upcoming</c>, <c>finished</c>) whose title, pitch or room holds
 	/// <paramref name="search"/> and that <paramref name="match"/> keeps, after the first <paramref name="offset"/> of them.
+	/// A <paramref name="sort"/> detail orders them by it instead, earliest first, as a character's timeline does.
 	/// </summary>
 	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5,
-		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null)
+		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null, string? sort = null)
 	{
 		var url = $"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}";
 		if (match is not null) url += $"&{match.Query}";
 		if (offset > 0) url += $"&offset={offset}";
 		if (!string.IsNullOrWhiteSpace(state)) url += $"&state={Uri.EscapeDataString(state)}";
 		if (!string.IsNullOrWhiteSpace(search)) url += $"&search={Uri.EscapeDataString(search.Trim())}";
-		var result = await Client.GetApiAsync<List<SceneDto>>(url, "The server returned no scene list.");
+		if (!string.IsNullOrWhiteSpace(sort)) url += $"&sort={Uri.EscapeDataString(sort)}";
+		var result = await Client.GetFeatureApiAsync<List<SceneDto>>(serverInfo, GameFeatures.Scenes, url, "The server returned no scene list.");
 
 		return result switch
 		{
@@ -134,7 +138,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// </summary>
 	public async Task<ApiResult<IReadOnlyList<SceneDetailValues>>> GetDetailValuesAsync()
 	{
-		var result = await Client.GetApiAsync<List<SceneDetailValues>>("api/scenes/details/values", "The server returned no detail values.");
+		var result = await Client.GetFeatureApiAsync<List<SceneDetailValues>>(serverInfo, GameFeatures.Scenes, "api/scenes/details/values", "The server returned no detail values.");
 
 		return result switch
 		{
@@ -146,7 +150,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// <summary>Who shares the most caller-visible scenes with <paramref name="dbref"/>, most first.</summary>
 	public async Task<ApiResult<IReadOnlyList<ScenePartner>>> GetPartnersAsync(string dbref, int count = 6)
 	{
-		var result = await Client.GetApiAsync<List<ScenePartner>>(
+		var result = await Client.GetFeatureApiAsync<List<ScenePartner>>(serverInfo, GameFeatures.Scenes,
 			$"api/scenes/partners?participant={Uri.EscapeDataString(dbref)}&count={count}", "The server returned no partner list.");
 
 		return result switch
@@ -162,7 +166,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// </summary>
 	public async Task<ApiResult<IReadOnlyList<string>>> GetMemberDbrefsAsync(string sceneId)
 	{
-		var result = await Client.GetApiAsync<List<SceneMemberDto>>(
+		var result = await Client.GetFeatureApiAsync<List<SceneMemberDto>>(serverInfo, GameFeatures.Scenes,
 			$"api/scenes/{Uri.EscapeDataString(sceneId)}/members", "The server returned no member list.");
 
 		return result switch
@@ -189,7 +193,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// </summary>
 	public async Task<ApiResult<SceneSummary>> GetSceneAsync(string id)
 	{
-		var result = await Client.GetApiAsync<SceneDto>($"api/scenes/{Uri.EscapeDataString(id)}", "The server returned no scene.");
+		var result = await Client.GetFeatureApiAsync<SceneDto>(serverInfo, GameFeatures.Scenes, $"api/scenes/{Uri.EscapeDataString(id)}", "The server returned no scene.");
 
 		return result switch
 		{
@@ -207,7 +211,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 			? $"api/scenes/{Uri.EscapeDataString(id)}/poses?count={c}"
 			: $"api/scenes/{Uri.EscapeDataString(id)}/poses";
 
-		var result = await Client.GetApiAsync<List<ScenePoseDto>>(url, "The server returned no poses.");
+		var result = await Client.GetFeatureApiAsync<List<ScenePoseDto>>(serverInfo, GameFeatures.Scenes, url, "The server returned no poses.");
 
 		return result switch
 		{
@@ -233,6 +237,11 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	public async Task<ApiResult<Success>> StreamPosesAsync(string id, Func<IReadOnlyList<ScenePoseView>, Task> onBatch,
 		CancellationToken cancellationToken = default)
 	{
+		if (serverInfo is not null && !await serverInfo.HasFeatureAsync(GameFeatures.Scenes))
+		{
+			return ApiFailure.NotEnabled(GameFeatures.Scenes);
+		}
+
 		var batch = new List<ScenePoseView>(PoseStreamBatch);
 		try
 		{

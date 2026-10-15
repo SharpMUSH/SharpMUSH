@@ -3916,6 +3916,10 @@
     <value>Begin met de wiki lezen, personages bekijken of meteen een scène in duiken.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Begin met de wiki lezen of personages bekijken.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Lees de wiki</value>
     <comment>MT</comment>
@@ -4908,6 +4912,12 @@
   </data>
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Meer tonen</value>
+  </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tijdlijn</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Niet gedateerd</value>
   </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Alles bekijken</value>
@@ -6148,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Een afbeelding met een inhoudswaarschuwing blijft buiten de afbeeldingenbibliotheek. Haal de waarschuwing weg om haar te delen.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Meldingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Ontvang meldingen op deze telefoon of computer als het portaal gesloten is</value>
+    <comment>MT</comment>
   </data>
 </root>

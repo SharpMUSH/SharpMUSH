@@ -3916,6 +3916,10 @@
     <value>Kezdje a wiki elolvasásával, a karakterek böngészésével, vagy csatlakozzon egy jelenethez.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Kezdje a wiki elolvasásával vagy a karakterek böngészésével.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>A wiki elolvasása</value>
     <comment>MT</comment>
@@ -4908,6 +4912,12 @@
   </data>
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Több mutatása</value>
+  </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Idővonal</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Nincs dátum</value>
   </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Összes</value>
@@ -6148,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>A tartalmi figyelmeztetéssel ellátott kép kimarad a képtárból. Vegye le a figyelmeztetést a megosztáshoz.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Értesítések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Értesítések erre a telefonra vagy számítógépre, amikor a portál zárva van</value>
+    <comment>MT</comment>
   </data>
 </root>

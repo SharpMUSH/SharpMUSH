@@ -61,6 +61,19 @@ public class PackageRegistryTests
 		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
+	/// <summary>The plugins a package named are kept with it: turning one of them off finds the package by them.</summary>
+	[Test]
+	public async Task InstalledPackage_KeepsItsPlugins()
+	{
+		var id = Id("plugins-kept");
+		await Registry.UpsertInstalledPackageAsync(SamplePackage(id) with { Plugins = ["scene", "discord"] });
+
+		var fetched = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+		await Assert.That(fetched.Plugins).IsEquivalentTo(new[] { "scene", "discord" });
+
+		await Registry.RemoveInstalledPackageAsync(id);
+	}
+
 	[Test]
 	public async Task PackageObjects_UpsertListRemove()
 	{

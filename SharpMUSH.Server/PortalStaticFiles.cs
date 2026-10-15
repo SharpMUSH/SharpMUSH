@@ -58,6 +58,9 @@ public static class PortalStaticFiles
 		return app;
 	}
 
+	/// <summary>The route prefixes that are never the portal's: the REST API and the SignalR hubs.</summary>
+	private static readonly string[] ApiPrefixes = ["/api", "/hubs"];
+
 	/// <summary>
 	/// The endpoint half: the manifest's asset endpoints, when there is one, and the SPA fallback that
 	/// sends every other non-file route to <c>index.html</c> so Blazor routes deep links client-side.
@@ -73,6 +76,17 @@ public static class PortalStaticFiles
 			endpoints.MapStaticAssets(manifestPath)
 				.AllowAnonymous()
 				.DisableRateLimiting();
+		}
+
+		// An API or hub route nothing serves, such as a plugin's that is not running (api/scenes, /hubs/scene without
+		// the Scene plugin), is a 404, never the portal's shell: a caller reading JSON must see that it is not there.
+		foreach (var prefix in ApiPrefixes)
+		{
+			endpoints.MapFallback(prefix + "/{**path}", context =>
+			{
+				context.Response.StatusCode = StatusCodes.Status404NotFound;
+				return Task.CompletedTask;
+			});
 		}
 
 		endpoints.MapFallbackToFile("index.html", new StaticFileOptions

@@ -3916,6 +3916,10 @@
     <value>Na początek warto przeczytać wiki, przejrzeć postacie lub dołączyć do sceny.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Na początek warto przeczytać wiki lub przejrzeć postacie.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Czytaj wiki</value>
     <comment>MT</comment>
@@ -4908,6 +4912,12 @@
   </data>
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Pokaż więcej</value>
+  </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Oś czasu</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Bez daty</value>
   </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Zobacz wszystkie</value>
@@ -6148,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Obraz z ostrzeżeniem o treści nie trafia do biblioteki obrazów. Usuń ostrzeżenie, aby go udostępnić.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Powiadomienia</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Otrzymuj powiadomienia na tym telefonie lub komputerze, gdy portal jest zamknięty</value>
+    <comment>MT</comment>
   </data>
 </root>

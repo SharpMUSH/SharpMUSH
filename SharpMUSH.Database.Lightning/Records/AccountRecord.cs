@@ -38,3 +38,21 @@ public sealed record AccountPasskeyRecord
 	public long CreatedAtMs { get; init; }
 	public long? LastUsedAtMs { get; init; }
 }
+
+/// <summary>
+/// A web push subscription, keyed by the SHA-256 of its endpoint, which can run past what an LMDB key holds.
+/// Times are Unix milliseconds.
+/// </summary>
+public sealed record PushSubscriptionRecord
+{
+	public string AccountKey { get; init; } = "";
+	public string Endpoint { get; init; } = "";
+	public byte[] P256dh { get; init; } = [];
+	public byte[] Auth { get; init; } = [];
+	public string Device { get; init; } = "";
+	public string KeyId { get; init; } = "";
+	public long CreatedAtMs { get; init; }
+	public long? LastSuccessAtMs { get; init; }
+	public long? LastFailureAtMs { get; init; }
+	public string? LastFailure { get; init; }
+}

@@ -3916,6 +3916,10 @@
     <value>Kom i gang ved å lese wikien, bla i karakterer eller hoppe inn i en scene.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Kom i gang ved å lese wikien eller bla i karakterer.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Les wikien</value>
     <comment>MT</comment>
@@ -4908,6 +4912,12 @@
   </data>
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Vis flere</value>
+  </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tidslinje</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Ikke datert</value>
   </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Se alle</value>
@@ -6148,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Et bilde med innholdsadvarsel holdes utenfor bildebiblioteket. Fjern advarselen for å dele det.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Varsler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Få varsler på denne telefonen eller datamaskinen når portalen er lukket</value>
+    <comment>MT</comment>
   </data>
 </root>

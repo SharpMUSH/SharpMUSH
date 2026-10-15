@@ -19,12 +19,12 @@
             @* The state the heading is actually addressed to. It had no affordance of its own: a
                first-time visitor was offered the wiki, the character list and the scene list — three
                ways to keep reading, and no way to join. *@
-            <p class="quickstart-text">@Loc["WidQuickstartIntro"]</p>
+            @Intro
             <CapsuleButton Primary="true" Class="quickstart-cta" Href="/login?tab=register" Icon="@Icons.Material.Outlined.PersonAdd">@Loc["AuthCreateAccount"]</CapsuleButton>
         }
         else
         {
-            <p class="quickstart-text">@Loc["WidQuickstartIntro"]</p>
+            @Intro
         }
 
         <nav class="quickstart-links @(InMain ? "quickstart-links--main" : null)" aria-label="@Loc["WidNewHere"]">
@@ -42,6 +42,12 @@
 </div>
 
 @code {
+    /// <summary>The opening line, which offers a scene only on a game with the Scene System.</summary>
+    private RenderFragment Intro => @<FeatureGate Feature="@GameFeatures.Scenes">
+        <ChildContent><p class="quickstart-text">@Loc["WidQuickstartIntro"]</p></ChildContent>
+        <Otherwise><p class="quickstart-text">@Loc["WidQuickstartIntroNoScenes"]</p></Otherwise>
+    </FeatureGate>;
+
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
