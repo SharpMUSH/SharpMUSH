@@ -21,6 +21,8 @@ namespace SharpMUSH.Library.Services.Passwords;
 ///   <item>SHA-crypt, <c>$6$[rounds=N$]SALT$HASH</c> or <c>$5$...</c> (<see cref="ShaCrypt"/>): not
 ///   PennMUSH's, but what RhostMUSH and glibc's <c>crypt(3)</c> write, so a password carried over from
 ///   such a game verifies too.</item>
+///   <item>MD5-crypt, <c>$1$SALT$HASH</c> (<see cref="Md5Crypt"/>): a TinyMUX or RhostMUSH game's
+///   <c>crypt(3)</c> may have written it.</item>
 ///   <item>A TinyMUX password, <c>$ALGO$SALT$HASH</c> (<c>check_mux_password</c>).</item>
 ///   <item>Plaintext.</item>
 /// </list>
@@ -39,6 +41,7 @@ internal static partial class PennMUSHPasswords
 				|| MatchesSha0(stored, bytes)
 				|| MatchesCrypt(stored, bytes)
 				|| ShaCrypt.Verify(stored, bytes)
+				|| Md5Crypt.Verify(stored, bytes)
 				|| MatchesMux(stored, bytes)
 				|| MatchesPlaintext(stored, bytes);
 		}
@@ -112,7 +115,7 @@ internal static partial class PennMUSHPasswords
 	/// </summary>
 	private static bool MatchesMux(string stored, ReadOnlySpan<byte> attempt)
 	{
-		if (!stored.StartsWith('$') || ShaCrypt.IsShaCrypt(stored))
+		if (!stored.StartsWith('$') || ShaCrypt.IsShaCrypt(stored) || Md5Crypt.IsMd5Crypt(stored))
 		{
 			return false;
 		}
