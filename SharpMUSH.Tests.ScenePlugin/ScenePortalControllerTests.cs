@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -5,6 +7,10 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Storage;
 using SharpMUSH.Plugins.Scene.Web;
@@ -53,6 +59,48 @@ public class ScenePortalControllerTests
 		public override DateTimeOffset GetUtcNow() => now;
 	}
 
+	/// <summary>The objids that name a live character; any other is destroyed (or its number reused).</summary>
+	private readonly HashSet<string> _live = [SceneFixture.GodObjid, SceneFixture.StrangerObjid];
+
+	private IMediator Mediator()
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromResult<AnyOptionalSharpObject>(_live.Contains(call.Arg<GetObjectNodeQuery>().DBRef.ToString())
+				? new AnySharpObject(Player(call.Arg<GetObjectNodeQuery>().DBRef))
+				: new None()));
+		return mediator;
+	}
+
+	private static SharpPlayer Player(DBRef dbref) => new()
+	{
+		Object = new SharpObject
+		{
+			Key = dbref.Number,
+			CreationTime = dbref.CreationMilliseconds ?? 0,
+			Name = "Someone",
+			Type = "Player",
+			Locks = ImmutableDictionary<string, SharpLockData>.Empty,
+			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Grants = new(_ => Task.FromResult(ObjectGrants.None)),
+			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
+			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
+			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
+			AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
+			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
+			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
+			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Zone = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Children = new(() => AsyncEnumerable.Empty<SharpObject>()),
+		},
+		Aliases = [],
+		Location = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+		Home = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+		PasswordHash = string.Empty,
+		PasswordSalt = null,
+		Quota = 20,
+	};
+
 	private ScenePortalController ControllerFor(ISceneService service, string? claimValue)
 	{
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -60,7 +108,7 @@ public class ScenePortalControllerTests
 		var context = new DefaultHttpContext { User = SceneFixture.PrincipalFor(claimValue) };
 		context.Request.Scheme = "https";
 		context.Request.Host = new HostString("game.example");
-		return new ScenePortalController(service, _store, options, new FrozenClock(Now))
+		return new ScenePortalController(service, _store, options, new FrozenClock(Now), Mediator())
 		{
 			ControllerContext = new ControllerContext { HttpContext = context }
 		};
@@ -234,5 +282,23 @@ public class ScenePortalControllerTests
 		await Assert.That(link.Exists).IsTrue();
 		await Assert.That(link.Url).IsNull();
 		await Assert.That(link.CreatedAt).IsEqualTo(Now.ToUnixTimeMilliseconds());
+	}
+
+	/// <summary>
+	/// A link made by a character since destroyed lists nothing, even once its number belongs to someone new: the
+	/// newcomer's private scenes must not reach the old link.
+	/// </summary>
+	[Test]
+	public async Task ALinkWhoseCharacterIsGone_ListsNothing()
+	{
+		var service = new FixedSceneService(Scheduled("2", "#1", isPublic: false, TimeSpan.FromDays(2)));
+		var url = ((ScenePortalController.SceneCalendarLinkDto)((OkObjectResult)await ControllerFor(service, SceneFixture.GodObjid)
+			.CreateCalendarLink()).Value!).Url!;
+		_live.Remove(SceneFixture.GodObjid);
+		_live.Add("#1:1799999999999");
+
+		var result = await ControllerFor(service, null).PersonalCalendar(url.Split('/').Last().Replace(".ics", ""));
+
+		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}
 }

@@ -97,7 +97,7 @@
 
     @if (_filter == ScenesFilter.Scheduled && _calendar)
     {
-        <CalendarFeedCard Acting="@(_acting is not null)" OnClose="@(() => _calendar = false)" />
+        <CalendarFeedCard Character="@(_acting is { } acting ? $"#{acting.DbrefNumber}:{acting.CreationTime}" : null)" OnClose="@(() => _calendar = false)" />
     }
 
     @if (_match is { } match)

@@ -1,8 +1,11 @@
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Storage;
@@ -34,7 +37,8 @@ public class ScenePortalController(
 	ISceneService sceneService,
 	IScenePortalStore store,
 	IOptionsWrapper<SharpMUSHOptions> options,
-	TimeProvider time) : ControllerBase
+	TimeProvider time,
+	IMediator mediator) : ControllerBase
 {
 	/// <summary>A draft as the portal reads it. <c>UpdatedAt</c> is UTC Unix-millis.</summary>
 	public record SceneDraftDto(string Mode, string Text, string? Markup, long UpdatedAt);
@@ -105,6 +109,10 @@ public class ScenePortalController(
 		var mine = string.Equals(scope, "mine", StringComparison.OrdinalIgnoreCase);
 		if (store.FindCalendarOwner(secret) is not string owner || !DBRef.TryParse(owner, out var parsed) || parsed is not { } character)
 			return NotFound();
+		// The link names the character by objid. A character destroyed since, whose number now belongs to someone
+		// else, must not lend the newcomer's view to the old link: the objid has to name the live object.
+		if (character.CreationMilliseconds is null || await mediator.Send(new GetObjectNodeQuery(character)) is not AnySharpObject)
+			return NotFound();
 
 		var scenes = await CalendarScenesAsync(scene => mine
 			? RunsOrJoinedAsync(scene, character)
@@ -160,9 +168,10 @@ public class ScenePortalController(
 	private async Task<IReadOnlyList<Contracts.Scene>> CalendarScenesAsync(Func<Contracts.Scene, Task<bool>> include)
 	{
 		var since = (time.GetUtcNow() - CalendarHistory).ToUnixTimeMilliseconds();
+		// Windowed in the store, so scenes with no time never take a place in a list's limit.
 		var candidates = (await sceneService.ListScenesAsync("scheduled", fromUtcMillis: since, count: CalendarLimit))
-			.Concat(await sceneService.ListScenesAsync("active", count: CalendarLimit))
-			.Concat(await sceneService.ListScenesAsync("finished", count: CalendarLimit))
+			.Concat(await sceneService.ListScenesAsync("active", fromUtcMillis: since, count: CalendarLimit))
+			.Concat(await sceneService.ListScenesAsync("finished", fromUtcMillis: since, count: CalendarLimit))
 			.Where(scene => scene.ScheduledFor >= since)
 			.DistinctBy(scene => scene.Id)
 			.OrderBy(scene => scene.ScheduledFor);

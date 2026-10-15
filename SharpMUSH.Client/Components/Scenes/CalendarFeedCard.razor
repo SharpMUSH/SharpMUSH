@@ -23,7 +23,7 @@
                     @Address(PublicUrl, "calendar-feed-public")
                 </section>
 
-                @if (Acting)
+                @if (Character is not null)
                 {
                     <section class="calendar-feed-part">
                         <h3 class="calendar-feed-head">@Loc["RolCalendarPrivate"]</h3>
@@ -62,12 +62,13 @@
 </div>
 
 @code {
-    /// <summary>The tab acts as a character, which a private link belongs to.</summary>
-    [Parameter] public bool Acting { get; set; }
+    /// <summary>The character this tab acts as, which a private link belongs to (objid); null for none.</summary>
+    [Parameter] public string? Character { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
 
     private SceneCalendarLink? _link;
+    private string? _linkFor;
     private bool _mineOnly;
     private bool _busy;
     private string? _error;
@@ -76,12 +77,19 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!Acting || _link is not null) return;
-        _link = await SceneService.GetCalendarLinkAsync() switch
+        // Another character's link, or the address shown once to it, is not this one's to show or act on.
+        if (Character == _linkFor) return;
+        _linkFor = Character;
+        _link = null;
+        _mineOnly = false;
+        _error = null;
+        if (Character is not { } character) return;
+        var link = await SceneService.GetCalendarLinkAsync() switch
         {
-            SceneCalendarLink link => link,
+            SceneCalendarLink found => found,
             ApiFailure => null,
         };
+        if (Character == character) _link = link;
     }
 
     /// <summary>
@@ -120,7 +128,11 @@
     {
         _busy = true;
         _error = null;
-        switch (await SceneService.CreateCalendarLinkAsync())
+        var character = Character;
+        var made = await SceneService.CreateCalendarLinkAsync();
+        _busy = false;
+        if (Character != character) return;
+        switch (made)
         {
             case SceneCalendarLink link:
                 _link = link;
@@ -129,14 +141,17 @@
                 _error = failure.Message;
                 break;
         }
-        _busy = false;
     }
 
     private async Task TurnOffAsync()
     {
         _busy = true;
         _error = null;
-        switch (await SceneService.DeleteCalendarLinkAsync())
+        var character = Character;
+        var removed = await SceneService.DeleteCalendarLinkAsync();
+        _busy = false;
+        if (Character != character) return;
+        switch (removed)
         {
             case Success:
                 _link = new SceneCalendarLink(false, null, null);
@@ -145,6 +160,5 @@
                 _error = failure.Message;
                 break;
         }
-        _busy = false;
     }
 }
