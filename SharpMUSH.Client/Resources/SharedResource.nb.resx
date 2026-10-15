@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Vis flere</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tidslinje</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Ikke datert</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Se alle</value>
   </data>
@@ -6244,5 +6250,56 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Få varsler på denne telefonen eller datamaskinen når portalen er lukket</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Bare du ser dette.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Meldinger til deg</value>
+  </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Denne ledeteksten</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Nå</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Festet</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Her</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Alltid</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Gå til</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Forlat</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Hjelp om {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Fest</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Løsne</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>{0} til</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Fyll inn feltene, og trykk Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Kjør bufferen</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Palettoppføringer som ikke er gyldige:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} palettoppføringer ble utelatt fordi grensen var nådd.</value>
   </data>
 </root>

@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>显示更多</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>时间线</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>未注明日期</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>查看全部</value>
   </data>
@@ -6244,5 +6250,56 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>门户关闭时在此手机或电脑上接收通知</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>只有你能看到这条。</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>发给你的通知</value>
+  </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>此提示</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>现在</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>已置顶</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>此处</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>始终</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>前往</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>离开</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>{0} 的帮助</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>置顶</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>取消置顶</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>还有 {0} 项</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>填写空白处，然后按 Enter。</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>运行缓冲区</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>无效的命令面板条目：</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>有 {0} 个命令面板条目因超出限制而未显示。</value>
   </data>
 </root>

@@ -71,7 +71,13 @@ public static class BundledPackages
 		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
 		// which is why this installs at first boot rather than shipping available-and-unenabled.
 		new("plus-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// +config after +help, whose librarian carries its topics, and before the packages that register
+		// their settings with it.
+		new("plus-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// The scene in the room, for the command palette: pushes scene_here as players move. Apart from scene
+		// because it needs the event handler and scene does not.
+		new("scene-here", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -90,6 +96,13 @@ public static class BundledPackages
 		// Available, not installed: the scene package keeps any detail an owner sets, and a game chooses whether
 		// it wants a verse, a canon and content warnings named for it.
 		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +safety is a name a game may already use, and a game chooses its own safety tools.
+		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: favourite poses and the highlights they make add +scene/fav and its kin to the
+		// Scene Logger, and a game chooses whether its players rank poses at all. Its portal page is a separate
+		// application package, as jobs-app is for jobs.
+		new("highlights", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("highlights-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
@@ -105,7 +118,15 @@ public static class BundledPackages
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
-		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		// Available, not installed: +info and +journal are names a game may already use for its own code.
+		new("info", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
+		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: joins health and jobs, so +health shows staff load.
+		new("health-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
+		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: which game events notify a player's phone or browser (@push) is the game's
@@ -117,6 +138,8 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it builds on scene and time, which a game chooses first.
+		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +alts is a name a game may already use for its own code. It hears PLAYER`UNLINK
 		// on the event handler, so an account forgets a hidden character that leaves it.
 		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),

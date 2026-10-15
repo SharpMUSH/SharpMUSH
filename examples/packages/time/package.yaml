@@ -1,6 +1,6 @@
 format: 1
 package: time
-version: 1.0.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -14,6 +14,12 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
 
 objects:
@@ -53,6 +59,10 @@ objects:
         ZONE`HIDE
       DATA`ROUTE`TIMEZONE`UNHIDE: |-
         ZONE`UNHIDE
+      DATA`ROUTE`TIMEZONE`DETECT: |-
+        ZONE`DETECT
+      DATA`ROUTE`TIMEZONE`MATCH: |-
+        ZONE`MATCH
 
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
@@ -135,7 +145,7 @@ objects:
       # Game time, your time and, when the game shows one, the IC date, split by chr(30).
       FUN`SCREEN`NOWFIELDS:
         value: |-
-          lfields(,Game time[chr(30)]Your time[if(get({{clock}}/DATA`IC`SHOW),[chr(30)]IC date)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<game_zone>)][chr(30)][if(strlen(%q<viewer_zone>),u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>),tone(muted,not set · +timezone <zone> sets it))][if(get({{clock}}/DATA`IC`SHOW),[chr(30)][u({{clock}}/FUN`IC`DATE,%q<now>)])],chr(30))
+          lfields(,Game time[chr(30)]Your time[if(get({{clock}}/DATA`CONFIG`IC-SHOW),[chr(30)]IC date)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<game_zone>)][chr(30)][if(strlen(%q<viewer_zone>),u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>),tone(muted,not set · +timezone <zone> sets it))][if(get({{clock}}/DATA`CONFIG`IC-SHOW),[chr(30)][u({{clock}}/FUN`IC`DATE,%q<now>)])],chr(30))
         flags: [funsyntax]
       # +time <time> or +time <name>: a time when it reads as one, or when it starts with a digit or a date and no
       # player has that name (a name may start with a digit, as 7of9 does); else a player.
@@ -216,7 +226,7 @@ objects:
         flags: [funsyntax]
       INC`ZONE`SHOW:
         value: |-
-          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. +timezone <zone> sets it%, such as +timezone America/New_York.); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
+          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,[if(u(%!/FUN`LOOKUP`OK,%#),+timezone/detect looks yours up from where you connect.%b)]+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
         flags: [cmdsyntax]
       # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
       # the Clock. God is beyond any object's reach, so the write is checked.
@@ -236,6 +246,105 @@ objects:
       INC`ZONE`CLEAR:
         value: |-
           @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); &TZ %#; @pemit %#=notice(TIME,Your time zone is cleared. Times are shown in the game's.,ok)
+        flags: [cmdsyntax]
+
+      # %0 a player: the zone their client reported (clientzone()), or nothing.
+      FUN`ZONE`CLIENT:
+        value: |-
+          u({{clock}}/FUN`ZONE`CHECK,clientzone(%0))
+        flags: [funsyntax]
+      # %0 a zone and where it came from, client or ip: the sentence that offers it.
+      FUN`ZONE`SUGGESTED:
+        value: |-
+          switch(%1,ip,Where you connect from suggests your time zone is %0,Your client says your time zone is %0)
+        flags: [funsyntax]
+      # %0 client or ip: where a zone set without the player typing it came from.
+      FUN`ZONE`SOURCE:
+        value: |-
+          switch(%0,ip,guessed from where you connect,from your client)
+        flags: [funsyntax]
+      # +timezone/detect: the zone the player's client reported, set as if they had typed it. With none, and
+      # DATA`CONFIG`DETECT-IP not off, asks the zone service where they connect from (INC`ZONE`LOOKUP).
+      INC`ZONE`DETECT:
+        value: |-
+          think setq(client_zone,u(%!/FUN`ZONE`CLIENT,%#)); @assert cor(strlen(%q<client_zone>),not(u(%!/FUN`LOOKUP`OK,%#)))=@include/args %!/INC`ZONE`LOOKUP=player,%:,mode,detect; @assert strlen(%q<client_zone>)=@pemit %#=notice(TIME,Your client has not reported a time zone. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%:,zone,%q<client_zone>,from,client
+        flags: [cmdsyntax]
+      # %<player>, %<zone> and %<from> (client or ip): sets the zone the player asked for with +timezone/detect.
+      INC`ZONE`TAKE:
+        value: |-
+          think setq(now,secs()); @assert comp(%<zone>,get(%<player>/TZ))=@pemit %<player>=notice(TIME,Your time zone is already %<zone>.); &TZ %<player>=%<zone>; @assert strmatch(get(%<player>/TZ),%<zone>)=@pemit %<player>=notice(TIME,Your TZ attribute could not be set. &TZ me=%<zone> sets it.,error); @pemit %<player>=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%<zone>,%q<now>)]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%<zone>)] for you.,ok)
+        flags: [cmdsyntax]
+      # +timezone/match <time>: the zones on the Clock's match-zones list whose clock reads that time now, each a
+      # link to +timezone <zone>. A player types a round time a few minutes off, so the nearest time within half an
+      # hour counts; zones that share an offset share it, so every zone at the nearest one is listed.
+      INC`ZONE`MATCH:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(TIME,Give the time where you are: +timezone/match 8:15pm.,warn); think u(%!/FUN`READ`TIME,%q<cmd_argument>); @assert cand(u(%!/FUN`READ`CLOCKOK),not(strlen(%q<read_zone_typed>)),not(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>))))=@pemit %#=notice(TIME,'%q<cmd_argument>' is not a time. Write the time where you are%, such as 20:15%, 8pm or 8:15 pm.,warn); think u(%!/FUN`MATCH`FIND,add(mul(%q<read_hour24>,60),%q<read_minute>)); @assert words(%q<match_found>)=@pemit %#=notice(TIME,No zone on the game's list is at [rjust(%q<read_hour24>,2,0)]:%q<read_minute> now. +timezone <zone> sets yours by name: +help timezone.,warn); @pemit %#=u(%!/FUN`SCREEN`MATCH)
+        flags: [cmdsyntax]
+      # %0 a time of day in minutes. Sets match_minutes, match_zones (the Clock's list), match_offsets (how many
+      # minutes each zone's clock is ahead of that time, -720 to 719), match_nearest (the offset nearest 0) and
+      # match_found (the zones at it, or nothing when it is half an hour or more away).
+      FUN`MATCH`FIND:
+        value: |-
+          setqm(match_minutes,%0,
+          match_zones,filterbool({{clock}}/FUN`ZONE`VALID,get({{clock}}/DATA`CONFIG`MATCH-ZONES)),
+          match_offsets,iter(%q<match_zones>,u(%!/FUN`MATCH`OFFSET,%i0)),
+          match_nearest,extract(%q<match_offsets>,match(iter(%q<match_offsets>,abs(%i0)),first(sort(iter(%q<match_offsets>,abs(%i0)),n))),1),
+          match_found,if(lt(abs(%q<match_nearest>),30),squish(iter(%q<match_zones>,if(eq(extract(%q<match_offsets>,inum(0),1),%q<match_nearest>),%i0)))))
+        flags: [funsyntax]
+      # %0 a zone: how many minutes its clock is ahead of %q<match_minutes> now, -720 to 719.
+      FUN`MATCH`OFFSET:
+        value: |-
+          sub(mod(add(mul(timefmt($H,%q<now>,%0),60),timefmt($M,%q<now>,%0),sub(2160,%q<match_minutes>)),1440),720)
+        flags: [funsyntax]
+      # The zones FUN`MATCH`FIND found, each a link that sets it.
+      FUN`SCREEN`MATCH:
+        value: |-
+          notice(TIME,It is [timefmt($H:$M,%q<now>,first(%q<match_found>))] now in [if(eq(words(%q<match_found>),1),this zone,these zones)]. Choose yours:)%r[bullets(iter(%q<match_found>,[cmdlink(+timezone %i0,+timezone %i0,Set your time zone to %i0)] [tone(muted,· UTC[timefmt($Z,%q<now>,%i0)])],,chr(30)),chr(30))]
+        flags: [funsyntax]
+
+      # ---- detected zones ---------------------------------------------------------
+      # From player`connect (login 1) and socket`timezone (login 0): %<player>, %<zone> (the client's, or nothing)
+      # and, at login, %<address>. A player who set a zone is left alone. With no client zone, a login asks the zone
+      # service where the player connects from (INC`ZONE`LOOKUP).
+      EVENT`ZONE:
+        value: |-
+          @break cor(not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(cor(strlen(%<zone>),%<login>))); @assert strlen(%<zone>)=@include/args %!/INC`ZONE`LOOKUP=player,%<player>,mode,login; @include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%<zone>,from,client,login,%<login>
+        flags: [cmdsyntax]
+      # %<player>, %<zone>, %<from> (client or ip) and %<login>. Fills an empty TZ when the setting for that source
+      # (DATA`CONFIG`DETECT for the client's, DATA`CONFIG`DETECT-IP for the address's) is set, hidden, since the
+      # player did not choose to share where they are; when it is offer, says so once a login.
+      INC`ZONE`SETTLE:
+        value: |-
+          think setq(zone_detect,get({{clock}}/DATA`CONFIG`[if(strmatch(%<from>,ip),DETECT-IP,DETECT)])); @break cor(strmatch(%q<zone_detect>,off),not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(u({{clock}}/FUN`ZONE`VALID,%<zone>))); @break cand(strmatch(%q<zone_detect>,offer),not(%<login>)); @assert strmatch(%q<zone_detect>,set)=@pemit %<player>=notice(TIME,[u(%!/FUN`ZONE`SUGGESTED,%<zone>,%<from>)]. +timezone/detect sets it.); &TZ %<player>=%<zone>; @set %<player>/TZ=!visual; @assert strmatch(get(%<player>/TZ),%<zone>); @pemit %<player>=notice(TIME,Your time zone is now [u({{clock}}/FUN`ZONE`LABEL,%<zone>,secs())]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. Only you and staff see it: +timezone/unhide shares it%, and +timezone <zone> changes it.,ok)
+        flags: [cmdsyntax]
+
+      # ---- the zone service --------------------------------------------------------
+      # Only when DATA`CONFIG`DETECT-IP is not off: the player's address goes to the service DATA`CONFIG`IP-SERVICE
+      # names, over https. A private or unknown address is never sent.
+
+      # %0 a player: 1 when a lookup may run for them now: the setting is on and they connect from a public address.
+      FUN`LOOKUP`OK:
+        value: |-
+          cand(not(strmatch(get({{clock}}/DATA`CONFIG`DETECT-IP),off)),u(%!/FUN`ADDRESS`PUBLIC,ipaddr(%0)))
+        flags: [funsyntax]
+      # %0 an address: 1 unless it is no IPv4 or IPv6 address, or a loopback, private or link-local one, which no
+      # service can place.
+      FUN`ADDRESS`PUBLIC:
+        value: |-
+          not(cor(not(cor(strmatch(%0,*.*.*.*),strmatch(%0,*:*))),strmatch(%0,#-*),strmatch(%0,127.*),strmatch(%0,10.*),strmatch(%0,192.168.*),strmatch(%0,169.254.*),strmatch(%0,0.*),cand(strmatch(%0,172.*.*.*),gte(elements(%0,2,.),16),lte(elements(%0,2,.),31)),strmatch(%0,::1),strmatch(%0,fc*:*),strmatch(%0,fd*:*),strmatch(%0,fe80:*)))
+        flags: [funsyntax]
+      # %<player> and %<mode> (login or detect): sends the player's address to the zone service. The reply runs
+      # LOOKUP`<number>, written here for this player, which hands it to INC`ZONE`REPLY and is then cleared.
+      INC`ZONE`LOOKUP:
+        value: |-
+          @assert u(%!/FUN`LOOKUP`OK,%<player>); think setqm(lookup_attr,LOOKUP`[after(num(%<player>),#)],lookup_url,edit(get({{clock}}/DATA`CONFIG`IP-SERVICE),<ip>,urlencode(ipaddr(%<player>)))); @assert strmatch(%q<lookup_url>,https://*); &%q<lookup_attr> %!=@include/args %!/INC`ZONE`REPLY=player,%<player>,mode,%<mode>; @http %!/%q<lookup_attr>=%q<lookup_url>
+        flags: [cmdsyntax]
+      # The zone service's reply: %0 the body, %<status>, with %<player> and %<mode>. A zone the server knows, at
+      # the reply's DATA`CONFIG`IP-FIELD, is settled as a login's (INC`ZONE`SETTLE) or taken for +timezone/detect.
+      INC`ZONE`REPLY:
+        value: |-
+          &LOOKUP`[after(num(%<player>),#)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%0,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -262,32 +371,213 @@ objects:
     location: "{{time}}"
     flags: [no_command, visual]
     attributes:
-      DATA: |-
-        Settings. One leaf per setting.
-      # The game's own time zone, the one +time calls game time.
-      DATA`ZONE: |-
+      # The settings +config shows and changes (plus-config); the code reads each with get(%!/DATA`CONFIG`<NAME>).
+      # The IC clock: at IC-ANCHOR, in seconds since 1970 (2026-01-01 00:00 UTC by default), it reads the same as
+      # the real one; from there it runs IC-RATIO times as fast. IC-DAYS moves the IC date that many days on (or
+      # back, below 0), and IC-YEARS adds to the year it shows.
+      DATA`CONFIG: |-
+        The game's time zone, how times are written, and the IC clock.
+      DATA`CONFIG`LABEL: |-
+        Time and the IC clock
+      DATA`CONFIG`ZONE: |-
         UTC
-      # How a time is written, as timefmt() takes it.
-      DATA`FORMAT: |-
+      DATA`CONFIG`ZONE`TYPE: |-
+        timezone
+      DATA`CONFIG`ZONE`DEFAULT: |-
+        UTC
+      DATA`CONFIG`ZONE`DESCRIPTION: |-
+        The game's time zone, the one +time calls game time.
+      DATA`CONFIG`ZONE`LABEL: |-
+        Game time zone
+      DATA`CONFIG`ZONE`EXAMPLE: |-
+        Europe/London
+      DATA`CONFIG`FORMAT: |-
         $a $d $b $Y, $H:$M
-      # The IC clock. At DATA`IC`ANCHOR, in seconds since 1970 (2026-01-01 00:00 UTC by default), the IC clock
-      # reads the same as the real one; from there it runs DATA`IC`RATIO times as fast. DATA`IC`DAYS moves the
-      # IC date that many days on (or back, below 0), and DATA`IC`YEARS adds to the year it shows.
-      DATA`IC`SHOW: |-
+      DATA`CONFIG`FORMAT`TYPE: |-
+        text
+      DATA`CONFIG`FORMAT`DEFAULT: |-
+        $a $d $b $Y, $H:$M
+      DATA`CONFIG`FORMAT`MAX: |-
+        100
+      DATA`CONFIG`FORMAT`DESCRIPTION: |-
+        How a time is written, in timefmt()'s codes.
+      DATA`CONFIG`FORMAT`LABEL: |-
+        Time format
+      DATA`CONFIG`FORMAT`EXAMPLE: |-
+        $d/$m/$Y $H:$M
+      DATA`CONFIG`IC-SHOW: |-
         1
-      DATA`IC`ANCHOR: |-
+      DATA`CONFIG`IC-SHOW`TYPE: |-
+        boolean
+      DATA`CONFIG`IC-SHOW`DEFAULT: |-
+        1
+      DATA`CONFIG`IC-SHOW`DESCRIPTION: |-
+        Whether +time shows the IC date.
+      DATA`CONFIG`IC-SHOW`LABEL: |-
+        Show the IC date
+      DATA`CONFIG`IC-SHOW`EXAMPLE: |-
+        no
+      DATA`CONFIG`IC-ANCHOR: |-
         1767225600
-      DATA`IC`RATIO: |-
+      DATA`CONFIG`IC-ANCHOR`TYPE: |-
+        integer
+      DATA`CONFIG`IC-ANCHOR`DEFAULT: |-
+        1767225600
+      DATA`CONFIG`IC-ANCHOR`DESCRIPTION: |-
+        A moment, in seconds since 1970, when the IC clock reads the same as the real one.
+      DATA`CONFIG`IC-ANCHOR`LABEL: |-
+        IC anchor
+      DATA`CONFIG`IC-ANCHOR`EXAMPLE: |-
+        1772323200
+      DATA`CONFIG`IC-RATIO: |-
         1
-      DATA`IC`DAYS: |-
+      DATA`CONFIG`IC-RATIO`TYPE: |-
+        number
+      DATA`CONFIG`IC-RATIO`DEFAULT: |-
+        1
+      DATA`CONFIG`IC-RATIO`MIN: |-
         0
-      DATA`IC`YEARS: |-
+      DATA`CONFIG`IC-RATIO`DESCRIPTION: |-
+        How many IC seconds pass each real second.
+      DATA`CONFIG`IC-RATIO`LABEL: |-
+        IC speed
+      DATA`CONFIG`IC-RATIO`EXAMPLE: |-
+        2
+      DATA`CONFIG`IC-DAYS: |-
         0
-      # The names of the IC months, January's first, and of the weekdays, Sunday's first, each split by |.
-      # Empty uses the real names.
-      DATA`IC`MONTHS: |-
+      DATA`CONFIG`IC-DAYS`TYPE: |-
+        integer
+      DATA`CONFIG`IC-DAYS`DEFAULT: |-
+        0
+      DATA`CONFIG`IC-DAYS`DESCRIPTION: |-
+        Days added to the IC date; below 0 goes back.
+      DATA`CONFIG`IC-DAYS`LABEL: |-
+        IC days added
+      DATA`CONFIG`IC-DAYS`EXAMPLE: |-
+        -3
+      DATA`CONFIG`IC-YEARS: |-
+        0
+      DATA`CONFIG`IC-YEARS`TYPE: |-
+        integer
+      DATA`CONFIG`IC-YEARS`DEFAULT: |-
+        0
+      DATA`CONFIG`IC-YEARS`DESCRIPTION: |-
+        Years added to the IC year shown.
+      DATA`CONFIG`IC-YEARS`LABEL: |-
+        IC years added
+      DATA`CONFIG`IC-YEARS`EXAMPLE: |-
+        300
+      DATA`CONFIG`IC-MONTHS: |-
 
-      DATA`IC`WEEKDAYS: |-
+      DATA`CONFIG`IC-MONTHS`TYPE: |-
+        list
+      DATA`CONFIG`IC-MONTHS`DEFAULT: |-
+
+      DATA`CONFIG`IC-MONTHS`DELIMITER: |-
+        |
+      DATA`CONFIG`IC-MONTHS`MAX: |-
+        12
+      DATA`CONFIG`IC-MONTHS`CHECK: |-
+        CHECK`IC`NAMES
+      DATA`CONFIG`IC-MONTHS`DESCRIPTION: |-
+        The twelve IC month names, January's first. Empty uses the real ones.
+      DATA`CONFIG`IC-MONTHS`LABEL: |-
+        IC month names
+      DATA`CONFIG`IC-WEEKDAYS: |-
+
+      DATA`CONFIG`IC-WEEKDAYS`TYPE: |-
+        list
+      DATA`CONFIG`IC-WEEKDAYS`DEFAULT: |-
+
+      DATA`CONFIG`IC-WEEKDAYS`DELIMITER: |-
+        |
+      DATA`CONFIG`IC-WEEKDAYS`MAX: |-
+        7
+      DATA`CONFIG`IC-WEEKDAYS`CHECK: |-
+        CHECK`IC`NAMES
+      DATA`CONFIG`IC-WEEKDAYS`DESCRIPTION: |-
+        The seven IC weekday names, Sunday's first. Empty uses the real ones.
+      DATA`CONFIG`IC-WEEKDAYS`LABEL: |-
+        IC weekday names
+      DATA`CONFIG`DETECT: |-
+        set
+      DATA`CONFIG`DETECT`TYPE: |-
+        choice
+      DATA`CONFIG`DETECT`CHOICES: |-
+        set offer off
+      DATA`CONFIG`DETECT`DEFAULT: |-
+        set
+      DATA`CONFIG`DETECT`DESCRIPTION: |-
+        What a zone a player's client reports does when they set none: set fills it in, hidden; offer tells them at login; off does nothing.
+      DATA`CONFIG`DETECT`LABEL: |-
+        Zone from the client
+      DATA`CONFIG`DETECT`EXAMPLE: |-
+        offer
+      DATA`CONFIG`DETECT-IP: |-
+        off
+      DATA`CONFIG`DETECT-IP`TYPE: |-
+        choice
+      DATA`CONFIG`DETECT-IP`CHOICES: |-
+        set offer off
+      DATA`CONFIG`DETECT-IP`DEFAULT: |-
+        off
+      DATA`CONFIG`DETECT-IP`DESCRIPTION: |-
+        What to do for a player who set no zone and whose client reports none: set fills it in from where they connect, hidden; offer tells them at login; off does nothing. Anything but off sends each such player's address to the zone service, ip-service.
+      DATA`CONFIG`DETECT-IP`LABEL: |-
+        Zone from where a player connects
+      DATA`CONFIG`DETECT-IP`EXAMPLE: |-
+        offer
+      DATA`CONFIG`IP-SERVICE: |-
+        https://ipinfo.io/<ip>/json
+      DATA`CONFIG`IP-SERVICE`TYPE: |-
+        text
+      DATA`CONFIG`IP-SERVICE`DEFAULT: |-
+        https://ipinfo.io/<ip>/json
+      DATA`CONFIG`IP-SERVICE`CHECK: |-
+        CHECK`IP`SERVICE
+      DATA`CONFIG`IP-SERVICE`DESCRIPTION: |-
+        The https address that answers with the zone of an address, as JSON, <ip> standing for the address. Used only when detect-ip is not off.
+      DATA`CONFIG`IP-SERVICE`LABEL: |-
+        Zone service
+      DATA`CONFIG`IP-SERVICE`EXAMPLE: |-
+        https://ipwho.is/<ip>
+      DATA`CONFIG`IP-FIELD: |-
+        timezone
+      DATA`CONFIG`IP-FIELD`TYPE: |-
+        text
+      DATA`CONFIG`IP-FIELD`DEFAULT: |-
+        timezone
+      DATA`CONFIG`IP-FIELD`DESCRIPTION: |-
+        Where the zone is in the zone service's reply, as a JSON path: timezone for ipinfo.io, timezone.id for ipwho.is.
+      DATA`CONFIG`IP-FIELD`LABEL: |-
+        Zone in the reply
+      DATA`CONFIG`IP-FIELD`EXAMPLE: |-
+        timezone.id
+      DATA`CONFIG`MATCH-ZONES: |-
+        Pacific/Honolulu America/Anchorage America/Los_Angeles America/Vancouver America/Phoenix America/Denver America/Mexico_City America/Chicago America/Bogota America/New_York America/Toronto America/Halifax America/St_Johns America/Sao_Paulo America/Argentina/Buenos_Aires Atlantic/Azores UTC Europe/London Europe/Dublin Europe/Lisbon Africa/Lagos Europe/Paris Europe/Berlin Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Stockholm Europe/Warsaw Africa/Johannesburg Africa/Cairo Europe/Athens Europe/Helsinki Europe/Istanbul Europe/Moscow Asia/Tehran Asia/Dubai Asia/Karachi Asia/Kolkata Asia/Kathmandu Asia/Dhaka Asia/Bangkok Asia/Jakarta Asia/Singapore Asia/Shanghai Asia/Manila Australia/Perth Asia/Seoul Asia/Tokyo Australia/Darwin Australia/Adelaide Australia/Brisbane Australia/Sydney Pacific/Auckland
+      DATA`CONFIG`MATCH-ZONES`TYPE: |-
+        list
+      DATA`CONFIG`MATCH-ZONES`DEFAULT: |-
+        Pacific/Honolulu America/Anchorage America/Los_Angeles America/Vancouver America/Phoenix America/Denver America/Mexico_City America/Chicago America/Bogota America/New_York America/Toronto America/Halifax America/St_Johns America/Sao_Paulo America/Argentina/Buenos_Aires Atlantic/Azores UTC Europe/London Europe/Dublin Europe/Lisbon Africa/Lagos Europe/Paris Europe/Berlin Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Stockholm Europe/Warsaw Africa/Johannesburg Africa/Cairo Europe/Athens Europe/Helsinki Europe/Istanbul Europe/Moscow Asia/Tehran Asia/Dubai Asia/Karachi Asia/Kolkata Asia/Kathmandu Asia/Dhaka Asia/Bangkok Asia/Jakarta Asia/Singapore Asia/Shanghai Asia/Manila Australia/Perth Asia/Seoul Asia/Tokyo Australia/Darwin Australia/Adelaide Australia/Brisbane Australia/Sydney Pacific/Auckland
+      DATA`CONFIG`MATCH-ZONES`MIN: |-
+        1
+      DATA`CONFIG`MATCH-ZONES`CHECK: |-
+        CHECK`ZONES
+      DATA`CONFIG`MATCH-ZONES`DESCRIPTION: |-
+        The zones +timezone/match offers, in the order it lists them.
+      DATA`CONFIG`MATCH-ZONES`LABEL: |-
+        Zones to match a time against
+      DATA`CONFIG`MATCH-ZONES`EXAMPLE: |-
+        America/New_York Europe/London Asia/Tokyo
+      # +config's CHECK for MATCH-ZONES (%0 the zones): every one a zone the server knows.
+      CHECK`ZONES: |-
+        if(every(%!/FUN`ZONE`VALID,%0,%b,zone_unknown),,The server knows no zone called [itemize(%q<zone_unknown>)].)
+      # +config's CHECK for IP-SERVICE (%0 the address): https, with <ip> in it.
+      CHECK`IP`SERVICE: |-
+        if(cand(strmatch(%0,https://*),strmatch(%0,*<ip>*)),,Give an https address with <ip> where the address goes%, such as https://ipinfo.io/<ip>/json.)
+      # +config's CHECK for IC-MONTHS and IC-WEEKDAYS (%0 the names, %1 the setting): every name or none.
+      CHECK`IC`NAMES: |-
+        setq(ic_need,if(strmatch(%1,ic-months),12,7))[if(cand(words(%0,|),neq(words(%0,|),%q<ic_need>)),Give all %q<ic_need> names%, or none for the real ones.)]
 
       # How the IC date is written. Evaluated with %<year>, %<month> (1 to 12), %<monthname>, %<day>,
       # %<weekday> (its name), %<hour>, %<minute> and %<second>.
@@ -376,10 +666,10 @@ objects:
         value: |-
           iter(%0,iter(%i0,capstr(lcstr(%i0)),_,_),/,/)
         flags: [funsyntax]
-      # The game's zone, UTC when DATA`ZONE names none the server knows.
+      # The game's zone, UTC when DATA`CONFIG`ZONE names none the server knows.
       FUN`ZONE`GAME:
         value: |-
-          firstof(u(%!/FUN`ZONE`CHECK,get(%!/DATA`ZONE)),UTC)
+          firstof(u(%!/FUN`ZONE`CHECK,get(%!/DATA`CONFIG`ZONE)),UTC)
         flags: [funsyntax]
       # %0 an object: the zone in its TZ, or nothing when it set none (or keeps it hidden).
       FUN`ZONE`OF:
@@ -398,10 +688,10 @@ objects:
         flags: [funsyntax]
 
       # ---- real time ------------------------------------------------------------
-      # %0 an instant and %1 a zone (the game's when empty): the time there, as DATA`FORMAT writes it.
+      # %0 an instant and %1 a zone (the game's when empty): the time there, as DATA`CONFIG`FORMAT writes it.
       FUN`OOC`SHOW:
         value: |-
-          timefmt(get(%!/DATA`FORMAT),%0,firstof(%1,u(%!/FUN`ZONE`GAME)))
+          timefmt(get(%!/DATA`CONFIG`FORMAT),%0,firstof(%1,u(%!/FUN`ZONE`GAME)))
         flags: [funsyntax]
       # %0 an instant and %1 a reader: the time in the reader's zone, else in the game's.
       FUN`OOC`FOR:
@@ -416,10 +706,10 @@ objects:
         flags: [funsyntax]
 
       # ---- IC time --------------------------------------------------------------
-      # %0 an instant (now when empty): the IC clock's instant then, in seconds, before DATA`IC`YEARS.
+      # %0 an instant (now when empty): the IC clock's instant then, in seconds, before DATA`CONFIG`IC-YEARS.
       FUN`IC`SECS:
         value: |-
-          round(add(get(%!/DATA`IC`ANCHOR),mul(sub(if(strlen(%0),%0,secs()),get(%!/DATA`IC`ANCHOR)),get(%!/DATA`IC`RATIO)),mul(get(%!/DATA`IC`DAYS),86400)),0)
+          round(add(get(%!/DATA`CONFIG`IC-ANCHOR),mul(sub(if(strlen(%0),%0,secs()),get(%!/DATA`CONFIG`IC-ANCHOR)),get(%!/DATA`CONFIG`IC-RATIO)),mul(get(%!/DATA`CONFIG`IC-DAYS),86400)),0)
         flags: [funsyntax]
       # %0 an instant (now when empty): the IC date and time, as FORMAT`IC writes it.
       FUN`IC`DATE:
@@ -429,17 +719,17 @@ objects:
       # %0 the year, month, day, weekday (0 for Sunday), hour, minute and second, split by spaces: FORMAT`IC of them.
       FUN`IC`WRITE:
         value: |-
-          uargs(%!/FORMAT`IC,year,add(first(%0),get(%!/DATA`IC`YEARS)),month,add(0,extract(%0,2,1)),monthname,u(%!/FUN`IC`MONTHNAME,add(0,extract(%0,2,1))),day,add(0,extract(%0,3,1)),weekday,u(%!/FUN`IC`WEEKDAYNAME,extract(%0,4,1)),hour,extract(%0,5,1),minute,extract(%0,6,1),second,extract(%0,7,1))
+          uargs(%!/FORMAT`IC,year,add(first(%0),get(%!/DATA`CONFIG`IC-YEARS)),month,add(0,extract(%0,2,1)),monthname,u(%!/FUN`IC`MONTHNAME,add(0,extract(%0,2,1))),day,add(0,extract(%0,3,1)),weekday,u(%!/FUN`IC`WEEKDAYNAME,extract(%0,4,1)),hour,extract(%0,5,1),minute,extract(%0,6,1),second,extract(%0,7,1))
         flags: [funsyntax]
       # %0 a month, 1 to 12: its IC name.
       FUN`IC`MONTHNAME:
         value: |-
-          firstof(extract(get(%!/DATA`IC`MONTHS),%0,1,|),timefmt($B,convtime(2026-[rjust(%0,2,0)]-01T00:00:00Z),UTC))
+          firstof(extract(get(%!/DATA`CONFIG`IC-MONTHS),%0,1,|),timefmt($B,convtime(2026-[rjust(%0,2,0)]-01T00:00:00Z),UTC))
         flags: [funsyntax]
       # %0 a weekday, 0 for Sunday to 6: its IC name. 1970-01-04 was a Sunday.
       FUN`IC`WEEKDAYNAME:
         value: |-
-          firstof(extract(get(%!/DATA`IC`WEEKDAYS),inc(%0),1,|),timefmt($A,add(259200,mul(%0,86400)),UTC))
+          firstof(extract(get(%!/DATA`CONFIG`IC-WEEKDAYS),inc(%0),1,|),timefmt($A,add(259200,mul(%0,86400)),UTC))
         flags: [funsyntax]
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
@@ -476,30 +766,37 @@ objects:
 
         Until you set your zone with `+timezone`, a time you type is read in the game's. See `+help timezone`.
       HELP`TIME`SETTINGS: |-
-        The settings are attributes on the Clock object, which sits inside the Time object in the master room:
+        `+config time` lists the settings and `+config time/<setting>=<value>` changes one \(`config.admin`\):
 
-        - `` DATA`ZONE ``: the game's time zone, the one `+time` calls game time. `UTC` by default.
-        - `` DATA`FORMAT ``: how a time is written, in `timefmt\(\)`'s codes. `$a $d $b $Y, $H:$M` by default, which writes `Thu 15 Oct 2026, 20:00`.
-        - `` ALIAS`<name> ``: a short name a player may give `+timezone` or `+time`, one attribute each, its value the zone. A short name wins over a zone of the same name.
+        - `zone`: the game's time zone, the one `+time` calls game time. `UTC` by default.
+        - `format`: how a time is written, in `timefmt\(\)`'s codes. `$a $d $b $Y, $H:$M` by default, which writes `Thu 15 Oct 2026, 20:00`.
+        - `detect`: what a zone a player's client reports does when they set none. `set`, the default, fills it in, hidden, and tells them; `offer` tells them at login, and `+timezone/detect` sets it; `off` does nothing. See `+help timezone client`.
+        - `detect-ip`: what to do for a player who set no zone and whose client reports none. `off`, the default, does nothing. `set` and `offer` ask the zone service where the player connects from, at login, and then work as for `detect`. Anything but `off` sends those players' addresses to that service, so say so in your game's privacy policy. A guess from an address is often wrong behind a VPN, a proxy or a mobile network, so `offer` suits it better than `set`.
+        - `ip-service`: the zone service, an https address with `<ip>` where the address goes. `https://ipinfo.io/<ip>/json` by default, which needs no account but limits how many lookups it answers. `https://ipwho.is/<ip>` is another. A private address, such as a player on the same network as the game, is never sent.
+        - `ip-field`: where the zone is in the service's reply, as a JSON path. `timezone` by default, for ipinfo.io; `timezone.id` for ipwho.is.
+        - `match-zones`: the zones `+timezone/match` offers, in the order it lists them. Each must be a zone the server knows. About fifty by default, at least one for each offset most players live in.
+
+        Short names a player may give `+timezone` or `+time` are attributes on the Clock object, inside the Time object in the master room: `` ALIAS`<name> ``, one each, its value the zone. A short name wins over a zone of the same name.
 
         For example, to keep the game on London time and let players type `irish`:
 
-        `` &DATA`ZONE <Clock>=Europe/London ``
+        `+config time/zone=Europe/London`
 
         `` &ALIAS`IRISH <Clock>=Europe/Dublin ``
 
         The IC date has its own settings: see `+help time ic`.
       HELP`TIME`IC: |-
-        The IC date `+time` shows comes from these attributes on the Clock object, inside the Time object in the master room:
+        The IC date `+time` shows comes from these settings, changed with `+config time/<setting>=<value>`:
 
-        - `` DATA`IC`ANCHOR ``: a moment, in seconds since 1970, when the IC clock reads the same as the real one. `1767225600`, 1 January 2026 at midnight UTC, by default.
-        - `` DATA`IC`RATIO ``: how many IC seconds pass each real second. `1` by default; `2` makes an IC day pass in twelve real hours.
-        - `` DATA`IC`DAYS ``: days added to the IC date. Below 0 goes back.
-        - `` DATA`IC`YEARS ``: years added to the year shown.
-        - `` DATA`IC`MONTHS ``: the twelve month names, January's first, split by `|`. Empty uses the real ones.
-        - `` DATA`IC`WEEKDAYS ``: the seven weekday names, Sunday's first, split by `|`. Empty uses the real ones.
-        - `` DATA`IC`SHOW ``: `0` takes the IC date off `+time`.
-        - `` FORMAT`IC ``: how the date is written. It is evaluated with `%%<year>`, `%%<month>` \(1 to 12\), `%%<monthname>`, `%%<day>`, `%%<weekday>` \(its name\), `%%<hour>`, `%%<minute>` and `%%<second>`.
+        - `ic-anchor`: a moment, in seconds since 1970, when the IC clock reads the same as the real one. `1767225600`, 1 January 2026 at midnight UTC, by default.
+        - `ic-ratio`: how many IC seconds pass each real second. `1` by default; `2` makes an IC day pass in twelve real hours.
+        - `ic-days`: days added to the IC date. Below 0 goes back.
+        - `ic-years`: years added to the year shown.
+        - `ic-months`: the twelve month names, January's first, split by `|`. Empty uses the real ones.
+        - `ic-weekdays`: the seven weekday names, Sunday's first, split by `|`. Empty uses the real ones.
+        - `ic-show`: `no` takes the IC date off `+time`.
+
+        How the date is written is `` FORMAT`IC `` on the Clock object. It is evaluated with `%%<year>`, `%%<month>` \(1 to 12\), `%%<monthname>`, `%%<day>`, `%%<weekday>` \(its name\), `%%<hour>`, `%%<minute>` and `%%<second>`.
 
         For example, a game set 300 years on, whose IC days run twice as fast from 1 March 2026. `convtime\(\)` turns the date into seconds:
 
@@ -507,11 +804,11 @@ objects:
 
         Output: `1772323200`
 
-        `` &DATA`IC`ANCHOR <Clock>=1772323200 ``
+        `+config time/ic-anchor=1772323200`
 
-        `` &DATA`IC`RATIO <Clock>=2 ``
+        `+config time/ic-ratio=2`
 
-        `` &DATA`IC`YEARS <Clock>=300 ``
+        `+config time/ic-years=300`
 
         The IC calendar is the real one's: twelve months of the real lengths. A calendar of its own, with other month lengths, is a game's own code in `` FORMAT`IC ``.
       HELP`TIME`CODE: |-
@@ -544,6 +841,8 @@ objects:
         - `+timezone <zone>` sets it: `+timezone America/New_York`.
         - `+timezone/clear` clears it. Times are then shown and read in the game's.
         - `+timezone/hide` keeps your zone to you and staff: `+time <name>` tells anyone else you keep it to yourself, and other packages read nothing. `+timezone/unhide` shows it again.
+        - `+timezone/detect` sets the zone your client reported. When it reported none, a game may look up where you connect from instead.
+        - `+timezone/match <time>` lists the zones where it is that time now, each a link that sets it: `+timezone/match 8:15pm`.
 
         A zone is named the way the tz database names it: a region and a city, such as `America/Chicago`, `Europe/Berlin` or `Australia/Perth`, or `UTC`. Capitals are put in for you, so `america/new_york` works. Short names work too:
 
@@ -569,10 +868,46 @@ objects:
 
         Output: `\[TIME\] Done: Your time zone is America/Los_Angeles \(UTC-07:00\). It is <the time there> for you.`
 
+        `+timezone/match` suits a client that reports no zone: type the time where you are, rounded as you like, and pick your zone from the list.
+
+        `+timezone/match 9pm`
+
+        Output: `\[TIME\] It is 21:04 now in these zones. Choose yours:` and a line for each zone, such as `+timezone Europe/Paris · UTC+02:00`.
+
+        See `+help timezone client` for the zone your client reports.
+
         Your zone is your `TZ` attribute, as PennMUSH keeps it, so `time\(*<name>\)` reads it too. Everyone can read it unless you hide it, which clears the attribute's `visual` flag. A zone you hide stays hidden when you change it.
+      HELP`TIMEZONE`CLIENT: |-
+        Some clients tell the game which time zone they are in. When you have not set one, the game uses it:
+
+        - The web portal always reports your browser's zone.
+        - BSD telnet and inetutils telnet report it when you type `environ define TZ Europe/Paris` and then `environ export TZ` at the `telnet>` prompt, before you open the game.
+        - PuTTY reports it when you add `TZ` with your zone, such as `Europe/Paris`, under Connection, Data, Environment variables.
+        - Mudlet, TinTin++, MUSHclient and most other MUD clients report none. Use `+timezone/match` or `+timezone <zone>`.
+
+        When your client reports no zone, a game may look one up from where you connect from, by asking a zone service on the internet. Staff decide whether it does and which service it asks. The guess is often wrong behind a VPN or on a mobile network.
+
+        A zone set this way is hidden, since you did not choose to share it: `+timezone/unhide` shares it. A zone you set yourself is never changed. A game may only tell you what it found, and leave setting it to `+timezone/detect`, or ignore it: see `+help time settings`.
+
+        Output, on logging in from the web portal in Paris with no zone set: `\[TIME\] Done: Your time zone is now Europe/Paris \(UTC+02:00\), from your client. Only you and staff see it: +timezone/unhide shares it, and +timezone <zone> changes it.`
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
     attributes:
       SRC`TIME: |-
         {{time_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`TIME: |-
+        {{clock}}
+
+  # A client's zone (clientzone()), at login and whenever a client reports one, handed to the Time object.
+  - ref: events
+    target: "{{$event_handler}}"
+    attributes:
+      PLAYER`CONNECT`TIME: |-
+        @trigger/args {{time}}/EVENT`ZONE=player,%<objid>,zone,clientzone(%<descriptor>),login,1
+      SOCKET`TIMEZONE`TIME: |-
+        @assert strlen(%<player>); @trigger/args {{time}}/EVENT`ZONE=player,%<player>,zone,%<zone>,login,0

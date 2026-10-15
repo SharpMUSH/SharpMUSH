@@ -72,18 +72,18 @@ These '@' commands are general utility and programming commands:
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|
 | [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
-| [@chat]      | [@command]   | [@config]    | [@decompile] | [@doing]     |
-| [@dolist]    | [@drain]     | [@edit]      | [@emit]      | [@entrances] |
-| [@find]      | [@force]     | [@function]  | [@gedit]     | [@grep]      |
-| [@halt]      | [@if]        | [@input]     | [@job]       | [@lemit]     |
-| [@listmotd]  | [@locale]    | [@mail]      | [@map]       | [@notify]    |
-| [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  |
-| [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     |
-| [@profile]   | [@prompt]    | [@ps]        | [@queue]     | [@remit]     |
-| [@restart]   | [@roll]      | [@scan]      | [@search]    | [@select]    |
-| [@stats]     | [@sweep]     | [@switch]    | [@teleport]  | [@trigger]   |
-| [@verb]      | [@version]   | [@wait]      | [@whereis]   | [@wiki]      |
-| [@zemit]     |              |              |              |              |
+| [@chat]      | [@command]   | [@config]    | [@context]   | [@decompile] |
+| [@doing]     | [@dolist]    | [@drain]     | [@edit]      | [@emit]      |
+| [@entrances] | [@find]      | [@force]     | [@function]  | [@gedit]     |
+| [@grep]      | [@halt]      | [@if]        | [@input]     | [@job]       |
+| [@lemit]     | [@listmotd]  | [@locale]    | [@mail]      | [@map]       |
+| [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   |
+| [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  |
+| [@pemit]     | [@profile]   | [@prompt]    | [@ps]        | [@queue]     |
+| [@remit]     | [@restart]   | [@roll]      | [@scan]      | [@search]    |
+| [@select]    | [@stats]     | [@sweep]     | [@switch]    | [@teleport]  |
+| [@trigger]   | [@verb]      | [@version]   | [@wait]      | [@whereis]   |
+| [@wiki]      | [@zemit]     |              |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
@@ -3054,6 +3054,8 @@ Deleting things frees space inside the file for reuse. It never shrinks the file
 - **scene.edits**: every version of every scene pose.
 - **scene.deleted**: poses deleted from a scene but still stored. Deleting a pose only hides it.
 - **audit**: the log of staff actions.
+- **rolls**: rolls kept by `@roll` and roll() with `record`.
+- **activity**: poses counted per character and room per day, behind [activity()]. Each day is one stream.
 
 A *stream* is one page's text in one language, or one pose.
 

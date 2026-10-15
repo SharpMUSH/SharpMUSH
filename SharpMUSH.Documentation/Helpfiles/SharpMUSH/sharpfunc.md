@@ -96,14 +96,15 @@
 
 |                |                |                |                |
 |----------------|----------------|----------------|----------------|
-| [ADDRLOG()]    | [CMDS()]       | [CONN()]       | [CONNLOG()]    |
-| [CONNRECORD()] | [DOING()]      | [HEIGHT()]     | [HIDDEN()]     |
-| [HOST()]       | [IDLE()]       | [IPADDR()]     | [LPORTS()]     |
-| [LWHO()]       | [LWHOID()]     | [MWHO()]       | [MWHOID()]     |
-| [NMWHO()]      | [NWHO()]       | [PLAYER()]     | [PORTS()]      |
-| [PUEBLO()]     | [RECV()]       | [SENT()]       | [SSL()]        |
-| [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      | [XMWHOID()]    |
-| [XWHO()]       | [XWHOID()]     | [ZMWHO()]      | [ZWHO()]       |
+| [ADDRLOG()]    | [CLIENTZONE()] | [CMDS()]       | [CONN()]       |
+| [CONNLOG()]    | [CONNRECORD()] | [DOING()]      | [HEIGHT()]     |
+| [HIDDEN()]     | [HOST()]       | [IDLE()]       | [IPADDR()]     |
+| [LPORTS()]     | [LWHO()]       | [LWHOID()]     | [MWHO()]       |
+| [MWHOID()]     | [NMWHO()]      | [NWHO()]       | [PLAYER()]     |
+| [PORTS()]      | [PUEBLO()]     | [RECV()]       | [SENT()]       |
+| [SSL()]        | [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      |
+| [XMWHOID()]    | [XWHO()]       | [XWHOID()]     | [ZMWHO()]      |
+| [ZWHO()]       |                |                |                |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -128,21 +129,22 @@
 
 |                |                |                |                |
 |----------------|----------------|----------------|----------------|
-| [ACCNAME()]    | [ALIAS()]      | [ANDFLAGS()]   | [ANDLFLAGS()]  |
-| [ANDLPOWERS()] | [CONFIG()]     | [CONTROLS()]   | [CSECS()]      |
-| [CTIME()]      | [DOWNMOTD()]   | [ELOCK()]      | [FINDABLE()]   |
-| [FLAGS()]      | [FULLALIAS()]  | [FULLMOTD()]   | [FULLNAME()]   |
-| [GETPIDS()]    | [HASATTR()]    | [HASATTRP()]   | [HASFLAG()]    |
-| [HASPOWER()]   | [HASROLE()]    | [HASTYPE()]    | [INAME()]      |
-| [ISAPPROVED()] | [LFLAGS()]     | [LOCK()]       | [LOCKFLAGS()]  |
-| [LOCKOWNER()]  | [LOCKS()]      | [LPIDS()]      | [LSTATS()]     |
-| [MONEY()]      | [MONIKER()]    | [MOTD()]       | [MSECS()]      |
-| [MTIME()]      | [MUDNAME()]    | [MUDURL()]     | [NAME()]       |
-| [NATTR()]      | [NEARBY()]     | [OBJID()]      | [OBJMEM()]     |
-| [ORFLAGS()]    | [ORLFLAGS()]   | [ORLPOWERS()]  | [PERMISSION()] |
-| [PIDINFO()]    | [PLAYERMEM()]  | [POLL()]       | [POWERS()]     |
-| [QUOTA()]      | [RESTARTS()]   | [ROLES()]      | [TYPE()]       |
-| [VERSION()]    | [VISIBLE()]    | [WIZMOTD()]    |                |
+| [ACCNAME()]    | [ACTIVITY()]   | [ALIAS()]      | [ANDFLAGS()]   |
+| [ANDLFLAGS()]  | [ANDLPOWERS()] | [CONFIG()]     | [CONTEXT()]    |
+| [CONTROLS()]   | [CSECS()]      | [CTIME()]      | [DOWNMOTD()]   |
+| [ELOCK()]      | [FINDABLE()]   | [FLAGS()]      | [FULLALIAS()]  |
+| [FULLMOTD()]   | [FULLNAME()]   | [GETPIDS()]    | [HASATTR()]    |
+| [HASATTRP()]   | [HASFLAG()]    | [HASPOWER()]   | [HASROLE()]    |
+| [HASTYPE()]    | [INAME()]      | [ISAPPROVED()] | [LFLAGS()]     |
+| [LOCK()]       | [LOCKFLAGS()]  | [LOCKOWNER()]  | [LOCKS()]      |
+| [LPIDS()]      | [LSTATS()]     | [MONEY()]      | [MONIKER()]    |
+| [MOTD()]       | [MSECS()]      | [MTIME()]      | [MUDNAME()]    |
+| [MUDURL()]     | [NAME()]       | [NATTR()]      | [NEARBY()]     |
+| [OBJID()]      | [OBJMEM()]     | [ORFLAGS()]    | [ORLFLAGS()]   |
+| [ORLPOWERS()]  | [PERMISSION()] | [PIDINFO()]    | [PLAYERMEM()]  |
+| [POLL()]       | [POWERS()]     | [QUOTA()]      | [RESTARTS()]   |
+| [ROLES()]      | [TYPE()]       | [VERSION()]    | [VISIBLE()]    |
+| [WIZMOTD()]    |                |                |                |
 
 ::: seealso
 - [Dbref functions]
@@ -914,6 +916,25 @@ You say, "65"
 say chr(65)
 You say, "A"
 ```
+# clientzone()
+`clientzone(<player|descriptor>)`
+
+  Returns the time zone the player's client reported for its connection, such as Europe/Paris, or nothing when it reported none. The web portal reports the browser's zone. A telnet client reports one when it sends TZ through NEW-ENVIRON, which BSD telnet does after `environ export TZ` and PuTTY does when TZ is set under Connection, Data, Environment variables. Most MUD clients send none.
+
+  The zone is only what the client said. It never changes the player's TZ attribute; softcode decides what to do with it, and the socket\`timezone event says when a client reports one. A player who is not connected gives #-1 NOT CONNECTED. You must be See_All to use this function on another player or a descriptor that is not yours.
+
+  Example, in the web portal:
+```sharp
+think clientzone(me)
+Europe/Paris
+```
+
+::: seealso
+- [SSL()]
+- [TERMINFO()]
+- [TIME()]
+- [EVENTS]
+:::
 # clone()
 `clone(<object>[, <new name>[, <dbref>[, preserve]]])`
 
@@ -1105,7 +1126,9 @@ You say, "709395750"
       Ddd MMM DD HH:MM:SS YYYY<br>
   where Ddd is the day of the week, MMM is the month, DD is the day of the month, HH is the hour in 24-hour time, MM is the minutes, SS is the seconds, and YYYY is the year. If you supply an incorrectly formatted string, it will return #-1.
 
-  convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too. If no `<timezone>` is given, the server's timezone is used.
+  convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too, such as America/New_York, with their summer time. If no `<timezone>` is given, the server's timezone is used.
+
+  convtime() also reads other ways of writing a date and time, such as 2026-10-30 20:00, in the same zone. A time that names its own offset, such as 2026-10-30T20:00:00Z or 2026-10-30T20:00:00+02:00, keeps it. A time the zone skips when summer time starts, such as 2027-03-14 02:30 in America/New_York, returns #-1 INVALID TIME; written in the format above, it is moved on past the gap, as PennMUSH does.
 
   If the extended convtime() is supported (See @config compile), more formats for the date are enabled, including ones missing the day of week and year, and a 'Month Day Year' format. In this case, convtime() can also handle dates prior to 1970 (in which case a negative number will be returned).
 
@@ -1117,6 +1140,9 @@ You say, "Wed Jun 24 10:22:54 1992"
 
     > say convtime(Wed Jun 24 10:22:54 1992)<br>
     You say, "709395774"
+
+    > say convtime(2026-10-30 20:00,America/New_York)<br>
+    You say, "1793404800"
 
 
 ::: seealso

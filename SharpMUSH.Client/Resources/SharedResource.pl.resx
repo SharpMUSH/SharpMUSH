@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Pokaż więcej</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Oś czasu</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Bez daty</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Zobacz wszystkie</value>
   </data>
@@ -6244,5 +6250,56 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Otrzymuj powiadomienia na tym telefonie lub komputerze, gdy portal jest zamknięty</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Tylko ty to widzisz.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Powiadomienia dla ciebie</value>
+  </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Ten monit</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Teraz</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Przypięte</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Tutaj</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Zawsze</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Przejdź do</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Wyjdź</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Pomoc: {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Przypnij</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Odepnij</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Jeszcze {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Uzupełnij pola i naciśnij Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Uruchom bufor</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Nieprawidłowe wpisy palety:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>Pominięto {0} wpisów palety z powodu limitów.</value>
   </data>
 </root>

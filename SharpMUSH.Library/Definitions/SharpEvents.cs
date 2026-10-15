@@ -32,6 +32,7 @@ public static class SharpEvents
 	public const string SocketLoginFail = "SOCKET`LOGINFAIL";
 	public const string SocketCreateFail = "SOCKET`CREATEFAIL";
 	public const string SocketGmcp = "SOCKET`GMCP";
+	public const string SocketTimeZone = "SOCKET`TIMEZONE";
 	public const string HttpBlocked = "HTTP`BLOCKED";
 	public const string HttpCommand = "HTTP`COMMAND";
 
@@ -119,4 +120,11 @@ public static class SharpEvents
 	/// id, site-relative url, reason, caption). The enactor is the reporter; the reason is their own text.
 	/// </summary>
 	public const string GalleryReport = "GALLERY`REPORT";
+
+	/// <summary>
+	/// Fired by the Scene plugin when a scene is made or its status changes: <c>@scene/create</c>,
+	/// <c>scenecreate()</c>, and <c>@scene/set</c> or <c>sceneset()</c> of a new status. Args: (scene id, status,
+	/// previous status, empty for a scene just made). The enactor is whoever caused it.
+	/// </summary>
+	public const string SceneStatus = "SCENE`STATUS";
 }

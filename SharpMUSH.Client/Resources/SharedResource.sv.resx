@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Visa fler</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tidslinje</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Inte daterad</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Visa alla</value>
   </data>
@@ -6244,5 +6250,56 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Få aviseringar på den här telefonen eller datorn när portalen är stängd</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Bara du ser detta.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Meddelanden till dig</value>
+  </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Den här prompten</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Nu</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Fästa</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Här</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Alltid</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Gå till</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Lämna</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Hjälp om {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Fäst</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Lossa</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>{0} till</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Fyll i fälten och tryck på Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Kör bufferten</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Palettposter som inte är giltiga:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} palettposter utelämnades eftersom gränsen nåddes.</value>
   </data>
 </root>

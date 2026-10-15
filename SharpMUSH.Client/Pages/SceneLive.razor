@@ -13,6 +13,7 @@
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
+<PalettePage Kind="scene" Subject="@Id" />
 
 @* Nothing to watch on a game with the Scene System off: say so instead of failing to load. *@
 <FeatureGate Feature="@GameFeatures.Scenes">
@@ -88,6 +89,8 @@ else
         {
             <div class="scene-live-banner" role="status">@Loc["RolSceneLiveFeedDown"]</div>
         }
+
+        <SceneNotices SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" />
 
         @* column-reverse keeps the story at its newest pose as poses arrive, as Play's does. *@
         <div class="scene-live-scroll" data-input-region>

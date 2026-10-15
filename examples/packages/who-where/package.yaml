@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
@@ -16,6 +16,13 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
+  # The settings below are registered with +config: +config who-where lists them.
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
 
 objects:
   - ref: ww_global
@@ -24,19 +31,26 @@ objects:
     location: "{{$master_room}}"
     parent: "{{ww_functions}}"
     attributes:
+      # +who: in the order the who-order setting names.
       CMD_+WHO: |-
-        $+who:@pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),name,); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
-      # +who/idle: the least idle first.
+        $+who:@pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),get({{ww_functions}}/DATA`CONFIG`WHO-ORDER),); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
+      # +who/idle: the least idle first. +who/name: by name.
       CMD_+WHO_SWITCH: |-
-        $+who/*:@assert member(idle,lcstr(%0))=@pemit %#=notice(WHO,+who has no /%0 switch. +who/idle lists the least idle first.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),idle,); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
+        $+who/*:@assert member(idle name,lcstr(%0))=@pemit %#=notice(WHO,+who has no /%0 switch. +who/idle lists the least idle first%, +who/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),lcstr(%0),); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
       # +who <name>: only the players whose name or alias starts with it.
       CMD_+WHO_MATCH: |-
         $+who *:@pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),name,%0); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
+      # +where: the view the where-view setting names.
       CMD_+WHERE: |-
-        $+where:@pemit %#=u({{ww_functions}}/WW_FN_WHERE,mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
-      # +where/room and +where/name: a switch is the WW_FN_WHERE_<SWITCH> it runs.
+        $+where:@pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(firstof(get({{ww_functions}}/DATA`CONFIG`WHERE-VIEW),grouped))],mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
+      # +where/grouped, +where/room and +where/name: a switch is the WW_FN_WHERE_<SWITCH> it runs.
       CMD_+WHERE_SWITCH: |-
-        $+where/*:@assert member(room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/room lists by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
+        $+where/*:@assert member(grouped room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/grouped lists under a line per location%, +where/room by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
+      # Command palette entries (help palette entries): both are useful anywhere, so they are staples.
+      PALETTE`WHO: |-
+        {"label":"Who is on","line":"+who","always":true,"icon":"Groups","keywords":"online players"}
+      PALETTE`WHERE: |-
+        {"label":"Where is everyone","line":"+where","always":true,"icon":"Map","keywords":"players rooms"}
 
   - ref: ww_functions
     type: thing
@@ -59,7 +73,7 @@ objects:
         100
       # %0 a screen: starts it, setting ww_view, and ww_key and ww_rs for a table.
       WW_FN_START: |-
-        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,chr(9246))][setq(ww_after,v(WW_IDLE_AFTER))]
+        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,chr(9246))][setq(ww_after,v(DATA`CONFIG`IDLE-AFTER))]
       # %0 a list, %1 how many to a run, %2 the list's delimiter (a space when empty): the runs, split by |.
       WW_FN_SPLIT: |-
         setq(ww_d,if(strlen(%2),%2,%b))[if(words(%0,%q<ww_d>),iter(lnum(0,dec(ceil(fdiv(words(%0,%q<ww_d>),%1)))),extract(%0,inc(mul(%i0,%1)),%1,%q<ww_d>),,|))]
@@ -87,11 +101,59 @@ objects:
       # %0 the footer's text, under a rule.
       WW_FN_FOOT: |-
         %r[rule()]%r[tone(muted,%0)]
-      # Seconds idle after which a player's name is drawn muted.
-      WW_IDLE_AFTER: |-
+      # ---- Settings: +config who-where -------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code
+      # reads the value with v() or get(); see plus-config's README.
+      DATA`CONFIG:
+        value: |-
+          What +who and +where show.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Who and Where
+      DATA`CONFIG`IDLE-AFTER: |-
         3600
-      # %0 a player, %1 their idle seconds: their name, muted when they have been idle WW_IDLE_AFTER
-      # seconds or more (ww_after, read once by WW_FN_START).
+      DATA`CONFIG`IDLE-AFTER`TYPE: |-
+        duration
+      DATA`CONFIG`IDLE-AFTER`DEFAULT: |-
+        3600
+      DATA`CONFIG`IDLE-AFTER`MIN: |-
+        60
+      DATA`CONFIG`IDLE-AFTER`DESCRIPTION: |-
+        How long a player is idle before +who draws their name muted.
+      DATA`CONFIG`IDLE-AFTER`LABEL: |-
+        Idle after
+      DATA`CONFIG`IDLE-AFTER`EXAMPLE: |-
+        45m
+      DATA`CONFIG`WHO-ORDER: |-
+        name
+      DATA`CONFIG`WHO-ORDER`TYPE: |-
+        choice
+      DATA`CONFIG`WHO-ORDER`CHOICES: |-
+        name idle
+      DATA`CONFIG`WHO-ORDER`DEFAULT: |-
+        name
+      DATA`CONFIG`WHO-ORDER`DESCRIPTION: |-
+        The order +who lists players in. +who/name and +who/idle pick one.
+      DATA`CONFIG`WHO-ORDER`LABEL: |-
+        Bare +who order
+      DATA`CONFIG`WHO-ORDER`EXAMPLE: |-
+        idle
+      DATA`CONFIG`WHERE-VIEW: |-
+        grouped
+      DATA`CONFIG`WHERE-VIEW`TYPE: |-
+        choice
+      DATA`CONFIG`WHERE-VIEW`CHOICES: |-
+        grouped room name
+      DATA`CONFIG`WHERE-VIEW`DEFAULT: |-
+        grouped
+      DATA`CONFIG`WHERE-VIEW`DESCRIPTION: |-
+        What +where shows: players under a line per location, or one per line by room or by name.
+      DATA`CONFIG`WHERE-VIEW`LABEL: |-
+        Bare +where view
+      DATA`CONFIG`WHERE-VIEW`EXAMPLE: |-
+        room
+      # %0 a player, %1 their idle seconds: their name, muted when they have been idle the idle-after
+      # setting or longer (ww_after, read once by WW_FN_START).
       WW_FN_NAME: |-
         if(gte(%1,%q<ww_after>),tone(muted,name(%0)),name(%0))
       # ---- +who ---------------------------------------------------------------------
@@ -185,6 +247,9 @@ objects:
       WW_FN_GROUP: |-
         rule(case(%0,#-1,Unfindable,name(%0)),,{{"title":"left","titles":\[{"text":"[setr(ww_count,words(%1))] [case(%q<ww_count>,1,player,players)]","side":"right"}\]}})%r[grid(iter(%1,u(%!/WW_FN_NAME,%i0,idle(%i0)),,|),|)]
       # +where/room: one row per player, by location and then by name; its runs are locations.
+      # +where/grouped: under a line per location.
+      WW_FN_WHERE_GROUPED: |-
+        u(%!/WW_FN_WHERE,%0)
       WW_FN_WHERE_ROOM: |-
         u(%!/WW_FN_START,WHERE_ROOM)[setq(ww_title,Where by location)][setq(ww_parts,u(%!/WW_FN_SPLIT,u(%!/WW_FN_ROOMS,u(%!/WW_FN_GROUPS,%0)),v(WW_PART_ROOMS)))]
       # %0 a run of rooms, or -: their rows, or the screen.
@@ -225,11 +290,11 @@ objects:
         `+who` lists everyone connected, by name, with their alias, how long they have been idle and
         connected, the first letter of their `@sex`, and where they are.
 
-        - `+who` lists everyone.
-        - `+who/idle` lists the least idle first.
+        - `+who` lists everyone, by name unless the game has set another order.
+        - `+who/name` lists them by name, and `+who/idle` the least idle first.
         - `+who <name>` lists only the players whose name or alias starts with `<name>`.
 
-        A name is drawn muted once its player has been idle an hour. A player who is unfindable, or
+        A name is drawn muted once its player has been idle an hour, or as long as the game sets. A player who is unfindable, or
         is in an unfindable room, is at `-`. The footer counts who is shown.
 
         Example:
@@ -266,8 +331,8 @@ objects:
       HELP`WHERE: |-
         `+where` shows where everyone connected is standing.
 
-        - `+where` gives each location a line with its name and how many are there, and lists the
-          players there under it, by name.
+        - `+where/grouped` gives each location a line with its name and how many are there, and lists
+          the players there under it, by name. `+where` shows this view unless the game has set another.
         - `+where/room` lists one player per line, sorted by location.
         - `+where/name` lists one player per line, sorted by name.
 
@@ -295,8 +360,30 @@ objects:
 
         Output: a heading, a line per location with the players there under it, and the count.
 
+      HELP`WHO`SETTINGS: |-
+        Staff change what `+who` and `+where` show with `+config who-where`:
+
+        - `idle-after`: how long a player is idle before their name is drawn muted. An hour by default.
+        - `who-order`: the order a bare `+who` uses, `name` or `idle`.
+        - `where-view`: the view a bare `+where` shows, `grouped`, `room` or `name`.
+
+        Example:
+
+        ```
+        > +config who-where/where-view=room
+        \[CONFIG\] Done: who-where/where-view is now room, was grouped.
+        ```
+
+        Output: one line saying what the setting is now and what it was.
+
   - ref: ww_help_registration
     target: "{{plus-help/librarian}}"
     attributes:
       SRC`WHO-WHERE: |-
         {{ww_help}}
+
+  - ref: ww_config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`WHO-WHERE: |-
+        {{ww_functions}}

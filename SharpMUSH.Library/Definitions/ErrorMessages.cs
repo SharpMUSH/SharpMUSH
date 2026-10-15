@@ -65,6 +65,8 @@ public static partial class ErrorMessages
 		public const string AttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
 		public const string AttrEvalPermissions = "#-1 NO PERMISSION TO EVALUATE ATTRIBUTE";
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
+		/// <summary>PennMUSH <c>do_set_atr</c> on <c>AE_BADNAME</c>.</summary>
+		public const string AttrBadName = "That's not a good name for an attribute.";
 
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";
@@ -432,6 +434,7 @@ public static partial class ErrorMessages
 		public const string RollFormulaTooDeep = "#-1 ROLL FORMULA NESTED TOO DEEPLY";
 		public const string RollRecordOnlyRolls = "#-1 ONLY A ROLL CAN BE RECORDED";
 		public const string NoSuchRoll = "#-1 NO SUCH ROLL";
+		public const string NoSuchActivityReport = "#-1 NO SUCH REPORT";
 		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
 		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
 		public const string RollInvalidJson = "#-1 INVALID JSON";

@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Показать ещё</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Хронология</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Без даты</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Смотреть все</value>
   </data>
@@ -6244,5 +6250,56 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Получайте уведомления на этом телефоне или компьютере, когда портал закрыт</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Это видите только вы.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Уведомления для вас</value>
+  </data>
+  <data name="NavPaletteGroupInput" xml:space="preserve">
+    <value>Этот запрос</value>
+  </data>
+  <data name="NavPaletteGroupNow" xml:space="preserve">
+    <value>Сейчас</value>
+  </data>
+  <data name="NavPaletteGroupPinned" xml:space="preserve">
+    <value>Закреплённые</value>
+  </data>
+  <data name="NavPaletteGroupHere" xml:space="preserve">
+    <value>Здесь</value>
+  </data>
+  <data name="NavPaletteGroupAlways" xml:space="preserve">
+    <value>Всегда</value>
+  </data>
+  <data name="NavPaletteGroupGo" xml:space="preserve">
+    <value>Перейти</value>
+  </data>
+  <data name="NavPaletteLeave" xml:space="preserve">
+    <value>Выйти</value>
+  </data>
+  <data name="NavPaletteHelpOn" xml:space="preserve">
+    <value>Справка по {0}</value>
+  </data>
+  <data name="NavPalettePin" xml:space="preserve">
+    <value>Закрепить</value>
+  </data>
+  <data name="NavPaletteUnpin" xml:space="preserve">
+    <value>Открепить</value>
+  </data>
+  <data name="NavPaletteMore" xml:space="preserve">
+    <value>Ещё {0}</value>
+  </data>
+  <data name="NavPaletteSlots" xml:space="preserve">
+    <value>Заполните поля и нажмите Enter.</value>
+  </data>
+  <data name="NavPaletteRunBuffer" xml:space="preserve">
+    <value>Выполнить буфер</value>
+  </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Недопустимые записи палитры:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} записей палитры пропущено из-за ограничений.</value>
   </data>
 </root>

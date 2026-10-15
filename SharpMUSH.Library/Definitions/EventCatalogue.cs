@@ -209,6 +209,9 @@ public static class EventCatalogue
 		new("SOCKET`GMCP", Args(("descriptor", N), ("package", T), ("message", J), ("player", O)),
 			"Whoever is logged in on the descriptor, or God (#1) before login",
 			"A client sent a GMCP package.", EventPrivacy.Private, true, Sharp),
+		new(SharpEvents.SocketTimeZone, Args(("descriptor", N), ("zone", T), ("player", O)),
+			"Whoever is logged in on the descriptor, or God (#1) before login",
+			"A client reported its time zone.", EventPrivacy.Private, false, Sharp),
 
 		new("HTTP`BLOCKED", Args(("descriptor", N), ("ip", Ip), ("method", W), ("path", T), ("reason", T)), Nobody,
 			"A sitelock refused an HTTP request.", EventPrivacy.Private, false, Penn),
@@ -237,6 +240,9 @@ public static class EventCatalogue
 		new(SharpEvents.MailReceived,
 			Args(("recipient", O), ("sender", O), ("number", N), ("subject", M), ("urgent", B)),
 			"The sender", "A player received @mail.", EventPrivacy.Private, false, Sharp),
+
+		new(SharpEvents.SceneStatus, Args(("scene", N), ("status", W), ("previous", W)), "Whoever made the scene or changed its status",
+			"A scene was made, or its status changed (the Scene plugin).", EventPrivacy.Staff, false, Sharp),
 
 		new(SharpEvents.BackupComplete, Args(("name", T), ("bytes", N)),
 			"Whoever ran @backup or @dump, or God (#1) for a scheduled copy",

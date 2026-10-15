@@ -130,9 +130,10 @@ public class GameFeatureServiceTests
 		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
 
 		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-verse", "radio-scene"]);
+			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here"])
+			.Because("highlights-app calls no plugin itself, but the package it shows does");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights"]);
 	}
 
 	/// <summary>
@@ -147,8 +148,8 @@ public class GameFeatureServiceTests
 		var result = await game.Features(scenePlugin: false).ApplyPackagesAsync(["scene-verse"], CancellationToken.None);
 
 		await Assert.That(result is Error<string> { Value: var message } && message.Contains("scene plugin")).IsTrue();
-		await Assert.That(game.Installed).IsEquivalentTo(["plus-help"])
-			.Because("+help needs no plugin; scene and scene-verse both call the Scene plugin");
+		await Assert.That(game.Installed).IsEquivalentTo(["plus-help", "plus-config"])
+			.Because("+help and +config need no plugin; scene and scene-verse both call the Scene plugin");
 	}
 
 	/// <summary>The offer is every bundled package, with what it attaches to and needs, from its manifest.</summary>
@@ -159,7 +160,7 @@ public class GameFeatureServiceTests
 
 		await Assert.That(packages.Select(p => p.Id)).IsEquivalentTo(BundledPackages.All.Select(p => p.PackageId));
 		var scene = packages.Single(p => p.Id == "scene");
-		await Assert.That(scene.DependsOn).IsEquivalentTo(["plus-help"]);
+		await Assert.That(scene.DependsOn).IsEquivalentTo(["plus-help", "plus-config"]);
 		await Assert.That(scene.Description).IsNotEmpty();
 		await Assert.That(packages.Single(p => p.Id == "profile-handler").Requires).IsEqualTo(HandlerKinds.Http);
 		await Assert.That(packages.Single(p => p.Id == "room-contents").Requires).IsEqualTo(HandlerKinds.Event);
@@ -192,7 +193,7 @@ public class GameFeatureServiceTests
 		var result = await game.Features().ApplyPackagesAsync(["scene"], CancellationToken.None);
 
 		await Assert.That(result is Success).IsTrue();
-		await Assert.That(game.Calls).IsEquivalentTo(["+plus-help", "+scene"],
+		await Assert.That(game.Calls).IsEquivalentTo(["+plus-help", "+plus-config", "+scene"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
