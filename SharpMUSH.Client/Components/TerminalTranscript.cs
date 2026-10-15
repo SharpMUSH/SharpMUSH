@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -165,6 +166,13 @@ public static class TerminalInput
 		// Fixed names with nothing to escape, so written out as NawsFrame is.
 		return $"{{\"type\":\"ttype\",\"types\":[{string.Join(',', types.Select(t => $"\"{t}\""))}]}}";
 	}
+
+	/// <summary>
+	/// The control frame reporting the browser's time zone, as a telnet client reports <c>TZ</c> with NEW-ENVIRON. The
+	/// game reads it as the client's zone (<c>clientzone()</c>) and checks it names one.
+	/// </summary>
+	public static string TimeZoneFrame(string zone) =>
+		JsonSerializer.Serialize(new { type = "environ", vars = new Dictionary<string, string> { ["TZ"] = zone } });
 
 	/// <summary>The control frame reporting the terminal's character grid (telnet NAWS).</summary>
 	public static string NawsFrame(int cols, int rows) => $"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}";
