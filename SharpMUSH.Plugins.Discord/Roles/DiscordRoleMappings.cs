@@ -55,7 +55,7 @@ public interface IDiscordRoleStore
 	/// <summary>Whether <paramref name="userId"/>'s hold on the role has open drift.</summary>
 	bool Drifted(ulong roleId, ulong userId);
 
-	/// <summary>Records the drift, replacing the member's earlier one on the same role.</summary>
+	/// <summary>Records the drift, replacing the member's earlier one on the same role. Drift on a role no longer mapped is dropped.</summary>
 	ValueTask RecordAsync(ulong roleId, DiscordDrift drift, CancellationToken cancellationToken = default);
 
 	/// <summary>Settles the member's drift on the role, once the game's answer is applied again.</summary>
@@ -68,7 +68,10 @@ public sealed class LightningDiscordRoleStore(ILightningStorageAccessor accessor
 	private readonly DiscordTable<DiscordRoleMapping> _mappings = new(accessor, "discord.role");
 	private readonly DiscordTable<DiscordDriftRecord> _drift = new(accessor, "discord.drift");
 
-	/// <summary>A drift change reads the role's record and writes it back; two at once must not lose one.</summary>
+	/// <summary>
+	/// A drift change reads the role's record and writes it back; two at once must not lose one. Removing a mapping takes
+	/// it too, so drift worked out before an unmap cannot be written back after it.
+	/// </summary>
 	private readonly SemaphoreSlim _changing = new(1, 1);
 
 	public IReadOnlyList<DiscordRoleMapping> Mappings() => _mappings.List();
@@ -80,8 +83,16 @@ public sealed class LightningDiscordRoleStore(ILightningStorageAccessor accessor
 
 	public async ValueTask<bool> RemoveAsync(ulong roleId, CancellationToken cancellationToken = default)
 	{
-		await _drift.RemoveAsync(roleId, cancellationToken);
-		return await _mappings.RemoveAsync(roleId, cancellationToken);
+		await _changing.WaitAsync(cancellationToken);
+		try
+		{
+			await _drift.RemoveAsync(roleId, CancellationToken.None);
+			return await _mappings.RemoveAsync(roleId, CancellationToken.None);
+		}
+		finally
+		{
+			_changing.Release();
+		}
 	}
 
 	public IReadOnlyList<DiscordDriftRecord> Drift() => _drift.List();
@@ -90,7 +101,8 @@ public sealed class LightningDiscordRoleStore(ILightningStorageAccessor accessor
 		=> _drift.Get(roleId)?.Members.Any(drift => drift.UserId == userId) == true;
 
 	public ValueTask RecordAsync(ulong roleId, DiscordDrift drift, CancellationToken cancellationToken = default)
-		=> ChangeAsync(roleId, members => [.. members.Where(member => member.UserId != drift.UserId), drift], cancellationToken);
+		=> ChangeAsync(roleId, members => [.. members.Where(member => member.UserId != drift.UserId), drift], cancellationToken,
+			onlyWhileMapped: true);
 
 	public ValueTask SettleAsync(ulong roleId, ulong userId, CancellationToken cancellationToken = default)
 		=> Drifted(roleId, userId)
@@ -98,11 +110,16 @@ public sealed class LightningDiscordRoleStore(ILightningStorageAccessor accessor
 			: ValueTask.CompletedTask;
 
 	private async ValueTask ChangeAsync(ulong roleId, Func<IReadOnlyList<DiscordDrift>, IReadOnlyList<DiscordDrift>> change,
-		CancellationToken cancellationToken)
+		CancellationToken cancellationToken, bool onlyWhileMapped = false)
 	{
 		await _changing.WaitAsync(cancellationToken);
 		try
 		{
+			if (onlyWhileMapped && _mappings.Get(roleId) is null)
+			{
+				return;
+			}
+
 			var members = change(_drift.Get(roleId)?.Members ?? []);
 			if (members.Count == 0)
 			{

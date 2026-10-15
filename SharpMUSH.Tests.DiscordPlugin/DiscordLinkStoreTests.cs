@@ -173,6 +173,7 @@ public class DiscordLinkStoreTests
 	public async Task Drift_KeepsOnePerMember_UntilSettled()
 	{
 		var store = new LightningDiscordRoleStore(_db);
+		await store.SaveAsync(new DiscordRoleMapping(500, 900, "Builders", "builder", DiscordRoleMode.Report, Now, "#1:1"));
 		await store.RecordAsync(500, new DiscordDrift(7, "ann", true, Now));
 		await store.RecordAsync(500, new DiscordDrift(7, "ann", false, Now.AddMinutes(1)));
 		await store.RecordAsync(500, new DiscordDrift(8, "bo", true, Now));
@@ -183,6 +184,17 @@ public class DiscordLinkStoreTests
 
 		await store.SettleAsync(500, 7);
 		await store.SettleAsync(500, 8);
+		await Assert.That(store.Drift()).IsEmpty();
+	}
+
+	/// <summary>A pass that worked out drift before an unmap must not write it back after; a later mapping starts clean.</summary>
+	[Test]
+	public async Task Drift_OnARoleNoLongerMapped_IsDropped()
+	{
+		var store = new LightningDiscordRoleStore(_db);
+		await store.RecordAsync(600, new DiscordDrift(7, "ann", true, Now));
+
+		await Assert.That(store.Drifted(600, 7)).IsFalse();
 		await Assert.That(store.Drift()).IsEmpty();
 	}
 }
