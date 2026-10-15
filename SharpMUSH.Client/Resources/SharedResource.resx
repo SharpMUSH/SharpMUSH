@@ -685,10 +685,19 @@
     <value>Selected File</value>
   </data>
   <data name="MailDatabaseOptional" xml:space="preserve">
-    <value>Mail database (optional): the PennMUSH maildb, for mail aliases</value>
+    <value>Mail database (optional): the PennMUSH maildb, for mail aliases, or RhostMUSH's .dump.mail from wmail/unload</value>
   </data>
   <data name="ChatDatabaseOptional" xml:space="preserve">
     <value>Chat database (optional): the PennMUSH chatdb, for channels</value>
+  </data>
+  <data name="AdmImportFormat" xml:space="preserve">
+    <value>Database format</value>
+  </data>
+  <data name="AdmImportFormatAuto" xml:space="preserve">
+    <value>Tell from the file</value>
+  </data>
+  <data name="AdmImportMailFoldersOptional" xml:space="preserve">
+    <value>Mail folders (optional): RhostMUSH's .dump.folder, which says which folder each message is in</value>
   </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview File Content</value>
@@ -704,16 +713,16 @@
   <!-- ImportDatabase.razor     -->
   <!-- ======================== -->
   <data name="ImportPennMUSHDatabase" xml:space="preserve">
-    <value>Import PennMUSH Database</value>
+    <value>Import PennMUSH or RhostMUSH Database</value>
   </data>
   <data name="ImportDatabaseDescription" xml:space="preserve">
-    <value>Upload a PennMUSH database file to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
+    <value>Upload a PennMUSH database file, or a RhostMUSH flatfile written with @dump/flat, to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
   </data>
   <data name="DropDatabaseFile" xml:space="preserve">
     <value>Drop PennMUSH database file here or click</value>
   </data>
   <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Supported formats: .db, .txt (max 100MB)</value>
+    <value>Supported formats: .db, .txt, .flat (max 100MB)</value>
   </data>
   <data name="Uploading" xml:space="preserve">
     <value>Uploading...</value>

@@ -7,7 +7,9 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Background service that handles PennMUSH database conversion on startup if configured.
+/// Background service that imports a database on startup if configured: <c>PENNMUSH_DATABASE_PATH</c> names a
+/// PennMUSH outdb or a RhostMUSH flatfile, told apart by its first lines unless
+/// <c>PENNMUSH_DATABASE_FORMAT</c> (<c>pennmush</c> or <c>rhostmush</c>) says which.
 /// </summary>
 public class PennMUSHDatabaseConversionService : BackgroundService
 {
@@ -17,6 +19,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 	private readonly IHostApplicationLifetime _lifetime;
 	private readonly bool _stopOnFailure;
 	private readonly string? _databaseFilePath;
+	private readonly string? _databaseFormat;
 
 	public PennMUSHDatabaseConversionService(
 		IPennMUSHDatabaseConverter converter,
@@ -33,6 +36,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			"true",
 			StringComparison.OrdinalIgnoreCase);
 		_databaseFilePath = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_PATH");
+		_databaseFormat = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_FORMAT");
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,11 +53,19 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			return;
 		}
 
-		_logger.LogInformation("Starting PennMUSH database conversion from: {FilePath}", _databaseFilePath);
+		if (!Enum.TryParse<DatabaseImportFormat>(string.IsNullOrWhiteSpace(_databaseFormat) ? nameof(DatabaseImportFormat.Auto) : _databaseFormat,
+				ignoreCase: true, out var format) || !Enum.IsDefined(format))
+		{
+			_logger.LogError("PENNMUSH_DATABASE_FORMAT is {Format}; it takes auto, pennmush or rhostmush", _databaseFormat);
+			return;
+		}
+
+		_logger.LogInformation("Starting database conversion from: {FilePath}", _databaseFilePath);
 
 		try
 		{
-			var result = await _converter.ConvertDatabaseAsync(_databaseFilePath, stoppingToken);
+			var result = await _converter.ConvertDatabaseAsync(new DatabaseImportFiles(_databaseFilePath, Format: format),
+				new Progress<ConversionProgress>(), stoppingToken);
 
 			if (result.IsSuccessful)
 			{

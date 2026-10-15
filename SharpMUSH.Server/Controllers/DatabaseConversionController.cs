@@ -32,7 +32,9 @@ public class DatabaseConversionController(
 
 	/// <summary>
 	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>), chatdb (<c>chatFile</c>) and
-	/// <c>mush.cnf</c> (<c>configFile</c>) optionally alongside
+	/// <c>mush.cnf</c> (<c>configFile</c>) optionally alongside; or a RhostMUSH flatfile, with its mail dump
+	/// (<c>mailFile</c>) and folder dump (<c>mailFolderFile</c>). <c>format</c> is <c>auto</c> (the default: told
+	/// from the file), <c>pennmush</c> or <c>rhostmush</c>.
 	/// </summary>
 	/// <remarks>
 	/// The <c>mush.cnf</c> is applied once every file is in and just before the conversion starts, so the conversion
@@ -40,14 +42,20 @@ public class DatabaseConversionController(
 	/// game's previous configuration back; an upload refused before it starts never changes it.
 	/// </remarks>
 	[HttpPost("upload")]
-	[RequestSizeLimit(3 * MaxUploadFileSize + MaxConfigFileSize + MultipartOverhead)] // Every file at its limit, and the form around them
+	[RequestSizeLimit(4 * MaxUploadFileSize + MaxConfigFileSize + MultipartOverhead)] // Every file at its limit, and the form around them
 	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)] // Each file
 	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
-		[FromForm] IFormFile? chatFile, [FromForm] IFormFile? configFile, CancellationToken cancellationToken)
+		[FromForm] IFormFile? chatFile, [FromForm] IFormFile? configFile, [FromForm] IFormFile? mailFolderFile,
+		[FromForm] string? format, CancellationToken cancellationToken)
 	{
 		if (file == null || file.Length == 0)
 		{
 			return BadRequest("No file uploaded");
+		}
+
+		if (!TryParseFormat(format, out var importFormat))
+		{
+			return BadRequest($"Unknown database format \"{format}\": it takes auto, pennmush or rhostmush.");
 		}
 
 		if (configFile is { Length: > MaxConfigFileSize })
@@ -57,7 +65,7 @@ public class DatabaseConversionController(
 
 		// Before anything is written: an import that fills the disk or the map part-way leaves a half-converted
 		// world, so one that clearly cannot fit is refused while the game is still untouched.
-		var sourceBytes = file.Length + (mailFile?.Length ?? 0) + (chatFile?.Length ?? 0);
+		var sourceBytes = file.Length + (mailFile?.Length ?? 0) + (chatFile?.Length ?? 0) + (mailFolderFile?.Length ?? 0);
 		if (capacity.Measure().ImportShortfall(sourceBytes) is { Length: > 0 } shortfall)
 		{
 			logger.LogWarning("PennMUSH import refused before it started: {Reason}", shortfall);
@@ -67,6 +75,7 @@ public class DatabaseConversionController(
 		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 		string? mailTempPath = null;
 		string? chatTempPath = null;
+		string? folderTempPath = null;
 		Func<Task>? restore = null;
 		try
 		{
@@ -97,6 +106,15 @@ public class DatabaseConversionController(
 					chatFile.Length);
 			}
 
+			if (mailFolderFile is not null)
+			{
+				folderTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.folder");
+				await using var folderStream = System.IO.File.Create(folderTempPath);
+				await mailFolderFile.CopyToAsync(folderStream, cancellationToken);
+				logger.LogInformation("Uploaded mail folder file: {FileName} ({Size} bytes)", mailFolderFile.FileName,
+					mailFolderFile.Length);
+			}
+
 			if (configFile is not null)
 			{
 				string text;
@@ -114,7 +132,7 @@ public class DatabaseConversionController(
 					or ArgumentException)
 				{
 					logger.LogWarning(ex, "The configuration uploaded with a PennMUSH database could not be read");
-					DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath], logger);
+					DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath, folderTempPath], logger);
 					return BadRequest($"Error importing configuration: {ex.Message}");
 				}
 
@@ -125,7 +143,8 @@ public class DatabaseConversionController(
 
 			var sessionId = Guid.NewGuid().ToString();
 
-			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, mailTempPath, chatTempPath, logger,
+			DatabaseConversionSession.StartConversion(sessionId, converter,
+				new DatabaseImportFiles(tempPath, mailTempPath, chatTempPath, folderTempPath, importFormat), logger,
 				cancellationToken, restore);
 
 			return Ok(new { sessionId, message = "Conversion started" });
@@ -139,9 +158,22 @@ public class DatabaseConversionController(
 				await RestoreAfterFailureAsync(restore);
 			}
 
-			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath], logger);
+			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath, folderTempPath], logger);
 			return StatusCode(500, $"Error uploading file: {ex.Message}");
 		}
+	}
+
+	/// <summary>The form's <c>format</c>: none or <c>auto</c> to tell from the file, else a format by name.</summary>
+	private static bool TryParseFormat(string? format, out DatabaseImportFormat parsed)
+	{
+		if (string.IsNullOrWhiteSpace(format))
+		{
+			parsed = DatabaseImportFormat.Auto;
+			return true;
+		}
+
+		return Enum.TryParse(format, ignoreCase: true, out parsed) && Enum.IsDefined(parsed)
+			&& !int.TryParse(format, out _);
 	}
 
 	/// <summary>Puts the configuration back after a failed upload; a failure here is logged beside the first.</summary>
@@ -216,7 +248,7 @@ public static class DatabaseConversionSession
 		public ConversionProgress? CurrentProgress { get; set; }
 		public ConversionResult? Result { get; set; }
 		public CancellationTokenSource CancellationSource { get; set; } = new();
-		/// <summary>The uploaded database and, when they came with it, the maildb and chatdb.</summary>
+		/// <summary>The uploaded database and, when they came with it, the maildb, chatdb and mail folder dump.</summary>
 		public string?[] TempFilePaths { get; init; } = [];
 	}
 
@@ -242,16 +274,14 @@ public static class DatabaseConversionSession
 	public static void StartConversion(
 		string sessionId,
 		IPennMUSHDatabaseConverter converter,
-		string tempFilePath,
-		string? mailTempFilePath,
-		string? chatTempFilePath,
+		DatabaseImportFiles files,
 		ILogger logger,
 		CancellationToken cancellationToken,
 		Func<Task>? restoreConfiguration = null)
 	{
 		var sessionData = new SessionData
 		{
-			TempFilePaths = [tempFilePath, mailTempFilePath, chatTempFilePath]
+			TempFilePaths = [files.Database, files.Mail, files.Chat, files.MailFolders]
 		};
 
 		var progress = new Progress<ConversionProgress>(p =>
@@ -266,8 +296,7 @@ public static class DatabaseConversionSession
 			cancellationToken,
 			sessionData.CancellationSource.Token);
 
-		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, chatTempFilePath, progress,
-				linkedCts.Token)
+		sessionData.ConversionTask = converter.ConvertDatabaseAsync(files, progress, linkedCts.Token)
 			.ContinueWith(async task =>
 			{
 				// Every way out — success, fault, cancellation — is done with the uploaded files.
