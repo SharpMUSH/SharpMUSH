@@ -1,5 +1,6 @@
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Models.Portal.Setup;
 
 namespace SharpMUSH.Client.Services;
 
@@ -9,7 +10,7 @@ namespace SharpMUSH.Client.Services;
 /// <c>+scene/set</c>, and staff change the catalogue with <c>+scene/detail/add|set|remove</c>.
 /// </summary>
 /// <remarks>A game without the scene package answers empty lists, and a scene's details then show by their keys.</remarks>
-public class SceneDetailService(IHttpClientFactory httpClientFactory)
+public class SceneDetailService(IHttpClientFactory httpClientFactory, ServerInfoService? serverInfo = null)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
@@ -38,7 +39,7 @@ public class SceneDetailService(IHttpClientFactory httpClientFactory)
 
 	private async Task<ApiResult<SceneDetailCatalogue>> FetchAsync()
 	{
-		var result = await Client.GetApiAsync<SceneDetailCatalogue>("api/scenes/details", "The server returned no scene details.");
+		var result = await Client.GetFeatureApiAsync<SceneDetailCatalogue>(serverInfo, GameFeatures.Scenes, "api/scenes/details", "The server returned no scene details.");
 		return result switch
 		{
 			SceneDetailCatalogue catalogue => new SceneDetailCatalogue(

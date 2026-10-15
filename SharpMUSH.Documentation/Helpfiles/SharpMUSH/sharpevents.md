@@ -58,7 +58,7 @@ Event Types:
 - **attribute**: attribute\`change
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
-- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn
+- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink
 - **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp
 - **http**: http\`blocked, http\`fail, http\`command
 - **room**: room\`contents
@@ -68,7 +68,7 @@ Event Types:
 - **backup**: backup\`complete, backup\`error
 - **gallery**: gallery\`add, gallery\`report
 
-The attribute, room, channel, page, mail, backup and gallery events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. attribute\`change tells the game an attribute flagged `watched` changed, so a gauge or a character sheet need not check it over and over, player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
+The attribute, room, channel, page, mail, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. attribute\`change tells the game an attribute flagged `watched` changed, so a gauge or a character sheet need not check it over and over, player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.
 
@@ -221,6 +221,12 @@ To mimic old behaviour:
 
 - **player\`warn** (*objid*, *reason*, *account*)
 - Stoppable. Triggered when staff warn a character from the web portal's moderation page. %# is the staff member's character, *<objid>* the warned character, *<reason>* what staff wrote, and *<account>* the staff member's account name. SharpMUSH keeps no warning itself beyond the audit log entry: the handler decides what a warning does, such as sending mail, opening a job or keeping a count. Nothing happens when the handler has no PLAYER\`WARN attribute.
+
+- **player\`link** (*objid*, *account*)
+- Triggered when a character is linked to an account, however it happened: @account/link, @account/claim or claim at the connect screen, the web portal, or a package. *<account>* is the account's id, as account() returns it. A character moved from one account to another triggers player\`unlink for the old account, then player\`link for the new one. %# is #1.
+
+- **player\`unlink** (*objid*, *account*)
+- Triggered when a character is taken off an account, by @account/unlink, the web portal, or a move to another account. *<account>* is the id of the account it left. The character itself is kept. %# is #1.
 
 # Socket Events
 # Event Socket

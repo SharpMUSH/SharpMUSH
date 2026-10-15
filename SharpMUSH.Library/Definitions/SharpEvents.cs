@@ -25,6 +25,8 @@ public static class SharpEvents
 	public const string PlayerConnect = "PLAYER`CONNECT";
 	public const string PlayerDisconnect = "PLAYER`DISCONNECT";
 	public const string PlayerWarn = "PLAYER`WARN";
+	public const string PlayerLink = "PLAYER`LINK";
+	public const string PlayerUnlink = "PLAYER`UNLINK";
 	public const string SocketConnect = "SOCKET`CONNECT";
 	public const string SocketDisconnect = "SOCKET`DISCONNECT";
 	public const string SocketLoginFail = "SOCKET`LOGINFAIL";

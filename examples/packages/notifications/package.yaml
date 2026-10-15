@@ -1,0 +1,189 @@
+format: 1.2
+package: notifications
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [notifications, push, page, mail, portal]
+requires_server: ">=0.1"
+
+# Its portal routes are children of http-handler's GET and POST verbs, and its help is a +help source.
+depends:
+  - package: http-handler
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  # The rules: what can notify a player, and what each player chose. The engine only delivers (@push); every
+  # decision about what is worth a notification is made here. WIZARD because @push needs notify.push, which
+  # the wizard role holds; only an object that controls this one can @trigger its API`SEND, so no player can
+  # send a notification through it.
+  #
+  # Trees: CMD` the +notify command, INC` its steps, API` what the event handler and other packages trigger,
+  # FUN` the reads, WEB` the portal page's JSON, DATA` the kinds, the defaults and each player's choices, one
+  # leaf each.
+  - ref: notifier
+    type: thing
+    name: Notifications
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA:
+        value: |-
+          Kinds, defaults and each player's choices. One leaf each.
+        flags: [no_command]
+      # What can notify a player, one branch per kind: its description, and DEFAULT, 1 when it notifies until
+      # the player turns it off. Another package adds a kind with DATA`KIND`<NAME> and DATA`KIND`<NAME>`DEFAULT
+      # on this object, and sends it with API`SEND (+help notify/staff).
+      DATA`KIND: |-
+        What can notify a player. One branch per kind.
+      DATA`KIND`PAGE: |-
+        A page sent to you
+      DATA`KIND`PAGE`DEFAULT: |-
+        1
+      DATA`KIND`MAIL: |-
+        @mail sent to you
+      DATA`KIND`MAIL`DEFAULT: |-
+        1
+      # Whether a notification shows the message itself. Off by default: a lock screen shows only who it is
+      # from and what kind it is, and a player who wants the text turns it on.
+      DATA`PREVIEW: |-
+        Show the message, not only who sent it
+      DATA`PREVIEW`DEFAULT: |-
+        0
+      # Each player's choices: DATA`PREF`<player key>`<kind or PREVIEW>, 1 or 0. Unset means the default.
+      DATA`PREF: |-
+        Each player's choices. One branch per player key.
+      # The portal page: a form with one switch per kind, filled in by WEB`SCHEMA.
+      DATA`WEB`SCHEMA: |-
+        {"kind":"form","schema_version":1,"title":"What notifies you","pages":[{"key":"main","title":"What notifies you","order":1,"sections":[{"name":"Notify me about","order":1,"elements":[]},{"name":"On the lock screen","order":2,"elements":[{"kind":"field","key":"preview","label":"","type":"boolean","default":false,"help":"Off: a notification says only who it is from. On: it shows the message too, where anyone holding your phone can read it."}]}]}],"actions":{"submit":{"transport":"http","method":"POST","route":"/http/notifications/save","payload":"fields","on_success":{"toast":"Saved."},"on_error":{"bind_field_errors":true}}}}
+
+      # ---- the command ----------------------------------------------------------
+      # +notify lists the settings; +notify <setting>=on|off changes one. %1 is what follows, as typed.
+      CMD`NOTIFY:
+        value: |-
+          $(?is)^\+notify(?\: +(.*))?$:@assert hastype(%#,player)=@pemit %#=notice(NOTIFY,Only players get notifications.,warn); @break strlen(%1)={@include/args %!/INC`SET=argument,%1}; @pemit %#=u(%!/FUN`SHOW,%#)
+        flags: [regexp]
+      # +notify <setting>=on|off.
+      INC`SET:
+        value: |-
+          think setq(setting,ucstr(trim(before(%<argument>,=))))[setq(choice,lcstr(trim(after(%<argument>,=))))]; @assert pos(=,%<argument>)=@pemit %#=notice(NOTIFY,+notify <setting>=on or off. +notify lists the settings.,warn); @assert member(u(%!/FUN`SETTINGS),%q<setting>)=@pemit %#=notice(NOTIFY,There is no setting called '[lcstr(%q<setting>)]'. +notify lists them.,warn); @assert match(on off,%q<choice>)=@pemit %#=notice(NOTIFY,Say on or off: +notify [lcstr(%q<setting>)]=on,warn); &DATA`PREF`[u(%!/FUN`KEY,%#)]`%q<setting> %!=t(match(on,%q<choice>)); @pemit %#=notice(NOTIFY,[lcstr(%q<setting>)] is %q<choice>: [u(%!/FUN`LABEL,%q<setting>)].,ok)
+
+      # ---- reads ----------------------------------------------------------------
+      # %0 a player: the key their choices are kept under.
+      FUN`KEY: |-
+        edit(objid(%0),#,,:,_)
+      # Every kind, by name.
+      FUN`KINDS: |-
+        iter(lattr(%!/DATA`KIND`*),after(%i0,DATA`KIND`))
+      # Every setting: the kinds, then PREVIEW.
+      FUN`SETTINGS: |-
+        u(%!/FUN`KINDS) PREVIEW
+      # %0 a setting: the DATA` branch that describes it.
+      FUN`BRANCH: |-
+        if(strmatch(%0,PREVIEW),PREVIEW,KIND`%0)
+      # %0 a setting: what it covers.
+      FUN`LABEL: |-
+        get(%!/DATA`[u(%!/FUN`BRANCH,%0)])
+      # %0 a player, %1 a setting: 1 when it is on for them.
+      FUN`WANTS: |-
+        default(%!/DATA`PREF`[u(%!/FUN`KEY,%0)]`%1,get(%!/DATA`[u(%!/FUN`BRANCH,%1)]`DEFAULT))
+      # %0 a player: their settings, as +notify shows them.
+      FUN`SHOW: |-
+        box(datacolumns(,Setting|[iter(u(%!/FUN`SETTINGS),lcstr(%i0),,|)],On|[iter(u(%!/FUN`SETTINGS),if(u(%!/FUN`WANTS,%0,%i0),tone(success,on),off),,|)],What it covers|[iter(u(%!/FUN`SETTINGS),u(%!/FUN`LABEL,%i0),,|)])%r[rule()]%r+notify <setting>=on or off changes one. Turn notifications on for a phone or browser in the portal: Settings%, Notifications.,Notifications)
+
+      # ---- sending --------------------------------------------------------------
+      # Sends a notification of kind %<kind> to player %<to>, when they want that kind: %<title> always, %<text>
+      # only when they turned PREVIEW on. %<path> is the portal page it opens, %<topic> folds notifications
+      # with the same topic into one, and %<urgent> 1 asks the push service to deliver it at once. Run with
+      # @trigger/args by an object that controls this one, such as the event handler. @push itself leaves a
+      # player who is at the game alone.
+      API`SEND: |-
+        @assert u(%!/FUN`WANTS,%<to>,%<kind>); think setq(notify_text,if(u(%!/FUN`WANTS,%<to>,PREVIEW),%<text>)); @break %<urgent>={@push/urgent %<to>=%<title>,%q<notify_text>,%<path>,%<topic>}; @push %<to>=%<title>,%q<notify_text>,%<path>,%<topic>
+
+      # Keeps the portal page's switches for player %q<notify_viewer>: %q<notify_choices> is <setting>:<1 or 0>
+      # for each one sent. The save route forces this object to run it, so the writes' reports go to this
+      # object rather than into the route's reply.
+      INC`SAVE: |-
+        think setq(notify_key,u(me/FUN`KEY,%q<notify_viewer>)); @dolist/inline %q<notify_choices>={&DATA`PREF`%q<notify_key>`[before(##,:)] me=after(##,:)}
+
+      # ---- the portal page ------------------------------------------------------
+      # %0 the viewer: the form, one switch per kind, each set as the viewer has it.
+      WEB`SCHEMA: |-
+        json_fill(v(DATA`WEB`SCHEMA),/pages/0/sections/0/elements,json_array(iter(u(%!/FUN`KINDS),u(%!/WEB`FIELD,%i0,%0),,|),|),/pages/0/sections/1/elements/0/label,v(DATA`PREVIEW),/pages/0/sections/1/elements/0/default,u(%!/FUN`WANTS,%0,PREVIEW))
+      # %0 a kind, %1 the viewer: its switch.
+      WEB`FIELD: |-
+        json(object,kind,json(string,field),key,json(string,lcstr(%0)),label,json(string,u(%!/FUN`LABEL,%0)),type,json(string,boolean),default,json(boolean,u(%!/FUN`WANTS,%1,%0)))
+      # The answer when the viewer is no character.
+      WEB`NOVIEWER: |-
+        json(object,ok,json(boolean,false),errors,json(object,_global,json(string,Choose a character first.)))
+
+  # The help, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are evaluated,
+  # so they hold no brackets, parentheses or percent signs.
+  - ref: notify_help
+    type: thing
+    name: Notifications Help
+    location: "{{notifier}}"
+    attributes:
+      HELP: |-
+        Notifications on your phone or in your browser.
+      HELP`NOTIFY: |-
+        A **notification** tells your phone or browser that something happened in the game while you were away: a page, or new @mail.
+
+        Turn them on for each phone or browser in the portal: **Settings, Notifications**, then **Turn on**. On an iPhone or iPad, add the portal to your home screen first: Share, then Add to Home Screen.
+
+        You are notified only while you are away. Nothing is sent while you have typed something in the last few minutes, or while the portal is open in front of you.
+
+        ## Choosing what notifies you
+
+        - `+notify` lists the settings and whether each is on.
+        - `+notify page=off` stops notifications for pages. `+notify mail=off` stops them for @mail.
+        - `+notify preview=on` shows the message itself. It is off at first, so a locked phone shows only who wrote to you, never what they said.
+
+        The portal's Notifications page sets the same things with switches.
+      HELP`NOTIFY`STAFF: |-
+        The Notifications object in the master room keeps what can notify a player, as `` DATA`KIND`<NAME> `` with its description and `` DATA`KIND`<NAME>`DEFAULT ``, 1 when it is on until a player turns it off. `` DATA`PREVIEW`DEFAULT `` is whether a new player sees message text: 0.
+
+        ## Adding a kind
+
+        A package adds a kind by setting those two attributes on the Notifications object, and sends one from an object that controls it, such as the event handler:
+
+        `` @trigger/args <notifications object>/API`SEND=to,<player>,kind,<NAME>,title,<title>,text,<text>,path,<portal page>,topic,<topic> ``
+
+        It sends nothing when the player turned that kind off, and leaves the text out unless they turned preview on. The kind shows in `+notify` and on the portal page by itself. See `help @push`.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`NOTIFICATIONS: |-
+        {{notify_help}}
+
+  # The events that notify: a page to everyone it reached but the pager, and new @mail.
+  - ref: events
+    target: "{{$event_handler}}"
+    attributes:
+      PAGE`MESSAGE`NOTIFICATIONS: |-
+        @dolist/inline setdiff(%<recipients>,%<speaker>)={@trigger/args {{notifier}}/API`SEND=to,##,kind,PAGE,title,Page from %<name>,text,%<message>,path,/play,topic,page-%<speaker>}
+      MAIL`RECEIVED`NOTIFICATIONS: |-
+        @trigger/args {{notifier}}/API`SEND=to,%<recipient>,kind,MAIL,title,Mail from [name(%<sender>)],text,%<subject>,path,/mail/%<number>,topic,mail,urgent,%<urgent>
+
+  # The portal page's routes, as children of http-handler's GET and POST verbs. %<viewer> is the character the
+  # portal signed in as; each switch arrives set as they have it, as the field's default. The notifications-app
+  # package puts the page at /apps/notifications.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`NOTIFICATIONS`SCHEMA: |-
+        @respond/type application/json; think u({{notifier}}/WEB`SCHEMA,%<viewer>)
+      POST`NOTIFICATIONS`SAVE: |-
+        @respond/type application/json; @assert isdbref(%<viewer>)={think u({{notifier}}/WEB`NOVIEWER)}; think setq(notify_viewer,%<viewer>)[setq(notify_choices,iter(u({{notifier}}/FUN`SETTINGS),if(json_query(%<body>,exists,lcstr(%i0)),%i0:[t(match(1 true,json_query(%<body>,extract,$.[lcstr(%i0)])))])))]; @force {{notifier}}=@include me/INC`SAVE; think json(object,ok,json(boolean,true),message,json(string,Saved.))

@@ -14,6 +14,7 @@
    cards: the profile's Recent scenes card links here with View all. A state and a search narrow the
    list on the server (api/scenes?participant=), which hands it over a page at a time. *@
 <FeatureGate Feature="@GameFeatures.Scenes">
+<ChildContent>
 <div class="char-scenes-page">
     <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@string.Format(Loc["NavCharScenesTitle"], Name)">
         <DescriptionContent>
@@ -66,6 +67,8 @@
         }
     }
 </div>
+</ChildContent>
+<Otherwise><ScenesNotEnabled /></Otherwise>
 </FeatureGate>
 
 @code {

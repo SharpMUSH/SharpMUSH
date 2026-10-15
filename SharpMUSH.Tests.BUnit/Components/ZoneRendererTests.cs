@@ -108,6 +108,7 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 			var widget = Substitute.For<IPortalWidget>();
 			widget.Name.Returns(name);
 			widget.ComponentType.Returns(componentType);
+			widget.Feature.Returns((string?)null);
 			reg.GetWidget(name).Returns(widget);
 		}
 		return reg;
@@ -151,6 +152,75 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 			.Add(c => c.Layout, LayoutWith("Thrower")));
 
 		await Assert.That(cut.Markup).Contains("WidWidgetRenderFailed");
+	}
+}
+
+/// <summary>
+/// A widget of an optional application is left out while the game does not have it on: without the application's
+/// plugin, such as the Scene plugin, nothing serves what it shows.
+/// </summary>
+public class ZoneRendererFeatureTests : ZoneRendererTestBase
+{
+	private StubServerInfoService Register(IReadOnlyList<string> features)
+	{
+		var reg = Substitute.For<IWidgetRegistry>();
+		var healthy = Substitute.For<IPortalWidget>();
+		healthy.Name.Returns("Healthy");
+		healthy.ComponentType.Returns(typeof(HealthyWidget));
+		healthy.Feature.Returns("scenes");
+		reg.GetWidget("Healthy").Returns(healthy);
+		Services.AddSingleton(reg);
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, features: features);
+		Services.AddSingleton<ServerInfoService>(serverInfo);
+		return serverInfo;
+	}
+
+	private static LayoutConfiguration Layout() => new(
+		Zones: new Dictionary<WidgetZone, List<WidgetPlacement>>
+		{
+			[WidgetZone.TopBar] = [new WidgetPlacement("Healthy", 0, null)],
+			[WidgetZone.LeftSidebar] = [],
+			[WidgetZone.RightSidebar] = [],
+			[WidgetZone.MainContent] = [],
+			[WidgetZone.Footer] = []
+		},
+		Settings: new LayoutSettings(false, false));
+
+	[TUnit.Core.Test]
+	public async Task AWidgetOfAnApplicationThatIsOff_IsLeftOut()
+	{
+		Register([]);
+
+		var cut = Render<ZoneRenderer>(p => p.Add(c => c.Zone, WidgetZone.TopBar).Add(c => c.Layout, Layout()));
+
+		await Assert.That(cut.Markup).DoesNotContain("healthy-widget");
+	}
+
+	[TUnit.Core.Test]
+	public async Task AWidgetOfAnApplicationThatIsOn_Renders()
+	{
+		Register(["scenes"]);
+
+		var cut = Render<ZoneRenderer>(p => p.Add(c => c.Zone, WidgetZone.TopBar).Add(c => c.Layout, Layout()));
+
+		cut.WaitForState(() => cut.Markup.Contains("healthy-widget"));
+		await Assert.That(cut.Markup).Contains("healthy-widget");
+	}
+
+	/// <summary>An administrator turns the application on in the same session: the widget appears without a reload.</summary>
+	[TUnit.Core.Test]
+	public async Task AnApplicationTurnedOnLater_ShowsItsWidget()
+	{
+		List<string> features = [];
+		var serverInfo = Register(features);
+		var cut = Render<ZoneRenderer>(p => p.Add(c => c.Zone, WidgetZone.TopBar).Add(c => c.Layout, Layout()));
+		await Assert.That(cut.Markup).DoesNotContain("healthy-widget");
+
+		features.Add("scenes");
+		serverInfo.Refresh();
+
+		cut.WaitForState(() => cut.Markup.Contains("healthy-widget"));
+		await Assert.That(cut.Markup).Contains("healthy-widget");
 	}
 }
 
