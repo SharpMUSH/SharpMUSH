@@ -42,6 +42,19 @@ public class TimeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
+	/// <summary>
+	/// A zone is named with its own case, whatever was looked up before: .NET keeps zones it has read in a cache
+	/// that ignores case, so asia/kolkata used to work only once Asia/Kolkata had been read.
+	/// </summary>
+	[Test]
+	public async Task AZoneIsNamedWithItsOwnCase()
+	{
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("timefmt($H,0,Asia/Kolkata)"))).ToPlainText()).IsEqualTo("05");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("timefmt($H,0,asia/kolkata)"))).ToPlainText()).StartsWith("#-1");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("valid(timezone,asia/kolkata)"))).ToPlainText()).IsEqualTo("0");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("valid(timezone,Asia/Kolkata)"))).ToPlainText()).IsEqualTo("1");
+	}
+
 	[Test]
 	public async Task Uptime()
 	{
