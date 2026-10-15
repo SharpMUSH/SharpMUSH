@@ -18,6 +18,15 @@ public record GMCPSignalMessage(long Handle, string Package, string Info) : IHan
 public record GMCPNegotiatedMessage(long Handle, bool Agreed) : IHandleMessage;
 
 /// <summary>
+/// Message sent from ConnectionServer to MainProcess whenever a client's GMCP <c>Core.Supports</c> list
+/// changes (<c>Set</c>, <c>Add</c> or <c>Remove</c>), and with an empty list when it withdraws GMCP.
+/// <paramref name="Modules"/> is the whole list after the change, each entry a module and its version
+/// as the client sent them (<c>"Room 1"</c>). The main process keeps it as the connection's
+/// <c>GMCP_SUPPORTS</c> metadata, which <c>gmcpsupports()</c> and <c>oob(..., supported)</c> read.
+/// </summary>
+public record GMCPSupportsMessage(long Handle, IReadOnlyList<string> Modules) : IHandleMessage;
+
+/// <summary>
 /// Message sent from ConnectionServer to MainProcess when a client names itself through MNES
 /// (NEW-ENVIRON <c>CLIENT_NAME</c>/<c>CLIENT_VERSION</c>). Either may be missing.
 /// </summary>

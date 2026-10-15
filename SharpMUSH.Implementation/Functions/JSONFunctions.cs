@@ -10,12 +10,12 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -534,7 +534,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "oob", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, ParameterNames = ["command", "arguments..."])]
+	[SharpFunction(Name = "oob", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, ParameterNames = ["players", "package", "message", "supported"])]
 	public async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -544,6 +544,19 @@ public partial class Functions
 		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState)
 			? msgState.Message.ToPlainText()
 			: "";
+
+		// The one option: send a telnet client only what it listed in Core.Supports, or everything when it
+		// listed nothing. Without it every GMCP client gets the package, which Mudlet relies on for packages
+		// it never lists.
+		var option = parser.CurrentState.Arguments.TryGetValue("3", out var optionState)
+			? optionState.Message.ToPlainText().Trim()
+			: null;
+		if (option is not null && !string.Equals(option, "supported", StringComparison.OrdinalIgnoreCase))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidArgument);
+		}
+
+		var onlySupported = option is not null;
 
 		var players = ArgHelpers.NameListString(playersArg);
 
@@ -559,10 +572,7 @@ public partial class Functions
 			}
 		}
 
-		var isWizard = await executor.IsWizard();
-		var hasSendOOBPower = await executor.HasPower("Send_OOB");
-
-		var mayReachOthers = isWizard || hasSendOOBPower;
+		var mayReachOthers = await MayReachOthersOutOfBandAsync(executor);
 		var executorRef = executor.Object().DBRef;
 		int sentCount = 0;
 
@@ -583,7 +593,7 @@ public partial class Functions
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
-				sentCount += await SendOutOfBandAsync(connection, package, message) ? 1 : 0;
+				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
 				continue;
 			}
 
@@ -611,7 +621,7 @@ public partial class Functions
 
 			await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
 			{
-				sentCount += await SendOutOfBandAsync(connection, package, message) ? 1 : 0;
+				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
 			}
 		}
 
@@ -619,11 +629,20 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// Who may send out-of-band data to, or read the GMCP modules of, a connection that is not their own:
+	/// a wizard, or anyone with the Send_OOB power. oob() and gmcpsupports() share it.
+	/// </summary>
+	private static async ValueTask<bool> MayReachOthersOutOfBandAsync(AnySharpObject executor)
+		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
+
+	/// <summary>
 	/// Sends one package to one connection: WebSocket (portal) connections get a structured envelope the
 	/// browser routes by package, GMCP-negotiated telnet connections a GMCP package. Any other connection
-	/// (plain telnet without GMCP) is skipped.
+	/// (plain telnet without GMCP) is skipped, and so is a GMCP client that listed modules in Core.Supports
+	/// without this package's when <paramref name="onlySupported"/> is set.
 	/// </summary>
-	private async ValueTask<bool> SendOutOfBandAsync(IConnectionService.ConnectionData connection, string package, string message)
+	private async ValueTask<bool> SendOutOfBandAsync(IConnectionService.ConnectionData connection, string package,
+		string message, bool onlySupported)
 	{
 		if (connection.ConnectionType == "websocket")
 		{
@@ -631,45 +650,80 @@ public partial class Functions
 			return true;
 		}
 
-		if (connection.Metadata.GetValueOrDefault("GMCP", "0") == "1")
+		if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1"
+				|| (onlySupported && !GmcpSupports.Accepts(connection.Metadata.GetValueOrDefault(GmcpSupports.MetadataKey), package)))
 		{
-			await MessageBus.Publish(new GMCPOutputMessage(connection.Handle, package, message));
-			return true;
+			return false;
 		}
 
-		return false;
+		await MessageBus.Publish(new GMCPOutputMessage(connection.Handle, package, message));
+		return true;
 	}
 
-	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["json", "player"])]
-	public async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// <c>gmcpsupports(&lt;descriptor|player&gt;[, &lt;package&gt;])</c>: the GMCP modules a client listed in
+	/// Core.Supports, as <c>Module version</c> pairs, or with a package 1 when it listed the package or a
+	/// module it belongs to. A player answers for their least idle connection, as <c>terminfo()</c> does.
+	/// Who may ask about a connection that is not their own is oob()'s rule.
+	/// </summary>
+	[SharpFunction(Name = "gmcpsupports", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["descriptor|player", "package"])]
+	public async ValueTask<CallState> GmcpSupportsFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var jsonContent = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
 
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg)
-				&& await LocateService.LocateAndNotifyIfInvalidWithCallState(
-					parser,
-					executor,
-					executor,
-					targetArg.Message.ToPlainText(),
-					PlayersPreference | AbsoluteMatch) is Error<CallState> error)
+		return await GmcpConnectionAsync(parser, executor, target) switch
 		{
-			return error.Value;
+			IConnectionService.ConnectionData connection => GmcpSupportsAnswer(parser,
+				connection.Metadata.GetValueOrDefault(GmcpSupports.MetadataKey, string.Empty)),
+			Error<string> error => new CallState(error.Value)
+		};
+	}
+
+	/// <summary>The kept list, or with a package whether the list covers it.</summary>
+	private static CallState GmcpSupportsAnswer(IMUSHCodeParser parser, string listed)
+		=> parser.CurrentState.Arguments.TryGetValue("1", out var packageState)
+			? new CallState(GmcpSupports.Lists(listed, packageState.Message.ToPlainText()) ? "1" : "0")
+			: new CallState(listed);
+
+	/// <summary>
+	/// The connection gmcpsupports() reads: a descriptor as given, or a player's least idle connection.
+	/// A mortal may ask only about their own; a descriptor that is not theirs and one that does not exist
+	/// are one answer, so the number tells them nothing.
+	/// </summary>
+	private async ValueTask<Result<IConnectionService.ConnectionData>> GmcpConnectionAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, string target)
+	{
+		var mayReachOthers = await MayReachOthersOutOfBandAsync(executor);
+		var executorRef = executor.Object().DBRef;
+
+		if (long.TryParse(target, NumberStyles.None, CultureInfo.InvariantCulture, out var descriptor))
+		{
+			return ConnectionService.Get(descriptor) switch
+			{
+				{ } connection when mayReachOthers || connection.Ref?.Number == executorRef.Number => connection,
+				null when mayReachOthers => new Error<string>(ErrorMessages.Returns.NoSuchDescriptor),
+				_ => new Error<string>(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied)
+			};
 		}
 
-		// TODO: Actual websocket/out-of-band JSON communication is planned for future release.
-		// For now, this returns an error as the feature requires websocket support.
-		//
-		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService
-		// 2. Implement GMCP (Generic MUD Communication Protocol) for JSON
-		// 3. Support standard GMCP packages and custom packages
-		// 4. Add JSON schema validation for safety
-		// 5. Implement bidirectional JSON communication
-		//
-		// When implemented, this will send JSON through GMCP/websocket channel
-		// Placeholder - returns empty string as OOB data doesn't display in-band
-		return CallState.Empty;
+		var located = await LocateService.LocateConnectionTarget(parser, executor, executor, target);
+		if (located is not (AnySharpObject and SharpPlayer player))
+		{
+			return new Error<string>(located is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
+		}
+
+		// Refused before anything about the connection, so a refusal does not say whether they are connected.
+		if (!mayReachOthers && player.Object.DBRef.Number != executorRef.Number)
+		{
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		return await ArgHelpers.LeastIdleConnectionAsync(ConnectionService, player.Object.DBRef) switch
+		{
+			{ } connection => connection,
+			null => new Error<string>(ErrorMessages.Returns.NotConnected)
+		};
 	}
 }

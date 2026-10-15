@@ -216,7 +216,7 @@ To mimic old behaviour:
 **Note**: A sitelock rule with deny_silent will not trigger socket\`loginfail or socket\`createfail.
 
 - **socket\`gmcp** (*descriptor*, *package*, *message*, *player*)
-- Stoppable. Triggered when a telnet client sends a GMCP package, such as Mudlet's External.Discord.Hello when it connects. *<message>* is the package's JSON, empty when it sent none. *<player>* is whoever is logged in on the descriptor, empty at the connect screen; %# is that player too, or #1 before login. Answer with oob() on the descriptor, which reaches the client before anyone logs in. Core.Ping and Core.KeepAlive are answered by the server and do not trigger this. The client chooses everything it sends, so check *<package>* before acting on *<message>*.
+- Stoppable. Triggered when a telnet client sends a GMCP package, such as Mudlet's External.Discord.Hello when it connects. *<message>* is the package's JSON, empty when it sent none. *<player>* is whoever is logged in on the descriptor, empty at the connect screen; %# is that player too, or #1 before login. Answer with oob() on the descriptor, which reaches the client before anyone logs in. Core.Ping and Core.KeepAlive are answered by the server and do not trigger this. The client chooses everything it sends, so check *<package>* before acting on *<message>*. The modules a client lists in Core.Supports are visible to softcode as the connection's GMCP_SUPPORTS, through gmcpsupports(). That list is recorded apart from this event, so the event for a Core.Supports package may still see the list from before it; read the list in a later event, such as player\`connect.
 
 # HTTP Events
 # Event HTTP

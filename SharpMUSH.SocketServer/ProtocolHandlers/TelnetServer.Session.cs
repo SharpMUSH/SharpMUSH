@@ -7,6 +7,7 @@ using SharpMUSH.Messaging.Messages;
 using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
+using TelnetNegotiationCore.Gmcp;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Protocols;
@@ -32,11 +33,18 @@ public partial class TelnetServer
 		private TelnetInterpreter? _telnet;
 		private int _telnetAnnounced;
 		private IReadOnlyList<string> _publishedTerminalTypes = [];
+		private IReadOnlyList<string> _publishedGmcpSupports = [];
 
 		public async ValueTask<TelnetInterpreter> BuildInterpreterAsync()
 		{
 			var terminalTypeProtocol = new TerminalTypeProtocol().OnTerminalTypes(OnTerminalTypesAsync);
-			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol)));
+			// Sends through the interpreter, which exists by the time a client can have said anything to answer.
+			var gmcp = new GmcpServerSession((package, data) =>
+				_telnet?.SendGMCPCommand(package, data) ?? ValueTask.CompletedTask)
+			{
+				OnSupportsChangedAsync = OnGmcpSupportsChangedAsync
+			};
+			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)));
 
 			builder.UsePipe(connection.Transport);
 			var telnet = await builder.BuildAsync();
@@ -49,15 +57,15 @@ public partial class TelnetServer
 		}
 
 		private TelnetInterpreterBuilder AddNegotiationPlugins(
-			TelnetInterpreterBuilder builder, TerminalTypeProtocol terminalTypeProtocol) =>
+			TelnetInterpreterBuilder builder, TerminalTypeProtocol terminalTypeProtocol, GmcpServerSession gmcp) =>
 			builder
 				.OnSubmit((byteArray, encoding, _) => OnSubmitAsync(encoding.GetString(byteArray)))
 				// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
 				// which asks every plugin rather than just the one that fired: reaching any of them means
 				// some option settled, and a client that answers only NAWS still speaks telnet.
-				// The Core session answers Core.Ping and keeps Core.Supports; every message, Core.* included,
-				// still reaches the callback below.
-				.AddPlugin<GMCPProtocol>().UseGmcpServerSession(out _)
+				// The Core session answers Core.Ping and keeps Core.Supports, reporting each change to the main
+				// process; every message, Core.* included, still reaches the callback below.
+				.AddPlugin<GMCPProtocol>().UseGmcpServerSession(gmcp)
 				.OnGMCPMessage(async data =>
 				{
 					await AnnounceTelnetIfNegotiatedAsync();
@@ -202,6 +210,29 @@ public partial class TelnetServer
 			await AnnounceTelnetIfNegotiatedAsync();
 			await held.PublishAsync(
 				() => server._publishEndpoint.Publish(new GMCPNegotiatedMessage(handle, agreed), ct));
+
+			// The session forgets the client's module list when GMCP is withdrawn, without reporting it as a
+			// change; the main process is told here instead, so the list it keeps does not outlive GMCP.
+			if (!agreed)
+			{
+				await PublishGmcpSupportsAsync([]);
+			}
+		}
+
+		private ValueTask OnGmcpSupportsChangedAsync(IReadOnlyDictionary<string, int> modules) =>
+			PublishGmcpSupportsAsync([.. modules.Select(module => new GmcpModule(module.Key, module.Value).ToString())]);
+
+		// The whole list each time, so the main process only ever replaces what it holds.
+		private async ValueTask PublishGmcpSupportsAsync(IReadOnlyList<string> modules)
+		{
+			if (_publishedGmcpSupports.SequenceEqual(modules))
+			{
+				return;
+			}
+
+			_publishedGmcpSupports = modules;
+			await held.PublishAsync(
+				() => server._publishEndpoint.Publish(new GMCPSupportsMessage(handle, modules), ct));
 		}
 
 		/// <summary>

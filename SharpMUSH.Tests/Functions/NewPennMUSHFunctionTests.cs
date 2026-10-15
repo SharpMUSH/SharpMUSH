@@ -206,15 +206,7 @@ public class NewPennMUSHFunctionTests
 	}
 
 	[Test]
-	public async Task WEBSOCKET_JSON_ReturnsEmpty()
-	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain("websocket_json({\"test\":\"value\"})"));
-		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
-	}
-
-	[Test]
 	[Arguments("websocket_html(<b>test</b>,NoSuchPlayerForWebsocket)")]
-	[Arguments("websocket_json({\"test\":\"value\"},NoSuchPlayerForWebsocket)")]
 	public async Task WEBSOCKET_UnknownPlayer_ReturnsNoMatch(string input)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));

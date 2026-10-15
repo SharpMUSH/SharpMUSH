@@ -10642,8 +10642,7 @@
       "file": "sharpfunc.md",
       "corpus": "help",
       "names": [
-        "WEBSOCKET_HTML()",
-        "WEBSOCKET_JSON()"
+        "WEBSOCKET_HTML()"
       ],
       "canonical": "WEBSOCKET_HTML()"
     },

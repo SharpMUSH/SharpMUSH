@@ -38,6 +38,10 @@ public class FunctionArityParityTests : ServerTestBase
 		["timestring"] = "trailing <precision> argument (millisecond-precision design)",
 		["uptime"] = "trailing <precision> argument (millisecond-precision design)",
 
+		// A client that listed GMCP modules in Core.Supports is sent only those; omitting it sends every
+		// GMCP client, as PennMUSH does.
+		["oob"] = "trailing <supported> argument (MUD-client support)",
+
 		// The vector family takes an output separator PennMUSH does not, defaulting to <delimiter>,
 		// which is how every other SharpMUSH list function spells the same idea.
 		["vadd"] = "trailing <osep> argument, defaulting to <delimiter>",
