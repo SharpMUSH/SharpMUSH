@@ -930,7 +930,8 @@ public class SceneRoleplayIntegrationTests
 		async Task<bool> BoHasSceneHere(bool expected)
 		{
 			// HERE`SYNC is queued by @trigger, so it may run just after the command returns.
-			for (var attempt = 0; attempt < 50; attempt++)
+			// Under a full parallel run the queue can hold it for several seconds.
+			for (var attempt = 0; attempt < 300; attempt++)
 			{
 				var has = contexts.Read(DBRef.Parse(bo)).Any(weighted => weighted.Context.Name == "scene_here");
 				if (has == expected) return has;
