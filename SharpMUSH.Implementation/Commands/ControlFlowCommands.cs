@@ -355,9 +355,14 @@ public partial class Commands
 					}));
 				iterationStack.Push(iterationWrapper);
 
+				// Each queued run gets its own copy of the q-registers, as PE_INFO_CLONE gives every queue entry
+				// @dolist makes; sharing the caller's frame let one run's setq() reach the next.
 				var stateForIteration = parser.CurrentState with
 				{
-					IterationRegisters = iterationStack
+					IterationRegisters = iterationStack,
+					Registers = new([parser.CurrentState.Registers.TryPeek(out var registers)
+						? new Dictionary<string, MString>(registers, registers.Comparer)
+						: []])
 				};
 
 				await Mediator.Send(new AdmitCommandListRequest(

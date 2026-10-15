@@ -47,7 +47,7 @@ When using `@dolist/inline`, an @break in an `<action list>` will stop the calli
 - /localize: q-registers are saved before each `<action>` is run, and restored after it completes
 - /clearregs: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize. `/clearreg` is the same switch, as RhostMUSH spells it.
 
-Without `/inline` or `/inplace`, /localize and /clearregs do nothing.
+Without `/inline` or `/inplace`, /localize and /clearregs do nothing: each queued `<action list>` starts with its own copy of the q-registers as they were when @dolist ran.
 
 `@dolist/inplace` is an alias for `@dolist/inline/nobreak/localize`.
 

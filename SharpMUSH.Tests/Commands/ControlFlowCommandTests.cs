@@ -899,6 +899,24 @@ public class ControlFlowCommandTests
 		await Assert.That(await WaitForMessage(executor, $"DlQueued_b_kept_{id}")).IsTrue();
 	}
 
+	/// <summary>
+	/// Each queued run of a @dolist starts from its own copy of the registers (PE_INFO_CLONE), so one
+	/// run's setq() does not reach the next. They shared the caller's frame.
+	/// </summary>
+	[Test]
+	public async ValueTask DoList_QueuedRuns_DoNotShareRegisters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,kept);@dolist a b={{think setq(dl,%q<dl>##);@pemit #1=DlCopy_%q<dl>_{id}}}"));
+
+		await Assert.That(await WaitForMessage(executor, $"DlCopy_keptb_{id}")).IsTrue()
+			.Because(string.Join(" | ", MessagesFor(executor).Where(heard => heard.Contains(id))));
+		await Assert.That(MessagesFor(executor)).Contains($"DlCopy_kepta_{id}");
+	}
+
 	[Test]
 	public async ValueTask Switch_Inline_BreakStopsLaterMatchingActions()
 	{
