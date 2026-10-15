@@ -21,7 +21,7 @@ Called anywhere else, including from an event that is not stoppable, it returns 
 
 ```sharp
 > &SOCKET`GMCP`A #9=think [if(strmatch(%<package>,Core.Hello),stopevent())]
-> &SOCKET`GMCP`B #9=@cemit Admin=GMCP: %<package>
+> &SOCKET`GMCP`B #9=@pemit #1=GMCP: %<package>
 > think stopevent()
 #-1 NOT HEARING A STOPPABLE EVENT
 ```
