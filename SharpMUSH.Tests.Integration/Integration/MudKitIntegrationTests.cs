@@ -524,6 +524,15 @@ public class MudKitIntegrationTests
 			await Assert.That(Kit(connected[player.Handle]).Select(f => f.Module))
 				.IsEquivalentTo(new[] { "Char.Name", "Char.Vitals", "Char.Status" });
 			await Assert.That(Single(connected[player.Handle], "Char.Name")["fullname"]!.GetValue<string>()).IsEqualTo(player.Name);
+
+			await Assert.That(await Think($"hasflag({player.Number}/MAXHP,watched)")).IsEqualTo("1")
+				.Because("a copy made while watch-new is on takes the watched default");
+			await God("+config gmcp-char/watch-new=off");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await God($"&MP {player.Number}=5");
+			await Assert.That(await Think($"hasflag({player.Number}/MP,watched)")).IsEqualTo("0")
+				.Because("turning watch-new off takes back the defaults the package gave");
+			await Assert.That(await Think($"get({await PackageObject("gmcp-char", "gmcp_char")}/DATA`WATCHING)")).IsEqualTo(string.Empty);
 		}
 		finally
 		{

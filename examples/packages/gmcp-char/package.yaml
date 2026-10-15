@@ -180,7 +180,7 @@ objects:
       DATA`CONFIG`WATCH-NEW`DEFAULT: |-
         1
       DATA`CONFIG`WATCH-NEW`DESCRIPTION: |-
-        Whether each vitals and status attribute is made watched wherever it is created, with @attribute/access, which replaces its default flags. Off, a copy is watched when its player connects.
+        Whether each vitals and status attribute is made watched wherever it is created, with @attribute/access, which replaces its default flags. Off, a copy is watched when its player connects, and the defaults this package gave go back to none.
       DATA`CONFIG`WATCH-NEW`LABEL: |-
         Watch new copies
       DATA`CONFIG`WATCH-NEW`EXAMPLE: |-
@@ -189,8 +189,16 @@ objects:
       # The vitals and status attributes, together.
       FUN`ATTRIBUTES: |-
         setunion(v(DATA`CONFIG`VITALS),v(DATA`CONFIG`STATUS))
+      # The attributes that should carry a watched default: none while watch-new is off.
+      FUN`WANTED: |-
+        if(v(DATA`CONFIG`WATCH-NEW),u(%!/FUN`ATTRIBUTES))
+      # Defaults this package gave earlier that are no longer wanted.
+      FUN`UNWANTED: |-
+        setdiff(v(DATA`WATCHING),u(%!/FUN`WANTED))
+      # DATA`WATCHING records the defaults this package gave, so turning watch-new off, or dropping an
+      # attribute from vitals or status, puts each one back to no default flags.
       INC`WATCH: |-
-        @dolist/inline u(%!/FUN`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##
+        @dolist/inline u(%!/FUN`UNWANTED)=@attribute/access ##=none; @dolist/inline u(%!/FUN`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##; &DATA`WATCHING %!=u(%!/FUN`WANTED)
       # %<attribute> one attribute: watched wherever it is made from now on, and on every player who has it.
       INC`WATCH`ATTRIBUTE: |-
         @if v(DATA`CONFIG`WATCH-NEW)={@attribute/access %<attribute>=watched}; @dolist/inline lsearch(all,type,player)={@if cand(hasattr(##,%<attribute>),not(hasflag(##/%<attribute>,watched)))={@set ##/%<attribute>=watched}}

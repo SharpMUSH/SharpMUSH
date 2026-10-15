@@ -27,6 +27,8 @@ attributes its `vitals` and `status` settings name:
    `watch-new` setting is on (the default). **This replaces the attribute's default flags.** A game
    whose stat attributes are already standard attributes with flags of their own turns `watch-new` off,
    or writes `@attribute/access HP=watched <its flags>` itself.
+   Turning `watch-new` off, or dropping an attribute from `vitals` or `status`, puts the defaults
+   the package gave back to none.
 2. `@set <player>/<attribute>=watched` on every player who already has one, from `AINSTALL`, `AUPDATE`,
    and `ACONFIG` when `vitals`, `status` or `watch-new` changes (`+config` triggers it).
 3. The same on each player as they connect (`` PLAYER`CONNECT`GMCPCHAR ``), which catches a copy made
