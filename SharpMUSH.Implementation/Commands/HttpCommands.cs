@@ -178,9 +178,8 @@ public partial class Commands
 	{
 		var lines = new List<(string Name, string Value)>();
 		string? contentType = null;
-		foreach (var line in (text ?? string.Empty).Split('\n'))
+		foreach (var trimmed in (text ?? string.Empty).Split('\n').Select(line => line.Trim()))
 		{
-			var trimmed = line.Trim();
 			if (trimmed.Length == 0) continue;
 
 			var colon = trimmed.IndexOf(':');
