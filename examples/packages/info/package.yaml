@@ -47,7 +47,7 @@ objects:
   #   PINFOFILE`<id>`...                                     +pinfo files, the same leaves
   #   JOURNAL`<id>`TITLE, TEXT, AT, EDITED, SHARE            journal entries; SHARE is empty, all, or objids
   # Notebooks live on the Notebook Store: BOOK`<id>`NAME, OWNER, MEMBERS, CREATED, and ENTRY`<n>`TITLE, TEXT,
-  # BY, AT, EDITED, EDITEDBY. The store also holds DRAFT`<dbref number>`, an open /write session.
+  # BY, AT, EDITED, EDITEDBY. The store also holds DRAFT`<dbref number>-<connection>`, an open /write session.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`FILE`, INC`JOURNAL` and
   # INC`BOOK` one routine per switch, INC`WRITE` and INPUT`WRITE` the /write sessions. FUN`FILE`, FUN`JOURNAL`
@@ -525,7 +525,7 @@ objects:
       # Writes %q<cmd_right_side> to file %q<file_id> (a new one when empty) named %q<file_name>.
       INC`FILE`STORE:
         value: |-
-          think setqm(file_new,not(strlen(%q<file_id>)),file_id,firstof(%q<file_id>,u(%!/FUN`FILE`NEXT))); @include/args %!/INC`ROOT`PROTECT=holder,%q<file_target>,root,%q<file_root>; &%q<file_root>`%q<file_id>`TEXT %q<file_target>=%q<cmd_right_side>; @assert eq(strlen(u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT)),strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &%q<file_root>`%q<file_id>`NAME %q<file_target>=%q<file_name>; &%q<file_root>`%q<file_id>`SET %q<file_target>=secs(); &%q<file_root>`%q<file_id>`BY %q<file_target>=%q<viewer_objid>; @if %q<file_lockit>={&%q<file_root>`%q<file_id>`LOCKED %q<file_target>=%q<viewer_objid>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>=secs()}; @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is [if(%q<file_new>,saved,updated)][if(%q<file_lockit>,%band locked)].,ok); @include/args %!/INC`FILE`TELL=did,if(%q<file_new>,added,changed)
+          think setqm(file_new,not(strlen(%q<file_id>)),file_id,firstof(%q<file_id>,u(%!/FUN`FILE`NEXT))); @include/args %!/INC`ROOT`PROTECT=holder,%q<file_target>,root,%q<file_root>; &%q<file_root>`%q<file_id>`TEXT %q<file_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &%q<file_root>`%q<file_id>`NAME %q<file_target>=%q<file_name>; &%q<file_root>`%q<file_id>`SET %q<file_target>=secs(); &%q<file_root>`%q<file_id>`BY %q<file_target>=%q<viewer_objid>; @if %q<file_lockit>={&%q<file_root>`%q<file_id>`LOCKED %q<file_target>=%q<viewer_objid>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>=secs()}; @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is [if(%q<file_new>,saved,updated)][if(%q<file_lockit>,%band locked)].,ok); @include/args %!/INC`FILE`TELL=did,if(%q<file_new>,added,changed)
         flags: [cmdsyntax]
       # Tells a player when someone else %<did> one of their files.
       INC`FILE`TELL:
@@ -647,7 +647,7 @@ objects:
       # +journal <title>=<text>: a new entry.
       INC`JOURNAL`ADD:
         value: |-
-          @include %!/INC`JOURNAL`MINE; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_left_side>,entry,title))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(INFO,+journal <title>=<text> writes an entry.,warn); @assert not(strlen(setr(jrnl_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); think setq(jrnl_id,u(%!/FUN`JOURNAL`NEXT)); @include/args %!/INC`ROOT`PROTECT=holder,%q<jrnl_target>,root,JOURNAL; &JOURNAL`%q<jrnl_id>`TEXT %q<jrnl_target>=%q<cmd_right_side>; @assert eq(strlen(u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT)),strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &JOURNAL`%q<jrnl_id>`TITLE %q<jrnl_target>=%q<cmd_left_side>; &JOURNAL`%q<jrnl_id>`AT %q<jrnl_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<cmd_left_side>%, is written. You and staff read it until you share it: +journal/share %q<jrnl_id>=<names> or all.,ok)
+          @include %!/INC`JOURNAL`MINE; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_left_side>,entry,title))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(INFO,+journal <title>=<text> writes an entry.,warn); @assert not(strlen(setr(jrnl_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); think setq(jrnl_id,u(%!/FUN`JOURNAL`NEXT)); @include/args %!/INC`ROOT`PROTECT=holder,%q<jrnl_target>,root,JOURNAL; &JOURNAL`%q<jrnl_id>`TEXT %q<jrnl_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &JOURNAL`%q<jrnl_id>`TITLE %q<jrnl_target>=%q<cmd_left_side>; &JOURNAL`%q<jrnl_id>`AT %q<jrnl_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<cmd_left_side>%, is written. You and staff read it until you share it: +journal/share %q<jrnl_id>=<names> or all.,ok)
         flags: [cmdsyntax]
       # +journal/write <title>
       INC`JOURNAL`WRITE:
@@ -657,7 +657,7 @@ objects:
       # +journal/edit <number>=<text>
       INC`JOURNAL`EDIT:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+journal/edit <number>=<text> replaces an entry's text.,warn); think setq(jrnl_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); &JOURNAL`%q<jrnl_id>`TEXT %q<jrnl_target>=%q<cmd_right_side>; @assert eq(strlen(u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT)),strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so the entry is as it was.,error); &JOURNAL`%q<jrnl_id>`EDITED %q<jrnl_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<jrnl_title>%, is updated.,ok)
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+journal/edit <number>=<text> replaces an entry's text.,warn); think setq(jrnl_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); &JOURNAL`%q<jrnl_id>`TEXT %q<jrnl_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so the entry is as it was.,error); &JOURNAL`%q<jrnl_id>`EDITED %q<jrnl_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<jrnl_title>%, is updated.,ok)
         flags: [cmdsyntax]
       # +journal/title <number>=<title>
       INC`JOURNAL`TITLE:
@@ -834,7 +834,7 @@ objects:
       # +notebook <notebook>/<title>=<text>: a new entry.
       INC`BOOK`ADD:
         value: |-
-          @assert cand(%q<cmd_has_slash>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+notebook <notebook>/<title>=<text> adds an entry.,warn); think setq(book_typed,%q<cmd_before_slash>); @include %!/INC`BOOK`NEED; @assert not(strlen(setr(book_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_after_slash>,entry,title))))=@pemit %#=notice(INFO,%q<book_problem>,warn); @assert not(strlen(setr(book_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<book_problem>,warn); think setq(book_entry,u(%!/FUN`BOOK`NEXTENTRY)); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`TEXT {{info_store}}=%q<cmd_right_side>; @assert eq(strlen(u(%!/FUN`BOOK`ENTRY,%q<book_entry>,TEXT)),strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`TITLE {{info_store}}=%q<cmd_after_slash>; &BOOK`%q<book_id>`ENTRY`%q<book_entry>`BY {{info_store}}=%q<viewer_objid>; &BOOK`%q<book_id>`ENTRY`%q<book_entry>`AT {{info_store}}=secs(); @pemit %#=notice(INFO,Entry %q<book_entry> of %q<book_name>%, %q<cmd_after_slash>%, is written.,ok); @include/args %!/INC`BOOK`TELL=message,[name(%#)] wrote in %q<book_name>: +notebook %q<book_name>/%q<book_entry>
+          @assert cand(%q<cmd_has_slash>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+notebook <notebook>/<title>=<text> adds an entry.,warn); think setq(book_typed,%q<cmd_before_slash>); @include %!/INC`BOOK`NEED; @assert not(strlen(setr(book_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_after_slash>,entry,title))))=@pemit %#=notice(INFO,%q<book_problem>,warn); @assert not(strlen(setr(book_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<book_problem>,warn); think setq(book_entry,u(%!/FUN`BOOK`NEXTENTRY)); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`TEXT {{info_store}}=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`BOOK`ENTRY,%q<book_entry>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`TITLE {{info_store}}=%q<cmd_after_slash>; &BOOK`%q<book_id>`ENTRY`%q<book_entry>`BY {{info_store}}=%q<viewer_objid>; &BOOK`%q<book_id>`ENTRY`%q<book_entry>`AT {{info_store}}=secs(); @pemit %#=notice(INFO,Entry %q<book_entry> of %q<book_name>%, %q<cmd_after_slash>%, is written.,ok); @include/args %!/INC`BOOK`TELL=message,[name(%#)] wrote in %q<book_name>: +notebook %q<book_name>/%q<book_entry>
         flags: [cmdsyntax]
       # +notebook/write <notebook>/<title>
       INC`BOOK`WRITE:
@@ -844,7 +844,7 @@ objects:
       # +notebook/edit <notebook>/<number>=<text>
       INC`BOOK`EDIT:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+notebook/edit <notebook>/<number>=<text> replaces an entry's text.,warn); @include %!/INC`BOOK`NEEDBOTH; @include %!/INC`BOOK`MAYEDIT; @assert not(strlen(setr(book_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<book_problem>,warn); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`TEXT {{info_store}}=%q<cmd_right_side>; @assert eq(strlen(u(%!/FUN`BOOK`ENTRY,%q<book_entry>,TEXT)),strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so the entry is as it was.,error); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`EDITED {{info_store}}=secs(); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`EDITEDBY {{info_store}}=%q<viewer_objid>; @pemit %#=notice(INFO,Entry %q<book_entry> of %q<book_name>%, %q<book_entry_title>%, is updated.,ok)
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+notebook/edit <notebook>/<number>=<text> replaces an entry's text.,warn); @include %!/INC`BOOK`NEEDBOTH; @include %!/INC`BOOK`MAYEDIT; @assert not(strlen(setr(book_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<book_problem>,warn); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`TEXT {{info_store}}=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`BOOK`ENTRY,%q<book_entry>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so the entry is as it was.,error); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`EDITED {{info_store}}=secs(); &BOOK`%q<book_id>`ENTRY`%q<book_entry>`EDITEDBY {{info_store}}=%q<viewer_objid>; @pemit %#=notice(INFO,Entry %q<book_entry> of %q<book_name>%, %q<book_entry_title>%, is updated.,ok)
         flags: [cmdsyntax]
       # +notebook/title <notebook>/<number>=<title>
       INC`BOOK`TITLE:
@@ -894,26 +894,37 @@ objects:
 
       # ---- /write: a text a line at a time -------------------------------------------------
       # Opens an @input session for %q<cmd_word> with %q<cmd_left_side>; %q<write_what> says what is being
-      # written. The draft is DRAFT`<dbref number> on the store: the command word, LEFT and TEXT. .done sends
-      # <left>=<text> through the same routine the one-line command runs, checks and all.
+      # written. The draft is on the store, one per connection: the command word, LEFT, TEXT and STARTED. .done
+      # sends <left>=<text> through the same routine the one-line command runs, checks and all.
       INC`WRITE`START:
         value: |-
-          think setq(write_key,DRAFT`[after(num(%#),#)]); &%q<write_key> {{info_store}}=%q<cmd_word>; &%q<write_key>`LEFT {{info_store}}=%q<cmd_left_side>; &%q<write_key>`TEXT {{info_store}}; @input/start Writing %q<write_what>. Type it a line at a time%, with an empty line between paragraphs. .done on a line by itself saves it%, .undo drops the last line%, and @input/cancel throws it away.=.done,%!/INPUT`WRITE`DONE,.undo,%!/INPUT`WRITE`UNDO,*,%!/INPUT`WRITE`LINE,3600
+          @include %!/INC`WRITE`SWEEP; think setq(write_key,[u(%!/FUN`WRITE`KEY)]); &%q<write_key> {{info_store}}=%q<cmd_word>; &%q<write_key>`LEFT {{info_store}}=%q<cmd_left_side>; &%q<write_key>`TEXT {{info_store}}; &%q<write_key>`STARTED {{info_store}}=secs(); @input/start Writing %q<write_what>. Type it a line at a time%, with an empty line between paragraphs. .done on a line by itself saves it%, .undo drops the last line%, and @input/cancel throws it away.=.done,%!/INPUT`WRITE`DONE,.undo,%!/INPUT`WRITE`UNDO,*,%!/INPUT`WRITE`LINE,3600
+        flags: [cmdsyntax]
+      # The draft of the writer's connection: DRAFT`<dbref number>-<connection>, so two clients each keep their own.
+      FUN`WRITE`KEY:
+        value: |-
+          DRAFT`[after(num(%#),#)]-%j
+        flags: [funsyntax]
+      # Drops drafts older than the longest session. @input/cancel, a disconnect and a restart end a session
+      # without running .done, so this and ADISCONNECT are what clear their drafts.
+      INC`WRITE`SWEEP:
+        value: |-
+          @dolist/inline/nobreak lattr({{info_store}}/DRAFT`*`STARTED)={@if lt(get({{info_store}}/##),sub(secs(),3700))={@wipe {{info_store}}/[before(##,`STARTED)]}}
         flags: [cmdsyntax]
       # Any other line, %0 exactly as typed: added to the draft.
       INPUT`WRITE`LINE:
         value: |-
-          think setqm(write_key,DRAFT`[after(num(%#),#)],write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),get(%!/DATA`CONFIG`LENGTH))=@input/prompt notice(INFO,That line would take it past [get(%!/DATA`CONFIG`LENGTH)] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
+          think setqm(write_key,[u(%!/FUN`WRITE`KEY)],write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),get(%!/DATA`CONFIG`LENGTH))=@input/prompt notice(INFO,That line would take it past [get(%!/DATA`CONFIG`LENGTH)] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
         flags: [cmdsyntax]
       # .undo: drops the last line.
       INPUT`WRITE`UNDO:
         value: |-
-          think setqm(write_key,DRAFT`[after(num(%#),#)],write_text,get({{info_store}}/%q<write_key>`TEXT),write_lines,words(%q<write_text>,%r)); @assert hasattr({{info_store}},%q<write_key>`TEXT)=@input/prompt Nothing to drop yet. .done ends it.; @if gt(%q<write_lines>,1)={&%q<write_key>`TEXT {{info_store}}=ldelete(%q<write_text>,%q<write_lines>,%r)},{&%q<write_key>`TEXT {{info_store}}}; @input/prompt Dropped the last line.
+          think setqm(write_key,[u(%!/FUN`WRITE`KEY)],write_text,get({{info_store}}/%q<write_key>`TEXT),write_lines,words(%q<write_text>,%r)); @assert hasattr({{info_store}},%q<write_key>`TEXT)=@input/prompt Nothing to drop yet. .done ends it.; @if gt(%q<write_lines>,1)={&%q<write_key>`TEXT {{info_store}}=ldelete(%q<write_text>,%q<write_lines>,%r)},{&%q<write_key>`TEXT {{info_store}}}; @input/prompt Dropped the last line.
         flags: [cmdsyntax]
       # .done, or an hour after the start: saves what was written, through the command's own routine.
       INPUT`WRITE`DONE:
         value: |-
-          think setqm(write_key,DRAFT`[after(num(%#),#)],write_word,get({{info_store}}/%q<write_key>),write_left,get({{info_store}}/%q<write_key>`LEFT),write_text,get({{info_store}}/%q<write_key>`TEXT)); @wipe {{info_store}}/%q<write_key>; @assert strlen(trim(%q<write_text>))=@pemit %#=notice(INFO,Nothing was written%, so nothing was saved.,warn); @if strmatch(r(reason,args),timeout)={@pemit %#=notice(INFO,An hour has passed since you started%, so what you wrote is being saved.)}; think u(%!/FUN`COMMAND`PARSE,%q<write_word>,,%q<write_left>=%q<write_text>); @include %!/INC`%q<cmd_route>
+          think setqm(write_key,[u(%!/FUN`WRITE`KEY)],write_word,get({{info_store}}/%q<write_key>),write_left,get({{info_store}}/%q<write_key>`LEFT),write_text,get({{info_store}}/%q<write_key>`TEXT)); @wipe {{info_store}}/%q<write_key>; @assert strlen(trim(%q<write_text>))=@pemit %#=notice(INFO,Nothing was written%, so nothing was saved.,warn); @if strmatch(r(reason,args),timeout)={@pemit %#=notice(INFO,An hour has passed since you started%, so what you wrote is being saved.)}; think u(%!/FUN`COMMAND`PARSE,%q<write_word>,,%q<write_left>=%q<write_text>); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -921,6 +932,11 @@ objects:
       STARTUP:
         value: |-
           @dolist/inline info pinfo journal notebook={@command/add/noparse/rsnoparse +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+        flags: [cmdsyntax]
+      # Master room ADISCONNECT runs for every player: drops the drafts of connections they no longer have.
+      ADISCONNECT:
+        value: |-
+          @assert hastype(%#,player); @dolist/inline/nobreak lattr({{info_store}}/DRAFT`[after(num(%#),#)]-*`STARTED)={@if not(member(ports(%#),last(before(##,`STARTED),-)))={@wipe {{info_store}}/[before(##,`STARTED)]}}; @include %!/INC`WRITE`SWEEP
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -943,7 +959,7 @@ objects:
         flags: [no_command]
       DRAFT:
         value: |-
-          Open +info/write, +journal/write and +notebook/write sessions, one branch per writer's dbref number.
+          Open +info/write, +journal/write and +notebook/write sessions, one branch per writer's dbref number and connection.
         flags: [no_command]
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
