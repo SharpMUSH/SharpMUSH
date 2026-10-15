@@ -180,7 +180,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 | Table, rows written out | `datatable(<opts>, <h1>\|<h2>, <c1>\|<c2>, …)` |
 | Table, a row per record | `ldatatable(<opts>, <h1>\|<h2>, iter(<list>,<c1>\|<c2>,,^), ^)`, one `iter()` for all rows |
 | Table from computed lists | `datacolumns(<opts>, <heading>\|<cells…>, …)`, one `iter()` per column |
-| A variadic layout from a computed list | the l-form: `lfields()`, `ldatatable()`, `lflex()`, `ltree()`, `lnode()` (list, delimiter); a list of layouts needs a delimiter their art never holds, such as `^` |
+| A variadic layout from a computed list | the l-form: `ldatatable()`, `lflex()`, `ltree()`, `lnode()` take the items as one list, then a delimiter; `lfields()` takes the labels and values as two lists and one delimiter for both; a list of layouts needs a delimiter their art never holds, such as `^` |
 | Names in columns / a list / a tree | `grid()` / `bullets()` / `tree()` + `node()` |
 | Side by side | `flex(<opts>, item(<content>, <width>), …)` |
 | Bar / status tag | `gauge(<v>, <max>, <label>)` / `badge(<text>, ok\|warn\|error\|info\|muted)` |
