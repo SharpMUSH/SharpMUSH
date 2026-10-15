@@ -340,12 +340,10 @@ public static partial class ReadPennMushConfig
 		foreach (var groups in text
 							 .Select(line => splitter.Match(line.Trim()))
 							 .Where(match => match.Success)
-							 .Select(match => match.Groups))
+							 .Select(match => match.Groups)
+							 .Where(groups => PennMushConfigImport.SecretDirectives.ContainsKey(groups["Key"].Value)))
 		{
-			if (PennMushConfigImport.SecretDirectives.TryGetValue(groups["Key"].Value, out var secret))
-			{
-				secrets[secret] = groups["Value"].Value.Trim();
-			}
+			secrets[PennMushConfigImport.SecretDirectives[groups["Key"].Value]] = groups["Value"].Value.Trim();
 		}
 
 		return new PennMushConfigImport(work, skipped, named, secrets);
