@@ -152,6 +152,9 @@ public static class BundledPackages
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it builds on scene and time, which a game chooses first.
 		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +alts is a name a game may already use for its own code. It hears PLAYER`UNLINK
+		// on the event handler, so an account forgets a hidden character that leaves it.
+		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>
