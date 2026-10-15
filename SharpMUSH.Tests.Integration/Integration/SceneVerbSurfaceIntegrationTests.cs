@@ -786,6 +786,42 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
+	/// A time is the reader's own: what a player with a zone in <c>TZ</c> types is read in it, and the message,
+	/// the card and the schedule show it there with the zone named. A player with no zone, or one the server does
+	/// not know, gets the game's time, called that.
+	/// </summary>
+	[Test]
+	public async Task ScheduledTimes_AreReadAndShownInTheReadersZone()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Tzo{Tag}");
+		var (_, otherHandle) = await CreatePlayerAsync($"Tzg{Tag}");
+		var (odd, oddHandle) = await CreatePlayerAsync($"Tzx{Tag}");
+		await God1($"&TZ {owner}=America/New_York");
+		await God1($"&TZ {odd}=Nowhere/Special");
+
+		var said = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule Zones {Tag}=2099-01-05 20:00"));
+		await Assert.That(said).Contains("for Mon Jan 05 20:00:00 2099 (America/New_York).");
+		var sceneId = System.Text.RegularExpressions.Regex.Match(said, @"Scheduled scene (\d+)").Groups[1].Value;
+		await Assert.That(await Eval($"scene({sceneId},scheduledfor)")).IsEqualTo("4071344400000")
+			.Because("20:00 in New York in January is 01:00 the next day in UTC");
+
+		var card = string.Join("\n", await RunAs(ownerHandle, $"+scene {sceneId}"));
+		await Assert.That(card).Contains("Jan 05 08:00PM (America/New_York)");
+		await Assert.That(string.Join("\n", await RunAs(otherHandle, $"+scene {sceneId}"))).Contains("(game time)");
+		await Assert.That(string.Join("\n", await RunAs(oddHandle, $"+scene {sceneId}"))).Contains("(game time)");
+
+		var upcoming = string.Join("\n", await RunAs(ownerHandle, "+scenes all"));
+		await Assert.That(upcoming).Contains("times in America/New_York");
+		await Assert.That(upcoming).Contains("Mon Jan 5 2099");
+
+		await RunAs(ownerHandle, $"+scene/reschedule {sceneId}=2099-07-06 20:00");
+		await Assert.That(await Eval($"scene({sceneId},scheduledfor)")).IsEqualTo("4087065600000")
+			.Because("in July New York keeps summer time, four hours behind UTC");
+		await RunAs(ownerHandle, $"+scene/cancel {sceneId}");
+	}
+
+	/// <summary>
 	/// <c>+scene/move</c> checks that its owner owns the focused scene, so the pose it moves has to be in
 	/// that scene: a pose id from another scene used to be reordered in a scene the mover did not own.
 	/// </summary>

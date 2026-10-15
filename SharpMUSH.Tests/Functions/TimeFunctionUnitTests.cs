@@ -42,6 +42,25 @@ public class TimeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
+	/// <summary>
+	/// convtime() reads a date and time with no offset of its own in the zone it is given, whatever the format: 20:00
+	/// on 30 October 2026 is 00:00 UTC the next day in New York (summer time) and 20:00 UTC in London (not).
+	/// A time that names its offset keeps it.
+	/// </summary>
+	[Test]
+	[Arguments("convtime(2026-10-30 20:00,America/New_York)", "1793404800")]
+	[Arguments("convtime(Fri Oct 30 20:00:00 2026,America/New_York)", "1793404800")]
+	[Arguments("convtime(2026-10-30 20:00,Europe/London)", "1793390400")]
+	[Arguments("convtime(2026-10-30 20:00,UTC)", "1793390400")]
+	[Arguments("convtime(2026-10-30T20:00:00Z,America/New_York)", "1793390400")]
+	[Arguments("convtime(2026-10-30T20:00:00+02:00,UTC)", "1793383200")]
+	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIMEZONE")]
+	public async Task ConvTimeReadsAWallClockInTheZone(string call, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(call));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async Task Uptime()
 	{

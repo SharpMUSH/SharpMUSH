@@ -931,39 +931,44 @@ public partial class Functions
 			? tzArg.Message.ToPlainText()
 			: string.Empty;
 
-		// Format: Ddd MMM DD HH:MM:SS YYYY, as time() and LASTLOGOUT write it, read in the given time zone
-		// (the server's when none is given).
+		// Format: Ddd MMM DD HH:MM:SS YYYY, as time() and LASTLOGOUT write it, or any date and time .NET reads
+		// (2026-12-31 20:00). A time that names no offset of its own is read in the given time zone (the
+		// server's when none is given); one that does (2026-12-31T20:00Z, ...+02:00) keeps it.
+		var zone = timezone switch
+		{
+			"" => TimeZoneInfo.Local,
+			_ when timezone.Equals("utc", StringComparison.OrdinalIgnoreCase) => TimeZoneInfo.Utc,
+			_ => TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var named) ? named : null
+		};
+
+		if (zone is null)
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
+		}
+
 		if (DateTime.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
 			DateTimeStyles.None, out var pennTime))
 		{
-			var zone = timezone switch
-			{
-				"" => TimeZoneInfo.Local,
-				_ when timezone.Equals("utc", StringComparison.OrdinalIgnoreCase) => TimeZoneInfo.Utc,
-				_ => TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var named) ? named : null
-			};
+			return ValueTask.FromResult<CallState>(InZone(pennTime, zone));
+		}
 
-			if (zone is null)
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
-			}
-
-			var instant = new DateTimeOffset(pennTime, zone.GetUtcOffset(pennTime));
-			return ValueTask.FromResult<CallState>(
-				TimePrecisions.Format(instant.ToUnixTimeMilliseconds(), precision));
+		if (DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var local)
+			&& local.Kind == DateTimeKind.Unspecified)
+		{
+			return ValueTask.FromResult<CallState>(InZone(local, zone));
 		}
 
 		if (!DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var dateTime))
 		{
-			if (!DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var dt))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTime);
-			}
-			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTime);
 		}
 
 		return ValueTask.FromResult<CallState>(
 			TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
+
+		string InZone(DateTime wallClock, TimeZoneInfo inZone) =>
+			TimePrecisions.Format(new DateTimeOffset(wallClock, inZone.GetUtcOffset(wallClock)).ToUnixTimeMilliseconds(),
+				precision);
 	}
 
 	[SharpFunction(Name = "CONVUTCSECS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
