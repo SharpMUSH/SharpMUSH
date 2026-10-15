@@ -1,4 +1,4 @@
-format: 1.7
+format: "1.10"
 package: gmcp-char
 version: 1.1.0
 authors: [SharpMUSH]
@@ -6,6 +6,7 @@ description: "Sends MUD clients the GMCP Char package: Char.Name, Char.Vitals fo
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp, mudlet, vitals, status, mud-kit]
+category: MUD clients
 requires_server: ">=0.1"
 
 depends:

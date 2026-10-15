@@ -1,4 +1,4 @@
-format: 1.7
+format: "1.10"
 package: mud-kit
 version: 1.0.0
 authors: [SharpMUSH]
@@ -6,6 +6,7 @@ description: "Everything a MUD client such as Mudlet reads over GMCP, in one ins
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp, mudlet, mud-kit, oob, clients]
+category: MUD clients
 requires_server: ">=0.1"
 
 # A meta package: it installs the five below and an overview topic for +help. Each of them installs

@@ -1,4 +1,4 @@
-format: 1.7
+format: "1.10"
 package: gmcp-room
 version: 1.0.0
 authors: [SharpMUSH]
@@ -6,6 +6,7 @@ description: "Sends MUD clients the GMCP Room package: Room.Info for a mapper (n
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp, mudlet, mapper, room, mud-kit]
+category: MUD clients
 requires_server: ">=0.1"
 
 # +help carries the topic below, and +config the settings. Both dependencies are what make

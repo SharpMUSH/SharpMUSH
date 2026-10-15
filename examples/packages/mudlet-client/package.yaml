@@ -1,4 +1,4 @@
-format: 1.7
+format: "1.10"
 package: mudlet-client
 version: 1.0.0
 authors: [SharpMUSH]
@@ -6,6 +6,7 @@ description: "Offers Mudlet the game's own interface and map over GMCP (Client.G
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp, mudlet, gui, discord, mud-kit]
+category: MUD clients
 requires_server: ">=0.1"
 
 depends:

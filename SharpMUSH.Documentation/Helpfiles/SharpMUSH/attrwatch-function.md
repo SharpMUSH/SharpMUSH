@@ -22,13 +22,12 @@ Code that sets up a watch of its own uses it to add the attribute to the table o
 #-1 NOT A STANDARD ATTRIBUTE
 > @attribute/access HP=none
 > think attrwatch(HP)
-
 > @attribute/watch HP
 > think attrwatch(HP)
 WATCH`HP WATCH`HP`*
 ```
 
-Output: HP is not in the table at first. Once it is, it is not watched, and the empty line is that. Watched with the default pattern, it returns the pattern.
+Output: HP is not in the table at first. Once it is, it is not watched, so the second think prints nothing. Watched with the default pattern, it returns the pattern.
 
 ::: seealso
 - [@attribute]
