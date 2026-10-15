@@ -100,6 +100,30 @@ public class MuxCompatibilityTests
 			.IsEqualTo("1|1|");
 	}
 
+	/// <summary>
+	/// PennMUSH runs a <c>#lambda</c> as an attribute named <c>#LAMBDA/&lt;code&gt;</c> (<c>call_ufun</c>), with the code
+	/// as <c>u()</c> evaluated it, and restores the caller's attribute after.
+	/// </summary>
+	[Test]
+	public async Task PercentEqualsInALambdaIsTheLambda()
+	{
+		var thing = TestIsolationHelpers.GenerateUniqueName("PennLambda");
+		await Assert.That(await Evaluate(Mux.None,
+				$"[setq(0,create({thing}))][attrib_set(%q0/FN`SUB,lit([ulambda(#lambda/\\%=)]|[strmatch(%=,#*/FN`SUB)]))][u(%q0/FN`SUB)]|[ulambda(#lambda/\\%=)]|[ulambda(#lambda/[add(1,2)]\\%=)]|[ulambda(lit(#lambda/[div(10,2)]/%=))]"))
+			.IsEqualTo("#LAMBDA/%=|1|#LAMBDA/%=|3#LAMBDA/3%=|5/#LAMBDA/[div(10,2)]/%=");
+	}
+
+	/// <summary>
+	/// PennMUSH splices <c>##</c>, <c>#@</c> and <c>#$</c> into the text before a lambda in it runs, so a lambda is
+	/// transparent to them: they bind to the outermost loop or switch around it, one inside the lambda included.
+	/// </summary>
+	[Test]
+	[Arguments("iter(a b,ulambda(lit(#lambda/##:#@)))", "a:1 b:2")]
+	[Arguments("iter(a b,ulambda(lit(#lambda/[iter(x y,##)])))", "a a b b")]
+	[Arguments("switch(abc,a*,ulambda(lit(#lambda/#$)))", "abc")]
+	public async Task LambdaIsTransparentToIterationTokens(string expression, string expected)
+		=> await Assert.That(await Evaluate(Mux.None, expression)).IsEqualTo(expected);
+
 	[Test]
 	public async Task AttributeSubstitutionReadsANumberedArgument()
 	{

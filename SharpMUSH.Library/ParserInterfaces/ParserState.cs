@@ -1046,7 +1046,7 @@ public partial record ParserState
 	/// </summary>
 	private IEnumerable<Dictionary<string, MString>> VisibleRegexpFrames
 		=> RegexRegisters.TakeWhile(frame => frame is not RegexpCaptureFrame owned
-			|| ReferenceEquals(owned.Evaluation, CurrentEvaluation));
+			|| ReferenceEquals(DBAttribute.Scope(owned.Evaluation), DBAttribute.Scope(CurrentEvaluation)));
 
 	/// <summary>
 	/// Whether <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> are substitutions here rather than text:
