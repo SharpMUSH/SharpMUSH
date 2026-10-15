@@ -68,7 +68,8 @@ public class TimeIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "time", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("time must install from the catalogue");
