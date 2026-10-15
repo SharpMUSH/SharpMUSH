@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 // The command palette's ⌘K / Ctrl+K hook (layout.js). It must not fire while the reader is typing:
-// the terminal input and every text field keep their keys.
+// the terminal input and every text field keep their keys, except the Play composer, where the
+// palette is how a player finds a command.
 const root = new URL('../../SharpMUSH.Client/wwwroot/', import.meta.url);
 
 function boot() {
@@ -56,6 +57,19 @@ test('a text field or an editor keeps its own K', () => {
     }
     listeners.get('keydown')(key(body, {}).event);
     assert.deepEqual(calls, [], 'no chord, or typing: nothing opens');
+});
+
+test('the Play composer opens the palette', () => {
+    const { layout, listeners } = boot();
+    const calls = [];
+    layout.registerPaletteHotkey({ invokeMethodAsync: name => calls.push(name) });
+
+    const composer = { tagName: 'TEXTAREA', isContentEditable: false, closest: selector => selector === '.composer-scope' ? {} : null };
+    const press = key(composer, { ctrlKey: true });
+    listeners.get('keydown')(press.event);
+
+    assert.deepEqual(calls, ['OpenPaletteFromHotkey']);
+    assert.ok(press.prevented());
 });
 
 test('registering twice keeps one listener', () => {
