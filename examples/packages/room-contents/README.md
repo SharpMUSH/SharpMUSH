@@ -9,7 +9,7 @@ changes — movement, connect, disconnect — for a resumed web session, and, fr
 the Scene plugin, when the room's scene or its cast changes, with
 `%<room>` = the affected room and `%<cause>` = the cause (`move-in`, `move-out`,
 `connect`, `disconnect`, `resume`, `scene`), by name (and as `%0` and `%1`). This package
-supplies the attribute that turns that event into **OOB v2** pushes, built for
+supplies ``ROOM`CONTENTS`ROOMCONTENTS``, the attribute below the event that turns it into **OOB v2** pushes, built for
 one connected occupant at a time and sent to that occupant alone:
 
 - **`room.contents`** — `{"v": 2, "who": [ … ]}`, one row per non-exit

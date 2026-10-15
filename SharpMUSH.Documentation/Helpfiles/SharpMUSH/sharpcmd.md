@@ -656,6 +656,11 @@ If `<message>` evaluates to something non-null, it will be shown to anyone who p
 Wizard-only. Takes a copy of the world, into a timestamped directory under the game's backup
 directory, and reports the name and size of what it wrote. This is a SharpMUSH command; PennMUSH
 has no equivalent, because PennMUSH holds the database in memory and `@dump` writes it out.
+`@dump` does the same as `@backup`.
+
+Everyone sees dump_message as the copy starts and dump_complete when it is written, and the dump
+and backup events are raised (see [event dump] and [event backup]). A failed copy tells connected
+wizards and royalty instead.
 
 The game keeps running throughout. The copy is a snapshot as of the moment it starts: everything
 committed before then is in it, nothing after. It is written aside and moved into place only once
@@ -668,11 +673,13 @@ construction.
 
 Older copies are deleted as new ones arrive, keeping a configured number. How many, where they go,
 and whether one is also taken automatically on an interval are deployment settings on the server
-process, not `@config` options. See `deploy/README.md`.
+process, not `@config` options. See `deploy/README.md`. A scheduled copy warns everyone five minutes
+and one minute before it, with dump_warning_5min and dump_warning_1min.
 
 
 ::: seealso
 - [@dump]
+- [@dbck]
 - [@shutdown]
 :::
 # @boot
@@ -1141,15 +1148,18 @@ Wizards and objects with the pick_dbref power can also specify the `<dbref>` of 
 # @dbck
 `@dbck`
 
-This is a wizard only command. It forces the database to perform a series of internal cleanup and consistency checks that normally run approximately every 10 minutes:
+Wizard-only. Reads every entry in every table of the newest backup of the world, and reports how
+much it read. A copy LMDB cannot read fails the check now, rather than on the day you restore it.
+The copy is opened read-only and never changed. A check that passes raises db\`dbck.
 
-1. For every object, make sure its location, home, next, contents, parent, and zone fields are valid objects.
-2. Check for disconnected rooms that aren't set FLOATING
-3. For every exit, player, or thing, make sure there is exactly one way to reach it from a room by following the contents fields of non-exits, the next fields of non-rooms, and the exits fields of rooms.
-4. For every thing or player, make sure that it is in the contents list of its location. Make sure every exit is in the exits list of its location.
-5. Check that objects being used as zones have a @lock/zone.
+PennMUSH's `@dbck` checks the live database's links. SharpMUSH keeps its links consistent as it
+writes them, so its `@dbck` checks the copy you would restore instead, and runs only when asked. Take
+a copy with `@backup` first.
 
-@dbck no longer performs an @purge. The results of @dbck are written to the game's error log, and not reported to the Wizard.
+::: seealso
+- [@backup]
+- [event db]
+:::
 # @describe
 # @desc
 `@describe <object>[=<description>]`
@@ -1226,17 +1236,14 @@ You may not specify both the `/any` switch and a specific attribute. Similarly, 
 `@dump`<br>
 `@dump[/paranoid|/debug|/nofork] [<check interval>]`
 
-This is a wizard-only command which saves a copy of the database from memory into the outdb file on disk. The MUSH saves the game automatically at a regular interval, controlled by the "dump_interval" @config option.
+Wizard-only. Takes a backup of the world, as `@backup` does. In PennMUSH, `@dump` writes the database
+from memory to disk; a SharpMUSH game commits every change as it is made, so the game on disk is
+already current and a copy of it is the dump. The switches and check interval are accepted for
+PennMUSH code and ignored.
 
-If the `/paranoid` switch is given, the game performs additional consistency checking which corrects possible data corruption in the copy of the db written to disk. If a check interval is specified, the game writes confirmation of the dump to the checkpoint log file every `<interval>` objects. If no interval is specified, it is taken to be the size of the database, divided by 5.
-
-`@dump/debug` is the same as `@dump/paranoid`, but also attempts to fix any errors found in the running (in-memory) copy of the database. In order to do this safely, the dump will be a non-forking dump, even if the MUSH is configured to do forking dumps (see "@config forking_dump").
-
-`@dump/nofork` does a normal, always non-forking dump.
-
-These switches should ONLY be used if a normal @dump is not being done correctly. They should generally only be done by wizards with access to the account on which the MUSH is running, since others will not have access to the checkpoint log file.
-
-In SharpMUSH `@dump` does nothing. There is no in-memory copy to write out: every change is committed to the database as it is made, so the game on disk is already current. To take a copy of it that is safe to read while the game runs, use `@backup`.
+Everyone sees dump_message as the copy starts and dump_complete when it is written, and the dump
+events are raised (see [event dump]). Scheduled copies run every SHARPMUSH_BACKUP_INTERVAL, a server
+setting, rather than PennMUSH's dump_interval.
 
 
 ::: seealso

@@ -26,7 +26,6 @@ public class ObjectDestructionService(
 	private const int GodDbRefNumber = 1;
 	private const string GoingFlag = "GOING";
 	private const string GoingTwiceFlag = "GOING_TWICE";
-	private const string ObjectDestroyEvent = "OBJECT`DESTROY";
 	private const string NothingDbRef = "#-1";
 
 	/// <inheritdoc />
@@ -112,7 +111,7 @@ public class ObjectDestructionService(
 
 		// PennMUSH free_object() queues OBJECT`DESTROY with everything about the object it can still
 		// name, "since the event will deal with an object that doesn't exist anymore".
-		await eventService.TriggerEventAsync(ObjectDestroyEvent, null, eventArguments);
+		await eventService.TriggerEventAsync(SharpEvents.ObjectDestroy, null, eventArguments);
 
 		return true;
 	}

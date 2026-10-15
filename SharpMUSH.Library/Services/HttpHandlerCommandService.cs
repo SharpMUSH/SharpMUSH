@@ -189,7 +189,7 @@ public class HttpHandlerCommandService(
 				try
 				{
 					budget.ThrowIfExceeded();
-					await eventService.TriggerEventAsync("HTTP`COMMAND", resolvedHandler,
+					await eventService.TriggerEventAsync(SharpEvents.HttpCommand, resolvedHandler,
 						clientIp, method, path, result.Status.ToString(), result.ContentType,
 						body.Length.ToString(), result.Body.Length.ToString());
 				}

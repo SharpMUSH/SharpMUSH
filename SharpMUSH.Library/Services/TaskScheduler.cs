@@ -868,6 +868,9 @@ public partial class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
 
+	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, DBRef enactor, bool notifyOnRejection = true)
+	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection, enactor: enactor);
+
 	public ValueTask<QueueAdmissionResult> AdmitSocketWork(Func<ValueTask<CallState?>> action, string triggerName, string group, Action? onReleased = null)
 	 => Admit(action, triggerName, group, null, onReleased: onReleased, notifyOnRejection: false, chargesOwner: false);
 

@@ -369,15 +369,18 @@ public partial class Commands
 
 			// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
 			// comm-feed package's comm.message) cannot reach anyone the terminal did not.
+			// The message keeps its markup (help event page); the log keeps the plain text.
 			await EventService.TriggerEventAsync(SharpEvents.PageMessage,
 				executor.Object().DBRef,
-				executor.Object().DBRef.ToString(),
-				string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString())),
-				delivered.Style,
-				senderName,
-				delivered.Message,
-				delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
-				delivered.Id.ToString(CultureInfo.InvariantCulture));
+				[
+					MarkupText.Plain(executor.Object().DBRef.ToString()),
+					MarkupText.Plain(string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString()))),
+					MarkupText.Plain(delivered.Style),
+					MarkupText.Plain(senderName),
+					message,
+					MarkupText.Plain(delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture)),
+					MarkupText.Plain(delivered.Id.ToString(CultureInfo.InvariantCulture))
+				]);
 
 			// Logged last, while page_log is on: for the pager and the recipients it reached, never one who
 			// refused it. The page is already delivered and pushed, so a slow or failed write holds up and

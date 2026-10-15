@@ -52,7 +52,7 @@ public class GameBroadcastService(
 					}
 
 					var flags = await player.ReadFlagsAsync();
-					hears = (anyOfFlags is null || anyOfFlags.Any(flags.Has)) && flags.Has(requiredFlag);
+					hears = (anyOfFlags is null || anyOfFlags.Any(flags.Has)) && (requiredFlag.Length == 0 || flags.Has(requiredFlag));
 					decided[conn.Ref.Value] = hears;
 				}
 

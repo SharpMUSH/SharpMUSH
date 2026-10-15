@@ -52,5 +52,7 @@ The payload shapes, the event arguments and the tests are in
 | ``FN`COMM`MESSAGE`` | the `comm.message` payload |
 | ``FN`COMM`WHO`` | the `comm.who` payload |
 
-To silence one of them, blank its event attribute (`&PAGE`MESSAGE #9=`); to
+Each handler is the attribute below its event (``PAGE`MESSAGE`COMMFEED``), so
+another package can hear the same event with an attribute of its own beside it
+(`help event`). To silence one of them, blank it (`&PAGE`MESSAGE`COMMFEED #9=`); to
 remove them all, `@package uninstall comm-feed`.

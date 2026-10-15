@@ -49,6 +49,12 @@ public interface IWorldBackupService
 	IReadOnlyList<WorldBackup> List();
 
 	/// <summary>
+	/// Opens the newest copy read-only and reads every entry of every table, so a copy that is damaged or does not
+	/// open is found before it is needed. Reports what was read, or why the copy failed the check.
+	/// </summary>
+	ValueTask<Result<WorldBackupCheck>> CheckLatestAsync(CancellationToken ct = default);
+
+	/// <summary>
 	/// How many automatic copies taken before a portal package operation are kept, in a directory of
 	/// their own so they never evict the copies <see cref="CreateAsync"/> keeps. Zero means none is
 	/// taken, as does an unsupported provider.

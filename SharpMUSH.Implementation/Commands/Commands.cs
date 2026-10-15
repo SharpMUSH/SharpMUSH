@@ -84,6 +84,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IWorldBackupService WorldBackupService { get; }
 
+	private IBackupRunner BackupRunner { get; }
+
 	private IServerRestart ServerRestart { get; }
 
 	/// <summary>Lazy: the plugin administration reaches the package installer, which runs softcode through the parser.</summary>
@@ -158,6 +160,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
+		IBackupRunner backupRunner,
 		IServerRestart serverRestart,
 		Lazy<IPluginAdministration> pluginAdministration,
 		IStorageCapacityService storageCapacity,
@@ -213,6 +216,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
+		BackupRunner = backupRunner;
 		ServerRestart = serverRestart;
 		PluginAdministration = pluginAdministration;
 		StorageCapacity = storageCapacity;

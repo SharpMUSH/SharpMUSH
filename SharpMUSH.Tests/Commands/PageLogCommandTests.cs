@@ -245,6 +245,12 @@ public class PageLogCommandTests
 			return inner.TriggerEventAsync(eventName, enactor, args);
 		}
 
+		public ValueTask TriggerEventAsync(string eventName, DBRef? enactor, IReadOnlyList<MString> args)
+		{
+			if (eventName == SharpMUSH.Library.Definitions.SharpEvents.PageMessage) Interlocked.Increment(ref PageEvents);
+			return inner.TriggerEventAsync(eventName, enactor, args);
+		}
+
 		public ValueTask<bool> HasHandlerAsync(string eventName) => inner.HasHandlerAsync(eventName);
 	}
 

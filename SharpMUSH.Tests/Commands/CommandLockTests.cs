@@ -43,8 +43,8 @@ public class CommandLockTests
 
 		var nonWizParser = Parser.Push(Parser.CurrentState with { Executor = nonWizardDbRef });
 
-		// Try to use @dump (which has CommandLock = "FLAG^WIZARD")
-		var result = await nonWizParser.CommandParse(MarkupText.Plain("@dump"));
+		// Try to use @dbck (which has CommandLock = "PERM^server.operate")
+		var result = await nonWizParser.CommandParse(MarkupText.Plain("@dbck"));
 		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
@@ -53,7 +53,7 @@ public class CommandLockTests
 	[Test]
 	public async ValueTask CommandLockAllowsWizard()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dump"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dbck"));
 		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("PERMISSION DENIED");

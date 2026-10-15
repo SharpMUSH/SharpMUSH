@@ -45,16 +45,16 @@ public class ChannelBroadcastServiceTests
 
 		await eventService.Received(1).TriggerEventAsync(SharpEvents.ChannelMessage,
 			null,
-			Arg.Is<string[]>(args =>
-				args.Length == 8
-				&& args[0] == "Public"
-				&& args[1] == string.Empty
-				&& args[2] == "say"
-				&& args[3] == "System"
-				&& args[4] == "The server is restarting."
-				&& args[5] == member.Object().DBRef.ToString()
-				&& long.Parse(args[6]) >= before
-				&& args[7] == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+			Arg.Is<IReadOnlyList<MString>>(args =>
+				args.Count == 8
+				&& args[0].ToPlainText() == "Public"
+				&& args[1].ToPlainText() == string.Empty
+				&& args[2].ToPlainText() == "say"
+				&& args[3].ToPlainText() == "System"
+				&& args[4].ToPlainText() == "The server is restarting."
+				&& args[5].ToPlainText() == member.Object().DBRef.ToString()
+				&& long.Parse(args[6].ToPlainText()) >= before
+				&& args[7].ToPlainText() == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 	}
 
 	/// <summary>
@@ -78,14 +78,14 @@ public class ChannelBroadcastServiceTests
 
 		var raised = eventService.ReceivedCalls()
 			.Single(call => call.GetMethodInfo().Name == nameof(IEventService.TriggerEventAsync))
-			.GetArguments()[2] as string[];
+			.GetArguments()[2] as IReadOnlyList<MString>;
 		var buffered = mediator.ReceivedCalls()
 			.Select(call => call.GetArguments()[0])
 			.OfType<AddChannelMessageCommand>()
 			.Single().Message;
 
 		await Assert.That(buffered.Id).IsGreaterThan(0);
-		await Assert.That(raised![7]).IsEqualTo(buffered.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		await Assert.That(raised![7].ToPlainText()).IsEqualTo(buffered.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
 		await Assert.That(buffered.Style).IsEqualTo("pose");
 		await Assert.That(buffered.SpeakerName).IsEqualTo("System");
 		await Assert.That(buffered.MessageText).IsEqualTo("The server is restarting.");
@@ -102,6 +102,7 @@ public class ChannelBroadcastServiceTests
 		await service.BroadcastAsync(Line(Channel(member, gagged: true)), CancellationToken.None);
 
 		await eventService.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
+		await eventService.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<IReadOnlyList<MString>>());
 	}
 
 	/// <summary>
@@ -128,7 +129,7 @@ public class ChannelBroadcastServiceTests
 
 		await eventService.Received(1).TriggerEventAsync(SharpEvents.ChannelMessage,
 			Arg.Any<DBRef?>(),
-			Arg.Is<string[]>(args => args[5] == member.Object().DBRef.ToString()));
+			Arg.Is<IReadOnlyList<MString>>(args => args[5].ToPlainText() == member.Object().DBRef.ToString()));
 	}
 
 	/// <summary>Hands out a fixed id, so a test can name the one the next line will carry.</summary>

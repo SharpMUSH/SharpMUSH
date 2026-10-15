@@ -225,6 +225,9 @@ public class PackageOperationRunnerTests
 
 		public IReadOnlyList<WorldBackup> List() => [];
 
+		public ValueTask<Result<WorldBackupCheck>> CheckLatestAsync(CancellationToken ct = default) =>
+			throw new InvalidOperationException("A package operation does not check backups.");
+
 		public ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(CancellationToken ct = default)
 		{
 			Calls.Enqueue("backup");

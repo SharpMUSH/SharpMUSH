@@ -29,7 +29,7 @@ public class BackupCommandTests : ServerTestBase
 	/// would have passed the test. That branch makes no copy either, so nothing downstream of the
 	/// lock can stand in for the lock.
 	/// </remarks>
-	[Test]
+	[Test, NotInParallel(nameof(BackupCommandTests))]
 	public async Task AMortalCannotRunIt()
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -70,5 +70,49 @@ public class BackupCommandTests : ServerTestBase
 				|| message.Contains("No backups have been taken yet", StringComparison.OrdinalIgnoreCase)
 				|| message.Contains("Backups in ", StringComparison.OrdinalIgnoreCase)))
 			.IsTrue();
+	}
+
+	/// <summary>
+	/// <c>@dump</c> is a backup with PennMUSH's dump events around it, and <c>@dbck</c> reads the newest copy
+	/// through and raises <c>DB`DBCK</c>. Both are heard on the event handler as God, who ran them. It runs apart
+	/// from <see cref="AMortalCannotRunIt"/>, which counts the copies on disk.
+	/// </summary>
+	[Test, NotInParallel(nameof(BackupCommandTests))]
+	public async Task DumpRaisesDumpCompleteAndDbckRaisesDbDbck()
+	{
+		if (!BackupService.IsSupported)
+		{
+			return;
+		}
+
+		var marker = TestIsolationHelpers.GenerateUniqueName("dump").ToUpperInvariant();
+		await Cmd($"&DUMP`COMPLETE`{marker} #9=think set(#9,HEARD_DUMP_{marker}:%#/%0/%1)");
+		await Cmd($"&DB`DBCK`{marker} #9=think set(#9,HEARD_DBCK_{marker}:%#)");
+		try
+		{
+			// Empty dump messages are not shown, so the copy is not broadcast to every player of the shared world
+			// while other tests read what their players heard.
+			using (TestOptionsOverride.Scope(options => options with
+			{
+				Dump = options.Dump with { DumpMessage = "", DumpComplete = "" }
+			}))
+			{
+				await Cmd("@dump");
+			}
+
+			var checkedName = await Cmd("@dbck");
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(await Eval($"get(#9/HEARD_DUMP_{marker})")).IsEqualTo("#1//0");
+			await Assert.That(await Eval($"get(#9/HEARD_DBCK_{marker})")).IsEqualTo("#1");
+			await Assert.That(checkedName).IsEqualTo(BackupService.List()[0].Name);
+		}
+		finally
+		{
+			await Cmd($"&DUMP`COMPLETE`{marker} #9");
+			await Cmd($"&DB`DBCK`{marker} #9");
+			await Cmd($"&HEARD_DUMP_{marker} #9");
+			await Cmd($"&HEARD_DBCK_{marker} #9");
+		}
 	}
 }

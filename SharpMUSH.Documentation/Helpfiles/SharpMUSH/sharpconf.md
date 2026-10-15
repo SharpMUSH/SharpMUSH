@@ -96,10 +96,10 @@ These options affect database saves and other periodic checks.
 - `dump_complete=<string>`: Notification message for the end of a save.
 - `dump_warning_1min=<string>`: Notification one minute before a save.
 - `dump_warning_5min=<string>`: Notification five minutes before a save.
-- `dump_interval=<time>`: Seconds between database saves.
 - `warn_interval=<time>`: Seconds between automatic @wchecks.
 - `purge_interval=<time>`: Seconds between automatic @purges.
-- `dbck_interval=<time>`: Seconds between automatic @dbcks.
+
+A save is a backup: the messages are shown around every `@backup`, `@dump` and scheduled backup, and an empty one is not shown. How often backups are scheduled is the server's SHARPMUSH_BACKUP_INTERVAL setting, not an option, so PennMUSH's dump_interval is read and ignored; so is dbck_interval, since `@dbck` runs only when asked (see [event dump] and [event db]).
 
 # @config flags
 These options set the default flags for newly-created objects and channels. Each is a

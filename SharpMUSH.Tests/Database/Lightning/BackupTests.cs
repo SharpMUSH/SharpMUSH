@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
@@ -343,6 +344,83 @@ public class BackupTests
 		}
 	}
 
+	/// <summary><c>@dbck</c>'s check: the newest copy is opened read-only and every entry of every core table read.</summary>
+	[Test]
+	public async Task CheckLatestReadsTheNewestCopyThrough()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+			await backups.CreateAsync();
+			var newest = (await backups.CreateAsync()).Expect<WorldBackup>();
+
+			var check = (await backups.CheckLatestAsync()).Expect<WorldBackupCheck>();
+
+			await Assert.That(check.Backup).IsEqualTo(newest);
+			await Assert.That(check.Tables).IsEqualTo(Tables.All.Count);
+			await Assert.That(check.Entries).IsGreaterThanOrEqualTo(db.Store.Count(Tables.Obj));
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	[Test]
+	public async Task CheckLatestWithNoCopyIsAnError()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+
+			var error = (await backups.CheckLatestAsync()).Expect<Error<string>>();
+
+			await Assert.That(error.Value).Contains("no backup to check");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	/// <summary>A copy whose meta pages are gone fails the check with a reason instead of throwing.</summary>
+	[Test]
+	public async Task CheckLatestReportsACopyLMDBCannotOpen()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+			var backup = (await backups.CreateAsync()).Expect<WorldBackup>();
+			await using (var file = File.OpenWrite(Path.Join(backup.Path, "data.mdb")))
+			{
+				await file.WriteAsync(new byte[8192]);
+			}
+
+			var error = (await backups.CheckLatestAsync()).Expect<Error<string>>();
+
+			await Assert.That(error.Value).StartsWith($"backup {backup.Name} failed the check: ");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
 	/// <summary>
 	/// A backup root that cannot be created — a full or read-only disk, or a path already taken by a
 	/// file — is reported like any other failure. A wizard typing the command gets a message, not an
@@ -473,7 +551,8 @@ public class BackupTests
 		backups.IsSupported.Returns(true);
 		backups.Root.Returns(root);
 		backups.ScheduledInterval.Returns(TimeSpan.Zero);
-		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
+		var schedule = new WorldBackupScheduleService(backups, Substitute.For<IBackupRunner>(), Substitute.For<TimeProvider>(),
+			NullLogger<WorldBackupScheduleService>.Instance);
 		try
 		{
 			await schedule.StartAsync(CancellationToken.None);
@@ -489,64 +568,32 @@ public class BackupTests
 		}
 	}
 
-	/// <summary>The 03:30 snapshot only finds a fresh copy if the interval actually fires one.</summary>
+	/// <summary>
+	/// The schedule over a real <see cref="BackupRunner"/>: one copy each interval, and a failed copy does not stop the
+	/// next. Driven through <see cref="WorldBackupScheduleService.TickAsync"/>, so no test waits on the clock.
+	/// </summary>
 	[Test]
-	public async Task TheScheduleTakesACopyEveryInterval()
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task TheScheduleTakesACopyEveryIntervalWhetherOrNotTheLastFailed(bool succeed)
 	{
-		var root = TempPath();
-		var taken = 0;
 		var backups = Substitute.For<IWorldBackupService>();
-		backups.IsSupported.Returns(true);
-		backups.Root.Returns(root);
-		backups.ScheduledInterval.Returns(TimeSpan.FromMilliseconds(200));
-		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(_ =>
-		{
-			Interlocked.Increment(ref taken);
-			return new ValueTask<Result<WorldBackup>>(
-				new WorldBackup("20260101-000000-000", Path.Combine(root, "20260101-000000-000"),
-					DateTimeOffset.UnixEpoch, 0));
-		});
-		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
-		try
-		{
-			await schedule.StartAsync(CancellationToken.None);
+		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(_ => new ValueTask<Result<WorldBackup>>(succeed
+			? new WorldBackup("20260101-000000-000", "/backups/20260101-000000-000", DateTimeOffset.UnixEpoch, 0)
+			: new Error<string>("disk full")));
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default());
+		var runner = new BackupRunner(backups, Substitute.For<IEventService>(), Substitute.For<IGameBroadcastService>(), options,
+			NullLogger<BackupRunner>.Instance);
+		var schedule = new WorldBackupScheduleService(backups, runner, Substitute.For<TimeProvider>(),
+			NullLogger<WorldBackupScheduleService>.Instance);
+		var interval = TimeSpan.FromHours(6);
 
-			await Assert.That(await Eventually(() => Volatile.Read(ref taken) >= 2)).IsTrue();
-		}
-		finally
-		{
-			await schedule.StopAsync(CancellationToken.None);
-			Delete(root);
-		}
-	}
+		await schedule.TickAsync(DateTimeOffset.UnixEpoch, interval);
+		await schedule.TickAsync(DateTimeOffset.UnixEpoch + interval, interval);
+		await schedule.TickAsync(DateTimeOffset.UnixEpoch + interval * 2, interval);
 
-	/// <summary>A failed copy is reported and the schedule carries on to the next interval.</summary>
-	[Test]
-	public async Task TheScheduleSurvivesAFailedCopy()
-	{
-		var root = TempPath();
-		var attempts = 0;
-		var backups = Substitute.For<IWorldBackupService>();
-		backups.IsSupported.Returns(true);
-		backups.Root.Returns(root);
-		backups.ScheduledInterval.Returns(TimeSpan.FromMilliseconds(200));
-		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(_ =>
-		{
-			Interlocked.Increment(ref attempts);
-			return new ValueTask<Result<WorldBackup>>(new Error<string>("disk full"));
-		});
-		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
-		try
-		{
-			await schedule.StartAsync(CancellationToken.None);
-
-			await Assert.That(await Eventually(() => Volatile.Read(ref attempts) >= 2)).IsTrue();
-		}
-		finally
-		{
-			await schedule.StopAsync(CancellationToken.None);
-			Delete(root);
-		}
+		await backups.Received(2).CreateAsync(Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>

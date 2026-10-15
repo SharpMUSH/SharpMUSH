@@ -31,6 +31,9 @@ public sealed class UnsupportedWorldBackupService(string provider, string reason
 
 	public IReadOnlyList<WorldBackup> List() => [];
 
+	public ValueTask<Result<WorldBackupCheck>> CheckLatestAsync(CancellationToken ct = default)
+		=> ValueTask.FromResult<Result<WorldBackupCheck>>(new Error<string>(UnavailableReason));
+
 	public int PackageOperationKeep => 0;
 
 	public ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(CancellationToken ct = default)

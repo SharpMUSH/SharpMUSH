@@ -82,7 +82,7 @@ public class HttpCompletionEventLifetimeTests
 				await Admit(EventState);
 				return new QueueAdmissionResult(1, QueueRejectionReason.None);
 			});
-			Events = new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(Scheduler), options, NullLogger<EventService>.Instance);
+			Events = new EventService(Mediator, Attributes, new Lazy<ITaskScheduler>(Scheduler), new Lazy<IMUSHCodeParser>(Parser), options, NullLogger<EventService>.Instance);
 			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(), Events, InlineTaskScheduler.Create(), options, NullLogger<HttpHandlerCommandService>.Instance);
 		}
 	}
