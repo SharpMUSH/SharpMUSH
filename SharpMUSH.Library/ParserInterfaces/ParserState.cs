@@ -229,8 +229,7 @@ public class IterationWrapper<T>
 
 /// <summary>
 /// One switch's subject, which <c>stext()</c> and <c>%$&lt;n&gt;</c> read, and which <c>#$</c> reads while one of
-/// its actions runs. An <c>if()</c> or <c>ifelse()</c> pushes one too, for <c>#$</c> only
-/// (<see cref="Conditional"/>).
+/// its actions runs. An <c>if()</c> or <c>ifelse()</c> pushes one too, whose subject is its evaluated condition.
 /// </summary>
 public sealed class SwitchFrame
 {
@@ -246,13 +245,6 @@ public sealed class SwitchFrame
 	public bool Spliced { get; init; }
 
 	/// <summary>
-	/// An <c>if()</c> or <c>ifelse()</c>, whose condition <c>#$</c> reads in the branch it runs, as TinyMUX's
-	/// does. It is not a switch, so <c>stext()</c>, <c>%$&lt;n&gt;</c> and <c>slev()</c> skip it
-	/// (<see cref="ParserState.SwitchFrames"/>).
-	/// </summary>
-	public bool Conditional { get; init; }
-
-	/// <summary>
 	/// The attribute being evaluated when the switch started, compared by reference: <c>#$</c> reads it only
 	/// from code of that same evaluation, as PennMUSH splices only the action's own text.
 	/// </summary>
@@ -265,10 +257,7 @@ public sealed class SwitchFrame
 	public bool InAction { get; set; }
 
 	/// <summary>A copy for a queued action, which must not see the switch move on to its next pattern.</summary>
-	public SwitchFrame Clone() => new()
-	{
-		Text = Text, Spliced = Spliced, Conditional = Conditional, Evaluation = Evaluation, InAction = InAction
-	};
+	public SwitchFrame Clone() => new() { Text = Text, Spliced = Spliced, Evaluation = Evaluation, InAction = InAction };
 }
 
 /// <summary>
@@ -508,12 +497,6 @@ public partial record ParserState
 		get => Context.SwitchStack;
 		init => Context = Context with { SwitchStack = value };
 	}
-
-	/// <summary>
-	/// The switches <c>stext()</c>, <c>%$&lt;n&gt;</c> and <c>slev()</c> count, innermost first: the
-	/// <see cref="SwitchStack"/> without its <c>if()</c> frames.
-	/// </summary>
-	public IEnumerable<SwitchFrame> SwitchFrames => SwitchStack.Where(frame => !frame.Conditional);
 
 	/// <inheritdoc cref="EvaluationContext.ExecutionStack"/>
 	public ConcurrentStack<Execution> ExecutionStack

@@ -229,7 +229,7 @@ public static partial class Substitutions
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		var symbolValue = symbol.Message.ToPlainText();
-		var stack = parser.CurrentState.SwitchFrames.ToList();
+		var stack = parser.CurrentState.SwitchStack;
 
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
 		{
@@ -249,7 +249,7 @@ public static partial class Substitutions
 	// Symbol: %$L --> Last/outermost switch string
 	private static CallState HandleSTextLast(IMUSHCodeParser parser)
 	{
-		var stack = parser.CurrentState.SwitchFrames.ToList();
+		var stack = parser.CurrentState.SwitchStack;
 
 		if (stack.Count == 0)
 		{

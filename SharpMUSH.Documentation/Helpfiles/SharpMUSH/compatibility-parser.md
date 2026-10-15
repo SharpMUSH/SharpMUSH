@@ -218,9 +218,12 @@ a b
 `case()`, `caseall()`, `if()` and `ifelse()` it is plain text.<br>
 **SharpMUSH** also replaces it in the action of `case()` and `caseall()`, with their subject, and in the
 branch of `if()` and `ifelse()`, with the evaluated condition, as TinyMUX does. A `switch()` around them or
-inside them still takes `#$` first, so code written for PennMUSH reads the same switch it read there.<br>
+inside them still takes `#$` first, so code written for PennMUSH reads the same switch it read there.
+The branch of an `if()` or `ifelse()` also counts as a switch for `stext()`, `%$<n>` and `slev()`, so
+`%$0` there is the condition and `%$1` the switch around it.<br>
 **Why.** The token then means the same thing in every function that matches or tests a value.<br>
-**Workaround.** Write `\#$` or `lit(#$)` where you want the text `#$`.
+**Workaround.** Write `\#$` or `lit(#$)` where you want the text `#$`. Inside an `if()`, use `%$1` or
+`stext(1)` for the switch around it, or `%$L` for the outermost.
 
 ```sharp
 > think case(moof,moof,#$)
@@ -231,6 +234,8 @@ moof
 a
 > think case(b,b,\#$)
 #$
+> think switch(a,*,if(1,%$0 %$1 [slev()]))
+1 a 2
 ```
 
 ## Function names cannot be produced by evaluation

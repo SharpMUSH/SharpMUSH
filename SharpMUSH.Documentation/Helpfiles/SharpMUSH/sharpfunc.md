@@ -2321,7 +2321,7 @@ think hastype(test object, PLAYER THING)
 
   These functions evaluate the `<condition>` and return `<true expression>` if the `<condition>` is true, or `<false expression>` (if provided) if the `<condition>` is false. Only the returned `<expression>` is evaluated.
 
-  In the expression that is evaluated, "#$" stands for the evaluated `<condition>`, unless a switch() around or inside it names its own `<string>`. The value is never evaluated as code. stext(), %$0 and slev() do not count if(). See [compatibility parser in case and if].
+  In the expression that is evaluated, "#$" stands for the evaluated `<condition>`, unless a switch() around or inside it names its own `<string>`. The value is never evaluated as code. The branch also counts as a switch on the `<condition>` for stext(), %$0 and slev(). See [compatibility parser in case and if].
 
 ```sharp
 > think if(abc,You typed #$.)
@@ -5791,7 +5791,7 @@ You say, "abcdefgh"
 `stext([\<n\>])`<br>
   %$`\<n\>`
 
-  slev() returns the current nesting depth of switch*(), reswitch*() and @switch/@selects. stext() returns the `<string>` being matched for the current switch, or the `\<n\>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. Unlike the "#$" token, which names the outermost switch it is written in, it can name any level.
+  slev() returns the current nesting depth of switch*(), case*(), reswitch*(), if(), ifelse() and @switch/@selects. An if() or ifelse() counts while its branch runs, with its evaluated condition as the `<string>`. stext() returns the `<string>` being matched for the current switch, or the `\<n\>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. Unlike the "#$" token, which names the outermost switch it is written in, it can name any level.
 
   stext(L) returns the `<string>` for the outermost switch, and is equivilent to stext(slev()). %$`\<n\>` is equivilent to stext(`\<n\>`), for `\<n\>`s of 0-9 or L.
 

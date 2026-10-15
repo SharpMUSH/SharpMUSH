@@ -210,9 +210,10 @@ public class SwitchFunctionUnitTests
 	[Arguments("case(a,a,switch(b,*,#$))", "b")]
 	[Arguments("switch(a,*,case(b,b,#$))", "a")]
 	[Arguments("iter(x y,switch(##,*,#$))", "x y")]
-	// if() is not a switch: stext(), %$0 and slev() pass over it.
-	[Arguments("if(1,[stext(0)]-[slev()]-%$0)", "-0-#-1 REGISTER OUT OF RANGE")]
-	[Arguments("switch(a,*,if(1,[stext(0)]-[slev()]-%$0))", "a-1-a")]
+	// if() runs its branch as a switch on its condition: stext(), %$0 and slev() read it too.
+	[Arguments("if(1,[stext(0)]-[slev()]-%$0)", "1-1-1")]
+	[Arguments("switch(a,*,if(abc,[stext(0)]-[stext(1)]-[slev()]-%$0-%$1-%$L))", "abc-a-2-abc-a-a")]
+	[Arguments("if(abc,x)[slev()]", "x0")]
 	public async Task HashDollarIsTheSubject(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

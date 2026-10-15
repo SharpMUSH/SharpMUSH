@@ -99,7 +99,7 @@ public partial class Functions
 				yield return ("T0", "0");
 		}
 
-		if (kinds.HasFlag(RegisterKinds.Switch) && state.SwitchFrames.FirstOrDefault() is { } switchFrame && switchFrame.Text.Length > 0)
+		if (kinds.HasFlag(RegisterKinds.Switch) && state.SwitchStack.TryPeek(out var switchFrame) && switchFrame.Text.Length > 0)
 			yield return ("S0", "0");
 	}
 
@@ -269,7 +269,7 @@ public partial class Functions
 			// stext() context — int depth, or "L" for the outermost switch.
 			case "switch":
 				{
-					var stack = parser.CurrentState.SwitchFrames.ToList();
+					var stack = parser.CurrentState.SwitchStack;
 					var depth = 0;
 					if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
 						depth = stack.Count - 1;
@@ -410,7 +410,7 @@ public partial class Functions
 		// n=0 is current switch, n=1 is the switch the current is nested in, etc.
 
 		var args = parser.CurrentState.Arguments;
-		var stack = parser.CurrentState.SwitchFrames.ToList();
+		var stack = parser.CurrentState.SwitchStack;
 
 		int depth = 0;
 
@@ -453,7 +453,7 @@ public partial class Functions
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> SLev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		return ValueTask.FromResult(new CallState(parser.CurrentState.SwitchFrames.Count()));
+		return ValueTask.FromResult(new CallState(parser.CurrentState.SwitchStack.Count));
 	}
 
 	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,

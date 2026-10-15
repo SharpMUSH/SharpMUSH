@@ -65,7 +65,7 @@ think [switch(a,*,u(me/SWSHOW))] [switch(a,*,u(me/SWOWN))] [switch(abc,#$,yes,no
 &SWOWN me
 
 ::case sc.subjectcaseif  #$ in case() and if(): text in PennMUSH, the subject or condition in SharpMUSH; a switch() still wins
-think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)]
+think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)] [switch(a,*,if(1,%$0 [slev()]))]
 think [switch(a,*,case(b,b,#$))] [case(a,a,switch(b,*,#$))] [if(1,switch(b,*,#$))] [switch(a,*,if(1,#$))]
 
 ::case sc.tokenbinding  with loops and switches nested in each other, ## #@ #$ name the outermost (innermost_tokens off)

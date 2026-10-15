@@ -1085,10 +1085,11 @@ public partial class Functions
 		var truthy = parsedIfElse.Message.Truthy(parser);
 		var result = CallState.Empty;
 
-		// #$ in the branch is the evaluated condition, as in TinyMUX; PennMUSH leaves it as text.
+		// The branch runs as a switch on the evaluated condition: #$, %$0 and stext() read it and slev() counts it,
+		// as #$ does in TinyMUX. PennMUSH has none of them in if().
 		parser.CurrentState.SwitchStack.Push(new SwitchFrame
 		{
-			Text = parsedIfElse.Message, Conditional = true, InAction = true, Evaluation = parser.CurrentState.CurrentEvaluation
+			Text = parsedIfElse.Message, InAction = true, Evaluation = parser.CurrentState.CurrentEvaluation
 		});
 		try
 		{

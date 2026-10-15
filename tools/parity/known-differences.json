@@ -200,10 +200,10 @@
       "scenario": "30-softcode",
       "case": "sc.subjectcaseif",
       "step": 0,
-      "reason": "SharpMUSH binds #$ in case(), caseall(), if() and ifelse() as TinyMUX does; PennMUSH leaves it as text there.",
+      "reason": "SharpMUSH binds #$ in case(), caseall(), if() and ifelse() as TinyMUX does, and counts an if() branch as a switch for %$0, stext() and slev(); PennMUSH leaves #$ as text there and counts only switches.",
       "tracking": "#1849",
       "profile": "`#$` in `case()` and `if()`",
-      "command": "think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)]"
+      "command": "think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)] [switch(a,*,if(1,%$0 [slev()]))]"
     }
   ]
 }
