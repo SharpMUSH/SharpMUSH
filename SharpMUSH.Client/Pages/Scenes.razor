@@ -19,6 +19,12 @@
 <div class="scenes-page">
     <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@Heading" Description="@Description">
         <Actions>
+            @* The schedule in a calendar app: open to anyone, since the public feed needs no sign-in. *@
+            @if (_filter == ScenesFilter.Scheduled && !_calendar)
+            {
+                <CapsuleButton Icon="@Icons.Material.Outlined.CalendarMonth" Class="scene-calendar-open"
+                               OnClick="@(() => _calendar = true)">@Loc["RolCalendarOpen"]</CapsuleButton>
+            }
             @* Starting a scene runs +scene/create as the character this tab acts as (POST api/commands),
                so it is offered only while one is. No terminal is needed: the command answers the page. *@
             @if (_acting is not null && !_starting && !_scheduling)
@@ -87,6 +93,11 @@
                 </div>
             </div>
         </KitCard>
+    }
+
+    @if (_filter == ScenesFilter.Scheduled && _calendar)
+    {
+        <CalendarFeedCard Acting="@(_acting is not null)" OnClose="@(() => _calendar = false)" />
     }
 
     @if (_match is { } match)
@@ -346,6 +357,10 @@
 
     /// <summary>The schedule form is open.</summary>
     private bool _scheduling;
+
+    /// <summary>The calendar feed card is open over the schedule.</summary>
+    private bool _calendar;
+
     private string _schedTitle = string.Empty;
     private string _schedPitch = string.Empty;
     private DateTime? _schedDate;

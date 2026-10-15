@@ -6194,6 +6194,69 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter to send</value>
   </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Add to calendar</value>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Add the schedule to your calendar</value>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Your calendar app shows each scene at your own local time and checks for changes every hour.</value>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Public scenes</value>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Every public scene on the schedule. Anyone can use this address.</value>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Your private link</value>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Also lists the private scenes this character can see. Anyone with the link can read it, so keep it to yourself.</value>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Only scenes I run or joined</value>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>This address is shown only now. Copy it into your calendar app before you leave the page.</value>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>You made a private link on {0}. Make a new one to see its address again; the old one stops working.</value>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Make my private link</value>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Make a new link</value>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Turn it off</value>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Calendar address</value>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Calendar address copied</value>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Subscribe</value>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Saving draft</value>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Draft saved</value>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Draft on this device only</value>
+  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>This scene is paused. It takes no poses until its owner resumes it.</value>
   </data>

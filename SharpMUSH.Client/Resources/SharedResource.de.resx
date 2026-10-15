@@ -6153,4 +6153,88 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Ein Bild mit Inhaltswarnung bleibt aus der Bildbibliothek heraus. Entferne die Warnung, um es zu teilen.</value>
   </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Zum Kalender hinzufügen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Den Spielplan in deinen Kalender übernehmen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Deine Kalender-App zeigt jede Szene in deiner Ortszeit und sucht stündlich nach Änderungen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Schließen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Öffentliche Szenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Jede öffentliche Szene im Spielplan. Jeder kann diese Adresse verwenden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Dein privater Link</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Enthält auch die privaten Szenen, die dieser Charakter sehen kann. Jeder mit dem Link kann ihn lesen, also behalte ihn für dich.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Nur Szenen, die ich leite oder denen ich beigetreten bin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Diese Adresse wird nur jetzt angezeigt. Kopiere sie in deine Kalender-App, bevor du die Seite verlässt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Du hast am {0} einen privaten Link erstellt. Erstelle einen neuen, um seine Adresse wieder zu sehen; der alte funktioniert dann nicht mehr.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Meinen privaten Link erstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Neuen Link erstellen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Ausschalten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Kalenderadresse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Kopieren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Kalenderadresse kopiert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Abonnieren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Entwurf wird gespeichert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Entwurf gespeichert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Entwurf nur auf diesem Gerät</value>
+    <comment>MT</comment>
+  </data>
 </root>
