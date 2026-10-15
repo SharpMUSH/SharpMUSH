@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.7.0
+    version: 1.6.1
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -115,7 +115,7 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.0.0
+    version: 1.0.2
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: bboards/
     name: BBoards
@@ -147,6 +147,11 @@ packages:
     package: time
     version: 1.1.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
+  - path: timeline/
+    name: Timeline
+    package: timeline
+    version: 1.0.0
+    description: IC dates on scenes and a timeline per character — a scene is dated in the IC calendar when it starts, +scene/date dates a flashback, +timeline lists a character's scenes in IC order
   - path: discord/
     name: Discord
     package: discord

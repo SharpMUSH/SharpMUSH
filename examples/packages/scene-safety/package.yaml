@@ -1,11 +1,11 @@
 format: 1.7
 package: scene-safety
-version: 1.0.0
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
-keywords: [scene, safety, lines, veils, consent]
+keywords: [scene, safety, lines, veils, consent, content-warning, rp]
 requires_server: ">=0.1"
 
 # The summary and the signal call the Scene plugin's scene functions and @scene/notice, so it installs only
@@ -397,7 +397,7 @@ objects:
       # +safety/scene [<id>]: the owner's summary of the focused scene, or the one named.
       INC`SAFETY`SCENE:
         value: |-
-          think setq(scene_id,firstof(%q<cmd_argument>,scenefocus(%#))); @assert cand(strlen(%q<scene_id>),not(strmatch(%q<scene_id>,#-*)))=@pemit %#=notice(SAFETY,Name a scene: +safety/scene <id>%, or focus on one with +scene/join <id>.,warn); @assert not(strmatch(scene(%q<scene_id>,status),#-*))=@pemit %#=notice(SAFETY,There is no scene %q<scene_id>.,warn); @assert u(%!/FUN`SCENE`OWNS,%q<scene_id>,%#)=@pemit %#=notice(SAFETY,Only scene %q<scene_id>'s owner sees its summary.,warn); @assert words(u(%!/FUN`SCENE`WARNINGS,%q<scene_id>),|)=@pemit %#=notice(SAFETY,Scene %q<scene_id> has no content warnings. +scene/set [v(DATA`CONFIG`WARNING-DETAIL)]=<warning> gives it one.); @assert strlen(setr(scene_summary,u(%!/FUN`SCENE`SUMMARY,%q<scene_id>)))=@pemit %#=notice(SAFETY,No line or veil of the other players in scene %q<scene_id> touches its content warnings.,ok); @pemit %#=%q<scene_summary>
+          think setq(scene_id,firstof(%q<cmd_argument>,scenefocus(%#))); @assert cand(strlen(%q<scene_id>),not(strmatch(%q<scene_id>,#-*)))=@pemit %#=notice(SAFETY,Name a scene: +safety/scene <id>%, or focus on one with +scene/join <id>.,warn); @assert not(strmatch(scene(%q<scene_id>,status),#-*))=@pemit %#=notice(SAFETY,There is no scene %q<scene_id>.,warn); @assert u(%!/FUN`SCENE`OWNS,%q<scene_id>,%#)=@pemit %#=notice(SAFETY,Only scene %q<scene_id>'s owner sees its summary.,warn); @assert words(u(%!/FUN`SCENE`WARNINGS,%q<scene_id>),|)=@pemit %#=notice(SAFETY,Scene %q<scene_id> has no content warnings. +scene/set [v(DATA`CONFIG`WARNING-DETAIL)]=<warning> gives it one.,warn); @assert strlen(setr(scene_summary,u(%!/FUN`SCENE`SUMMARY,%q<scene_id>)))=@pemit %#=notice(SAFETY,No line or veil of the other players in scene %q<scene_id> touches its content warnings.,ok); @pemit %#=%q<scene_summary>
         flags: [cmdsyntax]
       INC`SAFETY`PAUSE:
         value: |-

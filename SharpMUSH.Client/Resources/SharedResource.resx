@@ -4454,6 +4454,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Show more</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Timeline</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Not dated</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>View all</value>
   </data>
