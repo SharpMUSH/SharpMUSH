@@ -147,9 +147,8 @@ public sealed class PackageDeclarationService(
 	private async Task ApplyAttributeEntriesAsync(
 		PackageWriteTransaction writes, PackageDeclarationPlan plan, List<string> notes, CancellationToken cancellationToken)
 	{
-		foreach (var write in plan.AttributeEntryWrites)
+		foreach (var entry in plan.AttributeEntryWrites.Select(write => write.Entry))
 		{
-			var entry = write.Entry;
 			var previous = await mediator.Send(new GetAttributeEntryQuery(entry.Name), cancellationToken);
 			// Upper case, as @attribute/access stores them, so @attribute shows one spelling.
 			await mediator.Send(new CreateAttributeEntryCommand(entry.Name, [.. entry.Flags.Select(flag => flag.ToUpperInvariant())], entry.Limit,

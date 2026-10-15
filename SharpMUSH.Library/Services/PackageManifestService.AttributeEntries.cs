@@ -223,13 +223,10 @@ public partial class PackageManifestService
 		}
 
 		var retroactive = false;
-		if (entry.GetValueOrDefault("retroactive") is { } retroNode)
+		if (entry.GetValueOrDefault("retroactive") is { } retroNode && !bool.TryParse(retroNode.ToString(), out retroactive))
 		{
-			if (!bool.TryParse(retroNode.ToString(), out retroactive))
-			{
-				issues.Add(PackageManifestIssue.Error($"{path}.retroactive", "retroactive is true or false."));
-				ok = false;
-			}
+			issues.Add(PackageManifestIssue.Error($"{path}.retroactive", "retroactive is true or false."));
+			ok = false;
 		}
 
 		return ok ? new PackageAttributeEntrySpec(name, flags, limit, choices, delimiter, retroactive) : null;
