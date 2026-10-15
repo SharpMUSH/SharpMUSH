@@ -147,7 +147,11 @@ public class LookService(
 				ExecutionBudget.CurrentToken)
 			.FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
 
-		return found?.Source == AttributeSource.Ancestor;
+		// The ancestor's formats are the built-in look however they are reached: through the type
+		// ancestor, through an @parent set to the ancestor itself, or when looking at the ancestor.
+		return found is not null
+			&& (found.Source == AttributeSource.Ancestor
+				|| look.Viewing.TypeAncestor(configuration) is { } ancestor && found.SourceObject.SameObjectAs(ancestor));
 	}
 
 	private async ValueTask<Description> ResolveDescriptionAsync(Look look)

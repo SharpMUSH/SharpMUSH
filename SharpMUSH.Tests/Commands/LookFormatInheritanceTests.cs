@@ -172,6 +172,15 @@ public class LookFormatInheritanceTests
 			await Assert.That(heard).DoesNotContain((string line) => line.Contains($"ANAME_{token}", StringComparison.Ordinal));
 			await Assert.That(heard).DoesNotContain((string line) => line.Contains("localize(", StringComparison.Ordinal));
 
+			// The same formats reached through an @parent set to the Ancestor Room are still the built-in look.
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {room}={AncestorRoom}"));
+			before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+			heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+			await Assert.That(heard).Contains((string line) => line.StartsWith($"Room_{token}(", StringComparison.Ordinal));
+			await Assert.That(heard).DoesNotContain((string line) => line.Contains($"ANAME_{token}", StringComparison.Ordinal));
+
 			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&NAMEFORMAT here=OWN_{token}:[name(%0)]"));
 			before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
