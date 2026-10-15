@@ -19,6 +19,9 @@ public interface IPluginManager
 	/// <summary>The running plugin <paramref name="pluginId"/>: what it registered, or null when it is not running.</summary>
 	PluginRegistration? Registration(string pluginId);
 
+	/// <summary>Whether <paramref name="pluginId"/> was unloaded since the start and is not running again.</summary>
+	bool WasUnloaded(string pluginId);
+
 	/// <summary>
 	/// Unload an <i>unloadable</i> plugin at runtime: remove the command/function entries it registered from
 	/// the live libraries, then dispose its collectible plugin loader so its

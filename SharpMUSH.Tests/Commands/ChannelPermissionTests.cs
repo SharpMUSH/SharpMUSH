@@ -395,6 +395,29 @@ public class ChannelPermissionTests
 
 	// --- Chan_Ok_Type (extchat.h:196) ---------------------------------------------------------------
 
+	/// <summary>
+	/// A wizard object emits onto a channel it could not join, as a bridge or a logger does: a wizard is
+	/// See_All and Pemit_All, which skips <c>do_cemit</c>'s type gate.
+	/// </summary>
+	[Test]
+	public async Task PlayerOnlyChannel_TakesAWizardThingsCemit()
+	{
+		var name = UniqueChannel("WizThingCem");
+		var channel = await CreateChannel(name, "Player");
+
+		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ChanPermWizThing");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=WIZARD"));
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
+
+		await Assert.That(PermissionService.ChannelOkType(thing, channel)).IsFalse();
+		await Assert.That((await ChannelHelper.CemitRefusal(PermissionService, thing, channel)).Refused).IsFalse();
+
+		var before = await MessageCount(name);
+		await FunctionParserFor(thingDbRef).FunctionParse(MarkupText.Plain($"cemit({name},Bridged.)"));
+		await Assert.That(await MessageCount(name)).IsEqualTo(before + 1);
+	}
+
+
 	[Test]
 	public async Task PlayerOnlyChannel_RefusesAThing()
 	{

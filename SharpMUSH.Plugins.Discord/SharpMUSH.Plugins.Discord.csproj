@@ -26,6 +26,8 @@
 
 	<ItemGroup>
 		<None Update="plugin.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<!-- In-game help for @discord, indexed with the engine's while the plugin is loaded. -->
+		<None Update="help\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

@@ -927,23 +927,21 @@ public class SceneRoleplayIntegrationTests
 		await God1($"@tel {loggerDbref}={digOut}");
 
 		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
-		async Task<bool> BoHasSceneHere(bool expected)
+		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		async Task<bool> BoHasSceneHere()
 		{
-			// HERE`SYNC is queued by @trigger, so it may run just after the command returns.
-			for (var attempt = 0; attempt < 50; attempt++)
-			{
-				var has = contexts.Read(DBRef.Parse(bo)).Any(weighted => weighted.Context.Name == "scene_here");
-				if (has == expected) return has;
-				await Task.Delay(100);
-			}
-			return !expected;
+			// HERE`SYNC is @triggered (one generation) and @dolists over the room (a second), so wait for the
+			// queue to run that far rather than for a fixed time: the queue has one reader, and it is still working
+			// through what earlier tests queued, the event handler's room-contents updates for #0 above all.
+			await scheduler.SettleForTestsAsync(timeout: TimeSpan.FromSeconds(60));
+			return contexts.Read(DBRef.Parse(bo)).Any(weighted => weighted.Context.Name == "scene_here");
 		}
 
-		await Assert.That(await BoHasSceneHere(false)).IsFalse().Because("no scene runs in the room yet");
+		await Assert.That(await BoHasSceneHere()).IsFalse().Because("no scene runs in the room yet");
 		await RunAndCollectAs(amyHandle, $"+scene/create HereTest_{Tag}");
-		await Assert.That(await BoHasSceneHere(true)).IsTrue().Because("creating a running scene tells the room");
+		await Assert.That(await BoHasSceneHere()).IsTrue().Because("creating a running scene tells the room");
 		await RunAndCollectAs(amyHandle, "+scene/finish");
-		await Assert.That(await BoHasSceneHere(false)).IsFalse().Because("finishing the scene tells the room");
+		await Assert.That(await BoHasSceneHere()).IsFalse().Because("finishing the scene tells the room");
 	}
 
 	/// <summary>

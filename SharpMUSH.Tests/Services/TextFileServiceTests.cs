@@ -1,8 +1,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
@@ -74,6 +77,92 @@ public class TextFileServiceTests
 	}
 
 	/// <summary>
+	/// A loaded plugin's own help is indexed with the engine's; a plugin that did not load shows none, and a plugin
+	/// topic that clashes with the engine's is left out rather than stopping the index.
+	/// </summary>
+	[Test]
+	public async Task LoadedPluginHelp_IsIndexed_AndNeverDisplacesTheEngines()
+	{
+		var plugins = Path.Join(Path.GetTempPath(), $"sharpmush-plugins-{Guid.NewGuid():N}");
+		string Plugin(string id, string file, string markdown)
+		{
+			var help = Path.Join(plugins, id, "help");
+			Directory.CreateDirectory(help);
+			File.WriteAllText(Path.Join(help, file), markdown);
+			return Path.Join(plugins, id);
+		}
+
+		var catalog = PluginCatalog.ForEntries(
+		[
+			new PluginBootEntry("radio", null, "1.0.0", null, PluginOrigin.BuiltIn,
+				Plugin("radio", "radio.md", "# @radio\nTunes in."), PluginBootStatus.Loaded, null),
+			new PluginBootEntry("clash", null, "1.0.0", null, PluginOrigin.BuiltIn,
+				Plugin("clash", "clash.md", """
+					<!-- help-article
+					{"corpus":"help","id":"clash","lookup":"@clash","aliases":["engine"]}
+					-->
+					# @clash
+					Taken over.
+					"""), PluginBootStatus.Loaded, null),
+			new PluginBootEntry("off", null, "1.0.0", null, PluginOrigin.BuiltIn,
+				Plugin("off", "off.md", "# @off\nNot loaded."), PluginBootStatus.Disabled, null),
+			new PluginBootEntry("legacy", null, "1.0.0", null, PluginOrigin.BuiltIn,
+				Plugin("legacy", "legacy.md", "# engine\nStolen.\n\n# @legacyonly\nOnly here."), PluginBootStatus.Loaded, null),
+		]);
+		var (service, root) = BuildServiceOverTempFiles(0, 0, catalog);
+		try
+		{
+			Directory.CreateDirectory(Path.Join(root, "help"));
+			await File.WriteAllTextAsync(Path.Join(root, "help", "engine.md"), "# engine\nThe engine's own.");
+			await service.ReindexAsync();
+
+			await Assert.That(await service.GetEntryAsync("help", "@radio")).Contains("Tunes in.");
+			await Assert.That(await service.GetEntryAsync("help", "@off")).IsNull().Because("the plugin is not loaded");
+			await Assert.That(await service.GetEntryAsync("help", "engine")).Contains("The engine's own.");
+			await Assert.That(await service.GetEntryAsync("help", "@clash")).IsNull()
+				.Because("a file with a clashing topic is left out whole");
+			await Assert.That(await service.GetEntryAsync("help", "@legacyonly")).IsNull()
+				.Because("an old-style file with a clashing topic is left out whole too");
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+			Directory.Delete(plugins, recursive: true);
+		}
+	}
+
+	/// <summary>A plugin unloaded since the start keeps its catalog entry, but not its help.</summary>
+	[Test]
+	public async Task UnloadedPluginHelp_IsNotIndexed()
+	{
+		var plugins = Path.Join(Path.GetTempPath(), $"sharpmush-plugins-{Guid.NewGuid():N}");
+		var help = Path.Join(plugins, "radio", "help");
+		Directory.CreateDirectory(help);
+		await File.WriteAllTextAsync(Path.Join(help, "radio.md"), "# @radio\nTunes in.");
+		var catalog = PluginCatalog.ForEntries(
+		[
+			new PluginBootEntry("radio", null, "1.0.0", null, PluginOrigin.BuiltIn, Path.Join(plugins, "radio"), PluginBootStatus.Loaded, null),
+		]);
+		var manager = Substitute.For<IPluginManager>();
+		var (service, root) = BuildServiceOverTempFiles(0, 0, catalog, new Lazy<IPluginManager>(() => manager));
+		Directory.CreateDirectory(root);
+		try
+		{
+			await service.ReindexAsync();
+			await Assert.That(await service.GetEntryAsync("help", "@radio")).Contains("Tunes in.");
+
+			manager.WasUnloaded("radio").Returns(true);
+			await service.ReindexAsync();
+			await Assert.That(await service.GetEntryAsync("help", "@radio")).IsNull();
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+			Directory.Delete(plugins, recursive: true);
+		}
+	}
+
+	/// <summary>
 	/// The build copies the help files next to the server binary (TextFiles/ under bin/), and the default
 	/// setting is the relative "TextFiles". Resolved against the working directory it only worked where
 	/// the process starts in the binary's folder (the Docker image's /app): `dotnet run --project
@@ -99,7 +188,7 @@ public class TextFileServiceTests
 	/// markdown file each, so a reindex takes long enough for a concurrent reader to land inside it.
 	/// </summary>
 	private static (TextFileService Service, string Root) BuildServiceOverTempFiles(
-		int categories, int entriesPerCategory)
+		int categories, int entriesPerCategory, PluginCatalog? plugins = null, Lazy<IPluginManager>? manager = null)
 	{
 		var root = Path.Join(Path.GetTempPath(), $"sharpmush-textfiles-{Guid.NewGuid():N}");
 		for (var c = 0; c < categories; c++)
@@ -116,7 +205,7 @@ public class TextFileServiceTests
 			TextFile = BaseConfig.TextFile with { TextFilesDirectory = root, CacheOnStartup = false }
 		};
 
-		return (new TextFileService(Options.Create(options), NullLogger<TextFileService>.Instance), root);
+		return (new TextFileService(Options.Create(options), NullLogger<TextFileService>.Instance, plugins, manager), root);
 	}
 
 	/// <remarks>

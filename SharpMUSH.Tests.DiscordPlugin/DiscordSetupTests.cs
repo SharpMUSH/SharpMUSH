@@ -81,4 +81,32 @@ public class DiscordSetupTests
 		await Assert.That(step.Done).IsFalse();
 		await Assert.That(step.Link).IsEqualTo($"{DiscordSetup.DeveloperPortal}/{Application}/bot");
 	}
+
+	[Test]
+	public async Task MirroringBans_AddsBanMembersToTheInvite()
+	{
+		const ulong banMembers = 1UL << 2;
+		var plain = ulong.Parse(DiscordSetup.InviteUrl(Application).Split("permissions=")[1].Split('&')[0]);
+		var mirrored = ulong.Parse(DiscordSetup.InviteUrl(Application, mirrorBans: true).Split("permissions=")[1].Split('&')[0]);
+
+		await Assert.That(mirrored).IsEqualTo(plain | banMembers);
+		await Assert.That(plain & banMembers).IsEqualTo(0UL);
+	}
+
+	[Test]
+	public async Task MirroringBans_AddsAStep_DoneOnlyWhereTheBotMayBan()
+	{
+		var state = new DiscordGatewayState(DiscordGatewayStatus.Connected, Application, "Bot", [], false, Guilds: 2,
+			CannotBanIn: ["Harbour Lights"]);
+
+		var off = DiscordSetup.View(state);
+		var on = DiscordSetup.View(state, mirrorBans: true);
+		var allowed = DiscordSetup.View(state with { CannotBanIn = [] }, mirrorBans: true);
+
+		await Assert.That(off.Steps.Any(step => step.Key == "bans")).IsFalse();
+		var step = on.Steps.Single(step => step.Key == "bans");
+		await Assert.That(step.Done).IsFalse();
+		await Assert.That(step.Todo).Contains("lacks Ban Members in Harbour Lights");
+		await Assert.That(allowed.Steps.Single(step => step.Key == "bans").Done).IsTrue();
+	}
 }

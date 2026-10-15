@@ -16,6 +16,9 @@ public static class GameFeatures
 	/// <summary>The in-game wiki reader: <c>+wiki</c> listings and articles from the portal's wiki.</summary>
 	public const string WikiReader = "wiki-reader";
 
+	/// <summary>The Discord link: linked channels, and members linking their accounts. The <c>discord</c> package over the Discord plugin.</summary>
+	public const string Discord = "discord";
+
 	/// <summary>
 	/// What a new game has before anyone chooses — the applications the server installs at first boot.
 	/// Also what the portal assumes when it cannot ask the server.

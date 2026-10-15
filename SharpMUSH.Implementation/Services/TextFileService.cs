@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 
@@ -24,17 +25,31 @@ public class TextFileService : ITextFileService
 {
 	private readonly IOptions<SharpMUSHOptions> _options;
 	private readonly ILogger<TextFileService> _logger;
+	private readonly PluginCatalog? _plugins;
+	private readonly Lazy<IPluginManager>? _pluginManager;
 
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
 	private readonly AsyncLazy<bool> _initializationTask;
 
+	/// <param name="plugins">
+	/// The plugins this start loaded. Each may ship help of its own in <c>&lt;plugin folder&gt;/&lt;category&gt;/*.md</c>, which
+	/// is indexed with the engine's while the plugin is loaded.
+	/// </param>
+	/// <param name="pluginManager">
+	/// The running plugins. A plugin unloaded since the start leaves the catalog's report as it was, so whether it was is
+	/// asked here; the manager reindexes when one is unloaded or reloaded.
+	/// </param>
 	public TextFileService(
 		IOptions<SharpMUSHOptions> options,
-		ILogger<TextFileService> logger)
+		ILogger<TextFileService> logger,
+		PluginCatalog? plugins = null,
+		Lazy<IPluginManager>? pluginManager = null)
 	{
 		_options = options;
 		_logger = logger;
+		_plugins = plugins;
+		_pluginManager = pluginManager;
 
 		if (_options.Value.TextFile.CacheOnStartup)
 		{
@@ -290,7 +305,9 @@ public class TextFileService : ITextFileService
 			return;
 		}
 
-		var categories = await ListCategoriesAsync();
+		var categories = (await ListCategoriesAsync())
+			.Concat(PluginDirectories().SelectMany(directory => Directory.GetDirectories(directory).Select(Path.GetFileName)).OfType<string>())
+			.Distinct(StringComparer.OrdinalIgnoreCase);
 		var rebuilt = new Dictionary<string, Dictionary<string, IndexEntry>>(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var category in categories.OrderBy(name => name, StringComparer.Ordinal))
@@ -320,25 +337,64 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	private Dictionary<string, IndexEntry>? BuildCategoryIndex(string category)
 	{
-		if (PathInside(BaseDirectory, category) is not { } categoryPath || !Directory.Exists(categoryPath))
+		var categoryPath = PathInside(BaseDirectory, category);
+		var pluginPaths = PluginDirectories()
+			.Select(directory => PathInside(directory, category))
+			.OfType<string>()
+			.Where(Directory.Exists)
+			.ToList();
+		if ((categoryPath is null || !Directory.Exists(categoryPath)) && pluginPaths.Count == 0)
 		{
 			return null;
 		}
 
 		var categoryIndex = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
 
-		var mdFiles = Directory.GetFiles(categoryPath, "*.md").OrderBy(path => path, StringComparer.Ordinal);
-
-		foreach (var file in mdFiles)
+		if (categoryPath is not null && Directory.Exists(categoryPath))
 		{
-			IndexMarkdownFile(file, category, categoryIndex);
+			foreach (var file in Directory.GetFiles(categoryPath, "*.md").OrderBy(path => path, StringComparer.Ordinal))
+			{
+				IndexMarkdownFile(file, category, categoryIndex);
+			}
+		}
+
+		foreach (var file in pluginPaths.SelectMany(path => Directory.GetFiles(path, "*.md").OrderBy(file => file, StringComparer.Ordinal)))
+		{
+			IndexPluginFile(file, category, ref categoryIndex);
 		}
 
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
 		return categoryIndex;
 	}
 
-	private void IndexMarkdownFile(string filePath, string category, Dictionary<string, IndexEntry> index)
+	/// <summary>The folders of the plugins this start loaded and not unloaded since, in load order.</summary>
+	private IEnumerable<string> PluginDirectories() =>
+		_plugins?.Entries
+			.Where(entry => entry.Status == PluginBootStatus.Loaded && Directory.Exists(entry.Directory)
+				&& _pluginManager?.Value.WasUnloaded(entry.Id) != true)
+			.Select(entry => entry.Directory) ?? [];
+
+	/// <summary>
+	/// Indexes a plugin's help file into a copy of the index and keeps the copy only when the whole file indexed. A
+	/// plugin file with a topic that clashes with one already indexed, even an old-style one, or a file that does not
+	/// parse, is left out whole and logged; the engine's help, and the server, carry on without it.
+	/// </summary>
+	private void IndexPluginFile(string filePath, string category, ref Dictionary<string, IndexEntry> index)
+	{
+		var attempt = new Dictionary<string, IndexEntry>(index, StringComparer.OrdinalIgnoreCase);
+		try
+		{
+			IndexMarkdownFile(filePath, category, attempt, plugin: true);
+			index = attempt;
+		}
+		catch (Exception exception) when (exception is InvalidDataException or System.Text.Json.JsonException)
+		{
+			_logger.LogWarning("Plugin help {File} was not indexed: {Reason}", filePath, exception.Message);
+		}
+	}
+
+	/// <param name="plugin">Whether the file is a plugin's, which may not repeat a lookup even in an old-style file.</param>
+	private void IndexMarkdownFile(string filePath, string category, Dictionary<string, IndexEntry> index, bool plugin = false)
 	{
 		var parsed = HelpArticleParser.Parse(File.ReadAllText(filePath), category);
 		foreach (var source in parsed)
@@ -353,7 +409,7 @@ public class TextFileService : ITextFileService
 				var entry = new IndexEntry(filePath, 0, 0, help.Topic, help, hidden);
 				if (!index.TryAdd(lookup, entry))
 				{
-					if (source.Declared || index[lookup].Help?.Article?.Id.StartsWith("legacy:", StringComparison.Ordinal) == false)
+					if (plugin || source.Declared || index[lookup].Help?.Article?.Id.StartsWith("legacy:", StringComparison.Ordinal) == false)
 					{
 						throw new InvalidDataException($"Duplicate help lookup in {category}: {lookup}");
 					}
