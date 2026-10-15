@@ -119,7 +119,8 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), d.Compatibility.TinyMath),
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), d.Compatibility.SilentPEmit),
 				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), d.Compatibility.ParenGroups),
-				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters)
+				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters),
+				Boolean(Get(nameof(CompatibilityOptions.InnermostTokens)), d.Compatibility.InnermostTokens)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
@@ -233,6 +234,7 @@ public static partial class ReadPennMushConfig
 			{
 				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), d.Limit.GlobalQueueLimit),
 				GuestOutputLimit = UnsignedInteger(Get(nameof(LimitOptions.GuestOutputLimit)), d.Limit.GuestOutputLimit),
+				MaxGalleryImages = UnsignedInteger(Get(nameof(LimitOptions.MaxGalleryImages)), d.Limit.MaxGalleryImages),
 				CommandBurstSize = UnsignedInteger(Get(nameof(LimitOptions.CommandBurstSize)), d.Limit.CommandBurstSize)
 			},
 			Log = new LogOptions(

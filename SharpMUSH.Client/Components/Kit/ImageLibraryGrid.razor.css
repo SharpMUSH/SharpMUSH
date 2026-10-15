@@ -1,0 +1,63 @@
+.kit-library {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.kit-library-empty {
+	padding: 24px 16px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-card);
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.kit-library-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+	gap: 8px;
+}
+
+.kit-library-item {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 0 0 4px;
+	border: 2px solid transparent;
+	border-radius: 10px;
+	background: var(--surface-2);
+	overflow: hidden;
+	cursor: pointer;
+	color: var(--text-dim);
+}
+
+.kit-library-item img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+}
+
+.kit-library-name {
+	padding: 0 6px;
+	font-size: 11px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.kit-library-name ::deep .kit-library-lock {
+	font-size: 12px;
+	vertical-align: -2px;
+	color: var(--text-dim);
+}
+
+.kit-library-item:hover,
+.kit-library-item:focus-visible {
+	border-color: var(--accent);
+}
+
+.kit-library-item:disabled {
+	cursor: default;
+	opacity: 0.6;
+}

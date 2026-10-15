@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -17,13 +18,18 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   POST   /api/wiki-assets                 — upload an image (authenticated, 10 MB max)
 ///   GET    /api/wiki-assets/{id}/{fileName} — stream the asset bytes (anonymous, cacheable)
-///   GET    /api/wiki-assets?skip&amp;take       — list asset metadata (Wizard+)
-///   DELETE /api/wiki-assets/{id}            — delete an asset (Wizard+)
+///   GET    /api/wiki-assets?skip&amp;take       — list asset metadata (media.admin)
+///   GET    /api/wiki-assets/library?skip&amp;take&amp;search — the shared image library: the files the caller finds
+///                                             (signed in; <see cref="WikiAssetLibrary.Finds"/>)
+///   PUT    /api/wiki-assets/{id}/sharing    — share a file or set its lock (uploader or media.admin)
+///   DELETE /api/wiki-assets/{id}            — delete an asset (media.admin)
 /// </summary>
 [ApiController]
 [Route("api/wiki-assets")]
 public partial class WikiAssetController(
 	IWikiAssetService assetService,
+	IAdministrativeCapabilityService capabilities,
+	IRoleRegistryService roles,
 	ILogger<WikiAssetController> logger) : ControllerBase
 {
 	/// <summary>Content types we accept for upload. Everything else gets 415.</summary>
@@ -51,7 +57,29 @@ public partial class WikiAssetController(
 		long SizeBytes,
 		string Sha256,
 		string UploaderDbref,
-		DateTimeOffset UploadedAt);
+		DateTimeOffset UploadedAt,
+		bool Private,
+		string? Lock);
+
+	/// <summary>One file in the shared image library.</summary>
+	/// <param name="Lock">The permission a player needs to find it; null for everyone.</param>
+	/// <param name="CanManage">The caller may change <paramref name="Lock"/>: they uploaded it or hold <c>media.admin</c>.</param>
+	public record LibraryAssetDto(
+		string Id,
+		string FileName,
+		string Url,
+		string ContentType,
+		long SizeBytes,
+		DateTimeOffset UploadedAt,
+		string? Lock,
+		bool CanManage);
+
+	/// <summary>
+	/// <c>PUT /api/wiki-assets/{id}/sharing</c>: <paramref name="Shared"/> true shares a file kept to one
+	/// gallery (sharing cannot be undone); <paramref name="Lock"/> is the permission a player needs to find
+	/// it, null or empty for everyone.
+	/// </summary>
+	public record SharingRequest(bool Shared, string? Lock);
 
 	private static string AssetUrl(string id, string fileName) => $"/api/wiki-assets/{id}/{fileName}";
 
@@ -93,7 +121,7 @@ public partial class WikiAssetController(
 			return Unauthorized(new { error = "No character on this session." });
 
 		await using var content = file.OpenReadStream();
-		return await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct) switch
+		return await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct: ct) switch
 		{
 			WikiAsset asset => Uploaded(asset, uploaderDbref),
 			Error<string> error => StatusCode(StatusCodes.Status500InternalServerError, new { error = error.Value }),
@@ -139,8 +167,71 @@ public partial class WikiAssetController(
 		var assets = await assetService.ListAsync(skip, take);
 		return Ok(assets.Select(a => new WikiAssetDto(
 			a.Id, a.FileName, AssetUrl(a.Id, a.FileName), a.ContentType,
-			a.SizeBytes, a.Sha256, a.UploaderDbref, a.UploadedAt)));
+			a.SizeBytes, a.Sha256, a.UploaderDbref, a.UploadedAt, a.Private, a.Lock)));
 	}
+
+	/// <summary>
+	/// GET /api/wiki-assets/library?skip=0&amp;take=100&amp;search=
+	/// The shared image library, newest first: every shared file the caller finds, whose name contains
+	/// <paramref name="search"/> when one is given.
+	/// </summary>
+	[HttpGet("library")]
+	[Authorize]
+	public async Task<IActionResult> Library([FromQuery] int skip = 0, [FromQuery] int take = 100, [FromQuery] string? search = null)
+	{
+		var (scopes, viewer) = await LibraryViewer.ResolveAsync(User, capabilities, HttpContext.RequestAborted);
+		var term = search?.Trim() ?? "";
+		var assets = await assetService.ListAsync(Math.Max(skip, 0), Math.Clamp(take, 1, 500), asset =>
+			WikiAssetLibrary.Finds(asset, scopes, viewer)
+			&& asset.FileName.Contains(term, StringComparison.OrdinalIgnoreCase));
+		return Ok(assets.Select(a => new LibraryAssetDto(
+			a.Id, a.FileName, AssetUrl(a.Id, a.FileName), a.ContentType, a.SizeBytes, a.UploadedAt, a.Lock,
+			WikiAssetLibrary.Manages(a, scopes, viewer))));
+	}
+
+	/// <summary>
+	/// PUT /api/wiki-assets/{id}/sharing
+	/// Shares a file kept to one gallery, or sets the permission a player needs to find it in the library.
+	/// The uploader or a <c>media.admin</c> holder only; a shared file is never made private again, since a
+	/// page or another gallery may be showing it.
+	/// </summary>
+	[HttpPut("{id}/sharing")]
+	[Authorize]
+	public async Task<IActionResult> SetSharing(string id, [FromBody] SharingRequest request, CancellationToken ct)
+	{
+		if (await assetService.FindAsync(id, ct) is not WikiAsset asset)
+			return NotFound();
+
+		var (scopes, viewer) = await LibraryViewer.ResolveAsync(User, capabilities, HttpContext.RequestAborted);
+		if (!WikiAssetLibrary.Manages(asset, scopes, viewer))
+			return Forbid();
+		if (!request.Shared && !asset.Private)
+			return Conflict(new ApiErrorDto("A shared file stays shared: a page or a gallery may be showing it. Lock it instead."));
+
+		var permission = string.IsNullOrWhiteSpace(request.Lock) ? null : request.Lock.Trim().ToLowerInvariant();
+		if (permission is not null && !await IsPermissionAsync(permission, ct))
+			return BadRequest(new ApiErrorDto($"No such permission: {permission}."));
+
+		return await assetService.SetSharingAsync(id, !request.Shared, permission, ct) switch
+		{
+			WikiAsset changed => Shared(changed, viewer),
+			NotFound _ => NotFound(),
+		};
+	}
+
+	/// <summary>Log a sharing change and answer with the file as the library shows it.</summary>
+	private IActionResult Shared(WikiAsset asset, string? viewer)
+	{
+		logger.LogInformation("Wiki asset sharing set: id={Id} private={Private} lock={Lock} by={Viewer}",
+			asset.Id, asset.Private, LogSanitizer.Sanitize(asset.Lock ?? ""), LogSanitizer.Sanitize(viewer ?? ""));
+		return Ok(new LibraryAssetDto(asset.Id, asset.FileName, AssetUrl(asset.Id, asset.FileName), asset.ContentType,
+			asset.SizeBytes, asset.UploadedAt, asset.Lock, true));
+	}
+
+	/// <summary>A built-in permission or one the game defined.</summary>
+	private async Task<bool> IsPermissionAsync(string scope, CancellationToken ct) =>
+		PortalPermission.IsKnown(scope)
+		|| (await roles.GetCustomPermissionsAsync(ct)).Any(p => string.Equals(p.Scope, scope, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// DELETE /api/wiki-assets/{id}

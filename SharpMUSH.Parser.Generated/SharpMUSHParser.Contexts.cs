@@ -222,6 +222,8 @@ public partial class SharpMUSHParser
 		ITerminalNode REG_ALPHA() => SoftcodeTree.Token(this, SharpMUSHParser.REG_ALPHA, 0);
 		ITerminalNode ITEXT_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.ITEXT_NUM, 0);
 		ITerminalNode ITEXT_LAST() => SoftcodeTree.Token(this, SharpMUSHParser.ITEXT_LAST, 0);
+		ITerminalNode DTEXT_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.DTEXT_NUM, 0);
+		ITerminalNode DTEXT_LAST() => SoftcodeTree.Token(this, SharpMUSHParser.DTEXT_LAST, 0);
 		ITerminalNode STEXT_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.STEXT_NUM, 0);
 		ITerminalNode STEXT_LAST() => SoftcodeTree.Token(this, SharpMUSHParser.STEXT_LAST, 0);
 		ITerminalNode VWX() => SoftcodeTree.Token(this, SharpMUSHParser.VWX, 0);
@@ -247,6 +249,7 @@ public partial class SharpMUSHParser
 		ITerminalNode OTHER() => SoftcodeTree.Token(this, SharpMUSHParser.OTHER, 0);
 		ITerminalNode DOLLAR() => SoftcodeTree.Token(this, SharpMUSHParser.DOLLAR, 0);
 		ITerminalNode HASH() => SoftcodeTree.Token(this, SharpMUSHParser.HASH, 0);
+		ITerminalNode PERCENT_AT_END() => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT_AT_END, 0);
 		AnsiContext ansi() => SoftcodeTree.Rule<AnsiContext>(this, 0);
 	}
 

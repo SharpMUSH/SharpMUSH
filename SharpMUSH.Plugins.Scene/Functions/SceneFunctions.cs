@@ -27,6 +27,8 @@ public static class SceneFunctions
 	private const string ScenePermission = "#-1 PERMISSION";
 	private const string NoSuchType = "#-1 NO SUCH POSE TYPE";
 	private const string NoSuchField = "#-1 UNKNOWN TYPE FIELD";
+	private const string NoSuchDetail = "#-1 NO SUCH SCENE DETAIL";
+	private const string NoSuchDetailField = "#-1 UNKNOWN DETAIL FIELD";
 
 	/// <summary>
 	/// Returns true when the viewer may see this scene. Public scenes are visible
@@ -83,7 +85,8 @@ public static class SceneFunctions
 	/// scene(&lt;id&gt;[, &lt;field&gt;])
 	/// Returns a field of a scene. Fields: status (default), id, public, istemp,
 	/// scheduledfor, startedat, lastactivityat, posecount, owner, ownername,
-	/// starter, startername, room, roomname, title, summary, or any meta key.
+	/// starter, startername, room, roomname, title, summary, details (the details it has a value for), or any
+	/// meta key. A detail the catalogue lists reads empty while it is unset.
 	/// </summary>
 	[SharpFunction(Name = "scene", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -127,10 +130,25 @@ public static class SceneFunctions
 			// scene package's FUN`OWNS compares them against %#, which is the short form.
 			"room" => new CallState(await SceneLocate.ObjIdOrSelfAsync(parser, scene.RoomDbref)),
 			"roomname" => new CallState(scene.RoomName),
-			_ => new CallState(scene.Meta.TryGetValue(field, out var metaVal)
-				? metaVal
-				: "#-1 UNKNOWN SCENE FIELD"),
+			"details" => new CallState(string.Join(" ", DetailKeys(scene, await SceneLogger.DetailsAsync(parser.ServiceProvider)))),
+			_ when scene.Meta.TryGetValue(field, out var metaVal) => new CallState(metaVal),
+			// A detail the game lists reads empty until it is set, as an attribute does.
+			_ => (await SceneLogger.DetailsAsync(parser.ServiceProvider)).Details.Any(d => d.Key == field)
+				? CallState.Empty
+				: new CallState("#-1 UNKNOWN SCENE FIELD"),
 		};
+	}
+
+	/// <summary>
+	/// The details <paramref name="scene"/> has a value for: the catalogue's in its order, then any other key a player
+	/// set, by name. A built-in field kept in the bag (the title, the pitch) is not a detail.
+	/// </summary>
+	internal static IEnumerable<string> DetailKeys(Contracts.Scene scene, SceneDetailCatalogue catalogue)
+	{
+		var set = scene.Meta.Where(m => !string.IsNullOrWhiteSpace(m.Value) && SceneDetails.Normalize(m.Key) is string)
+			.Select(m => m.Key).ToHashSet(StringComparer.Ordinal);
+		var listed = catalogue.Details.Select(d => d.Key).Where(set.Contains).ToList();
+		return listed.Concat(set.Except(listed).Order(StringComparer.Ordinal));
 	}
 
 	/// <summary>
@@ -641,6 +659,103 @@ public static class SceneFunctions
 			"order" => type.Order.ToString(System.Globalization.CultureInfo.InvariantCulture),
 			_ => NoSuchField,
 		});
+	}
+
+	/// <summary>
+	/// scenedetails()
+	/// The scene details the Scene Logger defines, in their order, as a space-separated list of keys.
+	/// </summary>
+	[SharpFunction(Name = "scenedetails", MinArgs = 0, MaxArgs = 0,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> SceneDetailList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var catalogue = await SceneLogger.DetailsAsync(parser.ServiceProvider);
+		return new CallState(string.Join(" ", catalogue.Details.Select(d => d.Key)));
+	}
+
+	/// <summary>
+	/// scenedetail(&lt;key&gt;[, &lt;field&gt;])
+	/// One field of a scene detail: label (the default), hint, choices (split by |), many, listed, tone or order.
+	/// </summary>
+	[SharpFunction(Name = "scenedetail", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["key", "field"])]
+	public static async ValueTask<CallState> SceneDetailFn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var key = args["0"].Message.ToPlainText().Trim().ToLowerInvariant();
+		var field = args.TryGetValue("1", out var fieldArg)
+			? fieldArg.Message.ToPlainText().Trim().ToLowerInvariant()
+			: "label";
+
+		var catalogue = await SceneLogger.DetailsAsync(parser.ServiceProvider);
+		if (catalogue.Details.FirstOrDefault(d => d.Key == key) is not { } detail)
+		{
+			return new CallState(NoSuchDetail);
+		}
+
+		return new CallState(field switch
+		{
+			"label" => detail.Label,
+			"hint" => detail.Hint,
+			"choices" => string.Join(SceneDetails.Separator, detail.Choices),
+			"many" => detail.Many ? "1" : "0",
+			"listed" => detail.Listed ? "1" : "0",
+			"tone" => detail.Tone,
+			"order" => detail.Order.ToString(System.Globalization.CultureInfo.InvariantCulture),
+			_ => NoSuchDetailField,
+		});
+	}
+
+	/// <summary>
+	/// scenedetailcheck(&lt;key&gt;, &lt;json&gt;)
+	/// Empty when &lt;json&gt; would read as scene detail &lt;key&gt;; otherwise <c>#-1</c> and the reason. How the scene
+	/// package refuses a bad catalogue edit before writing it.
+	/// </summary>
+	[SharpFunction(Name = "scenedetailcheck", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["key", "json"])]
+	public static ValueTask<CallState> SceneDetailCheck(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		return ValueTask.FromResult(SceneDetails.Read(args["0"].Message.ToPlainText().Trim(), args["1"].Message.ToPlainText()) switch
+		{
+			SceneDetail => CallState.Empty,
+			Error<string> error => new CallState($"#-1 {error.Value}"),
+		});
+	}
+
+	/// <summary>
+	/// scenedetailvalue(&lt;key&gt;, &lt;value&gt;)
+	/// &lt;value&gt; as detail &lt;key&gt; keeps it: trimmed, several values joined by |, each written as its choice is.
+	/// A key the catalogue does not list keeps the value trimmed. <c>#-1</c> and the reason for a key that can't be a
+	/// detail or a value the detail does not allow.
+	/// </summary>
+	[SharpFunction(Name = "scenedetailvalue", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["key", "value"])]
+	public static async ValueTask<CallState> SceneDetailValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var value = args["1"].Message.ToPlainText();
+		return SceneDetails.Normalize(args["0"].Message.ToPlainText()) switch
+		{
+			string key => await KeptValueAsync(parser, key, value),
+			Error<string> error => new CallState($"#-1 {error.Value}"),
+		};
+	}
+
+	private static async ValueTask<CallState> KeptValueAsync(IMUSHCodeParser parser, string key, string value)
+	{
+		var catalogue = await SceneLogger.DetailsAsync(parser.ServiceProvider);
+		var accepted = catalogue.Details.FirstOrDefault(d => d.Key == key) is { } detail
+			? SceneDetails.Accept(detail, value)
+			: value.Trim();
+		return accepted switch
+		{
+			string kept => new CallState(kept),
+			Error<string> error => new CallState($"#-1 {error.Value}"),
+		};
 	}
 
 	/// <summary>

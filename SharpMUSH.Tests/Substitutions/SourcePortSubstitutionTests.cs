@@ -14,8 +14,8 @@ public class SourcePortSubstitutionTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	[Test]
-	[Arguments("think %d", 4242L, "4242")]
-	[Arguments("think %D", 4243L, "4243")]
+	[Arguments("think %j", 4242L, "4242")]
+	[Arguments("think %J", 4243L, "4243")]
 	public async Task ResolvesSourcePortWhenHandlePresent(string code, long handle, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -32,9 +32,18 @@ public class SourcePortSubstitutionTests
 	[Test]
 	public async Task ResolvesEmptyWhenNoHandle()
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain("%d"));
+		var result = await Parser.FunctionParse(MarkupText.Plain("%j"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>A bare <c>%d</c> is no substitution, as in PennMUSH: the letter.</summary>
+	[Test]
+	public async Task BareDIsTheLetter()
+	{
+		var result = await Parser.FunctionParse(MarkupText.Plain("%d"));
+
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("d");
 	}
 }

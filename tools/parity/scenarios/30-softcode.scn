@@ -55,7 +55,7 @@ think [iter(a b,#1 x#)] ##:#@
 ::case sc.switchsubject  #$ is the subject of the outermost switch whose action it is written in, text elsewhere
 &SWSHOW me=#$
 &SWOWN me=switch(z,*,#$)
-think [switch(moof,*a*,foo,#$)] [switchall(abc,a*,#$,*c,-#$)] [case(moof,moof,#$)] [reswitch(abc,^a,#$)]
+think [switch(moof,*a*,foo,#$)] [switchall(abc,a*,#$,*c,-#$)] [reswitch(abc,^a,#$)]
 think [switch(a,*,switch(b,*,#$))] [switch(b,*,switch(b,#$,x,y))] [switch(a,*,case(b,b,#$))] [iter(x y,switch(##,*,#$))]
 think [switch(a,*,u(me/SWSHOW))] [switch(a,*,u(me/SWOWN))] [switch(abc,#$,yes,no)] #$
 @switch/inline outer=*,{@switch/inline inner=*,{think nested #$ %$0}}
@@ -63,6 +63,17 @@ think [switch(a,*,u(me/SWSHOW))] [switch(a,*,u(me/SWOWN))] [switch(abc,#$,yes,no
 ::settle
 &SWSHOW me
 &SWOWN me
+
+::case sc.subjectcaseif  #$ in case() and if(): text in PennMUSH, the subject or condition in SharpMUSH; a switch() still wins
+think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)] [switch(a,*,if(1,%$0 [slev()]))]
+think [switch(a,*,case(b,b,#$))] [case(a,a,switch(b,*,#$))] [if(1,switch(b,*,#$))] [switch(a,*,if(1,#$))]
+
+::case sc.tokenbinding  with loops and switches nested in each other, ## #@ #$ name the outermost (innermost_tokens off)
+think [iter(a b,##[iter(x,##)])] [iter(a b,iter(##,##))] [switch(a,*,iter(x y,#$##))] [iter(a b,switch(c,*,switch(d,*,###$)))]
+@dolist a b=think dol [iter(x y,##:#@)]
+@dolist/inline a b=@switch/inline s=*,think dolsw ##:#$
+@switch/inline o=*,@dolist/inline x y=think swdol #$:##
+::settle
 
 ::case sc.attrs  attribute functions on the fixture object
 think [get([first(lcon(*Alice))]/COLOR)]
@@ -132,3 +143,14 @@ think a[]b|[strcat(x,[],y)]|[]
 @skip/ifelse 1=think ifelse-true,think ifelse-false
 @skip/ifelse 0=think ifelse-true,think ifelse-false
 @skip/ifelse 0=think ifelse-only-true
+
+::case sc.trailing-percent  a % at the end of the text is a literal %; a \ there is dropped when evaluated and kept when stored
+::as wiz
+think 50%
+say 50%
+think 50%% x
+think %
+think a\
+&TRAILPCT me=50%
+&TRAILBS me=a\
+think [get(me/TRAILPCT)] [u(me/TRAILPCT)] [get(me/TRAILBS)] [u(me/TRAILBS)]

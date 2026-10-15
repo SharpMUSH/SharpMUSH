@@ -8,7 +8,13 @@ lexer grammar SharpMUSHLexer;
  */
 
 fragment WS: [ \r\n\f\t]*;
+// RhostMUSH's bang notation on a call, %i<n> or %d<n>: ! or !! and an optional $ or ^ (Bang.cs).
+fragment BANG: '!' '!'? [$^]?;
 
+// A '\' or '%' that ends the text has nothing to escape or substitute: PennMUSH drops the '\' and keeps
+// the '%' as text (src/parse.c). Each is one token, so neither is left waiting for a character.
+ESCAPE_AT_END: '\\' EOF;
+PERCENT_AT_END: '%' EOF;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[' WS;
 CBRACK: ']';
@@ -21,7 +27,7 @@ EQUALS: '=' WS;
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: ';' WS;
 OANSI: '\u001b' -> pushMode(ANSI);
-FUNCHAR: [0-9a-zA-Z_~@`]+ '(' WS ; 
+FUNCHAR: BANG? [0-9a-zA-Z_~@`]+ '(' WS ;
 OPAREN: '(' WS;
 
 // Regexp captures: $0-$9 (one digit, as in PennMUSH) and $<name>. They read the regexp context that
@@ -72,8 +78,10 @@ LASTCOMMAND_AFTER_EVAL: [uU] -> popMode;
 PIPED_OUTPUT: '>' -> popMode;
 INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
-ITEXT_NUM: [iI][0-9]+ -> popMode;
+ITEXT_NUM: [iI] BANG? [0-9]+ -> popMode;
 ITEXT_LAST: [iI] 'L' -> popMode;
+DTEXT_NUM: [dD] BANG? [0-9]+ -> popMode;
+DTEXT_LAST: [dD][lL] -> popMode;
 STEXT_NUM: '$' [0-9]+ -> popMode;
 STEXT_LAST: '$' 'L' -> popMode;
 ARG_STARTCARET: '<' -> popMode;

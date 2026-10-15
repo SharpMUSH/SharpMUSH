@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+who and +where commands with a shared formatting object, drawn as layout tables."
 license: MIT
@@ -21,6 +21,7 @@ objects:
   - ref: ww_global
     type: thing
     name: Who-Where Global Object
+    location: "{{$master_room}}"
     parent: "{{ww_functions}}"
     attributes:
       CMD_+WHO: |-
@@ -43,8 +44,18 @@ objects:
         json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1))
       WW_FN_FOOT: |-
         %r[rule()]%r[tone(muted,[words(%0)] connected)]
+      # A Status column joins the table when some player has a status. Another package fills it without
+      # editing this one: it attaches FILTER`WHO`STATUS`<NAME> to this object, and chain() runs every such
+      # filter in name order, each getting the status so far as %0 and the player as %1.
       WW_FN_WHO: |-
-        box(datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[ansi(h,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)])[u(%!/WW_FN_FOOT,%0)],Who's Online)
+        setq(ww_filters,u(%!/WW_FN_FILTERS,WHO`STATUS))[setq(ww_status,iter(%0,chain(%q<ww_filters>,,%i0),,%r))][box(if(strlen(trim(edit(%q<ww_status>,%r,))),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2%r3),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[ansi(h,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)],[ansi(h,Status)]%r%q<ww_status>),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[ansi(h,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)]))[u(%!/WW_FN_FOOT,%0)],Who's Online)]
+      # %0 a point, %1 what would be shown, %2 the player: what every FILTER`<point>`<NAME> on this object
+      # makes of it, in name order. With no filters, %1 unchanged.
+      WW_FN_FILTER: |-
+        chain(u(%!/WW_FN_FILTERS,%0),%1,%2)
+      # %0 a point: its filters, as the chain() list.
+      WW_FN_FILTERS: |-
+        iter(lattr(%!/FILTER`%0`*),%!/%i0)
       WW_FN_WHERE: |-
         box(datacolumns(u(%!/WW_FN_OPTS,1%r2,1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Location)]%r[iter(%0,firstof(name(loc(%i0)),-),,%r)])[u(%!/WW_FN_FOOT,%0)],Where)
 
@@ -68,6 +79,21 @@ objects:
 
         It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
         well as from theirs.
+
+        A Status column appears when another package gives some player a status, such as `+lfrp`.
+      HELP`WHO`FILTERS: |-
+        A package can put a status in `+who` without editing who-where. It adds a **filter** to the
+        Who-Where Function Object: an attribute named `` FILTER`WHO`STATUS`<name> ``. For each player,
+        `+who` runs every such filter in name order with `chain\(\)`. Each gets the status so far as
+        `%%0`, empty to begin with, and the player as `%%1`, and returns the status to show; the next
+        filter gets that. The Status column appears when any player's status is not empty.
+
+        A filter runs as the Who-Where Function Object, with `%%#` the player reading. For example,
+        to mark staff:
+
+        `` &FILTER`WHO`STATUS`STAFF <object>=if\(hasrole\(%%1,wizard\),Staff,%%0\) ``
+
+        A filter a package attaches goes away when the package is uninstalled.
       HELP`WHERE: |-
         `+where` lists everyone connected and the room each is standing in.
 

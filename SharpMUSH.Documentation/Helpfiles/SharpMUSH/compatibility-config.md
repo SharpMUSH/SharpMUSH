@@ -24,6 +24,11 @@
       "id": "parenthesis-groups-paren-groups",
       "heading": "Parenthesis groups: `paren_groups`",
       "lookup": "compatibility config parenthesis groups paren groups"
+    },
+    {
+      "id": "innermost-loop-tokens",
+      "heading": "Innermost loop tokens",
+      "lookup": "compatibility config innermost loop tokens"
     }
   ]
 }
@@ -116,4 +121,37 @@ With the option on, the unescaped form groups as PennMUSH's does:
 ```sharp paren_groups
 > think cat(x,(a,b)c)
 x (a,b)c
+```
+
+## Innermost loop tokens
+
+The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches
+PennMUSH.
+
+With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$`
+names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action
+they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the
+code of an attribute that the loop or switch calls, they are plain text.
+
+With it on, `##` and `#@` name the innermost `iter()` or `@dolist` that is running, and `#$` names
+the innermost switch, `case()`, `if()` or `ifelse()` whose action is running. This also applies in the code of an attribute that
+the loop or switch calls. Either way, the value is inserted as text and is never evaluated as code.
+
+To get the same result with either setting, use `%i0` or `itext(0)` for the current element,
+`inum(0)` for its position, and `%$0` or `stext(0)` for the current switch.
+
+```sharp
+> think iter(a b,iter(x y,##))
+a a b b
+> think switch(a,*,switch(b,*,#$))
+a
+```
+
+With the option on, the same lines read the inner loop and the inner switch:
+
+```sharp innermost_tokens
+> think iter(a b,iter(x y,##))
+x y x y
+> think switch(a,*,switch(b,*,#$))
+b
 ```

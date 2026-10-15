@@ -270,7 +270,7 @@ public partial class Commands
 			var wrappedIteration = new IterationWrapper<MString>
 			{
 				Value = MarkupText.Empty, Break = false, NoBreak = noBreak, Iteration = 0,
-				Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
+				Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation, DoList = true
 			};
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
@@ -325,7 +325,8 @@ public partial class Commands
 					NoBreak = noBreak,
 					Iteration = iteration,
 					Spliced = true,
-					Evaluation = parser.CurrentState.CurrentEvaluation
+					Evaluation = parser.CurrentState.CurrentEvaluation,
+					DoList = true
 				};
 
 				// The loops this one runs inside stay visible, as they do inline: a ## written in an outer
@@ -339,7 +340,8 @@ public partial class Commands
 						Break = frame.Break,
 						NoBreak = frame.NoBreak,
 						Spliced = frame.Spliced,
-						Evaluation = frame.Evaluation
+						Evaluation = frame.Evaluation,
+						DoList = frame.DoList
 					}));
 				iterationStack.Push(iterationWrapper);
 

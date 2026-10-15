@@ -219,11 +219,17 @@ public class IterationWrapper<T>
 	/// the loop, never the code of an attribute it calls.
 	/// </summary>
 	public DBAttribute? Evaluation { get; init; }
+
+	/// <summary>
+	/// Whether this iteration is an <c>@dolist</c>, which <c>%d&lt;n&gt;</c> counts. <c>%i&lt;n&gt;</c> counts
+	/// every iteration.
+	/// </summary>
+	public bool DoList { get; init; }
 }
 
 /// <summary>
 /// One switch's subject, which <c>stext()</c> and <c>%$&lt;n&gt;</c> read, and which <c>#$</c> reads while one of
-/// its actions runs.
+/// its actions runs. An <c>if()</c> or <c>ifelse()</c> pushes one too, whose subject is its evaluated condition.
 /// </summary>
 public sealed class SwitchFrame
 {
@@ -231,8 +237,10 @@ public sealed class SwitchFrame
 	public required MString Text { get; init; }
 
 	/// <summary>
-	/// Whether <c>#$</c> reads this switch: true for <c>switch()</c>, <c>reswitch()</c>, <c>@switch</c> and
-	/// <c>@select</c>, which PennMUSH splices it into, and false for <c>case()</c>, which it does not.
+	/// Whether PennMUSH splices <c>#$</c> into this switch's action: true for <c>switch()</c>, <c>reswitch()</c>,
+	/// <c>@switch</c> and <c>@select</c>, false for <c>case()</c>, <c>if()</c> and <c>ifelse()</c>, which leave it
+	/// as text there. <c>#$</c> reads an unspliced one only when no spliced one binds it, so code written for
+	/// PennMUSH reads the same switch it did there.
 	/// </summary>
 	public bool Spliced { get; init; }
 
@@ -732,7 +740,8 @@ public partial record ParserState
 				Break = frame.Break,
 				NoBreak = frame.NoBreak,
 				Spliced = frame.Spliced,
-				Evaluation = frame.Evaluation
+				Evaluation = frame.Evaluation,
+				DoList = frame.DoList
 			})),
 			RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
 				? owned.Clone()

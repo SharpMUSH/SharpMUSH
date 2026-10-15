@@ -220,11 +220,11 @@ def generate(grammar_name):
 		w(f'bracketPattern__{n}: OBRACK evaluationString__{n}? CBRACK;')
 		w(f'regexpCapture__{n}: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__{n}? CCARET?;')
 		w(f'validSubstitution__{n}: complexSubstitutionSymbol__{n} | substitutionSymbol;')
-		w(f'complexSubstitutionSymbol__{n}: (REG_STARTCARET explicitEvaluationString__{n} CCARET | ARG_STARTCARET explicitEvaluationString__{n} CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);')
+		w(f'complexSubstitutionSymbol__{n}: (REG_STARTCARET explicitEvaluationString__{n} CCARET | ARG_STARTCARET explicitEvaluationString__{n} CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);')
 		# With paren_groups, a '(' or a name's '(' that starts no call opens a group instead of being text.
 		w(f'genericText__{n}: beginGenericText__{n}' + ('' if c.G else ' | FUNCHAR') + ';')
 		tokens = list(text_tokens(c)) + ([] if c.G else ['OPAREN'])
-		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | ansi)']) + ';')
+		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi)']) + ';')
 		if c.P == 1:
 			body = block(later(c)) + '*'
 			w(f'closedGroupFirst__{n}: beginGenericText__Open {body} genericText__Close;')
@@ -246,7 +246,7 @@ def generate(grammar_name):
     )
 ;
 
-escapedText: ESCAPE ANY;
+escapedText: ESCAPE ANY | ESCAPE_AT_END;
 
 iterationToken: ITER_ELEMENT | ITER_POSITION;
 
@@ -308,11 +308,12 @@ ACCESSORS = {
 	'function': [('FUNCHAR', False), ('evaluationString', True), ('COMMAWS', True), ('CPAREN', False)],
 	'validSubstitution': [('complexSubstitutionSymbol', False), ('substitutionSymbol', False)],
 	'complexSubstitutionSymbol': [('REG_STARTCARET', False), ('ARG_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False),
-		('REG_NUM', False), ('REG_ALPHA', False), ('ITEXT_NUM', False), ('ITEXT_LAST', False), ('STEXT_NUM', False),
+		('REG_NUM', False), ('REG_ALPHA', False), ('ITEXT_NUM', False), ('ITEXT_LAST', False), ('DTEXT_NUM', False),
+		('DTEXT_LAST', False), ('STEXT_NUM', False),
 		('STEXT_LAST', False), ('VWX', False)],
 	'genericText': [('beginGenericText', False), ('FUNCHAR', False)],
 	'beginGenericText': [('CPAREN', False), ('SEMICOLON', False), ('COMMAWS', False), ('EQUALS', False), ('CCARET', False),
-		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('ansi', False)],
+		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('PERCENT_AT_END', False), ('ansi', False)],
 }
 
 # Rules that are spliced into their parent when they exit: the tree keeps one flat run of text.
