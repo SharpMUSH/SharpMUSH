@@ -19,6 +19,7 @@ public enum DiscordGatewayStatus
 
 /// <param name="ApplicationId">The bot's application, once Discord accepted the token.</param>
 /// <param name="MissingIntents">The privileged intents turned off in the developer portal, by their names there.</param>
+/// <param name="PublicBot">Whether anyone, not only the application's owner, may add the bot to a server.</param>
 /// <param name="Guilds">How many servers the bot is in, while connected.</param>
 /// <param name="Detail">What Discord said, when it is not one of the cases above.</param>
 public sealed record DiscordGatewayState(
@@ -26,6 +27,7 @@ public sealed record DiscordGatewayState(
 	ulong? ApplicationId = null,
 	string? BotName = null,
 	IReadOnlyList<string>? MissingIntents = null,
+	bool? PublicBot = null,
 	int Guilds = 0,
 	string? Detail = null);
 
@@ -59,14 +61,14 @@ public static class DiscordSetup
 
 	/// <summary>
 	/// What the bot does in a server, and nothing more: read and post in linked channels and their threads, post
-	/// as speakers through its webhooks, give the Linked and mapped roles, and publish scenes as Scheduled Events.
-	/// A webhook's own token edits and deletes its posts, so the bot needs no Manage Messages; creating events
-	/// also lets it edit and delete its own.
+	/// as speakers through its webhooks, replace a member's message with the line as the game delivered it (which
+	/// deletes the original, so Manage Messages), give the Linked and mapped roles, and publish scenes as Scheduled
+	/// Events. Creating events also lets it edit and delete its own.
 	/// </summary>
 	public const GuildPermission Permissions =
 		GuildPermission.ViewChannel | GuildPermission.SendMessages | GuildPermission.SendMessagesInThreads
-		| GuildPermission.ReadMessageHistory | GuildPermission.ManageWebhooks | GuildPermission.ManageRoles
-		| GuildPermission.CreateEvents;
+		| GuildPermission.ReadMessageHistory | GuildPermission.ManageMessages | GuildPermission.ManageWebhooks
+		| GuildPermission.ManageRoles | GuildPermission.CreateEvents;
 
 	/// <summary>The link that adds the bot to a server, with its slash commands and exactly <see cref="Permissions"/>.</summary>
 	public static string InviteUrl(ulong applicationId)
@@ -95,7 +97,7 @@ public static class DiscordSetup
 	public static DiscordSetupView View(DiscordGatewayState state)
 	{
 		var invite = state.ApplicationId is { } id ? InviteUrl(id) : null;
-		return new DiscordSetupView(state.Status, state.BotName, invite, [Token(state), IntentsStep(state), Gateway(state), Server(state, invite)]);
+		return new DiscordSetupView(state.Status, state.BotName, invite, [Token(state), IntentsStep(state), Private(state), Gateway(state), Server(state, invite)]);
 	}
 
 	private static DiscordSetupStep Token(DiscordGatewayState state) => state.Status switch
@@ -115,6 +117,15 @@ public static class DiscordSetup
 		_ => new("intents", "Privileged intents", true),
 	};
 
+	/// <summary>Advice rather than a requirement: a public bot can be added by anyone who finds its invite.</summary>
+	private static DiscordSetupStep Private(DiscordGatewayState state) => state.PublicBot switch
+	{
+		false => new("private", "Only you can add the bot", true),
+		true => new("private", "Only you can add the bot", false,
+			"Untick Public Bot on the application's Bot page, so nobody else can add the bot to their server.", BotPage(state)),
+		null => new("private", "Only you can add the bot", false),
+	};
+
 	private static DiscordSetupStep Gateway(DiscordGatewayState state) => state.Status switch
 	{
 		DiscordGatewayStatus.Connected => new("gateway", "Connected to Discord", true),
@@ -127,7 +138,9 @@ public static class DiscordSetup
 	{
 		{ Guilds: > 0 } => new("server", "In a server", true),
 		{ Status: DiscordGatewayStatus.Connected } => new("server", "In a server", false,
-			"Open the invite link and pick your server. You need Manage Server there.", invite),
+			"Open the invite link and pick your server. You need Manage Server there. If the server requires two-factor "
+			+ "authentication for moderation, the application's owner needs it on as well, or Discord refuses the bot "
+			+ "its Manage permissions.", invite),
 		_ => new("server", "In a server", false),
 	};
 

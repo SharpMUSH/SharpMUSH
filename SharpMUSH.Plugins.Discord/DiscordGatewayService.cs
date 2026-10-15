@@ -30,11 +30,17 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 
 	private const int LastRefusedSetting = 4013;
 
+	/// <summary>Below this many logins left today, each new session is logged as a warning.</summary>
+	private const int LowLoginsLeft = 100;
+
 	private readonly Channel<bool> _reconnect = Channel.CreateBounded<bool>(
 		new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
 
 	private volatile DiscordGatewayState _state = new(DiscordGatewayStatus.Connecting);
 	private DiscordSocketClient? _client;
+
+	/// <summary>How many sessions the current client has started; a resume is not a new one.</summary>
+	private int _sessions;
 
 	public DiscordGatewayState State => _state with { Guilds = _client?.Guilds.Count ?? 0 };
 
@@ -82,10 +88,16 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 		{
 			GatewayIntents = DiscordSetup.Intents,
 			LogGatewayIntentWarnings = false,
+			// The library waits out rate limits; anything else comes back to the caller, which owns its retries.
+			DefaultRetryMode = RetryMode.RetryRatelimit,
+			// Rate-limit resets by Discord's relative header, so a skewed host clock cannot cut a wait short.
+			UseSystemClock = false,
 		});
 		client.Log += LogAsync;
 		client.Disconnected += exception => OnDisconnectedAsync(client, exception);
+		client.Connected += () => OnConnectedAsync(client);
 		client.Ready += () => OnReadyAsync(client);
+		_sessions = 0;
 		_client = client;
 
 		try
@@ -93,13 +105,34 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 			await client.LoginAsync(TokenType.Bot, token);
 			var application = await client.GetApplicationInfoAsync();
 			var missing = DiscordSetup.MissingIntents(application.Flags);
-			// With an intent off, Discord would close the gateway with 4014; there is no point starting it.
-			_state = new DiscordGatewayState(missing.Count > 0 ? DiscordGatewayStatus.IntentsOff : DiscordGatewayStatus.Connecting,
-				application.Id, application.Name, missing);
-			if (missing.Count == 0)
+			var state = new DiscordGatewayState(DiscordGatewayStatus.Connecting, application.Id, application.Name, missing,
+				application.IsBotPublic);
+			if (missing.Count > 0)
 			{
-				await client.StartAsync();
+				// Discord would close the gateway with 4014; there is no point starting it.
+				_state = state with { Status = DiscordGatewayStatus.IntentsOff };
+				return;
 			}
+
+			// A bot has a thousand logins a day; spending the last one resets its token.
+			var limit = (await client.GetBotGatewayAsync()).SessionStartLimit;
+			if (limit.Remaining == 0)
+			{
+				_state = state with
+				{
+					Status = DiscordGatewayStatus.Unreachable,
+					Detail = $"the bot has used all of today's {limit.Total} logins; Discord allows more in {TimeSpan.FromMilliseconds(limit.ResetAfter):h\\:mm}.",
+				};
+				return;
+			}
+
+			if (limit.Remaining < LowLoginsLeft)
+			{
+				logger.LogWarning("[Discord] Only {Remaining} of today's {Total} logins are left.", limit.Remaining, limit.Total);
+			}
+
+			_state = state;
+			await client.StartAsync();
 		}
 		catch (Exception exception) when (exception is ArgumentException
 			or HttpException { HttpCode: HttpStatusCode.Unauthorized })
@@ -114,11 +147,35 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 		}
 	}
 
-	private Task OnReadyAsync(DiscordSocketClient client)
+	/// <summary>Raised once the gateway is up, after a new session's Ready or a resume.</summary>
+	private Task OnConnectedAsync(DiscordSocketClient client)
 	{
 		if (ReferenceEquals(client, _client))
 		{
-			_state = _state with { Status = DiscordGatewayStatus.Connected, BotName = client.CurrentUser.Username };
+			_state = _state with { Status = DiscordGatewayStatus.Connected };
+		}
+
+		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// Ready comes only with a new session: a resumed one replays what it missed and raises no Ready. A second
+	/// Ready on the same client therefore means Discord events may have been lost while it reconnected.
+	/// </summary>
+	private Task OnReadyAsync(DiscordSocketClient client)
+	{
+		if (!ReferenceEquals(client, _client))
+		{
+			return Task.CompletedTask;
+		}
+
+		_state = _state with { BotName = client.CurrentUser.Username };
+		if (Interlocked.Increment(ref _sessions) > 1)
+		{
+			logger.LogWarning("[Discord] The session could not be resumed; Discord events while it was down may be lost.");
+		}
+		else
+		{
 			logger.LogInformation("[Discord] Connected as {Bot} in {Guilds} server(s).", client.CurrentUser.Username, client.Guilds.Count);
 		}
 
