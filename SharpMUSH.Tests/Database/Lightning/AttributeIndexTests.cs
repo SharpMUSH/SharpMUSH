@@ -204,6 +204,43 @@ public class AttributeIndexTests : LightningDatabaseFixture
 		await Assert.That(await QueryAsync("IDXLONG", IndexedAttributeOperation.Prefix, common + "sec")).IsEquivalentTo([b]);
 	}
 
+	/// <summary>Values that share the cut share a key, so a range bound on that key compares the stored values in full.</summary>
+	[Test]
+	public async Task ARangeProbeAtTheCutComparesTheStoredValue()
+	{
+		await IndexAsync("IDXLONGRANGE");
+		var common = new string('b', 398) + "é";
+		var a = await ThingAsync("RangeA");
+		var b = await ThingAsync("RangeB");
+		var c = await ThingAsync("RangeC");
+		await SetAsync(a, "IDXLONGRANGE", common + "apple");
+		await SetAsync(b, "IDXLONGRANGE", common + "melon");
+		await SetAsync(c, "IDXLONGRANGE", common + "zebra");
+
+		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.Less, common + "melon")).IsEquivalentTo([a]);
+		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.LessOrEqual, common + "MELON")).IsEquivalentTo([a, b]);
+		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.Greater, common + "melon")).IsEquivalentTo([c]);
+		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.GreaterOrEqual, common + "melon")).IsEquivalentTo([b, c]);
+		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.Between, common + "b", common + "n")).IsEquivalentTo([b]);
+		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.Less, common + "m", limit: 1)).IsEquivalentTo([a]);
+	}
+
+	/// <summary>An index key holds the name, a separator and up to 400 bytes of value, inside LMDB's 511.</summary>
+	[Test]
+	public async Task ANameTooLongForAnIndexKeyIsRefused()
+	{
+		var tooLong = "IDX" + new string('N', AttributeIndexOptions.MaxNameBytes - 2);
+		await Db.CreateOrUpdateAttributeEntryAsync(tooLong, []);
+		await Assert.That(await Db.SetAttributeIndexAsync(tooLong, AttributeIndexOptions.Default) is Error<string>).IsTrue();
+
+		var longest = "IDX" + new string('M', AttributeIndexOptions.MaxNameBytes - 3);
+		await IndexAsync(longest);
+		var a = await ThingAsync("LongestName");
+		var value = new string('v', 600);
+		await SetAsync(a, longest, value);
+		await Assert.That(await EqualAsync(longest, value)).IsEquivalentTo([a]);
+	}
+
 	[Test]
 	public async Task AnInternalCopyIsNeverListed()
 	{

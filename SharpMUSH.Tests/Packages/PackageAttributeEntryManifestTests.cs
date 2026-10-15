@@ -278,6 +278,18 @@ public class PackageAttributeEntryManifestTests
 		await Assert.That(errors.Single().Path).IsEqualTo("attributes.JOB`SECRET.index");
 	}
 
+	[Test]
+	public async Task ANameTooLongForAnIndexIsRefused()
+	{
+		var name = new string('N', AttributeIndexOptions.MaxNameBytes + 1);
+		var errors = Errors(Parse($"""
+			attributes:
+			  {name}:
+			    index: true
+			""", "1.8"));
+		await Assert.That(errors.Single().Path).IsEqualTo($"attributes.{name}.index");
+	}
+
 	/// <summary>Before format 1.8 <c>index:</c> was reserved, so an older manifest's is ignored with a warning.</summary>
 	[Test]
 	public async Task AnIndexBeforeFormat18IsIgnored()

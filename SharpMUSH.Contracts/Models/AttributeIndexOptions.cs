@@ -1,3 +1,4 @@
+using System.Text;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
@@ -24,6 +25,19 @@ public sealed record AttributeIndexOptions(bool Exact = false, bool Numeric = fa
 {
 	/// <summary>Case-insensitive text, whole values, every object.</summary>
 	public static AttributeIndexOptions Default { get; } = new();
+
+	/// <summary>
+	/// The longest attribute name an index can hold, in UTF-8 bytes once upper-cased: an index key is the name, a
+	/// separator and up to 400 bytes of value, and LMDB keys stop at 511 bytes.
+	/// </summary>
+	public const int MaxNameBytes = 110;
+
+	/// <summary>Whether <paramref name="name"/> is short enough to index (<see cref="MaxNameBytes"/>).</summary>
+	public static bool NameFits(string name) => Encoding.UTF8.GetByteCount(name.ToUpperInvariant()) <= MaxNameBytes;
+
+	/// <summary>Why <paramref name="name"/> cannot be indexed, when it is too long.</summary>
+	public static string NameTooLong(string name)
+		=> $"{name.ToUpperInvariant()} is too long to index: an indexed attribute's name is at most {MaxNameBytes} bytes.";
 
 	/// <summary>The object types a <c>type:</c> option names, as stored.</summary>
 	public static IReadOnlyList<string> ObjectTypes { get; } = ["PLAYER", "ROOM", "THING", "EXIT"];

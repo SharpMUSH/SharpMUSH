@@ -19,8 +19,9 @@ namespace SharpMUSH.Database.Lightning;
 /// in their own order. A part is the folded value as UTF-8 (lower-cased unless the index is <c>exact</c>); in a
 /// <c>numeric</c> index it starts with a class byte, <see cref="NumberClass"/> followed by the number as an
 /// order-preserving eight-byte double, or <see cref="TextClass"/> followed by the text, so every number sorts before
-/// every text. A part is cut at <see cref="IndexValueBytes"/> on a character boundary, and an equality probe that
-/// reaches the cut is checked against the stored value.
+/// every text. A part is cut at <see cref="IndexValueBytes"/> on a character boundary, and a probe that reaches the
+/// cut is checked against the stored value: in full for equality and prefix, and on the bound's key for a range.
+/// Values that share their first <see cref="IndexValueBytes"/> bytes share a key, so among themselves they sort by dbref.
 /// </para>
 /// <para>
 /// <see cref="Tables.AttrIdxOf"/> holds an indexed copy's own key (<c>Keys.Attr</c>) → the parts it is listed under,
@@ -337,6 +338,11 @@ public partial class LightningDatabase : IAttributeIndexStore
 				return new Error<string>($"{record.Name} is internal by default, so no copy of it could be indexed.");
 			}
 
+			if (!AttributeIndexOptions.NameFits(name))
+			{
+				return new Error<string>(AttributeIndexOptions.NameTooLong(name));
+			}
+
 			var wanted = ToRecord(options);
 			if (record.Index is { } current && SameOptions(current, wanted))
 			{
@@ -501,11 +507,15 @@ public partial class LightningDatabase : IAttributeIndexStore
 			var recheck = query.Operation is IndexedAttributeOperation.Equal or IndexedAttributeOperation.Prefix
 				&& ReachesLimit(probe, index);
 			var longName = query.Name.ToUpperInvariant();
+			var upper = query.Operation == IndexedAttributeOperation.Between
+				? EncodePart(query.UpperValue ?? query.Value, index)
+				: probe;
+			var bounds = Bounds(query, prefix, probe, upper);
 			var hits = new List<IndexedAttributeHit>();
 			byte[] lastKey = [];
 			long lastDbref = 0;
 			var limit = Math.Max(1, query.Limit);
-			foreach (var (key, value) in Rows(tx, query, index, prefix, probe))
+			foreach (var (key, value) in Rows(tx, query, prefix, probe, upper))
 			{
 				if (hits.Count == limit)
 				{
@@ -516,6 +526,11 @@ public partial class LightningDatabase : IAttributeIndexStore
 				lastKey = key;
 				lastDbref = dbref;
 				if (recheck && !StoredValueHolds(tx, dbref, longName, query.Value, index, prefixMatch))
+				{
+					continue;
+				}
+
+				if (bounds.Any(bound => !bound.Admits(tx, key, dbref, longName, index)))
 				{
 					continue;
 				}
@@ -551,9 +566,62 @@ public partial class LightningDatabase : IAttributeIndexStore
 			return tx.Dups(Tables.AttrIdx, key).LongCount(dbref => StoredValueHolds(tx, Keys.ReadDbref(dbref), longName, value, index));
 		}));
 
-	/// <summary>The index rows <paramref name="query"/> asks for, in order, after its cursor.</summary>
-	private static IEnumerable<(byte[] Key, byte[] Value)> Rows(ITx tx, IndexedAttributeQuerySpec query, AttributeIndexRecord index,
-		byte[] prefix, byte[] probe)
+	/// <summary>
+	/// A range operation's bound: the key a row sits on when its value compares equal to <see cref="Value"/> as far as
+	/// the index keeps it, and the comparison a row on that key must pass. Below the cut sitting on the key means equal;
+	/// at the cut the stored value is compared in full, so a value longer than the cut lands on the right side.
+	/// </summary>
+	private sealed record IndexBound(byte[] Key, byte[] Part, string Value, Func<int, bool> Holds)
+	{
+		public bool Admits(ITx tx, byte[] key, long dbref, string longName, AttributeIndexRecord index)
+			=> !key.AsSpan().SequenceEqual(Key)
+				|| (ReachesLimit(Part, index)
+					? StoredValueCompares(tx, dbref, longName, Part, Value, index, Holds)
+					: Holds(0));
+	}
+
+	private static List<IndexBound> Bounds(IndexedAttributeQuerySpec query, byte[] prefix, byte[] probe, byte[] upper)
+	{
+		var upperKey = IndexKey(prefix, upper);
+		IndexBound Lower(Func<int, bool> holds) => new(IndexKey(prefix, probe), probe, query.Value, holds);
+		return query.Operation switch
+		{
+			IndexedAttributeOperation.Less => [Lower(c => c < 0)],
+			IndexedAttributeOperation.LessOrEqual => [Lower(c => c <= 0)],
+			IndexedAttributeOperation.Greater => [Lower(c => c > 0)],
+			IndexedAttributeOperation.GreaterOrEqual => [Lower(c => c >= 0)],
+			IndexedAttributeOperation.Between =>
+				[Lower(c => c >= 0), new IndexBound(upperKey, upper, query.UpperValue ?? query.Value, c => c <= 0)],
+			_ => []
+		};
+	}
+
+	/// <summary>
+	/// Whether an element of the copy's stored value listed under <paramref name="part"/> compares to
+	/// <paramref name="probe"/> as <paramref name="holds"/> asks, in full: the folded text as UTF-8, the order the index
+	/// keeps up to the cut. Only text is ever cut, so the elements compared are text.
+	/// </summary>
+	private static bool StoredValueCompares(ITx tx, long dbref, string longName, byte[] part, string probe,
+		AttributeIndexRecord index, Func<int, bool> holds)
+	{
+		if (!tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes))
+		{
+			return false;
+		}
+
+		var options = Options(index);
+		var wanted = Encoding.UTF8.GetBytes(options.Fold(probe));
+		return options.Elements(DeserializeValue(bytes).ToPlainText())
+			.Where(element => EncodePart(element, index).AsSpan().SequenceEqual(part))
+			.Any(element => holds(Encoding.UTF8.GetBytes(options.Fold(element)).AsSpan().SequenceCompareTo(wanted)));
+	}
+
+	/// <summary>
+	/// The index rows <paramref name="query"/> asks for, in order, after its cursor. A range takes the rows on its bound
+	/// keys too, whatever the operation, and <see cref="IndexBound"/> decides each of those.
+	/// </summary>
+	private static IEnumerable<(byte[] Key, byte[] Value)> Rows(ITx tx, IndexedAttributeQuerySpec query, byte[] prefix,
+		byte[] probe, byte[] upper)
 	{
 		var probeKey = IndexKey(prefix, probe);
 		var after = query.After;
@@ -574,16 +642,12 @@ public partial class LightningDatabase : IAttributeIndexStore
 				return From(probeKey).TakeWhile(row => row.Key.AsSpan().SequenceEqual(probeKey));
 			case IndexedAttributeOperation.Prefix:
 				return From(probeKey);
-			case IndexedAttributeOperation.Less:
-				return From(prefix).TakeWhile(row => Compare(row.Key) < 0);
-			case IndexedAttributeOperation.LessOrEqual:
+			case IndexedAttributeOperation.Less or IndexedAttributeOperation.LessOrEqual:
 				return From(prefix).TakeWhile(row => Compare(row.Key) <= 0);
-			case IndexedAttributeOperation.Greater:
-				return From(prefix, probeKey).SkipWhile(row => Compare(row.Key) <= 0);
-			case IndexedAttributeOperation.GreaterOrEqual:
+			case IndexedAttributeOperation.Greater or IndexedAttributeOperation.GreaterOrEqual:
 				return From(prefix, probeKey);
 			case IndexedAttributeOperation.Between:
-				var upperKey = IndexKey(prefix, EncodePart(query.UpperValue ?? query.Value, index));
+				var upperKey = IndexKey(prefix, upper);
 				return From(prefix, probeKey).TakeWhile(row => row.Key.AsSpan().SequenceCompareTo(upperKey) <= 0);
 			case IndexedAttributeOperation.First:
 				return From(prefix);

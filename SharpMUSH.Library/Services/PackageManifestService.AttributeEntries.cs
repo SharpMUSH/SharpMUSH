@@ -237,6 +237,12 @@ public partial class PackageManifestService
 			ok = false;
 		}
 
+		if (index is not null && !AttributeIndexOptions.NameFits(name))
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.index", AttributeIndexOptions.NameTooLong(name)));
+			ok = false;
+		}
+
 		return ok ? new PackageAttributeEntrySpec(name, flags, limit, choices, delimiter, retroactive, index) : null;
 	}
 
