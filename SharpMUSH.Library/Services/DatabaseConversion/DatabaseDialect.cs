@@ -39,6 +39,26 @@ public enum DatabaseImportFormat
 	TinyMUX
 }
 
+/// <summary>Reads a <see cref="DatabaseImportFormat"/> as the upload API and the start-up import take it.</summary>
+public static class DatabaseImportFormats
+{
+	/// <summary>
+	/// The format named by <paramref name="text"/>, ignoring case; blank is <see cref="DatabaseImportFormat.Auto"/>.
+	/// A number is refused, though <see cref="Enum.TryParse{TEnum}(string?, bool, out TEnum)"/> would take one.
+	/// </summary>
+	public static bool TryParse(string? text, out DatabaseImportFormat format)
+	{
+		if (string.IsNullOrWhiteSpace(text))
+		{
+			format = DatabaseImportFormat.Auto;
+			return true;
+		}
+
+		return Enum.TryParse(text, ignoreCase: true, out format) && Enum.IsDefined(format)
+			&& !int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
+	}
+}
+
 /// <summary>
 /// The files one import reads: the database, and whatever came with it. Which side files mean anything
 /// depends on the format: a PennMUSH import reads a maildb and a chatdb, a RhostMUSH import its mail
@@ -81,7 +101,7 @@ public static class DatabaseFormatSniffer
 			return DatabaseDialect.PennMUSH;
 		}
 
-		return second.Length > 1 && second[0] == '+' && second[1] is 'S' or 'N' or 'A'
+		return (second.Length > 1 && second[0] == '+' && second[1] is 'S' or 'N' or 'A')
 			|| second.StartsWith('!')
 			? DatabaseDialect.RhostMUSH
 			: DatabaseDialect.PennMUSH;

@@ -54,7 +54,7 @@ public class DatabaseConversionController(
 			return BadRequest("No file uploaded");
 		}
 
-		if (!TryParseFormat(format, out var importFormat))
+		if (!DatabaseImportFormats.TryParse(format, out var importFormat))
 		{
 			return BadRequest($"Unknown database format \"{format}\": it takes auto, pennmush, rhostmush or tinymux.");
 		}
@@ -165,18 +165,6 @@ public class DatabaseConversionController(
 	}
 
 	/// <summary>The form's <c>format</c>: none or <c>auto</c> to tell from the file, else a format by name.</summary>
-	private static bool TryParseFormat(string? format, out DatabaseImportFormat parsed)
-	{
-		if (string.IsNullOrWhiteSpace(format))
-		{
-			parsed = DatabaseImportFormat.Auto;
-			return true;
-		}
-
-		return Enum.TryParse(format, ignoreCase: true, out parsed) && Enum.IsDefined(parsed)
-			&& !int.TryParse(format, out _);
-	}
-
 	/// <summary>Puts the configuration back after a failed upload; a failure here is logged beside the first.</summary>
 	private async Task RestoreAfterFailureAsync(Func<Task> restore)
 	{

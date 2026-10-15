@@ -87,6 +87,7 @@ public class RhostFlatfileReaderTests
 	[Arguments("garbage\n", DatabaseDialect.PennMUSH)]
 	public async Task TellsTheFormatsApart(string start, DatabaseDialect expected)
 	{
-		await Assert.That(DatabaseFormatSniffer.Sniff(new StringReader(start))).IsEqualTo(expected);
+		using var text = new StringReader(start);
+		await Assert.That(DatabaseFormatSniffer.Sniff(text)).IsEqualTo(expected);
 	}
 }

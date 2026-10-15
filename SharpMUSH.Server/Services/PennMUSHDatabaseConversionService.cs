@@ -53,8 +53,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			return;
 		}
 
-		if (!Enum.TryParse<DatabaseImportFormat>(string.IsNullOrWhiteSpace(_databaseFormat) ? nameof(DatabaseImportFormat.Auto) : _databaseFormat,
-				ignoreCase: true, out var format) || !Enum.IsDefined(format))
+		if (!DatabaseImportFormats.TryParse(_databaseFormat, out var format))
 		{
 			_logger.LogError("PENNMUSH_DATABASE_FORMAT is {Format}; it takes auto, pennmush, rhostmush or tinymux", _databaseFormat);
 			return;

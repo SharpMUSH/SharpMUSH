@@ -204,7 +204,7 @@ public class DatabaseConversionSessionTests
 		}
 	}
 
-	/// <summary>The request limit is the whole form, so it has to hold a database, a maildb and a chatdb all at the file limit.</summary>
+	/// <summary>The request limit is the whole form, so it has to hold the database, mail, chat and mail folder files at the file limit, and the mush.cnf.</summary>
 	[Test]
 	public async Task The_upload_limit_fits_every_file_at_its_limit()
 	{
@@ -214,6 +214,6 @@ public class DatabaseConversionSessionTests
 		var limit = request.MaxRequestBodySize!.Value;
 
 		await Assert.That(form.MultipartBodyLengthLimit).IsEqualTo(100L * 1024 * 1024);
-		await Assert.That(limit).IsGreaterThan(3 * form.MultipartBodyLengthLimit);
+		await Assert.That(limit).IsGreaterThan(4 * form.MultipartBodyLengthLimit + 1024 * 1024);
 	}
 }

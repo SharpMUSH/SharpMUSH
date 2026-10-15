@@ -149,6 +149,16 @@ public class TinyMuxDatabaseReaderTests
 			.IsEqualTo("A \u001b[1m\u001b[38;2;200;135;100mwidget\u001b[0m sits here.");
 	}
 
+	/// <summary>A channel code point that forms no colour is dropped; it used to be read again forever.</summary>
+	[Test]
+	[Arguments("a\U000F1000b", 5)]
+	[Arguments("a\U000F0005b", 5)]
+	[Arguments("a\U000F0700b", 4)]
+	public async Task DropsAStrayChannelCodePoint(string text, int version)
+	{
+		await Assert.That(TinyMuxColour.ToAnsi(text, version)).IsEqualTo("ab");
+	}
+
 	[Test]
 	public async Task SetsTheTinyMuxOptions()
 	{
@@ -233,7 +243,8 @@ public class TinyMuxDatabaseReaderTests
 	[Test]
 	public async Task ReadsQuotedStringsAcrossLines()
 	{
-		var reader = new TinyMuxFlatfileReader(new StringReader("\"a\\\"b\\\\c\\e\\n\\td\nsecond\" trailing\nnext\n"), "test");
+		using var text = new StringReader("\"a\\\"b\\\\c\\e\\n\\td\nsecond\" trailing\nnext\n");
+		var reader = new TinyMuxFlatfileReader(text, "test");
 
 		await Assert.That(reader.ReadString()).IsEqualTo("a\"b\\c\u001b\n\td\nsecond");
 		await Assert.That(reader.ReadLine()).IsEqualTo("next");

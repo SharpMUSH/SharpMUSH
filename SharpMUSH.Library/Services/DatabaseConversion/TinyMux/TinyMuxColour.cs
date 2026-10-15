@@ -105,11 +105,19 @@ public static class TinyMuxColour
 					Sgr(output, rgb is { } exact ? Truecolour(background, exact) : Indexed(background, index));
 					break;
 				case >= ChannelFirst and <= ChannelLast:
-					// A channel with no palette colour before it: TinyMUX starts from black.
-					i = ExactColour(runes, i, -1, value >= (version >= 5 ? 0xF2000 : 0xF0300), version, out var alone) - 1;
+					// A channel with no palette colour before it: TinyMUX starts from black. One that forms no
+					// colour (half a version 5 pair, or a version 3 or 4 code past the six channels) is dropped.
+					var channelBackground = value >= (version >= 5 ? 0xF2000 : 0xF0300);
+					var end = ExactColour(runes, i, -1, channelBackground, version, out var alone);
+					if (end == i)
+					{
+						break;
+					}
+
+					i = end - 1;
 					if (alone is { } colour)
 					{
-						Sgr(output, Truecolour(value >= (version >= 5 ? 0xF2000 : 0xF0300), colour));
+						Sgr(output, Truecolour(channelBackground, colour));
 					}
 
 					break;

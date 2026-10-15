@@ -120,9 +120,12 @@ internal static partial class PennMUSHPasswords
 	/// <c>ENABLE_PROPER_DES</c> chose a random salt, which is the stored value's first two characters.
 	/// </summary>
 	private static bool MatchesCrypt(string stored, ReadOnlySpan<byte> attempt)
-		=> stored.Length == 13
-			&& !stored.AsSpan().ContainsAnyExcept(CryptAlphabet)
+		=> IsTraditionalDes(stored)
 			&& AsciiEquals(DesCrypt.Crypt(attempt, stored[..2]), stored);
+
+	/// <summary>Whether the value has traditional DES's shape: thirteen crypt-alphabet characters.</summary>
+	private static bool IsTraditionalDes(string stored)
+		=> stored.Length == 13 && !stored.AsSpan().ContainsAnyExcept(CryptAlphabet);
 
 	private const string CryptAlphabet = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -168,7 +171,7 @@ internal static partial class PennMUSHPasswords
 		}
 
 		if (FormattedPattern().IsMatch(stored) || stored.StartsWith("XX", StringComparison.Ordinal)
-			|| stored.StartsWith('$') || IsExtendedDes(stored))
+			|| stored.StartsWith('$') || IsExtendedDes(stored) || IsTraditionalDes(stored))
 		{
 			return false;
 		}

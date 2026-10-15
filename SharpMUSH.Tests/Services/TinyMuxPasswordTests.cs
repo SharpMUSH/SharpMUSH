@@ -68,4 +68,11 @@ public class TinyMuxPasswordTests
 	{
 		await Assert.That(Service.PasswordIsValid("_J9..CCCCXBrJUJV154M", "_J9..CCCCXBrJUJV154M")).IsFalse();
 	}
+
+	/// <summary>Nor is a DES hash with a salt other than PennMUSH's XX.</summary>
+	[Test]
+	public async Task ARandomSaltDesHashIsNotItsOwnPassword()
+	{
+		await Assert.That(Service.PasswordIsValid("ab2RmhfeGz9J6", "ab2RmhfeGz9J6")).IsFalse();
+	}
 }

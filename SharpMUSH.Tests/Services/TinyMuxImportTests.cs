@@ -86,7 +86,8 @@ public class TinyMuxImportTests
 	[Arguments("+V6\n1\n4\n1\n7\n\"#4\"\n\"Fri Sep 04 12:01:45 2026\"\n\"Hello\"\n0\n*** END OF DUMP ***\n0\n\"Hi\"\n+++ END OF DUMP +++\n", "body 7")]
 	public async Task RefusesATruncatedMailFile(string file, string expected)
 	{
-		var read = () => TinyMuxMailReader.Read(new StringReader(file));
+		using var text = new StringReader(file);
+		var read = () => TinyMuxMailReader.Read(text);
 
 		await Assert.That(read).Throws<FormatException>().WithMessageContaining(expected);
 	}
