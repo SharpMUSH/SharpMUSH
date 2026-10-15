@@ -16,7 +16,7 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// The bundled info package, installed from the catalogue and driven with typed commands: +info and +pinfo files
-/// kept on the character, +journal entries shared one at a time, and +notebook notebooks on the Notebook Store.
+/// kept on the character, and +journal entries shared one at a time.
 /// Each test installs the package and removes it again. Not in parallel: the commands are global.
 /// </summary>
 [NotInParallel]
@@ -30,8 +30,6 @@ public class InfoIntegrationTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
-
-	private string Store { get; set; } = string.Empty;
 
 	private async Task<string> God(string command) =>
 		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
@@ -71,8 +69,6 @@ public class InfoIntegrationTests
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("info must install from the catalogue");
 		// AINSTALL is queued after the apply: it adds the commands.
 		await WebAppFactoryArg.QueueBarrierAsync();
-		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("info");
-		Store = objects.First(o => o.Ref == "info_store").Objid;
 	}
 
 	private async Task UninstallAsync() => await Installer.UninstallAsync("info", force: true, CancellationToken.None);
@@ -196,52 +192,6 @@ public class InfoIntegrationTests
 			await Assert.That(await As(ann, "+journal/share 1=nobody-by-that-name")).Contains("There is no player called 'nobody-by-that-name'.");
 			await Assert.That(await As(ann, "+journal/delete 1")).Contains("Journal entry 1, The night market, is deleted.");
 			await Assert.That(await As(ann, "+journal 2")).Contains("Still nobody.");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
-	}
-
-	[Test]
-	public async Task NotebooksAreWrittenByTheirPeople()
-	{
-		try
-		{
-			await InstallAsync();
-			var ann = await Player("NbAnn");
-			var bo = await Player("NbBo");
-			var cy = await Player("NbCy");
-			var book = TestIsolationHelpers.GenerateUniqueName("Plot");
-
-			await Assert.That(await As(ann, $"+notebook/create {book}")).Contains($"Notebook {book} is made.");
-			// Notebooks live on the store, not on whoever made them.
-			await Assert.That(await God($"think words(lattr({Store}/BOOK`*`NAME))")).IsNotEqualTo("0");
-			await Assert.That(await As(bo, $"+notebook/create {book}")).Contains($"There is already a notebook called '{book}'.");
-			await Assert.That(await As(bo, $"+notebook {book}")).Contains($"You are in no notebook called '{book}'.");
-
-			await Assert.That(await As(ann, $"+notebook/invite {book}={bo.Name}")).Contains($"{bo.Name} is in {book} now.");
-			await Assert.That(string.Join("\n", Notifications.For(bo.DbRef))).Contains($"brought you into the notebook {book}");
-
-			// An entry tells everyone else in the notebook.
-			await Assert.That(await As(bo, $"+notebook {book}/Lead=The harbourmaster lies.")).Contains($"Entry 1 of {book}, Lead, is written.");
-			await Assert.That(string.Join("\n", Notifications.For(ann.DbRef))).Contains($"{bo.Name} wrote in {book}: +notebook {book}/1");
-			await Assert.That(await As(ann, $"+notebook {book}")).Contains("Lead").And.Contains(bo.Name);
-			await Assert.That(await As(ann, $"+notebook {book}/1")).Contains("The harbourmaster lies.");
-
-			await Assert.That(await As(ann, $"+notebook {book}/Mine=Ann's.")).Contains($"Entry 2 of {book}");
-			await Assert.That(await As(bo, $"+notebook/edit {book}/2=Changed")).Contains("Only whoever wrote an entry");
-			await Assert.That(await As(ann, $"+notebook/edit {book}/1=Keeper's edit")).Contains("is updated.");
-			await Assert.That(await As(bo, $"+notebook/invite {book}={cy.Name}")).Contains($"Only {ann.Name}, who keeps {book}, or staff do that.");
-
-			await Assert.That(await As(ann, $"+notebook/owner {book}={bo.Name}")).Contains($"{bo.Name} keeps {book} now.");
-			await Assert.That(await As(bo, $"+notebook/leave {book}")).Contains($"You keep {book}");
-			await Assert.That(await As(ann, $"+notebook/leave {book}")).Contains($"You left {book}.");
-			await Assert.That(await As(ann, $"+notebook {book}")).Contains($"You are in no notebook called '{book}'.");
-
-			await Assert.That(await As(bo, $"+notebook/destroy {book}")).Contains($"This throws {book} and its 2 entries away for good.");
-			await Assert.That(await As(bo, $"+notebook/destroy {book}=yes")).Contains($"{book} is gone.");
-			await Assert.That(await As(bo, "+notebook/all")).Contains("Only staff list every notebook.");
 		}
 		finally
 		{

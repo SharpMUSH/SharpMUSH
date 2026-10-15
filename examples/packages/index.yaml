@@ -146,7 +146,7 @@ packages:
     name: Info Files
     package: info
     version: 1.0.0
-    description: +info, +pinfo, +journal and +notebook — public and private files on a character, a journal shared entry by entry, and plot notebooks a group writes together
+    description: +info, +pinfo and +journal — public and private files on a character, and a journal shared entry by entry
   - path: discord/
     name: Discord
     package: discord
