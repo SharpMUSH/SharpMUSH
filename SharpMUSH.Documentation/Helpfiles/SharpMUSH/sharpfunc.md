@@ -157,15 +157,16 @@
 | [FIRST()]       | [FOLD()]        | [GRAB()]        | [GRABALL()]     |
 | [INDEX()]       | [INF()]         | [ITEMIZE()]     | [ITEMS()]       |
 | [ITER()]        | [JITER()]       | [LAST()]        | [LDELETE()]     |
-| [LINSERT()]     | [LISTSET()]     | [LOCKFILTER()]  | [LREPLACE()]    |
-| [MAP()]         | [MATCH()]       | [MATCHALL()]    | [MEMBER()]      |
-| [MIX()]         | [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] |
-| [NSITER()]      | [RANDWORD()]    | [REMOVE()]      | [REST()]        |
-| [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  |
-| [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
-| [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
-| [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      | [WHILE()]       |
-| [WORDPOS()]     | [WORDS()]       |                 |                 |
+| [LINSERT()]     | [LISTDIFF()]    | [LISTINTER()]   | [LISTSET()]     |
+| [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         |
+| [MATCH()]       | [MATCHALL()]    | [MEMBER()]      | [MIX()]         |
+| [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] | [NSITER()]      |
+| [RANDWORD()]    | [REMOVE()]      | [REST()]        | [REVWORDS()]    |
+| [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  | [SETUNION()]    |
+| [SHUFFLE()]     | [SOME()]        | [SORT()]        | [SORTBY()]      |
+| [SORTKEY()]     | [SPLICE()]      | [STEP()]        | [STEPARGS()]    |
+| [TABLE()]       | [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     |
+| [WORDS()]       |                 |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -252,20 +253,20 @@
 | [CENTER()]               | [CHR()]                  | [COMP()]                 | [COND()]                 |
 | [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            | [DECOMPOSEWEB()]         |
 | [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         | [EDIT()]                 |
-| [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               | [FLIP()]                 |
-| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
-| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
-| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
-| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
-| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
-| [REGMATCH()]             | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               |
-| [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               |
-| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
-| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
-| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
-| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
-| [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            | [URLENCODE()]            |
-| [WRAP()]                 |                          |                          |                          |
+| [ELEMENTPOS()]           | [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               |
+| [FLIP()]                 | [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                |
+| [GRAPHEMECOUNT()]        | [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   |
+| [IFELSE()]               | [LCSTR()]                | [LEFT()]                 | [LIT()]                  |
+| [LJUST()]                | [LPOS()]                 | [MERGE()]                | [MID()]                  |
+| [ORD()]                  | [ORDINAL()]              | [POS()]                  | [PRINTF()]               |
+| [REGEDIT()]              | [REGMATCH()]             | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] |
+| [REPEAT()]               | [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             |
+| [SECURE()]               | [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               |
+| [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          |
+| [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            |
+| [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               |
+| [TR()]                   | [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            |
+| [URLENCODE()]            | [WRAP()]                 |                          |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
