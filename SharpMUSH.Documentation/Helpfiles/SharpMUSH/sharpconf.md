@@ -162,3 +162,4 @@ Options that help control compability with TinyMUSH servers.
 - `mux_justify=<boolean>`: Do ljust(), rjust() and center() cut text longer than the width, as TinyMUX does?
 - `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
 - `mux_list=<boolean>`: Is list() with two or three arguments TinyMUX's, which tells the enactor each result of a loop?
+- `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.

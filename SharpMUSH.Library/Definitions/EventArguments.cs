@@ -43,6 +43,8 @@ public static class EventArguments
 		],
 		[SharpEvents.PlayerChannels] = ["objid", "cause", "channel"],
 		["PLAYER`WARN"] = ["objid", "reason", "account"],
+		[SharpEvents.GalleryAdd] = ["objid", "asset", "url", "use"],
+		[SharpEvents.GalleryReport] = ["objid", "asset", "url", "reason", "caption"],
 		["SOCKET`CONNECT"] = ["descriptor", "ip"],
 		["SOCKET`DISCONNECT"] = ["descriptor", "ip", "cause", "received/sent/commands"],
 		["SOCKET`LOGINFAIL"] = ["descriptor", "ip", "count", "reason", "objid", "name"],

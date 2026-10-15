@@ -88,4 +88,13 @@ public record CompatibilityOptions(
 		Group = "TinyMUX Compatibility",
 		Order = 4)]
 	bool MuxList
+,
+
+	[property: SharpConfig(
+		Name = "innermost_tokens",
+		Category = "Compatibility",
+		Description = "Read ## and #@ from the innermost iter() or @dolist that is running, and #$ from the innermost switch whose action is running, wherever the token is written, as TinyMUX does. Off, they read the outermost one whose text they are written in, as PennMUSH does",
+		Group = "TinyMUX Compatibility",
+		Order = 5)]
+	bool InnermostTokens
 );

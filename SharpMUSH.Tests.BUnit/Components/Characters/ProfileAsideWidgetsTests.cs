@@ -42,16 +42,17 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 		await Assert.That(cut.Find(".gallery-hero .gallery-star")).IsNotNull();
 		var small = cut.FindAll(".gallery-small img");
 		await Assert.That(small.Count).IsEqualTo(2).Because("the board shows the portrait and two more; View all has the rest");
-		await Assert.That(cut.FindAll("button.gallery-view-all").Count).IsEqualTo(1);
+		await Assert.That(cut.Find("a.gallery-view-all").GetAttribute("href")).IsEqualTo("/character/Tomas%20Reyes/gallery")
+			.Because("View all opens the gallery page");
 		await Assert.That(cut.FindAll(".gallery-upload").Count).IsEqualTo(0).Because("a visitor cannot add images");
 	}
 
 	[Test]
-	public async Task ViewAll_OpensTheViewer_WithOwnerActionsOnlyForTheOwner()
+	public async Task ThePortrait_OpensTheViewer_WithOwnerActionsOnlyForTheOwner()
 	{
 		var visitor = InProfile<CharacterGalleryWidget>();
-		visitor.WaitForAssertion(() => visitor.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
-		await visitor.Find("button.gallery-view-all").ClickAsync();
+		visitor.WaitForAssertion(() => visitor.Find("button.gallery-hero"), TimeSpan.FromSeconds(5));
+		await visitor.Find("button.gallery-hero").ClickAsync();
 		await Assert.That(visitor.Find(".kit-viewer-count").TextContent).Contains("4");
 		await Assert.That(visitor.FindAll(".kit-viewer-actions button").Count).IsEqualTo(0);
 	}
@@ -67,9 +68,9 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 		_fake.Extra["PUT /api/profile/Tomas%20Reyes/gallery"] = "[]";
 
 		var cut = InProfile<CharacterGalleryWidget>(canEdit: true);
-		cut.WaitForAssertion(() => cut.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.gallery-hero"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".gallery-upload button.gallery-add").Count).IsEqualTo(1).Because("a kit capsule, not MudBlazor's default upload button");
-		await cut.Find("button.gallery-view-all").ClickAsync();
+		await cut.Find("button.gallery-hero").ClickAsync();
 		await cut.Find("button.kit-viewer-next").ClickAsync();
 		await cut.Find("button.kit-viewer-next").ClickAsync();
 		await cut.Find(".kit-viewer-actions button.gallery-make-banner").ClickAsync();

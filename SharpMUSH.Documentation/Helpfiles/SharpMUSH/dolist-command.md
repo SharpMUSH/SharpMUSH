@@ -34,7 +34,7 @@ The %i0 substitution, or the function itext(0), can be used in the `<action list
 
 %d0 is the current element as well, %d1 the element of the @dolist around it, and %dL the outermost one's. Unlike %i, %d counts only @dolists, so an iter() inside the action list does not move it. The idea comes from RhostMUSH.
 
-For backwards compatibility, "##" also stands for the current element of the list, and "#@" for its position, counting from 1. In a nested @dolist they name the outermost one. The element is never evaluated as code. For the current @dolist, use %i0 or itext(0), and inum(0). Like iter()'s, they count only in the action list as written, not in the code of an attribute it triggers or calls.
+For backwards compatibility, "##" also stands for the current element of the list, and "#@" for its position, counting from 1. In a nested @dolist they name the outermost one. The element is never evaluated as code. For the current @dolist, use %i0 or itext(0), and inum(0). Like iter()'s, they count only in the action list as written, not in the code of an attribute it triggers or calls. With the `innermost_tokens` option on, they name the innermost @dolist or iter() instead, wherever they are written. See [compatibility config innermost loop tokens].
 
 ## Notification and delimiters
 

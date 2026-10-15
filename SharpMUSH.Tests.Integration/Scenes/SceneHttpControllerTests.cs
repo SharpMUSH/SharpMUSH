@@ -1,4 +1,8 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -117,6 +121,129 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(dto.Types.Single(t => t.Key == "ooc"))
 			.IsEqualTo(new PoseTypeDto("ooc", "Out of character", "band", "secondary", "", false, 20));
 		await Assert.That(dto.Hidden.All(key => dto.Types.Any(t => t.Key == key))).IsTrue();
+	}
+
+	private record SceneDetailDto(string Key, string Label, string Hint, List<string> Choices, bool Many, bool Listed, string Tone, int Order);
+	private record SceneDetailsDto(List<SceneDetailDto> Details, List<JsonElement> Problems);
+	private record SceneDetailValueDto(string Value, int Scenes);
+	private record SceneDetailValuesDto(string Key, List<SceneDetailValueDto> Values);
+
+	/// <summary>Not in parallel: it lists a detail on the game's own catalogue for as long as it runs.</summary>
+	[Test]
+	[NotInParallel]
+	public async Task GetDetails_ReturnsTheSceneLoggersDetailsInOrder()
+	{
+		var registry = (IPackageRegistryService)factory.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+		var key = $"d{Guid.NewGuid():N}"[..12];
+		await Eval($$"""attrib_set(#{{logger.Number}}/DETAIL`{{key}},lit({"label":"Era","hint":"When it is set.","many":true,"tone":"Warning","order":-1000}))""");
+		try
+		{
+			var response = await CreateClient().GetAsync("api/scenes/details");
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+			var dto = (await response.Content.ReadFromJsonAsync<SceneDetailsDto>())!;
+			var first = dto.Details.First();
+			await Assert.That(first.Key).IsEqualTo(key).Because("the lowest order comes first");
+			await Assert.That(first.Label).IsEqualTo("Era");
+			await Assert.That(first.Hint).IsEqualTo("When it is set.");
+			await Assert.That(first.Choices).IsEmpty();
+			await Assert.That(first.Many).IsTrue();
+			await Assert.That(first.Listed).IsFalse();
+			await Assert.That(first.Tone).IsEqualTo("warning").Because("a tone is kept lower case");
+		}
+		finally
+		{
+			await Eval($"attrib_set(#{logger.Number}/DETAIL`{key})");
+		}
+	}
+
+	/// <summary>Lists detail <paramref name="key"/> on the game's catalogue, taking several values, for as long as <paramref name="body"/> runs.</summary>
+	private async Task WithDetailAsync(string key, string json, Func<Task> body)
+	{
+		var registry = (IPackageRegistryService)factory.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+		await Eval($"attrib_set(#{logger.Number}/DETAIL`{key},lit({json}))");
+		try
+		{
+			await body();
+		}
+		finally
+		{
+			await Eval($"attrib_set(#{logger.Number}/DETAIL`{key})");
+		}
+	}
+
+	private async Task<List<string>> SceneIdsAsync(string query)
+	{
+		var response = await CreateClient().GetAsync($"api/scenes?filter=recent&{query}");
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var found = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
+		return [.. found!.Select(s => s.GetProperty("id").GetString() ?? "")];
+	}
+
+	[Test]
+	public async Task ListScenes_Detail_KeepsTheScenesGivingThatValue()
+	{
+		var key = $"d{Guid.NewGuid():N}"[..12];
+		var word = $"W{Guid.NewGuid():N}"[..10];
+		await WithDetailAsync(key, """{"label":"Canon","many":true}""", async () =>
+		{
+			var both = await NewPublicSceneAsync("DetailBoth");
+			await Eval($"sceneset({both},{key},Other|{word})");
+			var longer = await NewPublicSceneAsync("DetailLonger");
+			await Eval($"sceneset({longer},{key},{word}s)");
+
+			await Assert.That(await SceneIdsAsync($"detail={key}&value={word.ToLowerInvariant()}")).IsEquivalentTo(new[] { both })
+				.Because("one of a detail's values, ignoring case, and never a value it is only part of");
+			await Assert.That(await SceneIdsAsync($"detail={key.ToUpperInvariant()}&value={word}s")).IsEquivalentTo(new[] { longer });
+		});
+
+		var unpaired = await CreateClient().GetAsync($"api/scenes?filter=recent&detail={key}");
+		await Assert.That(unpaired.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+	}
+
+	[Test]
+	public async Task GetDetailValues_CountsTheScenesGivingEachValue_OfTheListedDetails()
+	{
+		var key = $"d{Guid.NewGuid():N}"[..12];
+		var unlisted = $"d{Guid.NewGuid():N}"[..12];
+		var (common, rare, hidden) = ($"C{Guid.NewGuid():N}"[..10], $"R{Guid.NewGuid():N}"[..10], $"H{Guid.NewGuid():N}"[..10]);
+		await WithDetailAsync(unlisted, """{"label":"Mood"}""", () => WithDetailAsync(key, """{"label":"Canon","many":true,"listed":true}""", async () =>
+		{
+			var first = await NewPublicSceneAsync("ValuesFirst");
+			await Eval($"sceneset({first},{key},{common}|{rare}|{common})");
+			await Eval($"sceneset({first},{unlisted},Calm)");
+			var second = await NewPublicSceneAsync("ValuesSecond");
+			await Eval($"sceneset({second},{key},{common.ToLowerInvariant()})");
+			var secret = await Eval($"scenecreate(,#99999,ValuesHidden {Guid.NewGuid():N})");
+			await Eval($"sceneset({secret},public,0)");
+			await Eval($"sceneset({secret},{key},{hidden})");
+
+			var response = await CreateClient().GetAsync("api/scenes/details/values");
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+			var details = (await response.Content.ReadFromJsonAsync<List<SceneDetailValuesDto>>())!;
+			await Assert.That(details.Any(d => d.Key == unlisted)).IsFalse().Because("only the details cards show are browsed");
+			var values = details.Single(d => d.Key == key).Values;
+			await Assert.That(values.Select(v => (v.Value.ToLowerInvariant(), v.Scenes)))
+				.IsEquivalentTo(new[] { (common.ToLowerInvariant(), 2), (rare.ToLowerInvariant(), 1) }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+				.Because("each scene counts once per value, most scenes first, and a scene the caller can't see not at all");
+		}));
+	}
+
+	[Test]
+	public async Task ListScenes_Search_FindsASceneByItsDetail()
+	{
+		var verse = $"Verse{Guid.NewGuid():N}";
+		var sceneId = await Eval($"scenecreate(,{God},DetailSearch {Guid.NewGuid():N})");
+		await Eval($"sceneset({sceneId},verse,{verse})");
+
+		var response = await CreateClient().GetAsync($"api/scenes?filter=recent&search={verse}");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var found = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
+		await Assert.That(found!.Select(s => s.GetProperty("id").GetString() ?? "")).IsEquivalentTo(new[] { sceneId });
 	}
 
 	[Test]

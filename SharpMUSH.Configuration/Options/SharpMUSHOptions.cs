@@ -106,7 +106,8 @@ public record SharpMUSHOptions
 			MuxLogic: false,
 			MuxJustify: false,
 			MuxCollation: false,
-			MuxList: false
+			MuxList: false,
+			InnermostTokens: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

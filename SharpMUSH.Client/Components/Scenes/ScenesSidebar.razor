@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject SceneService Scenes
+@inject SceneDetailService SceneDetails
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
@@ -7,8 +8,9 @@
 
 @* The Scenes page sidebar (README §6.5, in the board-21 shape): "Scenes · ● N live · N recent", Browse
    over every list /api/scenes serves (All, Live now, Your scenes for a viewer acting as a character,
-   Scheduled, Finished), and up to five running scenes as image rows into their live view. Collapsed
-   keeps the browse icons and the scene leads. *@
+   Scheduled, Finished), a section for each detail the game lists (its verse, say) with the values in use and
+   how many scenes give each, linking to those scenes, and up to five running scenes as image rows into their
+   live view. Collapsed keeps the browse icons and the scene leads. *@
 <SidebarPanel Class="scenes-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
@@ -30,7 +32,7 @@
     }
     <SidebarGroup Class="scenes-side-browse" Label="@Loc["NavScenesBrowse"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Theaters" Label="@Loc["NavScenesAll"]"
-                    Href="/scenes" IsCurrent="@(_path == "/scenes" && _filter == ScenesFilter.All)" Collapsed="@Collapsed" />
+                    Href="/scenes" IsCurrent="@(_path == "/scenes" && _filter == ScenesFilter.All && _match is null)" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Sensors" Label="@Loc["NavScenesLive"]" Count="@_live?.Count"
                     Href="/scenes/active" IsCurrent="@(_path == "/scenes/active")" Collapsed="@Collapsed" />
         @if (_acting is not null)
@@ -45,6 +47,18 @@
     </SidebarGroup>
     @if (!Collapsed)
     {
+        @foreach (var (detail, values) in DetailSections())
+        {
+            <SectionLabel>@detail.Label</SectionLabel>
+            <SidebarGroup Class="scenes-side-detail" Label="@detail.Label">
+                @foreach (var value in values.Take(DetailValuesShown))
+                {
+                    var match = new SceneDetailMatch(detail.Key, value.Value);
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Sell" Label="@value.Value"
+                                Count="@value.Scenes" Href="@ScenesFilter.Href(match)" IsCurrent="@(_path == "/scenes" && _match == match)" />
+                }
+            </SidebarGroup>
+        }
         <SectionLabel>@Loc["NavScenesLive"]</SectionLabel>
     }
     <SidebarGroup Class="scenes-side-live" Label="@Loc["NavScenesLive"]">
@@ -68,6 +82,14 @@
 
     private const int LiveShown = 5;
 
+    /// <summary>The most values a detail's section shows: the ones the most scenes give.</summary>
+    private const int DetailValuesShown = 6;
+
+    /// <summary>The values each listed detail has, as the server counted them; null until read, and when the read failed.</summary>
+    private IReadOnlyList<SceneDetailValues>? _detailValues;
+
+    private SceneDetailMatch? _match;
+
     /// <summary>Null until read, and when the read failed: a count the server did not give is not zero.</summary>
     private IReadOnlyList<SceneSummary>? _live;
     private IReadOnlyList<SceneSummary>? _recent;
@@ -77,6 +99,7 @@
     private string _filter = ScenesFilter.All;
     private int _mineGeneration;
     private int _listsGeneration;
+    private int _detailsGeneration;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,7 +109,28 @@
         Locate();
         await LoadListsAsync();
         await LoadMineAsync();
+        await LoadDetailValuesAsync();
     }
+
+    /// <summary>The listed details' values, and the catalogue that names them.</summary>
+    private async Task LoadDetailValuesAsync()
+    {
+        // The counts are the acting character's view, as the lists are: only the newest answer counts.
+        var generation = ++_detailsGeneration;
+        var values = Scenes.GetDetailValuesAsync();
+        await SceneDetails.LoadAsync();
+        var read = await values is IReadOnlyList<SceneDetailValues> counted ? counted : null;
+        if (generation != _detailsGeneration) return;
+        _detailValues = read;
+    }
+
+    /// <summary>A section for each listed detail some scene gives a value, in the catalogue's order.</summary>
+    private IEnumerable<(SceneDetailInfo Detail, IReadOnlyList<SceneDetailValue> Values)> DetailSections() =>
+        from detail in SceneDetails.Catalogue.Details
+        where detail.Listed
+        join values in _detailValues ?? [] on detail.Key equals values.Key
+        where values.Values.Count > 0
+        select (detail, values.Values);
 
     /// <summary>The live and recent lists behind the header counts and the live rows.</summary>
     private async Task LoadListsAsync()
@@ -116,7 +160,7 @@
         (_acting, _mine) = (acting, mine);
     }
 
-    private bool IsFilter(string filter) => _path == "/scenes" && _filter == filter;
+    private bool IsFilter(string filter) => _path == "/scenes" && _filter == filter && _match is null;
 
     private bool IsScene(SceneSummary scene)
     {
@@ -136,7 +180,7 @@
     /// </summary>
     private void OnScenesChanged() => _ = InvokeAsync(async () =>
     {
-        await Task.WhenAll(LoadListsAsync(), LoadMineAsync());
+        await Task.WhenAll(LoadListsAsync(), LoadMineAsync(), LoadDetailValuesAsync());
         StateHasChanged();
     });
 
@@ -146,7 +190,7 @@
     /// </summary>
     private void OnActingChanged() => _ = InvokeAsync(async () =>
     {
-        await Task.WhenAll(LoadListsAsync(), LoadMineAsync());
+        await Task.WhenAll(LoadListsAsync(), LoadMineAsync(), LoadDetailValuesAsync());
         StateHasChanged();
     });
 
@@ -157,6 +201,7 @@
         _path = (cut >= 0 ? relative[..cut] : relative).TrimEnd('/');
         if (_path.Length == 0) _path = "/";
         _filter = ScenesFilter.FromUri(Nav.Uri);
+        _match = ScenesFilter.MatchFromUri(Nav.Uri);
     }
 
     public void Dispose()

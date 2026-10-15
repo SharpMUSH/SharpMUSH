@@ -36,6 +36,11 @@
       "lookup": "compatibility parser in iter is data not code"
     },
     {
+      "id": "in-case-and-if",
+      "heading": "`#$` in `case()` and `if()`",
+      "lookup": "compatibility parser in case and if"
+    },
+    {
       "id": "function-names-cannot-be-produced-by-evaluation",
       "heading": "Function names cannot be produced by evaluation",
       "lookup": "compatibility parser function names cannot be produced by evaluation"
@@ -199,7 +204,8 @@ text containing softcode executes.<br>
 `@dolist` they are written in, and does not re-evaluate element text. Inside `lit()` or after `\`
 they stay `##` and `#@`, where PennMUSH has already spliced the value. `#$` in `switch()`,
 `reswitch()`, `@switch` and `@select` works the same way: it reads the subject of the outermost one
-whose action it is written in, and the subject is never re-evaluated.<br>
+whose action it is written in, and the subject is never re-evaluated. The `innermost_tokens` option
+makes all three name the innermost loop or switch instead, as TinyMUX does.<br>
 **Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can
 influence becomes executable.<br>
 **Workaround.** Use `u()` or an explicit evaluation where you meant to run the element.
@@ -212,6 +218,34 @@ a b
 > &CODE me=[add(1,2)]
 > think iter(CODE,u(##))
 3
+```
+
+## `#$` in `case()` and `if()`
+
+**A choice.**
+
+**PennMUSH** replaces `#$` only in `switch()`, `switchall()`, `reswitch()`, `@switch` and `@select`. In
+`case()`, `caseall()`, `if()` and `ifelse()` it is plain text.<br>
+**SharpMUSH** also replaces it in the action of `case()` and `caseall()`, with their subject, and in the
+branch of `if()` and `ifelse()`, with the evaluated condition, as TinyMUX does. A `switch()` around them or
+inside them still takes `#$` first, so code written for PennMUSH reads the same switch it read there.
+The branch of an `if()` or `ifelse()` also counts as a switch for `stext()`, `%$<n>` and `slev()`, so
+`%$0` there is the condition and `%$1` the switch around it.<br>
+**Why.** The token then means the same thing in every function that matches or tests a value.<br>
+**Workaround.** Write `\#$` or `lit(#$)` where you want the text `#$`. Inside an `if()`, use `%$1` or
+`stext(1)` for the switch around it, or `%$L` for the outermost.
+
+```sharp
+> think case(moof,moof,#$)
+moof
+> think if(abc,<#$>)
+<abc>
+> think switch(a,*,case(b,b,#$))
+a
+> think case(b,b,\#$)
+#$
+> think switch(a,*,if(1,%$0 %$1 [slev()]))
+1 a 2
 ```
 
 ## Function names cannot be produced by evaluation

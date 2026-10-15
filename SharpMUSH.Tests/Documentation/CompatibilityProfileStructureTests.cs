@@ -45,6 +45,7 @@ public class CompatibilityProfileStructureTests
 		["Justification: `mux_justify`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
 		["Text order: `mux_collation`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
 		["TinyMUX's `list()`: `mux_list`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
+		["Innermost loop tokens"] = "describes a setting for TinyMUX code; off, the default, matches PennMUSH",
 		["`ansi()` and `lit()`"] = "only the declared maximum differs; behaviour matches",
 		["Time precision"] = "the consequence of the choice *A trailing `<precision>` on the time functions*",
 		["Objids and stamped dbrefs"] = "the representation decision is tracked in #1006 item 13",

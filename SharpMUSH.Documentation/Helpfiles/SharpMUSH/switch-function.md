@@ -38,7 +38,11 @@ switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [SWIT
 
 In the `<list>` that is evaluated, or the `<default>`, "#$" stands for `<str>`. The value is never evaluated as code, so #$ is safe on user input. If you nest switch()es, #$ refers to the outermost one whose `<list>` it is written in. For the current switch(), use %$0 or stext(0).
 
-"#$" counts only where it is written in the switch() itself. In an `<expr>`, in the code of an attribute a `<list>` calls such as u(), outside any switch, and inside lit() or after \, it is plain text. case() and caseall() leave it as text, for TinyMUSH 3 compatibility.
+"#$" counts only where it is written in the switch() itself. In an `<expr>`, in the code of an attribute a `<list>` calls such as u(), outside any switch, and inside lit() or after \, it is plain text.
+
+case() and caseall() set "#$" to `<str>` in the `<list>` or `<default>` they evaluate, as if() and ifelse() set it to their condition. When a switch() runs around or inside one of them, #$ names the switch() instead, as it does in PennMUSH, where case() leaves #$ as text. See [compatibility parser in case and if].
+
+With the `innermost_tokens` option on, #$ names the innermost switch, case(), if() or ifelse() whose `<list>`, `<default>` or branch is running, as TinyMUX's does, and it also works in the code of an attribute that `<list>` calls. See [compatibility config innermost loop tokens].
 
 
 ::: seealso

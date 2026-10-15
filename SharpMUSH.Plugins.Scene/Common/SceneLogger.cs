@@ -15,6 +15,7 @@ namespace SharpMUSH.Plugins.Scene.Common;
 public static class SceneLogger
 {
 	private const string TypePrefix = "TYPE`";
+	private const string DetailPrefix = "DETAIL`";
 
 	/// <summary>The Scene Logger, or null when the scene package is not installed.</summary>
 	public static async ValueTask<AnySharpObject?> FindAsync(IServiceProvider services)
@@ -60,6 +61,41 @@ public static class SceneLogger
 
 		return new PoseTypeCatalogue(
 			[.. types.OrderBy(t => t.Order).ThenBy(t => t.Key, StringComparer.Ordinal)],
+			[.. problems.OrderBy(p => p.Key, StringComparer.Ordinal)]);
+	}
+
+	/// <summary>Every scene detail the logger defines (<c>DETAIL`&lt;KEY&gt;</c>), in order, and the attributes that do not read as one.</summary>
+	public static async ValueTask<SceneDetailCatalogue> DetailsAsync(IServiceProvider services)
+	{
+		if (await FindAsync(services) is not { } logger) return SceneDetailCatalogue.Empty;
+
+		var attributes = services.GetRequiredService<IAttributeService>();
+		if (await attributes.GetAttributePatternAsync(logger, logger, DetailPrefix + "*", false, IAttributeService.AttributePatternMode.Wildcard)
+			is not SharpAttribute[] found)
+			return SceneDetailCatalogue.Empty;
+
+		var details = new List<SceneDetail>();
+		var problems = new List<SceneDetailProblem>();
+		foreach (var attribute in found)
+		{
+			var name = attribute.LongName;
+			if (!name.StartsWith(DetailPrefix, StringComparison.OrdinalIgnoreCase)) continue;
+			var key = name[DetailPrefix.Length..];
+			if (key.Length == 0 || key.Contains('`')) continue;
+
+			switch (SceneDetails.Read(key, attribute.Value.ToPlainText()))
+			{
+				case SceneDetail detail:
+					details.Add(detail);
+					break;
+				case Error<string> error:
+					problems.Add(new SceneDetailProblem(key.ToLowerInvariant(), error.Value));
+					break;
+			}
+		}
+
+		return new SceneDetailCatalogue(
+			[.. details.OrderBy(d => d.Order).ThenBy(d => d.Key, StringComparer.Ordinal)],
 			[.. problems.OrderBy(p => p.Key, StringComparer.Ordinal)]);
 	}
 
