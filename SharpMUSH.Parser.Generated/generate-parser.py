@@ -135,7 +135,8 @@ def generate(grammar_name):
 
 	def first(c):
 		alts = [f'bracePattern__{inside(c, "brace")}', f'bracketPattern__{inside(c, "bracket")}', f'beginGenericText__{N(c)}',
-				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken']
+				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken',
+				'switchSubject']
 		if c.G:
 			alts.append(f'closedGroupFirst__{inside(c, "group")}')
 		return alts
@@ -143,7 +144,7 @@ def generate(grammar_name):
 	def later(c):
 		alts = [f'bracePattern__{inside(c, "brace")}', f'bracketPattern__{inside(c, "bracket")}',
 				f'PERCENT validSubstitution__{inside(c, "name")}', f'regexpCapture__{inside(c, "name")}', 'iterationToken',
-				f'genericText__{N(c)}']
+				'switchSubject', f'genericText__{N(c)}']
 		if c.G:
 			alts.append(f'closedGroup__{inside(c, "group")}')
 		return alts
@@ -219,11 +220,11 @@ def generate(grammar_name):
 		w(f'bracketPattern__{n}: OBRACK evaluationString__{n}? CBRACK;')
 		w(f'regexpCapture__{n}: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__{n}? CCARET?;')
 		w(f'validSubstitution__{n}: complexSubstitutionSymbol__{n} | substitutionSymbol;')
-		w(f'complexSubstitutionSymbol__{n}: (REG_STARTCARET explicitEvaluationString__{n} CCARET | ARG_STARTCARET explicitEvaluationString__{n} CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);')
+		w(f'complexSubstitutionSymbol__{n}: (REG_STARTCARET explicitEvaluationString__{n} CCARET | ARG_STARTCARET explicitEvaluationString__{n} CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);')
 		# With paren_groups, a '(' or a name's '(' that starts no call opens a group instead of being text.
 		w(f'genericText__{n}: beginGenericText__{n}' + ('' if c.G else ' | FUNCHAR') + ';')
 		tokens = list(text_tokens(c)) + ([] if c.G else ['OPAREN'])
-		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | ansi)']) + ';')
+		w(f'beginGenericText__{n}: ' + ' | '.join(tokens + ['(escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi)']) + ';')
 		if c.P == 1:
 			body = block(later(c)) + '*'
 			w(f'closedGroupFirst__{n}: beginGenericText__Open {body} genericText__Close;')
@@ -245,9 +246,11 @@ def generate(grammar_name):
     )
 ;
 
-escapedText: ESCAPE ANY;
+escapedText: ESCAPE ANY | ESCAPE_AT_END;
 
 iterationToken: ITER_ELEMENT | ITER_POSITION;
+
+switchSubject: SWITCH_SUBJECT;
 
 ansi: OANSI ANSICHARACTER? CANSI;''')
 
@@ -291,22 +294,26 @@ ACCESSORS = {
 	'commaCommandArgs': [('evaluationString', True), ('COMMAWS', True)],
 	'evaluationString': [('function', False), ('explicitEvaluationString', False), ('callTail', False)],
 	'explicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('beginGenericText', False),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True), ('genericText', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True), ('switchSubject', True),
+		('genericText', True)],
 	'braceExplicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True),
+		('switchSubject', True)],
 	'callTail': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
-		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True)],
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('iterationToken', True),
+		('switchSubject', True)],
 	'regexpCapture': [('REGEXP_NUM', False), ('REGEXP_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False)],
 	'bracePattern': [('OBRACE', False), ('braceExplicitEvaluationString', False), ('CBRACE', False)],
 	'bracketPattern': [('OBRACK', False), ('evaluationString', False), ('CBRACK', False)],
 	'function': [('FUNCHAR', False), ('evaluationString', True), ('COMMAWS', True), ('CPAREN', False)],
 	'validSubstitution': [('complexSubstitutionSymbol', False), ('substitutionSymbol', False)],
 	'complexSubstitutionSymbol': [('REG_STARTCARET', False), ('ARG_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False),
-		('REG_NUM', False), ('REG_ALPHA', False), ('ITEXT_NUM', False), ('ITEXT_LAST', False), ('STEXT_NUM', False),
+		('REG_NUM', False), ('REG_ALPHA', False), ('ITEXT_NUM', False), ('ITEXT_LAST', False), ('DTEXT_NUM', False),
+		('DTEXT_LAST', False), ('STEXT_NUM', False),
 		('STEXT_LAST', False), ('VWX', False)],
 	'genericText': [('beginGenericText', False), ('FUNCHAR', False)],
 	'beginGenericText': [('CPAREN', False), ('SEMICOLON', False), ('COMMAWS', False), ('EQUALS', False), ('CCARET', False),
-		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('ansi', False)],
+		('OPAREN', False), ('escapedText', False), ('OTHER', False), ('DOLLAR', False), ('HASH', False), ('PERCENT_AT_END', False), ('ansi', False)],
 }
 
 # Rules that are spliced into their parent when they exit: the tree keeps one flat run of text.
@@ -381,7 +388,7 @@ def bridge(grammar):
 		elif base in ACCESSORS:
 			for rule in copies:
 				w(f'	public partial class {pascal(rule)}Context : {iface(base)};')
-	for rule in ('substitutionSymbol', 'escapedText', 'iterationToken', 'ansi'):
+	for rule in ('substitutionSymbol', 'escapedText', 'iterationToken', 'switchSubject', 'ansi'):
 		w(f'	public partial class {pascal(rule)}Context : ISoftcodeContext;')
 	w('')
 	w('	/// <summary>')

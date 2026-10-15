@@ -180,16 +180,6 @@ public class ParserErrorListener : BaseErrorListener, IAntlrErrorListener<int>
 			return null;
 		}
 
-		if (expected.Contains(SharpMUSHLexer.ANY))
-		{
-			return ["a character after \\"];
-		}
-
-		if (expected.Contains(SharpMUSHLexer.OTHER_SUB))
-		{
-			return ["a substitution after %"];
-		}
-
 		if (!expected.Contains(SharpMUSHLexer.OTHER))
 		{
 			return GetExpectedTokens(parser, expected);

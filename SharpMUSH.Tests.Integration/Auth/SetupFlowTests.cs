@@ -200,7 +200,7 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 	/// The claim leaves the rest of the wizard pending for the new administrator, who can read it and
 	/// close it. The portal is told which applications the game has.
 	/// </summary>
-	[Test, NotInParallel("SetupFlow", Order = 7)]
+	[Test, NotInParallel(["SetupFlow", "WikiReaderInstall"], Order = 7)]
 	public async Task Claim_LeavesTheWizardPending_ForTheAdministratorToFinish()
 	{
 		var db = factory.Services.GetRequiredService<ISharpDatabase>();

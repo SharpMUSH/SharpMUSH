@@ -270,7 +270,7 @@ public partial class Commands
 			var wrappedIteration = new IterationWrapper<MString>
 			{
 				Value = MarkupText.Empty, Break = false, NoBreak = noBreak, Iteration = 0,
-				Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
+				Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation, DoList = true
 			};
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
@@ -325,7 +325,8 @@ public partial class Commands
 					NoBreak = noBreak,
 					Iteration = iteration,
 					Spliced = true,
-					Evaluation = parser.CurrentState.CurrentEvaluation
+					Evaluation = parser.CurrentState.CurrentEvaluation,
+					DoList = true
 				};
 
 				// The loops this one runs inside stay visible, as they do inline: a ## written in an outer
@@ -339,7 +340,8 @@ public partial class Commands
 						Break = frame.Break,
 						NoBreak = frame.NoBreak,
 						Spliced = frame.Spliced,
-						Evaluation = frame.Evaluation
+						Evaluation = frame.Evaluation,
+						DoList = frame.DoList
 					}));
 				iterationStack.Push(iterationWrapper);
 
@@ -386,7 +388,6 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var strArg = args["0"];
-		var testString = strArg.Message.ToPlainText();
 		Option<MString> defaultArg = new None();
 		var matched = false;
 		var hadErrors = false;
@@ -423,7 +424,8 @@ public partial class Commands
 		// frame, so $0-$9 in it read the match; a queued action takes a copy of the frame with it.
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
-		parser.CurrentState.SwitchStack.Push(strArg.Message);
+		var frame = new SwitchFrame { Text = strArg.Message, Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation };
+		parser.CurrentState.SwitchStack.Push(frame);
 
 		try
 		{
@@ -458,9 +460,7 @@ public partial class Commands
 				if (patternMatched)
 				{
 					matched = true;
-					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
-					var actionText = actionArg.Message.ToPlainText().Replace("#$", testString);
-					hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
+					hadErrors |= await RunControlFlowAction(parser, executor, frame, actionArg.Message,
 						isInline, noBreak, hasLocalize, hasClearRegs);
 
 					if (isFirst) break;
@@ -470,8 +470,7 @@ public partial class Commands
 			if (defaultArg.TryGetValue(out var defaultValue) && !matched)
 			{
 				captures.Clear();
-				var defaultText = defaultValue.ToPlainText().Replace("#$", testString);
-				hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
+				hadErrors |= await RunControlFlowAction(parser, executor, frame, defaultValue,
 					isInline, noBreak, hasLocalize, hasClearRegs);
 			}
 
@@ -507,32 +506,43 @@ public partial class Commands
 	/// <c>do_entry</c> localizes around each inplace entry it drains (src/cque.c:1183-1195). A queued
 	/// action instead gets its own copy of the registers from <see cref="ParserState.SnapshotForQueuedAction"/>, matching
 	/// <c>PE_INFO_CLONE</c>, so neither switch has anything to do there.</para>
+	///
+	/// <para><c>#$</c> in the action reads the switch's subject (<c>VisitSwitchSubject</c>); a queued action
+	/// keeps a copy of the switch that still says so.</para>
 	/// </summary>
-	private async ValueTask<bool> RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
-		bool isInline, bool noBreak, bool localizeRegisters, bool clearRegisters)
+	private async ValueTask<bool> RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, SwitchFrame frame,
+		MString action, bool isInline, bool noBreak, bool localizeRegisters, bool clearRegisters)
 	{
-		if (!isInline)
+		frame.InAction = true;
+		try
 		{
-			await Mediator.Send(new AdmitCommandListRequest(
-				action,
-				parser.CurrentState.SnapshotForQueuedAction(),
-				new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
-				-1), ExecutionBudget.CurrentToken);
-			return false;
+			if (!isInline)
+			{
+				await Mediator.Send(new AdmitCommandListRequest(
+					action,
+					parser.CurrentState.SnapshotForQueuedAction(),
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1), ExecutionBudget.CurrentToken);
+				return false;
+			}
+
+			using var registers = RegisterScope.Enter(parser.CurrentState.Registers, localizeRegisters, clearRegisters);
+
+			var propagation = new BreakPropagation { PreserveNext = true };
+			var result = await parser.With(
+				state => state with { BreakPropagation = propagation },
+				p => p.CommandListParse(action));
+
+			if (propagation.Broke && !noBreak)
+			{
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+			}
+			return result?.HadErrors == true;
 		}
-
-		using var registers = RegisterScope.Enter(parser.CurrentState.Registers, localizeRegisters, clearRegisters);
-
-		var propagation = new BreakPropagation { PreserveNext = true };
-		var result = await parser.With(
-			state => state with { BreakPropagation = propagation },
-			p => p.CommandListParse(action));
-
-		if (propagation.Broke && !noBreak)
+		finally
 		{
-			parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+			frame.InAction = false;
 		}
-		return result?.HadErrors == true;
 	}
 
 	[SharpCommand(Name = "@IFELSE", Output = CommandOutput.Runs, Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
@@ -589,7 +599,8 @@ public partial class Commands
 		// Like @switch, the matched action runs with the match's captures for $0-$9.
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
-		parser.CurrentState.SwitchStack.Push(args["0"].Message);
+		var frame = new SwitchFrame { Text = args["0"].Message, Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation };
+		parser.CurrentState.SwitchStack.Push(frame);
 
 		try
 		{
@@ -625,10 +636,7 @@ public partial class Commands
 				{
 					matchFound = true;
 
-					var actionText = action.ToPlainText().Replace("#$", testString);
-					var actionMString = MarkupText.Plain(actionText);
-
-					hadErrors |= await RunControlFlowAction(parser, executor, actionMString,
+					hadErrors |= await RunControlFlowAction(parser, executor, frame, action,
 						isInline, noBreak, localizeRegs, clearRegs);
 
 					break;
@@ -643,10 +651,7 @@ public partial class Commands
 
 				if (defaultAction != null)
 				{
-					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
-					var actionMString = MarkupText.Plain(actionText);
-
-					hadErrors |= await RunControlFlowAction(parser, executor, actionMString,
+					hadErrors |= await RunControlFlowAction(parser, executor, frame, defaultAction,
 						isInline, noBreak, localizeRegs, clearRegs);
 				}
 			}

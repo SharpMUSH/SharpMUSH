@@ -219,8 +219,9 @@ public class ParserFailureTests
 	[Arguments("%q<abc", "#-1 PARSER FAILURE: Expected > at end of expression")]
 	[Arguments("add(1,%q<a)", "#-1 PARSER FAILURE: Expected > at position 10 (near \"add(1,%q<a)\")")]
 	[Arguments("%q<>", "#-1 PARSER FAILURE: Expected a name inside <> at position 3 (near \"%q<>\")")]
-	[Arguments("100%", "#-1 PARSER FAILURE: Expected a substitution after % at end of expression")]
-	[Arguments("lit(a\\", "#-1 PARSER FAILURE: Expected a character after \\ at end of expression")]
+	// A '%' or '\' at the end is text, so what is missing is the call's close.
+	[Arguments("lit(a%", "#-1 PARSER FAILURE: Expected ) or , at end of expression")]
+	[Arguments("lit(a\\", "#-1 PARSER FAILURE: Expected ) or , at end of expression")]
 	public async Task FailureNamesWhatIsMissing(string input, string expected)
 	{
 		await Assert.That(await Eval(input)).IsEqualTo(expected);
