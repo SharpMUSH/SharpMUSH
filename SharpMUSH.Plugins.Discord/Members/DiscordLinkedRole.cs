@@ -86,12 +86,13 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 		}
 
 		var options = new RequestOptions { CancelToken = cancellationToken, AuditLogReason = "Only linked members post in a linked channel" };
-		var everyone = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole) ?? OverwritePermissions.InheritAll;
-		await channel.AddPermissionOverwriteAsync(channel.Guild.EveryoneRole,
-			everyone.Modify(sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny), options);
+		// The Linked role first: if the second change fails, the channel is left open rather than closed to everyone.
 		var linked = channel.GetPermissionOverwrite(role) ?? OverwritePermissions.InheritAll;
 		await channel.AddPermissionOverwriteAsync(role,
 			linked.Modify(sendMessages: PermValue.Allow, sendMessagesInThreads: PermValue.Allow), options);
+		var everyone = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole) ?? OverwritePermissions.InheritAll;
+		await channel.AddPermissionOverwriteAsync(channel.Guild.EveryoneRole,
+			everyone.Modify(sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny), options);
 		return null;
 	}
 
