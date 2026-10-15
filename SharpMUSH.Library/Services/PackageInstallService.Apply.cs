@@ -427,12 +427,12 @@ public partial class PackageInstallService
 		return null;
 	}
 
-	/// <summary>Pass 5: objects removed from the package are marked GOING, the @destroy convention.</summary>
+	/// <summary>Pass 5: objects removed from the package are halted and marked GOING; see <see cref="ReleaseObjectAsync"/>.</summary>
 	private async Task RetireRemovedObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
 	{
 		foreach (var change in run.Changeset.Objects.Where(c => c.Action == PackageObjectAction.Delete))
 		{
-			await MarkGoingAsync(run.Writes, change.Objid!, run.Notes, cancellationToken);
+			await ReleaseObjectAsync(run.Writes, change.Objid!, run.Notes, cancellationToken);
 			await run.Writes.RemovePackageObjectAsync(run.Manifest.Name, change.Ref);
 			await run.Writes.RemoveManagedStructureAsync(run.Manifest.Name, change.Objid!);
 		}

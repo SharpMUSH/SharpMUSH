@@ -71,7 +71,7 @@
 - [x] Revisions: per-apply snapshot (objects, final attr values, configure answers,
       pre-apply undo data) + pruning; rollback applies an old snapshot as a NEW
       revision (`RollbackAsync`)
-- [x] Uninstall: dependents block (unless forced), created objects marked GOING
+- [x] Uninstall: dependents block (unless forced), created objects halted and marked GOING
       (@destroy convention), cross-package managed attrs cleared, registry cascade
 - [x] End-to-end integration test: install → customize → conflicted upgrade →
       take-theirs → rollback → uninstall (`PackageInstallServiceTests`)
@@ -187,7 +187,7 @@
 - [x] Git integration: clone, fetch, tag versions, update detection, branch pinning,
       moved-tag trust check (`GitPackageSourceServiceTests` vs local fixture repo)
 - [x] Dependency resolution: unmet deps block w/ source hints; conflicts match prereleases
-- [x] Uninstall: objects marked GOING, attrs/records cleaned, dependents block
+- [x] Uninstall: objects halted and marked GOING, attrs/records cleaned, dependents block
 - [x] Cross-package attrs: registry queries (`PackageRegistryTests`) + cross-package
       parent ref in apply (bbs-lite pattern, authoring tests)
 - [x] Dangerous pattern scanner: all listed patterns (`MushcodeHighlighterTests`)
