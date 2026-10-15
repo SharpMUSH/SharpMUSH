@@ -22,6 +22,9 @@ public static class SceneSystemServiceCollectionExtensions
 		services.AddSingleton(sp => new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
 		services.AddSingleton<ISceneStorage>(sp => sp.GetRequiredService<LightningSceneStorage>());
 
+		// Drafts and calendar links: what the portal keeps for a character, apart from the scenes.
+		services.AddSingleton<IScenePortalStore>(sp => new LightningScenePortalStore(sp.GetRequiredService<ILightningStorageAccessor>()));
+
 		// The two kinds of history the Scene System keeps, measured and bounded by the host's retention
 		// pass alongside the provider's own (see IHistoryRetentionService).
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningSceneStorage>().EditHistory);
