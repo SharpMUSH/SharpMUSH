@@ -1834,6 +1834,60 @@
   <data name="PkgMergedValueLabel" xml:space="preserve">
     <value>Merged value</value>
   </data>
+  <data name="PkgLocalEditsCount" xml:space="preserve">
+    <value>Changed by this game ({0})</value>
+  </data>
+  <data name="PkgLocalEditsSub" xml:space="preserve">
+    <value>This game changed these since the package last installed them. Everything else takes the new version.</value>
+  </data>
+  <data name="PkgLocalEditWhat" xml:space="preserve">
+    <value>Changed</value>
+  </data>
+  <data name="PkgLocalEditOutcome" xml:space="preserve">
+    <value>On this upgrade</value>
+  </data>
+  <data name="PkgLocalKept" xml:space="preserve">
+    <value>Kept: the package did not change it</value>
+  </data>
+  <data name="PkgLocalMerged" xml:space="preserve">
+    <value>Merged: the package changed other lines</value>
+  </data>
+  <data name="PkgLocalDecide" xml:space="preserve">
+    <value>Both changed it: choose below</value>
+  </data>
+  <data name="PkgOnlyLocalEdits" xml:space="preserve">
+    <value>Only what this game changed</value>
+  </data>
+  <data name="PkgMergedWritten" xml:space="preserve">
+    <value>Merged (what the upgrade writes)</value>
+  </data>
+  <data name="PkgHooksCount" xml:space="preserve">
+    <value>Runs after the apply: {0} ({1})</value>
+  </data>
+  <data name="PkgHooksSub" xml:space="preserve">
+    <value>The apply runs this on its object after writing everything above. It follows the choices made on this page.</value>
+  </data>
+  <data name="PkgLockConflictsCount" xml:space="preserve">
+    <value>Lock conflicts ({0})</value>
+  </data>
+  <data name="PkgLockConflictsSub" xml:space="preserve">
+    <value>This game and the package both changed these locks.</value>
+  </data>
+  <data name="PkgLockValueLabel" xml:space="preserve">
+    <value>Lock</value>
+  </data>
+  <data name="PkgStructFlag" xml:space="preserve">
+    <value>flag {0}</value>
+  </data>
+  <data name="PkgStructPower" xml:space="preserve">
+    <value>power {0}</value>
+  </data>
+  <data name="PkgStructAttrFlag" xml:space="preserve">
+    <value>{0} flag on {1}</value>
+  </data>
+  <data name="PkgStructLock" xml:space="preserve">
+    <value>{0} lock</value>
+  </data>
   <data name="PkgMissingRemoteParam" xml:space="preserve">
     <value>Missing 'remote' parameter.</value>
   </data>
