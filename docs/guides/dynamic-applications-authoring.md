@@ -70,10 +70,12 @@ Each handler ends by emitting JSON:
 }
 ```
 
-**Field types:** `text`, `textarea`, `mstring`, `number`, `select`, `multiselect`,
+**Field types:** `text`, `textarea`, `mstring`, `number`, `select`, `multiselect`, `list`,
 `boolean`, `radio`, `slider`, `date`, `hidden`, `computed`. `mstring` fields render your
 ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
-`{value,label}`.
+`{value,label}`. A `list` is free text, one value at a time, each shown as a chip that can be
+removed; a value may hold a comma. Give it a JSON array in the data, and it posts one back:
+`json(array,json(string,Sheet checked),json(string,Background read))`.
 
 **Display elements (for `view`, also usable in `form`):** `markdown`, `image` (`src_field`),
 `table` (`rows_field` + `columns`), `keyvalue` (`fields`; a value of `{text,link}` is a link),

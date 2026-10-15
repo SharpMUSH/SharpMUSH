@@ -6467,6 +6467,18 @@
   <data name="PkgSettingBlocked" xml:space="preserve">
     <value>Setting</value>
   </data>
+  <data name="PkgAttributeEntriesCount" xml:space="preserve">
+    <value>Attribute entries ({0})</value>
+  </data>
+  <data name="PkgAttributeEntriesSub" xml:space="preserve">
+    <value>Standard attributes the package adds to the @attribute table: their default flags, and a limit or a list of choices for their values.</value>
+  </data>
+  <data name="PkgAttributeEntryRetroactive" xml:space="preserve">
+    <value>Existing copies changed</value>
+  </data>
+  <data name="PkgAttributeEntriesConfirm" xml:space="preserve">
+    <value>I understand this package changes the flags of {0} attributes already on objects.</value>
+  </data>
   <data name="PkgSettingsConfirm" xml:space="preserve">
     <value>I understand this package changes the game options above.</value>
   </data>
