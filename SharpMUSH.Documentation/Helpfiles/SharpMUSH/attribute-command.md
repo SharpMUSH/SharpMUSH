@@ -129,7 +129,7 @@ The values keep their colour. Setting an attribute to the value it already has s
 
 A handler that changes a watched attribute runs the handlers again, and so does anything it queues with `@trigger`, `@wait` or `@force`. To keep a handler that changes what it heard about, or two handlers that change each other's attributes, from running for ever, a chain stops after 10: a change made by the tenth handler is still made, but runs nothing, and the server logs a warning. A change typed by a player or made by any other code starts a new chain.
 
-As with `/limit` and `/enum`, `<attrib>` must already be a standard attribute: add it with `@attribute/access` first. `@attribute <attrib>` shows the pattern, and `@attribute/decompile` writes the `@attribute/watch` line that makes it again. Only those with the config.admin permission can watch an attribute.
+As with `/limit` and `/enum`, `<attrib>` must already be a standard attribute: add it with `@attribute/access` first. `@attribute <attrib>` shows the pattern, attrwatch() returns it to softcode (see [attrwatch()]), and `@attribute/decompile` writes the `@attribute/watch` line that makes it again. Only those with the config.admin permission can watch an attribute.
 
 Example:
 ```sharp
@@ -189,6 +189,7 @@ Default flags reach new copies of the attribute only. An entry with `retroactive
 ::: seealso
 - [events]
 - [indexed()]
+- [attrwatch()]
 - [attributes]
 - [attribute flags]
 - [@set]

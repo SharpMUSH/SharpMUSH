@@ -187,6 +187,8 @@ public static partial class ErrorMessages
 		public const string IndexBuilding = "#-1 INDEX BUILDING";
 		/// <summary>An attribute with no index, or no entry in the attribute table.</summary>
 		public const string NotIndexed = "#-1 ATTRIBUTE NOT INDEXED";
+		/// <summary><c>attrwatch()</c> on a name that is not in the attribute table.</summary>
+		public const string NotStandardAttribute = "#-1 NOT A STANDARD ATTRIBUTE";
 		/// <summary>An <c>indexed()</c> operation it does not know.</summary>
 		public const string InvalidIndexOperation = "#-1 INVALID INDEX OPERATION";
 		/// <summary><c>indexed(..., between, ...)</c> without exactly two bounds.</summary>
