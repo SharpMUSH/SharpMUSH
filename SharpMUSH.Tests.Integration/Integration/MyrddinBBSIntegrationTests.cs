@@ -517,7 +517,7 @@ public class MyrddinBBSIntegrationTests
 		TestDiagnostics.WriteLine($"[BBS PACKAGE] Run log: {logPath}");
 		TestDiagnostics.WriteLine($"[BBS PACKAGE] Generated manifest: {manifestPath}");
 
-		await Assert.That(manifestYaml).Contains("format: 1")
+		await Assert.That(manifestYaml).StartsWith("format: ")
 			.Because("the generated artifact should be a complete package manifest");
 		await Assert.That(manifestYaml).Contains("package: myrddin-bbs");
 		// Quoted because it leads with a digit — plain, YAML would hand back a number.
