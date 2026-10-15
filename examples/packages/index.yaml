@@ -9,8 +9,8 @@ packages:
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph
-    version: 0.1.0
-    description: Read-only room topology in the reusable HTML/JavaScript host
+    version: 0.3.0
+    description: Room topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place
   - path: hello-world/
     package: hello-world
     version: 1.0.1
