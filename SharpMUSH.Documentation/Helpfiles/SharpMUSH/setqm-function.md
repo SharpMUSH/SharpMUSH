@@ -44,7 +44,14 @@ Building a register name from one set earlier in the same call:
 all unread
 ```
 
-setqm() and setrm() come from RhostMUSH and take the same arguments, except RhostMUSH's `<register>><label>` form.
+A name written `<register>><label>` also gives the register a label, as setq()'s third argument does (see 'help setq register labels'):
+```sharp
+> think [setqm(0>total, 5, total, add(%q<total>, 1))]%q0
+6
+```
+A bad label makes the function return `#-1 INVALID LABEL`; the other pairs are still set. RhostMUSH splits the name at the `>` before evaluating it, and SharpMUSH after, so a `>` that a function in the name returns marks a label too.
+
+setqm() and setrm() come from RhostMUSH and take the same arguments.
 
 ::: seealso
 - [setq()]
@@ -52,6 +59,7 @@ setqm() and setrm() come from RhostMUSH and take the same arguments, except Rhos
 - [R()]
 - [LISTQ()]
 - [UNSETQ()]
+- [nameq()]
 :::
 
 ## Returned values

@@ -1012,16 +1012,19 @@ public partial record ParserState
 	/// <returns>Success if it was a valid register.</returns>
 	public bool AddRegister(string register, MString value)
 	{
-		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
-		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
-		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
-		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
+		var canPeek = Registers.TryPeek(out var top);
+		if (!canPeek || string.IsNullOrEmpty(register))
 		{
 			return false;
 		}
 
-		var canPeek = Registers.TryPeek(out var top);
-		if (!canPeek)
+		// A RhostMUSH label (setq()'s third argument) writes the register it names.
+		register = RegisterLabels.Resolve(top!, register);
+
+		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
+		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
+		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
+		if (!RegisterNameRegex().IsMatch(register))
 		{
 			return false;
 		}

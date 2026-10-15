@@ -120,6 +120,10 @@ public static partial class ErrorMessages
 		public const string OutputTooLarge = "#-1 OUTPUT EXCEEDED MAXIMUM SIZE";
 		public const string RegisterRange = "#-1 REGISTER OUT OF RANGE";
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
+		/// <summary>RhostMUSH's answer for a q-register label it cannot take (<c>process_setqs</c>).</summary>
+		public const string InvalidLabel = "#-1 INVALID LABEL";
+		/// <summary>RhostMUSH's nameq() answer for a label another register already has.</summary>
+		public const string LabelInUseFormat = "#-1 LABEL [{0}] ALREADY IN USE";
 		public const string BadArgumentName = "#-1 ARGUMENT NAME INVALID";
 		public const string NamedArgumentsComeInPairs = "#-1 NAMED ARGUMENTS COME IN PAIRS";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";

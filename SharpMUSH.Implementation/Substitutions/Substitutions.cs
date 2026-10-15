@@ -187,7 +187,9 @@ public static partial class Substitutions
 		var name = symbol.Message.ToPlainText();
 		var bangLength = Bang.Read(name, out var bang);
 		parser.CurrentState.Registers.TryPeek(out var curVal);
-		var value = curVal!.TryGetValue(name[bangLength..].ToUpper(), out var found) ? found : MarkupText.Empty;
+		var value = curVal!.TryGetValue(RegisterLabels.Resolve(curVal, name[bangLength..].ToUpper()), out var found)
+			? found
+			: MarkupText.Empty;
 		return new CallState(bangLength > 0 ? bang.Apply(value, parser) : value);
 	}
 
