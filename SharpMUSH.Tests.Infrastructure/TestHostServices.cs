@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
@@ -28,6 +30,32 @@ public static class TestHostServices
 	{
 		services.RemoveAll<IServerRestart>();
 		services.AddSingleton<IServerRestart, RecordingServerRestart>();
+	}
+
+	/// <summary>Every test host hears feed lines through a <see cref="RecordingFeedLineListener"/>.</summary>
+	public static void RecordFeedLines(IServiceCollection services)
+	{
+		services.AddSingleton<RecordingFeedLineListener>();
+		services.AddSingleton<IFeedLineListener>(provider => provider.GetRequiredService<RecordingFeedLineListener>());
+	}
+}
+
+/// <summary>
+/// An <see cref="IFeedLineListener"/> that keeps every line it hears, as a plugin's would. Tests find their own
+/// line by a unique text, since the host is shared.
+/// </summary>
+public sealed class RecordingFeedLineListener : IFeedLineListener
+{
+	private readonly ConcurrentQueue<FeedLine> _lines = new();
+
+	/// <summary>Every line heard, oldest first.</summary>
+	public IReadOnlyList<FeedLine> Lines => _lines.ToArray();
+
+	/// <inheritdoc />
+	public ValueTask LineSentAsync(FeedLine line, CancellationToken cancellationToken)
+	{
+		_lines.Enqueue(line);
+		return ValueTask.CompletedTask;
 	}
 }
 

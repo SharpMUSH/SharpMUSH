@@ -78,6 +78,24 @@ public class FeedCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AListenerHearsEachLine_AfterItIsDelivered()
+	{
+		await Heard(_system, $"@feed/join {_kind}/1={Ref(_ann)}");
+		var text = TestIsolationHelpers.GenerateUniqueName("FeedListened");
+		await Heard(_system, $"@feed/send {_kind}/1={text}");
+
+		var heard = WebAppFactoryArg.Services.GetRequiredService<RecordingFeedLineListener>().Lines
+			.Where(line => line.Message.Text.ToPlainText() == text).ToList();
+		await Assert.That(heard).Count().IsEqualTo(1);
+		var line = heard[0];
+		await Assert.That(line.Message.Feed).IsEqualTo($"{_kind}/1");
+		await Assert.That(line.Message.Speaker.Number).IsEqualTo(_system.DbRef.Number);
+		await Assert.That(line.Recipients.Select(dbref => dbref.Number)).IsEquivalentTo(new[] { _ann.DbRef.Number });
+		await Assert.That(line.Stored).IsTrue();
+		await Assert.That(line.Origin).IsEmpty();
+	}
+
+	[Test]
 	public async Task MemberFunctions_ReadWhoIsOnAFeed()
 	{
 		await Heard(_system, $"@feed/join {_kind}/a={Ref(_ann)}");

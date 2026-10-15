@@ -92,6 +92,15 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      - name: Upload Discord plugin test build output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: SharpMUSH.Tests.DiscordPlugin
+          path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.DiscordPlugin.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Upload integration test build output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -333,6 +342,57 @@ jobs:
         with:
           name: test-results-scene-plugin
           path: TestResults/scene-plugin/**/*.trx
+          retention-days: 7
+          if-no-files-found: warn
+
+  test-discord-plugin:
+    needs: [build]
+    runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
+
+      - name: Download test build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: SharpMUSH.Tests.DiscordPlugin
+          path: ${{ runner.temp }}/test-build
+
+      - name: Download shared test build support
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.DiscordPlugin.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
+
+      - name: Discord plugin tests
+        run: dotnet run --project SharpMUSH.Tests.DiscordPlugin --no-build --no-restore -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/discord-plugin"
+
+      - name: Upload discord-plugin test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: test-results-discord-plugin
+          path: TestResults/discord-plugin/**/*.trx
           retention-days: 7
           if-no-files-found: warn
 

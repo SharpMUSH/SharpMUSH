@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <RollForward>LatestMajor</RollForward>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>TUnit0038</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="TUnit" Version="$(TUnitVersion)" />
+  </ItemGroup>
+
+  <!-- The plugin and Library only, not SharpMUSH.Implementation, as SharpMUSH.Tests.ScenePlugin does. -->
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+  </ItemGroup>
+
+</Project>

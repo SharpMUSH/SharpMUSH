@@ -52,6 +52,11 @@ public interface IFeedService
 /// <param name="Text">The message as written.</param>
 /// <param name="To">The <c>/to</c> list, which <c>ROUTE</c> gets as <c>%6</c>; empty when none was given.</param>
 /// <param name="DisplayName">The <c>/as</c> name, or empty.</param>
+/// <param name="Origin">
+/// Where the line came from when that was outside the game, such as <c>discord/&lt;message id&gt;</c>, so the
+/// <see cref="Plugins.IFeedLineListener"/> that brought it in does not send it back out; empty for a line sent
+/// in the game.
+/// </param>
 public sealed record FeedSend(
 	SharpFeedKind Kind,
 	SharpFeed Feed,
@@ -60,7 +65,8 @@ public sealed record FeedSend(
 	string Style,
 	MString Text,
 	IReadOnlyList<DBRef> To,
-	string DisplayName = "");
+	string DisplayName = "",
+	string Origin = "");
 
 /// <summary>What became of a line.</summary>
 /// <param name="Id">Its id.</param>

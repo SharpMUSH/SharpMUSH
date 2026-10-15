@@ -6,7 +6,7 @@ set -euo pipefail
 archive_dir="${1:?Pass an archive output directory}"
 mkdir -p "$archive_dir"
 
-for project in SharpMUSH.Tests SharpMUSH.Tests.BUnit SharpMUSH.Tests.ScenePlugin SharpMUSH.Tests.Integration; do
+for project in SharpMUSH.Tests SharpMUSH.Tests.BUnit SharpMUSH.Tests.ScenePlugin SharpMUSH.Tests.DiscordPlugin SharpMUSH.Tests.Integration; do
   test -d "$project/bin/Debug"
   tar -I 'gzip -1' -cf "$archive_dir/$project.tar.gz" "$project/bin/Debug"
 done

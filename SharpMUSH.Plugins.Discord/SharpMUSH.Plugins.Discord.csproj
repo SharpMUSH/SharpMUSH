@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+		<IsPackable>false</IsPackable>
+		<RootNamespace>SharpMUSH.Plugins.Discord</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<!-- The Discord gateway and REST client. Loads in the plugin's own load context with its dependencies. -->
+		<PackageReference Include="Discord.Net.WebSocket" Version="3.20.1" />
+		<!-- Host-owned contracts: kept out of the plugin's output so the host's copies are the ones that load. -->
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" Private="false" ExcludeAssets="runtime;native;contentFiles" />
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" Private="false" ExcludeAssets="runtime;native;contentFiles" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="plugin.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
+</Project>

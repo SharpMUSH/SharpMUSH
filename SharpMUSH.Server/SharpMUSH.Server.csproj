@@ -68,6 +68,7 @@
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
     <ProjectReference Include="..\SharpMUSH.Plugins.Lsp\SharpMUSH.Plugins.Lsp.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\SharpMUSH.Plugins.Mcp\SharpMUSH.Plugins.Mcp.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\SharpMUSH.CodeAnalysis\SharpMUSH.CodeAnalysis.csproj" />
   </ItemGroup>
 
@@ -93,6 +94,32 @@
     <ItemGroup>
       <ResolvedFileToPublish Include="@(McpPluginFiles)">
         <RelativePath>plugins/mcp/%(McpPluginFiles.PluginRelativePath)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <!-- The Discord plugin carries Discord.Net and its dependencies in plugins/discord/, the same way. -->
+  <Target Name="ResolveDiscordPluginFiles">
+    <PropertyGroup><DiscordPluginOutDir>$(MSBuildThisFileDirectory)../SharpMUSH.Plugins.Discord/bin/$(Configuration)/net11.0</DiscordPluginOutDir></PropertyGroup>
+    <ItemGroup>
+      <DiscordPluginFiles Include="$(DiscordPluginOutDir)\**\*.dll;$(DiscordPluginOutDir)\runtimes\**\*;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.deps.json;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.runtimeconfig.json;$(DiscordPluginOutDir)\plugin.json" Exclude="$(DiscordPluginOutDir)\SharpMUSH.*.dll;$(DiscordPluginOutDir)\SharpMUSH.*.pdb;$(DiscordPluginOutDir)\SharpMUSH.*.xml" />
+      <DiscordPluginFiles Include="$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.dll;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.pdb" />
+      <DiscordPluginFiles Update="@(DiscordPluginFiles)">
+        <PluginRelativePath>$([MSBuild]::MakeRelative('$(DiscordPluginOutDir)', '%(FullPath)'))</PluginRelativePath>
+      </DiscordPluginFiles>
+    </ItemGroup>
+    <RemoveDuplicates Inputs="@(DiscordPluginFiles)"><Output TaskParameter="Filtered" ItemName="UniqueDiscordPluginFiles" /></RemoveDuplicates>
+    <ItemGroup><DiscordPluginFiles Remove="@(DiscordPluginFiles)" /><DiscordPluginFiles Include="@(UniqueDiscordPluginFiles)" /></ItemGroup>
+  </Target>
+  <Target Name="CopyDiscordPlugin" AfterTargets="Build" DependsOnTargets="ResolveDiscordPluginFiles">
+    <RemoveDir Directories="$(OutDir)plugins\discord" />
+    <Copy SourceFiles="@(DiscordPluginFiles)" DestinationFiles="@(DiscordPluginFiles->'$(OutDir)plugins/discord/%(PluginRelativePath)')" />
+  </Target>
+  <Target Name="PublishDiscordPlugin" AfterTargets="ComputeResolvedFilesToPublishList" DependsOnTargets="ResolveDiscordPluginFiles">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(DiscordPluginFiles)">
+        <RelativePath>plugins/discord/%(DiscordPluginFiles.PluginRelativePath)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </ResolvedFileToPublish>
     </ItemGroup>

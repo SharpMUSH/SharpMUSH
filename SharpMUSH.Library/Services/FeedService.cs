@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -22,6 +23,7 @@ public class FeedService(
 	INotifyService notifyService,
 	IChannelMessageIdSource ids,
 	Lazy<ITaskScheduler> scheduler,
+	IEnumerable<IFeedLineListener> listeners,
 	ILogger<FeedService> logger) : IFeedService
 {
 	public async ValueTask<Result<SharpFeedKind>> GetKindAsync(string kind)
@@ -72,7 +74,7 @@ public class FeedService(
 	public async ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		var (kind, feed, speaker, executor, style, text, to, displayName) = send;
+		var (kind, feed, speaker, executor, style, text, to, displayName, origin) = send;
 		var settings = feed.Settings.Over(kind.Effective);
 		if (settings.MaxLength is > 0 and var maxLength && text.ToPlainText().Length > maxLength)
 			return new Error<string>($"That is longer than {feed.Name} takes ({maxLength} characters).");
@@ -96,7 +98,24 @@ public class FeedService(
 		var recipients = await RouteAsync(parser, owner, message, audience, to);
 		var delivered = await DeliverAsync(parser, owner, speaker, message, recipients);
 		await TapAsync(message, delivered);
+		await HandOnAsync(new FeedLine(message, delivered, stored, origin));
 		return new FeedDelivery(id, delivered, stored);
+	}
+
+	/// <summary>Every <see cref="IFeedLineListener"/>, in turn; one that throws is logged and skipped.</summary>
+	private async ValueTask HandOnAsync(FeedLine line)
+	{
+		foreach (var listener in listeners)
+		{
+			try
+			{
+				await listener.LineSentAsync(line, ExecutionBudget.CurrentToken);
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				logger.LogError(ex, "Feed line listener {Listener} failed on {Feed}", listener.GetType().Name, line.Message.Feed);
+			}
+		}
 	}
 
 	private ValueTask<AnyOptionalSharpObject> OwnerAsync(SharpFeedKind kind)
