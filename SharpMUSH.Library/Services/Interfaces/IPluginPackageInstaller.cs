@@ -26,7 +26,7 @@ public interface IPluginPackageInstaller
 	Task<Result<IReadOnlyList<string>>> DeployAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		IPluginPackageBinarySource binarySource,
+		IPackageFileSource fileSource,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>

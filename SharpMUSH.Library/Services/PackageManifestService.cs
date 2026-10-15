@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
 		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
-		"kind", "application", "binaries", "categories", "permissions", "roles", "settings"
+		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -154,18 +154,22 @@ public partial class PackageManifestService : IPackageManifestService
 		var kind = ReadKind(doc, issues);
 
 		// A softcode package requires objects and forbids an application/binaries
-		// block; an application package is the mirror — it registers a portal app
-		// and carries no objects of its own; a plugin package carries a compiled
-		// DLL and no softcode at all. Read each block so every issue is reported,
-		// but gate the requirement/forbidden checks on the declared kind.
+		// block, unless it ships wiki pages: a content pack may be nothing else. An
+		// application package is the mirror — it registers a portal app and carries
+		// no objects of its own; a plugin package carries a compiled DLL and no
+		// softcode at all. Read each block so every issue is reported, but gate the
+		// requirement/forbidden checks on the declared kind.
+		var contentPack = doc.GetValueOrDefault("wiki") is List<object> { Count: > 0 } && !doc.ContainsKey("objects");
 		var objects = kind == PackageKind.Softcode
-			? ReadObjects(doc, issues)
+			? contentPack ? [] : ReadObjects(doc, issues)
 			: ReadNoObjects(doc, kind, issues);
 		var application = ReadApplication(doc, name, kind, issues);
 		var binary = ReadBinaries(doc, kind, issues);
 		var declarations = ReadDeclarations(doc, kind, issues);
 		ValidateDeclarations(declarations, issues);
 		var settings = ReadSettings(doc, kind, issues);
+		var locale = ReadLocale(doc, issues);
+		var wiki = ReadWiki(doc, kind, declarations, issues);
 
 		ValidateRefs(objects, application, configure, dependencies, settings, issues);
 
@@ -194,7 +198,9 @@ public partial class PackageManifestService : IPackageManifestService
 			application,
 			binary,
 			declarations.IsEmpty ? null : declarations,
-			settings.Count == 0 ? null : settings);
+			settings.Count == 0 ? null : settings,
+			locale,
+			wiki.Count == 0 ? null : wiki);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}

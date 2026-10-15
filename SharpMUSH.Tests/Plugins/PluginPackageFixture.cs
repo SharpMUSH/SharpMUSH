@@ -46,9 +46,9 @@ public static class PluginPackageFixture
 		""";
 
 	/// <summary>Reads the fixture DLL and package <paramref name="id"/>'s <c>plugin.json</c>.</summary>
-	public sealed class BinarySource(string id) : IPluginPackageBinarySource
+	public sealed class BinarySource(string id) : IPackageFileSource
 	{
-		public async Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default) => fileName switch
+		public async Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default) => path switch
 		{
 			DllName => await File.ReadAllBytesAsync(DllPath, cancellationToken),
 			PluginManifest.FileName => PluginJson(id),

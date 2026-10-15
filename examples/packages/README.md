@@ -25,6 +25,7 @@ which games can add as a remote in the admin panel.
 | [`hello-world/`](hello-world/) | The minimal manifest: one object, one command attribute |
 | [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, a convention prefix |
 | [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
+| [`coast-guide/`](coast-guide/) | A content pack (format 1.4): wiki pages and nothing else — bodies in files and inline, a category pinned to the wiki home, a page that requires a permission the package declares |
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
@@ -41,7 +42,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -76,7 +77,7 @@ configure:                      # optional — installer-supplied parameters
     type: string
     default: "Community Board"  # defaults allowed except for dbref type
 
-objects:                        # required — at least one object
+objects:                        # required — at least one object (optional when wiki: is given)
   - ref: bbs_global             # required — unique intra-package name (lowercase)
     type: thing                 # required — thing | room | exit | player
     name: BBS Global Object     # required — in-game name
@@ -379,6 +380,94 @@ the installer to confirm before applying a package that changes one.
   package replaced, unless the game has changed it since the package set it;
   then it is left as it is.
 - **Rollback** leaves configuration options as they are.
+
+## Wiki pages (format 1.4)
+
+A package can ship wiki pages. Declare them in `wiki:` and set `format: 1.4`;
+an older server warns and ignores the block. A package whose `wiki:` is all it
+has — a **content pack**, such as a rules reference or a setting primer — may
+leave out `objects:` altogether.
+
+```yaml
+format: 1.4
+package: coast-guide
+version: 1.0.0
+locale: en                      # the pages' language; default the game's wiki default locale
+
+wiki:
+  - page: coast_road            # required — the page's slug, its identity; never taken from the title
+    namespace: main             # main (default) | help | category
+    title: Coast Road           # required
+    categories: [Travel]        # optional — category names
+    file: wiki/coast-road.md    # the body: a file inside the package directory...
+  - page: travel
+    namespace: category
+    title: Travel
+    pin: true                   # category pages only: pin the category to the wiki home
+    file: wiki/category/travel.md
+  - page: smugglers
+    title: Smugglers
+    published: true             # optional — default true; false ships a draft
+    requires:                   # optional — what the page itself requires, per action
+      view: [coast.gm]          # view | edit | delete
+      edit: [wiki.admin]
+    markdown: |                 # ...or inline Markdown; exactly one of file and markdown
+      # Smugglers
+      The smugglers use the sea caves below the [[Coast Road]].
+```
+
+- **`page`** is a slug the wiki keeps as it is: lowercase, `_` for a space, no
+  `/`, `#` or `?`. With `namespace` it names the page; changing either makes
+  a new page and drops the old one. A pair may be listed once.
+- **`namespace`** is `main`, `help` or `category`. Biographies (`character`)
+  and engine pages (`system`) are the game's, and a package cannot ship them.
+  A category page's `page` is the category's key: `lowered_abilities` is the
+  page of the category `Lowered Abilities`.
+- **`file`** is a path relative to the package directory, with `/` between
+  folders and no `..`. The file is UTF-8 text of at most 1 MB. It is read
+  once, when the package is planned, so the review screen and the install see
+  the same text. `sharpmush-package validate` and the repo validator read
+  every file the same way.
+- **Page text is literal Markdown.** `{{ref}}` tokens are not substituted in
+  it, and softcode does not read it: data softcode uses belongs in attributes.
+- **`requires`** names, per action, the permissions a reader needs on top of
+  the wiki's own rules. Each is built in (`wiki.admin`) or a custom
+  permission: declared in the same manifest's `permissions:`, or one the game
+  already has, which the plan checks. An undeclared custom permission is a
+  warning when the manifest is read.
+- **`locale`** is the language the pages are written in; a game that reads
+  in several languages translates them from it.
+
+A plugin package cannot declare `wiki:`.
+
+Pages are written as the Package Manager wizard, each revision summarised with
+the package and version (`coast-guide 1.0.0`). The review screen lists every
+page with what the install does to it.
+
+- **Install.** A page the game does not have is created. A page the game
+  already has exactly as the package ships it is adopted without a write. A
+  page the game has otherwise is a conflict: keep mine (the default) leaves
+  the game's page alone and the package does not own it; take theirs writes
+  the package's page over it. A page another installed package owns blocks
+  the plan: link to a page of your own instead.
+- **Upgrade.** Each page merges three ways, the game's page against what the
+  package last wrote against the new version. The body merges line by line:
+  where only one side changed a passage, that side's lines are kept, and the
+  result is written as one revision (`coast-guide 1.1.0, merged`). Where both
+  changed the same passage differently, the page is a conflict: the review
+  screen shows the base, the game's page, the new version and the merge with
+  each clash marked, and the administrator keeps the game's (the default), takes
+  the package's, or edits the merge. The title and the published flag merge
+  as values; categories, requirements and the pin as sets, so a category
+  staff added stays. A page staff deleted stays deleted unless the new
+  version changed it, which is a conflict.
+- **Dropped pages and uninstall.** A page nobody changed — every field as the
+  package wrote it, and no translation of its own — is deleted, after the
+  rest of the operation has been saved, and its category is unpinned if the
+  package pinned it. A page staff changed stays as the game's page, and the
+  notes say so.
+- **Rollback** leaves wiki pages as they are; a page's own history is the way
+  back for its text.
 
 ## Application packages (`kind: application`)
 

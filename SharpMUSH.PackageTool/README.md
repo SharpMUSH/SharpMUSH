@@ -9,7 +9,9 @@ without booting a server.
 
 For a `kind: plugin` manifest it additionally verifies that every declared
 binary file exists in the package directory and that its bytes match the
-SHA-256 hash recorded in the manifest.
+SHA-256 hash recorded in the manifest. For a content pack (format 1.4, a
+`wiki:` block) it reads every `file:` page from the package directory the way
+the server does.
 
 ## Install
 
@@ -90,6 +92,8 @@ PASSED   (or FAILED)
   conflict overlaps, and the structural rules for each kind.
 - For `kind: plugin`: each `binaries.files[*]` entry's `file` exists in the
   package directory and its SHA-256 matches the manifest `sha256`.
+- For `wiki:` pages with `file:`: the file is inside the package directory,
+  UTF-8 text and at most 1 MB.
 
 ## Use in GitHub Actions
 

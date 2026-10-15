@@ -449,7 +449,7 @@ public class PackagesController(
 		// Plugin packages carry a compiled DLL alongside package.yaml; resolve a binary reader over
 		// the same commit (or the staged upload) so the installer can verify and deposit the bytes.
 		// Softcode/application packages need none.
-		IPluginPackageBinarySource? binarySource = null;
+		IPackageFileSource? fileSource = null;
 		if ((manifest.Kind is PackageKind.Plugin or PackageKind.Ui) && isCatalogue)
 		{
 			// The catalogue embeds manifests, not DLLs: there is nothing to read the binaries out
@@ -460,21 +460,21 @@ public class PackagesController(
 
 		if (isUpload)
 		{
-			if (uploads.Binaries(request.Path) is not { } staged)
+			if (uploads.Files(request.Path) is not { } staged)
 			{
 				return NotFound("That upload is no longer waiting; upload the package again.");
 			}
 
-			binarySource = staged;
+			fileSource = staged;
 		}
 		else if (manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
-			switch (await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken))
+			switch (await source.GetFileSourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken))
 			{
 				case Error<string> error:
 					return BadRequest(error.Value);
-				case IPluginPackageBinarySource binary:
-					binarySource = binary;
+				case IPackageFileSource binary:
+					fileSource = binary;
 					break;
 			}
 		}
@@ -492,7 +492,7 @@ public class PackagesController(
 			request.AllowPluginCode);
 
 		var outcome = await operations.RunAsync("apply",
-			token => installer.ApplyAsync(manifest, applyRequest, token, binarySource), cancellationToken);
+			token => installer.ApplyAsync(manifest, applyRequest, token, fileSource), cancellationToken);
 		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult } && manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			if (isUpload)
@@ -531,6 +531,7 @@ public class PackagesController(
 		var isCatalogue = BundledPackages.IsCatalogueRemote(remoteName);
 
 		ValueOrResponse<PackageManifestSource> fetched;
+		PackageRemoteRecord? configured = null;
 		if (isCatalogue)
 		{
 			fetched = FetchCatalogueManifest(path);
@@ -549,6 +550,7 @@ public class PackagesController(
 				return NotFound($"No configured remote named '{remoteName}'.");
 			}
 
+			configured = remote;
 			fetched = await source.GetManifestAsync(remote, path, version, cancellationToken) switch
 			{
 				PackageManifestSource fromRemote => fromRemote,
@@ -558,8 +560,48 @@ public class PackagesController(
 
 		return fetched switch
 		{
-			PackageManifestSource manifestSource => ParseFetchedManifest(manifestSource, isCatalogue, version),
+			PackageManifestSource manifestSource => ParseFetchedManifest(manifestSource, isCatalogue, version) switch
+			{
+				FetchedManifest parsed => await ReadWikiPagesAsync(parsed, remoteName, configured, path, cancellationToken),
+				ActionResult response => response,
+			},
 			ActionResult response => response,
+		};
+	}
+
+	/// <summary>
+	/// Reads the bodies of a content pack's <c>file:</c> wiki pages from where the manifest came from, so the plan
+	/// and the apply carry the same text. The catalogue embeds manifests only, so it has no files to read.
+	/// </summary>
+	private async Task<ValueOrResponse<FetchedManifest>> ReadWikiPagesAsync(
+		FetchedManifest fetched, string remoteName, PackageRemoteRecord? remote, string path, CancellationToken cancellationToken)
+	{
+		if (!PackageWikiBodies.NeedsFiles(fetched.Manifest))
+		{
+			return fetched;
+		}
+
+		IPackageFileSource? files = null;
+		if (PluginUploadStore.IsUploadRemote(remoteName))
+		{
+			files = uploads.Files(path);
+		}
+		else if (remote is not null)
+		{
+			switch (await source.GetFileSourceAsync(remote, path, fetched.Source.Commit, cancellationToken))
+			{
+				case Error<string> error:
+					return BadRequest(error.Value);
+				case IPackageFileSource found:
+					files = found;
+					break;
+			}
+		}
+
+		return await PackageWikiBodies.LoadAsync(fetched.Manifest, files, cancellationToken) switch
+		{
+			PackageManifest loaded => fetched with { Manifest = loaded },
+			Error<string> error => UnprocessableEntity(new { Message = "The manifest is invalid.", Issues = new[] { error.Value } }),
 		};
 	}
 

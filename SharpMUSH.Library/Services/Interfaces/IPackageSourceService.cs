@@ -60,14 +60,12 @@ public interface IPackageSourceService
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Builds a binary reader over a managed package's carried files (Phase 4):
-	/// reads the bytes of files sitting alongside <c>package.yaml</c> in the
-	/// package directory, from the exact <paramref name="commit"/> the manifest
-	/// was fetched at (a moved tag therefore cannot smuggle different bytes than
-	/// the SHA-256 the manifest signed off on). The installer asks it for each
-	/// declared file name and verifies the hash before depositing.
+	/// Builds a reader over the files a package carries beside <c>package.yaml</c>: a plugin package's binaries and
+	/// a content pack's wiki page bodies, by their path in the package directory. It reads from the exact
+	/// <paramref name="commit"/> the manifest was fetched at, so a moved tag cannot smuggle in other bytes than the
+	/// ones reviewed (and, for a binary, the SHA-256 the manifest signed off on).
 	/// </summary>
-	Task<Result<IPluginPackageBinarySource>> GetBinarySourceAsync(
+	Task<Result<IPackageFileSource>> GetFileSourceAsync(
 		PackageRemoteRecord remote, string path, string commit,
 		CancellationToken cancellationToken = default);
 }
