@@ -223,17 +223,17 @@ objects:
       HERE`SYNC: |-
         think setq(room,%0); @dolist lcon(%q<room>,player)={@if strmatch(setr(scene,objeval(##,scenewhere(%q<room>))),#-1*)={@context/drop ##=scene_here},{@context/push ##=scene_here,[json(object,scene,%q<scene>)],,Scene %q<scene>[if(strlen(setr(title,scene(%q<scene>,title))),: %q<title>)] is running here.}}
       PALETTE`LIST: |-
-        {"label":"Scenes running now","line":"+scene","attr":"CMD`BROWSE","always":true,"icon":"Theaters","keywords":"rp scenes list"}
+        {"label":"Scenes running now","line":"+scene","always":true,"icon":"Theaters","keywords":"rp scenes list"}
       PALETTE`ABOUT: |-
-        {"label":"About the scene here","line":"+scene <scene>","attr":"CMD`SHOW","when":["scene_here"],"icon":"Info"}
+        {"label":"About the scene here","line":"+scene <scene>","when":["scene_here"],"icon":"Info"}
       PALETTE`JOIN: |-
-        {"label":"Join the scene here","line":"+scene/join <scene>","attr":"CMD`JOIN","when":["scene_here"],"lock":"FUN`PALETTE`JOINABLE/1","icon":"Login"}
+        {"label":"Join the scene here","line":"+scene/join <scene>","when":["scene_here"],"lock":"FUN`PALETTE`JOINABLE/1","icon":"Login"}
       PALETTE`POT: |-
-        {"label":"Pose order","line":"+pot","attr":"CMD`POT","when":["scene_focus"],"icon":"FormatListNumbered","info":"Who posed last, and how long ago."}
+        {"label":"Pose order","line":"+pot","when":["scene_focus"],"icon":"FormatListNumbered","info":"Who posed last, and how long ago."}
       PALETTE`RECALL: |-
-        {"label":"Recent poses","line":"+scene/recall","attr":"CMD`RECALL","when":["scene_focus"],"icon":"History"}
+        {"label":"Recent poses","line":"+scene/recall","when":["scene_focus"],"icon":"History"}
       PALETTE`LEAVE: |-
-        {"label":"Leave the scene","line":"+scene/leave","attr":"CMD`LEAVE","when":["scene_focus"],"icon":"Logout"}
+        {"label":"Leave the scene","line":"+scene/leave","when":["scene_focus"],"icon":"Logout"}
       # The JOIN entry's lock: 1 when the player (%#) may take part in scenes and is not already in the
       # one running where they stand.
       FUN`PALETTE`JOINABLE: |-

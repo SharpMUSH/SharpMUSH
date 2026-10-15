@@ -197,15 +197,15 @@ objects:
       # Every +bb command is CMD`BB, so each entry names it. Typing any of them puts bboards on the
       # player's context stack, and these rise.
       PALETTE`NEXT: |-
-        {"label":"Next new post","line":"+bbnext","attr":"CMD`BB","icon":"MarkEmailUnread","keywords":"bboards unread"}
+        {"label":"Next new post","line":"+bbnext","icon":"MarkEmailUnread","keywords":"bboards unread"}
       PALETTE`SCAN: |-
-        {"label":"What's new on the boards","line":"+bbscan","attr":"CMD`BB","icon":"Dashboard","keywords":"bboards unread"}
+        {"label":"What's new on the boards","line":"+bbscan","icon":"Dashboard","keywords":"bboards unread"}
       PALETTE`READ: |-
-        {"label":"Read a board or post","line":"+bbread <path>","attr":"CMD`BB","icon":"Article","keywords":"bboards"}
+        {"label":"Read a board or post","line":"+bbread <path>","icon":"Article","keywords":"bboards"}
       PALETTE`POST: |-
-        {"label":"Post to a board","line":"+bbpost <board>/<title>=<text>","attr":"CMD`BB","icon":"PostAdd","keywords":"bboards write"}
+        {"label":"Post to a board","line":"+bbpost <board>/<title>=<text>","icon":"PostAdd","keywords":"bboards write"}
       PALETTE`READER: |-
-        {"label":"Open the reader","line":"+bbreader","attr":"CMD`BB","icon":"ChromeReaderMode","keywords":"bboards keys"}
+        {"label":"Open the reader","line":"+bbreader","icon":"ChromeReaderMode","keywords":"bboards keys"}
       # While the reader takes the player's lines, its keys. FUN`PALETTE`WRITING decides which set.
       PALETTE`KEY_NEXT: |-
         {"label":"Next new thing","line":"n","context":"input","lock":"FUN`PALETTE`WRITING/0","order":1}

@@ -39,9 +39,9 @@ objects:
         $+where/*:@assert member(room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/room lists by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
       # Command palette entries (help palette entries): both are useful anywhere, so they are staples.
       PALETTE`WHO: |-
-        {"label":"Who is on","line":"+who","attr":"CMD_+WHO","always":true,"icon":"Groups","keywords":"online players"}
+        {"label":"Who is on","line":"+who","always":true,"icon":"Groups","keywords":"online players"}
       PALETTE`WHERE: |-
-        {"label":"Where is everyone","line":"+where","attr":"CMD_+WHERE","always":true,"icon":"Map","keywords":"players rooms"}
+        {"label":"Where is everyone","line":"+where","always":true,"icon":"Map","keywords":"players rooms"}
 
   - ref: ww_functions
     type: thing
