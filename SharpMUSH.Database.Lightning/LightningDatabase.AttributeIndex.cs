@@ -38,7 +38,10 @@ namespace SharpMUSH.Database.Lightning;
 /// </summary>
 public partial class LightningDatabase : IAttributeIndexStore
 {
-	/// <summary>Bytes of a value kept in an index key; LMDB keys stop at 511 and the name comes first.</summary>
+	/// <summary>
+	/// Bytes of a value kept in an index key, after the name (at most <see cref="AttributeIndexOptions.MaxNameBytes"/>).
+	/// Enough to order and select by; the stored value settles anything past it.
+	/// </summary>
 	internal const int IndexValueBytes = 400;
 
 	/// <summary>A part shorter than this was never cut; one this long may have been (a cut backs off up to three

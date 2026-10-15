@@ -27,10 +27,11 @@ public sealed record AttributeIndexOptions(bool Exact = false, bool Numeric = fa
 	public static AttributeIndexOptions Default { get; } = new();
 
 	/// <summary>
-	/// The longest attribute name an index can hold, in UTF-8 bytes once upper-cased: an index key is the name, a
-	/// separator and up to 400 bytes of value, and LMDB keys stop at 511 bytes.
+	/// The longest attribute name an index can hold, in UTF-8 bytes once upper-cased. An index key is the name, a
+	/// separator and up to 400 bytes of value, 1,425 bytes at most: inside LMDB 1.0's key limit at any page size from
+	/// 4 KiB up (1,978 bytes at 4 KiB; 8,122 at the 16 KiB SharpMUSH creates worlds with).
 	/// </summary>
-	public const int MaxNameBytes = 110;
+	public const int MaxNameBytes = 1024;
 
 	/// <summary>Whether <paramref name="name"/> is short enough to index (<see cref="MaxNameBytes"/>).</summary>
 	public static bool NameFits(string name) => Encoding.UTF8.GetByteCount(name.ToUpperInvariant()) <= MaxNameBytes;

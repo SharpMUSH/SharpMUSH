@@ -284,8 +284,8 @@ public class PackageAttributeEntryManifestTests
 		var name = new string('N', AttributeIndexOptions.MaxNameBytes + 1);
 		var errors = Errors(Parse($"""
 			attributes:
-			  {name}:
-			    index: true
+			  ? {name}
+			  : index: true
 			""", "1.8"));
 		await Assert.That(errors.Single().Path).IsEqualTo($"attributes.{name}.index");
 	}

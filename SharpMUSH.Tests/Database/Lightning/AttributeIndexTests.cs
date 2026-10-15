@@ -225,10 +225,13 @@ public class AttributeIndexTests : LightningDatabaseFixture
 		await Assert.That(await QueryAsync("IDXLONGRANGE", IndexedAttributeOperation.Less, common + "m", limit: 1)).IsEquivalentTo([a]);
 	}
 
-	/// <summary>An index key holds the name, a separator and up to 400 bytes of value, inside LMDB's 511.</summary>
+	/// <summary>An index key holds the name, a separator and up to 400 bytes of value, inside the environment's key limit.</summary>
 	[Test]
 	public async Task ANameTooLongForAnIndexKeyIsRefused()
 	{
+		await Assert.That(Db.Store.MaxKeySize)
+			.IsGreaterThanOrEqualTo(AttributeIndexOptions.MaxNameBytes + 1 + SharpMUSH.Database.Lightning.LightningDatabase.IndexValueBytes);
+
 		var tooLong = "IDX" + new string('N', AttributeIndexOptions.MaxNameBytes - 2);
 		await Db.CreateOrUpdateAttributeEntryAsync(tooLong, []);
 		await Assert.That(await Db.SetAttributeIndexAsync(tooLong, AttributeIndexOptions.Default) is Error<string>).IsTrue();
