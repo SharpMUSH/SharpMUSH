@@ -92,21 +92,12 @@ public class RpFinderIntegrationTests
 	private async Task<string> Key(TestIsolationHelpers.TestPlayer player)
 		=> await God($"think edit(objid(#{player.DbRef.Number}),#,,:,_)");
 
-	/// <summary>
-	/// Installs who-where once and leaves it: an uninstalled package's objects wait GOING in the master room
-	/// until the next purge, and their $-commands still answer, so a reinstalled who-where would print +who
-	/// once per install. rp-finder is installed and removed by each test.
-	/// </summary>
+	/// <summary>Installs who-where and rp-finder; each test removes both.</summary>
 	private async Task InstallAsync()
 	{
-		var registry = WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
-		if (!(await registry.GetPackageObjectsAsync("who-where")).Any())
-		{
-			await ApplyAsync("who-where");
-		}
-
+		await ApplyAsync("who-where");
 		await ApplyAsync("rp-finder");
-		var objects = await registry.GetPackageObjectsAsync("rp-finder");
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("rp-finder");
 		Finder = objects.First(o => o.Ref == "finder").Objid;
 		Store = objects.First(o => o.Ref == "store").Objid;
 	}
@@ -132,6 +123,7 @@ public class RpFinderIntegrationTests
 	private async Task UninstallAsync()
 	{
 		await Installer.UninstallAsync("rp-finder", force: true, CancellationToken.None);
+		await Installer.UninstallAsync("who-where", force: true, CancellationToken.None);
 	}
 
 	[Test]
