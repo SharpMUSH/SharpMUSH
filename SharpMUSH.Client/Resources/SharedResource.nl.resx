@@ -6153,6 +6153,90 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Een afbeelding met een inhoudswaarschuwing blijft buiten de afbeeldingenbibliotheek. Haal de waarschuwing weg om haar te delen.</value>
   </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Toevoegen aan agenda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Zet de planning in je agenda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Je agenda-app toont elke scène in je eigen lokale tijd en kijkt elk uur naar wijzigingen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Sluiten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Openbare scènes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Elke openbare scène op de planning. Iedereen kan dit adres gebruiken.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Je privélink</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Toont ook de privéscènes die dit personage kan zien. Iedereen met de link kan hem lezen, dus houd hem voor jezelf.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Alleen scènes die ik leid of waar ik aan meedoe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Dit adres wordt alleen nu getoond. Kopieer het naar je agenda-app voordat je de pagina verlaat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Je hebt op {0} een privélink gemaakt. Maak een nieuwe om het adres weer te zien; de oude werkt dan niet meer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Mijn privélink maken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Nieuwe link maken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Uitzetten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Agenda-adres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Kopiëren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Agenda-adres gekopieerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Abonneren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Concept opslaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Concept opgeslagen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Concept alleen op dit apparaat</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Meldingen</value>
     <comment>MT</comment>

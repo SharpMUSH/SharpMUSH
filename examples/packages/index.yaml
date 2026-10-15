@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.5.2
+    version: 1.6.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -155,7 +155,7 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.0
+    version: 1.0.1
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
   - path: roster-jobs/
     name: Roster applications in jobs

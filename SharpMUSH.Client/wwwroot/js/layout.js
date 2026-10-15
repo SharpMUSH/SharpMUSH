@@ -349,6 +349,65 @@ window.sharpmushLayout = {
 		};
 	},
 
+	// How much of the layout viewport the visible one has to lose, in px, before that is the on-screen keyboard
+	// rather than a browser toolbar sliding in.
+	keyboardGap: 120,
+
+	// The live scene page (SceneLive.razor). While the on-screen keyboard is up and a field on the page has focus,
+	// the page pins itself to the part of the screen still visible (window.visualViewport) as
+	// .scene-live-page--keyboard, with --vv-top and --vv-height: the compose sheet sits on the keyboard and the
+	// header stays in view, where otherwise the browser scrolls the whole page up to the field and back down when
+	// the keyboard closes. It also calls OnPageShown on the page when the tab comes back into view, so a draft
+	// written on another device is read again. Returns { dispose }.
+	watchSceneCompose: function (page, dotnetRef) {
+		const viewport = window.visualViewport;
+		const gap = this.keyboardGap;
+		const isField = element => !!element && (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT');
+		const update = () => {
+			const active = document.activeElement;
+			const open = !!viewport && isField(active) && page.contains(active)
+				&& window.innerHeight - viewport.height > gap;
+			page.classList.toggle('scene-live-page--keyboard', open);
+			if (open) {
+				page.style.setProperty('--vv-top', viewport.offsetTop + 'px');
+				page.style.setProperty('--vv-height', viewport.height + 'px');
+			} else {
+				page.style.removeProperty('--vv-top');
+				page.style.removeProperty('--vv-height');
+			}
+		};
+		// Focus leaves before it lands: judge once it has.
+		const later = () => setTimeout(update, 0);
+		const shown = () => {
+			if (document.visibilityState !== 'visible') return;
+			const pending = dotnetRef.invokeMethodAsync('OnPageShown');
+			if (pending && typeof pending.catch === 'function') {
+				pending.catch(() => { });
+			}
+		};
+		if (viewport) {
+			viewport.addEventListener('resize', update);
+			viewport.addEventListener('scroll', update);
+		}
+		page.addEventListener('focusin', later);
+		page.addEventListener('focusout', later);
+		document.addEventListener('visibilitychange', shown);
+		window.addEventListener('focus', shown);
+		return {
+			dispose: () => {
+				if (viewport) {
+					viewport.removeEventListener('resize', update);
+					viewport.removeEventListener('scroll', update);
+				}
+				page.removeEventListener('focusin', later);
+				page.removeEventListener('focusout', later);
+				document.removeEventListener('visibilitychange', shown);
+				window.removeEventListener('focus', shown);
+				page.classList.remove('scene-live-page--keyboard');
+			}
+		};
+	},
+
 	watchCompactScreen: function (dotnetRef) {
 		return this._watchScreen('_compactScreen', this.compactScreenQuery, dotnetRef, 'OnCompactScreenChanged');
 	},
