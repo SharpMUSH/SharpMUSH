@@ -18,7 +18,8 @@ namespace SharpMUSH.Server.Services;
 /// <c>compatibility_events</c> is on (src/timer.c): the save every <c>dump_interval</c>, with its warnings five
 /// minutes and one minute before; <c>DB`DBCK</c> every <c>dbck_interval</c>; and the inactivity check every
 /// minute, which disconnects players idle past <c>idle_timeout</c> and raises <c>PLAYER`INACTIVITY</c>.
-/// Each timer starts when the option is turned on, and stops when it is turned off.
+/// Each timer starts when the option is turned on, stops when it is turned off, and starts again when its
+/// interval is changed.
 /// </summary>
 public sealed class CompatibilityEventsService(
 	IOptionsWrapper<SharpMUSHOptions> options,
@@ -39,9 +40,11 @@ public sealed class CompatibilityEventsService(
 	private static readonly TimeSpan OneMinute = TimeSpan.FromMinutes(1);
 
 	private DateTimeOffset? _dumpCycleStart;
+	private TimeSpan _dumpInterval;
 	private bool _warnedFive;
 	private bool _warnedOne;
 	private DateTimeOffset? _nextDbck;
+	private TimeSpan _dbckInterval;
 	private DateTimeOffset? _nextInactivityCheck;
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -101,8 +104,9 @@ public sealed class CompatibilityEventsService(
 			return;
 		}
 
-		if (_dumpCycleStart is not { } start)
+		if (_dumpCycleStart is not { } start || interval != _dumpInterval)
 		{
+			_dumpInterval = interval;
 			StartDumpCycle(now);
 			return;
 		}
@@ -146,7 +150,13 @@ public sealed class CompatibilityEventsService(
 			return;
 		}
 
-		_nextDbck ??= now + interval;
+		if (_nextDbck is null || interval != _dbckInterval)
+		{
+			_dbckInterval = interval;
+			_nextDbck = now + interval;
+			return;
+		}
+
 		if (now >= _nextDbck)
 		{
 			_nextDbck = now + interval;

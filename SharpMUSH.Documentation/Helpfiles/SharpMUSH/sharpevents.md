@@ -226,7 +226,7 @@ To mimic old behaviour:
 - Triggered when an HTTP request is sitelocked !connect, by IP or path. *<reason>* is "IP sitelocked !connect" or "path sitelocked !connect". *<descriptor>* is empty: an HTTP request has no connection of its own.
 
 - **http\`fail** (*descriptor*, *ip*, *reason*)
-- Raised only while compatibility_events is on. Triggered when an HTTP request reaches the http_handler and its body cannot be read: a body larger than the server accepts, or one cut short or malformed. *<reason>* is the web server's message, and the request is answered with its status. *<descriptor>* is empty.
+- Raised only while compatibility_events is on. Triggered when an HTTP request reaches the http_handler and its body cannot be read: one larger than the server accepts, or malformed chunked data. *<reason>* is the web server's message, and the request is answered with its status. *<descriptor>* is empty.
 
 - **http\`command** (*ip*, *method*, *path*, *status*, *content-type*, *request-length*, *response-length*)
 - Triggered after an HTTP command is executed, using the same remaining request lifetime. It is omitted if that lifetime has already expired. If the event exhausts the deadline, the HTTP response is 503; request cancellation also cancels the event.
