@@ -34,6 +34,12 @@ public static class DiceRoll
 	/// <summary>How deep values may refer to other values.</summary>
 	public const int MaxVariableDepth = 32;
 
+	/// <summary>Operands in one formula, counting each use of a value's own formula again.</summary>
+	public const int MaxTerms = 1000;
+
+	/// <summary>How deep brackets, pools, function calls and values may nest, all counted together.</summary>
+	public const int MaxNesting = 64;
+
 	/// <summary>How many different names one roll may look up.</summary>
 	public const int MaxNames = 64;
 

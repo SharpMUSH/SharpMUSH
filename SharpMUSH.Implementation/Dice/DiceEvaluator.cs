@@ -46,7 +46,7 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 			NumberNode number => Evaluated.Of(number.Value),
 			GroupNode group => Group(Evaluate(group.Inner)),
 			NegateNode negate => Negate(Evaluate(negate.Operand)),
-			BinaryNode binary => Binary(binary.Operator, Evaluate(binary.Left), Evaluate(binary.Right)),
+			BinaryNode binary => Chain(binary),
 			FunctionNode function => Function(function.Name, [.. function.Arguments.Select(Evaluate)]),
 			VariableNode variable => Variable(variable.Name, Evaluate(variable.Value)),
 			FlavorNode flavored => Flavored(Evaluate(flavored.Inner), flavored.Flavor),
@@ -65,7 +65,7 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 			NumberNode number => Span.Point(Evaluated.Of(number.Value)),
 			GroupNode group => Range(group.Inner).Map(Group),
 			NegateNode negate => NegateRange(Range(negate.Operand)),
-			BinaryNode binary => BinaryRange(binary.Operator, Range(binary.Left), Range(binary.Right)),
+			BinaryNode binary => ChainRange(binary),
 			FunctionNode function => FunctionRange(function.Name, [.. function.Arguments.Select(Range)]),
 			VariableNode variable => Range(variable.Value).Map(value => Variable(variable.Name, value)),
 			FlavorNode flavored => Range(flavored.Inner).Map(inner => Flavored(inner, flavored.Flavor)),
@@ -73,6 +73,38 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 			PoolNode pool => PoolRange(pool),
 			_ => new Span(Fail(ErrorMessages.Returns.Error), Evaluated.Failed)
 		};
+	}
+
+	/// <summary>
+	/// <c>1+2+3...</c> parses as a chain down the left side, as long as the formula. It is walked in a
+	/// loop, left to right, so only brackets, pools, functions and values add to the call depth.
+	/// </summary>
+	private Evaluated Chain(BinaryNode node)
+	{
+		var spine = LeftSpine(node, out var first);
+		var result = Evaluate(first);
+		while (spine.TryPop(out var binary)) result = Binary(binary.Operator, result, Evaluate(binary.Right));
+		return result;
+	}
+
+	private Span ChainRange(BinaryNode node)
+	{
+		var spine = LeftSpine(node, out var first);
+		var result = Range(first);
+		while (spine.TryPop(out var binary)) result = BinaryRange(binary.Operator, result, Range(binary.Right));
+		return result;
+	}
+
+	private static Stack<BinaryNode> LeftSpine(BinaryNode node, out DiceNode first)
+	{
+		var spine = new Stack<BinaryNode>();
+		first = node;
+		while (first is BinaryNode binary)
+		{
+			spine.Push(binary);
+			first = binary.Left;
+		}
+		return spine;
 	}
 
 	private static Evaluated Group(Evaluated inner) => inner with { Text = $"({inner.Text})" };

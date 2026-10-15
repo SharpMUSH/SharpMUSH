@@ -423,6 +423,8 @@ public static partial class ErrorMessages
 		public const string RollUnknownFunctionFormat = "#-1 NO SUCH ROLL FUNCTION: {0}";
 		public const string RollVariablesTooDeep = "#-1 ROLL VARIABLES NESTED TOO DEEPLY";
 		public const string RollTooManyDice = "#-1 TOO MANY DICE";
+		public const string RollFormulaTooLarge = "#-1 ROLL FORMULA TOO LARGE";
+		public const string RollFormulaTooDeep = "#-1 ROLL FORMULA NESTED TOO DEEPLY";
 		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
 		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
 		public const string RollInvalidJson = "#-1 INVALID JSON";

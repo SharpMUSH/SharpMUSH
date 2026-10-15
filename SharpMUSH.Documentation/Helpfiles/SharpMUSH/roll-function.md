@@ -45,7 +45,7 @@ Output: a number, or with `text` as the third argument, each die and the total. 
 | `4dF+2` | four fate dice, each -1, 0 or +1, plus 2 |
 | `10d10cs>=8` | ten ten-sided dice, counting those that show 8 or more |
 | `3d6x` | three six-sided dice; each 6 adds another die |
-| `1dF+@stat.dex` | a fate die plus the value at `STAT`DEX` in `<data>` |
+| `1dF+@stat.dex` | a fate die plus the value at ``STAT`DEX`` in `<data>` |
 
 | Topic | Covers |
 |---|---|
@@ -71,7 +71,7 @@ Softcode reads `[ ]`, `{ }`, `%` and commas before roll() sees them. A formula t
 
 ## Errors
 
-roll() returns an error starting with #-1 when the formula cannot be read (naming the character where reading stopped), names something `<data>` does not hold, or rolls more than 1000 dice. valid(roll, <formula>) checks a formula without rolling it.
+roll() returns an error starting with #-1 when the formula cannot be read (naming the character where reading stopped), names something `<data>` does not hold, rolls more than 1000 dice, or grows past 1000 terms once its values are filled in. valid(roll, <formula>) checks a formula without rolling it.
 
 ```sharp
 > think roll(2d6+)

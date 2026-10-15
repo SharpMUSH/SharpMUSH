@@ -35,7 +35,7 @@ Every name, however deep, is looked up from the top of `<data>`. Each use of a n
 
 ## Attributes
 
-When `<data>` is an object, a name is one of its attributes and a dot is a backtick: `@stat.dex` reads `STAT`DEX`. Attributes are found and checked the way get() finds and checks them, and are never evaluated: what is stored is the number or formula.
+When `<data>` is an object, a name is one of its attributes and a dot is a backtick: `@stat.dex` reads ``STAT`DEX``. Attributes are found and checked the way get() finds and checks them, and are never evaluated: what is stored is the number or formula.
 
 ```sharp
 > &stat`dex me=1d6+@stat.speed

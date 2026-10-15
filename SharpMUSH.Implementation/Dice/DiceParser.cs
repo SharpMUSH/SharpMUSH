@@ -37,20 +37,33 @@ public sealed class DiceParser
 	private readonly Func<string, DiceValue> _lookup;
 	private readonly ImmutableStack<string> _resolving;
 	private readonly HashSet<string> _needs;
+	private readonly Budget _budget;
 	private int _position;
 
-	private DiceParser(string text, Func<string, DiceValue> lookup, ImmutableStack<string> resolving, HashSet<string> needs)
+	/// <summary>
+	/// Shared by every parser of one formula, values included, so a value used many times or nested
+	/// many levels counts against the whole formula.
+	/// </summary>
+	private sealed class Budget
+	{
+		public int Terms;
+		public int Depth;
+	}
+
+	private DiceParser(string text, Func<string, DiceValue> lookup, ImmutableStack<string> resolving,
+		HashSet<string> needs, Budget budget)
 	{
 		_text = text;
 		_lookup = lookup;
 		_resolving = resolving;
 		_needs = needs;
+		_budget = budget;
 	}
 
 	public static DiceParse Parse(string formula, Func<string, DiceValue> lookup)
 	{
 		var needs = new HashSet<string>(StringComparer.Ordinal);
-		return new DiceParser(formula, lookup, ImmutableStack<string>.Empty, needs).ParseFormula() switch
+		return new DiceParser(formula, lookup, ImmutableStack<string>.Empty, needs, new Budget()).ParseFormula() switch
 		{
 			DiceNode node when needs.Count > 0 => new DiceNeeds([.. needs]),
 			DiceNode node => node,
@@ -95,7 +108,24 @@ public sealed class DiceParser
 		return left;
 	}
 
+	/// <summary>Every operand passes through here, so the budget is kept here.</summary>
 	private DiceNode ParseUnary()
+	{
+		if (++_budget.Terms > DiceRoll.MaxTerms) return new InvalidNode(ErrorMessages.Returns.RollFormulaTooLarge);
+		if (_budget.Depth >= DiceRoll.MaxNesting) return new InvalidNode(ErrorMessages.Returns.RollFormulaTooDeep);
+
+		_budget.Depth++;
+		try
+		{
+			return ParseOperand();
+		}
+		finally
+		{
+			_budget.Depth--;
+		}
+	}
+
+	private DiceNode ParseOperand()
 	{
 		SkipSpaces();
 		if (Accept('-'))
@@ -146,10 +176,11 @@ public sealed class DiceParser
 
 		if (current == '(')
 		{
-			if (ParseBracketed() is not GroupNode group) return new InvalidNode(SyntaxError());
-			return IsDiceMarker()
-				? ParseDiceTerm(start, group) ?? new InvalidNode(SyntaxError())
-				: group;
+			return ParseBracketed() switch
+			{
+				GroupNode group when IsDiceMarker() => ParseDiceTerm(start, group) ?? new InvalidNode(SyntaxError()),
+				var bracketed => bracketed
+			};
 		}
 
 		if (current == '{') return ParsePool();
@@ -454,7 +485,7 @@ public sealed class DiceParser
 			return new VariableNode(name, new NumberNode(number));
 		}
 
-		return new DiceParser(formula, _lookup, _resolving.Push(key), _needs).ParseFormula() switch
+		return new DiceParser(formula, _lookup, _resolving.Push(key), _needs, _budget).ParseFormula() switch
 		{
 			DiceNode inner => new VariableNode(name, inner),
 			Error<string> error => new InvalidNode(error.Value)

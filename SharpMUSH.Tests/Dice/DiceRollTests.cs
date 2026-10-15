@@ -558,4 +558,63 @@ public class DiceRollTests
 
 		await Assert.That(Error("20d6x", null, faces)).IsEqualTo(ErrorMessages.Returns.RollTooManyDice);
 	}
+
+	[Test]
+	public async Task AValueUsedManyTimesCountsEachUseTowardsTheTermLimit()
+	{
+		// A1 is A2+A2, A2 is A3+A3, ...: 2^29 terms from 30 short values.
+		var values = string.Join(",", Enumerable.Range(1, 29).Select(i => $"\"A{i}\":\"A{i + 1}+A{i + 1}\""));
+		var data = $"{{{values},\"A30\":\"1\"}}";
+
+		await Assert.That(Error("A1", data)).IsEqualTo(ErrorMessages.Returns.RollFormulaTooLarge);
+	}
+
+	[Test]
+	public async Task AFormulaOfMoreThanAThousandTermsIsRefused()
+	{
+		await Assert.That(Error(string.Join("+", Enumerable.Repeat("1", DiceRoll.MaxTerms + 1))))
+			.IsEqualTo(ErrorMessages.Returns.RollFormulaTooLarge);
+	}
+
+	[Test]
+	[Arguments("(", ")")]
+	[Arguments("-", "")]
+	[Arguments("{", "}")]
+	[Arguments("abs(", ")")]
+	public async Task NestingPastTheLimitIsRefused(string open, string close)
+	{
+		var depth = DiceRoll.MaxNesting + 1;
+		var formula = string.Concat(Enumerable.Repeat(open, depth)) + "1" + string.Concat(Enumerable.Repeat(close, depth));
+
+		await Assert.That(Error(formula)).IsEqualTo(ErrorMessages.Returns.RollFormulaTooDeep);
+	}
+
+	[Test]
+	public async Task NestedValuesCountTowardsTheNestingLimit()
+	{
+		// Each value opens 3 brackets around the next: 22 values nest past 64.
+		var values = string.Join(",", Enumerable.Range(1, 21).Select(i => $"\"V{i}\":\"(((V{i + 1})))\""));
+		var data = $"{{{values},\"V22\":\"1\"}}";
+
+		await Assert.That(Error("V1", data)).IsEqualTo(ErrorMessages.Returns.RollFormulaTooDeep);
+	}
+
+	[Test]
+	public async Task TheLargestAllowedFormulaRollsOnASmallStack()
+	{
+		var formula = string.Join("+", Enumerable.Repeat("1d6", DiceRoll.MaxTerms - DiceRoll.MaxNesting))
+			+ "+" + string.Concat(Enumerable.Repeat("(", DiceRoll.MaxNesting - 1)) + "1d6"
+			+ string.Concat(Enumerable.Repeat(")", DiceRoll.MaxNesting - 1));
+		var totals = new decimal[3];
+		var thread = new Thread(() =>
+		{
+			totals[0] = Roll(formula, null).Total;
+			totals[1] = Rolled(formula, null, DiceRollMode.Minimize, []).Expect<DiceRollResult>().Total;
+			totals[2] = Rolled(formula, null, DiceRollMode.Maximize, []).Expect<DiceRollResult>().Total;
+		}, 256 * 1024);
+		thread.Start();
+		thread.Join();
+
+		await Assert.That(totals).IsEquivalentTo([937m, 937m, 5622m]);
+	}
 }
