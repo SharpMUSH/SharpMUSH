@@ -546,6 +546,53 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled")).IsFalse();
 	}
 
+	/// <summary>
+	/// An upgrade over a game's own edits lists what the game changed and what the upgrade does with each, and keeps
+	/// the game's attribute and lock by default, so the apply needs no decision before it can run.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_ListsWhatTheGameChanged_KeepingItByDefault()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("notes", "1.0.0", "1.1.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Upgrade, [],
+			[
+				new("notes", "#10:1", "DATA`KEPT", SharpMUSH.Library.Models.Packages.PackageAttributeAction.KeepLocal,
+					BaseValue: "base", LiveValue: "mine", NewValue: "base"),
+				new("notes", "#10:1", "DATA`MERGED", SharpMUSH.Library.Models.Packages.PackageAttributeAction.Merge,
+					BaseValue: "a\nb", LiveValue: "A\nb", NewValue: "a\nB", MergedValue: "A\nB"),
+				new("notes", "#10:1", "DATA`BOTH", SharpMUSH.Library.Models.Packages.PackageAttributeAction.Conflict,
+					SharpMUSH.Library.Models.Packages.PackageConflictKind.ModifyModify, "base", "mine", "theirs"),
+				new("notes", "#10:1", "DATA`NEW", SharpMUSH.Library.Models.Packages.PackageAttributeAction.AutoUpgrade,
+					BaseValue: "old", LiveValue: "old", NewValue: "new"),
+			],
+			[
+				new("notes", "#10:1", SharpMUSH.Library.Models.Packages.PackageStructureKind.Lock, "use",
+					SharpMUSH.Library.Models.Packages.PackageStructureAction.Conflict,
+					Conflict: SharpMUSH.Library.Models.Packages.PackageConflictKind.ModifyModify,
+					BaseValue: "#TRUE", LiveValue: "=#9", NewValue: "=#5"),
+			], [], [], []);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("notes", "1.1.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=notes");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".pkg-local-edits"), TimeSpan.FromSeconds(5));
+		var rows = cut.FindAll(".pkg-local-edits tbody tr").Select(r => r.TextContent).ToList();
+		await Assert.That(rows.Count).IsEqualTo(4);
+		await Assert.That(rows[0]).Contains("notes/DATA`KEPT");
+		await Assert.That(rows[0]).Contains("PkgLocalKept");
+		await Assert.That(rows[1]).Contains("notes/DATA`MERGED");
+		await Assert.That(rows[1]).Contains("PkgLocalMerged");
+		await Assert.That(rows[2]).Contains("notes/DATA`BOTH");
+		await Assert.That(rows[2]).Contains("PkgLocalDecide");
+		await Assert.That(rows[3]).Contains("PkgStructLock");
+		await Assert.That(rows[3]).Contains("PkgLocalDecide");
+		await Assert.That(cut.Find(".pkg-lock-conflicts").TextContent).Contains("=#9");
+		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled")).IsFalse();
+	}
+
 	[Test]
 	public async Task Suggestions_EscapesTheWordWhenDeletingIt()
 	{

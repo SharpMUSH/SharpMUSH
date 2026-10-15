@@ -46,3 +46,16 @@
 }
 
 .pkg-review-body .pkg-sha { word-break: break-all; }
+
+/* Each lock conflict is its own block: its label, the three values, then the choice. */
+.pkg-lock-conflict {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pkg-lock-conflict + .pkg-lock-conflict {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+}

@@ -434,8 +434,27 @@ public class PackagePlanService : IPackagePlanService
 			(false, true) => Make(PackageAttributeAction.AutoUpgrade),
 			(true, false) => Make(PackageAttributeAction.KeepLocal),
 			(true, true) when liveValue == newValue => Make(PackageAttributeAction.NoChange),
-			(true, true) => Make(PackageAttributeAction.Conflict, PackageConflictKind.ModifyModify)
+			(true, true) => MergeLines(Make(PackageAttributeAction.Conflict, PackageConflictKind.ModifyModify))
 		};
+	}
+
+	/// <summary>
+	/// Both sides changed a value: merged line by line when it has several lines, as a wiki page body is. Lines
+	/// only one side changed take that side's; a clash stays a conflict, carrying the merge with the clashes
+	/// marked. A value whose new side still waits on apply-time refs is not merged, since those lines change.
+	/// </summary>
+	private static PackageAttributeChange MergeLines(PackageAttributeChange conflict)
+	{
+		if (conflict is not { BaseValue: { } baseValue, LiveValue: { } liveValue, NewValue: { } newValue, RequiresApplyResolution: false }
+			|| !(baseValue.Contains('\n') || liveValue.Contains('\n') || newValue.Contains('\n')))
+		{
+			return conflict;
+		}
+
+		var merge = LineMerge.Merge(baseValue, liveValue, newValue);
+		return merge.IsClean
+			? conflict with { Action = PackageAttributeAction.Merge, Conflict = null, MergedValue = merge.Resolve(preferOurs: true) }
+			: conflict with { MergedValue = merge.Marked("game", "package") };
 	}
 
 	// ── Object structure: flags, powers, locks, attribute flags ─────────────

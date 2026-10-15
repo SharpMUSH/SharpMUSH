@@ -420,6 +420,41 @@ public class PackagePlanServiceTests
 	}
 
 	[Test]
+	public async Task Table_BothChangedOnDifferentLines_Merges()
+	{
+		var attr = UpgradeWith("a\nb\nc", "A\nb\nc", "a\\nb\\nC").Attributes.Single();
+		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Merge);
+		await Assert.That(attr.Conflict).IsNull();
+		await Assert.That(attr.MergedValue).IsEqualTo("A\nb\nC");
+		await Assert.That(attr.IsLocalEdit).IsTrue();
+	}
+
+	[Test]
+	public async Task Table_BothChangedTheSameLine_ConflictCarriesTheMarkedMerge()
+	{
+		var attr = UpgradeWith("a\nb", "a\nmine", "a\\ntheirs").Attributes.Single();
+		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(attr.Conflict).IsEqualTo(PackageConflictKind.ModifyModify);
+		await Assert.That(attr.MergedValue).IsEqualTo("a\n<<<<<<< game\nmine\n=======\ntheirs\n>>>>>>> package");
+	}
+
+	[Test]
+	public async Task Table_BothChangedAOneLineValue_ConflictWithoutAMerge()
+	{
+		var attr = UpgradeWith("old", "customized").Attributes.Single();
+		await Assert.That(attr.MergedValue).IsNull();
+	}
+
+	[Test]
+	public async Task LocalEdits_AreWhatTheGameChanged()
+	{
+		await Assert.That(UpgradeWith("value-new", "customized").Attributes.Single().IsLocalEdit).IsTrue();
+		await Assert.That(UpgradeWith("old", "customized").Attributes.Single().IsLocalEdit).IsTrue();
+		await Assert.That(UpgradeWith("old", "old").Attributes.Single().IsLocalEdit).IsFalse();
+		await Assert.That(UpgradeWith("same", "same", "same").Attributes.Single().IsLocalEdit).IsFalse();
+	}
+
+	[Test]
 	public async Task Table_BothChanged_Conflict_WithAllThreePanes()
 	{
 		var attr = UpgradeWith("old", "customized").Attributes.Single();

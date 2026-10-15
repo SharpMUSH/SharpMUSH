@@ -118,7 +118,13 @@ public enum PackageAttributeAction
 	RemoveBaseline,
 
 	/// <summary>Needs an admin decision; see <see cref="PackageConflictKind"/>.</summary>
-	Conflict
+	Conflict,
+
+	/// <summary>
+	/// The game and the package both changed it, on different lines; write the line-by-line merge
+	/// (<see cref="PackageAttributeChange.MergedValue"/>), as a wiki page body merges.
+	/// </summary>
+	Merge
 }
 
 /// <summary>Why an attribute needs an admin decision.</summary>
@@ -151,6 +157,12 @@ public enum PackageConflictKind
 /// <param name="NewValue">Incoming value with refs resolved as far as currently possible, or null for deletes.</param>
 /// <param name="PreviousAttribute">Legacy ref path whose local value is being migrated; the old leaf remains for other code.</param>
 /// <param name="RequiresApplyResolution">True when the new value references objects that only get dbrefs at apply time.</param>
+/// <param name="MergedValue">
+/// For <see cref="PackageAttributeAction.Merge"/>, the merged value the apply writes. For a
+/// <see cref="PackageConflictKind.ModifyModify"/> conflict on a value of several lines, the merge with each clash
+/// written out between <c>&lt;&lt;&lt;&lt;&lt;&lt;&lt; game</c> and <c>&gt;&gt;&gt;&gt;&gt;&gt;&gt; package</c>
+/// markers, for an edited merge to start from. Null otherwise.
+/// </param>
 public sealed record PackageAttributeChange(
 	string TargetRef,
 	string? Objid,
@@ -161,7 +173,16 @@ public sealed record PackageAttributeChange(
 	string? LiveValue = null,
 	string? NewValue = null,
 	bool RequiresApplyResolution = false,
-	string? PreviousAttribute = null);
+	string? PreviousAttribute = null,
+	string? MergedValue = null)
+{
+	/// <summary>
+	/// True when the game changed this attribute away from what the package last installed (or has one of its own where
+	/// the package now ships one): the upgrade keeps it, merges it, or asks.
+	/// </summary>
+	public bool IsLocalEdit => Action is PackageAttributeAction.KeepLocal or PackageAttributeAction.Merge
+		or PackageAttributeAction.Conflict;
+}
 
 /// <summary>The kind of object-structure element a <see cref="PackageStructureChange"/> describes.</summary>
 public enum PackageStructureKind
@@ -237,7 +258,11 @@ public sealed record PackageStructureChange(
 	string? BaseValue = null,
 	string? LiveValue = null,
 	string? NewValue = null,
-	bool RequiresApplyResolution = false);
+	bool RequiresApplyResolution = false)
+{
+	/// <summary>True when the game changed this flag, power or lock away from what the package last installed.</summary>
+	public bool IsLocalEdit => Action is PackageStructureAction.KeepLocal or PackageStructureAction.Conflict;
+}
 
 /// <summary>
 /// The package-managed object structure baseline for one object (decision
