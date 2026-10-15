@@ -87,6 +87,14 @@ public class SceneSharedTests
 	}
 
 	[Test]
+	public async Task A_count_past_the_scan_takes_what_the_scan_finds()
+	{
+		var both = await SceneWith(First, Second);
+
+		await Assert.That(await Eval($"sceneshared({First},{Second},{int.MaxValue})")).IsEqualTo(both);
+	}
+
+	[Test]
 	public async Task It_is_empty_for_two_players_who_share_none()
 	{
 		await SceneWith(First);

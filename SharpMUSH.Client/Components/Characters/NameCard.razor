@@ -29,7 +29,7 @@
 </span>
 
 @code {
-    /// <summary>The character whose card this is.</summary>
+    /// <summary>The character whose card this is. Empty opens no card: the name is drawn as it is.</summary>
     [Parameter, EditorRequired] public string CharacterName { get; set; } = string.Empty;
 
     /// <summary>Their picture, when the place the name is drawn already knows it.</summary>
@@ -49,7 +49,7 @@
 
     private string ProfileHref => "/character/" + Uri.EscapeDataString(CharacterName);
 
-    private Task Enter() => After(_open ? TimeSpan.Zero : OpenDelay, true);
+    private Task Enter() => string.IsNullOrEmpty(CharacterName) ? Task.CompletedTask : After(_open ? TimeSpan.Zero : OpenDelay, true);
 
     private Task Leave() => After(CloseDelay, false);
 

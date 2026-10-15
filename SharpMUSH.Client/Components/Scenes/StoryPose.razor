@@ -101,7 +101,9 @@
             }
             <div class="story-main">
                 <div class="story-head">
-                    <NameCard CharacterName="@Pose.DisplayName" ImageUrl="@ImageUrl">
+                    @* A pose shown under a persona opens no card: the persona is nobody the directory knows, and the author's
+                       card would say who is behind it. *@
+                    <NameCard CharacterName="@CardName" ImageUrl="@ImageUrl">
                         @if (OnCharacter.HasDelegate)
                         {
                             <button type="button" class="story-name" style="@NameStyle" @onclick="Open">@Pose.DisplayName</button>
@@ -256,6 +258,8 @@
     private string? NameStyle => SafeColor is { } c ? $"color:{c};" : null;
 
     private string Time => Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm");
+
+    private string CardName => string.IsNullOrWhiteSpace(Pose.ShowAsName) ? Pose.AuthorName : string.Empty;
 
     private string ProfileHref => "/character/" + Uri.EscapeDataString(Pose.DisplayName);
 

@@ -255,7 +255,7 @@ public static class SceneFunctions
 	private static async ValueTask<List<string>> SharedScenesAsync(IMUSHCodeParser parser, string player, string other, int count)
 	{
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var shared = new List<string>(count);
+		var shared = new List<string>(Math.Min(count, SharedScanLimit));
 		foreach (var scene in await service.ListScenesAsync("mine", player, count: SharedScanLimit))
 		{
 			if (shared.Count == count) break;
