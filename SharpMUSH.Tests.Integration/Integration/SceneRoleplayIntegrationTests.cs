@@ -878,6 +878,9 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(tomHandle, "+scene/start");
 		var sceneId = await Eval($"get({tom}/MY.SID)");
 		await Assert.That(sceneId).IsNotEmpty();
+		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
+		bool Focused() => contexts.Read(DBRef.Parse(tom)).Any(weighted => weighted.Context.Name == "scene_focus");
+		await Assert.That(Focused()).IsTrue().Because("create pushes scene_focus for the palette");
 
 		// Pitch (set while focused, owner-gated).
 		await RunAndCollectAs(tomHandle, "+scene/pitch A tense standoff at dawn.");
@@ -889,11 +892,13 @@ public class SceneRoleplayIntegrationTests
 			.Because("deactivate clears the player's focus");
 		await Assert.That(await Eval($"scenemember({sceneId}, {tom}, role)")).DoesNotStartWith("#-1")
 			.Because("deactivate keeps membership");
+		await Assert.That(Focused()).IsFalse().Because("deactivate drops scene_focus with the focus");
 
 		// Activate: focus restored.
 		await RunAndCollectAs(tomHandle, $"+scene/activate {sceneId}");
 		await Assert.That(await Eval($"scenefocus({tom})")).IsEqualTo(sceneId)
 			.Because("activate re-focuses the player");
+		await Assert.That(Focused()).IsTrue().Because("activate pushes scene_focus again");
 
 		// Details card renders the fields (Volund-style `+scene <id>`).
 		var infoMsgs = await RunAndCollectAs(tomHandle, $"+scene {sceneId}");
