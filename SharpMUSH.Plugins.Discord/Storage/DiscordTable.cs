@@ -43,6 +43,26 @@ public sealed class DiscordTable<T> where T : class
 	public async ValueTask<bool> RemoveAsync(ulong id, CancellationToken cancellationToken = default)
 		=> await _accessor.WriteAsync(tx => tx.Delete(_table, Key(id)), cancellationToken);
 
+	/// <summary>Removes every record keyed below <paramref name="id"/>; a Discord id grows with time, so these are the older ones.</summary>
+	/// <returns>How many went.</returns>
+	public async ValueTask<int> RemoveBelowAsync(ulong id, CancellationToken cancellationToken = default)
+	{
+		var below = Key(id);
+		return await _accessor.WriteAsync(tx =>
+		{
+			var keys = tx.Range(_table, [])
+				.Select(entry => entry.Key)
+				.TakeWhile(key => key.AsSpan().SequenceCompareTo(below) < 0)
+				.ToList();
+			foreach (var key in keys)
+			{
+				tx.Delete(_table, key);
+			}
+
+			return keys.Count;
+		}, cancellationToken);
+	}
+
 	private static byte[] Key(ulong id)
 	{
 		var key = new byte[sizeof(ulong)];

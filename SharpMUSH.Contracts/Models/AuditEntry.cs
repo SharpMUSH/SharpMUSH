@@ -54,6 +54,7 @@ public static class AuditTargetKinds
 	public const string Plugin = "plugin";
 	public const string Server = "server";
 	public const string Secret = "secret";
+	public const string Feed = "feed";
 }
 
 /// <summary>
@@ -157,6 +158,9 @@ public static class AuditActions
 	public const string SecretClear = "secret.clear";
 	public const string SecretHosts = "secret.hosts";
 
+	/// <summary>A line taken out of a feed's recall, such as one whose Discord message a moderator deleted.</summary>
+	public const string FeedLineDelete = "feed.line.delete";
+
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
 	[
@@ -165,6 +169,7 @@ public static class AuditActions
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
-		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart, SecretSet, SecretClear, SecretHosts
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart, SecretSet, SecretClear, SecretHosts,
+		FeedLineDelete
 	];
 }

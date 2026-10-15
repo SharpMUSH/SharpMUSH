@@ -11,9 +11,12 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Discord.Links;
+using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Plugins.Discord.Outbox;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -23,8 +26,10 @@ namespace SharpMUSH.Plugins.Discord.Commands;
 /// <c>@discord</c>: the bot's connection and the linked Discord channels. With no switch it shows both;
 /// <c>/link &lt;channel id&gt;</c> links a channel to the feed <c>discord/&lt;channel id&gt;</c>, <c>/unlink</c> drops a link
 /// and deletes its webhook, <c>/resume</c> starts a stopped link again, and <c>/connect</c> logs the bot in again after
-/// its token or intents change. Every switch needs <c>discord.admin</c>.
-/// Linking, unlinking and resuming return the channel id at once and tell the admin how it went when it is done.
+/// its token or intents change. <c>/gate</c> lets only linked members post in a linked channel again, as linking does.
+/// These need <c>discord.admin</c>. <c>/speak &lt;channel id&gt;</c>, run by any character on a linked account, makes it the
+/// character its Discord user speaks as there; <c>/speak/off</c> stops that.
+/// Linking, unlinking, resuming and gating return the channel id at once and tell the admin how it went when it is done.
 /// </summary>
 public static class DiscordCommandModule
 {
@@ -36,21 +41,26 @@ public static class DiscordCommandModule
 	/// <summary>How long a link or unlink waits on Discord before the admin is told it did not answer.</summary>
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
-	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST"],
+	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "SPEAK", "OFF"],
 		Behavior = CB.Default | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = ["channel"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var services = parser.ServiceProvider;
 		var notify = services.GetRequiredService<INotifyService>();
 		var executor = await parser.CurrentState.KnownExecutorObject(services.GetRequiredService<IMediator>());
+		var switches = parser.CurrentState.Switches.ToArray();
+		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+		if (switches.Contains("SPEAK"))
+		{
+			return await SpeakAsync(parser, executor, argument, off: switches.Contains("OFF"));
+		}
+
 		if (!await executor.Can(DiscordPlugin.AdminPermission))
 		{
 			await notify.Notify(executor, Notice("Permission denied.", NoticeKind.Error));
 			return new CallState(PermissionDenied);
 		}
 
-		var switches = parser.CurrentState.Switches.ToArray();
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
 		var relay = services.GetRequiredService<DiscordRelay>();
 		var gateway = services.GetRequiredService<DiscordGatewayService>();
 		if (switches.Contains("CONNECT"))
@@ -60,11 +70,12 @@ public static class DiscordCommandModule
 			return CallState.Empty;
 		}
 
-		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME");
+		var gate = services.GetRequiredService<IDiscordChannelGate>();
+		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME" or "GATE");
 		if (action is null)
 		{
 			var state = gateway.State;
-			await notify.Notify(executor, Overview(state, relay.Links()));
+			await notify.Notify(executor, Overview(state, relay.Links(), gate));
 			// Outside the panel, so it copies whole.
 			if (state.ApplicationId is { } applicationId)
 			{
@@ -92,8 +103,9 @@ public static class DiscordCommandModule
 		{
 			_ = Task.Run(() => AnswerAsync(notify, executor, logger, cancellationToken => action switch
 			{
-				"LINK" => LinkAsync(relay, feeds, executor, channelId, cancellationToken),
+				"LINK" => LinkAsync(relay, feeds, gate, executor, channelId, cancellationToken),
 				"UNLINK" => UnlinkAsync(relay, channelId, cancellationToken),
+				"GATE" => GateAsync(relay, gate, channelId, cancellationToken),
 				_ => ResumeAsync(relay, channelId, cancellationToken),
 			}));
 		}
@@ -124,15 +136,83 @@ public static class DiscordCommandModule
 		await notify.Notify(executor, answer);
 	}
 
-	private static async ValueTask<MString> LinkAsync(DiscordRelay relay, IFeedService feeds, AnySharpObject executor,
-		ulong channelId, CancellationToken cancellationToken)
+	private static async ValueTask<MString> LinkAsync(DiscordRelay relay, IFeedService feeds, IDiscordChannelGate gate,
+		AnySharpObject executor, ulong channelId, CancellationToken cancellationToken)
 	{
 		var objid = executor.Object().DBRef.ToString();
 		return await relay.LinkAsync(channelId, objid, new SecretAuthor(objid, executor.Object().Name), cancellationToken) switch
 		{
-			DiscordChannelLink link => await LinkedAsync(feeds, link),
+			DiscordChannelLink link => await LinkedAsync(feeds, link, await gate.GateAsync(channelId, cancellationToken)),
 			Error<string> error => Notice(error.Value, NoticeKind.Error),
 		};
+	}
+
+	private static async ValueTask<MString> GateAsync(DiscordRelay relay, IDiscordChannelGate gate, ulong channelId,
+		CancellationToken cancellationToken)
+	{
+		if (relay.Links().FirstOrDefault(status => status.Link.ChannelId == channelId) is not { Link: var link })
+		{
+			return Notice("That channel is not linked.", NoticeKind.Warn);
+		}
+
+		return await gate.GateAsync(channelId, cancellationToken) is { } problem
+			? Notice($"#{link.ChannelName} is still open to everyone: {problem}", NoticeKind.Error)
+			: Notice($"Only linked members may post in #{link.ChannelName} now.", NoticeKind.Ok);
+	}
+
+	/// <summary>
+	/// <c>@discord/speak</c>: the executor, a character, becomes (or with <c>/off</c> stops being) who its account's
+	/// Discord user speaks as in a linked channel. Anyone may run it for themselves.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> SpeakAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string argument, bool off)
+	{
+		var services = parser.ServiceProvider;
+		var notify = services.GetRequiredService<INotifyService>();
+		if (!ulong.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId))
+		{
+			await notify.Notify(executor, Notice(
+				"@discord/speak takes a linked channel's id. In Discord, turn on Developer Mode, then right-click the channel and Copy Channel ID.",
+				NoticeKind.Warn));
+			return new CallState(BadChannel);
+		}
+
+		var identities = services.GetRequiredService<DiscordIdentities>();
+		var character = new DiscordCharacter(executor.Object().DBRef, executor.Object().Name, executor.IsPlayer);
+		var cancellationToken = ExecutionBudget.CurrentToken;
+		var result = off
+			? await identities.StopAsync(character, channelId, cancellationToken)
+			: await identities.SpeakAsync(character, channelId, () => MaySendAsync(parser, executor, channelId), cancellationToken);
+		switch (result)
+		{
+			case string done:
+				await notify.Notify(executor, Notice(done, NoticeKind.Ok));
+				return new CallState(channelId.ToString(CultureInfo.InvariantCulture));
+			case Error<string> error:
+				await notify.Notify(executor, Notice(error.Value, NoticeKind.Error));
+				return new CallState("#-1");
+			default:
+				return CallState.Empty;
+		}
+	}
+
+	/// <summary>The check <c>@feed/send</c> makes: the kind's runner, or the send lock.</summary>
+	private static async Task<bool> MaySendAsync(IMUSHCodeParser parser, AnySharpObject character, ulong channelId)
+	{
+		var services = parser.ServiceProvider;
+		var feeds = services.GetRequiredService<IFeedService>();
+		if (await feeds.GetKindAsync(DiscordChannelLink.FeedKind) is not SharpFeedKind kind)
+		{
+			return false;
+		}
+
+		var key = channelId.ToString(CultureInfo.InvariantCulture);
+		var feed = await services.GetRequiredService<IMediator>().Send(new GetFeedQuery(kind.Name, key), ExecutionBudget.CurrentToken) switch
+		{
+			SharpFeed found => found,
+			_ => SharpFeed.New(kind.Name, key),
+		};
+		return await feeds.CanRunAsync(character, kind) || await feeds.PassesAsync(kind, feed, FeedLocks.Send, character);
 	}
 
 	private static async ValueTask<MString> UnlinkAsync(DiscordRelay relay, ulong channelId, CancellationToken cancellationToken)
@@ -149,15 +229,20 @@ public static class DiscordCommandModule
 			_ => Notice("That channel is not linked.", NoticeKind.Warn),
 		};
 
-	private static async ValueTask<MString> LinkedAsync(IFeedService feeds, DiscordChannelLink link)
+	private static async ValueTask<MString> LinkedAsync(IFeedService feeds, DiscordChannelLink link, string? gateProblem)
 	{
 		var linked = $"Linked #{link.ChannelName} in {link.GuildName}. Lines sent on the feed discord/{link.FeedKey} are posted there.";
-		return await feeds.GetKindAsync(DiscordChannelLink.FeedKind) is Error<string>
-			? Notice($"{linked} Install the discord package for the feed kind they are sent on.", NoticeKind.Warn)
-			: Notice(linked, NoticeKind.Ok);
+		if (await feeds.GetKindAsync(DiscordChannelLink.FeedKind) is Error<string>)
+		{
+			return Notice($"{linked} Install the discord package for the feed kind they are sent on.", NoticeKind.Warn);
+		}
+
+		return gateProblem is null
+			? Notice($"{linked} Only linked members may post there.", NoticeKind.Ok)
+			: Notice($"{linked} It is still open to everyone: {gateProblem} Fix that, then @discord/gate {link.FeedKey}.", NoticeKind.Warn);
 	}
 
-	private static MString Overview(DiscordGatewayState gateway, IReadOnlyList<DiscordLinkStatus> links)
+	private static MString Overview(DiscordGatewayState gateway, IReadOnlyList<DiscordLinkStatus> links, IDiscordChannelGate gate)
 	{
 		var connection = ServerLayout.KeyValues(
 		[
@@ -176,7 +261,8 @@ public static class DiscordCommandModule
 					new TableColumn(MarkupText.Plain("State")) { Min = 10 },
 				],
 				links.Select(status => ImmutableArray.Create(
-					"#" + status.Link.ChannelName, status.Link.GuildName, status.Link.FeedKey, State(status)).AsEnumerable()));
+					"#" + status.Link.ChannelName, status.Link.GuildName, status.Link.FeedKey,
+					State(status, gate.OpenTo(status.Link.ChannelId))).AsEnumerable()));
 
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord"), connection, linked), 78);
 	}
@@ -192,12 +278,18 @@ public static class DiscordCommandModule
 		_ => gateway.Detail is { } detail ? $"cannot reach Discord: {detail}" : "cannot reach Discord",
 	};
 
-	private static string State(DiscordLinkStatus status) => status.State switch
+	private static string State(DiscordLinkStatus status, IReadOnlyList<string>? openTo)
 	{
-		DiscordLinkState.Faulted => $"stopped: {status.Link.Fault?.Reason ?? "a post failed"} @discord/resume {status.Link.FeedKey} once it is fixed.",
-		DiscordLinkState.Backlogged => $"behind, {status.Depth} lines waiting",
-		_ => "posting",
-	};
+		var posting = status.State switch
+		{
+			DiscordLinkState.Faulted => $"stopped: {status.Link.Fault?.Reason ?? "a post failed"} @discord/resume {status.Link.FeedKey} once it is fixed.",
+			DiscordLinkState.Backlogged => $"behind, {status.Depth} lines waiting",
+			_ => "posting",
+		};
+		return openTo is [_, ..]
+			? $"{posting}; {string.Join(" and ", openTo)} may post without linking: @discord/gate {status.Link.FeedKey}"
+			: posting;
+	}
 
 	private static MString Notice(string text, NoticeKind kind) => NoticeMarkup.Message(Badge, text, kind);
 }

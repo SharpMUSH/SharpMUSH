@@ -15,10 +15,12 @@ public interface IDiscordLinkedRole
 
 /// <summary>
 /// Links Discord users to game accounts. A member runs <c>/link</c> in Discord, which proves who they are there, and
-/// confirms in the portal while signed in, which proves which account is theirs. Either side can unlink.
+/// confirms in the portal while signed in, which proves which account is theirs. Either side can unlink, which drops
+/// the user's speaking identities too.
 /// </summary>
 public sealed class DiscordAccounts(
 	IDiscordAccountStore store,
+	IDiscordSpeakerStore speakers,
 	DiscordLinkTickets tickets,
 	IAccountService accounts,
 	IDiscordLinkedRole linkedRole,
@@ -125,6 +127,8 @@ public sealed class DiscordAccounts(
 			}
 
 			await store.SaveAsync(link with { UnlinkedAt = time.GetUtcNow() }, CancellationToken.None);
+			// Its speaking identities go with it; linking again starts with none.
+			await speakers.ForgetAsync(link.UserId, CancellationToken.None);
 			logger.LogInformation("[Discord] {User} unlinked from account {Account}.", link.Username, link.AccountId);
 			await ChangeRoleAsync(() => linkedRole.TakeAsync(link.UserId, cancellationToken), link);
 			return link;

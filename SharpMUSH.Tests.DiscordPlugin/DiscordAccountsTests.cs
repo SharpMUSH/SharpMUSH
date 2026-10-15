@@ -71,12 +71,13 @@ public class DiscordAccountsTests
 		public Clock Clock { get; } = new();
 		public MemoryAccountStore Store { get; } = new();
 		public RecordingRole Role { get; } = new();
+		public MemorySpeakerStore Speakers { get; } = new();
 		public IAccountService Accounts { get; } = Substitute.For<IAccountService>();
 		public DiscordAccounts Discord { get; }
 
 		public Game()
 		{
-			Discord = new DiscordAccounts(Store, new DiscordLinkTickets(Clock), Accounts, Role, Clock,
+			Discord = new DiscordAccounts(Store, Speakers, new DiscordLinkTickets(Clock), Accounts, Role, Clock,
 				NullLogger<DiscordAccounts>.Instance);
 		}
 
@@ -182,17 +183,19 @@ public class DiscordAccountsTests
 	}
 
 	[Test]
-	public async Task UnlinkingFromDiscord_DropsTheLink_AndTakesTheRole()
+	public async Task UnlinkingFromDiscord_DropsTheLink_TheRole_AndTheSpeakingIdentities()
 	{
 		var game = new Game();
 		game.Account("acct-1");
 		await game.LinkAsync(Ann, "acct-1");
+		await game.Speakers.SetAsync(Ann.UserId, 555, "#5:1");
 
 		var dropped = await game.Discord.UnlinkUserAsync(Ann.UserId, CancellationToken.None);
 
 		await Assert.That(dropped.Expect<DiscordAccountLink>().AccountId).IsEqualTo("acct-1");
 		await Assert.That(game.Discord.ForAccount("acct-1")).IsNull();
 		await Assert.That(game.Role.Changes).IsEquivalentTo(["give 1001", "take 1001"]);
+		await Assert.That(game.Speakers.Character(Ann.UserId, 555)).IsNull().Because("unlinking drops the speaking identities");
 		await Assert.That(await game.Discord.UnlinkUserAsync(Ann.UserId, CancellationToken.None) is NotFound).IsTrue();
 	}
 

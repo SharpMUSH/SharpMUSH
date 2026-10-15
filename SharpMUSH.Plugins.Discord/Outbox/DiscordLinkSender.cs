@@ -18,13 +18,18 @@ public interface IDiscordPoster
 /// Told when the link stops on a failure only an admin can fix. It may <see cref="Resume"/> the link at once, after
 /// fixing what it can (making a new webhook for one that was deleted).
 /// </param>
+/// <param name="posted">
+/// Told of each post Discord took, with the id of the message it made: to pair the message with its lines, and delete
+/// the members' messages it stands in for. What it throws is logged; the link goes on.
+/// </param>
 public sealed class DiscordLinkSender(
 	IDiscordPoster poster,
 	DiscordOutbox outbox,
 	DiscordOutboxOptions options,
 	TimeProvider time,
 	ILogger logger,
-	Func<LinkBroken, CancellationToken, Task>? faulted = null)
+	Func<LinkBroken, CancellationToken, Task>? faulted = null,
+	Func<DiscordPost, ulong, CancellationToken, Task>? posted = null)
 {
 	private readonly Channel<bool> _wake = Channel.CreateBounded<bool>(
 		new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
@@ -124,6 +129,11 @@ public sealed class DiscordLinkSender(
 			}
 
 			Log(outcome);
+			if (outcome is Posted { MessageId: var messageId } && posted is { } done)
+			{
+				await PostedAsync(done, post, messageId, cancellationToken);
+			}
+
 			if (stopped is { } broken && faulted is not null)
 			{
 				await faulted(broken, cancellationToken);
@@ -133,6 +143,19 @@ public sealed class DiscordLinkSender(
 			{
 				await Task.Delay(wait, time, cancellationToken);
 			}
+		}
+	}
+
+	private async Task PostedAsync(Func<DiscordPost, ulong, CancellationToken, Task> done, DiscordPost post, ulong messageId,
+		CancellationToken cancellationToken)
+	{
+		try
+		{
+			await done(post, messageId, cancellationToken);
+		}
+		catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+		{
+			logger.LogWarning(exception, "[Discord] Could not finish after a post.");
 		}
 	}
 
