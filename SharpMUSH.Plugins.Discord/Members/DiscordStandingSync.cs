@@ -166,7 +166,7 @@ public sealed class DiscordStandingSync(
 		}
 	}
 
-	/// <returns>Whether the member is banned there now.</returns>
+	/// <returns>Whether the bot banned the member there, which it lifts when the game ban ends.</returns>
 	private async Task<bool> BanAsync(SocketGuild? guild, ulong userId, CancellationToken cancellationToken)
 	{
 		if (guild is null)
@@ -177,6 +177,13 @@ public sealed class DiscordStandingSync(
 		if (!guild.CurrentUser.GuildPermissions.BanMembers)
 		{
 			logger.LogWarning("[Discord] Game bans are mirrored, but the bot lacks Ban Members in {Guild}.", guild.Name);
+			return false;
+		}
+
+		var options = new RequestOptions { CancelToken = cancellationToken };
+		if (await guild.GetBanAsync(userId, options) is not null)
+		{
+			// Staff banned them already; that ban is theirs, and stays when the game ban ends.
 			return false;
 		}
 
