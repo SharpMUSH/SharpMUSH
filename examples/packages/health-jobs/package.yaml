@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: health-jobs
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Staff load in +health: how many open jobs each staffer handles, how many wait on staff, and the oldest one waiting. Joins the health and jobs packages."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [health, jobs, staff, load]
+category: Staff
 requires_server: ">=0.1"
 
 # Neither package knows about the other. Jobs keeps the jobs; health draws the numbers. This one reads the

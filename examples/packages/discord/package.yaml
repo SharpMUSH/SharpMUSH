@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: discord
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "The game's side of the Discord link: the discord.admin permission, and the Discord Bridge that owns the discord feed kind. Each linked Discord channel is the feed discord/<channel id>, and every line sent on it is posted in that channel. The Discord plugin does the posting; @discord/link links a channel."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, chat, bridge, feed]
+category: Community
 requires_server: ">=0.1"
 
 # Who runs the Discord link is a permission, so a game can hand it to one staff role and take it back

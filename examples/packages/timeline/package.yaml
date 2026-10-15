@@ -1,11 +1,12 @@
-format: 1.7
+format: "1.10"
 package: timeline
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "IC dates on scenes and a timeline for each character: a scene is dated in the game's IC calendar when it starts, +scene/date dates a flashback, and +timeline lists a character's finished scenes in IC order."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, timeline, calendar, ic, date]
+category: Scenes
 requires_server: ">=0.1"
 
 # +scene/date, +timeline and the dating call the Scene plugin's scene functions, so it installs only while the
