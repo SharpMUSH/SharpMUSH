@@ -177,6 +177,7 @@ public static class MushList
 		private readonly MarkupText _source;
 		private readonly string _text;
 		private readonly string _delimiter;
+		private readonly bool _marked;
 		private readonly bool _dropEmpty;
 		private int _position;
 		private bool _finished;
@@ -189,7 +190,8 @@ public static class MushList
 			_source = text;
 			_text = text.Text;
 			_delimiter = delimiter.Text;
-			_dropEmpty = _delimiter == " ";
+			_marked = ListSeparators.IsMarked(delimiter);
+			_dropEmpty = _delimiter == " " && !_marked;
 			_finished = _text.Length == 0;
 			_position = 0;
 			_work = 0;
@@ -240,10 +242,23 @@ public static class MushList
 		}
 
 		/// <summary>
-		/// The first delimiter in <c>[from, to)</c>, or -1. The search goes a checkpoint's worth of text at a
-		/// time, so one long item cannot outrun the budget.
+		/// The first delimiter in <c>[from, to)</c>, or -1; for a marked delimiter, the first one marked.
 		/// </summary>
 		private readonly int IndexOfDelimiter(int from, int to)
+		{
+			while (true)
+			{
+				var at = IndexOfText(from, to);
+				if (at < 0 || !_marked || ListSeparators.Covers(_source, at, _delimiter.Length)) return at;
+				from = at + 1;
+			}
+		}
+
+		/// <summary>
+		/// The first occurrence of the delimiter's text in <c>[from, to)</c>, or -1. The search goes a
+		/// checkpoint's worth of text at a time, so one long item cannot outrun the budget.
+		/// </summary>
+		private readonly int IndexOfText(int from, int to)
 		{
 			while (true)
 			{
