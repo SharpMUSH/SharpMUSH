@@ -94,6 +94,11 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				null)
 		};
 
+	public bool IsSortType(string sortType) =>
+		sortType.StartsWith("attr:") || sortType.StartsWith("attri:")
+		|| (sortType.StartsWith('-') ? sortType[1..] : sortType) is "a" or "i" or "d" or "n" or "f" or "m" or "name"
+			or "iname" or "conn" or "idle" or "owner" or "loc" or "ctime" or "mtime" or "lattr";
+
 	public IAsyncEnumerable<MString> Sort(IEnumerable<MString> items,
 		Func<MString, CancellationToken, ValueTask<string>> keySelector,
 		IMUSHCodeParser parser, ISortService.SortInformation sortData)
@@ -112,6 +117,10 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			ISortService.SortType.CasedLexicographically
 				=> source
 					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal, direction),
+
+			ISortService.SortType.Collated
+				=> source
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.InvariantCulture, direction),
 
 			ISortService.SortType.UncasedLexicographically
 				=> source
@@ -254,6 +263,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			ISortService.SortType.DecimalSort => FloatComparerInstance,
 			ISortService.SortType.CasedLexicographically => StringComparer.Ordinal,
 			ISortService.SortType.UncasedLexicographically => StringComparer.OrdinalIgnoreCase,
+			ISortService.SortType.Collated => StringComparer.InvariantCulture,
 			// NaturalSort (mudname, default): numeric strings compared by value, others case-insensitive
 			ISortService.SortType.NaturalSort => MudnameComparerInstance,
 			_ => MudnameComparerInstance
