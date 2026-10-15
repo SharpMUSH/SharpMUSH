@@ -90,6 +90,12 @@ public static class Tables
 	public static readonly TableDef Audit = TableDef.Node("audit");
 	/// <summary>Recorded rolls: big-endian id → the roll. Ids come from <c>next_roll</c> and only grow, so the table is in the order rolled.</summary>
 	public static readonly TableDef Roll = TableDef.Node("roll");
+	/// <summary>Poses per character per UTC day: big-endian day number + big-endian dbref → counts, so a date range is one key range.</summary>
+	public static readonly TableDef ActivityPlayer = TableDef.Node("activity.player");
+	/// <summary>Poses and scenes per room per UTC day: big-endian day number + big-endian dbref → counts and posers.</summary>
+	public static readonly TableDef ActivityRoom = TableDef.Node("activity.room");
+	/// <summary>Big-endian dbref (character or room) → big-endian Unix millis of its latest pose.</summary>
+	public static readonly TableDef ActivityLast = TableDef.Node("activity.last");
 	public static readonly TableDef State = TableDef.Node("state");
 	public static readonly TableDef ExpandedObj = TableDef.Node("x.obj");
 	public static readonly TableDef ExpandedSrv = TableDef.Node("x.srv");

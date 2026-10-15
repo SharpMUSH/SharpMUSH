@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -32,6 +34,9 @@ public static class SceneWrite
 		}
 
 		var scene = await sceneService.CreateSceneAsync(roomDbref, ownerDbref, title);
+		// Counted for the staff activity reports: a scene started, in its room or in none.
+		parser.ServiceProvider.GetService<IActivityLedger>()?.RecordScene(
+			DBRef.TryParse(scene.RoomDbref, out var room) && room is { } where ? where.Number : null);
 		await notifyService.Notify(executor,
 			SceneCommandHelper.Notice($"Created scene #{scene.Id} owned by {scene.OwnerName}.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);

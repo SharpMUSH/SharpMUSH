@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -56,9 +58,26 @@ public static class ScenePoseHandlers
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
+		CountPose(parser, pose);
 		await notifyService.Notify(executor, SceneCommandHelper.Notice($"Added pose #{pose.Id} to scene #{sceneId}.", NoticeKind.Ok));
 		await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
 		return MarkupText.Plain(pose.Id);
+	}
+
+	/// <summary>
+	/// Counts a recorded pose for the staff activity reports, unless it is out of character. A pose the
+	/// author typed was counted already as they typed it, and the ledger takes this for the same one.
+	/// </summary>
+	private static void CountPose(IMUSHCodeParser parser, Contracts.ScenePose pose)
+	{
+		if (pose.Type == PoseTypes.OutOfCharacter
+			|| parser.ServiceProvider.GetService<IActivityLedger>() is not { } ledger
+			|| !DBRef.TryParse(pose.AuthorDbref, out var author) || author is not { } poser)
+		{
+			return;
+		}
+
+		ledger.RecordPose(poser.Number, DBRef.TryParse(pose.OriginDbref, out var origin) && origin is { } room ? room.Number : null);
 	}
 
 	public static async ValueTask<MString> SetPose(
