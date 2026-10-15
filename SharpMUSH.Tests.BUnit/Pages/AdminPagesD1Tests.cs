@@ -262,6 +262,24 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		}
 	}
 
+	/// <summary>The scene system turned on while the overview is open: its Pose types card appears without a reload.</summary>
+	[Test]
+	public async Task Dashboard_FollowsTheSceneSystemBeingTurnedOn()
+	{
+		Auth.SetPolicies("layout.admin");
+		List<string> features = [];
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, features: features);
+		Services.AddSingleton<ServerInfoService>(serverInfo);
+		var cut = RenderPage(typeof(Dashboard));
+		cut.WaitForAssertion(() => cut.Find(".kit-page-head h1"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/scenes/types']").Count).IsEqualTo(0);
+
+		features.Add("scenes");
+		serverInfo.Refresh();
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/scenes/types']"), TimeSpan.FromSeconds(5));
+	}
+
 	/// <summary>A moderator (Royalty's scopes) is offered characters, moderation and the audit log, not configuration.</summary>
 	[Test]
 	public async Task Dashboard_OffersModerationToModerators()

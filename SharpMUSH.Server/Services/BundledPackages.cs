@@ -113,6 +113,10 @@ public static class BundledPackages
 		// package, as jobs-app is for jobs.
 		new("notifications", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("notifications-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
+		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
+		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>
