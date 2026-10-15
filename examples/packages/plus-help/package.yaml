@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: plus-help
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [help, docs, navigation, ui]
+category: Essentials
 requires_server: ">=0.1"
 
 # `+help` is the game's own help: what THIS game installed and what THIS game's staff wrote. `help`

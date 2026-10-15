@@ -1,12 +1,13 @@
-format: 1.1
+format: "1.10"
 package: chargen-app
-version: 2.0.0
+version: 2.0.1
 kind: application
 authors: [SharpMUSH]
 description: "Registers character applications (the chargen package) as a portal page at /apps/chargen: the applicant's own application as a form, and for reviewers the queue, the waitlist and each application with its comments and what changed."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [portal, application, form, chargen, review]
+category: Characters
 requires_server: ">=0.1"
 
 # An application package owns no objects. The chargen package serves the routes it points at:
