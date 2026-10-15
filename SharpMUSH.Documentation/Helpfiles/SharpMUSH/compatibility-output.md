@@ -27,7 +27,8 @@
 
 `render(<string>, <formats>)` converts a string's markup for something outside the game: a bot, a
 web page, an SQL column. The formats are `ansi`, `html`, `noaccents` and `markup`, as in PennMUSH,
-and `ansi` requires the `Can_Spoof` power.
+and `ansi` requires the `Can_Spoof` power. SharpMUSH adds `markdown`, which writes a table as a
+Markdown pipe table, for a wiki page.
 
 ## `render()` markup compatibility
 
