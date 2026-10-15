@@ -32,7 +32,8 @@ public class PackagesController(
 	IPackageAuthoringService authoring,
 	IPackageOperationRunner operations,
 	PluginUploadStore uploads,
-	IAuditLog audit) : ControllerBase
+	IAuditLog audit,
+	EngineVersion engine) : ControllerBase
 {
 	/// <summary>The canonical official repo, used when no official remote is configured yet.</summary>
 	public const string DefaultOfficialRepoUrl = "https://github.com/SharpMUSH/SharpMUSH-Packages";
@@ -502,6 +503,7 @@ public class PackagesController(
 			request.Decisions ?? [],
 			request.KeepRevisions,
 			request.AllowPluginCode,
+			request.AllowPastMaximum,
 			fetched.Readme);
 
 		var outcome = await operations.RunAsync("apply",
@@ -519,6 +521,15 @@ public class PackagesController(
 					new AuditTarget(AuditTargetKinds.Plugin, manifest.Name, manifest.Name),
 					$"v{manifest.Version} from {(isUpload ? "an upload" : remote.Url)}", cancellationToken);
 			}
+		}
+
+		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult }
+			&& PackageServerCompatibility.Check(manifest, engine.Current) is { Fit: PackageServerFit.AboveMaximum } past
+			&& User.FindFirstValue(ClaimTypes.NameIdentifier) is { } confirmedBy)
+		{
+			await audit.RecordPortalAsync(confirmedBy, AuditActions.PackagePastMaximum,
+				new AuditTarget(AuditTargetKinds.Package, manifest.Name, manifest.Name),
+				$"v{manifest.Version} applied on SharpMUSH {past.Server}, past maximum_server {past.Maximum}", cancellationToken);
 		}
 
 		return outcome switch

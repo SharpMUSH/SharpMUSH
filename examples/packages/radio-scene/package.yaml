@@ -1,6 +1,6 @@
 format: 1.2
 package: radio-scene
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
 license: MIT
@@ -12,13 +12,13 @@ requires_server: ">=0.1"
 # package keeps scenes and their poses. This one listens to the radio's feed and writes into scenes.
 depends:
   - package: radio
-    version: ">=1.2 <2.0"
+    version: ">=1.2"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/radio/
       branch: main
   - package: scene
-    version: ">=1.5 <2.0"
+    version: ">=1.5"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/

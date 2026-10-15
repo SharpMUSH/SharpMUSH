@@ -1,6 +1,6 @@
 format: 1
 package: profile-handler
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
@@ -13,7 +13,7 @@ requires_server: ">=0.1"
 # http-handler while this is installed.
 depends:
   - package: http-handler
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: http-handler/

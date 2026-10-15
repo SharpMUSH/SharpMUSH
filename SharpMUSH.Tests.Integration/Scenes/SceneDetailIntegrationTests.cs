@@ -93,7 +93,8 @@ public class SceneDetailIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");

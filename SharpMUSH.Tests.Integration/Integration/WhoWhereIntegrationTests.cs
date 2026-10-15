@@ -92,7 +92,8 @@ public class WhoWhereIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "who-where", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("who-where must install from the catalogue");

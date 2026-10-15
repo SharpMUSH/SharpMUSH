@@ -1,6 +1,6 @@
 format: 1.2
 package: finger
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits one attribute at a time."
 license: MIT
@@ -10,7 +10,7 @@ requires_server: ">=0.1"
 
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/

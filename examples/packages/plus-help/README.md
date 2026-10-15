@@ -33,7 +33,7 @@ Put the topics in a `HELP` attribute tree and attach one leaf to the librarian:
 ```yaml
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/

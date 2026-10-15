@@ -60,6 +60,7 @@ public sealed record PlanRequest(
 /// compiled C# in full server trust. A plugin install is refused without it; softcode and application packages
 /// ignore it.
 /// </param>
+/// <param name="AllowPastMaximum">The administrator's confirmation to apply a package on a server newer than its <c>maximum_server</c>.</param>
 public sealed record ApplyRequest(
 	string Remote,
 	string Path,
@@ -67,7 +68,8 @@ public sealed record ApplyRequest(
 	Dictionary<string, string>? ConfigureAnswers,
 	List<PackageConflictDecision>? Decisions,
 	int KeepRevisions = 10,
-	bool AllowPluginCode = false);
+	bool AllowPluginCode = false,
+	bool AllowPastMaximum = false);
 
 /// <summary>A configure prompt for the review screen.</summary>
 public sealed record ConfigurePromptDto(string Key, string Label, string Type, string? Default, bool Answered);

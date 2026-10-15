@@ -97,6 +97,9 @@ public static class PackageManifestWriter
 			yaml.Append("requires_server: ").AppendLine(Scalar(requiresServer.ToString()));
 		}
 
+		AppendOptional(yaml, "verified_server", manifest.VerifiedServer?.ToString());
+		AppendOptional(yaml, "maximum_server", manifest.MaximumServer?.ToString());
+
 		AppendOptional(yaml, "replaces", manifest.Replaces);
 		AppendOptional(yaml, "locale", manifest.Locale);
 	}

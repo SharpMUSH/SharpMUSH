@@ -1,6 +1,6 @@
 format: 1
 package: bbs-lite
-version: 0.9.1-beta
+version: 0.9.2-beta
 authors: [SharpMUSH]
 description: "Tiny bulletin board demonstrating dependencies, typed configure params, cross-package refs, and locks."
 license: MIT
@@ -10,7 +10,7 @@ requires_server: ">=0.1"
 
 depends:
   - package: who-where
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: who-where/
