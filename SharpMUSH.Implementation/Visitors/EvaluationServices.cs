@@ -30,6 +30,7 @@ internal sealed class EvaluationServices
 	private IPluginHookDispatcher? _pluginHooks;
 	private IRealityPolicy? _reality;
 	private IPipeOutputCapture? _pipeCapture;
+	private IActivityLedger? _activity;
 	private ExecutorDebugFlags? _debugFlags;
 	private SoftcodeParseCache? _parseCache;
 
@@ -136,6 +137,10 @@ internal sealed class EvaluationServices
 	/// <summary>Takes a piped command's output for the next command's <c>%|</c>; absent in hosts that do not register it.</summary>
 	public IPipeOutputCapture? PipeCapture
 		=> _pipeCapture ??= LocatesOptional ? Provider.GetService<IPipeOutputCapture>() : null;
+
+	/// <summary>Counts poses for the staff activity reports; absent in hosts that do not register it.</summary>
+	public IActivityLedger? Activity
+		=> _activity ??= LocatesOptional ? Provider.GetService<IActivityLedger>() : null;
 
 	public EvaluationDiagnostics Diagnostics { get; }
 	public FunctionInvocationPipeline Functions { get; }

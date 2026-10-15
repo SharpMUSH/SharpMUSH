@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.BUnit.Services;
 public class SceneEventMessageContractTests
 {
 	private const string Wire =
-		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":[],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000","type":"ooc","meta":{"frequency":"Harbour Watch"}}""";
+		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":[],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000","type":"ooc","meta":{"frequency":"Harbour Watch"},"recipient":null}""";
 
 	[Test]
 	public async Task The_client_record_writes_the_plugin_wire_shape()
@@ -43,6 +43,16 @@ public class SceneEventMessageContractTests
 		await Assert.That(message.ActorObjId).IsEqualTo("#312:1718000000");
 		await Assert.That(message.Type).IsEqualTo("ooc");
 		await Assert.That(message.Meta!["frequency"]).IsEqualTo("Harbour Watch");
+	}
+
+	[Test]
+	public async Task The_client_record_reads_a_notices_recipient()
+	{
+		var notice = Wire.Replace("\"recipient\":null", "\"recipient\":\"#18\"", StringComparison.Ordinal);
+
+		var message = JsonSerializer.Deserialize<SceneEventMessage>(notice, JsonSerializerOptions.Web)!;
+
+		await Assert.That(message.Recipient).IsEqualTo("#18");
 	}
 
 	[Test]

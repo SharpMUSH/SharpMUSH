@@ -196,6 +196,12 @@ public partial class PackageInstallService
 				await BaselineAsync(newValue!, change.LiveValue ?? (change.Action == PackageAttributeAction.KeepLocal ? null : newValue));
 				return null;
 
+			case PackageAttributeAction.Merge:
+				// The baseline advances to the package's value, so the game's lines stay visible as local drift.
+				await WriteAsync(change.MergedValue!);
+				await BaselineAsync(newValue!, change.MergedValue!);
+				return null;
+
 			case PackageAttributeAction.Delete:
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
 				await writes.ClearAttributeAsync(target, path, cancellationToken);
