@@ -247,6 +247,10 @@
       <Link>BundledPackages\messages.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\summary\README.md">
+      <Link>BundledPackages\summary.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.summary.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\who-where\README.md">
       <Link>BundledPackages\who-where.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.README.md</LogicalName>
@@ -366,6 +370,10 @@
     <EmbeddedResource Include="..\examples\packages\finger\package.yaml">
       <Link>BundledPackages\finger.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.finger.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\summary\package.yaml">
+      <Link>BundledPackages\summary.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.summary.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\time\package.yaml">
       <Link>BundledPackages\time.package.yaml</Link>

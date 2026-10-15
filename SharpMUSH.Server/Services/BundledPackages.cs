@@ -122,6 +122,8 @@ public static class BundledPackages
 		new("watch", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +summary is a name a game may already use for its own code.
+		new("summary", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: +info and +journal are names a game may already use for its own code.

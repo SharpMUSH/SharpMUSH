@@ -157,6 +157,11 @@ packages:
     package: finger
     version: 1.1.1
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
+  - path: summary/
+    name: Summary
+    package: summary
+    version: 1.0.0
+    description: +summary — a line summing up your last pose, told to your room only and never recorded by a scene (requires plus-config)
   - path: time/
     name: Time
     package: time
