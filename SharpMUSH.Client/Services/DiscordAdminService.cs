@@ -19,6 +19,9 @@ public class DiscordAdminService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<DiscordAdminAnswer>> ReconnectAsync() =>
 		Client.PostApiAsync<object?, DiscordAdminAnswer>($"{Base}/connection", null, NoAnswer);
 
+	public Task<ApiResult<DiscordAdminAnswer>> MirrorBansAsync(bool on) =>
+		Client.PutApiAsync<DiscordSettingsRequest, DiscordAdminAnswer>($"{Base}/settings", new DiscordSettingsRequest(on), NoAnswer);
+
 	public Task<ApiResult<List<DiscordChannelView>>> ChannelsAsync() =>
 		Client.GetApiAsync<List<DiscordChannelView>>($"{Base}/channels", "The server returned no channels.");
 

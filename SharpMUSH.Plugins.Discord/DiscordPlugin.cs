@@ -59,6 +59,8 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<IDiscordAccountStore, LightningDiscordAccountStore>();
 		services.AddSingleton<IDiscordSpeakerStore, LightningDiscordSpeakerStore>();
 		services.AddSingleton(provider => new DiscordLinkTickets(TimeProvider.System));
+		services.AddSingleton<IDiscordSettingsStore, LightningDiscordSettingsStore>();
+		services.AddSingleton<IDiscordStandings, DiscordStandings>();
 		services.AddSingleton<DiscordLinkedRole>();
 		services.AddSingleton<IDiscordLinkedRole>(provider => new DiscordLinkedMember(
 			provider.GetRequiredService<DiscordLinkedRole>(), provider.GetRequiredService<DiscordRoleSync>()));
@@ -70,6 +72,13 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<DiscordSlashCommands>();
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordSlashCommands>());
+		services.AddSingleton<IDiscordBanStore, LightningDiscordBanStore>();
+		services.AddSingleton(provider => new DiscordStandingSync(provider.GetRequiredService<IDiscordAccountStore>(),
+			provider.GetRequiredService<IDiscordBanStore>(), provider.GetRequiredService<IDiscordSettingsStore>(),
+			provider.GetRequiredService<IDiscordStandings>(), provider.GetRequiredService<DiscordLinkedRole>(), TimeProvider.System,
+			provider.GetRequiredService<ILogger<DiscordStandingSync>>()));
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordStandingSync>());
+		services.AddSingleton<IAccountChangeListener>(provider => provider.GetRequiredService<DiscordStandingSync>());
 
 		services.AddSingleton<DiscordIdentities>();
 		services.AddSingleton<IDiscordFeedInput, DiscordFeedInput>();

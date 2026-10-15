@@ -47,7 +47,13 @@ public sealed class DiscordGatewayService(
 	/// <summary>How many sessions the current client has started; a resume is not a new one.</summary>
 	private int _sessions;
 
-	public DiscordGatewayState State => _state with { Guilds = _client?.Guilds.Count ?? 0 };
+	public DiscordGatewayState State => _client is { } client
+		? _state with
+		{
+			Guilds = client.Guilds.Count,
+			CannotBanIn = [.. client.Guilds.Where(guild => guild.CurrentUser is { GuildPermissions.BanMembers: false }).Select(guild => guild.Name)],
+		}
+		: _state;
 
 	/// <summary>
 	/// The text channels the bot can see in each server it is in, with the permissions a link needs there that it lacks;

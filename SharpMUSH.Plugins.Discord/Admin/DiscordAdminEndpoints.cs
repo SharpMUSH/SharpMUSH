@@ -38,7 +38,16 @@ public static class DiscordAdminEndpoints
 					: Results.Forbid();
 		});
 
-		group.MapGet("connection", (DiscordGatewayService gateway) => Connection(gateway.State));
+		group.MapGet("connection", (DiscordGatewayService gateway, IDiscordSettingsStore settings)
+			=> Connection(gateway.State, settings.Get().MirrorBans));
+
+		group.MapPut("settings", async (DiscordSettingsRequest request, DiscordStandingSync standing, CancellationToken cancellationToken) =>
+		{
+			await standing.SetMirrorBansAsync(request.MirrorBans, cancellationToken);
+			return request.MirrorBans
+				? Answer("A game ban now bans the account's Discord member in every server the bot is in.", "ok")
+				: Answer("Game bans are no longer mirrored. Bans the bot already made are lifted when their game bans end.", "ok");
+		});
 
 		group.MapPost("connection", (DiscordGatewayService gateway) =>
 		{
@@ -181,11 +190,12 @@ public static class DiscordAdminEndpoints
 				: Answer("That Discord user is not linked.", "warn"));
 	}
 
-	public static DiscordConnectionView Connection(DiscordGatewayState state)
+	public static DiscordConnectionView Connection(DiscordGatewayState state, bool mirrorBans)
 	{
-		var setup = DiscordSetup.View(state);
+		var setup = DiscordSetup.View(state, mirrorBans);
 		return new DiscordConnectionView(JsonName(state.Status.ToString()), state.BotName, setup.InviteUrl, state.Guilds,
-			setup.Steps.Select(step => new DiscordSetupStepView(step.Key, step.Title, step.Done, step.Todo, step.Link)).ToList());
+			setup.Steps.Select(step => new DiscordSetupStepView(step.Key, step.Title, step.Done, step.Todo, step.Link)).ToList(),
+			mirrorBans);
 	}
 
 	public static DiscordChannelView Channel(DiscordLinkStatus status, IReadOnlyList<string>? openTo)

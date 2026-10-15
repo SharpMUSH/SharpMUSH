@@ -12,12 +12,17 @@ public sealed record DiscordSetupStepView(string Key, string Title, bool Done, s
 /// <param name="Status">noToken, connecting, connected, badToken, intentsOff or unreachable.</param>
 /// <param name="InviteUrl">The link that adds the bot to a server, once Discord accepted the token.</param>
 /// <param name="Guilds">How many servers the bot is in, while connected.</param>
+/// <param name="MirrorBans">Whether a game ban also bans the account's member on Discord.</param>
 public sealed record DiscordConnectionView(
 	string Status,
 	string? BotName,
 	string? InviteUrl,
 	int Guilds,
-	IReadOnlyList<DiscordSetupStepView> Steps);
+	IReadOnlyList<DiscordSetupStepView> Steps,
+	bool MirrorBans = false);
+
+/// <summary>Turns mirroring game bans to Discord on or off (<c>PUT api/discord/admin/settings</c>).</summary>
+public sealed record DiscordSettingsRequest(bool MirrorBans);
 
 /// <summary>A linked Discord channel (<c>GET api/discord/admin/channels</c>).</summary>
 /// <param name="Feed">The feed it is, <c>discord/&lt;channel id&gt;</c>.</param>
