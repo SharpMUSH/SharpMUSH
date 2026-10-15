@@ -573,7 +573,7 @@ objects:
       # a reviewer: the section's title, its answers and its comments. An empty answer shows the field's help.
       FUN`DISPLAY`SECTION:
         value: |-
-          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,[u(%!/FUN`FIELD`NAME,%i0)][if(member(%3,%i0),%b[tone(warning,*)])],%b,%*<|>),iter(%q<section_fields>,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,firstof(get({{store}}/FIELD`%i0`HELP),-))),%b,%*<|>),%*<|>)])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
+          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,[u(%!/FUN`FIELD`NAME,%i0)][if(member(%3,%i0),%b[tone(warning,*)])],%b,%*<|>),iter(%q<section_fields>,firstof(unmark(u(%!/FUN`APP`VALUE,%0,%i0,%2)),tone(muted,firstof(get({{store}}/FIELD`%i0`HELP),-))),%b,%*<|>),%*<|>)])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
         flags: [funsyntax]
       # %0 a key, %1 1 when the reader is its owner, %2 1 for a reviewer, %3 the character: the whole application in a box.
       # The owner reads the draft and sees * on what they changed since they last submitted; a reviewer reads the
@@ -597,7 +597,7 @@ objects:
       # said and what it says.
       FUN`DISPLAY`DIFF:
         value: |-
-          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,[rule([u(%!/FUN`FIELD`LABEL,%i0)] · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`%i0`SECTION)]),-)])]%r[lfields(,Was%*<|>Now,[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%1),tone(muted,empty))]%*<|>[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,empty))],%*<|>)],%b,%r),Nothing changed.),%3)]
+          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,[rule([u(%!/FUN`FIELD`LABEL,%i0)] · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`%i0`SECTION)]),-)])]%r[lfields(,Was%*<|>Now,[firstof(unmark(u(%!/FUN`APP`VALUE,%0,%i0,%1)),tone(muted,empty))]%*<|>[firstof(unmark(u(%!/FUN`APP`VALUE,%0,%i0,%2)),tone(muted,empty))],%*<|>)],%b,%r),Nothing changed.),%3)]
         flags: [funsyntax]
 
       # ---- telling people -------------------------------------------------------

@@ -171,7 +171,7 @@ objects:
         if(strlen(%q<ww_prefix>),u(%!/WW_FN_MATCHING,%0,%q<ww_prefix>),%0)
       # %0 a player: their row.
       WW_FN_WHO_ROW: |-
-        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r[first(get(%0/ALIAS),;)]%r[etime(%q<ww_idle>,3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)]
+        unmark([u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r[first(get(%0/ALIAS),;)]%r[etime(%q<ww_idle>,3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)])
       # %0 the rows: the box, or a warning when +who <name> matched nobody.
       WW_FN_WHO_SCREEN: |-
         if(strlen(%0),box([u(%!/WW_FN_WHO_TABLE,%0)][u(%!/WW_FN_FOOT,u(%!/WW_FN_WHO_COUNT,words(%0,%q<ww_rs>)))],Who's Online),notice(WHO,Nobody connected has a name starting with %q<ww_prefix>.,warn))
@@ -265,7 +265,7 @@ objects:
         case(%0,-,u(%!/WW_FN_WHERE_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(%0,u(%!/WW_FN_WHERE_ROW,%i0,u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%i0))),,%q<ww_rs>))))
       # %0 a player, %1 where they are: their row, with how long they have been idle.
       WW_FN_WHERE_ROW: |-
-        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r%1%r[etime(%q<ww_idle>,3)]
+        unmark([u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r%1%r[etime(%q<ww_idle>,3)])
       # %0 the rows: the box with the table and the count.
       WW_FN_WHERE_SCREEN: |-
         box(ldatatable(u(%!/WW_FN_OPTS,1%r3,1%r1%r2,%r1,%r12),[tone(strong,Name)]%r[tone(strong,Location)]%r>[tone(strong,Idle)],%0,%q<ww_rs>)[u(%!/WW_FN_FOOT,[words(%0,%q<ww_rs>)] connected)],%q<ww_title>)

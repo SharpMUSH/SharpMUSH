@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.7.0
+    version: 1.7.1
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -52,7 +52,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.0.0
+    version: 2.0.1
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires plus-help, plus-config, http-handler)
   - path: chargen-app/
     package: chargen-app
@@ -70,7 +70,7 @@ packages:
   - path: plus-config/
     name: "+config"
     package: plus-config
-    version: 1.0.0
+    version: 1.0.1
     description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
   - path: hello-ui/
     name: Hello UI
@@ -155,12 +155,12 @@ packages:
   - path: finger/
     name: Finger
     package: finger
-    version: 1.1.0
+    version: 1.1.1
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
   - path: time/
     name: Time
     package: time
-    version: 1.2.0
+    version: 1.2.1
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: info/
     name: Info Files
@@ -170,7 +170,7 @@ packages:
   - path: health/
     name: Health
     package: health
-    version: 1.0.0
+    version: 1.0.1
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
   - path: health-jobs/
     name: Health Staff Load
@@ -200,7 +200,7 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.1
+    version: 1.0.2
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
   - path: roster-jobs/
     name: Roster applications in jobs
@@ -210,5 +210,5 @@ packages:
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability
-    version: 1.0.0
+    version: 1.0.1
     description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group or a scene's cast are all free

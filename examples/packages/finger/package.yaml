@@ -334,7 +334,7 @@ objects:
       # The prepared profile: the fields side by side, each section under its own line, and a footer.
       FUN`CARD`DRAW:
         value: |-
-          box([if(words(%q<card_inline>),lfields(json(object,cols,firstof(get(%!/DATA`CONFIG`COLUMNS),1)),iter(%q<card_inline>,get(%!/%i0),,%*<|>),iter(%q<card_inline>,u(%!/FUN`CARD`SHOW,%i0),,%*<|>),%*<|>))][iter(%q<card_sections>,[if(cor(words(%q<card_inline>),gt(inum(0),1)),%r)][rule(get(%!/%i0))]%r[u(%!/FUN`CARD`SHOW,%i0)],,)]%r[rule()]%r[tone(muted,u(%!/FUN`CARD`FOOTER))],u(%!/FUN`CARD`TITLE),,u(%!/FUN`DISPLAY`FRAME))
+          box([if(words(%q<card_inline>),lfields(json(object,cols,firstof(get(%!/DATA`CONFIG`COLUMNS),1)),iter(%q<card_inline>,get(%!/%i0),,%*<|>),iter(%q<card_inline>,unmark(u(%!/FUN`CARD`SHOW,%i0)),,%*<|>),%*<|>))][iter(%q<card_sections>,[if(cor(words(%q<card_inline>),gt(inum(0),1)),%r)][rule(get(%!/%i0))]%r[u(%!/FUN`CARD`SHOW,%i0)],,)]%r[rule()]%r[tone(muted,u(%!/FUN`CARD`FOOTER))],u(%!/FUN`CARD`TITLE),,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
       FUN`CARD`TITLE:
         value: |-

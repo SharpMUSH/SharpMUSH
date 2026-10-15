@@ -457,7 +457,7 @@ objects:
       # %0 a character, %1 1 when the reader is roster staff: the entry as labelled values, framed with the name.
       FUN`DISPLAY`ENTRY:
         value: |-
-          setq(roster_fields,u({{roster}}/FUN`DISPLAY`FIELDS,%0,%1))[box(lfields(,iter(%q<roster_fields>,u({{roster}}/FUN`DISPLAY`LABEL,%i0),,%*<|>),iter(%q<roster_fields>,u({{roster}}/FUN`DISPLAY`VALUE,%0,%i0),,%*<|>),%*<|>)[if(strmatch(u({{roster}}/FUN`ENTRY`STATE,%0),available),%r[rule()]%r[u({{roster}}/FUN`DISPLAY`HOWTOGET)])],name(%0))]
+          setq(roster_fields,u({{roster}}/FUN`DISPLAY`FIELDS,%0,%1))[box(lfields(,iter(%q<roster_fields>,u({{roster}}/FUN`DISPLAY`LABEL,%i0),,%*<|>),iter(%q<roster_fields>,unmark(u({{roster}}/FUN`DISPLAY`VALUE,%0,%i0)),,%*<|>),%*<|>)[if(strmatch(u({{roster}}/FUN`ENTRY`STATE,%0),available),%r[rule()]%r[u({{roster}}/FUN`DISPLAY`HOWTOGET)])],name(%0))]
         flags: [funsyntax]
       # %0 a character, %1 1 for staff: which fields its entry shows, in order, leaving out the empty ones.
       FUN`DISPLAY`FIELDS:
