@@ -95,6 +95,7 @@ public class PackageServerRangeTests
 	[Arguments("maximum_server: \"3.0-beta\"", "maximum_server")]
 	[Arguments("maximum_server: \">=3\"", "maximum_server")]
 	[Arguments("requires_server: \">=3.0\"\nmaximum_server: \"2\"", "maximum_server")]
+	[Arguments("requires_server: \">2.0.0\"\nmaximum_server: \"2.0.0\"", "maximum_server")]
 	public async Task AMalformedRange_IsRefused(string range, string field)
 	{
 		var failure = Parse(range).Expect<PackageManifestFailure>();
@@ -104,6 +105,7 @@ public class PackageServerRangeTests
 
 	[Test]
 	[Arguments("requires_server: \">=2.0\"\nverified_server: \"1.5\"")]
+	[Arguments("requires_server: \">2.0\"\nverified_server: \"2.0\"")]
 	[Arguments("verified_server: \"3.1\"\nmaximum_server: \"2\"")]
 	public async Task AVerifiedVersionOutsideTheRange_Warns(string range)
 	{

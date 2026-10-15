@@ -75,6 +75,12 @@ public class PackageServerRangeInstallTests
 		(await ApplyAsync(Manifest(id, "1.0.1", ""))).Expect<PackageApplyResult>();
 		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().PastMaximum).IsNull();
 
+		// A rollback restores the mark that revision carried, in either direction.
+		(await Installer.RollbackAsync(id, 1)).Expect<PackageRollbackResult>();
+		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().PastMaximum!.Maximum).IsEqualTo("1");
+		(await Installer.RollbackAsync(id, 2)).Expect<PackageRollbackResult>();
+		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().PastMaximum).IsNull();
+
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
 

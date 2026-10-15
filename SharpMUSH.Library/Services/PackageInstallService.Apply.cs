@@ -545,10 +545,11 @@ public partial class PackageInstallService
 		// its edges silently.
 		var revision = (run.Inputs.Installed?.CurrentRevision ?? 0) + 1;
 		var source = run.Request.Source;
+		var pastMaximum = PastMaximum(manifest, run.Notes);
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
 			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
-			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, run.Notes)));
+			Kind: manifest.Kind, PastMaximum: pastMaximum));
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -567,7 +568,8 @@ public partial class PackageInstallService
 					o.IsAttach ? PackageObjectRelation.Attached : PackageObjectRelation.Owned))
 				.ToList(),
 			run.FinalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
-			structureSnapshot);
+			structureSnapshot,
+			pastMaximum);
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,

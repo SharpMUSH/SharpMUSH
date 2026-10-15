@@ -48,17 +48,18 @@ public partial class PackageManifestService
 			}
 		}
 
-		var lowest = minimum?.Clauses.Select(c => c.Version).Max();
-		if (maximum is not null && lowest is not null && maximum.IsExceededBy(lowest))
+		// A strict bound at a three-component maximum (">2.0.0" with 2.0.0) leaves no version between them either.
+		if (maximum is not null && minimum?.Clauses.Any(c => maximum.IsExceededBy(c.Version)
+			|| (c.Comparison == VersionComparison.Greater && maximum.Components == 3 && c.Version.CompareTo(maximum.Version) == 0)) == true)
 		{
 			issues.Add(PackageManifestIssue.Error("maximum_server",
 				$"maximum_server {maximum} is below requires_server {minimum}; no SharpMUSH version satisfies both."));
 		}
 
-		if (verified is not null && lowest is not null && verified.CompareTo(lowest) < 0)
+		if (verified is not null && minimum is not null && !minimum.IsSatisfiedBy(verified, includePrereleases: true))
 		{
 			issues.Add(PackageManifestIssue.Warning("verified_server",
-				$"verified_server {verified} is below requires_server {minimum}."));
+				$"verified_server {verified} is outside requires_server {minimum}."));
 		}
 
 		if (verified is not null && maximum is not null && maximum.IsExceededBy(verified))

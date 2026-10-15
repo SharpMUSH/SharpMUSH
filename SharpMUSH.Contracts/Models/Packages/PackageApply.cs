@@ -82,11 +82,13 @@ public sealed record PackageRollbackResult(int Revision, int RestoredFromRevisio
 /// <param name="Objects">Package objects after this apply (ref, objid, type).</param>
 /// <param name="Attributes">Final effective value of every managed attribute after this apply.</param>
 /// <param name="Structure">Final package-managed object structure (flags/powers/locks/attribute flags) per object after this apply.</param>
+/// <param name="PastMaximum">The confirmed install past <c>maximum_server</c> this apply recorded, restored by a rollback to it.</param>
 public sealed record PackageRevisionSnapshot(
 	string Version,
 	IReadOnlyList<PackageRevisionSnapshotObject> Objects,
 	IReadOnlyList<PackageRevisionSnapshotAttribute> Attributes,
-	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null);
+	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null,
+	PackageMaximumOverride? PastMaximum = null);
 
 /// <summary>One object in a revision snapshot.</summary>
 /// <param name="Ref">The manifest ref that produced or targets the object.</param>
