@@ -79,10 +79,12 @@ public sealed class MsspReportPublisher(
 		{
 			// Before the report: a connection server stops asking once the report arrives.
 			var translations = options.CurrentValue.AsciiTranslations.Translations;
-			var settings = AsciiTranslations.Fingerprint(translations);
+			var mediaBaseUrl = options.CurrentValue.Net.MediaBaseUrl;
+			var settings = AsciiTranslations.Fingerprint(translations) + '\n' + mediaBaseUrl;
 			if (force || settings != _lastSettings)
 			{
-				await bus.Publish(new OutputSettingsMessage(new Dictionary<string, string>(translations, StringComparer.Ordinal)), ct);
+				await bus.Publish(new OutputSettingsMessage(new Dictionary<string, string>(translations, StringComparer.Ordinal),
+					mediaBaseUrl), ct);
 				_lastSettings = settings;
 			}
 

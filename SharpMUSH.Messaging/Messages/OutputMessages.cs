@@ -97,10 +97,12 @@ public record MSSPReportMessage(MSSPVariable[] Variables);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer with the game settings that shape each connection's output:
-/// the <c>ascii_translations</c> table, the stand-in a client without Unicode is sent for each character. Published
-/// with the MSSP report, when it changes and when a connection server asks.
+/// the <c>ascii_translations</c> table, the stand-in a client without Unicode is sent for each character, and
+/// <c>media_base_url</c>, sent to a GMCP client as <c>Client.Media.Default</c>. Published with the MSSP report, when
+/// it changes and when a connection server asks.
 /// </summary>
-public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations);
+/// <param name="MediaBaseUrl">Where a GMCP client fetches the game's sounds; null when unset, or from an older server.</param>
+public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl = null);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection

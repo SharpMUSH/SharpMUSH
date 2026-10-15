@@ -142,6 +142,9 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var reader = ReaderTheme(connection.Preferences?.Theme);
 		var deserialized = MarkupTextSerializer.Deserialize(markup);
 		if (showSeparators) deserialized = ListSeparators.Show(deserialized);
+		var media = ClientMediaFrames.Wanted(connection.ConnectionType, connection.Capabilities)
+			? ClientMediaFrames.From(deserialized)
+			: null;
 		// Tones are coloured after the layout: a block laid out again is drawn from its own copy of the text, which
 		// still holds the tone's span.
 		var ms = ToneMarkup.ForTelnet(Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
@@ -171,7 +174,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			text += PuebloLineBreak;
 		}
 
-		return new RenderedOutput(Encoding.UTF8.GetBytes(text), ApplyOutputTransform: true);
+		return new RenderedOutput(Encoding.UTF8.GetBytes(text), ApplyOutputTransform: true, media);
 	}
 
 	/// <summary>
