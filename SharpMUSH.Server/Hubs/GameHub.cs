@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Push;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Library.Authorization;
@@ -40,6 +41,7 @@ public interface IGameHubClient
 /// Client-to-server:
 ///   JoinRoom     — adds the client to group "room:{roomDbref}"
 ///   LeaveRoom    — removes the client from group "room:{roomDbref}"
+///   ReportVisibility — whether the tab is in view, for @push (<see cref="IPortalPresence"/>)
 ///
 /// Game commands do not go through this hub. The portal runs them with <c>POST api/commands</c>
 /// (<see cref="Controllers.CommandsController"/>), which answers with the command's own output.
@@ -49,10 +51,12 @@ public interface IGameHubClient
 /// </summary>
 [Authorize]
 public class GameHub(ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard,
-	IVisibleWorldProjection projection) : Hub<IGameHubClient>
+	IVisibleWorldProjection projection, IPortalPresence presence) : Hub<IGameHubClient>
 {
 	/// <summary>Claim name that carries the authenticated character's dbref.</summary>
 	public const string CharacterDbrefClaim = "character_dbref";
+
+	private const string CharacterItem = "character";
 
 	/// <summary>
 	/// The SignalR group for a character. Takes a <see cref="DBRef"/> rather than a string so
@@ -83,6 +87,7 @@ public class GameHub(ILogger<GameHub> logger, HubConnectionRegistry registry, Si
 			&& await projection.ResolveCharacterAsync(actor, Context.ConnectionAborted) is { } player)
 		{
 			var character = player.Object.DBRef;
+			Context.Items[CharacterItem] = character;
 			await Groups.AddToGroupAsync(Context.ConnectionId, CharacterGroupName(character), Context.ConnectionAborted);
 			logger.LogInformation("[GameHub] Connection {ConnectionId} joined character group {Group}",
 				Context.ConnectionId, CharacterGroupName(character));
@@ -105,7 +110,21 @@ public class GameHub(ILogger<GameHub> logger, HubConnectionRegistry registry, Si
 	{
 		logger.LogInformation("[GameHub] Connection {ConnectionId} disconnected", Context.ConnectionId);
 		registry.Remove(Context.ConnectionId);
+		presence.Remove(Context.ConnectionId);
 		await base.OnDisconnectedAsync(exception);
+	}
+
+	/// <summary>
+	/// The tab reports that its page was shown or hidden (<c>visibilitychange</c>), and once when it connects.
+	/// While any tab playing a character is in view, <c>@push</c> leaves that character's devices alone.
+	/// </summary>
+	/// <param name="state"><c>visible</c> when the page is in view; anything else is out of view.</param>
+	public void ReportVisibility(string? state)
+	{
+		if (Context.Items.TryGetValue(CharacterItem, out var item) && item is DBRef character)
+		{
+			presence.Report(Context.ConnectionId, character, state == "visible");
+		}
 	}
 
 	/// <summary>

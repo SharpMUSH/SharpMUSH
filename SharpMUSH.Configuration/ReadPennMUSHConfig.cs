@@ -248,7 +248,10 @@ public static partial class ReadPennMushConfig
 				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), d.Limit.GlobalQueueLimit),
 				GuestOutputLimit = UnsignedInteger(Get(nameof(LimitOptions.GuestOutputLimit)), d.Limit.GuestOutputLimit),
 				MaxGalleryImages = UnsignedInteger(Get(nameof(LimitOptions.MaxGalleryImages)), d.Limit.MaxGalleryImages),
-				CommandBurstSize = UnsignedInteger(Get(nameof(LimitOptions.CommandBurstSize)), d.Limit.CommandBurstSize)
+				CommandBurstSize = UnsignedInteger(Get(nameof(LimitOptions.CommandBurstSize)), d.Limit.CommandBurstSize),
+				PushIdleSeconds = UnsignedInteger(Get(nameof(LimitOptions.PushIdleSeconds)), d.Limit.PushIdleSeconds),
+				PushLimit = UnsignedInteger(Get(nameof(LimitOptions.PushLimit)), d.Limit.PushLimit),
+				PushDevices = UnsignedInteger(Get(nameof(LimitOptions.PushDevices)), d.Limit.PushDevices)
 			},
 			Log = new LogOptions(
 				Boolean(Get(nameof(LogOptions.UseSyslog)), d.Log.UseSyslog),

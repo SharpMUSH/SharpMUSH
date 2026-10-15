@@ -118,8 +118,15 @@ public static class BundledPackages
 		new("relationships-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("relationships-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("relationships-card", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
+		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: which game events notify a player's phone or browser (@push) is the game's
+		// choice, and +notify lands an object in the master room. Its settings page is a separate application
+		// package, as jobs-app is for jobs.
+		new("notifications", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("notifications-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),

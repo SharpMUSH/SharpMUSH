@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Покажи още</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Хронология</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Без дата</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Виж всички</value>
   </data>
@@ -6163,6 +6169,14 @@
   </data>
   <data name="RolNameCardLabel" xml:space="preserve">
     <value>Карта на {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Известия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Получавайте известия на този телефон или компютър, когато порталът е затворен</value>
     <comment>MT</comment>
   </data>
 </root>
