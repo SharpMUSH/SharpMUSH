@@ -39,8 +39,8 @@ public class PennMUSHStringFunctionTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// lnum() with no argument is empty, as in TinyMUX (help compatibility arguments); PennMUSH errors.
 	[Test]
-	[Arguments("lnum()")]
 	[Arguments("lnum(#1)")]
 	[Arguments("lnum(foo)")]
 	[Arguments("lnum(1,)")]

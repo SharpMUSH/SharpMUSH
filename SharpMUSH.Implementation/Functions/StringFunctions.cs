@@ -588,13 +588,13 @@ public partial class Functions
 	// No parity requirement: PennMUSH's fun_switch (which backs CASE/CASEALL/SWITCH) checks only
 	// minargs, so both case(str,pat,res) and case(str,pat,res,default) are legal — and the trailing
 	// default makes the common form even-numbered.
-	[SharpFunction(Name = "case", MinArgs = 3, MaxArgs = int.MaxValue,
+	[SharpFunction(Name = "case", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse,
 		ParameterNames = ["expression", "case...|result...", "default"])]
 	public ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SwitchInternal(parser, all: false, exact: true);
 
-	[SharpFunction(Name = "caseall", MinArgs = 3, MaxArgs = int.MaxValue,
+	[SharpFunction(Name = "caseall", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SwitchInternal(parser, all: true, exact: true);
@@ -613,7 +613,7 @@ public partial class Functions
 			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
-		var result = str.Center(fill, rightFill, widthInt, TruncationType.Overflow);
+		var result = str.Center(fill, rightFill, widthInt, JustifyTruncation(parser, string.Empty));
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -650,7 +650,7 @@ public partial class Functions
 	{
 		var value1 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var value2 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var type = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "A").ToPlainText().ToUpperInvariant();
+		var type = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.Empty).ToPlainText().ToUpperInvariant();
 
 		// fun_comp compares N only as strict integers and F only as strict numbers, refusing anything
 		// else with e_ints and e_nums (src/funstr.c:475-490) instead of comparing it as text.
@@ -670,6 +670,9 @@ public partial class Functions
 			"N" when ArgHelpers.TryStrictInteger(value1, out int int1) && ArgHelpers.TryStrictInteger(value2, out int int2) => int1.CompareTo(int2),
 			"F" when NumericEvaluation.Strict.TryDouble(value1, out var real1) && NumericEvaluation.Strict.TryDouble(value2, out var real2) => real1.CompareTo(real2),
 			"D" => CompareDbRefs(value1, value2),
+			// Without a type, mux_collation compares as TinyMUX does: comp(a,B) is -1, not 1.
+			"" when Compatibility(parser).MuxCollation
+				=> string.Compare(value1, value2, StringComparison.InvariantCulture),
 			_ => string.Compare(value1, value2, StringComparison.Ordinal)
 		};
 
@@ -1146,9 +1149,21 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		var truncType = truncate == "1" ? TruncationType.Truncate : TruncationType.Overflow;
+		var truncType = JustifyTruncation(parser, truncate);
 		return ValueTask.FromResult<CallState>(str.Pad(fill, widthInt, PadType.Right, truncType));
 	}
+
+	/// <summary>
+	/// Whether ljust(), rjust() and center() cut text longer than the width. A truncate argument of
+	/// 1 cuts and any other given value does not; without one, PennMUSH lets the text overflow and
+	/// TinyMUX cuts it, chosen by mux_justify.
+	/// </summary>
+	private static TruncationType JustifyTruncation(IMUSHCodeParser parser, string truncate) => truncate switch
+	{
+		"1" => TruncationType.Truncate,
+		"" when Compatibility(parser).MuxJustify => TruncationType.Truncate,
+		_ => TruncationType.Overflow
+	};
 
 	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string", "character"])]
 	public ValueTask<CallState> ListPositions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1435,7 +1450,7 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		var truncType = truncate == "1" ? TruncationType.Truncate : TruncationType.Overflow;
+		var truncType = JustifyTruncation(parser, truncate);
 		return ValueTask.FromResult<CallState>(str.Pad(fill, widthInt, PadType.Left, truncType));
 	}
 
@@ -1596,12 +1611,14 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(match ? "1" : "0"));
 	}
 
-	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
+	// Two arguments are TinyMUX's arity (switch(x,default) is the default); PennMUSH refuses them, so
+	// accepting them replaces only an error. The same holds for switchall(), case() and caseall().
+	[SharpFunction(Name = "switch", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SwitchInternal(parser, all: false, exact: false);
 
-	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
+	[SharpFunction(Name = "switchall", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SwitchInternal(parser, all: true, exact: false);
@@ -1839,12 +1856,18 @@ public partial class Functions
 		return new string(decoded[..written]);
 	}
 
-	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "width", "first line width", "line separator"])]
+	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 8, Flags = FunctionFlags.Regular, ParameterNames = ["string", "width", "first line width", "line separator"])]
 	public async ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var str = args["0"].Message;
+
+		if (IsMuxWrap(args))
+		{
+			return MuxWrap(args);
+		}
+
 		var lineSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.NewLine);
 
 		// fun_wrap (src/funstr.c:1644-1669): an empty text is answered as it is, before the widths are
@@ -1873,6 +1896,144 @@ public partial class Functions
 		}
 
 		return MarkupText.Join(lineSeparator, WrapLines(str, widthInt, firstLineInt));
+	}
+
+	/// <summary>
+	/// Whether a <c>wrap()</c> call is TinyMUX's
+	/// <c>wrap(text, width[, just[, lefttxt[, righttxt[, hanging[, osep[, width1]]]]]])</c> rather than
+	/// PennMUSH's <c>wrap(text, width[, first line width[, line separator]])</c>. PennMUSH takes at most
+	/// four arguments and its third is a number, so a fifth argument, or a third that starts with a
+	/// letter (<c>l</c>, <c>r</c>, <c>c</c>, or a word such as <c>right</c>), can only be TinyMUX's.
+	/// A four-argument call with an empty or numeric third argument stays PennMUSH's.
+	/// </summary>
+	private static bool IsMuxWrap(OrderedArguments args)
+		=> args.Count > 4
+			|| args.TryGetValue("2", out var third)
+			&& third.Message.ToPlainText() is [var first, ..]
+			&& char.IsAsciiLetter(first);
+
+	/// <summary>
+	/// TinyMUX's <c>wrap()</c>. Every line is padded to its width and justified (left, right or centre,
+	/// by the first letter of the third argument), then framed by <c>lefttxt</c> and <c>righttxt</c>.
+	/// Lines after the first start with <c>hanging</c> spaces, which do not count against the width.
+	/// A line break in the text forces a new line, a tab advances to the next multiple of eight, and a
+	/// word longer than a line is cut at the line's end. The output separator defaults to a line
+	/// break; <c>@@</c> means none.
+	/// </summary>
+	private static CallState MuxWrap(OrderedArguments args)
+	{
+		string Text(int index) => args.TryGetValue(index.ToString(), out var value) ? value.Message.ToPlainText() : string.Empty;
+		MString Markup(int index) => args.TryGetValue(index.ToString(), out var value) ? value.Message : MarkupText.Empty;
+
+		const int defaultWidth = 78;
+		const int widthLimit = 8192;
+		var width = defaultWidth;
+		if (Text(1).Length > 0 && (!ArgHelpers.TryStrictInteger(Text(1), out width) || width < 1 || width >= widthLimit))
+		{
+			return ErrorMessages.Returns.OutOfRange;
+		}
+
+		var firstWidth = width;
+		if (Text(7).Length > 0 && (!ArgHelpers.TryStrictInteger(Text(7), out firstWidth) || firstWidth < 1 || firstWidth >= widthLimit))
+		{
+			return ErrorMessages.Returns.OutOfRange;
+		}
+
+		var justification = Text(2) switch
+		{
+			"" => 'l',
+			var just => char.ToLowerInvariant(just[0])
+		};
+		if (justification is not ('l' or 'r' or 'c'))
+		{
+			return ErrorMessages.Returns.InvalidJustification;
+		}
+
+		var text = Markup(0);
+		if (text.Length == 0)
+		{
+			return text;
+		}
+
+		var hanging = ArgHelpers.TryStrictInteger(Text(5), out int hangingValue) ? Math.Max(0, hangingValue) : 0;
+		var separator = Text(6) switch
+		{
+			"" => MarkupText.NewLine,
+			"@@" => MarkupText.Empty,
+			_ => Markup(6)
+		};
+
+		var lines = new List<MString>();
+		foreach (var paragraph in text.Split("\n"))
+		{
+			var rest = ExpandTabs(paragraph);
+			do
+			{
+				var lineWidth = lines.Count == 0 ? firstWidth : width;
+				var (line, remainder) = BreakLine(rest, lineWidth);
+				var padding = lineWidth - line.Length;
+				var (before, after) = justification switch
+				{
+					'r' => (padding, 0),
+					'c' => (padding / 2, padding - padding / 2),
+					_ => (0, padding)
+				};
+				lines.Add(MarkupText.Concat([
+					MarkupText.Plain(new string(' ', lines.Count == 0 ? 0 : hanging)),
+					Markup(3),
+					MarkupText.Plain(new string(' ', before)),
+					line,
+					MarkupText.Plain(new string(' ', after)),
+					Markup(4)
+				]));
+				rest = remainder;
+			} while (rest.Length > 0);
+		}
+
+		return MarkupText.Join(separator, lines);
+	}
+
+	/// <summary>
+	/// The first line of <paramref name="text"/> at <paramref name="width"/>, and what follows it: the
+	/// text up to the last space that fits (the space itself is dropped), or the first
+	/// <paramref name="width"/> characters when no space does.
+	/// </summary>
+	private static (MString Line, MString Remainder) BreakLine(MString text, int width)
+	{
+		if (text.Length <= width)
+		{
+			return (text, MarkupText.Empty);
+		}
+
+		var lastSpace = text.Text.LastIndexOf(' ', width);
+		return lastSpace > 0
+			? (text.Substring(0, lastSpace), text.Substring(lastSpace + 1))
+			: (text.Substring(0, width), text.Substring(width));
+	}
+
+	/// <summary>Each tab in a line as the spaces that reach the next multiple of eight.</summary>
+	private static MString ExpandTabs(MString line)
+	{
+		if (!line.Text.Contains('\t'))
+		{
+			return line;
+		}
+
+		var parts = new List<MString>();
+		var column = 0;
+		var start = 0;
+		for (var index = line.Text.IndexOf('\t'); index >= 0; index = line.Text.IndexOf('\t', start))
+		{
+			parts.Add(line.Substring(start, index - start));
+			column += index - start;
+			var spaces = 8 - column % 8;
+			parts.Add(MarkupText.Plain(new string(' ', spaces)));
+			column += spaces;
+			start = index + 1;
+		}
+
+		parts.Add(line.Substring(start));
+		return MarkupText.Concat(parts);
 	}
 
 	/// <summary>

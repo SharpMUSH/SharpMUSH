@@ -383,9 +383,9 @@ You say, "2"
 - [TAN()]
 :::
 # add()
-`add(<number1>, <number2>[, ... , <numberN>])`
+`add(<number1>[, <number2>, ... , <numberN>])`
 
-  Returns the sum of the given numbers.
+  Returns the sum of the given numbers. As in TinyMUX, a single number is returned as it is: `add(5)` is 5.
 
 
 ::: seealso
@@ -469,12 +469,14 @@ You say, "r baz"
 :::
 # and()
 # cand()
-`and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>
-`cand(<boolean1>, <boolean2>[, ... , <booleanN>])`
+`and(<boolean1>[, <boolean2>, ... , <booleanN>])`<br>
+`cand(<boolean1>[, <boolean2>, ... , <booleanN>])`
 
   These functions take any number of boolean values, and return 1 if all are true, and 0 otherwise. and() will always evaluate all its arguments (including side effects), while cand() stops evaluation after the first false argument.
 
   Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.
+
+  As in TinyMUX, a single argument is tested on its own: `and(1)` is 1. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX does, so `and(1,abc)` is 0. See [compatibility config].
 
 
 ::: seealso
@@ -783,6 +785,8 @@ You say, "foo barbaz blech"
 
   If `<string>` divides `<width>` into uneven portions, the left side will be one character shorter than the right side.
 
+  A `<string>` longer than `<width>` is returned unaltered. With the `mux_justify` @config option on, it is cut to `<width>` characters, as TinyMUX does. See [compatibility config].
+
   Examples:
 ```sharp
 say center(X,5,-)
@@ -930,6 +934,8 @@ You say, "A"
         F               Floating point numbers
 
   Whether or not the a sort type is case-sensitive or not depends on the particular MUSH and its environment.
+
+  With the `mux_collation` @config option on, a comparison with no `<type>` orders text as TinyMUX does, by letter first and lower case before upper case: `comp(a,B)` is -1, where it is otherwise 1. See [compatibility config].
 
 ::: seealso
 - [STRMATCH()]
@@ -2833,7 +2839,7 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
 
   This function returns `<string>`, padded with the string `<fill>` until it's `<length>` characters long. `<fill>` can be more than one character in length, and defaults to a single space.
 
-  If `<string>` is longer than `<length>`, it will be returned unaltered, unless `<truncate?>` is true, in which case only the first `<length>` characters of `<string>` are returned.
+  If `<string>` is longer than `<length>`, it will be returned unaltered, unless `<truncate?>` is true, in which case only the first `<length>` characters of `<string>` are returned. With the `mux_justify` @config option on, it is cut unless `<truncate?>` is 0, as TinyMUX's ljust() always cuts. See [compatibility config].
 
   Examples:
 ```sharp
@@ -2870,7 +2876,8 @@ You say, "foo   "
 - [OPEN()]
 :::
 # list()
-`list(<option>[, <type>])`
+`list(<option>[, <type>])`<br>
+`list(<list>, <action>[, <delimiter>])`
 
   This is the function-equivilent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
 
@@ -2886,6 +2893,8 @@ You say, "foo   "
   powers      : Returns all @powers.
 
   "commands"/"functions" return both built-in and local commands/functions by default. You can specify a `<type>` of either "builtin", "local" or "all" to limit this if you wish.
+
+  With the `mux_list` @config option on, list() is TinyMUX's instead, the second form: `<action>` is evaluated for each element of `<list>`, as by iter(), and each result is told to you rather than returned. list() itself returns nothing. See [compatibility config].
 
 
 ::: seealso
@@ -2949,10 +2958,10 @@ think lmath(add, 1|2|3, |)
 - [LOG()]
 :::
 # lnum()
-`lnum(<number>)`<br>
+`lnum([<number>])`<br>
 `lnum(<start number>, <end number>[, <output separator>[, <step>]])`
 
-  With one argument, lnum returns a list of numbers, from 0 to `<number - 1>`. For example, lnum(4) returns the list "0 1 2 3". This is useful for creating loops.
+  With one argument, lnum returns a list of numbers, from 0 to `<number - 1>`. For example, lnum(4) returns the list "0 1 2 3". This is useful for creating loops. With no argument, or an empty one, it returns nothing, as in TinyMUX.
 
   With two arguments, the numbers range from the first to the second argument. For example, lnum(1,4) => 1 2 3 4
 
@@ -3591,9 +3600,9 @@ You say, "http://www.testmush.com"
 - [CONFIG()]
 :::
 # mul()
-`mul(<number1>, <number2>[, ... , <numberN>])`
+`mul(<number1>[, <number2>, ... , <numberN>])`
 
-  Returns the product of some numbers.
+  Returns the product of some numbers. As in TinyMUX, a single number is returned as it is: `mul(3)` is 3.
 
 
 ::: seealso
@@ -3999,12 +4008,14 @@ think objevals(me,v(DATA`TEXT))
 :::
 # or()
 # cor()
-`or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>
-`cor(<boolean1>, <boolean2>[, ... , <booleanN>])`
+`or(<boolean1>[, <boolean2>, ... , <booleanN>])`<br>
+`cor(<boolean1>[, <boolean2>, ... , <booleanN>])`
 
   These functions take a number of boolean values, and return 1 if any of them are true, and 0 if all are false. or() always evaluates all of its arguments, while cor() stops evaluating as soon as one is true.
 
   Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.
+
+  As in TinyMUX, a single argument is tested on its own: `or(0)` is 0. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX does, so `or(0,abc)` is 0. See [compatibility config].
 
 
 ::: seealso
@@ -4934,6 +4945,11 @@ LOC
 
   This function returns the union of two sets -- i.e., all the elements of both `<list1>` and `<list2>`, minus any duplicate elements. The list returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [SORTING]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
+  TinyMUX writes the output separator before the sort type: `setunion(<list1>, <list2>, <delimiter>, <osep>, <sort type>)`. When the fourth argument names no sort type and the fifth does, it is read that way. The same goes for setdiff(), setinter() and setsymdiff().
+
+    > say setunion(B a c, b, %b, |, a)<br>
+    You say, "B|a|b|c"
+
   Examples:
 ```sharp
 say setunion(foo baz gleep bar, bar moof gleep)
@@ -5043,6 +5059,8 @@ You say, "-1"
   The second argument is a sort type. See [SORTING].
 
   The optional third argument gives the list's delimiter character. If not present, `<delimiter>` defaults to a space. The optional fourth argument gives a string that will delimit the resulting list; it defaults to `<delimiter>`.
+
+  With the `mux_collation` @config option on, a sort with no sort type orders text as TinyMUX does, by letter first and lower case before upper case: `sort(b A a B)` is `a A b B`, where it is otherwise `A a b B`. See [compatibility config].
 
 
 ::: seealso
@@ -6580,9 +6598,16 @@ think words(1 2%b%b3, %b)
 - [ITEMS()]
 :::
 # wrap()
-`wrap(<string>, <width>[, <first line width>[, <line separator>]])`
+`wrap(<string>, <width>[, <first line width>[, <line separator>]])`<br>
+`wrap(<string>, <width>, <justification>[, <left>[, <right>[, <hanging>[, <osep>[, <first width>]]]]])`
 
   This function takes `<string>` and splits it into lines containing no more than `<width>` characters each. If `<first line width>` is given, the first line may have a different width. If `<line separator>` is given, it is inserted between each line; by default the separator is a newline (%r).
+
+  The second form is TinyMUX's, used when there are more than four arguments or the third starts with a letter. Every line is padded to its width and justified by `<justification>`: `left`, `right` or `center` (only the first letter counts). `<left>` and `<right>` frame each line, lines after the first start with `<hanging>` spaces, `<osep>` goes between lines (a newline by default, `@@` for none), and `<first width>` is the first line's width. A word longer than a line is cut.
+
+    > think wrap(aaa bbb ccc,7,center,<,>,2)<br>
+    <aaa bbb><br>
+      <  ccc  >
 
   Examples:
 ```sharp
@@ -6616,9 +6641,11 @@ think words(1 2%b%b3, %b)
 - [regexp]
 :::
 # xor()
-`xor(<boolean1>, <boolean2>[, ... , <booleanN>])`
+`xor(<boolean1>[, <boolean2>, ... , <booleanN>])`
 
-  Takes two or more booleans and returns a 1 if one, and only one, of the inputs is equivalent to true(1).
+  Takes one or more booleans and returns a 1 if one, and only one, of the inputs is equivalent to true(1).
+
+  With the `mux_logic` @config option on, xor() is TinyMUX's: each argument is tested by its leading signed integer, and the answer is 1 when an odd number of them are true, so `xor(1,1,1)` is 1. See [compatibility config].
 
 
 ::: seealso

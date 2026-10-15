@@ -102,7 +102,11 @@ public record SharpMUSHOptions
 			TinyMath: false,
 			TinyTrimFun: false,
 			ParenGroups: false,
-			HttpQRegisters: false
+			HttpQRegisters: false,
+			MuxLogic: false,
+			MuxJustify: false,
+			MuxCollation: false,
+			MuxList: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

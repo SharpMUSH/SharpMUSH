@@ -128,6 +128,7 @@ public static partial class ErrorMessages
 		public const string NumberOutOfRange = "#-1 NUMBER OUT OF RANGE";
 		/// <summary><c>fun_wrap</c>'s answer for a width below 2 (<c>src/funstr.c:1666-1668</c>).</summary>
 		public const string WidthTooSmall = "#-1 WIDTH TOO SMALL";
+		public const string InvalidJustification = "#-1 INVALID JUSTIFICATION SPECIFIED";
 
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";

@@ -959,8 +959,12 @@ public partial class Functions
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MushText.SplitList(delimiter, list);
 
+		// Without a sort type, mux_collation sorts text the way TinyMUX does: a A b B, not A a b B.
+		var sortInformation = sortType.Length == 0 && Compatibility(parser).MuxCollation
+			? new ISortService.SortInformation(ISortService.SortType.Collated, MoreLinq.OrderByDirection.Ascending, null)
+			: SortService.StringToSortType(sortType);
 		var sorted = SortService.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
-			SortService.StringToSortType(sortType));
+			sortInformation);
 
 		return MarkupText.Join(outputSeparator, await sorted.ToArrayAsync());
 	}
@@ -1576,15 +1580,20 @@ public partial class Functions
 			delimiter = MarkupText.Space;
 		}
 
-		// With four arguments, a non-empty fourth is a sort type and an empty one is the
-		// output separator. With five, the fourth is the sort type and the fifth the separator.
-		var sortArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Empty);
-		var sortType = sortArg.ToPlainText();
-		var outputSeparator = args.Count switch
+		// PennMUSH: with four arguments a non-empty fourth is the sort type, whatever it says, and an
+		// empty one is the output separator. With five, the fourth is the sort type and the fifth the
+		// separator, unless the fourth is text that names no sort type and the fifth names one: that is
+		// TinyMUX's order (list1, list2, delimiter, separator, sort type).
+		var fourth = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Empty);
+		var fifth = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MarkupText.Empty);
+		var (sortType, outputSeparator) = args.Count switch
 		{
-			4 when sortArg.Length == 0 => MarkupText.Empty,
-			5 => args["4"].Message,
-			_ => delimiter
+			4 when fourth.Length == 0 => (string.Empty, MarkupText.Empty),
+			4 => (fourth.ToPlainText(), delimiter),
+			5 when fourth.Length > 0 && !SortService.IsSortType(fourth.ToPlainText())
+				&& SortService.IsSortType(fifth.ToPlainText()) => (fifth.ToPlainText(), fourth),
+			5 => (fourth.ToPlainText(), args["4"].Message),
+			_ => (string.Empty, delimiter)
 		};
 		if (sortType.Length == 0)
 		{

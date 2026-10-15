@@ -55,5 +55,37 @@ public record CompatibilityOptions(
 		Description = "Also hand HTTP softcode q-registers, as PennMUSH does, besides the named arguments: STATUS and CONTENT-TYPE to an @http callback, and HDR.<name> and HEADERS to the http_handler. A PennMUSH database import turns it on",
 		Group = "PennMUSH Compatibility",
 		Order = 2)]
-	bool HttpQRegisters
+	bool HttpQRegisters,
+
+	[property: SharpConfig(
+		Name = "mux_logic",
+		Category = "Compatibility",
+		Description = "and(), or(), xor(), cand() and cor() test each argument by its leading signed integer, as TinyMUX does, so text such as abc is false, and xor() is true for an odd number of true arguments; t(), if() and the rest keep the usual rule",
+		Group = "TinyMUX Compatibility",
+		Order = 1)]
+	bool MuxLogic,
+
+	[property: SharpConfig(
+		Name = "mux_justify",
+		Category = "Compatibility",
+		Description = "ljust(), rjust() and center() cut text longer than the width, as TinyMUX does, unless a call says otherwise",
+		Group = "TinyMUX Compatibility",
+		Order = 2)]
+	bool MuxJustify,
+
+	[property: SharpConfig(
+		Name = "mux_collation",
+		Category = "Compatibility",
+		Description = "comp() with no type and sort() with no sort type order text by collation, as TinyMUX does (a before A before b), rather than by character code",
+		Group = "TinyMUX Compatibility",
+		Order = 3)]
+	bool MuxCollation,
+
+	[property: SharpConfig(
+		Name = "mux_list",
+		Category = "Compatibility",
+		Description = "list() with two or three arguments is TinyMUX's loop: it evaluates its second argument for each element and tells each result to the enactor. With one argument it stays PennMUSH's list()",
+		Group = "TinyMUX Compatibility",
+		Order = 4)]
+	bool MuxList
 );

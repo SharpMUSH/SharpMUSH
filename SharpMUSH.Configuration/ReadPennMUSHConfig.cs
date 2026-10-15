@@ -119,7 +119,11 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), d.Compatibility.TinyMath),
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), d.Compatibility.SilentPEmit),
 				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), d.Compatibility.ParenGroups),
-				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters)
+				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters),
+				Boolean(Get(nameof(CompatibilityOptions.MuxLogic)), d.Compatibility.MuxLogic),
+				Boolean(Get(nameof(CompatibilityOptions.MuxJustify)), d.Compatibility.MuxJustify),
+				Boolean(Get(nameof(CompatibilityOptions.MuxCollation)), d.Compatibility.MuxCollation),
+				Boolean(Get(nameof(CompatibilityOptions.MuxList)), d.Compatibility.MuxList)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),

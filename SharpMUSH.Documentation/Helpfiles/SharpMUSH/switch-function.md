@@ -26,9 +26,13 @@
 `switch(<str>, <expr1>, <list1>[, ... , <exprN>, <listN>][, <default>])`<br>
 `switchall(<str>, <expr1>, <list1>[, ... , <exprN>, <listN>][, <default>])`<br>
 `case(<str>, <expr1>, <list1>[, ... , <exprN>, <listN>][, <default>])`<br>
-`caseall(<str>, <expr1>, <list1>[, ... , <exprN>, <listN>][, <default>])`
+`caseall(<str>, <expr1>, <list1>[, ... , <exprN>, <listN>][, <default>])`<br>
+`switch(<str>, <default>)`<br>
+`switchall(<str>, <default>)`<br>
+`case(<str>, <default>)`<br>
+`caseall(<str>, <default>)`
 
-These functions match `<string>` against the `<expr>`essions, returning the corresponding `<list>`. If nothing is matched, the `<default>` is returned. switch() and case() return the `<str>` for the first matching `<expr>`, while switchall() and caseall() return the corresponding `<list>` for all `<expr>`s which match.
+These functions match `<string>` against the `<expr>`essions, returning the corresponding `<list>`. If nothing is matched, the `<default>` is returned. As in TinyMUX, a `<default>` may come alone: `switch(x,default)` is `default`. switch() and case() return the `<str>` for the first matching `<expr>`, while switchall() and caseall() return the corresponding `<list>` for all `<expr>`s which match.
 
 switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [SWITCH WILDCARDS]. case() and caseall() do a case-sensitive exact match, like member() or comp(). In this case, $0-$9 will be set to the text that the nth wildcard character met.
 

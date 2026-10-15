@@ -22,7 +22,9 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "add", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
+	// add() and mul() take one argument as TinyMUX's do (add(5) is 5); PennMUSH refuses it, so this
+	// replaces only an error; add() itself stays PennMUSH's error. sub() stays at two, as in both.
+	[SharpFunction(Name = "add", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc + sub);
 
@@ -30,7 +32,7 @@ public partial class Functions
 	public ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc - sub);
 
-	[SharpFunction(Name = "mul", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
+	[SharpFunction(Name = "mul", MinArgs = 1, EmptyCallMinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc * sub);
 
@@ -571,14 +573,20 @@ public partial class Functions
 			: await operation.Invoke(this, operands, attribute);
 	}
 
-	[SharpFunction(Name = "lnum", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
+	[SharpFunction(Name = "lnum", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
 	public async ValueTask<CallState> LNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await Task.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var arg0Text = args["0"].Message.ToPlainText();
+		var arg0Text = args.Count == 0 ? string.Empty : args["0"].Message.ToPlainText();
+
+		// lnum() is an empty list in TinyMUX; PennMUSH refuses it, so this replaces only an error.
+		if (args.Count <= 1 && arg0Text.Length == 0)
+		{
+			return new CallState(MarkupText.Empty);
+		}
 
 		// Single arg: lnum(count) -> 0..count-1, count must be integer-like
 		if (args.Count == 1)

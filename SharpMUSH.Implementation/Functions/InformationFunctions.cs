@@ -1407,15 +1407,30 @@ public partial class Functions
 	/// <c>#-1</c>. Names come back upper-case, except flags and powers, which keep their own casing as
 	/// <c>@list flags</c> shows them.
 	/// </summary>
-	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	/// <summary>
+	/// PennMUSH's list(): names of functions, commands, attributes and so on. Under mux_list it is
+	/// TinyMUX's instead, iter() that tells the enactor each result in turn and returns nothing,
+	/// which is why the arguments are not evaluated before the call.
+	/// </summary>
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (Compatibility(parser).MuxList)
+		{
+			return await TellEachAsync(parser);
+		}
+
 		var args = parser.CurrentState.Arguments;
-		var option = args.TryGetValue("0", out var a0) ? a0.Message.ToPlainText() : string.Empty;
+		if (args.Count > 2)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, "LIST", 2, args.Count));
+		}
+
+		var option = args.TryGetValue("0", out var a0) ? (await a0.GetParsedResultAsync()).Message.ToPlainText() : string.Empty;
 		var type = "all";
 		if (args.TryGetValue("1", out var a1))
 		{
-			type = a1.Message.ToPlainText().ToLowerInvariant();
+			type = (await a1.GetParsedResultAsync()).Message.ToPlainText().ToLowerInvariant();
 			if (type is not ("builtin" or "local" or "all"))
 				return new CallState(ErrorMessages.Returns.Nothing);
 		}
@@ -1461,6 +1476,52 @@ public partial class Functions
 				_ => await FullMotd(parser, default!)
 			};
 		}
+	}
+
+	/// <summary>
+	/// TinyMUX's list(list, action[, delimiter]): the action is evaluated for each element, as by
+	/// iter(), and each result is told to the enactor. The call itself returns nothing.
+	/// </summary>
+	private async ValueTask<CallState> TellEachAsync(IMUSHCodeParser parser)
+	{
+		var args = parser.CurrentState.Arguments;
+		if (args.Count < 2)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "LIST", 2, args.Count));
+		}
+
+		var list = (await args["0"].GetParsedResultAsync()).Message;
+		var delimiter = args.TryGetValue("2", out var a2) && a2.Message.Length > 0
+			? (await a2.GetParsedResultAsync()).Message
+			: MarkupText.Space;
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var iteration = new IterationWrapper<MString>
+		{
+			Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0,
+			Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
+		};
+
+		parser.CurrentState.IterationRegisters.Push(iteration);
+		try
+		{
+			foreach (var item in MushText.SplitList(delimiter, list))
+			{
+				iteration.Value = item;
+				iteration.Iteration++;
+				await NotifyService.Notify(enactor, (await args["1"].GetParsedResultAsync()).Message, executor);
+				if (iteration.Break)
+				{
+					break;
+				}
+			}
+		}
+		finally
+		{
+			parser.CurrentState.IterationRegisters.TryPop(out _);
+		}
+
+		return CallState.Empty;
 	}
 
 	/// <summary>Command names of one type — "builtin", "local", or anything else for both — sorted, upper-case.</summary>

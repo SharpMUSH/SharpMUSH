@@ -83,6 +83,7 @@ right pronoun for him/her:<br>
 
 Some attributes can be retrieved via substitutions:<br>
      %va-%vz = the contents of the object's VA-VZ attributes, respectively<br>
+     %=`\<name\>` = the contents of the object's attribute `<name>`, as v(`<name>`); `%=<12>` is argument 12. From TinyMUX.<br>
      %wa-%wz, %xa-%xz = as above, for WA-WZ and XA-XZ<br>
 These are the equivilent of get(me/`<attribute>`).
 
@@ -95,6 +96,7 @@ Other substitutions:<br>
     %L = the dbref of the ENACTOR's location<br>
     %j = the DESCRIPTOR (port) the command was entered from<br>
     %c = text of the last command, _before_ evaluation<br>
+    %m = the same as %c, TinyMUX's name for it<br>
     %u = text of the last command, after evaluation, available to locks/hooks<br>
     %> = the output of the last command, like a function's result: see [command output]<br>
     %| = what the command before a `;|` showed you: see [piping]<br>

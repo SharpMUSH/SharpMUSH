@@ -34,6 +34,11 @@
       "id": "ansi-and-lit",
       "heading": "`ansi()` and `lit()`",
       "lookup": "compatibility arguments ansi and lit"
+    },
+    {
+      "id": "tinymux-s-forms-of-shared-functions",
+      "heading": "TinyMUX's forms of shared functions",
+      "lookup": "compatibility arguments tinymux s forms of shared functions"
     }
   ]
 }
@@ -158,3 +163,39 @@ a
 PennMUSH spells "the last argument swallows the rest, commas and all" as a negative maximum in its
 function table. SharpMUSH reaches the same result with a literal flag on the function instead, so the
 declared maximum is not a comparable number. Behaviour matches; only the declaration differs.
+
+## TinyMUX's forms of shared functions
+
+**A choice.**
+
+**PennMUSH** refuses these calls: `switch(x,default)` and `add(5)` are argument-count errors, as
+are `and()`, `or()`, `xor()`, `cand()`, `cor()` and `mul()` with one argument. `itext()` and
+`lnum()` with no argument are errors. `wrap()` takes at most four arguments, and its third must be
+a number. A set function's fourth argument is its sort type and its fifth the output separator,
+so `setunion(B a c,b, ,|,a)` joins the result with `a`: `Baaabac`.<br>
+**SharpMUSH** answers them as TinyMUX does. `switch(<string>,<default>)` is the default, a
+one-argument `add()` or `and()` is that argument tested or returned, `itext()` is the innermost
+loop's element, and `lnum()` is empty. `wrap(<text>,<width>,<justify>,<left>,<right>,<hanging>,<osep>,<first width>)`
+is TinyMUX's `wrap()` whenever it has more than four arguments or its third starts with a letter:
+it pads every line to its width, justified `left`, `right` or `center`. `setunion()`, `setinter()`,
+`setdiff()` and `setsymdiff()` take TinyMUX's order, the output separator and then the sort type,
+when the fourth argument is text that names no sort type and the fifth names one. A four-argument
+call stays PennMUSH's, where any fourth argument is the sort type, so TinyMUX's
+`setunion(<list1>,<list2>,<delimiter>,<osep>)` is written `setunion(<list1>,<list2>,<delimiter>,,<osep>)`.<br>
+**Why.** TinyMUX code that uses these forms runs. All but the set functions' order are errors in
+PennMUSH, so no working PennMUSH code changes; a set function changes only when its fourth argument
+names no sort type and its fifth names one, which PennMUSH would use as the separator.<br>
+**Workaround.** Give PennMUSH's arguments for code that has to run on both: a default with a
+pattern before it, two numbers, a level for `itext()`, a number as `wrap()`'s third argument, and
+a sort type before the output separator.
+
+```sharp
+> think [switch(x,default)]|[add(5)]|[and(1)]|[lnum()]|[iter(a b,itext())]
+default|5|1||a b
+> think wrap(aaa bbb ccc,5,right)
+  aaa
+  bbb
+  ccc
+> think setunion(B a c,b, ,|,a)
+B|a|b|c
+```

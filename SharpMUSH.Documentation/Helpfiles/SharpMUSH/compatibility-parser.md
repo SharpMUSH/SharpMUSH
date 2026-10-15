@@ -79,6 +79,16 @@
       "id": "and-pipe-a-command-s-output",
       "heading": "`;|` and `%|` pipe a command's output",
       "lookup": "compatibility parser and pipe a command s output"
+    },
+    {
+      "id": "m-is-the-running-command",
+      "heading": "`%m` is the running command",
+      "lookup": "compatibility parser m is the running command"
+    },
+    {
+      "id": "name-is-an-attribute-or-argument",
+      "heading": "`%=<name>` is an attribute or argument",
+      "lookup": "compatibility parser name is an attribute or argument"
     }
   ]
 }
@@ -385,4 +395,41 @@ PennMUSH answers `a|b` to the first line:
 ab
 > think a|b
 a|b
+```
+
+## `%m` is the running command
+
+**A choice.**
+
+**PennMUSH** has no `%m` substitution, so it evaluates `%m` to a plain `m`.<br>
+**SharpMUSH** substitutes the running command as it was written, as TinyMUX does: `%m` is `%c`.<br>
+**Why.** TinyMUX code that reads the command runs unchanged.<br>
+**Workaround.** Write a plain `m`, which means the same on both servers, and `%c` for the command.
+Importing a PennMUSH database names every attribute that uses `%m`.
+
+PennMUSH answers `m|think %m|%c` to the line:
+
+```sharp
+> think %m|%c
+think %m|%c|think %m|%c
+```
+
+## `%=<name>` is an attribute or argument
+
+**A choice.**
+
+**PennMUSH** evaluates `%=` to the attribute being evaluated, such as `#1/FN`, and `<name>` after it
+is text, so `%=<desc>` in an attribute is `#1/FN<desc>`.<br>
+**SharpMUSH** reads `%=<name>` as TinyMUX does: the executor's attribute `<name>`, as `v(<name>)`
+would, or, when `<name>` is a number, that argument, as `%<name>` would. `%=` on its own is not
+affected.<br>
+**Why.** TinyMUX code that reads attributes, and arguments past `%9`, this way runs unchanged.<br>
+**Workaround.** Use `v(<name>)` for an attribute, which means the same on both servers, and
+`%<name>` for a numbered argument. Importing a PennMUSH database names every attribute that uses
+`%=<`.
+
+```sharp
+> &MUXDOC me=hello
+> think %=<muxdoc>
+hello
 ```

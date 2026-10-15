@@ -27,6 +27,13 @@ public class SharpFunctionAttribute : Attribute
 	public int MinArgs { get; set; } = 0;
 
 	/// <summary>
+	/// The minimum an empty call, <c>f()</c>, is refused with, when it is above <see cref="MinArgs"/>.
+	/// For a function that takes a single argument only as TinyMUX's does (<c>add(5)</c>), this is
+	/// PennMUSH's minimum, so <c>add()</c> stays PennMUSH's argument-count error. Zero means none.
+	/// </summary>
+	public int EmptyCallMinArgs { get; set; }
+
+	/// <summary>
 	/// The most arguments a call may carry. PennMUSH's <c>flist[]</c> spells "no limit" as
 	/// <c>INT_MAX</c> and so does this default, because an omitted maximum has to fail open: a
 	/// number here is a refusal, and refusing a call nobody meant to bound is invisible until
