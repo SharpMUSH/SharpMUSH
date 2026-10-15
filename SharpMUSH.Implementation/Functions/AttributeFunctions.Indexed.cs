@@ -129,6 +129,8 @@ public partial class Functions
 
 		var memo = new AttributeViewMemo();
 		var path = name.Split('`');
+		// A split index lists a copy once per element; the walk names each object once, where it first comes.
+		var seen = new HashSet<int>();
 		var skip = start - 1;
 		IndexedAttributeCursor? after = null;
 		while (true)
@@ -153,6 +155,11 @@ public partial class Functions
 
 			foreach (var hit in page.Hits)
 			{
+				if (!seen.Add(hit.Number))
+				{
+					continue;
+				}
+
 				var verdict = visibility.SeesEverything ? IndexedAttributeVerdict.Visible : visibility.Judge(hit);
 				if (verdict == IndexedAttributeVerdict.Check && !await CanReadIndexedCopyAsync(executor, hit, path, memo))
 				{

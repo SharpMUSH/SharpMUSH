@@ -57,7 +57,7 @@ Output: the index ignores case unless it was made `exact`, so both #20 and #21 m
 | `last` | every value, highest first; `<value>` is not used |
 | `count` | how many values are equal to `<value>`, as a number |
 
-In a `numeric` index, numbers come before text and compare as numbers, so 9 comes before 10 and `05` equals `5`. `prefix` there matches text values only. In a `split` index each word of a value (or each element, with `split:<delimiter>`) is listed on its own, so `=` finds an object by any one of them.
+In a `numeric` index, numbers come before text and compare as numbers, so 9 comes before 10 and `05` equals `5`. `prefix` there matches text values only. In a `split` index each word of a value (or each element, with `split:<delimiter>`) is listed on its own, so `=` finds an object by any one of them; an object that matches by several is still listed once, where it first comes.
 
 Examples:
 ```sharp

@@ -83,6 +83,22 @@ public class IndexedFunctionTests
 		await Assert.That(await Eval($"indexed({name},first,,6,2)")).IsEqualTo(string.Empty);
 	}
 
+	/// <summary>A split index lists a copy once per element, but indexed() names each object once, where it first comes.</summary>
+	[Test]
+	public async Task ASplitIndexNamesEachObjectOnce()
+	{
+		var (name, t) = await IndexedAsync("IdxSplitOnce", "split", "red rose", "ruby");
+
+		await Assert.That(await Eval($"indexed({name},first)")).IsEqualTo(Refs([t[0], t[1]]));
+		await Assert.That(await Eval($"indexed({name},last)")).IsEqualTo(Refs([t[1], t[0]]));
+		await Assert.That(await Eval($"indexed({name},prefix,r)")).IsEqualTo(Refs([t[0], t[1]]));
+		await Assert.That(await Eval($"indexed({name},first,,2,1)")).IsEqualTo(Refs([t[1]]));
+
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "IdxSplitOnceMortal");
+		await AsGod($"@set {t[0]}/{name}=visual");
+		await Assert.That(await Eval($"indexed({name},first)", mortal)).IsEqualTo(Refs([t[0]]));
+	}
+
 	[Test]
 	public async Task BadCallsSayWhy()
 	{
