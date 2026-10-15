@@ -28,6 +28,7 @@ public class HomePageTests : BunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton<IWidgetRegistry>(registry)
+			.AddSingleton(new ApplicationCatalog([]))
 			.AddSingleton(layouts)
 			.AddEchoLocalizer();
 		JSInterop.Mode = JSRuntimeMode.Loose;

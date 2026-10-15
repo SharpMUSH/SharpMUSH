@@ -33,7 +33,7 @@ else if (_schema.IsForm)
 }
 else
 {
-    <SchemaViewRenderer Document="_schema" Data="_data" />
+    <SchemaViewRenderer Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" />
 }
 
 @code {
@@ -50,6 +50,9 @@ else
     /// have it. Rendering from it spares a second fetch that could answer differently from the one the gate used.
     /// </summary>
     [Parameter] public PortalApplication? Application { get; set; }
+
+    /// <summary>Draw nothing when the view shows nothing (see <see cref="SchemaViewRenderer.QuietWhenEmpty"/>).</summary>
+    [Parameter] public bool QuietWhenEmpty { get; set; }
 
     [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
 

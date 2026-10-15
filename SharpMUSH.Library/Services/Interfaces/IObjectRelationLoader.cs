@@ -31,6 +31,12 @@ public interface IObjectRelationLoader
 	/// <summary>What object <paramref name="number"/> is granted: its roles, overrides and scopes.</summary>
 	Task<Authorization.ObjectGrants> GrantsOf(int number, bool isPlayer, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// The flags of object <paramref name="number"/>, as <paramref name="read"/> reads them from the provider
+	/// (the type's flag included). The host may answer with an earlier read until the object is written.
+	/// </summary>
+	SharpObjectFlag[] FlagsOf(int number, string type, Func<SharpObjectFlag[]> read);
+
 	/// <summary>The destination of the exit <paramref name="exitTypedId"/>, if it is linked.</summary>
 	Task<AnyOptionalSharpContainer> ExitDestinationOf(string exitTypedId, string objectId, int number, CancellationToken cancellationToken);
 }

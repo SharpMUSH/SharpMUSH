@@ -183,6 +183,14 @@ public static partial class ErrorMessages
 		/// <summary>A named text file that does not exist, PennMUSH's wording (<c>src/help.c:1144</c>).</summary>
 		public const string NoSuchFile = "#-1 NO SUCH FILE";
 		public const string ImaginaryNumber = "#-1 IMAGINARY NUMBER";
+		/// <summary>An attribute index still being built (<c>indexed()</c>, <c>lsearch</c>'s <c>INDEX</c>): no fall back to a scan.</summary>
+		public const string IndexBuilding = "#-1 INDEX BUILDING";
+		/// <summary>An attribute with no index, or no entry in the attribute table.</summary>
+		public const string NotIndexed = "#-1 ATTRIBUTE NOT INDEXED";
+		/// <summary>An <c>indexed()</c> operation it does not know.</summary>
+		public const string InvalidIndexOperation = "#-1 INVALID INDEX OPERATION";
+		/// <summary><c>indexed(..., between, ...)</c> without exactly two bounds.</summary>
+		public const string BetweenTakesTwoValues = "#-1 BETWEEN TAKES TWO VALUES";
 		public const string InvalidAction = "#-1 INVALID ACTION";
 		public const string InvalidAlignString = "#-1 INVALID ALIGN STRING";
 		public const string InvalidArguments = "#-1 INVALID ARGUMENTS";
@@ -1375,6 +1383,9 @@ public static partial class ErrorMessages
 		// PennMUSH fill_search_spec (src/wiz.c:2388-2399): START and COUNT are 1-based and at least one.
 		public const string SearchInvalidStart = "Invalid start index";
 		public const string SearchInvalidCount = "Invalid count index";
+		public const string SearchIndexSyntax = "INDEX takes <attribute>:<value>.";
+		public const string SearchIndexNotIndexed = "That attribute has no index; see @attribute/index.";
+		public const string SearchIndexBuilding = "That attribute's index is still being built.";
 		// PennMUSH do_search's report (src/wiz.c:1323-1414). Each heading is preceded by a blank line.
 		public const string SearchRoomsHeader = "\nROOMS:";
 		public const string SearchExitsHeader = "\nEXITS:";

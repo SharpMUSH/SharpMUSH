@@ -52,6 +52,25 @@ public class StorageCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task TheReportListsEachAttributeIndex()
+	{
+		var name = ("STOREIDX_" + Guid.NewGuid().ToString("N"))[..20].ToUpperInvariant();
+		await Cmd($"@attribute/access {name}=none");
+		await Cmd($"@attribute/index {name}=numeric");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "StoreIdx");
+		await Cmd($"&{name} {thing}=42");
+
+		var heard = string.Join("\n", await HeardAfterAsync("@storage"));
+
+		await Assert.That(heard).Contains("Attribute indexes").And.Contains($"{name} (numeric)");
+		var usage = WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IStorageCapacityService>()
+			.Measure().AttributeIndexes.Single(index => index.Name == name);
+		await Assert.That(usage.Rows).IsEqualTo(1);
+		await Assert.That(usage.Ready).IsTrue();
+		await Assert.That(usage.Bytes).IsGreaterThan(0);
+	}
+
+	[Test]
 	public async Task TheReportCountsReaderSlotsADeadProcessLeftBehind()
 	{
 		// The session's store also checks on a timer, which can free the slot before this test does; the

@@ -2230,6 +2230,45 @@
   <data name="AttributeCommandDecompileEnumFormat" xml:space="preserve">
     <value>@attribute/enum {0}={1}</value>
   </data>
+  <data name="AttributeCommandIndexSettingFormat" xml:space="preserve">
+    <value>Indexing {0}: {1}.</value>
+  </data>
+  <data name="AttributeCommandIndexReadyFormat" xml:space="preserve">
+    <value>Index on {0} ready: {1} copies on {2} objects indexed.</value>
+  </data>
+  <data name="AttributeCommandIndexContinuingFormat" xml:space="preserve">
+    <value>Index on {0}: {1} of {2} objects looked at so far, {3} copies indexed. It goes on building in the background; you will be told when it is ready.</value>
+  </data>
+  <data name="AttributeCommandIndexUnchangedFormat" xml:space="preserve">
+    <value>{0} is already indexed that way: {1}.</value>
+  </data>
+  <data name="AttributeCommandIndexRemovedFormat" xml:space="preserve">
+    <value>Index on {0} removed.</value>
+  </data>
+  <data name="AttributeCommandIndexNoneFormat" xml:space="preserve">
+    <value>{0} has no index.</value>
+  </data>
+  <data name="AttributeCommandIndexGoneFormat" xml:space="preserve">
+    <value>The index on {0} was taken off before it was ready.</value>
+  </data>
+  <data name="AttributeCommandIndexInternalFormat" xml:space="preserve">
+    <value>{0} is internal by default, so no copy of it could be indexed.</value>
+  </data>
+  <data name="AttributeCommandIndexOptionsFormat" xml:space="preserve">
+    <value>Index options: {0}</value>
+  </data>
+  <data name="AttributeCommandIndexRefusedFormat" xml:space="preserve">
+    <value>Cannot index: {0}</value>
+  </data>
+  <data name="AttributeCommandIndexedNotInternalFormat" xml:space="preserve">
+    <value>{0} is indexed. Take the index off with @attribute/index {0}=off before making it internal.</value>
+  </data>
+  <data name="AttributeCommandIndexDescribeFormat" xml:space="preserve">
+    <value>  Index: {0} ({1})</value>
+  </data>
+  <data name="AttributeCommandDecompileIndexFormat" xml:space="preserve">
+    <value>@attribute/index {0}={1}</value>
+  </data>
 
   <!-- @stats command -->
   <data name="LogWipeUnsupportedFormat" xml:space="preserve">
@@ -2304,6 +2343,15 @@
   </data>
   <data name="SearchInvalidCount" xml:space="preserve">
     <value>Invalid count index</value>
+  </data>
+  <data name="SearchIndexSyntax" xml:space="preserve">
+    <value>INDEX takes &lt;attribute&gt;:&lt;value&gt;.</value>
+  </data>
+  <data name="SearchIndexNotIndexed" xml:space="preserve">
+    <value>That attribute has no index; see @attribute/index.</value>
+  </data>
+  <data name="SearchIndexBuilding" xml:space="preserve">
+    <value>That attribute's index is still being built.</value>
   </data>
 
   <!-- @listmotd command -->

@@ -29,7 +29,8 @@ public sealed record PackageDeclarationLiveState(
 	IReadOnlyDictionary<(PackageDeclarationKind Kind, string Name), string> OtherOwners,
 	IReadOnlyList<SharpAttributeEntry>? AttributeEntries = null,
 	IReadOnlySet<string>? AttributeFlags = null,
-	IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>>? AttributeCopies = null);
+	IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>>? AttributeCopies = null,
+	IReadOnlyDictionary<string, long>? IndexCopies = null);
 
 /// <summary>An attribute entry an apply writes, and whether its default flags then go to every existing copy.</summary>
 public sealed record PackageAttributeEntryWrite(PackageAttributeEntrySpec Entry, bool Retroactive);

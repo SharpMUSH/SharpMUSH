@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
@@ -174,11 +175,14 @@ public class PackageManifestWriterTests
 			new("JOB`STATUS", ["no_command"], Enum: ["new", "yes", "held:later", "#1"]),
 			new("JOB`DUE", [], Enum: ["this week", "someday"], EnumDelimiter: '|', Retroactive: true),
 			new("JOB`TITLE", ["safe"], Limit: @"^[a-z'\d]{1,60}$: #x", Retroactive: true),
-			new("JOB`NOTE", [])
+			new("JOB`NOTE", []),
+			new("JOB`LEVEL", [], Index: new AttributeIndexOptions(Numeric: true, Type: "THING")),
+			new("JOB`TAGS", [], Index: new AttributeIndexOptions(Split: "#")),
+			new("JOB`OPENED", [], Index: AttributeIndexOptions.Default)
 		];
 		var original = Maximal() with
 		{
-			Format = PackageManifestService.AttributeEntriesFormat,
+			Format = PackageManifestService.AttributeIndexFormat,
 			Declarations = PackageDeclarations.None with { Attributes = entries }
 		};
 		var again = RoundTrip(original).Declared.AttributeEntries;
