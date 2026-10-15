@@ -78,6 +78,8 @@ objects:
         value: |-
           How character applications are reviewed.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Character applications
       DATA`CONFIG`CAP: |-
         0
       DATA`CONFIG`CAP`TYPE: |-
@@ -88,6 +90,10 @@ objects:
         0
       DATA`CONFIG`CAP`DESCRIPTION: |-
         The most active characters, counted as holders of the approved role. Past it, an approved application waits for a place. 0 is no cap.
+      DATA`CONFIG`CAP`LABEL: |-
+        Cap on characters
+      DATA`CONFIG`CAP`EXAMPLE: |-
+        40
       DATA`CONFIG`APPROVED-ROLE: |-
         approved
       DATA`CONFIG`APPROVED-ROLE`TYPE: |-
@@ -100,6 +106,10 @@ objects:
         FUN`CONFIG`CHECK`ROLE
       DATA`CONFIG`APPROVED-ROLE`DESCRIPTION: |-
         The role an approved character gets. Removing it frees a place under the cap.
+      DATA`CONFIG`APPROVED-ROLE`LABEL: |-
+        Approved role
+      DATA`CONFIG`APPROVED-ROLE`EXAMPLE: |-
+        approved
       DATA`CONFIG`SHOW-QUEUE: |-
         1
       DATA`CONFIG`SHOW-QUEUE`TYPE: |-
@@ -108,6 +118,10 @@ objects:
         1
       DATA`CONFIG`SHOW-QUEUE`DESCRIPTION: |-
         Whether applicants see their place in the queue and the typical wait, and +apps/queue answers anyone.
+      DATA`CONFIG`SHOW-QUEUE`LABEL: |-
+        Show the queue
+      DATA`CONFIG`SHOW-QUEUE`EXAMPLE: |-
+        yes
       DATA`CONFIG`WAIT-SAMPLE: |-
         20
       DATA`CONFIG`WAIT-SAMPLE`TYPE: |-
@@ -120,6 +134,10 @@ objects:
         200
       DATA`CONFIG`WAIT-SAMPLE`DESCRIPTION: |-
         How many of the latest decisions the typical wait is the middle of.
+      DATA`CONFIG`WAIT-SAMPLE`LABEL: |-
+        Decisions in the typical wait
+      DATA`CONFIG`WAIT-SAMPLE`EXAMPLE: |-
+        20
       DATA`CONFIG`MAIL-OFFLINE: |-
         1
       DATA`CONFIG`MAIL-OFFLINE`TYPE: |-
@@ -127,7 +145,11 @@ objects:
       DATA`CONFIG`MAIL-OFFLINE`DEFAULT: |-
         1
       DATA`CONFIG`MAIL-OFFLINE`DESCRIPTION: |-
-        Whether a decision or comment reaches an applicant who is not connected by @mail.
+        Whether an applicant who is not connected gets decisions and comments by @mail.
+      DATA`CONFIG`MAIL-OFFLINE`LABEL: |-
+        Mail when offline
+      DATA`CONFIG`MAIL-OFFLINE`EXAMPLE: |-
+        yes
       # %0 a role's short name: nothing when it is one, else the reason.
       FUN`CONFIG`CHECK`ROLE:
         value: |-
