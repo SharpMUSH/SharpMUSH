@@ -1,0 +1,264 @@
+format: "1.10"
+package: mudlet-client
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Offers Mudlet the game's own interface and map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [gmcp, mudlet, gui, discord, mud-kit]
+category: MUD clients
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+# The shapes are Mudlet's, as TelnetNegotiationCore's ClientGui, ClientMap, DiscordInfo and
+# DiscordStatus types write them:
+#
+#   Client.GUI               {"version":"1.0","url":"https://example.org/game.mpackage"}
+#   Client.Map               {"url":"https://example.org/game.xml"}
+#   External.Discord.Info    {"inviteurl":"https://discord.gg/abc","applicationid":"1234"}
+#   External.Discord.Status  {"game":"My Game","details":"Playing Wren","starttime":1792000000}
+#
+# When they are sent, all from SOCKET`GMCP (what the client says) and PLAYER`CONNECT:
+#
+#   - Core.Hello, the first thing Mudlet says: Client.Map. Client.GUI too when a player is already logged
+#     in on that connection and has not turned +gui off.
+#   - PLAYER`CONNECT: Client.GUI, unless the player turned it off, and External.Discord.Status. Mudlet
+#     says Core.Hello before anyone logs in, so this is where a player's +gui off is honoured.
+#   - External.Discord.Hello: External.Discord.Info and Status. External.Discord.Get: Status.
+#
+# A URL or id the settings leave empty is not sent. The Discord packages go through
+# oob(..., supported). Client.GUI and Client.Map do not: Mudlet never lists Client in Core.Supports,
+# and the script that would add it lives in the very interface being offered (see README.md).
+#
+# Two objects: the Mudlet Client, in the master room, carries +gui, the settings, the help and the
+# functions that build and send each package. It holds Send_OOB, which lets oob() reach a connection
+# that is not its own, and nothing more. The event handler carries two thin handlers that call it.
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # package is what the client sent; player is whoever is logged in on the descriptor, or nothing.
+      SOCKET`GMCP`MUDLETCLIENT: |-
+        @assert match(Core.Hello External.Discord.Hello External.Discord.Get,%<package>); think u({{client}}/FUN`HEARD`[ucstr(edit(%<package>,.,`))],%<descriptor>,%<player>)
+      PLAYER`CONNECT`MUDLETCLIENT: |-
+        think u({{client}}/FUN`CONNECTED,%<descriptor>,%<objid>)
+
+  - ref: client
+    type: thing
+    name: Mudlet Client
+    location: "{{$master_room}}"
+    powers: [Send_OOB]
+    attributes:
+      # ── Settings: +config mudlet-client ───────────────────────────────────
+      DATA`CONFIG:
+        value: |-
+          What the game offers Mudlet: its interface, its map and its Discord.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Mudlet client
+      DATA`CONFIG`GUI-URL: ""
+      DATA`CONFIG`GUI-URL`TYPE: |-
+        text
+      DATA`CONFIG`GUI-URL`DEFAULT: ""
+      DATA`CONFIG`GUI-URL`PATTERN: |-
+        ^(https?://\S+)?$
+      DATA`CONFIG`GUI-URL`DESCRIPTION: |-
+        Where Mudlet downloads the game's interface package (.mpackage), offered with Client.GUI. Empty offers none.
+      DATA`CONFIG`GUI-URL`LABEL: |-
+        Interface package
+      DATA`CONFIG`GUI-URL`EXAMPLE: |-
+        https://example.org/game.mpackage
+      DATA`CONFIG`GUI-VERSION: |-
+        1.0
+      DATA`CONFIG`GUI-VERSION`TYPE: |-
+        text
+      DATA`CONFIG`GUI-VERSION`DEFAULT: |-
+        1.0
+      DATA`CONFIG`GUI-VERSION`MIN: |-
+        1
+      DATA`CONFIG`GUI-VERSION`MAX: |-
+        20
+      DATA`CONFIG`GUI-VERSION`DESCRIPTION: |-
+        The interface package's version. Mudlet installs it again when this changes, so change it with each new package.
+      DATA`CONFIG`GUI-VERSION`LABEL: |-
+        Interface version
+      DATA`CONFIG`GUI-VERSION`EXAMPLE: |-
+        1.1
+      DATA`CONFIG`MAP-URL: ""
+      DATA`CONFIG`MAP-URL`TYPE: |-
+        text
+      DATA`CONFIG`MAP-URL`DEFAULT: ""
+      DATA`CONFIG`MAP-URL`PATTERN: |-
+        ^(https?://\S+)?$
+      DATA`CONFIG`MAP-URL`DESCRIPTION: |-
+        Where Mudlet downloads the game's map, offered with Client.Map. Empty offers none.
+      DATA`CONFIG`MAP-URL`LABEL: |-
+        Map
+      DATA`CONFIG`MAP-URL`EXAMPLE: |-
+        https://example.org/game-map.xml
+      DATA`CONFIG`DISCORD-INVITE: ""
+      DATA`CONFIG`DISCORD-INVITE`TYPE: |-
+        text
+      DATA`CONFIG`DISCORD-INVITE`DEFAULT: ""
+      DATA`CONFIG`DISCORD-INVITE`PATTERN: |-
+        ^(https://\S+)?$
+      DATA`CONFIG`DISCORD-INVITE`DESCRIPTION: |-
+        An invite to the game's Discord server, which Mudlet shows beside its rich presence. Empty sends none.
+      DATA`CONFIG`DISCORD-INVITE`LABEL: |-
+        Discord invite
+      DATA`CONFIG`DISCORD-INVITE`EXAMPLE: |-
+        https://discord.gg/abcdef
+      DATA`CONFIG`DISCORD-APPLICATION: ""
+      DATA`CONFIG`DISCORD-APPLICATION`TYPE: |-
+        text
+      DATA`CONFIG`DISCORD-APPLICATION`DEFAULT: ""
+      DATA`CONFIG`DISCORD-APPLICATION`PATTERN: |-
+        ^[0-9]*$
+      DATA`CONFIG`DISCORD-APPLICATION`DESCRIPTION: |-
+        The id of the game's own Discord application, whose name and icons Mudlet then shows. Empty uses Mudlet's.
+      DATA`CONFIG`DISCORD-APPLICATION`LABEL: |-
+        Discord application
+      DATA`CONFIG`DISCORD-APPLICATION`EXAMPLE: |-
+        123456789012345678
+      DATA`CONFIG`DISCORD-GAME: ""
+      DATA`CONFIG`DISCORD-GAME`TYPE: |-
+        text
+      DATA`CONFIG`DISCORD-GAME`DEFAULT: ""
+      DATA`CONFIG`DISCORD-GAME`MAX: |-
+        60
+      DATA`CONFIG`DISCORD-GAME`DESCRIPTION: |-
+        The game's name in a player's Discord status. Empty uses the game's name.
+      DATA`CONFIG`DISCORD-GAME`LABEL: |-
+        Discord game name
+      DATA`CONFIG`DISCORD-GAME`EXAMPLE: |-
+        Coast of Ash
+      DATA`CONFIG`DISCORD-CHARACTER: |-
+        1
+      DATA`CONFIG`DISCORD-CHARACTER`TYPE: |-
+        boolean
+      DATA`CONFIG`DISCORD-CHARACTER`DEFAULT: |-
+        1
+      DATA`CONFIG`DISCORD-CHARACTER`DESCRIPTION: |-
+        Whether a player's Discord status names the character they play.
+      DATA`CONFIG`DISCORD-CHARACTER`LABEL: |-
+        Name the character
+      DATA`CONFIG`DISCORD-CHARACTER`EXAMPLE: |-
+        off
+      # Players who turned +gui off: one leaf per player, keyed by objid.
+      DATA`GUI-OFF:
+        value: |-
+          Players who turned +gui off, one leaf per objid.
+        flags: [no_command]
+
+      # ── Commands ─────────────────────────────────────────────────────────
+      CMD`GUI: |-
+        $+gui:@pemit %#=u(%!/FUN`DISPLAY`STATUS,%#)
+      CMD`GUI`SWITCH: |-
+        $+gui *:@assert match(on off,%0)=@pemit %#=notice(GUI,+gui on offers you the game's interface when you connect%, +gui off stops it.,warn); @include %!/INC`GUI`[ucstr(%0)]
+      INC`GUI`ON: |-
+        @assert strlen(v(DATA`CONFIG`GUI-URL))=@pemit %#=notice(GUI,This game has no interface package for Mudlet.,warn); &DATA`GUI-OFF`[u(%!/FUN`KEY,%#)] %!; @pemit %#=notice(GUI,u(%!/FUN`TEXT`ON,u(%!/FUN`SEND`GUI,%#)),ok)
+      INC`GUI`OFF: |-
+        &DATA`GUI-OFF`[u(%!/FUN`KEY,%#)] %!=1; @pemit %#=notice(GUI,Your client will not be offered the game's interface when you connect. +gui on offers it again.,ok)
+
+      # ── Reads ────────────────────────────────────────────────────────────
+      # %0 a player: the key their choice is kept under, their objid as an attribute name (#12:345 is 12-345).
+      FUN`KEY: |-
+        edit(objid(%0),#,,:,-)
+      # %0 a player: whether they want Client.GUI, and there is one to offer.
+      FUN`GUI`WANTED: |-
+        cand(strlen(v(DATA`CONFIG`GUI-URL)),not(hasattr(%!,DATA`GUI-OFF`[u(%!/FUN`KEY,%0)])))
+      # %0 a player: whether their client says it is a screen reader.
+      FUN`READER: |-
+        member(terminfo(%0),screenreader)
+
+      # ── Payloads ─────────────────────────────────────────────────────────
+      FUN`PAYLOAD`GUI: |-
+        json(object,version,json(string,v(DATA`CONFIG`GUI-VERSION)),url,json(string,v(DATA`CONFIG`GUI-URL)))
+      FUN`PAYLOAD`MAP: |-
+        json(object,url,json(string,v(DATA`CONFIG`MAP-URL)))
+      # A setting as a JSON string, or null when it is empty, so a json_mod() patch leaves it out.
+      FUN`PAYLOAD`OPTIONAL: |-
+        if(strlen(%0),json(string,%0),null)
+      FUN`PAYLOAD`DISCORDINFO: |-
+        json_mod(json(object),patch,json(object,inviteurl,u(%!/FUN`PAYLOAD`OPTIONAL,v(DATA`CONFIG`DISCORD-INVITE)),applicationid,u(%!/FUN`PAYLOAD`OPTIONAL,v(DATA`CONFIG`DISCORD-APPLICATION))))
+      # %0 the player, or nothing before login: the game, and once someone plays, who and since when.
+      FUN`PAYLOAD`DISCORDSTATUS: |-
+        json_mod(json(object,game,json(string,strfirstof(v(DATA`CONFIG`DISCORD-GAME),mudname()))),patch,json(object,details,u(%!/FUN`PAYLOAD`OPTIONAL,if(cand(strlen(%0),v(DATA`CONFIG`DISCORD-CHARACTER)),Playing [name(%0)])),starttime,if(strlen(%0),json(number,sub(secs(),trunc(conn(%0)))),null)))
+
+      # ── Sending ──────────────────────────────────────────────────────────
+      # Each takes %0 where to send (a player or a descriptor) and returns how many connections took it.
+      FUN`SEND`GUI: |-
+        oob(%0,Client.GUI,u(%!/FUN`PAYLOAD`GUI))
+      FUN`SEND`MAP: |-
+        if(strlen(v(DATA`CONFIG`MAP-URL)),oob(%0,Client.Map,u(%!/FUN`PAYLOAD`MAP)),0)
+      FUN`SEND`DISCORDINFO: |-
+        oob(%0,External.Discord.Info,u(%!/FUN`PAYLOAD`DISCORDINFO),supported)
+      # %1 the player, or nothing.
+      FUN`SEND`DISCORDSTATUS: |-
+        oob(%0,External.Discord.Status,u(%!/FUN`PAYLOAD`DISCORDSTATUS,%1),supported)
+
+      # ── What the client said, and connecting ─────────────────────────────
+      # Each takes %0 the descriptor and %1 the player logged in on it, or nothing. null() keeps oob()'s
+      # counts out of the event handler's output.
+      FUN`HEARD`CORE`HELLO: |-
+        null(u(%!/FUN`SEND`MAP,%0))[if(cand(strlen(%1),u(%!/FUN`GUI`WANTED,%1)),null(u(%!/FUN`SEND`GUI,%0)))]
+      FUN`HEARD`EXTERNAL`DISCORD`HELLO: |-
+        null(u(%!/FUN`SEND`DISCORDINFO,%0))[null(u(%!/FUN`SEND`DISCORDSTATUS,%0,%1))]
+      FUN`HEARD`EXTERNAL`DISCORD`GET: |-
+        null(u(%!/FUN`SEND`DISCORDSTATUS,%0,%1))
+      FUN`CONNECTED: |-
+        if(u(%!/FUN`GUI`WANTED,%1),null(u(%!/FUN`SEND`GUI,%0)))[null(u(%!/FUN`SEND`DISCORDSTATUS,%0,%1))]
+
+      # ── Screens ──────────────────────────────────────────────────────────
+      # %0 how many connections took the interface just now.
+      FUN`TEXT`ON: |-
+        Your client will be offered the game's interface when you connect.[if(%0,%bIt was offered just now.,%bNone of your connections takes GMCP now%, so it will be offered next time.)]
+      # +gui: %0 the player. A screen reader is told in two sentences; anyone else sees the fields.
+      FUN`DISPLAY`STATUS: |-
+        if(strlen(v(DATA`CONFIG`GUI-URL)),if(u(%!/FUN`READER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))
+      FUN`DISPLAY`PLAIN: |-
+        The game's interface for Mudlet is version [v(DATA`CONFIG`GUI-VERSION)], at [v(DATA`CONFIG`GUI-URL)]. [if(u(%!/FUN`GUI`WANTED,%0),It is offered to you when you connect. +gui off stops that.,You turned it off. +gui on offers it again.)]
+      FUN`DISPLAY`BOX: |-
+        box(fields(,Package,v(DATA`CONFIG`GUI-URL),Version,v(DATA`CONFIG`GUI-VERSION),Offered,if(u(%!/FUN`GUI`WANTED,%0),tone(success,when you connect),tone(muted,no%, you turned it off)),Map,strfirstof(v(DATA`CONFIG`MAP-URL),tone(muted,none)))%r[rule()]%r[tone(muted,+gui on and +gui off choose whether it is offered.)],Mudlet interface)
+
+      # ---- help -----------------------------------------------------------
+      HELP: |-
+        Mudlet: the game's own interface, its map and Discord.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`GUI: |-
+        gmcp room|gmcp char
+      HELP`GUI: |-
+        `+gui` shows whether the game offers **Mudlet** an interface package of its own: windows, gauges and a map drawn from what the game sends over GMCP.
+
+        - `+gui on` offers it to your client each time you connect, and offers it now. This is how it starts.
+        - `+gui off` stops offering it. An interface Mudlet already installed stays until you remove it in Mudlet's Package Manager.
+
+        Mudlet asks before it installs a package, and installs it again when the game's version changes.
+
+        The game can also send Mudlet its **map**, and fill in your **Discord** status with the game's name and the character you play: staff choose with `+config mudlet-client`.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`MUDLET-CLIENT: |-
+        {{client}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`MUDLET-CLIENT: |-
+        {{client}}

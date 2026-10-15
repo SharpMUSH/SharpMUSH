@@ -1,0 +1,84 @@
+format: "1.10"
+package: mud-kit
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Everything a MUD client such as Mudlet reads over GMCP, in one install: gmcp-room, gmcp-comm, gmcp-items, gmcp-char and mudlet-client."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [gmcp, mudlet, mud-kit, oob, clients]
+category: MUD clients
+requires_server: ">=0.1"
+
+# A meta package: it installs the five below and an overview topic for +help. Each of them installs
+# and uninstalls on its own too, so a game takes only what it uses. Uninstalling mud-kit takes only
+# the overview; the five stay until they are uninstalled themselves.
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: gmcp-room
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/gmcp-room/
+      branch: main
+  - package: gmcp-comm
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/gmcp-comm/
+      branch: main
+  - package: gmcp-items
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/gmcp-items/
+      branch: main
+  - package: gmcp-char
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/gmcp-char/
+      branch: main
+  - package: mudlet-client
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/mudlet-client/
+      branch: main
+
+objects:
+  - ref: mud_kit_help
+    type: thing
+    name: MUD Kit Help
+    flags: [no_command]
+    attributes:
+      HELP: |-
+        What the game tells MUD clients such as Mudlet, over GMCP.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`GMCP: |-
+        gmcp room|gmcp comm|gmcp items|gmcp char|gui
+      HELP`GMCP: |-
+        **GMCP** is how a MUD client such as **Mudlet** is told things apart from the game's text, so it can draw a map, gauges, an inventory window or a chat window. Your client asks for it when it connects; you do nothing.
+
+        This game sends:
+
+        - **Room**: where you are and who is here, for a mapper. `+help gmcp room`
+        - **Comm**: channel lines and pages, for a chat window. `+help gmcp comm`
+        - **Char.Items**: what you carry and what lies about. `+help gmcp items`
+        - **Char**: your name, gauges and status. `+help gmcp char`
+        - **Client** and **External.Discord**: the game's own interface and map for Mudlet, and your Discord status. `+help gui`
+
+        A client that lists the GMCP modules it wants when it connects is sent only those. One that lists none, such as TinTin++ or MUSHclient, is sent everything.
+
+        `terminfo%(me%)` shows `gmcp` when your connection agreed to GMCP, and `gmcpsupports%(me%)` the modules your client listed.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`MUD-KIT: |-
+        {{mud_kit_help}}

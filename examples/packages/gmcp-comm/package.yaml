@@ -1,0 +1,174 @@
+format: "1.10"
+package: gmcp-comm
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Sends MUD clients the GMCP Comm package: each channel line and page as Comm.Channel.Text, for a client's chat window, and the channels a player is on as Comm.Channel.List."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [gmcp, mudlet, channels, pages, mud-kit]
+category: MUD clients
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+# The shapes are Iron Realms' (IRE), which Mudlet's chat scripts read and TelnetNegotiationCore's
+# CommChannelText type writes:
+#
+#   Comm.Channel.Text  {"channel":"Public","talker":"Wren","text":"<Public> Wren says, \"Hi.\""}
+#   Comm.Channel.List  [{"name":"Public","caption":"Public","command":"+public"}]
+#
+# text is the whole line as the player's terminal shows it, in ANSI colour, which Mudlet's chat
+# window draws; a connection whose client says it is a screen reader (terminfo()) is sent it without
+# colour. command is what a client types before a message to speak on the channel.
+#
+# The engine decides who received what. CHANNEL`MESSAGE names exactly the members a line was
+# delivered to, and PAGE`MESSAGE exactly the players a page reached, so a line goes to those players
+# and nobody else, and this package never works out channel or page permissions again. PLAYER`CHANNELS
+# fires on connect and whenever a player's channel list may have changed.
+#
+# Every send is oob(..., supported). Mudlet does not list Comm in its Core.Supports, so a Mudlet
+# script that wants these adds it: sendGMCP([[Core.Supports.Add ["Comm.Channel 1"] ]]). A client that
+# lists nothing is sent everything.
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # ── Settings ─────────────────────────────────────────────────────────
+      FN`GMCPCOMM`SETTING: |-
+        get({{gmcp_comm}}/DATA`CONFIG`%0)
+
+      # ── Who ──────────────────────────────────────────────────────────────
+      # %0 an object: a connected player, the only thing anything is sent to.
+      FN`GMCPCOMM`VIEWER: |-
+        cand(hastype(%0,player),hasflag(%0,CONNECTED))
+      # %0 a viewer: whether their client says it is a screen reader.
+      FN`GMCPCOMM`READER: |-
+        member(terminfo(%0),screenreader)
+
+      # ── Lines ────────────────────────────────────────────────────────────
+      # A channel line as the terminal shows it, from named arguments: channel, style, name, message.
+      # An @cemit and a connect or disconnect line name nobody.
+      FN`GMCPCOMM`CHANNELLINE: |-
+        <%<channel>> [switch(%<style>,pose,%<name> %<message>,semipose,%<name>%<message>,emit,%<message>,presence,%<message>,%<name> says%, "%<message>")]
+      # A page as a recipient's terminal shows it, from named arguments: style, name, message.
+      FN`GMCPCOMM`PAGEIN: |-
+        switch(%<style>,pose,From afar%, %<name> %<message>,semipose,From afar%, %<name>%<message>,%<name> pages: %<message>)
+      # A page as the pager's terminal shows it, from named arguments: style, name (the pager's own),
+      # message, to (the names it reached).
+      FN`GMCPCOMM`PAGEOUT: |-
+        switch(%<style>,pose,Long distance to %<to>: %<name> %<message>,semipose,Long distance to %<to>: %<name>%<message>,You paged %<to> with '%<message>')
+      # %0 a list of players: their names, as a page lists them.
+      FN`GMCPCOMM`NAMES: |-
+        itemize(iter(%0,name(%i0),,|),|)
+      # %0 a line, %1 the viewer: the line in ANSI colour, or plain for a screen reader.
+      FN`GMCPCOMM`SHOWN: |-
+        if(u(me/FN`GMCPCOMM`READER,%1),stripansi(%0),render(%0,ansi))
+
+      # ── Payloads ─────────────────────────────────────────────────────────
+      # Comm.Channel.Text, from named arguments: channel, talker, line and viewer.
+      FN`GMCPCOMM`TEXT: |-
+        json(object,channel,json(string,%<channel>),talker,json(string,stripansi(%<talker>)),text,json(string,u(me/FN`GMCPCOMM`SHOWN,%<line>,%<viewer>)))
+      # One Comm.Channel.List entry: %0 a channel's name.
+      FN`GMCPCOMM`CHANNEL: |-
+        json(object,name,json(string,%0),caption,json(string,%0),command,json(string,+[lcstr(%0)]))
+      # Comm.Channel.List: %0 the player. channels() with on lists the ones they are on.
+      FN`GMCPCOMM`LIST: |-
+        json_array(iter(channels(%0,on),u(me/FN`GMCPCOMM`CHANNEL,%i0),,%r),%r)
+
+      # ── Sending ──────────────────────────────────────────────────────────
+      # %0 the players, %1 the channel, %2 the talker, %3 the line: Comm.Channel.Text to each, built for
+      # each so a screen reader's copy is plain.
+      FN`GMCPCOMM`SEND: |-
+        null(iter(filterbool(me/FN`GMCPCOMM`VIEWER,%0),oob(%i0,Comm.Channel.Text,uargs(me/FN`GMCPCOMM`TEXT,channel,%1,talker,%2,line,%3,viewer,%i0),supported)))
+
+      # ── The handlers ─────────────────────────────────────────────────────
+      # recipients are the members the line was delivered to.
+      CHANNEL`MESSAGE`GMCPCOMM: |-
+        think u(me/FN`GMCPCOMM`SEND,%<recipients>,%<channel>,%<name>,uargs(me/FN`GMCPCOMM`CHANNELLINE,channel,%<channel>,style,%<style>,name,%<name>,message,%<message>))
+      # recipients are those the page reached; the pager is sent their own copy, as their terminal shows
+      # it. setdiff() keeps a self-page to the recipient's copy.
+      PAGE`MESSAGE`GMCPCOMM: |-
+        @assert u(me/FN`GMCPCOMM`SETTING,PAGES); think u(me/FN`GMCPCOMM`SEND,%<recipients>,u(me/FN`GMCPCOMM`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FN`GMCPCOMM`PAGEIN,style,%<style>,name,%<name>,message,%<message>))[u(me/FN`GMCPCOMM`SEND,setdiff(num(%<speaker>),iter(%<recipients>,num(%i0))),u(me/FN`GMCPCOMM`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FN`GMCPCOMM`PAGEOUT,style,%<style>,name,name(%<speaker>),message,%<message>,to,u(me/FN`GMCPCOMM`NAMES,%<recipients>)))]
+      # objid is the player; cause is connect, resume, join, leave, status, rename or delete.
+      PLAYER`CHANNELS`GMCPCOMM: |-
+        @assert u(me/FN`GMCPCOMM`VIEWER,%<objid>); think null(oob(%<objid>,Comm.Channel.List,u(me/FN`GMCPCOMM`LIST,%<objid>),supported))
+
+  # ---- settings and help ----------------------------------------------------
+  - ref: gmcp_comm
+    type: thing
+    name: GMCP Comm
+    flags: [no_command]
+    attributes:
+      DATA`CONFIG:
+        value: |-
+          What the GMCP Comm package sends a client's chat window.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        GMCP Comm
+      DATA`CONFIG`PAGES: |-
+        1
+      DATA`CONFIG`PAGES`TYPE: |-
+        boolean
+      DATA`CONFIG`PAGES`DEFAULT: |-
+        1
+      DATA`CONFIG`PAGES`DESCRIPTION: |-
+        Whether pages are sent as Comm.Channel.Text too, to the pager and to each player the page reached.
+      DATA`CONFIG`PAGES`LABEL: |-
+        Pages
+      DATA`CONFIG`PAGES`EXAMPLE: |-
+        off
+      DATA`CONFIG`PAGE-CHANNEL: |-
+        page
+      DATA`CONFIG`PAGE-CHANNEL`TYPE: |-
+        text
+      DATA`CONFIG`PAGE-CHANNEL`DEFAULT: |-
+        page
+      DATA`CONFIG`PAGE-CHANNEL`MIN: |-
+        1
+      DATA`CONFIG`PAGE-CHANNEL`MAX: |-
+        30
+      DATA`CONFIG`PAGE-CHANNEL`DESCRIPTION: |-
+        The channel name a page is sent under, which a client's chat window files it by.
+      DATA`CONFIG`PAGE-CHANNEL`LABEL: |-
+        Page channel
+      DATA`CONFIG`PAGE-CHANNEL`EXAMPLE: |-
+        tells
+      HELP: |-
+        Channel lines and pages for a MUD client's chat window, over GMCP.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`GMCP`COMM: |-
+        gmcp room|gmcp char
+      HELP`GMCP`COMM: |-
+        A MUD client such as **Mudlet** can keep a chat window apart from the game's text. Each channel line and page you see is also sent to your client as GMCP **Comm.Channel.Text**: the channel, who spoke, and the line as your screen shows it. **Comm.Channel.List** tells it the channels you are on and what to type to speak on each, when you connect and whenever you join or leave one.
+
+        Pages are filed under a channel called `page`, unless staff chose another name.
+
+        A client that lists GMCP modules when it connects is sent these only when it listed `Comm`. Mudlet does not list it by itself: a Mudlet script adds it with
+        `sendGMCP%(%[%[Core.Supports.Add %["Comm.Channel 1"%] %]%]%)`.
+
+        Staff: `+config gmcp-comm`.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`GMCP-COMM: |-
+        {{gmcp_comm}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`GMCP-COMM: |-
+        {{gmcp_comm}}
