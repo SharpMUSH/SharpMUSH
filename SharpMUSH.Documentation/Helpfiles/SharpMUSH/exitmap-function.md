@@ -17,7 +17,7 @@ Returns a JSON object of the exits in `<room>`, each exit's name to the number o
 
 Only the exits `<viewer>` can see are listed: the ones `look` would show them. A DARK exit is left out unless the room or the exit is LIGHT or the viewer can see everything, and reality layers apply as they do to look. An exit's lock does not hide it, as it does not in look. `<viewer>` is you when it is left out.
 
-Each exit appears under its name up to the first `;`, so `North;n` is `North`. When two exits share a name, the first is kept. An exit linked to HOME leads to the viewer's own home, a variable exit is -2, and an unlinked exit is -1.
+Each exit appears under its name up to the first `;`, so `North;n` is `North`. When two exits share a name, without regard to case, the first is kept, as typing the name takes it. An exit linked to HOME leads to the viewer's own home, a variable exit is -2, and an unlinked exit is -1.
 
 You may map a room you can examine or are standing in, as with [lexits()]. Mapping it as another viewer needs that too, or control of the viewer.
 
