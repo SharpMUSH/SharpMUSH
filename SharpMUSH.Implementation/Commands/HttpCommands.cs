@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using System.Text;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -15,7 +17,7 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@HTTP",
 		Switches = ["DELETE", "POST", "PUT", "GET", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged | CB.NoGuest, MinArgs = 0, MaxArgs = 3, ParameterNames = ["url", "code"])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged | CB.NoGuest, MinArgs = 0, MaxArgs = 4, ParameterNames = ["url", "code"])]
 	public async ValueTask<Option<CallState>> Http(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -24,6 +26,16 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg);
 		parser.CurrentState.Arguments.TryGetValue("1", out var uriArg);
 		parser.CurrentState.Arguments.TryGetValue("2", out var dataArg);
+		parser.CurrentState.Arguments.TryGetValue("3", out var headersArg);
+
+		if (!await executor.IsWizard() && !await executor.HasPower("CAN_HTTP"))
+		{
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
+		}
 
 		if (objAttrArg is null)
 		{
@@ -62,20 +74,34 @@ public partial class Commands
 					_ => HttpMethod.Get
 				};
 
-				if (method == HttpMethod.Get && dataArg is not null)
-				{
-					await NotifyService.Notify(executor, "GET requests cannot have a body.", executor);
-					return new CallState(ErrorMessages.Returns.GetRequestsCannotHaveBody);
-				}
-
 				if (!Uri.TryCreate(uriArg.Message.ToPlainText(), UriKind.Absolute, out var uri))
 				{
 					await NotifyService.Notify(executor, "Invalid URI format.", executor);
 					return new CallState(ErrorMessages.Returns.InvalidUriFormat);
 				}
 
+				// A GET has no body, so its headers follow the URL; every other verb takes them after the data.
+				var isGet = method == HttpMethod.Get;
+				var headersText = (isGet ? dataArg : headersArg)?.Message.ToPlainText();
+				if (ParseRequestHeaders(headersText) is not RequestHeaders headers)
+				{
+					await NotifyService.Notify(executor, "Header value has a bad key:value set. Aborting.", executor);
+					return new CallState(ErrorMessages.Returns.InvalidHttpHeader);
+				}
+
+				// PennMUSH reads content-type and userpass from the caller's q-registers. They outlive the
+				// code that set them, so only a game that keeps PennMUSH's registers (http_qregisters) reads them;
+				// elsewhere both come in the headers argument.
+				var qRegisters = Configuration.CurrentValue.Compatibility.HttpQRegisters;
+				var registers = qRegisters && parser.CurrentState.Registers.TryPeek(out var top) ? top : [];
+				var contentType = headersText is not null
+					? headers.ContentType
+					: registers.GetValueOrDefault("CONTENT-TYPE")?.ToPlainText();
+				var userPass = registers.GetValueOrDefault("USERPASS")?.ToPlainText();
+
 				var requestUri = uri;
-				var requestBody = dataArg?.Message.ToPlainText();
+				var requestBody = isGet ? null : dataArg?.Message.ToPlainText();
+				var outputLimit = parser.CurrentState.OutputLimit;
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 				// The callback's %> and %| are the ones at admission, like any queued entry's; the state below is built later.
 				var queuedOutput = parser.CurrentState.PipedOutput;
@@ -86,36 +112,31 @@ public partial class Commands
 					{
 						var client = HttpClientFactory.CreateClient("api");
 
-						using var message = new HttpRequestMessage
-						{
-							Headers =
-							{
-								{ "User-Agent", "SharpMUSH" }
-							},
-							Method = method,
-							Content = requestBody is null
-								? null
-								: new StringContent(requestBody),
-							RequestUri = requestUri
-						};
+						using var message = BuildRequest(method, requestUri, requestBody, contentType, userPass, headers);
+						using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead,
+							ExecutionBudget.CurrentToken);
 
-						using var response = await client.SendAsync(message, ExecutionBudget.CurrentToken);
+						var body = await ReadResponseAsync(response.Content, outputLimit, ExecutionBudget.CurrentToken);
+						if (body.Overflowed)
+							await NotifyService.Notify(found, "Too much HTTP data received; excess truncated.", found);
 
 						var status = MarkupText.Plain(((int)response.StatusCode).ToString());
-						var contentType = MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty);
+						var responseType = MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty);
+						var overflow = MarkupText.Plain(body.Overflowed ? "1" : "0");
 						// PennMUSH hands these over as q-registers; a PennMUSH import keeps them with http_qregisters.
-						if (Configuration.CurrentValue.Compatibility.HttpQRegisters)
+						if (qRegisters)
 						{
 							parser.CurrentState.AddRegister("STATUS", status);
-							parser.CurrentState.AddRegister("CONTENT-TYPE", contentType);
+							parser.CurrentState.AddRegister("CONTENT-TYPE", responseType);
+							parser.CurrentState.AddRegister("HTTP-OVERFLOW", overflow);
 						}
 
-						var content = await response.Content.ReadAsStringAsync(ExecutionBudget.CurrentToken);
 						var contentDict = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
 						{
-							["0"] = new CallState(MarkupText.Plain(content)),
+							["0"] = new CallState(MarkupText.Plain(body.Text)),
 							["status"] = new CallState(status),
-							["content-type"] = new CallState(contentType)
+							["content-type"] = new CallState(responseType),
+							["http-overflow"] = new CallState(overflow)
 						};
 
 						return parser.CurrentState with
@@ -140,6 +161,123 @@ public partial class Commands
 
 				return CallState.Empty;
 			});
+	}
+
+	/// <summary>The headers argument of <c>@http</c>: its lines in order, less the Content-Type line, which sets the body's type.</summary>
+	private sealed record RequestHeaders(List<(string Name, string Value)> Lines, string? ContentType);
+
+	/// <summary>What <c>@http</c> read of a response: the text up to the output limit, and whether there was more.</summary>
+	private readonly record struct ResponseBody(string Text, bool Overflowed);
+
+	/// <summary>
+	/// Reads <c>Key:value</c> lines, one per line (PennMUSH #1398). A line with no colon, a name that is not an
+	/// HTTP token, a value holding a control character, or a Content-Length line (the body sets that) fails
+	/// the whole argument. Blank lines are skipped.
+	/// </summary>
+	private static Result<RequestHeaders> ParseRequestHeaders(string? text)
+	{
+		var lines = new List<(string Name, string Value)>();
+		string? contentType = null;
+		foreach (var line in (text ?? string.Empty).Split('\n',
+			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+		{
+			var colon = line.IndexOf(':');
+			if (colon < 0) return new Error<string>(line);
+
+			var name = line[..colon].Trim();
+			var value = line[(colon + 1)..].Trim();
+			if (name.Length == 0 || !name.All(IsTokenChar) || value.Any(c => char.IsControl(c) && c != '\t')
+				|| name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+				return new Error<string>(line);
+
+			if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+				contentType = value;
+			else
+				lines.Add((name, value));
+		}
+
+		return new RequestHeaders(lines, contentType);
+
+		// RFC 9110 token characters.
+		static bool IsTokenChar(char c) => char.IsAsciiLetterOrDigit(c) || "!#$%&'*+-.^_`|~".Contains(c);
+	}
+
+	/// <summary>
+	/// The request <c>@http</c> sends. A body goes out in the charset its content type names (UTF-8 when it names
+	/// none), as <c>application/x-www-form-urlencoded</c> unless a content type is given. A header line replaces
+	/// the engine's own User-Agent and the <c>userpass</c> Authorization; a body header on a request with no body is dropped.
+	/// </summary>
+	private static HttpRequestMessage BuildRequest(HttpMethod method, Uri uri, string? body, string? contentType,
+		string? userPass, RequestHeaders headers)
+	{
+		var message = new HttpRequestMessage(method, uri);
+		message.Headers.TryAddWithoutValidation("User-Agent", "SharpMUSH");
+
+		if (!string.IsNullOrEmpty(body))
+		{
+			var type = string.IsNullOrEmpty(contentType) ? "application/x-www-form-urlencoded" : contentType;
+			var charset = MediaTypeHeaderValue.TryParse(type, out var parsed) ? parsed.CharSet : null;
+			message.Content = new ByteArrayContent(CharsetEncoding(charset).GetBytes(body));
+			message.Content.Headers.TryAddWithoutValidation("Content-Type", type);
+		}
+
+		if (!string.IsNullOrEmpty(userPass))
+			message.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+				Convert.ToBase64String(Encoding.UTF8.GetBytes(userPass)));
+
+		foreach (var (name, _) in headers.Lines)
+		{
+			if (name.Equals("User-Agent", StringComparison.OrdinalIgnoreCase)
+				|| name.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
+				message.Headers.Remove(name);
+		}
+
+		foreach (var (name, value) in headers.Lines)
+		{
+			if (!message.Headers.TryAddWithoutValidation(name, value))
+				message.Content?.Headers.TryAddWithoutValidation(name, value);
+		}
+
+		return message;
+	}
+
+	/// <summary>
+	/// Reads the response body in the charset it declares (UTF-8 when it declares none or one this runtime does
+	/// not know), stopping at <paramref name="limit"/> characters, the most one value may hold here.
+	/// </summary>
+	private static async ValueTask<ResponseBody> ReadResponseAsync(HttpContent content, int limit, CancellationToken token)
+	{
+		await using var stream = await content.ReadAsStreamAsync(token);
+		using var reader = new StreamReader(stream, CharsetEncoding(content.Headers.ContentType?.CharSet),
+			detectEncodingFromByteOrderMarks: true);
+		var text = new StringBuilder();
+		var buffer = new char[8192];
+		int read;
+		while ((read = await reader.ReadAsync(buffer.AsMemory(), token)) > 0)
+		{
+			if (text.Length + read > limit)
+			{
+				text.Append(buffer, 0, limit - text.Length);
+				return new ResponseBody(text.ToString(), true);
+			}
+
+			text.Append(buffer, 0, read);
+		}
+
+		return new ResponseBody(text.ToString(), false);
+	}
+
+	private static Encoding CharsetEncoding(string? charset)
+	{
+		if (string.IsNullOrWhiteSpace(charset)) return new UTF8Encoding(false);
+		try
+		{
+			return Encoding.GetEncoding(charset.Trim('"'));
+		}
+		catch (ArgumentException)
+		{
+			return new UTF8Encoding(false);
+		}
 	}
 
 	[SharpCommand(Name = "@RESPOND", Switches = ["HEADER", "TYPE"], Behavior = CB.Default | CB.NoGagged | CB.EqSplit,

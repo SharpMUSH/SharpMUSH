@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Dice;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -1618,6 +1619,12 @@ public partial class Functions
 		// context, relative to the executor (PennMUSH matches function arguments to the executor) — not
 		// the caller one frame up the u() chain.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// A SharpMUSH category: whether roll() can read a formula, whatever its names turn out to hold.
+		if (category == "roll")
+		{
+			return new CallState(DiceParser.IsValid(str.ToPlainText()) ? "1" : "0");
+		}
 
 		var validationType = category switch
 		{

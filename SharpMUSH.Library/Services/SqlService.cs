@@ -3,6 +3,8 @@ using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.Providers;
 
@@ -15,6 +17,7 @@ namespace SharpMUSH.Library.Services;
 public class SqlService : ISqlService, IAsyncDisposable
 {
 	private readonly IOptionsMonitor<SharpMUSHOptions> _config;
+	private readonly ISecretStore _secrets;
 	private readonly Lazy<IEventService>? _events;
 	private ConnectionState _state = ConnectionState.Unknown;
 	private readonly SemaphoreSlim _providerLock = new(1, 1);
@@ -23,20 +26,23 @@ public class SqlService : ISqlService, IAsyncDisposable
 	private bool _disposed;
 
 	/// <summary>
-	/// Constructor that accepts configuration monitor for runtime configuration changes.
+	/// Constructor that accepts configuration monitor for runtime configuration changes. The password is
+	/// the <c>sql.password</c> secret, never a configuration option.
 	/// </summary>
-	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
+	public SqlService(IOptionsMonitor<SharpMUSHOptions> config, ISecretStore secrets)
 	{
 		_config = config;
+		_secrets = secrets;
 	}
 
 	/// <summary>
-	/// As <see cref="SqlService(IOptionsMonitor{SharpMUSHOptions})"/>, raising PennMUSH's <c>SQL`CONNECT</c>,
-	/// <c>SQL`CONNECTFAIL</c> and <c>SQL`DISCONNECT</c>.
+	/// As <see cref="SqlService(IOptionsMonitor{SharpMUSHOptions}, ISecretStore)"/>, raising PennMUSH's
+	/// <c>SQL`CONNECT</c>, <c>SQL`CONNECTFAIL</c> and <c>SQL`DISCONNECT</c>.
 	/// </summary>
-	public SqlService(IOptionsMonitor<SharpMUSHOptions> config, Lazy<IEventService> events)
+	public SqlService(IOptionsMonitor<SharpMUSHOptions> config, ISecretStore secrets, Lazy<IEventService> events)
 	{
 		_config = config;
+		_secrets = secrets;
 		_events = events;
 	}
 
@@ -65,13 +71,28 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
+		FoundResult<string> password = platform is "sqlite"
+			? new NotFound()
+			: await _secrets.GetAsync(SecretDefinition.SqlPassword.Name);
 
+		// A stored password this host cannot decrypt leaves SQL unavailable rather than connecting without one,
+		// which would hide the key ring problem behind an authentication failure. The store logs why.
+		return password switch
+		{
+			Error<string> => null,
+			string value => await ProviderAsync(cvn, platform, value),
+			NotFound => await ProviderAsync(cvn, platform, null)
+		};
+	}
+
+	private async ValueTask<ISqlProvider?> ProviderAsync(NetOptions cvn, string platform, string? password)
+	{
 		var connectionString = platform switch
 		{
 			"mysql" or "mariadb" =>
-				BuildMySqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
+				BuildMySqlConnectionString(cvn.SqlHost, cvn.SqlUsername, password, cvn.SqlDatabase),
 			"postgresql" or "postgres" =>
-				BuildPostgreSqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
+				BuildPostgreSqlConnectionString(cvn.SqlHost, cvn.SqlUsername, password, cvn.SqlDatabase),
 			"sqlite" =>
 				$"Data Source={cvn.SqlDatabase}",
 			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")

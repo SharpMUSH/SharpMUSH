@@ -7,7 +7,10 @@
     think add(1,2)                sent verbatim on the current session
     ::as alice                    switch the current session
     ::settle                      wait for queued work (@wait/@trigger) to finish
+    ::until DONE                  the next command's step also waits for a line ending in DONE
     ::logout wiz
+
+`{{echo}}` in a command is replaced, when it is sent, by the URL of the local HTTP site (echo.py).
 
 Directives use `::` because every MUSH command starts with a word, `@`, `+` or `&` and none can
 start with `::` on either server.
@@ -24,6 +27,7 @@ class Step:
     text: str = ""       # command text, or "name character password" for login
     session: str = ""
     lineno: int = 0
+    until: str = ""      # command: also read until a line ending in this, for output that arrives later
 
 
 @dataclass
@@ -47,6 +51,7 @@ class ScenarioError(ValueError):
 def load(path: Path) -> Scenario:
     cases: list[Case] = []
     current_session = ""
+    until = ""
     for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.rstrip()
         if not line or line.startswith("#"):
@@ -83,6 +88,10 @@ def load(path: Path) -> Scenario:
                 steps.append(Step("settle", "", current_session, lineno))
             elif directive == "logout":
                 steps.append(Step("logout", "", rest.strip() or current_session, lineno))
+            elif directive == "until":
+                if not rest.strip():
+                    raise ScenarioError(f"{path}:{lineno}: ::until <text>")
+                until = rest.strip()
             else:
                 raise ScenarioError(f"{path}:{lineno}: unknown directive ::{directive}")
             continue
@@ -90,5 +99,8 @@ def load(path: Path) -> Scenario:
             raise ScenarioError(f"{path}:{lineno}: command before any ::case")
         if not current_session:
             raise ScenarioError(f"{path}:{lineno}: command with no session; use ::login first")
-        cases[-1].steps.append(Step("command", line, current_session, lineno))
+        cases[-1].steps.append(Step("command", line, current_session, lineno, until))
+        until = ""
+    if until:
+        raise ScenarioError(f"{path}: ::until with no command after it")
     return Scenario(path.stem, path, cases)

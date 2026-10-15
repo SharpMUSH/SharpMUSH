@@ -38,6 +38,7 @@ using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -165,6 +166,11 @@ internal static class EngineRegistration
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();
+		// Secrets the server holds for itself, encrypted with the Data Protection key ring; a plugin
+		// declares the ones it reads with a SecretDefinition singleton of its own.
+		services.AddSingleton(_ => SecretStoreOptions.FromEnvironment());
+		services.AddSingleton(SecretDefinition.SqlPassword);
+		services.AddSingleton<ISecretStore, SecretStore>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();

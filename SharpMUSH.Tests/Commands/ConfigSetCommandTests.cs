@@ -147,7 +147,7 @@ public class ConfigSetCommandTests
 	/// </summary>
 	[Test]
 	[Arguments("names_file")]
-	[Arguments("sql_password")]
+	[Arguments("sql_username")]
 	public async ValueTask Set_RefusesOptionsPennKeepsOutOfReach(string option)
 		=> await Restoring(async () =>
 		{
@@ -247,9 +247,9 @@ public class ConfigSetCommandTests
 	[Test]
 	public async ValueTask Enable_RefusesAnOptionPennKeepsOutOfReach()
 	{
-		var messages = await AsGod("@enable sql_password");
+		var messages = await AsGod("@enable sql_username");
 
-		await Assert.That(messages).Contains(string.Format(ErrorMessages.Notifications.ConfigOptionNotSettableFormat, "sql_password"));
+		await Assert.That(messages).Contains(string.Format(ErrorMessages.Notifications.ConfigOptionNotSettableFormat, "sql_username"));
 	}
 
 	[Test]
@@ -265,19 +265,19 @@ public class ConfigSetCommandTests
 		});
 
 	/// <summary>
-	/// <c>can_view_config_option</c>: a CP_GODONLY option is hidden from everyone but God — its value
-	/// is the SQL password.
+	/// <c>can_view_config_option</c>: a CP_GODONLY option is hidden from everyone but God — the SQL
+	/// credentials.
 	/// </summary>
 	[Test]
 	public async ValueTask GodOnlyOptions_AreHiddenFromEveryoneButGod()
 	{
 		var wizard = await Wizard();
 
-		var direct = await As(wizard, "@config sql_password");
+		var direct = await As(wizard, "@config sql_username");
 		var category = await As(wizard, "@config net");
 
-		await Assert.That(direct.Any(m => m.Contains("sql_password", StringComparison.OrdinalIgnoreCase) && m.Contains(':'))).IsFalse();
-		await Assert.That(category.Any(m => m.Contains("sql_password", StringComparison.OrdinalIgnoreCase))).IsFalse();
+		await Assert.That(direct.Any(m => m.Contains("sql_username", StringComparison.OrdinalIgnoreCase) && m.Contains(':'))).IsFalse();
+		await Assert.That(category.Any(m => m.Contains("sql_username", StringComparison.OrdinalIgnoreCase))).IsFalse();
 		await Assert.That(category.Any(m => m.Contains("mud_name", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
 }

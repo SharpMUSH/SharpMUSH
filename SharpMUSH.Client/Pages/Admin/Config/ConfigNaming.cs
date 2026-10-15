@@ -32,6 +32,7 @@ public static partial class ConfigNaming
 		"sitelock" or "sitelockrules" => "SitelockRules",
 		"mssp" => "Mssp",
 		"asciitranslations" => "AsciiTranslations",
+		"secrets" => "Secrets",
 		"dump" => "Dump",
 		"file" or "files" => "File",
 		"textfile" or "textfiles" => "TextFile",

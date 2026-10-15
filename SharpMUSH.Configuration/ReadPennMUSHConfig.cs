@@ -119,7 +119,8 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), d.Compatibility.TinyMath),
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), d.Compatibility.SilentPEmit),
 				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), d.Compatibility.ParenGroups),
-				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters)
+				Boolean(Get(nameof(CompatibilityOptions.HttpQRegisters)), d.Compatibility.HttpQRegisters),
+				Boolean(Get(nameof(CompatibilityOptions.InnermostTokens)), d.Compatibility.InnermostTokens)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
@@ -275,7 +276,6 @@ public static partial class ReadPennMushConfig
 				String(Get(nameof(NetOptions.SqlHost)), d.Net.SqlHost),
 				String(Get(nameof(NetOptions.SqlDatabase)), d.Net.SqlDatabase),
 				String(Get(nameof(NetOptions.SqlUsername)), d.Net.SqlUsername),
-				String(Get(nameof(NetOptions.SqlPassword)), d.Net.SqlPassword),
 				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), d.Net.JsonUnsafeUnescape),
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), d.Net.SslRequireClientCert)
 			),
@@ -341,7 +341,20 @@ public static partial class ReadPennMushConfig
 
 		var named = configDictionary.Where(entry => entry.Value.Length > 0).Select(entry => entry.Key)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		return new PennMushConfigImport(work, skipped, named);
+		// A secret directive takes its last line, as an option does. An empty one, as in PennMUSH's shipped
+		// mush.cnf, means no password: there is nothing to store.
+		var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var (line, key) in text
+							 .Select(line => (Line: line, Match: splitter.Match(line.Trim())))
+							 .Where(entry => entry.Match.Success)
+							 .Select(entry => (entry.Line, Key: entry.Match.Groups["Key"].Value))
+							 .Where(entry => PennMushConfigImport.SecretDirectives.ContainsKey(entry.Key)))
+		{
+			secrets[PennMushConfigImport.SecretDirectives[key]] = DirectiveValue(line);
+		}
+
+		return new PennMushConfigImport(work, skipped, named,
+			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal));
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
 	}

@@ -107,6 +107,59 @@ public class ListFunctionUnitTests
 		await Check("iter(a b,ulambda(lit(#lambda/##)))", "a b");
 	}
 
+	/// <summary>
+	/// With <c>innermost_tokens</c> on, ##, #@ and #$ read the innermost loop or switch that is running, wherever
+	/// they are written, as TinyMUX does; their value is still inserted as text. Off, the same code reads the
+	/// outermost one, as PennMUSH does.
+	/// </summary>
+	[Test]
+	[Arguments("iter(a b,iter(x y,#@:##))", "1:a 1:a 2:b 2:b", "1:x 2:y 1:x 2:y")]
+	[Arguments("iter(a b,##[iter(x,##)])", "aa bb", "ax bx")]
+	[Arguments("iter(a b,iter(##,##))", "a b", "a b")]
+	[Arguments("iter(lit([add(1,1)]),iter(lit(%#),##))", "[add(1,1)]", "%#")]
+	[Arguments("iter(a b,lit(##))", "## ##", "## ##")]
+	[Arguments("##:#@ #$", "##:#@ #$", "##:#@ #$")]
+	[Arguments("switch(a,*,switch(b,*,#$))", "a", "b")]
+	[Arguments("switch(b,*,switch(b,#$,x,y))", "x", "x")]
+	[Arguments("switch(a,*,case(b,b,#$))", "a", "b")]
+	[Arguments("switch(a,*,if(1,#$))", "a", "1")]
+	[Arguments("if(abc,case(d,d,#$))", "abc", "d")]
+	[Arguments("iter(x y,switch(##,*,#$))", "x y", "x y")]
+	[Arguments("switch(a,*,iter(x y,#$##))", "ax ay", "ax ay")]
+	public async Task IterationTokensInnermost(string function, string outermost, string innermost)
+	{
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain(function))).ToString()).IsEqualTo(outermost);
+
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { InnermostTokens = true }
+		});
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain(function))).ToString()).IsEqualTo(innermost);
+	}
+
+	/// <summary>
+	/// With <c>innermost_tokens</c> on, the tokens reach into the code of an attribute the loop or switch calls,
+	/// as TinyMUX looks them up when they are evaluated.
+	/// </summary>
+	[Test]
+	public async Task IterationTokensInnermostReachCalledAttributes()
+	{
+		var objNum = await CreateObjectWithAttribute("innermost_tokens_obj", "SHOW", "##:#@");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&SUBJECT #{objNum}=#$"));
+
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { InnermostTokens = true }
+		});
+
+		async Task Check(string fn, string exp) =>
+			await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain(fn))).ToString()).IsEqualTo(exp);
+
+		await Check($"iter(a b,u(#{objNum}/SHOW))", "a:1 b:2");
+		await Check($"switch(a,*,u(#{objNum}/SUBJECT))", "a");
+		await Check($"u(#{objNum}/SHOW)", "##:#@");
+	}
+
 	[Test]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak()],|,-)", "2")]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2-3-4")]

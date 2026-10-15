@@ -804,7 +804,7 @@ The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Bool
 
 SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all (the listening addresses and ports belong to the connection server's own configuration), so setting them has no effect.
 
-Only God can see the SQL credentials (sql_username, sql_password, sql_database).
+Only God can see the SQL credentials (sql_username, sql_database). The SQL password is not a configuration option: it is the `sql.password` secret, which nobody can see. See [@secret].
 
 For information about parameters, see [@config parameters]
 # @conformat
@@ -1420,25 +1420,63 @@ The same, reading the exits by name:
 - [@descformat]
 :::
 # @http
-`@http <obj>/<attr>=<URL>`<br>
-`@http/delete <obj>/<att>=<URL>[,<data>]`<br>
-`@http/post <obj>/<att>=<URL>[,<data>]`<br>
-`@http/put <obj>/<att>=<URL>[,<data>]`
+`@http <obj>/<attr>=<URL>[,<headers>]`<br>
+`@http/<verb> <obj>/<attr>=<URL>[,<data>[,<headers>]]`
 
-Attempts to retrieve URL with a HTTP GET request, and upon doing so, queues the action list in `<obj>/<attr>`. The body of the reply from the remote web server is passed as %0, with the HTTP status in %`<status>` and the Content-Type header in %`<content-type>`. These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>` and %q`<content-type>`, as PennMUSH does. Any commas in the URL need to be escaped.
+Sends an HTTP request to `<URL>` and, when the reply arrives, queues the action list in `<obj>/<attr>`. Without a switch the request is a GET. The other verbs are switches: /post, /put, /delete, /patch, /head, /options, /trace and /connect. Any commas in the URL or the data need to be escaped.
 
-The POST switch makes it do a HTTP POST request instead of the default GET, (And PUT and DELETE do the obvious). With these, the 'content-type' q-register controls the type of data; it defaults to 'application/x-www-form-urlencoded'. If it contains the string "charset=utf-8", `<data>` will be converted to UTF-8, otherwise it is assumed to be Latin-1.
+The action list receives:
+- %0: the body of the reply.
+- %`<status>`: the HTTP status, such as 200.
+- %`<content-type>`: the reply's Content-Type header.
+- %`<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
 
-If the q-register 'userpass' is set when running @http, it should hold a string of the form user:password and will be used if needed for HTTP authentication.
+These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>`, %q`<content-type>` and %q`<http-overflow>`, as PennMUSH does.
+
+`<data>` is the body of the request. It is sent as `application/x-www-form-urlencoded` unless a Content-Type header says otherwise, encoded in the charset that type names, or UTF-8 when it names none. A GET has no body, so its headers follow the URL.
+
+`<headers>` is a list of `Name:value` lines, one per line (use %r between them). They are sent as written, except:
+- A Content-Type line sets the type of `<data>`; on a request with no data it is not sent.
+- A User-Agent line replaces SharpMUSH's own.
+- A Content-Length line, a line with no colon, or a name with a space in it refuses the whole command with "Header value has a bad key:value set. Aborting."
+
+To log in to the remote site, send an Authorization header. For HTTP Basic, that is `Authorization:Basic [encode64(<user>:<password>)]`.
+
+With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: %q`<content-type>` sets the type of `<data>` when no `<headers>` are given, and %q`<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
 
 Restricted to objects set Wizard or with the Can_HTTP @Power.
 
-Note: The response body has the same 8k limit as other MUSH strings. Anything longer is truncated; this command is best used with APIs that provide short responses.
+### Examples
+postman-echo.com answers with the request it received, so these show what @http sent.
+
+Sending JSON with a header of your own:
+```sharp
+> &SHOW me=think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]
+> @http/post me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),Content-Type:application/json%rGame:MyMUSH
+```
+Output: `200 baz MyMUSH`
+
+Logging in with HTTP Basic:
+```sharp
+> &SHOW me=think %<status> %0
+> @http me/SHOW=https://postman-echo.com/basic-auth,Authorization:Basic [encode64(postman:password)]
+```
+Output: `200 {"authenticated":true}`
+
+Checking whether the reply was cut short:
+```sharp
+> &SHOW me=think [if(%<http-overflow>,Reply too long.,Reply complete.)]
+> @http me/SHOW=https://postman-echo.com/get
+```
+Output: `Reply complete.`
 
 
 ::: seealso
 - [URLENCODE()]
 - [URLDECODE()]
+- [ENCODE64()]
+- [JSON()]
+- [named arguments]
 :::
 # @firstexit
 `@firstexit <exit1>[, ... , <exitN>]`
@@ -2387,6 +2425,50 @@ Nesting is limited by the `max_depth` configuration option, as it is for [@@] an
 - [@@]
 - [restrictedexpr]
 :::
+# @secret
+`@secret[/list]`<br>
+`@secret <name>=<value>`<br>
+`@secret/clear <name>`
+
+Manages the secrets the server keeps for itself: passwords, tokens and signing keys, such as the SQL password (`sql.password`). A stored value is encrypted with the server's key ring, which is kept outside the world, so a copy of the world alone opens no secret. Nothing shows a value again: not this command, not the web portal, and no function. Softcode cannot read a secret.
+
+With no argument, or `/list`, @secret lists every secret the server or a plugin reads, and every stored one: where its value comes from, when (UTC) and by whom it was stored, and what it is for. A secret whose stored value this server cannot decrypt shows as `unreadable: set it again`.
+
+`@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`.
+
+`/clear` removes the stored value.
+
+An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
+
+Importing a PennMUSH `mush.cnf` in the web portal stores its `sql_password` as the `sql.password` secret, never as a configuration option.
+
+A typed value passes through your client, which may keep it in a log. Use the web portal's Secrets page, or an override, where that matters.
+
+Using @secret needs the `config.admin` permission. A plugin may name another permission that manages its own secret.
+
+Output: nothing; it tells you what it did.
+
+### Examples
+```
+> @secret sql.password=hunter2
+sql.password is set. Its value is never shown again.
+> @secret
++-------------------------------< Secrets (1) >------------------------------+
+| Secret        Value       Stored                   For                     |
+| -------------------------------------------------------------------------- |
+| sql.password  stored      2026-10-14 23:38 by      The password of         |
+|                           God(#1)                  sql_username on the SQL |
+|                                                    server.                 |
++----------------------------------------------------------------------------+
+> @secret/clear sql.password
+sql.password is cleared.
+```
+
+
+::: seealso
+- [@config]
+- [@sql]
+:::
 # @set
 `@set <object>=[!]<flag> [[!]<flag> ...]`<br>
 `@<pre-defined attribute> <object>=<value>`<br>
@@ -2731,6 +2813,8 @@ Test
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
 
+The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
+
 For each row returned by the query, the action list in `<obj>/<attr>` is queued, with row number passed as %0 and the columns passed as %1-%9 and v(10) to v(29). Row numbers start at 1. The MUSH will also set named arguments, with arg names matching the SQL field names. These are accessible as `r(<name>, arg)`.
 
 The `/notify` switch queues `@notify me` after the admitted row callbacks. This runs as the object executing `@mapsql`. One queue slot is reserved for completion before the query starts; if that reservation fails, the query does not run. Completion still runs for an empty result or partial row admission, but a query error releases its reservation without notifying.
@@ -2770,6 +2854,8 @@ Prepared statement example:
 `@sql[/prepare] <query>[, <param1>[, <param2>[, ...]]]`
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
+
+The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
 
 Output: the query's result, as it shows it.
 

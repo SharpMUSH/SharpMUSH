@@ -28,8 +28,11 @@ public class ConfigurationControllerTests
 
 		var config = StoreConfigOptionWriter.Create(store, options, reload);
 		return (new ConfigurationController(options, config,
-			new MushCnfImportService(config, store, NullLogger<MushCnfImportService>.Instance),
-			Substitute.For<IAuditLog>(), NullLogger<ConfigurationController>.Instance), store, reload);
+			new MushCnfImportService(config, store, Substitute.For<ISecretStore>(), NullLogger<MushCnfImportService>.Instance),
+			Substitute.For<IAuditLog>(), NullLogger<ConfigurationController>.Instance)
+		{
+			ControllerContext = new() { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() }
+		}, store, reload);
 	}
 
 	[Test]

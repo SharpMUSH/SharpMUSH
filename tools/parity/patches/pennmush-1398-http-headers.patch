@@ -1,0 +1,546 @@
+PennMUSH pull request #1398 (https://github.com/pennmush/pennmush/pull/1398, not merged upstream):
+@http takes a <headers> argument and sets %q<http-overflow>. Applied to the reference PennMUSH by
+.github/workflows/parity.yml so that 75-http compares SharpMUSH with what PennMUSH does with it.
+
+Taken from the pull request's head (926ab14) against its base (152acc5), less the files `make`
+regenerates and the help text, with one fix: the pull request sets http-overflow with
+pe_regs_set_int and a string, which stores the pointer as a number; this uses pe_regs_set.
+
+diff --git a/hdrs/http.h b/hdrs/http.h
+new file mode 100644
+index 0000000..440e000
+--- /dev/null
++++ b/hdrs/http.h
+@@ -0,0 +1,52 @@
++/**
++ * \file http.h
++ *
++ * \brief Miscellaneous functions for http functionality.
++ */
++
++#ifndef _HTTP_H_
++#define _HTTP_H_
++#ifdef HAVE_LIBCURL
++
++#include "copyrite.h"
++#include "mushsql.h"
++#include "mushtype.h"
++#include "mypcre.h"
++#include <curl/curl.h>
++
++/** Supported http types */
++enum http_verb {
++  HTTP_GET = 0,
++  HTTP_POST = 1,
++  HTTP_DELETE = 2,
++  HTTP_PUT = 3,
++  HTTP_PATCH = 4,
++  HTTP_HEAD = 5,
++  HTTP_OPTIONS = 6,
++  HTTP_TRACE = 7,
++  HTTP_CONNECT = 8
++};
++
++/* Data for translating http_verb to a string that CURL can use */
++static const char* http_verb_name[9] = {"GET","POST","DELETE","PUT","PATCH","HEAD","OPTIONS","TRACE","CONNECT"};
++
++/* Data for successfull @fetch commands */
++struct urlreq {
++  dbref thing;
++  dbref enactor;
++  int queue_type;
++  int too_big;
++  PE_REGS *pe_regs;
++  char *attrname;
++  sqlite3_str *body;
++  void *header_slist;
++};
++
++void free_urlreq(struct urlreq *req);
++int req_set_cloexec(void *clientp __attribute__((__unused__)), curl_socket_t fd,
++                curlsocktype purpose __attribute__((__unused__)));
++size_t req_write_callback(void *contents, size_t size, size_t nmemb, void *userp);
++enum http_verb string_to_verb(char * verb);
++
++#endif /** HAVE_LIBCURL **/
++#endif
+\ No newline at end of file
+diff --git a/hdrs/parse.h b/hdrs/parse.h
+index f1039fa..cf7fae7 100644
+--- a/hdrs/parse.h
++++ b/hdrs/parse.h
+@@ -394,18 +394,4 @@ NEW_PE_INFO *pe_info_from(NEW_PE_INFO *old_pe_info, int flags,
+ extern void start_cpu_timer(void);
+ extern void reset_cpu_timer(void);
+ 
+-#ifdef HAVE_LIBCURL
+-/* Data for successfull @fetch commands */
+-struct urlreq {
+-  dbref thing;
+-  dbref enactor;
+-  int queue_type;
+-  int too_big;
+-  PE_REGS *pe_regs;
+-  char *attrname;
+-  sqlite3_str *body;
+-  void *header_slist;
+-};
+-#endif
+-
+-#endif /* !_PARSE_H_ */
++#endif /* !_PARSE_H_ */
+\ No newline at end of file
+diff --git a/hdrs/sort.h b/hdrs/sort.h
+index 9eb53f4..4081a94 100644
+--- a/hdrs/sort.h
++++ b/hdrs/sort.h
+@@ -73,6 +73,8 @@ int slist_comp(s_rec *s1, s_rec *s2, ListTypeInfo *lti);
+ 
+ /** General-use sorting routines, good for most purposes. */
+ int gencomp(dbref player, char *a, char *b, SortType sort_type);
++int comp_gencomp(dbref executor, char *left, char *right,
++                        const char *type);
+ void do_gensort(dbref player, char *keys[], char *strs[], int n,
+                 SortType sort_type);
+ 
+diff --git a/src/Makefile.in b/src/Makefile.in
+index 844a093..45e8be6 100644
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -23,7 +23,7 @@ C_FILES=access.c atr_tab.c attrib.c boolexp.c bsd.c bufferq.c		\
+ 	extchat.c extmail.c filecopy.c flaglocal.c flags.c funcrypt.c	\
+ 	function.c fundb.c funjson.c funlist.c funlocal.c funmath.c	\
+ 	funmisc.c funstr.c funtime.c funufun.c game.c hash_function.c	\
+-	help.c htab.c intmap.c local.c lock.c log.c look.c malias.c	\
++	help.c htab.c http.c intmap.c local.c lock.c log.c look.c malias.c	\
+ 	map_file.c markup.c match.c memcheck.c move.c mycrypt.c		\
+ 	mymalloc.c mysocket.c myrlimit.c myssl.c notify.c parse.c	\
+ 	pcg_basic.c player.c plyrlist.c predicat.c privtab.c		\
+@@ -41,7 +41,7 @@ O_FILES=access.o atr_tab.o attrib.o boolexp.o bsd.o bufferq.o		\
+ 	extchat.o extmail.o filecopy.o flaglocal.o flags.o funcrypt.o	\
+ 	function.o fundb.o funjson.o funlist.o funlocal.o funmath.o	\
+ 	funmisc.o funstr.o funtime.o funufun.o game.o hash_function.o	\
+-	help.o htab.o intmap.o local.o lock.o log.o look.o malias.o	\
++	help.o htab.o http.o intmap.o local.o lock.o log.o look.o malias.o	\
+ 	map_file.o markup.o match.o memcheck.o move.o mycrypt.o		\
+ 	mymalloc.o mysocket.o myrlimit.o myssl.o notify.o parse.o	\
+ 	pcg_basic.o player.o plyrlist.o predicat.o privtab.o		\
+diff --git a/src/SWITCHES b/src/SWITCHES
+index c226e34..a748646 100644
+--- a/src/SWITCHES
++++ b/src/SWITCHES
+@@ -58,6 +58,7 @@ FWD
+ GAG
+ GENERATE
+ GLOBALS
++HEAD
+ HEADER
+ HERE
+ HIDE
+@@ -107,12 +108,14 @@ OEMIT
+ OFF
+ ON
+ OPAQUE
++OPTIONS
+ OUTSIDE
+ OVERRIDE
+ PAGING
+ PANIC
+ PARANOID
+ PARENT
++PATCH
+ PLAYER
+ PLAYERS
+ PORT
+diff --git a/src/bsd.c b/src/bsd.c
+index 8d2836d..41f12ce 100644
+--- a/src/bsd.c
++++ b/src/bsd.c
+@@ -73,9 +73,6 @@
+ #ifdef HAVE_POLL_H
+ #include <poll.h>
+ #endif
+-#ifdef HAVE_LIBCURL
+-#include <curl/curl.h>
+-#endif
+ #include <openssl/rand.h>
+ 
+ #include "access.h"
+@@ -92,6 +89,7 @@
+ #include "game.h"
+ #include "help.h"
+ #include "htab.h"
++#include "http.h"
+ #include "intmap.h"
+ #include "lock.h"
+ #include "log.h"
+@@ -1125,19 +1123,6 @@ exit_report(const char *prog, pid_t pid, WAIT_TYPE code)
+ int ncurl_queries = 0;
+ CURLM *curl_handle = NULL;
+ 
+-static void
+-free_urlreq(struct urlreq *req)
+-{
+-  pe_regs_free(req->pe_regs);
+-  if (req->body) {
+-    sqlite3_str_reset(req->body);
+-    sqlite3_str_finish(req->body);
+-  }
+-  mush_free(req->attrname, "urlreq.attrname");
+-  curl_slist_free_all(req->header_slist);
+-  mush_free(req, "urlreq");
+-}
+-
+ static void
+ handle_curl_msg(CURLMsg *msg)
+ {
+@@ -1204,6 +1189,8 @@ handle_curl_msg(CURLMsg *msg)
+       if (resp->too_big) {
+         notify(resp->thing, "Too much HTTP data received; excess truncated.");
+       }
++      pe_regs_set(resp->pe_regs, PE_REGS_Q, "http-overflow", resp->too_big ? "1" : "0");
++      
+       queue_attribute_base_priv(resp->thing, resp->attrname, resp->enactor, 0,
+                                 resp->pe_regs, resp->queue_type, resp->thing,
+                                 NULL, NULL);
+diff --git a/src/cmds.c b/src/cmds.c
+index f5ffab2..fc30f42 100644
+--- a/src/cmds.c
++++ b/src/cmds.c
+@@ -26,7 +26,7 @@
+ #endif
+ 
+ #ifdef HAVE_LIBCURL
+-#include <curl/curl.h>
++#include "http.h"
+ #endif
+ 
+ #include "access.h"
+@@ -55,6 +55,7 @@
+ #include "version.h"
+ #include "mushsql.h"
+ #include "charconv.h"
++#include "sort.h"
+ 
+ /* External Stuff */
+ void do_poor(dbref player, char *arg1);
+@@ -1823,32 +1824,6 @@ COMMAND(cmd_who)
+     do_who_mortal(executor, arg_left);
+ }
+ 
+-#ifdef HAVE_LIBCURL
+-static size_t
+-req_write_callback(void *contents, size_t size, size_t nmemb, void *userp)
+-{
+-  struct urlreq *req = userp;
+-  size_t realsize = size * nmemb;
+-  sqlite3_str_append(req->body, contents, realsize);
+-  if (sqlite3_str_length(req->body) >= BUFFER_LEN) {
+-    /* Raise an error and abort request. */
+-    req->too_big = 1;
+-    return 0;
+-  } else {
+-    return realsize;
+-  }
+-}
+-
+-static int
+-req_set_cloexec(void *clientp __attribute__((__unused__)), curl_socket_t fd,
+-                curlsocktype purpose __attribute__((__unused__)))
+-{
+-  set_close_exec(fd);
+-  return CURL_SOCKOPT_OK;
+-}
+-
+-#endif
+-
+ COMMAND(cmd_fetch)
+ {
+   /* Move this to a more appropriate file? */
+@@ -1859,13 +1834,15 @@ COMMAND(cmd_fetch)
+   CURL *handle;
+   struct curl_slist *headers = NULL;
+   dbref thing;
+-  char *s;
++  int switch_cnt = 0, headerslot = 0, numargs, nptrs;
++  char *s, *cp, *header_key, *header_value;
++  char **ptrs;
+   const char *userpass;
++  const char *contenttype = NULL;
+   char tbuf[BUFFER_LEN];
++  char cur_header[BUFFER_LEN];
+   int queue_type = QUEUE_DEFAULT | (queue_entry->queue_type & QUEUE_EVENT);
+-  bool post = false;
+-  bool del = false;
+-  bool put = false;
++  enum http_verb verb = HTTP_GET;
+ 
+   if (!Wizard(executor) && !has_power_by_name(executor, "Can_HTTP", NOTYPE)) {
+     notify(executor, T("Permission denied."));
+@@ -1877,20 +1854,45 @@ COMMAND(cmd_fetch)
+     return;
+   }
+ 
++  for (numargs = 1; args_right[numargs] && numargs < (MAX_ARG);
++       numargs++)
++    ;
++
+   if (SW_ISSET(sw, SWITCH_POST)) {
+-    post = true;
++    verb = HTTP_POST;
++    switch_cnt++;
+   }
+-
+   if (SW_ISSET(sw, SWITCH_PUT)) {
+-    put = true;
++    verb = HTTP_PUT;
++    switch_cnt++;
+   }
+-
+   if (SW_ISSET(sw, SWITCH_DELETE)) {
+-    del = true;
++    verb = HTTP_DELETE;
++    switch_cnt++;
++  }
++  if (SW_ISSET(sw, SWITCH_PATCH)) {
++    verb = HTTP_PATCH;
++    switch_cnt++;
++  }
++  if (SW_ISSET(sw, SWITCH_HEAD)) {
++    verb = HTTP_HEAD;
++    switch_cnt++;
++  }
++  if (SW_ISSET(sw, SWITCH_OPTIONS)) {
++    verb = HTTP_OPTIONS;
++    switch_cnt++;
++  }
++  if (SW_ISSET(sw, SWITCH_TRACE)) {
++    verb = HTTP_TRACE;
++    switch_cnt++;
++  }
++  if (SW_ISSET(sw, SWITCH_CONNECT)) {
++    verb = HTTP_CONNECT;
++    switch_cnt++;
+   }
+ 
+-  if ((post && put) || (post && del) || (put && del)) {
+-    notify(executor, "You can't make multiple requests at the same time!");
++  if (switch_cnt > 1) {
++    notify(executor, T("You can't indicate multiple http verbs at the same time!"));
+     return;
+   }
+ 
+@@ -1941,40 +1943,72 @@ COMMAND(cmd_fetch)
+   curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1);
+   curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 5);
+ 
++
++  if(numargs > 2 && verb == HTTP_GET) {
++    headerslot = 2;
++  }
++  else if( numargs > 3 && verb != HTTP_GET) {
++    headerslot = 3;
++  }
++
+   userpass = pe_regs_get(req->pe_regs, PE_REGS_Q, "userpass");
+   if (userpass) {
+     curl_easy_setopt(handle, CURLOPT_USERPWD, userpass);
+     curl_easy_setopt(handle, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+   }
++  
++  if(headerslot)
++  {
++
++    cp = remove_markup(args_right[headerslot], NULL);
++    ptrs = mush_calloc(MAX_SORTSIZE, sizeof(char *), "ptrarray");
++    nptrs = list2arr_ansi(ptrs, MAX_SORTSIZE, cp, '\n', 1);
++    
++    for(int i = 0; i < nptrs; i++) {
++      char* cur_line = ptrs[i];
++      header_key = split_token(&cur_line,':');
++      header_value = cur_line;
++
++      if(header_key == NULL || header_value == NULL) {
++        notify(executor, T("Header value has a bad key:value set. Aborting."));
++        return;
++      }
++
++      if(comp_gencomp(executor, header_key, "Content-Type", INSENS_ALPHANUM_LIST) == 0) {
++        contenttype = header_value;
++        continue;
++      }
++
++      snprintf(cur_header, sizeof cur_header, "%s: %s", header_key, header_value);
++      headers = curl_slist_append(headers, cur_header);
++    }
++
++    mush_free(ptrs, "ptrarray");
++  }
+ 
+-  if (post || put || del) {
++  if (verb != HTTP_GET) {
+     bool postdata;
+-    const char *contenttype;
+ 
+-    if (post) {
++    if (verb == HTTP_POST) {
+       curl_easy_setopt(handle, CURLOPT_POST, 1);
+-    } else if (put) {
+-      curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "PUT");
+     } else {
+-      curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "DELETE");
++      curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, http_verb_name[verb]);
+     }
+ 
+     postdata = args_right[2] && *args_right[2];
+ 
+-    contenttype = pe_regs_get(req->pe_regs, PE_REGS_Q, "content-type");
++    contenttype = headerslot ? contenttype : pe_regs_get(req->pe_regs, PE_REGS_Q, "content-type");
+     if (contenttype) {
+       char ct_header[BUFFER_LEN];
+       snprintf(ct_header, sizeof ct_header, "Content-Type: %s", contenttype);
+       headers = curl_slist_append(headers, ct_header);
+     }
+     if (contenttype && postdata &&
+-        (strstr(contenttype, "charset=utf-8") ||
+-         strstr(contenttype, "charset=UTF-8"))) {
++        (strcasecmp(contenttype, "charset=utf-8") == 0)) {
+       int ulen;
+-      char *utf8 =
+-        latin1_to_utf8(args_right[2], strlen(args_right[2]), &ulen, 0);
++      char *utf8 = latin1_to_utf8(args_right[2], strlen(args_right[2]), &ulen, "string.httpcmd");
+       curl_easy_setopt(handle, CURLOPT_COPYPOSTFIELDS, utf8);
+-      mush_free(utf8, "string");
++      mush_free(utf8, "string.httpcmd");
+     } else if (postdata) {
+       curl_easy_setopt(handle, CURLOPT_COPYPOSTFIELDS, args_right[2]);
+     }
+@@ -1982,8 +2016,7 @@ COMMAND(cmd_fetch)
+ 
+   curl_easy_setopt(handle, CURLOPT_PRIVATE, req);
+ 
+-  headers =
+-    curl_slist_append(headers, "Accept-Charset: iso-8859-1, utf-8, us-ascii");
++  headers = curl_slist_append(headers, "Accept-Charset: iso-8859-1, utf-8, us-ascii");
+   req->header_slist = headers;
+   curl_easy_setopt(handle, CURLOPT_HTTPHEADER, headers);
+ 
+diff --git a/src/command.c b/src/command.c
+index 006202a..d301347 100644
+--- a/src/command.c
++++ b/src/command.c
+@@ -179,7 +179,7 @@ COMLIST commands[] = {
+    "LIST AFTER BEFORE EXTEND IGSWITCH IGNORE OVERRIDE INPLACE INLINE "
+    "LOCALIZE CLEARREGS NOBREAK",
+    cmd_hook, CMD_T_ANY | CMD_T_EQSPLIT | CMD_T_RS_ARGS, "WIZARD", "hook"},
+-  {"@HTTP", "DELETE POST PUT", cmd_fetch,
++  {"@HTTP", "DELETE POST PUT PATCH HEAD OPTIONS TRACE CONNECT", cmd_fetch,
+    CMD_T_ANY | CMD_T_EQSPLIT | CMD_T_RS_ARGS | CMD_T_NOGAGGED | CMD_T_NOGUEST,
+    0, 0},
+   {"@INCLUDE", "LOCALIZE CLEARREGS NOBREAK", cmd_include,
+diff --git a/src/funstr.c b/src/funstr.c
+index 376839e..3bf1dec 100644
+--- a/src/funstr.c
++++ b/src/funstr.c
+@@ -51,8 +51,6 @@ static int align_one_line(char *buff, char **bp, int ncols, int cols[MAX_COLS],
+                           ansi_string *as[MAX_COLS], ansi_data adata[MAX_COLS],
+                           int linenum, char *fieldsep, int fslen, char *linesep,
+                           int lslen, char filler);
+-static int comp_gencomp(dbref executor, char *left, char *right,
+-                        const char *type);
+ void init_pronouns(void);
+ 
+ /** Return an indicator of a player's gender.
+@@ -437,16 +435,6 @@ FUNCTION(fun_str_rep_or_ins)
+   free_ansi_string(src);
+ }
+ 
+-extern int sort_order; /* from sort.c */
+-
+-static int
+-comp_gencomp(dbref executor, char *left, char *right, const char *type)
+-{
+-  int c;
+-  c = gencomp(executor, left, right, type);
+-  return (c > 0 ? 1 : (c < 0 ? -1 : 0)) * sort_order;
+-}
+-
+ /* ARGSUSED */
+ FUNCTION(fun_comp)
+ {
+diff --git a/src/http.c b/src/http.c
+new file mode 100644
+index 0000000..10a71b5
+--- /dev/null
++++ b/src/http.c
+@@ -0,0 +1,50 @@
++/**
++ * \file http.c
++ *
++ * \brief Miscellaneous functions for http functionality.
++ *
++ *
++ */
++
++#ifdef HAVE_LIBCURL
++#include "http.h"
++#include "mymalloc.h"
++#include "mysocket.h"
++#include "parse.h"
++
++void
++free_urlreq(struct urlreq *req)
++{
++  pe_regs_free(req->pe_regs);
++  if (req->body) {
++    sqlite3_str_reset(req->body);
++    sqlite3_str_finish(req->body);
++  }
++  mush_free(req->attrname, "urlreq.attrname");
++  curl_slist_free_all(req->header_slist);
++  mush_free(req, "urlreq");
++}
++
++size_t
++req_write_callback(void *contents, size_t size, size_t nmemb, void *userp)
++{
++  struct urlreq *req = userp;
++  size_t realsize = size * nmemb;
++  sqlite3_str_append(req->body, contents, realsize);
++  if (sqlite3_str_length(req->body) >= BUFFER_LEN) {
++    /* Raise an error but keep going. We will handle this later. */
++    req->too_big = 1;
++    return realsize;
++  } else {
++    return realsize;
++  }
++}
++
++int
++req_set_cloexec(void *clientp __attribute__((__unused__)), curl_socket_t fd,
++                curlsocktype purpose __attribute__((__unused__)))
++{
++  set_close_exec(fd);
++  return CURL_SOCKOPT_OK;
++}
++#endif /** HAVE_LIBCURL **/
+\ No newline at end of file
+diff --git a/src/sort.c b/src/sort.c
+index 9529eff..cc16a11 100644
+--- a/src/sort.c
++++ b/src/sort.c
+@@ -853,6 +853,14 @@ gencomp(dbref player, char *a, char *b, SortType sort_type)
+   return result;
+ }
+ 
++int
++comp_gencomp(dbref executor, char *left, char *right, const char *type)
++{
++  int c;
++  c = gencomp(executor, left, right, type);
++  return (c > 0 ? 1 : (c < 0 ? -1 : 0)) * sort_order;
++}
++
+ /**
+  * Given a player dbref (For use with viewing permissions for attrs, etc),
+  * list of keys, list of strings it maps to (sortkey()-style),
