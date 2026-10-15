@@ -185,15 +185,16 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 		}
 
 		await guild.DownloadUsersAsync();
-		var linked = store.List().Where(link => link.Linked).Select(link => link.UserId).ToHashSet();
 		foreach (var member in guild.Users.Where(member => !member.IsBot))
 		{
+			// Read per member, not once up front: a /link or /unlink during the pass must not be undone by it.
+			var linked = store.Get(member.Id) is { Linked: true };
 			var holds = member.Roles.Any(held => held.Id == role.Id);
-			if (linked.Contains(member.Id) && !holds)
+			if (linked && !holds)
 			{
 				await member.AddRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Linked to a game account" });
 			}
-			else if (!linked.Contains(member.Id) && holds)
+			else if (!linked && holds)
 			{
 				await member.RemoveRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Not linked to a game account" });
 			}
