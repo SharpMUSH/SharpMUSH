@@ -79,6 +79,8 @@ public static class FlagSeed
 		("TRACK_MONEY", "", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("XTERM256", "", ["XTERM","COLOR256"], [], [], ["PLAYER"]),
 		("TRUECOLOR", "", ["TRUECOLOUR","RGB","24BIT"], [], [], ["PLAYER"]),
+		// Draws each list separator (%*<...>) in reverse video, so a builder can see where a list splits.
+		("SHOW_SEPARATORS", "", null, [], [], ["PLAYER"]),
 		("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("OPEN_OK", "", null, [], [], ["ROOM"]),
 		// RhostMUSH's SIDEFX: with the sidefx_flag option on, side-effect functions work only for an

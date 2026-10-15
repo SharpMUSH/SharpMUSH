@@ -49,7 +49,7 @@ public class MStringBenchmarks
 	private static readonly MarkupText ColSep = MarkupText.Space;
 	private static readonly MarkupText RowSep = MarkupText.NewLine;
 
-	private static MarkupRegistry Registry => MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo();
+	private static MarkupRegistry Registry => MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators();
 
 	/// <summary>
 	/// Rendering and serialisation resolve their emitters through <see cref="MarkupRegistry.Default"/>,

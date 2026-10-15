@@ -12,6 +12,7 @@ using Serilog;
 using SharpMUSH.Database;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Messaging.NATS.Strategy;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
@@ -34,7 +35,7 @@ public class Program
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators();
 		}
 	}
 

@@ -26,6 +26,7 @@ Additional Flags:
 * Loud
 * No_log
 * Paranoid
+* Show_separators
 * Track_money
 * XTERM256
 * TRUECOLOR
@@ -508,6 +509,25 @@ A player set SHARED is a shared player (also called a Zone Master): anyone who p
 - [zone masters]
 - [@chown]
 - [@lock]
+:::
+
+# SHOW_SEPARATORS
+
+**Flag: SHOW_SEPARATORS (players)**
+
+A player set SHOW_SEPARATORS sees each marked list separator in what they are shown in reverse video, in a terminal and in the portal, so a marked `|` stands out from a typed one. Nobody else's output changes. See [list separators].
+
+```sharp
+> @set me=SHOW_SEPARATORS
+> think a|b%*<|>c
+```
+
+Output: `a|b|c`, with the second `|` in reverse video.
+
+
+::: seealso
+- [list separators]
+- [decompose()]
 :::
 
 # SIDEFX

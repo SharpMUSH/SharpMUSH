@@ -291,6 +291,14 @@
       <Link>BundledPackages\jobs-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.jobs-app.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen\package.yaml">
+      <Link>BundledPackages\chargen.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen-app\package.yaml">
+      <Link>BundledPackages\chargen-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen-app.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\messages\package.yaml">
       <Link>BundledPackages\messages.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>
