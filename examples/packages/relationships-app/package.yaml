@@ -1,12 +1,13 @@
-format: 1.2
+format: "1.10"
 package: relationships-app
-version: 1.0.0
+version: 1.0.1
 kind: application
 authors: [SharpMUSH]
 description: "The relationships package as a profile widget: a character's confirmed relationships drawn as a web, with the same list under it."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [portal, application, relationships, profile, web]
+category: Characters
 requires_server: ">=0.1"
 
 # An application package owns no objects. The relationships package serves the routes it points at:

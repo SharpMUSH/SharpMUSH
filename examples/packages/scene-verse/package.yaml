@@ -1,11 +1,12 @@
-format: 1.7
+format: "1.10"
 package: scene-verse
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Verse, canon and content warnings on scenes: three scene details for +scene/set, a content warning told to whoever joins, and +scene/verses."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, verse, canon, content-warning, rp]
+category: Scenes
 requires_server: ">=0.1"
 
 # The details and +scene/verses call the Scene plugin's scene functions, so it installs only while the

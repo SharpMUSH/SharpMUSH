@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: http-handler
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [http, api, router]
+category: Web portal
 requires_server: ">=0.1"
 
 # Attach mode (decision 20.3): manages the verb-router attributes on the
