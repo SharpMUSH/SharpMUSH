@@ -215,6 +215,7 @@ internal static class EngineRegistration
 		// the command library, which reaches nearly every service.
 		services.AddSingleton<IRuntimeRegistrationService, Implementation.Services.RuntimeRegistrationService>();
 		services.AddSingleton<IEventService, EventService>();
+		services.AddSingleton<IDumpService, DumpService>();
 		services.AddSingleton<IFeedService, FeedService>();
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();

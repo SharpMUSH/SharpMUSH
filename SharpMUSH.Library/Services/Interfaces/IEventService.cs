@@ -40,4 +40,11 @@ public interface IEventService
 	/// SharpMUSH events whose catalogue entry gives an argument the markup kind pass it this way.
 	/// </summary>
 	ValueTask TriggerEventAsync(string eventName, DBRef? enactor, IReadOnlyList<MString> args);
+
+	/// <summary>
+	/// Whether the configured event handler has its own attribute named <paramref name="eventName"/>, or a
+	/// package's child of it (<c>GALLERY`REPORT`JOBS</c>), so a trigger would queue something. What the server does
+	/// when nobody hears an event (PennMUSH's own reaction to a signal) asks first.
+	/// </summary>
+	ValueTask<bool> HasHandlerAsync(string eventName);
 }

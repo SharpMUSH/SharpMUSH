@@ -32,6 +32,15 @@ public class EventService(
 	private sealed record Hearer(string Attribute, MString Body);
 
 	/// <inheritdoc />
+	public async ValueTask<bool> HasHandlerAsync(string eventName)
+	{
+		var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
+		return eventHandlerDbRef is not (null or 0)
+			&& await mediator.Send(new GetObjectNodeQuery(new DBRef((int)eventHandlerDbRef.Value, null))) is AnySharpObject eventHandler
+			&& (await HearersAsync(eventHandler, eventName.ToUpperInvariant())).Count > 0;
+	}
+
+	/// <inheritdoc />
 	public ValueTask TriggerEventAsync(string eventName, DBRef? enactor, params string[] args)
 		=> TriggerEventAsync(eventName, enactor, args.Select(MarkupText.Plain).ToArray());
 

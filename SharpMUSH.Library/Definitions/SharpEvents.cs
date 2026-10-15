@@ -33,6 +33,21 @@ public static class SharpEvents
 	public const string HttpBlocked = "HTTP`BLOCKED";
 	public const string HttpCommand = "HTTP`COMMAND";
 
+	// PennMUSH's events SharpMUSH has nothing of its own to raise from, raised only while compatibility_events is on.
+	public const string Dump5Min = "DUMP`5MIN";
+	public const string Dump1Min = "DUMP`1MIN";
+	public const string DumpComplete = "DUMP`COMPLETE";
+	public const string DumpError = "DUMP`ERROR";
+	public const string DbDbck = "DB`DBCK";
+	public const string LogHuh = "LOG`HUH";
+	public const string SqlConnect = "SQL`CONNECT";
+	public const string SqlConnectFail = "SQL`CONNECTFAIL";
+	public const string SqlDisconnect = "SQL`DISCONNECT";
+	public const string SignalUsr1 = "SIGNAL`USR1";
+	public const string SignalUsr2 = "SIGNAL`USR2";
+	public const string PlayerInactivity = "PLAYER`INACTIVITY";
+	public const string HttpFail = "HTTP`FAIL";
+
 	/// <summary>
 	/// Fired (room-scoped, not actor-scoped) whenever a room's visible contents change — an
 	/// object enters/leaves, or a player connects/disconnects in it. Args: (roomobjid, cause).

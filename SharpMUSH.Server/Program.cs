@@ -226,6 +226,7 @@ public class Program
 		SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher dispatcher,
 		SitelockGuard sitelock,
 		SharpMUSH.Library.Services.Interfaces.IEventService events,
+		SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> options,
 		ILogger<Program> logger)
 	{
 		var request = context.Request;
@@ -250,8 +251,23 @@ public class Program
 			return;
 		}
 
-		using var reader = new StreamReader(request.Body);
-		var body = await reader.ReadToEndAsync(context.RequestAborted);
+		string body;
+		try
+		{
+			using var reader = new StreamReader(request.Body);
+			body = await reader.ReadToEndAsync(context.RequestAborted);
+		}
+		catch (BadHttpRequestException ex)
+		{
+			// PennMUSH spec: http`fail (descriptor, IP, reason), for a request too malformed to answer.
+			if (options.CurrentValue.Compatibility.CompatibilityEvents)
+			{
+				await events.TriggerEventAsync(SharpEvents.HttpFail, null, "", clientIp, ex.Message);
+			}
+
+			context.Response.StatusCode = ex.StatusCode;
+			return;
+		}
 
 		var headers = request.Headers
 			.SelectMany(header => header.Value.Where(value => value is not null)

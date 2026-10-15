@@ -184,6 +184,27 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	/// <summary>Forces a sync of everything committed so far, whatever the sync mode.</summary>
+	public MDBResultCode Flush()
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			var code = _env.Flush(force: true);
+			if (code == MDBResultCode.Success)
+			{
+				Interlocked.Exchange(ref _unflushed, 0);
+				Interlocked.Increment(ref _flushes);
+			}
+
+			return code;
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
 	private static EnvironmentOpenFlags FlagsFor(LightningSyncMode sync) => sync switch
 	{
 		LightningSyncMode.Full => EnvironmentOpenFlags.NoThreadLocalStorage,

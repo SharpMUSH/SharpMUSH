@@ -51,12 +51,15 @@ The handler gets each argument by position, the first as %0, and by the name sho
 These are the events a SharpMUSH game raises. To see the help for a type, type [event <type>].
 
 Event Types:
-- **db**: db\`purge, db\`wcheck
-- **log**: log\`err, log\`cmd, log\`wiz, log\`conn, log\`trace, log\`check
+- **dump**: dump\`5min, dump\`1min, dump\`complete, dump\`error
+- **db**: db\`dbck, db\`purge, db\`wcheck
+- **log**: log\`err, log\`cmd, log\`wiz, log\`conn, log\`trace, log\`check, log\`huh
 - **object**: object\`create, object\`destroy, object\`move, object\`rename, object\`flag
-- **player**: player\`create, player\`connect, player\`disconnect, player\`channels, player\`warn
+- **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
+- **signal**: signal\`usr1, signal\`usr2
+- **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn
 - **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp
-- **http**: http\`blocked, http\`command
+- **http**: http\`blocked, http\`fail, http\`command
 - **room**: room\`contents
 - **channel**: channel\`message, channel\`who
 - **page**: page\`message
@@ -65,12 +68,36 @@ Event Types:
 
 The room, channel, page, mail and backup events, player\`channels, player\`warn and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, and socket\`gmcp hands softcode what a client sends over GMCP.
 
-PennMUSH documents some events SharpMUSH never raises, because it has nothing to raise them from: the dump, sql and signal events, db\`dbck, log\`huh, player\`inactivity and http\`fail. [compatibility events] lists them with what to use instead.
+The dump, sql and signal events, db\`dbck, log\`huh, player\`inactivity and http\`fail are raised only while the compatibility_events option is on. It is off in a new game and turned on by a PennMUSH database import (see [compatibility events]).
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.
 
+# Dump Events
+# Event Dump
+Raised only while compatibility_events is on, which also turns on PennMUSH's save cycle: every dump_interval the game saves the world to disk, warning everyone five minutes and one minute before. `@dump` saves at once.
+
+- **dump\`5min** (*message*, *forking*)
+- Database save will occur in 5 minutes.
+- **dump\`1min** (*message*, *forking*)
+- Database save will occur in 1 minute.
+- **dump\`complete** (*message*, *forking*)
+- Database save has completed.
+- **dump\`error** (*message*, *forking*, *status*)
+- Database save failed! You might want this to alert any admin on.
+
+*<message>* is the message shown to everyone: dump_warning_5min, dump_warning_1min, dump_complete, or for dump\`error "GAME: ERROR! Database save failed!", which goes to connected wizards and royalty. *<forking>* is always 0: SharpMUSH saves without forking. *<status>* is "PERROR " followed by the error the save returned.
+
+The standard messages are still shown when these events are set. To turn one off, set it to an empty string with `@config/set` or in mush.cnf. %# is #1, or whoever ran `@dump`.
+
+### Example
+```sharp
+> &DUMP`ERROR #9=@cemit Admin=Save failed: %<status>
+```
+
 # Database Events
 # Event DB
+- **db\`dbck**
+- Raised only while compatibility_events is on. Triggered every dbck_interval, where PennMUSH runs its consistency check. SharpMUSH keeps its links consistent as it writes them, so there is no check to run: the event is the timer.
 - **db\`purge**
 - Triggered after the scheduled purge of destroyed objects, every purge_interval.
 - **db\`wcheck**
@@ -90,6 +117,9 @@ Events in the log tree are triggered when `@log` writes a message to a log. The 
 - **log\`check** (*message*)
 
 *<message>* is the message as logged, as plain text.
+
+- **log\`huh** (*message*)
+- Raised only while compatibility_events is on. Triggered when a player types a command the game does not understand (Huh?) somewhere they do not control. *<message>* is PennMUSH's huh log line: "HUH: Name(#dbref) in Room(#dbref) [Room's owner]: command". %# is the player.
 
 ### Example
 ```sharp
@@ -120,6 +150,36 @@ Message logged to Wizard log.
 &OBJECT`FLAG #9=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
 ```
 
+# SQL Events
+# Event SQL
+Raised only while compatibility_events is on. SharpMUSH opens a connection for each sql() query, so these report a change: whether the latest attempt to reach the SQL server worked, against the one before it.
+
+- **sql\`connect** (*platform*)
+- Triggered on successful connect to the SQL database, the first time and after a failure. *<platform>* is 'mysql', 'postgresql' or 'sqlite3'.
+
+- **sql\`connectfail** (*platform*, *error*)
+- Triggered on unsuccessful connect to the SQL database, when the attempt before it failed too or there was none. *<error>* is the database driver's message.
+
+- **sql\`disconnect** (*platform*, *error*)
+- Triggered when the SQL database cannot be reached after it could be. sql() tries again on its next query.
+
+%# is whoever ran the query.
+
+# Signal Events
+# Event Signal
+Raised only while compatibility_events is on. No arguments are passed to these events.
+
+- **signal\`usr1**: Triggered when the SharpMUSH server process receives a "kill -USR1"
+- **signal\`usr2**: Triggered when the SharpMUSH server process receives a "kill -USR2"
+
+If these attributes exist, then SharpMUSH will **NOT** perform what it usually does when it receives a signal. In effect, these override the default actions: USR1 restarts the server, as `@shutdown/reboot` does, and USR2 saves the world, as `@dump` does. Players stay connected through a restart. With compatibility_events off, a signal keeps its usual effect, which stops the server.
+
+To mimic old behaviour:
+```sharp
+&SIGNAL`USR1 #9=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
+&SIGNAL`USR2 #9=@dump
+```
+
 # Player Events
 # Event Player
 - **player\`create** (*objid*, *name*, *how*, *descriptor*, *email*)
@@ -130,6 +190,9 @@ Message logged to Wizard log.
 
 - **player\`disconnect** (*objid*, *connections*, *hidden*, *cause*, *ip*, *descriptor*, *connected*, *idle*, *received/sent/commands*)
 - Similar to `@adisconnect`, but for event system, and with more information available.
+
+- **player\`inactivity**
+- Raised only while compatibility_events is on. Triggered when idle players are disconnected. Only run if at least one player gets idlebooted (Or auto-hidden), not at every inactivity check. The check runs every minute: a player idle longer than idle_timeout is disconnected, unless they may idle (the Idle power, wizards and royalty); one who may idle and is UNFINDABLE is hidden instead, if they may hide. A web portal tab is never idlebooted. With idle_timeout 0, the default, nobody is.
 
 - **player\`channels** (*objid*, *cause*, *channel*)
 - Triggered for a connected player when their channel list may have changed. *<cause>* is one of connect, resume, join, leave, status (a change to their own channel flags, such as a gag or a title), rename or delete; *<channel>* is the channel concerned (its new name after a rename), and empty on connect and resume. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection), and is sent the list again. Not triggered for a player who is not connected: they are sent their whole list when they connect.
@@ -160,6 +223,9 @@ Message logged to Wizard log.
 # Event HTTP
 - **http\`blocked** (*descriptor*, *ip*, *method*, *path*, *reason*)
 - Triggered when an HTTP request is sitelocked !connect, by IP or path. *<reason>* is "IP sitelocked !connect" or "path sitelocked !connect". *<descriptor>* is empty: an HTTP request has no connection of its own.
+
+- **http\`fail** (*descriptor*, *ip*, *reason*)
+- Raised only while compatibility_events is on. Triggered when an HTTP request reaches the http_handler and its body cannot be read: a body larger than the server accepts, or one cut short or malformed. *<reason>* is the web server's message, and the request is answered with its status. *<descriptor>* is empty.
 
 - **http\`command** (*ip*, *method*, *path*, *status*, *content-type*, *request-length*, *response-length*)
 - Triggered after an HTTP command is executed, using the same remaining request lifetime. It is omitted if that lifetime has already expired. If the event exhausts the deadline, the HTTP response is 503; request cancellation also cancels the event.

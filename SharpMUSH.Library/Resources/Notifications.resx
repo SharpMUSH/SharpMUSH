@@ -2598,6 +2598,20 @@
   <data name="DumpDoesNothing" xml:space="preserve">
     <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
   </data>
+  <data name="DumpStarting" xml:space="preserve">
+    <value>Dumping...</value>
+  </data>
+  <data name="DumpComplete" xml:space="preserve">
+    <value>Dump complete.</value>
+  </data>
+
+  <!-- compatibility_events: the inactivity check -->
+  <data name="InactivityTimeout" xml:space="preserve">
+    <value>*** Inactivity timeout ***</value>
+  </data>
+  <data name="InactivityHidden" xml:space="preserve">
+    <value>*** Inactivity limit reached. You are now HIDDEN. ***</value>
+  </data>
 
   <!-- @backup -->
   <data name="BackupUnavailableFormat" xml:space="preserve">

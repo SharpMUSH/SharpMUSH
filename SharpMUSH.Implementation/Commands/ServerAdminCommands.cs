@@ -98,7 +98,16 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpDoesNothing), executor);
+		if (!Configuration.CurrentValue.Compatibility.CompatibilityEvents)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpDoesNothing), executor);
+			return new None();
+		}
+
+		// do_dump (src/game.c:209-215): the save, with its dump events, between "Dumping..." and "Dump complete.".
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpStarting), executor);
+		await DumpService.DumpAsync(executor.Object().DBRef);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpComplete), executor);
 		return new None();
 	}
 
