@@ -176,6 +176,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 | Titled frame | `box(<body>, <title>)` |
 | Divider / footer | `rule(<title>)` on its own line inside the box; footer = `[rule()]%r<text>` |
 | `Label: value` sheet | `fields(, <label>, <value>, …)`; `{{"cols":2}}` for two columns |
+| Sheet from computed lists | `lfields(<opts>, <labels>, <values>, <delim>)`, the labels and values as two lists; `chr(30)` as the delimiter when a value may hold anything |
 | Table, rows written out | `datatable(<opts>, <h1>\|<h2>, <c1>\|<c2>, …)` |
 | Table from computed lists | `datacolumns(<opts>, <heading>\|<cells…>, …)`, one `iter()` per column |
 | Names in columns / a list / a tree | `grid()` / `bullets()` / `tree()` + `node()` |

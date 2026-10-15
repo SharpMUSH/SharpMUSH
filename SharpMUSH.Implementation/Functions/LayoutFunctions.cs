@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Layout;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -221,6 +222,24 @@ public partial class Functions
 		var fields = new List<Field>();
 		for (var i = 1; i + 1 < args.Count; i += 2)
 			fields.Add(new Field(Arg(args, i), Body(Arg(args, i + 1))));
+		return ValueTask.FromResult(Laidout(parser, FieldsSchema, Arg(args, 0), new Fields([.. fields])));
+	}
+
+	/// <summary>
+	/// <c>lfields(&lt;options&gt;, &lt;labels&gt;, &lt;values&gt;[, &lt;delimiter&gt;])</c> — <c>fields()</c> with the
+	/// labels and the values given as two lists, as <c>lalign()</c> is <c>align()</c> with its columns in one: the
+	/// form for softcode that only knows its fields when it runs.
+	/// </summary>
+	[SharpFunction(Name = "lfields", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["options", "labels", "values", "delimiter"])]
+	public ValueTask<CallState> ListFields(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
+		var labels = Arg(args, 1).Length == 0 ? [] : MushText.SplitList(delimiter, Arg(args, 1));
+		var values = Arg(args, 2).Length == 0 && labels.Length == 0 ? [] : MushText.SplitList(delimiter, Arg(args, 2));
+		if (labels.Length != values.Length) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
+
+		Field[] fields = [.. labels.Zip(values, (label, value) => new Field(label, Body(value)))];
 		return ValueTask.FromResult(Laidout(parser, FieldsSchema, Arg(args, 0), new Fields([.. fields])));
 	}
 

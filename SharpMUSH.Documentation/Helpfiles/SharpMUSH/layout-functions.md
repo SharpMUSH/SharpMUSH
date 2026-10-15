@@ -291,8 +291,38 @@ Species:
 ```
 
 ::: seealso
+- [LFIELDS()]
 - [BOX()]
 - [FLEX()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# lfields()
+
+`lfields(<options>, <labels>, <values>[, <delimiter>])`
+
+[FIELDS()] with the labels in one list and the values in another, the way [LALIGN()] takes [ALIGN()]'s columns as a list. The first label goes with the first value, and so on. Use it when the fields are only known when the code runs, such as a sheet built from a list of attributes.
+
+*<delimiter>* splits both lists; a space by default. Labels such as `Full Name` need another one. The two lists must have as many items as each other, or it returns `#-1 NUMBER OF WORDS MUST BE EQUAL`. Two empty lists draw nothing.
+
+*<options>* are [FIELDS()]'s.
+
+### Examples
+```sharp
+> think lfields({{"width":40}},Sex Species,Male Human)
+Sex:     Male
+Species: Human
+> think lfields({{"width":40}},Sex|Species|Origin,Male|Human|Super Robot Wars AG,|)
+Sex:     Male
+Species: Human
+Origin:  Super Robot Wars AG
+> think lfields({{"width":40}},Sex Species,Male)
+#-1 NUMBER OF WORDS MUST BE EQUAL
+```
+
+::: seealso
+- [FIELDS()]
+- [LALIGN()]
 - [LAYOUT FUNCTIONS]
 :::
 
