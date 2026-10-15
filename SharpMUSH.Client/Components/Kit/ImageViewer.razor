@@ -17,7 +17,7 @@
          @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
         @* Tab cycles inside the dialog; Close takes focus when it opens (see OnAfterRenderAsync). *@
         <MudFocusTrap DefaultFocus="DefaultFocus.None">
-        <div class="kit-viewer-frame">
+        <div class="kit-viewer-frame@(Compact ? " kit-viewer--compact" : "")">
             <div class="kit-viewer-bar">
                 <span class="kit-viewer-count">@Loc["NavViewerCount", _index + 1, Items.Count]</span>
                 <span class="kit-viewer-spacer"></span>
@@ -37,7 +37,7 @@
                     <div class="kit-viewer-cover" role="group" aria-label="@Loc["NavGalleryWarningLabel", item.Warning!]">
                         <MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" />
                         <span class="kit-viewer-cover-warning">@item.Warning</span>
-                        <CapsuleButton Class="kit-viewer-reveal" OnClick="@(() => Reveal(item))">@Loc["NavGalleryShowImage"]</CapsuleButton>
+                        <CapsuleButton Class="kit-viewer-reveal" Primary="true" OnClick="@(() => Reveal(item))">@Loc["NavGalleryShowImage"]</CapsuleButton>
                     </div>
                 }
                 else if (ImageUrlPolicy.IsRenderable(item.Url))
@@ -105,6 +105,9 @@
 
     /// <summary>Anything more about the image on screen, under its caption (the gallery's edit and report forms).</summary>
     [Parameter] public RenderFragment<Item>? Details { get; set; }
+
+    /// <summary>Shows the image smaller, so what <see cref="Details"/> shows fits under it.</summary>
+    [Parameter] public bool Compact { get; set; }
 
     /// <summary>The warned images the viewer chose to see since it opened, by URL.</summary>
     private readonly HashSet<string> _revealed = new(StringComparer.Ordinal);

@@ -10,7 +10,8 @@
    or deletes it; anyone else signed in may report it, when the game takes reports (the server asks
    them to choose a character first when they have none). Every
    write answers with the gallery as the server now holds it, handed up through OnChanged. *@
-<ImageViewer Items="@ViewerItems" Open="@Open" OpenChanged="OnOpenChanged" @bind-Index="_index" Label="@Label">
+<ImageViewer Items="@ViewerItems" Open="@Open" OpenChanged="OnOpenChanged" @bind-Index="_index" Label="@Label"
+             Compact="@(_editing is not null || _reporting is not null)">
     <Actions>
         @if (CanEdit && ByKey(context.Key) is { } entry)
         {
@@ -61,7 +62,7 @@
                     <small id="gallery-warning-help">@Loc["NavGalleryWarningHelp"]</small>
                 </label>
                 <div class="gallery-form-actions">
-                    <CapsuleButton Class="gallery-details-cancel" Disabled="_busy" OnClick="@(() => _editing = null)">@Loc["Cancel"]</CapsuleButton>
+                    <button type="button" class="gallery-details-cancel" disabled="@_busy" @onclick="@(() => _editing = null)">@Loc["Cancel"]</button>
                     <button type="submit" class="gallery-details-save" disabled="@_busy">@Loc["Save"]</button>
                 </div>
             </form>
@@ -74,7 +75,7 @@
                     <textarea class="gallery-report-reason" maxlength="500" rows="3" @bind="_reason" @bind:event="oninput"></textarea>
                 </label>
                 <div class="gallery-form-actions">
-                    <CapsuleButton Class="gallery-report-cancel" Disabled="_busy" OnClick="@(() => _reporting = null)">@Loc["Cancel"]</CapsuleButton>
+                    <button type="button" class="gallery-report-cancel" disabled="@_busy" @onclick="@(() => _reporting = null)">@Loc["Cancel"]</button>
                     <button type="submit" class="gallery-report-send" disabled="@(_busy || string.IsNullOrWhiteSpace(_reason))">@Loc["NavGalleryReportSend"]</button>
                 </div>
             </form>

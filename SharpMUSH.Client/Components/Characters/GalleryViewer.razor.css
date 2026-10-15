@@ -64,3 +64,22 @@
 	opacity: 0.5;
 	cursor: default;
 }
+
+.gallery-details-cancel,
+.gallery-report-cancel {
+	padding: 6px 16px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.gallery-details-cancel:disabled,
+.gallery-report-cancel:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
