@@ -57,16 +57,22 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync(tx =>
 		{
-			var outcome = PushSubscriptionSaveOutcome.Added;
-			if (tx.TryGet(Tables.PushSubscription, key, out var bytes))
-			{
-				var previous = Codec.Deserialize<PushSubscriptionRecord>(bytes);
-				tx.Delete(Tables.PushSubscriptionByAccount, Keys.Str(previous.AccountKey), key);
-				outcome = PushSubscriptionSaveOutcome.Replaced;
-			}
-			else if (tx.Dups(Tables.PushSubscriptionByAccount, Keys.Str(accountKey)).Count() >= maxPerAccount)
+			// Only a subscription the account already holds is exempt from its limit; one moving in from another
+			// account counts like a new one.
+			var previous = tx.TryGet(Tables.PushSubscription, key, out var bytes)
+				? Codec.Deserialize<PushSubscriptionRecord>(bytes)
+				: null;
+			if (previous?.AccountKey != accountKey
+				&& tx.Dups(Tables.PushSubscriptionByAccount, Keys.Str(accountKey)).Count() >= maxPerAccount)
 			{
 				return PushSubscriptionSaveOutcome.AccountFull;
+			}
+
+			var outcome = PushSubscriptionSaveOutcome.Added;
+			if (previous is not null)
+			{
+				tx.Delete(Tables.PushSubscriptionByAccount, Keys.Str(previous.AccountKey), key);
+				outcome = PushSubscriptionSaveOutcome.Replaced;
 			}
 
 			tx.Put(Tables.PushSubscription, key, Codec.Serialize(record));

@@ -74,7 +74,8 @@ public sealed class WebPushService(
 
 	private readonly Channel<PushJob> _queue = Channel.CreateBounded<PushJob>(new BoundedChannelOptions(
 		Math.Max(1, options.Value.QueueCapacity))
-	{ FullMode = BoundedChannelFullMode.DropWrite });
+	// Wait, not a Drop mode: only then does TryWrite report a full queue, which @push outputs as limited.
+	{ FullMode = BoundedChannelFullMode.Wait });
 
 	private readonly SemaphoreSlim _keyLock = new(1, 1);
 	private readonly Lock _limitLock = new();
@@ -117,6 +118,21 @@ public sealed class WebPushService(
 			|| old.Endpoint != oldEndpoint)
 		{
 			return new Error<string>("No such subscription.");
+		}
+
+		// A subscription made with a key the server has since replaced cannot be renewed: the browser makes its
+		// replacement with the old key, which the push service would refuse every push signed with the new one. It is
+		// dropped, and Settings asks for notifications to be turned on again.
+		if (old.KeyId != PushEndpoints.KeyIdOf((await KeysAsync(cancellationToken)).PublicKey))
+		{
+			await subscriptions.RemovePushSubscriptionAsync(old.Id, old.AccountId, cancellationToken);
+			return new Error<string>("The game changed its key: turn notifications on again.");
+		}
+
+		// The replacement is checked before the old one goes, so a bad renewal leaves notifications on.
+		if (Validate(endpoint, p256dh, auth) is null)
+		{
+			return new Error<string>(Refusal(endpoint));
 		}
 
 		// The browser has already replaced the old subscription, so it goes first: renewing must not be refused for

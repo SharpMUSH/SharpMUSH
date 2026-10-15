@@ -92,6 +92,20 @@ public class PushSubscriptionStoreTests
 		await Assert.That((await _db.GetPushSubscriptionsAsync(_alice)).Count).IsEqualTo(2);
 	}
 
+	/// <summary>An endpoint moving in from another account counts against the limit like a new one.</summary>
+	[Test]
+	public async Task AFullAccountTakesNoEndpointFromAnotherAccount()
+	{
+		await _db.SavePushSubscriptionAsync(Subscription(_alice, "https://fcm.googleapis.com/fcm/send/a"), 1);
+		await _db.SavePushSubscriptionAsync(Subscription(_bob, "https://fcm.googleapis.com/fcm/send/b"), 1);
+
+		var moved = await _db.SavePushSubscriptionAsync(Subscription(_alice, "https://fcm.googleapis.com/fcm/send/b"), 1);
+
+		await Assert.That(moved).IsEqualTo(PushSubscriptionSaveOutcome.AccountFull);
+		await Assert.That((await _db.GetPushSubscriptionsAsync(_bob)).Count).IsEqualTo(1);
+		await Assert.That((await _db.GetPushSubscriptionsAsync(_alice)).Count).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task ResultsAreRecordedAndASubscriptionIsRemovedOnlyByItsAccount()
 	{

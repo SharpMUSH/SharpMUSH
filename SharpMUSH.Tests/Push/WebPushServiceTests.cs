@@ -42,12 +42,13 @@ public class WebPushServiceTests
 		public ValueTask<PushSubscriptionSaveOutcome> SavePushSubscriptionAsync(PushSubscription subscription, int maxPerAccount,
 			CancellationToken cancellationToken = default)
 		{
-			var replaced = Rows.Remove(subscription.Id);
-			if (!replaced && Rows.Values.Count(row => row.AccountId == subscription.AccountId) >= maxPerAccount)
+			var own = Rows.TryGetValue(subscription.Id, out var previous) && previous.AccountId == subscription.AccountId;
+			if (!own && Rows.Values.Count(row => row.AccountId == subscription.AccountId) >= maxPerAccount)
 			{
 				return ValueTask.FromResult(PushSubscriptionSaveOutcome.AccountFull);
 			}
 
+			var replaced = Rows.Remove(subscription.Id);
 			Rows[subscription.Id] = subscription;
 			return ValueTask.FromResult(replaced ? PushSubscriptionSaveOutcome.Replaced : PushSubscriptionSaveOutcome.Added);
 		}
@@ -78,8 +79,8 @@ public class WebPushServiceTests
 		}
 	}
 
-	private sealed record Rig(WebPushService Service, MemoryStore Store, Answering PushService, ECDiffieHellman Browser,
-		byte[] BrowserPublic, byte[] Auth) : IDisposable
+	private sealed record Rig(WebPushService Service, MemoryStore Store, Answering PushService, ISecretStore Secrets,
+		ECDiffieHellman Browser, byte[] BrowserPublic, byte[] Auth) : IDisposable
 	{
 		public void Dispose()
 		{
@@ -88,7 +89,7 @@ public class WebPushServiceTests
 		}
 	}
 
-	private static Rig Build(Func<HttpRequestMessage, HttpResponseMessage> answer, int pushLimit = 10)
+	private static Rig Build(Func<HttpRequestMessage, HttpResponseMessage> answer, int pushLimit = 10, int queueCapacity = 10_000)
 	{
 		var secrets = Substitute.For<ISecretStore>();
 		var stored = VapidKeys.Generate().Export();
@@ -104,16 +105,18 @@ public class WebPushServiceTests
 
 		var store = new MemoryStore();
 		var service = new WebPushService(secrets, store, clients, game,
-			Options.Create(new WebPushOptions { Subject = "mailto:admin@example.com" }), TimeProvider.System,
+			Options.Create(new WebPushOptions { Subject = "mailto:admin@example.com", QueueCapacity = queueCapacity }), TimeProvider.System,
 			NullLogger<WebPushService>.Instance);
 
 		var browser = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
-		return new Rig(service, store, pushService, browser, VapidKeys.PublicPoint(browser.ExportParameters(false)),
+		return new Rig(service, store, pushService, secrets, browser, VapidKeys.PublicPoint(browser.ExportParameters(false)),
 			RandomNumberGenerator.GetBytes(16));
 	}
 
+	private static string NewEndpoint() => $"https://fcm.googleapis.com/fcm/send/{Guid.NewGuid():N}";
+
 	private static async Task<PushSubscription> SubscribeAsync(Rig rig, string account = "node_accounts/7")
-		=> (await rig.Service.SubscribeAsync(account, $"https://fcm.googleapis.com/fcm/send/{Guid.NewGuid():N}",
+		=> (await rig.Service.SubscribeAsync(account, NewEndpoint(),
 			VapidKeys.Base64Url(rig.BrowserPublic), VapidKeys.Base64Url(rig.Auth),
 			"Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0 Safari/537.36")).Expect<PushSubscription>();
 
@@ -227,5 +230,64 @@ public class WebPushServiceTests
 		await Assert.That(topic.Length).IsEqualTo(32);
 		await Assert.That(topic.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_')).IsTrue();
 		await Assert.That(WebPushService.TopicHeader(new DBRef(43, 1), "x")).IsNotEqualTo(WebPushService.TopicHeader(Character, "x"));
+	}
+
+	/// <summary>The service is not started, so nothing drains the queue: a full one is limited, not sent.</summary>
+	[Test]
+	public async Task AFullQueueIsLimited()
+	{
+		using var rig = Build(_ => new HttpResponseMessage(HttpStatusCode.Created), queueCapacity: 1);
+		await SubscribeAsync(rig);
+		var message = new PushMessage("node_accounts/7", Character, "Page from Tobin", "", "/play", null, false);
+
+		var first = await rig.Service.SendAsync(message);
+		var second = await rig.Service.SendAsync(message);
+
+		await Assert.That(first).IsEqualTo(PushOutcome.Sent);
+		await Assert.That(second).IsEqualTo(PushOutcome.Limited);
+	}
+
+	[Test]
+	public async Task ARenewalMovesTheSubscriptionAndKeepsItsName()
+	{
+		using var rig = Build(_ => new HttpResponseMessage(HttpStatusCode.Created));
+		var old = await SubscribeAsync(rig);
+		var endpoint = NewEndpoint();
+
+		var renewed = await rig.Service.RenewAsync(old.Endpoint, endpoint, VapidKeys.Base64Url(rig.BrowserPublic),
+			VapidKeys.Base64Url(rig.Auth));
+
+		var stored = renewed.Expect<PushSubscription>();
+		await Assert.That(stored.Endpoint).IsEqualTo(endpoint);
+		await Assert.That(stored.Device).IsEqualTo(old.Device);
+		await Assert.That(rig.Store.Rows.Keys).IsEquivalentTo([stored.Id]);
+	}
+
+	[Test]
+	public async Task ABadRenewalLeavesTheOldSubscription()
+	{
+		using var rig = Build(_ => new HttpResponseMessage(HttpStatusCode.Created));
+		var old = await SubscribeAsync(rig);
+
+		var refused = await rig.Service.RenewAsync(old.Endpoint, "https://push.example.org/abc",
+			VapidKeys.Base64Url(rig.BrowserPublic), VapidKeys.Base64Url(rig.Auth));
+
+		await Assert.That(refused.Value).IsTypeOf<Error<string>>();
+		await Assert.That(rig.Store.Rows.Keys).IsEquivalentTo([old.Id]);
+	}
+
+	[Test]
+	public async Task ARenewalUnderAReplacedKeyIsDropped()
+	{
+		using var rig = Build(_ => new HttpResponseMessage(HttpStatusCode.Created));
+		var old = await SubscribeAsync(rig);
+		rig.Secrets.GetAsync(VapidKeys.SecretName, Arg.Any<CancellationToken>())
+			.Returns(new FoundResult<string>(VapidKeys.Generate().Export()));
+
+		var refused = await rig.Service.RenewAsync(old.Endpoint, NewEndpoint(), VapidKeys.Base64Url(rig.BrowserPublic),
+			VapidKeys.Base64Url(rig.Auth));
+
+		await Assert.That(refused.Value).IsTypeOf<Error<string>>();
+		await Assert.That(rig.Store.Rows).IsEmpty();
 	}
 }

@@ -41,7 +41,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private bool _wanted;
 	private CancellationTokenSource? _retry;
 	// Whether this tab is in view, as last reported by the page (PushInterop); the hub is told on every connect.
-	private bool _visible = true;
+	// Out of view until the page says otherwise, so a page that never reports cannot hold every @push back.
+	private bool _visible;
 
 	/// <summary>How long to wait before each new attempt after a start failed or the hub closed; the last delay
 	/// repeats. Settable for tests.</summary>
