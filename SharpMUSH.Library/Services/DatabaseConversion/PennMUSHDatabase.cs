@@ -46,6 +46,37 @@ public class PennMUSHDatabase
 	public PennMUSHChatDatabase Chat { get; set; } = new();
 
 	/// <summary>
+	/// The server that wrote the source, for the import's messages: PennMUSH unless a reader for another
+	/// server says otherwise.
+	/// </summary>
+	public string SourceName { get; set; } = "PennMUSH";
+
+	/// <summary>
+	/// What the reader noticed while turning the source into this model: names it renamed, values it
+	/// could not carry, choices it made. The import reports each one as a warning.
+	/// </summary>
+	public List<string> ReaderNotes { get; set; } = [];
+
+	/// <summary>
+	/// Configuration options, by name, that the source's softcode needs, which the import sets once the
+	/// world is written. A <see cref="bool"/> is set as given; a <see cref="uint"/> is a minimum, raised to
+	/// and never lowered. PennMUSH softcode writes literal parentheses unescaped and reads @http's status
+	/// from q-registers.
+	/// </summary>
+	public Dictionary<string, object> SourceOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase)
+	{
+		["paren_groups"] = true,
+		["http_qregisters"] = true
+	};
+
+	/// <summary>
+	/// Whether the source reads <c>%|</c> and <c>;|</c> as command piping and <c>%m</c> and <c>%=&lt;</c>
+	/// as the running command and an attribute or argument, as SharpMUSH does. PennMUSH does not, and the
+	/// import reports softcode that uses them.
+	/// </summary>
+	public bool SharesPipingSubstitutions { get; set; }
+
+	/// <summary>
 	/// God/Wizard player DBRef (usually #1)
 	/// </summary>
 	public int GodPlayer { get; set; } = 1;

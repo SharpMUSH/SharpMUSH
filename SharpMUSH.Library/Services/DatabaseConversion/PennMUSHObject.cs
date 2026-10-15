@@ -81,6 +81,12 @@ public class PennMUSHObject
 	public List<string> Powers { get; init; } = [];
 
 	/// <summary>
+	/// Permission scopes (<c>control.all</c>, <c>server.operate</c>) the object is granted as allow
+	/// overrides: a source privilege SharpMUSH grants as a permission rather than as a power.
+	/// </summary>
+	public List<string> Permissions { get; init; } = [];
+
+	/// <summary>
 	/// Warning flags
 	/// </summary>
 	public List<string> Warnings { get; init; } = [];
