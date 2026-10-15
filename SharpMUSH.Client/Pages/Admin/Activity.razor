@@ -1,0 +1,296 @@
+@page "/admin/activity"
+@attribute [Authorize(Policy = "players.view")]
+@using System.Globalization
+@using SharpMUSH.Library.Models
+@inject AdminActivityService ActivityService
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmActivityTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+@* Staff-only numbers counted from poses and scenes, never connection time: the game at a glance, when
+   people play, who is drifting away, how each approval month kept posing, and which rooms are used. *@
+<div class="page-stack page-stack--padded adm-activity">
+    <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmActivityTitle"]" Description="@Loc["AdmActivityBlurb"]" />
+
+    <div class="adm-activity-controls">
+        <MudSelect T="int" Value="_days" ValueChanged="OnDaysChangedAsync" Label="@Loc["AdmActivityWindow"]"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="adm-activity-select">
+            @foreach (var days in WindowChoices)
+            {
+                <MudSelectItem T="int" Value="@days">@Loc["AdmActivityLastDays", days]</MudSelectItem>
+            }
+        </MudSelect>
+        <span class="adm-activity-zone">@Loc["AdmActivityZone", _zone]</span>
+    </div>
+
+    <LoadState TValue="ActivitySummary" Value="_summary" Loading="@(_loading && _summary is null)" Error="@_error" Context="summary">
+        <AdminStats>
+            <AdminStat Key="posed" Icon="@Icons.Material.Filled.RecordVoiceOver" Label="@Loc["AdmActivityPosed"]"
+                       Value="@summary.Posed.ToString(CultureInfo.CurrentCulture)"
+                       Sub="@Loc["AdmActivityOfApproved", summary.Approved, Change(summary.Posed, summary.PosedBefore)]" />
+            <AdminStat Key="poses" Icon="@Icons.Material.Filled.Notes" Label="@Loc["AdmActivityPoses"]"
+                       Value="@summary.Poses.ToString("N0", CultureInfo.CurrentCulture)"
+                       Sub="@Change(summary.Poses, summary.PosesBefore)" />
+            @if (summary.Scenes is { } scenes)
+            {
+                <AdminStat Key="scenes" Icon="@Icons.Material.Filled.TheaterComedy" Label="@Loc["AdmActivityScenes"]"
+                           Value="@scenes.ToString(CultureInfo.CurrentCulture)" Sub="@Change(scenes, summary.ScenesBefore ?? 0)" />
+            }
+            <AdminStat Key="approvals" Icon="@Icons.Material.Filled.HowToReg" Label="@Loc["AdmActivityNewApprovals"]"
+                       Value="@summary.NewApprovals.ToString(CultureInfo.CurrentCulture)" />
+            <AdminStat Key="rooms" Icon="@Icons.Material.Filled.MeetingRoom" Label="@Loc["AdmActivityRoomsUsed"]"
+                       Value="@summary.RoomsUsed.ToString(CultureInfo.CurrentCulture)"
+                       Sub="@Loc["AdmActivityRoomsDeadSub", summary.RoomsDead]" />
+            <AdminStat Key="drifting" Icon="@Icons.Material.Filled.TrendingDown" Label="@Loc["AdmActivityDrifting"]"
+                       Value="@summary.Drifting.ToString(CultureInfo.CurrentCulture)" Warn="@(summary.Drifting > 0)" />
+            <AdminStat Key="peak" Icon="@Icons.Material.Filled.Schedule" Label="@Loc["AdmActivityPeak"]"
+                       Value="@(summary.Peak is { } peak ? $"{DayName(peak.Weekday)} {peak.Hour:00}:00" : "—")"
+                       Sub="@(summary.Peak is { } p ? Loc["AdmActivityPeakSub", p.Players.ToString("0.#", CultureInfo.CurrentCulture)].Value : null)" />
+        </AdminStats>
+    </LoadState>
+
+    <KitCard Title="@Loc["AdmActivityHoursTitle"]" Sub="@Loc["AdmActivityHoursSub"]">
+        @if (_hours is { } hours)
+        {
+            var max = hours.Players.SelectMany(row => row).DefaultIfEmpty(0).Max();
+            <div class="adm-activity-heat" role="table" aria-label="@Loc["AdmActivityHoursTitle"]">
+                <div class="adm-activity-heat-row" role="row">
+                    <span class="adm-activity-heat-day" role="columnheader"></span>
+                    @for (var hour = 0; hour < 24; hour++)
+                    {
+                        <span class="adm-activity-heat-hour" role="columnheader">@(hour % 3 == 0 ? hour.ToString("00") : null)</span>
+                    }
+                </div>
+                @foreach (var weekday in WeekOrder)
+                {
+                    <div class="adm-activity-heat-row" role="row">
+                        <span class="adm-activity-heat-day" role="rowheader">@DayName(weekday)</span>
+                        @for (var hour = 0; hour < 24; hour++)
+                        {
+                            var value = hours.Players[weekday][hour];
+                            var label = Loc["AdmActivityHeatCell", DayName(weekday), hour.ToString("00"), value.ToString("0.#", CultureInfo.CurrentCulture)].Value;
+                            <span class="adm-activity-heat-cell" role="cell" title="@label" aria-label="@label"
+                                  style="--heat: @Heat(value, max)"></span>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="adm-activity-legend">
+                <span>@Loc["AdmActivityHeatLow"]</span>
+                @foreach (var step in new[] { 0.0, 0.25, 0.5, 0.75, 1.0 })
+                {
+                    <span class="adm-activity-heat-cell" style="--heat: @Heat(step, 1)"></span>
+                }
+                <span>@Loc["AdmActivityHeatHigh", max.ToString("0.#", CultureInfo.CurrentCulture)]</span>
+            </div>
+        }
+        else if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+    </KitCard>
+
+    <KitCard Title="@Loc["AdmActivityDriftingTitle"]" Sub="@Loc["AdmActivityDriftingSub", _days, _drifting?.Baseline ?? 60, _drifting?.MinimumDays ?? 4]">
+        <LoadState TValue="ActivityDrifting" Value="_drifting" Loading="@(_loading && _drifting is null)"
+                   IsEmpty="d => d.Players.Count == 0" Context="drifting">
+            <Empty><EmptyBox>@Loc["AdmActivityDriftingEmpty"]</EmptyBox></Empty>
+            <ChildContent>
+                <MudTable Items="drifting.Players" Dense="true" Hover="true" Elevation="0" Class="adm-activity-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["AdmActivityCharacter"]</MudTh>
+                        <MudTh>@Loc["AdmActivityLastPose"]</MudTh>
+                        <MudTh>@Loc["AdmActivityDaysPosed"]</MudTh>
+                        <MudTh>@Loc["AdmActivityPoses"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["AdmActivityCharacter"]"><a class="adm-activity-link" href="@CharacterHref(context.Objid)">@context.Name</a></MudTd>
+                        <MudTd data-label="@Loc["AdmActivityLastPose"]">@(context.LastPose is { } last ? Loc.Format(last) : Loc["AdmActivityNever"])</MudTd>
+                        <MudTd data-label="@Loc["AdmActivityDaysPosed"]">@Loc["AdmActivityNowWas", context.RecentDays, context.BaselineDays]</MudTd>
+                        <MudTd data-label="@Loc["AdmActivityPoses"]">@Loc["AdmActivityNowWas", context.RecentPoses, context.BaselinePoses]</MudTd>
+                    </RowTemplate>
+                </MudTable>
+                @if (drifting.Total > drifting.Players.Count)
+                {
+                    <p class="adm-activity-note">@Loc["AdmActivityShowing", drifting.Players.Count, drifting.Total]</p>
+                }
+            </ChildContent>
+        </LoadState>
+    </KitCard>
+
+    <KitCard Title="@Loc["AdmActivityCohortsTitle"]" Sub="@Loc["AdmActivityCohortsSub"]">
+        <LoadState TValue="ActivityCohorts" Value="_cohorts" Loading="@(_loading && _cohorts is null)" Context="cohorts">
+            <MudSimpleTable Dense="true" Elevation="0" Class="adm-activity-table adm-activity-cohorts">
+                <thead>
+                    <tr>
+                        <th>@Loc["AdmActivityMonth"]</th>
+                        <th>@Loc["AdmActivityApproved"]</th>
+                        <th>@Loc["AdmActivityActiveNow"]</th>
+                        @for (var period = 1; period <= 6; period++)
+                        {
+                            <th>@Loc["AdmActivityPeriod", period * 30]</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cohort in cohorts.Cohorts.Where(c => c.Approved > 0))
+                    {
+                        <tr>
+                            <td class="adm-activity-mono">@cohort.Month</td>
+                            <td>@cohort.Approved</td>
+                            <td>@cohort.Active</td>
+                            @foreach (var share in cohort.Retained)
+                            {
+                                @if (share is { } kept)
+                                {
+                                    <td class="adm-activity-share" style="--heat: @Heat(kept, 1)">@kept.ToString("P0", CultureInfo.CurrentCulture)</td>
+                                }
+                                else
+                                {
+                                    <td class="adm-activity-dim">—</td>
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            @if (cohorts.Undated > 0)
+            {
+                <p class="adm-activity-note">@Loc["AdmActivityUndated", cohorts.Undated]</p>
+            }
+        </LoadState>
+    </KitCard>
+
+    <div class="adm-activity-pair">
+        <KitCard Title="@Loc["AdmActivityRoomsTitle"]" Sub="@Loc["AdmActivityRoomsSub", _days]">
+            <LoadState TValue="ActivityRooms" Value="_rooms" Loading="@(_loading && _rooms is null)"
+                       IsEmpty="r => r.Used.Count == 0" Context="rooms">
+                <Empty><EmptyBox>@Loc["AdmActivityRoomsEmpty"]</EmptyBox></Empty>
+                <ChildContent>
+                    <MudTable Items="rooms.Used" Dense="true" Hover="true" Elevation="0" Class="adm-activity-table">
+                        <HeaderContent>
+                            <MudTh>@Loc["AdmActivityRoom"]</MudTh>
+                            <MudTh>@Loc["AdmActivityPoses"]</MudTh>
+                            <MudTh>@Loc["AdmActivityDays"]</MudTh>
+                            <MudTh>@Loc["AdmActivityPeople"]</MudTh>
+                            @if (_summary?.Scenes is not null)
+                            {
+                                <MudTh>@Loc["AdmActivityScenes"]</MudTh>
+                            }
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd data-label="@Loc["AdmActivityRoom"]">@context.Name <span class="adm-activity-dim adm-activity-mono">@Dbref(context.Objid)</span></MudTd>
+                            <MudTd data-label="@Loc["AdmActivityPoses"]">@context.Poses.ToString("N0", CultureInfo.CurrentCulture)</MudTd>
+                            <MudTd data-label="@Loc["AdmActivityDays"]">@context.Days</MudTd>
+                            <MudTd data-label="@Loc["AdmActivityPeople"]">@context.People</MudTd>
+                            @if (context.Scenes is { } roomScenes)
+                            {
+                                <MudTd data-label="@Loc["AdmActivityScenes"]">@roomScenes</MudTd>
+                            }
+                        </RowTemplate>
+                    </MudTable>
+                </ChildContent>
+            </LoadState>
+        </KitCard>
+
+        <KitCard Title="@Loc["AdmActivityDeadTitle"]" Sub="@Loc["AdmActivityDeadSub", _rooms?.DeadDays ?? 90]">
+            <LoadState TValue="ActivityRooms" Value="_rooms" Loading="@(_loading && _rooms is null)"
+                       IsEmpty="r => r.Dead.Count == 0" Context="rooms">
+                <Empty><EmptyBox>@Loc["AdmActivityDeadEmpty"]</EmptyBox></Empty>
+                <ChildContent>
+                    <ul class="adm-activity-dead">
+                        @foreach (var room in rooms.Dead)
+                        {
+                            <li>
+                                <span>@room.Name <span class="adm-activity-dim adm-activity-mono">@Dbref(room.Objid)</span></span>
+                                <span class="adm-activity-dim">@(room.LastPose is { } last ? Loc.Format(last) : Loc["AdmActivityNever"])</span>
+                            </li>
+                        }
+                    </ul>
+                    @if (rooms.DeadTotal > rooms.Dead.Count)
+                    {
+                        <p class="adm-activity-note">@Loc["AdmActivityShowing", rooms.Dead.Count, rooms.DeadTotal]</p>
+                    }
+                </ChildContent>
+            </LoadState>
+        </KitCard>
+    </div>
+</div>
+
+@code {
+    private static readonly int[] WindowChoices = [7, 30, 90];
+
+    private int _days = 30;
+    private string _zone = "UTC";
+    private bool _loading;
+    private string? _error;
+    private ActivitySummary? _summary;
+    private ActivityHours? _hours;
+    private ActivityDrifting? _drifting;
+    private ActivityCohorts? _cohorts;
+    private ActivityRooms? _rooms;
+
+    /// <summary>The week as this reader's culture starts it, as weekday numbers (0 is Sunday).</summary>
+    private static IEnumerable<int> WeekOrder =>
+        Enumerable.Range(0, 7).Select(i => ((int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek + i) % 7);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The heatmap is drawn in the reader's own zone when the browser names one the server knows.
+        _zone = TimeZoneInfo.Local.Id is { Length: > 0 } local && local != "Local" ? local : "UTC";
+        await LoadAsync();
+    }
+
+    private async Task OnDaysChangedAsync(int days)
+    {
+        _days = days;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        var options = new ActivityOptions(Days: _days, Zone: _zone);
+        var summary = ActivityService.SummaryAsync(options);
+        var hours = ActivityService.HoursAsync(options);
+        var drifting = ActivityService.DriftingAsync(options);
+        var cohorts = ActivityService.CohortsAsync(options);
+        var rooms = ActivityService.RoomsAsync(options);
+
+        _summary = Take(await summary);
+        _hours = Take(await hours);
+        _drifting = Take(await drifting);
+        _cohorts = Take(await cohorts);
+        _rooms = Take(await rooms);
+        _loading = false;
+    }
+
+    private T? Take<T>(ApiResult<T> result) where T : class
+    {
+        switch (result)
+        {
+            case T value:
+                return value;
+            case ApiFailure failure:
+                _error ??= failure.Message;
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    private static string DayName(int weekday) =>
+        CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)weekday);
+
+    /// <summary>0-1: how strongly a cell is tinted with the accent.</summary>
+    private static string Heat(double value, double max) =>
+        (max <= 0 ? 0 : Math.Clamp(value / max, 0, 1)).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private string Change(long now, long before) => before == now
+        ? Loc["AdmActivitySame"]
+        : Loc[now > before ? "AdmActivityUp" : "AdmActivityDown", Math.Abs(now - before), before];
+
+    private static string Dbref(string objid) => objid.Split(':')[0];
+
+    private static string CharacterHref(string objid) => $"/admin/characters/{Dbref(objid).TrimStart('#')}";
+}

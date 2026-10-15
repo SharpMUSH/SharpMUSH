@@ -118,11 +118,12 @@ public class WhoWhereIntegrationTests
 			var bo = await Player("WgBo", attic);
 			var players = $"#{cy.DbRef.Number} #{ann.DbRef.Number} #{bo.DbRef.Number}";
 
-			// The grouping, as God reads it: rooms by name, and each room's players by name.
-			var pairs = await God($"think u({Functions}/WW_FN_PAIRS,{players})");
-			await Assert.That(await God($"think u({Functions}/WW_FN_ROOMS,{pairs})")).IsEqualTo($"{attic} {parlour}");
-			await Assert.That(await God($"think u({Functions}/WW_FN_IN,{parlour},{pairs})"))
-				.IsEqualTo($"#{ann.DbRef.Number} #{cy.DbRef.Number}");
+			// The grouping: each room once, its players by name; then the rooms by name.
+			var groups = $"u({Functions}/WW_FN_GROUPS,{players})";
+			await Assert.That(await God($"think {groups}"))
+				.IsEqualTo($"{{\"{parlour}\":[\"#{ann.DbRef.Number}\",\"#{cy.DbRef.Number}\"],\"{attic}\":[\"#{bo.DbRef.Number}\"]}}");
+			await Assert.That(await God($"think [u({Functions}/WW_FN_ROOMS,{groups})]|[u({Functions}/WW_FN_IN,{parlour})]"))
+				.IsEqualTo($"{attic} {parlour}|#{ann.DbRef.Number} #{cy.DbRef.Number}");
 
 			// +where: a line per location with its count, rooms by name, and the players under it by name.
 			var grouped = await As(ann, "+where");
@@ -145,6 +146,52 @@ public class WhoWhereIntegrationTests
 
 			await Assert.That(await As(ann, "+where/bogus")).Contains("+where has no /bogus switch.");
 			await Assert.That(await As(ann, "+help where")).Contains("+where/room").And.Contains("+where/name");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task SettingsChooseTheBareViewsThroughPlusConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var (den, _) = await Room("WsDen");
+			var staff = await Player("WsStaff", den);
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			await Assert.That(await As(staff, "+config who-where")).Contains("idle-after").And.Contains("where-view").And.Contains("who-order");
+
+			// A bare +where shows the view the setting names; +where/grouped is always the grouped one.
+			await Assert.That(await As(staff, "+config who-where/where-view=NAME")).Contains("who-where/where-view is now name, was grouped.");
+			try
+			{
+				await Assert.That(await As(staff, "+where")).Contains("Where by name");
+				await Assert.That(await As(staff, "+where/grouped")).Contains("connected in");
+			}
+			finally
+			{
+				await As(staff, "+config/reset who-where/where-view");
+			}
+			await Assert.That(await As(staff, "+where")).Contains("connected in");
+
+			// A duration is stored in seconds, which is what the muting reads.
+			await Assert.That(await As(staff, "+config who-where/idle-after=30s")).Contains("It must be at least 1m.");
+			await Assert.That(await As(staff, "+config who-where/idle-after=2h")).Contains("who-where/idle-after is now 2h, was 1h.");
+			try
+			{
+				await Assert.That(await God($"think get({Functions}/DATA`CONFIG`IDLE-AFTER)")).IsEqualTo("7200");
+			}
+			finally
+			{
+				await As(staff, "+config/reset who-where/idle-after");
+			}
+
+			await Assert.That(await As(staff, "+config who-where/who-order=sideways")).Contains("Choose name or idle.");
+			await Assert.That(await As(staff, "+who/name")).Contains(staff.Name);
 		}
 		finally
 		{
@@ -210,8 +257,12 @@ public class WhoWhereIntegrationTests
 			await Assert.That(Order(grouped, "Unfindable", hidden.Name)).IsTrue();
 
 			// +where locates players as the function object does, so the room stays hidden from God too.
-			var pairs = await God($"think u({Functions}/WW_FN_PAIRS,#{hidden.DbRef.Number})");
-			await Assert.That(pairs).IsEqualTo($"#-1:#{hidden.DbRef.Number}");
+			await Assert.That(await God($"think u({Functions}/WW_FN_GROUPS,#{hidden.DbRef.Number})"))
+				.IsEqualTo($"{{\"#-1\":[\"#{hidden.DbRef.Number}\"]}}");
+			// Unfindable comes last and is not counted as a location.
+			var both = $"#{hidden.DbRef.Number} #{reader.DbRef.Number}";
+			await Assert.That(await God($"think [setr(0,u({Functions}/WW_FN_ROOMS,u({Functions}/WW_FN_GROUPS,{both})))]|[u({Functions}/WW_FN_IN,#-1)]|[u({Functions}/WW_FN_WHERE_COUNT,{both},%q0)]"))
+				.IsEqualTo($"{hall} #-1|#{hidden.DbRef.Number}|2 connected in 1 location");
 		}
 		finally
 		{
@@ -239,17 +290,57 @@ public class WhoWhereIntegrationTests
 			}
 
 			var list = string.Join(' ', players.Select(p => $"#{p.DbRef.Number}"));
-			var pairs = await God($"think u({Functions}/WW_FN_PAIRS,{list})");
-			await Assert.That(await God($"think words(u({Functions}/WW_FN_ROOMS,{pairs}))")).IsEqualTo("20");
-			foreach (var room in rooms)
-			{
-				await Assert.That(await God($"think words(u({Functions}/WW_FN_IN,{room},{pairs}))")).IsEqualTo("10");
-			}
+			var groups = $"u({Functions}/WW_FN_GROUPS,{list})";
+			await Assert.That(await God($"think [words(setr(0,u({Functions}/WW_FN_ROOMS,{groups})))]|[iter(%q0,words(u({Functions}/WW_FN_IN,%i0)))]"))
+				.IsEqualTo($"20|{string.Join(' ', Enumerable.Repeat("10", 20))}");
 
 			var grouped = await As(players[0], "+where");
 			await Assert.That(grouped).Contains("connected");
 			await Assert.That(await As(players[0], "+where/room")).Contains(players[199].Name);
 			await Assert.That(await As(players[0], "+where/name")).Contains(players[199].Name);
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// Large data, the costly shape: every player in a room of their own. Each screen is sent in parts through
+	/// @dolist, so the command's own evaluation costs a few function calls (<c>%?</c>) a player and each part's are
+	/// its own. At 33 a player in one evaluation (#1865), +where passed function_invocation_limit (25000) with
+	/// about 760 players connected.
+	/// </summary>
+	[Test]
+	public async Task EveryScreenCostsItsCommandAFewCallsPerPlayer()
+	{
+		try
+		{
+			await InstallAsync();
+			var players = new List<TestIsolationHelpers.TestPlayer>();
+			for (var count = 0; count < 150; count++)
+			{
+				players.Add(await Player("WcP", (await Room("WcRoom")).DbRef));
+			}
+
+			var list = string.Join(' ', players.Select(p => $"#{p.DbRef.Number}"));
+			foreach (var screen in new[] { "WW_FN_WHERE", "WW_FN_WHERE_ROOM", "WW_FN_WHERE_NAME", "WW_FN_WHO" })
+			{
+				// %? is the calls made so far, then the depth; the few around the screen count too.
+				var calls = await God($"think [setq(0,u({Functions}/{screen},{list}))][first(%?)]");
+				await Assert.That(int.Parse(calls)).IsLessThan(players.Count * 6)
+					.Because($"{screen} must cost its command fewer than 6 calls a player");
+			}
+
+			// Small parts, so every screen is built across several runs and the rows meet at part boundaries.
+			await God($"&WW_PART_PLAYERS {Functions}=40");
+			await God($"&WW_PART_ROOMS {Functions}=40");
+			foreach (var command in new[] { "+where", "+where/room", "+where/name", "+who", "+who/idle", "+who WcP" })
+			{
+				var screen = await As(players[0], command);
+				await Assert.That(screen).Contains(players[149].Name).And.Contains(players[0].Name)
+					.And.DoesNotContain("LIMIT EXCEEDED").And.DoesNotContain("#-1").Because(command);
+			}
 		}
 		finally
 		{

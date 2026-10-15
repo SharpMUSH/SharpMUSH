@@ -14,7 +14,7 @@ public class SceneEventMessageContractTests
 {
 	/// <summary>SignalR's JSON protocol names properties in camelCase, which is what <see cref="JsonSerializerOptions.Web"/> does.</summary>
 	private const string Wire =
-		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":[],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000","type":"ooc","meta":{"frequency":"Harbour Watch"}}""";
+		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":[],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000","type":"ooc","meta":{"frequency":"Harbour Watch"},"recipient":null}""";
 
 	private static SceneEventMessage Sample(string? actorObjId = "#312:1718000000") => new(
 		SceneId: "42",
@@ -32,7 +32,7 @@ public class SceneEventMessageContractTests
 		Meta: new Dictionary<string, string> { ["frequency"] = "Harbour Watch" });
 
 	[Test]
-	public async Task Meta_is_the_last_member_on_the_wire()
+	public async Task Recipient_is_the_last_member_on_the_wire()
 	{
 		await Assert.That(JsonSerializer.Serialize(Sample(), JsonSerializerOptions.Web)).IsEqualTo(Wire);
 	}
@@ -66,6 +66,17 @@ public class SceneEventMessageContractTests
 
 		await Assert.That(back.ActorObjId).IsNull();
 		await Assert.That(back.Timestamp).IsEqualTo(1790741467794);
+	}
+
+	[Test]
+	public async Task A_notice_names_its_recipient_on_the_wire()
+	{
+		var notice = Sample() with { EventType = "notice", Recipient = "#18" };
+
+		var back = JsonSerializer.Deserialize<SceneEventMessage>(
+			JsonSerializer.Serialize(notice, JsonSerializerOptions.Web), JsonSerializerOptions.Web)!;
+
+		await Assert.That(back.Recipient).IsEqualTo("#18");
 	}
 
 	[Test]

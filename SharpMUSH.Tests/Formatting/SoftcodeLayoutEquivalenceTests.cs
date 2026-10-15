@@ -112,11 +112,11 @@ public class SoftcodeLayoutEquivalenceTests
 
 		// Bracket groups that break at the '[' itself. A '[' hands its break to a call it leads, so
 		// '[u(...)]' cuddles and exercises no OBRACK break; a bracket over prose is the shape that still
-		// does, and the one Corpus_ExercisesEachBreakPosition counts for that position. The comma in the
-		// first belongs at root: inside an argument list a bracket keeps the call's context, where a comma is
-		// neither text nor a separator, so a comma between brackets is a parse error (see UnparseableCorpus).
+		// does, and the one Corpus_ExercisesEachBreakPosition counts for that position. A bracket starts
+		// over, so a comma inside one is text wherever the bracket is, and never a break.
 		() => "[aaaaaaaaaaaa,bbbbbbbbbbbb]",
 		() => "strcat(one,[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa],two)",
+		() => "strcat(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose)",
 
 		// A brace group containing a comma. That comma is data, not a separator — but the '{' itself is
 		// structural, so this breaks at the brace and nowhere inside it.
@@ -247,9 +247,8 @@ public class SoftcodeLayoutEquivalenceTests
 	/// </summary>
 	public static IEnumerable<Func<string>> UnparseableCorpus() =>
 	[
-		// The `,y` sits inside [...] inside an argument list: bracketPattern__Call_* keeps the call's
-		// context, and its beginGenericText does not list COMMAWS as text. Position 41.
-		() => "switch(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose, and more)",
+		// The bracket is never closed, so it runs to the end of the text and takes the call's ')'.
+		() => "switch(a,[ansi(hr,a long stretch of text),y,{b,c},trailing prose, and more)",
 		() => "switch(a,b,c",
 		() => "add(1,add(1,add(1,add(1,5)))",
 
