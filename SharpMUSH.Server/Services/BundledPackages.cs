@@ -71,6 +71,9 @@ public static class BundledPackages
 		// which is why this installs at first boot rather than shipping available-and-unenabled.
 		new("plus-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// The scene in the room, for the command palette: pushes scene_here as players move. Apart from scene
+		// because it needs the event handler and scene does not.
+		new("scene-here", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),

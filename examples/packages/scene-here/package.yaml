@@ -1,0 +1,28 @@
+format: 1.2
+package: scene-here
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Tells the command palette about the scene where a player stands: entering a room with a scene running pushes scene_here onto their context stack, and entering one without drops it."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, rp, palette, context]
+requires_server: ">=0.1"
+
+# The scene package's palette entries for the scene in the room (About, Join) rise while scene_here is on
+# a player's stack (help @context), and their <scene> slot is filled from it. Pushing needs a move event,
+# so this lives on the event handler, apart from the scene package, which needs no handler.
+depends:
+  - package: scene
+    version: ">=1.7"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # %<objid> moved into %<destination>. A private scene the handler may not see reads as none.
+      OBJECT`MOVE`SCENE: |-
+        @assert hastype(%<objid>,PLAYER); @assert not(strmatch(setr(scene,scenewhere(%<destination>)),#-1*))={@context/drop %<objid>=scene_here}; @context/push %<objid>=scene_here,[json(object,scene,%q<scene>)],,Scene %q<scene>[if(strlen(setr(title,scene(%q<scene>,title))),: %q<title>)] is running here.

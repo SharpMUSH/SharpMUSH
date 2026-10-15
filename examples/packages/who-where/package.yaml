@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.5.2
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
@@ -37,6 +37,11 @@ objects:
       # +where/room and +where/name: a switch is the WW_FN_WHERE_<SWITCH> it runs.
       CMD_+WHERE_SWITCH: |-
         $+where/*:@assert member(room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/room lists by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho())
+      # Command palette entries (help palette entries): both are useful anywhere, so they are staples.
+      PALETTE`WHO: |-
+        {"label":"Who is on","line":"+who","attr":"CMD_+WHO","always":true,"icon":"Groups","keywords":"online players"}
+      PALETTE`WHERE: |-
+        {"label":"Where is everyone","line":"+where","attr":"CMD_+WHERE","always":true,"icon":"Map","keywords":"players rooms"}
 
   - ref: ww_functions
     type: thing
