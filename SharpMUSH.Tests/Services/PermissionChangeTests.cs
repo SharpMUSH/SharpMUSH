@@ -8,8 +8,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// A change to who may do what takes effect on the next check, though the grants, owner and location
-/// behind each check are kept per object between writes (<c>ObjectRelationMemo</c>). Each test asks once
+/// A change to who may do what takes effect on the next check, though the grants, owner, location and
+/// flags behind each check are kept per object between writes (<c>ObjectRelationMemo</c>). Each test asks once
 /// before the change, so the answer is kept, then changes it each way it can change and asks again.
 /// </summary>
 public class PermissionChangeTests : ServerTestBase
@@ -106,5 +106,54 @@ public class PermissionChangeTests : ServerTestBase
 
 		await Cmd($"@tel {thing}={second}");
 		await Assert.That(await Eval($"num(loc({thing}))")).IsEqualTo(second);
+	}
+
+	[Test]
+	public async Task FlagChangeTakesEffectAtOnce()
+	{
+		var (player, thing) = await MortalAndHiddenThingAsync("PcVisual");
+		await Assert.That(await Secret(player, thing)).IsNotEqualTo("hidden");
+
+		await Cmd($"@set {thing}=VISUAL");
+		await Assert.That(await Secret(player, thing)).IsEqualTo("hidden");
+
+		await Cmd($"@set {thing}=!VISUAL");
+		await Assert.That(await Secret(player, thing)).IsNotEqualTo("hidden");
+	}
+
+	[Test]
+	public async Task HaltedObjectStopsRunningCodeAtOnce()
+	{
+		var thing = $"#{(await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "PcHalt")).Number}";
+		await Cmd($"&FN {thing}=[add(1,2)]");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo("3");
+
+		await Cmd($"@set {thing}=HALT");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo("[add(1,2)]");
+
+		await Cmd($"@set {thing}=!HALT");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo("3");
+	}
+
+	[Test]
+	public async Task RenamedOwnerIsShownAtOnce()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "PcOwnerName");
+		var thing = $"#{(await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "PcOwned")).Number}";
+		await Cmd($"@chown {thing}=#{owner.DbRef.Number}");
+
+		// Twice, so the owner is kept as well as named.
+		await CmdAs(owner.DbRef, owner.Handle, $"examine {thing}");
+		await CmdAs(owner.DbRef, owner.Handle, $"examine {thing}");
+		await Assert.That(Heard(owner.Name)).IsTrue();
+
+		var renamed = "Rn" + Guid.NewGuid().ToString("N")[..12];
+		await Cmd($"@name #{owner.DbRef.Number}={renamed}");
+		await CmdAs(owner.DbRef, owner.Handle, $"examine {thing}");
+		await Assert.That(Heard($"Owner: {renamed}")).IsTrue();
+
+		bool Heard(string text)
+			=> WebAppFactoryArg.Notifications.For(owner.DbRef).Any(message => message.Contains(text, StringComparison.Ordinal));
 	}
 }

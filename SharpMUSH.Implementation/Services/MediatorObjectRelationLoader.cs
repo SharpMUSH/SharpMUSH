@@ -9,8 +9,8 @@ namespace SharpMUSH.Implementation.Services;
 /// <summary>
 /// The host's <see cref="IObjectRelationLoader"/>: relations resolve through the Mediator's cached
 /// queries, so a provider-built object follows the same invalidation as every other read. Grants, owner
-/// and location, which every permission check reads, answer from <see cref="ObjectRelationMemo"/> until the
-/// object is written.
+/// and location, which every permission check reads, and flags answer from <see cref="ObjectRelationMemo"/>
+/// until the object is written.
 /// </summary>
 public class MediatorObjectRelationLoader(IMediator mediator, ObjectRelationMemo memo) : IObjectRelationLoader
 {
@@ -45,6 +45,9 @@ public class MediatorObjectRelationLoader(IMediator mediator, ObjectRelationMemo
 	public Task<Library.Authorization.ObjectGrants> GrantsOf(int number, bool isPlayer, CancellationToken cancellationToken)
 		=> memo.GrantsAsync(number, isPlayer, async ct => await mediator.Send(new GetObjectGrantsQuery(number, isPlayer), ct),
 			cancellationToken);
+
+	public SharpObjectFlag[] FlagsOf(int number, string type, Func<SharpObjectFlag[]> read)
+		=> memo.Flags(number, type, read);
 
 	public async Task<AnyOptionalSharpContainer> ExitDestinationOf(string exitTypedId, string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetExitDestinationOfQuery(exitTypedId, objectId, number), cancellationToken);

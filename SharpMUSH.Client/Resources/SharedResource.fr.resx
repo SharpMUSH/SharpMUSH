@@ -5537,6 +5537,18 @@
     <value>Brouillon sur cet appareil uniquement</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>Diagramme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} vers {1} : {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>Fiche de {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notifications</value>
     <comment>MT</comment>
