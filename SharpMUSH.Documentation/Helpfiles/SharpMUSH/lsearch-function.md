@@ -61,10 +61,13 @@ lsearch() is free unless it includes either an eval-class search or an elock sea
 
 lsearchr() is like an lsearch() run through revwords(). Results are returned from highest dbref to lowest. search() is an alias for lsearch().
 
+lsearch() also takes an INDEX class, which PennMUSH does not have: `INDEX, <attribute>:<value>` keeps the objects whose own copy of `<attribute>` the attribute's index lists under `<value>`, as indexed(`<attribute>`, =, `<value>`) finds them, and the search starts from those objects instead of every object. The attribute must have a ready index (see [@attribute index]); while it is being built lsearch() returns `#-1 INDEX BUILDING`, and without one `#-1 ATTRIBUTE NOT INDEXED`. Only objects whose copy you could read with get() are listed.
+
 search() and lsearch() also take the one-argument form RhostMUSH and TinyMUSH use, `search([<player>] <class>=<restriction>[, <low>[, <high>]])`; see [lsearch rhostmush one argument form].
 
 
 ::: seealso
+- [indexed()]
 - [@search]
 - [@find]
 - [LPARENT()]
@@ -108,4 +111,5 @@ lsearch(me, type, room, 100, 200)        <-- same, but only w/db# 100-200<br>
 lsearch(all, eplayer, \[eq(money(##),100)\]) <-- lists all players with 100 coins.<br>
 lsearch(all, type, player, elock, (FLAG^WIZARD|FLAG^ROYALTY)&!FLAG^IC) ^-- list all wiz and roy players that are not IC.<br>
 lsearch(all, type, player, elock, sex:m*) <- lists all players with an @sex beginning with 'm'<br>
-lsearch(me, elock, !desc:*)              <-- lists all objects you own that don't have an @desc set
+lsearch(me, elock, !desc:*)              <-- lists all objects you own that don't have an @desc set<br>
+lsearch(all, type, player, index, STATUS:approved) <-- lists the players whose STATUS is approved, from the STATUS index

@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
@@ -229,17 +230,52 @@ public class PackageAttributeEntryManifestTests
 	}
 
 	[Test]
-	public async Task AnIndexIsReservedForALaterFormat()
+	public async Task AnIndexTakesTrueOrTheOptionWords()
 	{
-		var parsed = Parse("""
+		var entries = Entries("""
 			attributes:
 			  JOB`STATUS:
 			    enum: [new, closed]
+			    index: true
+			  JOB`LEVEL:
+			    index: numeric type:thing
+			  JOB`TAGS:
+			    index: [exact, "split:|"]
+			  JOB`NOTE:
+			    index: false
+			""");
+
+		await Assert.That(entries.Single(e => e.Name == "JOB`STATUS").Index).IsEqualTo(AttributeIndexOptions.Default);
+		await Assert.That(entries.Single(e => e.Name == "JOB`LEVEL").Index)
+			.IsEqualTo(new AttributeIndexOptions(Numeric: true, Type: "THING"));
+		await Assert.That(entries.Single(e => e.Name == "JOB`TAGS").Index)
+			.IsEqualTo(new AttributeIndexOptions(Exact: true, Split: "|"));
+		await Assert.That(entries.Single(e => e.Name == "JOB`NOTE").Index).IsNull();
+	}
+
+	[Test]
+	public async Task AnIndexWithAnUnknownOptionIsRefused()
+	{
+		var errors = Errors(Parse("""
+			attributes:
+			  JOB`STATUS:
 			    index: { fold: case }
-			""").Expect<ParsedPackageManifest>();
-		await Assert.That(parsed.Manifest.Declared.AttributeEntries.Single().Name).IsEqualTo("JOB`STATUS");
-		await Assert.That(parsed.Warnings.Single().Path).IsEqualTo("attributes.JOB`STATUS.index");
-		await Assert.That(parsed.Warnings.Single().Message).Contains("reserved");
+			  JOB`LEVEL:
+			    index: sorted
+			"""));
+		await Assert.That(errors.Select(e => e.Path)).IsEquivalentTo(["attributes.JOB`STATUS.index", "attributes.JOB`LEVEL.index"]);
+	}
+
+	[Test]
+	public async Task AnInternalEntryCannotBeIndexed()
+	{
+		var errors = Errors(Parse("""
+			attributes:
+			  JOB`SECRET:
+			    flags: [internal]
+			    index: true
+			"""));
+		await Assert.That(errors.Single().Path).IsEqualTo("attributes.JOB`SECRET.index");
 	}
 
 	/// <summary>The reader knows the attribute flags a new world is seeded with, less <c>branch</c>.</summary>

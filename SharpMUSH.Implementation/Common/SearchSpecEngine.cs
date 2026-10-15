@@ -59,6 +59,7 @@ public static class SearchSpecEngine
 		string? hasPower = null;
 		var start = 1;
 		int? count = null;
+		AttributeIndexProbe? indexProbe = null;
 
 		var appLevelCriteria = new List<(string key, string value)>();
 
@@ -134,6 +135,18 @@ public static class SearchSpecEngine
 				case "POWERS":
 					hasPower = restriction;
 					break;
+				// SharpMUSH's own class: candidates come from an attribute index (@attribute/index), never a scan.
+				case "INDEX":
+					switch (await IndexProbeAsync(mediator, restriction))
+					{
+						case AttributeIndexProbe probe:
+							indexProbe = probe;
+							break;
+						case Error<string> refused:
+							return refused;
+					}
+
+					break;
 				default:
 					// Lock evaluation, COMMAND, LISTEN, and other criteria must happen in application code
 					appLevelCriteria.Add((classType, restriction));
@@ -199,8 +212,11 @@ public static class SearchSpecEngine
 		if (heldFlag is not null) hasFlag = null;
 		if (heldPower is not null) hasPower = null;
 
+		// An INDEX match says what the object's copy of the attribute holds, so a searcher who could not read that copy
+		// does not learn it from the search: each match passes CanViewAttribute, as indexed() checks its hits.
+		var indexViewCheck = indexProbe is not null && !await executor.IsWizard();
 		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria
-			|| heldFlag is not null || heldPower is not null;
+			|| heldFlag is not null || heldPower is not null || indexViewCheck;
 
 		// PennMUSH's raw_search: a non-wizard (non-See_All/Search_All) searcher only sees objects
 		// they could @examine, unless they're searching only their own objects. The one exception is
@@ -224,6 +240,7 @@ public static class SearchSpecEngine
 			HasFlag = hasFlag,
 			HasPower = hasPower,
 			Owner = ownerFilter,
+			AttributeValue = indexProbe,
 			Skip = needsPerObjectEvaluation ? null : start - 1,  // Only skip at DB level if no app-level filtering
 			Limit = needsPerObjectEvaluation ? null : count  // Only limit at DB level if no app-level filtering
 		};
@@ -249,6 +266,8 @@ public static class SearchSpecEngine
 		// @listen) reads and never writes, so once the page is full nothing a later candidate does can
 		// be observed, and the scan stops there. Either way only the requested window is stored.
 		var window = new ResultWindow(start, count);
+		var viewMemo = new AttributeViewMemo();
+		var indexPath = indexProbe?.Name.Split('`') ?? [];
 		var pageEndsScan = compiledEvals.Count == 0 && !hasEvaluatingLock && !visOnly;
 		await foreach (var obj in filteredObjects)
 		{
@@ -265,6 +284,11 @@ public static class SearchSpecEngine
 			bool matches = true;
 
 			if (visOnly && !await permissionService.CanExamine(executor, typedObj))
+			{
+				matches = false;
+			}
+
+			if (matches && indexViewCheck && !await CanReadIndexedCopyAsync(mediator, permissionService, executor, typedObj, indexPath, viewMemo))
 			{
 				matches = false;
 			}
@@ -343,6 +367,36 @@ public static class SearchSpecEngine
 		}
 
 		return new SearchResult(window.Results, hadErrors);
+	}
+
+	/// <summary>
+	/// The <c>INDEX</c> class's <c>&lt;attribute&gt;:&lt;value&gt;</c>, once its attribute has a ready index; otherwise
+	/// the notification that rejects the spec. There is no fall back to a scan: a building index answers
+	/// <c>#-1 INDEX BUILDING</c> from <c>lsearch()</c>.
+	/// </summary>
+	private static async ValueTask<Result<AttributeIndexProbe>> IndexProbeAsync(IMediator mediator, string restriction)
+	{
+		var colon = restriction.IndexOf(':');
+		var name = colon > 0 ? restriction[..colon].Trim().ToUpperInvariant() : string.Empty;
+		if (name.Length == 0)
+		{
+			return new Error<string>(nameof(ErrorMessages.Notifications.SearchIndexSyntax));
+		}
+
+		return await mediator.Send(new GetAttributeEntryQuery(name)) switch
+		{
+			{ Index: { Ready: true } } => new AttributeIndexProbe(name, restriction[(colon + 1)..]),
+			{ Index: not null } => new Error<string>(nameof(ErrorMessages.Notifications.SearchIndexBuilding)),
+			_ => new Error<string>(nameof(ErrorMessages.Notifications.SearchIndexNotIndexed))
+		};
+	}
+
+	/// <summary>Whether <paramref name="executor"/> may read <paramref name="target"/>'s own copy of the indexed attribute.</summary>
+	private static async ValueTask<bool> CanReadIndexedCopyAsync(IMediator mediator, IPermissionService permissionService,
+		AnySharpObject executor, AnySharpObject target, string[] path, AttributeViewMemo memo)
+	{
+		var levels = await mediator.CreateStream(new GetAttributeQuery(target.Object().DBRef, path)).ToArrayAsync();
+		return levels.Length == path.Length && await permissionService.CanViewAttribute(executor, target, memo, levels);
 	}
 
 	/// <summary>

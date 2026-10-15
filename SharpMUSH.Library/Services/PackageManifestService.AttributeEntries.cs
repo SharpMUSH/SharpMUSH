@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Utilities;
 
@@ -12,11 +14,8 @@ public partial class PackageManifestService
 
 	private static readonly IReadOnlySet<string> KnownAttributeEntryKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"flags", "limit", "enum", "delimiter", "retroactive"
+		"flags", "limit", "enum", "delimiter", "retroactive", "index"
 	};
-
-	/// <summary>Keys a later format gives an attribute entry; warned about and ignored.</summary>
-	private static readonly IReadOnlySet<string> ReservedAttributeEntryKeys = new HashSet<string>(StringComparer.Ordinal) { "index" };
 
 	/// <summary>
 	/// The attribute flags a new world has (<c>AttributeFlagSeed</c> in SharpMUSH.Database, which a test keeps this
@@ -124,9 +123,7 @@ public partial class PackageManifestService
 	{
 		foreach (var key in entry.Keys.Where(k => !KnownAttributeEntryKeys.Contains(k)))
 		{
-			issues.Add(ReservedAttributeEntryKeys.Contains(key)
-				? PackageManifestIssue.Warning($"{path}.{key}", $"'{key}' is reserved for a later format and is ignored.")
-				: PackageManifestIssue.Warning($"{path}.{key}", $"Unknown key '{key}' is ignored."));
+			issues.Add(PackageManifestIssue.Warning($"{path}.{key}", $"Unknown key '{key}' is ignored."));
 		}
 
 		var ok = true;
@@ -229,7 +226,57 @@ public partial class PackageManifestService
 			ok = false;
 		}
 
-		return ok ? new PackageAttributeEntrySpec(name, flags, limit, choices, delimiter, retroactive) : null;
+		var index = ReadAttributeIndex(entry, path, issues, ref ok);
+		if (index is not null && flags.Contains("internal"))
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.index", "An internal attribute cannot be indexed: no copy of it is ever listed."));
+			ok = false;
+		}
+
+		return ok ? new PackageAttributeEntrySpec(name, flags, limit, choices, delimiter, retroactive, index) : null;
+	}
+
+	/// <summary>
+	/// An entry's <c>index:</c>, as <c>@attribute/index</c> takes it: <c>true</c> for the default (case-insensitive
+	/// text, whole values, every object), <c>false</c> for none, or the option words, as one string
+	/// (<c>numeric type:thing</c>) or a list (<c>[numeric, type:thing]</c>).
+	/// </summary>
+	private static AttributeIndexOptions? ReadAttributeIndex(Dictionary<string, object?> entry, string path,
+		List<PackageManifestIssue> issues, ref bool ok)
+	{
+		string words;
+		switch (entry.GetValueOrDefault("index"))
+		{
+			case null:
+				return null;
+			case string text when bool.TryParse(text, out var on):
+				if (!on) return null;
+				words = string.Empty;
+				break;
+			case string text:
+				words = text;
+				break;
+			case List<object> list when list.All(item => item is string):
+				words = string.Join(' ', list.Cast<string>());
+				break;
+			default:
+				issues.Add(PackageManifestIssue.Error($"{path}.index",
+					"index is true, or the options @attribute/index takes: exact, numeric, split[:<delimiter>], type:<type>."));
+				ok = false;
+				return null;
+		}
+
+		switch (AttributeIndexOptions.Parse(words))
+		{
+			case AttributeIndexOptions options:
+				return options;
+			case Error<string> error:
+				issues.Add(PackageManifestIssue.Error($"{path}.index", error.Value));
+				ok = false;
+				return null;
+			default:
+				return null;
+		}
 	}
 
 	/// <summary>The scalars in the list <paramref name="key"/> of <paramref name="entry"/>, each with its path; anything else is reported.</summary>

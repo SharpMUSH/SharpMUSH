@@ -283,11 +283,12 @@ public partial class LightningDatabase
 	}
 
 	private static void WriteInitialAttribute(ITx tx, long dbref, string longName, string value)
-		=> WriteAttributePath(tx, dbref, new PreparedAttributeWrite(
+		=> WriteAttributePath(tx, dbref, ReadObjectHeader(tx, dbref)?.Type ?? string.Empty, new PreparedAttributeWrite(
 			longName.Split('`'),
 			Keys.Str(MarkupTextSerializer.Serialize(MString.Plain(value))),
 			1,
-			[]));
+			[],
+			MString.Plain(value)));
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>
 	private static void RecomputeNextDbref(ITx tx) => RecomputeCounter(tx, "next_dbref", Tables.Obj);

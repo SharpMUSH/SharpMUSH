@@ -150,6 +150,11 @@ these groups:
   only the portal's load reads them back.
 - **Page log:** `GetPageLogQuery`, `GetPageConversationsQuery`. The log grows with every page while
   `page_log` is on, and only the portal reads it, once per load and per conversation opened.
+- **Attribute indexes:** `GetIndexedAttributeQuery`, `CountIndexedAttributeQuery`,
+  `CountAttributeCopiesQuery` (`IAttributeIndexStore`). Every write of an indexed attribute would
+  invalidate them, and a page of an index costs less than a cache round trip. The index commands
+  (`SetAttributeIndexCommand`, `DropAttributeIndexCommand`, `BuildAttributeIndexBatchCommand`) drop
+  the attribute entry caches, since the cached entry carries the index and its build state.
 
 Whether any of these should be cached is a measurement question. If one is, it gets
 `ICacheable` together with `ICacheInvalidating` on every write that can change its answer, and

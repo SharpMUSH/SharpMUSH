@@ -15,6 +15,8 @@ namespace SharpMUSH.Server.Services;
 ///   <c>backup_disk_free</c>, <c>leftover_worlds</c>.</item>
 ///   <item><c>sharpmush_storage_backup_fits</c> — 1 when the next backup run would pass its free-space
 ///   check.</item>
+///   <item><c>sharpmush_storage_attribute_index_bytes{index=…}</c> — the pages each attribute index
+///   (<c>@attribute/index</c>) takes, in bytes, by attribute name.</item>
 ///   <item><c>sharpmush_storage_stale_readers_cleared_total</c> — reader slots freed since startup because
 ///   the process holding them died mid-read.</item>
 /// </list>
@@ -47,6 +49,8 @@ public sealed class StorageCapacityMetrics : IHostedService, IDisposable
 			description: "World storage capacity: map limit, file length, allocated disk, live data, backup budget");
 		_meter.CreateObservableGauge("sharpmush.storage.backup.fits", ObserveFits,
 			description: "1 when the next backup run would find enough free disk, 0 when it would refuse to start");
+		_meter.CreateObservableGauge("sharpmush.storage.attribute_index.bytes", ObserveIndexBytes, unit: "By",
+			description: "The pages each attribute index takes, by attribute name");
 		_meter.CreateObservableCounter("sharpmush.storage.stale_readers.cleared", () => Current().StaleReadersCleared,
 			description: "LMDB reader slots freed since startup because the process holding them died mid-read");
 	}
@@ -76,6 +80,10 @@ public sealed class StorageCapacityMetrics : IHostedService, IDisposable
 			.Where(f => f.Bytes >= 0)
 			.Select(f => new Measurement<long>(f.Bytes, new KeyValuePair<string, object?>("kind", f.Kind)));
 	}
+
+	private IEnumerable<Measurement<long>> ObserveIndexBytes()
+		=> Current().AttributeIndexes.Select(index =>
+			new Measurement<long>(index.Bytes, new KeyValuePair<string, object?>("index", index.Name)));
 
 	private int ObserveFits() => Current().Backup.NextRunFits ? 1 : 0;
 
