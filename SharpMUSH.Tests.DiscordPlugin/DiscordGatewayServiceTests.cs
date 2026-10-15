@@ -14,7 +14,7 @@ public class DiscordGatewayServiceTests
 	{
 		var secrets = Substitute.For<ISecretStore>();
 		secrets.GetAsync(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name, Arg.Any<CancellationToken>()).Returns(new FoundResult<string>(new NotFound()));
-		using var gateway = new DiscordGatewayService(secrets, NullLogger<DiscordGatewayService>.Instance);
+		using var gateway = new DiscordGatewayService(secrets, [], NullLogger<DiscordGatewayService>.Instance);
 
 		await gateway.StartAsync(cancellationToken);
 		var state = await SettledAsync(gateway, cancellationToken);
@@ -29,7 +29,7 @@ public class DiscordGatewayServiceTests
 		var secrets = Substitute.For<ISecretStore>();
 		secrets.GetAsync(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name, Arg.Any<CancellationToken>())
 			.Returns(new FoundResult<string>(new NotFound()), new FoundResult<string>("not a bot token"));
-		using var gateway = new DiscordGatewayService(secrets, NullLogger<DiscordGatewayService>.Instance);
+		using var gateway = new DiscordGatewayService(secrets, [], NullLogger<DiscordGatewayService>.Instance);
 
 		await gateway.StartAsync(cancellationToken);
 		await SettledAsync(gateway, cancellationToken);

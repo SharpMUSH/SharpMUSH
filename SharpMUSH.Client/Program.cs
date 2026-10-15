@@ -47,6 +47,7 @@ builder.Services.AddSingleton<ApplicationRegistryClient>();
 builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
+builder.Services.AddSingleton<DiscordAccountService>();
 builder.Services.AddSingleton<MailService>();
 builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 // Scene data is served by the server API; the WASM client has no local ISceneService
