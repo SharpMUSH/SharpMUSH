@@ -150,6 +150,27 @@ public class LayoutFunctionTests
 			.IsEqualTo(Lines("    Sex: Male", "Species: Human"));
 	}
 
+	/// <summary>lfields() is fields() with the labels and values as two lists, split on a space or the delimiter given.</summary>
+	[Test]
+	public async Task ListFields_PairEachLabelWithTheValueAtItsPlace()
+	{
+		await Assert.That(TrimLines(await Eval("lfields({{\"width\":40}},Sex Species,Male Human)")))
+			.IsEqualTo(Lines("Sex:     Male", "Species: Human"));
+		await Assert.That(TrimLines(await Eval("lfields({{\"width\":40}},Full Name|Origin,Mannaz Byron|Super Robot Wars AG,|)")))
+			.IsEqualTo(Lines("Full Name: Mannaz Byron", "Origin:    Super Robot Wars AG"));
+		await Assert.That((await Eval("lfields(,,)")).ToPlainText()).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>A value is any text or layout, as in fields(), and the lists are split before the values are laid out.</summary>
+	[Test]
+	public async Task ListFields_TakeLayoutsAndOptionsAsFieldsDoes()
+		=> await Assert.That(TrimLines(await Eval("box(lfields({{\"cols\":2}},Sex|Species|Job|Online,Male|Human|Dark Warrior|1h,|),Mannaz Byron,60)")))
+			.IsEqualTo(Lines(
+				"+=====================< Mannaz Byron >=====================+",
+				"| Sex:     Male                 Job:    Dark Warrior       |",
+				"| Species: Human                Online: 1h                 |",
+				"+==========================================================+"));
+
 	/// <summary>The finger box the layout functions were made for, with its key/value pairs as fields.</summary>
 	[Test]
 	public async Task Fields_InsideABox_MakeAFingerSheet()
@@ -472,6 +493,8 @@ public class LayoutFunctionTests
 	[Arguments("fields(,Sex,Male,Species)", "#-1 FUNCTION (FIELDS) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
 	[Arguments("fields({{\"cols\":0}},Sex,Male)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("fields({{\"cols\":\"x\"}},Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("lfields(,Sex Species,Male)", ErrorMessages.Returns.NumberOfWordsMustBeEqual)]
+	[Arguments("lfields({{\"cols\":0}},Sex,Male)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("tree({{\"guide\":\"wavy\"}},a)", "#-1 UNKNOWN GUIDE STYLE")]
 	[Arguments("tree({{\"colour\":\"red\"}},a)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("gauge(a,12)", ErrorMessages.Returns.Numbers)]
