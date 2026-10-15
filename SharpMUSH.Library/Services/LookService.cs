@@ -24,7 +24,8 @@ public class LookService(
 	IDidItService didItService,
 	IConnectionService connectionService,
 	IRealityPolicy reality,
-	ILocalizationService localizationService) : ILookService
+	ILocalizationService localizationService,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration) : ILookService
 {
 	public async ValueTask<CallState> LookRoom(
 		IMUSHCodeParser parser,
@@ -73,7 +74,8 @@ public class LookService(
 		bool Terse,
 		bool ShowDescription,
 		bool ViewingFromInside,
-		bool TryIdesc);
+		bool TryIdesc,
+		bool Halted);
 
 	/// <summary>
 	/// The description a look shows before any format attribute: its text, the attribute it came from
@@ -119,7 +121,33 @@ public class LookService(
 			&& (viewing.IsPlayer || viewing.IsThing);
 
 		return new Look(parser, looker, viewing, viewingObject, key, god,
-			lookThroughExit, terse, showDescription, viewingFromInside, tryIdesc);
+			lookThroughExit, terse, showDescription, viewingFromInside, tryIdesc,
+			await viewing.HasFlag("HALT", ExecutionBudget.CurrentToken));
+	}
+
+	/// <summary>
+	/// Whether the built-in look stands in for <paramref name="formatAttributeName"/>. The formats a type
+	/// ancestor carries (the Ancestor Room's <c>NAMEFORMAT</c> and <c>DESCFORMAT</c>) are SharpMUSH's
+	/// built-in look written as softcode, and PennMUSH shows its built-in look for a halted room too.
+	/// A halted object runs none of its softcode, so such a format would show as its own code; the look
+	/// uses the default instead. A format on the object itself or its @parents still shows unevaluated,
+	/// as in PennMUSH.
+	/// </summary>
+	private async ValueTask<bool> SkipsFormatAsync(Look look, string formatAttributeName)
+	{
+		if (!look.Halted)
+		{
+			return false;
+		}
+
+		var walk = new InheritanceWalk(await look.Viewing.Ancestor(configuration),
+			(int)configuration.CurrentValue.Limit.MaxParents);
+		var found = await mediator.CreateStream(
+				new GetAttributeWithInheritanceQuery(look.ViewingObject.DBRef, formatAttributeName.Split('`'), true, walk),
+				ExecutionBudget.CurrentToken)
+			.FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
+
+		return found?.Source == AttributeSource.Ancestor;
 	}
 
 	private async ValueTask<Description> ResolveDescriptionAsync(Look look)
@@ -211,6 +239,11 @@ public class LookService(
 			("object", look.ViewingObject.DBRef.ToString()),
 			("name", defaultFormattedName));
 
+		if (await SkipsFormatAsync(look, "NAMEFORMAT"))
+		{
+			return defaultFormattedName;
+		}
+
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService, look.Parser, look.Looker, look.Viewing, "NAMEFORMAT",
 			nameFormatArgs, defaultFormattedName);
@@ -235,7 +268,8 @@ public class LookService(
 		}
 
 		// As in AttributeHelpers.EvaluateFormatAttribute: after a tripped limit the format would show its code.
-		if (!formatAttribute.IsAttribute || look.Parser.CurrentState.LimitExceeded?.IsExceeded == true)
+		if (!formatAttribute.IsAttribute || look.Parser.CurrentState.LimitExceeded?.IsExceeded == true
+				|| await SkipsFormatAsync(look, formatAttrName))
 		{
 			return description.Base;
 		}
@@ -362,7 +396,8 @@ public class LookService(
 
 	private async ValueTask<bool> HasFormatAsync(Look look, string formatAttributeName)
 		=> (await attributeService.GetAttributeAsync(look.God, look.Viewing, formatAttributeName,
-			IAttributeService.AttributeMode.Read, true)).IsAttribute;
+			IAttributeService.AttributeMode.Read, true)).IsAttribute
+			&& !await SkipsFormatAsync(look, formatAttributeName);
 
 	/// <summary>
 	/// What the looker can see in the container, split into exits and everything else. Each content
@@ -444,9 +479,11 @@ public class LookService(
 
 		var conFormatArgs = CallbackArguments.Of(("contents", contentDbrefs.ToString()), ("names", contentNames.ToString()));
 
-		var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
-			attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
-			conFormatArgs, defaultContents);
+		var formattedContents = await SkipsFormatAsync(look, "CONFORMAT")
+			? defaultContents
+			: await AttributeHelpers.EvaluateFormatAttribute(
+				attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
+				conFormatArgs, defaultContents);
 
 		if (formattedContents.Length > 0)
 		{
@@ -467,9 +504,11 @@ public class LookService(
 			: MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"),
 				MessageFormatting.FormatMStringsWithOxfordComma(visibleExits.Select(x => ExitLink(x.Object().Name)).ToList()));
 
-		var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
-			attributeService, look.Parser, look.Looker, look.Viewing, "EXITFORMAT",
-			exitFormatArgs, defaultExits);
+		var formattedExits = await SkipsFormatAsync(look, "EXITFORMAT")
+			? defaultExits
+			: await AttributeHelpers.EvaluateFormatAttribute(
+				attributeService, look.Parser, look.Looker, look.Viewing, "EXITFORMAT",
+				exitFormatArgs, defaultExits);
 
 		if (formattedExits.Length == 0)
 		{
