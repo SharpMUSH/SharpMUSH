@@ -136,11 +136,13 @@ public sealed class DiscordInbound(
 			return;
 		}
 
-		await pairs.RemoveAsync(messageId, cancellationToken);
 		foreach (var lineId in pair.LineIds)
 		{
 			await game.RemoveLineAsync(lineId, link, messageId, cancellationToken);
 		}
+
+		// Last, so a removal that fails part way leaves the pair for the lines still in recall.
+		await pairs.RemoveAsync(messageId, cancellationToken);
 	}
 
 	/// <summary>

@@ -86,12 +86,13 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 		}
 
 		var options = new RequestOptions { CancelToken = cancellationToken, AuditLogReason = "Only linked members post in a linked channel" };
-		var everyone = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole) ?? OverwritePermissions.InheritAll;
-		await channel.AddPermissionOverwriteAsync(channel.Guild.EveryoneRole,
-			everyone.Modify(sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny), options);
+		// The Linked role first: if the second change fails, the channel is left open rather than closed to everyone.
 		var linked = channel.GetPermissionOverwrite(role) ?? OverwritePermissions.InheritAll;
 		await channel.AddPermissionOverwriteAsync(role,
 			linked.Modify(sendMessages: PermValue.Allow, sendMessagesInThreads: PermValue.Allow), options);
+		var everyone = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole) ?? OverwritePermissions.InheritAll;
+		await channel.AddPermissionOverwriteAsync(channel.Guild.EveryoneRole,
+			everyone.Modify(sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny), options);
 		return null;
 	}
 
@@ -185,15 +186,16 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, ILogger<Discor
 		}
 
 		await guild.DownloadUsersAsync();
-		var linked = store.List().Where(link => link.Linked).Select(link => link.UserId).ToHashSet();
 		foreach (var member in guild.Users.Where(member => !member.IsBot))
 		{
+			// Read per member, not once up front: a /link or /unlink during the pass must not be undone by it.
+			var linked = store.Get(member.Id) is { Linked: true };
 			var holds = member.Roles.Any(held => held.Id == role.Id);
-			if (linked.Contains(member.Id) && !holds)
+			if (linked && !holds)
 			{
 				await member.AddRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Linked to a game account" });
 			}
-			else if (!linked.Contains(member.Id) && holds)
+			else if (!linked && holds)
 			{
 				await member.RemoveRoleAsync(role.Id, new RequestOptions { AuditLogReason = "Not linked to a game account" });
 			}
