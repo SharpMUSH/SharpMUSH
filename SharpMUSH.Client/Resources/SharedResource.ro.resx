@@ -6153,4 +6153,12 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>O imagine cu avertisment de conținut rămâne în afara bibliotecii de imagini. Scoate avertismentul ca s-o partajezi.</value>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primește notificări pe acest telefon sau computer când portalul este închis</value>
+    <comment>MT</comment>
+  </data>
 </root>

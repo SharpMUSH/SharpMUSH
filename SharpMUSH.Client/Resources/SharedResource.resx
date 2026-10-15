@@ -5156,6 +5156,12 @@
   <data name="EnumPermFeedAdminDesc" xml:space="preserve">
     <value>Defines and runs feeds, the message pipelines game systems such as a radio or a phone are built on: their kinds, taps, members and limits.</value>
   </data>
+  <data name="EnumPermNotifyPush" xml:space="preserve">
+    <value>Game · Push notifications</value>
+  </data>
+  <data name="EnumPermNotifyPushDesc" xml:space="preserve">
+    <value>Sends notifications to players' phones and browsers with @push. Give it to the object of a package that decides what notifies, not to players.</value>
+  </data>
   <data name="EnumPermSideFx" xml:space="preserve">
     <value>Game · Side-effect functions</value>
   </data>
@@ -8001,5 +8007,92 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>An image with a content warning stays out of the image library. Take the warning off to share it.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Get notified on this phone or computer when the portal is closed</value>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Turn notifications on for each phone or computer you want them on. The game decides what is worth a notification, and each of your characters chooses which they receive.</value>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Notifications are on here ({0}).</value>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Notifications are off on this device. Your browser asks for permission when you turn them on.</value>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Turn on</value>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Send a test</value>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Notifications are on for this device.</value>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Test sent. It should arrive in a few seconds.</value>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>The browser did not allow notifications. Allow them for this site in the browser's settings, then try again.</value>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Notifications are blocked for this site. Allow them in the browser's site settings, then reload this page.</value>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>This browser cannot show notifications from a website.</value>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>On iPhone and iPad, notifications work only from the home screen: tap Share, then Add to Home Screen, and open the portal from the new icon.</value>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Install the portal as an app: it opens in its own window, and notifications show its name.</value>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Your devices</value>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Every phone and computer with notifications on for this account</value>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>No device has notifications on yet.</value>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Turn off notifications on {0}</value>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>On since {0}</value>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>last sent {0}</value>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>failed {0} ({1})</value>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>the game changed its key: turn notifications on again on that device</value>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>What notifies you</value>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Pages and new mail notify you when you are away, showing who sent it but not what it says. Type +notify in the game to choose what notifies each character, and whether the text shows.</value>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Choose what notifies you</value>
   </data>
 </root>

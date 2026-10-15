@@ -6153,4 +6153,12 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>En bild med innehållsvarning hålls utanför bildbiblioteket. Ta bort varningen för att dela den.</value>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Aviseringar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Få aviseringar på den här telefonen eller datorn när portalen är stängd</value>
+    <comment>MT</comment>
+  </data>
 </root>
