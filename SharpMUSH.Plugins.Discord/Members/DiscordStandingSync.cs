@@ -43,8 +43,8 @@ public sealed class LightningDiscordBanStore(ILightningStorageAccessor accessor)
 /// Follows a linked account's standing on Discord: the Linked role goes while the account is banned, disabled or
 /// closed and comes back when it is active again, and with <see cref="DiscordSettings.MirrorBans"/> on, a game ban
 /// bans the member in every server the bot is in (<see cref="DiscordStandingPlan"/>). It hears every ban, lift and
-/// status change through <see cref="IAccountChangeListener"/>, and goes over everyone when a server becomes available
-/// and when mirroring is turned on, to catch what happened while the bot was away.
+/// status change through <see cref="IAccountChangeListener"/>, and goes over everyone when a server becomes available,
+/// when the bot joins one or is granted Ban Members, and when mirroring is turned on, to catch what it missed.
 /// </summary>
 /// <remarks>Mapped roles follow the account's standing in <see cref="Roles.DiscordRoleSync"/>.</remarks>
 public sealed class DiscordStandingSync(
@@ -67,12 +67,24 @@ public sealed class DiscordStandingSync(
 	public void Attach(DiscordSocketClient client)
 	{
 		_client = client;
-		client.GuildAvailable += _ =>
-		{
-			Background(PassAsync);
-			return Task.CompletedTask;
-		};
+		client.GuildAvailable += _ => PassSoon();
+		client.JoinedGuild += _ => PassSoon();
+		// A bot refused Ban Members bans nobody until it is granted, so whatever grants it starts a pass: a role the bot
+		// holds gaining it, or the bot being given a role.
+		client.RoleUpdated += (_, role) => role.Guild.CurrentUser is { } bot && bot.Roles.Any(held => held.Id == role.Id)
+			? BanMembersGranted(bot)
+			: Task.CompletedTask;
+		client.GuildMemberUpdated += (_, member) => member.Id == client.CurrentUser?.Id ? BanMembersGranted(member) : Task.CompletedTask;
 	}
+
+	private Task PassSoon()
+	{
+		Background(PassAsync);
+		return Task.CompletedTask;
+	}
+
+	private Task BanMembersGranted(SocketGuildUser bot)
+		=> settings.Get().MirrorBans && bot.GuildPermissions.BanMembers ? PassSoon() : Task.CompletedTask;
 
 	public ValueTask AccountChangedAsync(string accountId, CancellationToken cancellationToken)
 	{
@@ -137,10 +149,14 @@ public sealed class DiscordStandingSync(
 					break;
 			}
 
-			var bannedIn = (mirrored?.Guilds ?? []).Except(plan.Unban).ToList();
+			// A ban the bot cannot lift now, in a server it is not in, stays on record to lift once it is back.
+			var bannedIn = (mirrored?.Guilds ?? []).ToList();
 			foreach (var guildId in plan.Unban)
 			{
-				await UnbanAsync(client.GetGuild(guildId), userId, cancellationToken);
+				if (await UnbanAsync(client.GetGuild(guildId), userId, cancellationToken))
+				{
+					bannedIn.Remove(guildId);
+				}
 			}
 
 			foreach (var guildId in plan.Ban)
@@ -155,7 +171,7 @@ public sealed class DiscordStandingSync(
 			{
 				await bans.RemoveAsync(userId, cancellationToken);
 			}
-			else if (plan.Ban.Count > 0)
+			else if (!bannedIn.SequenceEqual(mirrored?.Guilds ?? []))
 			{
 				await bans.SaveAsync(new DiscordMirroredBan(userId, accountId, bannedIn, mirrored?.At ?? time.GetUtcNow()), cancellationToken);
 			}
@@ -192,11 +208,12 @@ public sealed class DiscordStandingSync(
 		return true;
 	}
 
-	private async Task UnbanAsync(SocketGuild? guild, ulong userId, CancellationToken cancellationToken)
+	/// <returns>Whether the ban is gone: lifted now, or by staff already. False while the bot is not in the server.</returns>
+	private async Task<bool> UnbanAsync(SocketGuild? guild, ulong userId, CancellationToken cancellationToken)
 	{
 		if (guild is null)
 		{
-			return;
+			return false;
 		}
 
 		try
@@ -208,6 +225,8 @@ public sealed class DiscordStandingSync(
 		{
 			// Staff already lifted it on Discord.
 		}
+
+		return true;
 	}
 
 	/// <summary>Off the gateway's own thread and the caller's, which a slow Discord request must not hold up.</summary>
