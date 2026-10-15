@@ -735,6 +735,9 @@ public class JobsIntegrationTests
 			await As(staff, "+job/reply 1=Second floor it is.");
 			await Assert.That(await God($"think [words(get({requests}/STATS`ANSWER))]")).IsEqualTo("1")
 				.Because("only the first answer counts");
+			await As(staff, "+job/approve 1=Done.");
+			await Assert.That(await God($"think [words(get({requests}/STATS`CLOSE))]")).IsEqualTo("1")
+				.Because("closing a player's job is one sample of how soon the bucket closes");
 
 			await God($"&STATS`ANSWER {requests}=7200 14400 30000 9000 86400");
 			await God($"&STATS`CLOSE {requests}=90000 200000 150000");
