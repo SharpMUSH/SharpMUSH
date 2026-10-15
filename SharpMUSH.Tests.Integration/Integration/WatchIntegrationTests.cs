@@ -15,14 +15,13 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The bundled rp-finder package, installed from the catalogue with who-where and driven with typed commands:
-/// +lfrp statuses, shown in +who, and the watch list fed by the master room's ACONNECT and ADISCONNECT. Each
-/// test installs rp-finder and removes it again. Nothing waits on the clock: a status that ran out, or a
-/// connect outside the quiet window, is written onto the store. Not in parallel: +lfrp, +watch and +who are
-/// global.
+/// The bundled watch package, installed from the catalogue with who-where and driven with typed commands: the
+/// watch list fed by the master room's ACONNECT and ADISCONNECT. Each test installs watch and removes it again.
+/// Nothing waits on the clock: a connect outside the quiet window is written onto the store. Not in parallel:
+/// +watch and +who are global.
 /// </summary>
 [NotInParallel]
-public class RpFinderIntegrationTests
+public class WatchIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -33,7 +32,6 @@ public class RpFinderIntegrationTests
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
-	private string Finder { get; set; } = string.Empty;
 	private string Store { get; set; } = string.Empty;
 
 	private async Task<string> God(string command) =>
@@ -92,13 +90,12 @@ public class RpFinderIntegrationTests
 	private async Task<string> Key(TestIsolationHelpers.TestPlayer player)
 		=> await God($"think edit(objid(#{player.DbRef.Number}),#,,:,_)");
 
-	/// <summary>Installs who-where and rp-finder; each test removes both.</summary>
+	/// <summary>Installs who-where and watch; each test removes both.</summary>
 	private async Task InstallAsync()
 	{
 		await ApplyAsync("who-where");
-		await ApplyAsync("rp-finder");
-		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("rp-finder");
-		Finder = objects.First(o => o.Ref == "finder").Objid;
+		await ApplyAsync("watch");
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("watch");
 		Store = objects.First(o => o.Ref == "store").Objid;
 	}
 
@@ -112,7 +109,8 @@ public class RpFinderIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
@@ -122,67 +120,8 @@ public class RpFinderIntegrationTests
 
 	private async Task UninstallAsync()
 	{
-		await Installer.UninstallAsync("rp-finder", force: true, CancellationToken.None);
+		await Installer.UninstallAsync("watch", force: true, CancellationToken.None);
 		await Installer.UninstallAsync("who-where", force: true, CancellationToken.None);
-	}
-
-	[Test]
-	public async Task AStatusIsSetListedShownAndCleared()
-	{
-		try
-		{
-			await InstallAsync();
-			var ann = await Player("LfAnn");
-			var bo = await Player("LfBo");
-			var mod = await Player("LfMod", "rp-moderator");
-
-			await Assert.That(await As(ann, "+lfrp/note Short scenes")).Contains("Say what you are looking for first");
-			var line = TestIsolationHelpers.GenerateUniqueName("LfLine");
-			await Assert.That(await As(ann, $"+lfrp {line}")).Contains($"You are looking for RP: {line}")
-				.And.Contains("It lasts 4 hours or until you log off.");
-			await Assert.That(await As(ann, $"+lfrp {new string('x', 101)}")).Contains("Keep it to 100 characters.");
-
-			// What a player types is never evaluated.
-			await Assert.That(await As(ann, "+lfrp/note Short scenes; no combat. [add(1,2)] 50% off"))
-				.Contains("Your note: Short scenes; no combat. [add(1,2)] 50% off");
-			await Assert.That(await As(ann, "+lfrp/place here")).Contains("Others see where you are standing");
-
-			var list = await As(bo, "+lfrp");
-			await Assert.That(list).Contains("Looking for RP").And.Contains(ann.Name).And.Contains(line)
-				.And.Contains("LfAnnRoom");
-			var shown = await As(bo, $"+lfrp/show {ann.Name}");
-			await Assert.That(shown).Contains("Short scenes; no combat. [add(1,2)] 50% off").And.Contains("LfAnnRoom");
-			await Assert.That(await As(bo, "+lfrp/show")).Contains("You are not looking for RP.");
-
-			await Assert.That(await As(bo, $"+lfrp/off {ann.Name}")).Contains("Only an RP moderator can clear someone else's status.");
-			await Assert.That(await As(mod, $"+lfrp/off {ann.Name}")).Contains($"{ann.Name} is no longer looking for RP.");
-			await Assert.That(Heard(ann, "cleared your +lfrp status")).IsEquivalentTo(new[] { $"[RP] {mod.Name} cleared your +lfrp status." });
-			await Assert.That(await As(bo, $"+lfrp/show {ann.Name}")).Contains($"{ann.Name} is not looking for RP.");
-
-			// A status runs out DATA`LFRP`HOURS after it was last set, and a fresh one starts without the old note.
-			await As(ann, $"+lfrp {line}");
-			await As(ann, "+lfrp/note Old note");
-			var annKey = await Key(ann);
-			await God($"&LFRP`{annKey}`UNTIL {Store}=1");
-			await Assert.That(await As(bo, $"+lfrp/show {ann.Name}")).Contains($"{ann.Name} is not looking for RP.");
-			await As(bo, "+lfrp");
-			await Assert.That(await God($"think lattr({Store}/LFRP`{annKey}*)")).IsEqualTo(string.Empty)
-				.Because("listing clears statuses that ran out");
-			await As(ann, $"+lfrp {line}");
-			await Assert.That(await As(ann, "+lfrp/show")).Contains("Note:").And.DoesNotContain("Old note");
-
-			await Assert.That(await As(ann, "+lfrp/off")).Contains("You are no longer looking for RP.");
-			await Assert.That(await As(ann, "+lfrp/off")).Contains("You are not looking for RP.");
-
-			// Logging off ends it.
-			await As(ann, $"+lfrp {line}");
-			await Disconnect(ann);
-			await Assert.That(await God($"think lattr({Store}/LFRP`{annKey}*)")).IsEqualTo(string.Empty);
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
 	}
 
 	[Test]
@@ -193,16 +132,14 @@ public class RpFinderIntegrationTests
 			await InstallAsync();
 			var ann = await Player("SwAnn");
 
-			await Assert.That(await As(ann, "+lfrp/bogus")).Contains("+lfrp has no /bogus switch. +help lfrp lists them.");
 			await Assert.That(await As(ann, "+watch/bogus")).Contains("+help watch lists them.");
 			await Assert.That(await As(ann, "+watch/add/del x")).Contains("Use one switch at a time.");
-			await Assert.That(await As(ann, "+lfrp/note/2 x")).Contains("+lfrp/note takes no page number.");
+			await Assert.That(await As(ann, "+watch/add/2 x")).Contains("+watch/add takes no page number.");
 			await Assert.That(await As(ann, "+watch/list/0")).Contains("Pages start at 1");
 			await Assert.That(await As(ann, "+watch something")).Contains("+watch/add <name> watches someone.");
 
-			await Assert.That(await As(ann, "+help rp")).Contains("+lfrp").And.Contains("+watch");
-			await Assert.That(await As(ann, "+help who filters")).Contains("FILTER`WHO`STATUS`<name>");
 			await Assert.That(await As(ann, "+help watch")).Contains("+watch/watchers");
+			await Assert.That(await As(ann, "+help watch staff")).Contains("DATA`WATCH`QUIET");
 		}
 		finally
 		{
@@ -227,6 +164,14 @@ public class RpFinderIntegrationTests
 			// +friend is the same command, the way Volund's FRIEND global spells it.
 			await Assert.That(await As(cy, $"+friend/add {ann.Name}")).Contains($"You watch {ann.Name} now");
 			await Assert.That(await As(bo, "+watch")).Contains("Watched and on").And.Contains(ann.Name).And.Contains("WaAnnRoom");
+
+			// +watch shows the status +who shows, whichever package gives it.
+			var whoWhere = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("who-where"))
+				.First(o => o.Ref == "ww_functions").Objid;
+			var status = TestIsolationHelpers.GenerateUniqueName("WaStatus");
+			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}=if(strmatch(%1,#{ann.DbRef.Number}),{status},%0)");
+			await Assert.That(Unwrapped(await As(bo, "+watch"))).Contains(status);
+			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}");
 			await Assert.That(await As(bo, "+watch/list")).Contains(ann.Name).And.Contains("on now");
 			var watchers = await As(ann, "+watch/watchers");
 			await Assert.That(watchers).Contains(bo.Name).And.Contains(cy.Name).And.Contains("2 watching");
@@ -236,7 +181,7 @@ public class RpFinderIntegrationTests
 			await Disconnect(ann);
 			await Assert.That(Heard(bo, $"{ann.Name} has disconnected.")).IsEmpty();
 			ann = await Connect(ann);
-			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).IsEquivalentTo(new[] { $"[RP] {ann.Name} has connected." });
+			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).IsEquivalentTo(new[] { $"[WATCH] {ann.Name} has connected." });
 			await Assert.That(Heard(cy, $"{ann.Name} has connected.")).Count().IsEqualTo(1);
 			await Assert.That(await As(bo, "+watch/list")).Contains("on now");
 			await Disconnect(ann);
@@ -285,7 +230,7 @@ public class RpFinderIntegrationTests
 			// At login, a player hears who of those they watch is on.
 			await Disconnect(bo);
 			bo = await Connect(bo);
-			await Assert.That(Heard(bo, "On now of those you watch:")).IsEquivalentTo(new[] { $"[RP] On now of those you watch: {ann.Name}." });
+			await Assert.That(Heard(bo, "On now of those you watch:")).IsEquivalentTo(new[] { $"[WATCH] On now of those you watch: {ann.Name}." });
 
 			await Assert.That(await As(cy, $"+friend/delete {ann.Name}")).Contains($"You no longer watch {ann.Name}.");
 			await Assert.That(await As(cy, $"+watch/del {ann.Name}")).Contains($"You do not watch {ann.Name}.");
@@ -308,78 +253,19 @@ public class RpFinderIntegrationTests
 		}
 	}
 
+	/// <summary>Large data: a player with two hundred watchers. The list pages, and a connect reaches every watcher once.</summary>
 	[Test]
-	public async Task AStatusShowsInWho()
-	{
-		try
-		{
-			await InstallAsync();
-			var ann = await Player("WhAnn");
-			var bo = await Player("WhBo");
-			// A short room name keeps Location to one line, so only the Status cell wraps and Unwrapped reads it whole.
-			var annRoom = await God($"think loc(#{ann.DbRef.Number})");
-			await God($"@name {annRoom}=WhR");
-
-			await Assert.That(await As(bo, "+who")).DoesNotContain("Status").Because("nobody has a status yet");
-			var line = TestIsolationHelpers.GenerateUniqueName("WhLine");
-			await As(ann, $"+lfrp {line}");
-			var who = await As(bo, "+who");
-			await Assert.That(who).Contains("Status");
-			await Assert.That(Unwrapped(who)).Contains(line);
-
-			// A long line is cut to 40 characters.
-			var whoWhere = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("who-where"))
-				.First(o => o.Ref == "ww_functions").Objid;
-			await As(ann, $"+lfrp {line} {new string('x', 60)}");
-			await Assert.That(await God($"think u({whoWhere}/WW_FN_FILTER,WHO`STATUS,,#{ann.DbRef.Number})"))
-				.IsEqualTo($"{line} {new string('x', 37 - line.Length - 1)}...");
-			await As(ann, $"+lfrp {line}");
-
-			// Another package's filter runs after this one, in name order, and gets its status as %0.
-			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}=if(strlen(%0),%[%0%],%0)");
-			await Assert.That(Unwrapped(await As(bo, "+who"))).Contains($"[{line}");
-			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}");
-
-			// A status that ran out is gone from +who.
-			await God($"&LFRP`{await Key(ann)}`UNTIL {Store}=1");
-			await Assert.That(Unwrapped(await As(bo, "+who"))).DoesNotContain(line);
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
-	}
-
-	/// <summary>
-	/// Large data: two hundred players looking for RP, and a player with two hundred watchers. Each list pages,
-	/// and a connect reaches every watcher once.
-	/// </summary>
-	[Test]
-	public async Task ManyStatusesAndWatchersPageAndAnnounce()
+	public async Task ManyWatchersPageAndAnnounce()
 	{
 		try
 		{
 			await InstallAsync();
 			var ann = await Player("StAnn");
-			var bo = await Player("StBo");
 			var players = new List<TestIsolationHelpers.TestPlayer>();
 			for (var count = 0; count < 200; count++)
 			{
 				players.Add(await Player("StW"));
 			}
-			foreach (var player in players)
-			{
-				await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"+lfrp Stress status of {player.Name}"));
-			}
-			await WebAppFactoryArg.QueueBarrierAsync();
-
-			var first = await As(bo, "+lfrp");
-			await Assert.That(first).Contains("Looking for RP").And.Contains("page 1 of").And.Contains("+lfrp/2");
-			var pages = int.Parse(System.Text.RegularExpressions.Regex.Match(first, @"page 1 of (\d+)").Groups[1].Value);
-			await Assert.That(await As(bo, $"+lfrp/{pages}")).Contains($"page {pages} of {pages}");
-			await Assert.That(await As(bo, $"+lfrp/{pages + 1}")).Contains($"There are only {pages} pages.");
-			await Assert.That(await As(bo, "+who")).Contains("Status");
-
 			// Two hundred watchers, written onto the store as +watch/add would.
 			var annKey = await Key(ann);
 			var objids = new List<string>();

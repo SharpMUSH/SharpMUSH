@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Homepage">Project homepage / documentation URL, or null.</param>
 /// <param name="Keywords">Search keywords for the browse UI (≤5 advisory).</param>
 /// <param name="ConventionPrefix">Advisory attribute-name prefix (e.g. <c>BBS_</c>); not enforced.</param>
-/// <param name="RequiresServer">Minimum/compatible SharpMUSH server version constraint, or null.</param>
+/// <param name="RequiresServer">The lowest SharpMUSH version the package runs on (lower-bound clauses only), or null. A server below it cannot apply the package.</param>
 /// <param name="Replaces">Package id this package supersedes (rename continuity), or null.</param>
 /// <param name="Conflicts">Packages that cannot be installed alongside this one.</param>
 /// <param name="Dependencies">Packages this package requires, with version constraints.</param>
@@ -27,6 +27,8 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Settings">The configuration options the package sets (<c>settings:</c>, format 1.3), or null for none.</param>
 /// <param name="Locale">The locale the package's wiki pages are written in (<c>locale:</c>, format 1.4), canonical, or null for the game's <c>wiki_default_locale</c>.</param>
 /// <param name="Wiki">The wiki pages the package ships (<c>wiki:</c>, format 1.4), or null for none.</param>
+/// <param name="VerifiedServer">The newest SharpMUSH version the author tested on (<c>verified_server</c>, format 1.6), or null.</param>
+/// <param name="MaximumServer">The newest SharpMUSH version the package runs on (<c>maximum_server</c>, format 1.6), or null for no limit.</param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -49,7 +51,9 @@ public sealed record PackageManifest(
 	PackageDeclarations? Declarations = null,
 	IReadOnlyList<PackageSettingSpec>? Settings = null,
 	string? Locale = null,
-	IReadOnlyList<PackageWikiPageSpec>? Wiki = null)
+	IReadOnlyList<PackageWikiPageSpec>? Wiki = null,
+	PackageVersion? VerifiedServer = null,
+	PackageVersionCeiling? MaximumServer = null)
 {
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
@@ -163,7 +167,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 4);
+	public static PackageFormatVersion Supported { get; } = new(1, 6);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

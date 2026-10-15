@@ -397,18 +397,41 @@ public class SearchFunctionUnitTests
 	{
 		// From pennfunc.md: lsearch(all, eplayer, \[eq(money(##),100)\])
 		// "any brackets, percent signs, or other special characters should be escaped"
-		// The code is evaluated twice:
-		// 1. Once as an argument to lsearch()
-		// 2. Again for each object with ## replaced by the dbref
-		// Correct syntax uses commas, not equals: lsearch(all,eval,\[...\])
-		var result = await Parser.EvaluateAsync(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,*1\)\],maxdb,9)"));
-		var resultText = result.ToPlainText();
+		// The code is evaluated twice: once as lsearch()'s argument, then for each object with ##
+		// replaced by its dbref, #N as PennMUSH's unparse_dbref writes it.
+		var result = await SearchAsync(@"lsearch(all,eval,\[strmatch\(##\,#1\)\],maxdb,9)");
 
-		if (!string.IsNullOrEmpty(resultText))
-		{
-			await Assert.That(resultText).Contains("#1");
-			await Assert.That(resultText).DoesNotContain(":");
-		}
+		await Assert.That(result).IsEqualTo("#1");
+	}
+
+	[Test]
+	[Arguments("eval")]
+	[Arguments("ething")]
+	public async Task Lsearch_EvalClass_ReplacesHashHashWithAUsableDbref(string evalClass)
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchEvalDbref");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"&{token} {match}=1");
+
+		var result = await SearchAsync(
+			$@"lsearch(all,{evalClass},\[get\(##/{token}\)\],mindb,{match.Number},maxdb,{control.Number})");
+
+		await Assert.That(ReturnedDbRefs(result)).IsEquivalentTo([match.Number]);
+	}
+
+	[Test]
+	public async Task Search_EvalClass_ReplacesHashHashWithAUsableDbref()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("SearchEvalDbref");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"{token}_Control");
+		await CommandAsync($"&{token} {match}=1");
+
+		var result = await CommandAsync(
+			$"@search all mindb={match.Number},maxdb={control.Number},eval=get(##/{token})");
+
+		await Assert.That(ReturnedDbRefs(result.Message.ToPlainText())).IsEquivalentTo([match.Number]);
 	}
 
 	[Test]

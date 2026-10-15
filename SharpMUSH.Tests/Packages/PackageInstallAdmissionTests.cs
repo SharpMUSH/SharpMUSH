@@ -89,7 +89,8 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IPackageDeclarationService>(),
 				services.GetRequiredService<IPackageSettingService>(),
 				services.GetRequiredService<IPackageWikiService>(),
-				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>())
+				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
+				services.GetRequiredService<EngineVersion>())
 		};
 	}
 

@@ -41,11 +41,6 @@
       "lookup": "compatibility config text order mux collation"
     },
     {
-      "id": "tinymux-s-list-mux-list",
-      "heading": "TinyMUX's `list()`: `mux_list`",
-      "lookup": "compatibility config tinymux s list mux list"
-    },
-    {
       "id": "innermost-loop-tokens",
       "heading": "Innermost loop tokens",
       "lookup": "compatibility config innermost loop tokens"
@@ -59,6 +54,11 @@
       "id": "rhostmush-lattr-arguments-rhost-lattr",
       "heading": "RhostMUSH lattr() arguments: `rhost_lattr`",
       "lookup": "compatibility config rhostmush lattr arguments rhost lattr"
+    },
+    {
+      "id": "rhostmush-list-loop-rhost-list",
+      "heading": "RhostMUSH list() loop: `rhost_list`",
+      "lookup": "compatibility config rhostmush list loop rhost list"
     },
     {
       "id": "rhostmush-map-arguments-rhost-map-args",
@@ -229,21 +229,6 @@ With `mux_collation` on:
 a A b B|-1|A B a b
 ```
 
-## TinyMUX's `list()`: `mux_list`
-
-PennMUSH's `list()` names the game's functions, commands, flags and so on. TinyMUX's
-`list(<list>, <action>[, <delimiter>])` evaluates `<action>` for each element, as `iter()` does,
-and tells each result to the enactor instead of returning it. With `mux_list` on, `list()` is
-TinyMUX's, and `list(functions)` is an argument-count error.
-
-With `mux_list` on, this tells you `xa` and then `xb`, and `list()` itself returns nothing:
-
-```sharp unchecked mux_list
-> think list(a b,x%i0)
-xa
-xb
-```
-
 ## Innermost loop tokens
 
 The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches
@@ -328,6 +313,44 @@ RHOSTDOC_LATTR_CMD
 2 1
 > think lattr(me/RHOSTDOC_LATTR_*,|)
 RHOSTDOC_LATTR_CMD RHOSTDOC_LATTR_TEXT
+```
+
+## RhostMUSH list() loop: `rhost_list`
+
+Off by default; meant for a game moved from RhostMUSH or TinyMUX.
+
+PennMUSH's `list()` names the game's functions, commands, flags and so on. RhostMUSH's
+`list(<list>, <eval>[, <delimiter>][, <header>][, <target>])` evaluates `<eval>` for each element,
+as `iter()` does, and tells each result to the enactor on a line of its own instead of returning it.
+Its first three arguments are TinyMUX's `list()`, so this one option serves code written for either
+game. With `rhost_list` on, `list()` is RhostMUSH's and returns nothing, and `list(functions)` is an
+argument-count error.
+
+- `<delimiter>` separates the elements; it is a space when left out or empty.
+- `<header>`, when it is not empty, is evaluated once and told before the first result.
+- `<target>` sends the header and the results to another object instead of the enactor. It is used
+  only when the enactor controls it. A target the enactor does not control, or a name that matches
+  nothing, is ignored without a word, and the lines go to the enactor.
+- An empty list tells nothing, not even the header. A result that is empty is not told.
+- `ibreak()` stops the loop after the line it is in is told.
+
+With `rhost_list` on, this tells you `Words:`, then `a:1`, then `b:2`, and `list()` itself returns
+nothing:
+
+```sharp unchecked rhost_list
+> think list(a b,##:#@,,Words:)
+Words:
+a:1
+b:2
+```
+
+An empty list tells nothing, header included, so this shows only what `think` returns:
+
+```sharp rhost_list
+> think X[list(,##,,Words:)]Y
+XY
+> think list(functions)
+#-1 FUNCTION (LIST) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1
 ```
 
 ## RhostMUSH map() arguments: `rhost_map_args`

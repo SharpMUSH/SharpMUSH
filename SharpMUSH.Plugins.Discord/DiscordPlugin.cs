@@ -3,16 +3,20 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Secrets;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Discord.Links;
+using SharpMUSH.Plugins.Discord.Outbox;
 
 namespace SharpMUSH.Plugins.Discord;
 
 /// <summary>
-/// Links the game to Discord through a bot the game runs itself. This part logs the bot in and walks the
-/// admin through adding it to a server; feeds cross in a later part.
+/// Links the game to Discord through a bot the game runs itself: logs the bot in, walks the admin through adding
+/// it to a server, and posts the lines of each linked channel's feed there (<c>@discord</c>).
 /// </summary>
 [SharpPlugin]
 public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointContributor
@@ -30,6 +34,17 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton(Token);
 		services.AddSingleton<DiscordGatewayService>();
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordGatewayService>());
+		services.AddSingleton<IDiscordLinkStore, LightningDiscordLinkStore>();
+		services.AddSingleton(provider =>
+		{
+			var secrets = provider.GetRequiredService<ISecretStore>();
+			return new DiscordRelay(provider.GetRequiredService<IDiscordLinkStore>(), secrets,
+				provider.GetRequiredService<DiscordGatewayService>(),
+				link => new DiscordWebhookPoster(link.ChannelId, link.WebhookId, secrets),
+				new DiscordOutboxOptions(), TimeProvider.System, provider.GetRequiredService<ILogger<DiscordRelay>>());
+		});
+		services.AddSingleton<IFeedLineListener>(provider => provider.GetRequiredService<DiscordRelay>());
+		services.AddHostedService(provider => provider.GetRequiredService<DiscordRelay>());
 	}
 
 	public void MapEndpoints(IEndpointRouteBuilder endpoints)
