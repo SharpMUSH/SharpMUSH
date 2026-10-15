@@ -378,10 +378,12 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 					matches = ScenesByIndex(tx, MemberIndexKey(viewer)).Where(IsListed).OrderByDescending(s => s.LastActivityAt);
 					break;
 				case "active":
-					matches = ScenesByIndex(tx, StatusIndexKey(ActiveStatus)).OrderByDescending(s => s.LastActivityAt);
+					matches = ScenesByIndex(tx, StatusIndexKey(ActiveStatus)).Where(s => InWindow(s, fromUtcMillis, toUtcMillis))
+						.OrderByDescending(s => s.LastActivityAt);
 					break;
 				case "finished":
-					matches = ScenesByIndex(tx, StatusIndexKey(FinishedStatus)).OrderByDescending(s => s.LastActivityAt);
+					matches = ScenesByIndex(tx, StatusIndexKey(FinishedStatus)).Where(s => InWindow(s, fromUtcMillis, toUtcMillis))
+						.OrderByDescending(s => s.LastActivityAt);
 					break;
 				default:
 					matches = ScenesByIndex(tx, IdxAll).Where(IsListed).OrderByDescending(s => s.LastActivityAt);
@@ -390,6 +392,11 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 			return matches.Take(Math.Max(0, count)).Select(s => ProjectScene(tx, s)).ToList();
 		}));
+
+	/// <summary>Within the UTC-millis bounds, when there are any: a window leaves out the scenes with no time.</summary>
+	private static bool InWindow(SceneRecord scene, long? fromUtcMillis, long? toUtcMillis) =>
+		fromUtcMillis is null && toUtcMillis is null
+		|| scene.ScheduledFor is { } due && (fromUtcMillis is null || due >= fromUtcMillis) && (toUtcMillis is null || due <= toUtcMillis);
 
 	/// <summary>How long after its time a scene that never started stays on the <c>upcoming</c> list: a host may start late.</summary>
 	public static readonly TimeSpan LateStartGrace = TimeSpan.FromHours(1);
