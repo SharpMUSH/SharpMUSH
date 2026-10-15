@@ -65,10 +65,11 @@ Event Types:
 - **channel**: channel\`message, channel\`who
 - **page**: page\`message
 - **mail**: mail\`received
+- **scene**: scene\`status
 - **backup**: backup\`complete, backup\`error
 - **gallery**: gallery\`add, gallery\`report
 
-The attribute, room, channel, page, mail, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. attribute\`change tells the game an attribute flagged `watched` changed, so a gauge or a character sheet need not check it over and over, player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, and the gallery events tell the game about the web portal's profile pictures.
+The attribute, room, channel, page, mail, scene, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink and socket\`gmcp are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. attribute\`change tells the game an attribute flagged `watched` changed, so a gauge or a character sheet need not check it over and over, player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, the gallery events tell the game about the web portal's profile pictures, and scene\`status lets a package act when a scene starts or ends.
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.
 
@@ -286,6 +287,16 @@ To mimic old behaviour:
 ### Example
 ```sharp
 > &MAIL`RECEIVED #9=@cemit Admin=[name(%<sender>)] mailed [name(%<recipient>)]: %<subject>
+```
+
+# Scene Events
+# Event Scene
+- **scene\`status** (*scene*, *status*, *previous*)
+- Triggered by the Scene plugin when a scene is made or its status changes: `@scene/create` and scenecreate() make one, and `@scene/set <id>/status=` or sceneset() change it, which is how `+scene/start`, `/pause` and `/finish` do it. *<scene>* is the scene's id, *<status>* its status now (new, active, paused, finished or cancelled as the scene package uses them), and *<previous>* its status before, empty for a scene just made. Setting the status it already has triggers nothing. %# is whoever made the scene or changed it. Only raised while the Scene plugin is loaded.
+
+### Example
+```sharp
+&SCENE`STATUS #9=@if strmatch(%<status>,active)={@cemit Public=Scene %<scene> has started: [scene(%<scene>,title)]}
 ```
 
 # Backup Events
