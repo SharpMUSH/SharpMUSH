@@ -83,6 +83,7 @@ a package works with its defaults even where `+config` is not installed.
 | `MIN`, `MAX` | Bounds: a number's value, a duration in seconds, a text's length, a list's size |
 | `CHOICES` | The words a `choice` takes, or the words a `list` may hold |
 | `PATTERN` | A regular expression a `text`, or each word of a `list`, must match |
+| `DELIMITER` | For `list`: what separates the items, such as `\|` for names with spaces in them; a space when unset |
 | `OBJECTTYPE` | For `object`: any of `ROOM PLAYER THING EXIT` |
 | `CHECK` | The name of an attribute on the same object: `%0` the value as stored, `%1` the setting; it returns nothing when the value is fine, or the reason it is not |
 | `PERMISSION` | The permission that changes this setting, instead of `config.admin` |
@@ -97,7 +98,7 @@ a package works with its defaults even where `+config` is not installed.
 | `boolean` | yes no on off true false 1 0 | `1` or `0` |
 | `duration` | `4h`, `30m`, `1d 12h`, `45` | seconds |
 | `choice` | one word of `CHOICES`, any case | as `CHOICES` writes it |
-| `list` | words separated by spaces | space-separated, each once, in the order given |
+| `list` | items separated by `DELIMITER` (spaces by default) | the same, each once, in the order given |
 | `pattern` | a regular expression | as typed |
 | `object` | a name or dbref the setter can find | objid |
 | `timezone` | an IANA zone such as `Europe/London` | as typed |

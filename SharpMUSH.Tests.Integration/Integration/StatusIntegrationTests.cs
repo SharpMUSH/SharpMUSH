@@ -219,10 +219,16 @@ public class StatusIntegrationTests
 				.And.Contains("It lasts 1 hour.");
 			await Assert.That(Unwrapped(await As(bo, "+who"))).Contains("Openscene:Thetavern");
 
-			// DATA`LIST`MORE goes under the list.
-			await God($"&DATA`LIST`MORE {StatusObject}=Longer requests: +bbread public/looking");
+			// The list-footer setting goes under the list, and the line length is a +config setting too.
+			await Assert.That(await As(admin, "+config status/list-footer=Longer requests: +bbread public/looking"))
+				.Contains("status/list-footer is now Longer requests: +bbread public/looking, was none.");
 			await Assert.That(await As(bo, "+status/list scene")).Contains("Open scene").And.Contains("Longer requests: +bbread public/looking");
-			await God($"&DATA`LIST`MORE {StatusObject}");
+			await As(admin, "+config/reset status/list-footer");
+			await Assert.That(await As(bo, "+status/list scene")).DoesNotContain("Longer requests");
+			await Assert.That(await As(admin, "+config status/line-length=500")).Contains("It must be at most 400.");
+			await As(admin, "+config status/line-length=20");
+			await Assert.That(await As(ann, $"+status scene={new string('x', 21)}")).Contains("Keep it to 20 characters.");
+			await As(admin, "+config/reset status/line-length");
 
 			// Removing a status takes it from everyone who had it.
 			await Assert.That(await As(admin, "+status/remove scene")).Contains("Removed scene, and cleared it from 1 player.");

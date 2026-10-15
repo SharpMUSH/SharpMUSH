@@ -209,8 +209,14 @@ public class TimeIntegrationTests
 			await God($"&FILTER`TIME`SCREEN`WEATHER {Time}=%0%r[fields(,Weather,Rain)]");
 			await Assert.That(await As(ann, "+time")).Contains("Weather: Rain");
 
-			await God($"&DATA`IC`SHOW {Clock}=0");
+			var staff = await Player("ScStaff");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+			await Assert.That(await As(staff, "+config time/ic-show=no")).Contains("time/ic-show is now no, was yes.");
 			await Assert.That(await As(ann, "+time")).DoesNotContain("IC date");
+
+			// Month names come all twelve or none, split by |.
+			await Assert.That(await As(staff, "+config time/ic-months=Thaw|Seed")).Contains("Give all 12 names, or none for the real ones.");
+			await Assert.That(await As(staff, "+config time/zone=Mars/Olympus")).Contains("Give a time zone, such as Europe/London or UTC.");
 		}
 		finally
 		{
@@ -229,14 +235,14 @@ public class TimeIntegrationTests
 			await Assert.That(await Think($"u({Clock}/FUN`IC`DATE,1767225600)")).IsEqualTo("Thursday, 1 January 2026, 00:00");
 
 			// Twice as fast, 300 years on, with names of the game's own: a real day after the anchor is two IC days.
-			await God($"&DATA`IC`RATIO {Clock}=2");
-			await God($"&DATA`IC`YEARS {Clock}=300");
-			await God($"&DATA`IC`MONTHS {Clock}=Deepwinter|Thaw|Seed|Rain|Bloom|Sun|High|Harvest|Fall|Mist|Frost|Dark");
-			await God($"&DATA`IC`WEEKDAYS {Clock}=Sunsday|Moonsday|Tirsday|Wodensday|Thorsday|Freyday|Starday");
+			await God($"&DATA`CONFIG`IC-RATIO {Clock}=2");
+			await God($"&DATA`CONFIG`IC-YEARS {Clock}=300");
+			await God($"&DATA`CONFIG`IC-MONTHS {Clock}=Deepwinter|Thaw|Seed|Rain|Bloom|Sun|High|Harvest|Fall|Mist|Frost|Dark");
+			await God($"&DATA`CONFIG`IC-WEEKDAYS {Clock}=Sunsday|Moonsday|Tirsday|Wodensday|Thorsday|Freyday|Starday");
 			await Assert.That(await Think($"u({Clock}/FUN`IC`DATE,{1767225600 + 86400 + 3600})")).IsEqualTo("Starday, 3 Deepwinter 2326, 02:00");
 
-			// DATA`IC`DAYS moves the date, and FORMAT`IC writes it the game's way.
-			await God($"&DATA`IC`DAYS {Clock}=-3");
+			// IC-DAYS moves the date, and FORMAT`IC writes it the game's way.
+			await God($"&DATA`CONFIG`IC-DAYS {Clock}=-3");
 			await God($"&FORMAT`IC {Clock}=Year %<year>, month %<month>, day %<day>");
 			await Assert.That(await Think($"u({Clock}/FUN`IC`DATE,{1767225600 + 86400})")).IsEqualTo("Year 2325, month 12, day 31");
 		}

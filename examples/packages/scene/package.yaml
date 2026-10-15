@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -16,6 +16,12 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
 
 # Staff finish a scene that is not theirs with the scene.close permission. The package defines it;
@@ -59,14 +65,45 @@ objects:
     name: Scene Logger
     flags: [WIZARD]
     attributes:
-      # ---- policy knobs (read by the verbs; replaces a SceneOptions config) ----
-      DATA`CAPTURE: |-
-        1
-      # `active` so +scene/create yields an immediately-capturing scene — pose/say/@emit are recorded
-      # right after creation, with no separate +scene/start. Set this to `new` (or `scheduled`) instead
-      # if you want creation to STAGE a scene that only begins logging after an explicit +scene/start.
-      DATA`DEFAULT_STATUS: |-
+      # ---- settings: +config scene (plus-config); the verbs read each with get(%!/DATA`CONFIG`<NAME>) ----
+      # DEFAULT-STATUS is `active` so +scene/create yields an immediately-capturing scene: pose/say/@emit are
+      # recorded right after creation, with no separate +scene/start. `new` (or `scheduled`) makes creation
+      # STAGE a scene that only begins logging after an explicit +scene/start. OPEN-DETAILS: see DETAIL` below.
+      # RECALL-ROUNDS: see INC`RECALL.
+      DATA`CONFIG:
+        value: |-
+          What a new scene starts as, which details players may set, and how much +scene/recall shows.
+        flags: [no_command]
+      DATA`CONFIG`DEFAULT-STATUS: |-
         active
+      DATA`CONFIG`DEFAULT-STATUS`TYPE: |-
+        choice
+      DATA`CONFIG`DEFAULT-STATUS`DEFAULT: |-
+        active
+      DATA`CONFIG`DEFAULT-STATUS`CHOICES: |-
+        active new scheduled
+      DATA`CONFIG`DEFAULT-STATUS`DESCRIPTION: |-
+        What +scene/create makes: an active scene logs at once; new or scheduled waits for +scene/start.
+      DATA`CONFIG`OPEN-DETAILS: |-
+        1
+      DATA`CONFIG`OPEN-DETAILS`TYPE: |-
+        boolean
+      DATA`CONFIG`OPEN-DETAILS`DEFAULT: |-
+        1
+      DATA`CONFIG`OPEN-DETAILS`DESCRIPTION: |-
+        Whether an owner may set scene details the game does not list.
+      DATA`CONFIG`RECALL-ROUNDS: |-
+        2
+      DATA`CONFIG`RECALL-ROUNDS`TYPE: |-
+        integer
+      DATA`CONFIG`RECALL-ROUNDS`DEFAULT: |-
+        2
+      DATA`CONFIG`RECALL-ROUNDS`MIN: |-
+        1
+      DATA`CONFIG`RECALL-ROUNDS`MAX: |-
+        20
+      DATA`CONFIG`RECALL-ROUNDS`DESCRIPTION: |-
+        How many rounds of poses a bare +scene/recall shows.
 
       # ---- owner / wizard guard -------------------------------------------------
       FUN`OWNS: |-
@@ -268,10 +305,8 @@ objects:
       #                 scene cards), tone (the theme colour its values show in, such as warning) and order.
       #                 scenedetails() lists the keys, scenedetail() reads a field.
       # A key must be a word that is not one of the scene's own fields (status, title, room, ...). Staff with
-      # layout.admin change the catalogue with +scene/detail/add, /set and /remove. With DATA`OPEN_DETAILS set, as
+      # layout.admin change the catalogue with +scene/detail/add, /set and /remove. With DATA`CONFIG`OPEN-DETAILS set, as
       # shipped, an owner may set any detail, shown under its key when the catalogue does not list it.
-      DATA`OPEN_DETAILS: |-
-        1
       DATA`DENY_DETAILS: |-
         Changing scene details needs the layout.admin permission.
       DATA`DETAIL_FIELDS: |-
@@ -313,7 +348,7 @@ objects:
       # +scene/details lists the game's details; +scene/detail <key> shows one.
       CMD`DETAILS:
         value: |-
-          $(?is)^\+scene/details$: @assert words(scenedetails())=@pemit %#=[notice(SCENE,[if(get(%!/DATA`OPEN_DETAILS),This game lists no scene details. You can still set your own: +scene/set <name>=<value>.,This game has no scene details.)],warn)]; @pemit %#=[u(%!/FUN`DETAILS`TABLE)][if(get(%!/DATA`OPEN_DETAILS),%rYou can set other details too: +scene/set <name>=<value>.)]
+          $(?is)^\+scene/details$: @assert words(scenedetails())=@pemit %#=[notice(SCENE,[if(get(%!/DATA`CONFIG`OPEN-DETAILS),This game lists no scene details. You can still set your own: +scene/set <name>=<value>.,This game has no scene details.)],warn)]; @pemit %#=[u(%!/FUN`DETAILS`TABLE)][if(get(%!/DATA`CONFIG`OPEN-DETAILS),%rYou can set other details too: +scene/set <name>=<value>.)]
         flags: [REGEXP]
       CMD`DETAIL:
         value: |-
@@ -329,14 +364,14 @@ objects:
         flags: [REGEXP]
       CMD`DETAIL`REMOVE:
         value: |-
-          $(?is)^\+scene/detail/remove +(.+)$: @assert permission(%#,layout.admin)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_DETAILS)],error)]; think [setq(K,lcstr(trim(%1)))]; @assert hasattr(%!,DETAIL`%q<K>)=@pemit %#=[notice(SCENE,No scene detail called %q<K>.,warn)]; &DETAIL`%q<K> %!; @pemit %#=[notice(SCENE,Removed scene detail %q<K>. Scenes keep their values for it[if(get(%!/DATA`OPEN_DETAILS),\, shown under its key)].,ok)]
+          $(?is)^\+scene/detail/remove +(.+)$: @assert permission(%#,layout.admin)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_DETAILS)],error)]; think [setq(K,lcstr(trim(%1)))]; @assert hasattr(%!,DETAIL`%q<K>)=@pemit %#=[notice(SCENE,No scene detail called %q<K>.,warn)]; &DETAIL`%q<K> %!; @pemit %#=[notice(SCENE,Removed scene detail %q<K>. Scenes keep their values for it[if(get(%!/DATA`CONFIG`OPEN-DETAILS),\, shown under its key)].,ok)]
         flags: [REGEXP]
       # +scene/set [<id>/]<detail>=<value>: the focused scene, or the one named; an empty value clears it. Its owner
       # or a wizard, as for the title and pitch. scenedetailvalue() refuses a key that can't be a detail and a value
       # the detail does not allow, and writes several values the one way.
       CMD`SET:
         value: |-
-          $(?is)^\+scene/set +(?\:(\d+)/)?([^=]+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; think [setq(K,lcstr(trim(%2)))]; @assert or(member(scenedetails(),%q<K>),get(%!/DATA`OPEN_DETAILS))=@pemit %#=[notice(SCENE,No scene detail called %q<K>. +scene/details lists them.,warn)]; @assert not(strmatch(setr(V,scenedetailvalue(%q<K>,%3)),#-1*))=@pemit %#=[notice(SCENE,after(%q<V>,#-1%b),warn)]; @scene/set %q<SceneID>/%q<K>=%q<V>; @pemit %#=[notice(SCENE,if(strlen(%q<V>),Scene %q<SceneID>: [u(%!/FUN`DETAIL`LABEL,%q<K>)] is now [u(%!/FUN`DETAIL`SHOW,%q<SceneID>,%q<K>)].,Scene %q<SceneID>: [u(%!/FUN`DETAIL`LABEL,%q<K>)] cleared.),ok)]
+          $(?is)^\+scene/set +(?\:(\d+)/)?([^=]+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; think [setq(K,lcstr(trim(%2)))]; @assert or(member(scenedetails(),%q<K>),get(%!/DATA`CONFIG`OPEN-DETAILS))=@pemit %#=[notice(SCENE,No scene detail called %q<K>. +scene/details lists them.,warn)]; @assert not(strmatch(setr(V,scenedetailvalue(%q<K>,%3)),#-1*))=@pemit %#=[notice(SCENE,after(%q<V>,#-1%b),warn)]; @scene/set %q<SceneID>/%q<K>=%q<V>; @pemit %#=[notice(SCENE,if(strlen(%q<V>),Scene %q<SceneID>: [u(%!/FUN`DETAIL`LABEL,%q<K>)] is now [u(%!/FUN`DETAIL`SHOW,%q<SceneID>,%q<K>)].,Scene %q<SceneID>: [u(%!/FUN`DETAIL`LABEL,%q<K>)] cleared.),ok)]
         flags: [REGEXP]
 
       # ---- pose marks -------------------------------------------------------------
@@ -562,7 +597,7 @@ objects:
       # propagate its register); @assert in command position does.
       CMD`CREATE:
         value: |-
-          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert setr(SceneID,scenecreate(%L,%#,%1)); @scene/member %q<SceneID>/owner=%#; @scene/focus %#=%q<SceneID>; @scene/set %q<SceneID>/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=[notice(SCENE,Scene %q<SceneID> created and focused \(status: [get(%!/DATA`DEFAULT_STATUS)]\).,ok)]; &MY.SID %#=%q<SceneID>
+          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert setr(SceneID,scenecreate(%L,%#,%1)); @scene/member %q<SceneID>/owner=%#; @scene/focus %#=%q<SceneID>; @scene/set %q<SceneID>/status=[get(%!/DATA`CONFIG`DEFAULT-STATUS)]; @pemit %#=[notice(SCENE,Scene %q<SceneID> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)]; &MY.SID %#=%q<SceneID>
         flags: [REGEXP]
 
       # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
@@ -740,7 +775,7 @@ objects:
       #
       # `+scene/recall <n>` asks for a count; bare `+scene/recall` asks for "enough to see where we are",
       # which is a function of how many people are posing: one round of the room is
-      # words(scenemembers()), and DATA`RECALL_ROUNDS rounds of it is what someone who just walked in
+      # words(scenemembers()), and DATA`CONFIG`RECALL-ROUNDS rounds of it is what someone who just walked in
       # needs. `+scene/recall <id>=[<n>]` is the same for a scene the reader is not focused on, and
       # `+scene/log [<id>]` reads all of it. Every one goes through INC`RECALL so they cannot render
       # differently -- each verb passes it scene and count (none for the whole log) by name with
@@ -750,8 +785,6 @@ objects:
       # The guard is what makes bare recall safe: sceneposes() answers "#-1 NOT FOUND" for a scene
       # that does not exist, and an unfocused player's scenefocus() IS that string, so without it
       # the verb printed the sentinel back at them.
-      DATA`RECALL_ROUNDS: |-
-        2
 
       # One entry per pose, drawn as it is live (FUN`POSE`DRAW): a rule naming who posed, the pose's id and the
       # scene, then the pose as its type's FORMAT draws it, with the stored markup, so colour survives. A band,
@@ -779,7 +812,7 @@ objects:
         How many poses? Give a whole number of 1 or more, or just +scene/recall for the last few.
       CMD`RECALL:
         value: |-
-          $(?is)^\+scene/rec(?\:a(?\:l(?\:l)?)?)?(?\: +(.*))?$: think [setq(Named,t(pos(chr(61),%1)))][setq(SceneID,if(cand(%q<Named>,strlen(setr(_i,trim(before(%1,chr(61)))))),%q<_i>,scenefocus(%#)))][setq(Count,trim(if(%q<Named>,after(%1,chr(61)),%1)))]; @assert not(strmatch(%q<SceneID>,#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert or(not(strlen(%q<Count>)),and(isint(%q<Count>),gt(%q<Count>,0)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_COUNT)],warn)]; @assert words(sceneposes(%q<SceneID>))=@pemit %#=[notice(SCENE,Scene %q<SceneID> has no poses yet.)]; @include/args %!/INC`RECALL=scene,%q<SceneID>,count,[firstof(%q<Count>,max(1,mul(get(%!/DATA`RECALL_ROUNDS),words(scenemembers(%q<SceneID>)))))]
+          $(?is)^\+scene/rec(?\:a(?\:l(?\:l)?)?)?(?\: +(.*))?$: think [setq(Named,t(pos(chr(61),%1)))][setq(SceneID,if(cand(%q<Named>,strlen(setr(_i,trim(before(%1,chr(61)))))),%q<_i>,scenefocus(%#)))][setq(Count,trim(if(%q<Named>,after(%1,chr(61)),%1)))]; @assert not(strmatch(%q<SceneID>,#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert or(not(strlen(%q<Count>)),and(isint(%q<Count>),gt(%q<Count>,0)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_COUNT)],warn)]; @assert words(sceneposes(%q<SceneID>))=@pemit %#=[notice(SCENE,Scene %q<SceneID> has no poses yet.)]; @include/args %!/INC`RECALL=scene,%q<SceneID>,count,[firstof(%q<Count>,max(1,mul(get(%!/DATA`CONFIG`RECALL-ROUNDS),words(scenemembers(%q<SceneID>)))))]
         flags: [REGEXP]
       # The whole log of the focused scene, or of the one named, under a rule with its title and a line of its details,
       # through the LOG`HEAD filters.
@@ -1398,8 +1431,7 @@ objects:
 
         Output: `\[SCENE\] Done: Added scene detail era. +scene/detail/set era/<field>=<value> changes it.`
 
-        Players may set details the game does not list unless `` DATA`OPEN_DETAILS `` on the Scene
-        Logger is `0`.
+        Players may set details the game does not list unless `+config scene/open-details=no` turns it off.
       HELP`SCENE`FILTERS: |-
         A package can change what `+scene` shows without editing the scene package. It adds a **filter**
         to the Scene Logger: an attribute named `` FILTER`<point>`<name> ``. Where `+scene` draws that
@@ -1434,3 +1466,9 @@ objects:
     attributes:
       SRC`SCENE: |-
         {{scene_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`SCENE: |-
+        {{logger}}
