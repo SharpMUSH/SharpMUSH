@@ -73,6 +73,8 @@ Brackets around a whole attribute, a whole evaluated argument or a %-substitutio
 
 A function after text inside an argument is not just left unevaluated: its own commas and closing paren split and close the outer function. `think cat(a,b add(1,2))` gives `a b add(1 2)`. That is with paren_groups off, the default; see [compatibility config].
 
+Inside brackets only the closing `]` ends anything, wherever the brackets are: a comma, `)`, `;` or `=` in them is text unless a function inside claims it. `think cat(a,[x,y])` gives `a x,y`, and `think [x;y]` gives `x;y`. A register name in `%q<...>` is the same up to its `>`.
+
 A second function straight after a function is text: `think add(1,2)mul(2,3)` gives `3mul(2,3)`. Write `add(1,2)[mul(2,3)]`.
 
 A word that is a function's name, with `(` straight after it at the start, is a call even when it was meant as text: `think Last(minute) changes are fine` gives `minute changes are fine`. Write `\Last(minute)`. A name that is not a function stays text outside brackets and is an error inside them.
