@@ -1979,9 +1979,9 @@ public partial class Functions
 		};
 
 		var lines = new List<MString>();
-		foreach (var paragraph in text.Split("\n"))
+		foreach (var paragraph in text.Split("\n").Select(ExpandTabs))
 		{
-			var rest = ExpandTabs(paragraph);
+			var rest = paragraph;
 			do
 			{
 				var lineWidth = lines.Count == 0 ? firstWidth : width;

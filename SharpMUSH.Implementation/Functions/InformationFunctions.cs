@@ -1427,18 +1427,19 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, "LIST", 2, args.Count));
 		}
 
-		var option = args.TryGetValue("0", out var a0) ? (await a0.GetParsedResultAsync()).Message.ToPlainText() : string.Empty;
+		var errors = new ListEvaluationErrors();
+		var option = args.TryGetValue("0", out var a0) ? errors.Record(await a0.GetParsedResultAsync()).ToPlainText() : string.Empty;
 		var type = "all";
 		if (args.TryGetValue("1", out var a1))
 		{
-			type = (await a1.GetParsedResultAsync()).Message.ToPlainText().ToLowerInvariant();
+			type = errors.Record(await a1.GetParsedResultAsync()).ToPlainText().ToLowerInvariant();
 			if (type is not ("builtin" or "local" or "all"))
-				return new CallState(ErrorMessages.Returns.Nothing);
+				return errors.Complete(new CallState(ErrorMessages.Returns.Nothing));
 		}
 
 		bool Names(string full) => full.StartsWith(option, StringComparison.OrdinalIgnoreCase);
 
-		return option switch
+		return errors.Complete(option switch
 		{
 			"" => new CallState(ErrorMessages.Returns.Nothing),
 			_ when option.Equals("motd", StringComparison.OrdinalIgnoreCase) => await Motd(parser, default!),
@@ -1454,7 +1455,7 @@ public partial class Functions
 			_ when Names("powers") => new CallState(await FlagListAsync(parser,
 				Mediator.CreateStream(new GetPowersQuery()).Select(p => (p.Name, p.Symbol, p.SetPermissions, p.Disabled)))),
 			_ => new CallState(ErrorMessages.Returns.Nothing)
-		};
+		});
 
 		static async ValueTask<CallState> UpperSorted(IAsyncEnumerable<string> names)
 			=> new(string.Join(' ', (await names.ToArrayAsync())
@@ -1491,9 +1492,10 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "LIST", 2, args.Count));
 		}
 
-		var list = (await args["0"].GetParsedResultAsync()).Message;
+		var errors = new ListEvaluationErrors();
+		var list = errors.Record(await args["0"].GetParsedResultAsync());
 		var delimiter = args.TryGetValue("2", out var a2) && a2.Message.Length > 0
-			? (await a2.GetParsedResultAsync()).Message
+			? errors.Record(await a2.GetParsedResultAsync())
 			: MarkupText.Space;
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -1510,7 +1512,7 @@ public partial class Functions
 			{
 				iteration.Value = item;
 				iteration.Iteration++;
-				await NotifyService.Notify(enactor, (await args["1"].GetParsedResultAsync()).Message, executor);
+				await NotifyService.Notify(enactor, errors.Record(await args["1"].GetParsedResultAsync()), executor);
 				if (iteration.Break)
 				{
 					break;
@@ -1522,7 +1524,7 @@ public partial class Functions
 			parser.CurrentState.IterationRegisters.TryPop(out _);
 		}
 
-		return CallState.Empty;
+		return errors.Complete(CallState.Empty);
 	}
 
 	/// <summary>Command names of one type — "builtin", "local", or anything else for both — sorted, upper-case.</summary>
