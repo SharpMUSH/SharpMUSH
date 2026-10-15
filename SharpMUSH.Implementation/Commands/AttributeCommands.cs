@@ -1,6 +1,7 @@
 ﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -16,6 +17,24 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	/// <summary>
+	/// <c>@gender object[=value]</c>: <c>@sex</c> for whichever attribute <c>gender_attr</c> names, read when the
+	/// command runs, so a game that keeps gender in another attribute sets it where pronouns read it. The
+	/// arguments are taken as typed and written by the same path as every <c>@&lt;attribute&gt;</c> command, so
+	/// permissions, the QUIET gate, attribute flags and clearing are <c>@sex</c>'s. <c>@sex</c> itself still sets
+	/// SEX, as in PennMUSH.
+	/// </summary>
+	[SharpCommand(Name = "@GENDER", Behavior = CB.NoParse, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object", "value"])]
+	public ValueTask<Option<CallState>> Gender(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var writer = new StandardAttributeWriter(Mediator, LocateService, AttributeService, NotifyService);
+		return parser.CurrentState.Arguments.TryGetValue("0", out var arguments)
+			&& !string.IsNullOrWhiteSpace(arguments.Message.ToPlainText())
+				? writer.WriteAsync(parser, arguments.Message,
+					AttributeHelpers.GenderAttributeName(Configuration.CurrentValue.Attribute.GenderAttribute))
+				: writer.UsageAsync(parser, "GENDER");
+	}
+
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
 	public ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)

@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Mostrar mais</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Linha do tempo</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Sem data</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Ver tudo</value>
   </data>
@@ -6152,5 +6158,103 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Uma imagem com aviso de conteúdo fica fora da biblioteca de imagens. Remova o aviso para compartilhá-la.</value>
+  </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Adicionar ao calendário</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Adicione a programação ao seu calendário</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Seu aplicativo de calendário mostra cada cena no seu horário local e verifica mudanças a cada hora.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Fechar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Cenas públicas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Todas as cenas públicas da programação. Qualquer pessoa pode usar este endereço.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Seu link privado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Também lista as cenas privadas que este personagem pode ver. Qualquer pessoa com o link pode lê-lo, então guarde-o para você.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Só cenas que eu conduzo ou das quais participei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Este endereço só aparece agora. Copie-o para o seu aplicativo de calendário antes de sair da página.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Você criou um link privado em {0}. Crie um novo para ver o endereço de novo; o antigo deixa de funcionar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Criar meu link privado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Criar um novo link</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Desativar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Endereço do calendário</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Copiar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Endereço do calendário copiado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Assinar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Salvando rascunho</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Rascunho salvo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Rascunho só neste dispositivo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificações</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Receba notificações neste celular ou computador quando o portal estiver fechado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Só você vê isto.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Avisos para você</value>
   </data>
 </root>

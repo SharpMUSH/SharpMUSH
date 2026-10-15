@@ -76,6 +76,7 @@ builder.Services.AddSingleton<GameMessagesService>();
 builder.Services.AddSingleton<PortalThemesAdminService>();
 builder.Services.AddSingleton<AdminCharactersService>();
 builder.Services.AddSingleton<AdminAuditService>();
+builder.Services.AddSingleton<AdminActivityService>();
 builder.Services.AddSingleton<AdminBansService>();
 builder.Services.AddSingleton<AdminServerService>();
 // Registers the terminal facades — see AddTerminalServices for the rationale.
@@ -102,6 +103,8 @@ builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<PasskeyInterop>();
 builder.Services.AddSingleton<AccountPasskeyService>();
+builder.Services.AddSingleton<PushInterop>();
+builder.Services.AddSingleton<AccountPushService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<IThemeService>(sp => sp.GetRequiredService<ThemeService>());
@@ -198,6 +201,10 @@ CultureInfo.DefaultThreadCurrentUICulture = culture;
 // same run. (No readiness check here: the server hands out the portal only once the game is ready —
 // see PortalStartupPage in SharpMUSH.Server.)
 _ = app.Services.GetRequiredService<AccountAuthService>().InitAsync();
+
+// Web push: whether this tab is in view and which character it plays, and the character a tab opened from a
+// notification asks for. Started here so a tab reports from its first render; nothing waits on it.
+_ = app.Services.GetRequiredService<PushInterop>().StartAsync();
 
 // The last theme applied in this browser, read before the first render so ThemeProvider renders it once
 // instead of rendering the default and then re-rendering the whole tree in the stored one. The game's

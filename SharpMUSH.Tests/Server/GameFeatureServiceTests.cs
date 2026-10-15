@@ -130,9 +130,9 @@ public class GameFeatureServiceTests
 		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
 
 		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene"]);
+			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline"]);
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline"]);
 	}
 
 	/// <summary>

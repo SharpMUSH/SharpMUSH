@@ -72,7 +72,7 @@ objects:
       # The settings +config shows and changes (plus-config). Code reads each with get(%!/DATA`CONFIG`<NAME>).
       DATA`CONFIG:
         value: |-
-          How long a status line, note and place may be, and what +status/list says under the list.
+          The statuses on offer, how long a status line, note and place may be, and what +status/list says under the list.
         flags: [no_command]
       DATA`CONFIG`LABEL: |-
         Status
@@ -138,6 +138,62 @@ objects:
         List footer
       DATA`CONFIG`LIST-FOOTER`EXAMPLE: |-
         Longer requests: +bbread public/looking
+      # The statuses on offer, a +config table: entries on the store under STATUS`, each holding what it
+      # means, with TAG, LASTS and LOGOFF beneath.
+      DATA`CONFIG`STATUSES`TYPE: |-
+        table
+      DATA`CONFIG`STATUSES`LABEL: |-
+        Statuses
+      DATA`CONFIG`STATUSES`DESCRIPTION: |-
+        The statuses a player may choose.
+      DATA`CONFIG`STATUSES`STORE: |-
+        {{store}}
+      DATA`CONFIG`STATUSES`PATH: |-
+        STATUS
+      DATA`CONFIG`STATUSES`ENTRY: |-
+        means
+      DATA`CONFIG`STATUSES`FIELDS: |-
+        means tag lasts logoff
+      DATA`CONFIG`STATUSES`KEYPATTERN: |-
+        ^[A-Za-z0-9_]{1,20}$
+      DATA`CONFIG`STATUSES`FIELD`MEANS`TYPE: |-
+        text
+      DATA`CONFIG`STATUSES`FIELD`MEANS`MIN: |-
+        1
+      DATA`CONFIG`STATUSES`FIELD`MEANS`MAX: |-
+        200
+      DATA`CONFIG`STATUSES`FIELD`MEANS`LABEL: |-
+        Means
+      DATA`CONFIG`STATUSES`FIELD`MEANS`DESCRIPTION: |-
+        What +status says it means.
+      DATA`CONFIG`STATUSES`FIELD`TAG`TYPE: |-
+        text
+      DATA`CONFIG`STATUSES`FIELD`TAG`MAX: |-
+        20
+      DATA`CONFIG`STATUSES`FIELD`TAG`LABEL: |-
+        Tag
+      DATA`CONFIG`STATUSES`FIELD`TAG`DESCRIPTION: |-
+        What +who shows. The status's name when empty.
+      DATA`CONFIG`STATUSES`FIELD`LASTS`TYPE: |-
+        duration
+      DATA`CONFIG`STATUSES`FIELD`LASTS`DEFAULT: |-
+        0
+      DATA`CONFIG`STATUSES`FIELD`LASTS`MIN: |-
+        0
+      DATA`CONFIG`STATUSES`FIELD`LASTS`MAX: |-
+        604800
+      DATA`CONFIG`STATUSES`FIELD`LASTS`LABEL: |-
+        Lasts
+      DATA`CONFIG`STATUSES`FIELD`LASTS`DESCRIPTION: |-
+        How long it lasts from when it is set. 0 lasts until it is changed.
+      DATA`CONFIG`STATUSES`FIELD`LOGOFF`TYPE: |-
+        boolean
+      DATA`CONFIG`STATUSES`FIELD`LOGOFF`DEFAULT: |-
+        0
+      DATA`CONFIG`STATUSES`FIELD`LOGOFF`LABEL: |-
+        Ends at logoff
+      DATA`CONFIG`STATUSES`FIELD`LOGOFF`DESCRIPTION: |-
+        Whether logging off ends it.
       # Which INC` routine each switch runs: DATA`ROUTE`STATUS`<switch>. BARE is the command alone, ARG the
       # command with something after it and no switch.
       DATA`ROUTE: |-
@@ -156,12 +212,6 @@ objects:
         STATUS`SHOW
       DATA`ROUTE`STATUS`LIST: |-
         STATUS`LIST
-      DATA`ROUTE`STATUS`OPTIONS: |-
-        STATUS`OPTIONS
-      DATA`ROUTE`STATUS`ADD: |-
-        STATUS`ADD
-      DATA`ROUTE`STATUS`REMOVE: |-
-        STATUS`REMOVE
       # The routines that take a page as a last switch: +status/list/2.
       DATA`PAGED: |-
         STATUS`LIST
@@ -205,8 +255,8 @@ objects:
         value: |-
           permission(%#,softcode.status.moderate)
         flags: [funsyntax]
-      # 1 when the player running the command may change the statuses on offer: staff who change the game's
-      # configuration.
+      # 1 when the player running the command may change the statuses on offer through +config: staff who
+      # change the game's configuration.
       FUN`IS`ADMIN:
         value: |-
           permission(%#,config.admin)
@@ -228,6 +278,11 @@ objects:
       FUN`DISPLAY`DURATION:
         value: |-
           trim(etime(max(0,%0),3))
+        flags: [funsyntax]
+      # %0 seconds, more than 0: how long a status lasts, in words. Whole hours read as hours.
+      FUN`DISPLAY`LASTS:
+        value: |-
+          if(cand(not(mod(%0,3600)),setr(lasts_hours,div(%0,3600))),%q<lasts_hours> hour[if(neq(%q<lasts_hours>,1),s)],squish(etime(%0)))
         flags: [funsyntax]
       # %0 text, %1 a length: the text cut to that length, ending ... when it was cut.
       FUN`DISPLAY`SHORT:
@@ -268,7 +323,7 @@ objects:
         flags: [cmdsyntax]
 
       # ---- statuses -------------------------------------------------------------
-      # The statuses a player may choose are STATUS`<NAME> on the store, with TAG, HOURS and LOGOFF beneath.
+      # The statuses a player may choose are STATUS`<NAME> on the store, with TAG, LASTS and LOGOFF beneath.
       # A player's status is PLAYER`<key> on the store (the player's objid), with NAME (which status), LINE, NOTE,
       # PLACE, SET (when it was last set, in seconds) and UNTIL (when it runs out; unset, never) beneath it. All of
       # it is kept on the store so the +who filter reads everything it needs from there.
@@ -291,17 +346,17 @@ objects:
       # %0 a status: when one set now runs out, or nothing when it lasts until it is changed.
       FUN`STATUS`UNTIL:
         value: |-
-          if(gt(default({{store}}/STATUS`%0`HOURS,0),0),add(secs(),mul(get({{store}}/STATUS`%0`HOURS),3600)))
+          if(gt(setr(status_lasts,default({{store}}/STATUS`%0`LASTS,0)),0),add(secs(),%q<status_lasts>))
         flags: [funsyntax]
       # %0 a status: how long it lasts, as a sentence.
       FUN`STATUS`LASTS:
         value: |-
-          setq(status_hours,default({{store}}/STATUS`%0`HOURS,0))[if(gt(%q<status_hours>,0),It lasts %q<status_hours> hour[if(neq(%q<status_hours>,1),s)][if(get({{store}}/STATUS`%0`LOGOFF),%bor until you log off)].,if(get({{store}}/STATUS`%0`LOGOFF),It lasts until you log off.,It lasts until you change it.))]
+          setq(status_lasts,default({{store}}/STATUS`%0`LASTS,0))[if(gt(%q<status_lasts>,0),It lasts [u(%!/FUN`DISPLAY`LASTS,%q<status_lasts>)][if(get({{store}}/STATUS`%0`LOGOFF),%bor until you log off)].,if(get({{store}}/STATUS`%0`LOGOFF),It lasts until you log off.,It lasts until you change it.))]
         flags: [funsyntax]
       # %0 a status: how long it lasts, in a few words for a table.
       FUN`STATUS`LASTSSHORT:
         value: |-
-          setq(status_hours,default({{store}}/STATUS`%0`HOURS,0))[if(gt(%q<status_hours>,0),%q<status_hours>h[if(get({{store}}/STATUS`%0`LOGOFF),%bor logoff)],if(get({{store}}/STATUS`%0`LOGOFF),until logoff,until changed))]
+          setq(status_lasts,default({{store}}/STATUS`%0`LASTS,0))[if(gt(%q<status_lasts>,0),[u(%!/FUN`DISPLAY`DURATION,%q<status_lasts>)][if(get({{store}}/STATUS`%0`LOGOFF),%bor logoff)],if(get({{store}}/STATUS`%0`LOGOFF),until logoff,until changed))]
         flags: [funsyntax]
       # %0 a player with a status: its tag, and its line after a colon.
       FUN`STATUS`TEXT:
@@ -348,7 +403,7 @@ objects:
       # The statuses a player may choose, as a table.
       FUN`STATUS`CHOICES:
         value: |-
-          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),[tone(strong,Name)]%r[iter(%q<status_names>,lcstr(%i0),,%r)],[tone(strong,Means)]%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],[tone(strong,Lasts)]%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTSSHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)][if(u(%!/FUN`IS`ADMIN),%r[tone(muted,Staff: +status/options <name>/hours=<hours> changes how long one lasts. +help status staff has the rest.)])]
+          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),[tone(strong,Name)]%r[iter(%q<status_names>,lcstr(%i0),,%r)],[tone(strong,Means)]%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],[tone(strong,Lasts)]%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTSSHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)][if(u(%!/FUN`IS`ADMIN),%r[tone(muted,Staff: +config status/statuses changes them. +help status staff has the rest.)])]
         flags: [funsyntax]
       # +status <name>[=<line>]
       INC`STATUS`SET:
@@ -407,41 +462,11 @@ objects:
         flags: [funsyntax]
 
       # ---- staff: the statuses on offer -------------------------------------------
-      # Stops a command whose player may not change the statuses on offer.
-      INC`STATUS`NEEDADMIN:
+      # +config changes the statuses (DATA`CONFIG`STATUSES) and runs this after each change. A status taken
+      # away is cleared from everyone who has it, and whoever removed it is told how many.
+      ACONFIG:
         value: |-
-          @assert u(%!/FUN`IS`ADMIN)=@pemit %#=notice(STATUS,Only staff who change the game's configuration can change the statuses on offer.,error)
-        flags: [cmdsyntax]
-      # +status/options <name>/<option>=<value>: hours, logoff, tag or means. Each option is its own routine.
-      INC`STATUS`OPTIONS:
-        value: |-
-          @include %!/INC`STATUS`NEEDADMIN; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(STATUS,+status/options <name>/hours=<hours>%, /logoff=on or off%, /tag=<text> or /means=<text>,warn); think setq(status_typed,trim(before(%q<cmd_left_side>,/))); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_option,lcstr(trim(after(%q<cmd_left_side>,/)))); @assert member(hours logoff tag means,%q<status_option>)=@pemit %#=notice(STATUS,A status has hours%, logoff%, tag and means.,warn); @include %!/INC`STATUS`OPTION`[ucstr(%q<status_option>)]
-        flags: [cmdsyntax]
-      INC`STATUS`OPTION`HOURS:
-        value: |-
-          @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0))=@pemit %#=notice(STATUS,Hours are a whole number: 0 lasts until it is changed.,warn); &STATUS`%q<status_name>`HOURS {{store}}=%q<cmd_right_side>; @pemit %#=notice(STATUS,[lcstr(%q<status_name>)]: [u(%!/FUN`STATUS`LASTS,%q<status_name>)] A status set before now keeps the time it had.,ok)
-        flags: [cmdsyntax]
-      INC`STATUS`OPTION`LOGOFF:
-        value: |-
-          @assert member(on off,lcstr(%q<cmd_right_side>))=@pemit %#=notice(STATUS,+status/options [lcstr(%q<status_name>)]/logoff=on ends it at logoff%, =off keeps it.,warn); &STATUS`%q<status_name>`LOGOFF {{store}}=if(strmatch(%q<cmd_right_side>,on),1,0); @pemit %#=notice(STATUS,[lcstr(%q<status_name>)]: [u(%!/FUN`STATUS`LASTS,%q<status_name>)],ok)
-        flags: [cmdsyntax]
-      INC`STATUS`OPTION`TAG:
-        value: |-
-          @assert cand(strlen(%q<cmd_right_side>),lte(strlen(%q<cmd_right_side>),20))=@pemit %#=notice(STATUS,A tag is 1 to 20 characters.,warn); &STATUS`%q<status_name>`TAG {{store}}=%q<cmd_right_side>; @pemit %#=notice(STATUS,[lcstr(%q<status_name>)] shows as %q<cmd_right_side>.,ok)
-        flags: [cmdsyntax]
-      INC`STATUS`OPTION`MEANS:
-        value: |-
-          @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(STATUS,Say what it means after the =.,warn); &STATUS`%q<status_name> {{store}}=%q<cmd_right_side>; @pemit %#=notice(STATUS,[lcstr(%q<status_name>)] means: %q<cmd_right_side>,ok)
-        flags: [cmdsyntax]
-      # +status/add <name>=<what it means>: a new status, lasting until it is changed, shown as its name.
-      INC`STATUS`ADD:
-        value: |-
-          @include %!/INC`STATUS`NEEDADMIN; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(STATUS,+status/add <name>=<what it means>,warn); @assert cand(regmatch(%q<cmd_left_side>,^\[A-Za-z0-9_\]+$),lte(strlen(%q<cmd_left_side>),20))=@pemit %#=notice(STATUS,A status name is one word of up to 20 letters%, digits and _.,warn); think setq(status_name,ucstr(%q<cmd_left_side>)); @assert not(hasattr({{store}},STATUS`%q<status_name>))=@pemit %#=notice(STATUS,There is already a status called [lcstr(%q<status_name>)].,warn); &STATUS`%q<status_name> {{store}}=%q<cmd_right_side>; &STATUS`%q<status_name>`TAG {{store}}=%q<cmd_left_side>; &STATUS`%q<status_name>`HOURS {{store}}=0; &STATUS`%q<status_name>`LOGOFF {{store}}=0; @pemit %#=notice(STATUS,Added [lcstr(%q<status_name>)]. It lasts until it is changed. +status/options [lcstr(%q<status_name>)]/hours=<hours> changes that.,ok)
-        flags: [cmdsyntax]
-      # +status/remove <name>: takes the status away, and from everyone who has it.
-      INC`STATUS`REMOVE:
-        value: |-
-          @include %!/INC`STATUS`NEEDADMIN; @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<cmd_argument>)))=@pemit %#=notice(STATUS,There is no status '%q<cmd_argument>'. +status lists them.,warn); think setq(status_holders,filterbool(%!/FUN`STATUS`HOLDS,iter(lattr({{store}}/PLAYER`*),after(%i0,`)),,,%q<status_name>)); @dolist/inline %q<status_holders>={@include/args %!/INC`STATUS`CLEAR=key,##}; @wipe {{store}}/STATUS`%q<status_name>; @pemit %#=notice(STATUS,Removed [lcstr(%q<status_name>)][if(words(%q<status_holders>),%, and cleared it from [words(%q<status_holders>)] player[if(neq(words(%q<status_holders>),1),s)])].,ok)
+          @assert cand(strmatch(%<setting>,statuses),strmatch(%<action>,remove)); think setq(status_removed,lcstr(%<entry>),status_remover,%<by>); think setq(status_holders,filterbool(%!/FUN`STATUS`HOLDS,iter(lattr({{store}}/PLAYER`*),after(%i0,`)),,,ucstr(%q<status_removed>))); @assert words(%q<status_holders>); @dolist/inline %q<status_holders>={@include/args %!/INC`STATUS`CLEAR=key,##}; @pemit %q<status_remover>=notice(STATUS,Cleared %q<status_removed> from [words(%q<status_holders>)] player[if(neq(words(%q<status_holders>),1),s)].,ok)
         flags: [cmdsyntax]
       # %0 a key, %1 a status: 1 when that player's status is it.
       FUN`STATUS`HOLDS:
@@ -474,9 +499,9 @@ objects:
   # The statuses a player may choose, and every player's status. Inside the Status object, so no player can
   # reach it, and no_command, so nothing kept on it is ever matched as a command.
   #
-  # A status is STATUS`<NAME>, its value what it means, with TAG (what +who shows), HOURS (how long it lasts
-  # from when it is set; 0 until it is changed) and LOGOFF (1 when logging off ends it) beneath. A game adds,
-  # changes or removes statuses with +status/add, /options and /remove.
+  # A status is STATUS`<NAME>, its value what it means, with TAG (what +who shows), LASTS (how long it lasts
+  # from when it is set, in seconds; 0 until it is changed) and LOGOFF (1 when logging off ends it) beneath.
+  # Staff change them with +config status/statuses (DATA`CONFIG`STATUSES on the Status object).
   - ref: store
     type: thing
     name: Status Store
@@ -489,15 +514,15 @@ objects:
         Looking for roleplay now.
       STATUS`LFRP`TAG: |-
         LFRP
-      STATUS`LFRP`HOURS: |-
-        4
+      STATUS`LFRP`LASTS: |-
+        14400
       STATUS`LFRP`LOGOFF: |-
         1
       STATUS`RP_OK: |-
         Not looking, but glad to be asked.
       STATUS`RP_OK`TAG: |-
         RP OK
-      STATUS`RP_OK`HOURS: |-
+      STATUS`RP_OK`LASTS: |-
         0
       STATUS`RP_OK`LOGOFF: |-
         0
@@ -547,17 +572,18 @@ objects:
 
         ## Statuses
 
-        Staff who can change the game's configuration \(the `config.admin` permission\) choose the statuses on offer:
+        Staff who can change the game's configuration \(the `config.admin` permission\) choose the statuses on offer with `+config`:
 
-        - `+status/options <name>/hours=<hours>` sets how long it lasts from when it is set. 0 lasts until it is changed.
-        - `+status/options <name>/logoff=on` ends it at logoff, and `=off` keeps it.
-        - `+status/options <name>/tag=<text>` sets what `+who` shows, such as `LFRP`.
-        - `+status/options <name>/means=<text>` sets what `+status` says it means.
-        - `+status/add <name>=<what it means>` adds one, lasting until it is changed. `+status/remove <name>` takes one away, and from everyone who has it.
+        - `+config status/statuses` lists them, and `+config status/statuses/<name>` shows one.
+        - `+config status/statuses/<name>/lasts=<time>` sets how long it lasts from when it is set, such as `4h`. `0` lasts until it is changed.
+        - `+config status/statuses/<name>/logoff=yes` ends it at logoff, and `=no` keeps it.
+        - `+config status/statuses/<name>/tag=<text>` sets what `+who` shows, such as `LFRP`.
+        - `+config status/statuses/<name>/means=<text>` sets what `+status` says it means.
+        - `+config/add status/statuses/<name>=<what it means>` adds one, lasting until it is changed. `+config/remove status/statuses/<name>` takes one away, and from everyone who has it.
 
-        `+status` shows each status and how long it lasts. A new hours applies to statuses set after the change.
+        `+status` shows each status and how long it lasts. A new length applies to statuses set after the change.
 
-        They are kept on the Status Store, inside the Status object in the master room, as `` STATUS`<NAME> `` with `TAG`, `HOURS` and `LOGOFF` beneath.
+        They are kept on the Status Store, inside the Status object in the master room, as `` STATUS`<NAME> `` with `TAG`, `LASTS` \(seconds\) and `LOGOFF` beneath.
 
         ## Settings
 

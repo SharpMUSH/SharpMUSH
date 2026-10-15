@@ -1529,3 +1529,17 @@ pre.ms-preformatted {
 .kit-palette-field:has(input:focus-visible) {
 	box-shadow: inset 0 0 0 2px var(--accent);
 }
+
+/* The live scene page while the on-screen keyboard is up (layout.js watchSceneCompose): pinned to the part of the
+   screen the keyboard leaves, so the header stays at the top, the compose sheet sits on the keyboard, and the browser
+   has no reason to scroll the page up to the field and back down again when the keyboard closes. Above the bottom
+   navigation (40), which the keyboard covers anyway. The height is in
+   SceneLive.razor.css, where it can outweigh the page's own. */
+.scene-live-page--keyboard {
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: var(--vv-top, 0px);
+	z-index: 45;
+	background: var(--bg);
+}
