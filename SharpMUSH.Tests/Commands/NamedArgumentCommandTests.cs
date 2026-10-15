@@ -51,10 +51,18 @@ public class NamedArgumentCommandTests
 		await Run($"&STEP {thing}=think setq(back,%<who> as %!)");
 		await Run($"&RUN {thing}=@trigger/inline/args {thing}/STEP=who,Bob; &OUT {thing}=%q<back>");
 		await Run($"&KEEP {thing}=think setq(back,mine); @trigger/inline/localize/args {thing}/STEP=who,Bob; &OUT2 {thing}=%q<back>");
+		await Run($"&CLEAR {thing}=think setq(old,gone); @trigger/inline/clearregs/args {thing}/STEP=who,Ann; &OUT3 {thing}=%q<old>|%q<back>");
 		await Run($"@trigger/inline {thing}/RUN");
 		await Run($"@trigger/inline {thing}/KEEP");
+		await Run($"&MISS {thing}=think setq(old,kept); @trigger/inline/clearregs/match {thing}/STEP=zzz; &OUT4 {thing}=%q<old>");
+		await Run($"@trigger/inline {thing}/CLEAR");
+		await Run($"@trigger/inline {thing}/MISS");
 		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo($"Bob as #{thing.Number}");
 		await Assert.That(await Eval($"get({thing}/OUT2)")).IsEqualTo("mine");
+		await Assert.That(await Eval($"get({thing}/OUT3)")).IsEqualTo($"|Ann as #{thing.Number}")
+			.Because("/clearregs empties the caller's registers and still hands the triggered ones back");
+		await Assert.That(await Eval($"get({thing}/OUT4)")).IsEqualTo("kept")
+			.Because("a trigger whose /match fails clears nothing");
 	}
 
 	[Test]
