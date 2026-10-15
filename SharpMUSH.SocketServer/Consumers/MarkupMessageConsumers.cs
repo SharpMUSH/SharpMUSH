@@ -47,6 +47,7 @@ public class MarkupOutputConsumer(
 				: rendered.Data;
 
 			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;
+			await RenderedGmcp.SendAsync(connection, rendered);
 			if (message.Prompt) await connection.PromptOutputFunction(data);
 			else await connection.OutputFunction(data);
 		}
@@ -119,6 +120,7 @@ public class MarkupPromptConsumer(
 				: rendered.Data;
 
 			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;
+			await RenderedGmcp.SendAsync(connection, rendered);
 			await connection.PromptOutputFunction(data);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -128,6 +130,22 @@ public class MarkupPromptConsumer(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error sending markup prompt to connection {Handle}", message.Handle);
+		}
+	}
+}
+
+/// <summary>
+/// Sends a render's GMCP messages (<see cref="RenderedOutput.Gmcp"/>) ahead of its text, so a sound plays as its
+/// line arrives rather than after it.
+/// </summary>
+public static class RenderedGmcp
+{
+	public static async ValueTask SendAsync(ConnectionServerService.ConnectionData connection, RenderedOutput rendered)
+	{
+		if (rendered.Gmcp is not { Count: > 0 } frames || connection.GMCPFunction is not { } send) return;
+		foreach (var frame in frames)
+		{
+			await send(frame.Package, frame.Json);
 		}
 	}
 }

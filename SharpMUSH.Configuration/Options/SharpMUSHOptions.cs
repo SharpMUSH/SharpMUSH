@@ -266,6 +266,7 @@ public record SharpMUSHOptions
 			IpAddr: null,
 			JsonUnsafeUnescape: false,
 			Logins: true,
+			MediaBaseUrl: null,
 			MudName: "SharpMUSH",
 			MudUrl: null,
 			// SharpMUSH-only; MXP is negotiated per client, so this only says whether to offer it.

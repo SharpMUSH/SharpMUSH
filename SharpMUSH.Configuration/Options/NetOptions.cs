@@ -75,5 +75,8 @@ public record NetOptions(
 	bool JsonUnsafeUnescape,
 
 	[property: SharpConfig(Name = "ssl_require_client_cert", Category = "Net", Description = "Require clients to present valid SSL certificates", Group = "Connection Settings", Order = 3, Tooltip = "Enhanced security but requires client certificate setup")]
-	bool SslRequireClientCert
+	bool SslRequireClientCert,
+
+	[property: SharpConfig(Name = "media_base_url", Category = "Net", Description = "Web address a GMCP client such as Mudlet fetches the game's sounds and music from, when sound() or music() names a file rather than a full address. Sent as Client.Media.Default when a client agrees to GMCP; empty sends nothing", Group = "Network Protocol", Order = 7)]
+	string? MediaBaseUrl
 );

@@ -26,6 +26,7 @@ public partial class TelnetServer : ConnectionHandler
 	private readonly ConnectionServerOptions _options;
 	private readonly MsspReportHolder _mssp;
 	private readonly TerminalProbes _probes;
+	private readonly OutputSettingsHolder? _settings;
 
 	/// <summary>
 	/// How much a client may type before its connection is registered. Registration normally takes
@@ -42,7 +43,8 @@ public partial class TelnetServer : ConnectionHandler
 		ITelnetInterpreterFactory telnetFactory,
 		ConnectionServerOptions options,
 		MsspReportHolder mssp,
-		TerminalProbes probes)
+		TerminalProbes probes,
+		OutputSettingsHolder? settings = null)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -53,6 +55,7 @@ public partial class TelnetServer : ConnectionHandler
 		_options = options;
 		_mssp = mssp;
 		_probes = probes;
+		_settings = settings;
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
