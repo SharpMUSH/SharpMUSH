@@ -59,4 +59,27 @@ public class LightningSceneListTests
 		await Assert.That(listed.Select(s => s.Id)).Contains(kept.Id);
 		await Assert.That(listed.Select(s => s.Id)).DoesNotContain(cancelled.Id);
 	}
+
+	/// <summary>
+	/// A window applies before the limit, so finished scenes with no time, however recently active, never crowd
+	/// a timed one out of the calendar's slice.
+	/// </summary>
+	[Test]
+	public async Task AWindowedFinishedList_LeavesOutUntimedScenesBeforeTheLimit()
+	{
+		var timed = await _scenes.CreateSceneAsync("#0", "#1", "Timed");
+		await _scenes.SetSceneMetaAsync(timed.Id, "scheduledfor", "5000");
+		await _scenes.SetSceneMetaAsync(timed.Id, "status", "finished");
+		foreach (var name in new[] { "Untimed one", "Untimed two" })
+		{
+			var untimed = await _scenes.CreateSceneAsync("#0", "#1", name);
+			await _scenes.SetSceneMetaAsync(untimed.Id, "status", "finished");
+		}
+
+		var windowed = await _scenes.ListScenesAsync("finished", fromUtcMillis: 1000, count: 1);
+		var unwindowed = await _scenes.ListScenesAsync("finished", count: 10);
+
+		await Assert.That(windowed.Select(s => s.Id)).IsEquivalentTo([timed.Id]);
+		await Assert.That(unwindowed.Count).IsEqualTo(3);
+	}
 }

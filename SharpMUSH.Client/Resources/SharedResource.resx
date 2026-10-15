@@ -1834,6 +1834,60 @@
   <data name="PkgMergedValueLabel" xml:space="preserve">
     <value>Merged value</value>
   </data>
+  <data name="PkgLocalEditsCount" xml:space="preserve">
+    <value>Changed by this game ({0})</value>
+  </data>
+  <data name="PkgLocalEditsSub" xml:space="preserve">
+    <value>This game changed these since the package last installed them. Everything else takes the new version.</value>
+  </data>
+  <data name="PkgLocalEditWhat" xml:space="preserve">
+    <value>Changed</value>
+  </data>
+  <data name="PkgLocalEditOutcome" xml:space="preserve">
+    <value>On this upgrade</value>
+  </data>
+  <data name="PkgLocalKept" xml:space="preserve">
+    <value>Kept: the package did not change it</value>
+  </data>
+  <data name="PkgLocalMerged" xml:space="preserve">
+    <value>Merged: the package changed other lines</value>
+  </data>
+  <data name="PkgLocalDecide" xml:space="preserve">
+    <value>Both changed it: choose below</value>
+  </data>
+  <data name="PkgOnlyLocalEdits" xml:space="preserve">
+    <value>Only what this game changed</value>
+  </data>
+  <data name="PkgMergedWritten" xml:space="preserve">
+    <value>Merged (what the upgrade writes)</value>
+  </data>
+  <data name="PkgHooksCount" xml:space="preserve">
+    <value>Runs after the apply: {0} ({1})</value>
+  </data>
+  <data name="PkgHooksSub" xml:space="preserve">
+    <value>The apply runs this on its object after writing everything above. It follows the choices made on this page.</value>
+  </data>
+  <data name="PkgLockConflictsCount" xml:space="preserve">
+    <value>Lock conflicts ({0})</value>
+  </data>
+  <data name="PkgLockConflictsSub" xml:space="preserve">
+    <value>This game and the package both changed these locks.</value>
+  </data>
+  <data name="PkgLockValueLabel" xml:space="preserve">
+    <value>Lock</value>
+  </data>
+  <data name="PkgStructFlag" xml:space="preserve">
+    <value>flag {0}</value>
+  </data>
+  <data name="PkgStructPower" xml:space="preserve">
+    <value>power {0}</value>
+  </data>
+  <data name="PkgStructAttrFlag" xml:space="preserve">
+    <value>{0} flag on {1}</value>
+  </data>
+  <data name="PkgStructLock" xml:space="preserve">
+    <value>{0} lock</value>
+  </data>
   <data name="PkgMissingRemoteParam" xml:space="preserve">
     <value>Missing 'remote' parameter.</value>
   </data>
@@ -3225,6 +3279,12 @@
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Only you see this.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notices for you</value>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
   </data>
@@ -4394,6 +4454,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Show more</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Timeline</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Not dated</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>View all</value>
   </data>
@@ -5080,6 +5146,12 @@
   </data>
   <data name="AdmSetupPkgPlusHelpDesc" xml:space="preserve">
     <value>The game's own help, gathering the topics installed packages carry and keeping the ones you write.</value>
+  </data>
+  <data name="AdmSetupPkgPlusConfigTitle" xml:space="preserve">
+    <value>+config</value>
+  </data>
+  <data name="AdmSetupPkgPlusConfigDesc" xml:space="preserve">
+    <value>One command for the settings your softcode systems keep for themselves, each checked against what the system says it accepts.</value>
   </data>
   <data name="AdmSetupPkgJobsTitle" xml:space="preserve">
     <value>Jobs</value>
@@ -6223,6 +6295,69 @@
   </data>
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter to send</value>
+  </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Add to calendar</value>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Add the schedule to your calendar</value>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Your calendar app shows each scene at your own local time and checks for changes every hour.</value>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Public scenes</value>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Every public scene on the schedule. Anyone can use this address.</value>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Your private link</value>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Also lists the private scenes this character can see. Anyone with the link can read it, so keep it to yourself.</value>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Only scenes I run or joined</value>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>This address is shown only now. Copy it into your calendar app before you leave the page.</value>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>You made a private link on {0}. Make a new one to see its address again; the old one stops working.</value>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Make my private link</value>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Make a new link</value>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Turn it off</value>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Calendar address</value>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Calendar address copied</value>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Subscribe</value>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Saving draft</value>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Draft saved</value>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Draft on this device only</value>
   </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>This scene is paused. It takes no poses until its owner resumes it.</value>
@@ -8262,6 +8397,153 @@
   </data>
   <data name="AdmDiscordAccountGone" xml:space="preserve">
     <value>(account gone)</value>
+  </data>
+  <data name="AdmActivityTitle" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="AdmCardActivity" xml:space="preserve">
+    <value>See when people play, who is drifting away, how each approval month kept posing, and which rooms are used.</value>
+  </data>
+  <data name="AdmActivityBlurb" xml:space="preserve">
+    <value>Counted from poses and scenes, never from time connected. Staff only; everything but the drifting list is a total.</value>
+  </data>
+  <data name="AdmActivityWindow" xml:space="preserve">
+    <value>Window</value>
+  </data>
+  <data name="AdmActivityLastDays" xml:space="preserve">
+    <value>Last {0} days</value>
+  </data>
+  <data name="AdmActivityZone" xml:space="preserve">
+    <value>Hours in {0}</value>
+  </data>
+  <data name="AdmActivityPosed" xml:space="preserve">
+    <value>Characters posing</value>
+  </data>
+  <data name="AdmActivityOfApproved" xml:space="preserve">
+    <value>of {0} approved · {1}</value>
+  </data>
+  <data name="AdmActivityPoses" xml:space="preserve">
+    <value>Poses</value>
+  </data>
+  <data name="AdmActivityScenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="AdmActivityNewApprovals" xml:space="preserve">
+    <value>New approvals</value>
+  </data>
+  <data name="AdmActivityRoomsUsed" xml:space="preserve">
+    <value>Rooms used</value>
+  </data>
+  <data name="AdmActivityRoomsDeadSub" xml:space="preserve">
+    <value>{0} dead</value>
+  </data>
+  <data name="AdmActivityDrifting" xml:space="preserve">
+    <value>Drifting away</value>
+  </data>
+  <data name="AdmActivityPeak" xml:space="preserve">
+    <value>Busiest hour</value>
+  </data>
+  <data name="AdmActivityPeakSub" xml:space="preserve">
+    <value>{0} posing on average</value>
+  </data>
+  <data name="AdmActivitySame" xml:space="preserve">
+    <value>same as the window before</value>
+  </data>
+  <data name="AdmActivityUp" xml:space="preserve">
+    <value>up {0} from {1}</value>
+  </data>
+  <data name="AdmActivityDown" xml:space="preserve">
+    <value>down {0} from {1}</value>
+  </data>
+  <data name="AdmActivityHoursTitle" xml:space="preserve">
+    <value>When people play</value>
+  </data>
+  <data name="AdmActivityHoursSub" xml:space="preserve">
+    <value>Approved characters posing in each hour of the week, averaged over the window.</value>
+  </data>
+  <data name="AdmActivityHeatCell" xml:space="preserve">
+    <value>{0} {1}:00, {2} posing</value>
+  </data>
+  <data name="AdmActivityHeatLow" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="AdmActivityHeatHigh" xml:space="preserve">
+    <value>{0} posing</value>
+  </data>
+  <data name="AdmActivityDriftingTitle" xml:space="preserve">
+    <value>Drifting away</value>
+  </data>
+  <data name="AdmActivityDriftingSub" xml:space="preserve">
+    <value>Posed on at least {2} of the {1} days before the last {0} days, and on half as many days or fewer since.</value>
+  </data>
+  <data name="AdmActivityDriftingEmpty" xml:space="preserve">
+    <value>Nobody who posed regularly has slowed down.</value>
+  </data>
+  <data name="AdmActivityCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="AdmActivityLastPose" xml:space="preserve">
+    <value>Last pose</value>
+  </data>
+  <data name="AdmActivityDaysPosed" xml:space="preserve">
+    <value>Days posed</value>
+  </data>
+  <data name="AdmActivityNowWas" xml:space="preserve">
+    <value>{0} now, {1} before</value>
+  </data>
+  <data name="AdmActivityNever" xml:space="preserve">
+    <value>never</value>
+  </data>
+  <data name="AdmActivityShowing" xml:space="preserve">
+    <value>Showing {0} of {1}.</value>
+  </data>
+  <data name="AdmActivityCohortsTitle" xml:space="preserve">
+    <value>Cohorts by approval month</value>
+  </data>
+  <data name="AdmActivityCohortsSub" xml:space="preserve">
+    <value>Of the characters approved each month, the share who posed in each 30 days after that month ended.</value>
+  </data>
+  <data name="AdmActivityMonth" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="AdmActivityApproved" xml:space="preserve">
+    <value>Approved</value>
+  </data>
+  <data name="AdmActivityActiveNow" xml:space="preserve">
+    <value>Posing now</value>
+  </data>
+  <data name="AdmActivityPeriod" xml:space="preserve">
+    <value>Day {0}</value>
+  </data>
+  <data name="AdmActivityUndated" xml:space="preserve">
+    <value>{0} approved characters have no approval in the audit log and are counted by the month they were created.</value>
+  </data>
+  <data name="AdmActivityRoomsTitle" xml:space="preserve">
+    <value>Busiest rooms</value>
+  </data>
+  <data name="AdmActivityRoomsSub" xml:space="preserve">
+    <value>Poses in each room over the last {0} days.</value>
+  </data>
+  <data name="AdmActivityRoomsEmpty" xml:space="preserve">
+    <value>Nobody has posed in a room in this window.</value>
+  </data>
+  <data name="AdmActivityRoom" xml:space="preserve">
+    <value>Room</value>
+  </data>
+  <data name="AdmActivityDays" xml:space="preserve">
+    <value>Days</value>
+  </data>
+  <data name="AdmActivityPeople" xml:space="preserve">
+    <value>People</value>
+  </data>
+  <data name="AdmActivityDeadTitle" xml:space="preserve">
+    <value>Dead rooms</value>
+  </data>
+  <data name="AdmActivityDeadSub" xml:space="preserve">
+    <value>No pose in {0} days.</value>
+  </data>
+  <data name="AdmActivityDeadEmpty" xml:space="preserve">
+    <value>Every room has seen a pose.</value>
   </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notifications</value>

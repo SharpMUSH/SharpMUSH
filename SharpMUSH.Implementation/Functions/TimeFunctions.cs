@@ -76,7 +76,7 @@ public partial class Functions
 		var secs = args.TryGetValue("0", out var value) ? value.Message.ToPlainText() : null;
 		var timezone = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, TimeZoneInfo.Utc.Id).ToPlainText();
 
-		if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
+		if (!TimeZones.TryFind(timezone, out var tz))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.NoSuchTimezone);
 		}
@@ -339,7 +339,7 @@ public partial class Functions
 			return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 		}
 
-		if (TimeZoneInfo.TryFindSystemTimeZoneById(arg0, out var timeZone))
+		if (TimeZones.TryFind(arg0, out var timeZone))
 		{
 			return TimeZoneInfo.ConvertTime(DateTimeOffset.Now, timeZone).ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 		}
@@ -358,7 +358,7 @@ public partial class Functions
 
 				var attrValue = tz.Last().Value.ToPlainText();
 
-				return TimeZoneInfo.TryFindSystemTimeZoneById(attrValue, out var dbTimeZone)
+				return TimeZones.TryFind(attrValue, out var dbTimeZone)
 					? TimeZoneInfo.ConvertTime(DateTimeOffset.Now, dbTimeZone).ToString(PennTimeFormat, CultureInfo.InvariantCulture)
 					: DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 			});
@@ -448,7 +448,7 @@ public partial class Functions
 		if (args.TryGetValue("2", out var tzArg))
 		{
 			var tzStr = tzArg.Message.ToPlainText();
-			if (TimeZoneInfo.TryFindSystemTimeZoneById(tzStr, out var tz))
+			if (TimeZones.TryFind(tzStr, out var tz))
 			{
 				dt = TimeZoneInfo.ConvertTime(dt, tz);
 			}
@@ -904,7 +904,7 @@ public partial class Functions
 					dateTime.UtcDateTime.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 			}
 
-			if (TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
+			if (TimeZones.TryFind(timezone, out var tz))
 			{
 				var converted = TimeZoneInfo.ConvertTime(dateTime, tz);
 				return ValueTask.FromResult<CallState>(converted.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
@@ -940,7 +940,7 @@ public partial class Functions
 			{
 				"" => TimeZoneInfo.Local,
 				_ when timezone.Equals("utc", StringComparison.OrdinalIgnoreCase) => TimeZoneInfo.Utc,
-				_ => TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var named) ? named : null
+				_ => TimeZones.TryFind(timezone, out var named) ? named : null
 			};
 
 			if (zone is null)

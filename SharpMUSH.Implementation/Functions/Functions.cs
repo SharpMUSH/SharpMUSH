@@ -48,6 +48,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private ITextFileService TextFileService { get; }
 	private ILogger<Functions> Logger { get; }
 	private IMessageBus MessageBus { get; }
+	private IActivityReportService ActivityReports { get; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -86,7 +87,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IBooleanExpressionParser booleanExpressionParser,
 		ITextFileService textFileService,
 		IDidItService didItService,
-		IAccountService accountService)
+		IAccountService accountService,
+		IActivityReportService activityReports)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -119,6 +121,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		TextFileService = textFileService;
 		DidItService = didItService;
 		AccountService = accountService;
+		ActivityReports = activityReports;
 
 		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
 			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });

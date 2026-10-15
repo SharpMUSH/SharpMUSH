@@ -37,13 +37,7 @@ public class PackageLifecycleRunner(
 		CancellationToken cancellationToken = default)
 	{
 		// Install → AINSTALL (first install only); Upgrade → AUPDATE (never on first install).
-		var attribute = changeset.Kind switch
-		{
-			PackageRevisionKind.Install => "AINSTALL",
-			PackageRevisionKind.Upgrade => "AUPDATE",
-			_ => null
-		};
-		if (attribute is null)
+		if (changeset.LifecycleHook is not { } attribute)
 		{
 			return;
 		}
