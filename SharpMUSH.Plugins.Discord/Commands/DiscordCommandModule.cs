@@ -29,6 +29,7 @@ namespace SharpMUSH.Plugins.Discord.Commands;
 /// its token or intents change. <c>/gate</c> lets only linked members post in a linked channel again, as linking does.
 /// These need <c>discord.admin</c>. <c>/speak &lt;channel id&gt;</c>, run by any character on a linked account, makes it the
 /// character its Discord user speaks as there; <c>/speak/off</c> stops that. <c>/bans on|off</c> mirrors game bans to Discord bans.
+/// <c>/event</c> publishes Discord Scheduled Events (<see cref="DiscordEventCommands"/>).
 /// Linking, unlinking, resuming and gating return the channel id at once and tell the admin how it went when it is done.
 /// </summary>
 public static class DiscordCommandModule
@@ -42,7 +43,7 @@ public static class DiscordCommandModule
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
 	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "SPEAK", "OFF", "MAP", "UNMAP",
-			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY", "BANS"],
+			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY", "BANS", "EVENT", "START", "END"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "role"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -66,6 +67,12 @@ public static class DiscordCommandModule
 		{
 			var right = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText().Trim();
 			return await DiscordRoleCommands.RunAsync(parser, executor, switches, argument, right);
+		}
+
+		if (switches.Contains("EVENT"))
+		{
+			var right = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText().Trim();
+			return await DiscordEventCommands.RunAsync(parser, executor, switches, argument, right);
 		}
 
 		if (switches.Contains("BANS"))
@@ -127,7 +134,7 @@ public static class DiscordCommandModule
 	}
 
 	/// <summary>Tells the admin how a link or unlink went. Runs off the game's queue, so nothing it throws reaches a caller.</summary>
-	private static async Task AnswerAsync(INotifyService notify, AnySharpObject executor, ILogger logger,
+	internal static async Task AnswerAsync(INotifyService notify, AnySharpObject executor, ILogger logger,
 		Func<CancellationToken, ValueTask<MString>> work)
 	{
 		using var timeout = new CancellationTokenSource(DiscordTimeout);
