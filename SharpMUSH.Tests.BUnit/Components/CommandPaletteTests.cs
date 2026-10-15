@@ -202,6 +202,22 @@ public class CommandPaletteTests : BunitContext
 	}
 
 	[Test]
+	public async Task Reopening_DropsTheLastOpeningsRows_BeforeTheServerAnswersAgain()
+	{
+		_palette.Response = Response([Entry("WHO", "Who is on", "+who", system: "who-where")]);
+		var cut = RenderOpen();
+		cut.WaitForState(() => Labels(cut).Contains("Who is on"));
+
+		// The account switched character between openings, and this time the server does not answer.
+		_palette.Response = null;
+		cut.Render(p => p.Add(x => x.Open, false));
+		cut.Render(p => p.Add(x => x.Open, true));
+
+		await Assert.That(Labels(cut)).DoesNotContain("Who is on");
+		await Assert.That(Groups(cut)).IsEquivalentTo(["Go to"]);
+	}
+
+	[Test]
 	public async Task WithoutTheServersAnswer_ThePagesStillShow()
 	{
 		var cut = RenderOpen();

@@ -24,7 +24,9 @@ internal static class ContextAuthority
 			return new Error<string>(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		var isEnactor = parser.CurrentState.Enactor is { } enactor && enactor.Number == player.Object.DBRef.Number;
+		// The whole objid where the enactor carries one: a queued action can outlive its player, whose number may
+		// then belong to someone else.
+		var isEnactor = parser.CurrentState.Enactor is { } enactor && enactor.SameObjectAs(player.Object.DBRef);
 		return isEnactor || await permissions.Controls(executor, found)
 			? player
 			: new Error<string>(ErrorMessages.Returns.PermissionDenied);
