@@ -75,6 +75,9 @@ public static class BundledPackages
 		// their settings with it.
 		new("plus-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// The scene in the room, for the command palette: pushes scene_here as players move. Apart from scene
+		// because it needs the event handler and scene does not.
+		new("scene-here", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -95,6 +98,11 @@ public static class BundledPackages
 		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +safety is a name a game may already use, and a game chooses its own safety tools.
 		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: favourite poses and the highlights they make add +scene/fav and its kin to the
+		// Scene Logger, and a game chooses whether its players rank poses at all. Its portal page is a separate
+		// application package, as jobs-app is for jobs.
+		new("highlights", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("highlights-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
@@ -112,7 +120,9 @@ public static class BundledPackages
 		// Available, not installed: +summary is a name a game may already use for its own code.
 		new("summary", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
-		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		// Available, not installed: +info and +journal are names a game may already use for its own code.
+		new("info", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
 		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins health and jobs, so +health shows staff load.
@@ -130,6 +140,8 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it builds on scene and time, which a game chooses first.
+		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

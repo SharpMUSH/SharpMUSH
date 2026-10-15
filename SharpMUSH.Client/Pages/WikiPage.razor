@@ -2,10 +2,12 @@
 @layout WikiLayout
 @using SharpMUSH.Client.Components
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (!_redirecting)
 {
     <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
+    <PalettePage Kind="wiki" Subject="@($"{Ns}/{Slug}")" Rows="@PaletteRows" />
 
     <WikiView @key="@($"{Ns}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns"
               Locale="@Lang" Mode="WikiView.WikiMode.View" />
@@ -23,6 +25,12 @@
     public string? Lang { get; set; }
 
     private bool _redirecting;
+
+    private IReadOnlyList<PaletteRow> PaletteRows =>
+    [
+        PaletteRow.Go($"{WikiRoutes.WikiPathFor(Ns, Slug)}/edit", Icons.Material.Outlined.Edit, Loc["WikiEdit"]),
+        PaletteRow.Go($"{WikiRoutes.WikiPathFor(Ns, Slug)}/history", Icons.Material.Outlined.History, Loc["WkRevisionHistory"])
+    ];
 
     // Backstop for links this app no longer produces: bookmarks, external links, hand-typed URLs,
     // and wiki markup rendered before character links became aliases. Cold loads are caught

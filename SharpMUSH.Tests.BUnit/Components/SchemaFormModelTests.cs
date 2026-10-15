@@ -55,6 +55,25 @@ public class SchemaFormModelTests
 	}
 
 	[Test]
+	public async Task Load_SeedsJsonListsAsItems_AndJsonBooleansAsBooleans()
+	{
+		var document = Form(Page("main", 1, Field("steps", "list"), Field("audit", "boolean"), Field("tags", "multiselect")));
+		var data = new SchemaData(new Dictionary<string, SchemaFieldValue>
+		{
+			["steps"] = new(Json("[\"Sheet checked\",\"Read, then signed\"]")),
+			["audit"] = new(Json("true")),
+			["tags"] = new(Json("[\"a\"]"))
+		});
+
+		var model = Loaded(document, data);
+
+		await Assert.That(model.GetMulti("steps")).IsEquivalentTo(["Sheet checked", "Read, then signed"]);
+		await Assert.That(model.GetBool("audit")).IsTrue();
+		await Assert.That(model.GetMulti("tags")).IsEquivalentTo(["a"]);
+		await Assert.That(model.GetString("steps")).IsEqualTo("Sheet checked, Read, then signed");
+	}
+
+	[Test]
 	public async Task Load_ReplacementDocument_KeepsWhatWasEntered_AndStartsAtItsFirstPage()
 	{
 		var model = Loaded(Form(Page("one", 1, Field("name")), Page("two", 2, Field("email"))));

@@ -657,6 +657,7 @@
         {
             if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
             _ = SendTerminalTypesAsync();
+            _ = SendTimeZoneAsync();
         }
         InvokeAsync(StateHasChanged);
     }
@@ -666,6 +667,20 @@
     {
         await ScreenReader.LoadAsync();
         if (Terminal.IsConnected) await Terminal.SendControlAsync(TerminalInput.TerminalTypesFrame(ScreenReader.On));
+    }
+
+    /// <summary>Says which time zone the browser is in (TerminalInput.TimeZoneFrame), so the game can fill in the player's.</summary>
+    private async Task SendTimeZoneAsync()
+    {
+        string? zone;
+        try
+        {
+            zone = await JsRuntime.InvokeAsync<string?>("SharpMUSH.timeZone");
+        }
+        // portal-interop.js not loaded, or the page is going away: the game is told nothing.
+        catch (JSException) { return; }
+        catch (TaskCanceledException) { return; }
+        if (!string.IsNullOrEmpty(zone) && Terminal.IsConnected) await Terminal.SendControlAsync(TerminalInput.TimeZoneFrame(zone));
     }
 
     /// <summary>Screen reader mode turned on or off in Settings: the game is told at once.</summary>

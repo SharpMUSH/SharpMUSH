@@ -43,6 +43,28 @@ public class TimeFunctionUnitTests
 	}
 
 	/// <summary>
+	/// convtime() reads a date and time with no offset of its own in the zone it is given, whatever the format: 20:00
+	/// on 30 October 2026 is 00:00 UTC the next day in New York (summer time) and 20:00 UTC in London (not).
+	/// A time that names its offset keeps it, and one the zone skips when summer time starts is refused, except in
+	/// PennMUSH's own format, which moves it past the gap as PennMUSH does.
+	/// </summary>
+	[Test]
+	[Arguments("convtime(2026-10-30 20:00,America/New_York)", "1793404800")]
+	[Arguments("convtime(Fri Oct 30 20:00:00 2026,America/New_York)", "1793404800")]
+	[Arguments("convtime(2026-10-30 20:00,Europe/London)", "1793390400")]
+	[Arguments("convtime(2026-10-30 20:00,UTC)", "1793390400")]
+	[Arguments("convtime(2026-10-30T20:00:00Z,America/New_York)", "1793390400")]
+	[Arguments("convtime(2026-10-30T20:00:00+02:00,UTC)", "1793383200")]
+	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIMEZONE")]
+	[Arguments("convtime(2027-03-14 02:30,America/New_York)", "#-1 INVALID TIME")]
+	[Arguments("convtime(Sun Mar 14 02:30:00 2027,America/New_York)", "1805009400")]
+	public async Task ConvTimeReadsAWallClockInTheZone(string call, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(call));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
 	/// A zone is named with its own case, whatever was looked up before: .NET keeps zones it has read in a cache
 	/// that ignores case, so asia/kolkata used to work only once Asia/Kolkata had been read.
 	/// </summary>

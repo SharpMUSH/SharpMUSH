@@ -31,22 +31,26 @@ which games can add as a remote in the admin panel.
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 | [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
 | [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
+| [`scene-here/`](scene-here/) | Pushes `scene_here` onto a player's context stack as they enter a room with a scene running, so the command palette offers that scene's commands with its number filled in (requires scene and the event handler) |
 | [`scene-verse/`](scene-verse/) | Extends another package's output without editing it: scene details on the Scene Logger, and ``FILTER`<point>`<name>`` attributes that `+scene` runs with `chain()` over what it shows (requires scene) |
+| [`highlights/`](highlights/) + [`highlights-app/`](highlights-app/) | A package that keeps its own data beside another's: favourite poses in a store of its own, commands attached to the Scene Logger, a ``FILTER`POSE`RULE`` filter, settings on `+config`, and a portal page whose routes check what the viewer may read, since a route runs as a wizard (requires scene) |
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 | [`status/`](status/) | `+status`: whether a player is looking for roleplay (`lfrp`, runs out and ends at logoff) or glad to be asked (`rp_ok`), from a list of statuses the game keeps on the Status Store; shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter (requires who-where) |
 | [`watch/`](watch/) | A watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global, and `+watch` shows each player's `+who` status (requires who-where) |
 | [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
 | [`time/`](time/) | Time zones and an IC clock: `+time` shows the game's time and the player's own, `+time 8pm Pacific` converts a time (with a Discord timestamp), `+timezone` keeps the player's zone in `TZ` as PennMUSH does, and a Clock object holds the IC calendar settings and the functions other packages read the time through |
+| [`info/`](info/) | Files and notes: `+info` and `+pinfo` keep public and private files on the character under trees flagged `wizard` and `no_command` on first write, and `+journal` shares entries one by one; long texts are written a line at a time through `@input`, lists come in pages, and settings register with `+config` |
 | [`health/`](health/) | Staff numbers counted from poses and scenes, drawn from `activity()`: `+health` sums up a window against the one before, `/drifting` lists regulars who slowed down, `/cohorts` how each approval month stayed, `/rooms` busy and dead rooms, `/when` a weekday-by-hour map. Settings through `+config health` |
 | [`health-jobs/`](health-jobs/) | Joins health and jobs: a Staff load section in `+health` and `+health/staff`, open jobs and the oldest waiting on staff per staffer, attached as a summary filter and an `` INC`VIEW`STAFF `` view (requires health and jobs) |
-| [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (finger, health, scene, scene-safety, status, summary, time, timeline and who-where register theirs) |
+| [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (finger, health, highlights, info, scene, scene-safety, status, summary, time, timeline and who-where register theirs) |
 | [`summary/`](summary/) | `+summary`: one line summing up a player's last pose, told to their location with `@remit` so the scene package's pose hooks never record it, kept nowhere, with its length limit a `+config` setting (requires plus-config) |
 | [`timeline/`](timeline/) | IC dates on scenes and a timeline per character: a scene gets the time package's IC date when it starts (through the Scene plugin's ``SCENE`STATUS`` event), `+scene/date` dates a flashback, and `+timeline` lists a character's finished scenes in IC order, as the portal's character timeline does (requires scene and time) |
 | [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
 | [`notifications/`](notifications/) + [`notifications-app/`](notifications-app/) | The rules behind push notifications: subscriptions to the ``PAGE`MESSAGE`` and ``MAIL`RECEIVED`` events on the event handler call `@push` when the player wants that kind, the same settings are a `+notify` command and a portal form, and other packages add a kind and send it with ``@trigger/args`` on ``API`SEND`` |
 | [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
 | [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
+| [`scene-availability/`](scene-availability/) | When characters are free: `+avail/busy` and `+avail/free` keep dates, ranges and repeating patterns (weekly, every 2 weeks, the 2nd Tuesday, until a date, with dates skipped) in the player's own zone, `+avail/find` lists the times a group is all free, and a ``FILTER`CARD`` on the Scene Logger shows who of a scheduled scene's cast is free at its time (requires scene and time) |
 
 ## The manifest: `package.yaml`
 
@@ -495,6 +499,62 @@ page with what the install does to it.
   notes say so.
 - **Rollback** leaves wiki pages as they are; a page's own history is the way
   back for its text.
+
+## Attribute entries (format 1.5)
+
+A package can add standard attributes to the game's `@attribute` table: the
+default flags every new copy of the attribute gets, and a `limit` or an `enum`
+its values must meet. Declare them in `attributes:` and set `format: 1.5`; a
+manifest with `attributes:` and an older format is refused. Before 1.5 a
+package could only do this from `AINSTALL` softcode.
+
+```yaml
+format: 1.5
+package: jobs
+version: 2.0.0
+
+attributes:                     # attribute name: the entry @attribute would make
+  BBPOST_COUNT:
+    flags: [no_command, wizard] # default flags, as @attribute/access takes them
+  JOB`STATUS:
+    enum: [new, staff, player, held, closed]   # as @attribute/enum: a value must name one
+  JOB`TITLE:
+    limit: '^.{1,60}$'          # as @attribute/limit: a caseless regular expression
+  JOB`DUE:
+    enum: [this week, next week, someday]
+    delimiter: '|'              # choices with spaces need another delimiter
+  JOB`OWNER:
+    flags: [wizard]
+    retroactive: true           # also give these flags to every copy already on an object
+```
+
+The name is one `@attribute` takes, upper-cased, with `` ` `` only between
+branches. Each flag must be an attribute flag (`branch` is structure, not a
+default). A `limit` must compile as `@attribute/limit` compiles it, and an
+entry takes a limit or an enum, not both, since each replaces the other. An
+`index:` key is reserved for a later format and ignored. A plugin package
+cannot declare `attributes:`. The plan checks each entry against the game's
+live table, and its flags against the game's attribute flags.
+
+- **Install.** An entry the game lacks is created and becomes the package's.
+  An entry the game already has is the game's: the package uses it as it is
+  and never changes or removes it. If the game's entry has a different `limit`
+  or `enum` from the one the manifest declares, the plan is blocked and says
+  so; different default flags are only noted. An entry another installed
+  package owns blocks the plan.
+- **Retroactive.** Default flags reach new copies of the attribute only,
+  unless the entry sets `retroactive: true`: then, whenever the apply writes
+  the entry's flags, or a new version turns `retroactive` on, every copy already on an object gets exactly those flags
+  (its `branch` flag kept, its owner unchanged). The review screen shows how
+  many existing copies change, and asks the installer to confirm first.
+- **Upgrade.** The package's entries are merged field by field against what
+  the previous version declared: the default flags, and the limit-or-enum. A
+  field the new version changes takes the new value; the other keeps what the
+  game has, so an administrator's `@attribute/access` survives.
+- **Dropped entries and uninstall.** The entry is deleted from the table.
+  Values already stored on objects stay as they are.
+- **Rollback** restores objects and attributes only; attribute entries stay as
+  they are.
 
 ## Engine version range (format 1.6)
 
