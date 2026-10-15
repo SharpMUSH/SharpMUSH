@@ -84,7 +84,7 @@ public sealed class DiscordRelay(
 
 		return await webhooks.CreateWebhookAsync(channelId, cancellationToken) switch
 		{
-			CreatedWebhook created => await LinkCreatedAsync(channelId, created, linkedBy, author, cancellationToken),
+			CreatedWebhook created => await LinkCreatedAsync(channelId, created, linkedBy, author),
 			Error<string> error => error,
 		};
 	}
@@ -205,9 +205,10 @@ public sealed class DiscordRelay(
 	}
 
 	private async Task<Result<DiscordChannelLink>> LinkCreatedAsync(ulong channelId, CreatedWebhook created,
-		string linkedBy, SecretAuthor author, CancellationToken cancellationToken)
+		string linkedBy, SecretAuthor author)
 	{
-		if (await secrets.SetAsync(DiscordChannelLink.TokenSecretFor(channelId), created.Token, author, cancellationToken)
+		// The webhook exists now; a timeout past this point must not leave it with no link to delete it by.
+		if (await secrets.SetAsync(DiscordChannelLink.TokenSecretFor(channelId), created.Token, author, CancellationToken.None)
 			is Error<string> refused)
 		{
 			return refused;
@@ -215,7 +216,7 @@ public sealed class DiscordRelay(
 
 		var link = new DiscordChannelLink(channelId, created.GuildId, created.WebhookId, created.ChannelName,
 			created.GuildName, time.GetUtcNow(), linkedBy);
-		await store.SaveAsync(link, cancellationToken);
+		await store.SaveAsync(link, CancellationToken.None);
 		Start(link);
 		logger.LogInformation("[Discord] Linked #{Channel} in {Guild}.", link.ChannelName, link.GuildName);
 		return link;
@@ -301,13 +302,14 @@ public sealed class DiscordRelay(
 
 	private async Task<string?> UseWebhookAsync(LinkRunner runner, CreatedWebhook created, CancellationToken cancellationToken)
 	{
-		if (await secrets.SetAsync(runner.Link.TokenSecret, created.Token, Author, cancellationToken) is Error<string> refused)
+		// As when linking: the new webhook exists, so its token and id are kept whatever happens to the caller.
+		if (await secrets.SetAsync(runner.Link.TokenSecret, created.Token, Author, CancellationToken.None) is Error<string> refused)
 		{
 			return refused.Value;
 		}
 
 		runner.Link = runner.Link with { WebhookId = created.WebhookId };
-		await store.SaveAsync(runner.Link, cancellationToken);
+		await store.SaveAsync(runner.Link, CancellationToken.None);
 		runner.Poster.WebhookId = created.WebhookId;
 		logger.LogInformation("[Discord] #{Channel}'s webhook was deleted; the bot made a new one.", runner.Link.ChannelName);
 		return null;

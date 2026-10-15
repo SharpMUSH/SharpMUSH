@@ -24,7 +24,7 @@ namespace SharpMUSH.Plugins.Discord.Commands;
 /// <c>/link &lt;channel id&gt;</c> links a channel to the feed <c>discord/&lt;channel id&gt;</c>, <c>/unlink</c> drops a link
 /// and deletes its webhook, <c>/resume</c> starts a stopped link again, and <c>/connect</c> logs the bot in again after
 /// its token or intents change. Every switch needs <c>discord.admin</c>.
-/// Linking and unlinking return the channel id at once and tell the admin how it went when Discord answers.
+/// Linking, unlinking and resuming return the channel id at once and tell the admin how it went when it is done.
 /// </summary>
 public static class DiscordCommandModule
 {
@@ -82,27 +82,20 @@ public static class DiscordCommandModule
 			return new CallState(BadChannel);
 		}
 
-		if (action == "RESUME")
-		{
-			var (message, result) = await relay.ResumeAsync(channelId, ExecutionBudget.CurrentToken) switch
-			{
-				DiscordChannelLink link => (Notice($"#{link.ChannelName} posts again.", NoticeKind.Ok), link.FeedKey),
-				_ => (Notice("That channel is not linked.", NoticeKind.Warn), NoSuchLink),
-			};
-			await notify.Notify(executor, message);
-			return new CallState(result);
-		}
-
-		// Linking and unlinking wait on Discord, and the game's queue must not; the answer follows when Discord gives it.
+		// Linking and unlinking wait on Discord, and resuming waits behind them; the game's queue must not, so the answer
+		// follows when it comes.
 		var feeds = services.GetRequiredService<IFeedService>();
 		var logger = services.GetRequiredService<ILogger<DiscordRelay>>();
 		// The answer is told outside this command's queue entry, so none of the entry's ambient state (its output
 		// lane among it, closed by then) may flow into the task.
 		using (ExecutionContext.SuppressFlow())
 		{
-			_ = Task.Run(() => AnswerAsync(notify, executor, logger, cancellationToken => action == "LINK"
-				? LinkAsync(relay, feeds, executor, channelId, cancellationToken)
-				: UnlinkAsync(relay, channelId, cancellationToken)));
+			_ = Task.Run(() => AnswerAsync(notify, executor, logger, cancellationToken => action switch
+			{
+				"LINK" => LinkAsync(relay, feeds, executor, channelId, cancellationToken),
+				"UNLINK" => UnlinkAsync(relay, channelId, cancellationToken),
+				_ => ResumeAsync(relay, channelId, cancellationToken),
+			}));
 		}
 
 		return new CallState(channelId.ToString(CultureInfo.InvariantCulture));
@@ -146,6 +139,13 @@ public static class DiscordCommandModule
 		=> await relay.UnlinkAsync(channelId, cancellationToken) switch
 		{
 			DiscordChannelLink link => Notice($"Unlinked #{link.ChannelName}. Its feed discord/{link.FeedKey} stays, with its lines.", NoticeKind.Ok),
+			_ => Notice("That channel is not linked.", NoticeKind.Warn),
+		};
+
+	private static async ValueTask<MString> ResumeAsync(DiscordRelay relay, ulong channelId, CancellationToken cancellationToken)
+		=> await relay.ResumeAsync(channelId, cancellationToken) switch
+		{
+			DiscordChannelLink link => Notice($"#{link.ChannelName} posts again.", NoticeKind.Ok),
 			_ => Notice("That channel is not linked.", NoticeKind.Warn),
 		};
 
