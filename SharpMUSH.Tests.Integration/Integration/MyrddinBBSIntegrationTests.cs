@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -517,8 +518,10 @@ public class MyrddinBBSIntegrationTests
 		TestDiagnostics.WriteLine($"[BBS PACKAGE] Run log: {logPath}");
 		TestDiagnostics.WriteLine($"[BBS PACKAGE] Generated manifest: {manifestPath}");
 
-		await Assert.That(manifestYaml).StartsWith("format: ")
-			.Because("the generated artifact should be a complete package manifest");
+		// The writer quotes a format YAML would read as another number (1.10 is not 1.1).
+		await Assert.That(manifestYaml.Split('\n')[0].Replace("\"", string.Empty))
+			.IsEqualTo($"format: {PackageFormatVersion.Supported}")
+			.Because("the generated artifact should be a complete package manifest in the current format");
 		await Assert.That(manifestYaml).Contains("package: myrddin-bbs");
 		// Quoted because it leads with a digit — plain, YAML would hand back a number.
 		await Assert.That(manifestYaml).Contains("version: '4.0.6'")
