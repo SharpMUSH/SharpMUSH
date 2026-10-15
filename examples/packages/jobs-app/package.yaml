@@ -1,12 +1,13 @@
-format: 1.2
+format: "1.10"
 package: jobs-app
-version: 1.0.2
+version: 1.0.3
 kind: application
 authors: [SharpMUSH]
 description: "Registers the job queue (the jobs package) as a portal page at /apps/jobs: the queue, each job's conversation with its staff buttons, and a new-request form."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [portal, application, jobs, requests, tickets]
+category: Staff
 requires_server: ">=0.1"
 
 # An application package owns no objects. The jobs package serves the routes it points at:

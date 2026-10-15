@@ -1,11 +1,12 @@
-format: 1.8
+format: "1.10"
 package: jobs
-version: 1.10.0
+version: 1.10.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [jobs, requests, tickets, staff, anomaly]
+category: Staff
 requires_server: ">=0.1"
 
 # plus-help carries the +help topics; plus-config the +config settings;

@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: summary
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [summary, pose, roleplay, rp]
+category: Scenes
 requires_server: ">=0.1"
 
 depends:
