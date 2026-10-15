@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace SharpMUSH.Plugins.Discord.Outbox;
 
 /// <summary>A feed line on its way to one Discord channel, already rendered as Discord text.</summary>
@@ -200,18 +202,18 @@ public sealed class DiscordOutbox(DiscordOutboxOptions options, Random random)
 			return new DiscordPost(first.Speaker, first.AvatarUrl, parts[0], 1);
 		}
 
-		var content = first.Text;
+		var content = new StringBuilder(first.Text);
 		var lines = 1;
 		while (_queue.First is { Value: var next }
 			&& next.Speaker == first.Speaker && next.AvatarUrl == first.AvatarUrl
 			&& content.Length + 1 + next.Text.Length <= options.MaxContent)
 		{
-			content += "\n" + next.Text;
+			content.Append('\n').Append(next.Text);
 			lines++;
 			_queue.RemoveFirst();
 		}
 
-		return new DiscordPost(first.Speaker, first.AvatarUrl, content, lines);
+		return new DiscordPost(first.Speaker, first.AvatarUrl, content.ToString(), lines);
 	}
 
 	/// <summary>A notice that went out settles the count; lines dropped while it was in flight are owed again.</summary>
