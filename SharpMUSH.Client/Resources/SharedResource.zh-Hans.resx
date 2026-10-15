@@ -6243,6 +6243,18 @@
     <value>草稿仅保存在此设备上</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>图表</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} 到 {1}：{2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>{0} 的名片</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>通知</value>
     <comment>MT</comment>

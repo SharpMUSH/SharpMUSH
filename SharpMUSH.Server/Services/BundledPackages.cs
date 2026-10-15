@@ -130,6 +130,13 @@ public static class BundledPackages
 		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins health and jobs, so +health shows staff load.
 		new("health-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +rel is a name a game may already use for its own code. It reads finger's fields.
+		// relationships-scene adds the last scene together and needs the Scene System; relationships-app (the web on a
+		// profile) and relationships-card (a line on the name card) are its portal widgets.
+		new("relationships", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("relationships-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("relationships-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("relationships-card", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
 		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.

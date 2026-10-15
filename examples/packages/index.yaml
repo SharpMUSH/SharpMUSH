@@ -177,6 +177,26 @@ packages:
     package: health-jobs
     version: 1.0.0
     description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
+  - path: relationships/
+    name: Relationships
+    package: relationships
+    version: 1.0.0
+    description: +rel — typed relationships both players confirm, a card for any character with your private note, and the routes the portal draws the web and the name card from
+  - path: relationships-scene/
+    name: Relationships Scene
+    package: relationships-scene
+    version: 1.0.0
+    description: Adds Last scene together to the +rel card and the portal's name card (requires relationships and scene)
+  - path: relationships-app/
+    name: Relationships web
+    package: relationships-app
+    version: 1.0.0
+    description: The relationship web on a character's profile page, as a portal widget (requires relationships)
+  - path: relationships-card/
+    name: Relationship card
+    package: relationships-card
+    version: 1.0.0
+    description: What a character is to you, your note and more, on the portal's name card (requires relationships)
   - path: timeline/
     name: Timeline
     package: timeline
