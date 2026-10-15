@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
@@ -104,7 +105,7 @@ public class AccountControllersSessionClaimsTests
 		FusionCache cache)
 	{
 		var claims = new AccountClaimsService(
-			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
+			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache, new ObjectVersions()), NullLogger<AccountClaimsService>.Instance);
 		return new AdminAccountsController(accounts, sessions, claims, Substitute.For<IAdministrativeCapabilityService>(),
 			Substitute.For<IAuditLog>(), Substitute.For<IMediator>(), new BearerAccountResolver(sessions, accounts),
 			NullLogger<AdminAccountsController>.Instance)

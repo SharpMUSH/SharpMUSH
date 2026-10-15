@@ -459,7 +459,7 @@ public partial class PackageInstallService
 
 		if (installed.Owned is not null)
 		{
-			notes.Add("Roles, permissions and categories are left as they are: a rollback restores objects and attributes only.");
+			notes.Add("Roles, permissions, categories and attribute entries are left as they are: a rollback restores objects and attributes only.");
 		}
 
 		if (installed.Settings is not null)

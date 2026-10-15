@@ -7,6 +7,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IInputSessionService
 {
 	InputSession? GetCapturing(long handle);
+	/// <summary>The session <paramref name="id"/> while it still captures its connection's lines, else null.</summary>
+	InputSession? FindCapturing(Guid id);
 	InputCaptureSnapshot CapturePendingInput(long handle);
 	/// <summary>Opaque transport revision retained after capture ends; changes on each successful start.</summary>
 	Guid GetCaptureGeneration(long handle);

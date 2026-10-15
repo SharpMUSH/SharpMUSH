@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Kit;
@@ -229,6 +230,22 @@ public partial class Play
 			InSheet: true);
 		Layouts.OnLayoutChanged += OnLayoutChanged;
 		ServerInfo.Changed += OnServerInfoChanged;
+		_paletteInserts = ServiceProvider.GetService<PaletteContext>()?.ListenForInsert(line => InvokeAsync(() => InsertLineAsync(line)));
+	}
+
+	private IDisposable? _paletteInserts;
+
+	/// <summary>A line from the command palette, to finish and send: the composer in Story, the terminal's own line otherwise.</summary>
+	private async Task InsertLineAsync(string line)
+	{
+		if (View == PlayView.Story && _composer is not null)
+		{
+			await _composer.StartCommandAsync(line);
+		}
+		else if (_playTerm is not null)
+		{
+			await _playTerm.SetInputAsync(line);
+		}
 	}
 
 	protected override async Task OnInitializedAsync()
@@ -243,6 +260,8 @@ public partial class Play
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (!firstRender) return;
+		// A line the palette chose before this page was open to take it.
+		if (ServiceProvider.GetService<PaletteContext>()?.TakePendingInsert() is { } pending) await InsertLineAsync(pending);
 		var changed = await LoadStoredChoicesAsync();
 		_self = DotNetObjectReference.Create(this);
 		changed |= await WatchScreenAsync();
@@ -657,6 +676,7 @@ public partial class Play
 	public async ValueTask DisposeAsync()
 	{
 		Layouts.OnLayoutChanged -= OnLayoutChanged;
+		_paletteInserts?.Dispose();
 		ServerInfo.Changed -= OnServerInfoChanged;
 		PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
 		PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;

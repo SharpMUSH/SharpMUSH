@@ -40,6 +40,7 @@ public static class PackageManifestWriter
 		WriteConfigure(yaml, manifest.Configure);
 		WriteDeclarations(yaml, manifest.Declared);
 		WriteSettings(yaml, manifest.Settings ?? []);
+		WriteAttributeEntries(yaml, manifest.Declared.AttributeEntries);
 		WriteWiki(yaml, manifest.WikiPages);
 
 		switch (manifest.Kind)
@@ -223,6 +224,52 @@ public static class PackageManifestWriter
 		{
 			// Quoted always: an unquoted yes, 40 or #12 would come back as a bool, a number or a comment.
 			yaml.Append("  ").Append(setting.Option).Append(": ").AppendLine(Quoted(setting.Value));
+		}
+	}
+
+	private static void WriteAttributeEntries(StringBuilder yaml, IReadOnlyList<PackageAttributeEntrySpec> entries)
+	{
+		if (entries.Count == 0)
+		{
+			return;
+		}
+
+		yaml.AppendLine();
+		yaml.AppendLine("attributes:");
+		foreach (var entry in entries)
+		{
+			yaml.Append("  ").Append(Scalar(entry.Name)).Append(':');
+			if (entry.Flags.Count == 0 && entry.Limit is null && entry.Enum is null && !entry.Retroactive)
+			{
+				yaml.AppendLine(" {}");
+				continue;
+			}
+
+			yaml.AppendLine();
+			if (entry.Flags.Count > 0)
+			{
+				yaml.Append("    flags: ").AppendLine(Flow(entry.Flags));
+			}
+
+			if (entry.Limit is { } limit)
+			{
+				// Quoted always: a regular expression is full of characters YAML would read otherwise.
+				yaml.Append("    limit: ").AppendLine(Quoted(limit));
+			}
+
+			if (entry.Enum is { } choices)
+			{
+				yaml.Append("    enum: ").AppendLine(Flow(choices));
+				if (entry.EnumDelimiter != ' ')
+				{
+					yaml.Append("    delimiter: ").AppendLine(Quoted(entry.EnumDelimiter.ToString()));
+				}
+			}
+
+			if (entry.Retroactive)
+			{
+				yaml.AppendLine("    retroactive: true");
+			}
 		}
 	}
 

@@ -240,7 +240,10 @@ window.sharpmushLayout = {
 			if (!this._paletteRef) return;
 			const target = event.target;
 			const tag = target && target.tagName;
-			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) return;
+			// A field keeps the key, except where the player types commands (the Play composer and the terminal's
+			// line): the palette is how they find one there.
+			const field = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable);
+			if (field && !(target.closest && target.closest('.composer-scope, .term-input'))) return;
 			event.preventDefault();
 			const pending = this._paletteRef.invokeMethodAsync('OpenPaletteFromHotkey');
 			if (pending && typeof pending.catch === 'function') {
@@ -295,7 +298,10 @@ window.sharpmushLayout = {
 			if (!this._exitKeys.has(key)) return;
 			const target = event.target;
 			const tag = target && target.tagName;
-			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) return;
+			// A field keeps the key, except where the player types commands (the Play composer and the terminal's
+			// line): the palette is how they find one there.
+			const field = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable);
+			if (field && !(target.closest && target.closest('.composer-scope, .term-input'))) return;
 			if (document.querySelector && document.querySelector('[aria-modal="true"]')) return;
 			event.preventDefault();
 			const pending = this._exitRef.invokeMethodAsync('GoByKey', key);
