@@ -16,6 +16,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Applications;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -88,6 +89,9 @@ public class HostedUiAuthenticatedSmokeTests
 			builder.Services.AddSingleton<IApplicationRegistryService>(registry); builder.Services.AddSingleton(mediator);
 			builder.Services.AddSingleton(permissions); builder.Services.AddSingleton(reality); builder.Services.AddSingleton(attributes);
 			builder.Services.AddSingleton<IEngineCommandInvoker>(Substitute.For<IEngineCommandInvoker>());
+			var warnings = Substitute.For<IWarningService>();
+			warnings.FindWarningsAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<WarningType>()).Returns(AsyncEnumerable.Empty<ObjectWarning>());
+			builder.Services.AddSingleton(warnings);
 			builder.Services.AddSingleton<IConnectionService>(Substitute.For<IConnectionService>());
 			builder.Services.AddSingleton(capabilities); builder.Services.AddSingleton<IVisibleWorldProjection, VisibleWorldProjection>();
 			builder.Services.AddSingleton(accounts); builder.Services.AddSingleton<IAccountSessionStore>(sessions);

@@ -1,6 +1,8 @@
 using SharpMUSH.Library.Commands.Database;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -316,6 +318,30 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(Lines(_ann, text)).IsEquivalentTo(new[] { $"Tapped {_kind}/1 from {_system.Name} to {await Objid(_bo)}: {text}" });
 
 		await Assert.That(await Cmd($"@feed/untap {_kind}={Ref(logger)}/LOG")).Contains("Removed the tap");
+	}
+
+	/// <summary>A line brought in from outside the game tells its taps where it came from.</summary>
+	[Test]
+	public async Task ATapHearsWhereALineCameFrom()
+	{
+		var logger = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "FeedOrigin");
+		await Cmd($"&LOG {Ref(logger)}=@pemit {Ref(_ann)}=From %<origin>: %<text>");
+		await Cmd($"@feed/tap {_kind}={Ref(logger)}/LOG");
+
+		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
+		var kind = (await feeds.GetKindAsync(_kind)).Expect<SharpFeedKind>();
+		if (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(_system.DbRef)) is not AnySharpObject system)
+		{
+			throw new InvalidOperationException("The test player is gone.");
+		}
+
+		var text = TestIsolationHelpers.GenerateUniqueName("FeedOrigin");
+		await feeds.SendAsync(CommandParser.FromState(ParserState.RootFor(_system.DbRef)),
+			new FeedSend(kind, SharpFeed.New(_kind, "1"), system, system, FeedStyles.Say, MarkupText.Plain(text), [],
+				Origin: "elsewhere/42"));
+		await WebAppFactoryArg.Notifications.WaitForAsync(_ann.DbRef, text);
+
+		await Assert.That(Lines(_ann, text)).IsEquivalentTo(new[] { $"From elsewhere/42: {text}" });
 	}
 
 	/// <summary>The radio in <c>help @feed example</c>, as written there: global commands in the master room.</summary>

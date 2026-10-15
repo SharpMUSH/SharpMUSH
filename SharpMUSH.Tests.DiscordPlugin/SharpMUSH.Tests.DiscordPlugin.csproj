@@ -21,6 +21,11 @@
     <PackageReference Include="TUnit" Version="$(TUnitVersion)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Expect<T>() without the whole of Tests.Infrastructure. -->
+    <Compile Include="..\SharpMUSH.Tests.Infrastructure\UnionExpectations.cs" Link="UnionExpectations.cs" />
+  </ItemGroup>
+
   <!-- The plugin and Library only, not SharpMUSH.Implementation, as SharpMUSH.Tests.ScenePlugin does. -->
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" />

@@ -21,9 +21,6 @@ public class WarningService(
 	ILockService lockService,
 	IMediator mediator) : IWarningService
 {
-	/// <summary>One problem a check found: the warning's name, as <c>@warnings</c> spells it, and what is wrong.</summary>
-	private readonly record struct Warning(string Name, string Message);
-
 	/// <summary>
 	/// Check warnings on a specific object
 	/// </summary>
@@ -56,6 +53,23 @@ public class WarningService(
 		}
 
 		return found;
+	}
+
+	/// <inheritdoc />
+	public async IAsyncEnumerable<ObjectWarning> FindWarningsAsync(AnySharpObject checker, AnySharpObject target,
+		WarningType warnings)
+	{
+		var targetObj = target.Object();
+		if (await targetObj.IsGoingAsync() || await targetObj.HasNoWarnFlagAsync()
+				|| await OwnerOfAsync(targetObj) is not SharpPlayer owner || await owner.Object.HasNoWarnFlagAsync())
+		{
+			yield break;
+		}
+
+		await foreach (var warning in FindWarnings(checker, target, warnings))
+		{
+			yield return warning;
+		}
 	}
 
 	/// <summary>
@@ -161,7 +175,7 @@ public class WarningService(
 	/// Every warning <paramref name="target"/> earns under <paramref name="warnings"/>: the lock checks every
 	/// object gets, then the checks for its type.
 	/// </summary>
-	private IAsyncEnumerable<Warning> FindWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private IAsyncEnumerable<ObjectWarning> FindWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
 		=> LockWarnings(target, warnings).Concat(target switch
 		{
 			SharpRoom => RoomWarnings(checker, target, warnings),
@@ -174,27 +188,38 @@ public class WarningService(
 	/// Each lock that does not validate: invalid syntax, references to objects that do not exist or are GOING,
 	/// eval locks naming missing attributes, indirect locks that are not there.
 	/// </summary>
-	private IAsyncEnumerable<Warning> LockWarnings(AnySharpObject target, WarningType warnings)
+	private IAsyncEnumerable<ObjectWarning> LockWarnings(AnySharpObject target, WarningType warnings)
 		=> warnings.HasFlag(WarningType.LockProbs)
 			? target.Object().Locks
 				.Where(entry => !string.IsNullOrWhiteSpace(entry.Value.LockString))
 				.Where(entry => !lockService.Validate(entry.Value.LockString, target))
-				.Select(entry => new Warning("lock-checks", $"Lock '{entry.Key}' has problems: invalid syntax or references."))
+				.Select(entry => new ObjectWarning("lock-checks", $"Lock '{entry.Key}' has problems: invalid syntax or references."))
 				.ToAsyncEnumerable()
-			: AsyncEnumerable.Empty<Warning>();
+			: AsyncEnumerable.Empty<ObjectWarning>();
 
-	private async IAsyncEnumerable<Warning> RoomWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private async IAsyncEnumerable<ObjectWarning> RoomWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
 	{
 		if (warnings.HasFlag(WarningType.RoomDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
 		{
-			yield return new Warning("room-desc", "Room has no description.");
+			yield return new ObjectWarning("room-desc", "Room has no description.");
 		}
 	}
 
-	private async IAsyncEnumerable<Warning> ExitWarnings(AnySharpObject checker, AnySharpObject target, SharpExit exit,
+	private async IAsyncEnumerable<ObjectWarning> ExitWarnings(AnySharpObject checker, AnySharpObject target, SharpExit exit,
 		WarningType warnings)
 	{
-		// One read of the destination edge serves the link and topology checks.
+		// The destination edge is read only when a check needs it, and then once for all of them, so a caller
+		// that must not resolve a variable exit's destination can still ask for the message checks.
+		if ((warnings & (WarningType.ExitUnlinked | WarningType.ExitOneway | WarningType.ExitMultiple)) == WarningType.None)
+		{
+			await foreach (var warning in ExitMessageWarnings(checker, target, warnings))
+			{
+				yield return warning;
+			}
+
+			yield break;
+		}
+
 		var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
 		if (warnings.HasFlag(WarningType.ExitUnlinked))
@@ -205,22 +230,9 @@ public class WarningService(
 			}
 		}
 
-		if (warnings.HasFlag(WarningType.ExitDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
+		await foreach (var warning in ExitMessageWarnings(checker, target, warnings))
 		{
-			yield return new Warning("exit-desc", "Exit has no description.");
-		}
-
-		if (warnings.HasFlag(WarningType.ExitMsgs))
-		{
-			if (await LacksAnyAsync(checker, target, "SUCCESS", "OSUCCESS", "ODROP"))
-			{
-				yield return new Warning("exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
-			}
-
-			if (await LacksAnyAsync(checker, target, "FAILURE"))
-			{
-				yield return new Warning("exit-msgs", "Exit is missing FAILURE message.");
-			}
+			yield return warning;
 		}
 
 		if (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple))
@@ -232,24 +244,47 @@ public class WarningService(
 		}
 	}
 
+	/// <summary>The exit's description and its SUCCESS, OSUCCESS, ODROP and FAILURE messages.</summary>
+	private async IAsyncEnumerable<ObjectWarning> ExitMessageWarnings(AnySharpObject checker, AnySharpObject target,
+		WarningType warnings)
+	{
+		if (warnings.HasFlag(WarningType.ExitDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
+		{
+			yield return new ObjectWarning("exit-desc", "Exit has no description.");
+		}
+
+		if (warnings.HasFlag(WarningType.ExitMsgs))
+		{
+			if (await LacksAnyAsync(checker, target, "SUCCESS", "OSUCCESS", "ODROP"))
+			{
+				yield return new ObjectWarning("exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
+			}
+
+			if (await LacksAnyAsync(checker, target, "FAILURE"))
+			{
+				yield return new ObjectWarning("exit-msgs", "Exit is missing FAILURE message.");
+			}
+		}
+	}
+
 	/// <summary>
 	/// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still point at NOTHING.
 	/// #0 is the master room, a real destination, so only negative dbrefs are invalid. A variable exit (one
 	/// linked to HOME, #-1) needs a DESTINATION or EXITTO attribute to say where it leads.
 	/// </summary>
-	private async IAsyncEnumerable<Warning> ExitLinkWarnings(AnySharpObject checker, AnySharpObject target,
+	private async IAsyncEnumerable<ObjectWarning> ExitLinkWarnings(AnySharpObject checker, AnySharpObject target,
 		AnyOptionalSharpContainer destination)
 	{
 		int? destinationNumber = destination is AnySharpContainer linked ? linked.Object().DBRef.Number : null;
 
 		if (destinationNumber is null or < 0)
 		{
-			yield return new Warning("exit-unlinked", "Exit is unlinked (no destination set). This exit can be stolen.");
+			yield return new ObjectWarning("exit-unlinked", "Exit is unlinked (no destination set). This exit can be stolen.");
 		}
 
 		if (destinationNumber == -1 && await LacksAllAsync(checker, target, "DESTINATION", "EXITTO"))
 		{
-			yield return new Warning("exit-unlinked", "Variable exit lacks DESTINATION or EXITTO attribute.");
+			yield return new ObjectWarning("exit-unlinked", "Variable exit lacks DESTINATION or EXITTO attribute.");
 		}
 	}
 
@@ -257,7 +292,7 @@ public class WarningService(
 	/// How many exits lead back from the destination to the exit's source. An unlinked exit, or one between
 	/// negative dbrefs, has no topology to analyse: it is neither one-way nor duplicated.
 	/// </summary>
-	private async IAsyncEnumerable<Warning> ExitTopologyWarnings(SharpExit exit, AnyOptionalSharpContainer maybeDestination,
+	private async IAsyncEnumerable<ObjectWarning> ExitTopologyWarnings(SharpExit exit, AnyOptionalSharpContainer maybeDestination,
 		WarningType warnings)
 	{
 		var source = (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef;
@@ -274,16 +309,16 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
 		{
-			yield return new Warning("exit-oneway", "Exit has no return path from destination back to source.");
+			yield return new ObjectWarning("exit-oneway", "Exit has no return path from destination back to source.");
 		}
 
 		if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
 		{
-			yield return new Warning("exit-multiple", $"Exit has {returnExitCount} return paths from destination back to source.");
+			yield return new ObjectWarning("exit-multiple", $"Exit has {returnExitCount} return paths from destination back to source.");
 		}
 	}
 
-	private async IAsyncEnumerable<Warning> ThingWarnings(AnySharpObject checker, AnySharpObject target, SharpThing thing,
+	private async IAsyncEnumerable<ObjectWarning> ThingWarnings(AnySharpObject checker, AnySharpObject target, SharpThing thing,
 		WarningType warnings)
 	{
 		// A thing in a player's inventory needs no description, as in PennMUSH.
@@ -291,28 +326,28 @@ public class WarningService(
 				&& await LacksAnyAsync(checker, target, "DESCRIBE")
 				&& !(await thing.Location.WithCancellation(CancellationToken.None)).IsPlayer)
 		{
-			yield return new Warning("thing-desc", "Thing has no description.");
+			yield return new ObjectWarning("thing-desc", "Thing has no description.");
 		}
 
 		if (warnings.HasFlag(WarningType.ThingMsgs))
 		{
 			if (await LacksAnyAsync(checker, target, "SUCCESS", "OSUCCESS", "DROP", "ODROP"))
 			{
-				yield return new Warning("thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
+				yield return new ObjectWarning("thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
 			}
 
 			if (await LacksAnyAsync(checker, target, "FAILURE"))
 			{
-				yield return new Warning("thing-msgs", "Thing is missing FAILURE message.");
+				yield return new ObjectWarning("thing-msgs", "Thing is missing FAILURE message.");
 			}
 		}
 	}
 
-	private async IAsyncEnumerable<Warning> PlayerWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private async IAsyncEnumerable<ObjectWarning> PlayerWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
 	{
 		if (warnings.HasFlag(WarningType.PlayerDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
 		{
-			yield return new Warning("my-desc", "Player is missing description.");
+			yield return new ObjectWarning("my-desc", "Player is missing description.");
 		}
 	}
 
@@ -330,7 +365,7 @@ public class WarningService(
 	/// <summary>
 	/// Send a warning message to the checker
 	/// </summary>
-	private async Task Complain(AnySharpObject checker, AnySharpObject target, Warning warning)
+	private async Task Complain(AnySharpObject checker, AnySharpObject target, ObjectWarning warning)
 	{
 		var targetObj = target.Object();
 		await notifyService.Notify(checker, $"Warning '{warning.Name}' for {targetObj.Name}(#{targetObj.Key}):");

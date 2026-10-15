@@ -48,9 +48,10 @@ which games can add as a remote in the admin panel.
 | [`relationships-scene/`](relationships-scene/) | Last scene together on the `+rel` card and the name card, from `sceneshared()`; a package of its own so a game without the Scene System never calls it |
 | [`relationships-app/`](relationships-app/) | The relationship web on the profile page: a widget application of scope `profile` drawn with the schema `graph` element |
 | [`relationships-card/`](relationships-card/) | The name card's relationship lines: a widget application of scope `card`, drawn on the hover card and the Play sheet |
-| [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (finger, health, highlights, info, relationships, scene, scene-safety, status, time, timeline and who-where register theirs) |
+| [`plus-config/`](plus-config/) | A registry other packages attach to: each keeps its settings on its own object as ``DATA`CONFIG`<NAME>`` with leaves saying the type and limits, and `+config` lists, checks and writes them (discord-scenes, finger, health, highlights, info, relationships, scene, scene-safety, status, time, timeline and who-where register theirs) |
 | [`timeline/`](timeline/) | IC dates on scenes and a timeline per character: a scene gets the time package's IC date when it starts (through the Scene plugin's ``SCENE`STATUS`` event), `+scene/date` dates a flashback, and `+timeline` lists a character's finished scenes in IC order, as the portal's character timeline does (requires scene and time) |
-| [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
+| [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and the Discord Admin role that allows it, and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
+| [`discord-scenes/`](discord-scenes/) | Scheduled scenes in the Discord server's Events tab: through the Scene plugin's ``SCENE`STATUS`` and ``SCENE`CHANGE`` events, a scene with a time still to come is published with `@discord/event`, moved when it is rescheduled, shown as happening when it starts and ended when it finishes or is cancelled. Settings through `+config discord-scenes` (requires discord, scene, plus-help and plus-config, and both plugins) |
 | [`notifications/`](notifications/) + [`notifications-app/`](notifications-app/) | The rules behind push notifications: subscriptions to the ``PAGE`MESSAGE`` and ``MAIL`RECEIVED`` events on the event handler call `@push` when the player wants that kind, the same settings are a `+notify` command and a portal form, and other packages add a kind and send it with ``@trigger/args`` on ``API`SEND`` |
 | [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
 | [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
@@ -650,7 +651,7 @@ only once the administrator ticks "Install it anyway". On 1.9.0 it is refused.
 `category:` is the group a package is listed under where packages are offered
 together. The setup wizard lists the bundled packages by it; within a category, a
 package that needs another of the same category is listed under it (`jobs-app`
-under `jobs`), and packages with none come last under Other. One name, up to 40
+under `jobs`), and packages with none come last under Uncategorized. One name, up to 40
 characters. Write the format quoted, `format: "1.10"`, so YAML tools that type
 numbers do not read it as 1.1; below 1.10 `category:` is ignored with a warning.
 

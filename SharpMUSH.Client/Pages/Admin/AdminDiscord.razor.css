@@ -1,0 +1,190 @@
+.adm-discord-empty,
+.adm-discord-hint {
+	margin: 0;
+	padding: 14px 16px 16px;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.adm-discord-hint {
+	padding-top: 4px;
+}
+
+/* the setup checklist: a tick or a ring, the step, and what to do next */
+.adm-discord-steps {
+	list-style: none;
+	margin: 0;
+	padding: 8px 16px 4px;
+}
+
+.adm-discord-step {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 6px 0;
+}
+
+.adm-discord-step ::deep .adm-discord-step-icon {
+	flex-shrink: 0;
+	margin-top: 1px;
+	color: var(--text-dim);
+}
+
+.adm-discord-step--done ::deep .adm-discord-step-icon {
+	color: var(--accent);
+}
+
+.adm-discord-step-text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.adm-discord-step-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.adm-discord-bans {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 16px 0;
+}
+
+.adm-discord-actions {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding: 8px 16px 16px;
+	font-size: 13px;
+}
+
+.adm-discord-actions ::deep .adm-discord-reconnect {
+	margin-left: auto;
+}
+
+.adm-discord-rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.adm-discord-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px 10px 16px;
+}
+
+.adm-discord-row:not(:first-child) {
+	border-top: 1px solid var(--border-soft);
+}
+
+.adm-discord-row-text {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.adm-discord-row-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	font-size: 13px;
+	color: var(--text);
+}
+
+.adm-discord-row-head code,
+.adm-discord-sub code {
+	font-family: var(--font-mono);
+}
+
+.adm-discord-name {
+	font-weight: 600;
+}
+
+.adm-discord-row-head ::deep .adm-discord-arrow {
+	color: var(--text-dim);
+}
+
+.adm-discord-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+	overflow-wrap: anywhere;
+}
+
+.adm-discord-sub a {
+	margin-left: 4px;
+}
+
+.adm-discord-fault {
+	color: var(--danger);
+}
+
+.adm-discord-missing {
+	margin-left: 6px;
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.adm-discord-row-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.adm-discord-row-actions ::deep .adm-discord-mode {
+	width: 180px;
+	margin: 0;
+}
+
+/* a form under a list: its fields, then its capsule level with them */
+.adm-discord-form {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 16px 16px;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+
+.adm-discord-form ::deep .adm-discord-field {
+	flex: 1 1 200px;
+	min-width: 0;
+	margin: 0;
+}
+
+.adm-discord-form ::deep .adm-discord-link,
+.adm-discord-form ::deep .adm-discord-map {
+	flex-shrink: 0;
+}
+
+/* a narrow page stacks rows and forms */
+@container page (max-width: 48rem) {
+	.adm-discord-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.adm-discord-row-actions {
+		flex-wrap: wrap;
+	}
+
+	.adm-discord-form {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.adm-discord-form ::deep .adm-discord-field {
+		flex: 0 0 auto;
+	}
+}

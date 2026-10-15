@@ -140,6 +140,41 @@ public class HelpArticleTests
 		}
 	}
 
+	/// <summary>
+	/// Plugin help is indexed into the engine's corpus while the plugin is loaded, so it must pass the same checks
+	/// with the engine's topics around it, and claim none of them.
+	/// </summary>
+	[Test]
+	public async Task EveryPluginsHelpPassesIntegrityValidationWithTheEngines()
+	{
+		var repository = new DirectoryInfo(AppContext.BaseDirectory);
+		while (repository is not null && !File.Exists(Path.Join(repository.FullName, "SharpMUSH.sln")))
+		{
+			repository = repository.Parent;
+		}
+
+		await Assert.That(repository).IsNotNull();
+		var engine = Directory.GetFiles(Path.Join("TextFiles", "help"), "*.md")
+			.SelectMany(file => HelpArticleParser.Parse(File.ReadAllText(file), "help")).ToList();
+		var plugins = Directory.GetDirectories(repository!.FullName, "SharpMUSH.Plugins.*")
+			.Select(directory => Path.Join(directory, "help"))
+			.Where(Directory.Exists)
+			.ToList();
+		await Assert.That(plugins).IsNotEmpty();
+		foreach (var help in plugins)
+		{
+			var articles = Directory.GetFiles(help, "*.md")
+				.SelectMany(file => HelpArticleParser.Parse(File.ReadAllText(file), "help")).ToList();
+			var engineLookups = engine.SelectMany(Lookups).ToHashSet(StringComparer.OrdinalIgnoreCase);
+			await Assert.That(articles.SelectMany(Lookups).Where(engineLookups.Contains)).IsEmpty();
+			HelpCorpusValidator.Validate([.. engine, .. articles]);
+		}
+
+		static IEnumerable<string> Lookups(HelpArticleParser.ParsedArticle parsed) =>
+			[parsed.Article.Lookup, .. parsed.Article.Aliases,
+				.. parsed.Article.Sections.SelectMany(section => section.Aliases.Prepend(section.Lookup))];
+	}
+
 	[Test]
 	[Arguments("[missing topic]")]
 	[Arguments("[SAMPLE2]")]

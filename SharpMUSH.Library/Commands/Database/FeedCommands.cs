@@ -33,6 +33,9 @@ public record AppendFeedMessageCommand(SharpFeedMessage Message, FeedSettings Li
 /// <summary>Drops a feed's lines sent before <paramref name="Before"/>, or all. See <see cref="IFeedStore.PurgeFeedAsync"/>.</summary>
 public record PurgeFeedCommand(string Kind, string Key, DateTimeOffset? Before) : ICommand<int>;
 
+/// <summary>Drops one line. See <see cref="IFeedStore.DeleteFeedMessageAsync"/>.</summary>
+public record DeleteFeedMessageCommand(long Id) : ICommand<bool>;
+
 /// <summary>Adds a tap. See <see cref="IFeedStore.AddFeedTapAsync"/>.</summary>
 public record AddFeedTapCommand(SharpFeedTap Tap) : ICommand;
 

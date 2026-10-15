@@ -22,6 +22,7 @@ public enum DiscordGatewayStatus
 /// <param name="PublicBot">Whether anyone, not only the application's owner, may add the bot to a server.</param>
 /// <param name="Guilds">How many servers the bot is in, while connected.</param>
 /// <param name="Detail">What Discord said, when it is not one of the cases above.</param>
+/// <param name="CannotBanIn">The servers where the bot lacks Ban Members, while connected.</param>
 public sealed record DiscordGatewayState(
 	DiscordGatewayStatus Status,
 	ulong? ApplicationId = null,
@@ -29,7 +30,12 @@ public sealed record DiscordGatewayState(
 	IReadOnlyList<string>? MissingIntents = null,
 	bool? PublicBot = null,
 	int Guilds = 0,
-	string? Detail = null);
+	string? Detail = null,
+	IReadOnlyList<string>? CannotBanIn = null);
+
+/// <summary>A text channel the bot can see.</summary>
+/// <param name="Missing">The permissions a link uses there that the bot lacks, by the names Discord's settings use.</param>
+public sealed record DiscordTextChannel(ulong ChannelId, string Name, ulong GuildId, string GuildName, IReadOnlyList<string> Missing);
 
 /// <summary>One item of the admin page's checklist.</summary>
 /// <param name="Todo">What the admin does next, when the item is not done.</param>
@@ -70,9 +76,15 @@ public static class DiscordSetup
 		| GuildPermission.ReadMessageHistory | GuildPermission.ManageMessages | GuildPermission.ManageWebhooks
 		| GuildPermission.ManageRoles | GuildPermission.CreateEvents;
 
-	/// <summary>The link that adds the bot to a server, with its slash commands and exactly <see cref="Permissions"/>.</summary>
-	public static string InviteUrl(ulong applicationId)
-		=> $"https://discord.com/oauth2/authorize?client_id={applicationId}&permissions={(ulong)Permissions}&scope=bot+applications.commands";
+	/// <summary>
+	/// The link that adds the bot to a server, with its slash commands and exactly <see cref="Permissions"/>, and Ban
+	/// Members as well when game bans are mirrored to Discord.
+	/// </summary>
+	public static string InviteUrl(ulong applicationId, bool mirrorBans = false)
+	{
+		var permissions = mirrorBans ? Permissions | GuildPermission.BanMembers : Permissions;
+		return $"https://discord.com/oauth2/authorize?client_id={applicationId}&permissions={(ulong)permissions}&scope=bot+applications.commands";
+	}
 
 	/// <summary>
 	/// What a linked channel needs of the bot, by the names Discord's settings use: seeing it, making its webhook,
@@ -119,10 +131,16 @@ public static class DiscordSetup
 		return missing;
 	}
 
-	public static DiscordSetupView View(DiscordGatewayState state)
+	public static DiscordSetupView View(DiscordGatewayState state, bool mirrorBans = false)
 	{
-		var invite = state.ApplicationId is { } id ? InviteUrl(id) : null;
-		return new DiscordSetupView(state.Status, state.BotName, invite, [Token(state), IntentsStep(state), Private(state), Gateway(state), Server(state, invite)]);
+		var invite = state.ApplicationId is { } id ? InviteUrl(id, mirrorBans) : null;
+		List<DiscordSetupStep> steps = [Token(state), IntentsStep(state), Private(state), Gateway(state), Server(state, invite)];
+		if (mirrorBans)
+		{
+			steps.Add(Bans(state));
+		}
+
+		return new DiscordSetupView(state.Status, state.BotName, invite, steps);
 	}
 
 	private static DiscordSetupStep Token(DiscordGatewayState state) => state.Status switch
@@ -167,6 +185,15 @@ public static class DiscordSetup
 			+ "authentication for moderation, the application's owner needs it on as well, or Discord refuses the bot "
 			+ "its Manage permissions.", invite),
 		_ => new("server", "In a server", false),
+	};
+
+	/// <summary>Only while game bans are mirrored: the bot bans a banned account's member in every server it is in.</summary>
+	private static DiscordSetupStep Bans(DiscordGatewayState state) => state switch
+	{
+		{ Status: not DiscordGatewayStatus.Connected } or { Guilds: 0 } => new("bans", "Ban Members", false),
+		{ CannotBanIn: [_, ..] servers } => new("bans", "Ban Members", false,
+			$"Game bans are mirrored to Discord, but the bot lacks Ban Members in {string.Join(", ", servers)}. Give its role that permission in Server Settings, Roles."),
+		_ => new("bans", "Ban Members", true),
 	};
 
 	private static string BotPage(DiscordGatewayState state)

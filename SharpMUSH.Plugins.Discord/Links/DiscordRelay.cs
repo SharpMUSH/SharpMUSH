@@ -24,6 +24,8 @@ public sealed class DiscordRelay(
 	IDiscordLinkStore store,
 	ISecretStore secrets,
 	IDiscordWebhooks webhooks,
+	IDiscordMessagePairs pairs,
+	IDiscordMessages messages,
 	Func<DiscordChannelLink, IDiscordLinkPoster> posters,
 	DiscordOutboxOptions options,
 	TimeProvider time,
@@ -38,6 +40,11 @@ public sealed class DiscordRelay(
 	/// </summary>
 	public static readonly TimeSpan RecreateInterval = TimeSpan.FromMinutes(10);
 
+	/// <summary>
+	/// How long the bot remembers which lines a post carries. Deleting an older post leaves its lines in recall.
+	/// </summary>
+	public static readonly TimeSpan PairsKept = TimeSpan.FromDays(90);
+
 	private readonly ConcurrentDictionary<ulong, LinkRunner> _links = new();
 
 	/// <summary>
@@ -45,6 +52,7 @@ public sealed class DiscordRelay(
 	/// </summary>
 	private readonly SemaphoreSlim _changing = new(1, 1);
 	private readonly CancellationTokenSource _stopping = new();
+	private ITimer? _forgetting;
 
 	public IReadOnlyList<DiscordLinkStatus> Links()
 		=> store.List()
@@ -163,7 +171,8 @@ public sealed class DiscordRelay(
 
 	/// <summary>
 	/// Hands a line on a linked channel's feed to that channel's sender, unless it was meant for only some members:
-	/// named with <c>@feed/send/to</c>, or marked by its system (a channel's <c>seeall</c> line).
+	/// named with <c>@feed/send/to</c>, or marked by its system (a channel's <c>seeall</c> line). A line that came in
+	/// from this channel replaces the member's message it came in as, so the channel shows what the game made of it.
 	/// </summary>
 	public ValueTask LineSentAsync(FeedLine line, CancellationToken cancellationToken)
 	{
@@ -174,13 +183,28 @@ public sealed class DiscordRelay(
 			&& ulong.TryParse(message.Key, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId)
 			&& _links.TryGetValue(channelId, out var runner))
 		{
-			runner.Sender.Send(DiscordLineText.From(message));
+			runner.Sender.Send(DiscordLineText.From(message) with
+			{
+				LineId = line.Stored ? message.Id : 0,
+				Replaces = CameFrom(line.Origin),
+			});
 		}
 
 		return ValueTask.CompletedTask;
 	}
 
-	/// <summary>Starts every stored link; a link that was faulted stays stopped until an admin resumes it.</summary>
+	/// <summary>The member's message a line came in as: <c>discord/&lt;message id&gt;</c>.</summary>
+	private static ulong? CameFrom(string origin)
+		=> origin.StartsWith(DiscordChannelLink.FeedKind + "/", StringComparison.Ordinal)
+			&& ulong.TryParse(origin.AsSpan(DiscordChannelLink.FeedKind.Length + 1), NumberStyles.None, CultureInfo.InvariantCulture,
+				out var messageId)
+				? messageId
+				: null;
+
+	/// <summary>
+	/// Starts every stored link; a link that was faulted stays stopped until an admin resumes it. Once a day, pairs older
+	/// than <see cref="PairsKept"/> are forgotten.
+	/// </summary>
 	public Task StartAsync(CancellationToken cancellationToken)
 	{
 		foreach (var link in store.List())
@@ -188,11 +212,33 @@ public sealed class DiscordRelay(
 			Start(link);
 		}
 
+		_forgetting = time.CreateTimer(_ => _ = ForgetOldPairsAsync(), null, TimeSpan.Zero, TimeSpan.FromDays(1));
 		return Task.CompletedTask;
+	}
+
+	private async Task ForgetOldPairsAsync()
+	{
+		try
+		{
+			await pairs.ForgetBeforeAsync(time.GetUtcNow() - PairsKept, _stopping.Token);
+		}
+		catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+		{
+			// Stopping: tomorrow's pass, after the next start, forgets them instead.
+		}
+		catch (Exception exception)
+		{
+			logger.LogError(exception, "[Discord] Forgetting old message pairs failed.");
+		}
 	}
 
 	public async Task StopAsync(CancellationToken cancellationToken)
 	{
+		if (_forgetting is { } forgetting)
+		{
+			await forgetting.DisposeAsync();
+		}
+
 		await _stopping.CancelAsync();
 		foreach (var channelId in _links.Keys)
 		{
@@ -226,7 +272,8 @@ public sealed class DiscordRelay(
 	{
 		var poster = posters(link);
 		var sender = new DiscordLinkSender(poster, new DiscordOutbox(options, Random.Shared), options, time, logger,
-			(broken, cancellationToken) => FaultedAsync(link.ChannelId, broken, cancellationToken));
+			(broken, cancellationToken) => FaultedAsync(link.ChannelId, broken, cancellationToken),
+			(post, messageId, cancellationToken) => PostedAsync(link.ChannelId, post, messageId, cancellationToken));
 		if (link.Fault is { } fault)
 		{
 			sender.Halt(new LinkBroken(fault.Code, fault.Reason));
@@ -290,6 +337,30 @@ public sealed class DiscordRelay(
 			broken.Reason);
 		runner.Link = runner.Link with { Fault = new DiscordLinkFault(broken.Code, broken.Reason, now) };
 		await store.SaveAsync(runner.Link, cancellationToken);
+	}
+
+	/// <summary>
+	/// Pairs the post with the lines it carries, then deletes the members' messages it stands in for. A message already
+	/// gone, or one the bot may no longer delete, stays as it is.
+	/// </summary>
+	private async Task PostedAsync(ulong channelId, DiscordPost post, ulong messageId, CancellationToken cancellationToken)
+	{
+		if (post.LineIds.Count > 0)
+		{
+			await pairs.SaveAsync(new DiscordMessagePair(messageId, channelId, post.LineIds), cancellationToken);
+		}
+
+		foreach (var original in post.Replaces)
+		{
+			try
+			{
+				await messages.DeleteAsync(channelId, original, "Replaced by the line as the game received it", cancellationToken);
+			}
+			catch (Exception exception) when (exception is HttpException or HttpRequestException or TimeoutException)
+			{
+				logger.LogInformation("[Discord] A member's message was not replaced: {Reason}", exception.Message);
+			}
+		}
 	}
 
 	/// <returns>Null when the link has a new webhook, else why it has none.</returns>

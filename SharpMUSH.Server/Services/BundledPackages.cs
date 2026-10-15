@@ -143,6 +143,12 @@ public static class BundledPackages
 		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: joins game channels to linked Discord channels, so it needs the discord package and
+		// the event handler.
+		new("discord-channels", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		// Available, not installed: publishes scheduled scenes as Discord events, so it needs both plugins and the event
+		// handler.
+		new("discord-scenes", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: which game events notify a player's phone or browser (@push) is the game's
 		// choice, and +notify lands an object in the master room. Its settings page is a separate application
 		// package, as jobs-app is for jobs.
