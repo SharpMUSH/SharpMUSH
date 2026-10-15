@@ -62,7 +62,10 @@ public class GetPaletteEntriesQueryHandler(
 				var name = attribute.LongName[PaletteEntry.Prefix.Length..];
 				if (name.Length == 0 || name.Contains('`')) continue;
 				if (!isLocal && attribute.Flags.Any(flag => flag.Name == "no_inherit")) continue;
-				found.TryAdd(name, attribute.Value.ToPlainText());
+				// An empty value is the branch a deeper attribute (PALETTE`X`Y) made, not an entry.
+				var value = attribute.Value.ToPlainText();
+				if (string.IsNullOrWhiteSpace(value)) continue;
+				found.TryAdd(name, value);
 			}
 		}
 	}
