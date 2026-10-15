@@ -425,6 +425,9 @@ public static partial class ErrorMessages
 		public const string RollTooManyDice = "#-1 TOO MANY DICE";
 		public const string RollFormulaTooLarge = "#-1 ROLL FORMULA TOO LARGE";
 		public const string RollFormulaTooDeep = "#-1 ROLL FORMULA NESTED TOO DEEPLY";
+		public const string RollRecordOnlyRolls = "#-1 ONLY A ROLL CAN BE RECORDED";
+		public const string RollRecordAnswersJson = "#-1 A RECORDED ROLL ANSWERS IN JSON";
+		public const string NoSuchRoll = "#-1 NO SUCH ROLL";
 		public const string RollTooManyNames = "#-1 TOO MANY ROLL VARIABLES";
 		public const string RollSidesOutOfRange = "#-1 DIE SIDES OUT OF RANGE";
 		public const string RollInvalidJson = "#-1 INVALID JSON";

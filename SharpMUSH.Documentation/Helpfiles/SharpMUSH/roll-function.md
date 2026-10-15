@@ -54,6 +54,7 @@ Output: a number, or with `text` as the third argument, each die and the total. 
 | [ROLL POOLS] | choosing among whole formulas, and labels |
 | [ROLL DATA] | stats from an object's attributes or a JSON object |
 | [ROLL OPTIONS] | the dice as text or JSON, and the lowest and highest totals |
+| [ROLL RECORDS] | rolls the game keeps, so anyone can check them |
 
 ## Typing a formula into a call
 
@@ -86,6 +87,7 @@ roll() returns an error starting with #-1 when the formula cannot be read (namin
 - [ROLL POOLS]
 - [ROLL DATA]
 - [ROLL OPTIONS]
+- [ROLL RECORDS]
 - [die()]
 - [rand()]
 - [valid()]

@@ -80,9 +80,10 @@ These '@' commands are general utility and programming commands:
 | [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  |
 | [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     |
 | [@profile]   | [@prompt]    | [@ps]        | [@queue]     | [@remit]     |
-| [@restart]   | [@scan]      | [@search]    | [@select]    | [@stats]     |
-| [@sweep]     | [@switch]    | [@teleport]  | [@trigger]   | [@verb]      |
-| [@version]   | [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     |
+| [@restart]   | [@roll]      | [@scan]      | [@search]    | [@select]    |
+| [@stats]     | [@sweep]     | [@switch]    | [@teleport]  | [@trigger]   |
+| [@verb]      | [@version]   | [@wait]      | [@whereis]   | [@wiki]      |
+| [@zemit]     |              |              |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
