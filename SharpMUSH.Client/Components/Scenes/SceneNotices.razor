@@ -27,13 +27,24 @@
 
     private readonly List<SceneEventMessage> _notices = [];
 
+    private string? _shownScene;
+
     protected override void OnInitialized() => SceneHub.OnSceneEventReceived += OnSceneEvent;
+
+    // The page is reused when the route moves to another scene: the last scene's notices go with it.
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_shownScene, SceneId, StringComparison.Ordinal)) return;
+        _shownScene = SceneId;
+        _notices.Clear();
+    }
 
     private void OnSceneEvent(SceneEventMessage msg)
     {
-        if (msg.EventType != "notice" || !string.Equals(msg.SceneId, SceneId, StringComparison.Ordinal)) return;
+        if (msg.EventType != "notice") return;
         _ = InvokeAsync(() =>
         {
+            if (!string.Equals(msg.SceneId, SceneId, StringComparison.Ordinal)) return;
             _notices.Add(msg);
             StateHasChanged();
         });

@@ -47,6 +47,19 @@ public class SceneNoticesTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".scene-notice")).IsEmpty();
 	}
 
+	/// <summary>The page is reused when the route moves to another scene; the last scene's notices do not follow.</summary>
+	[Test]
+	public async Task Moving_to_another_scene_drops_the_last_scenes_notices()
+	{
+		var cut = Render<SceneNotices>(p => p.Add(x => x.SceneId, "42"));
+		_hub.RaiseScene(Event("42", "notice", "Someone in scene 42 asks to pause what is happening now."));
+		cut.WaitForAssertion(() => cut.Find(".scene-notice"));
+
+		cut.Render(p => p.Add(x => x.SceneId, "7"));
+
+		await Assert.That(cut.FindAll(".scene-notice")).IsEmpty();
+	}
+
 	[Test]
 	public async Task Poses_and_other_scenes_notices_are_not_shown()
 	{
