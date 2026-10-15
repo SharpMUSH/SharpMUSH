@@ -271,7 +271,7 @@
 | [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         |
 | [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           |
 | [SWITCH()]               | [TR()]                   | [TRIM()]                 | [UCSTR()]                |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
+| [UNMARK()]               | [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -1317,6 +1317,13 @@ think decompose(This is \[a [ansi(y,test)]\][space(3)])
 This is \[a%b[ansi(y,test)]\] %b%b
 ```
 
+  A marked list separator decomposes into the `%*<...>` that makes it: see [list separators].
+
+```sharp
+think decompose(a|b%*<|>c)
+a|b%*<|>c
+```
+
   A layout (box(), rule(), flex(), item(), figure(), fields(), tree(), node(), gauge(), bullets(), grid(), datatable(), datacolumns() and gradient()) decomposes into the call that builds it, with only the options that differ from the function's defaults. The game's layout_border and layout_theme are left out, so the call takes whatever the game has when it runs. A datacolumns() comes back as the datatable() it draws, and a badge() as its ansi().
 
 ```sharp
@@ -1745,10 +1752,13 @@ think elock(Dancing Slippers/drop, Princess)
 
   This function prevents code injection in strings entered by players. It is only needed when `<string>` will be passed through a command or function which will evaluate it again, which can usually be avoided. Since the function preserves the original string, it is, in most cases, a better choice than secure(), but decompose() is often better still.
 
+  Marked list separators in `<string>` lose their mark, as with unmark(): see [list separators].
+
 
 ::: seealso
 - [DECOMPOSE()]
 - [SECURE()]
+- [UNMARK()]
 :::
 # eval()
 # get_eval()
@@ -4915,10 +4925,13 @@ You say, "cfaedb"
     ( ) [ ] { } $ % , ^ ;<br>
   Note that the use of this function is very rarely needed.
 
+  Marked list separators in `<string>` lose their mark, as with unmark(): see [list separators].
+
 
 ::: seealso
 - [DECOMPOSE()]
 - [ESCAPE()]
+- [UNMARK()]
 :::
 # set()
 `set(<object>[/<attribute pattern>], <flag>)`<br>
@@ -5647,7 +5660,7 @@ My name
 # stripansi()
 `stripansi(<string>)`
 
-  Returns the string with all ansi and HTML codes removed.
+  Returns the string with all ansi and HTML codes removed. Marked list separators stay marked: see [list separators].
 
 
 ::: seealso
@@ -6433,6 +6446,26 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [SETUNION()]
 - [SORT()]
+:::
+# unmark()
+`unmark(<string>)`
+
+  Returns `<string>` with its marked list separators unmarked and its colour kept, so nothing in it splits a list on a marked delimiter. Use it on text a player typed before it goes into a list: a player can write `%*<|>` in a command's arguments as they can write colour. secure() and escape() unmark their text too. See [list separators].
+
+  Examples:
+```sharp
+think words(a%*<|>b, %*<|>)
+2
+think words(unmark(a%*<|>b), %*<|>)
+1
+```
+
+
+::: seealso
+- [list separators]
+- [SECURE()]
+- [ESCAPE()]
+- [DECOMPOSE()]
 :::
 # v()
 # v-function

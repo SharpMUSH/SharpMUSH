@@ -2266,6 +2266,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var pipedOutput = new AttributeMentions();
 		var piping = new AttributeMentions();
 		var tinyMuxSubstitutions = new AttributeMentions();
+		var listSeparators = new AttributeMentions();
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -2281,7 +2282,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
 
-			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions, pennDatabase.SharesPipingSubstitutions);
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions, listSeparators, pennDatabase.SharesPipingSubstitutions);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2366,6 +2367,15 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				$"{string.Join(", ", tinyMuxSubstitutions.Shown)}{more}");
 		}
 
+		if (listSeparators.Count > 0)
+		{
+			var more = listSeparators.Count > listSeparators.Shown.Count
+				? $" and {listSeparators.Count - listSeparators.Shown.Count} more" : string.Empty;
+			warnings.Add($"{listSeparators.Count} attribute(s) use %*<, which PennMUSH evaluates to *< and SharpMUSH to a marked " +
+				"list separator; softcode is not rewritten, so write *< where it was meant: " +
+				$"{string.Join(", ", listSeparators.Shown)}{more}");
+		}
+
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
 	}
@@ -2397,17 +2407,24 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> (or <c>; |</c>) as a <c>;</c> before a command starting with <c>|</c>.
 	/// Here they are the last command's output and command piping. It also records each that uses
 	/// <c>%m</c> or <c>%=&lt;</c>, which PennMUSH evaluates to <c>m</c> and <c>=&lt;</c> and SharpMUSH, as
-	/// TinyMUX does, to the running command and an attribute or argument. A source that reads all of these as
-	/// SharpMUSH does (<paramref name="sharesPiping"/>, TinyMUX) is checked only for <c>%&gt;</c>.
+	/// TinyMUX does, to the running command and an attribute or argument; and each that uses <c>%*&lt;</c>,
+	/// which PennMUSH, RhostMUSH and TinyMUX evaluate to <c>*&lt;</c> and SharpMUSH to a marked list separator. A
+	/// source that reads the others as SharpMUSH does (<paramref name="sharesPiping"/>, TinyMUX) is checked only
+	/// for <c>%&gt;</c> and <c>%*&lt;</c>.
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
-		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions, bool sharesPiping)
+		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions, AttributeMentions listSeparators, bool sharesPiping)
 	{
 		foreach (var pennAttr in pennObj.Attributes)
 		{
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '>'))
 			{
 				pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (HasSubstitution(pennAttr.Value, "*<"))
+			{
+				listSeparators.Add($"#{imported.Number}/{pennAttr.Name}");
 			}
 
 			if (sharesPiping)

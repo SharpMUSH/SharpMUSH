@@ -11,7 +11,7 @@ namespace SharpMUSH.Server.Handlers;
 
 /// <summary>
 /// Handles object flag changes and syncs output preferences to ConnectionServer
-/// when ANSI/COLOR/XTERM256/TRUECOLOR flags are modified
+/// when ANSI/COLOR/XTERM256/TRUECOLOR/SHOW_SEPARATORS flags are modified
 /// </summary>
 public class ObjectFlagChangeHandler(
 	ILogger<ObjectFlagChangeHandler> logger,
@@ -24,7 +24,8 @@ public class ObjectFlagChangeHandler(
 		"ANSI",
 		"COLOR",
 		"XTERM256",
-		"TRUECOLOR"
+		"TRUECOLOR",
+		"SHOW_SEPARATORS"
 	};
 
 	public async ValueTask Handle(ObjectFlagChangedNotification notification, CancellationToken cancellationToken)
@@ -50,6 +51,7 @@ public class ObjectFlagChangeHandler(
 		var colorEnabled = flags.Has("COLOR");
 		var xterm256Enabled = flags.Has("XTERM256");
 		var truecolorEnabled = flags.Has("TRUECOLOR");
+		var showSeparators = flags.Has("SHOW_SEPARATORS");
 
 		foreach (var connection in connections)
 		{
@@ -58,7 +60,8 @@ public class ObjectFlagChangeHandler(
 				ansiEnabled,
 				colorEnabled,
 				xterm256Enabled,
-				truecolorEnabled
+				truecolorEnabled,
+				showSeparators
 			), cancellationToken);
 
 			logger.LogInformation("Synced {Flag} flag change for player {Player} on handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}, TRUECOLOR={Truecolor}",
