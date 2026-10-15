@@ -79,6 +79,7 @@ public sealed class CharactersApiFake : HttpMessageHandler
 			.AddLocalization();
 		// The profile's Page button asks whether a visitor could play as a guest.
 		ctx.Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
+		ctx.Services.TryAddSingleton(new ApplicationCatalog([]));
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		var auth = ctx.AddAuthorization();
 		return (fake, factory, auth);

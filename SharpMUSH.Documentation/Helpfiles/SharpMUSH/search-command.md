@@ -60,6 +60,8 @@ If `<class>`=FLAGS or LFLAGS, only objects with the list of flags specified by `
 
 If `<class>`=POWERS, only objects with the given powers are listed. `<restriction>` should be a space-separated list of power names.
 
+If `<class>`=INDEX, `<restriction>` is `<attribute>:<value>`, and only objects whose own copy of an indexed attribute holds `<value>` are listed, found through the attribute's index (see [@attribute index]). INDEX is SharpMUSH's own class.
+
 If `<class>`=ELOCK, only objects that pass the given lock string (as in help @lock) are listed. For purposes of indirect locks (@#123), 'search' is the name of the lock.
 
 If `<class>`=EVAL, only objects for which `<restriction>` evaluates to a true boolean value will be listed. The token '##' in `<restriction>`, which is a function, is replaced by each dbref sequentially. Classes EPLAYER, EROOM, EEXIT, and ETHING work like EVAL but are restricted to a single type.

@@ -203,14 +203,20 @@ default `flags`, and a `limit` or an `enum` (with its `delimiter`). The referenc
 - **Validity.** The manifest reader checks the name (`@attribute`'s characters, `` ` `` only between
   branches), each flag against the built-in attribute flags (`branch` refused), that a `limit`
   compiles as `@attribute/limit` compiles it, and that an entry has a limit or an enum, not both.
-  `attributes:` needs `format: 1.5`. `index:` is reserved for path 6 and ignored with a warning. The
-  plan checks the live table and the game's attribute flags.
+  `attributes:` needs `format: 1.5`. `index:` takes `true` or `@attribute/index`'s option words
+  (`AttributeIndexOptions.Parse`), needs `format: 1.8`, and is refused with `internal` in the
+  flags. Below 1.8 the key keeps its 1.5 reading, reserved and ignored, with a warning.
+  The plan checks the live table and the game's attribute flags.
 - **Ownership.** An entry the package creates is recorded in `InstalledPackageRecord.Owned` with the
   values that version declared. An entry the game already has is the game's: the package uses it
   and never changes it; if its limit or enum contradicts the manifest's, the plan says so and blocks
   (different default flags are only noted). One owned by another installed package blocks the plan.
-- **Upgrade** is a field-wise three-way merge against `Owned`: the default flags as a set, and the
-  limit-or-enum as one field, since each replaces the other.
+- **Upgrade** is a field-wise three-way merge against `Owned`: the default flags as a set, the
+  limit-or-enum as one field, since each replaces the other, and the index as one field.
+- **Index.** Applying an entry with an index writes it with `SetAttributeIndexCommand` and starts
+  the background build (`IAttributeIndexBuilder`); the plan's change says how many objects it builds
+  over (`CountAttributeCopiesQuery`). A game's own entry without the declared index blocks the plan,
+  since the package's `indexed()` calls depend on its order and fold.
 - **Removal** (a dropped entry, or uninstall) deletes the entry, whatever relies on it; stored values
   on objects are left alone, since an entry only sets defaults and checks.
 - **Retroactive.** Default flags apply to new copies only, unless the entry sets `retroactive: true`

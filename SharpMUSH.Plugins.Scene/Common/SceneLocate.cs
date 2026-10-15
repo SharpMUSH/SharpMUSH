@@ -52,6 +52,10 @@ public static class SceneLocate
 	public static async ValueTask<string> PlayerOrSelf(IMUSHCodeParser parser, string name)
 		=> await ResolveAsync(parser, name, PlayerFlags) ?? name;
 
+	/// <summary>The dbref of the player <paramref name="name"/> names, as <see cref="PlayerOrSelf"/> finds one, or null when none.</summary>
+	public static ValueTask<string?> PlayerAsync(IMUSHCodeParser parser, string name)
+		=> ResolveAsync(parser, name, PlayerFlags);
+
 	/// <summary>
 	/// Expands a dbref into its objid (<c>#13:1788365739971</c>), the spelling the rest of the engine uses
 	/// for a reference that is stored or compared, or null when it is empty, unparseable or names nothing.

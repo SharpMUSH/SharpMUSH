@@ -641,7 +641,13 @@ public partial class Functions
 		async ValueTask<CallState> Rejected(string notification)
 		{
 			await NotifyService.NotifyLocalized(executor, notification, executor);
-			return new CallState(ErrorMessages.Returns.Nothing);
+			return new CallState(notification switch
+			{
+				// The INDEX class answers as indexed() does, so softcode can tell a building index from no match.
+				nameof(ErrorMessages.Notifications.SearchIndexBuilding) => ErrorMessages.Returns.IndexBuilding,
+				nameof(ErrorMessages.Notifications.SearchIndexNotIndexed) => ErrorMessages.Returns.NotIndexed,
+				_ => ErrorMessages.Returns.Nothing
+			});
 		}
 	}
 

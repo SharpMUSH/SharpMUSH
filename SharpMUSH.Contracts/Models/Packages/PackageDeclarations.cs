@@ -96,19 +96,24 @@ public sealed record PackageRoleSpec(
 /// Whether writing the default flags also gives them to every copy of the attribute already on an object, as
 /// <c>@attribute/access/retroactive</c> does; otherwise they reach new copies only.
 /// </param>
+/// <param name="Index">
+/// The index on the attribute's values, as <c>@attribute/index</c> puts it (<c>index:</c>), or null for none. Applying
+/// it builds the index over the copies already on objects, in the background.
+/// </param>
 public sealed record PackageAttributeEntrySpec(
 	string Name,
 	IReadOnlyList<string> Flags,
 	string? Limit = null,
 	IReadOnlyList<string>? Enum = null,
 	char EnumDelimiter = ' ',
-	bool Retroactive = false)
+	bool Retroactive = false,
+	AttributeIndexOptions? Index = null)
 {
 	/// <summary>Whether <paramref name="other"/> holds the same values, the lists compared by content.</summary>
 	public bool SameAs(PackageAttributeEntrySpec other)
 		=> Name == other.Name && Flags.SequenceEqual(other.Flags) && Limit == other.Limit
 			&& (Enum ?? []).SequenceEqual(other.Enum ?? []) && (Enum is null) == (other.Enum is null)
-			&& EnumDelimiter == other.EnumDelimiter && Retroactive == other.Retroactive;
+			&& EnumDelimiter == other.EnumDelimiter && Retroactive == other.Retroactive && Index == other.Index;
 }
 
 /// <summary>What happens to one declared item in a plan.</summary>
