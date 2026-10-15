@@ -36,9 +36,6 @@ public sealed class WebPushOptions
 	/// </summary>
 	public List<string> AdditionalHosts { get; set; } = [];
 
-	/// <summary>How many browsers one account may subscribe.</summary>
-	public int MaxSubscriptionsPerAccount { get; set; } = 20;
-
 	/// <summary>How many pushes may wait to be sent; past it <c>@push</c> outputs <c>limited</c>.</summary>
 	public int QueueCapacity { get; set; } = 10_000;
 }
@@ -101,11 +98,11 @@ public sealed class WebPushService(
 		var keys = await KeysAsync(cancellationToken);
 		var subscription = new PushSubscription(PushEndpoints.IdOf(endpoint), accountId, endpoint, key, secret,
 			DeviceName(userAgent), PushEndpoints.KeyIdOf(keys.PublicKey), clock.GetUtcNow(), null, null, null);
-		return await subscriptions.SavePushSubscriptionAsync(subscription, options.Value.MaxSubscriptionsPerAccount,
+		return await subscriptions.SavePushSubscriptionAsync(subscription, (int)game.CurrentValue.Limit.PushDevices,
 				cancellationToken) switch
 		{
 			PushSubscriptionSaveOutcome.AccountFull => new Error<string>(
-				$"This account already has {options.Value.MaxSubscriptionsPerAccount} devices with notifications on. Remove one first."),
+				$"This account already has {game.CurrentValue.Limit.PushDevices} devices with notifications on. Remove one first."),
 			_ => subscription
 		};
 	}
@@ -149,7 +146,7 @@ public sealed class WebPushService(
 	private async ValueTask<Result<PushSubscription>> RenamedAsync(PushSubscription subscription,
 		CancellationToken cancellationToken)
 	{
-		await subscriptions.SavePushSubscriptionAsync(subscription, options.Value.MaxSubscriptionsPerAccount, cancellationToken);
+		await subscriptions.SavePushSubscriptionAsync(subscription, (int)game.CurrentValue.Limit.PushDevices, cancellationToken);
 		return subscription;
 	}
 

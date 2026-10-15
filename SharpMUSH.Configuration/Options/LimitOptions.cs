@@ -378,4 +378,10 @@ public record LimitOptions(
 
 	[SharpConfig(Name = "push_limit", Category = "Limit", Description = "Maximum push notifications @push sends one player in a minute; past it @push outputs limited", Group = "Players", Order = 7, Min = 1, Max = 1000)]
 	public uint PushLimit { get; init; } = DefaultPushLimit;
+
+	/// <summary>Default number of browsers one account may turn push notifications on in.</summary>
+	public const uint DefaultPushDevices = 10;
+
+	[SharpConfig(Name = "push_devices", Category = "Limit", Description = "Maximum browsers one account may turn push notifications on in; each @push sends one request per browser", Group = "Players", Order = 8, Min = 1, Max = 1000)]
+	public uint PushDevices { get; init; } = DefaultPushDevices;
 }

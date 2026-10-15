@@ -360,6 +360,10 @@ push_idle_seconds 300
 # The most push notifications @push sends one player in a minute.
 push_limit 10
 
+# The most browsers one account may turn push notifications on in. Each @push
+# sends one request per browser.
+push_devices 10
+
 # How much MUSH money do players get when they're created?
 starting_money 150
 

@@ -2380,6 +2380,8 @@ Nothing is sent while `<player>` is at the game: a connection of theirs sent som
 
 A character is sent at most `push_limit` notifications a minute (10 by default); @push drops the rest.
 
+An account may turn notifications on in at most `push_devices` browsers (10 by default); each @push sends one request per browser.
+
 The server signs every notification with a key it makes the first time it needs one, kept as the `push.vapid` secret (see [@secret]). `@secret/clear push.vapid` makes a new key the next time, after which every device has to turn notifications on again.
 
 Using @push needs the `notify.push` permission, which the `wizard` role allows.
