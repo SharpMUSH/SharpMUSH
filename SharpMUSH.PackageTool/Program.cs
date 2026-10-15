@@ -15,6 +15,7 @@ using YamlDotNet.Serialization;
 // required. For a `kind: plugin` manifest, each declared binary file is also
 // verified to exist in the package directory and to match its declared SHA-256,
 // and each `file:` wiki page of a content pack is read as the server reads it.
+// An `attributes:` block (format 1.5) is checked by the parser, and counted.
 //
 // Exit codes:
 //   0  all inputs valid (warnings allowed, unless --strict)
@@ -117,13 +118,15 @@ internal static class PackageToolApp
 		var wikiVerified = VerifyWikiPages(parsed.Manifest, packageDir, label, strict);
 		var binariesOk = binariesVerified && wikiVerified;
 
+		var entries = parsed.Manifest.Declared.AttributeEntries.Count;
+		var entriesNote = entries > 0 ? $" ({entries} attribute entr{(entries == 1 ? "y" : "ies")})" : "";
 		if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
 		{
-			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()})");
+			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}){entriesNote}");
 		}
 		else if (binariesOk && !warningsFail)
 		{
-			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}) — with warnings");
+			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}){entriesNote} — with warnings");
 		}
 
 		return binariesOk && !warningsFail;

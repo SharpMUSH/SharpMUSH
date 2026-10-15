@@ -343,6 +343,18 @@ else
                 </MudSelect>
                 break;
 
+            case "list":
+                @* One value a line, so a value may hold a comma; posted as a JSON list. *@
+                <div class="mb-2">
+                    <ListEditor Items="GetMulti(key).ToList()" ItemsChanged="v => Changed(element, () => _model.SetMulti(key, v))"
+                                Label="@label" Help="@help" Separators="[]" Disabled="_busy" />
+                    @if (error is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@error</MudText>
+                    }
+                </div>
+                break;
+
             case "radio":
                 <div class="mb-2">
                     <MudText Typo="Typo.body2">@label</MudText>

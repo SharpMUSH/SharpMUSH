@@ -66,8 +66,10 @@ foreach (var manifestPath in manifestPaths)
 				}
 			}
 
+			var entries = parsed.Manifest.Declared.AttributeEntries.Count;
 			Console.WriteLine($"OK    {relative}: {parsed.Manifest.Name} {parsed.Manifest.Version}"
-				+ (pages > 0 ? $" (format {parsed.Manifest.Format}, {pages} wiki page{(pages == 1 ? "" : "s")})" : ""));
+				+ (pages > 0 ? $" (format {parsed.Manifest.Format}, {pages} wiki page{(pages == 1 ? "" : "s")})" : "")
+				+ (entries > 0 ? $" ({entries} attribute entr{(entries == 1 ? "y" : "ies")})" : ""));
 			break;
 		case PackageManifestFailure failure:
 			Report(relative, failure.Issues);

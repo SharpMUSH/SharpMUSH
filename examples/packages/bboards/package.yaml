@@ -1,6 +1,6 @@
-format: 1.2
+format: 1.5
 package: bboards
-version: 1.2.2
+version: 1.3.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -53,6 +53,12 @@ roles:
     priority: 11
     permissions:
       softcode.bboards.moderate: allow
+
+# Every character's BBOARD tree holds what they have read: only wizards write it, anyone reads it, and
+# it is never a command. A game that already has a BBOARD entry keeps its own.
+attributes:
+  BBOARD:
+    flags: [wizard, no_command]
 
 objects:
   # The command object. WIZARD because it creates and changes board and post objects, writes each
@@ -193,6 +199,35 @@ objects:
       # later version can accept them.
       DATA`ROLES: |-
         foreground primary secondary tertiary muted success warning error info
+      # ---- command palette (help palette entries) --------------------------------
+      # Every +bb command is CMD`BB, so each entry names it. Typing any of them puts bboards on the
+      # player's context stack, and these rise.
+      PALETTE`NEXT: |-
+        {"label":"Next new post","line":"+bbnext","icon":"MarkEmailUnread","keywords":"bboards unread"}
+      PALETTE`SCAN: |-
+        {"label":"What's new on the boards","line":"+bbscan","icon":"Dashboard","keywords":"bboards unread"}
+      PALETTE`READ: |-
+        {"label":"Read a board or post","line":"+bbread <path>","icon":"Article","keywords":"bboards"}
+      PALETTE`POST: |-
+        {"label":"Post to a board","line":"+bbpost <board>/<title>=<text>","icon":"PostAdd","keywords":"bboards write"}
+      PALETTE`READER: |-
+        {"label":"Open the reader","line":"+bbreader","icon":"ChromeReaderMode","keywords":"bboards keys"}
+      # While the reader takes the player's lines, its keys. FUN`PALETTE`WRITING decides which set.
+      PALETTE`KEY_NEXT: |-
+        {"label":"Next new thing","line":"n","context":"input","lock":"FUN`PALETTE`WRITING/0","order":1}
+      PALETTE`KEY_LOOK: |-
+        {"label":"Show this screen again","line":"l","context":"input","lock":"FUN`PALETTE`WRITING/0","order":2}
+      PALETTE`KEY_UP: |-
+        {"label":"Up one level","line":"u","context":"input","lock":"FUN`PALETTE`WRITING/0","order":3}
+      PALETTE`KEY_COMMENT: |-
+        {"label":"Comment on this post","line":"c <text>","context":"input","lock":"FUN`PALETTE`WRITING/0","order":4}
+      PALETTE`KEY_KEYS: |-
+        {"label":"Reader keys","line":"?","context":"input","lock":"FUN`PALETTE`WRITING/0","order":5}
+      PALETTE`KEY_POST: |-
+        {"label":"Post what you wrote","line":".","context":"input","lock":"FUN`PALETTE`WRITING/1","order":1}
+      # 1 while the player (%#) is writing in the reader.
+      FUN`PALETTE`WRITING: |-
+        t(strlen(get(u(%!/FUN`READING`HOLDER,objid(%#))/BBOARD`READER`WRITE)))
       # Every +bb<word> command. %1 the word, %2 the switches, %3 what follows, all exactly as typed.
       CMD`BB:
         value: |-
@@ -218,11 +253,10 @@ objects:
       # every boot. /noparse and /rsnoparse hand the hook the text as typed; /inline runs it in place.
       STARTUP: |-
         @command/add/noparse/rsnoparse +bb;@hook/override/inline +bb={{bboards}},CMD`BB;@dolist/inline [get({{bboards}}/DATA`WORDS)]={@command/add/noparse/rsnoparse +bb%i0; @hook/override/inline +bb%i0={{bboards}},CMD`BB};&TICK`ID {{bboards}}=[secs()][rand(100000)];@trigger {{bboards}}/TICK=[get({{bboards}}/TICK`ID)]
-      # Runs once, on first install, as God: puts the commands in the master room, protects every
-      # character's BBOARD tree (only wizards write it, anyone reads it), makes the starting boards and
-      # their locks, and starts the commands.
+      # Runs once, on first install, as God: puts the commands in the master room, makes the starting
+      # boards and their locks, and starts the commands.
       AINSTALL: |-
-        @teleport {{bboards}}=#2;@attribute/access BBOARD=wizard no_command;@include {{bboards}}/INC`SEED;@trigger {{bboards}}/STARTUP
+        @teleport {{bboards}}=#2;@include {{bboards}}/INC`SEED;@trigger {{bboards}}/STARTUP
       # The starting boards. Two categories at the top; Public holds two boards of its own.
       INC`SEED: |-
         @include {{bboards}}/INC`SEED`CATEGORIES;@include/args {{bboards}}/INC`SEED`OFFICIAL=category,%q<seed_official_category>;@include/args {{bboards}}/INC`SEED`COMMUNITY=category,%q<seed_community_category>;@include/args {{bboards}}/INC`SEED`PUBLIC=board,%q<seed_public_board>
