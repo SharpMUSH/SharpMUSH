@@ -198,7 +198,8 @@ internal sealed class AttributeEvaluator(
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		var split = objAndAttribute.Split("/");
 		var obj = split.First();
-		var attribute = MarkupText.Concat(split.Skip(1));
+		// Everything after the first /, as PennMUSH splits it: a #lambda's code may hold more.
+		var attribute = MarkupText.Join(MarkupText.Plain("/"), split.Skip(1));
 		var objPlainText = obj.ToPlainText();
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
