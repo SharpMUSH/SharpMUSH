@@ -26,8 +26,13 @@ public class SecretsPageTests : TrackingBunitContext
 				"discord.admin", true),
 			new("sql.password", "The password of sql_username on the SQL server.", SecretSource.Stored, null, true,
 				DateTimeOffset.UnixEpoch, new SecretAuthor("#1:1", "God"), null, true),
+			new("http.github.token", null, SecretSource.Stored, null, true,
+				DateTimeOffset.UnixEpoch, new SecretAuthor("#1:1", "God"), null, false),
+			new("http.weather.key", null, SecretSource.Stored, null, true,
+				DateTimeOffset.UnixEpoch, new SecretAuthor("#1:1", "God"), null, false, "api.weather.example"),
 		];
 
+		public readonly List<(string Path, string Body)> Puts = [];
 		public string? PutPath;
 		public string? PutBody;
 		public string? DeletePath;
@@ -44,7 +49,15 @@ public class SecretsPageTests : TrackingBunitContext
 			{
 				PutPath = request.RequestUri!.AbsolutePath;
 				PutBody = await request.Content!.ReadAsStringAsync(ct);
-				return new(HttpStatusCode.OK) { Content = JsonContent.Create(Secrets[1]) };
+				Puts.Add((PutPath, PutBody));
+				var name = Uri.UnescapeDataString(PutPath.Split('/')[3]);
+				var secret = Secrets.FirstOrDefault(s => s.Name == name) ?? Secrets[1] with { Name = name };
+				return new(HttpStatusCode.OK)
+				{
+					Content = JsonContent.Create(PutPath.EndsWith("/hosts", StringComparison.Ordinal)
+						? secret with { Hosts = string.Join(' ', System.Text.Json.JsonDocument.Parse(PutBody).RootElement.GetProperty("hosts").EnumerateArray().Select(h => h.GetString())) }
+						: secret)
+				};
 			}
 
 			if (request.Method == HttpMethod.Delete)
@@ -80,7 +93,7 @@ public class SecretsPageTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".secret-rows"));
 
 		var rows = cut.FindAll(".secret-row");
-		await Assert.That(rows.Count).IsEqualTo(2);
+		await Assert.That(rows.Count).IsEqualTo(4);
 		await Assert.That(rows[0].TextContent).Contains("set by /run/secrets/discord.token");
 		await Assert.That(rows[1].TextContent).Contains("stored");
 		await Assert.That(rows[1].TextContent).Contains("God");
@@ -106,6 +119,63 @@ public class SecretsPageTests : TrackingBunitContext
 		await Assert.That(_api.PutPath).IsEqualTo("/api/secrets/sql.password");
 		await Assert.That(_api.PutBody).Contains("hunter2");
 		cut.WaitForState(() => string.IsNullOrEmpty(cut.FindAll(".secret-form input")[1].GetAttribute("value")));
+	}
+
+	[Test]
+	public async Task AnHttpSecretWithNoHostsIsFlagged()
+	{
+		var cut = Render<Secrets>();
+		cut.WaitForAssertion(() => cut.Find(".secret-rows"));
+
+		var rows = cut.FindAll(".secret-row");
+		await Assert.That(rows[2].QuerySelector(".secret-no-hosts")).IsNotNull();
+		await Assert.That(rows[2].TextContent).Contains("@http sends it nowhere until you name its hosts.");
+		await Assert.That(rows[3].QuerySelector(".secret-no-hosts")).IsNull();
+		await Assert.That(rows[3].TextContent).Contains("@http may send it to api.weather.example");
+		await Assert.That(rows[1].QuerySelector(".secret-no-hosts")).IsNull()
+			.Because("@http never sends a secret outside http.*, so sql.password needs no hosts");
+		await Assert.That(rows[1].QuerySelector(".mud-icon-button[title='Hosts @http may send it to']")).IsNull();
+	}
+
+	[Test]
+	public async Task EditingHostsSendsTheList()
+	{
+		var cut = Render<Secrets>();
+		cut.WaitForAssertion(() => cut.Find(".secret-rows"));
+
+		await cut.FindAll(".secret-row")[2].QuerySelector(".mud-icon-button[title='Hosts @http may send it to']")!
+			.ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+		await cut.Find(".secret-hosts-form input").InputAsync(
+			new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "api.github.com  uploads.github.com" });
+		await cut.Find(".secret-hosts-save").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+		cut.WaitForState(() => _api.PutPath is not null);
+		await Assert.That(_api.PutPath).IsEqualTo("/api/secrets/http.github.token/hosts");
+		await Assert.That(_api.PutBody).IsEqualTo("""{"hosts":["api.github.com","uploads.github.com"]}""");
+		cut.WaitForState(() => cut.FindAll(".secret-hosts-form").Count == 0);
+	}
+
+	[Test]
+	public async Task TheFormAsksForHostsWithAnHttpSecret()
+	{
+		var cut = Render<Secrets>();
+		cut.WaitForAssertion(() => cut.Find(".secret-rows"));
+
+		await cut.FindAll(".secret-form input")[0].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "sql.password" });
+		await Assert.That(cut.FindAll(".secret-form input").Count).IsEqualTo(2);
+		await Assert.That(cut.FindAll(".secret-advice")).IsEmpty();
+
+		await cut.FindAll(".secret-form input")[0].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "http.github.token" });
+		await Assert.That(cut.FindAll(".secret-form input").Count).IsEqualTo(3);
+		await Assert.That(cut.Find(".secret-advice").TextContent).Contains("only to the hosts named for it");
+
+		await cut.FindAll(".secret-form input")[1].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "ghp_example" });
+		await cut.FindAll(".secret-form input")[2].InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "api.github.com" });
+		await cut.Find(".secret-save").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+		cut.WaitForState(() => _api.Puts.Count == 2);
+		await Assert.That(_api.Puts[0].Path).IsEqualTo("/api/secrets/http.github.token");
+		await Assert.That(_api.Puts[1]).IsEqualTo(("/api/secrets/http.github.token/hosts", """{"hosts":["api.github.com"]}"""));
 	}
 
 	[Test]
