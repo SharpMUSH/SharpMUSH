@@ -139,8 +139,10 @@ public class ChargenIntegrationTests
 
 			await Assert.That(await As(applicant, "+app/set archetype=bard")).Contains("Archetype is one of: Fighter, Scholar, Rogue, Mystic.");
 			await Assert.That(await As(applicant, "+app/set archetype=rogue")).Contains("Archetype saved.");
-			await Assert.That(await Stored($"APP`{await Key(applicant)}`FIELD`ARCHETYPE")).IsEqualTo("Rogue")
-				.Because("a choice is kept as the form writes it");
+			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/ARCHETYPE)]")).IsEqualTo("Rogue")
+				.Because("the answer is the character's own attribute, and a choice is kept as the form writes it");
+			await Assert.That(await As(applicant, "&ARCHETYPE me=Fighter")).Contains("NO PERMISSION")
+				.Because("only +app changes an answer, so every change shows in the next round");
 			await Assert.That(await As(applicant, "+app/set nosuch=x")).Contains("There is no field 'nosuch'.");
 			await Assert.That(await As(applicant, "+app/submit")).Contains("Fill in concept and background first.");
 			await Assert.That(await As(reviewer, $"+app {applicant.Name}")).Contains($"{applicant.Name} has not submitted an application yet.")
@@ -259,6 +261,12 @@ public class ChargenIntegrationTests
 			await As(player, "+app/set archetype=fighter");
 			await As(player, "+app/set background=Grew up at the forge.");
 			await Assert.That(await As(player, "+app/submit")).Contains("Fill in trade first.");
+			await God("+apps/field/attribute trade=skill:trade");
+			await Assert.That(await Stored("FIELD`TRADE`ATTRIBUTE")).IsEqualTo(string.Empty).Because("an attribute name has no colon");
+			await God("+apps/field/attribute trade=skill`trade");
+			await Assert.That(await Stored("FIELD`TRADE`ATTRIBUTE")).IsEqualTo("SKILL`TRADE");
+			await As(player, "+app/set trade=smith");
+			await Assert.That(await God($"think [get(#{player.DbRef.Number}/SKILL`TRADE)]")).IsEqualTo("Smith");
 
 			await God("+apps/section/remove skills");
 			await Assert.That(await Stored("SECTION`SKILLS")).IsEqualTo("Skills").Because("a section with fields is not removed");
@@ -300,7 +308,7 @@ public class ChargenIntegrationTests
 				"""{"op":"save","field_concept":"A pilot, {who} never misses a tide","field_archetype":"rogue","field_background":""}""", applicant);
 			await Assert.That(saved.GetProperty("ok").GetBoolean()).IsTrue().Because(saved.ToString());
 			await Assert.That(saved.GetProperty("fields").GetProperty("field_concept").GetString()).IsEqualTo("A pilot, {who} never misses a tide")
-				.Because("a value reaches the store whole, commas and braces too");
+				.Because("a value reaches the character whole, commas and braces too");
 			await Assert.That(saved.GetProperty("fields").GetProperty("field_archetype").GetString()).IsEqualTo("Rogue");
 			await Assert.That((await Http("GET", $"/chargen/schema?at={key}", "", reviewer)).ToString())
 				.Contains("There is no such application.").Because("staff see an application only once it has been submitted");

@@ -63,8 +63,9 @@ objects:
   # routine per switch, INC`NEED` the guards they share, INC`DO` the writes (shared with the portal routes),
   # FUN` the reads, FUN`DISPLAY` and FUN`PAGE` the screens, WEB` the portal, ON` the hooks a game fills in.
   # DATA`CONFIG` holds the settings (+config chargen) and DATA`ROUTE` which routine each switch runs.
-  # Applications and the form are kept on the Chargen Store, never on a player, so nobody can rewrite their
-  # own application's state.
+  # The answers are the character's own attributes, set only through +app (the attribute is wizard-flagged).
+  # The form, state, rounds and comments are kept on the Chargen Store, so nobody can rewrite their own
+  # application's state or history.
   - ref: chargen
     type: thing
     name: Chargen
@@ -226,6 +227,8 @@ objects:
         APPS`FIELD`OPTION
       DATA`ROUTE`APPS`FIELD`HELP: |-
         APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`ATTRIBUTE: |-
+        APPS`FIELD`OPTION
       DATA`ROUTE`APPS`FIELD`REMOVE: |-
         APPS`FIELD`REMOVE
       # The routines that take a page as a last switch: +apps/2.
@@ -336,7 +339,8 @@ objects:
       # ---- the form -------------------------------------------------------------
       # The form is kept on the store: SECTION`<KEY> its title, with ORDER; FIELD`<KEY> its label, with
       # SECTION, TYPE (text, long or choice), CHOICES (split by |), REQUIRED (1 or 0), MAX (characters), ORDER
-      # and HELP. Keys are upper case; players type them in any case.
+      # HELP and ATTRIBUTE (the character's attribute that holds it; the key by default). Keys are upper case;
+      # players type them in any case.
       #
       # %0 a section: where it comes in the form.
       FUN`FORM`SECTION`ORDER:
@@ -392,6 +396,11 @@ objects:
           firstof(get({{store}}/FIELD`%0`TYPE),text)
         flags: [funsyntax]
       # %0 a field: the most characters it takes.
+      # %0 a field: the attribute on the character that holds it.
+      FUN`FIELD`ATTRIBUTE:
+        value: |-
+          firstof(get({{store}}/FIELD`%0`ATTRIBUTE),%0)
+        flags: [funsyntax]
       FUN`FIELD`MAX:
         value: |-
           firstof(get({{store}}/FIELD`%0`MAX),if(strmatch(u(%!/FUN`FIELD`TYPE,%0),long),4000,200))
@@ -425,10 +434,11 @@ objects:
       # ---- applications ---------------------------------------------------------
       # An application is APP`<key> on the store, the character's objid, with STATE (draft, submitted, changes,
       # approved, waitlist or retired), CREATED, ROUND (how many times it was submitted), SUBMITTED (when it last
-      # was), DECIDED and BY (the last decision and who made it), WAITLISTED, FIELD`<F> (the draft) and ROUND`<n>
-      # with AT and FIELD`<F> (each submission as it was sent). COMMENT`<n> holds a comment, with SECTION (empty
-      # for the whole application), AUTHOR (objid), NAME (the author's name then), AT, ROUND, PRIVATE (1 for
-      # staff only) and KIND (comment, return, approve, waitlist or retire); COMMENTS is the last number.
+      # was), DECIDED and BY (the last decision and who made it), WAITLISTED, and ROUND`<n> with AT and FIELD`<F>
+      # (each submission as it was sent; the draft is on the character). COMMENT`<n> holds a comment, with
+      # SECTION (empty for the whole application), AUTHOR (objid), NAME (the author's name then), AT, ROUND,
+      # PRIVATE (1 for staff only) and KIND (comment, return, approve, waitlist or retire); COMMENTS is the last
+      # number.
       #
       # %0 a key: its state, empty when there is no application.
       FUN`APP`STATE:
@@ -455,10 +465,11 @@ objects:
         value: |-
           setq(app_name_objid,get({{store}}/APP`%0))[if(isdbref(%q<app_name_objid>),name(%q<app_name_objid>),-)]
         flags: [funsyntax]
-      # %0 a key, %1 a field, %2 a round, or nothing for the draft: what the field said.
+      # %0 a key, %1 a field, %2 a round, or nothing for the draft: what the field said. The draft is the
+      # character's own attribute; a round is the copy kept on the store when it was submitted.
       FUN`APP`VALUE:
         value: |-
-          get({{store}}/APP`%0`[if(strlen(%2),ROUND`%2`)]FIELD`%1)
+          if(strlen(%2),get({{store}}/APP`%0`ROUND`%2`FIELD`%1),if(isdbref(setr(value_objid,get({{store}}/APP`%0))),get(%q<value_objid>/[u(%!/FUN`FIELD`ATTRIBUTE,%1)])))
         flags: [funsyntax]
       # %0 a field, %1 a key, %2 and %3 two rounds, either of them empty for the draft: 1 when the field differs.
       FUN`APP`DIFFERS:
@@ -614,7 +625,7 @@ objects:
       # Sets field %<field> of the draft to %<value>, which already fits it; empty clears it.
       INC`DO`SET:
         value: |-
-          @include %!/INC`DO`TOUCH; @if strlen(%<value>)={&APP`%q<app_key>`FIELD`%<field> {{store}}=u(%!/FUN`FIELD`STORED,%<field>,%<value>)},{&APP`%q<app_key>`FIELD`%<field> {{store}}}
+          @include %!/INC`DO`TOUCH; think setq(set_attribute,u(%!/FUN`FIELD`ATTRIBUTE,%<field>)); @if strlen(%<value>)={&%q<set_attribute> %q<app_objid>=u(%!/FUN`FIELD`STORED,%<field>,%<value>); @set %q<app_objid>/%q<set_attribute>=wizard},{&%q<set_attribute> %q<app_objid>}
         flags: [cmdsyntax]
       # Adds a comment by %<author> on section %<section> (empty for the whole application): %<text>, %<private> 1
       # for staff only, %<kind> comment, return, approve, waitlist or retire. Sets comment_number.
@@ -625,7 +636,7 @@ objects:
       # Submits the draft as the next round. The caller has checked it may be submitted.
       INC`DO`SUBMIT:
         value: |-
-          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if strlen(get({{store}}/APP`%q<app_key>`FIELD`##))={&APP`%q<app_key>`ROUND`%q<submit_round>`FIELD`## {{store}}=get({{store}}/APP`%q<app_key>`FIELD`##)}}; &APP`%q<app_key>`ROUND`%q<submit_round>`AT {{store}}=secs(); &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,[name(%q<app_objid>)] [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b[chr(40)]round %q<submit_round>[chr(41)])]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if strlen(u(%!/FUN`APP`VALUE,%q<app_key>,##))={&APP`%q<app_key>`ROUND`%q<submit_round>`FIELD`## {{store}}=u(%!/FUN`APP`VALUE,%q<app_key>,##)}}; &APP`%q<app_key>`ROUND`%q<submit_round>`AT {{store}}=secs(); &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,[name(%q<app_objid>)] [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b[chr(40)]round %q<submit_round>[chr(41)])]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
         flags: [cmdsyntax]
       # Records how long the application waited for its decision, keeping the latest 200.
       INC`DO`RECORDWAIT:
@@ -866,6 +877,10 @@ objects:
         value: |-
           if(cand(isint(%0),gte(%0,0)),%0,#-1 The order is a whole number: lower comes first.)
         flags: [funsyntax]
+      FUN`FORM`OPTION`ATTRIBUTE:
+        value: |-
+          if(cor(not(strlen(%0)),cand(lte(strlen(%0),60),regmatch(%0,^%[A-Za-z0-9_-%]%[A-Za-z0-9_`-%]*$))),ucstr(%0),#-1 An attribute name is up to 60 letters%, digits%, -%, _ and `.)
+        flags: [funsyntax]
       FUN`FORM`OPTION`HELP:
         value: |-
           if(lte(strlen(%0),200),%0,#-1 Keep help to 200 characters.)
@@ -873,7 +888,7 @@ objects:
       # +apps/field/remove <key>: the field leaves the form. What applications said in it stays with them.
       INC`APPS`FIELD`REMOVE:
         value: |-
-          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'.,warn); think setq(form_label,get({{store}}/FIELD`%q<form_key>)); @dolist/inline SECTION TYPE CHOICES REQUIRED MAX ORDER HELP={&FIELD`%q<form_key>`## {{store}}}; &FIELD`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the field %q<form_label>. What applications said in it stays with them.,ok)
+          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'.,warn); think setq(form_label,get({{store}}/FIELD`%q<form_key>)); @dolist/inline SECTION TYPE CHOICES REQUIRED MAX ORDER HELP ATTRIBUTE={&FIELD`%q<form_key>`## {{store}}}; &FIELD`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the field %q<form_label>. What applications said in it stays with them.,ok)
         flags: [cmdsyntax]
 
       # ---- portal -----------------------------------------------------------------
@@ -1491,7 +1506,8 @@ objects:
         Output: `\[APP\] Done: Returned to Cora for changes.`
       HELP`APP`FORM: |-
         The form is the game's: sections, and fields in them. Changing it takes the `config.admin` permission.
-        What applications already said stays with them when a field moves or goes.
+        Each answer is an attribute on the character, which only `+app` changes. What was said stays on the
+        character when a field moves or goes, and a new `attribute` does not move answers already given.
 
         - `+apps/fields`: every section and field.
         - `+apps/section <key>=<title>`: add a section at the end, or retitle one.
@@ -1513,6 +1529,7 @@ objects:
         | `max` | the most characters: 200 for text and 4000 for long by default |
         | `order` | where it comes in its section |
         | `help` | a line shown under an empty field |
+        | `attribute` | the attribute on the character that holds the answer: the key by default |
 
         Example:
 
