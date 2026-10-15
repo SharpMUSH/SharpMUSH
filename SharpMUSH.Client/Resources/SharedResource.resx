@@ -6305,6 +6305,24 @@
   <data name="PkgSettingsConfirm" xml:space="preserve">
     <value>I understand this package changes the game options above.</value>
   </data>
+  <data name="PkgServerBelowMinimum" xml:space="preserve">
+    <value>This package needs SharpMUSH {0}; this server is {1}. Upgrade the server to install it.</value>
+  </data>
+  <data name="PkgServerNewerThanVerified" xml:space="preserve">
+    <value>This package was tested on SharpMUSH up to {0}; this server is {1}. It will probably work, but nobody has checked.</value>
+  </data>
+  <data name="PkgServerAboveMaximum" xml:space="preserve">
+    <value>This package runs on SharpMUSH up to {0}; this server is {1}. Its author says it does not run on newer versions.</value>
+  </data>
+  <data name="PkgServerPastMaximumConfirm" xml:space="preserve">
+    <value>Install it anyway. The choice is recorded on the package and in the audit log.</value>
+  </data>
+  <data name="PkgPastMaximumChip" xml:space="preserve">
+    <value>Past maximum {0}</value>
+  </data>
+  <data name="PkgPastMaximumTooltip" xml:space="preserve">
+    <value>Installed on SharpMUSH {0}, newer than the {1} its manifest allows, after an administrator confirmed it on {2}.</value>
+  </data>
   <data name="NavClaimCharacter" xml:space="preserve">
     <value>Claim character</value>
   </data>

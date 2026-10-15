@@ -286,6 +286,9 @@ public class ListFunctionUnitTests
 	// Sorting by location compares each object's loc(); the key used to be an unawaited task, so any
 	// two distinct keys threw and the sort returned nothing.
 	[Arguments("sort(#2 #0,loc)", "#0 #2")]
+	// namei sorts dbrefs by name, ignoring case: God, Master Room, Room Zero.
+	[Arguments("sort(#0 #2 #1,namei)", "#1 #2 #0")]
+	[Arguments("sort(#0 #2 #1,-namei)", "#0 #2 #1")]
 	// Dbref sort compares numbers, not text, and reads an objid as its dbref.
 	[Arguments("sort(#105 #1000 #99,d)", "#99 #105 #1000")]
 	[Arguments("sort(#105:1 #1000:2 #99:3 foo,d)", "foo #99:3 #105:1 #1000:2")]

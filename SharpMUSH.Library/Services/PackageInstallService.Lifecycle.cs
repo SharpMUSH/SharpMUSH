@@ -470,6 +470,7 @@ public partial class PackageInstallService
 		await writes.UpsertInstalledPackageAsync(installed with
 		{
 			Version = snapshot.Version,
+			PastMaximum = snapshot.PastMaximum,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});

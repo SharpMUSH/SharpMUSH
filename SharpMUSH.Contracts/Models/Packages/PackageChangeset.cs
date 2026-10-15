@@ -17,6 +17,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Declarations">What happens to the roles, permissions and categories the package declares or owned; a blocked one blocks the apply.</param>
 /// <param name="Settings">What happens to the configuration options the package sets or set; a blocked one blocks the apply.</param>
 /// <param name="Wiki">What happens to the wiki pages the package ships or shipped (format 1.4); a blocked one blocks the apply.</param>
+/// <param name="Compatibility">Where this server sits in the package's engine-version range; a server below its minimum blocks the apply.</param>
 public sealed record PackageChangeset(
 	string PackageId,
 	string? FromVersion,
@@ -30,16 +31,18 @@ public sealed record PackageChangeset(
 	IReadOnlyList<string> Notes,
 	IReadOnlyList<PackageDeclarationChange>? Declarations = null,
 	IReadOnlyList<PackageSettingChange>? Settings = null,
-	IReadOnlyList<PackageWikiChange>? Wiki = null)
+	IReadOnlyList<PackageWikiChange>? Wiki = null,
+	PackageServerCompatibility? Compatibility = null)
 {
 	/// <summary>
-	/// True when dependency/conflict issues, or a declared item or setting that cannot be applied, prevent applying
-	/// at all.
+	/// True when dependency/conflict issues, a declared item or setting that cannot be applied, or a server older than
+	/// the package's <c>requires_server</c>, prevent applying at all.
 	/// </summary>
 	public bool IsBlocked => DependencyIssues.Count > 0
 		|| (Declarations?.Any(d => d.Action == PackageDeclarationAction.Blocked) ?? false)
 		|| (Settings?.Any(s => s.Action == PackageSettingAction.Blocked) ?? false)
-		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Blocked) ?? false);
+		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Blocked) ?? false)
+		|| Compatibility?.Fit == PackageServerFit.BelowMinimum;
 
 	/// <summary>True when at least one attribute, structure element or wiki page needs an admin decision.</summary>
 	public bool HasConflicts =>

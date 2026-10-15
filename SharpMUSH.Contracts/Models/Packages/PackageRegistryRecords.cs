@@ -26,6 +26,10 @@ namespace SharpMUSH.Library.Models.Packages;
 /// </param>
 /// <param name="Settings">The configuration options this package set and still owns. Null when it owns none.</param>
 /// <param name="Kind">What the package is: softcode, a portal application, or a plugin.</param>
+/// <param name="PastMaximum">
+/// Set when the administrator confirmed applying this version on a server newer than its <c>maximum_server</c>; null
+/// when the last apply was inside the range.
+/// </param>
 /// <param name="Plugins">The plugins the package declared it needs (<c>plugins:</c>), or null for none.</param>
 public sealed record InstalledPackageRecord(
 	string Id,
@@ -40,6 +44,7 @@ public sealed record InstalledPackageRecord(
 	PackageDeclarations? Owned = null,
 	IReadOnlyList<PackageSettingRecord>? Settings = null,
 	PackageKind Kind = PackageKind.Softcode,
+	PackageMaximumOverride? PastMaximum = null,
 	IReadOnlyList<string>? Plugins = null);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>

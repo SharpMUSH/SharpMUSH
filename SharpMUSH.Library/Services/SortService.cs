@@ -53,7 +53,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			"f" => new ISortService.SortInformation(ISortService.SortType.DecimalSort, OrderByDirection.Ascending, null),
 			"m" => new ISortService.SortInformation(ISortService.SortType.NaturalSort, OrderByDirection.Ascending, null),
 			"name" => new ISortService.SortInformation(ISortService.SortType.CasedName, OrderByDirection.Ascending, null),
-			"iname" => new ISortService.SortInformation(ISortService.SortType.UncasedName, OrderByDirection.Ascending, null),
+			"namei" => new ISortService.SortInformation(ISortService.SortType.UncasedName, OrderByDirection.Ascending, null),
 			"conn" => new ISortService.SortInformation(ISortService.SortType.Conn, OrderByDirection.Ascending, null),
 			"idle" => new ISortService.SortInformation(ISortService.SortType.Idle, OrderByDirection.Ascending, null),
 			"owner" => new ISortService.SortInformation(ISortService.SortType.Owner, OrderByDirection.Ascending, null),
@@ -72,7 +72,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			"-f" => new ISortService.SortInformation(ISortService.SortType.DecimalSort, OrderByDirection.Descending, null),
 			"-m" => new ISortService.SortInformation(ISortService.SortType.NaturalSort, OrderByDirection.Descending, null),
 			"-name" => new ISortService.SortInformation(ISortService.SortType.CasedName, OrderByDirection.Descending, null),
-			"-iname" => new ISortService.SortInformation(ISortService.SortType.UncasedName, OrderByDirection.Descending,
+			"-namei" => new ISortService.SortInformation(ISortService.SortType.UncasedName, OrderByDirection.Descending,
 				null),
 			"-conn" => new ISortService.SortInformation(ISortService.SortType.Conn, OrderByDirection.Descending, null),
 			"-idle" => new ISortService.SortInformation(ISortService.SortType.Idle, OrderByDirection.Descending, null),
@@ -97,7 +97,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	public bool IsSortType(string sortType) =>
 		sortType.StartsWith("attr:") || sortType.StartsWith("attri:")
 		|| (sortType.StartsWith('-') ? sortType[1..] : sortType) is "a" or "i" or "d" or "n" or "f" or "m" or "name"
-			or "iname" or "conn" or "idle" or "owner" or "loc" or "ctime" or "mtime" or "lattr";
+			or "namei" or "conn" or "idle" or "owner" or "loc" or "ctime" or "mtime" or "lattr";
 
 	public IAsyncEnumerable<MString> Sort(IEnumerable<MString> items,
 		Func<MString, CancellationToken, ValueTask<string>> keySelector,

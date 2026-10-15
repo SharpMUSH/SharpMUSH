@@ -14,12 +14,17 @@ public interface IDiscordPoster
 /// Drains one link's <see cref="DiscordOutbox"/> into its <see cref="IDiscordPoster"/>, one post at a time. Links
 /// run side by side; within a link, lines leave in the order they were said.
 /// </summary>
+/// <param name="faulted">
+/// Told when the link stops on a failure only an admin can fix. It may <see cref="Resume"/> the link at once, after
+/// fixing what it can (making a new webhook for one that was deleted).
+/// </param>
 public sealed class DiscordLinkSender(
 	IDiscordPoster poster,
 	DiscordOutbox outbox,
 	DiscordOutboxOptions options,
 	TimeProvider time,
-	ILogger logger)
+	ILogger logger,
+	Func<LinkBroken, CancellationToken, Task>? faulted = null)
 {
 	private readonly Channel<bool> _wake = Channel.CreateBounded<bool>(
 		new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
@@ -31,6 +36,18 @@ public sealed class DiscordLinkSender(
 			lock (outbox)
 			{
 				return outbox.State;
+			}
+		}
+	}
+
+	/// <summary>How many lines wait.</summary>
+	public int Depth
+	{
+		get
+		{
+			lock (outbox)
+			{
+				return outbox.Depth;
 			}
 		}
 	}
@@ -54,6 +71,15 @@ public sealed class DiscordLinkSender(
 		}
 
 		_wake.Writer.TryWrite(true);
+	}
+
+	/// <summary>Stops the link until <see cref="Resume"/>.</summary>
+	public void Halt(LinkBroken broken)
+	{
+		lock (outbox)
+		{
+			outbox.Halt(broken);
+		}
 	}
 
 	/// <summary>An admin fixed the link; what is still young enough goes out.</summary>
@@ -88,12 +114,21 @@ public sealed class DiscordLinkSender(
 		{
 			var outcome = await PostAsync(post, cancellationToken);
 			TimeSpan wait;
+			LinkBroken? stopped;
 			lock (outbox)
 			{
+				var before = outbox.Fault;
 				wait = outbox.Report(outcome, time.GetUtcNow());
+				// A broken link, or one rejection too many: either way the link has just stopped.
+				stopped = before is null ? outbox.Fault : null;
 			}
 
 			Log(outcome);
+			if (stopped is { } broken && faulted is not null)
+			{
+				await faulted(broken, cancellationToken);
+			}
+
 			if (wait > TimeSpan.Zero)
 			{
 				await Task.Delay(wait, time, cancellationToken);

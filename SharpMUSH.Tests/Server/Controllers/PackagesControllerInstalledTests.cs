@@ -37,7 +37,7 @@ public class PackagesControllerInstalledTests
 			Substitute.For<IPackageAuthoringService>(), Substitute.For<IPackageOperationRunner>(),
 			new PluginUploadStore(PluginPackageFixture.ScratchDirectories(), Substitute.For<IPackageManifestService>(),
 				NullLogger<PluginUploadStore>.Instance),
-			Substitute.For<IAuditLog>());
+			Substitute.For<IAuditLog>(), new EngineVersion(new PackageVersion(2, 0, 0)));
 
 		var result = (IReadOnlyList<InstalledPackageDto>)((OkObjectResult)(await controller.GetInstalled()).Result!).Value!;
 

@@ -97,6 +97,8 @@ public static class PackageManifestWriter
 			yaml.Append("requires_server: ").AppendLine(Scalar(requiresServer.ToString()));
 		}
 
+		AppendOptional(yaml, "verified_server", manifest.VerifiedServer?.ToString());
+		AppendOptional(yaml, "maximum_server", manifest.MaximumServer?.ToString());
 		if (manifest.RequiredPlugins.Count > 0)
 		{
 			yaml.Append("plugins: ").AppendLine(Flow(manifest.RequiredPlugins));

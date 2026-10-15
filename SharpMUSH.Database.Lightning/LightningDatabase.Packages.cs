@@ -42,6 +42,9 @@ public partial class LightningDatabase
 		Owned = package.Owned is { IsEmpty: false } owned ? owned.ToJson() : null,
 		Settings = package.Settings is { Count: > 0 } settings ? PackageSettingRecord.ToJson(settings) : null,
 		Kind = package.Kind == PackageKind.Softcode ? null : package.Kind.ToString().ToLowerInvariant(),
+		PastMaximumServer = package.PastMaximum?.Server,
+		PastMaximum = package.PastMaximum?.Maximum,
+		PastMaximumAt = package.PastMaximum is { } past ? FormatPackageTimestamp(past.At) : null,
 		Plugins = package.Plugins?.ToArray()
 	};
 
@@ -52,6 +55,9 @@ public partial class LightningDatabase
 		r.Owned is { Length: > 0 } owned ? PackageDeclarations.FromJson(owned) : null,
 		r.Settings is { Length: > 0 } settings ? PackageSettingRecord.FromJson(settings) : null,
 		Enum.TryParse<PackageKind>(r.Kind, ignoreCase: true, out var kind) ? kind : PackageKind.Softcode,
+		r is { PastMaximumServer: { } server, PastMaximum: { } maximum, PastMaximumAt: { } at }
+			? new PackageMaximumOverride(server, maximum, ParsePackageTimestamp(at))
+			: null,
 		r.Plugins is { Length: > 0 } ? r.Plugins : null);
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)

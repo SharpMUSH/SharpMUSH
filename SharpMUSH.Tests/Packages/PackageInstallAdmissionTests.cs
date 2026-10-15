@@ -90,6 +90,7 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IPackageSettingService>(),
 				services.GetRequiredService<IPackageWikiService>(),
 				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
+				services.GetRequiredService<EngineVersion>(),
 				services.GetRequiredService<Lazy<IPluginManager>>())
 		};
 	}
@@ -127,7 +128,7 @@ public class PackageInstallAdmissionTests
 	public async Task Softcode_OverAPluginThatIsNotRunning_IsRejectedAndWritesNothing()
 	{
 		var manifest = Parse("""
-			format: 1.5
+			format: 1.7
 			package: adm-over-absent-plugin
 			version: "1.0.0"
 			plugins: [adm-absent-plugin]

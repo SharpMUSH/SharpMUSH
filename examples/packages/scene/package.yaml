@@ -1,4 +1,4 @@
-format: 1.5
+format: 1.7
 package: scene
 version: 1.7.0
 authors: [SharpMUSH]
@@ -16,7 +16,7 @@ plugins: [scene]
 # attach target, and it is what makes uninstalling scene take its help registration with it.
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/

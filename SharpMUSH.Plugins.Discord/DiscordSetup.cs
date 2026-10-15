@@ -75,6 +75,31 @@ public static class DiscordSetup
 		=> $"https://discord.com/oauth2/authorize?client_id={applicationId}&permissions={(ulong)Permissions}&scope=bot+applications.commands";
 
 	/// <summary>
+	/// What a linked channel needs of the bot, by the names Discord's settings use: seeing it, making its webhook,
+	/// and replacing a member's message with the game's version.
+	/// </summary>
+	public static IReadOnlyList<string> MissingInChannel(ChannelPermissions permissions)
+	{
+		List<string> missing = [];
+		if (!permissions.ViewChannel)
+		{
+			missing.Add("View Channel");
+		}
+
+		if (!permissions.ManageWebhooks)
+		{
+			missing.Add("Manage Webhooks");
+		}
+
+		if (!permissions.ManageMessages)
+		{
+			missing.Add("Manage Messages");
+		}
+
+		return missing;
+	}
+
+	/// <summary>
 	/// The privileged intents <paramref name="flags"/> leave off, by their names in the developer portal. A bot
 	/// in fewer than 100 servers has the <c>…Limited</c> flag instead of the full one.
 	/// </summary>

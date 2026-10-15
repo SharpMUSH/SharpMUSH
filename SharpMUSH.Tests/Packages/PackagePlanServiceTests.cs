@@ -685,7 +685,7 @@ public class PackagePlanServiceTests
 	{
 		var manifest = Parse(
 			"""
-			format: 1.5
+			format: 1.7
 			package: probe
 			version: "1.0"
 			plugins: [scene]

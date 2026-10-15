@@ -15,6 +15,9 @@ public sealed record InstalledPackageRecord
 	public string? Owned { get; init; }
 	public string? Settings { get; init; }
 	public string? Kind { get; init; }
+	public string? PastMaximumServer { get; init; }
+	public string? PastMaximum { get; init; }
+	public string? PastMaximumAt { get; init; }
 	public string[]? Plugins { get; init; }
 }
 

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Discord.Links;
 
 namespace SharpMUSH.Plugins.Discord;
 
@@ -14,7 +15,8 @@ namespace SharpMUSH.Plugins.Discord;
 /// The bot's one connection to Discord. It reads <c>discord.token</c> when the server starts and again on
 /// <see cref="Reconnect"/>, and keeps <see cref="State"/> current for the admin page's checklist.
 /// </summary>
-public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordGatewayService> logger) : BackgroundService
+public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordGatewayService> logger)
+	: BackgroundService, IDiscordWebhooks
 {
 	/// <summary>Discord's close code for a token it does not accept.</summary>
 	private const int AuthenticationFailed = 4004;
@@ -213,6 +215,50 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 		// Stopping from inside the client's own event would wait on itself.
 		_ = Task.Run(client.StopAsync);
 		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// Makes the webhook a linked channel posts through, once the bot can see the channel and holds every permission
+	/// a link uses there. A thread is refused: its parent channel's webhook posts into it.
+	/// </summary>
+	public async Task<WebhookCreation> CreateWebhookAsync(ulong channelId, CancellationToken cancellationToken)
+	{
+		if (_client is not { ConnectionState: ConnectionState.Connected } client)
+		{
+			return new Error<string>("The bot is not connected to Discord. @discord shows why.");
+		}
+
+		var channel = client.GetChannel(channelId);
+		if (channel is SocketThreadChannel)
+		{
+			return new Error<string>("That is a thread. Link the channel it is in.");
+		}
+
+		if (channel is not SocketTextChannel text)
+		{
+			return new Error<string>(channel is null
+				? "The bot cannot see a channel with that id. Check that it is in that server and may view the channel."
+				: "That channel does not take messages.");
+		}
+
+		var missing = DiscordSetup.MissingInChannel(text.Guild.CurrentUser.GetPermissions(text));
+		if (missing.Count > 0)
+		{
+			return new Error<string>($"The bot lacks {string.Join(", ", missing)} in #{text.Name}.");
+		}
+
+		try
+		{
+			// Discord refuses a webhook named with "discord" in it; the bot's own name never has it.
+			var webhook = await text.CreateWebhookAsync(client.CurrentUser.Username,
+				options: new RequestOptions { CancelToken = cancellationToken });
+			return new CreatedWebhook(webhook.Id, webhook.Token, text.Guild.Id, text.Guild.Name, text.Name);
+		}
+		catch (HttpException exception)
+		{
+			logger.LogWarning("[Discord] Could not make a webhook in #{Channel}: {Reason}", text.Name, exception.Message);
+			return new Error<string>($"Discord refused to make a webhook in #{text.Name}: {exception.Reason ?? exception.Message}");
+		}
 	}
 
 	private Task LogAsync(LogMessage message)

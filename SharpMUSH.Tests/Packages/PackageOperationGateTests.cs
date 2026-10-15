@@ -44,6 +44,7 @@ public class PackageOperationGateTests
 			services.GetRequiredService<IPackageSettingService>(),
 			services.GetRequiredService<IPackageWikiService>(),
 			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
+			services.GetRequiredService<EngineVersion>(),
 			services.GetRequiredService<Lazy<IPluginManager>>());
 	}
 

@@ -24,7 +24,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
-		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
+		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins"
 	};
 
@@ -133,6 +133,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 		var conventionPrefix = OptionalString(doc, "convention_prefix", issues);
 		var requiresServer = ReadConstraintField(doc, "requires_server", issues);
+		var (verifiedServer, maximumServer) = ReadServerRange(doc, requiresServer, issues);
 
 		var replaces = OptionalString(doc, "replaces", issues);
 		if (replaces is not null && (!PackageSlugRegex().IsMatch(replaces) || replaces == name))
@@ -203,13 +204,15 @@ public partial class PackageManifestService : IPackageManifestService
 			settings.Count == 0 ? null : settings,
 			locale,
 			wiki.Count == 0 ? null : wiki,
+			verifiedServer,
+			maximumServer,
 			plugins.Count == 0 ? null : plugins);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}
 
 	/// <summary>
-	/// Reads <c>plugins:</c> (format 1.5): the ids of the plugins the package's code calls into, such as <c>scene</c>
+	/// Reads <c>plugins:</c> (format 1.7): the ids of the plugins the package's code calls into, such as <c>scene</c>
 	/// for a package that runs <c>+scene</c> or <c>scenewhere()</c>. A plugin id is a package id, so it is held to the
 	/// same rule.
 	/// </summary>

@@ -98,7 +98,7 @@ public class FeedService(
 		var recipients = await RouteAsync(parser, owner, message, audience, to);
 		var delivered = await DeliverAsync(parser, owner, speaker, message, recipients);
 		await TapAsync(message, delivered);
-		await HandOnAsync(new FeedLine(message, delivered, stored, origin));
+		await HandOnAsync(new FeedLine(message, delivered, stored, origin, to));
 		return new FeedDelivery(id, delivered, stored);
 	}
 
