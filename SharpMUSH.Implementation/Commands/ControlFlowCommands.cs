@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
@@ -22,34 +23,23 @@ public partial class Commands
 	/// <summary>
 	/// Handles delimiter/pid extraction for @dolist and @map commands when /DELIMIT or /PID is used.
 	/// Format: @dolist/delimit <delimiter> <list>=<action>
-	/// Returns the delimiter/pid value and the remaining list text.
+	/// Returns the delimiter/pid value and the remaining list text, both with their markup, so a marked
+	/// delimiter (<c>%*&lt;|&gt;</c>) stays one.
 	/// </summary>
-	private (string paramValue, MString listText) ExtractFirstParameter(MString originalListText, bool extractParameter)
+	private static (MString paramValue, MString listText) ExtractFirstParameter(MString originalListText, bool extractParameter)
 	{
-		if (!extractParameter)
+		if (!extractParameter || originalListText.Length == 0)
 		{
-			return (" ", originalListText);
+			return (MarkupText.Space, originalListText);
 		}
 
-		var plainListText = originalListText.ToPlainText();
-		if (plainListText.Length == 0)
-		{
-			return (" ", originalListText);
-		}
-
-		var spaceIndex = plainListText.IndexOf(' ');
+		var spaceIndex = originalListText.Text.IndexOf(' ');
 		if (spaceIndex <= 0)
 		{
-			return (plainListText, MarkupText.Empty);
+			return (originalListText, MarkupText.Empty);
 		}
 
-		var textSpan = plainListText.AsSpan();
-		var paramValue = textSpan.Slice(0, spaceIndex).ToString();
-		var remainingText = plainListText.Length > spaceIndex + 1
-			? MarkupText.Plain(textSpan.Slice(spaceIndex + 1).ToString())
-			: MarkupText.Empty;
-
-		return (paramValue, remainingText);
+		return (originalListText.Substring(0, spaceIndex), originalListText.Substring(spaceIndex + 1));
 	}
 
 	[SharpCommand(Name = "@MAP", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
@@ -87,7 +77,7 @@ public partial class Commands
 
 		var originalListText = args.Count >= 2 ? args["1"].Message : MarkupText.Empty;
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
-		var list = listText.Split(delimiter);
+		var list = MushText.Split(delimiter, listText);
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, list.Length, objSpec, attrName);
 
@@ -235,7 +225,7 @@ public partial class Commands
 		var hasDelimit = switches.Contains("DELIMIT");
 		var hasPid = switches.Contains("PID");
 
-		string delimiter = " ";
+		var delimiter = MarkupText.Space;
 		string? notifyPid = null;
 		MString listText;
 
@@ -252,7 +242,7 @@ public partial class Commands
 			var (pidParam, extractedList) = ExtractFirstParameter(
 				parser.CurrentState.Arguments["0"].Message,
 				true);
-			notifyPid = pidParam;
+			notifyPid = pidParam.ToPlainText();
 			listText = extractedList;
 		}
 		else
@@ -260,7 +250,7 @@ public partial class Commands
 			listText = parser.CurrentState.Arguments["0"].Message;
 		}
 
-		var list = listText.Split(delimiter);
+		var list = MushText.Split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message;
 
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");

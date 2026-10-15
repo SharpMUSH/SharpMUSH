@@ -664,6 +664,35 @@ public class PennMUSHDbrefPreservationTests
 	}
 
 	/// <summary>
+	/// PennMUSH evaluates <c>%*&lt;</c> to <c>*&lt;</c>; here it marks a list separator. The importer names the
+	/// attributes using it.
+	/// </summary>
+	[Test]
+	public async Task ListSeparatorsInImportedSoftcodeAreNamed()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master Room", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject
+			{
+				DBRef = 10, Name = "Ten", Type = PennMUSHObjectType.Thing,
+				Attributes =
+				[
+					new PennMUSHAttribute { Name = "SEP", Value = "think iter(a b,##,,%*<|>)" },
+					new PennMUSHAttribute { Name = "STAR", Value = "think 5%* off" },
+					new PennMUSHAttribute { Name = "ESCAPED", Value = "think \\%*<|> %%*<" }
+				]
+			}));
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(await AttributeAsync(world, 10, "SEP")).IsEqualTo("think iter(a b,##,,%*<|>)");
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("1 attribute(s) use %*<") && w.EndsWith(": #10/SEP"))).IsTrue();
+	}
+
+	/// <summary>
 	/// A minimal PennMUSH world is #0-#2. With the seeds at #3-#9 gone, the next object is #3, one past
 	/// the highest imported object, not the 10 the seeds had pushed the counter to.
 	/// </summary>

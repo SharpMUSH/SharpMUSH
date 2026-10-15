@@ -176,11 +176,11 @@ A package declares the roles, permissions and categories it needs in `package.ya
 | Titled frame | `box(<body>, <title>)` |
 | Divider / footer | `rule(<title>)` on its own line inside the box; footer = `[rule()]%r<text>` |
 | `Label: value` sheet | `fields(, <label>, <value>, …)`; `{{"cols":2}}` for two columns |
-| Sheet from computed lists | `lfields(<opts>, <labels>, <values>, <delim>)`, the labels and values as two lists; `chr(30)` as the delimiter when a value may hold anything |
+| Sheet from computed lists | `lfields(<opts>, <labels>, <values>, <delim>)`, the labels and values as two lists; `%*<\|>` as the delimiter when a value may hold anything, each typed value through `unmark()` |
 | Table, rows written out | `datatable(<opts>, <h1>\|<h2>, <c1>\|<c2>, …)` |
-| Table, a row per record | `ldatatable(<opts>, <h1>\|<h2>, iter(<list>,<c1>\|<c2>,,^), ^)`, one `iter()` for all rows |
+| Table, a row per record | `ldatatable(<opts>, <h1>\|<h2>, iter(<list>,<c1>\|<c2>,,%*<^>), %*<^>)`, one `iter()` for all rows |
 | Table from computed lists | `datacolumns(<opts>, <heading>\|<cells…>, …)`, one `iter()` per column |
-| A variadic layout from a computed list | the l-form: `ldatatable()`, `lflex()`, `ltree()`, `lnode()` take the items as one list, then a delimiter; `lfields()` takes the labels and values as two lists and one delimiter for both; a list of layouts needs a delimiter their art never holds, such as `^` |
+| A variadic layout from a computed list | the l-form: `ldatatable()`, `lflex()`, `ltree()`, `lnode()` take the items as one list, then a delimiter; `lfields()` takes the labels and values as two lists and one delimiter for both; a list of layouts or of player text needs a marked delimiter, such as `%*<^>`, which splits only where it is marked |
 | Names in columns / a list / a tree | `grid()` / `bullets()` / `tree()` + `node()` |
 | Side by side | `flex(<opts>, item(<content>, <width>), …)` |
 | Bar / status tag | `gauge(<v>, <max>, <label>)` / `badge(<text>, ok\|warn\|error\|info\|muted)` |
@@ -190,7 +190,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 - **Options are one JSON object**: inline with doubled braces, `box(x,T,,{{"title":"left"}})`, or `json(object,…)` when a value is computed. A misspelled key errors (`#-1 UNKNOWN LAYOUT OPTION`). An inline `\n` is eaten by evaluation and silently becomes `n`; build a newline with `json(string,%r)`.
 - **Nesting is by line.** A `fields()`/`datatable()`/`flex()`/`tree()` on a line of its own inside `box()` keeps its layout; a `rule()` on its own line becomes a divider meeting the box's sides. After other text on the same line, a block layout falls apart. Inline pieces (`badge()`, `cmdlink()`) are fine anywhere.
 - **Tables: say what to keep.** Too wide, wrapping columns shrink first, then the highest `"priority"` number is dropped. A wrapping column with no `"min"` shrinks to a letter per line before anything drops. Mark names, numbers, times and statuses `"nowrap"` (shown whole or not at all), leave free text wrapping with a `"min"`, give droppable columns priority 2+. `<` `-` `>` before a heading aligns its column. Give the free-text column a `"grow"` share (`"grow":"|1"`) to span the screen; without one a table is as wide as its cells.
-- **Player text in a table needs another delimiter.** Cells split at `|`, and a title can hold one. Join those columns with `%r` and pass `json(object,delim,json(string,%r))`. The option lists split on the delimiter too: `nowrap,json(string,1%r3)`; `"1|3"` is then one bad item (`#-1 ARGUMENT OUT OF RANGE`).
+- **Player text in a table needs a marked delimiter.** Cells split at `|`, and a title can hold one. Write the cell delimiter marked into the options, `{{"delim":"%*<^>"}}`, and separate cells with `%*<^>`; `json()` drops the mark. Put typed text through `unmark()` first, or a player's own `%*<^>` splits the cell. The option lists (`nowrap`, `priority`, ...) split on the same delimiter. See `help list separators`.
 - **In `package.yaml`, `{{` is an object reference**, so `{{"title":"left"}}` fails the install. Build options there with `json(object,…)`.
 - **An empty table still draws its headings** — `if(words(%q<l>),<table>,No scenes.)`.
 - **Build the layout last.** `left()`, `edit()` or other text surgery on a layout leaves plain text: no per-reader width, no portal structure. Colour goes in the cells, a border piece (`"top":"[ansi(hb,=)]"`) or `gradient()`.
@@ -261,6 +261,7 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 
 | Mistake | Fix |
 |---|---|
+| Player text packed into a `\|`- or `^`-delimited list | Mark the delimiter (`%*<\|>`) and put typed text through `unmark()`; a plain `\|` in the text splits the item, and so does a `%*<\|>` the player typed |
 | A command behind a `cmdlink()` that trusts whoever clicked | The click is the reader typing it; check `%#` in the command |
 | `@create Event Handler` + `@config/set event_handler=…` | `#9` exists and is configured — just ``&EVENT`NAME #9=…`` |
 | `$GET /path:` $-command HTTP handling, `@pemit %#=` as body, telnet-port URL | `` GET`PATH `` sub-handler on `#8`; `think` = body; URL under `/http/` |

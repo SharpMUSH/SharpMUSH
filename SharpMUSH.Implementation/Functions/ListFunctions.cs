@@ -485,6 +485,11 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(listStr.Length));
 		}
 
+		if (ListSeparators.IsMarked(delimiter))
+		{
+			return ValueTask.FromResult(new CallState(Math.Max(1, ListSeparators.Split(list, delimStr).Length)));
+		}
+
 		var count = 1;
 		var index = 0;
 		while ((index = listStr.IndexOf(delimStr, index, StringComparison.Ordinal)) != -1)
@@ -1424,9 +1429,9 @@ public partial class Functions
 	public ValueTask<CallState> WordPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var list = args["0"].Message.ToPlainText();
+		var list = args["0"].Message;
 		var numberArg = args["1"].Message.ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 
 		if (!ArgHelpers.TryInteger(parser, numberArg, out var number))
 		{
@@ -1441,15 +1446,18 @@ public partial class Functions
 		// fun_wordpos (src/funlist.c) walks the words in place and stops at the first one that ends past
 		// the character, so a delimiter belongs to the word after it: wordpos(foo bar baz, 5) is 2. A
 		// space delimiter merges its runs, every other delimiter counts an empty word between two of
-		// its own, which is what SplitList does with the items.
+		// its own, which is what SplitList does with the items. A marked delimiter splits only where it
+		// is marked, and keeps its empty items even when it is a space.
 		var target = number - 1;
 		var word = 1;
-		var text = list.AsSpan();
-		foreach (var range in text.Split(delimiter))
+		var mergesRuns = delimiter.Text == " " && !ListSeparators.IsMarked(delimiter);
+		var offset = 0;
+		foreach (var item in MushText.Split(delimiter, list))
 		{
-			var (offset, length) = range.GetOffsetAndLength(text.Length);
-			if (delimiter == " " && length == 0) continue;
-			if (target < offset + length) break;
+			var end = offset + item.Length;
+			offset = end + delimiter.Length;
+			if (mergesRuns && item.Length == 0) continue;
+			if (target < end) break;
 			word++;
 		}
 
@@ -1742,19 +1750,10 @@ public partial class Functions
 		}
 		var newValue = arg2.Message;
 
-		var inputDelimiter = " ";
-		if (args.TryGetValue("3", out var arg3))
-		{
-			inputDelimiter = arg3.Message.ToPlainText();
-		}
+		var inputDelimiter = args.TryGetValue("3", out var arg3) ? arg3.Message : MarkupText.Space;
+		var outputDelimiter = args.TryGetValue("4", out var arg4) ? arg4.Message : inputDelimiter;
 
-		var outputDelimiter = inputDelimiter;
-		if (args.TryGetValue("4", out var arg4))
-		{
-			outputDelimiter = arg4.Message.ToPlainText();
-		}
-
-		var items = MushText.SplitList(MarkupText.Plain(inputDelimiter), listStr);
+		var items = MushText.SplitList(inputDelimiter, listStr);
 
 		if (position < 1 || position > items.Length)
 		{
@@ -1764,6 +1763,6 @@ public partial class Functions
 		// Set the item at the position (convert to 0-based)
 		items[position - 1] = newValue;
 
-		return ValueTask.FromResult(new CallState(MarkupText.Join(MarkupText.Plain(outputDelimiter), items)));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(outputDelimiter, items)));
 	}
 }
