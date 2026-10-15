@@ -40,7 +40,7 @@ public static class SceneStatusEvent
 		{
 			await events.TriggerEventAsync(SharpEvents.SceneStatus, parser.CurrentState.Enactor, scene.Id, scene.Status, previous);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			parser.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(typeof(SceneStatusEvent))
 				.LogWarning(ex, "Scene {Scene}: SCENE`STATUS was not raised", scene.Id);

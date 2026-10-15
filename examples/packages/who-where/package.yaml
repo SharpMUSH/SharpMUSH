@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
@@ -33,35 +33,64 @@ objects:
     attributes:
       # +who: in the order the who-order setting names.
       CMD_+WHO: |-
-        $+who:@pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),get({{ww_functions}}/DATA`CONFIG`WHO-ORDER))
+        $+who:@pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),get({{ww_functions}}/DATA`CONFIG`WHO-ORDER),); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
       # +who/idle: the least idle first. +who/name: by name.
       CMD_+WHO_SWITCH: |-
-        $+who/*:@assert member(idle name,lcstr(%0))=@pemit %#=notice(WHO,+who has no /%0 switch. +who/idle lists the least idle first%, +who/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),lcstr(%0))
+        $+who/*:@assert member(idle name,lcstr(%0))=@pemit %#=notice(WHO,+who has no /%0 switch. +who/idle lists the least idle first%, +who/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),lcstr(%0),); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
       # +who <name>: only the players whose name or alias starts with it.
       CMD_+WHO_MATCH: |-
-        $+who *:@assert setr(ww_found,u({{ww_functions}}/WW_FN_MATCHING,mwho(),%0))=@pemit %#=notice(WHO,Nobody connected has a name starting with %0.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHO,%q<ww_found>)
+        $+who *:@pemit %#=u({{ww_functions}}/WW_FN_WHO,mwho(),name,%0); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
       # +where: the view the where-view setting names.
       CMD_+WHERE: |-
-        $+where:@pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(firstof(get({{ww_functions}}/DATA`CONFIG`WHERE-VIEW),grouped))],mwho())
+        $+where:@pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(firstof(get({{ww_functions}}/DATA`CONFIG`WHERE-VIEW),grouped))],mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
       # +where/grouped, +where/room and +where/name: a switch is the WW_FN_WHERE_<SWITCH> it runs.
       CMD_+WHERE_SWITCH: |-
-        $+where/*:@assert member(grouped room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/grouped lists under a line per location%, +where/room by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho())
+        $+where/*:@assert member(grouped room name,lcstr(%0))=@pemit %#=notice(WHERE,+where has no /%0 switch. +where/grouped lists under a line per location%, +where/room by location%, +where/name by name.,warn); @pemit %#=u({{ww_functions}}/WW_FN_WHERE_[ucstr(%0)],mwho()); @dolist/delimit | %q<ww_parts>|-=@pemit %#=u({{ww_functions}}/WW_FN_PART,##)
 
   - ref: ww_functions
     type: thing
     name: Who-Where Function Object
     flags: [no_command]
     attributes:
-      # Every screen is one box() as wide as the reader's screen; no width is given, so each reader gets
-      # it at their own width, and the web portal draws a card. Tables are datacolumns(), one WW_FN_COL_*
-      # per column, each its heading and its cells joined with %r; the delimiter is a newline
-      # (WW_FN_OPTS), so a name or room with a | in it stays one cell.
+      # Every screen is a heading or a box() as wide as the reader's screen; no width is given, so each
+      # reader gets it at their own width, and the web portal draws a card.
+      # ---- Parts ---------------------------------------------------------------------
+      # Every screen is sent in parts, so it works however many players are connected. A command's
+      # @pemit runs the screen's WW_FN_<SCREEN> with the players: it sends nothing, or a heading, and
+      # sets ww_view, the screen, and ww_parts, its runs of players or locations split by |. @dolist then
+      # sends WW_FN_PART for each run, and for - after the last. Each queued run has its own
+      # function_invocation_limit, so the cost of one never adds to another's. Runs are a few hundred
+      # players or a hundred locations, so a screen takes few of the player_queue_limit (100) commands
+      # an owner may have queued: two for most games.
+      WW_PART_PLAYERS: |-
+        250
+      WW_PART_ROOMS: |-
+        100
+      # %0 a screen: starts it, setting ww_view, and ww_key and ww_rs for a table.
+      WW_FN_START: |-
+        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,chr(9246))][setq(ww_after,v(DATA`CONFIG`IDLE-AFTER))]
+      # %0 a list, %1 how many to a run, %2 the list's delimiter (a space when empty): the runs, split by |.
+      WW_FN_SPLIT: |-
+        setq(ww_d,if(strlen(%2),%2,%b))[if(words(%0,%q<ww_d>),iter(lnum(0,dec(ceil(fdiv(words(%0,%q<ww_d>),%1)))),extract(%0,inc(mul(%i0,%1)),%1,%q<ww_d>),,|))]
+      # %0 a run from ww_parts, or - after the last: one @pemit of the screen's @dolist.
+      WW_FN_PART: |-
+        u(%!/WW_FN_%q<ww_view>_PART,%0)
+      # A table is built on this object while its runs are sent, one row per player in WW_TMP`<ww_key>:
+      # the cells split by %r, which no name holds, and the rows by U+241E (ww_rs), since chr() refuses
+      # control characters such as chr(30). The key is the reader and a random number, so two screens
+      # built at once keep apart.
+      # %0 rows: added to the table.
+      WW_FN_ROWS_ADD: |-
+        if(strlen(%0),attrib_set(%!/WW_TMP`%q<ww_key>,[if(hasattr(%!,WW_TMP`%q<ww_key>),[xget(%!,WW_TMP`%q<ww_key>)]%q<ww_rs>)]%0))
+      # The table's rows, none when no run added any, which are then cleared.
+      WW_FN_ROWS_TAKE: |-
+        if(hasattr(%!,WW_TMP`%q<ww_key>),[xget(%!,WW_TMP`%q<ww_key>)][attrib_set(%!/WW_TMP`%q<ww_key>)])
       # Short columns are nowrap and the Location and Status columns grow into the spare width, so a
       # table fills the box. On a narrow screen the columns of least priority go first (Gender, then
       # Alias, then Connected); in the portal, a phone shows only the priority-1 columns. A Status column
       # is priority 1: another package put it there to be seen.
       # %0 the nowrap columns, %1 the priorities, %2 each column's share of spare width, %3 each column's
-      # least width.
+      # least width, each split by %r.
       WW_FN_OPTS: |-
         json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
       # %0 the footer's text, under a rule.
@@ -118,35 +147,34 @@ objects:
         Bare +where view
       DATA`CONFIG`WHERE-VIEW`EXAMPLE: |-
         room
-      # %0 a player: their name, muted when they have been idle the idle-after setting or longer.
+      # %0 a player, %1 their idle seconds: their name, muted when they have been idle the idle-after
+      # setting or longer (ww_after, read once by WW_FN_START).
       WW_FN_NAME: |-
-        if(gte(idle(%0),v(DATA`CONFIG`IDLE-AFTER)),tone(muted,name(%0)),name(%0))
-      # ---- Columns: %0 players, in the order shown ---------------------------------
-      WW_FN_COL_NAME: |-
-        [tone(strong,Name)]%r[iter(%0,u(%!/WW_FN_NAME,%i0),,%r)]
-      # The first of a player's aliases.
-      WW_FN_COL_ALIAS: |-
-        [tone(strong,Alias)]%r[iter(%0,first(get(%i0/ALIAS),;),,%r)]
-      WW_FN_COL_IDLE: |-
-        >[tone(strong,Idle)]%r[iter(%0,etime(idle(%i0),3),,%r)]
-      WW_FN_COL_CONNECTED: |-
-        >[tone(strong,Conn)]%r[iter(%0,etime(conn(%i0),3),,%r)]
-      # The first letter of the player's @sex, or ? when it is not set.
-      WW_FN_COL_GENDER: |-
-        [tone(strong,G)]%r[iter(%0,firstof(ucstr(left(get(%i0/SEX),1)),?),,%r)]
-      WW_FN_COL_LOCATION: |-
-        [tone(strong,Location)]%r[iter(%0,u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%i0)),,%r)]
-      # %1 the statuses, one a line.
-      WW_FN_COL_STATUS: |-
-        [tone(strong,Status)]%r%1
+        if(gte(%1,%q<ww_after>),tone(muted,name(%0)),name(%0))
       # ---- +who ---------------------------------------------------------------------
-      # +who: %0 the players to show, %1 the order (name when empty, or idle): name, alias, idle,
-      # connected, gender and location. A Status column joins the table when some player has a status.
-      # Another package fills it without editing this one: it attaches FILTER`WHO`STATUS`<NAME> to this
-      # object, and chain() runs every such filter in name order, each getting the status so far as %0 and
-      # the player as %1.
+      # +who: %0 the players, %1 the order (name when empty, or idle), %2 the start of a name, to show only
+      # the players whose name or alias starts with it: name, alias, idle, connected, gender and location.
+      # A Status column joins the table when some player has a status. Another package fills it without
+      # editing this one: it attaches FILTER`WHO`STATUS`<NAME> to this object, and chain() runs every such
+      # filter in name order, each getting the status so far as %0 and the player as %1.
       WW_FN_WHO: |-
-        setq(ww_players,u(%!/WW_FN_ORDER_[firstof(%1,name)],%0))[setq(ww_status,u(%!/WW_FN_STATUSES,%q<ww_players>))][box([u(%!/WW_FN_WHO_TABLE,%q<ww_players>,%q<ww_status>)][u(%!/WW_FN_FOOT,u(%!/WW_FN_WHO_COUNT,%0))],Who's Online)]
+        u(%!/WW_FN_START,WHO)[setq(ww_prefix,%2)][setq(ww_filters,u(%!/WW_FN_FILTERS,WHO`STATUS))][setq(ww_parts,u(%!/WW_FN_SPLIT,u(%!/WW_FN_ORDER_[firstof(%1,name)],%0),v(WW_PART_PLAYERS)))]
+      # %0 a run of players, or -: their rows, or the screen.
+      WW_FN_WHO_PART: |-
+        case(%0,-,u(%!/WW_FN_WHO_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(u(%!/WW_FN_WHO_KEEP,%0),u(%!/WW_FN_WHO_ROW,%i0),,%q<ww_rs>))))
+      # %0 players: those to show.
+      WW_FN_WHO_KEEP: |-
+        if(strlen(%q<ww_prefix>),u(%!/WW_FN_MATCHING,%0,%q<ww_prefix>),%0)
+      # %0 a player: their row.
+      WW_FN_WHO_ROW: |-
+        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r[first(get(%0/ALIAS),;)]%r[etime(%q<ww_idle>,3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)]
+      # %0 the rows: the box, or a warning when +who <name> matched nobody.
+      WW_FN_WHO_SCREEN: |-
+        if(strlen(%0),box([u(%!/WW_FN_WHO_TABLE,%0)][u(%!/WW_FN_FOOT,u(%!/WW_FN_WHO_COUNT,words(%0,%q<ww_rs>)))],Who's Online),notice(WHO,Nobody connected has a name starting with %q<ww_prefix>.,warn))
+      # %0 the rows: the table, with a Status column when any status is set. Without one, every row ends
+      # in an empty cell, which is taken off.
+      WW_FN_WHO_TABLE: |-
+        setq(ww_bare,edit(%0%q<ww_rs>,%r%q<ww_rs>,%q<ww_rs>))[if(eq(sub(strlen(%0%q<ww_rs>),strlen(%q<ww_bare>)),mul(words(%0,%q<ww_rs>),strlen(%r))),ldatatable(u(%!/WW_FN_OPTS,1%r2%r3%r4%r5,1%r3%r1%r2%r4%r1,%r%r%r%r%r1,%r%r%r%r%r12),[tone(strong,Name)]%r[tone(strong,Alias)]%r>[tone(strong,Idle)]%r>[tone(strong,Conn)]%r[tone(strong,G)]%r[tone(strong,Location)],left(%q<ww_bare>,dec(strlen(%q<ww_bare>))),%q<ww_rs>),ldatatable(u(%!/WW_FN_OPTS,1%r2%r3%r4%r5,1%r3%r1%r2%r4%r1%r1,%r%r%r%r%r1%r1,%r%r%r%r%r12%r12),[tone(strong,Name)]%r[tone(strong,Alias)]%r>[tone(strong,Idle)]%r>[tone(strong,Conn)]%r[tone(strong,G)]%r[tone(strong,Location)]%r[tone(strong,Status)],%0,%q<ww_rs>))]
       # %0 players: by name.
       WW_FN_ORDER_NAME: |-
         sort(%0,namei)
@@ -162,15 +190,9 @@ objects:
       # %0 a name, %1 a start: whether %0 starts with %1, ignoring case.
       WW_FN_STARTS: |-
         not(comp(lcstr(left(%0,strlen(%1))),lcstr(%1)))
-      # %0 the players shown: how many, and of how many when +who <name> left some out.
+      # %0 how many are shown: and of how many when +who <name> left some out.
       WW_FN_WHO_COUNT: |-
-        [words(%0)][if(neq(words(%0),words(mwho())),%bof [words(mwho())])] connected
-      # %0 players: each one's status, one a line.
-      WW_FN_STATUSES: |-
-        setq(ww_filters,u(%!/WW_FN_FILTERS,WHO`STATUS))[iter(%0,chain(%q<ww_filters>,,%i0),,%r)]
-      # %0 players, %1 their statuses: the +who table, with a Status column when any status is set.
-      WW_FN_WHO_TABLE: |-
-        if(strlen(trim(edit(%1,%r,))),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3%r4%r5,1%r3%r1%r2%r4%r1%r1,%r%r%r%r%r1%r1,%r%r%r%r%r12%r12),u(%!/WW_FN_COL_NAME,%0),u(%!/WW_FN_COL_ALIAS,%0),u(%!/WW_FN_COL_IDLE,%0),u(%!/WW_FN_COL_CONNECTED,%0),u(%!/WW_FN_COL_GENDER,%0),u(%!/WW_FN_COL_LOCATION,%0),u(%!/WW_FN_COL_STATUS,%0,%1)),datacolumns(u(%!/WW_FN_OPTS,1%r2%r3%r4%r5,1%r3%r1%r2%r4%r1,%r%r%r%r%r1,%r%r%r%r%r12),u(%!/WW_FN_COL_NAME,%0),u(%!/WW_FN_COL_ALIAS,%0),u(%!/WW_FN_COL_IDLE,%0),u(%!/WW_FN_COL_CONNECTED,%0),u(%!/WW_FN_COL_GENDER,%0),u(%!/WW_FN_COL_LOCATION,%0)))
+        %0[if(neq(%0,words(mwho())),%bof [words(mwho())])] connected
       # %0 a point, %1 what would be shown, %2 the player: what every FILTER`<point>`<NAME> on this object
       # makes of it, in name order. With no filters, %1 unchanged.
       WW_FN_FILTER: |-
@@ -179,51 +201,70 @@ objects:
       WW_FN_FILTERS: |-
         iter(lattr(%!/FILTER`%0`*),%!/%i0)
       # ---- +where -------------------------------------------------------------------
-      # Each player's room is looked up once, into a list of <room>:<player> pairs sorted by player name;
-      # grouping and sorting then work on that list with graball(), not by asking every player again.
+      # One pass groups the players by room: json_group_by() looks up each player's room once and answers
+      # {"<room>":["<player>",...],...}, the players under each room in name order. One json_map() pass
+      # lists the rooms and keeps each room's players in a q-register (ww_in<number>), which the @dolist
+      # runs carry, so the cost grows with players plus rooms, never players times rooms.
       # %0 a player: the room they stand in, or #-1 when they or a place they are in is unfindable.
       # room() answers an objid, or #-1 PERMISSION DENIED; the dbref before the colon is the answer.
       WW_FN_ROOM: |-
         first(first(room(%0)),:)
-      # %0 players: <room>:<player> for each, by player name.
-      WW_FN_PAIRS: |-
-        iter(sort(%0,namei),[u(%!/WW_FN_ROOM,%i0)]:%i0)
-      # %0 pairs: the rooms in them, by name, and #-1 last when someone cannot be located.
+      # %0 players: the groups, each room with its players by name.
+      WW_FN_GROUPS: |-
+        json_group_by(%!/WW_FN_ROOM,sort(%0,namei))
+      # json_map() over the groups: a room's key, its players kept in ww_in<number> (ww_in-1 for #-1).
+      WW_FN_GROUP_KEEP: |-
+        setq(ww_in[after(%2,#)],%1)%2
+      # %0 groups: their rooms, by name, and #-1 last when someone cannot be located.
       WW_FN_ROOMS: |-
-        setq(ww_rooms,setunion(iter(%0,before(%i0,:)),))[trim(sort(remove(%q<ww_rooms>,#-1),namei)[if(member(%q<ww_rooms>,#-1),%b#-1)])]
-      # %0 a room from WW_FN_ROOMS, %1 pairs: the players in it, by name.
+        setq(ww_rooms,json_map(%!/WW_FN_GROUP_KEEP,%0))[trim(sort(remove(%q<ww_rooms>,#-1),namei)[if(member(%q<ww_rooms>,#-1),%b#-1)])]
+      # %0 a room from WW_FN_ROOMS: the players in it, by name. The group is a JSON array of dbrefs, which
+      # hold no character JSON escapes.
       WW_FN_IN: |-
-        iter(graball(%1,%0:*),after(%i0,:))
+        edit(r(ww_in[after(%0,#)]),\[,,\],,",,\,,%b)
       # %0 a room or #-1: its name, or - for a player who cannot be located.
       WW_FN_PLACE: |-
-        if(isdbref(%0),name(%0),-)
-      # +where: a rule for each location, its name on the left and how many are there on the right, and
-      # the players there under it in as many columns as fit.
+        case(%0,#-1,-,name(%0))
+      # +where: the heading; its runs are locations, each a rule with its name on the left and how many are
+      # there on the right, and the players there under it in as many columns as fit; the count is last.
       WW_FN_WHERE: |-
-        setq(ww_pairs,u(%!/WW_FN_PAIRS,%0))[setq(ww_rooms,u(%!/WW_FN_ROOMS,%q<ww_pairs>))][box([iter(%q<ww_rooms>,u(%!/WW_FN_GROUP,%i0,%q<ww_pairs>),,%r)][u(%!/WW_FN_FOOT,u(%!/WW_FN_WHERE_COUNT,%0,%q<ww_rooms>))],Where)]
+        u(%!/WW_FN_START,WHERE)[setq(ww_rooms,u(%!/WW_FN_ROOMS,u(%!/WW_FN_GROUPS,%0)))][setq(ww_parts,u(%!/WW_FN_SPLIT,%q<ww_rooms>,v(WW_PART_ROOMS)))][setq(ww_foot,u(%!/WW_FN_WHERE_COUNT,%0,%q<ww_rooms>))][rule(Where)]
+      # %0 a run of rooms, or -: their groups, or the count.
+      WW_FN_WHERE_PART: |-
+        case(%0,-,[rule()]%r[tone(muted,%q<ww_foot>)],iter(%0,u(%!/WW_FN_GROUP,%i0,u(%!/WW_FN_IN,%i0)),,%r))
       # %0 players, %1 their rooms: how many are connected, and in how many locations.
       WW_FN_WHERE_COUNT: |-
         setq(ww_places,words(remove(%1,#-1)))[words(%0)] connected in %q<ww_places> [if(eq(%q<ww_places>,1),location,locations)]
-      # %0 a room or #-1, %1 pairs: its rule and its players.
+      # %0 a room or #-1, %1 its players: its rule and its players. The rule's options are written out,
+      # the location on the left and the count on the right; the count is a right title, so a narrow
+      # screen drops it first. Both brackets of the titles array are escaped, so the parser reads them
+      # as text.
       WW_FN_GROUP: |-
-        setq(ww_here,u(%!/WW_FN_IN,%0,%1))[rule(if(isdbref(%0),name(%0),Unfindable),,u(%!/WW_FN_GROUP_TITLES,words(%q<ww_here>)))]%r[grid(iter(%q<ww_here>,u(%!/WW_FN_NAME,%i0),,|),|)]
-      # %0 a count: the rule's options, the location on the left and the count on the right. The count
-      # is a right title, so a narrow screen drops it first.
-      WW_FN_GROUP_TITLES: |-
-        json(object,title,json(string,left),titles,json(array,json(object,text,json(string,%0 [if(eq(%0,1),player,players)]),side,json(string,right))))
-      # %0 players, in the order shown, %1 the title: one row per player, with where they are and how long
-      # they have been idle.
-      WW_FN_WHERE_LIST: |-
-        box(datacolumns(u(%!/WW_FN_OPTS,1%r3,1%r1%r2,%r1,%r12),u(%!/WW_FN_COL_NAME,%0),u(%!/WW_FN_COL_LOCATION,%0),u(%!/WW_FN_COL_IDLE,%0))[u(%!/WW_FN_FOOT,[words(%0)] connected)],%1)
+        rule(case(%0,#-1,Unfindable,name(%0)),,{{"title":"left","titles":\[{"text":"[setr(ww_count,words(%1))] [case(%q<ww_count>,1,player,players)]","side":"right"}\]}})%r[grid(iter(%1,u(%!/WW_FN_NAME,%i0,idle(%i0)),,|),|)]
+      # +where/room: one row per player, by location and then by name; its runs are locations.
       # +where/grouped: under a line per location.
       WW_FN_WHERE_GROUPED: |-
         u(%!/WW_FN_WHERE,%0)
-      # +where/room: by location, then by name.
       WW_FN_WHERE_ROOM: |-
-        setq(ww_pairs,u(%!/WW_FN_PAIRS,%0))[u(%!/WW_FN_WHERE_LIST,iter(u(%!/WW_FN_ROOMS,%q<ww_pairs>),u(%!/WW_FN_IN,%i0,%q<ww_pairs>)),Where by location)]
-      # +where/name: by name.
+        u(%!/WW_FN_START,WHERE_ROOM)[setq(ww_title,Where by location)][setq(ww_parts,u(%!/WW_FN_SPLIT,u(%!/WW_FN_ROOMS,u(%!/WW_FN_GROUPS,%0)),v(WW_PART_ROOMS)))]
+      # %0 a run of rooms, or -: their rows, or the screen.
+      WW_FN_WHERE_ROOM_PART: |-
+        case(%0,-,u(%!/WW_FN_WHERE_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(%0,u(%!/WW_FN_ROOM_ROWS,%i0),,%q<ww_rs>))))
+      # %0 a room: a row for each of its players, its name looked up once.
+      WW_FN_ROOM_ROWS: |-
+        setq(ww_place,u(%!/WW_FN_PLACE,%0))[iter(u(%!/WW_FN_IN,%0),u(%!/WW_FN_WHERE_ROW,%i0,%q<ww_place>),,%q<ww_rs>)]
+      # +where/name: one row per player, by name; its runs are players.
       WW_FN_WHERE_NAME: |-
-        u(%!/WW_FN_WHERE_LIST,sort(%0,namei),Where by name)
+        u(%!/WW_FN_START,WHERE_NAME)[setq(ww_title,Where by name)][setq(ww_parts,u(%!/WW_FN_SPLIT,sort(%0,namei),v(WW_PART_PLAYERS)))]
+      # %0 a run of players, or -: their rows, or the screen.
+      WW_FN_WHERE_NAME_PART: |-
+        case(%0,-,u(%!/WW_FN_WHERE_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(%0,u(%!/WW_FN_WHERE_ROW,%i0,u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%i0))),,%q<ww_rs>))))
+      # %0 a player, %1 where they are: their row, with how long they have been idle.
+      WW_FN_WHERE_ROW: |-
+        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r%1%r[etime(%q<ww_idle>,3)]
+      # %0 the rows: the box with the table and the count.
+      WW_FN_WHERE_SCREEN: |-
+        box(ldatatable(u(%!/WW_FN_OPTS,1%r3,1%r1%r2,%r1,%r12),[tone(strong,Name)]%r[tone(strong,Location)]%r>[tone(strong,Idle)],%0,%q<ww_rs>)[u(%!/WW_FN_FOOT,[words(%0,%q<ww_rs>)] connected)],%q<ww_title>)
 
   # ---- +help topics ---------------------------------------------------------
   # On the function object, which is unflagged — the librarian cannot u() a privileged object's
@@ -297,23 +338,23 @@ objects:
 
         ```
         > +where
-        +==================================< Where >=================================+
-        +=< Harbour Watch >=============================================< 1 player >=+
-        | Bram                                                                       |
-        +=< Market Square >============================================< 3 players >=+
-        | Ash     Sorrel  Tomas                                                      |
-        +=< Room Zero >=================================================< 1 player >=+
-        | God                                                                        |
-        +=< The Old Mill >=============================================< 2 players >=+
-        | Elin  Mira                                                                 |
-        +=< Unfindable >================================================< 1 player >=+
-        | Kit                                                                        |
-        +============================================================================+
-        | 8 connected in 4 locations                                                 |
-        +============================================================================+
+        ===================================< Where >==================================
+        =< Harbour Watch >===============================================< 1 player >=
+        Bram
+        =< Market Square >==============================================< 3 players >=
+        Ash     Sorrel  Tomas
+        =< Room Zero >===================================================< 1 player >=
+        God
+        =< The Old Mill >===============================================< 2 players >=
+        Elin  Mira
+        =< Unfindable >==================================================< 1 player >=
+        Kit
+        ==============================================================================
+        8 connected in 4 locations
         ```
 
-        Output: a box with a line per location and the players there under it.
+        Output: a heading, a line per location with the players there under it, and the count.
+
       HELP`WHO`SETTINGS: |-
         Staff change what `+who` and `+where` show with `+config who-where`:
 
@@ -330,14 +371,14 @@ objects:
 
         Output: one line saying what the setting is now and what it was.
 
-  - ref: ww_config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`WHO-WHERE: |-
-        {{ww_functions}}
-
   - ref: ww_help_registration
     target: "{{plus-help/librarian}}"
     attributes:
       SRC`WHO-WHERE: |-
         {{ww_help}}
+
+  - ref: ww_config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`WHO-WHERE: |-
+        {{ww_functions}}

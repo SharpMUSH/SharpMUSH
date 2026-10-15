@@ -6167,4 +6167,10 @@
     <value>门户关闭时在此手机或电脑上接收通知</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>只有你能看到这条。</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>发给你的通知</value>
+  </data>
 </root>

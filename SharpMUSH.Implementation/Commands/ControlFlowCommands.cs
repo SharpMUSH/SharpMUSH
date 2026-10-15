@@ -340,31 +340,13 @@ public partial class Commands
 					DoList = true
 				};
 
-				// The loops this one runs inside stay visible, as they do inline: a ## written in an outer
-				// @dolist reads the outer element, as PennMUSH's splice gives it. Copies, since an inline
-				// outer loop moves on before this action runs.
-				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>(
-					parser.CurrentState.IterationRegisters.Reverse().Select(frame => new IterationWrapper<MString>
-					{
-						Value = frame.Value,
-						Iteration = frame.Iteration,
-						Break = frame.Break,
-						NoBreak = frame.NoBreak,
-						Spliced = frame.Spliced,
-						Evaluation = frame.Evaluation,
-						DoList = frame.DoList
-					}));
-				iterationStack.Push(iterationWrapper);
-
-				// Each queued run gets its own copy of the q-registers, as PE_INFO_CLONE gives every queue entry
-				// @dolist makes; sharing the caller's frame let one run's setq() reach the next.
-				var stateForIteration = parser.CurrentState with
-				{
-					IterationRegisters = iterationStack,
-					Registers = new([parser.CurrentState.Registers.TryPeek(out var registers)
-						? new Dictionary<string, MString>(registers, registers.Comparer)
-						: []])
-				};
+				// Each queued run is an action of its own (PE_INFO_CLONE): its own copy of the q-registers and of
+				// the loops it runs inside, so a ## written in an outer @dolist reads the outer element, as
+				// PennMUSH's splice gives it, and fresh execution control, so every run has a whole
+				// function_invocation_limit as each PennMUSH queue entry does. Sharing the caller's state let one
+				// run's setq() reach the next and spent one budget across every run.
+				var stateForIteration = parser.CurrentState.SnapshotForQueuedAction();
+				stateForIteration.IterationRegisters.Push(iterationWrapper);
 
 				await Mediator.Send(new AdmitCommandListRequest(
 					command,

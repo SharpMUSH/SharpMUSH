@@ -1,0 +1,33 @@
++V6
+2
+4
+1
+0
+"#4"
+"Fri Sep 04 12:01:45 2026"
+"Hello"
+0
+1
+4
+1
+"#1"
+"Sat Sep 05 08:30:00 2026"
+"Re: Hello"
+1
+*** END OF DUMP ***
+0
+"Welcome aboard.\nSee you."
+1
+"Thanks!"
++++ END OF DUMP +++
+*** Begin MALIAS ***
+2
+1 2
+N:staff
+D:The staff
+1
+4
+4 1
+N:mine
+D:Just me
+4
