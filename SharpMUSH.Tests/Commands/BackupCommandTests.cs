@@ -89,11 +89,20 @@ public class BackupCommandTests : ServerTestBase
 		await Cmd($"&DB`DBCK`{marker} #9=think set(#9,HEARD_DBCK_{marker}:%#)");
 		try
 		{
-			await Cmd("@dump");
+			// Empty dump messages are not shown, so the copy is not broadcast to every player of the shared world
+			// while other tests read what their players heard.
+			using (TestOptionsOverride.Scope(options => options with
+			{
+				Dump = options.Dump with { DumpMessage = "", DumpComplete = "" }
+			}))
+			{
+				await Cmd("@dump");
+			}
+
 			var checkedName = await Cmd("@dbck");
 			await WebAppFactoryArg.QueueBarrierAsync();
 
-			await Assert.That(await Eval($"get(#9/HEARD_DUMP_{marker})")).IsEqualTo("#1/GAME: Save complete./0");
+			await Assert.That(await Eval($"get(#9/HEARD_DUMP_{marker})")).IsEqualTo("#1//0");
 			await Assert.That(await Eval($"get(#9/HEARD_DBCK_{marker})")).IsEqualTo("#1");
 			await Assert.That(checkedName).IsEqualTo(BackupService.List()[0].Name);
 		}
