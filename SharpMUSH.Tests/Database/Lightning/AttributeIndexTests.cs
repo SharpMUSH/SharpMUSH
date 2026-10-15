@@ -329,6 +329,25 @@ public class AttributeIndexTests : LightningDatabaseFixture
 		await Assert.That(hit.Facts.HasFlag(IndexedAttributeFacts.MortalDark)).IsFalse();
 	}
 
+	/// <summary>
+	/// Every start re-seeds the built-in attribute entries; an index staff put on one of them is not the seed's and
+	/// stays, with its rows still kept by later writes.
+	/// </summary>
+	[Test]
+	public async Task AnIndexOnASeededEntrySurvivesARestart()
+	{
+		await IndexAsync("SEX", new AttributeIndexOptions(Type: "PLAYER"));
+		await SetAsync(1, "SEX", "Plural");
+
+		await ReopenAsync();
+		await Assert.That((await Db.GetSharpAttributeEntry("SEX"))?.Index?.Options).IsEqualTo(new AttributeIndexOptions(Type: "PLAYER"));
+		await Assert.That(await EqualAsync("SEX", "plural")).IsEquivalentTo([1]);
+
+		await SetAsync(1, "SEX", "Neuter");
+		await Assert.That(await EqualAsync("SEX", "plural")).IsEmpty();
+		await Assert.That(await EqualAsync("SEX", "neuter")).IsEquivalentTo([1]);
+	}
+
 	[Test]
 	public async Task UsageReportsEachIndex()
 	{

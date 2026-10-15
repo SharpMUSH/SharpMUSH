@@ -125,7 +125,13 @@ public partial class LightningDatabase
 
 		foreach (var (name, defaultFlags) in AttributeEntrySeed.Entries)
 		{
-			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(new AttributeEntryRecord { Name = name, DefaultFlags = defaultFlags }));
+			// An index is staff's (@attribute/index), not the seed's: dropping it here would leave its rows unmaintained.
+			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(new AttributeEntryRecord
+			{
+				Name = name,
+				DefaultFlags = defaultFlags,
+				Index = ReadAttributeEntryRecord(tx, name)?.Index
+			}));
 		}
 	}
 
