@@ -110,6 +110,20 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("hasattr-m", "[hasattr({BIG},FLAT3999)]", false, AsMortal: true),
 		new("grep-m", "[grep({BIG},FLAT1*,value)]", false, AsMortal: true),
 		new("examine-m", "examine {BIG}", true, AsMortal: true),
+		// {OTHER}: another mortal player, connected, in a room of their own: what +who and +where ask of each
+		// player from an unprivileged package object, so every answer goes through the permission checks.
+		new("name-o", "[name({OTHER})]", false, AsMortal: true),
+		new("loc-o", "[loc({OTHER})]", false, AsMortal: true),
+		new("room-o", "[room({OTHER})]", false, AsMortal: true),
+		new("get-o", "[get({OTHER}/ALIAS)]", false, AsMortal: true),
+		new("idle-o", "[idle({OTHER})]", false, AsMortal: true),
+		new("conn-o", "[conn({OTHER})]", false, AsMortal: true),
+		// {ONLINE}: every player --connections logged in, each in a room of their own (the +where repro).
+		new("name-all", "[strlen(iter({ONLINE},name(%i0)))]", false, AsMortal: true),
+		new("loc-all", "[strlen(iter({ONLINE},loc(%i0)))]", false, AsMortal: true),
+		new("room-all", "[strlen(iter({ONLINE},room(%i0)))]", false, AsMortal: true),
+		new("get-all", "[strlen(iter({ONLINE},get(%i0/ALIAS)))]", false, AsMortal: true),
+		new("idle-all", "[strlen(iter({ONLINE},idle(%i0)))]", false, AsMortal: true),
 		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
 		new("theme-me", "@theme me=fantasy", true),
 		new("theme-anc", "@theme #4=fantasy", true),
@@ -261,17 +275,22 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		for (var i = 0; i < things; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
 
-		await ConnectPlayersAsync(connections);
+		var online = await ConnectPlayersAsync(connections,
+			ownRooms: scenarios.Any(scenario => scenario.Input.Contains("{ONLINE}")));
 
-		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
+		var (mortal, big, kid) = scenarios.Any(scenario => scenario.AsMortal)
 			? await SeedBigObjectsAsync()
 			: (one, one, one);
+		var other = scenarios.Any(scenario => scenario.Input.Contains("{OTHER}"))
+			? await SeedOtherPlayerAsync()
+			: one;
 		var member = scenarios.Any(scenario => scenario.Name.StartsWith("feed", StringComparison.Ordinal)
 				|| scenario.Name.StartsWith("radio", StringComparison.Ordinal))
 			? await SeedFeedsAsync(baseParser, one, feedMembers, feedLines)
 			: one;
 		var inputs = scenarios.ToDictionary(scenario => scenario, scenario => MarkupText.Plain(scenario.Input
-			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}").Replace("{MEMBER}", member.ToString())));
+			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}").Replace("{MEMBER}", member.ToString()).Replace("{OTHER}", $"#{other.Number}")
+			.Replace("{ONLINE}", string.Join(' ', online.Select(player => $"#{player.Number}")))));
 		DBRef Executor(Scenario scenario) => scenario.AsMortal ? mortal : one;
 
 		foreach (var scenario in scenarios)
@@ -348,6 +367,25 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	}
 
 	/// <summary>
+	/// A second mortal player with an alias, connected, alone in a room of their own: the player +who and
+	/// +where list, seen from an object that neither controls nor shares a room with them.
+	/// </summary>
+	private async Task<DBRef> SeedOtherPlayerAsync()
+	{
+		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
+			throw new InvalidOperationException("God (#1) is not seeded as a player.");
+		var roomRef = await _database.CreateRoomAsync("ProfileOtherRoom", god);
+		var other = await _database.CreatePlayerAsync("ProfileOther", "unused", roomRef, roomRef, 100);
+		await _database.SetAttributeAsync(other, ["ALIAS"], MarkupText.Plain("PO"), god);
+		var connectionService = _server!.Services.GetRequiredService<IConnectionService>();
+		const long handle = 899_999L;
+		await connectionService.Register(handle, "localhost", "localhost", "profile",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await connectionService.Bind(handle, other);
+		return other;
+	}
+
+	/// <summary>
 	/// Feed kind <c>bench</c>, owned by God: <c>bench/crowd</c> with <paramref name="members"/> players (none
 	/// connected) and its default 500 lines stored, <c>bench/long</c> keeping every line with
 	/// <paramref name="lines"/> stored and crowd's last member as its one member, and <c>bench/quiet</c> and
@@ -399,22 +437,29 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 
 	/// <summary>
 	/// <paramref name="count"/> players logged in on handles of their own, output discarded, each with a THEME
-	/// that is code, as a game's would be.
+	/// that is code, as a game's would be. With <paramref name="ownRooms"/>, each waits in a room of their own
+	/// and has an ALIAS, as on a game where +where lists every player apart.
 	/// </summary>
-	private async Task ConnectPlayersAsync(int count)
+	private async Task<List<DBRef>> ConnectPlayersAsync(int count, bool ownRooms)
 	{
+		var online = new List<DBRef>(count);
 		var connectionService = _server!.Services.GetRequiredService<IConnectionService>();
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
 		for (var i = 0; i < count; i++)
 		{
-			var player = await _database.CreatePlayerAsync($"ProfileOnline{i}", "unused", new DBRef(0), new DBRef(0), 100);
+			var room = ownRooms ? await _database.CreateRoomAsync($"ProfileOnlineRoom{i}", god) : new DBRef(0);
+			var player = await _database.CreatePlayerAsync($"ProfileOnline{i}", "unused", room, room, 100);
 			await _database.SetAttributeAsync(player, ["THEME"], MarkupText.Plain("if(1,nord)"), god);
+			if (ownRooms) await _database.SetAttributeAsync(player, ["ALIAS"], MarkupText.Plain($"PO{i}"), god);
+			online.Add(player);
 			var handle = 900_000L + i;
 			await connectionService.Register(handle, "localhost", "localhost", "profile",
 				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 			await connectionService.Bind(handle, player);
 		}
+
+		return online;
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)

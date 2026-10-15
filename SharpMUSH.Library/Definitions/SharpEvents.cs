@@ -32,6 +32,7 @@ public static class SharpEvents
 	public const string SocketLoginFail = "SOCKET`LOGINFAIL";
 	public const string SocketCreateFail = "SOCKET`CREATEFAIL";
 	public const string SocketGmcp = "SOCKET`GMCP";
+	public const string SocketTimeZone = "SOCKET`TIMEZONE";
 	public const string HttpBlocked = "HTTP`BLOCKED";
 	public const string HttpCommand = "HTTP`COMMAND";
 
