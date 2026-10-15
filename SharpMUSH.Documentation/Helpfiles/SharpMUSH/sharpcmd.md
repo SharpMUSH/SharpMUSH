@@ -3987,7 +3987,29 @@ This socket command shows what the game reports to MUD crawlers and bots through
 
 The server fills in what it knows: the game's name (`mud_name`), the players connected, when it started, its ports (`port`, `ssl_port`), its website (`mud_url`), the codebase, and the protocols it speaks. Everything else (genre, contact address, Discord, and so on) is the `mssp` configuration option, set from the portal's MSSP page under Configuration. A PennMUSH `mush.cnf` import carries over its `mssp name/value` lines.
 
+Beyond the MSSP specification, the server also reports, for directories that list it:
+
+- `PLAYERS DAY` and `PLAYERS WEEK`: how many different players connected in the last 24 hours and the last 7 days. The server notes who is connected once a minute, so a visit shorter than that may not count. Only the counts are reported, never names.
+- `LOGINS`, `PLAYER CREATION` and `GUESTS`: `1` or `0`, from the `logins`, `player_creation` and `guests` options.
+- `PORTAL APPLICATION`: one line for each portal page anyone with a character may open, such as a character application: its address, a space, then its name. A page for staff only, or one that needs a permission, is left out. None is reported while `mud_url` is unset.
+
 A variable with several values repeats its name on one line per value, the default last. For the variables crawlers read, see https://tintin.mudhalla.net/protocols/mssp/
+
+### Example
+```
+> MSSP-REQUEST
+MSSP-REPLY-START
+NAME	SharpMUSH
+PLAYERS	1
+...
+PLAYERS DAY	1
+PLAYERS WEEK	1
+LOGINS	1
+PLAYER CREATION	1
+GUESTS	1
+PORTAL APPLICATION	https://mush.example.com/apps/chargen Character Application
+MSSP-REPLY-END
+```
 
 
 ::: seealso

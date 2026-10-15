@@ -11,7 +11,13 @@ public enum MsspGroup
 	World,
 	Protocols,
 	Commercial,
-	Hiring
+	Hiring,
+
+	/// <summary>
+	/// Variables the specification does not list, which SharpMUSH reports so a directory can tell a game people
+	/// play from one nobody visits: recent players, whether the doors are open, and the portal pages anyone may open.
+	/// </summary>
+	Activity
 }
 
 /// <summary>What a variable's values look like, which decides how it is checked and edited.</summary>
@@ -93,7 +99,8 @@ public sealed record MsspVariable(
 
 /// <summary>
 /// The MSSP variables (<see href="https://tintin.mudhalla.net/protocols/mssp/"/>): the specification's
-/// official tables, plus the protocol flags crawlers still read from its earlier extended list.
+/// official tables, plus the protocol flags crawlers still read from its earlier extended list, plus SharpMUSH's
+/// own <see cref="MsspGroup.Activity"/> variables.
 /// </summary>
 /// <remarks>
 /// The server reports the variables it can know — PennMUSH's <c>report_mssp</c> (<c>src/bsd.c</c>)
@@ -199,7 +206,15 @@ public static class MsspCatalog
 		new("PAY FOR PERKS", MsspGroup.Commercial, MsspValueKind.Flag, "Players can pay for perks."),
 
 		new("HIRING BUILDERS", MsspGroup.Hiring, MsspValueKind.Flag, "The game is looking for builders."),
-		new("HIRING CODERS", MsspGroup.Hiring, MsspValueKind.Flag, "The game is looking for coders.")
+		new("HIRING CODERS", MsspGroup.Hiring, MsspValueKind.Flag, "The game is looking for coders."),
+
+		new("PLAYERS DAY", MsspGroup.Activity, MsspValueKind.Number, "Different players connected in the last 24 hours.", MsspSource.Live),
+		new("PLAYERS WEEK", MsspGroup.Activity, MsspValueKind.Number, "Different players connected in the last 7 days.", MsspSource.Live),
+		new("LOGINS", MsspGroup.Activity, MsspValueKind.Flag, "Players may log in.", MsspSource.Option, "logins"),
+		new("PLAYER CREATION", MsspGroup.Activity, MsspValueKind.Flag, "New characters may be created at the login screen.", MsspSource.Option, "player_creation"),
+		new("GUESTS", MsspGroup.Activity, MsspValueKind.Flag, "Guests may connect.", MsspSource.Option, "guests"),
+		new("PORTAL APPLICATION", MsspGroup.Activity, MsspValueKind.List,
+			"A portal page anyone may open, such as a character application: its address, a space, then its name.", MsspSource.Live)
 	];
 
 	private static readonly Dictionary<string, MsspVariable> ByName = All.ToDictionary(variable => variable.Name);

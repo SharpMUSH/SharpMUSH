@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -16,6 +17,33 @@ public static class ConnectedPlayers
 	{
 		var count = 0;
 
+		await foreach (var _ in CountedAsync(connections, mediator, countAll))
+		{
+			count++;
+		}
+
+		return count;
+	}
+
+	/// <summary>
+	/// The players <see cref="CountAsync"/> counts, each once however many connections it has: who the heartbeat's
+	/// day and week counts are taken from.
+	/// </summary>
+	public static async ValueTask<IReadOnlySet<int>> DistinctAsync(IConnectionService connections, IMediator mediator, bool countAll)
+	{
+		var players = new HashSet<int>();
+
+		await foreach (var reference in CountedAsync(connections, mediator, countAll))
+		{
+			players.Add(reference.Number);
+		}
+
+		return players;
+	}
+
+	/// <summary>One entry per connection that counts.</summary>
+	private static async IAsyncEnumerable<DBRef> CountedAsync(IConnectionService connections, IMediator mediator, bool countAll)
+	{
 		await foreach (var connection in connections.GetAll())
 		{
 			if (connection.Ref is not { } reference) continue;
@@ -26,9 +54,7 @@ public static class ConnectedPlayers
 
 			if (!countAll && await found.IsDark()) continue;
 
-			count++;
+			yield return reference;
 		}
-
-		return count;
 	}
 }

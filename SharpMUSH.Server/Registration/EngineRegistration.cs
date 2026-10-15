@@ -115,6 +115,8 @@ internal static class EngineRegistration
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IDidItService, DidItService>();
 		services.AddSingleton<IMsspReportService, Implementation.Services.MsspReportService>();
+		// Distinct players over the last day and week, for MSSP's PLAYERS DAY and PLAYERS WEEK.
+		services.AddSingleton<PlayerActivity>();
 		services.AddSingleton<ILookService, LookService>();
 		services.AddSingleton<IObjectDestructionService, ObjectDestructionService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();

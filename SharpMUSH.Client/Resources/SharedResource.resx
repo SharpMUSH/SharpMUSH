@@ -6062,6 +6062,9 @@
   <data name="AdmMsspGroupHiring" xml:space="preserve">
     <value>Hiring</value>
   </data>
+  <data name="AdmMsspGroupActivity" xml:space="preserve">
+    <value>Activity and access</value>
+  </data>
   <data name="AdmMsspGroupOther" xml:space="preserve">
     <value>Other variables</value>
   </data>
