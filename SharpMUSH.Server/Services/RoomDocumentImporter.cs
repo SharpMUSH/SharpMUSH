@@ -35,7 +35,8 @@ public sealed partial class RoomDocumentImporter(
 	[GeneratedRegex("^[A-Za-z][A-Za-z0-9_-]{0,63}$")]
 	private static partial Regex NewKey();
 
-	[GeneratedRegex("^#[0-9]{1,10}$")]
+	/// <summary>A dbref, nine digits at most so that it always fits an <see cref="int"/>.</summary>
+	[GeneratedRegex("^#[0-9]{1,9}$")]
 	private static partial Regex Dbref();
 
 	/// <summary>What <c>@dig</c> and <c>@open</c> answer with: a dbref, with the object's creation time after a colon.</summary>
@@ -45,8 +46,11 @@ public sealed partial class RoomDocumentImporter(
 	private static string? Made(string? result)
 		=> result is not null && MadeDbref().Match(result) is { Success: true } match ? match.Groups[1].Value : null;
 
-	/// <summary>One change, with what it does once confirmed. A step reports why the game refused it, or null.</summary>
-	private sealed record Step(string Action, string Target, string Summary, string Value, Func<Context, Task<string?>> Run);
+	/// <summary>
+	/// One change, with what it does once confirmed. A step reports why the game refused it, or null. <c>Was</c> is what
+	/// the change replaces, so a confirmed plan stops matching once someone else changes that.
+	/// </summary>
+	private sealed record Step(string Action, string Target, string Summary, string Value, Func<Context, Task<string?>> Run, string Was = "");
 
 	/// <summary>What the steps of one apply share: the actor, and the dbrefs of what earlier steps made.</summary>
 	private sealed class Context(AnySharpObject actor)
@@ -92,7 +96,7 @@ public sealed partial class RoomDocumentImporter(
 
 	private static string Fingerprint(IEnumerable<Step> steps)
 		=> Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
-			string.Join('\n', steps.Select(step => $"{step.Action}\t{step.Target}\t{step.Value}")))));
+			string.Join('\n', steps.Select(step => $"{step.Action}\t{step.Target}\t{step.Value}\t{step.Was}")))));
 
 	private async Task<Planned> BuildAsync(AnySharpObject actor, RoomDocumentDto document, CancellationToken ct)
 	{
@@ -192,7 +196,7 @@ public sealed partial class RoomDocumentImporter(
 		{
 			if (string.IsNullOrWhiteSpace(newName) || newName.Length > MaxText) planned.Problems.Add($"{room.Id} needs a name.");
 			else planned.Steps.Add(new("rename", room.Id, $"Rename {now.Name} ({room.Id}) to {newName.Trim()}", newName.Trim(),
-				async context => Failure(await Command(context, "@NAME", room.Id, newName.Trim()))));
+				async context => Failure(await Command(context, "@NAME", room.Id, newName.Trim())), now.Name ?? ""));
 		}
 		if (room.Description is { } newDescription && newDescription != now.Description)
 			Describe(planned, room.Id, now.Name!, now.Description ?? "", newDescription);
@@ -247,10 +251,11 @@ public sealed partial class RoomDocumentImporter(
 		planned.Steps.Add(new("open", exit.Id, $"Open {name} ({exit.Id}) in {room.Id}{(to == "unlinked" ? ", unlinked" : $" to {to}")}",
 			$"{room.Id}\t{name}\t{to}", async context =>
 			{
-				var result = await Command(context, "@OPEN", name, to == "unlinked" ? null : context.Resolve(to), null, context.Resolve(room.Id));
+				// Opened unlinked, then linked on its own: @open keeps an exit it may not link and still answers its dbref.
+				var result = await Command(context, "@OPEN", name, null, null, context.Resolve(room.Id));
 				if (Made(result) is not { } dbref) return result ?? "@open made no exit.";
 				context.Created[exit.Id] = dbref;
-				return null;
+				return to == "unlinked" ? null : Failure(await Command(context, "@LINK", dbref, context.Resolve(to)));
 			}));
 		if (!string.IsNullOrEmpty(exit.Description)) Describe(planned, exit.Id, name, "", exit.Description);
 	}
@@ -271,15 +276,15 @@ public sealed partial class RoomDocumentImporter(
 		{
 			if (string.IsNullOrWhiteSpace(exit.Name) || exit.Name.Length > MaxText) planned.Problems.Add($"{exit.Id} needs a name.");
 			else planned.Steps.Add(new("rename", exit.Id, $"Rename {was.Name} ({exit.Id}) to {exit.Name.Trim()}", exit.Name.Trim(),
-				async context => Failure(await Command(context, "@NAME", exit.Id, exit.Name.Trim()))));
+				async context => Failure(await Command(context, "@NAME", exit.Id, exit.Name.Trim())), was.Name ?? ""));
 		}
 		if (relink && await DestinationAsync(actor, exit.To!, newRooms, exit.Id, planned, ct) is { } destination)
 		{
 			planned.Steps.Add(destination == "unlinked"
 				? new("unlink", exit.Id, $"Unlink {was.Name} ({exit.Id})", "unlinked",
-					async context => Failure(await Command(context, "@UNLINK", exit.Id)))
+					async context => Failure(await Command(context, "@UNLINK", exit.Id)), was.To ?? "")
 				: new("link", exit.Id, $"Link {was.Name} ({exit.Id}) to {destination}", destination,
-					async context => Failure(await Command(context, "@LINK", exit.Id, context.Resolve(destination)))));
+					async context => Failure(await Command(context, "@LINK", exit.Id, context.Resolve(destination))), was.To ?? ""));
 		}
 		if (describe) Describe(planned, exit.Id, was.Name!, was.Description ?? "", exit.Description!);
 	}
@@ -317,7 +322,7 @@ public sealed partial class RoomDocumentImporter(
 				? await attributes.ClearAttributeAsync(context.Actor, target, "DESCRIBE", IAttributeService.AttributePatternMode.Exact)
 				: await attributes.SetAttributeAsync(context.Actor, target, "DESCRIBE", MarkupText.Plain(description));
 			return result is Error<string> error ? error.Value : null;
-		}));
+		}, was));
 	}
 
 	private void Place(Planned planned, string id, string name, double[]? was, double[] coordinates, IReadOnlyList<string> axes)
@@ -342,7 +347,7 @@ public sealed partial class RoomDocumentImporter(
 				if (result is Error<string> error) return error.Value;
 			}
 			return null;
-		}));
+		}, was is null ? "" : string.Join(' ', was.Select(axis => axis.ToString(CultureInfo.InvariantCulture)))));
 	}
 
 	private static bool SameCoordinates(double[] wanted, double[]? now)

@@ -124,7 +124,10 @@ public class RoomDocumentImporterTests
 		await Assert.That(applied.Created["out"]).IsEqualTo("#51");
 		await _commands.Received(1).InvokeAsync("@OPEN", _actor.Object().DBRef,
 			Arg.Is<Dictionary<string, CallState>>(args => args["0"].Message!.ToPlainText() == "Out;o"
-				&& args["1"].Message!.ToPlainText() == "#10" && args["3"].Message!.ToPlainText() == "#50"),
+				&& !args.ContainsKey("1") && args["3"].Message!.ToPlainText() == "#50"),
+			Arg.Any<IEnumerable<string>?>());
+		await _commands.Received(1).InvokeAsync("@LINK", _actor.Object().DBRef,
+			Arg.Is<Dictionary<string, CallState>>(args => args["0"].Message!.ToPlainText() == "#51" && args["1"].Message!.ToPlainText() == "#10"),
 			Arg.Any<IEnumerable<string>?>());
 	}
 
@@ -138,5 +141,37 @@ public class RoomDocumentImporterTests
 		await Assert.That(applied.Done).IsEmpty();
 		await Assert.That(applied.Failed).Contains("quota");
 		await _commands.DidNotReceive().InvokeAsync("@OPEN", Arg.Any<DBRef>(), Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
+	}
+
+	[Test]
+	public async Task AnExitTheGameWillNotLinkIsReportedAsRefused()
+	{
+		Answer("@OPEN", "#51:1760000000001");
+		Answer("@LINK", "#-1 PERMISSION DENIED");
+		var document = Document(new RoomDocumentRoomDto("#10", null, null, null, [new("#11", null, null, null), new("door", "Door", "#20", null)]));
+		var plan = await Importer.PlanAsync(_actor, document, default);
+		var applied = (await Importer.ApplyAsync(_actor, document, plan.Fingerprint, default)).Expect<RoomApplyDto>();
+		await Assert.That(applied.Failed).Contains("PERMISSION DENIED");
+		await Assert.That(applied.Done).IsEmpty();
+	}
+
+	[Test]
+	public async Task ApplyIsRefusedWhenWhatAChangeReplacesWasChanged()
+	{
+		var document = Document(new RoomDocumentRoomDto("#10", null, "Iron gates.", null, null));
+		var plan = await Importer.PlanAsync(_actor, document, default);
+		var attribute = new SharpAttribute("DESCRIBE", "DESCRIBE", "DESCRIBE", [], null, "DESCRIBE", null!, null!, null!) { Value = MarkupText.Plain("Someone else's words.") };
+		_attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Is<AnySharpObject>(o => o.Object().DBRef.Number == 10), "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false).Returns(new[] { attribute });
+		var result = await Importer.ApplyAsync(_actor, document, plan.Fingerprint, default);
+		await Assert.That(result is Error<string>).IsTrue();
+		await _attributes.DidNotReceiveWithAnyArgs().SetAttributeAsync(default!, default!, default!, default(MString)!);
+	}
+
+	[Test]
+	public async Task ADbrefTooLargeForTheGameIsAProblem()
+	{
+		var plan = await Importer.PlanAsync(_actor, Document(new RoomDocumentRoomDto("#9999999999", "Far", null, null, null)), default);
+		await Assert.That(plan.Problems.Single()).Contains("#9999999999");
 	}
 }
