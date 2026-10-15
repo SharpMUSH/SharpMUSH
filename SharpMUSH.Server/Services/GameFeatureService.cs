@@ -82,7 +82,7 @@ public class GameFeatureService(
 		var states = new List<BundledPackageState>(BundledPackages.All.Count);
 		foreach (var package in BundledPackages.All)
 		{
-			var (description, dependsOn, _) = Catalogue.GetValueOrDefault(package.PackageId);
+			var (description, dependsOn, _, category) = Catalogue.GetValueOrDefault(package.PackageId);
 			states.Add(new BundledPackageState(
 				package.PackageId,
 				description ?? string.Empty,
@@ -90,7 +90,8 @@ public class GameFeatureService(
 				HandlerKind(package.Requires),
 				IsAvailable(package),
 				dependsOn ?? [],
-				package.InstallAtFirstBoot && !declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase)));
+				package.InstallAtFirstBoot && !declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase),
+				category));
 		}
 
 		return states;
@@ -237,8 +238,8 @@ public class GameFeatureService(
 			&& (entry.DependsOn ?? []).All(dependency => seen.Contains(dependency) || PluginsLoaded(dependency, seen));
 	}
 
-	/// <summary>Each bundled package's description, bundled dependencies and plugins, read from its embedded manifest once.</summary>
-	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins)> Catalogue
+	/// <summary>Each bundled package's description, bundled dependencies, plugins and category, read from its embedded manifest once.</summary>
+	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins, string? Category)> Catalogue
 		=> _catalogue ??= BundledPackages.All.ToDictionary(
 			p => p.PackageId,
 			p => manifests.ParseManifest(BundledPackages.ManifestYaml(p.PackageId)) switch
@@ -246,9 +247,10 @@ public class GameFeatureService(
 				ParsedPackageManifest parsed => ((string?)parsed.Manifest.Description,
 					(IReadOnlyList<string>?)parsed.Manifest.Dependencies.Select(d => d.PackageId)
 						.Where(BundledPackages.Contains).ToList(),
-					(IReadOnlyList<string>?)parsed.Manifest.RequiredPlugins),
-				_ => (null, null, null)
+					(IReadOnlyList<string>?)parsed.Manifest.RequiredPlugins,
+					parsed.Manifest.Category),
+				_ => (null, null, null, null)
 			});
 
-	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins)>? _catalogue;
+	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins, string? Category)>? _catalogue;
 }
