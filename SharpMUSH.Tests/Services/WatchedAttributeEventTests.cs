@@ -302,6 +302,33 @@ public class WatchedAttributeEventTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AttrwatchAnswersWhetherTheAttributeIsInTheTableAndHowItIsWatched()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("WTREAD").ToUpperInvariant();
+		try
+		{
+			await Assert.That(await Eval($"attrwatch({name})")).IsEqualTo(ErrorMessages.Returns.NotStandardAttribute)
+				.Because("the name is not in the table yet");
+
+			await Cmd($"@attribute/access {name}=none");
+			await Assert.That(await Eval($"attrwatch({name})")).IsEqualTo(string.Empty)
+				.Because("in the table and not watched");
+
+			await Cmd($"@attribute/watch {name}");
+			await Assert.That(await Eval($"attrwatch({name.ToLowerInvariant()})")).IsEqualTo($"WATCH`{name} WATCH`{name}`*")
+				.Because("the default pattern, whatever case the name is asked in");
+
+			await Cmd($"@attribute/watch {name}=");
+			await Assert.That(await Eval($"attrwatch({name})")).IsEqualTo(string.Empty)
+				.Because("an empty pattern turned watching off");
+		}
+		finally
+		{
+			await Cmd($"@attribute/delete {name}");
+		}
+	}
+
+	[Test]
 	public async Task OnlyConfigAdminsMayWatch()
 	{
 		var god = (await Mediator.Send(new GetObjectNodeQuery(God)))
