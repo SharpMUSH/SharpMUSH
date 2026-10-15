@@ -10,8 +10,10 @@ namespace SharpMUSH.Client.Models;
 /// <param name="Choices">The values it allows; empty when any text will do.</param>
 /// <param name="Many">Whether a scene may give it several values, split by <see cref="Separator"/>.</param>
 /// <param name="Listed">Whether it shows on the scene's card in lists.</param>
+/// <param name="Tone">The tone its values show in (<c>warning</c>), or empty for the text's own colour.</param>
 /// <param name="Order">Its place, lowest first.</param>
-public sealed record SceneDetailInfo(string Key, string Label, string Hint, IReadOnlyList<string> Choices, bool Many, bool Listed, int Order)
+public sealed record SceneDetailInfo(string Key, string Label, string Hint, IReadOnlyList<string> Choices, bool Many, bool Listed,
+	string Tone, int Order)
 {
 	/// <summary>What splits the values of a detail that takes several.</summary>
 	public const char Separator = '|';
@@ -24,7 +26,7 @@ public sealed record SceneDetailInfo(string Key, string Label, string Hint, IRea
 
 	/// <summary>A key a player set that the catalogue does not list: named by its key.</summary>
 	public static SceneDetailInfo Unlisted(string key) =>
-		new(key, key.Length > 0 ? char.ToUpperInvariant(key[0]) + key[1..] : key, "", [], false, false, int.MaxValue);
+		new(key, key.Length > 0 ? char.ToUpperInvariant(key[0]) + key[1..] : key, "", [], false, false, "", int.MaxValue);
 
 	/// <summary>The values <paramref name="value"/> holds, split when the detail takes several.</summary>
 	public IReadOnlyList<string> Values(string value) =>
@@ -62,3 +64,16 @@ public sealed record SceneDetailCatalogue(IReadOnlyList<SceneDetailInfo> Details
 		return [.. catalogued, .. unlisted];
 	}
 }
+
+/// <summary>A scene list narrowed to the scenes giving detail <paramref name="Key"/> the value <paramref name="Value"/>.</summary>
+public sealed record SceneDetailMatch(string Key, string Value)
+{
+	/// <summary>The query <c>api/scenes</c> and the <c>/scenes</c> page read it from.</summary>
+	public string Query => $"detail={Uri.EscapeDataString(Key)}&value={Uri.EscapeDataString(Value)}";
+}
+
+/// <summary>One value a listed detail has, and how many scenes the viewer may see give it.</summary>
+public sealed record SceneDetailValue(string Value, int Scenes);
+
+/// <summary><c>GET api/scenes/details/values</c>: one listed detail's values, most scenes first.</summary>
+public sealed record SceneDetailValues(string Key, IReadOnlyList<SceneDetailValue> Values);

@@ -77,29 +77,34 @@ public class SceneCardTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AScene_ShowsTheDetailsTheGameLists_AsTags()
+	public async Task AScene_ShowsTheDetailsTheGameLists_LabelledAndLinked_InTheirTone()
 	{
 		_api.Extra["/api/scenes/details"] = """
-			{"details":[{"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10},
-			            {"key":"canon","label":"Canon","hint":"","choices":[],"many":true,"listed":false,"order":20},
-			            {"key":"warning","label":"Content warning","hint":"","choices":[],"many":true,"listed":true,"order":30}],
+			{"details":[{"key":"warning","label":"Content warning","hint":"","choices":[],"many":true,"listed":true,"tone":"warning","order":5},
+			            {"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10},
+			            {"key":"canon","label":"Canon","hint":"","choices":[],"many":true,"listed":false,"order":20}],
 			 "problems":[]}
 			""";
 		var scene = Scene() with
 		{
 			Meta = new Dictionary<string, string>
 			{
-				["title"] = "Salt Market at Dusk", ["verse"] = "Marvel", ["canon"] = "X-Men", ["warning"] = "Violence|Blood",
+				["title"] = "Salt Market at Dusk", ["verse"] = "Marvel 616", ["canon"] = "X-Men", ["warning"] = "Violence|Blood",
 			},
 		};
 
 		var cut = Render<SceneCard>(p => p.Add(x => x.Scene, scene));
 
-		cut.WaitForAssertion(() =>
-		{
-			var tags = cut.FindAll(".scene-card-detail").Select(t => t.TextContent.Trim()).ToList();
-			if (!tags.SequenceEqual(["Marvel", "Violence", "Blood"])) throw new InvalidOperationException(string.Join(",", tags));
-		});
+		cut.WaitForAssertion(() => cut.Find(".scene-card-details"));
+		var details = cut.FindAll(".scene-card-detail");
+		await Assert.That(details.Select(d => d.QuerySelector("dt")!.TextContent.Trim()))
+			.IsEquivalentTo(new[] { "Content warning", "Verse" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(details.Select(d => d.QuerySelector("dd")!.TextContent.Trim()))
+			.IsEquivalentTo(new[] { "Violence, Blood", "Marvel 616" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(details[1].QuerySelector("a.detail-value")!.GetAttribute("href")).IsEqualTo("/scenes?detail=verse&value=Marvel%20616");
+		await Assert.That(details[0].QuerySelector(".detail-values")!.GetAttribute("style")).IsEqualTo("--detail-tone: var(--warn);");
+		await Assert.That(details[1].QuerySelector(".detail-values")!.GetAttribute("style")).IsNull();
+		await Assert.That(cut.Find(".scene-card-top").TextContent).DoesNotContain("Marvel").Because("the title row is the scene's state");
 		await Assert.That(cut.Markup).DoesNotContain("X-Men").Because("canon is not a listed detail");
 	}
 }

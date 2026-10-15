@@ -86,10 +86,12 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	private record SceneMemberDto(string? MemberDbref, bool IsCurrent);
 
 
-	/// <summary>Lists scenes by filter (active|recent|scheduled).</summary>
-	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
+	/// <summary>Lists scenes by filter (active|recent|scheduled), only those <paramref name="match"/> keeps when it is given.</summary>
+	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50,
+		SceneDetailMatch? match = null)
 	{
 		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
+		if (match is not null) url += $"&{match.Query}";
 		return _listFlight.RunAsync((Acting, Interlocked.Read(ref _changes), url), () => FetchScenesAsync(url));
 	}
 
@@ -107,12 +109,13 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// <summary>
 	/// The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first: those in
 	/// <paramref name="state"/> (<c>live</c>, <c>upcoming</c>, <c>finished</c>) whose title, pitch or room holds
-	/// <paramref name="search"/>, after the first <paramref name="offset"/> of them.
+	/// <paramref name="search"/> and that <paramref name="match"/> keeps, after the first <paramref name="offset"/> of them.
 	/// </summary>
 	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5,
-		int offset = 0, string? state = null, string? search = null)
+		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null)
 	{
 		var url = $"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}";
+		if (match is not null) url += $"&{match.Query}";
 		if (offset > 0) url += $"&offset={offset}";
 		if (!string.IsNullOrWhiteSpace(state)) url += $"&state={Uri.EscapeDataString(state)}";
 		if (!string.IsNullOrWhiteSpace(search)) url += $"&search={Uri.EscapeDataString(search.Trim())}";
@@ -121,6 +124,21 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 		return result switch
 		{
 			List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>
+	/// The values each listed scene detail has across the scenes the caller may see, with how many scenes give each:
+	/// what the sidebar browses by.
+	/// </summary>
+	public async Task<ApiResult<IReadOnlyList<SceneDetailValues>>> GetDetailValuesAsync()
+	{
+		var result = await Client.GetApiAsync<List<SceneDetailValues>>("api/scenes/details/values", "The server returned no detail values.");
+
+		return result switch
+		{
+			List<SceneDetailValues> details => (IReadOnlyList<SceneDetailValues>)[.. details.Select(d => d with { Values = d.Values ?? [] })],
 			ApiFailure failure => failure
 		};
 	}
@@ -162,8 +180,8 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 		=> ListScenesAsync("active", count);
 
 	/// <summary>Convenience: the most recent scenes (newest first).</summary>
-	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetRecentScenesAsync(int count = 50)
-		=> ListScenesAsync("recent", count);
+	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetRecentScenesAsync(int count = 50, SceneDetailMatch? match = null)
+		=> ListScenesAsync("recent", count, match);
 
 	/// <summary>
 	/// One scene. <see cref="ApiFailureKind.NotFound"/> covers both a scene that does not exist and one

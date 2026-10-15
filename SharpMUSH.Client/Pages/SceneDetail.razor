@@ -267,7 +267,7 @@
                             @foreach (var (detail, values) in SceneDetails.Catalogue.Of(scene))
                             {
                                 <dt>@detail.Label</dt>
-                                <dd class="scene-detail-value">@string.Join(" · ", values)</dd>
+                                <dd class="scene-detail-value"><DetailValueLinks Detail="detail" Values="values" /></dd>
                             }
                             @if (!NotStarted(scene))
                             {

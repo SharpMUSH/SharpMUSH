@@ -265,7 +265,8 @@ objects:
       #   DETAIL`<KEY>  JSON the Scene plugin reads: label (its name for people), hint (one line on what goes in
       #                 it), choices (the values it allows; none means any text), many (true when a scene may give
       #                 several, split by |), listed (shown beside the title in +scene lists and on the portal's
-      #                 scene cards) and order. scenedetails() lists the keys, scenedetail() reads a field.
+      #                 scene cards), tone (the theme colour its values show in, such as warning) and order.
+      #                 scenedetails() lists the keys, scenedetail() reads a field.
       # A key must be a word that is not one of the scene's own fields (status, title, room, ...). Staff with
       # layout.admin change the catalogue with +scene/detail/add, /set and /remove. With DATA`OPEN_DETAILS set, as
       # shipped, an owner may set any detail, shown under its key when the catalogue does not list it.
@@ -274,13 +275,17 @@ objects:
       DATA`DENY_DETAILS: |-
         Changing scene details needs the layout.admin permission.
       DATA`DETAIL_FIELDS: |-
-        label hint choices many listed order
+        label hint choices many listed tone order
       # The name detail %0 goes by: its label, or for one the catalogue does not list, its key.
       FUN`DETAIL`LABEL: |-
         if(member(scenedetails(),%0),scenedetail(%0),capstr(%0))
-      # Scene %0's value for detail %1, several values split by a middle dot, through the DETAIL`SHOW filters.
+      # Scene %0's value for detail %1, several values split by a middle dot, in the detail's tone, through the
+      # DETAIL`SHOW filters.
       FUN`DETAIL`SHOW: |-
-        u(%!/FUN`FILTER,DETAIL`SHOW,edit(scene(%0,%1),|,%b[chr(183)]%b),%0,%1)
+        u(%!/FUN`FILTER,DETAIL`SHOW,u(%!/FUN`DETAIL`PAINT,%1,edit(scene(%0,%1),|,%b[chr(183)]%b)),%0,%1)
+      # %1 in the tone detail %0 names, or as it is when it names none or the catalogue does not list it.
+      FUN`DETAIL`PAINT: |-
+        if(strlen(setr(_t,if(member(scenedetails(),%0),scenedetail(%0,tone)))),tone(%q<_t>,%1),%1)
       # How many of scene %0's values for detail %1 match the pattern %2, ignoring case.
       FUN`DETAIL`HAS: |-
         if(not(strmatch(setr(_v,scene(%0,%1)),#-1*)),words(iter(%q<_v>,if(strmatch(trim(%i0),%2),1),|,%b)),0)
@@ -304,7 +309,7 @@ objects:
       FUN`DETAILS`TABLE: |-
         setq(_k,scenedetails())[box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|3|2,||1|),[ansi(h,Detail)]%r[iter(%q<_k>,%i0,,%r)],[ansi(h,Name)]%r[iter(%q<_k>,scenedetail(%i0),,%r)],[ansi(h,What goes in it)]%r[iter(%q<_k>,firstof(scenedetail(%i0,hint),-),,%r)],[ansi(h,Takes)]%r[iter(%q<_k>,u(%!/FUN`DETAIL`TAKES,%i0),,%r)]),Scene details,,u(%!/FUN`FRAME))]
       FUN`DETAIL`CARD: |-
-        box(fields(,Detail,%0,Name,scenedetail(%0),What goes in it,firstof(scenedetail(%0,hint),-),Takes,u(%!/FUN`DETAIL`TAKES,%0),In lists,if(scenedetail(%0,listed),yes,no),Order,scenedetail(%0,order)),Scene detail %0,,u(%!/FUN`FRAME))
+        box(fields(,Detail,%0,Name,scenedetail(%0),What goes in it,firstof(scenedetail(%0,hint),-),Takes,u(%!/FUN`DETAIL`TAKES,%0),In lists,if(scenedetail(%0,listed),yes,no),Tone,firstof(scenedetail(%0,tone),-),Order,scenedetail(%0,order)),Scene detail %0,,u(%!/FUN`FRAME))
       # +scene/details lists the game's details; +scene/detail <key> shows one.
       CMD`DETAILS:
         value: |-
@@ -1383,6 +1388,7 @@ objects:
           - `choices` — the values it allows, split by `|`; empty for any text
           - `many` — `yes` when a scene may give several values
           - `listed` — `yes` to show it beside the title in lists and on the portal's scene cards
+          - `tone` — the theme colour its values show in, such as `warning`; empty for none
           - `order` — its place, lowest first
         - `+scene/detail/remove <detail>` — stop listing it. Scenes keep their values
 

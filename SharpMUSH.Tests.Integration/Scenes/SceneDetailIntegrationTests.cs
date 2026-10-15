@@ -36,6 +36,9 @@ public class SceneDetailIntegrationTests
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
+	private async Task<string> Html(string expression) =>
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).Render(MarkupFormat.Html);
+
 	private async Task God(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
@@ -182,9 +185,16 @@ public class SceneDetailIntegrationTests
 		try
 		{
 			await InstallAsync("scene-verse");
-			await LoggerAsync();
-			await Assert.That((await Eval("scenedetails()")).Split(' ').Take(3)).IsEquivalentTo(new[] { "verse", "canon", "warning" });
+			var logger = await LoggerAsync();
+			await Assert.That((await Eval("scenedetails()")).Split(' ').Take(3))
+				.IsEquivalentTo(new[] { "warning", "verse", "canon" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+				.Because("the content warning comes first, so it is read first");
 			await Assert.That(await Eval("scenedetail(warning)")).IsEqualTo("Content warning");
+			await Assert.That(await Eval("scenedetail(warning,tone)")).IsEqualTo("warning");
+			await Assert.That(await Eval("scenedetail(verse,tone)")).IsEmpty();
+			await Assert.That(await Html($"u({logger}/FUN`DETAIL`PAINT,warning,Violence)")).IsEqualTo(await Html("tone(warning,Violence)"))
+				.Because("a detail's values show in its tone");
+			await Assert.That(await Html($"u({logger}/FUN`DETAIL`PAINT,verse,Marvel)")).IsEqualTo(await Html("Marvel"));
 			await Assert.That(await Eval("scenedetail(canon,many)")).IsEqualTo("1");
 			await Assert.That(await Eval("scenedetailvalue(canon, Marvel | X-Men |)")).IsEqualTo("Marvel|X-Men");
 

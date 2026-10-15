@@ -15,9 +15,13 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <param name="Choices">The values it allows; empty when any text will do.</param>
 /// <param name="Many">Whether a scene may give it several values, kept split by <see cref="SceneDetails.Separator"/>.</param>
 /// <param name="Listed">Whether it is shown beside the title in scene lists and on the portal's scene cards.</param>
+/// <param name="Tone">
+/// A tone's name (<see cref="PoseTypes.ToneNames"/>) its values are shown in, in +scene and the portal, or empty for the
+/// surrounding text's colour. A content warning takes <c>warning</c>.
+/// </param>
 /// <param name="Order">Its place in lists, lowest first.</param>
 public sealed record SceneDetail(string Key, string Label, string Hint, IReadOnlyList<string> Choices, bool Many, bool Listed,
-	int Order);
+	string Tone, int Order);
 
 /// <summary>A <c>DETAIL`</c> attribute the catalogue left out, and why.</summary>
 public sealed record SceneDetailProblem(string Key, string Reason);
@@ -92,7 +96,7 @@ public static partial class SceneDetails
 		{
 			if (document.RootElement.ValueKind != JsonValueKind.Object) return new Error<string>("not a JSON object");
 
-			var detail = new SceneDetail(normal, normal, "", [], false, false, DefaultOrder);
+			var detail = new SceneDetail(normal, normal, "", [], false, false, "", DefaultOrder);
 			foreach (var property in document.RootElement.EnumerateObject())
 			{
 				var value = property.Value;
@@ -107,10 +111,13 @@ public static partial class SceneDetails
 					"listed" => value.ValueKind is JsonValueKind.True or JsonValueKind.False
 						? detail with { Listed = value.GetBoolean() }
 						: Bad("listed must be true or false"),
+					"tone" => Text(value) is { } tone && (tone.Length == 0 || PoseTypes.ToneNames.Contains(tone, StringComparer.OrdinalIgnoreCase))
+						? detail with { Tone = tone.ToLowerInvariant() }
+						: Bad($"tone must be one of {string.Join(", ", PoseTypes.ToneNames)}"),
 					"order" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var order)
 						? detail with { Order = order }
 						: Bad("order must be a whole number"),
-					_ => Bad($"'{property.Name}' is not a field; the fields are label, hint, choices, many, listed, order"),
+					_ => Bad($"'{property.Name}' is not a field; the fields are label, hint, choices, many, listed, tone, order"),
 				};
 				switch (read)
 				{

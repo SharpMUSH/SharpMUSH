@@ -4430,6 +4430,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Details</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Scenes where {0} is {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Show all scenes</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Started</value>
   </data>

@@ -2,7 +2,8 @@
 @inject SceneDetailService SceneDetails
 
 @* One scene in a list (/scenes, /scenes/active), after the scene cards in board 30's feed: the title,
-   a LIVE tag while it runs (PAUSED while it waits to resume), the pitch's first line, "room · N poses · when"
+   a LIVE tag while it runs (PAUSED while it waits to resume), the pitch's first line, the details the game lists
+   ("Content warning Violence  Verse Marvel", each value a link to the scenes sharing it), "room · N poses · when"
    (a scene still waiting to start has neither room nor poses, so it says only when it is due), Read, and — for a running scene — the live view
    as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. *@
 <article class="scene-card @(Scene.IsLive ? "scene-card--live" : null)">
@@ -21,14 +22,22 @@
             {
                 <Pill Tag="true" Class="scene-card-private">@Loc["NavScenePrivate"]</Pill>
             }
-            @foreach (var value in ListedDetails())
-            {
-                <Pill Tag="true" Class="scene-card-detail">@value</Pill>
-            }
         </div>
         @if (Pitch is { } pitch)
         {
             <p class="scene-card-pitch">@pitch</p>
+        }
+        @if (ListedDetails() is { Count: > 0 } details)
+        {
+            <dl class="scene-card-details">
+                @foreach (var (detail, values) in details)
+                {
+                    <div class="scene-card-detail">
+                        <dt>@detail.Label</dt>
+                        <dd><DetailValueLinks Detail="detail" Values="values" /></dd>
+                    </div>
+                }
+            </dl>
         }
         <div class="scene-card-meta">
             @foreach (var (part, index) in Meta().Select((part, index) => (part, index)))
@@ -60,9 +69,9 @@
     private string? Pitch =>
         Scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch.Trim() : null;
 
-    /// <summary>The scene's values for the details the game shows on cards (<c>listed</c>), such as its verse.</summary>
-    private IEnumerable<string> ListedDetails() =>
-        SceneDetails.Catalogue.Of(Scene).Where(d => d.Detail.Listed).SelectMany(d => d.Values);
+    /// <summary>The details the game shows on cards (<c>listed</c>) that the scene has, such as its verse, in the catalogue's order.</summary>
+    private IReadOnlyList<(SceneDetailInfo Detail, IReadOnlyList<string> Values)> ListedDetails() =>
+        [.. SceneDetails.Catalogue.Of(Scene).Where(d => d.Detail.Listed)];
 
     /// <summary>Reads the detail catalogue once for every card; a card drawn before it answers shows none.</summary>
     protected override async Task OnInitializedAsync() => await SceneDetails.LoadAsync();

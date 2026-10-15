@@ -675,7 +675,7 @@ public static class SceneFunctions
 
 	/// <summary>
 	/// scenedetail(&lt;key&gt;[, &lt;field&gt;])
-	/// One field of a scene detail: label (the default), hint, choices (split by |), many, listed or order.
+	/// One field of a scene detail: label (the default), hint, choices (split by |), many, listed, tone or order.
 	/// </summary>
 	[SharpFunction(Name = "scenedetail", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -701,6 +701,7 @@ public static class SceneFunctions
 			"choices" => string.Join(SceneDetails.Separator, detail.Choices),
 			"many" => detail.Many ? "1" : "0",
 			"listed" => detail.Listed ? "1" : "0",
+			"tone" => detail.Tone,
 			"order" => detail.Order.ToString(System.Globalization.CultureInfo.InvariantCulture),
 			_ => NoSuchDetailField,
 		});

@@ -99,6 +99,30 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheAddress_NarrowsToADetailValue_SaysSo_AndLinksBackToEveryScene()
+	{
+		_api.Extra["/api/scenes/details"] = """
+			{"details":[{"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10}],"problems":[]}
+			""";
+		_api.Extra[$"{SceneJson.Recent}&detail=verse&value=Marvel%20616"] = SceneJson.List(SceneJson.Scene("S2", "Lamplighters' Vigil"));
+
+		var cut = RenderAt<SharpMUSH.Client.Pages.Scenes>("/scenes?detail=verse&value=Marvel%20616", CharactersApiFake.Anonymous(this));
+		cut.WaitForAssertion(() => cut.Find(".scene-card"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scenes-match-text").TextContent.Contains("Verse", StringComparison.Ordinal), TimeSpan.FromSeconds(5));
+
+		await Assert.That(Titles(cut)).IsEquivalentTo(new[] { "Lamplighters' Vigil" });
+		await Assert.That(cut.Find(".scenes-match-text").TextContent).IsEqualTo("Scenes where Verse is Marvel 616");
+		await Assert.That(cut.Find(".scenes-match-clear").GetAttribute("href")).IsEqualTo("/scenes");
+
+		Nav.NavigateTo("/scenes");
+		cut.WaitForAssertion(() =>
+		{
+			if (Titles(cut).Count != 3) throw new InvalidOperationException($"still {Titles(cut).Count} scenes");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scenes-match").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Mine_ListsTheActingCharactersScenes()
 	{
 		var cut = RenderAt<SharpMUSH.Client.Pages.Scenes>("/scenes?mine=1", await ActingAsync(this));
@@ -357,7 +381,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		var names = facts.QuerySelectorAll("dt").Select(d => d.TextContent.Trim()).Take(3).ToList();
 		var values = facts.QuerySelectorAll(".scene-detail-value").Select(d => d.TextContent.Trim()).ToList();
 		await Assert.That(names).IsEquivalentTo(new[] { "Verse", "Canon", "Era" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(values).IsEquivalentTo(new[] { "Marvel 616", "Marvel · X-Men", "1980s" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(values).IsEquivalentTo(new[] { "Marvel 616", "Marvel, X-Men", "1980s" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]

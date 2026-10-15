@@ -23,20 +23,17 @@ objects:
   - ref: verse
     target: "{{scene/logger}}"
     attributes:
-      # The details, read by the Scene plugin (+help scene details): verse and the content warning follow a
-      # scene's title in +scene lists and show as tags on the portal's scene cards; canon and the content
-      # warning take several values, split by |.
+      # The details, read by the Scene plugin (+help scene details): the content warning and verse follow a
+      # scene's title in +scene lists and show on the portal's scene cards, the warning first and in the warning
+      # colour; canon and the content warning take several values, split by |.
       DETAIL`VERSE: |-
         {"label":"Verse","hint":"The setting or universe the scene takes place in.","listed":true,"order":10}
       DETAIL`CANON: |-
         {"label":"Canon","hint":"The source works the scene draws on. Split several with |.","many":true,"order":20}
       DETAIL`WARNING: |-
-        {"label":"Content warning","hint":"What a reader may want to know before joining, such as violence. Split several with |.","many":true,"listed":true,"order":30}
+        {"label":"Content warning","hint":"What a reader may want to know before joining, such as violence. Split several with |.","many":true,"listed":true,"tone":"warning","order":5}
 
-      # Filters (+help scene filters). A content warning is shown in the warning colour wherever it is shown,
-      # and a player who joins a scene that has one is told it.
-      FILTER`DETAIL`SHOW`VERSE: |-
-        if(strmatch(%2,warning),tone(warning,%0),%0)
+      # A filter (+help scene filters): a player who joins a scene with a content warning is told it.
       FILTER`JOIN`VERSE: |-
         %0[if(strlen(scene(%1,warning)),%r[notice(SCENE,Content warning: [u(%!/FUN`DETAIL`SHOW,%1,warning)])])]
 
@@ -76,4 +73,4 @@ objects:
 
         Output: `\[SCENE\] Done: Scene 1: Content warning is now Violence.`
 
-        The verse and the content warning follow the scene's title in `+scene`, and all three show on its card and at the top of its log. Whoever joins a scene with a content warning is told it as they join. See `+help scene details` for the rest.
+        The content warning and the verse follow the scene's title in `+scene`, the warning first and in the warning colour, and all three show on its card and at the top of its log. Whoever joins a scene with a content warning is told it as they join. See `+help scene details` for the rest.

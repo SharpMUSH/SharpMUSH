@@ -5000,6 +5000,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Подробности</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Сцены, где {0}: {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Показать все сцены</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Начата</value>
   </data>

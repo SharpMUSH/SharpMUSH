@@ -42,7 +42,7 @@ public class SceneDetailService(IHttpClientFactory httpClientFactory)
 		return result switch
 		{
 			SceneDetailCatalogue catalogue => new SceneDetailCatalogue(
-				[.. (catalogue.Details ?? []).Select(d => d with { Choices = d.Choices ?? [] })], catalogue.Problems ?? []),
+				[.. (catalogue.Details ?? []).Select(d => d with { Choices = d.Choices ?? [], Tone = d.Tone ?? "" })], catalogue.Problems ?? []),
 			ApiFailure failure => failure,
 		};
 	}

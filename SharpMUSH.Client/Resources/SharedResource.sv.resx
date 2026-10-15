@@ -5000,6 +5000,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Detaljer</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Scener där {0} är {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Visa alla scener</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Startad</value>
   </data>

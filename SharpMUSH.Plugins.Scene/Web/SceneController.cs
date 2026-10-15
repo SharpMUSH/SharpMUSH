@@ -21,8 +21,10 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
+///   ...&amp;detail=verse&amp;value=Marvel — only the scenes giving that detail that value
 ///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones
 ///   GET /api/scenes/details               — the scene details the game defines, and the ones that did not read
+///   GET /api/scenes/details/values        — the values the listed details have, and how many scenes give each
 ///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
@@ -131,19 +133,29 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// Lists scenes by filter (recent-first; scheduled sorted by ScheduledFor ascending),
 	/// restricted to scenes the caller may see. <c>count</c> caps the number returned. <c>state</c> keeps the
 	/// scenes in one state (<see cref="MatchesState"/>), <c>search</c> those whose title, pitch or room holds
-	/// the text, and <c>offset</c> skips that many of the scenes left, for a list read a page at a time.
+	/// the text, <c>detail</c> and <c>value</c> those giving that detail that value (one of its values, for a
+	/// detail that takes several), and <c>offset</c> skips that many of the scenes left, for a list read a page
+	/// at a time.
 	/// </summary>
 	[HttpGet]
 	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50,
 		[FromQuery] string? participant = null, [FromQuery] int offset = 0, [FromQuery] string? state = null,
-		[FromQuery] string? search = null)
+		[FromQuery] string? search = null, [FromQuery] string? detail = null, [FromQuery] string? value = null,
+		[FromServices] IServiceProvider? services = null)
 	{
 		if (!IsKnownState(state))
 		{
 			return BadRequest(new { error = "state must be live, upcoming or finished." });
 		}
 
-		Func<Contracts.Scene, bool> match = scene => MatchesState(scene, state) && MatchesSearch(scene, search);
+		if (string.IsNullOrWhiteSpace(detail) != string.IsNullOrWhiteSpace(value))
+		{
+			return BadRequest(new { error = "detail and value go together." });
+		}
+
+		var given = string.IsNullOrWhiteSpace(detail) ? null : await DetailAsync(services, detail);
+		Func<Contracts.Scene, bool> match = scene => MatchesState(scene, state) && MatchesSearch(scene, search)
+			&& (given is null || SceneDetails.Values(given, scene.Meta.GetValueOrDefault(given.Key, "")).Contains(value!.Trim(), StringComparer.OrdinalIgnoreCase));
 		if (participant is not null)
 		{
 			return DBRef.TryParse(participant, out var member) && member is { } who
@@ -153,6 +165,17 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 
 		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
 		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match)).Select(ToDto));
+	}
+
+	/// <summary>
+	/// The detail <paramref name="key"/> names, as the catalogue lists it; one it does not list takes a single value, as
+	/// the portal shows it, and so does every key when there is no catalogue to read.
+	/// </summary>
+	private static async Task<SceneDetail> DetailAsync(IServiceProvider? services, string key)
+	{
+		var normal = key.Trim().ToLowerInvariant();
+		var catalogue = services is null ? SceneDetailCatalogue.Empty : await SceneLogger.DetailsAsync(services);
+		return catalogue.Details.FirstOrDefault(d => d.Key == normal) ?? new SceneDetail(normal, normal, "", [], false, false, "", 0);
 	}
 
 	private static bool IsKnownState(string? state) =>
@@ -215,6 +238,54 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	{
 		var catalogue = await SceneLogger.DetailsAsync(services);
 		return Ok(new SceneDetailsDto(catalogue.Details, catalogue.Problems));
+	}
+
+	/// <summary>One value a listed detail has, and how many scenes the caller may see give it.</summary>
+	public record SceneDetailValueDto(string Value, int Scenes);
+
+	/// <summary>The values one listed detail has, most scenes first.</summary>
+	public record SceneDetailValuesDto(string Key, IReadOnlyList<SceneDetailValueDto> Values);
+
+	/// <summary>The most values <see cref="GetDetailValues"/> returns for one detail.</summary>
+	public const int MaxDetailValues = 50;
+
+	/// <summary>
+	/// For each detail the catalogue lists (<c>listed</c>), in its order, the values the scenes the caller may see give
+	/// it, each with how many scenes: most first, then by value. A value is counted once per scene, and spelled as it
+	/// was first seen. The portal's sidebar browses scenes by these.
+	/// </summary>
+	[HttpGet("details/values")]
+	public async Task<IActionResult> GetDetailValues([FromServices] IServiceProvider services)
+	{
+		var listed = (await SceneLogger.DetailsAsync(services)).Details.Where(d => d.Listed).ToList();
+		if (listed.Count == 0) return Ok(Array.Empty<SceneDetailValuesDto>());
+
+		var counts = listed.ToDictionary(d => d.Key, _ => new Dictionary<string, (string Value, int Scenes)>(StringComparer.OrdinalIgnoreCase));
+		foreach (var scene in await sceneService.ListScenesAsync("recent", CallerDbref, count: int.MaxValue))
+		{
+			var given = listed
+				.Select(d => (Detail: d, Values: SceneDetails.Values(d, scene.Meta.GetValueOrDefault(d.Key, ""))))
+				.Where(d => d.Values.Count > 0)
+				.ToList();
+			if (given.Count == 0 || !await CanSeeAsync(scene)) continue;
+
+			foreach (var (detail, values) in given)
+			{
+				var tally = counts[detail.Key];
+				foreach (var one in values.Distinct(StringComparer.OrdinalIgnoreCase))
+				{
+					tally[one] = tally.TryGetValue(one, out var seen) ? seen with { Scenes = seen.Scenes + 1 } : (one, 1);
+				}
+			}
+		}
+
+		return Ok(listed.Select(d => new SceneDetailValuesDto(d.Key, [
+			.. counts[d.Key].Values
+				.OrderByDescending(v => v.Scenes)
+				.ThenBy(v => v.Value, StringComparer.OrdinalIgnoreCase)
+				.Take(MaxDetailValues)
+				.Select(v => new SceneDetailValueDto(v.Value, v.Scenes))
+		])));
 	}
 
 	/// <summary>
