@@ -112,6 +112,11 @@ packages:
     package: scene-verse
     version: 1.1.0
     description: Verse, canon and content warnings on scenes, a content warning told to whoever joins, and +scene/verses (requires scene)
+  - path: scene-safety/
+    name: Scene safety
+    package: scene-safety
+    version: 1.0.0
+    description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: bboards/
     name: BBoards
     package: bboards

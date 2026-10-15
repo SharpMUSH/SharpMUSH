@@ -93,6 +93,8 @@ public static class BundledPackages
 		// Available, not installed: the scene package keeps any detail an owner sets, and a game chooses whether
 		// it wants a verse, a canon and content warnings named for it.
 		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +safety is a name a game may already use, and a game chooses its own safety tools.
+		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
