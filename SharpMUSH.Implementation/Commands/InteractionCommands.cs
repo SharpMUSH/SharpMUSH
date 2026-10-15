@@ -1098,7 +1098,7 @@ public partial class Commands
 	/// <c>atr_add(..., Owner(b->creator), 0)</c> does. Penn's queue is single-threaded; here two
 	/// <c>USE</c>s of one object can run at once, so the read and the write share a gate striped by
 	/// object, as <c>MailDelivery</c>'s mailbox gates are, and one charge buys one <c>AUSE</c>. The
-	/// object doing the <c>USE</c> is the write's enactor, so a <c>watched</c> <c>CHARGES</c> names it.
+	/// object doing the <c>USE</c> is the write's enactor, so a watch on <c>CHARGES</c> names it.
 	/// </remarks>
 	private async ValueTask<bool> ChargeAction(AnySharpObject thing, DBRef user)
 	{

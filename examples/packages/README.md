@@ -65,7 +65,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -571,13 +571,31 @@ live table, and its flags against the game's attribute flags.
     JOB`LEVEL:
       index: numeric type:thing
   ```
+- **Watch (format 1.9).** `watch:` makes the attribute watched, as
+  `@attribute/watch` does: whenever a copy of it on any object is set, cleared
+  or wiped, the event handler runs its attributes matching the pattern, with
+  the object, the attribute, the old and new values and the enactor as
+  `%0`-`%4`. `true` is the default pattern, `` WATCH`<name> WATCH`<name>`* ``,
+  so the package's handler is an attribute such as `` WATCH`HP`<package> `` on
+  the event handler; or give the pattern, as a string of space-separated
+  wildcards or a list. An entry the game already has must already have the
+  same watch, or the plan is blocked and names the `@attribute/watch` line
+  that fixes it. The key needs `format: 1.9`; in an older manifest it is
+  ignored with a warning.
+
+  ```yaml
+  format: 1.9
+  attributes:
+    HP:
+      watch: true
+  ```
 - **Upgrade.** The package's entries are merged field by field against what
-  the previous version declared: the default flags, the limit-or-enum, and the
-  index. A
+  the previous version declared: the default flags, the limit-or-enum, the
+  index and the watch. A
   field the new version changes takes the new value; the other keeps what the
   game has, so an administrator's `@attribute/access` survives.
 - **Dropped entries and uninstall.** The entry is deleted from the table,
-  with its index. Values already stored on objects stay as they are.
+  with its index and its watch. Values already stored on objects stay as they are.
 - **Rollback** restores objects and attributes only; attribute entries stay as
   they are.
 

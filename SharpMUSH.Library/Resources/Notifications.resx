@@ -2269,6 +2269,21 @@
   <data name="AttributeCommandDecompileIndexFormat" xml:space="preserve">
     <value>@attribute/index {0}={1}</value>
   </data>
+  <data name="AttributeCommandWatchSetFormat" xml:space="preserve">
+    <value>{0} is watched: every change to it runs the event handler's {1}.</value>
+  </data>
+  <data name="AttributeCommandWatchRemovedFormat" xml:space="preserve">
+    <value>{0} is no longer watched.</value>
+  </data>
+  <data name="AttributeCommandWatchNoneFormat" xml:space="preserve">
+    <value>{0} is not watched.</value>
+  </data>
+  <data name="AttributeCommandWatchDescribeFormat" xml:space="preserve">
+    <value>  Watch: {0}</value>
+  </data>
+  <data name="AttributeCommandDecompileWatchFormat" xml:space="preserve">
+    <value>@attribute/watch {0}={1}</value>
+  </data>
 
   <!-- @stats command -->
   <data name="LogWipeUnsupportedFormat" xml:space="preserve">

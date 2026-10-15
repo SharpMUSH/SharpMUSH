@@ -15,9 +15,12 @@ public partial class PackageManifestService
 	/// <summary>The first format in which an entry's <c>index:</c> means something; below it the key is ignored.</summary>
 	public static PackageFormatVersion AttributeIndexFormat { get; } = new(1, 8);
 
+	/// <summary>The first format in which an entry's <c>watch:</c> means something; below it the key is ignored.</summary>
+	public static PackageFormatVersion AttributeWatchFormat { get; } = new(1, 9);
+
 	private static readonly IReadOnlySet<string> KnownAttributeEntryKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"flags", "limit", "enum", "delimiter", "retroactive", "index"
+		"flags", "limit", "enum", "delimiter", "retroactive", "index", "watch"
 	};
 
 	/// <summary>
@@ -243,7 +246,41 @@ public partial class PackageManifestService
 			ok = false;
 		}
 
-		return ok ? new PackageAttributeEntrySpec(name, flags, limit, choices, delimiter, retroactive, index) : null;
+		var watch = ReadAttributeWatch(name, entry, path, format, issues, ref ok);
+		return ok ? new PackageAttributeEntrySpec(name, flags, limit, choices, delimiter, retroactive, index, watch) : null;
+	}
+
+	/// <summary>
+	/// An entry's <c>watch:</c>, as <c>@attribute/watch</c> takes it: <c>true</c> for the default pattern
+	/// (<c>WATCH`&lt;name&gt;</c> and every attribute one level below it), <c>false</c> for none, or the pattern itself,
+	/// as one string of space-separated wildcards or a list of them.
+	/// </summary>
+	private static string? ReadAttributeWatch(string name, Dictionary<string, object?> entry, string path,
+		PackageFormatVersion format, List<PackageManifestIssue> issues, ref bool ok)
+	{
+		if (entry.ContainsKey("watch") && format.Major == AttributeWatchFormat.Major && format.Minor < AttributeWatchFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning($"{path}.watch",
+				$"'watch' needs format {AttributeWatchFormat} or later and is ignored; set format: {AttributeWatchFormat}."));
+			return null;
+		}
+
+		switch (entry.GetValueOrDefault("watch"))
+		{
+			case null:
+				return null;
+			case string text when bool.TryParse(text, out var on):
+				return on ? AttributeWatch.DefaultPattern(name) : null;
+			case string text when AttributeWatch.Normalize(text) is { } pattern:
+				return pattern;
+			case List<object> list when list.All(item => item is string) && AttributeWatch.Normalize(string.Join(' ', list.Cast<string>())) is { } listed:
+				return listed;
+			default:
+				issues.Add(PackageManifestIssue.Error($"{path}.watch",
+					"watch is true, false, or the pattern @attribute/watch takes: one or more attribute wildcards, such as WATCH`HP`*."));
+				ok = false;
+				return null;
+		}
 	}
 
 	/// <summary>

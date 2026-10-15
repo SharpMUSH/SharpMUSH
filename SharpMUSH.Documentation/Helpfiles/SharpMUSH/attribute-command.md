@@ -21,6 +21,11 @@
       "lookup": "@attribute index"
     },
     {
+      "id": "attribute-watch",
+      "heading": "Watched attributes",
+      "lookup": "@attribute watch"
+    },
+    {
       "id": "attribute-packages",
       "heading": "Attribute entries from packages",
       "lookup": "@attribute packages"
@@ -103,6 +108,53 @@ Index on LEVEL ready: 412 copies on 1530 objects indexed.
 ```
 Output: LEVEL is now indexed for players, numbers in numeric order, and indexed(LEVEL, >=, 10) lists the players whose LEVEL is 10 or more.
 
+## Watched attributes
+
+`@attribute/watch <attrib>[=<pattern>]`<br>
+`@attribute/watch <attrib>=`
+
+`@attribute/watch` makes `<attrib>` a watched attribute. From then on, every time a copy of it on any object is set, cleared or wiped, by any command or function, the event handler object runs each of its own attributes whose name matches `<pattern>`. `<pattern>` is one or more attribute wildcards separated by spaces, as lattr() takes them: `*` matches within one level of an attribute tree and `**` across levels. An attribute that matches more than one of them runs once.
+
+Without `=<pattern>`, the pattern is ``WATCH`<attrib> WATCH`<attrib>`*``: the handler's ``WATCH`<attrib>`` and every attribute one level below it. Each package can then keep a handler of its own, such as ``WATCH`HP`GAUGE``, without editing another's. `@attribute/watch <attrib>=` with nothing after the `=` stops watching it.
+
+Each matching attribute is queued on its own, as an event's attribute is, and runs as the event handler with its permissions. It gets:
+
+- `%0` or `%<objid>`: the object the attribute is on.
+- `%1` or `%<attribute>`: the attribute's full name, in upper case (HP, or STATS\`HP).
+- `%2` or `%<old>`: the value it had. A new attribute's is empty.
+- `%3` or `%<new>`: the value it has now. A cleared or wiped attribute's is empty.
+- `%4` or `%<enactor>`: whoever changed it, which `%#` is too, or #1 when the server changed it for its own bookkeeping.
+
+The values keep their colour. Setting an attribute to the value it already has still runs the handlers, and a `@wipe` runs them once for each watched attribute it removes. Only the name that is watched counts: watching STATS does not watch STATS\`HP. Attributes nobody watches cost nothing, and loading a PennMUSH database runs nothing. The handlers run after the change has happened, so they cannot stop it, and stopevent() does nothing in them.
+
+A handler that changes a watched attribute runs the handlers again, and so does anything it queues with `@trigger`, `@wait` or `@force`. To keep a handler that changes what it heard about, or two handlers that change each other's attributes, from running for ever, a chain stops after 10: a change made by the tenth handler is still made, but runs nothing, and the server logs a warning. A change typed by a player or made by any other code starts a new chain.
+
+As with `/limit` and `/enum`, `<attrib>` must already be a standard attribute: add it with `@attribute/access` first. `@attribute <attrib>` shows the pattern, and `@attribute/decompile` writes the `@attribute/watch` line that makes it again. Only those with the config.admin permission can watch an attribute.
+
+Example:
+```sharp
+> @attribute/access HP=none
+> &HP me=20
+> @attribute/watch HP
+> &WATCH`HP`LOG #9=@pemit %<objid>=HP went from %<old> to %<new>.
+> &HP me=15
+```
+Output: after the last line you are told "HP went from 20 to 15."
+
+### Gauge example
+
+A client such as Mudlet can draw a health bar from the GMCP package Char.Vitals. Instead of checking every player's HP over and over, watch HP and MAXHP and send the bar whenever one of them changes:
+```sharp
+> @attribute/watch HP=WATCH`VITALS`*
+> @attribute/watch MAXHP=WATCH`VITALS`*
+> &WATCH`VITALS`GAUGE #9=think oob(num(%<objid>),Char.Vitals,json(object,hp,json(number,default(%<objid>/HP,0)),maxhp,json(number,default(%<objid>/MAXHP,0))))
+> &MAXHP me=40
+> &HP me=25
+```
+Output: after the last line your client is sent Char.Vitals {"hp":25,"maxhp":40}. The line before it sent one too, with an hp of 0.
+
+Both attributes run the same handler, so it reads both values again rather than using `%<new>`, and each message carries the whole gauge. It is sent to the player whose attribute changed, and oob() sends nothing to a connection that did not agree to GMCP. If the attribute is on a thing rather than a player, nobody is connected as it and nothing is sent.
+
 ## Attribute entries from packages
 
 A package can add standard attributes to the table itself, in the `attributes:` block of its manifest (format 1.5), instead of running `@attribute` from its install code. Each entry names the attribute and gives what `@attribute` would set: default `flags`, and a `limit` or an `enum` (with a `delimiter` when a choice holds a space).
@@ -121,9 +173,21 @@ An entry the game already has is the game's: the package uses it and never chang
 
 From format 1.8 an entry can also carry an `index:`, as `@attribute/index` would make it: `index: true` for the default, or the option words, such as `index: numeric type:thing`. An older manifest's `index:` is ignored. Installing the package builds the index in the background, and the review screen says how many objects it builds over. A game entry without the same index blocks the install until you index it.
 
+From format 1.9 an entry can also carry a `watch:`, as `@attribute/watch` would set it: `watch: true` for the default pattern, or the pattern itself, such as ``watch: WATCH`HP`*``. An older manifest's `watch:` is ignored. A game entry without the same watch blocks the install until you watch it that way. An upgrade that drops `watch:` stops watching the attribute, and uninstalling the package deletes the entry with its watch. The package's handler attributes on the event handler object come from its objects, as any other code does.
+
+Example, in a package's manifest:
+```
+format: 1.9
+attributes:
+  HP:
+    watch: true
+```
+Output: once the package is installed, ``@attribute HP`` shows ``Watch: WATCH`HP WATCH`HP`*``, and the package's ``WATCH`HP`<name>`` attribute on the event handler runs whenever an HP changes.
+
 Default flags reach new copies of the attribute only. An entry with `retroactive: true` also gives them to every copy already on an object, like `@attribute/access/retroactive` but keeping each copy's owner; the portal's review screen shows how many copies change and asks you to confirm before it applies.
 
 ::: seealso
+- [events]
 - [indexed()]
 - [attributes]
 - [attribute flags]

@@ -259,7 +259,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
 		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
 		using var ceilingScope = parser.State.IsEmpty ? null : OutputCeiling.Enter(parser.CurrentState);
-		// Only an evaluation that runs behind an ATTRIBUTE`CHANGE carries a depth; everything else pays one comparison.
+		// Only an evaluation that runs behind an attribute watch handler carries a depth; everything else pays one comparison.
 		using var changeChainScope = parser.State.IsEmpty || parser.CurrentState.AttributeChangeDepth == 0
 			? null
 			: AttributeChangeChain.Enter(parser.CurrentState.AttributeChangeDepth);

@@ -125,12 +125,15 @@ public partial class LightningDatabase
 
 		foreach (var (name, defaultFlags) in AttributeEntrySeed.Entries)
 		{
-			// An index is staff's (@attribute/index), not the seed's: dropping it here would leave its rows unmaintained.
+			// An index and a watch are staff's (@attribute/index, @attribute/watch), not the seed's: dropping an index here
+			// would leave its rows unmaintained, and a watch would stop at the next restart.
+			var stored = ReadAttributeEntryRecord(tx, name);
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(new AttributeEntryRecord
 			{
 				Name = name,
 				DefaultFlags = defaultFlags,
-				Index = ReadAttributeEntryRecord(tx, name)?.Index
+				Index = stored?.Index,
+				Watch = stored?.Watch
 			}));
 		}
 	}
@@ -294,7 +297,7 @@ public partial class LightningDatabase
 			Keys.Str(MarkupTextSerializer.Serialize(MString.Plain(value))),
 			1,
 			[],
-			MString.Plain(value)));
+			MString.Plain(value)), WatchedAttributes.None.Names);
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>
 	private static void RecomputeNextDbref(ITx tx) => RecomputeCounter(tx, "next_dbref", Tables.Obj);

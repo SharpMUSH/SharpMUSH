@@ -304,6 +304,54 @@ public class PackageAttributeEntryManifestTests
 		await Assert.That(parsed.Warnings.Select(w => w.Path)).Contains("attributes.JOB`LEVEL.index");
 	}
 
+	[Test]
+	public async Task AWatchTakesTrueOrAPattern()
+	{
+		var entries = Entries("""
+			attributes:
+			  HP:
+			    watch: true
+			  MP:
+			    watch: 'watch`mp`jobs  WATCH`MP`GAUGE'
+			  SP:
+			    watch: [WATCH`SP`A, WATCH`SP`B]
+			  XP:
+			    watch: false
+			""", "1.9");
+
+		await Assert.That(entries.Single(e => e.Name == "HP").Watch).IsEqualTo("WATCH`HP WATCH`HP`*");
+		await Assert.That(entries.Single(e => e.Name == "MP").Watch).IsEqualTo("WATCH`MP`JOBS WATCH`MP`GAUGE");
+		await Assert.That(entries.Single(e => e.Name == "SP").Watch).IsEqualTo("WATCH`SP`A WATCH`SP`B");
+		await Assert.That(entries.Single(e => e.Name == "XP").Watch).IsNull();
+	}
+
+	[Test]
+	public async Task AWatchThatIsNotAPatternIsRefused()
+	{
+		var errors = Errors(Parse("""
+			attributes:
+			  HP:
+			    watch: { pattern: WATCH`HP }
+			  MP:
+			    watch: '  '
+			""", "1.9"));
+		await Assert.That(errors.Select(e => e.Path)).IsEquivalentTo(["attributes.HP.watch", "attributes.MP.watch"]);
+	}
+
+	/// <summary>Before format 1.9 <c>watch:</c> was unknown, so an older manifest's is ignored with a warning.</summary>
+	[Test]
+	public async Task AWatchBeforeFormat19IsIgnored()
+	{
+		var parsed = Parse("""
+			attributes:
+			  HP:
+			    watch: true
+			""", "1.8").Expect<ParsedPackageManifest>();
+
+		await Assert.That(parsed.Manifest.Declared.AttributeEntries.Single().Watch).IsNull();
+		await Assert.That(parsed.Warnings.Select(w => w.Path)).Contains("attributes.HP.watch");
+	}
+
 	/// <summary>The reader knows the attribute flags a new world is seeded with, less <c>branch</c>.</summary>
 	[Test]
 	public async Task TheKnownFlagsAreTheSeededOnes()

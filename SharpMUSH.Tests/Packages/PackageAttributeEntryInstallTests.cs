@@ -84,4 +84,54 @@ public class PackageAttributeEntryInstallTests
 		await Assert.That(await Mediator.Send(new GetAttributeEntryQuery(attribute))).IsNull();
 		await Assert.That((await CopyAsync(thing, attribute))!.Value.ToPlainText()).IsEqualTo("stored");
 	}
+
+	private static PackageManifest WatchManifest(string package, string attribute, string version, bool watch)
+		=> new PackageManifestService().ParseManifest($"""
+			format: 1.9
+			package: {package}
+			version: "{version}"
+			objects:
+			  - ref: desk
+			    type: thing
+			    name: Watch Desk
+			attributes:
+			  {attribute}:
+			    watch: {(watch ? "true" : "false")}
+			""").Expect<ParsedPackageManifest>().Manifest;
+
+	private Task<Result<PackageApplyResult>> ApplyWatchAsync(PackageManifest manifest, string package, string commit)
+		=> Installer.ApplyAsync(manifest, new PackageApplyRequest(
+			new PackageApplySource("https://github.com/SharpMUSH/SharpMUSH-Packages", $"{package}/", commit, "main"),
+			new Dictionary<string, string>(), []));
+
+	/// <summary>
+	/// <c>watch:</c> (format 1.9) puts the default watch on the entry the package installs; an upgrade that drops it
+	/// takes the watch off, one that declares it again puts it back, and uninstalling deletes the entry with it.
+	/// </summary>
+	[Test]
+	public async Task AWatchIsAppliedAndReverted()
+	{
+		var id = Guid.NewGuid().ToString("N")[..8];
+		var package = $"attr-watch-{id}";
+		var attribute = $"PKGW_{id}".ToUpperInvariant();
+
+		(await ApplyWatchAsync(WatchManifest(package, attribute, "1.0", watch: true), package, "commit-1")).Expect<PackageApplyResult>();
+		await Assert.That((await Mediator.Send(new GetAttributeEntryQuery(attribute)))?.Watch)
+			.IsEqualTo(AttributeWatch.DefaultPattern(attribute));
+		await Assert.That((await Mediator.Send(new GetWatchedAttributesQuery())).Names).Contains(attribute)
+			.Because("the writes' cached set of watched names follows the table");
+
+		(await ApplyWatchAsync(WatchManifest(package, attribute, "2.0", watch: false), package, "commit-2")).Expect<PackageApplyResult>();
+		await Assert.That(await Mediator.Send(new GetAttributeEntryQuery(attribute))).IsNotNull();
+		await Assert.That((await Mediator.Send(new GetAttributeEntryQuery(attribute)))?.Watch).IsNull();
+		await Assert.That((await Mediator.Send(new GetWatchedAttributesQuery())).Names).DoesNotContain(attribute);
+
+		(await ApplyWatchAsync(WatchManifest(package, attribute, "3.0", watch: true), package, "commit-3")).Expect<PackageApplyResult>();
+		await Assert.That((await Mediator.Send(new GetAttributeEntryQuery(attribute)))?.Watch)
+			.IsEqualTo(AttributeWatch.DefaultPattern(attribute));
+
+		await Assert.That((await Installer.UninstallAsync(package)).Value).IsTypeOf<Success>();
+		await Assert.That(await Mediator.Send(new GetAttributeEntryQuery(attribute))).IsNull();
+		await Assert.That((await Mediator.Send(new GetWatchedAttributesQuery())).Names).DoesNotContain(attribute);
+	}
 }

@@ -48,4 +48,20 @@ public interface IEventService
 	/// own reaction to a signal nobody hears, asks first.
 	/// </summary>
 	ValueTask<bool> HasHandlerAsync(string eventName);
+
+	/// <summary>
+	/// Queues the event handler's attributes that <c>@attribute/watch</c> named for a change to a watched attribute: each
+	/// of the handler's own attributes matching a wildcard in <paramref name="pattern"/> becomes a queue entry of its own,
+	/// as a non-stoppable event's attribute does, run by the handler with its own permissions. It is not a catalogue
+	/// event: no <c>EVENT`</c> attribute hears it, and <c>stopevent()</c> does nothing in it.
+	/// <para>
+	/// The handlers run one <see cref="AttributeChangeChain"/> level deeper than the code that made the change. Nothing
+	/// is queued when no event handler is configured or no attribute matches. Failures are logged; cancellation of the
+	/// current execution lifetime propagates.
+	/// </para>
+	/// </summary>
+	/// <param name="pattern">One or more attribute wildcards, separated by spaces (<see cref="AttributeWatch"/>).</param>
+	/// <param name="enactor">The object that made the change, or null for the server's own bookkeeping (God, #1).</param>
+	/// <param name="args">%0-%4, also given by the names in <see cref="AttributeWatch.ArgumentNames"/>.</param>
+	ValueTask QueueAttributeWatchHandlersAsync(string pattern, DBRef? enactor, IReadOnlyList<MString> args);
 }

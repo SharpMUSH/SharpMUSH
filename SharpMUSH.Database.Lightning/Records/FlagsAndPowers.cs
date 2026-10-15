@@ -53,6 +53,9 @@ public sealed record AttributeEntryRecord
 
 	/// <summary>The index on the attribute's values, or null; see <c>LightningDatabase.AttributeIndex.cs</c>.</summary>
 	public AttributeIndexRecord? Index { get; init; }
+
+	/// <summary>The <c>@attribute/watch</c> pattern, or null when the attribute is not watched.</summary>
+	public string? Watch { get; init; }
 }
 
 /// <summary>Mirrors <c>SharpMUSH.Library.Models.AttributeIndexDefinition</c>.</summary>
