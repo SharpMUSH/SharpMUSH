@@ -101,7 +101,7 @@
 		<Content Include="Integration\TestData\*.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
-		<Content Include="Services\TestData\*.outdb;Services\TestData\*.maildb;Services\TestData\*.chatdb">
+		<Content Include="Services\TestData\*.outdb;Services\TestData\*.maildb;Services\TestData\*.chatdb;Services\TestData\*.flat;Services\TestData\*.mail;Services\TestData\*.folder">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">

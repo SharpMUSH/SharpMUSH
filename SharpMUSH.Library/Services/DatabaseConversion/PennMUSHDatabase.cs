@@ -46,6 +46,18 @@ public class PennMUSHDatabase
 	public PennMUSHChatDatabase Chat { get; set; } = new();
 
 	/// <summary>
+	/// The server the database came from. A reader for another server builds this same model, and the
+	/// dialect decides which softcode notes the import gives and which compatibility options it turns on.
+	/// </summary>
+	public DatabaseDialect Dialect { get; set; } = DatabaseDialect.PennMUSH;
+
+	/// <summary>
+	/// What the reader decided, or could not carry, while turning another server's database into this
+	/// model: one line each. The import reports them ahead of its own warnings.
+	/// </summary>
+	public List<string> ImportNotes { get; set; } = [];
+
+	/// <summary>
 	/// God/Wizard player DBRef (usually #1)
 	/// </summary>
 	public int GodPlayer { get; set; } = 1;

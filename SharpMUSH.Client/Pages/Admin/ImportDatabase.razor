@@ -40,7 +40,7 @@
         <KitCard Class="dbimport-dropzone">
             <div class="dbimport-body">
                 <MudFileUpload T="IBrowserFile"
-                               Accept=".db,.txt"
+                               Accept=".db,.txt,.flat"
                                FilesChanged="OnFileSelected"
                                MaximumFileCount="1"
                                MaxFileSize="104857600" />
@@ -61,6 +61,15 @@
                         <span class="dbimport-file-name">@_selectedFile.Name</span>
                         <span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                     </div>
+
+                    @* Told from the file's first lines unless chosen: a PennMUSH outdb and a RhostMUSH flatfile
+                       both start +V, and what follows tells them apart. *@
+                    <SectionLabel Class="dbimport-label">@Loc["AdmImportFormat"]</SectionLabel>
+                    <MudRadioGroup T="string" Class="dbimport-format" @bind-Value="_format">
+                        <MudRadio T="string" Value="@("auto")">@Loc["AdmImportFormatAuto"]</MudRadio>
+                        <MudRadio T="string" Value="@("pennmush")">PennMUSH</MudRadio>
+                        <MudRadio T="string" Value="@("rhostmush")">RhostMUSH</MudRadio>
+                    </MudRadioGroup>
 
                     @* The source game's mush.cnf goes in first: it names the master room, the player start,
                        the ancestors and the handlers the database's objects are, and those decide how the
@@ -108,6 +117,20 @@
                             <MudIcon Icon="@Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
                             <span class="dbimport-file-name">@_selectedChatFile.Name</span>
                             <span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+                        </div>
+                    }
+
+                    @* RhostMUSH's wmail/unload writes the mail and, beside it, which folder each message is in. *@
+                    <SectionLabel Class="dbimport-label">@Loc["AdmImportMailFoldersOptional"]</SectionLabel>
+                    <MudFileUpload T="IBrowserFile"
+                                   FilesChanged="OnMailFolderFileSelected"
+                                   MaximumFileCount="1"
+                                   MaxFileSize="104857600" />
+                    @if (_selectedMailFolderFile != null)
+                    {
+                        <div class="dbimport-file-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Folder" Class="dbimport-file-icon" />
+                            <span class="dbimport-file-name">@_selectedMailFolderFile.Name</span>
                         </div>
                     }
 
@@ -293,6 +316,11 @@
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _selectedMailFile;
     private IBrowserFile? _selectedChatFile;
+    private IBrowserFile? _selectedMailFolderFile;
+
+    /// <summary>The database's format as the form sends it: auto, pennmush or rhostmush.</summary>
+    private string _format = "auto";
+
     private bool _isUploading;
     private bool _isConverting;
     private bool _isUpdatingProgress;
@@ -321,12 +349,16 @@
 
     private void OnChatFileSelected(IBrowserFile? file) => _selectedChatFile = file;
 
+    private void OnMailFolderFileSelected(IBrowserFile? file) => _selectedMailFolderFile = file;
+
     private void ClearSelection()
     {
         _selectedFile = null;
         _selectedConfigFile = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
+        _selectedMailFolderFile = null;
+        _format = "auto";
     }
 
     private async Task StartConversion()
@@ -347,8 +379,10 @@
             await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
             await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
             await using var configStream = _selectedConfigFile?.OpenReadStream(MaxConfigFileSize);
+            await using var folderStream = _selectedMailFolderFile?.OpenReadStream(maxAllowedSize: 104857600);
             var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
-                _selectedMailFile?.Name, chatStream, _selectedChatFile?.Name, configStream, _selectedConfigFile?.Name);
+                _selectedMailFile?.Name, chatStream, _selectedChatFile?.Name, configStream, _selectedConfigFile?.Name,
+                folderStream, _selectedMailFolderFile?.Name, _format);
 
             switch (upload)
             {
@@ -487,6 +521,8 @@
         _configImportedFrom = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
+        _selectedMailFolderFile = null;
+        _format = "auto";
         _sessionId = null;
         _progress = null;
         _result = null;

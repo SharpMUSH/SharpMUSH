@@ -118,6 +118,12 @@ public class PennMUSHObject
 	/// An exit's or player's aliases: its ALIAS attribute in a PennMUSH dump, split on ';'.
 	/// </summary>
 	public List<string> Aliases { get; init; } = [];
+
+	/// <summary>
+	/// Powers the source took away from this object, as SharpMUSH power names. PennMUSH has none; a
+	/// RhostMUSH depower becomes one, and the import denies the power's permission on the object.
+	/// </summary>
+	public List<string> DeniedPowers { get; init; } = [];
 }
 
 /// <summary>
