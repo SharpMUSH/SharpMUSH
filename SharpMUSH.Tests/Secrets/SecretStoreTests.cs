@@ -29,7 +29,7 @@ public class SecretStoreTests
 	/// </summary>
 	private sealed class Host : IDisposable
 	{
-		private readonly string _directory = Path.Combine(Path.GetTempPath(), $"secret-store-{Guid.NewGuid():N}");
+		private readonly string _directory = Path.Join(Path.GetTempPath(), $"secret-store-{Guid.NewGuid():N}");
 		private readonly Dictionary<string, string>? _environment;
 		private ServiceProvider _ring;
 
@@ -38,11 +38,11 @@ public class SecretStoreTests
 			Directory.CreateDirectory(Files);
 			_environment = environment;
 			World = world ?? new InMemoryWorld();
-			_ring = Ring(Path.Combine(_directory, "keys"));
+			_ring = Ring(Path.Join(_directory, "keys"));
 			Store = Open();
 		}
 
-		public string Files => Path.Combine(_directory, "run-secrets");
+		public string Files => Path.Join(_directory, "run-secrets");
 		public InMemoryWorld World { get; }
 		public SecretStore Store { get; private set; }
 		public IKeyManager Keys => _ring.GetRequiredService<IKeyManager>();
@@ -50,7 +50,7 @@ public class SecretStoreTests
 		public void Restart()
 		{
 			_ring.Dispose();
-			_ring = Ring(Path.Combine(_directory, "keys"));
+			_ring = Ring(Path.Join(_directory, "keys"));
 			Store = Open();
 		}
 
@@ -145,11 +145,11 @@ public class SecretStoreTests
 		using var host = new Host(environment: environment);
 		await host.Store.SetAsync("sql.password", "stored", Grave);
 
-		await File.WriteAllTextAsync(Path.Combine(host.Files, "sql.password"), "from-file\n");
+		await File.WriteAllTextAsync(Path.Join(host.Files, "sql.password"), "from-file\n");
 		await Assert.That((await host.Store.GetAsync("sql.password")).Expect<string>()).IsEqualTo("from-file");
 		await Assert.That((await host.Store.ListAsync()).Single(s => s.Name == "sql.password"))
 			.IsEqualTo(new SecretStatus("sql.password", SecretDefinition.SqlPassword.Description, SecretSource.File,
-				Path.Combine(host.Files, "sql.password"), true, Now, Grave, null, true));
+				Path.Join(host.Files, "sql.password"), true, Now, Grave, null, true));
 
 		environment["SHARPMUSH_SECRET_SQL_PASSWORD"] = "from-environment";
 		await Assert.That((await host.Store.GetAsync("sql.password")).Expect<string>()).IsEqualTo("from-environment");
