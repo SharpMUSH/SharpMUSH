@@ -124,6 +124,15 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("room-all", "[strlen(iter({ONLINE},room(%i0)))]", false, AsMortal: true),
 		new("get-all", "[strlen(iter({ONLINE},get(%i0/ALIAS)))]", false, AsMortal: true),
 		new("idle-all", "[strlen(iter({ONLINE},idle(%i0)))]", false, AsMortal: true),
+		// u() call overhead: the same loop with a trivial attribute (PROFILE_U is %0) and with no call at all.
+		new("id-all", "[strlen(iter({ONLINE},%i0))]", false, AsMortal: true),
+		new("u-all", "[strlen(iter({ONLINE},u(me/PROFILE_U,%i0)))]", false, AsMortal: true),
+		new("u-obj-all", "[strlen(iter({ONLINE},u({BIG}/PROFILE_U,%i0)))]", false, AsMortal: true),
+		new("u-1", "[u(me/PROFILE_U,5)]", false, AsMortal: true),
+		new("u-obj-1", "[u({BIG}/PROFILE_U,5)]", false, AsMortal: true),
+		new("get-u-1", "[get(me/PROFILE_U)]", false, AsMortal: true),
+		new("lambda-1", "[ulambda(#lambda/%0,5)]", false, AsMortal: true),
+		new("strlen-m", "[strlen(5)]", false, AsMortal: true),
 		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
 		new("theme-me", "@theme me=fantasy", true),
 		new("theme-anc", "@theme #4=fantasy", true),
@@ -342,6 +351,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		if (await _database.GetObjectNodeAsync(mortalRef) is not (AnySharpObject and SharpPlayer mortal))
 			throw new InvalidOperationException("The profile mortal was not created.");
 
+		await _database.SetAttributeAsync(mortalRef, ["PROFILE_U"], MarkupText.Plain("%0"), mortal);
 		var value = MarkupText.Plain("some value");
 		var big = await _database.CreateThingAsync("ProfileBig", room, mortal, room);
 		var writes = new List<AttributeWrite>();
@@ -357,6 +367,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var kid = await _database.CreateThingAsync("ProfileKid", room, mortal, room);
 		await _database.SetAttributesAsync(kid,
 			Enumerable.Range(0, KidAttributes).Select(i => new AttributeWrite([$"KID{i:D3}"], value, mortal, [])).ToList());
+		await _database.SetAttributeAsync((await Node(big)).Object().DBRef, ["PROFILE_U"], MarkupText.Plain("%0"), mortal);
 		await _database.SetObjectParent(await Node(kid), await Node(big));
 		return (mortal.Object.DBRef, (await Node(big)).Object().DBRef, (await Node(kid)).Object().DBRef);
 
