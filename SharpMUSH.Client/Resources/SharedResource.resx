@@ -5102,8 +5102,8 @@
   <data name="AdmSetupPackagesLead" xml:space="preserve">
     <value>Every package this server ships. Add or remove any of them; what a package needs comes with it. You can change them later under Packages.</value>
   </data>
-  <data name="AdmSetupPkgGroupOther" xml:space="preserve">
-    <value>Other</value>
+  <data name="AdmSetupPkgGroupUncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
   </data>
   <data name="AdmSetupPkgGroupCount" xml:space="preserve">
     <value>{0} of {1}</value>
