@@ -274,6 +274,8 @@ objects:
       # back, below 0), and IC-YEARS adds to the year it shows.
       DATA`CONFIG: |-
         The game's time zone, how times are written, and the IC clock.
+      DATA`CONFIG`LABEL: |-
+        Time and the IC clock
       DATA`CONFIG`ZONE: |-
         UTC
       DATA`CONFIG`ZONE`TYPE: |-
@@ -282,6 +284,10 @@ objects:
         UTC
       DATA`CONFIG`ZONE`DESCRIPTION: |-
         The game's time zone, the one +time calls game time.
+      DATA`CONFIG`ZONE`LABEL: |-
+        Game time zone
+      DATA`CONFIG`ZONE`EXAMPLE: |-
+        Europe/London
       DATA`CONFIG`FORMAT: |-
         $a $d $b $Y, $H:$M
       DATA`CONFIG`FORMAT`TYPE: |-
@@ -292,6 +298,10 @@ objects:
         100
       DATA`CONFIG`FORMAT`DESCRIPTION: |-
         How a time is written, in timefmt()'s codes.
+      DATA`CONFIG`FORMAT`LABEL: |-
+        Time format
+      DATA`CONFIG`FORMAT`EXAMPLE: |-
+        $d/$m/$Y $H:$M
       DATA`CONFIG`IC-SHOW: |-
         1
       DATA`CONFIG`IC-SHOW`TYPE: |-
@@ -300,6 +310,10 @@ objects:
         1
       DATA`CONFIG`IC-SHOW`DESCRIPTION: |-
         Whether +time shows the IC date.
+      DATA`CONFIG`IC-SHOW`LABEL: |-
+        Show the IC date
+      DATA`CONFIG`IC-SHOW`EXAMPLE: |-
+        no
       DATA`CONFIG`IC-ANCHOR: |-
         1767225600
       DATA`CONFIG`IC-ANCHOR`TYPE: |-
@@ -308,6 +322,10 @@ objects:
         1767225600
       DATA`CONFIG`IC-ANCHOR`DESCRIPTION: |-
         A moment, in seconds since 1970, when the IC clock reads the same as the real one.
+      DATA`CONFIG`IC-ANCHOR`LABEL: |-
+        IC anchor
+      DATA`CONFIG`IC-ANCHOR`EXAMPLE: |-
+        1772323200
       DATA`CONFIG`IC-RATIO: |-
         1
       DATA`CONFIG`IC-RATIO`TYPE: |-
@@ -318,6 +336,10 @@ objects:
         0
       DATA`CONFIG`IC-RATIO`DESCRIPTION: |-
         How many IC seconds pass each real second.
+      DATA`CONFIG`IC-RATIO`LABEL: |-
+        IC speed
+      DATA`CONFIG`IC-RATIO`EXAMPLE: |-
+        2
       DATA`CONFIG`IC-DAYS: |-
         0
       DATA`CONFIG`IC-DAYS`TYPE: |-
@@ -326,6 +348,10 @@ objects:
         0
       DATA`CONFIG`IC-DAYS`DESCRIPTION: |-
         Days added to the IC date; below 0 goes back.
+      DATA`CONFIG`IC-DAYS`LABEL: |-
+        IC days added
+      DATA`CONFIG`IC-DAYS`EXAMPLE: |-
+        -3
       DATA`CONFIG`IC-YEARS: |-
         0
       DATA`CONFIG`IC-YEARS`TYPE: |-
@@ -334,6 +360,10 @@ objects:
         0
       DATA`CONFIG`IC-YEARS`DESCRIPTION: |-
         Years added to the IC year shown.
+      DATA`CONFIG`IC-YEARS`LABEL: |-
+        IC years added
+      DATA`CONFIG`IC-YEARS`EXAMPLE: |-
+        300
       DATA`CONFIG`IC-MONTHS: |-
 
       DATA`CONFIG`IC-MONTHS`TYPE: |-
@@ -348,6 +378,8 @@ objects:
         CHECK`IC`NAMES
       DATA`CONFIG`IC-MONTHS`DESCRIPTION: |-
         The twelve IC month names, January's first. Empty uses the real ones.
+      DATA`CONFIG`IC-MONTHS`LABEL: |-
+        IC month names
       DATA`CONFIG`IC-WEEKDAYS: |-
 
       DATA`CONFIG`IC-WEEKDAYS`TYPE: |-
@@ -362,6 +394,8 @@ objects:
         CHECK`IC`NAMES
       DATA`CONFIG`IC-WEEKDAYS`DESCRIPTION: |-
         The seven IC weekday names, Sunday's first. Empty uses the real ones.
+      DATA`CONFIG`IC-WEEKDAYS`LABEL: |-
+        IC weekday names
       # +config's CHECK for IC-MONTHS and IC-WEEKDAYS (%0 the names, %1 the setting): every name or none.
       CHECK`IC`NAMES: |-
         setq(ic_need,if(strmatch(%1,ic-months),12,7))[if(cand(words(%0,|),neq(words(%0,|),%q<ic_need>)),Give all %q<ic_need> names%, or none for the real ones.)]

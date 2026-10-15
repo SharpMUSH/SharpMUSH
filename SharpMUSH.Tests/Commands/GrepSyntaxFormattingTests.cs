@@ -1,6 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -208,12 +211,12 @@ public class GrepSyntaxFormattingTests
 		await ExpectPlainText("EMPTYFN: ");
 	}
 
-	// Its first parse error sits mid-string rather than at the end, so ToMushFailureString() includes a
+	// Its first parse error (an empty register name) sits mid-string rather than at the end, so ToMushFailureString() includes a
 	// (near "...") excerpt -- and that excerpt is of the RAW value, which the formatted code no longer
 	// reproduces contiguously because a break lands after the "0,". Hence a substring that exists in the
 	// stored value, does not exist in the laid-out code, and does exist in the appended summary.
 	private const string ErrorWithExcerptCode =
-		"switch([add(1),y],0,aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff)";
+		"switch(%q<>,0,aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff)";
 
 	private const string StraddlesABreak = "0,aaaaaaaaaa";
 
@@ -227,7 +230,9 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmtSummary");
 
-		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&BADFN {obj}={ErrorWithExcerptCode}"));
+		// Typed with &, a value that does not parse is refused, so it is stored directly.
+		var setter = (await WebAppFactoryArg.Services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(_player.DbRef)).Expect<SharpPlayer>();
+		await Mediator.Send(new SetAttributeCommand(obj, ["BADFN"], MarkupText.Plain(ErrorWithExcerptCode), setter));
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/BADFN=funsyntax"));
 
 		BeginNotificationWindow();

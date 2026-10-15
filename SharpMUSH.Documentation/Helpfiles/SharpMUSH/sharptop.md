@@ -257,7 +257,10 @@ This is the index to the MUSH online help files.
 
   Only the first letter of the SEX attribute counts, in upper or lower case: M is male (he, him, his, his), F or W is female (she, her, her, hers), and T or P is plural (they, them, their, theirs). So `male`, `m`, `Female`, `woman` and `plural` all work. Anything else, or no SEX attribute at all, also gives they, them, their and theirs; PennMUSH gives it, it, its and its there.
 
+  A game can keep gender in another attribute with the `gender_attr` option (see [@config attribs]); pronouns then read that attribute instead of SEX. `@gender` sets whichever attribute that is, while `@sex` always sets SEX.
+
 ::: seealso
+- [@gender]
 - [@sex]
 - [%]
 :::

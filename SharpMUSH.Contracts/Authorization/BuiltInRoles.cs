@@ -100,6 +100,7 @@ public static class BuiltInRoles
 		PortalPermission.GameWizard,
 		PortalPermission.ChatAdmin,
 		PortalPermission.FeedAdmin,
+		PortalPermission.NotifyPush,
 		PortalPermission.SideFx,
 		PortalPermission.ServerOperate,
 		PortalPermission.ControlAll,

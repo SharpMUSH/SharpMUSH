@@ -59,7 +59,7 @@ public partial class Commands
 		return returnsMessage && outcome.Admitted ? new CallState(message) : outcome.Result;
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM", "SILENT", "NOISY"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM", "SILENT", "NOISY"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged | CB.Pose,
 		MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)

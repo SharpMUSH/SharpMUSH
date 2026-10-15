@@ -35,11 +35,12 @@ public interface IAccountStore
 	/// Links <paramref name="characterRef"/> to the account, unless another account already holds it. The check
 	/// and the write are one transaction, so of two accounts linking the same character at once exactly one wins.
 	/// </summary>
-	/// <returns>The account that holds the character instead, or null when it is now (or already was) this account's.</returns>
-	ValueTask<SharpAccount?> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
+	/// <returns>Whether the write added the link, found it already there, or found another account holding the character.</returns>
+	ValueTask<CharacterLinkWrite> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
 
 	/// <summary>Removes the graph edge linking <paramref name="characterRef"/> to the account.</summary>
-	ValueTask UnlinkCharacterFromAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
+	/// <returns>True when the account held the character and no longer does.</returns>
+	ValueTask<bool> UnlinkCharacterFromAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
 
 	/// <summary>Returns all SharpPlayer characters linked to the given account.</summary>
 	ValueTask<IReadOnlyList<SharpPlayer>> GetCharactersForAccountAsync(string accountId, CancellationToken cancellationToken = default);

@@ -685,10 +685,34 @@
     <value>Selected File</value>
   </data>
   <data name="MailDatabaseOptional" xml:space="preserve">
-    <value>Mail database (optional): the PennMUSH maildb, for mail aliases</value>
+    <value>Mail database (optional): the PennMUSH maildb, RhostMUSH's .dump.mail from wmail/unload, or TinyMUX's mail.db, for mail and mail aliases</value>
   </data>
   <data name="ChatDatabaseOptional" xml:space="preserve">
-    <value>Chat database (optional): the PennMUSH chatdb, for channels</value>
+    <value>Chat database (optional): the PennMUSH chatdb or TinyMUX comsys.db, for channels</value>
+  </data>
+  <data name="AdmImportFormat" xml:space="preserve">
+    <value>Database format</value>
+  </data>
+  <data name="AdmImportFormatAuto" xml:space="preserve">
+    <value>Tell from the file</value>
+  </data>
+  <data name="AdmImportRewrites" xml:space="preserve">
+    <value>Rewritten softcode ({0})</value>
+  </data>
+  <data name="AdmImportRewriteBefore" xml:space="preserve">
+    <value>Before</value>
+  </data>
+  <data name="AdmImportRewriteAfter" xml:space="preserve">
+    <value>After</value>
+  </data>
+  <data name="AdmImportDownloadLog" xml:space="preserve">
+    <value>Download import log</value>
+  </data>
+  <data name="AdmImportRewritesLead" xml:space="preserve">
+    <value>The import changed the softcode in these attributes so SharpMUSH reads it as the old server did. Open one to see its code before and after. Test each one before players connect, and fix by hand any line that says check by hand.</value>
+  </data>
+  <data name="AdmImportMailFoldersOptional" xml:space="preserve">
+    <value>Mail folders (optional): RhostMUSH's .dump.folder, which says which folder each message is in</value>
   </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview File Content</value>
@@ -704,16 +728,16 @@
   <!-- ImportDatabase.razor     -->
   <!-- ======================== -->
   <data name="ImportPennMUSHDatabase" xml:space="preserve">
-    <value>Import PennMUSH Database</value>
+    <value>Import PennMUSH, RhostMUSH or TinyMUX Database</value>
   </data>
   <data name="ImportDatabaseDescription" xml:space="preserve">
-    <value>Upload a PennMUSH database file to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
+    <value>Upload a PennMUSH database, a RhostMUSH flatfile written with @dump/flat, or a TinyMUX flatfile, to convert and import into SharpMUSH. The format is told from the file unless you choose one. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
   </data>
   <data name="DropDatabaseFile" xml:space="preserve">
-    <value>Drop PennMUSH database file here or click</value>
+    <value>Drop the database file here or click</value>
   </data>
   <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Supported formats: .db, .txt (max 100MB)</value>
+    <value>Supported formats: .db, .flat, .txt (max 100MB)</value>
   </data>
   <data name="Uploading" xml:space="preserve">
     <value>Uploading...</value>
@@ -1701,6 +1725,9 @@
   <data name="PkgRequires" xml:space="preserve">
     <value>Requires</value>
   </data>
+  <data name="PkgNeedsPlugin" xml:space="preserve">
+    <value>Needs the {0} plugin, which is not running on this server.</value>
+  </data>
   <data name="PkgNotInstalledSuffix" xml:space="preserve">
     <value> — not installed.</value>
   </data>
@@ -1806,6 +1833,60 @@
   </data>
   <data name="PkgMergedValueLabel" xml:space="preserve">
     <value>Merged value</value>
+  </data>
+  <data name="PkgLocalEditsCount" xml:space="preserve">
+    <value>Changed by this game ({0})</value>
+  </data>
+  <data name="PkgLocalEditsSub" xml:space="preserve">
+    <value>This game changed these since the package last installed them. Everything else takes the new version.</value>
+  </data>
+  <data name="PkgLocalEditWhat" xml:space="preserve">
+    <value>Changed</value>
+  </data>
+  <data name="PkgLocalEditOutcome" xml:space="preserve">
+    <value>On this upgrade</value>
+  </data>
+  <data name="PkgLocalKept" xml:space="preserve">
+    <value>Kept: the package did not change it</value>
+  </data>
+  <data name="PkgLocalMerged" xml:space="preserve">
+    <value>Merged: the package changed other lines</value>
+  </data>
+  <data name="PkgLocalDecide" xml:space="preserve">
+    <value>Both changed it: choose below</value>
+  </data>
+  <data name="PkgOnlyLocalEdits" xml:space="preserve">
+    <value>Only what this game changed</value>
+  </data>
+  <data name="PkgMergedWritten" xml:space="preserve">
+    <value>Merged (what the upgrade writes)</value>
+  </data>
+  <data name="PkgHooksCount" xml:space="preserve">
+    <value>Runs after the apply: {0} ({1})</value>
+  </data>
+  <data name="PkgHooksSub" xml:space="preserve">
+    <value>The apply runs this on its object after writing everything above. It follows the choices made on this page.</value>
+  </data>
+  <data name="PkgLockConflictsCount" xml:space="preserve">
+    <value>Lock conflicts ({0})</value>
+  </data>
+  <data name="PkgLockConflictsSub" xml:space="preserve">
+    <value>This game and the package both changed these locks.</value>
+  </data>
+  <data name="PkgLockValueLabel" xml:space="preserve">
+    <value>Lock</value>
+  </data>
+  <data name="PkgStructFlag" xml:space="preserve">
+    <value>flag {0}</value>
+  </data>
+  <data name="PkgStructPower" xml:space="preserve">
+    <value>power {0}</value>
+  </data>
+  <data name="PkgStructAttrFlag" xml:space="preserve">
+    <value>{0} flag on {1}</value>
+  </data>
+  <data name="PkgStructLock" xml:space="preserve">
+    <value>{0} lock</value>
   </data>
   <data name="PkgMissingRemoteParam" xml:space="preserve">
     <value>Missing 'remote' parameter.</value>
@@ -3198,6 +3279,12 @@
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Only you see this.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notices for you</value>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
   </data>
@@ -3256,6 +3343,9 @@
   </data>
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Get started by reading the wiki, browsing characters, or jumping into a scene.</value>
+  </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Get started by reading the wiki or browsing characters.</value>
   </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Read the Wiki</value>
@@ -4364,6 +4454,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Show more</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Timeline</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Not dated</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>View all</value>
   </data>
@@ -4572,7 +4668,7 @@
     <value>Content · Spellcheck</value>
   </data>
   <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Server · PennMUSH import</value>
+    <value>Server · Database import</value>
   </data>
   <data name="AdmDiagnosticsKicker" xml:space="preserve">
     <value>Build · Queue diagnostics</value>
@@ -4884,10 +4980,10 @@
     <value>Bring an existing game?</value>
   </data>
   <data name="AdmSetupImportLead" xml:space="preserve">
-    <value>Moving from PennMUSH? Import its database now, before anyone else connects, with its mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your PennMUSH God; your portal account stays linked to it and keeps the password you just chose.</value>
+    <value>Moving from PennMUSH, RhostMUSH or TinyMUX? Import its database now, before anyone else connects, with a PennMUSH game's mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your old game's God; your portal account stays linked to it and keeps the password you just chose.</value>
   </data>
   <data name="AdmSetupImportPenn" xml:space="preserve">
-    <value>Import a PennMUSH database</value>
+    <value>Import a PennMUSH, RhostMUSH or TinyMUX database</value>
   </data>
   <data name="AdmSetupStartFresh" xml:space="preserve">
     <value>Start a new game</value>
@@ -4914,7 +5010,7 @@
     <value>Saving…</value>
   </data>
   <data name="AdmSetupDoneLead" xml:space="preserve">
-    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and a PennMUSH database in PennMUSH import.</value>
+    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and another game's database in Database import.</value>
   </data>
   <data name="AdmSetupBack" xml:space="preserve">
     <value>Back</value>
@@ -5155,6 +5251,12 @@
   </data>
   <data name="EnumPermFeedAdminDesc" xml:space="preserve">
     <value>Defines and runs feeds, the message pipelines game systems such as a radio or a phone are built on: their kinds, taps, members and limits.</value>
+  </data>
+  <data name="EnumPermNotifyPush" xml:space="preserve">
+    <value>Game · Push notifications</value>
+  </data>
+  <data name="EnumPermNotifyPushDesc" xml:space="preserve">
+    <value>Sends notifications to players' phones and browsers with @push. Give it to the object of a package that decides what notifies, not to players.</value>
   </data>
   <data name="EnumPermSideFx" xml:space="preserve">
     <value>Game · Side-effect functions</value>
@@ -6105,7 +6207,7 @@
     <value>Server status</value>
   </data>
   <data name="AdmImportLabel" xml:space="preserve">
-    <value>PennMUSH import</value>
+    <value>Database import</value>
   </data>
   <data name="AdmCardSoftcode" xml:space="preserve">
     <value>Edit the attributes on objects you control, and try code in a console.</value>
@@ -6159,7 +6261,7 @@
     <value>Every server setting, by section, with import and export.</value>
   </data>
   <data name="AdmCardImport" xml:space="preserve">
-    <value>Bring a PennMUSH database into this game.</value>
+    <value>Bring a PennMUSH, RhostMUSH or TinyMUX database into this game.</value>
   </data>
   <data name="RolEditScene" xml:space="preserve">
     <value>Edit scene</value>
@@ -6193,6 +6295,69 @@
   </data>
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter to send</value>
+  </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Add to calendar</value>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Add the schedule to your calendar</value>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Your calendar app shows each scene at your own local time and checks for changes every hour.</value>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Public scenes</value>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Every public scene on the schedule. Anyone can use this address.</value>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Your private link</value>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Also lists the private scenes this character can see. Anyone with the link can read it, so keep it to yourself.</value>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Only scenes I run or joined</value>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>This address is shown only now. Copy it into your calendar app before you leave the page.</value>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>You made a private link on {0}. Make a new one to see its address again; the old one stops working.</value>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Make my private link</value>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Make a new link</value>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Turn it off</value>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Calendar address</value>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Calendar address copied</value>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Subscribe</value>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Saving draft</value>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Draft saved</value>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Draft on this device only</value>
   </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>This scene is paused. It takes no poses until its owner resumes it.</value>
@@ -8001,5 +8166,239 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>An image with a content warning stays out of the image library. Take the warning off to share it.</value>
+  </data>
+  <data name="AdmActivityTitle" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="AdmCardActivity" xml:space="preserve">
+    <value>See when people play, who is drifting away, how each approval month kept posing, and which rooms are used.</value>
+  </data>
+  <data name="AdmActivityBlurb" xml:space="preserve">
+    <value>Counted from poses and scenes, never from time connected. Staff only; everything but the drifting list is a total.</value>
+  </data>
+  <data name="AdmActivityWindow" xml:space="preserve">
+    <value>Window</value>
+  </data>
+  <data name="AdmActivityLastDays" xml:space="preserve">
+    <value>Last {0} days</value>
+  </data>
+  <data name="AdmActivityZone" xml:space="preserve">
+    <value>Hours in {0}</value>
+  </data>
+  <data name="AdmActivityPosed" xml:space="preserve">
+    <value>Characters posing</value>
+  </data>
+  <data name="AdmActivityOfApproved" xml:space="preserve">
+    <value>of {0} approved · {1}</value>
+  </data>
+  <data name="AdmActivityPoses" xml:space="preserve">
+    <value>Poses</value>
+  </data>
+  <data name="AdmActivityScenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="AdmActivityNewApprovals" xml:space="preserve">
+    <value>New approvals</value>
+  </data>
+  <data name="AdmActivityRoomsUsed" xml:space="preserve">
+    <value>Rooms used</value>
+  </data>
+  <data name="AdmActivityRoomsDeadSub" xml:space="preserve">
+    <value>{0} dead</value>
+  </data>
+  <data name="AdmActivityDrifting" xml:space="preserve">
+    <value>Drifting away</value>
+  </data>
+  <data name="AdmActivityPeak" xml:space="preserve">
+    <value>Busiest hour</value>
+  </data>
+  <data name="AdmActivityPeakSub" xml:space="preserve">
+    <value>{0} posing on average</value>
+  </data>
+  <data name="AdmActivitySame" xml:space="preserve">
+    <value>same as the window before</value>
+  </data>
+  <data name="AdmActivityUp" xml:space="preserve">
+    <value>up {0} from {1}</value>
+  </data>
+  <data name="AdmActivityDown" xml:space="preserve">
+    <value>down {0} from {1}</value>
+  </data>
+  <data name="AdmActivityHoursTitle" xml:space="preserve">
+    <value>When people play</value>
+  </data>
+  <data name="AdmActivityHoursSub" xml:space="preserve">
+    <value>Approved characters posing in each hour of the week, averaged over the window.</value>
+  </data>
+  <data name="AdmActivityHeatCell" xml:space="preserve">
+    <value>{0} {1}:00, {2} posing</value>
+  </data>
+  <data name="AdmActivityHeatLow" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="AdmActivityHeatHigh" xml:space="preserve">
+    <value>{0} posing</value>
+  </data>
+  <data name="AdmActivityDriftingTitle" xml:space="preserve">
+    <value>Drifting away</value>
+  </data>
+  <data name="AdmActivityDriftingSub" xml:space="preserve">
+    <value>Posed on at least {2} of the {1} days before the last {0} days, and on half as many days or fewer since.</value>
+  </data>
+  <data name="AdmActivityDriftingEmpty" xml:space="preserve">
+    <value>Nobody who posed regularly has slowed down.</value>
+  </data>
+  <data name="AdmActivityCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="AdmActivityLastPose" xml:space="preserve">
+    <value>Last pose</value>
+  </data>
+  <data name="AdmActivityDaysPosed" xml:space="preserve">
+    <value>Days posed</value>
+  </data>
+  <data name="AdmActivityNowWas" xml:space="preserve">
+    <value>{0} now, {1} before</value>
+  </data>
+  <data name="AdmActivityNever" xml:space="preserve">
+    <value>never</value>
+  </data>
+  <data name="AdmActivityShowing" xml:space="preserve">
+    <value>Showing {0} of {1}.</value>
+  </data>
+  <data name="AdmActivityCohortsTitle" xml:space="preserve">
+    <value>Cohorts by approval month</value>
+  </data>
+  <data name="AdmActivityCohortsSub" xml:space="preserve">
+    <value>Of the characters approved each month, the share who posed in each 30 days after that month ended.</value>
+  </data>
+  <data name="AdmActivityMonth" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="AdmActivityApproved" xml:space="preserve">
+    <value>Approved</value>
+  </data>
+  <data name="AdmActivityActiveNow" xml:space="preserve">
+    <value>Posing now</value>
+  </data>
+  <data name="AdmActivityPeriod" xml:space="preserve">
+    <value>Day {0}</value>
+  </data>
+  <data name="AdmActivityUndated" xml:space="preserve">
+    <value>{0} approved characters have no approval in the audit log and are counted by the month they were created.</value>
+  </data>
+  <data name="AdmActivityRoomsTitle" xml:space="preserve">
+    <value>Busiest rooms</value>
+  </data>
+  <data name="AdmActivityRoomsSub" xml:space="preserve">
+    <value>Poses in each room over the last {0} days.</value>
+  </data>
+  <data name="AdmActivityRoomsEmpty" xml:space="preserve">
+    <value>Nobody has posed in a room in this window.</value>
+  </data>
+  <data name="AdmActivityRoom" xml:space="preserve">
+    <value>Room</value>
+  </data>
+  <data name="AdmActivityDays" xml:space="preserve">
+    <value>Days</value>
+  </data>
+  <data name="AdmActivityPeople" xml:space="preserve">
+    <value>People</value>
+  </data>
+  <data name="AdmActivityDeadTitle" xml:space="preserve">
+    <value>Dead rooms</value>
+  </data>
+  <data name="AdmActivityDeadSub" xml:space="preserve">
+    <value>No pose in {0} days.</value>
+  </data>
+  <data name="AdmActivityDeadEmpty" xml:space="preserve">
+    <value>Every room has seen a pose.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Get notified on this phone or computer when the portal is closed</value>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Turn notifications on for each phone or computer you want them on. The game decides what is worth a notification, and each of your characters chooses which they receive.</value>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Notifications are on here ({0}).</value>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Notifications are off on this device. Your browser asks for permission when you turn them on.</value>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Turn on</value>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Send a test</value>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Notifications are on for this device.</value>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Test sent. It should arrive in a few seconds.</value>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>The browser did not allow notifications. Allow them for this site in the browser's settings, then try again.</value>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Notifications are blocked for this site. Allow them in the browser's site settings, then reload this page.</value>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>This browser cannot show notifications from a website.</value>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>On iPhone and iPad, notifications work only from the home screen: tap Share, then Add to Home Screen, and open the portal from the new icon.</value>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Install the portal as an app: it opens in its own window, and notifications show its name.</value>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Your devices</value>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Every phone and computer with notifications on for this account</value>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>No device has notifications on yet.</value>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Turn off notifications on {0}</value>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>On since {0}</value>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>last sent {0}</value>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>failed {0} ({1})</value>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>the game changed its key: turn notifications on again on that device</value>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>What notifies you</value>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Pages and new mail notify you when you are away, showing who sent it but not what it says. Type +notify in the game to choose what notifies each character, and whether the text shows.</value>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Choose what notifies you</value>
   </data>
 </root>

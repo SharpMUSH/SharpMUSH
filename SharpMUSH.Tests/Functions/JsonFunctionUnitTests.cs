@@ -23,6 +23,10 @@ public class JsonFunctionUnitTests
 	[Arguments("""json(object,ansi(hr,k),"v")""", """{"k":"v"}""")]
 	[Arguments("json(object,k,v)", "#-1 BAD ARGUMENT FORMAT TO json")]
 	[Arguments("json(array,1,2)", "[1,2]")]
+	// PennMUSH's json() gives an empty array or object when no values or pairs follow the type.
+	[Arguments("json(array)", "[]")]
+	[Arguments("json(object)", "{}")]
+	[Arguments("json(object,k)", "#-1 FUNCTION (json) EXPECTS AN ODD NUMBER OF ARGUMENTS")]
 	[Arguments("json(array,1,blah)", "#-1 BAD ARGUMENT FORMAT TO json")]
 	// Penn json.null.1-3
 	[Arguments("json(null)", "null")]

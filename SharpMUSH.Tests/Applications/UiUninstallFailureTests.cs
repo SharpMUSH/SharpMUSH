@@ -30,7 +30,8 @@ public class UiUninstallFailureTests
 		var service = new PackageInstallService(Substitute.For<IObjectStore>(), Substitute.For<IAttributeStore>(), Substitute.For<IFlagAndPowerStore>(), Substitute.For<INavigationStore>(),
 			registry, apps, Substitute.For<IPackagePlanService>(), new TestSharpMushOptions.FixedWrapper(TestSharpMushOptions.Create()), Substitute.For<IPackageLifecycleRunner>(), files,
 			Substitute.For<IMediator>(), new PackageOperationGate(), Substitute.For<ILockService>(), Substitute.For<IPackageDeclarationService>(), Substitute.For<IPackageSettingService>(), Substitute.For<IPackageWikiService>(),
-			new Lazy<IRuntimeRegistrationService>(() => Substitute.For<IRuntimeRegistrationService>()), new EngineVersion(new PackageVersion(2, 0, 0)));
+			new Lazy<IRuntimeRegistrationService>(() => Substitute.For<IRuntimeRegistrationService>()), new EngineVersion(new PackageVersion(2, 0, 0)),
+			new Lazy<IPluginManager>(() => Substitute.For<IPluginManager>()));
 		await Assert.That(await service.UninstallAsync("graph-proof", force: true) is Error<string>).IsTrue();
 		await Assert.That((await apps.GetApplicationsAsync()).Count).IsEqualTo(2);
 		await Assert.That((await apps.GetApplicationAsync("east")).Expect<RegisteredApplication>().Config!.Value.GetProperty("rooms")[0].GetInt32()).IsEqualTo(10);

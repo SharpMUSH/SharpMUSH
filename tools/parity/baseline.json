@@ -33,14 +33,6 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "05-import/import.rooms#2",
-   "command": "@teleport me=[loc(*Alice)]"
-  },
-  {
-   "key": "05-import/import.rooms#4",
-   "command": "@teleport me=#0"
-  },
-  {
    "key": "05-import/import.things#2",
    "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
   },
@@ -63,10 +55,6 @@
   {
    "key": "10-player-commands/obj.give#1",
    "command": "look"
-  },
-  {
-   "key": "10-player-commands/obj.give#2",
-   "command": "get Widget"
   },
   {
    "key": "10-player-commands/obj.inventory#0",
@@ -127,10 +115,6 @@
   {
    "key": "20-admin-commands/admin.wizard#3",
    "command": "examine *Alice"
-  },
-  {
-   "key": "20-admin-commands/admin.wizard#4",
-   "command": "@teleport *Alice=here"
   },
   {
    "key": "25-requested-dbref/dbref.holes#0",

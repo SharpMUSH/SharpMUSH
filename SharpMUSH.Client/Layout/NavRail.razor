@@ -141,7 +141,7 @@
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
-        _build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+        _build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
         await LoadAppsAsync(user);
     }
 
@@ -204,11 +204,16 @@
         ServerInfo.Changed -= OnServerInfoChanged;
     }
 
-    /// <summary>A newer server answer (the guest roster or the game's name changed): the brand and the Play link follow it.</summary>
+    /// <summary>
+    /// A newer server answer (the guest roster, the game's name or its applications changed): the brand, the Play
+    /// link and the Build &amp; manage entries follow it.
+    /// </summary>
     private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
     {
         _gameName = await ServerInfo.GameNameAsync();
         _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        _build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
         StateHasChanged();
     });
 }
