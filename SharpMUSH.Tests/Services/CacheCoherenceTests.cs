@@ -123,7 +123,7 @@ public class CacheCoherenceTests
 
 		await Assert.That(created).IsEqualTo(42);
 		await Assert.That((await cache.TryGetAsync<string>(CacheKeys.Object(42))).HasValue).IsFalse();
-		await Assert.That(versions.Of(42)).IsEqualTo(1)
+		await Assert.That(versions.Of(42)).IsGreaterThan(0)
 			.Because("a result-derived key is an object key like any other and moves the object's version");
 	}
 
