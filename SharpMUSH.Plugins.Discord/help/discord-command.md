@@ -172,7 +172,7 @@ A game ban always takes the Linked role and every mapped role. With `@discord/ba
 - `description`: up to 1000 characters
 - `server`: the server's id, needed only when the bot is in more than one
 
-Publishing the same key again updates the event; once it has ended, it makes a new one. `/start` shows the event as happening now. `/end` ends an event that started and cancels one that has not. `@discord/event` alone lists what is published. Each command returns the key at once and says how it went when Discord answers.
+Publishing the same key again updates the event while it is still to come. Once it has started or ended, publishing ends it and makes a new one: a paused scene moved to another day is a new event. `/start` shows the event as happening now. `/end` ends an event that started and cancels one that has not. `@discord/event` alone lists what is published. Each command returns the key at once and says how it went when Discord answers.
 
 ::: seealso
 - [@feed]

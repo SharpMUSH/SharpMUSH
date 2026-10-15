@@ -1,0 +1,189 @@
+format: 1.7
+package: discord-scenes
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Scheduled scenes in the Discord server's Events tab: a scene with a time still to come is published as a Discord event, moved when it is rescheduled, shown as happening when it starts, and ended when it finishes or is cancelled."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [discord, scene, events, schedule]
+requires_server: ">=0.1"
+
+# The Scene plugin keeps the scenes and raises SCENE`STATUS and SCENE`CHANGE; the Discord plugin runs
+# @discord/event. Without both running the package does not install, and turning either off uninstalls it.
+plugins: [scene, discord]
+
+# The scene package gives scenes their schedule (+scene/schedule, /reschedule, /cancel); the discord package
+# holds the discord.admin permission @discord/event needs.
+depends:
+  - package: discord
+    version: ">=1.1 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/discord/
+      branch: main
+  - package: scene
+    version: ">=1.8 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  # Publishes the scenes. WIZARD because @discord/event needs discord.admin, which wizards hold, and because it
+  # reads members-only scenes to decide whether to publish them.
+  #
+  # Each scene is the Discord event scene-<id>. TRIG`SYNC looks at the scene as it is now and does what that
+  # calls for, so the order the events arrive in does not matter, and running it twice changes nothing.
+  #
+  # Trees: TRIG` the routine the events trigger, FUN`SCENE` reads a scene, FUN`EVENT` builds what Discord
+  # gets. DATA`CONFIG` the settings.
+  - ref: publisher
+    type: thing
+    name: Discord Scenes
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings.
+      DATA`CONFIG: |-
+        Scheduled scenes as Discord events.
+      DATA`CONFIG`PUBLISH: |-
+        1
+      DATA`CONFIG`PUBLISH`DESCRIPTION: |-
+        Publish scheduled scenes in the Discord server's Events tab.
+      DATA`CONFIG`PUBLISH`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLISH`DEFAULT: |-
+        1
+      DATA`CONFIG`PRIVATE: |-
+        0
+      DATA`CONFIG`PRIVATE`DESCRIPTION: |-
+        Publish members-only scenes too. Everyone in the Discord server sees their titles and times.
+      DATA`CONFIG`PRIVATE`TYPE: |-
+        boolean
+      DATA`CONFIG`PRIVATE`DEFAULT: |-
+        0
+      DATA`CONFIG`LENGTH: |-
+        10800
+      DATA`CONFIG`LENGTH`DESCRIPTION: |-
+        How long a scene's Discord event lasts from its start. Discord needs an end; a scene that runs longer is ended when it finishes.
+      DATA`CONFIG`LENGTH`TYPE: |-
+        duration
+      DATA`CONFIG`LENGTH`DEFAULT: |-
+        10800
+      DATA`CONFIG`LENGTH`MIN: |-
+        900
+      DATA`CONFIG`LENGTH`MAX: |-
+        86400
+
+      # ---- keeping a scene's Discord event in step ------------------------------------
+      # %0 a scene, %1 what changed: status, or the key SCENE`CHANGE named.
+      #
+      # - finished or cancelled: the event ends (status only, so a cancel that also clears the time ends it once).
+      # - active: the event shows as happening (status only; a running scene's event is not published again).
+      # - waiting with a time still to come, public or PRIVATE on: published, or updated.
+      # - waiting without one, or made members-only: the event is taken down. A scene just made has none to take.
+      TRIG`SYNC:
+        value: |-
+          @assert v(DATA`CONFIG`PUBLISH); think u(%!/FUN`SCENE`READ,%0); @switch/first 1=cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>)),{@discord/event/end scene-%0},cand(strmatch(%1,status),strmatch(%q<scene_status>,active)),{@discord/event/start scene-%0},%q<scene_listed>,{@discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)},cand(%q<scene_waiting>,match(status scheduledfor public,%1),comp(%q<scene_status>,new)),{@discord/event/end scene-%0}
+        flags: [cmdsyntax]
+      # %0 a scene. Sets scene_status, scene_at (its time in milliseconds, or empty), scene_waiting (not yet
+      # started, or paused) and scene_listed (waiting, with a time still to come, and public or PRIVATE on).
+      FUN`SCENE`READ:
+        value: |-
+          setqm(scene_status,scene(%0,status),
+          scene_at,scene(%0,scheduledfor),
+          scene_waiting,not(match(active finished cancelled,%q<scene_status>)),
+          scene_listed,cand(%q<scene_waiting>,isint(%q<scene_at>),gt(%q<scene_at>,mul(secs(),1000)),or(scene(%0,public),v(DATA`CONFIG`PRIVATE))))
+        flags: [funsyntax]
+
+      # %0 a scene, %1 a key: its text, or nothing when the scene has none (scene() reads an unset key as an error).
+      FUN`SCENE`TEXT:
+        value: |-
+          if(strmatch(setr(scene_text,scene(%0,%1)),#-1*),,%q<scene_text>)
+        flags: [funsyntax]
+
+      # ---- what Discord gets ----------------------------------------------------------------
+      # %0 a scene, with FUN`SCENE`READ's registers set: the event as @discord/event takes it. Its name is the
+      # scene's title, its description the scene's summary, and where it is its page on the game's website.
+      FUN`EVENT`JSON:
+        value: |-
+          json(object,name,json(string,firstof(scene(%0,title),Scene %0)),start,div(%q<scene_at>,1000),end,add(div(%q<scene_at>,1000),v(DATA`CONFIG`LENGTH)),location,json(string,u(%!/FUN`EVENT`LOCATION,%0)),description,json(string,u(%!/FUN`SCENE`TEXT,%0,summary)))
+        flags: [funsyntax]
+      # %0 a scene: its page on the game's website when mud_url is set, else the game's name and the scene's room.
+      FUN`EVENT`LOCATION:
+        value: |-
+          if(strlen(config(mud_url)),[u({{scene/logger}}/FUN`NO_TRAILING_SLASH,config(mud_url))]/scenes/%0,[mudname()]: [firstof(scene(%0,roomname),the game)])
+        flags: [funsyntax]
+
+  # The Scene plugin raises SCENE`STATUS when a scene is made or its status changes, and SCENE`CHANGE when one of
+  # its keys does (help event scene). The event handler runs these beside any other package's, and hands the work
+  # to the publisher. Only the keys a Discord event shows are passed on.
+  - ref: event
+    target: "{{$event_handler}}"
+    attributes:
+      SCENE`STATUS`DISCORDSCENES: |-
+        @trigger {{publisher}}/TRIG`SYNC=%<scene>,status
+      SCENE`CHANGE`DISCORDSCENES: |-
+        @assert match(scheduledfor title summary public room,%<key>); @trigger {{publisher}}/TRIG`SYNC=%<scene>,%<key>
+
+  - ref: help
+    type: thing
+    name: Discord Scenes Help
+    location: "{{publisher}}"
+    attributes:
+      HELP: |-
+        Scheduled scenes as Discord events.
+      SEE: |-
+        Cross-references. One leaf per topic.
+      SEE`DISCORD`SCENES: |-
+        scene schedule|discord channels
+      HELP`DISCORD`SCENES: |-
+        A scene scheduled with `+scene/schedule` shows in the Discord server's Events tab, where members can mark themselves interested. The game keeps the event in step:
+
+        - `+scene/reschedule` moves it, and `+scene/title` renames it.
+        - `+scene/start` shows it as happening now.
+        - `+scene/finish` ends it, and `+scene/cancel` cancels it.
+        - A scene paused with a new time is a new event at that time. One paused without a time is taken down until it has one.
+
+        The event's name is the scene's title, its description the scene's summary, and its place the scene's page on the game's website, or the game's name and the scene's room when the game has no website address \(`mud_url`\).
+
+        For example:
+
+        `+scene/schedule Harbour Night=+1d`
+
+        Output: the scene is scheduled as usual, and Harbour Night appears in the Discord server's Events tab a day from now.
+
+        Only scenes anyone may watch are published. A scene that is made members-only is taken down.
+
+        ## Settings
+
+        - `+config discord-scenes/publish`: `yes`, as shipped, publishes scheduled scenes. `no` stops; events already published stay until their scenes finish.
+        - `+config discord-scenes/private`: `no`, as shipped. `yes` publishes members-only scenes too, and everyone in the Discord server sees their titles and times.
+        - `+config discord-scenes/length`: how long an event lasts from its start, `3h` as shipped. Discord needs an end; a scene that runs longer is ended when it finishes.
+
+        The bot needs the Create Events permission in the server. `@discord/event` lists what the game has published \(`help @discord events`\).
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`DISCORD-SCENES: |-
+        {{help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`DISCORD-SCENES: |-
+        {{publisher}}

@@ -58,6 +58,7 @@ public static class SceneWrite
 
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(sceneService, sceneId);
 		var statusBefore = SceneStatusEvent.IsStatus(key!) ? await SceneStatusEvent.StatusOfAsync(sceneService, sceneId) : string.Empty;
+		var valueBefore = await SceneChangeEvent.ValueBeforeAsync(sceneService, sceneId, key!);
 		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
 		{
 			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
@@ -67,6 +68,7 @@ public static class SceneWrite
 		SceneActivity.AfterSet(parser, key!, statusBefore, scene);
 		await SceneRoomRefresh.AfterSetAsync(parser, key!, roomBefore, scene);
 		await SceneStatusEvent.AfterSetAsync(parser, key!, statusBefore, scene);
+		await SceneChangeEvent.AfterSetAsync(parser, key!, valueBefore, scene);
 
 		await notifyService.Notify(executor, SceneCommandHelper.Notice($"#{scene.Id} {key} set.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);

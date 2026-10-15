@@ -172,6 +172,11 @@ packages:
     package: discord-channels
     version: 1.0.0
     description: Joins a game channel to a linked Discord channel both ways (+discord/channel)
+  - path: discord-scenes/
+    name: Discord Scenes
+    package: discord-scenes
+    version: 1.0.0
+    description: Scheduled scenes in the Discord server's Events tab, kept in step as they are moved, started, finished or cancelled (requires the Scene and Discord plugins)
   - path: notifications/
     name: Notifications
     package: notifications

@@ -134,7 +134,7 @@ public class GameFeatureServiceTests
 		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id).Except(features.PackagesOver("discord")))
 			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline"]);
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "discord-scenes"]);
 	}
 
 	/// <summary>

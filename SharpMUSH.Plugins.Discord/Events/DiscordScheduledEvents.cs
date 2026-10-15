@@ -22,7 +22,8 @@ public sealed class DiscordScheduledEvents(IDiscordEventStore store, TimeProvide
 
 	/// <summary>
 	/// Creates the event, or updates the one already published for <paramref name="key"/> while it is still to come. One
-	/// that has started is updated but keeps its start; one that ended or was cancelled is replaced by a new one.
+	/// that has started is ended and replaced by a new one, since the start given is still to come: a scene paused and
+	/// moved to another day. One that ended or was cancelled is replaced too.
 	/// </summary>
 	public async Task<Result<string>> PublishAsync(string key, DiscordEventSpec spec, CancellationToken cancellationToken)
 		=> Guild(spec.GuildId) switch
@@ -47,27 +48,24 @@ public sealed class DiscordScheduledEvents(IDiscordEventStore store, TimeProvide
 				: null;
 			switch (existing)
 			{
-				case { Status: GuildScheduledEventStatus.Scheduled or GuildScheduledEventStatus.Active } current:
-					var started = current.Status == GuildScheduledEventStatus.Active;
+				case { Status: GuildScheduledEventStatus.Scheduled } current:
 					await current.ModifyAsync(properties =>
 					{
 						properties.Name = spec.Name;
 						properties.Description = spec.Description ?? string.Empty;
 						properties.Location = spec.Location;
+						properties.StartTime = spec.Start;
 						properties.EndTime = spec.End;
-						if (!started)
-						{
-							properties.StartTime = spec.Start;
-						}
 					}, options);
 					await SaveAsync(key, guild.Id, current.Id, spec, cancellationToken);
-					return started
-						? $"Updated the Discord event for {key} in {guild.Name}. It has started, so its start stays."
-						: $"Updated the Discord event for {key} in {guild.Name}.";
+					return $"Updated the Discord event for {key} in {guild.Name}.";
+				case { Status: GuildScheduledEventStatus.Active } current:
+					// Discord never puts a started event back on the schedule, so the move is a new event.
+					await current.EndAsync(options);
+					await CreateAsync(guild, key, spec, options, cancellationToken);
+					return $"The Discord event for {key} had started, so it was ended and {key} published again in {guild.Name}.";
 				default:
-					var created = await guild.CreateEventAsync(spec.Name, spec.Start, GuildScheduledEventType.External,
-						GuildScheduledEventPrivacyLevel.Private, spec.Description, spec.End, location: spec.Location, options: options);
-					await SaveAsync(key, guild.Id, created.Id, spec, cancellationToken);
+					await CreateAsync(guild, key, spec, options, cancellationToken);
 					return $"Published {key} as a Discord event in {guild.Name}.";
 			}
 		}
@@ -75,6 +73,14 @@ public sealed class DiscordScheduledEvents(IDiscordEventStore store, TimeProvide
 		{
 			_changing.Release();
 		}
+	}
+
+	private async Task CreateAsync(SocketGuild guild, string key, DiscordEventSpec spec, RequestOptions options,
+		CancellationToken cancellationToken)
+	{
+		var created = await guild.CreateEventAsync(spec.Name, spec.Start, GuildScheduledEventType.External,
+			GuildScheduledEventPrivacyLevel.Private, spec.Description, spec.End, location: spec.Location, options: options);
+		await SaveAsync(key, guild.Id, created.Id, spec, cancellationToken);
 	}
 
 	/// <summary>Marks the event as started: Discord shows it as happening now.</summary>
