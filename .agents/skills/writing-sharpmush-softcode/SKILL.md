@@ -261,7 +261,7 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 
 ## Command palette and contexts
 
-The portal's palette (Ctrl+K) offers a command when its object holds a `` PALETTE`<NAME> `` attribute: a JSON object, at least `label` and `line`, usually `attr` naming the `$`-command. The value is data; only `lock` is evaluated. A `<word>` in `line` is a slot the player fills, or a context value of that name fills. Entries are one level deep: `` PALETTE`KEY_NEXT ``, never `` PALETTE`KEY`NEXT ``. `help palette keys` lists every key.
+The portal's palette (Ctrl+K) offers a command when its object holds a `` PALETTE`<NAME> `` attribute: a JSON object, at least `label` and `line`. The value is data; only `lock` is evaluated. A `<word>` in `line` is a slot the player fills, or a context value of that name fills. Entries are one level deep: `` PALETTE`KEY_NEXT ``, never `` PALETTE`KEY`NEXT ``. `help palette keys` lists every key.
 
 What comes first is the player's context stack. A typed `$`-command pushes its package (or its object) on its own; push anything else with `@context/push <player>=<name>[,<values>[,<lifetime>[,<info>]]]` and take it off with `@context/drop`. Values are a JSON object built with `json()`, never `{…}` (the parser removes braces), and text needs `json(string,…)`: `` @context/push %#=combat,[json(object,target,json(string,%0))],10m,You are fighting %0. ``. An entry with `"when":["combat"]` rises while `combat` is on the stack; add `"urgent":true` for "do this now". `context(<player>[,<count>[,<osep>[,<obj>/<attr>]]])` returns the same list to softcode.
 

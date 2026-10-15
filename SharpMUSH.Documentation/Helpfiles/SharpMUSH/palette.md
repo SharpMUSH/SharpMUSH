@@ -38,9 +38,9 @@ The portal's command palette (Ctrl+K) runs game commands as well as going to pag
 
 ```sharp
 > &CMD`JOIN Scene Board=$+join *:@pemit %#=You join scene %0.
-> &PALETTE`JOIN Scene Board={"label":"Join the scene here","line":"+join <scene>","attr":"CMD`JOIN","when":["scene_here"],"info":"Join the scene in this room."}
+> &PALETTE`JOIN Scene Board={"label":"Join the scene here","line":"+join <scene>","when":["scene_here"],"info":"Join the scene in this room."}
 > &CMD`SCENES Scene Board=$+scenes:@pemit %#=Scene 12 is running here.
-> &PALETTE`SCENES Scene Board={"label":"Scenes here","line":"+scenes","attr":"CMD`SCENES"}
+> &PALETTE`SCENES Scene Board={"label":"Scenes here","line":"+scenes"}
 ```
 
 With nothing typed, the palette shows, in order: lines for the `@input` session the player is in, urgent commands, the player's pins, what this page and their context put first, commands marked `always`, then the portal's pages. Typing searches all of them, and the built-in commands the player may use. Choosing a row runs its line as if the player had typed it, so every check the command makes still applies.
@@ -64,7 +64,6 @@ The value is data and is never evaluated, except the `lock`. An object offers at
 |---|---|
 | `label` | Required. What the row says, plain text. |
 | `line` | Required. The command line. Each `<slot>` is asked for before the line runs, unless a context filled it; `\<` is a plain `<`. |
-| `attr` | The `$`-command attribute the line runs. The entry is offered only while that is a `$`-command on the object. |
 | `action` | `run` (the default) or `insert`, which puts the line into the Play composer for the player to finish. |
 | `lock` | A lock, checked with the player as enactor. The entry is offered only when it passes. |
 | `always` | `true` for a command useful anywhere, such as `+who`. It is listed under Always. |
@@ -78,7 +77,7 @@ The value is data and is never evaluated, except the `lock`. An object offers at
 | `help` | A help topic. Typing offers a "Help on" row for it. |
 | `order` | A number that sorts the object's entries; lower first. |
 
-A value that is not one of these is ignored. An entry that is not valid says why: `not a JSON object`, `no label`, `no line`, `action is neither run nor insert`, `<attr> is not a $-command`.
+A value that is not one of these is ignored. An entry that is not valid says why: `not a JSON object`, `no label`, `no line`, `action is neither run nor insert`.
 
 ## Which entries a player is offered
 
@@ -86,8 +85,8 @@ An entry is offered when all of these hold:
 
 1. Its object is somewhere a typed `$`-command would look: the player, what they carry, the room and its contents, the room's zone, the player's zone, or the master room. The player must be able to see it.
 2. The object hears commands (not NO_COMMAND or HALT), and its `@lock/command` and `@lock/use` pass for the player.
-3. An entry on a player is offered only to that player. A player's own entries need not run a `$`-command, so `&PALETTE`WAVE me={"label":"Wave","line":"pose waves."}` is a personal shortcut.
-4. With `attr`, that attribute is a `$`-command on the object. Without it, a line whose first word is a built-in command needs the player to be allowed that command.
+3. An entry on a player is offered only to that player, and rule 2 does not apply to it, so `&PALETTE`WAVE me={"label":"Wave","line":"pose waves."}` is a personal shortcut.
+4. A line whose first word is a built-in command needs the player to be allowed that command.
 5. Its `lock` passes.
 
 Things and players start NO_COMMAND; `@set <object>=!no_command` lets a thing's entries be offered.

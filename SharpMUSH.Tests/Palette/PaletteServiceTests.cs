@@ -76,7 +76,7 @@ public class PaletteServiceTests
 		try
 		{
 			await SetAsync(scene.Thing, "CMD`PTEST", $"${command}:@pemit %#=ran {command}");
-			await SetAsync(scene.Thing, "PALETTE`RUN", $$"""{"label":"Run the test","line":"{{command}}","attr":"CMD`PTEST"}""");
+			await SetAsync(scene.Thing, "PALETTE`RUN", $$"""{"label":"Run the test","line":"{{command}}"}""");
 
 			await TypeAsync(scene, command);
 
@@ -94,18 +94,17 @@ public class PaletteServiceTests
 	}
 
 	[Test]
-	public async ValueTask AnEntry_IsOfferedOnlyWhenItsLockPassesAndItsCommandExists()
+	public async ValueTask AnEntry_IsOfferedOnlyWhenItsLockPasses()
 	{
 		var scene = await BuildAsync("PalLocks");
 		try
 		{
 			await SetAsync(scene.Thing, "CMD`OPEN", "$+palopen:think open");
-			await SetAsync(scene.Thing, "PALETTE`OPEN", """{"label":"Open","line":"+palopen","attr":"CMD`OPEN"}""");
-			await SetAsync(scene.Thing, "PALETTE`SHUT", """{"label":"Shut","line":"+palopen","attr":"CMD`OPEN","lock":"#FALSE"}""");
-			await SetAsync(scene.Thing, "PALETTE`GONE", """{"label":"Gone","line":"+palgone","attr":"CMD`GONE"}""");
+			await SetAsync(scene.Thing, "PALETTE`OPEN", """{"label":"Open","line":"+palopen"}""");
+			await SetAsync(scene.Thing, "PALETTE`SHUT", """{"label":"Shut","line":"+palopen","lock":"#FALSE"}""");
 			await SetAsync(scene.Thing, "PALETTE`BROKEN", "not json");
 			// Entries are one level deep; PALETTE`DEEP`ER is not one, and the empty PALETTE`DEEP it makes is no invalid entry.
-			await SetAsync(scene.Thing, "PALETTE`DEEP`ER", """{"label":"Deeper","line":"+palopen","attr":"CMD`OPEN"}""");
+			await SetAsync(scene.Thing, "PALETTE`DEEP`ER", """{"label":"Deeper","line":"+palopen"}""");
 
 			var palette = await Palette.ResolveAsync(scene.Player);
 			var offered = palette.Entries.Where(entry => entry.Id.StartsWith(scene.Thing.Object().DBRef + "/")).Select(entry => entry.Label).ToArray();
@@ -121,7 +120,6 @@ public class PaletteServiceTests
 			}
 
 			var examined = await Palette.ResolveAsync(scene.Player);
-			await Assert.That(examined.Invalid).Contains($"{scene.Thing.Object().DBRef}/GONE: CMD`GONE is not a $-command");
 			await Assert.That(examined.Invalid).Contains($"{scene.Thing.Object().DBRef}/BROKEN: not a JSON object");
 			await Assert.That(examined.Invalid.Where(line => line.StartsWith($"{scene.Thing.Object().DBRef}/DEEP"))).IsEmpty();
 		}
