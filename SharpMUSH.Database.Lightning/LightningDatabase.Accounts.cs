@@ -162,28 +162,34 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
-	public async ValueTask<SharpAccount?> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
+	public async ValueTask<CharacterLinkWrite> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
+	{
+		var key = ParseAccountId(accountId);
+		return await Store.WriteAsync<CharacterLinkWrite>(tx =>
+		{
+			if (tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var heldBy))
+			{
+				var holder = Keys.ReadStr(heldBy);
+				if (holder == key) return new AlreadyLinked();
+				if (ReadAccountByKey(tx, holder) is { } other) return other;
+			}
+
+			tx.Put(Tables.AccountChar.Forward, Keys.Str(key), Keys.Dbref(characterRef.Number));
+			tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
+			return new Linked();
+		}, cancellationToken);
+	}
+
+	public async ValueTask<bool> UnlinkCharacterFromAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
 		return await Store.WriteAsync(tx =>
 		{
-			if (tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var heldBy)
-					&& Keys.ReadStr(heldBy) is var holder && holder != key)
-				return ReadAccountByKey(tx, holder);
-
-			tx.Put(Tables.AccountChar.Forward, Keys.Str(key), Keys.Dbref(characterRef.Number));
-			tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
-			return null;
-		}, cancellationToken);
-	}
-
-	public async ValueTask UnlinkCharacterFromAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
-	{
-		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
-		{
+			var held = tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var heldBy)
+				&& Keys.ReadStr(heldBy) == key;
 			tx.Delete(Tables.AccountChar.Forward, Keys.Str(key), Keys.Dbref(characterRef.Number));
 			tx.Delete(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
+			return held;
 		}, cancellationToken);
 	}
 

@@ -1323,13 +1323,22 @@ public partial class Commands
 		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
 		// is run will be copied and made available in the triggered attribute").
 		// /inline without /localize (PennMUSH @trigger2 help) lets the triggered attribute override the caller's
-		// Q-registers, so it can hand values back the way an @include does: it works on the caller's own set.
+		// Q-registers, so it can hand values back the way an @include does: it works on the caller's own set,
+		// which /clearregs empties first (RegisterScope's bare QUEUE_CLEAR_QREG case).
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
 		parser.CurrentState.Registers.TryPeek(out var currentRegs);
-		var sharesRegisters = switches.Contains("INLINE") && !switches.Contains("LOCALIZE");
-		registerStack.Push(switches.Contains("CLEARREGS") || currentRegs is null
-			? new Dictionary<string, MString>()
-			: sharesRegisters ? currentRegs : new Dictionary<string, MString>(currentRegs));
+		var clearsRegisters = switches.Contains("CLEARREGS");
+		if (switches.Contains("INLINE") && !switches.Contains("LOCALIZE") && currentRegs is not null)
+		{
+			if (clearsRegisters) currentRegs.Clear();
+			registerStack.Push(currentRegs);
+		}
+		else
+		{
+			registerStack.Push(clearsRegisters || currentRegs is null
+				? new Dictionary<string, MString>()
+				: new Dictionary<string, MString>(currentRegs));
+		}
 
 		if (switches.Contains("MATCH"))
 		{
