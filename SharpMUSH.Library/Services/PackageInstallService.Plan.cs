@@ -31,7 +31,8 @@ public partial class PackageInstallService
 			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken),
 			Settings = await PlanSettingsAsync(inputs, changeset),
 			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),
-				cancellationToken)
+				cancellationToken),
+			Compatibility = PackageServerCompatibility.Check(manifest, engine.Current)
 		};
 	}
 
@@ -104,7 +105,7 @@ public partial class PackageInstallService
 
 		return new PackagePlanInputs(
 			manifest, installed, installedObjects, baselines, allInstalled, otherManaged, live,
-			wellKnown, configureAnswers, crossPackageObjids, structureBaselines);
+			wellKnown, configureAnswers, crossPackageObjids, structureBaselines, RunningPlugins(manifest));
 	}
 
 	/// <summary>

@@ -1,6 +1,6 @@
 format: 1.1
 package: chargen-app
-version: 1.0.0
+version: 1.0.1
 kind: application
 authors: [SharpMUSH]
 description: "Registers the character-application form (chargen) as a portal page at /apps/chargen."
@@ -14,7 +14,7 @@ requires_server: ">=0.1"
 # registers the portal entry point that renders them.
 depends:
   - package: chargen
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: chargen/

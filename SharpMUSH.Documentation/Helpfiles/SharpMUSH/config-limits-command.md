@@ -68,6 +68,9 @@ Limits and other constants.
 
 - `max_aliases=<number>`: The maximum number of aliases a player can have.
 - `max_gallery_images=<number>`: The most images one character's profile gallery may hold. An upload past it is refused.
+- `push_idle_seconds=<number>`: Seconds without input after which `@push` treats a player as away, unless a portal tab of theirs is in view (see [@push]).
+- `push_limit=<number>`: The most push notifications `@push` sends one player in a minute.
+- `push_devices=<number>`: The most browsers one account may turn push notifications on in.
 - `keepalive_timeout=<time>`: How often should an 'Are you still there?' query be sent to clients, to stop players' routers booting idle connections?
 - `max_parents=<number>`: The maximum number of levels of parenting allowed.
 - `call_limit=<number>`: The maximum number of times the parser can be called recursively for any one expression.

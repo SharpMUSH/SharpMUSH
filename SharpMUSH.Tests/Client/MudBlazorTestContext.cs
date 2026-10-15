@@ -52,20 +52,23 @@ public abstract class MudBlazorTestContext : BunitContext
 		Services.AddSingleton<TerminalResumeStore>();
 		Services.AddSingleton<CharacterSwitchService>();
 		// NavMenu (and other chrome) inject ServerInfoService to gate the guest "Play" affordance on
-		// the server's Net.Guests flag. The stub factory returns "[]" for its api/server-info fetch,
-		// which the service treats as an unreadable response and degrades to the config default (true).
-		Services.AddSingleton(new ServerInfoService(StubFactoryReturningEmptyList()));
+		// the server's Net.Guests flag and the Scenes links on the Scene System. The stub answers a new
+		// game's server-info: guests on, the Scene System installed.
+		Services.AddSingleton(new ServerInfoService(StubFactoryReturning(
+			"""{"guestsEnabled":true,"mudName":"SharpMUSH","features":["scenes"]}""")));
 		// The account block draws the acting character's avatar, which looks its picture up in the
 		// character directory; the empty list leaves every avatar as initials.
 		Services.AddSingleton<ICharacterPictures>(new CharacterDirectoryService(
 			StubFactoryReturningEmptyList(), NullLogger<CharacterDirectoryService>.Instance));
 	}
 
-	private IHttpClientFactory StubFactoryReturningEmptyList()
+	private IHttpClientFactory StubFactoryReturningEmptyList() => StubFactoryReturning("[]");
+
+	private IHttpClientFactory StubFactoryReturning(string json)
 	{
 		// One client for every CreateClient() call rather than a fresh one each time: the stubs are
 		// stateless, and a client made inside the lambda has no owner to dispose it.
-		var client = TrackClient(new HttpClient(new EmptyJsonArrayHandler())
+		var client = TrackClient(new HttpClient(new JsonHandler(json))
 		{
 			BaseAddress = new Uri("http://localhost/")
 		});
@@ -121,12 +124,12 @@ public abstract class MudBlazorTestContext : BunitContext
 		base.Dispose(disposing);
 	}
 
-	private sealed class EmptyJsonArrayHandler : HttpMessageHandler
+	private sealed class JsonHandler(string json) : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 			=> Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = new StringContent("[]", Encoding.UTF8, "application/json")
+				Content = new StringContent(json, Encoding.UTF8, "application/json")
 			});
 	}
 }

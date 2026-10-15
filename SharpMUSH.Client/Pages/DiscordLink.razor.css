@@ -58,3 +58,10 @@
     opacity: 0.6;
     cursor: default;
 }
+
+/* a narrow page gives the confirm button the card's whole width, an easier tap */
+@container page (max-width: 48rem) {
+    .discord-link-confirm {
+        align-self: stretch;
+    }
+}

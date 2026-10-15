@@ -55,6 +55,7 @@ public static class AuditTargetKinds
 	public const string Server = "server";
 	public const string Secret = "secret";
 	public const string Feed = "feed";
+	public const string Package = "package";
 }
 
 /// <summary>
@@ -153,6 +154,7 @@ public static class AuditActions
 	public const string PluginDisable = "plugin.disable";
 	public const string PluginUpload = "plugin.upload";
 	public const string PluginInstall = "plugin.install";
+	public const string PackagePastMaximum = "package.past-maximum";
 	public const string ServerRestart = "server.restart";
 	public const string SecretSet = "secret.set";
 	public const string SecretClear = "secret.clear";
@@ -169,7 +171,7 @@ public static class AuditActions
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
-		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart, SecretSet, SecretClear, SecretHosts,
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
 		FeedLineDelete
 	];
 }

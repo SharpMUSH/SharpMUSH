@@ -9,15 +9,12 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// An optional application: the bundled package that switches it on, and the plugin it runs on, if any.
+/// An optional application: the bundled package that switches it on. The plugins it runs on are the package's
+/// <c>plugins:</c>; without them the application is not available on this server.
 /// </summary>
 /// <param name="Id">A <see cref="GameFeatures"/> id.</param>
 /// <param name="PackageId">The bundled package whose presence is the application being on.</param>
-/// <param name="RequiredPlugin">
-/// The plugin the package's commands and the portal's pages call into; without it the application is not
-/// available on this server, whatever the package says.
-/// </param>
-public sealed record OptionalApplication(string Id, string PackageId, string? RequiredPlugin = null);
+public sealed record OptionalApplication(string Id, string PackageId);
 
 /// <summary>Persisted first-run wizard state (expanded server data).</summary>
 public sealed class SetupWizardState
@@ -63,16 +60,16 @@ public class GameFeatureService(
 	/// <summary>The optional applications, in the order the wizard offers them.</summary>
 	public static readonly IReadOnlyList<OptionalApplication> All =
 	[
-		new(GameFeatures.Scenes, "scene", RequiredPlugin: "scene"),
+		new(GameFeatures.Scenes, "scene"),
 		new(GameFeatures.WikiReader, "wiki-reader"),
-		new(GameFeatures.Discord, "discord", RequiredPlugin: "discord"),
+		new(GameFeatures.Discord, "discord"),
 	];
 
 	/// <inheritdoc />
 	public async Task<IReadOnlyList<string>> EnabledAsync()
 	{
 		return await All
-			.Where(app => PluginLoaded(app.RequiredPlugin))
+			.Where(app => PluginsLoaded(app.PackageId))
 			.ToAsyncEnumerable()
 			.Where(async (app, _) => await registry.GetInstalledPackageAsync(app.PackageId) is InstalledPackageRecord)
 			.Select(app => app.Id)
@@ -86,7 +83,7 @@ public class GameFeatureService(
 		var states = new List<BundledPackageState>(BundledPackages.All.Count);
 		foreach (var package in BundledPackages.All)
 		{
-			var (description, dependsOn) = Catalogue.GetValueOrDefault(package.PackageId);
+			var (description, dependsOn, _) = Catalogue.GetValueOrDefault(package.PackageId);
 			states.Add(new BundledPackageState(
 				package.PackageId,
 				description ?? string.Empty,
@@ -143,9 +140,9 @@ public class GameFeatureService(
 			var package = BundledPackages.All.First(p => p.PackageId == id);
 			if (!IsAvailable(package))
 			{
-				failures.Add(package.Requires is BundledPackageHandler.None
-					? $"{id} needs a plugin this server has not loaded."
-					: $"{id} needs an {HandlerKind(package.Requires)} handler; set one first.");
+				failures.Add(PluginsLoaded(id)
+					? $"{id} needs an {HandlerKind(package.Requires)} handler; set one first."
+					: $"{id} needs the {string.Join(", ", Catalogue[id].Plugins ?? [])} plugin, which this server has not loaded.");
 				continue;
 			}
 
@@ -219,24 +216,31 @@ public class GameFeatureService(
 			_ => true
 		};
 
-		return handlerSet
-			&& PluginLoaded(All.FirstOrDefault(a => a.PackageId == package.PackageId)?.RequiredPlugin);
+		return handlerSet && PluginsLoaded(package.PackageId);
 	}
 
-	private bool PluginLoaded(string? plugin)
-		=> plugin is null || plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase));
+	/// <summary>The bundled packages that name plugin <paramref name="pluginId"/> in <c>plugins:</c>.</summary>
+	public IReadOnlyList<string> PackagesOver(string pluginId)
+		=> [.. Catalogue.Where(entry => entry.Value.Plugins?.Contains(pluginId, StringComparer.OrdinalIgnoreCase) ?? false)
+			.Select(entry => entry.Key)];
 
-	/// <summary>Each bundled package's description and bundled dependencies, read from its embedded manifest once.</summary>
-	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn)> Catalogue
+	/// <summary>Whether every plugin bundled package <paramref name="packageId"/> names in <c>plugins:</c> is loaded.</summary>
+	private bool PluginsLoaded(string packageId)
+		=> Catalogue.GetValueOrDefault(packageId).Plugins is not { } required
+			|| required.All(plugin => plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)));
+
+	/// <summary>Each bundled package's description, bundled dependencies and plugins, read from its embedded manifest once.</summary>
+	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins)> Catalogue
 		=> _catalogue ??= BundledPackages.All.ToDictionary(
 			p => p.PackageId,
 			p => manifests.ParseManifest(BundledPackages.ManifestYaml(p.PackageId)) switch
 			{
 				ParsedPackageManifest parsed => ((string?)parsed.Manifest.Description,
 					(IReadOnlyList<string>?)parsed.Manifest.Dependencies.Select(d => d.PackageId)
-						.Where(BundledPackages.Contains).ToList()),
-				_ => (null, null)
+						.Where(BundledPackages.Contains).ToList(),
+					(IReadOnlyList<string>?)parsed.Manifest.RequiredPlugins),
+				_ => (null, null, null)
 			});
 
-	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn)>? _catalogue;
+	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins)>? _catalogue;
 }

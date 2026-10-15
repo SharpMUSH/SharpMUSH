@@ -359,6 +359,45 @@ You say, "2"
 - [SIGN()]
 :::
 
+# account()
+`account(<player>[, <field>])`
+
+  Returns the account `<player>` is linked to, or nothing when it is on no account. `<field>` is `id` (the default), the account's id, which never changes and is what to store or compare; or `name`, the account's username.
+
+  Asking for the id needs the `players.view` permission, unless you are `<player>` or another character on the same account. The name is half of a login, so it always needs `players.view`. Otherwise it returns #-1 PERMISSION DENIED.
+
+  Example:
+```sharp
+think account(*Ariel, name)
+ariel-plays
+think strmatch(account(*Ariel), account(*Brand))
+1
+```
+
+
+::: seealso
+- [ACCOUNTCHARS()]
+- [accounts]
+- [@account]
+:::
+# accountchars()
+`accountchars(<player>)`
+
+  Returns the objids of every character on the same account as `<player>`, lowest dbref first, `<player>` included. A character on no account returns only itself.
+
+  It needs the `players.view` permission, unless you are `<player>` or another character on the same account, so a player can list their own characters.
+
+  Example:
+```sharp
+think iter(accountchars(%#), name(%i0))
+Ariel Brand
+```
+
+
+::: seealso
+- [ACCOUNT()]
+- [accounts]
+:::
 # accname()
 `accname(<object>)`
 
@@ -2897,7 +2936,7 @@ You say, "foo   "
 :::
 # list()
 `list(<option>[, <type>])`<br>
-`list(<list>, <action>[, <delimiter>])`
+`list(<list>, <eval>[, <delimiter>][, <header>][, <target>])`
 
   This is the function-equivilent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
 
@@ -2914,7 +2953,17 @@ You say, "foo   "
 
   "commands"/"functions" return both built-in and local commands/functions by default. You can specify a `<type>` of either "builtin", "local" or "all" to limit this if you wish.
 
-  With the `mux_list` @config option on, list() is TinyMUX's instead, the second form: `<action>` is evaluated for each element of `<list>`, as by iter(), and each result is told to you rather than returned. list() itself returns nothing. See [compatibility config].
+  With the `rhost_list` @config option on, list() is the second form instead, which comes from RhostMUSH; its first three arguments are TinyMUX's list(). `<eval>` is evaluated for each element of `<list>`, as by iter(), and each result is told to you on a line of its own rather than returned. list() itself returns nothing. `<delimiter>` separates the elements and is a space when left out. A `<header>` that is not empty is told once, before the first result. A `<target>` you control hears the header and the results instead of you; a target you do not control, or one that is not found, is ignored. An empty list tells nothing, not even the header. See [compatibility config].
+
+  Examples, with `rhost_list` on:
+
+    > think list(red blue,Color #@: ##)<br>
+    Color 1: red<br>
+    Color 2: blue<br>
+    > think list(a|b,[strlen(##)],|,Lengths:)<br>
+    Lengths:<br>
+    1<br>
+    1
 
 
 ::: seealso

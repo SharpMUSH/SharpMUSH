@@ -7,9 +7,10 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// TinyMUX's forms of functions PennMUSH shares, and the four <c>mux_</c> options for the ones that
+/// TinyMUX's forms of functions PennMUSH shares, and the three <c>mux_</c> options for the ones that
 /// cannot be told apart. Every TinyMUX expectation is the answer of TinyMUX 2.14.0.11 (5f3a3f1) to the
-/// same line; the PennMUSH ones are PennMUSH 1.8.8's.
+/// same line; the PennMUSH ones are PennMUSH 1.8.8's. TinyMUX's list() is reached through <c>rhost_list</c>,
+/// whose first three arguments are TinyMUX's (<see cref="Mux.List"/>).
 /// </summary>
 public class MuxCompatibilityTests
 {
@@ -63,7 +64,7 @@ public class MuxCompatibilityTests
 		=> await Assert.That(await Evaluate(options, expression)).IsEqualTo(expected);
 
 	[Test]
-	public async Task MuxListTellsTheEnactorEachResult()
+	public async Task TinyMuxListTellsTheEnactorEachResult()
 	{
 		var marker = TestIsolationHelpers.GenerateUniqueName("MuxList");
 		var god = Factory.ExecutorDBRef;
@@ -144,7 +145,7 @@ public class MuxCompatibilityTests
 				MuxLogic = mux.HasFlag(Mux.Logic),
 				MuxJustify = mux.HasFlag(Mux.Justify),
 				MuxCollation = mux.HasFlag(Mux.Collation),
-				MuxList = mux.HasFlag(Mux.List)
+				RhostList = mux.HasFlag(Mux.List)
 			}
 		});
 		var original = (MUSHCodeParser)Factory.FunctionParser;

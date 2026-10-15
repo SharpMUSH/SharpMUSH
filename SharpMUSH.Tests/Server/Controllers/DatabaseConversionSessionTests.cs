@@ -35,10 +35,10 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(Task.FromException<ConversionResult>(new FormatException("bad maildb")));
 
-		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, database, mail, chat,
+		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, new DatabaseImportFiles(database, mail, chat),
 			NullLogger.Instance, CancellationToken.None);
 		await WaitForDeletionAsync(database, mail, chat);
 
@@ -52,12 +52,12 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(call => Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>())
 				.ContinueWith<ConversionResult>(_ => throw new OperationCanceledException(), TaskScheduler.Default));
 
 		var sessionId = Guid.NewGuid().ToString();
-		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+		DatabaseConversionSession.StartConversion(sessionId, converter, new DatabaseImportFiles(database, mail, chat), NullLogger.Instance,
 			CancellationToken.None);
 		await Assert.That(File.Exists(mail)).IsTrue();
 
@@ -75,11 +75,11 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(Task.FromException<ConversionResult>(new FormatException("bad maildb")));
 		var restored = new TaskCompletionSource();
 
-		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, database, mail, chat,
+		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, new DatabaseImportFiles(database, mail, chat),
 			NullLogger.Instance, CancellationToken.None, () =>
 			{
 				restored.TrySetResult();
@@ -99,11 +99,11 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(Task.FromResult(new ConversionResult { Errors = ["Fatal error: cancelled"], Aborted = true }));
 		var restored = new TaskCompletionSource();
 
-		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, database, mail, chat,
+		DatabaseConversionSession.StartConversion(Guid.NewGuid().ToString(), converter, new DatabaseImportFiles(database, mail, chat),
 			NullLogger.Instance, CancellationToken.None, () =>
 			{
 				restored.TrySetResult();
@@ -120,12 +120,12 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(Task.FromResult(new ConversionResult { Errors = ["#12: number already taken"] }));
 		var restores = 0;
 
 		var sessionId = Guid.NewGuid().ToString();
-		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+		DatabaseConversionSession.StartConversion(sessionId, converter, new DatabaseImportFiles(database, mail, chat), NullLogger.Instance,
 			CancellationToken.None, () =>
 			{
 				Interlocked.Increment(ref restores);
@@ -149,12 +149,12 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(Task.FromResult(new ConversionResult()));
 		var restores = 0;
 
 		var sessionId = Guid.NewGuid().ToString();
-		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+		DatabaseConversionSession.StartConversion(sessionId, converter, new DatabaseImportFiles(database, mail, chat), NullLogger.Instance,
 			CancellationToken.None, () =>
 			{
 				Interlocked.Increment(ref restores);
@@ -181,12 +181,12 @@ public class DatabaseConversionSessionTests
 	{
 		var (database, mail, chat) = TempFiles();
 		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
-		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+		converter.ConvertDatabaseAsync(Arg.Is<DatabaseImportFiles>(f => f.Database == database && f.Mail == mail && f.Chat == chat), Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
 			.Returns(call => Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>())
 				.ContinueWith<ConversionResult>(_ => throw new OperationCanceledException(), TaskScheduler.Default));
 
 		var sessionId = Guid.NewGuid().ToString();
-		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+		DatabaseConversionSession.StartConversion(sessionId, converter, new DatabaseImportFiles(database, mail, chat), NullLogger.Instance,
 			CancellationToken.None);
 
 		try
@@ -204,7 +204,7 @@ public class DatabaseConversionSessionTests
 		}
 	}
 
-	/// <summary>The request limit is the whole form, so it has to hold a database, a maildb and a chatdb all at the file limit.</summary>
+	/// <summary>The request limit is the whole form, so it has to hold the database, mail, chat and mail folder files at the file limit, and the mush.cnf.</summary>
 	[Test]
 	public async Task The_upload_limit_fits_every_file_at_its_limit()
 	{
@@ -214,6 +214,6 @@ public class DatabaseConversionSessionTests
 		var limit = request.MaxRequestBodySize!.Value;
 
 		await Assert.That(form.MultipartBodyLengthLimit).IsEqualTo(100L * 1024 * 1024);
-		await Assert.That(limit).IsGreaterThan(3 * form.MultipartBodyLengthLimit);
+		await Assert.That(limit).IsGreaterThan(4 * form.MultipartBodyLengthLimit + 1024 * 1024);
 	}
 }

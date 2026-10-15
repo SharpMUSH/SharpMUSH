@@ -279,6 +279,12 @@ public partial class PackageInstallService
 			return new Error<string>($"Revision {revision} has no usable snapshot.");
 		}
 
+		if ((snapshot.Plugins ?? []).FirstOrDefault(id => plugins.Value.Registration(id) is null) is string absent)
+		{
+			return new Error<string>(
+				$"Cannot roll back '{packageId}': revision {revision} needs the {absent} plugin, which is not running.");
+		}
+
 		var managedAttributes = await registry.GetManagedAttributesAsync(packageId);
 		var sharedRefs = new HashSet<(string Objid, string Attribute)>();
 		foreach (var objid in snapshot.Attributes.Select(a => a.Objid)
@@ -470,6 +476,8 @@ public partial class PackageInstallService
 		await writes.UpsertInstalledPackageAsync(installed with
 		{
 			Version = snapshot.Version,
+			PastMaximum = snapshot.PastMaximum,
+			Plugins = snapshot.Plugins,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});

@@ -118,14 +118,33 @@ public class AccountsAndSessionsTests
 			_db.LinkCharacterToAccountAsync(alice.Id!, god).AsTask(),
 			_db.LinkCharacterToAccountAsync(bob.Id!, god).AsTask());
 
-		await Assert.That(links.Count(holder => holder is null)).IsEqualTo(1);
+		await Assert.That(links.Count(written => written is Linked)).IsEqualTo(1);
 		var winner = (await _db.GetAccountForCharacterAsync(god))!.Id;
-		await Assert.That(links.Single(holder => holder is not null)!.Id).IsEqualTo(winner);
+		await Assert.That(links.Select(written => written is SharpAccount holder ? holder.Id : null).Single(id => id is not null))
+			.IsEqualTo(winner);
 		var aliceHas = (await _db.GetCharactersForAccountAsync(alice.Id!)).Count;
 		var bobHas = (await _db.GetCharactersForAccountAsync(bob.Id!)).Count;
 		await Assert.That(aliceHas + bobHas).IsEqualTo(1);
-		await Assert.That(await _db.LinkCharacterToAccountAsync(winner!, god)).IsNull()
+		await Assert.That(await _db.LinkCharacterToAccountAsync(winner!, god) is AlreadyLinked).IsTrue()
 			.Because("linking a character to the account that already holds it changes nothing");
+	}
+
+	/// <summary>
+	/// The same link written twice at once is added once: the write reports which one added it, so the link event
+	/// fires once.
+	/// </summary>
+	[Test]
+	public async Task OneOfTwoIdenticalLinksAddsIt()
+	{
+		var account = await _db.CreateAccountAsync("Dana", null, "hash");
+		var god = new DBRef(1);
+
+		var links = await Task.WhenAll(
+			_db.LinkCharacterToAccountAsync(account.Id!, god).AsTask(),
+			_db.LinkCharacterToAccountAsync(account.Id!, god).AsTask());
+
+		await Assert.That(links.Count(written => written is Linked)).IsEqualTo(1);
+		await Assert.That(links.Count(written => written is AlreadyLinked)).IsEqualTo(1);
 	}
 
 	[Test]
@@ -143,7 +162,9 @@ public class AccountsAndSessionsTests
 		await Assert.That(owner).IsNotNull();
 		await Assert.That(owner!.Id).IsEqualTo(account.Id);
 
-		await _db.UnlinkCharacterFromAccountAsync(account.Id!, god);
+		await Assert.That(await _db.UnlinkCharacterFromAccountAsync(account.Id!, god)).IsTrue();
+		await Assert.That(await _db.UnlinkCharacterFromAccountAsync(account.Id!, god)).IsFalse()
+			.Because("a second unlink finds nothing to remove");
 
 		var charactersAfterUnlink = await _db.GetCharactersForAccountAsync(account.Id!);
 		var ownerAfterUnlink = await _db.GetAccountForCharacterAsync(god);

@@ -685,10 +685,34 @@
     <value>Selected File</value>
   </data>
   <data name="MailDatabaseOptional" xml:space="preserve">
-    <value>Mail database (optional): the PennMUSH maildb, for mail aliases</value>
+    <value>Mail database (optional): the PennMUSH maildb, RhostMUSH's .dump.mail from wmail/unload, or TinyMUX's mail.db, for mail and mail aliases</value>
   </data>
   <data name="ChatDatabaseOptional" xml:space="preserve">
-    <value>Chat database (optional): the PennMUSH chatdb, for channels</value>
+    <value>Chat database (optional): the PennMUSH chatdb or TinyMUX comsys.db, for channels</value>
+  </data>
+  <data name="AdmImportFormat" xml:space="preserve">
+    <value>Database format</value>
+  </data>
+  <data name="AdmImportFormatAuto" xml:space="preserve">
+    <value>Tell from the file</value>
+  </data>
+  <data name="AdmImportRewrites" xml:space="preserve">
+    <value>Rewritten softcode ({0})</value>
+  </data>
+  <data name="AdmImportRewriteBefore" xml:space="preserve">
+    <value>Before</value>
+  </data>
+  <data name="AdmImportRewriteAfter" xml:space="preserve">
+    <value>After</value>
+  </data>
+  <data name="AdmImportDownloadLog" xml:space="preserve">
+    <value>Download import log</value>
+  </data>
+  <data name="AdmImportRewritesLead" xml:space="preserve">
+    <value>The import changed the softcode in these attributes so SharpMUSH reads it as the old server did. Open one to see its code before and after. Test each one before players connect, and fix by hand any line that says check by hand.</value>
+  </data>
+  <data name="AdmImportMailFoldersOptional" xml:space="preserve">
+    <value>Mail folders (optional): RhostMUSH's .dump.folder, which says which folder each message is in</value>
   </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview File Content</value>
@@ -704,16 +728,16 @@
   <!-- ImportDatabase.razor     -->
   <!-- ======================== -->
   <data name="ImportPennMUSHDatabase" xml:space="preserve">
-    <value>Import PennMUSH Database</value>
+    <value>Import PennMUSH, RhostMUSH or TinyMUX Database</value>
   </data>
   <data name="ImportDatabaseDescription" xml:space="preserve">
-    <value>Upload a PennMUSH database file to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
+    <value>Upload a PennMUSH database, a RhostMUSH flatfile written with @dump/flat, or a TinyMUX flatfile, to convert and import into SharpMUSH. The format is told from the file unless you choose one. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
   </data>
   <data name="DropDatabaseFile" xml:space="preserve">
-    <value>Drop PennMUSH database file here or click</value>
+    <value>Drop the database file here or click</value>
   </data>
   <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Supported formats: .db, .txt (max 100MB)</value>
+    <value>Supported formats: .db, .flat, .txt (max 100MB)</value>
   </data>
   <data name="Uploading" xml:space="preserve">
     <value>Uploading...</value>
@@ -1700,6 +1724,9 @@
   </data>
   <data name="PkgRequires" xml:space="preserve">
     <value>Requires</value>
+  </data>
+  <data name="PkgNeedsPlugin" xml:space="preserve">
+    <value>Needs the {0} plugin, which is not running on this server.</value>
   </data>
   <data name="PkgNotInstalledSuffix" xml:space="preserve">
     <value> — not installed.</value>
@@ -3257,6 +3284,9 @@
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Get started by reading the wiki, browsing characters, or jumping into a scene.</value>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Get started by reading the wiki or browsing characters.</value>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Read the Wiki</value>
   </data>
@@ -4572,7 +4602,7 @@
     <value>Content · Spellcheck</value>
   </data>
   <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Server · PennMUSH import</value>
+    <value>Server · Database import</value>
   </data>
   <data name="AdmDiagnosticsKicker" xml:space="preserve">
     <value>Build · Queue diagnostics</value>
@@ -4884,10 +4914,10 @@
     <value>Bring an existing game?</value>
   </data>
   <data name="AdmSetupImportLead" xml:space="preserve">
-    <value>Moving from PennMUSH? Import its database now, before anyone else connects, with its mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your PennMUSH God; your portal account stays linked to it and keeps the password you just chose.</value>
+    <value>Moving from PennMUSH, RhostMUSH or TinyMUX? Import its database now, before anyone else connects, with a PennMUSH game's mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your old game's God; your portal account stays linked to it and keeps the password you just chose.</value>
   </data>
   <data name="AdmSetupImportPenn" xml:space="preserve">
-    <value>Import a PennMUSH database</value>
+    <value>Import a PennMUSH, RhostMUSH or TinyMUX database</value>
   </data>
   <data name="AdmSetupStartFresh" xml:space="preserve">
     <value>Start a new game</value>
@@ -4914,7 +4944,7 @@
     <value>Saving…</value>
   </data>
   <data name="AdmSetupDoneLead" xml:space="preserve">
-    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and a PennMUSH database in PennMUSH import.</value>
+    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and another game's database in Database import.</value>
   </data>
   <data name="AdmSetupBack" xml:space="preserve">
     <value>Back</value>
@@ -5149,6 +5179,12 @@
   </data>
   <data name="EnumPermFeedAdminDesc" xml:space="preserve">
     <value>Defines and runs feeds, the message pipelines game systems such as a radio or a phone are built on: their kinds, taps, members and limits.</value>
+  </data>
+  <data name="EnumPermNotifyPush" xml:space="preserve">
+    <value>Game · Push notifications</value>
+  </data>
+  <data name="EnumPermNotifyPushDesc" xml:space="preserve">
+    <value>Sends notifications to players' phones and browsers with @push. Give it to the object of a package that decides what notifies, not to players.</value>
   </data>
   <data name="EnumPermSideFx" xml:space="preserve">
     <value>Game · Side-effect functions</value>
@@ -6099,7 +6135,7 @@
     <value>Server status</value>
   </data>
   <data name="AdmImportLabel" xml:space="preserve">
-    <value>PennMUSH import</value>
+    <value>Database import</value>
   </data>
   <data name="AdmCardSoftcode" xml:space="preserve">
     <value>Edit the attributes on objects you control, and try code in a console.</value>
@@ -6153,7 +6189,7 @@
     <value>Every server setting, by section, with import and export.</value>
   </data>
   <data name="AdmCardImport" xml:space="preserve">
-    <value>Bring a PennMUSH database into this game.</value>
+    <value>Bring a PennMUSH, RhostMUSH or TinyMUX database into this game.</value>
   </data>
   <data name="RolEditScene" xml:space="preserve">
     <value>Edit scene</value>
@@ -6298,6 +6334,24 @@
   </data>
   <data name="PkgSettingsConfirm" xml:space="preserve">
     <value>I understand this package changes the game options above.</value>
+  </data>
+  <data name="PkgServerBelowMinimum" xml:space="preserve">
+    <value>This package needs SharpMUSH {0}; this server is {1}. Upgrade the server to install it.</value>
+  </data>
+  <data name="PkgServerNewerThanVerified" xml:space="preserve">
+    <value>This package was tested on SharpMUSH up to {0}; this server is {1}. It will probably work, but nobody has checked.</value>
+  </data>
+  <data name="PkgServerAboveMaximum" xml:space="preserve">
+    <value>This package runs on SharpMUSH up to {0}; this server is {1}. Its author says it does not run on newer versions.</value>
+  </data>
+  <data name="PkgServerPastMaximumConfirm" xml:space="preserve">
+    <value>Install it anyway. The choice is recorded on the package and in the audit log.</value>
+  </data>
+  <data name="PkgPastMaximumChip" xml:space="preserve">
+    <value>Past maximum {0}</value>
+  </data>
+  <data name="PkgPastMaximumTooltip" xml:space="preserve">
+    <value>Installed on SharpMUSH {0}, newer than the {1} its manifest allows, after an administrator confirmed it on {2}.</value>
   </data>
   <data name="NavClaimCharacter" xml:space="preserve">
     <value>Claim character</value>
@@ -8019,5 +8073,92 @@
   </data>
   <data name="DiscordLinkNoTicket" xml:space="preserve">
     <value>This page needs the link the bot sends when you type /link in Discord.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Get notified on this phone or computer when the portal is closed</value>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Turn notifications on for each phone or computer you want them on. The game decides what is worth a notification, and each of your characters chooses which they receive.</value>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Notifications are on here ({0}).</value>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Notifications are off on this device. Your browser asks for permission when you turn them on.</value>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Turn on</value>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Send a test</value>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Notifications are on for this device.</value>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Test sent. It should arrive in a few seconds.</value>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>The browser did not allow notifications. Allow them for this site in the browser's settings, then try again.</value>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Notifications are blocked for this site. Allow them in the browser's site settings, then reload this page.</value>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>This browser cannot show notifications from a website.</value>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>On iPhone and iPad, notifications work only from the home screen: tap Share, then Add to Home Screen, and open the portal from the new icon.</value>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Install the portal as an app: it opens in its own window, and notifications show its name.</value>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Your devices</value>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Every phone and computer with notifications on for this account</value>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>No device has notifications on yet.</value>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Turn off notifications on {0}</value>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>On since {0}</value>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>last sent {0}</value>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>failed {0} ({1})</value>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>the game changed its key: turn notifications on again on that device</value>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>What notifies you</value>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Pages and new mail notify you when you are away, showing who sent it but not what it says. Type +notify in the game to choose what notifies each character, and whether the text shows.</value>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Choose what notifies you</value>
   </data>
 </root>

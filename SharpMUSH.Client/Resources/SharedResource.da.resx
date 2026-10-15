@@ -3916,6 +3916,10 @@
     <value>Kom i gang: læs wikien, gennemse karakterer, eller hop ind i en scene.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Kom i gang: læs wikien eller gennemse karakterer.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Læs wikien</value>
     <comment>MT</comment>
@@ -6148,5 +6152,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Et billede med en indholdsadvarsel holdes uden for billedbiblioteket. Fjern advarslen for at dele det.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notifikationer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Få notifikationer på denne telefon eller computer, når portalen er lukket</value>
+    <comment>MT</comment>
   </data>
 </root>

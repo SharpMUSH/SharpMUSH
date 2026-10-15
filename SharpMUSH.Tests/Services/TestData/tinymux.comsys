@@ -1,0 +1,24 @@
++V5
+*** Begin CHANNELS ***
+2
+1 1
+pub Public
+4 2
+pub Public
+st Staff
+*** Begin COMSYS ***
+2
+Public
+[Public]
+887 0 0 0 1 0 0 -1
+2
+1 1 1 0
+t:
+4 1 1 1
+t:The Builder
+Staff
+[Staff]
+7 0 0 0 1 0 0 3
+1
+1 0 0 0
+t:
