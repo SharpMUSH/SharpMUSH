@@ -909,6 +909,38 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
 	}
 
+	/// <summary>A player already in the room gets scene_here when a scene starts there and loses it when the
+	/// scene finishes, without moving: the palette's About and Join rows follow the scene.</summary>
+	[Test]
+	public async Task SceneHere_FollowsTheScene_ForThoseAlreadyInTheRoom()
+	{
+		await God1("@set #1=WIZARD");
+		var digOut = (await God1($"@dig HereRoom_{Tag}")).Message.ToPlainText().Trim();
+		var (amy, amyHandle) = await CreatePlayerAsync($"Amy_{Tag}", "pw_amy_123");
+		var (bo, _) = await CreatePlayerAsync($"Bo_{Tag}", "pw_bo_123");
+		await God1($"@tel {amy}={digOut}");
+		await God1($"@tel {bo}={digOut}");
+
+		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
+		async Task<bool> BoHasSceneHere(bool expected)
+		{
+			// HERE`SYNC is queued by @trigger, so it may run just after the command returns.
+			for (var attempt = 0; attempt < 50; attempt++)
+			{
+				var has = contexts.Read(DBRef.Parse(bo)).Any(weighted => weighted.Context.Name == "scene_here");
+				if (has == expected) return has;
+				await Task.Delay(100);
+			}
+			return !expected;
+		}
+
+		await Assert.That(await BoHasSceneHere(false)).IsFalse().Because("no scene runs in the room yet");
+		await RunAndCollectAs(amyHandle, $"+scene/create HereTest_{Tag}");
+		await Assert.That(await BoHasSceneHere(true)).IsTrue().Because("creating a running scene tells the room");
+		await RunAndCollectAs(amyHandle, "+scene/finish");
+		await Assert.That(await BoHasSceneHere(false)).IsFalse().Because("finishing the scene tells the room");
+	}
+
 	/// <summary>
 	/// Proves #2 (AINSTALL `leave` lands the logger in the master room #2) and #4 (capture keys off the
 	/// poser's loc(%#), not the logger's %L): with the logger NOT co-located, a remote player's +scene/create
