@@ -34,6 +34,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly IPackageInstallService? _packageInstaller;
 	private readonly IBundledPackageBootstrap? _bundledPackages;
 	private readonly Lazy<IRuntimeRegistrationService>? _registrations;
+	private readonly IRoleRegistryService? _roles;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
@@ -44,7 +45,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IPackageRegistryService? packageRegistry = null,
 		IPackageInstallService? packageInstaller = null,
 		IBundledPackageBootstrap? bundledPackages = null,
-		Lazy<IRuntimeRegistrationService>? registrations = null)
+		Lazy<IRuntimeRegistrationService>? registrations = null,
+		IRoleRegistryService? roles = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
@@ -55,13 +57,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_packageInstaller = packageInstaller;
 		_bundledPackages = bundledPackages;
 		_registrations = registrations;
+		_roles = roles;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)
 	{
-		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
-
-		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
+		var pennDatabase = await ReadSourceAsync(databaseFilePath, null, null, cancellationToken);
 		return await ConvertDatabaseAsync(pennDatabase, cancellationToken);
 	}
 
@@ -70,9 +71,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default)
 	{
-		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
-
-		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
+		var pennDatabase = await ReadSourceAsync(databaseFilePath, null, null, cancellationToken);
 		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
 	}
 
@@ -89,6 +88,14 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		string? chatDatabaseFilePath,
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default)
+	{
+		var pennDatabase = await ReadSourceAsync(databaseFilePath, mailDatabaseFilePath, chatDatabaseFilePath, cancellationToken);
+		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+	}
+
+	/// <summary>A PennMUSH dump, and its maildb and chatdb when they are given.</summary>
+	private async Task<PennMUSHDatabase> ReadPennMUSHAsync(string databaseFilePath, string? mailDatabaseFilePath,
+		string? chatDatabaseFilePath, CancellationToken cancellationToken)
 	{
 		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
 
@@ -121,7 +128,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
-		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+		return pennDatabase;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(PennMUSHDatabase pennDatabase, CancellationToken cancellationToken = default)
@@ -187,6 +194,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		try
 		{
+			warnings.AddRange(pennDatabase.ReaderNotes);
+
 			// Ahead of the first progress report, since nothing to report on exists until it has run.
 			await ImportDefinitionsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Creating objects", 0.0);
@@ -199,6 +208,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Objects created", 0.25);
 
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
+			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
@@ -217,7 +227,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Channels imported", 0.97);
 
 			await ReinstallPackagesAsync(context);
-			await EnablePennMUSHCompatibilityAsync(context, cancellationToken);
+			await EnableSourceOptionsAsync(pennDatabase, context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
 
@@ -255,43 +265,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		return result;
-	}
-
-	/// <summary>
-	/// Turns on <c>paren_groups</c> and <c>http_qregisters</c> in the configuration of the world being
-	/// written. PennMUSH softcode writes a literal parenthesis inside a function's arguments unescaped,
-	/// which SharpMUSH reads as PennMUSH does only with paren_groups on, and reads an @http response's
-	/// status and content type from q-registers. Written through the Mediator, like the objects, so it
-	/// lands in the same world, and signalled so a running game rereads its configuration.
-	/// </summary>
-	/// <remarks>
-	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
-	/// and the options are left for the administrator to set.
-	/// </remarks>
-	private async ValueTask EnablePennMUSHCompatibilityAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
-	{
-		var warnings = context.Warnings;
-		try
-		{
-			var options = _options.CurrentValue;
-			if (options.Compatibility is { ParenGroups: true, HttpQRegisters: true }) return;
-
-			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
-				options with
-				{
-					Compatibility = options.Compatibility with { ParenGroups = true, HttpQRegisters = true },
-					Database = context.WrittenDatabaseOptions ?? options.Database
-				}), cancellationToken);
-			_configurationReload?.SignalChange();
-			_logger.LogInformation("Turned on paren_groups and http_qregisters for the imported PennMUSH softcode");
-		}
-		catch (Exception ex) when (ex is not OperationCanceledException)
-		{
-			_logger.LogWarning(ex, "Could not turn on paren_groups and http_qregisters for the imported PennMUSH softcode");
-			warnings.Add($"paren_groups and http_qregisters could not be turned on ({ex.Message}); imported softcode " +
-				"that writes literal parentheses unescaped or reads @http's %q<status> needs them: set both to yes in the " +
-				"configuration and reload it.");
-		}
 	}
 
 	/// <summary>
@@ -2233,7 +2206,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
 
-			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions);
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions, pennDatabase.SharesPipingSubstitutions);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2298,7 +2271,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (pipedOutput.Count > 0)
 		{
 			var more = pipedOutput.Count > pipedOutput.Shown.Count ? $" and {pipedOutput.Count - pipedOutput.Shown.Count} more" : string.Empty;
-			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which PennMUSH evaluates to > and SharpMUSH to the last command's output; " +
+			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which {pennDatabase.SourceName} evaluates to > and SharpMUSH to the last command's output; " +
 				$"softcode is not rewritten, so write > where > was meant: {string.Join(", ", pipedOutput.Shown)}{more}");
 		}
 
@@ -2349,16 +2322,22 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> (or <c>; |</c>) as a <c>;</c> before a command starting with <c>|</c>.
 	/// Here they are the last command's output and command piping. It also records each that uses
 	/// <c>%m</c> or <c>%=&lt;</c>, which PennMUSH evaluates to <c>m</c> and <c>=&lt;</c> and SharpMUSH, as
-	/// TinyMUX does, to the running command and an attribute or argument.
+	/// TinyMUX does, to the running command and an attribute or argument. A source that reads all of these as
+	/// SharpMUSH does (<paramref name="sharesPiping"/>, TinyMUX) is checked only for <c>%&gt;</c>.
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
-		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions)
+		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions, bool sharesPiping)
 	{
 		foreach (var pennAttr in pennObj.Attributes)
 		{
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '>'))
 			{
 				pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (sharesPiping)
+			{
+				continue;
 			}
 
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '|') || PipesCommand(pennAttr.Value))
