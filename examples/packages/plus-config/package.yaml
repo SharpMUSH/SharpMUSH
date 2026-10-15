@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: plus-config
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [config, settings, admin, softcode]
+category: Essentials
 requires_server: ">=0.1"
 
 # +config is to a system's settings what +help is to its topics. A system keeps each setting on its own
