@@ -5057,6 +5057,12 @@
   <data name="AdmSetupPkgPlusHelpDesc" xml:space="preserve">
     <value>The game's own help, gathering the topics installed packages carry and keeping the ones you write.</value>
   </data>
+  <data name="AdmSetupPkgPlusConfigTitle" xml:space="preserve">
+    <value>+config</value>
+  </data>
+  <data name="AdmSetupPkgPlusConfigDesc" xml:space="preserve">
+    <value>One command for the settings your softcode systems keep for themselves, each checked against what the system says it accepts.</value>
+  </data>
   <data name="AdmSetupPkgJobsTitle" xml:space="preserve">
     <value>Jobs</value>
   </data>

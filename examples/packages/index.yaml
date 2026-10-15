@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.5.1
+    version: 1.6.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -67,6 +67,11 @@ packages:
     package: plus-help
     version: 1.5.1
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
+  - path: plus-config/
+    name: "+config"
+    package: plus-config
+    version: 1.0.0
+    description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
   - path: hello-ui/
     name: Hello UI
     package: hello-ui
@@ -117,16 +122,26 @@ packages:
     package: bboards-app
     version: 1.0.2
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
-  - path: rp-finder/
-    name: RP Finder
-    package: rp-finder
-    version: 1.0.1
-    description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)
+  - path: status/
+    name: Status
+    package: status
+    version: 1.1.0
+    description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
+  - path: watch/
+    name: Watch
+    package: watch
+    version: 1.0.0
+    description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: finger/
     name: Finger
     package: finger
-    version: 1.0.1
+    version: 1.1.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
+  - path: time/
+    name: Time
+    package: time
+    version: 1.1.0
+    description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: discord/
     name: Discord
     package: discord

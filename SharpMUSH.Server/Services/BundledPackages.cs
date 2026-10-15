@@ -71,6 +71,9 @@ public static class BundledPackages
 		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
 		// which is why this installs at first boot rather than shipping available-and-unenabled.
 		new("plus-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// +config after +help, whose librarian carries its topics, and before the packages that register
+		// their settings with it.
+		new("plus-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
@@ -97,11 +100,15 @@ public static class BundledPackages
 		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +who and +where are names a game may already use for its own code.
 		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: +lfrp, +watch and +friend are global commands, and +watch and +friend are names
-		// a game may already use for its own code. Its status shows in who-where's +who.
-		new("rp-finder", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +status is a name a game may already use for its own code. A status shows in
+		// who-where's +who.
+		new("status", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +watch and +friend are names a game may already use for its own code.
+		new("watch", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +time is a name a game may already use for its own code.
+		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];

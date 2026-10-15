@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.Integration;
 /// +who by name, by idle or matching a name; +where grouped under a line per location, one player per line by
 /// location or by name, and a player in an unfindable room. The shared
 /// world has other tests' players connected, so the tests look at their own players' rows and the order between
-/// them, never at the whole list. Not in parallel: +where is global, and rp-finder's tests install who-where too.
+/// them, never at the whole list. Not in parallel: +where is global, and the status and watch tests install who-where too.
 /// </summary>
 [NotInParallel]
 public class WhoWhereIntegrationTests
@@ -145,6 +145,52 @@ public class WhoWhereIntegrationTests
 
 			await Assert.That(await As(ann, "+where/bogus")).Contains("+where has no /bogus switch.");
 			await Assert.That(await As(ann, "+help where")).Contains("+where/room").And.Contains("+where/name");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task SettingsChooseTheBareViewsThroughPlusConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var (den, _) = await Room("WsDen");
+			var staff = await Player("WsStaff", den);
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			await Assert.That(await As(staff, "+config who-where")).Contains("idle-after").And.Contains("where-view").And.Contains("who-order");
+
+			// A bare +where shows the view the setting names; +where/grouped is always the grouped one.
+			await Assert.That(await As(staff, "+config who-where/where-view=NAME")).Contains("who-where/where-view is now name, was grouped.");
+			try
+			{
+				await Assert.That(await As(staff, "+where")).Contains("Where by name");
+				await Assert.That(await As(staff, "+where/grouped")).Contains("connected in");
+			}
+			finally
+			{
+				await As(staff, "+config/reset who-where/where-view");
+			}
+			await Assert.That(await As(staff, "+where")).Contains("connected in");
+
+			// A duration is stored in seconds, which is what the muting reads.
+			await Assert.That(await As(staff, "+config who-where/idle-after=30s")).Contains("It must be at least 1m.");
+			await Assert.That(await As(staff, "+config who-where/idle-after=2h")).Contains("who-where/idle-after is now 2h, was 1h.");
+			try
+			{
+				await Assert.That(await God($"think get({Functions}/DATA`CONFIG`IDLE-AFTER)")).IsEqualTo("7200");
+			}
+			finally
+			{
+				await As(staff, "+config/reset who-where/idle-after");
+			}
+
+			await Assert.That(await As(staff, "+config who-where/who-order=sideways")).Contains("Choose name or idle.");
+			await Assert.That(await As(staff, "+who/name")).Contains(staff.Name);
 		}
 		finally
 		{

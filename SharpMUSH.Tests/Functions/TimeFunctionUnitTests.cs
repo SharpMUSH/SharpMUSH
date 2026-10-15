@@ -27,6 +27,21 @@ public class TimeFunctionUnitTests
 		await Assert.That(parts.Length).IsEqualTo(5);
 	}
 
+	/// <summary>
+	/// time(&lt;zone&gt;) is the zone's clock now, summer time included, as PennMUSH's is: the same wall clock
+	/// timefmt() writes for this moment in that zone. Both are read back as UTC, so an hour the clocks repeat is
+	/// never ambiguous. New York and Sydney keep summer time in opposite halves of the year, so one of them is in
+	/// it whenever this runs.
+	/// </summary>
+	[Test]
+	[Arguments("America/New_York")]
+	[Arguments("Australia/Sydney")]
+	public async Task TimeInAZoneKeepsSummerTime(string zone)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lte(abs(sub(convtime(time({zone}),UTC),convtime(timefmt($a $b $d $H:$M:$S $Y,secs(),{zone}),UTC))),2)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
 	[Test]
 	public async Task Uptime()
 	{

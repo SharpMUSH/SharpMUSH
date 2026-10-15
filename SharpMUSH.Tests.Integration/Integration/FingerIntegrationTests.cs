@@ -169,15 +169,19 @@ public class FingerIntegrationTests
 			await Assert.That(await As(staff, $"+finger/set {ann.Name}/occupation=Tinker")).Contains($"{ann.Name}'s Occupation: Tinker");
 			await Assert.That(string.Join("\n", Notifications.For(ann.DbRef))).Contains($"{staff.Name} changed your Occupation.");
 
-			await God($"&DATA`LOCKED {Finger}=occupation");
+			// The fields only staff set are a +config list, checked against the field list.
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+			await Assert.That(await As(staff, "+config/add finger/locked=occupation bogus")).Contains("bogus is not a field.");
+			await Assert.That(await As(staff, "+config/add finger/locked=occupation")).Contains("finger/locked is now occupation, was none.");
 			try
 			{
+				await Assert.That(await God($"think get({Finger}/DATA`CONFIG`LOCKED)")).IsEqualTo("occupation");
 				await Assert.That(await As(ann, "+finger/set occupation=Pirate")).Contains("Only staff set Occupation.");
 				await Assert.That(await As(ann, "+finger/fields")).Contains("set");
 			}
 			finally
 			{
-				await God($"&DATA`LOCKED {Finger}");
+				await As(staff, "+config/reset finger/locked");
 			}
 		}
 		finally

@@ -67,15 +67,18 @@ run of spaces, every indent, every line break and every `;` as `%b` / `%r` / `%;
 command leaves the browser, because MUSH evaluation compresses space runs, eats the ones at an
 argument's edges, ends the line at a newline and starts a new command at a semicolon.
 
-## Policy knobs (``DATA`*``)
+## Settings (`+config scene`)
 
-There is intentionally **no `SceneOptions` config category** — every knob is policy, set as a
-``&DATA`*`` attribute on the Scene Logger and read by the verbs (one place, not two). The
-package ships sensible defaults; the most notable is **``DATA`DEFAULT_STATUS=active``**, so
-`+scene/create` yields an immediately-capturing scene (set it to `new`/`scheduled` to stage a
-scene that only logs after `+scene/start`). See the ``DATA`*`` block in `package.yaml` for the
-full set — `CAPTURE`, `DEFAULT_STATUS`, `RECALL_ROUNDS`, and the three refusal strings
-`DENY_APPROVAL` / `DENY_NO_FOCUS` / `DENY_NOT_OWNER` — and its current defaults.
+There is no `SceneOptions` config category. Every setting is policy, kept on the Scene Logger as
+``DATA`CONFIG`<NAME>`` and changed with `+config scene/<setting>=<value>` (`config.admin`):
+
+- `default-status`: what `+scene/create` makes. `active` (the default) logs at once; `new` or
+  `scheduled` stages a scene that only logs after `+scene/start`.
+- `open-details`: whether an owner may set scene details the game does not list. `yes` by default.
+- `recall-rounds`: how many rounds of poses a bare `+scene/recall` shows. `2` by default.
+
+The refusal strings (``DATA`DENY_APPROVAL``, ``DATA`DENY_NO_FOCUS``, ``DATA`DENY_NOT_OWNER`` and the
+rest) stay plain ``DATA`` attributes on the Scene Logger.
 
 ## Player commands
 
