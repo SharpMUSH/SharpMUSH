@@ -88,6 +88,27 @@ public partial class Commands
 				])));
 		}
 
+		if (report.AttributeIndexes.Count > 0)
+		{
+			parts.Add(new Rule(MarkupText.Plain("Attribute indexes")));
+			parts.Add(ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Attribute")) { Min = 10 },
+					new TableColumn(MarkupText.Plain("Rows")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Pages")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Size")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("State")) { Wrap = false },
+				],
+				report.AttributeIndexes.OrderByDescending(index => index.Bytes).Select(index => (IEnumerable<string>)
+				[
+					index.Options.Length > 0 ? $"{index.Name} ({index.Options})" : index.Name,
+					index.Rows.ToString(CultureInfo.InvariantCulture),
+					index.Pages.ToString(CultureInfo.InvariantCulture),
+					DescribeBytes(index.Bytes),
+					index.Ready ? "ready" : $"building, at #{index.ResumeAt}",
+				])));
+		}
+
 		var backup = report.Backup;
 		parts.Add(new Rule(MarkupText.Plain("Backups")));
 		if (string.IsNullOrEmpty(backup.Root))

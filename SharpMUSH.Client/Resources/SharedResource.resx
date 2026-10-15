@@ -8380,6 +8380,15 @@
   <data name="AdmActivityDeadEmpty" xml:space="preserve">
     <value>Every room has seen a pose.</value>
   </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>Diagram</value>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} to {1}: {2}</value>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>{0}'s card</value>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notifications</value>
   </data>
