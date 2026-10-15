@@ -87,7 +87,11 @@ public sealed class MemoryRoleStore : SharpMUSH.Plugins.Discord.Roles.IDiscordRo
 
 	public ValueTask RecordAsync(ulong roleId, SharpMUSH.Plugins.Discord.Roles.DiscordDrift drift, CancellationToken cancellationToken = default)
 	{
-		_drift[(roleId, drift.UserId)] = drift;
+		if (_mappings.ContainsKey(roleId))
+		{
+			_drift[(roleId, drift.UserId)] = drift;
+		}
+
 		return ValueTask.CompletedTask;
 	}
 
