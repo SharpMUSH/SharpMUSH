@@ -170,7 +170,7 @@ public class ChargenIntegrationTests
 			await As(applicant, "+app/set background=Born on the barges of the Sallow.");
 			await Assert.That(await As(applicant, "+app/submit")).Contains("Submitted.");
 			var diff = await As(reviewer, $"+app/diff {applicant.Name}");
-			await Assert.That(diff).Contains("Changes since round 1").And.Contains("Born on the river barges.")
+			await Assert.That(diff).Contains("round 1 to").And.Contains("Born on the river barges.")
 				.And.Contains("Born on the barges of the Sallow.").And.DoesNotContain("A ferry pilot")
 				.Because("only what changed is shown");
 

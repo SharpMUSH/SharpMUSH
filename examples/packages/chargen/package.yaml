@@ -404,12 +404,12 @@ objects:
       # %0 a field: its label, and its key in muted text when a player could not guess the key from the label.
       FUN`FIELD`NAME:
         value: |-
-          setq(field_label,u(%!/FUN`FIELD`LABEL,%0))[%q<field_label>][if(comp(lcstr(%q<field_label>),lcstr(%0)),%b[tone(muted,lcstr(%0))])]
+          setq(field_label,u(%!/FUN`FIELD`LABEL,%0))[%q<field_label>][if(comp(lcstr(%q<field_label>),lcstr(%0)),%b[tone(muted,\([lcstr(%0)]\))])]
         flags: [funsyntax]
       # %0 a section: its title, and its key in muted text when a player could not guess the key from the title.
       FUN`SECTION`NAME:
         value: |-
-          setq(section_title,firstof(get({{store}}/SECTION`%0),lcstr(%0)))[%q<section_title>][if(comp(lcstr(%q<section_title>),lcstr(%0)),%b[tone(muted,lcstr(%0))])]
+          setq(section_title,firstof(get({{store}}/SECTION`%0),lcstr(%0)))[%q<section_title>][if(comp(lcstr(%q<section_title>),lcstr(%0)),%b[tone(muted,\([lcstr(%0)]\))])]
         flags: [funsyntax]
       # %0 a field, %1 typed text: nothing when the text fits the field, else the reason.
       FUN`FIELD`PROBLEM:
@@ -521,6 +521,11 @@ objects:
           switch(get({{store}}/APP`%0`STATE),submitted,setq(queue_list,u(%!/FUN`QUEUE))[setq(queue_wait,u(%!/FUN`WAIT`TYPICAL))]Number [member(%q<queue_list>,%0)] of [words(%q<queue_list>)] in the queue.[if(strlen(%q<queue_wait>),%bApplications usually get an answer in about [u(%!/FUN`DISPLAY`DURATION,%q<queue_wait>)].)],waitlist,Number [member(u(%!/FUN`WAITLIST),%0)] on the waitlist. [u(%!/FUN`PLACES`TEXT)],)
         flags: [funsyntax]
       # The places under the cap, as a sentence.
+      # %0 the waitlist before a place opened: who has left it since, as a sentence and a space, or nothing.
+      FUN`ADMITTED`TEXT:
+        value: |-
+          setq(admitted_keys,setdiff(%0,u(%!/FUN`WAITLIST)))[if(words(%q<admitted_keys>),[itemize(iter(%q<admitted_keys>,u(%!/FUN`APP`NAME,%i0),,|),|)] [if(eq(words(%q<admitted_keys>),1),gets the place,get the places)] from the waitlist.%b)]
+        flags: [funsyntax]
       FUN`PLACES`TEXT:
         value: |-
           setq(places_cap,default(%!/DATA`CONFIG`CAP,0))[if(gt(%q<places_cap>,0),[u(%!/FUN`ACTIVE)] of %q<places_cap> places are taken.,There is no cap on characters.)]
@@ -727,7 +732,7 @@ objects:
       # by default the one before the last.
       INC`APP`DIFF:
         value: |-
-          @if cand(%q<viewer_staff>,strlen(%q<cmd_left_side>),not(isint(%q<cmd_left_side>)))={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(diff_from,%q<cmd_right_side>)},{@include %!/INC`NEED`MINE; think setq(diff_from,%q<cmd_argument>)}; @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,You have no application.,warn); think setqm(diff_owner,strmatch(%q<app_objid>,%q<viewer_objid>),diff_round,default({{store}}/APP`%q<app_key>`ROUND,0)); @assert %q<diff_round>=@pemit %#=notice(APP,It has not been submitted yet%, so there is nothing to compare.,warn); think setq(diff_to,if(cand(%q<diff_owner>,u(%!/FUN`STATE`EDITABLE,%q<app_state>)),,%q<diff_round>)); think setq(diff_from,firstof(%q<diff_from>,if(strlen(%q<diff_to>),dec(%q<diff_round>),%q<diff_round>))); @assert cand(isint(%q<diff_from>),gt(%q<diff_from>,0),lte(%q<diff_from>,%q<diff_round>))=@pemit %#=notice(APP,if(gt(%q<diff_round>,1),Name a round from 1 to %q<diff_round>.,It has been submitted once%, so there is nothing earlier to compare.),warn); @pemit %#=u(%!/FUN`DISPLAY`DIFF,%q<app_key>,%q<diff_from>,%q<diff_to>,Changes since round %q<diff_from>[if(strlen(%q<diff_to>),%b· round %q<diff_to>,%b· the draft)])
+          @if cand(%q<viewer_staff>,strlen(%q<cmd_left_side>),not(isint(%q<cmd_left_side>)))={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(diff_from,%q<cmd_right_side>)},{@include %!/INC`NEED`MINE; think setq(diff_from,%q<cmd_argument>)}; @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,You have no application.,warn); think setqm(diff_owner,strmatch(%q<app_objid>,%q<viewer_objid>),diff_round,default({{store}}/APP`%q<app_key>`ROUND,0)); @assert %q<diff_round>=@pemit %#=notice(APP,It has not been submitted yet%, so there is nothing to compare.,warn); think setq(diff_to,if(cand(%q<diff_owner>,u(%!/FUN`STATE`EDITABLE,%q<app_state>)),,%q<diff_round>)); think setq(diff_from,firstof(%q<diff_from>,if(strlen(%q<diff_to>),dec(%q<diff_round>),%q<diff_round>))); @assert cand(isint(%q<diff_from>),gt(%q<diff_from>,0),lte(%q<diff_from>,%q<diff_round>))=@pemit %#=notice(APP,if(gt(%q<diff_round>,1),Name a round from 1 to %q<diff_round>.,It has been submitted once%, so there is nothing earlier to compare.),warn); @pemit %#=u(%!/FUN`DISPLAY`DIFF,%q<app_key>,%q<diff_from>,%q<diff_to>,[u(%!/FUN`APP`NAME,%q<app_key>)]: round %q<diff_from> to [if(strlen(%q<diff_to>),round %q<diff_to>,the draft)])
         flags: [cmdsyntax]
       # +app/comment <section>=<text> for the owner, +app/comment <name>[/<section>]=<text> for a reviewer.
       INC`APP`COMMENT:
@@ -754,7 +759,7 @@ objects:
       # +app/retire <name>: an approved character stops counting against the cap.
       INC`APP`RETIRE:
         value: |-
-          @include %!/INC`NEED`REVIEWER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`OTHER; @assert strmatch(%q<app_state>,approved)=@pemit %#=notice(APP,Only an approved application can be retired.,warn); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; @pemit %#=notice(APP,Retired [name(%q<app_objid>)]. [u(%!/FUN`PLACES`TEXT)],ok)
+          @include %!/INC`NEED`REVIEWER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`OTHER; @assert strmatch(%q<app_state>,approved)=@pemit %#=notice(APP,Only an approved application can be retired.,warn); think setq(retire_waiting,u(%!/FUN`WAITLIST)); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; @pemit %#=notice(APP,Retired [name(%q<app_objid>)]. [u(%!/FUN`ADMITTED`TEXT,%q<retire_waiting>)][u(%!/FUN`PLACES`TEXT)],ok)
         flags: [cmdsyntax]
 
       # ---- lists ------------------------------------------------------------------
@@ -1250,7 +1255,7 @@ objects:
         flags: [cmdsyntax]
       WEB`ACT`RETIRE:
         value: |-
-          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,approved)=think setq(out,u(%!/WEB`ERR,Only an approved application can be retired.)); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; think setq(out,u(%!/WEB`DONE,Retired [name(%q<app_objid>)]. [u(%!/FUN`PLACES`TEXT)]))
+          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,approved)=think setq(out,u(%!/WEB`ERR,Only an approved application can be retired.)); think setq(retire_waiting,u(%!/FUN`WAITLIST)); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; think setq(out,u(%!/WEB`DONE,Retired [name(%q<app_objid>)]. [u(%!/FUN`ADMITTED`TEXT,%q<retire_waiting>)][u(%!/FUN`PLACES`TEXT)]))
         flags: [cmdsyntax]
       # After a change: message %0, the inputs emptied (the owner's own fields put back), and the page drawn again.
       WEB`DONE:
@@ -1513,9 +1518,9 @@ objects:
         |---|---|---|
         | `cap` | 0 | The most characters with the approved role. 0 is no cap. |
         | `approved-role` | approved | The role approval gives. |
-        | `show-queue` | 1 | Applicants see their place and the typical wait, and anyone can use `+apps/queue`. |
+        | `show-queue` | yes | Applicants see their place and the typical wait, and anyone can use `+apps/queue`. |
         | `wait-sample` | 20 | How many of the latest decisions the typical wait is the middle of. |
-        | `mail-offline` | 1 | Applicants who are not connected hear about decisions and comments by @mail. |
+        | `mail-offline` | yes | Applicants who are not connected hear about decisions and comments by @mail. |
 
         Raising the cap admits the waitlist into the new places at once.
 
