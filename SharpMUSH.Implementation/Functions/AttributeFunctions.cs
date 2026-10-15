@@ -1053,7 +1053,14 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "udefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default", "arguments..."])]
-	public async ValueTask<CallState> UserAttributeDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> UserAttributeDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> UserAttributeDefaultAsync(parser, asCaller: false);
+
+	/// <summary>
+	/// udefault()'s body: the attribute runs as the object that holds it, or, when
+	/// <paramref name="asCaller"/>, as the object calling the function (RhostMUSH's u2default()).
+	/// </summary>
+	private async ValueTask<CallState> UserAttributeDefaultAsync(IMUSHCodeParser parser, bool asCaller)
 	{
 		var selector = await parser.FunctionParse(parser.CurrentState.Arguments["0"].Message) ?? CallState.Empty;
 		var hadErrors = selector.HadErrors;
@@ -1084,7 +1091,7 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.LongName),
 					Arguments = arguments,
 					EnvironmentRegisters = arguments,
-					Executor = actualObject.Object().DBRef,
+					Executor = asCaller ? state.Executor : actualObject.Object().DBRef,
 					Caller = state.Executor
 				}, p => p.FunctionParse(value.Value)))!;
 			}));

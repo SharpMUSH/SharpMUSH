@@ -154,6 +154,18 @@ public class LimitExceededFlag
 }
 
 /// <summary>
+/// RhostMUSH's <c>privatize()</c> switch, shared by every frame of one evaluation: while it is on,
+/// code that localizes the q-registers (<c>localize()</c>, <c>ulocal()</c> and the like) starts with
+/// them empty instead of with a copy of the caller's. A reference type for the same reason as
+/// <see cref="LimitExceededFlag"/>.
+/// </summary>
+public class RegisterPrivacyFlag
+{
+	/// <summary>Whether localized code starts with empty q-registers.</summary>
+	public bool Enabled { get; set; }
+}
+
+/// <summary>
 /// HTTP response context for building HTTP responses
 /// </summary>
 public class HttpResponseContext
@@ -435,6 +447,9 @@ public sealed record EvaluationContext
 	/// <summary>Set once a limit has been exceeded.</summary>
 	public LimitExceededFlag? LimitExceeded { get; init; }
 
+	/// <summary>Whether localized code starts with empty q-registers (<c>privatize()</c>).</summary>
+	public RegisterPrivacyFlag? RegisterPrivacy { get; init; }
+
 	/// <inheritdoc cref="ParserState.MoveDepth"/>
 	public InvocationCounter? MoveDepth { get; init; }
 
@@ -550,6 +565,13 @@ public partial record ParserState
 	{
 		get => Context.LimitExceeded;
 		init => Context = Context with { LimitExceeded = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.RegisterPrivacy"/>
+	public RegisterPrivacyFlag? RegisterPrivacy
+	{
+		get => Context.RegisterPrivacy;
+		init => Context = Context with { RegisterPrivacy = value };
 	}
 
 	/// <summary>
@@ -751,6 +773,7 @@ public partial record ParserState
 			FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations = new(),
 			LimitExceeded = new(),
+			RegisterPrivacy = new(),
 			MoveDepth = new(),
 			CommandText = null,
 			QueuedOutput = PipedOutput,
@@ -795,6 +818,7 @@ public partial record ParserState
 			FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations = new InvocationCounter(),
 			LimitExceeded = new LimitExceededFlag(),
+			RegisterPrivacy = new RegisterPrivacyFlag(),
 			MoveDepth = new InvocationCounter()
 		},
 		Arguments = new Dictionary<string, CallState>()
@@ -862,6 +886,7 @@ public partial record ParserState
 				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations = new InvocationCounter(),
 				LimitExceeded = new LimitExceededFlag(),
+				RegisterPrivacy = new RegisterPrivacyFlag(),
 				MoveDepth = new InvocationCounter(),
 				CommandText = commandText,
 				OutputLimit = outputLimit

@@ -39,6 +39,7 @@
 | [OBJ()]               | [OWNER()]             | [PFUN()]              | [POSS()]              |
 | [REGLATTR()]          | [REGREP()]            | [REGREPI()]           | [REGXATTR()]          |
 | [SET()]               | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 |
+| [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           |
 | [UARGS()]             | [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           |
 | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 | [WILDGREP()]          |
 | [WILDGREPI()]         | [XATTR()]             | [XGET()]              | [ZFUN()]              |
@@ -62,12 +63,13 @@
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
-|          |          |          |          |
-|----------|----------|----------|----------|
-| [AND()]  | [CAND()] | [COR()]  | [EQ()]   |
-| [GT()]   | [GTE()]  | [LT()]   | [LTE()]  |
-| [NAND()] | [NEQ()]  | [NOR()]  | [NOT()]  |
-| [OR()]   | [T()]    | [XOR()]  |          |
+|           |           |           |           |
+|-----------|-----------|-----------|-----------|
+| [AND()]   | [CAND()]  | [COR()]   | [EQ()]    |
+| [GT()]    | [GTE()]   | [LAND()]  | [LNOR()]  |
+| [LOR()]   | [LT()]    | [LTE()]   | [LXNOR()] |
+| [LXOR()]  | [NAND()]  | [NEQ()]   | [NOR()]   |
+| [NOT()]   | [OR()]    | [T()]     | [XOR()]   |
 
 ::: seealso
 - [boolean values]
@@ -151,19 +153,21 @@
 
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
-| [CHAIN()]       | [ELEMENTS()]    | [EVERY()]       | [EXTRACT()]     |
-| [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     | [FIRST()]       |
-| [FOLD()]        | [GRAB()]        | [GRABALL()]     | [INDEX()]       |
-| [ITEMIZE()]     | [ITEMS()]       | [ITER()]        | [JITER()]       |
-| [LAST()]        | [LDELETE()]     | [LINSERT()]     | [LISTSET()]     |
-| [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         | [MATCH()]       |
-| [MATCHALL()]    | [MEMBER()]      | [MIX()]         | [MUNGE()]       |
-| [NAMEGRAB()]    | [NAMEGRABALL()] | [RANDWORD()]    | [REMOVE()]      |
-| [REST()]        | [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    |
-| [SETSYMDIFF()]  | [SETUNION()]    | [SHUFFLE()]     | [SOME()]        |
-| [SORT()]        | [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      |
-| [STEP()]        | [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      |
-| [WORDPOS()]     | [WORDS()]       |                 |                 |
+| [CHAIN()]       | [CITER()]       | [ELEMENTS()]    | [EVERY()]       |
+| [EXTRACT()]     | [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     |
+| [FIRST()]       | [FOLD()]        | [GRAB()]        | [GRABALL()]     |
+| [INDEX()]       | [INF()]         | [ITEMIZE()]     | [ITEMS()]       |
+| [ITER()]        | [JITER()]       | [LAST()]        | [LDELETE()]     |
+| [LINSERT()]     | [LISTDIFF()]    | [LISTINTER()]   | [LISTSET()]     |
+| [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         |
+| [MATCH()]       | [MATCHALL()]    | [MEMBER()]      | [MIX()]         |
+| [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] | [NSITER()]      |
+| [RANDWORD()]    | [REMOVE()]      | [REST()]        | [REVWORDS()]    |
+| [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  | [SETUNION()]    |
+| [SHUFFLE()]     | [SOME()]        | [SORT()]        | [SORTBY()]      |
+| [SORTKEY()]     | [SPLICE()]      | [STEP()]        | [STEPARGS()]    |
+| [TABLE()]       | [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     |
+| [WORDS()]       |                 |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -178,12 +182,14 @@
 | [ATAN()]     | [ATAN2()]    | [BOUND()]    | [CEIL()]     |
 | [COS()]      | [CTU()]      | [DIST2D()]   | [DIST3D()]   |
 | [E()]        | [EXP()]      | [FDIV()]     | [FLOOR()]    |
-| [FMOD()]     | [FRACTION()] | [LMATH()]    | [LN()]       |
-| [LOG()]      | [MAX()]      | [MEAN()]     | [MEDIAN()]   |
-| [MIN()]      | [MUL()]      | [PI()]       | [POWER()]    |
-| [ROOT()]     | [ROUND()]    | [SIGN()]     | [SIN()]      |
-| [SQRT()]     | [STDDEV()]   | [SUB()]      | [TAN()]      |
-| [TRUNC()]    | [VAL()]      |              |              |
+| [FMOD()]     | [FRACTION()] | [LADD()]     | [LAVG()]     |
+| [LDIV()]     | [LMATH()]    | [LMAX()]     | [LMIN()]     |
+| [LMUL()]     | [LN()]       | [LOG()]      | [LSUB()]     |
+| [MAX()]      | [MEAN()]     | [MEDIAN()]   | [MIN()]      |
+| [MUL()]      | [PI()]       | [POWER()]    | [ROOT()]     |
+| [ROUND()]    | [SIGN()]     | [SIN()]      | [SQRT()]     |
+| [STDDEV()]   | [SUB()]      | [TAN()]      | [TRUNC()]    |
+| [VAL()]      |              |              |              |
 
   These functions operate only on integers (if passed floating point numbers, they will return an error or misbehave):
 
@@ -247,23 +253,23 @@
 | [ACCENT()]               | [AFTER()]                | [ALIGN()]                | [ALPHAMAX()]             |
 | [ALPHAMIN()]             | [ART()]                  | [BEFORE()]               | [BRACKETS()]             |
 | [CAPSTR()]               | [CASE()]                 | [CASEALL()]              | [CAT()]                  |
-| [CENTER()]               | [CHR()]                  | [COMP()]                 | [COND()]                 |
-| [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            | [DECOMPOSEWEB()]         |
-| [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         | [EDIT()]                 |
-| [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               | [FLIP()]                 |
-| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
-| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
-| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
-| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
-| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
-| [REGMATCH()]             | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               |
-| [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               |
-| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
-| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
-| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
-| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
-| [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            | [URLENCODE()]            |
-| [WRAP()]                 |                          |                          |                          |
+| [CENTER()]               | [CHR()]                  | [COLUMNS()]              | [COMP()]                 |
+| [COND()]                 | [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            |
+| [DECOMPOSEWEB()]         | [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         |
+| [EDIT()]                 | [ELEMENTPOS()]           | [ENCODE64()]             | [ENCRYPT()]              |
+| [ESCAPE()]               | [FLIP()]                 | [FOREACH()]              | [FORMDECODE()]           |
+| [FORMQ()]                | [GRAPHEMECOUNT()]        | [GRAPHEMES()]            | [HMAC()]                 |
+| [IF()]                   | [IFELSE()]               | [LCSTR()]                | [LEFT()]                 |
+| [LIT()]                  | [LJUST()]                | [LPOS()]                 | [MERGE()]                |
+| [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
+| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDERMARKDOWN()]       |
+| [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                | [RJUST()]                |
+| [SCRAMBLE()]             | [SECURE()]               | [SPACE()]                | [SPELLNUM()]             |
+| [SQUISH()]               | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
+| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         |
+| [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           |
+| [SWITCH()]               | [TR()]                   | [TRIM()]                 | [UCSTR()]                |
+| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -299,14 +305,14 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          | [LETQ()]           |
 | [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
 | [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
-| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [R()]              |
-| [RAND()]           | [RESTRICTEDEXPR()] | [S()]              | [SCAN()]           |
-| [SET()]            | [SETQ()]           | [SETQM()]          | [SETR()]           |
-| [SETRM()]          | [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     |
-| [SPEAK()]          | [STEXT()]          | [SUGGEST()]        | [TAG()]            |
-| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
-| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
-| [WIPE()]           |                    |                    |                    |
+| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      |
+| [R()]              | [RAND()]           | [RESTRICTEDEXPR()] | [S()]              |
+| [SCAN()]           | [SET()]            | [SETQ()]           | [SETQM()]          |
+| [SETR()]           | [SETRM()]          | [SLEV()]           | [SOUNDEX()]        |
+| [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          | [SUGGEST()]        |
+| [TAG()]            | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       |
+| [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         |
+| [VALID()]          | [WIPE()]           |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.

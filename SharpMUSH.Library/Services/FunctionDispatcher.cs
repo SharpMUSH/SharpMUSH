@@ -112,10 +112,14 @@ public static class FunctionDispatcher
 			logger.LogInformation("Function {Function} executed by {Executor}", name, executor!.Object().DBRef);
 
 		if (!flags.HasFlag(FunctionFlags.Localize)) return await definition.Function(parser);
+		// privatize(1) (RhostMUSH): localized code starts with no q-registers rather than a copy.
+		var privatized = parser.CurrentState.RegisterPrivacy?.Enabled == true;
 		var localized = parser.Push(parser.CurrentState with
 		{
 			Registers = new(parser.CurrentState.Registers.Reverse()
-				.Select(frame => new Dictionary<string, MString>(frame, frame.Comparer)))
+				.Select(frame => privatized
+					? new Dictionary<string, MString>(frame.Comparer)
+					: new Dictionary<string, MString>(frame, frame.Comparer)))
 		});
 		if (deferredArguments && flags.HasFlag(FunctionFlags.NoParse))
 		{
