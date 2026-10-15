@@ -249,9 +249,15 @@ public partial class LightningDatabase
 		string? limit = null, string[]? enumValues = null, char enumDelimiter = ' ',
 		CancellationToken cancellationToken = default)
 	{
-		var record = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
+		var replacement = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
-		await Store.WriteAsync(tx => tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(record)), cancellationToken);
+		// The flags, limit and enum are replaced; an index on the entry is not one of them and carries over.
+		var record = await Store.WriteAsync(tx =>
+		{
+			var written = replacement with { Index = ReadAttributeEntryRecord(tx, name)?.Index };
+			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(written));
+			return written;
+		}, cancellationToken);
 		return MapEntry(record);
 	}
 
@@ -271,8 +277,17 @@ public partial class LightningDatabase
 		return created ? MapEntry(record) : null;
 	}
 
+	/// <summary>Deletes the entry, and with it any index on it; the copies on objects stay.</summary>
 	public async ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx => tx.Delete(Tables.AttrEntry, Keys.Upper(name)), cancellationToken);
+		=> await Store.WriteAsync(tx =>
+		{
+			if (ReadAttributeEntryRecord(tx, name) is { Index: not null })
+			{
+				DropIndexRows(tx, name);
+			}
+
+			return tx.Delete(Tables.AttrEntry, Keys.Upper(name));
+		}, cancellationToken);
 
 	#endregion
 
@@ -320,12 +335,12 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
-			if (ReadObject(tx, n) is null)
+			if (ReadObject(tx, n) is not { } found)
 			{
 				return new NotFound();
 			}
 
-			var outcome = WriteAttributePath(tx, n, write);
+			var outcome = WriteAttributePath(tx, n, found.Record.Type, write);
 			if (TouchesAliases(write.Path))
 			{
 				SyncPlayerAliases(tx, n);
@@ -346,14 +361,14 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync(tx =>
 		{
-			if (ReadObject(tx, n) is null)
+			if (ReadObject(tx, n) is not { } found)
 			{
 				return false;
 			}
 
 			foreach (var write in writes)
 			{
-				WriteAttributePath(tx, n, write);
+				WriteAttributePath(tx, n, found.Record.Type, write);
 			}
 
 			// The importer's path: an imported player's ALIAS is indexed as it lands.
@@ -368,26 +383,29 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// An <see cref="AttributeWrite"/> with its path upper-cased and its value serialized, so the writer
-	/// thread does neither. <see cref="Text"/> is the value as given, for a <c>watched</c> leaf's report.
+	/// thread does neither. <see cref="Source"/> is the value itself, whose plain text an indexed attribute's
+	/// index needs; it is only read when the attribute has an index.
 	/// </summary>
-	private readonly record struct PreparedAttributeWrite(string[] Path, byte[] Value, MString Text, long Owner, string[] Flags)
+	private readonly record struct PreparedAttributeWrite(string[] Path, byte[] Value, long Owner, string[] Flags, MString Source)
 	{
 		public static PreparedAttributeWrite From(AttributeWrite write) => new(
 			[.. write.Path.Select(segment => segment.ToUpperInvariant())],
 			Keys.Str(MarkupTextSerializer.Serialize(write.Value)),
-			write.Value,
 			write.Owner.Object.Key,
-			[.. write.Flags.Select(flag => flag.Name)]);
+			[.. write.Flags.Select(flag => flag.Name)],
+			write.Value);
 	}
 
 	private static readonly byte[] EmptyAttributeValue = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
 
 	/// <summary>
 	/// One attribute set, as <see cref="SetAttributeAsync"/> describes it, inside the caller's transaction.
-	/// The write's own flags land on its leaf alongside the entry's defaults. Answers the leaf's change when
-	/// the leaf carries <c>watched</c> once written.
+	/// The write's own flags land on its leaf alongside the entry's defaults. When the leaf's entry has an index,
+	/// the leaf's index entries follow its value in the same transaction (<see cref="IndexCopy"/>); the entry
+	/// is read here for its default flags anyway, so an attribute without an index costs nothing more.
+	/// Answers the leaf's change when the leaf carries <c>watched</c> once written.
 	/// </summary>
-	private static AttributeWriteOutcome WriteAttributePath(ITx tx, long n, PreparedAttributeWrite write)
+	private static AttributeWriteOutcome WriteAttributePath(ITx tx, long n, string objectType, PreparedAttributeWrite write)
 	{
 		var path = write.Path;
 		var longName = string.Empty;
@@ -429,10 +447,14 @@ public partial class LightningDatabase
 				if (IsWatched(flags))
 				{
 					var previous = existing is null ? MarkupText.Empty : ReadPreviousValue(tx, key);
-					outcome = new WatchedAttributesChanged([new WatchedAttributeChange(longName, previous, write.Text)]);
+					outcome = new WatchedAttributesChanged([new WatchedAttributeChange(longName, previous, write.Source)]);
 				}
 
 				tx.Put(Tables.AttrVal, key, write.Value);
+				if (entry?.Index is { } index)
+				{
+					IndexCopy(tx, n, longName, index, objectType, flags, write.Source.ToPlainText());
+				}
 			}
 			else if (existing is null)
 			{
@@ -533,6 +555,8 @@ public partial class LightningDatabase
 				? new WatchedAttributesChanged([new WatchedAttributeChange(longName, ReadPreviousValue(tx, key), MarkupText.Empty)])
 				: new Success();
 
+			// Emptied or gone, the copy has no index entry either way.
+			UnindexCopy(tx, n, longName);
 			if (HasChildren(tx, n, longName))
 			{
 				tx.Put(Tables.AttrVal, key, empty);
@@ -574,6 +598,8 @@ public partial class LightningDatabase
 			var descendants = Keys.Attr(n, longName + "`");
 			var outcome = WatchedRemovals(tx, longName, key, walk[^1].Meta, descendants);
 
+			UnindexCopy(tx, n, longName);
+			UnindexCopies(tx, n, descendants);
 			tx.Delete(Tables.AttrMeta, key);
 			tx.Delete(Tables.AttrVal, key);
 			tx.DeletePrefix(Tables.AttrMeta, descendants);
@@ -1050,6 +1076,7 @@ public partial class LightningDatabase
 		if (mutate(flags))
 		{
 			tx.Put(Tables.AttrMeta, Keys.Attr(dbref, longName), Codec.Serialize(meta with { Flags = [.. flags] }));
+			ReindexAfterFlagChange(tx, dbref, longName, IsInternal(meta.Flags), flags);
 		}
 	}
 
@@ -1084,7 +1111,8 @@ public partial class LightningDatabase
 		DefaultFlags = record.DefaultFlags,
 		Limit = string.IsNullOrEmpty(record.Limit) ? null : record.Limit,
 		Enum = record.Enum is { Length: > 0 } ? record.Enum : null,
-		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' '
+		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' ',
+		Index = record.Index is { } index ? MapIndex(index) : null
 	};
 
 	/// <summary>A space delimiter is the default and is not written, so older rows and new ones read alike.</summary>

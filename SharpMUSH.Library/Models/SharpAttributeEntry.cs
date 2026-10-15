@@ -20,4 +20,19 @@ public class SharpAttributeEntry
 	/// A value holding it names no choice, so a choice may contain spaces only under another delimiter.
 	/// </summary>
 	public char EnumDelimiter { get; set; } = ' ';
+
+	/// <summary>
+	/// The index on this attribute (<c>@attribute/index</c>), or null for none: its options, and whether it is
+	/// ready or still being built.
+	/// </summary>
+	public AttributeIndexDefinition? Index { get; set; }
 }
+
+/// <summary>An attribute entry's index, as the entry stores it.</summary>
+/// <param name="Options">How values are ordered and which copies are kept.</param>
+/// <param name="Ready">
+/// Whether every existing copy has been indexed. Until then the index answers nothing (queries say
+/// <c>#-1 INDEX BUILDING</c>), though every write already keeps it.
+/// </param>
+/// <param name="ResumeAt">While building, the dbref the next batch of the build starts at.</param>
+public sealed record AttributeIndexDefinition(AttributeIndexOptions Options, bool Ready, long ResumeAt);

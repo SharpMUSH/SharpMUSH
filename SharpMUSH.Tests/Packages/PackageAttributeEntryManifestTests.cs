@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
@@ -27,8 +28,8 @@ public class PackageAttributeEntryManifestTests
 	private static IReadOnlyList<PackageManifestIssue> Errors(PackageManifestResult<ParsedPackageManifest> result)
 		=> result.Expect<PackageManifestFailure>().Issues.Where(i => i.Severity == PackageManifestIssueSeverity.Error).ToList();
 
-	private IReadOnlyList<PackageAttributeEntrySpec> Entries(string body)
-		=> Parse(body).Expect<ParsedPackageManifest>().Manifest.Declared.AttributeEntries;
+	private IReadOnlyList<PackageAttributeEntrySpec> Entries(string body, string format = "1.5")
+		=> Parse(body, format).Expect<ParsedPackageManifest>().Manifest.Declared.AttributeEntries;
 
 	[Test]
 	public async Task EveryFieldParses()
@@ -229,17 +230,78 @@ public class PackageAttributeEntryManifestTests
 	}
 
 	[Test]
-	public async Task AnIndexIsReservedForALaterFormat()
+	public async Task AnIndexTakesTrueOrTheOptionWords()
 	{
-		var parsed = Parse("""
+		var entries = Entries("""
 			attributes:
 			  JOB`STATUS:
 			    enum: [new, closed]
+			    index: true
+			  JOB`LEVEL:
+			    index: numeric type:thing
+			  JOB`TAGS:
+			    index: [exact, "split:|"]
+			  JOB`NOTE:
+			    index: false
+			""", "1.8");
+
+		await Assert.That(entries.Single(e => e.Name == "JOB`STATUS").Index).IsEqualTo(AttributeIndexOptions.Default);
+		await Assert.That(entries.Single(e => e.Name == "JOB`LEVEL").Index)
+			.IsEqualTo(new AttributeIndexOptions(Numeric: true, Type: "THING"));
+		await Assert.That(entries.Single(e => e.Name == "JOB`TAGS").Index)
+			.IsEqualTo(new AttributeIndexOptions(Exact: true, Split: "|"));
+		await Assert.That(entries.Single(e => e.Name == "JOB`NOTE").Index).IsNull();
+	}
+
+	[Test]
+	public async Task AnIndexWithAnUnknownOptionIsRefused()
+	{
+		var errors = Errors(Parse("""
+			attributes:
+			  JOB`STATUS:
 			    index: { fold: case }
+			  JOB`LEVEL:
+			    index: sorted
+			""", "1.8"));
+		await Assert.That(errors.Select(e => e.Path)).IsEquivalentTo(["attributes.JOB`STATUS.index", "attributes.JOB`LEVEL.index"]);
+	}
+
+	[Test]
+	public async Task AnInternalEntryCannotBeIndexed()
+	{
+		var errors = Errors(Parse("""
+			attributes:
+			  JOB`SECRET:
+			    flags: [internal]
+			    index: true
+			""", "1.8"));
+		await Assert.That(errors.Single().Path).IsEqualTo("attributes.JOB`SECRET.index");
+	}
+
+	[Test]
+	public async Task ANameTooLongForAnIndexIsRefused()
+	{
+		var name = new string('N', AttributeIndexOptions.MaxNameBytes + 1);
+		var errors = Errors(Parse($"""
+			attributes:
+			  ? {name}
+			  : index: true
+			""", "1.8"));
+		await Assert.That(errors.Single().Path).IsEqualTo($"attributes.{name}.index");
+	}
+
+	/// <summary>Before format 1.8 <c>index:</c> was reserved, so an older manifest's is ignored with a warning.</summary>
+	[Test]
+	public async Task AnIndexBeforeFormat18IsIgnored()
+	{
+		var parsed = Parse("""
+			attributes:
+			  JOB`LEVEL:
+			    index: numeric
 			""").Expect<ParsedPackageManifest>();
-		await Assert.That(parsed.Manifest.Declared.AttributeEntries.Single().Name).IsEqualTo("JOB`STATUS");
-		await Assert.That(parsed.Warnings.Single().Path).IsEqualTo("attributes.JOB`STATUS.index");
-		await Assert.That(parsed.Warnings.Single().Message).Contains("reserved");
+
+		await Assert.That(parsed.Manifest.Declared.AttributeEntries.Single().Index).IsNull();
+		await Assert.That(parsed.Warnings.Select(w => w.Path)).Contains("attributes.JOB`LEVEL.index");
 	}
 
 	/// <summary>The reader knows the attribute flags a new world is seeded with, less <c>branch</c>.</summary>
