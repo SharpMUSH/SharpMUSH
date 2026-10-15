@@ -168,7 +168,7 @@ public class EventService(
 			}
 
 			return result;
-		}, $"event:{eventName}", "event", handler, notifyOnRejection: false);
+		}, $"event:{eventName}", "event", handler, enactor, notifyOnRejection: false);
 
 		if (!admission.Accepted)
 		{

@@ -59,7 +59,7 @@ public partial class EventCatalogueTests
 	[Test]
 	public async Task HelpListsEveryRaisedEventWithItsArguments()
 	{
-		var help = File.ReadAllText(Path.Combine(RepositoryRoot(), "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH", "sharpevents.md"))
+		var help = File.ReadAllText(HelpFile("sharpevents.md"))
 			.Replace("\\`", "`");
 		var missing = EventCatalogue.All
 			.Where(definition => definition.Support == EventSupport.Raised)
@@ -74,9 +74,9 @@ public partial class EventCatalogueTests
 	[Test]
 	public async Task HelpPutsEveryUnsupportedEventInTheCompatibilityProfile()
 	{
-		var events = File.ReadAllText(Path.Combine(RepositoryRoot(), "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH", "sharpevents.md"))
+		var events = File.ReadAllText(HelpFile("sharpevents.md"))
 			.Replace("\\`", "`");
-		var compatibility = File.ReadAllText(Path.Combine(RepositoryRoot(), "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH", "compatibility-events.md"))
+		var compatibility = File.ReadAllText(HelpFile("compatibility-events.md"))
 			.Replace("\\`", "`");
 		var misplaced = EventCatalogue.All
 			.Where(definition => definition.Support == EventSupport.Unsupported)
@@ -119,11 +119,14 @@ public partial class EventCatalogueTests
 				.Select(expression => new Raise(Path.GetRelativePath(root, file), expression, constants.GetValueOrDefault(expression))));
 	}
 
+	private static string HelpFile(string name)
+		=> Path.Join(RepositoryRoot(), "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH", name);
+
 	/// <summary>Walks up from the test binaries to the directory holding <c>SharpMUSH.sln</c>.</summary>
 	private static string RepositoryRoot()
 	{
 		var directory = new DirectoryInfo(AppContext.BaseDirectory);
-		while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SharpMUSH.sln")))
+		while (directory is not null && !File.Exists(Path.Join(directory.FullName, "SharpMUSH.sln")))
 			directory = directory.Parent;
 
 		return directory?.FullName

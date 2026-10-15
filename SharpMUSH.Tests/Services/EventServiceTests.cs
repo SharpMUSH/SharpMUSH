@@ -155,8 +155,9 @@ public class EventServiceTests
 		var fixture = new Fixture("think own", SharpMUSH.Library.Definitions.SharpEvents.SocketGmcp,
 			("SOCKET`GMCP`A", "think stop"), ("SOCKET`GMCP`B", "think never"));
 		Func<ValueTask<CallState?>>? work = null;
+		DBRef? queuedEnactor = null;
 		fixture.Scheduler.AdmitWork(Arg.Do<Func<ValueTask<CallState?>>>(x => work = x), Arg.Any<string>(), Arg.Any<string>(),
-				Arg.Any<DBRef>(), Arg.Any<bool>())
+				Arg.Any<DBRef>(), Arg.Do<DBRef>(x => queuedEnactor = x), Arg.Any<bool>())
 			.Returns(ValueTask.FromResult(new QueueAdmissionResult(1, QueueRejectionReason.None)));
 		var ran = new List<string>();
 		fixture.Parser.CommandListParse(Arg.Any<MString>()).Returns(call =>
@@ -173,6 +174,8 @@ public class EventServiceTests
 
 		await fixture.Events.TriggerEventAsync(SharpMUSH.Library.Definitions.SharpEvents.SocketGmcp, null, "1", "Core.Hello", "{}", "");
 		await Assert.That(fixture.Queued()).IsEmpty();
+		// The entry's enactor is who caused the event, so a time-out is reported to them, not to the handler.
+		await Assert.That(queuedEnactor!.Value.Number).IsEqualTo(1);
 		await work!();
 
 		await Assert.That(ran).IsEquivalentTo(new[] { "think own", "think stop" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
