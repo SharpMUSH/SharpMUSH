@@ -107,7 +107,7 @@ public sealed partial class PluginUploadStore(
 		// The README rides along so the install keeps it (PackageReadme); the first name found wins, as from a remote.
 		if (PackageReadme.FileNames.FirstOrDefault(files.ContainsKey) is { } readme)
 		{
-			await File.WriteAllBytesAsync(Path.Combine(folder, readme), files[readme], cancellationToken);
+			await File.WriteAllBytesAsync(Path.Join(folder, readme), files[readme], cancellationToken);
 		}
 
 		logger.LogInformation("Staged uploaded plugin package {PackageId} v{Version} as {Token}.", manifest.Name, manifest.Version, token);

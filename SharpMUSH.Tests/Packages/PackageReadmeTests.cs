@@ -51,10 +51,10 @@ public class PackageReadmeTests
 	[Test]
 	public async Task BundledPackages_EmbedTheirReadmes()
 	{
-		var examples = Path.Combine(FindRepoRoot(), "examples", "packages");
+		var examples = Path.Join(FindRepoRoot(), "examples", "packages");
 		foreach (var descriptor in BundledPackages.All)
 		{
-			var file = Path.Combine(examples, descriptor.PackageId, "README.md");
+			var file = Path.Join(examples, descriptor.PackageId, "README.md");
 			if (!File.Exists(file))
 			{
 				continue;
@@ -137,7 +137,7 @@ public class PackageReadmeTests
 	private static string FindRepoRoot()
 	{
 		var directory = new DirectoryInfo(AppContext.BaseDirectory);
-		while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SharpMUSH.sln")))
+		while (directory is not null && !File.Exists(Path.Join(directory.FullName, "SharpMUSH.sln")))
 		{
 			directory = directory.Parent;
 		}
