@@ -103,7 +103,7 @@
   <Target Name="ResolveDiscordPluginFiles">
     <PropertyGroup><DiscordPluginOutDir>$(MSBuildThisFileDirectory)../SharpMUSH.Plugins.Discord/bin/$(Configuration)/net11.0</DiscordPluginOutDir></PropertyGroup>
     <ItemGroup>
-      <DiscordPluginFiles Include="$(DiscordPluginOutDir)\**\*.dll;$(DiscordPluginOutDir)\runtimes\**\*;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.deps.json;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.runtimeconfig.json;$(DiscordPluginOutDir)\plugin.json" Exclude="$(DiscordPluginOutDir)\SharpMUSH.*.dll;$(DiscordPluginOutDir)\SharpMUSH.*.pdb;$(DiscordPluginOutDir)\SharpMUSH.*.xml" />
+      <DiscordPluginFiles Include="$(DiscordPluginOutDir)\**\*.dll;$(DiscordPluginOutDir)\runtimes\**\*;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.deps.json;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.runtimeconfig.json;$(DiscordPluginOutDir)\plugin.json;$(DiscordPluginOutDir)\help\*.md" Exclude="$(DiscordPluginOutDir)\SharpMUSH.*.dll;$(DiscordPluginOutDir)\SharpMUSH.*.pdb;$(DiscordPluginOutDir)\SharpMUSH.*.xml" />
       <DiscordPluginFiles Include="$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.dll;$(DiscordPluginOutDir)\SharpMUSH.Plugins.Discord.pdb" />
       <DiscordPluginFiles Update="@(DiscordPluginFiles)">
         <PluginRelativePath>$([MSBuild]::MakeRelative('$(DiscordPluginOutDir)', '%(FullPath)'))</PluginRelativePath>
