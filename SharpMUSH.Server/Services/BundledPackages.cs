@@ -93,6 +93,11 @@ public static class BundledPackages
 		// Available, not installed: the scene package keeps any detail an owner sets, and a game chooses whether
 		// it wants a verse, a canon and content warnings named for it.
 		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: favourite poses and the highlights they make add +scene/fav and its kin to the
+		// Scene Logger, and a game chooses whether its players rank poses at all. Its portal page is a separate
+		// application package, as jobs-app is for jobs.
+		new("highlights", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("highlights-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
