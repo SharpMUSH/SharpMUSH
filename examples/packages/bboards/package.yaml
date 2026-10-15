@@ -207,17 +207,17 @@ objects:
       PALETTE`READER: |-
         {"label":"Open the reader","line":"+bbreader","attr":"CMD`BB","icon":"ChromeReaderMode","keywords":"bboards keys"}
       # While the reader takes the player's lines, its keys. FUN`PALETTE`WRITING decides which set.
-      PALETTE`KEY`NEXT: |-
+      PALETTE`KEY_NEXT: |-
         {"label":"Next new thing","line":"n","context":"input","lock":"FUN`PALETTE`WRITING/0","order":1}
-      PALETTE`KEY`LOOK: |-
+      PALETTE`KEY_LOOK: |-
         {"label":"Show this screen again","line":"l","context":"input","lock":"FUN`PALETTE`WRITING/0","order":2}
-      PALETTE`KEY`UP: |-
+      PALETTE`KEY_UP: |-
         {"label":"Up one level","line":"u","context":"input","lock":"FUN`PALETTE`WRITING/0","order":3}
-      PALETTE`KEY`COMMENT: |-
+      PALETTE`KEY_COMMENT: |-
         {"label":"Comment on this post","line":"c <text>","context":"input","lock":"FUN`PALETTE`WRITING/0","order":4}
-      PALETTE`KEY`KEYS: |-
+      PALETTE`KEY_KEYS: |-
         {"label":"Reader keys","line":"?","context":"input","lock":"FUN`PALETTE`WRITING/0","order":5}
-      PALETTE`KEY`POST: |-
+      PALETTE`KEY_POST: |-
         {"label":"Post what you wrote","line":".","context":"input","lock":"FUN`PALETTE`WRITING/1","order":1}
       # 1 while the player (%#) is writing in the reader.
       FUN`PALETTE`WRITING: |-
