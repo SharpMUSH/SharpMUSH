@@ -660,8 +660,9 @@ Several things are kept after they stop being what the game shows:
 - **Deleted poses.** Deleting a pose hides it. Its content and edit history stay stored.
 - **The audit log.** Every staff action, from the portal or the game, is one entry (the portal's
   audit log page lists them).
+- **Recorded rolls.** Every `@roll`, and every roll() kept with `record`, so `rollinfo()` can show it.
 
-All four grow without bound by default. Each one makes the live world larger, and so every backup.
+All five grow without bound by default. Each one makes the live world larger, and so every backup.
 `@storage/history` counts them.
 
 **The default keeps everything.** Unless an operator sets a policy, nothing is ever purged. That
