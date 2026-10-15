@@ -609,3 +609,63 @@ test('a tab list claims only the keys that move between its tabs', () => {
     assert.equal(press('Tab'), false);
     assert.equal(press('a'), false);
 });
+
+test('the scene compose watch pins the page to the visible area while the keyboard is up, and lets go on dispose', async () => {
+    const target = () => {
+        const listeners = new Map();
+        return {
+            listeners,
+            addEventListener: (name, handler) => listeners.set(name, handler),
+            removeEventListener: (name, handler) => { if (listeners.get(name) === handler) listeners.delete(name); }
+        };
+    };
+    const viewport = Object.assign(target(), { height: 800, offsetTop: 0 });
+    const doc = Object.assign(target(), { activeElement: null, visibilityState: 'visible' });
+    const win = Object.assign(target(), { innerHeight: 800, visualViewport: viewport });
+    const context = vm.createContext({ window: win, document: doc, HTMLElement: class {}, setTimeout });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    const layout = context.window.sharpmushLayout;
+
+    const classes = new Set();
+    const style = new Map();
+    const field = { tagName: 'TEXTAREA' };
+    const page = Object.assign(target(), {
+        contains: element => element === field,
+        classList: { toggle: (name, on) => on ? classes.add(name) : classes.delete(name), remove: name => classes.delete(name) },
+        style: { setProperty: (name, value) => style.set(name, value), removeProperty: name => style.delete(name) }
+    });
+    const calls = [];
+    const watch = layout.watchSceneCompose(page, { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+
+    // Focus lands in the compose field; the keyboard then takes the lower part of the screen.
+    doc.activeElement = field;
+    page.listeners.get('focusin')();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(classes.has('scene-live-page--keyboard'), false);
+    viewport.height = 420;
+    viewport.offsetTop = 30;
+    viewport.listeners.get('resize')();
+    assert.equal(classes.has('scene-live-page--keyboard'), true);
+    assert.equal(style.get('--vv-top'), '30px');
+    assert.equal(style.get('--vv-height'), '420px');
+
+    // A field outside the page leaves it alone.
+    doc.activeElement = { tagName: 'INPUT' };
+    viewport.listeners.get('scroll')();
+    assert.equal(classes.has('scene-live-page--keyboard'), false);
+    assert.equal(style.has('--vv-top'), false);
+
+    // Coming back to the tab asks the page to read the draft again.
+    doc.listeners.get('visibilitychange')();
+    win.listeners.get('focus')();
+    assert.deepEqual(calls, ['OnPageShown', 'OnPageShown']);
+
+    doc.activeElement = field;
+    viewport.listeners.get('resize')();
+    watch.dispose();
+    assert.equal(classes.has('scene-live-page--keyboard'), false);
+    assert.equal(viewport.listeners.size, 0);
+    assert.equal(page.listeners.size, 0);
+    assert.equal(doc.listeners.size, 0);
+    assert.equal(win.listeners.size, 0);
+});

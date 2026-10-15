@@ -1,0 +1,164 @@
+@using System.Globalization
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IStringLocalizer<SharedResource> Loc
+@inject SceneService SceneService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+@* The schedule in a calendar app: a feed the app reads every hour. Each time in it is a moment, not a clock
+   reading, so the app shows it in the reader's own time zone. The public feed lists the public scenes; a private
+   link, made per character, adds the private scenes that character may see, or only the ones it runs or joined.
+   The server keeps only a fingerprint of the private link, so its address is shown once, when it is made. *@
+<div class="calendar-feed-wrap">
+    <KitCard Class="calendar-feed" Title="@Loc["RolCalendarTitle"]" Sub="@Loc["RolCalendarSub"]">
+        <Controls>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Close" Class="calendar-feed-close" AriaLabel="@Loc["RolCalendarClose"]" OnClick="OnClose" />
+        </Controls>
+        <ChildContent>
+            <div class="calendar-feed-body">
+                <section class="calendar-feed-part">
+                    <h3 class="calendar-feed-head">@Loc["RolCalendarPublic"]</h3>
+                    <p class="calendar-feed-text">@Loc["RolCalendarPublicHint"]</p>
+                    @Address(PublicUrl, "calendar-feed-public")
+                </section>
+
+                @if (Character is not null)
+                {
+                    <section class="calendar-feed-part">
+                        <h3 class="calendar-feed-head">@Loc["RolCalendarPrivate"]</h3>
+                        <p class="calendar-feed-text">@Loc["RolCalendarPrivateHint"]</p>
+                        @if (_link is { Url: { } url })
+                        {
+                            <MudCheckBox T="bool" @bind-Value="_mineOnly" Dense="true" Class="calendar-feed-mine"
+                                         Label="@Loc["RolCalendarMineOnly"]" />
+                            @Address(_mineOnly ? url + "?scope=mine" : url, "calendar-feed-private")
+                            <p class="calendar-feed-note">@Loc["RolCalendarShownOnce"]</p>
+                        }
+                        else if (_link is { Exists: true, CreatedAt: { } made })
+                        {
+                            <p class="calendar-feed-note">@string.Format(Loc["RolCalendarMadeOn"], DateTimeOffset.FromUnixTimeMilliseconds(made).ToLocalTime().ToString("D", CultureInfo.CurrentCulture))</p>
+                        }
+                        @if (_error is not null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="calendar-feed-error">@_error</MudAlert>
+                        }
+                        <div class="calendar-feed-actions">
+                            <CapsuleButton Primary="@(_link is not { Exists: true })" Icon="@Icons.Material.Outlined.Key" Class="calendar-feed-make"
+                                           Disabled="_busy" OnClick="MakeLinkAsync">
+                                @(_link is { Exists: true } ? Loc["RolCalendarMakeNew"] : Loc["RolCalendarMake"])
+                            </CapsuleButton>
+                            @if (_link is { Exists: true })
+                            {
+                                <CapsuleButton Icon="@Icons.Material.Outlined.LinkOff" Class="calendar-feed-off" Disabled="_busy"
+                                               OnClick="TurnOffAsync">@Loc["RolCalendarTurnOff"]</CapsuleButton>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </ChildContent>
+    </KitCard>
+</div>
+
+@code {
+    /// <summary>The character this tab acts as, which a private link belongs to (objid); null for none.</summary>
+    [Parameter] public string? Character { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private SceneCalendarLink? _link;
+    private string? _linkFor;
+    private bool _mineOnly;
+    private bool _busy;
+    private string? _error;
+
+    private string PublicUrl => Nav.ToAbsoluteUri(ApiUrl.Resolve("/api/scenes/calendar.ics")).AbsoluteUri;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Another character's link, or the address shown once to it, is not this one's to show or act on.
+        if (Character == _linkFor) return;
+        _linkFor = Character;
+        _link = null;
+        _mineOnly = false;
+        _error = null;
+        if (Character is not { } character) return;
+        var link = await SceneService.GetCalendarLinkAsync() switch
+        {
+            SceneCalendarLink found => found,
+            ApiFailure => null,
+        };
+        if (Character == character) _link = link;
+    }
+
+    /// <summary>
+    /// A feed's address, read-only so it selects whole, with Copy and Subscribe: <c>webcal:</c> is the same address
+    /// that a phone hands to its calendar app.
+    /// </summary>
+    private RenderFragment Address(string url, string cssClass) => __builder =>
+    {
+        <div class="calendar-feed-address @cssClass">
+            <input class="calendar-feed-url" type="text" readonly value="@url" aria-label="@Loc["RolCalendarAddress"]" onfocus="this.select()" />
+            <CapsuleButton Icon="@Icons.Material.Outlined.ContentCopy" Class="calendar-feed-copy" OnClick="() => CopyAsync(url)">@Loc["RolCalendarCopy"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.EventAvailable" Class="calendar-feed-subscribe" Href="@Webcal(url)">@Loc["RolCalendarSubscribe"]</CapsuleButton>
+        </div>
+    };
+
+    private static string Webcal(string url) =>
+        url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? "webcal://" + url["https://".Length..]
+        : url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ? "webcal://" + url["http://".Length..]
+        : url;
+
+    private async Task CopyAsync(string url)
+    {
+        try
+        {
+            // Rejected outside a secure context, or when the browser withholds clipboard permission.
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            Snackbar.Add(Loc["RolCalendarCopied"], Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["WkCopyFailed"], Severity.Error);
+        }
+    }
+
+    private async Task MakeLinkAsync()
+    {
+        _busy = true;
+        _error = null;
+        var character = Character;
+        var made = await SceneService.CreateCalendarLinkAsync();
+        _busy = false;
+        if (Character != character) return;
+        switch (made)
+        {
+            case SceneCalendarLink link:
+                _link = link;
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private async Task TurnOffAsync()
+    {
+        _busy = true;
+        _error = null;
+        var character = Character;
+        var removed = await SceneService.DeleteCalendarLinkAsync();
+        _busy = false;
+        if (Character != character) return;
+        switch (removed)
+        {
+            case Success:
+                _link = new SceneCalendarLink(false, null, null);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+}

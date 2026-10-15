@@ -335,6 +335,14 @@
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\notifications\package.yaml">
+      <Link>BundledPackages\notifications.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.notifications.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\notifications-app\package.yaml">
+      <Link>BundledPackages\notifications-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.notifications-app.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\roster\package.yaml">
       <Link>BundledPackages\roster.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.roster.package.yaml</LogicalName>

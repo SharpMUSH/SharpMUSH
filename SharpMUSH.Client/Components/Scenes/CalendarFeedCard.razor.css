@@ -1,0 +1,63 @@
+/* A sub-line that wraps on a phone still clears the card's edge. */
+.calendar-feed-wrap ::deep .kit-card-head {
+    padding-block: 10px;
+}
+
+.calendar-feed-body {
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.calendar-feed-head {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.calendar-feed-text,
+.calendar-feed-note {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.calendar-feed-note {
+    margin: 8px 0 0;
+}
+
+/* The address, then Copy and Subscribe; on a phone the address takes a line of its own. */
+.calendar-feed-address {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.calendar-feed-url {
+    flex: 1 1 18rem;
+    min-width: 0;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.calendar-feed-url:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.calendar-feed-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}

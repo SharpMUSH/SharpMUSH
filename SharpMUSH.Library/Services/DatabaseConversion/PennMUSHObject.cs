@@ -81,6 +81,12 @@ public class PennMUSHObject
 	public List<string> Powers { get; init; } = [];
 
 	/// <summary>
+	/// Permission scopes (<c>control.all</c>, <c>server.operate</c>) the object is granted as allow
+	/// overrides: a source privilege SharpMUSH grants as a permission rather than as a power.
+	/// </summary>
+	public List<string> Permissions { get; init; } = [];
+
+	/// <summary>
 	/// Warning flags
 	/// </summary>
 	public List<string> Warnings { get; init; } = [];
@@ -118,6 +124,12 @@ public class PennMUSHObject
 	/// An exit's or player's aliases: its ALIAS attribute in a PennMUSH dump, split on ';'.
 	/// </summary>
 	public List<string> Aliases { get; init; } = [];
+
+	/// <summary>
+	/// Powers the source took away from this object, as SharpMUSH power names. PennMUSH has none; a
+	/// RhostMUSH depower becomes one, and the import denies the power's permission on the object.
+	/// </summary>
+	public List<string> DeniedPowers { get; init; } = [];
 }
 
 /// <summary>
