@@ -127,3 +127,8 @@ packages:
     package: finger
     version: 1.0.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
+  - path: discord/
+    name: Discord
+    package: discord
+    version: 1.0.0
+    description: The discord feed kind and the discord.admin permission, for the Discord plugin's linked channels (@discord/link)

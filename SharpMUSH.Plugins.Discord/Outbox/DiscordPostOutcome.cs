@@ -22,22 +22,33 @@ public readonly record struct Rejected(string Reason);
 
 public union PostOutcome(Posted, Transient, LinkBroken, Rejected);
 
+/// <summary>A post that could not be tried at all until an admin acts, such as a link whose webhook token is missing.</summary>
+/// <param name="Code">As <see cref="LinkBroken.Code"/>.</param>
+public sealed class DiscordLinkException(int code, string reason) : Exception(reason)
+{
+	public int Code { get; } = code;
+}
+
 /// <summary>Sorts what a failed post threw into what the outbox does next.</summary>
 public static class DiscordFailures
 {
 	private const int UnknownChannel = 10003;
 	private const int UnknownGuild = 10004;
-	private const int UnknownWebhook = 10015;
+	public const int UnknownWebhook = 10015;
 	private const int MissingAccess = 50001;
 	private const int MissingPermissions = 50013;
-	private const int InvalidWebhookToken = 50027;
+	public const int InvalidWebhookToken = 50027;
 
 	public static PostOutcome Classify(Exception exception) => exception switch
 	{
 		HttpException http => Classify(http),
+		DiscordLinkException broken => new LinkBroken(broken.Code, broken.Message),
 		HttpRequestException or TimeoutException or TaskCanceledException or IOException => new Transient(exception.Message),
 		_ => new Rejected(exception.Message),
 	};
+
+	/// <summary>Whether <paramref name="broken"/> means the channel's webhook is gone, so a new one could fix it.</summary>
+	public static bool WebhookGone(LinkBroken broken) => broken.Code is UnknownWebhook or InvalidWebhookToken or 404;
 
 	private static PostOutcome Classify(HttpException http)
 	{

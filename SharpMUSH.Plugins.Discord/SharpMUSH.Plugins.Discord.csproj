@@ -14,9 +14,14 @@
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 		<!-- The Discord gateway and REST client. Loads in the plugin's own load context with its dependencies. -->
 		<PackageReference Include="Discord.Net.WebSocket" Version="3.20.1" />
+		<!-- Posts through each linked channel's webhook, which needs only the webhook's own token. -->
+		<PackageReference Include="Discord.Net.Webhook" Version="3.20.1" />
 		<!-- Host-owned contracts: kept out of the plugin's output so the host's copies are the ones that load. -->
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" Private="false" ExcludeAssets="runtime;native;contentFiles" />
 		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" Private="false" ExcludeAssets="runtime;native;contentFiles" />
+		<!-- The source generator turns the [SharpCommand] methods into the command library PluginBase reflects. -->
+		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>

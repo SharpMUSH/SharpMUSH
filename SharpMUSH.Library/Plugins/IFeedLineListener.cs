@@ -22,4 +22,6 @@ public interface IFeedLineListener
 /// <param name="Recipients">Who it was delivered to.</param>
 /// <param name="Stored">Whether it was stored.</param>
 /// <param name="Origin">Where it came from when that was outside the game (<c>discord/&lt;message id&gt;</c>), or empty.</param>
-public sealed record FeedLine(SharpFeedMessage Message, IReadOnlyList<DBRef> Recipients, bool Stored, string Origin);
+/// <param name="To">The objids <c>@feed/send/to</c> named for the kind's ROUTE, or empty when the line was for every member.</param>
+public sealed record FeedLine(SharpFeedMessage Message, IReadOnlyList<DBRef> Recipients, bool Stored, string Origin,
+	IReadOnlyList<DBRef> To);

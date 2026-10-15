@@ -36,6 +36,7 @@ which games can add as a remote in the admin panel.
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 | [`rp-finder/`](rp-finder/) | Finding roleplay: a `+lfrp` status that runs out and ends at logoff, shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter, and a watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global (requires who-where) |
 | [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
+| [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
 
 ## The manifest: `package.yaml`
 
