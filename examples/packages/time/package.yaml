@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: time
-version: 1.2.1
+version: 1.2.2
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [time, timezone, clock, calendar, ic]
+category: Scenes
 requires_server: ">=0.1"
 
 depends:

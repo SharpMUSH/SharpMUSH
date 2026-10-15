@@ -1,11 +1,12 @@
-format: 1.7
+format: "1.10"
 package: highlights
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, highlights, favourites, poses, rp]
+category: Scenes
 requires_server: ">=0.1"
 
 # Every command reads poses through the Scene plugin's scene functions, so the package installs only while the
