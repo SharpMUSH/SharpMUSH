@@ -39,6 +39,8 @@ which games can add as a remote in the admin panel.
 | [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
 | [`time/`](time/) | Time zones and an IC clock: `+time` shows the game's time and the player's own, `+time 8pm Pacific` converts a time (with a Discord timestamp), `+timezone` keeps the player's zone in `TZ` as PennMUSH does, and a Clock object holds the IC calendar settings and the functions other packages read the time through |
 | [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
+| [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
+| [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
 
 ## The manifest: `package.yaml`
 

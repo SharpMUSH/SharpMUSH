@@ -45,6 +45,29 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	public async Task TriggerInlineHandsRegistersBackUnlessLocalized()
+	{
+		var thing = await NewThing("TrigRegs");
+		await Run($"&STEP {thing}=think setq(back,%<who> as %!)");
+		await Run($"&RUN {thing}=@trigger/inline/args {thing}/STEP=who,Bob; &OUT {thing}=%q<back>");
+		await Run($"&KEEP {thing}=think setq(back,mine); @trigger/inline/localize/args {thing}/STEP=who,Bob; &OUT2 {thing}=%q<back>");
+		await Run($"@trigger/inline {thing}/RUN");
+		await Run($"@trigger/inline {thing}/KEEP");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo($"Bob as #{thing.Number}");
+		await Assert.That(await Eval($"get({thing}/OUT2)")).IsEqualTo("mine");
+	}
+
+	[Test]
+	public async Task TriggeredLoopBindsItsOwnIterationTokens()
+	{
+		var thing = await NewThing("TrigLoop");
+		await Run($"&INNER {thing}=@dolist/inline x y=&OUT {thing}=[get({thing}/OUT)]##");
+		await Run($"&OUTER {thing}=@dolist/inline a={{@trigger/inline {thing}/INNER}}");
+		await Run($"@trigger/inline {thing}/OUTER");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("xy");
+	}
+
+	[Test]
 	public async Task TriggerArgsRefusesAnUnpairedName()
 	{
 		var thing = await NewThing("TrigOdd");
