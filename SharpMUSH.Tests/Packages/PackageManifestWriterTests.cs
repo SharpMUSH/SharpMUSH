@@ -166,6 +166,31 @@ public class PackageManifestWriterTests
 	}
 
 	[Test]
+	public async Task AttributeEntriesRoundTrip()
+	{
+		PackageAttributeEntrySpec[] entries =
+		[
+			new("BBPOST_COUNT", ["no_command", "wizard"]),
+			new("JOB`STATUS", ["no_command"], Enum: ["new", "yes", "held:later", "#1"]),
+			new("JOB`DUE", [], Enum: ["this week", "someday"], EnumDelimiter: '|', Retroactive: true),
+			new("JOB`TITLE", ["safe"], Limit: @"^[a-z'\d]{1,60}$: #x", Retroactive: true),
+			new("JOB`NOTE", [])
+		];
+		var original = Maximal() with
+		{
+			Format = PackageManifestService.AttributeEntriesFormat,
+			Declarations = PackageDeclarations.None with { Attributes = entries }
+		};
+		var again = RoundTrip(original).Declared.AttributeEntries;
+
+		await Assert.That(again.Count).IsEqualTo(entries.Length);
+		foreach (var (expected, actual) in entries.Zip(again))
+		{
+			await Assert.That(actual.SameAs(expected)).IsTrue();
+		}
+	}
+
+	[Test]
 	public async Task PluginsRoundTrip()
 	{
 		var again = RoundTrip(Maximal() with { Plugins = ["scene", "discord"] });

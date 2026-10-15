@@ -105,6 +105,24 @@ public class SchemaFormRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task ListField_RendersAChipPerValueFromTheData()
+	{
+		var doc = Form(null, null, Page(1, null, Field("steps", "Checklist", "list")));
+		var data = new SchemaData(new Dictionary<string, SchemaFieldValue>
+		{
+			["steps"] = new(System.Text.Json.JsonDocument.Parse("[\"Sheet checked\",\"Read, then signed\"]").RootElement.Clone())
+		});
+		var cut = Render<MudHarness>(p => p.AddChildContent<SchemaFormRenderer>(cp => cp
+			.Add(x => x.Document, doc)
+			.Add(x => x.Data, data)));
+
+		var chips = cut.FindAll(".list-editor-chip");
+		await Assert.That(chips.Count).IsEqualTo(2);
+		await Assert.That(chips[1].TextContent).Contains("Read, then signed");
+		await Assert.That(cut.Markup).Contains("Checklist");
+	}
+
+	[TUnit.Core.Test]
 	public async Task SliderField_RendersSlider()
 	{
 		var cut = RenderForm(Form(null, null, Page(1, null,

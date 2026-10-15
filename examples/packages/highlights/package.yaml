@@ -1,0 +1,308 @@
+format: 1.7
+package: highlights
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, highlights, favourites, poses, rp]
+requires_server: ">=0.1"
+
+# Every command reads poses through the Scene plugin's scene functions, so the package installs only while the
+# plugin runs.
+plugins: [scene]
+
+# The commands, the pose-line filter and the help are attached to the scene package's objects, and the portal
+# routes to the HTTP handler, so uninstalling this package takes all of it away. The favourites themselves live on
+# the Highlights Store, which goes with it.
+depends:
+  - package: scene
+    version: ">=1.7"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+  - package: http-handler
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  # The favourites, one branch per favourited pose and one leaf per player:
+  #   POSE`<pose>`BY     the objids of the players who favourited it
+  #   POSE`<pose>`SCENE  its scene, so a list is checked against what a reader may see without looking each pose up
+  #   POSE`<pose>`AT     when it was written, in seconds, for the highlights' time window
+  #   PLAYER`<n>`<t>     the poses the player with objid #<n>:<t> favourited, oldest first. An attribute name may
+  #                      hold a # but get() refuses one holding a :, so the objid's : becomes a branch.
+  # The Scene Logger writes them; nothing here is evaluated. The settings are +config's (plus-config): one
+  # DATA`CONFIG`<NAME> leaf holds each value, beside its description, type and limits, and +config highlights
+  # shows and changes them. The code reads each with get({{store}}/DATA`CONFIG`<NAME>).
+  - ref: store
+    type: thing
+    name: Highlights Store
+    flags: [NO_COMMAND]
+    attributes:
+      DATA:
+        value: |-
+          Settings for favourite poses and highlights.
+        flags: [no_command]
+      DATA`CONFIG: |-
+        Favourite poses and the highlights they make.
+      DATA`CONFIG`LABEL: |-
+        Highlights
+      DATA`CONFIG`WINDOW: |-
+        2419200
+      DATA`CONFIG`WINDOW`DESCRIPTION: |-
+        How far back the highlights reach, by when the pose was written. 0 shows every favourited pose.
+      DATA`CONFIG`WINDOW`TYPE: |-
+        duration
+      DATA`CONFIG`WINDOW`DEFAULT: |-
+        2419200
+      DATA`CONFIG`WINDOW`MIN: |-
+        0
+      DATA`CONFIG`WINDOW`LABEL: |-
+        Window
+      DATA`CONFIG`WINDOW`EXAMPLE: |-
+        2w
+      DATA`CONFIG`PAGE-SIZE: |-
+        10
+      DATA`CONFIG`PAGE-SIZE`DESCRIPTION: |-
+        How many poses one page of the highlights or of a player's favourites shows.
+      DATA`CONFIG`PAGE-SIZE`TYPE: |-
+        integer
+      DATA`CONFIG`PAGE-SIZE`DEFAULT: |-
+        10
+      DATA`CONFIG`PAGE-SIZE`MIN: |-
+        1
+      DATA`CONFIG`PAGE-SIZE`MAX: |-
+        50
+      DATA`CONFIG`PAGE-SIZE`LABEL: |-
+        Poses per page
+      DATA`CONFIG`PAGE-SIZE`EXAMPLE: |-
+        20
+      DATA`CONFIG`OWN-POSES: |-
+        0
+      DATA`CONFIG`OWN-POSES`DESCRIPTION: |-
+        Whether players may favourite their own poses.
+      DATA`CONFIG`OWN-POSES`TYPE: |-
+        boolean
+      DATA`CONFIG`OWN-POSES`DEFAULT: |-
+        0
+      DATA`CONFIG`OWN-POSES`LABEL: |-
+        Own poses
+      DATA`CONFIG`OWN-POSES`EXAMPLE: |-
+        yes
+      POSE:
+        value: |-
+          The favourited poses, one branch per pose.
+        flags: [no_command]
+      PLAYER:
+        value: |-
+          The poses each player favourited, one leaf per player.
+        flags: [no_command]
+
+  # The commands, on the Scene Logger beside the +scene verbs, so they run as it does: WIZARD, with %# the player.
+  # The scene package's own guard (FUN`IS`APPROVED) decides who may favourite, as it decides who may mark a pose.
+  # Every scene*() call answers as %#, so a pose in a scene the player cannot see reads as missing in-game. The
+  # portal's routes run as the HTTP handler, which sees every scene, so FUN`HIGHLIGHT`SEES asks the same question
+  # for the viewer the route names.
+  - ref: favourites
+    target: "{{scene/logger}}"
+    attributes:
+      DATA`USAGE`FAVOURITE: |-
+        +scene/fav <pose>
+      DATA`USAGE`UNFAVOURITE: |-
+        +scene/unfav <pose>
+      DATA`DENY_BAD_PAGE: |-
+        Which page? Give a whole number of 1 or more.
+
+      # ---- reading the store --------------------------------------------------------
+      # 1 when %0 (a dbref or objid) may read scene %1: a wizard, anyone for a public scene, a member for a
+      # private one. The Scene plugin's own rule, asked for a viewer who is not the enactor.
+      FUN`HIGHLIGHT`SEES: |-
+        cor(orflags(%0,W),cand(not(strmatch(setr(hl_p,scene(%1,public)),#-1*)),%q<hl_p>),not(strmatch(scenemember(%1,%0,role),#-1*)))
+      # 1 when favourited pose %1 belongs in what %0 is shown: its scene is one they may read, it was not deleted,
+      # and its type is not one of %2, the types they hide (+scene/hide).
+      FUN`HIGHLIGHT`SHOWS: |-
+        cand(u(%!/FUN`HIGHLIGHT`SEES,%0,setr(hl_s,get({{store}}/POSE`%1`SCENE))),not(strmatch(setr(hl_d,scenepose(%q<hl_s>,%1,deleted)),#-1*)),not(%q<hl_d>),not(member(%2,firstof(scenepose(%q<hl_s>,%1,type),ic))))
+      # The favourited poses written inside the time window (DATA`CONFIG`WINDOW; 0 for no limit).
+      FUN`HIGHLIGHT`RECENT: |-
+        setq(hl_w,get({{store}}/DATA`CONFIG`WINDOW))[setq(hl_f,sub(secs(),%q<hl_w>))][squish(iter(lattr({{store}}/POSE`*`BY),setq(hl_i,extract(%i0,2,1,`))[if(cor(not(%q<hl_w>),gte(get({{store}}/POSE`%q<hl_i>`AT),%q<hl_f>)),%q<hl_i>)]))]
+      # The sort key of pose %0: how many players favourited it, then the newer pose first.
+      FUN`HIGHLIGHT`RANK: |-
+        add(mul(words(get({{store}}/POSE`%0`BY)),1000000000),%0)
+      # The highlights: the favourited poses of the window, the most favourited first.
+      FUN`HIGHLIGHT`IDS: |-
+        sortkey(%!/FUN`HIGHLIGHT`RANK,u(%!/FUN`HIGHLIGHT`RECENT),-n)
+      # The poses %0 favourited, the latest first.
+      FUN`HIGHLIGHT`MINE: |-
+        revwords(get({{store}}/PLAYER`[u(%!/FUN`FAVOURITE`KEY,%0)]))
+      # Page %2 of poses %1 as %0 is shown them, DATA`CONFIG`PAGE-SIZE to a page. It stops once it has one pose more
+      # than the page needs, so a long list costs only what it shows, and hands back hl_more: 1 when a later page
+      # has something.
+      FUN`HIGHLIGHT`PAGE: |-
+        setq(hl_h,u(%!/FUN`HIDDEN,%0))[setq(hl_n,mul(%2,setr(hl_z,get({{store}}/DATA`CONFIG`PAGE-SIZE))))][setq(hl_o,)][null(iter(%1,if(u(%!/FUN`HIGHLIGHT`SHOWS,%0,%i0,%q<hl_h>),setq(hl_o,%q<hl_o> %i0))[if(gt(words(%q<hl_o>),%q<hl_n>),ibreak())]))][setq(hl_more,gt(words(%q<hl_o>),%q<hl_n>))][extract(%q<hl_o>,inc(mul(dec(%2),%q<hl_z>)),%q<hl_z>)]
+      # How long the window is, in words.
+      FUN`HIGHLIGHT`SPAN: |-
+        cond(not(mod(%0,604800)),[div(%0,604800)] [if(eq(div(%0,604800),1),week,weeks)],not(mod(%0,86400)),[div(%0,86400)] [if(eq(div(%0,86400),1),day,days)],[max(1,div(%0,3600))] [if(lte(div(%0,3600),1),hour,hours)])
+      # Who wrote pose %1 of scene %0: the name it went out under, and the character's own when that was a persona.
+      FUN`HIGHLIGHT`CREDIT: |-
+        if(cand(strlen(setr(hl_as,scenepose(%0,%1,showas))),not(strmatch(%q<hl_as>,setr(hl_an,scenepose(%0,%1,authorname))))),%q<hl_as> %(%q<hl_an>%),scenepose(%0,%1,authorname))
+
+      # ---- favouriting ----------------------------------------------------------------
+      # The store's key for objid %0: #15:1792044974852 is 15`1792044974852.
+      FUN`FAVOURITE`KEY: |-
+        edit(after(%0,#),:,`)
+      # Why %0 (an objid) may not favourite pose %1, or nothing when they may.
+      FUN`FAVOURITE`REFUSAL: |-
+        cond(not(isint(%1)),No such pose: %1.,strmatch(setr(hl_s,scenepose(,%1,scene)),#-1*),No such pose: %1.,not(u(%!/FUN`HIGHLIGHT`SEES,%0,%q<hl_s>)),No such pose: %1.,scenepose(%q<hl_s>,%1,deleted),Pose %1 was deleted.,cand(not(get({{store}}/DATA`CONFIG`OWN-POSES)),strmatch(objid(scenepose(%q<hl_s>,%1,author)),%0)),Pose %1 is your own. Favourites are for other players' poses.,member(get({{store}}/POSE`%1`BY),%0),Pose %1 is already one of your favourites.)
+      # Why %0 may not take pose %1 out of their favourites, or nothing when they may.
+      FUN`UNFAVOURITE`REFUSAL: |-
+        if(cor(not(isint(%1)),not(member(get({{store}}/PLAYER`[u(%!/FUN`FAVOURITE`KEY,%0)]),%1))),Pose %1 is not one of your favourites.)
+      # Pose %<pose> becomes one of %<who>'s favourites. Nothing checks here: the caller asked FUN`FAVOURITE`REFUSAL.
+      INC`FAVOURITE`ADD: |-
+        &POSE`%<pose>`BY {{store}}=setunion(get({{store}}/POSE`%<pose>`BY),%<who>); &POSE`%<pose>`SCENE {{store}}=scenepose(,%<pose>,scene); &POSE`%<pose>`AT {{store}}=div(scenepose(,%<pose>,createdat),1000); think setq(hl_key,u(%!/FUN`FAVOURITE`KEY,%<who>)); &PLAYER`%q<hl_key> {{store}}=squish(get({{store}}/PLAYER`%q<hl_key>) %<pose>)
+      # Pose %<pose> is no longer one of %<who>'s favourites; a pose nobody favourites any more leaves the store.
+      INC`FAVOURITE`REMOVE: |-
+        &POSE`%<pose>`BY {{store}}=setdiff(get({{store}}/POSE`%<pose>`BY),%<who>); think setq(hl_key,u(%!/FUN`FAVOURITE`KEY,%<who>)); @if words(setr(hl_left,remove(get({{store}}/PLAYER`%q<hl_key>),%<pose>)))={&PLAYER`%q<hl_key> {{store}}=%q<hl_left>},{&PLAYER`%q<hl_key> {{store}}}; @if not(words(get({{store}}/POSE`%<pose>`BY)))={@wipe {{store}}/POSE`%<pose>`**; &POSE`%<pose> {{store}}}
+
+      CMD`FAVOURITE:
+        value: |-
+          $(?is)^\+scene/fav(?\:o(?\:u?r(?\:i(?\:t(?\:e)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert strlen(setr(hl_pose,trim(%1)))=@pemit %#=[notice(HIGHLIGHTS,[get(%!/DATA`USAGE`FAVOURITE)],warn)]; @assert not(strlen(setr(hl_no,u(%!/FUN`FAVOURITE`REFUSAL,%:,%q<hl_pose>))))=@pemit %#=[notice(HIGHLIGHTS,%q<hl_no>,warn)]; @include/args %!/INC`FAVOURITE`ADD=who,%:,pose,%q<hl_pose>; @pemit %#=[notice(HIGHLIGHTS,Pose %q<hl_pose> by [u(%!/FUN`HIGHLIGHT`CREDIT,scenepose(,%q<hl_pose>,scene),%q<hl_pose>)] is one of your favourites now.,ok)]
+        flags: [REGEXP]
+      CMD`UNFAVOURITE:
+        value: |-
+          $(?is)^\+scene/unfav(?\:o(?\:u?r(?\:i(?\:t(?\:e)?)?)?)?)?(?\: +(.*))?$: @assert strlen(setr(hl_pose,trim(%1)))=@pemit %#=[notice(HIGHLIGHTS,[get(%!/DATA`USAGE`UNFAVOURITE)],warn)]; @assert not(strlen(setr(hl_no,u(%!/FUN`UNFAVOURITE`REFUSAL,%:,%q<hl_pose>))))=@pemit %#=[notice(HIGHLIGHTS,%q<hl_no>,warn)]; @include/args %!/INC`FAVOURITE`REMOVE=who,%:,pose,%q<hl_pose>; @pemit %#=[notice(HIGHLIGHTS,Pose %q<hl_pose> is no longer one of your favourites.,ok)]
+        flags: [REGEXP]
+
+      # ---- showing them ---------------------------------------------------------------
+      # Poses %1 drawn for reader %0 as recall draws them (FUN`POSE`DRAW): a rule naming who posed it, the pose and
+      # its scene, then the pose in its own colours.
+      FUN`HIGHLIGHT`DRAW: |-
+        iter(%1,u(%!/FUN`POSE`DRAW,firstof(scenepose(setr(hl_s,get({{store}}/POSE`%i0`SCENE)),%i0,type),ic),%i0,scenepose(%q<hl_s>,%i0,content),%q<hl_s>,%0),,%r)
+      # A screen of poses %1 for %#: rule %0 over them and %2 under them, then the next page's command when there is one.
+      FUN`HIGHLIGHT`SCREEN: |-
+        rule(%0,,json(object,title,"left"))%r[if(strlen(%2),%2%r)][u(%!/FUN`HIGHLIGHT`DRAW,%#,%1)][if(%q<hl_more>,%r%3)]
+      INC`HIGHLIGHT`PAGE: |-
+        @assert cor(not(strlen(%<page>)),cand(isint(%<page>),gt(%<page>,0)))=@pemit %#=[notice(HIGHLIGHTS,[get(%!/DATA`DENY_BAD_PAGE)],warn)]; think setq(hl_page,firstof(%<page>,1))
+      CMD`HIGHLIGHTS:
+        value: |-
+          $(?is)^\+scene/hig(?\:h(?\:l(?\:i(?\:g(?\:h(?\:t(?\:s)?)?)?)?)?)?)?(?\: +(.*))?$: @include/args %!/INC`HIGHLIGHT`PAGE=page,trim(%1); think setq(hl_shown,u(%!/FUN`HIGHLIGHT`PAGE,%:,u(%!/FUN`HIGHLIGHT`IDS),%q<hl_page>))[setq(hl_w,get({{store}}/DATA`CONFIG`WINDOW))]; @assert words(%q<hl_shown>)=@pemit %#=[notice(HIGHLIGHTS,if(gt(%q<hl_page>,1),There is no page %q<hl_page> of highlights.,No pose [if(%q<hl_w>,from the last [u(%!/FUN`HIGHLIGHT`SPAN,%q<hl_w>)]%b)]is a favourite yet. +scene/fav <pose> makes one yours.))]; @pemit %#=[u(%!/FUN`HIGHLIGHT`SCREEN,Highlights[if(gt(%q<hl_page>,1),%b[chr(183)] page %q<hl_page>)],%q<hl_shown>,The poses players favourited most[if(%q<hl_w>,\, from the last [u(%!/FUN`HIGHLIGHT`SPAN,%q<hl_w>)])].,+scene/highlights [inc(%q<hl_page>)] shows more.)]
+        flags: [REGEXP]
+      CMD`FAVOURITES:
+        value: |-
+          $(?is)^\+scene/fav(?\:o(?\:u?r(?\:i(?\:t(?\:e)?)?)?)?)?s(?\: +(.*))?$: @include/args %!/INC`HIGHLIGHT`PAGE=page,trim(%1); think setq(hl_shown,u(%!/FUN`HIGHLIGHT`PAGE,%:,u(%!/FUN`HIGHLIGHT`MINE,%:),%q<hl_page>)); @assert words(%q<hl_shown>)=@pemit %#=[notice(HIGHLIGHTS,if(gt(%q<hl_page>,1),There is no page %q<hl_page> of your favourites.,You have no favourite poses yet. +scene/fav <pose> makes one yours.))]; @pemit %#=[u(%!/FUN`HIGHLIGHT`SCREEN,Your favourites[if(gt(%q<hl_page>,1),%b[chr(183)] page %q<hl_page>)],%q<hl_shown>,,+scene/favs [inc(%q<hl_page>)] shows more.)]
+        flags: [REGEXP]
+
+      # A filter on the line over a pose (+help scene filters): a pose the reader favourited says so beside its scene.
+      FILTER`POSE`RULE`FAVOURITE: |-
+        %0[if(member(get({{store}}/POSE`%2`BY),%:),%b[chr(183)] favourite)]
+
+      # ---- the portal's routes -----------------------------------------------------------
+      # /apps/highlights is the highlights and /apps/highlights/mine the viewer's favourites; a number after either
+      # is the page. %<at> is that address, %<viewer> the signed-in character's objid (empty for a visitor).
+      # The view %0 names: mine or all.
+      WEB`HIGHLIGHT`VIEW: |-
+        if(strmatch(%0,mine*),mine,all)
+      # The page %0 names, from 1.
+      WEB`HIGHLIGHT`PAGENUM: |-
+        if(cand(isint(setr(hl_pn,last(%0,/))),gt(%q<hl_pn>,0)),%q<hl_pn>,1)
+      # The poses on the page %1 names, for viewer %0; hands back hl_more as FUN`HIGHLIGHT`PAGE does.
+      WEB`HIGHLIGHT`POSES: |-
+        u(%!/FUN`HIGHLIGHT`PAGE,%0,if(strmatch(u(%!/WEB`HIGHLIGHT`VIEW,%1),mine),if(strlen(%0),u(%!/FUN`HIGHLIGHT`MINE,%0)),u(%!/FUN`HIGHLIGHT`IDS)),u(%!/WEB`HIGHLIGHT`PAGENUM,%1))
+      # The address of page %1 of view %0.
+      WEB`HIGHLIGHT`ADDRESS: |-
+        /apps/highlights[if(strmatch(%0,mine),/mine)][if(gt(%1,1),/%1)]
+      WEB`HIGHLIGHT`MARKDOWN: |-
+        json(object,kind,json(string,markdown),value,json(string,%0))
+      WEB`HIGHLIGHT`SECTION: |-
+        json(object,name,json(string,),order,json(number,%0),columns,json(number,1),elements,json(array,%1))
+      # The words over the view %0, for viewer %1.
+      WEB`HIGHLIGHT`INTRO: |-
+        if(strmatch(%0,mine),if(strlen(%1),The poses you favourited\, the latest first. Back to \[the highlights\]\(/apps/highlights\).,Sign in with a character to see your favourites.),The poses players favourited most[if(setr(hl_w,get({{store}}/DATA`CONFIG`WINDOW)),\, from the last [u(%!/FUN`HIGHLIGHT`SPAN,%q<hl_w>)])].[if(strlen(%1),%bFavourite one with the button under it or `+scene/fav <pose>` in the game\, and see \[your favourites\]\(/apps/highlights/mine\).,%bPlayers favourite them with `+scene/fav <pose>` in the game.)])
+      # Links to the pages around page %1 of view %0, with hl_more from the poses.
+      WEB`HIGHLIGHT`PAGING: |-
+        squish([if(gt(%1,1),\[Previous page\]\([u(%!/WEB`HIGHLIGHT`ADDRESS,%0,dec(%1))]\))] [if(%q<hl_more>,\[Next page\]\([u(%!/WEB`HIGHLIGHT`ADDRESS,%0,inc(%1))]\))])
+      WEB`SCHEMA`HIGHLIGHTS: |-
+        setq(hl_view,u(%!/WEB`HIGHLIGHT`VIEW,%<at>))[setq(hl_page,u(%!/WEB`HIGHLIGHT`PAGENUM,%<at>))][null(u(%!/WEB`HIGHLIGHT`POSES,%<viewer>,%<at>))][setq(hl_title,if(strmatch(%q<hl_view>,mine),Your favourites,Highlights))][json(object,kind,json(string,view),schema_version,json(number,1),title,json(string,%q<hl_title>),pages,json(array,json(object,key,json(string,main),title,json(string,%q<hl_title>),order,json(number,1),sections,json_array(u(%!/WEB`HIGHLIGHT`SECTION,1,u(%!/WEB`HIGHLIGHT`MARKDOWN,u(%!/WEB`HIGHLIGHT`INTRO,%q<hl_view>,%<viewer>)))%r[u(%!/WEB`HIGHLIGHT`SECTION,2,json(object,kind,json(string,timeline),rows_field,json(string,poses),empty,json(string,if(strmatch(%q<hl_view>,mine),You have no favourite poses yet.,No pose is a favourite yet.))))][if(strlen(setr(hl_links,u(%!/WEB`HIGHLIGHT`PAGING,%q<hl_view>,%q<hl_page>))),%r[u(%!/WEB`HIGHLIGHT`SECTION,3,u(%!/WEB`HIGHLIGHT`MARKDOWN,%q<hl_links>))])],%r))),actions,json(object,favourite,json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/highlights/act),on_error,json(object,bind_field_errors,json(boolean,false)))))]
+      # Pose %1 as a timeline row for viewer %0 on page %2: who wrote it, when, the pose in its colours, a link to
+      # its scene, and a button that favourites it or takes it back.
+      WEB`HIGHLIGHT`ROW: |-
+        setq(hl_s,get({{store}}/POSE`%1`SCENE))[setq(hl_mine,member(get({{store}}/POSE`%1`BY),%0))][json(object,author,json(string,u(%!/FUN`HIGHLIGHT`CREDIT,%q<hl_s>,%1)),time,json(number,get({{store}}/POSE`%1`AT)),body,json(string,scenepose(%q<hl_s>,%1,markup)),format,json(string,mstring),tag,json(string,if(%q<hl_mine>,Your favourite)),tag_color,json(string,primary),links,json(array,json(object,href,json(string,/scenes/%q<hl_s>),label,json(string,Scene %q<hl_s>: [u(%!/FUN`LIST_TITLE,%q<hl_s>)]))),actions,u(%!/WEB`HIGHLIGHT`TOGGLE,%0,%1,%2,%q<hl_mine>))]
+      # The button under pose %1 for viewer %0 on page %2: favourite it, or take it back when %3 says it is theirs.
+      # None for a visitor, a character who may not favourite, or the viewer's own pose.
+      WEB`HIGHLIGHT`TOGGLE: |-
+        if(cor(not(u(%!/FUN`IS`APPROVED,%0)),cand(not(%3),strlen(u(%!/FUN`FAVOURITE`REFUSAL,%0,%1)))),json(array),json(array,json(object,action,json(string,favourite),label,json(string,if(%3,Take back,Favourite)),values,json(object,pose,json(string,%1),favourite,json(boolean,if(%3,false,true)),at,json(string,%2)))))
+      # The view's data for viewer %0 at %1: the poses as timeline rows.
+      WEB`HIGHLIGHT`DATA: |-
+        json(object,fields,json(object,poses,json(object,value,if(words(setr(hl_ps,u(%!/WEB`HIGHLIGHT`POSES,%0,%1))),json_array(iter(%q<hl_ps>,u(%!/WEB`HIGHLIGHT`ROW,%0,%i0,%1),,%r),%r),json_array()),visible,json(boolean,true))))
+      WEB`DATA`HIGHLIGHTS: |-
+        u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%<at>)
+      # Field %0 of posted JSON %1, unquoted; empty when it was not posted.
+      WEB`HIGHLIGHT`FIELD: |-
+        setq(hl_fv,json_query(%1,get,%0))[switch(%q<hl_fv>,null,,"*,json_query(%q<hl_fv>,unescape),%q<hl_fv>)]
+      WEB`HIGHLIGHT`ERROR: |-
+        json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))
+      # A button press: favourite pose %<body>'s pose for %<viewer>, or take it back. Run by the route through @force,
+      # so the "Set." lines go to the Scene Logger and not into the response. It leaves the answer in out: the page's
+      # poses again, so the buttons and tags follow, or the refusal.
+      WEB`ACT`HIGHLIGHTS: |-
+        think setq(hl_pose,u(%!/WEB`HIGHLIGHT`FIELD,pose,%<body>))[setq(hl_add,strmatch(json_query(%<body>,get,favourite),true))][setq(hl_at,u(%!/WEB`HIGHLIGHT`FIELD,at,%<body>))][setq(out,u(%!/WEB`HIGHLIGHT`ERROR,Sign in with an approved character to favourite poses.))]; @assert u(%!/FUN`IS`APPROVED,%<viewer>); think setq(out,u(%!/WEB`HIGHLIGHT`ERROR,setr(hl_no,u(%!/FUN`[if(%q<hl_add>,FAVOURITE,UNFAVOURITE)]`REFUSAL,%<viewer>,%q<hl_pose>)))); @assert not(strlen(%q<hl_no>)); @include/args %!/INC`FAVOURITE`[if(%q<hl_add>,ADD,REMOVE)]=who,%<viewer>,pose,%q<hl_pose>; think setq(out,json(object,ok,json(boolean,true),message,json(string,if(%q<hl_add>,Pose %q<hl_pose> is one of your favourites now.,Pose %q<hl_pose> is no longer one of your favourites.)),data,u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%q<hl_at>)))
+
+  # The routes the portal page reads (the highlights-app package registers it). The handler must be WIZARD, as the
+  # seeded one is, to @force the Scene Logger for a button press.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`HIGHLIGHTS`SCHEMA: |-
+        @respond/type application/json; think uargs({{scene/logger}}/WEB`SCHEMA`HIGHLIGHTS,viewer,%<viewer>,at,%q<form.at>)
+      GET`HIGHLIGHTS`DATA: |-
+        @respond/type application/json; think uargs({{scene/logger}}/WEB`DATA`HIGHLIGHTS,viewer,%<viewer>,at,%q<form.at>)
+      POST`HIGHLIGHTS`ACT: |-
+        @force {{scene/logger}}={@include/nobreak/args {{scene/logger}}/WEB`ACT`HIGHLIGHTS=viewer,%<viewer>}; @respond/type application/json; think %q<out>
+
+  # +help scene highlights, a subtopic of +help scene. Bodies are evaluated, so brackets, parentheses and percent
+  # signs are escaped.
+  - ref: highlights_help
+    target: "{{scene/scene_help}}"
+    attributes:
+      SEE`SCENE`HIGHLIGHTS: |-
+        scene pose|scene filters
+      HELP`SCENE`HIGHLIGHTS: |-
+        A pose you liked can be one of your **favourites**. The poses players favourite most make the
+        game's **highlights**, each credited to the character who wrote it.
+
+        - `+scene/fav <pose>` — make a pose one of your favourites
+        - `+scene/unfav <pose>` — take it back
+        - `+scene/favs \[<page>\]` — your favourites, the latest first
+        - `+scene/highlights \[<page>\]` — the poses favourited most, recent ones first among equals
+
+        For example:
+
+        `+scene/fav 12`
+
+        Output: `\[HIGHLIGHTS\] Done: Pose 12 by Ada is one of your favourites now.`
+
+        A pose's number is on the line over it in `+scene/recall` and `+scene/log`, and that line says
+        `favourite` beside the scene once it is one of yours. The highlights show only poses from scenes
+        you can read. They show no counts and rank no players: a pose is there because someone liked it.
+
+        The website shows the same lists on the Highlights page, with a button under each pose.
+
+        Staff change how far back the highlights reach, how many poses a page shows, and whether players
+        may favourite their own poses, with `+config highlights`.
+
+  # +config highlights: the settings on the Highlights Store.
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`HIGHLIGHTS: |-
+        {{store}}

@@ -95,6 +95,17 @@ PASSED   (or FAILED)
 - For `wiki:` pages with `file:`: the file is inside the package directory,
   UTF-8 text and at most 1 MB.
 
+### Attribute entries (format 1.5)
+
+An `attributes:` block (standard attribute entries, as `@attribute` makes
+them) is checked as the server reads it: it needs `format: 1.5`, each name is
+one `@attribute` takes, each flag is an attribute flag other than `branch`,
+a `limit` compiles as `@attribute/limit` compiles it, an entry has a limit or
+an `enum` but not both, and an enum's choices do not hold its `delimiter`.
+Whether the game already has an entry, and whether it agrees, is a question
+for the server's plan, not the offline validator. The summary line counts the
+entries, as `(3 attribute entries)`.
+
 ## Use in GitHub Actions
 
 A reusable composite action lives at

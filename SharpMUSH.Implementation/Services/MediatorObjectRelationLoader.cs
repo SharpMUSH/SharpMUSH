@@ -8,15 +8,21 @@ namespace SharpMUSH.Implementation.Services;
 
 /// <summary>
 /// The host's <see cref="IObjectRelationLoader"/>: relations resolve through the Mediator's cached
-/// queries, so a provider-built object follows the same invalidation as every other read.
+/// queries, so a provider-built object follows the same invalidation as every other read. Grants, owner
+/// and location, which every permission check reads, answer from <see cref="ObjectRelationMemo"/> until the
+/// object is written.
 /// </summary>
-public class MediatorObjectRelationLoader(IMediator mediator) : IObjectRelationLoader
+public class MediatorObjectRelationLoader(IMediator mediator, ObjectRelationMemo memo) : IObjectRelationLoader
 {
-	public async Task<AnySharpContainer> LocationOf(string typedId, string objectId, CancellationToken cancellationToken)
-		=> await mediator.Send(new GetCertainLocationQuery(typedId, objectId), cancellationToken);
+	public Task<AnySharpContainer> LocationOf(string typedId, string objectId, CancellationToken cancellationToken)
+		=> memo.LocationAsync(int.Parse(objectId), async ct => await mediator.Send(new GetCertainLocationQuery(typedId, objectId), ct),
+			cancellationToken);
 
 	/// <summary>Every object has a player for its owner; one that does not is a damaged world, and throws.</summary>
-	public async Task<SharpPlayer> OwnerOf(string objectId, int number, CancellationToken cancellationToken)
+	public Task<SharpPlayer> OwnerOf(string objectId, int number, CancellationToken cancellationToken)
+		=> memo.OwnerAsync(number, ct => ReadOwnerAsync(objectId, number, ct), cancellationToken);
+
+	private async Task<SharpPlayer> ReadOwnerAsync(string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetOwnerOfQuery(objectId, number), cancellationToken) switch
 		{
 			AnySharpObject and SharpPlayer owner => owner,
@@ -36,8 +42,9 @@ public class MediatorObjectRelationLoader(IMediator mediator) : IObjectRelationL
 	public async Task<AnyOptionalSharpContainer> DropToOf(string roomTypedId, string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetDropToOfQuery(roomTypedId, objectId, number), cancellationToken);
 
-	public async Task<Library.Authorization.ObjectGrants> GrantsOf(int number, bool isPlayer, CancellationToken cancellationToken)
-		=> await mediator.Send(new GetObjectGrantsQuery(number, isPlayer), cancellationToken);
+	public Task<Library.Authorization.ObjectGrants> GrantsOf(int number, bool isPlayer, CancellationToken cancellationToken)
+		=> memo.GrantsAsync(number, isPlayer, async ct => await mediator.Send(new GetObjectGrantsQuery(number, isPlayer), ct),
+			cancellationToken);
 
 	public async Task<AnyOptionalSharpContainer> ExitDestinationOf(string exitTypedId, string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetExitDestinationOfQuery(exitTypedId, objectId, number), cancellationToken);

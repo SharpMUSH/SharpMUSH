@@ -102,7 +102,13 @@ public sealed class SchemaFormModel
 		}
 	}
 
-	public string GetString(string key) => _values.TryGetValue(key, out var v) ? v?.ToString() ?? "" : "";
+	public string GetString(string key) => _values.TryGetValue(key, out var v)
+		? v switch
+		{
+			IEnumerable<string> list => string.Join(", ", list),
+			_ => v?.ToString() ?? ""
+		}
+		: "";
 
 	public void SetString(string key, string? value) => Set(key, value);
 
@@ -218,15 +224,15 @@ public sealed class SchemaFormModel
 		}
 	}
 
-	/// <summary>A value from the prefill data, a default or an action's answer: JSON true and false stay
-	/// booleans, so a <c>boolean</c> field shows them; everything else is its text.</summary>
-	private static object Seed(JsonElement value)
-		=> value.ValueKind switch
-		{
-			JsonValueKind.True => true,
-			JsonValueKind.False => false,
-			_ => SchemaViewRenderer.ValueToString(value)
-		};
+	/// <summary>A value as the form holds it: a JSON list as its items (multiselect, list), a JSON
+	/// boolean as a bool (boolean), anything else as text.</summary>
+	private static object Seed(JsonElement value) => value.ValueKind switch
+	{
+		JsonValueKind.Array => value.EnumerateArray().Select(item => SchemaViewRenderer.ValueToString(item)).ToList(),
+		JsonValueKind.True => true,
+		JsonValueKind.False => false,
+		_ => SchemaViewRenderer.ValueToString(value)
+	};
 
 	/// <summary>The width, out of 12, of one element in an N-column section, honouring its span.</summary>
 	public static int ColumnWidth(int columns, int span)

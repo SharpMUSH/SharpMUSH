@@ -16,6 +16,10 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <item>An item the new version drops, and every item on uninstall, is removed, except a role someone
 /// holds, a permission a remaining role sets, and a category something remaining is in: those are kept
 /// and stop being the package's.</item>
+/// <item>Standard attribute entries (<c>attributes:</c>, format 1.5) follow the same ownership and merge, with
+/// three differences: a game's entry whose limit or enum contradicts the manifest blocks the plan, a dropped
+/// entry is always deleted (values on objects stay), and a <c>retroactive</c> entry gives its default flags to
+/// every existing copy when the apply writes them.</item>
 /// </list>
 /// Writes go through the operation's <see cref="PackageWriteTransaction"/>, so a failed apply undoes them.
 /// </summary>
