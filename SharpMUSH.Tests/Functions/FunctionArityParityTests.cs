@@ -71,7 +71,11 @@ public class FunctionArityParityTests : ServerTestBase
 
 		// Opt-out of PennMUSH's one-per-control-character count, measuring tabs and newlines as the
 		// zero columns they occupy (#1256). Omitted, strlen() answers as PennMUSH does.
-		["strlen"] = "trailing <count controls> argument; a false value counts control characters as zero"
+		["strlen"] = "trailing <count controls> argument; a false value counts control characters as zero",
+
+		// RhostMUSH's map() passes arguments after <osep> to the attribute as %1 onwards. PennMUSH
+		// refuses a fifth argument, so no PennMUSH call reaches them.
+		["map"] = "arguments past <osep> are passed as %1 onwards (from RhostMUSH)"
 	};
 
 	/// <summary>
