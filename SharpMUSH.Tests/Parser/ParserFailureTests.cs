@@ -217,7 +217,8 @@ public class ParserFailureTests
 	[Arguments("add(1,", "#-1 PARSER FAILURE: Expected ) or , at end of expression")]
 	[Arguments("if(1,a,[setq(0,1)][strcat(a,b)", "#-1 PARSER FAILURE: Expected ] at end of expression")]
 	[Arguments("%q<abc", "#-1 PARSER FAILURE: Expected > at end of expression")]
-	[Arguments("add(1,%q<a)", "#-1 PARSER FAILURE: Expected > at position 10 (near \"add(1,%q<a)\")")]
+	// Only > ends a name, so the call's ) is part of it.
+	[Arguments("add(1,%q<a)", "#-1 PARSER FAILURE: Expected > at end of expression")]
 	[Arguments("%q<>", "#-1 PARSER FAILURE: Expected a name inside <> at position 3 (near \"%q<>\")")]
 	// A '%' or '\' at the end is text, so what is missing is the call's close.
 	[Arguments("lit(a%", "#-1 PARSER FAILURE: Expected ) or , at end of expression")]
