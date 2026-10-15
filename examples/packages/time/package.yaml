@@ -49,6 +49,10 @@ objects:
         ZONE`SET
       DATA`ROUTE`TIMEZONE`CLEAR: |-
         ZONE`CLEAR
+      DATA`ROUTE`TIMEZONE`HIDE: |-
+        ZONE`HIDE
+      DATA`ROUTE`TIMEZONE`UNHIDE: |-
+        ZONE`UNHIDE
 
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
@@ -133,16 +137,17 @@ objects:
         value: |-
           lfields(,Game time[chr(30)]Your time[if(get({{clock}}/DATA`IC`SHOW),[chr(30)]IC date)],[u(%!/FUN`DISPLAY`AT,%q<now>,%q<game_zone>)][chr(30)][if(strlen(%q<viewer_zone>),u(%!/FUN`DISPLAY`AT,%q<now>,%q<viewer_zone>),tone(muted,not set · +timezone <zone> sets it))][if(get({{clock}}/DATA`IC`SHOW),[chr(30)][u({{clock}}/FUN`IC`DATE,%q<now>)])],chr(30))
         flags: [funsyntax]
-      # +time <time> or +time <name>: a time starts with a digit, or with a date.
+      # +time <time> or +time <name>: a time when it reads as one, or when it starts with a digit or a date and no
+      # player has that name (a name may start with a digit, as 7of9 does); else a player.
       INC`ARG:
         value: |-
-          @break cor(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>)),isint(left(%q<cmd_argument>,1)))={@include %!/INC`CONVERT}; @include %!/INC`PLAYER
+          think u(%!/FUN`READ`TIME,%q<cmd_argument>)[setq(read_error,u(%!/FUN`READ`ERROR))]; @break cor(not(strlen(%q<read_error>)),cand(cor(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>)),isint(left(%q<cmd_argument>,1))),not(strlen(u(%!/FUN`PLAYER,%q<cmd_argument>)))))={@include %!/INC`CONVERT}; @include %!/INC`PLAYER
         flags: [cmdsyntax]
 
       # ---- +time <name> -----------------------------------------------------------
       INC`PLAYER:
         value: |-
-          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(TIME,There is no player called '%q<cmd_argument>'.,warn); think setq(target_zone,u({{clock}}/FUN`ZONE`OF,%q<target>)); @assert strlen(%q<target_zone>)=@pemit %#=notice(TIME,[name(%q<target>)] has not set a time zone.,warn); @pemit %#=u(%!/FUN`SCREEN`PLAYER)
+          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(TIME,There is no player called '%q<cmd_argument>'.,warn); @assert cor(not(u(%!/FUN`ZONE`HIDDEN,%q<target>)),controls(%#,%q<target>))=@pemit %#=notice(TIME,[name(%q<target>)] keeps their time zone to themselves.,warn); think setq(target_zone,u({{clock}}/FUN`ZONE`CHECK,get(%q<target>/TZ))); @assert strlen(%q<target_zone>)=@pemit %#=notice(TIME,[name(%q<target>)] has not set a time zone.,warn); @pemit %#=u(%!/FUN`SCREEN`PLAYER)
         flags: [cmdsyntax]
       # The time where %q<target> is, the reader's own, and how far apart they are.
       FUN`SCREEN`PLAYER:
@@ -189,10 +194,11 @@ objects:
         value: |-
           cand(isint(%q<read_hour>),isint(%q<read_minute>),eq(strlen(%q<read_minute>),2),gte(%q<read_minute>,0),lte(%q<read_minute>,59),if(strlen(%q<read_ampm>),cand(gte(%q<read_hour>,1),lte(%q<read_hour>,12)),cand(gte(%q<read_hour>,0),lte(%q<read_hour>,23))))
         flags: [funsyntax]
-      # What is wrong with the time FUN`READ`TIME read, or nothing.
+      # What is wrong with the time FUN`READ`TIME read, or nothing. A time the clocks skip when summer time starts
+      # reads back as another hour, and is refused.
       FUN`READ`ERROR:
         value: |-
-          case(1,not(u(%!/FUN`READ`CLOCKOK)),'[firstof(%q<read_clock>,%q<cmd_argument>)]' is not a time. Write 20:00%, 8pm or 8:30 am.,gt(words(%q<read_zone_typed>),1),Give one time zone after the time%, such as America/New_York.,cand(strlen(%q<read_zone_typed>),not(strlen(%q<read_zone>))),There is no time zone called '%q<read_zone_typed>'. +help timezone says how they are named.,not(isnum(%q<read_instant>)),'%q<read_date>' is not a date. Write it as 2026-10-20.)
+          case(1,not(u(%!/FUN`READ`CLOCKOK)),'[firstof(%q<read_clock>,%q<cmd_argument>)]' is not a time. Write 20:00%, 8pm or 8:30 am.,gt(words(%q<read_zone_typed>),1),Give one time zone after the time%, such as America/New_York.,cand(strlen(%q<read_zone_typed>),not(strlen(%q<read_zone>))),There is no time zone called '%q<read_zone_typed>'. +help timezone says how they are named.,not(isnum(%q<read_instant>)),'%q<read_date>' is not a date. Write it as 2026-10-20.,comp(timefmt($H:$M,%q<read_instant>,%q<read_zone>),[rjust(%q<read_hour24>,2,0)]:%q<read_minute>),There is no [rjust(%q<read_hour24>,2,0)]:%q<read_minute> on %q<read_date> in %q<read_zone>: the clocks go forward past it.)
         flags: [funsyntax]
       # The moment FUN`READ`TIME read, in its zone, the game's, the reader's, how far off it is, and a Discord
       # timestamp, which Discord shows to each reader in their own time.
@@ -202,15 +208,30 @@ objects:
         flags: [funsyntax]
 
       # ---- +timezone --------------------------------------------------------------
+      # %0 a player: 1 when they set a zone and hid it. Their TZ is then not visual, so only they, staff and this
+      # object read it, and the Clock's functions answer nothing for them.
+      FUN`ZONE`HIDDEN:
+        value: |-
+          cand(hasattr(%0,TZ),not(hasflag(%0/TZ,visual)))
+        flags: [funsyntax]
       INC`ZONE`SHOW:
         value: |-
-          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. +timezone <zone> sets it%, such as +timezone America/New_York.); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.)
+          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. +timezone <zone> sets it%, such as +timezone America/New_York.); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
         flags: [cmdsyntax]
       # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
       # the Clock. God is beyond any object's reach, so the write is checked.
       INC`ZONE`SET:
         value: |-
           think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'. +help timezone says how they are named.,warn); &TZ %#=%q<zone_found>; @assert strmatch(get(%#/TZ),%q<zone_found>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<zone_found> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.,ok)
+        flags: [cmdsyntax]
+      # +timezone/hide and +timezone/unhide: TZ's visual flag. A zone changed while hidden stays hidden.
+      INC`ZONE`HIDE:
+        value: |-
+          @assert hasattr(%#,TZ)=@pemit %#=notice(TIME,You have not set a time zone.,warn); @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your time zone is already hidden.,warn); @set %#/TZ=!visual; @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your TZ attribute could not be changed. @set me/TZ=!visual hides it.,error); @pemit %#=notice(TIME,Only you and staff see your time zone now. +time <your name> tells others you keep it to yourself.,ok)
+        flags: [cmdsyntax]
+      INC`ZONE`UNHIDE:
+        value: |-
+          @assert u(%!/FUN`ZONE`HIDDEN,%#)=@pemit %#=notice(TIME,Your time zone is not hidden.,warn); @set %#/TZ=visual; @assert not(u(%!/FUN`ZONE`HIDDEN,%#))=@pemit %#=notice(TIME,Your TZ attribute could not be changed. @set me/TZ=visual shows it.,error); @pemit %#=notice(TIME,Everyone sees your time zone again.,ok)
         flags: [cmdsyntax]
       INC`ZONE`CLEAR:
         value: |-
@@ -522,6 +543,7 @@ objects:
         - `+timezone` shows yours.
         - `+timezone <zone>` sets it: `+timezone America/New_York`.
         - `+timezone/clear` clears it. Times are then shown and read in the game's.
+        - `+timezone/hide` keeps your zone to you and staff: `+time <name>` tells anyone else you keep it to yourself, and other packages read nothing. `+timezone/unhide` shows it again.
 
         A zone is named the way the tz database names it: a region and a city, such as `America/Chicago`, `Europe/Berlin` or `Australia/Perth`, or `UTC`. Capitals are put in for you, so `america/new_york` works. Short names work too:
 
@@ -547,7 +569,7 @@ objects:
 
         Output: `\[TIME\] Done: Your time zone is America/Los_Angeles \(UTC-07:00\). It is <the time there> for you.`
 
-        Your zone is your `TZ` attribute, as PennMUSH keeps it, so `time\(*<name>\)` reads it too. Everyone can read it.
+        Your zone is your `TZ` attribute, as PennMUSH keeps it, so `time\(*<name>\)` reads it too. Everyone can read it unless you hide it, which clears the attribute's `visual` flag. A zone you hide stays hidden when you change it.
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"

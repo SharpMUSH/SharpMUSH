@@ -142,6 +142,8 @@ public class TimeIntegrationTests
 			await Assert.That(await As(ann, "+time 8pm Nowhere/Land")).Contains("There is no time zone called 'Nowhere/Land'.");
 			await Assert.That(await As(ann, "+time 8pm two zones")).Contains("Give one time zone after the time");
 			await Assert.That(await As(ann, "+time 2026-02-30 8pm")).Contains("'2026-02-30' is not a date.");
+			// 02:30 on the day New York's clocks go forward does not happen there.
+			await Assert.That(await As(ann, "+time 2026-03-08 02:30")).Contains("There is no 02:30 on 2026-03-08 in America/New_York");
 		}
 		finally
 		{
@@ -161,6 +163,11 @@ public class TimeIntegrationTests
 			await Assert.That(await As(ann, $"+time {bo.Name}")).Contains($"{bo.Name} has not set a time zone.");
 			await Assert.That(await As(ann, "+time nobody-by-that-name")).Contains("There is no player called 'nobody-by-that-name'.");
 
+			// A name that starts with a digit is still a name.
+			var digit = await Player("7Pt");
+			await As(digit, "+timezone UTC");
+			await Assert.That(await As(ann, $"+time {digit.Name}")).Contains($"Time for {digit.Name}");
+
 			// Two zones without summer time, so the difference is the same on every date.
 			await As(bo, "+timezone Asia/Tokyo");
 			await Assert.That(await As(ann, $"+time {bo.Name}")).Contains($"Time for {bo.Name}").And.Contains("Asia/Tokyo (UTC+09:00)")
@@ -168,6 +175,16 @@ public class TimeIntegrationTests
 			await As(ann, "+timezone Asia/Kolkata");
 			await Assert.That(await As(ann, $"+time {bo.Name}")).Contains($"{bo.Name} is 3.5 hours ahead of you");
 			await Assert.That(await As(bo, $"+time {ann.Name}")).Contains($"{ann.Name} is 3.5 hours behind you");
+
+			// A hidden zone is kept from +time and from the Clock, and stays hidden when it changes.
+			await Assert.That(await As(bo, "+timezone/hide")).Contains("Only you and staff see your time zone now.");
+			await Assert.That(await As(ann, $"+time {bo.Name}")).Contains($"{bo.Name} keeps their time zone to themselves.");
+			await Assert.That(await Think($"u({Clock}/FUN`ZONE`OF,#{bo.DbRef.Number})")).IsEqualTo(string.Empty);
+			await As(bo, "+timezone Asia/Kolkata");
+			await Assert.That(await As(bo, "+timezone")).Contains("Only you and staff see it.");
+			await Assert.That(await As(bo, "+timezone/hide")).Contains("Your time zone is already hidden.");
+			await Assert.That(await As(bo, "+timezone/unhide")).Contains("Everyone sees your time zone again.");
+			await Assert.That(await As(ann, $"+time {bo.Name}")).Contains($"{bo.Name} keeps the same time as you");
 		}
 		finally
 		{
