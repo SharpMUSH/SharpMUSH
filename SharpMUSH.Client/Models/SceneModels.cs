@@ -83,3 +83,15 @@ public sealed record ScenePartner(string Dbref, string Name, int Scenes);
 /// image URLs are raw and pass <c>ImageUrlPolicy</c> where they render.
 /// </summary>
 public sealed record CharacterProfileData(string Name, string Objid, string Dbref, string? Image, string? Banner, string? Color, string? Role);
+
+/// <summary>
+/// An unsent pose as the server keeps it for every device of the character: the mode it goes out as (<c>emit</c>
+/// or <c>ooc</c>), its text, its styled text when it has colour, and when it was written (UTC Unix-millis).
+/// </summary>
+public sealed record SceneDraftCopy(string Mode, string Text, string? Markup, long UpdatedAt);
+
+/// <summary>
+/// The acting character's private calendar link: whether it has one, since when (UTC Unix-millis), and its address,
+/// which the server gives only in the answer that made it.
+/// </summary>
+public sealed record SceneCalendarLink(bool Exists, long? CreatedAt, string? Url);

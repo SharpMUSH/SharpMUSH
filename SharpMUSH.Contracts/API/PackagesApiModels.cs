@@ -84,7 +84,8 @@ public sealed record AttributeRenderDto(
 	string? BaseHtml,
 	string? LiveHtml,
 	string? NewHtml,
-	IReadOnlyList<string> DangerousPatterns);
+	IReadOnlyList<string> DangerousPatterns,
+	string? MergedHtml = null);
 
 /// <summary>The review screen payload: changeset plus rendering aids.</summary>
 /// <param name="PackageId">Package being planned.</param>

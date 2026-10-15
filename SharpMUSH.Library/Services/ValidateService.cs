@@ -10,6 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Time;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
@@ -66,7 +67,7 @@ public partial class ValidateService(
 			IValidateService.ValidationType.QRegisterName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()) && value.ToPlainText()[0] != '-',
 			IValidateService.ValidationType.Timezone
-				=> TimeZoneInfo.TryFindSystemTimeZoneById(value.ToPlainText(), out _),
+				=> TimeZones.TryFind(value.ToPlainText(), out _),
 			IValidateService.ValidationType.FunctionName
 				=> FunctionNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.RoleName

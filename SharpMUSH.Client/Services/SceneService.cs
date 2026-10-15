@@ -112,15 +112,17 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	/// The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first: those in
 	/// <paramref name="state"/> (<c>live</c>, <c>upcoming</c>, <c>finished</c>) whose title, pitch or room holds
 	/// <paramref name="search"/> and that <paramref name="match"/> keeps, after the first <paramref name="offset"/> of them.
+	/// A <paramref name="sort"/> detail orders them by it instead, earliest first, as a character's timeline does.
 	/// </summary>
 	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5,
-		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null)
+		int offset = 0, string? state = null, string? search = null, SceneDetailMatch? match = null, string? sort = null)
 	{
 		var url = $"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}";
 		if (match is not null) url += $"&{match.Query}";
 		if (offset > 0) url += $"&offset={offset}";
 		if (!string.IsNullOrWhiteSpace(state)) url += $"&state={Uri.EscapeDataString(state)}";
 		if (!string.IsNullOrWhiteSpace(search)) url += $"&search={Uri.EscapeDataString(search.Trim())}";
+		if (!string.IsNullOrWhiteSpace(sort)) url += $"&sort={Uri.EscapeDataString(sort)}";
 		var result = await Client.GetFeatureApiAsync<List<SceneDto>>(serverInfo, GameFeatures.Scenes, url, "The server returned no scene list.");
 
 		return result switch
@@ -269,6 +271,34 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 			return ApiFailure.Transport(ex);
 		}
 	}
+
+	/// <summary>
+	/// The acting character's unsent pose for the scene, as the server keeps it for every device. No draft reads
+	/// as an empty one written at time 0.
+	/// </summary>
+	public Task<ApiResult<SceneDraftCopy>> GetDraftAsync(string sceneId) =>
+		Client.GetApiAsync<SceneDraftCopy>($"api/scenes/{Uri.EscapeDataString(sceneId)}/draft", "The server returned no draft.");
+
+	/// <summary>
+	/// Keeps <paramref name="text"/> as the acting character's draft for the scene, for its other devices; an empty
+	/// text is kept too, so a sent pose empties the copies they hold. Answers with the server's copy and its time.
+	/// </summary>
+	public Task<ApiResult<SceneDraftCopy>> SaveDraftAsync(string sceneId, string mode, string text, string? markup) =>
+		Client.PutApiAsync<SceneDraftWrite, SceneDraftCopy>($"api/scenes/{Uri.EscapeDataString(sceneId)}/draft",
+			new SceneDraftWrite(mode, text, markup), "The server did not keep the draft.");
+
+	private sealed record SceneDraftWrite(string Mode, string Text, string? Markup);
+
+	/// <summary>Whether the acting character has a private calendar link, and since when.</summary>
+	public Task<ApiResult<SceneCalendarLink>> GetCalendarLinkAsync() =>
+		Client.GetApiAsync<SceneCalendarLink>("api/scenes/calendar/link", "The server returned no calendar link.");
+
+	/// <summary>Makes the acting character a new private calendar link; the one before stops working.</summary>
+	public Task<ApiResult<SceneCalendarLink>> CreateCalendarLinkAsync() =>
+		Client.PostApiAsync<object?, SceneCalendarLink>("api/scenes/calendar/link", null, "The server made no calendar link.");
+
+	/// <summary>Turns the acting character's private calendar link off.</summary>
+	public Task<ApiResult<Success>> DeleteCalendarLinkAsync() => Client.DeleteApiAsync("api/scenes/calendar/link");
 
 	private static SceneSummary ToSummary(SceneDto d) => new(
 		d.Id, d.Status, d.IsPublic, d.IsTempRoom, d.ScheduledFor, d.StartedAt, d.LastActivityAt,

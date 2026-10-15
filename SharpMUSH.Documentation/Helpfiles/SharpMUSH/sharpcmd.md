@@ -2606,6 +2606,30 @@ ATTRIB_SET is the internal command which powers &attr and @_attr setting; it can
 - [@set]
 - [ATTRIB_SET()]
 :::
+# @gender
+`@gender <object>[=<gender>]`
+
+Sets the gender of `<object>` in the attribute the `gender_attr` option names, which is the attribute pronoun substitution reads. That is SEX unless the game has changed it, so on most games `@gender` and `@sex` do the same thing. With no `=`, the attribute is cleared.
+
+`@gender` works exactly like `@sex` and the other `@<attribute>` commands: you must be able to set the attribute on `<object>`, the value is stored as typed, and you are told it was set unless you are QUIET. If `gender_attr` is changed, `@gender` sets the new attribute from then on. `@sex` always sets SEX. `@gender` is a SharpMUSH addition.
+
+```sharp
+> @gender me=Female
+```
+Output: "Yourname/SEX - Set." on a game that keeps gender in SEX, or the name of the attribute `gender_attr` names in its place.
+
+```sharp
+> @gender me
+```
+Output: "Yourname/SEX - Cleared." on a game that keeps gender in SEX.
+
+
+::: seealso
+- [@sex]
+- [@config attribs]
+- [GENDER]
+- [SUBJ()]
+:::
 # @sex
 `@sex <player>[=<gender>]`
 
@@ -2621,8 +2645,12 @@ You can use this command to set yourself or any of your objects to be male, fema
 > @sex me=No thank you (silly, but possible)
 ```
 
+`@sex` always sets the SEX attribute, as it does in PennMUSH. If the game keeps gender in another attribute (the `gender_attr` option), use [@gender] instead.
+
 
 ::: seealso
+- [@gender]
+- [@config attribs]
 - [GENDER]
 - [SUBJ()]
 - [POSS()]
@@ -3026,6 +3054,8 @@ Deleting things frees space inside the file for reuse. It never shrinks the file
 - **scene.edits**: every version of every scene pose.
 - **scene.deleted**: poses deleted from a scene but still stored. Deleting a pose only hides it.
 - **audit**: the log of staff actions.
+- **rolls**: rolls kept by `@roll` and roll() with `record`.
+- **activity**: poses counted per character and room per day, behind [activity()]. Each day is one stream.
 
 A *stream* is one page's text in one language, or one pose.
 

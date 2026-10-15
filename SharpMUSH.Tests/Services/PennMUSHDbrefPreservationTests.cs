@@ -292,7 +292,7 @@ public class PennMUSHDbrefPreservationTests
 	[Test]
 	public async Task TheBundledPackagesMakeWayForTheSourceAndComeBackPastIt()
 	{
-		string[] bundled = ["plus-help", "scene"];
+		string[] bundled = ["plus-help", "plus-config", "scene"];
 		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptionsWithScenePlugin);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
@@ -388,7 +388,7 @@ public class PennMUSHDbrefPreservationTests
 	[Test]
 	public async Task AnImportThatStopsPartWayStillPutsThePackagesBack()
 	{
-		string[] bundled = ["plus-help", "scene"];
+		string[] bundled = ["plus-help", "plus-config", "scene"];
 		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptionsWithScenePlugin);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
