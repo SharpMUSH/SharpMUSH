@@ -520,12 +520,13 @@ objects:
       # Measured, not set: each bucket keeps how long its latest jobs waited for staff's first answer
       # (STATS`ANSWER) and to close (STATS`CLOSE), in seconds, DATA`CONFIG`WAIT-SAMPLE of each. A job
       # staff filed, a /query and an approval at once are left out (JOB`STATS`SKIP on the job).
-      # List %0 with %1 added at the end, cut to the latest DATA`CONFIG`WAIT-SAMPLE.
+      # List %0 with %1 added at the end, cut to the latest DATA`CONFIG`WAIT-SAMPLE. With no %1, the
+      # samples a lowered setting still counts.
       FUN`STATS`ADD: |-
         [setq(_sa,squish(%0 %1))][setq(_sn,get({{jobs}}/DATA`CONFIG`WAIT-SAMPLE))][extract(%q<_sa>,max(1,sub(words(%q<_sa>),dec(%q<_sn>))),%q<_sn>)]
       # The median of bucket %0's STATS`%1 (ANSWER or CLOSE), in seconds, once three jobs have been measured.
       FUN`WAIT`OF: |-
-        [if(gte(words(setr(_ws,get(%0/STATS`%1))),3),round(lmath(median,%q<_ws>),0))]
+        [if(gte(words(setr(_ws,u({{jobs}}/FUN`STATS`ADD,get(%0/STATS`%1),))),3),round(lmath(median,%q<_ws>),0))]
       # %0 seconds in words: under an hour, about 5 hours, about 3 days.
       FUN`DURATION: |-
         [switch(1,lt(%0,3600),under an hour,lt(%0,129600),about [setr(_h,max(1,round(fdiv(%0,3600),0)))] hour[if(neq(%q<_h>,1),s)],about [setr(_d,round(fdiv(%0,86400),0))] day[if(neq(%q<_d>,1),s)])]
@@ -540,7 +541,7 @@ objects:
         [setq(_ew,u({{jobs}}/FUN`WAIT`SHORT,%0,1))][switch(%q<_ew>,within *,Staff aim to answer %q<_ew>.,,,Staff usually answer in %q<_ew>.)]
       # Bucket %0's measured wait of kind %1 (ANSWER or CLOSE), with how many jobs it comes from.
       FUN`WAIT`MEASURED: |-
-        [if(isint(setr(_wm,u({{jobs}}/FUN`WAIT`OF,%0,%1))),[capstr(u({{jobs}}/FUN`DURATION,%q<_wm>))] [chr(40)]the last [words(get(%0/STATS`%1))] jobs[chr(41)],Not measured yet)]
+        [if(isint(setr(_wm,u({{jobs}}/FUN`WAIT`OF,%0,%1))),[capstr(u({{jobs}}/FUN`DURATION,%q<_wm>))] [chr(40)]the last [words(u({{jobs}}/FUN`STATS`ADD,get(%0/STATS`%1),))] jobs[chr(41)],Not measured yet)]
 
       # ---- checklists -----------------------------------------------------------------
       # A bucket's CHECKLIST is copied onto each job filed in it, so changing it later leaves the jobs
@@ -1370,7 +1371,7 @@ objects:
         [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(match(true 1 yes on,lcstr(%q<_v>)),yes,no),audit,if(match(true 1 yes on,lcstr(%q<_v>)),yes,no),checklist,u({{jobs}}/WEB`STEPLIST,%q<_v>),if(strmatch(%q<_v>,null),,%q<_v>))]
       # A posted JSON list of steps as the |-separated list +bucket/set takes; a | inside a step becomes a /.
       WEB`STEPLIST: |-
-        [if(cand(strmatch(json_query(%0),array),gt(json_query(%0,size),0)),iter(lnum(0,dec(json_query(%0,size))),edit(json_query(json_query(%0,get,%i0),unescape),|,/),%b,|),if(strmatch(%0,null),,%0))]
+        [switch(1,strmatch(json_query(%0),array),if(gt(json_query(%0,size),0),iter(lnum(0,dec(json_query(%0,size))),edit(json_query(json_query(%0,get,%i0),unescape),|,/),%b,|)),strmatch(%0,null),,%0)]
 
       # sidebar: GET /http/jobs/nav
       # Viewer %0's sidebar: staff get the queue's views and the buckets they work, players their own

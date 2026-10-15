@@ -854,6 +854,11 @@ public class JobsIntegrationTests
 			await Assert.That(form.GetProperty("fields").GetProperty("checklist").GetProperty("value").GetArrayLength()).IsEqualTo(2);
 			var job = await Http("GET", "/jobs/data?at=1", "", staff);
 			await Assert.That(job.GetProperty("fields").GetProperty("steps").GetProperty("value").GetArrayLength()).IsEqualTo(2);
+
+			var cleared = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","checklist":[]}""", staff);
+			await Assert.That(cleared.GetProperty("ok").GetBoolean()).IsTrue().Because(cleared.ToString());
+			await Assert.That(await God($"think [get({applications}/CHECKLIST)]")).IsEqualTo(string.Empty)
+				.Because("removing every step in the portal clears the checklist");
 		}
 		finally
 		{
