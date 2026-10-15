@@ -19,6 +19,12 @@ public static class Tables
 	public static readonly TableDef AttrVal = TableDef.Node("attr.val");
 	public static readonly TableDef AttrFlag = TableDef.Node("attr.flag");
 	public static readonly TableDef AttrEntry = TableDef.Node("attr.entry");
+	/// <summary>Attribute indexes: UPPER(long name) + 0x00 + the folded value (cut at a character boundary) → dbref
+	/// duplicates, so one value's objects are one duplicate run in dbref order. See <c>LightningDatabase.AttributeIndex.cs</c>.</summary>
+	public static readonly TableDef AttrIdx = TableDef.Index("attr.idx", duplicates: true, fixedDuplicates: true);
+	/// <summary>An indexed copy's own key (<c>Keys.Attr</c>) → the value parts it is listed under in <see cref="AttrIdx"/>,
+	/// so a rewrite or a delete finds its old entries with one read, and a wipe or a destroy with the prefix its attributes use.</summary>
+	public static readonly TableDef AttrIdxOf = TableDef.Node("attr.idx.of");
 	public static readonly TableDef Flag = TableDef.Node("flag");
 	public static readonly TableDef Power = TableDef.Node("power");
 

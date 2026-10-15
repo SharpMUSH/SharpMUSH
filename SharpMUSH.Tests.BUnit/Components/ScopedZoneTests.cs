@@ -39,6 +39,7 @@ public class ScopedZoneTests : BunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton<IWidgetRegistry>(registry)
+			.AddSingleton(new ApplicationCatalog([]))
 			.AddSingleton(layoutService)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 

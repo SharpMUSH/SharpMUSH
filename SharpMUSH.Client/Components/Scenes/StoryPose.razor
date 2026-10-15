@@ -14,7 +14,7 @@
    notice  - one dim line.
    Every row carries data-pose-type and its tone as --pose-tone, so a staff stylesheet can restyle one type.
    The portrait and the name open the character: the sheet in Play (OnCharacter), the profile page
-   elsewhere. *@
+   elsewhere. Resting the pointer on a prose pose's name opens its name card. *@
 @switch (Type.Layout)
 {
     case PoseTypeInfo.Band:
@@ -101,14 +101,18 @@
             }
             <div class="story-main">
                 <div class="story-head">
-                    @if (OnCharacter.HasDelegate)
-                    {
-                        <button type="button" class="story-name" style="@NameStyle" @onclick="Open">@Pose.DisplayName</button>
-                    }
-                    else
-                    {
-                        <a class="story-name" style="@NameStyle" href="@ProfileHref">@Pose.DisplayName</a>
-                    }
+                    @* A pose shown under a persona opens no card: the persona is nobody the directory knows, and the author's
+                       card would say who is behind it. *@
+                    <NameCard CharacterName="@CardName" ImageUrl="@ImageUrl">
+                        @if (OnCharacter.HasDelegate)
+                        {
+                            <button type="button" class="story-name" style="@NameStyle" @onclick="Open">@Pose.DisplayName</button>
+                        }
+                        else
+                        {
+                            <a class="story-name" style="@NameStyle" href="@ProfileHref">@Pose.DisplayName</a>
+                        }
+                    </NameCard>
                     @TypeIcon
                     <span class="story-time">@Time</span>
                     @EditedBadge
@@ -254,6 +258,8 @@
     private string? NameStyle => SafeColor is { } c ? $"color:{c};" : null;
 
     private string Time => Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm");
+
+    private string CardName => string.IsNullOrWhiteSpace(Pose.ShowAsName) ? Pose.AuthorName : string.Empty;
 
     private string ProfileHref => "/character/" + Uri.EscapeDataString(Pose.DisplayName);
 

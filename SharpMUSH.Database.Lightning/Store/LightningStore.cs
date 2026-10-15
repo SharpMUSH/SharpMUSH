@@ -20,6 +20,9 @@ public sealed partial class LightningStore : IDisposable
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 
+	/// <summary>The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size.</summary>
+	internal int MaxKeySize => _env.MaxKeySize;
+
 	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> swap in a whole
 	/// new dictionary, and reader threads outside the gate's write lock must see the swap, never a stale one.</summary>
 	private volatile Dictionary<TableDef, LmdbDb> _tables = new();
