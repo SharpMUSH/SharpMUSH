@@ -50,6 +50,7 @@ public sealed class InactivityCheckService(
 		}
 		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
 		{
+			// Shutdown.
 		}
 	}
 

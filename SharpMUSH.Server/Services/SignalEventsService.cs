@@ -48,6 +48,7 @@ public sealed class SignalEventsService(
 		}
 		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
 		{
+			// Shutdown.
 		}
 	}
 
