@@ -1,6 +1,6 @@
 format: "1.10"
 package: scene
-version: 1.11.2
+version: 1.11.3
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -271,9 +271,11 @@ objects:
       # Both carry `scene`, which fills the <scene> slots.
       # scene_here for each player in room %0, as the scene-here package keeps it while players move: pushed
       # while a scene that player may see runs there, dropped while none does. Every status change triggers
-      # it, so those already in the room follow a scene starting, pausing or ending. /inline, so the status
-      # change has reached them when the command returns, not after whatever is queued ahead of it.
+      # it, so those already in the room follow a scene starting, pausing or ending. One queued entry per room
+      # (@trigger runs in place, a queued @dolist does not), so the room has a budget of its own.
       HERE`SYNC: |-
+        @dolist %0=@trigger me/HERE`SYNC`ROOM=##
+      HERE`SYNC`ROOM: |-
         think setq(room,%0); @dolist/inline lcon(%q<room>,player)={@if strmatch(setr(scene,objeval(##,scenewhere(%q<room>))),#-1*)={@context/drop ##=scene_here},{@context/push ##=scene_here,[json(object,scene,%q<scene>)],,Scene %q<scene>[if(strlen(setr(title,scene(%q<scene>,title))),: %q<title>)] is running here.}}
       PALETTE`LIST: |-
         {"label":"Scenes running now","line":"+scene","always":true,"icon":"Theaters","keywords":"rp scenes list"}
