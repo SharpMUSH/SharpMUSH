@@ -209,6 +209,10 @@
    "command": "Wiz wizpass"
   },
   {
+   "key": "38-tinymux-forms/mux.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "40-compat-choices/choice.dropto#0",
    "command": "Wiz wizpass"
   },

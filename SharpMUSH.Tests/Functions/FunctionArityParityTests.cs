@@ -71,7 +71,25 @@ public class FunctionArityParityTests : ServerTestBase
 
 		// Opt-out of PennMUSH's one-per-control-character count, measuring tabs and newlines as the
 		// zero columns they occupy (#1256). Omitted, strlen() answers as PennMUSH does.
-		["strlen"] = "trailing <count controls> argument; a false value counts control characters as zero"
+		["strlen"] = "trailing <count controls> argument; a false value counts control characters as zero",
+
+		// TinyMUX's forms of functions PennMUSH shares (help compatibility arguments). Each takes a call
+		// PennMUSH refuses; an empty call keeps PennMUSH's error (EmptyCallMinArgs).
+		["add"] = "one argument, as TinyMUX's add(5) is 5",
+		["mul"] = "one argument, as TinyMUX's mul(3) is 3",
+		["and"] = "one argument, tested on its own as in TinyMUX",
+		["cand"] = "one argument, tested on its own as in TinyMUX",
+		["or"] = "one argument, tested on its own as in TinyMUX",
+		["cor"] = "one argument, tested on its own as in TinyMUX",
+		["xor"] = "one argument, tested on its own as in TinyMUX",
+		["itext"] = "no argument is itext(0), as in TinyMUX",
+		["lnum"] = "no argument is an empty list, as in TinyMUX",
+		["switch"] = "a default alone, as TinyMUX's switch(x,default) is default",
+		["switchall"] = "a default alone, as TinyMUX's switch(x,default) is default",
+		["case"] = "a default alone, as TinyMUX's switch(x,default) is default",
+		["caseall"] = "a default alone, as TinyMUX's switch(x,default) is default",
+		["wrap"] = "TinyMUX's wrap(text,width,justify,left,right,hanging,osep,first width)",
+		["list"] = "TinyMUX's list(list,action,delimiter) under mux_list"
 	};
 
 	/// <summary>

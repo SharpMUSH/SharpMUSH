@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SharpMUSH.Implementation.Generated;
 
-using FunctionInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string Flags, string SideEffectMinArgs, string[] Restrict, string[] ParameterNames, bool StaticMethod);
+using FunctionInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string EmptyCallMinArgs, string MaxArgs, string Flags, string SideEffectMinArgs, string[] Restrict, string[] ParameterNames, bool StaticMethod);
 
 [Generator]
 public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
@@ -37,6 +37,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		var methodName = syntax.Identifier.Text;
 		var attrName = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Name").Value.Value?.ToString() ?? "";
 		var minArgs = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "MinArgs").Value.Value?.ToString() ?? "0";
+		var emptyCallMinArgs = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "EmptyCallMinArgs").Value.Value?.ToString() ?? "0";
 		var maxArgs = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "MaxArgs").Value.Value?.ToString() ?? "32";
 		var flags = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Flags").Value.Value?.ToString() ??
 								"FunctionFlags.Regular";
@@ -50,7 +51,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 			? paramNamesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
 			: [];
 		var staticMethod = syntax.Modifiers.Any(m => m.ValueText == "static");
-		return (name, className, methodName, attrName, minArgs, maxArgs, flags, sideEffectMinArgs, restrict, parameterNames, staticMethod);
+		return (name, className, methodName, attrName, minArgs, emptyCallMinArgs, maxArgs, flags, sideEffectMinArgs, restrict, parameterNames, staticMethod);
 	}
 
 	private static void Execute(SourceProductionContext context,
@@ -119,6 +120,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		{
 				Name = "{{EscapeString(info.AttributeName)}}",
 				MinArgs = {{info.MinArgs}},
+				EmptyCallMinArgs = {{info.EmptyCallMinArgs}},
 				MaxArgs = {{info.MaxArgs}},
 				Flags = (SharpMUSH.Library.Definitions.FunctionFlags){{info.Flags}},
 				SideEffectMinArgs = {{info.SideEffectMinArgs}},

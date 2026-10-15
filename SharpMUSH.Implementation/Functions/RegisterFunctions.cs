@@ -370,12 +370,21 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(new(string.Empty));
 	}
 
-	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "itext", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message.ToPlainText();
+		var levelArg = args.Count == 0 ? string.Empty : args["0"].Message.ToPlainText();
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		// itext() is TinyMUX's itext(0), and empty outside a loop; PennMUSH refuses an empty level, so
+		// this replaces only an error.
+		if (levelArg.Length == 0)
+		{
+			return ValueTask.FromResult(maxCount == 0
+				? new CallState(MarkupText.Empty)
+				: new CallState(parser.CurrentState.IterationRegisters.First().Value));
+		}
 
 		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
 		{

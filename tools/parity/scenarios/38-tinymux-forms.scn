@@ -1,0 +1,39 @@
+# TinyMUX's forms of functions and substitutions PennMUSH shares (TinyMUX compatibility). Each case is
+# the parity case for its compatibility profile entry; the steps that differ are allowlisted in
+# known-differences.json with both servers' output pinned. The last case runs the four mux_ options at
+# their default, off, where SharpMUSH has to answer as PennMUSH does.
+
+::case mux.login
+::login wiz Wiz wizpass
+think ok
+
+::case mux.forms  TinyMUX's forms of shared functions: calls PennMUSH refuses are answered as TinyMUX does
+think [switch(x,default)]|[add(5)]|[and(1)]|[lnum()]|[iter(a b,itext())]
+think wrap(aaa bbb ccc,5,right)
+think setunion(B a c,b, ,|,a)
+think wrap(abc def,4,,|)
+think setunion(c a b,b d, ,|)
+
+::case mux.percent-m  %m is the running command, as in TinyMUX; PennMUSH has no %m and prints m
+think %m|%c
+
+::case mux.attribute-sub  %=<name> is the executor's attribute, as in TinyMUX; PennMUSH prints %= then <name>
+&MUXSUB me=hello
+think %=<muxsub>
+&MUXSUB me=
+
+::case mux.options-off  the mux_ options are off by default and SharpMUSH answers as PennMUSH
+think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]|[ljust(abcdef,3)]|[center(abcdefg,3)]|[sort(b A a B)]|[comp(a,B)]
+think [gt(words(list(functions)),100)]
+
+::case penn.wrap  PennMUSH's wrap(): a word with no space inside the width is cut one short and hyphenated, and a word that ends exactly at the width moves to the next line
+think wrap(abc def,3,,|)
+think wrap(aa abcdefghijkl bb,6,,|)
+think wrap(aaaa bbbbb ccc,10,,|)
+think wrap(a%rb%r%rc,5,,|)
+
+::case penn.percent-equals  %= is the attribute being evaluated, as #<dbref>/<name>, and empty outside one
+&PEQ me=%=
+think u(me/PEQ)
+think [%=]x
+&PEQ me=

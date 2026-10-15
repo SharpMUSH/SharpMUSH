@@ -86,8 +86,14 @@ public static partial class Substitutions
 			// server gives %j a meaning.
 			"j" or "J" => parser.CurrentState.Handle?.ToString() ?? string.Empty,
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
-			"C" or "c" => CommandBeforeEvaluation(parser),
+			// %m is TinyMUX's name for the same thing; PennMUSH has no %m and prints m.
+			"C" or "c" or "M" or "m" => CommandBeforeEvaluation(parser),
 			"U" or "u" => CommandAfterEvaluation(parser),
+			// %=: the attribute being evaluated, as #<dbref>/<name> (PennMUSH's pe_info->attrname); empty
+			// outside one. %=<name> is TinyMUX's attribute substitution, read before it gets here.
+			"=" => parser.CurrentState.CurrentEvaluation is { } evaluation
+				? $"#{evaluation.DB.Number}/{evaluation.Name}"
+				: string.Empty,
 			// %>: the logical output of the last command run in this queue entry (help command output).
 			// PennMUSH has no %> and prints a literal >.
 			">" => parser.CurrentState.PipedOutput,
@@ -147,6 +153,7 @@ public static partial class Substitutions
 		if (context.STEXT_LAST() is not null) return HandleSTextLast(parser);
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
 		if (context.ARG_STARTCARET() is not null) return new CallState(parser.CurrentState.Argument(symbol.Message.ToPlainText()));
+		if (context.ATTR_STARTCARET() is not null) return await HandleAttributeOrArgument(symbol, parser, mediator, attributeService);
 		return HandleRegistrySymbol(symbol, parser);
 	}
 
@@ -223,6 +230,19 @@ public static partial class Substitutions
 		return val is SharpAttribute[] attr
 			? new CallState(attr.Last().Value)
 			: new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// <c>%=&lt;name&gt;</c>, from TinyMUX: argument <c>name</c> when it starts with a digit
+	/// (<c>%=&lt;12&gt;</c> is <c>%&lt;12&gt;</c>), otherwise the executor's attribute, as <c>v(name)</c>.
+	/// </summary>
+	private static async ValueTask<CallState> HandleAttributeOrArgument(CallState symbol, IMUSHCodeParser parser,
+		IMediator mediator, IAttributeService attributeService)
+	{
+		var name = symbol.Message.ToPlainText();
+		return name.Length > 0 && char.IsAsciiDigit(name[0])
+			? new CallState(parser.CurrentState.Argument(name))
+			: await HandleVWX(symbol, parser, mediator, attributeService);
 	}
 
 	// Symbol Example: %$0 --> 0
