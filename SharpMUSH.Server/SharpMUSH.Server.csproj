@@ -319,6 +319,14 @@
       <Link>BundledPackages\scene-safety.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\highlights\package.yaml">
+      <Link>BundledPackages\highlights.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.highlights.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\highlights-app\package.yaml">
+      <Link>BundledPackages\highlights-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.highlights-app.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\bboards\package.yaml">
       <Link>BundledPackages\bboards.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.bboards.package.yaml</LogicalName>
