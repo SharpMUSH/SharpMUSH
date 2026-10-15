@@ -54,7 +54,8 @@ public interface ISceneService
 	/// <c>paused</c> one. It is sorted by time ascending, paused scenes with no time last, and windowed by
 	/// the optional UTC-millis bounds (a window leaves out the scenes with no time). <c>upcoming</c> is the
 	/// same list without the scenes whose time passed more than an hour ago and that never started: what a
-	/// reader of the schedule can still go to. <paramref name="viewerDbref"/> scopes <c>mine</c> and
+	/// reader of the schedule can still go to. <c>active</c> and <c>finished</c> take the same window, applied before
+	/// <paramref name="count"/>. <paramref name="viewerDbref"/> scopes <c>mine</c> and
 	/// visibility filtering.
 	/// </summary>
 	Task<IReadOnlyList<Contracts.Scene>> ListScenesAsync(string filter, string? viewerDbref = null,

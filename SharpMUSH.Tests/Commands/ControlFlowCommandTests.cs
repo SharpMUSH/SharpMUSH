@@ -940,6 +940,25 @@ public class ControlFlowCommandTests
 		await Assert.That(MessagesFor(executor)).Contains($"DlCopy_kepta_{id}");
 	}
 
+	/// <summary>
+	/// Each queued run of a @dolist is a queue entry of its own with a whole function_invocation_limit, as in
+	/// PennMUSH: three runs of 10000 calls each all finish under a limit of 25000. They shared the caller's count.
+	/// </summary>
+	[Test]
+	public async ValueTask DoList_QueuedRuns_EachHaveTheirOwnInvocationLimit()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"@dolist a b c=@pemit #1=DlBudget_##_[words(iter(lnum(10000),add(%i0,0)))]_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"DlBudget_c_10000_{id}")).IsTrue()
+			.Because(string.Join(" | ", MessagesFor(executor).Where(heard => heard.Contains(id))));
+		await Assert.That(MessagesFor(executor)).Contains($"DlBudget_a_10000_{id}");
+		await Assert.That(MessagesFor(executor)).Contains($"DlBudget_b_10000_{id}");
+	}
+
 	[Test]
 	public async ValueTask Switch_Inline_BreakStopsLaterMatchingActions()
 	{

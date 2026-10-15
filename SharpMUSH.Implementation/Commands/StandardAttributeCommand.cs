@@ -1,3 +1,4 @@
+using Mediator;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -20,6 +21,9 @@ namespace SharpMUSH.Implementation.Commands;
 /// </summary>
 internal sealed class StandardAttributeCommand(EvaluationServices services)
 {
+	private readonly StandardAttributeWriter _writer = new(services.Mediator, services.LocateService,
+		services.AttributeService, services.NotifyService);
+
 	/// <summary>
 	/// The entry an <c>@attrname</c> command means when no entry has that exact name: an exact match
 	/// (case-insensitive) first, then the shortest <c>prefixmatch</c> entry the name begins, ties broken
@@ -92,14 +96,7 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 		var evalString = context.evaluationString();
 		if (evalString == null || evalString.IsEmpty)
 		{
-			var handle = prs.CurrentState.Handle;
-			if (handle.HasValue)
-			{
-				await services.NotifyService.NotifyLocalized(handle.Value, nameof(ErrorMessages.Notifications.UsageAtCommandFormat),
-					matchedEntry.Name.ToLower());
-			}
-
-			return CallState.Empty;
+			return await _writer.UsageAsync(prs, matchedEntry.Name);
 		}
 
 		var fullText = src.Substring(evalString.Start.StartIndex, evalString.Stop.StopIndex - evalString.Start.StartIndex + 1);
@@ -124,17 +121,49 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 
 		if (spaceIndex == -1)
 		{
-			var handle = prs.CurrentState.Handle;
-			if (handle.HasValue)
-			{
-				await services.NotifyService.NotifyLocalized(handle.Value, nameof(ErrorMessages.Notifications.UsageAtCommandFormat),
-					matchedEntry.Name.ToLower());
-			}
-
-			return CallState.Empty;
+			return await _writer.UsageAsync(prs, matchedEntry.Name);
 		}
 
 		var argsText = fullText.Substring(spaceIndex + 1, fullText.Length - spaceIndex - 1);
+		return await _writer.WriteAsync(prs, argsText, matchedEntry.Name);
+	}
+}
+
+/// <summary>
+/// The write behind every <c>@&lt;attribute&gt; object[=value]</c> command: PennMUSH's <c>command_atrset</c>
+/// as <c>command_isattr</c> reaches it. The text after the command name is taken as written, never
+/// evaluated; with no <c>=</c> the attribute is cleared. The executor is the permission subject, and the
+/// confirmation passes <c>do_set_atr</c>'s QUIET gate. <c>@gender</c> uses it too, so it cannot set an
+/// attribute any differently than <c>@sex</c> does.
+/// </summary>
+internal sealed class StandardAttributeWriter(
+	IMediator mediator,
+	ILocateService locateService,
+	IAttributeService attributeService,
+	INotifyService notifyService)
+{
+	/// <summary>Tells the enactor how the command named for <paramref name="attributeName"/> is used.</summary>
+	public async ValueTask<Option<CallState>> UsageAsync(IMUSHCodeParser prs, string attributeName)
+	{
+		var handle = prs.CurrentState.Handle;
+		if (handle.HasValue)
+		{
+			await notifyService.NotifyLocalized(handle.Value, nameof(ErrorMessages.Notifications.UsageAtCommandFormat),
+				attributeName.ToLower());
+		}
+
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// Sets <paramref name="attributeName"/> on the object <paramref name="argsText"/> names, to the text after
+	/// its <c>=</c>, or clears it when there is no <c>=</c>.
+	/// </summary>
+	/// <param name="prs">The command's parser.</param>
+	/// <param name="argsText">The command's arguments as typed: <c>object=value</c> or <c>object</c>.</param>
+	/// <param name="attributeName">The attribute to write.</param>
+	public async ValueTask<Option<CallState>> WriteAsync(IMUSHCodeParser prs, MString argsText, string attributeName)
+	{
 		var argsPlainText = argsText.ToPlainText();
 
 		var equalsIndex = argsPlainText.IndexOf('=');
@@ -143,9 +172,9 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			// No = sign - clear/unset the attribute
 			var objectToClear = argsPlainText.Trim();
 
-			var clearExecutor = await prs.CurrentState.KnownExecutorObject(services.Mediator);
+			var clearExecutor = await prs.CurrentState.KnownExecutorObject(mediator);
 
-			var clearLocateResult = await services.LocateService.LocateAndNotifyIfInvalid(
+			var clearLocateResult = await locateService.LocateAndNotifyIfInvalid(
 				prs, clearExecutor, clearExecutor, objectToClear, LocateFlags.All);
 
 			if (clearLocateResult is not AnySharpObject clearTargetObject)
@@ -153,14 +182,14 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 				return CallState.Empty;
 			}
 
-			var clearResult = await services.AttributeService.ClearAttributeAsync(
-				clearExecutor, clearTargetObject, matchedEntry.Name,
+			var clearResult = await attributeService.ClearAttributeAsync(
+				clearExecutor, clearTargetObject, attributeName,
 				IAttributeService.AttributePatternMode.Exact);
 
 			var clearHandle = prs.CurrentState.Handle;
 
 			// A player's alias list was reported by the write itself (PlayerAliases).
-			if (!clearHandle.HasValue || PlayerAliases.Applies(clearTargetObject, matchedEntry.Name))
+			if (!clearHandle.HasValue || PlayerAliases.Applies(clearTargetObject, attributeName))
 			{
 				return CallState.Empty;
 			}
@@ -168,18 +197,18 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			if (clearResult is not Error<string> clearError)
 			{
 				// do_set_atr's QUIET gate (src/attrib.c:2446).
-				if (await AttributeWriteReport.IsSuppressedAsync(services.AttributeService, clearExecutor, clearTargetObject,
-							matchedEntry.Name))
+				if (await AttributeWriteReport.IsSuppressedAsync(attributeService, clearExecutor, clearTargetObject,
+							attributeName))
 				{
 					return CallState.Empty;
 				}
 
-				await services.NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared),
-					clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
+				await notifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared),
+					clearExecutor, clearTargetObject.Object().Name, attributeName);
 			}
 			else
 			{
-				await services.NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat),
+				await notifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat),
 					clearExecutor, clearError.Value);
 			}
 
@@ -197,9 +226,9 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			? argsText.Substring(equalsIndex + 1, valueLength)
 			: MarkupText.Plain(valuePart);
 
-		var executor = await prs.CurrentState.KnownExecutorObject(services.Mediator);
+		var executor = await prs.CurrentState.KnownExecutorObject(mediator);
 
-		var locateResult = await services.LocateService.LocateAndNotifyIfInvalid(
+		var locateResult = await locateService.LocateAndNotifyIfInvalid(
 			prs, executor, executor, objectPart, LocateFlags.All);
 
 		if (locateResult is not AnySharpObject targetObject)
@@ -207,12 +236,12 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			return CallState.Empty;
 		}
 
-		var setResult = await services.AttributeService.SetAttributeForReportAsync(
-			executor, targetObject, matchedEntry.Name, valueMString);
+		var setResult = await attributeService.SetAttributeForReportAsync(
+			executor, targetObject, attributeName, valueMString);
 
 		var handle2 = prs.CurrentState.Handle;
 
-		if (!handle2.HasValue || PlayerAliases.Applies(targetObject, matchedEntry.Name))
+		if (!handle2.HasValue || PlayerAliases.Applies(targetObject, attributeName))
 		{
 			return CallState.Empty;
 		}
@@ -223,13 +252,13 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			case WrittenAttribute written:
 				if (!await AttributeWriteReport.IsSuppressedAsync(executor, targetObject, written))
 				{
-					await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet),
-						executor, targetObject.Object().Name, matchedEntry.Name);
+					await notifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet),
+						executor, targetObject.Object().Name, attributeName);
 				}
 
 				break;
 			case Error<string> error:
-				await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat),
+				await notifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat),
 					executor, error.Value);
 				break;
 		}
