@@ -3061,6 +3061,18 @@ PLAYERS:</value>
   <data name="OwnerChanged" xml:space="preserve">
     <value>Owner changed.</value>
   </data>
+  <data name="PlayersAlwaysOwnThemselves" xml:space="preserve">
+    <value>Players always own themselves.</value>
+  </data>
+  <data name="MustCarryToChown" xml:space="preserve">
+    <value>You must carry the object to @chown it.</value>
+  </data>
+  <data name="ChownPreserveIsForWizards" xml:space="preserve">
+    <value>You cannot @CHOWN/PRESERVE. Use normal @CHOWN.</value>
+  </data>
+  <data name="ChownReceiverHasNoQuota" xml:space="preserve">
+    <value>That player doesn't have enough money or quota to receive that object.</value>
+  </data>
   <data name="AsciiTranslationSetFormat" xml:space="preserve">
     <value>{0} is sent to clients without Unicode as '{1}'.</value>
   </data>

@@ -811,6 +811,14 @@ public static partial class ErrorMessages
 		public const string ZoneChanged = "Zone changed.";
 		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:238</c>): to the enactor, after every successful <c>@chown</c>; QUIET does not suppress it.</summary>
 		public const string OwnerChanged = "Owner changed.";
+		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:205-207</c>): only God may @chown a player.</summary>
+		public const string PlayersAlwaysOwnThemselves = "Players always own themselves.";
+		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:214-217</c>): a thing is chowned from the inventory, unless the enactor is privileged.</summary>
+		public const string MustCarryToChown = "You must carry the object to @chown it.";
+		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:219-221</c>).</summary>
+		public const string ChownPreserveIsForWizards = "You cannot @CHOWN/PRESERVE. Use normal @CHOWN.";
+		/// <summary>PennMUSH <c>do_chown</c> (<c>src/set.c:226-231</c>): the new owner has no quota slot; said only when it is someone else.</summary>
+		public const string ChownReceiverHasNoQuota = "That player doesn't have enough money or quota to receive that object.";
 		public const string CantMakeCircularZones = "You can't make circular zones!";
 		/// <summary><c>do_chzone</c>'s no-op guard (<c>src/set.c:394</c>).</summary>
 		public const string ObjectAlreadyInThatZone = "That object is already in that zone.";
