@@ -239,6 +239,19 @@ public class LayoutFunctionTests
 		await Assert.That((await Eval("ltree({{\"guide\":\"nope\"}},a b)")).ToPlainText()).IsEqualTo("#-1 UNKNOWN GUIDE STYLE");
 	}
 
+	/// <summary>A list holding only a sound is not empty: the sound reaches the client as it does from the variadic form.</summary>
+	[Test]
+	[Arguments("lflex(,sound(door.wav))", "flex(,sound(door.wav))")]
+	[Arguments("ltree(,sound(door.wav))", "tree(,sound(door.wav))")]
+	[Arguments("ldatatable(,Sound,sound(door.wav))", "datatable(,Sound,sound(door.wav))")]
+	public async Task AListForm_KeepsAListOfOnlyASound(string listForm, string variadic)
+	{
+		var fromList = (await Eval(listForm)).Render(MarkupFormat.Mxp);
+
+		await Assert.That(fromList).Contains("<SOUND door.wav>");
+		await Assert.That(fromList).IsEqualTo((await Eval(variadic)).Render(MarkupFormat.Mxp));
+	}
+
 	[Test]
 	public async Task Gradient_ColoursEachCharacterAlongTheWay_SkippingSpaces()
 	{

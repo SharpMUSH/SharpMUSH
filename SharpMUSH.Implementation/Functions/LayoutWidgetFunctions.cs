@@ -351,9 +351,12 @@ public partial class Functions
 	private static LayoutMarkup? LayoutOf(MString text) =>
 		text.Runs.IsDefaultOrEmpty ? null : text.Runs[0].Markups.OfType<LayoutMarkup>().FirstOrDefault();
 
-	/// <summary>A list's items split on its delimiter (a space when none is given); none for an empty list.</summary>
+	/// <summary>
+	/// A list's items split on its delimiter (a space when none is given); none for an empty list. A list
+	/// of only a point such as <c>sound()</c> is not empty: its carrier is in <c>Text</c>, not in the plain text.
+	/// </summary>
 	private static MString[] ListItems(MString list, MString delimiter) =>
-		list.ToPlainText().Trim().Length == 0
+		string.IsNullOrWhiteSpace(list.Text)
 			? []
 			: MushText.SplitList(delimiter.Length == 0 ? MarkupText.Space : delimiter, list);
 
