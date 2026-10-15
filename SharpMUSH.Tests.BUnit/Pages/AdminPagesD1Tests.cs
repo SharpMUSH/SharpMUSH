@@ -390,7 +390,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cards = cut.FindAll("a.adm-dash-card").Select(c => c.GetAttribute("href")).ToList();
 		await Assert.That(cards).IsEquivalentTo(new[]
 		{
-			"/softcode", "/admin/characters", "/admin/guests", "/admin/moderation", "/admin/audit",
+			"/softcode", "/admin/characters", "/admin/guests", "/admin/activity", "/admin/moderation", "/admin/audit",
 			"/admin/wiki", "/admin/suggestions", "/admin/messages", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}

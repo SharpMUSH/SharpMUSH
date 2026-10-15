@@ -257,10 +257,13 @@
 
     /// <summary>Starts a page to someone (the character sheet's Page): Command, with the page prefilled.</summary>
     /// <param name="command">The row's own Page action (<c>page #312=</c>, which survives a rename), when it has one.</param>
-    public Task StartPageAsync(string name, string? command = null)
+    public Task StartPageAsync(string name, string? command = null) => StartCommandAsync(command ?? $"page {name}=");
+
+    /// <summary>Puts a command line in, to finish and send (the command palette's insert): Command, with the line.</summary>
+    public Task StartCommandAsync(string line)
     {
         _type = Command;
-        _draft.Load(MarkupText.Plain(command ?? $"page {name}="), raw: true);
+        _draft.Load(MarkupText.Plain(line), raw: true);
         _focusInput = true;
         StateHasChanged();
         return SaveDraftAsync();

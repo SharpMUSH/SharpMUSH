@@ -307,9 +307,21 @@
       <Link>BundledPackages\scene-verse.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-verse.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-here\package.yaml">
+      <Link>BundledPackages\scene-here.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-here.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-safety\package.yaml">
       <Link>BundledPackages\scene-safety.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\highlights\package.yaml">
+      <Link>BundledPackages\highlights.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.highlights.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\highlights-app\package.yaml">
+      <Link>BundledPackages\highlights-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.highlights-app.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\bboards\package.yaml">
       <Link>BundledPackages\bboards.package.yaml</Link>
@@ -370,6 +382,10 @@
     <EmbeddedResource Include="..\examples\packages\roster-jobs\package.yaml">
       <Link>BundledPackages\roster-jobs.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-availability\package.yaml">
+      <Link>BundledPackages\scene-availability.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-availability.package.yaml</LogicalName>
     </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the
