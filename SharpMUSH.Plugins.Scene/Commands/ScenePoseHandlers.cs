@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -56,9 +58,29 @@ public static class ScenePoseHandlers
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
+		CountPose(parser, executor, pose);
 		await notifyService.Notify(executor, SceneCommandHelper.Notice($"Added pose #{pose.Id} to scene #{sceneId}.", NoticeKind.Ok));
 		await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
 		return MarkupText.Plain(pose.Id);
+	}
+
+	/// <summary>
+	/// Counts a pose its author added themselves (the portal's compose box) for the staff activity reports,
+	/// unless it is out of character. A pose the author typed was counted as they typed it, and the logger's
+	/// copy, added while that command runs, is not counted again. A line another object adds for someone, such
+	/// as radio-scene logging what a listener heard, is not their pose.
+	/// </summary>
+	private static void CountPose(IMUSHCodeParser parser, AnySharpObject executor, Contracts.ScenePose pose)
+	{
+		if (pose.Type == PoseTypes.OutOfCharacter
+			|| parser.ServiceProvider.GetService<IActivityLedger>() is not { } ledger
+			|| !DBRef.TryParse(pose.AuthorDbref, out var author) || author is not { } poser
+			|| poser.Number != executor.Object().DBRef.Number)
+		{
+			return;
+		}
+
+		ledger.RecordPose(poser.Number, DBRef.TryParse(pose.OriginDbref, out var origin) && origin is { } room ? room.Number : null);
 	}
 
 	public static async ValueTask<MString> SetPose(

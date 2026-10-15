@@ -20,5 +20,11 @@ public enum CommandBehavior
 	Internal = 1 << 13,
 	NoOp = 1 << 14,
 	God = 1 << 15,
-	Args = 1 << 16
+	Args = 1 << 16,
+
+	/// <summary>
+	/// The command speaks a line into the room its executor stands in (SAY, POSE, SEMIPOSE, @EMIT). When a
+	/// character runs it, the activity ledger counts a pose, before any hook can replace the command.
+	/// </summary>
+	Pose = 1 << 17
 }

@@ -46,7 +46,7 @@ public partial class Commands
 		return thought;
 	}
 
-	[SharpCommand(Name = "SAY", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
+	[SharpCommand(Name = "SAY", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged | CB.Pose, MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Say(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var message = parser.CurrentState.Switches.Contains("NOEVAL")
@@ -55,7 +55,7 @@ public partial class Commands
 		return await CommunicationService.SpeechAsync(parser, message, "\"");
 	}
 
-	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
+	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged | CB.Pose, MinArgs = 0,
 		MaxArgs = 1, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Pose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -65,7 +65,7 @@ public partial class Commands
 		return await CommunicationService.SpeechAsync(parser, message, parser.CurrentState.Switches.Contains("NOSPACE") ? ";" : ":");
 	}
 
-	[SharpCommand(Name = "SEMIPOSE", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
+	[SharpCommand(Name = "SEMIPOSE", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged | CB.Pose, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> SemiPose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

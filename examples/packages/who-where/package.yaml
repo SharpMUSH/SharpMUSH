@@ -241,10 +241,10 @@ objects:
       # as text.
       WW_FN_GROUP: |-
         rule(case(%0,#-1,Unfindable,name(%0)),,{{"title":"left","titles":\[{"text":"[setr(ww_count,words(%1))] [case(%q<ww_count>,1,player,players)]","side":"right"}\]}})%r[grid(iter(%1,u(%!/WW_FN_NAME,%i0,idle(%i0)),,|),|)]
-      # +where/grouped: the +where view, under a line per location.
+      # +where/room: one row per player, by location and then by name; its runs are locations.
+      # +where/grouped: under a line per location.
       WW_FN_WHERE_GROUPED: |-
         u(%!/WW_FN_WHERE,%0)
-      # +where/room: one row per player, by location and then by name; its runs are locations.
       WW_FN_WHERE_ROOM: |-
         u(%!/WW_FN_START,WHERE_ROOM)[setq(ww_title,Where by location)][setq(ww_parts,u(%!/WW_FN_SPLIT,u(%!/WW_FN_ROOMS,u(%!/WW_FN_GROUPS,%0)),v(WW_PART_ROOMS)))]
       # %0 a run of rooms, or -: their rows, or the screen.
