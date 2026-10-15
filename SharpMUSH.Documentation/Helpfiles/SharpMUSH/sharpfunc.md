@@ -94,17 +94,17 @@
 # Connection Functions
   Connection functions return information about the connections open on a game, or about specific connections.
 
-|                |                |                |                |
-|----------------|----------------|----------------|----------------|
-| [ADDRLOG()]    | [CLIENTZONE()] | [CMDS()]       | [CONN()]       |
-| [CONNLOG()]    | [CONNRECORD()] | [DOING()]      | [HEIGHT()]     |
-| [HIDDEN()]     | [HOST()]       | [IDLE()]       | [IPADDR()]     |
-| [LPORTS()]     | [LWHO()]       | [LWHOID()]     | [MWHO()]       |
-| [MWHOID()]     | [NMWHO()]      | [NWHO()]       | [PLAYER()]     |
-| [PORTS()]      | [PUEBLO()]     | [RECV()]       | [SENT()]       |
-| [SSL()]        | [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      |
-| [XMWHOID()]    | [XWHO()]       | [XWHOID()]     | [ZMWHO()]      |
-| [ZWHO()]       |                |                |                |
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [ADDRLOG()]      | [CLIENTZONE()]   | [CMDS()]         | [CONN()]         |
+| [CONNLOG()]      | [CONNRECORD()]   | [DOING()]        | [GMCPSUPPORTS()] |
+| [HEIGHT()]       | [HIDDEN()]       | [HOST()]         | [IDLE()]         |
+| [IPADDR()]       | [LPORTS()]       | [LWHO()]         | [LWHOID()]       |
+| [MWHO()]         | [MWHOID()]       | [NMWHO()]        | [NWHO()]         |
+| [PLAYER()]       | [PORTS()]        | [PUEBLO()]       | [RECV()]         |
+| [SENT()]         | [SSL()]          | [TERMINFO()]     | [WIDTH()]        |
+| [XMWHO()]        | [XMWHOID()]      | [XWHO()]         | [XWHOID()]       |
+| [ZMWHO()]        | [ZWHO()]         |                  |                  |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -112,13 +112,14 @@
 |               |               |               |               |
 |---------------|---------------|---------------|---------------|
 | [CHILDREN()]  | [CON()]       | [ENTRANCES()] | [EXIT()]      |
-| [FOLLOWERS()] | [FOLLOWING()] | [HOME()]      | [LCON()]      |
-| [LEXITS()]    | [LOC()]       | [LOCATE()]    | [LPARENT()]   |
-| [LPLAYERS()]  | [LSEARCH()]   | [LTHINGS()]   | [LVCON()]     |
-| [LVEXITS()]   | [LVPLAYERS()] | [LVTHINGS()]  | [NAMELIST()]  |
-| [NEXT()]      | [NEXTDBREF()] | [NUM()]       | [OWNER()]     |
-| [PARENT()]    | [PMATCH()]    | [RLOC()]      | [RNUM()]      |
-| [ROOM()]      | [WHERE()]     | [ZFIND()]     | [ZONE()]      |
+| [EXITMAP()]   | [FOLLOWERS()] | [FOLLOWING()] | [HOME()]      |
+| [LCON()]      | [LEXITS()]    | [LOC()]       | [LOCATE()]    |
+| [LPARENT()]   | [LPLAYERS()]  | [LSEARCH()]   | [LTHINGS()]   |
+| [LVCON()]     | [LVEXITS()]   | [LVPLAYERS()] | [LVTHINGS()]  |
+| [NAMELIST()]  | [NEXT()]      | [NEXTDBREF()] | [NUM()]       |
+| [OWNER()]     | [PARENT()]    | [PMATCH()]    | [RLOC()]      |
+| [RNUM()]      | [ROOM()]      | [WHERE()]     | [ZFIND()]     |
+| [ZONE()]      |               |               |               |
 
 ::: seealso
 - [database]
@@ -6044,24 +6045,22 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 
 `isjson()    json()     json_array()     json_fill()     json_group_by()     json_map()     json_query()     json_mod()`
 
-  This function sends a JSON object to GMCP and WebSocket connections.
+  oob() sends a JSON object to GMCP and WebSocket connections. gmcpsupports() says which GMCP packages a client asked for, and exitmap() builds the exits object a client's mapper reads.
 
-`oob()`
+`exitmap()     gmcpsupports()     oob()`
 
 
 ::: seealso
 - [JSON PATHS]
 :::
 # websocket_html()
-# websocket_json()
-`websocket_html(<html>[, <player>])`<br>
-`websocket_json(<json>[, <player>])`
+`websocket_html(<html>[, <player>])`
 
-  Reserved for sending raw HTML or a raw JSON payload out-of-band to a WebSocket client, defaulting to the caller when no `<player>` is given.
+  Reserved for sending raw HTML out-of-band to a WebSocket client, defaulting to the caller when no `<player>` is given.
 
-  **Neither function is implemented yet.** Both validate their arguments and then return an error; no data reaches any connection. They are registered so that softcode written against them keeps its name, and so that this gap is visible from in-game help rather than only from the source. Use [OOB()] for GMCP, which does work.
+  **It is not implemented yet.** It checks that `<player>` exists and then returns nothing; no data reaches any connection. It is registered so that softcode written against it keeps its name, and so that this gap is visible from in-game help rather than only from the source. Use [wshtml()] for HTML in the text, and [OOB()] for JSON, which reaches GMCP and WebSocket clients.
 
-  These are SharpMUSH functions; PennMUSH has neither.
+  This is a SharpMUSH function; PennMUSH has none.
 
 
 ::: seealso
@@ -6070,7 +6069,7 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 :::
 # oob()
 # GMCP
-`oob(<players>, <package>[, <message>])`
+`oob(<players>, <package>[, <message>[, supported]])`
 
   This function sends an out-of-band message using the General MUD Communication Protocol (GMCP - http://www.gammon.com.au/gmcp) and a WebSocket.
 
@@ -6080,9 +6079,19 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 
   If specified, `<message>` is a JSON-formatted message to be sent. Use the JSON() function to construct valid JSON.
 
+  With the fourth argument `supported`, a telnet client is sent the package only when it listed the package, or a module it belongs to, in GMCP Core.Supports, or listed nothing at all: Blightmud, TinTin++ and MUSHclient never send Core.Supports, so an empty list means the client never said. `Room` covers `Room.Info`. A WebSocket (portal) connection always gets the package. Any other fourth argument is an error. Without it every client that agreed to GMCP gets the package, which suits packages Mudlet uses without listing. See [gmcpsupports()].
+
   You must be a wizard or have the Send_OOB power to send messages to anyone but yourself, or to a descriptor other than your own.
 
   Returns the number of descriptors the message was sent to on success, or a string starting with #-1 on error.
+
+Examples:
+```sharp
+> think oob(me, Room.Info, json(object, num, json(number, 1234)), supported)
+1
+```
+
+Output: the number of your connections that took Room.Info. A Mudlet that listed `Room 1` counts; a client that listed modules without Room does not.
 
 
 ::: seealso

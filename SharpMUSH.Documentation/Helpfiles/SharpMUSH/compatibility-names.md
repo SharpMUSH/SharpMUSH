@@ -106,11 +106,13 @@ hi
   `rendermarkdown()`: CommonMark to markup.<br>
   `pagerecall()`, `pageconversations()`: read your own page log (the `page_log` option); PennMUSH
   keeps no page log.<br>
+  `gmcpsupports()`, `exitmap()`: the GMCP modules a client listed in Core.Supports, and a room's
+  exits as JSON for a client's mapper.<br>
   `formq()`, the wiki functions and the scene functions: SharpMUSH subsystems with no PennMUSH
   counterpart.
 
-Two are registered and do nothing yet: `websocket_html()` and `websocket_json()` validate their
-arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0.
+One is registered and does nothing yet: `websocket_html()` checks its arguments and returns
+nothing. Use `oob()` for GMCP. `objmem()` always answers 0.
 
 ## SharpMUSH-only commands
 

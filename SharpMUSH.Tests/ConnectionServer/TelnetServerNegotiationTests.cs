@@ -1277,6 +1277,35 @@ public class TelnetServerNegotiationTests
 		}
 	}
 
+	/// <summary>
+	/// The client's Core.Supports list leaves the connection server: gmcpsupports() and
+	/// <c>oob(..., supported)</c> read it in the main process. Each change sends the whole list.
+	/// </summary>
+	[Test]
+	public async Task GmcpCoreSupports_IsPublishedToTheMainProcess()
+	{
+		var (toServer, fromServer, handler, published, cts) = StartServer();
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, GMCP));
+			await WriteAsync(toServer, IAC, DO, GMCP);
+			await WriteAsync(toServer,
+				[IAC, SB, GMCP, .. "Core.Supports.Set [\"Room 1\", \"Client.Media 1\"]"u8.ToArray(), IAC, SE]);
+
+			var message = await WaitForPublishedAsync<GMCPSupportsMessage>(published);
+
+			await Assert.That(message).IsNotNull();
+			await Assert.That(message!.Modules).IsEquivalentTo(["Room 1", "Client.Media 1"]);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	private const byte NEW_ENVIRON = 39;
 	private const byte ENV_VAR = 0;
 	private const byte ENV_VAL = 1;

@@ -16,6 +16,11 @@
       "lookup": "compatibility arguments a trailing osep on the vector functions"
     },
     {
+      "id": "a-trailing-supported-on-oob",
+      "heading": "A trailing `supported` on `oob()`",
+      "lookup": "compatibility arguments a trailing supported on oob"
+    },
+    {
       "id": "prepared-statement-parameters-on-sql-and-mapsql",
       "heading": "Prepared-statement parameters on `sql()` and `mapsql()`",
       "lookup": "compatibility arguments prepared statement parameters on sql and mapsql"
@@ -91,6 +96,24 @@ more digits.)
 > think vadd(1|2|3,4|5|6,|,%b)
 5 7 9
 ```
+
+## A trailing `supported` on `oob()`
+
+**A choice.**
+
+**PennMUSH** sends the package to every connection that speaks GMCP.<br>
+**SharpMUSH** does the same, unless a fourth argument `supported` asks it to skip a telnet client
+that listed GMCP modules in Core.Supports without this package's. A client that listed nothing, and
+a WebSocket, still get it.<br>
+**Why.** A client that says which modules it wants should not be sent the rest, but most clients
+never say, and Mudlet uses some packages it does not list.<br>
+**Workaround.** Omit it.
+
+```sharp unchecked
+> think oob(me,Room.Info,json(object,num,json(number,1234)),supported)
+1
+```
+(The count is how many of your connections took it.)
 
 ## Prepared-statement parameters on `sql()` and `mapsql()`
 

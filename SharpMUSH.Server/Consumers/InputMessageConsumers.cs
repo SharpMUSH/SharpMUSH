@@ -196,6 +196,28 @@ public class GMCPNegotiatedConsumer(ILogger<GMCPNegotiatedConsumer> logger, ICon
 }
 
 /// <summary>
+/// Consumes the client's GMCP <c>Core.Supports</c> list: kept as <c>GMCP_SUPPORTS</c>, space-separated
+/// <c>Module version</c> pairs, which <c>gmcpsupports()</c> and <c>oob(..., supported)</c> read.
+/// </summary>
+public class GMCPSupportsConsumer(ILogger<GMCPSupportsConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<GMCPSupportsMessage>
+{
+	public async Task HandleAsync(GMCPSupportsMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] GMCPSupportsMessage - Handle: {Handle}, Modules: {@Modules}",
+			message.Handle, message.Modules);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping GMCP Core.Supports for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		connectionService.Update(message.Handle, GmcpSupports.MetadataKey, GmcpSupports.Format(message.Modules));
+	}
+}
+
+/// <summary>
 /// Consumes MSDP update messages from NATS JetStream
 /// </summary>
 public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionService connectionService)

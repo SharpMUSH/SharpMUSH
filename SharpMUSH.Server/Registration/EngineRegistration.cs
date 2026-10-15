@@ -425,6 +425,7 @@ internal static class EngineRegistration
 				x.AddConsumer<Consumers.WebSocketInputConsumer, WebSocketInputMessage>();
 				x.AddConsumer<Consumers.GMCPSignalConsumer, GMCPSignalMessage>();
 				x.AddConsumer<Consumers.GMCPNegotiatedConsumer, GMCPNegotiatedMessage>();
+				x.AddConsumer<Consumers.GMCPSupportsConsumer, GMCPSupportsMessage>();
 				x.AddConsumer<Consumers.ClientIdentityConsumer, ClientIdentityMessage>();
 				x.AddConsumer<Consumers.ClientTimeZoneConsumer, ClientTimeZoneMessage>();
 				x.AddConsumer<Consumers.MSDPUpdateConsumer, MSDPUpdateMessage>();
