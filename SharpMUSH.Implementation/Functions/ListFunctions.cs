@@ -1117,16 +1117,22 @@ public partial class Functions
 	{
 		var keys = keyResults.Select(key => key.ToPlainText()).ToList();
 		var indexes = Enumerable.Range(0, list.Length);
-		var sortedIndexes = sortType.ToPlainText().ToLower() switch
+		// A leading - reverses the order, as it does for sort() (help sorting).
+		var type = sortType.ToPlainText().ToLower();
+		var descending = type.StartsWith('-');
+		var sortedIndexes = (descending ? type[1..] : type) switch
 		{
 			// gen_num: a numeric key is parse_integer of its text (src/sort.c:346-349).
-			"n" => indexes.OrderBy(i => ArgHelpers.ParseInteger(keys[i])),
-			"f" => indexes.OrderBy(i => double.TryParse(keys[i], out var f) ? f : 0.0),
-			"i" => indexes.OrderBy(i => keys[i], StringComparer.OrdinalIgnoreCase),
-			_ => indexes.OrderBy(i => keys[i])
+			"n" => Ordered(i => ArgHelpers.ParseInteger(keys[i])),
+			"f" => Ordered(i => double.TryParse(keys[i], out var f) ? f : 0.0),
+			"i" => Ordered(i => keys[i], StringComparer.OrdinalIgnoreCase),
+			_ => Ordered(i => keys[i])
 		};
 
 		return sortedIndexes.Select(i => list[i]);
+
+		IEnumerable<int> Ordered<TKey>(Func<int, TKey> key, IComparer<TKey>? comparer = null)
+			=> descending ? indexes.OrderByDescending(key, comparer) : indexes.OrderBy(key, comparer);
 	}
 
 	/// <summary>

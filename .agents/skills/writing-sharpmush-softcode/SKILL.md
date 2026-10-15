@@ -123,13 +123,23 @@ Never build nested `@switch` ladders for validation. Guard with `@assert`/`@brea
 Never pack fields into one delimited value (`name|date|dues`). One attribute tree branch per record, one leaf per fact, `no_command` on the root (restrictive attribute flags inherit down; granting ones like `visual` don't):
 
 ```
-&DATA obj=Guild records, one branch per member objid.
+&DATA obj=Guild records, one branch per member: objid #30:171943 is DATA`30`171943.
 @set obj/DATA=no_command
-&DATA`#30:171943`NAME obj=Ivory Syndicate
-&DATA`#30:171943`DUES obj=150
+&DATA`30`171943`NAME obj=Ivory Syndicate
+&DATA`30`171943`DUES obj=150
 ```
 
-Read directly: ``get(obj/DATA`#30:171943`DUES)``. Key by **objid**, not dbref or name. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
+Read directly: ``get(obj/DATA`30`171943`DUES)``. Key by **objid**, not dbref or name, but never by the objid as written: `:` is not an attribute name character, so `&DATA`#30:171943`NAME` is refused. ``edit(after(objid(<obj>),#),:,`)`` makes the key. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
+
+## Settings: `` DATA`CONFIG `` and `+config`
+
+A setting staff may change (a duration, a column count, a default view) is a `` DATA`CONFIG`<NAME> `` attribute on the object whose code reads it, holding the value, with leaves saying what it accepts: `TYPE` (`text integer number boolean duration choice list pattern object timezone table`), `DEFAULT`, `DESCRIPTION`, `LABEL` (display name), `EXAMPLE`, `MIN`/`MAX`, `CHOICES`, `PATTERN`, `DELIMITER` (a list's separator when not a space), `OBJECTTYPE`, `CHECK`, `PERMISSION`. Register the object with the bundled `plus-config` package (a package attaches `` SYSTEM`<system> `` to `{{plus-config/registry}}`; hand-made code uses `+config/register <system>=<object>`), and `+config <system>/<name>=<value>` checks and writes it; `config.admin` changes it unless `PERMISSION` names another.
+
+- **Read it where it lives**: `` v(DATA`CONFIG`HOURS) ``, or `` get(<obj>/DATA`CONFIG`HOURS) `` from another object. No dependency on `+config` to read.
+- **Stored form is the usable form**: durations in seconds, booleans `1`/`0`, objects as objids, lists joined by their `DELIMITER`. Write the value and `DEFAULT` that way in the manifest. Give each setting a `LABEL` and `DESCRIPTION`, and the system a `` DATA`CONFIG`LABEL ``.
+- **No settings object, no staff-only `+mything/set`, no `@config` option** for a package's own knob.
+- **Records staff curate are a `table`**: named entries with the same fields (the statuses on offer, each with means, tag, lasts, logoff). The entries stay where the code reads them, on the `STORE` object under `PATH` (`` <PATH>`<ENTRY> `` holds the `ENTRY` field, other fields are leaves beneath); each field is declared under `` DATA`CONFIG`<table>`FIELD`<field> `` with the same leaves as a setting. `+config <system>/<table>/<entry>/<field>=<value>` changes one field, `+config/add` and `/remove` change entries, and `ACONFIG` hears `%<action>` `add`/`remove` to tidy up. The store needs the system object's owner and `NO_COMMAND`. No `+mything/options` command for them.
+- Details: `+help config writing` on a game with the package.
 
 ## Pipeline functions (SharpMUSH-specific; prefer over hand-rolled loops)
 

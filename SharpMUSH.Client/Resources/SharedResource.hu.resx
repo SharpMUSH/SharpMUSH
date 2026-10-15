@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Több mutatása</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Idővonal</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Nincs dátum</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Összes</value>
   </data>
@@ -6244,5 +6250,11 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Értesítések erre a telefonra vagy számítógépre, amikor a portál zárva van</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Ezt csak te látod.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Értesítések neked</value>
   </data>
 </root>

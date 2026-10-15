@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene.Web;
@@ -63,6 +64,21 @@ public sealed class SceneHub(ISceneService sceneService, ILogger<SceneHub> logge
 	public static string SceneGroupName(string sceneId) => $"scene:{sceneId}";
 
 	/// <summary>
+	/// One character's connections on a scene: where a notice for that member alone goes (<c>@scene/notice</c>).
+	/// A connection joins it with the scene's group, so only a character that may see the scene is in it.
+	/// </summary>
+	public static string MemberGroupName(string sceneId, int character) => $"scene:{sceneId}:char:{character}";
+
+	/// <summary>
+	/// The group an event goes to: a notice for one member (<see cref="SceneEventMessage.Recipient"/>) reaches only
+	/// that member's connections on the scene, everything else the whole scene.
+	/// </summary>
+	public static string GroupFor(SceneEventMessage message) =>
+		message.Recipient is { } recipient && DBRef.TryParse(recipient, out var member) && member is { } to
+			? MemberGroupName(message.SceneId, to.Number)
+			: SceneGroupName(message.SceneId);
+
+	/// <summary>
 	/// Adds the calling connection to the <c>scene:{sceneId}</c> group (live scene view opened), after
 	/// proving the caller is a character who may see that scene.
 	/// </summary>
@@ -86,6 +102,7 @@ public sealed class SceneHub(ISceneService sceneService, ILogger<SceneHub> logge
 		}
 
 		await Groups.AddToGroupAsync(Context.ConnectionId, SceneGroupName(id));
+		await Groups.AddToGroupAsync(Context.ConnectionId, MemberGroupName(id, character.Number));
 		logger.LogDebug("[SceneHub] Connection {ConnectionId} joined scene group {Group}",
 			Context.ConnectionId, SceneGroupName(id));
 	}
@@ -104,9 +121,10 @@ public sealed class SceneHub(ISceneService sceneService, ILogger<SceneHub> logge
 	public async Task LeaveScene(string? sceneId)
 	{
 		var id = RequireSceneId(sceneId);
-		RequireCharacter();
+		var character = RequireCharacter();
 
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, SceneGroupName(id));
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, MemberGroupName(id, character.Number));
 		logger.LogDebug("[SceneHub] Connection {ConnectionId} left scene group {Group}",
 			Context.ConnectionId, SceneGroupName(id));
 	}
