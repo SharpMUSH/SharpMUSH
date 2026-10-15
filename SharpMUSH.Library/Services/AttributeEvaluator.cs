@@ -282,7 +282,9 @@ internal sealed class AttributeEvaluator(
 			var result = await parser.With(s => s with
 			{
 				Arguments = args,
-				EnvironmentRegisters = args
+				EnvironmentRegisters = args,
+				CurrentEvaluation = new LambdaEvaluation(executor.Object().DBRef, attribute.ToPlainText(),
+					DBAttribute.Scope(s.CurrentEvaluation))
 			},
 				async np => await np.FunctionParse(attribute));
 			return result ?? CallState.Empty;

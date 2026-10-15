@@ -101,7 +101,7 @@ Other substitutions:<br>
     %> = the output of the last command, like a function's result: see [command output]<br>
     %| = what the command before a `;|` showed you: see [piping]<br>
     %? = The current function invocation and depth counts<br>
-    %= = The dbref/attribute currently being evaluated<br>
+    %= = The dbref/attribute currently being evaluated, or `#LAMBDA/<code>` inside a #lambda<br>
     %+ = The number of arguments passed to the current ufun.<br>
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function<br>
     %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>    %`\<name\>` = the equivalent of r(name, args): the argument called `<name>`, from `uargs()`, a regexp `$-command` or `mapsql()`. `%<0>` is `%0`. Like `%0`, it ends with the call.<br>

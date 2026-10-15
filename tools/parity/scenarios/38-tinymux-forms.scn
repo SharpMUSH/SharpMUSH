@@ -37,3 +37,13 @@ think wrap(a%rb%r%rc,5,,|)
 think u(me/PEQ)
 think [%=]x
 &PEQ me=
+
+::case penn.lambda-percent-equals  inside a #lambda, %= is #LAMBDA/<code>, so a lambda can call itself; ## #@ #$ still reach the loop or switch around it
+&PLQ me=[ulambda(#lambda/\%=)]|[strmatch(%=,#*/PLQ)]
+think u(me/PLQ)
+think ulambda(lit(#lambda/[if(lte(%0,1),1,mul(%0,ulambda(%=,dec(%0))))]),5)
+think ulambda(lit(#lambda/[div(10,2)]/%=))
+think iter(a b,ulambda(lit(#lambda/##:#@)))
+think iter(a b,ulambda(lit(#lambda/[iter(x y,##)])))
+think switch(abc,a*,ulambda(lit(#lambda/#$)))
+&PLQ me=

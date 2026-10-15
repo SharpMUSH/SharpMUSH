@@ -547,7 +547,7 @@ public partial class TaskScheduler(
 		}
 	}
 
-	private static string? SourceAttribute(ParserState state) => state.CurrentEvaluation is { } current
+	private static string? SourceAttribute(ParserState state) => DBAttribute.Scope(state.CurrentEvaluation) is { } current
 		&& current.DB == state.Executor ? current.Name : null;
 	private async ValueTask<QueueAdmissionResult> RejectInvalidTarget(DBRef? executor, string kind)
 	{
