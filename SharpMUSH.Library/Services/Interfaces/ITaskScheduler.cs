@@ -42,6 +42,12 @@ public interface ITaskScheduler
 	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true);
 
 	/// <summary>
+	/// As <see cref="AdmitWork(Func{ValueTask{CallState?}}, string, string, DBRef, bool)"/>, with the object that
+	/// caused the work as the entry's enactor, who is told when it runs out of time.
+	/// </summary>
+	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, DBRef enactor, bool notifyOnRejection = true);
+
+	/// <summary>
 	/// Admits work that arrived on a socket of its own rather than from an object or a player, as an
 	/// inbound HTTP request does. PennMUSH queues such an entry <c>QUEUE_SOCKET</c> and <c>do_entry</c>
 	/// charges it to no one (<c>src/cque.c</c>, <c>run_http_command</c>), so it counts against the global
