@@ -84,6 +84,15 @@ public class RoomDocumentImporterTests
 	}
 
 	[Test]
+	public async Task ALinkTheExportCouldNotNameIsLeftAlone()
+	{
+		var plan = await Importer.PlanAsync(_actor, Document(new RoomDocumentRoomDto("#10", null, null, null,
+			[new("#11", null, "non-room", null)])), default);
+		await Assert.That(plan.Steps).IsEmpty();
+		await Assert.That(plan.Problems).IsEmpty();
+	}
+
+	[Test]
 	public async Task ARoomTheBuilderDoesNotControlIsAProblem()
 	{
 		_permissions.Controls(_actor, Arg.Is<AnySharpObject>(o => o.Object().DBRef.Number == 20)).Returns(false);

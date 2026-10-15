@@ -264,7 +264,7 @@ public sealed partial class RoomDocumentImporter(
 		HashSet<string> newRooms, Planned planned, CancellationToken ct)
 	{
 		var rename = exit.Name is { } name && name.Trim() != was.Name;
-		var relink = exit.To is { } to && to is not ("variable" or "hidden") && !string.Equals(to, was.To, StringComparison.OrdinalIgnoreCase);
+		var relink = exit.To is { } to && to is not ("variable" or "hidden" or "non-room") && !string.Equals(to, was.To, StringComparison.OrdinalIgnoreCase);
 		var describe = exit.Description is { } description && description != was.Description;
 		if (!rename && !relink && !describe) return;
 		if (await ObjectAsync(exit.Id, ct) is not { } target || !await permissions.Controls(actor, target))

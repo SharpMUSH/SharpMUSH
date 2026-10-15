@@ -197,6 +197,8 @@
     }
     function refresh() { if (ask('topology')) document.getElementById('status').textContent = 'Reading permitted topology…'; }
     function exportRooms() { if (ask('document')) document.getElementById('status').textContent = 'Exporting rooms…'; }
+    // The host saves at most 2 MiB for a package.
+    const maxSavedLength = 2 * 1024 * 1024;
     const fileName = () => (config.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'rooms') + '.rooms.json';
     // Dragging a room drops it in the nearest grid cell of the level on show. Nothing changes in the game until the
     // positions are saved, and saving goes through the host, which shows the changes and asks first.
@@ -269,7 +271,9 @@
         } else if (reply.type === 'document-result') {
             const text = reply.error ?? reply.result.error;
             if (text) { document.getElementById('status').textContent = text; return; }
-            connection.postMessage({ type: 'save-file', channel, name: fileName(), text: JSON.stringify(reply.result.document, null, 2) + '\n' });
+            const saved = JSON.stringify(reply.result.document, null, 2) + '\n';
+            if (saved.length > maxSavedLength) { document.getElementById('status').textContent = 'These rooms are more than 2 MiB as a file; export fewer at a time.'; return; }
+            connection.postMessage({ type: 'save-file', channel, name: fileName(), text: saved });
             document.getElementById('status').textContent = `Exported ${reply.result.document.rooms.length} rooms to ${fileName()}.`;
         }
     }

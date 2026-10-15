@@ -68,7 +68,7 @@ Export saves the selected rooms as `<title>.rooms.json`, a room document:
 }
 ```
 
-Rooms and exits are in dbref order, so exporting an unchanged world twice gives the same file. An exit's `name` carries its aliases after `;`, as `@open` takes it. `to` is a room's dbref, or `home`, `variable` (worked out when the exit is used), `unlinked`, or `hidden` when you may not see where it leads. Descriptions are the rooms' and exits' own DESCRIBE attributes as plain text. An export of rooms with more than 500 exits between them is refused; export fewer rooms at a time.
+Rooms and exits are in dbref order, so exporting an unchanged world twice gives the same file. An exit's `name` carries its aliases after `;`, as `@open` takes it. `to` is a room's dbref, or `home`, `variable` (worked out when the exit is used), `unlinked`, `non-room` when it leads to a player or thing, or `hidden` when you may not see where it leads. Descriptions are the rooms' and exits' own DESCRIBE attributes as plain text. An export of rooms with more than 500 exits between them, or that comes to more than 2 MiB, is refused; export fewer rooms at a time.
 
 ## Moving rooms and importing
 
@@ -76,7 +76,7 @@ Dragging a room drops it in the nearest cell of the level on show. Nothing chang
 
 **Import** reads a room document and asks the server what it would change (`POST api/objects/topology/plan`). The portal, not the package, lists the changes above the frame and waits for the player to confirm them. **Save positions** goes the same way, as a document listing only the moved rooms' coordinates. Then `POST api/objects/topology/apply` works the changes out again and refuses them (409) when they no longer match the fingerprint of the list the player confirmed.
 
-A document lists only what it changes. An `id` that is a dbref is a room or exit that is there; any other `id` (a letter, then up to 63 letters, digits, `_` or `-`) is a new room or exit, dug or opened by the import, and an exit's `to` may name a new room by it. A field left out stays as it is; `"description": ""` clears one, `"coordinates": []` removes them, and `to` of `variable` or `hidden` leaves the link alone. Nothing is destroyed, and an exit is never moved between rooms. Each change runs as the current character through `@dig`, `@name`, `@open`, `@link` and `@unlink`, or sets the attribute through the attribute service, so quota, control, locks and link permissions are the game's own. A document with problems changes nothing; the first change the game refuses stops the import, and the changes before it stay made.
+A document lists only what it changes. An `id` that is a dbref is a room or exit that is there; any other `id` (a letter, then up to 63 letters, digits, `_` or `-`) is a new room or exit, dug or opened by the import, and an exit's `to` may name a new room by it. A field left out stays as it is; `"description": ""` clears one, `"coordinates": []` removes them, and `to` of `variable`, `hidden` or `non-room` leaves the link alone. Nothing is destroyed, and an exit is never moved between rooms. Each change runs as the current character through `@dig`, `@name`, `@open`, `@link` and `@unlink`, or sets the attribute through the attribute service, so quota, control, locks and link permissions are the game's own. A document with problems changes nothing; the first change the game refuses stops the import, and the changes before it stay made.
 
 ## Definition contract
 

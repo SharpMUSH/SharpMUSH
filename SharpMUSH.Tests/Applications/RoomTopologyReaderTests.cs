@@ -237,6 +237,22 @@ public class RoomTopologyReaderTests
 	}
 
 	[Test]
+	public async Task ExportNamesAThingDestinationOnlyByItsKind()
+	{
+		var thing = _objects.CreateThing(50, "Crate", _a).Expect<SharpThing>();
+		var exit = _objects.CreateExit(11, "Into the crate", [], _a).Expect<SharpExit>();
+		Exits(new SharpExit
+		{
+			Object = exit.Object,
+			Aliases = exit.Aliases,
+			Location = exit.Location,
+			Home = new(async ct => { await ValueTask.CompletedTask; return new AnyOptionalSharpContainer(new AnySharpContainer(thing)); })
+		});
+		var document = (await Reader.ExportAsync(_actor, [10], RoomTopologyReader.DefaultCoordinates, default)).Expect<RoomDocumentDto>();
+		await Assert.That(document.Rooms[0].Exits![0].To).IsEqualTo("non-room");
+	}
+
+	[Test]
 	public async Task TruncatedExportIsRefused()
 	{
 		var exit = _objects.CreateExit(11, "many", [], _a, _b).Expect<SharpExit>();
