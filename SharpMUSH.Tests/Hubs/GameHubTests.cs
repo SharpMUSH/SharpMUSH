@@ -78,7 +78,7 @@ public class GameHubTests
 			projection.CanSubscribeRoomAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
 		}
 
-		var hub = new GameHub(NullLogger<GameHub>.Instance, registry, guard, projection)
+		var hub = new GameHub(NullLogger<GameHub>.Instance, registry, guard, projection, new SharpMUSH.Library.Push.PortalPresence())
 		{
 			Groups = groups,
 			Clients = clients,
