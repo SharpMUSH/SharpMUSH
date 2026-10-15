@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Visa fler</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Tidslinje</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Inte daterad</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Visa alla</value>
   </data>

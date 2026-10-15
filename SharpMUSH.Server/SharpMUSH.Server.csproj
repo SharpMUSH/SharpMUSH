@@ -335,6 +335,10 @@
       <Link>BundledPackages\time.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\timeline\package.yaml">
+      <Link>BundledPackages\timeline.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.timeline.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord\package.yaml">
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>

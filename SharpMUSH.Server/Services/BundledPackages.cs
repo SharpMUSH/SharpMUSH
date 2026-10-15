@@ -109,6 +109,8 @@ public static class BundledPackages
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
+		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];

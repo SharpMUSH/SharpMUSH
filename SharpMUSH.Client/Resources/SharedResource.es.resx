@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Mostrar más</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Cronología</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Sin fecha</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Ver todo</value>
   </data>

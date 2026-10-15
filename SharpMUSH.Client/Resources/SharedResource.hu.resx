@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Több mutatása</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Idővonal</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Nincs dátum</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Összes</value>
   </data>

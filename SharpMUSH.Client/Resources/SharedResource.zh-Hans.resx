@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>显示更多</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>时间线</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>未注明日期</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>查看全部</value>
   </data>

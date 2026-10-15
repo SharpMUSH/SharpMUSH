@@ -4207,6 +4207,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Afficher plus</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Chronologie</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Non daté</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Tout voir</value>
   </data>
