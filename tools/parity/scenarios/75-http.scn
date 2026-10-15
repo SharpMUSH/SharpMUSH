@@ -1,6 +1,7 @@
 # @http against a local site (echo.py) that answers with the request it received.
 # The reference is PennMUSH with pennmush/pennmush#1398 applied (tools/parity/patches/), which adds a
-# headers argument and %q<http-overflow>; #1398 is not merged upstream.
+# headers argument and %q<http-overflow>; #1398 is not merged upstream. #1398 takes the headers as
+# Key:value lines and SharpMUSH as a JSON object, so no case here passes headers.
 # The imported world has http_qregisters on, so SharpMUSH reads and sets PennMUSH's q-registers here.
 ::case http.login
 ::login wiz Wiz wizpass
@@ -10,29 +11,14 @@
 ::until HTTPDONE
 @http me/HTTPCB={{echo}}/get
 
-::case http.get-headers  a GET's headers follow the URL
-::until HTTPDONE
-@http me/HTTPCB={{echo}}/get,X-Parity:one
-
 ::case http.post-form  a body with no type goes out as a form
 ::until HTTPDONE
 @http/post me/HTTPCB={{echo}}/post,a=1
-
-::case http.post-headers  a Content-Type line sets the body's type; other lines are sent as written
-::until HTTPDONE
-@http/post me/HTTPCB={{echo}}/post,a=1,Content-Type:application/json
 
 ::case http.put-type-register  %q<content-type> sets the body's type when no headers are given
 ::until HTTPDONE
 @http/put me/HTTPCB=[setq(content-type,text/csv)]{{echo}}/put,a=1
 
-::case http.headers-over-register  given headers, %q<content-type> is not read
-::until HTTPDONE
-@http/post me/HTTPCB=[setq(content-type,text/csv)]{{echo}}/post,a=1,X-Parity:two
-
 ::case http.userpass  %q<userpass> logs in to a site that asks
 ::until HTTPDONE
 @http me/HTTPCB=[setq(userpass,user:secret)]{{echo}}/auth
-
-::case http.bad-header  a header line with no colon refuses the command
-@http me/HTTPCB={{echo}}/get,nocolon

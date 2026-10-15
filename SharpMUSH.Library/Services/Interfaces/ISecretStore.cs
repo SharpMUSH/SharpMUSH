@@ -40,6 +40,20 @@ public interface ISecretStore
 	/// <returns>The secret's status afterwards, or <see cref="NotFound"/> when nothing was stored.</returns>
 	ValueTask<Found<SecretStatus>> ClearAsync(string name, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// The hosts <c>@http</c> may send <paramref name="name"/> to (see <see cref="SecretHosts"/>); empty when it may
+	/// be sent nowhere.
+	/// </summary>
+	ValueTask<IReadOnlyList<string>> HostsAsync(string name, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Sets the hosts <c>@http</c> may send <paramref name="name"/> to, replacing the list; none clears it. Kept apart
+	/// from the value, so a value an override supplies is bound too.
+	/// </summary>
+	/// <returns>The secret's status afterwards, or why it was refused (a bad name or host).</returns>
+	ValueTask<Result<SecretStatus>> SetHostsAsync(string name, IReadOnlyList<string> hosts,
+		CancellationToken cancellationToken = default);
+
 	/// <summary>What is stored under <paramref name="names"/> now, still encrypted, for <see cref="RestoreAsync"/>.</summary>
 	ValueTask<SecretSnapshot> SnapshotAsync(IEnumerable<string> names, CancellationToken cancellationToken = default);
 

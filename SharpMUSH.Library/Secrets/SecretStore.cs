@@ -14,6 +14,12 @@ namespace SharpMUSH.Library.Secrets;
 public sealed class SecretsData
 {
 	public Dictionary<string, StoredSecret> Secrets { get; set; } = [];
+
+	/// <summary>
+	/// The hosts each secret may be sent to by <c>@http</c>, by name. Kept apart from the value, so it holds for a
+	/// value an override supplies too.
+	/// </summary>
+	public Dictionary<string, List<string>> Hosts { get; set; } = [];
 }
 
 /// <summary>One stored secret.</summary>
@@ -85,10 +91,10 @@ public sealed class SecretStore(
 	/// <inheritdoc />
 	public async ValueTask<IReadOnlyList<SecretStatus>> ListAsync(CancellationToken cancellationToken = default)
 	{
-		var stored = (await LoadAsync()).Secrets;
-		return _definitions.Keys.Union(stored.Keys)
+		var data = await LoadAsync();
+		return _definitions.Keys.Union(data.Secrets.Keys).Union(data.Hosts.Keys)
 			.Order(StringComparer.Ordinal)
-			.Select(name => Status(name, stored.GetValueOrDefault(name)))
+			.Select(name => Status(name, data.Secrets.GetValueOrDefault(name), data.Hosts.GetValueOrDefault(name)))
 			.ToList();
 	}
 
@@ -112,27 +118,70 @@ public sealed class SecretStore(
 		}
 
 		var secret = new StoredSecret(Protect(name, value), clock.GetUtcNow(), author);
+		List<string>? hosts = null;
 		await ChangeAsync(data =>
 		{
 			data.Secrets[name] = secret;
+			hosts = data.Hosts.GetValueOrDefault(name);
 			return true;
 		});
 		logger.LogInformation("Secret {Secret} set by {Author} ({AuthorId})", name, author.Name, author.Id);
-		return Status(name, secret);
+		return Status(name, secret, hosts);
 	}
 
 	/// <inheritdoc />
 	public async ValueTask<Found<SecretStatus>> ClearAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var removed = false;
-		await ChangeAsync(data => removed = data.Secrets.Remove(name));
+		List<string>? hosts = null;
+		await ChangeAsync(data =>
+		{
+			hosts = data.Hosts.GetValueOrDefault(name);
+			return removed = data.Secrets.Remove(name);
+		});
 		if (!removed)
 		{
 			return new NotFound();
 		}
 
 		logger.LogInformation("Secret {Secret} cleared", name);
-		return Status(name, null);
+		return Status(name, null, hosts);
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<IReadOnlyList<string>> HostsAsync(string name, CancellationToken cancellationToken = default)
+		=> (await LoadAsync()).Hosts.GetValueOrDefault(name) ?? [];
+
+	/// <inheritdoc />
+	public async ValueTask<Result<SecretStatus>> SetHostsAsync(string name, IReadOnlyList<string> hosts,
+		CancellationToken cancellationToken = default)
+	{
+		if (!SecretNames.IsValid(name))
+		{
+			return new Error<string>($"'{name}' is not a secret name: use lower-case letters and digits, in parts joined by '.'.");
+		}
+
+		var normalized = hosts.Select(host => host.Trim().ToLowerInvariant()).Where(host => host.Length > 0)
+			.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+		if (normalized.FirstOrDefault(host => !SecretHosts.IsValidPattern(host)) is { } bad)
+		{
+			return new Error<string>($"'{bad}' is not a host: give a name such as api.example.com, or *.example.com for every host under it.");
+		}
+
+		StoredSecret? stored = null;
+		await ChangeAsync(data =>
+		{
+			stored = data.Secrets.GetValueOrDefault(name);
+			if (normalized.Count == 0)
+			{
+				return data.Hosts.Remove(name);
+			}
+
+			data.Hosts[name] = normalized;
+			return true;
+		});
+		logger.LogInformation("Secret {Secret} may be sent to {Hosts}", name, normalized.Count == 0 ? "no host" : string.Join(' ', normalized));
+		return Status(name, stored, normalized);
 	}
 
 	/// <inheritdoc />
@@ -162,7 +211,7 @@ public sealed class SecretStore(
 			return true;
 		});
 
-	private SecretStatus Status(string name, StoredSecret? stored)
+	private SecretStatus Status(string name, StoredSecret? stored, IReadOnlyList<string>? hosts)
 	{
 		var definition = _definitions.GetValueOrDefault(name);
 		var overridden = Override(name);
@@ -174,7 +223,7 @@ public sealed class SecretStore(
 		};
 
 		return new SecretStatus(name, definition?.Description, source, overridden?.Where, stored is not null, stored?.SetAt, stored?.SetBy,
-			definition?.ManagedBy, definition is not null);
+			definition?.ManagedBy, definition is not null, hosts is { Count: > 0 } ? string.Join(' ', hosts) : null);
 	}
 
 	/// <summary>The environment variable's value, else the file's; null when neither sets the secret.</summary>

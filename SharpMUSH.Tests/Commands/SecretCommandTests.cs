@@ -63,6 +63,27 @@ public class SecretCommandTests
 		}
 	}
 
+	[Test]
+	public async Task HostsAreSetListedAndCleared()
+	{
+		var name = "http." + SecretName();
+		try
+		{
+			var set = await AsGod($"@secret/host {name}=api.example.com *.example.org");
+			var listed = string.Join("\n", await AsGod("@secret"));
+			var cleared = await AsGod($"@secret/host {name}=");
+
+			await Assert.That(set).Contains($"@http may send {name} to: *.example.org api.example.com");
+			await Assert.That(listed).Contains("api.example.com");
+			await Assert.That(cleared).Contains($"@http may send {name} to no host.");
+			await Assert.That(await Secrets.HostsAsync(name)).IsEmpty();
+		}
+		finally
+		{
+			await Secrets.SetHostsAsync(name, []);
+		}
+	}
+
 	/// <summary>The command is not evaluated: brackets, substitutions and a second <c>=</c> are part of the value.</summary>
 	[Test]
 	public async Task AValueIsStoredExactlyAsTyped()

@@ -1422,18 +1422,28 @@ The action list receives:
 - %0: the body of the reply.
 - %`<status>`: the HTTP status, such as 200.
 - %`<content-type>`: the reply's Content-Type header.
+- %`<headers>`: every header of the reply, as a JSON object. Each name is in lower case, and its value is a string, or a list of strings when the header came more than once. Read one with json_query().
 - %`<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
 
 These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>`, %q`<content-type>` and %q`<http-overflow>`, as PennMUSH does.
 
 `<data>` is the body of the request. It is sent as `application/x-www-form-urlencoded` unless a Content-Type header says otherwise, encoded in the charset that type names, or UTF-8 when it names none. A GET has no body, so its headers follow the URL.
 
-`<headers>` is a list of `Name:value` lines, one per line (use %r between them). They are sent as written, except:
-- A Content-Type line sets the type of `<data>`; on a request with no data it is not sent.
-- A User-Agent line replaces SharpMUSH's own.
-- A Content-Length line, a line with no colon, or a name with a space in it refuses the whole command with "Header value has a bad key:value set. Aborting."
+`<headers>` is a JSON object, best built with json(). Each member is a header name, and its value is a string, a secret (below), or a list of those to send that header once for each. They are sent as given, except:
+- Content-Type sets the type of `<data>`; on a request with no data it is not sent. It cannot be a secret.
+- User-Agent replaces SharpMUSH's own.
+- Anything that is not an object of names and values, a name with a space in it, or a Content-Length header refuses the whole command with "Headers must be a JSON object of header names and values. Aborting."
 
-To log in to the remote site, send an Authorization header. For HTTP Basic, that is `Authorization:Basic [encode64(<user>:<password>)]`.
+A JSON object typed into the command needs an extra pair of braces around it, because the outer pair only groups the argument.
+
+To log in to the remote site, send an Authorization header. For HTTP Basic, that is `json(object,Authorization,"Basic [encode64(<user>:<password>)]")`.
+
+A password or token kept in softcode can be read by anyone who can read that attribute. Store it with @secret instead, and name it in a header as an object: `json(object,secret,"<name>",scheme,"Bearer")`. The server puts the value in as the request leaves; softcode never sees it. `scheme` is optional: without it the header is the value alone, `Basic` sends the value (`<user>:<password>`) base64-encoded after `Basic `, and any other scheme is written before the value, as `Bearer <value>`. A secret is only sent when:
+- its name starts with `http.`;
+- the URL is https;
+- the URL's host is one @secret/host named for that secret.
+
+Otherwise the whole command is refused with "A secret in the headers may not be sent to that URL. Aborting." A request carrying a secret does not follow redirects, so the secret never reaches another host; the action list gets the redirect itself. A site that echoes the request, such as postman-echo.com, sends the value back in %0, and so in reach of softcode: bind a secret only to the hosts that need it.
 
 With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: %q`<content-type>` sets the type of `<data>` when no `<headers>` are given, and %q`<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
 
@@ -1445,16 +1455,39 @@ postman-echo.com answers with the request it received, so these show what @http 
 Sending JSON with a header of your own:
 ```sharp
 > &SHOW me=think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]
-> @http/post me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),Content-Type:application/json%rGame:MyMUSH
+> @http/post me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),json(object,Content-Type,"application/json",Game,"MyMUSH")
 ```
 Output: `200 baz MyMUSH`
+
+Headers typed as JSON, in their extra braces:
+```sharp
+> &SHOW me=think %<status> [json_query(%0,extract,$.headers.game)]
+> @http me/SHOW=https://postman-echo.com/get,{{"Game":"MyMUSH"}}
+```
+Output: `200 MyMUSH`
 
 Logging in with HTTP Basic:
 ```sharp
 > &SHOW me=think %<status> %0
-> @http me/SHOW=https://postman-echo.com/basic-auth,Authorization:Basic [encode64(postman:password)]
+> @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,"Basic [encode64(postman:password)]")
 ```
 Output: `200 {"authenticated":true}`
+
+Logging in with a stored secret, as a wizard:
+```sharp
+> @secret http.postman.login=postman:password
+> @secret/host http.postman.login=postman-echo.com
+> &SHOW me=think %<status> %0
+> @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,json(object,secret,"http.postman.login",scheme,"Basic"))
+```
+Output: `200 {"authenticated":true}`
+
+Reading a header of the reply:
+```sharp
+> &SHOW me=think [json_query(json_query(%<headers>,get,content-type),unescape)]
+> @http me/SHOW=https://postman-echo.com/get
+```
+Output: `application/json; charset=utf-8`
 
 Checking whether the reply was cut short:
 ```sharp
@@ -1469,6 +1502,8 @@ Output: `Reply complete.`
 - [URLDECODE()]
 - [ENCODE64()]
 - [JSON()]
+- [JSON_QUERY()]
+- [@secret]
 - [named arguments]
 :::
 # @firstexit
@@ -2421,7 +2456,8 @@ Nesting is limited by the `max_depth` configuration option, as it is for [@@] an
 # @secret
 `@secret[/list]`<br>
 `@secret <name>=<value>`<br>
-`@secret/clear <name>`
+`@secret/clear <name>`<br>
+`@secret/host <name>=[<host> ...]`
 
 Manages the secrets the server keeps for itself: passwords, tokens and signing keys, such as the SQL password (`sql.password`). A stored value is encrypted with the server's key ring, which is kept outside the world, so a copy of the world alone opens no secret. Nothing shows a value again: not this command, not the web portal, and no function. Softcode cannot read a secret.
 
@@ -2430,6 +2466,8 @@ With no argument, or `/list`, @secret lists every secret the server or a plugin 
 `@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`.
 
 `/clear` removes the stored value.
+
+`/host` names the hosts @http may send the secret to, separated by spaces, replacing the ones named before; with none, it may be sent nowhere. `*.example.com` covers every host under example.com, but not example.com itself. Only a secret whose name starts with `http.` can be sent, and only over https; see [@http]. The hosts belong to the name, not the value: setting or clearing the value leaves them, and they hold for a value an override supplies.
 
 An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
 
@@ -2443,24 +2481,30 @@ Output: nothing; it tells you what it did.
 
 ### Examples
 ```
-> @secret sql.password=hunter2
-sql.password is set. Its value is never shown again.
+> @secret http.github.token=ghp_example
+http.github.token is set. Its value is never shown again.
+> @secret/host http.github.token=api.github.com uploads.github.com
+@http may send http.github.token to: api.github.com uploads.github.com
 > @secret
-+-------------------------------< Secrets (1) >------------------------------+
-| Secret        Value       Stored                   For                     |
++-------------------------------< Secrets (2) >------------------------------+
+| Secret             Value       Stored                 For                  |
 | -------------------------------------------------------------------------- |
-| sql.password  stored      2026-10-14 23:38 by      The password of         |
-|                           God(#1)                  sql_username on the SQL |
-|                                                    server.                 |
+| http.github.token  stored      2026-10-15 10:00 by    @http may send it to |
+|                                God(#1)                api.github.com       |
+|                                                       uploads.github.com.  |
+| sql.password       not set     -                      The password of      |
+|                                                       sql_username on the  |
+|                                                       SQL server.          |
 +----------------------------------------------------------------------------+
-> @secret/clear sql.password
-sql.password is cleared.
+> @secret/clear http.github.token
+http.github.token is cleared.
 ```
 
 
 ::: seealso
 - [@config]
 - [@sql]
+- [@http]
 :::
 # @set
 `@set <object>=[!]<flag> [[!]<flag> ...]`<br>

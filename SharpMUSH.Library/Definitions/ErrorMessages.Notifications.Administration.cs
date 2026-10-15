@@ -219,7 +219,11 @@ public static partial class ErrorMessages
 		public const string AsciiTranslationBadCharacterFormat = "'{0}' is not one character outside ASCII.";
 		public const string AsciiTranslationBadText = "The text must be plain ASCII. Write a space as %b.";
 		public const string AsciiTranslationUsage = "Usage: @ascii[/remove] <character>[=<text>]";
-		public const string SecretUsage = "Usage: @secret[/list], @secret <name>=<value>, or @secret/clear <name>";
+		public const string SecretUsage = "Usage: @secret[/list], @secret <name>=<value>, @secret/clear <name>, or @secret/host <name>=[<host> ...]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretHostsFormat = "@http may send {0} to: {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SecretNoHostsFormat = "@http may send {0} to no host.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SecretSetFormat = "{0} is set. Its value is never shown again.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

@@ -1,6 +1,8 @@
 PennMUSH pull request #1398 (https://github.com/pennmush/pennmush/pull/1398, not merged upstream):
 @http takes a <headers> argument and sets %q<http-overflow>. Applied to the reference PennMUSH by
 .github/workflows/parity.yml so that 75-http compares SharpMUSH with what PennMUSH does with it.
+SharpMUSH takes the headers as a JSON object rather than #1398's Key:value lines, so 75-http compares
+everything but the headers argument.
 
 Taken from the pull request's head (926ab14) against its base (152acc5), less the files `make`
 regenerates and the help text, with one fix: the pull request sets http-overflow with
