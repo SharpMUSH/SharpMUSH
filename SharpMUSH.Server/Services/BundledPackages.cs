@@ -118,7 +118,9 @@ public static class BundledPackages
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
-		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		// Available, not installed: +info and +journal are names a game may already use for its own code.
+		new("info", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
 		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins health and jobs, so +health shows staff load.
@@ -136,6 +138,8 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it builds on scene and time, which a game chooses first.
+		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>
