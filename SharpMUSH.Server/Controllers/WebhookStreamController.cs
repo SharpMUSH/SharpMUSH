@@ -24,6 +24,8 @@ namespace SharpMUSH.Server.Controllers;
 [AllowAnonymous]
 public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<WebhookOptions> options) : ControllerBase
 {
+	private static readonly TimeSpan CloseHandshakeWait = TimeSpan.FromSeconds(5);
+
 	[HttpGet("{name}/stream")]
 	public async Task Stream(string name, CancellationToken cancellationToken)
 	{
@@ -48,6 +50,12 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 
 		using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 		using var lease = webhooks.OpenStream(subscription.Name, events.Writer);
+		// A rotation or delete between the check above and OpenStream closed no writer of this stream's.
+		if (await webhooks.GetAsync(name) is not WebhookSubscription current || current.Secret != subscription.Secret)
+		{
+			events.Writer.TryComplete();
+		}
+
 		using var closed = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		var watching = WatchForCloseAsync(socket, closed);
 
@@ -58,8 +66,10 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 				await socket.SendAsync(Frame(message), WebSocketMessageType.Text, true, closed.Token);
 			}
 
-			// The subscription was deleted or its secret rotated.
+			// The subscription was deleted or its secret rotated. Wait a moment for the tool's own close frame, so
+			// it sees a clean close with this reason rather than a dropped connection.
 			await socket.CloseOutputAsync(WebSocketCloseStatus.PolicyViolation, "webhook deleted or secret rotated", CancellationToken.None);
+			await Task.WhenAny(watching, Task.Delay(CloseHandshakeWait, cancellationToken));
 		}
 		catch (OperationCanceledException)
 		{
