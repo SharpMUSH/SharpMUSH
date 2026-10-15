@@ -44,42 +44,22 @@ public static partial class Substitutions
 					await parser.CurrentState.KnownEnactorObject(mediator),
 					configuration.CurrentValue.Attribute.GenderAttribute,
 					configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
-					x => x switch
-					{
-						"M" or "Male" => "he",
-						"F" or "Female" => "she",
-						_ => "they"
-					}),
+					PronounCase.Subjective),
 			"O" or "o" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
 				await parser.CurrentState.KnownEnactorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "him",
-					"F" or "Female" => "her",
-					_ => "them"
-				}),
+				PronounCase.Objective),
 			"P" or "p" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
 				await parser.CurrentState.KnownEnactorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.PossessivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "his",
-					"F" or "Female" => "her",
-					_ => "their"
-				}),
+				PronounCase.Possessive),
 			"A" or "a" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
 				await parser.CurrentState.KnownEnactorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "his",
-					"F" or "Female" => "hers",
-					_ => "theirs"
-				}),
+				PronounCase.AbsolutePossessive),
 			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
 			// %j: the connection the command came in on. %d is RhostMUSH's @dolist element; no MUSH

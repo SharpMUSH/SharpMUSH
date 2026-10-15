@@ -143,3 +143,24 @@ think a\
 &TRAILPCT me=50%
 &TRAILBS me=a\
 think [get(me/TRAILPCT)] [u(me/TRAILPCT)] [get(me/TRAILBS)] [u(me/TRAILBS)]
+
+::case sc.gender-first-letter  only the first letter of SEX picks the pronoun: M male, F/W female, T/P plural (get_gender, src/funstr.c)
+::as wiz
+@create SexProbe
+@sex SexProbe=m
+think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex SexProbe=Male
+think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex SexProbe=f
+think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex SexProbe=woman
+think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex SexProbe=plural
+think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex SexProbe=t
+think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex me=male
+think %s %o %p %a %S
+@sex me=woman
+think %s %o %p %a %S
+@sex me=

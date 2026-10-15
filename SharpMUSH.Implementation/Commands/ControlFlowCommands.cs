@@ -218,7 +218,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID"], ParameterNames = ["list", "command"])]
+		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID", "SPACE"], ParameterNames = ["list", "command"])]
 	public async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
@@ -231,6 +231,7 @@ public partial class Commands
 			return usage;
 		}
 
+		// RhostMUSH's /space names the default, a space-separated list, so it changes nothing; /delimit wins.
 		var hasDelimit = switches.Contains("DELIMIT");
 		var hasPid = switches.Contains("PID");
 
@@ -394,7 +395,8 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SWITCH", Output = CommandOutput.Runs,
-		Switches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
+		Switches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK",
+			"REGALL", "REGFIRST", "CLEARREG"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 3, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public async ValueTask<Option<CallState>> Switch(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -417,8 +419,11 @@ public partial class Commands
 			remainingArgs.RemoveAt(remainingArgs.Count - 1);
 		}
 
-		var isFirst = switches.Contains("FIRST") && !switches.Contains("ALL");
-		var isRegexp = switches.Contains("REGEXP");
+		// RhostMUSH spells /all/regexp as /regall, /first/regexp as /regfirst and /clearregs as /clearreg;
+		// each is only another name for the switches here.
+		var isFirst = (switches.Contains("FIRST") || switches.Contains("REGFIRST"))
+			&& !(switches.Contains("ALL") || switches.Contains("REGALL"));
+		var isRegexp = switches.Contains("REGEXP") || switches.Contains("REGALL") || switches.Contains("REGFIRST");
 
 		// PennMUSH folds the execution switches into one queue_type (src/cmds.c:1510-1521), where
 		// QUEUE_RECURSE == QUEUE_INPLACE | QUEUE_NO_BREAKS | QUEUE_PRESERVE_QREG (hdrs/externs.h:150).
@@ -433,7 +438,7 @@ public partial class Commands
 		// already QUEUE_INPLACE, and do_entry applies them once per inplace entry (cque.c:1183-1195).
 		// 'help @switch2' says the same: q-registers are saved/cleared "before each <action> is run".
 		var hasLocalize = switches.Contains("LOCALIZE") || isInplace;
-		var hasClearRegs = switches.Contains("CLEARREGS");
+		var hasClearRegs = switches.Contains("CLEARREGS") || switches.Contains("CLEARREG");
 
 		// do_switch (src/predicat.c) runs each matched action with a PE_REGS_SWITCH | PE_REGS_CAPTURE
 		// frame, so $0-$9 in it read the match; a queued action takes a copy of the frame with it.
@@ -918,7 +923,7 @@ public partial class Commands
 
 		var hasChain = switches.Contains("CHAIN");
 		var hasNoBreak = switches.Contains("NOBREAK");
-		var hasClearRegs = switches.Contains("CLEARREGS");
+		var hasClearRegs = switches.Contains("CLEARREGS") || switches.Contains("CLEARREG");
 		var hasLocalize = switches.Contains("LOCALIZE");
 
 		// With /chain the left side is a space-separated list of <object>/<attribute> targets, run in order
