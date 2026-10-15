@@ -180,7 +180,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 						evaluated = await visitor.VisitChildren(x) ?? CallState.Empty;
 					var msg = evaluated.Message;
 					retainedArguments?.Add(msg.Length);
-					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
+					if (stripAnsi) msg = msg.WithoutVisualMarkup();
 					refinedArguments.Add(evaluated.AsValue(msg, x.Depth()));
 				}
 
@@ -323,7 +323,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			}
 
 			var text = visitor.GetContextText(x);
-			var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
+			var evalText = stripAnsi ? text.WithoutVisualMarkup() : text;
 			var evaluate = Unclocked(clock, SharpMUSHParserVisitor.CreateDeferredEvaluation(x, visitor, stripAnsi));
 			refinedArguments.Add(new CallState(evalText, x.Depth(), null, async () => (await evaluate())?.Message)
 			{ ParsedResult = evaluate });

@@ -75,7 +75,10 @@ public static partial class SoftcodeDecomposer
 				r = last;
 				continue;
 			}
-			Write(run.Markups, Escape(text.Text.Substring(run.Start, run.Length)));
+			var body = Escape(text.Text.Substring(run.Start, run.Length));
+			// Inside %*<...> a '>' would end the separator.
+			if (run.Markups.Contains(ListSeparatorMarkup.Instance)) body = body.Replace(">", "\\>");
+			Write(run.Markups, body);
 			position = run.End;
 		}
 
@@ -90,7 +93,8 @@ public static partial class SoftcodeDecomposer
 	/// <remarks>
 	/// Colour is <c>ansi()</c>. A command link (it rides on the colour layer) is <c>cmdlink(text,command[,hint])</c>,
 	/// inside the <c>ansi()</c> when the layer has colour too. An address link is <c>tagwrap(a,href="…",text)</c>,
-	/// the one call that writes an address. A tag is <c>tagwrap(name[,attributes],text)</c>.
+	/// the one call that writes an address. A tag is <c>tagwrap(name[,attributes],text)</c>. A list separator is
+	/// <c>%*&lt;text&gt;</c>.
 	/// </remarks>
 	private static (string Open, string Close)? Call(IMarkup markup)
 	{
@@ -113,6 +117,8 @@ public static partial class SoftcodeDecomposer
 					}
 					return open.Length > 0 ? (open, close) : null;
 				}
+			case ListSeparatorMarkup:
+				return ("%*<", ">");
 			case HtmlMarkup html:
 				return (html.Attributes is { Length: > 0 } attributes
 					? $"[tagwrap({html.TagName},{Escape(attributes)},"
