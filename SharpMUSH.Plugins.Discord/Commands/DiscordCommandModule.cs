@@ -1,0 +1,186 @@
+using System.Collections.Immutable;
+using System.Globalization;
+using Mediator;
+using MarkupString;
+using MarkupString.Layout;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Discord.Links;
+using SharpMUSH.Plugins.Discord.Outbox;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+
+namespace SharpMUSH.Plugins.Discord.Commands;
+
+/// <summary>
+/// <c>@discord</c>: the bot's connection and the linked Discord channels. With no switch it shows both;
+/// <c>/link &lt;channel id&gt;</c> links a channel to the feed <c>discord/&lt;channel id&gt;</c>, <c>/unlink</c> drops a link
+/// and deletes its webhook, and <c>/resume</c> starts a stopped link again. Every switch needs <c>discord.admin</c>.
+/// Linking and unlinking return the channel id at once and tell the admin how it went when Discord answers.
+/// </summary>
+public static class DiscordCommandModule
+{
+	private const string Badge = "DISCORD";
+	private const string PermissionDenied = "#-1 PERMISSION DENIED";
+	private const string NoSuchLink = "#-1 NO SUCH LINK";
+	private const string BadChannel = "#-1 INVALID CHANNEL ID";
+
+	/// <summary>How long a link or unlink waits on Discord before the admin is told it did not answer.</summary>
+	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
+
+	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "LIST"],
+		Behavior = CB.Default | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = ["channel"])]
+	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var services = parser.ServiceProvider;
+		var notify = services.GetRequiredService<INotifyService>();
+		var executor = await parser.CurrentState.KnownExecutorObject(services.GetRequiredService<IMediator>());
+		if (!await executor.Can(DiscordPlugin.AdminPermission))
+		{
+			await notify.Notify(executor, Notice("Permission denied.", NoticeKind.Error));
+			return new CallState(PermissionDenied);
+		}
+
+		var switches = parser.CurrentState.Switches.ToArray();
+		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+		var relay = services.GetRequiredService<DiscordRelay>();
+		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME");
+		if (action is null)
+		{
+			await notify.Notify(executor, Overview(services.GetRequiredService<DiscordGatewayService>().State, relay.Links()));
+			return CallState.Empty;
+		}
+
+		if (!ulong.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId))
+		{
+			await notify.Notify(executor, Notice(
+				$"@discord/{action.ToLowerInvariant()} takes a channel's id. In Discord, turn on Developer Mode, then right-click the channel and Copy Channel ID.",
+				NoticeKind.Warn));
+			return new CallState(BadChannel);
+		}
+
+		if (action == "RESUME")
+		{
+			var (message, result) = await relay.ResumeAsync(channelId, ExecutionBudget.CurrentToken) switch
+			{
+				DiscordChannelLink link => (Notice($"#{link.ChannelName} posts again.", NoticeKind.Ok), link.FeedKey),
+				_ => (Notice("That channel is not linked.", NoticeKind.Warn), NoSuchLink),
+			};
+			await notify.Notify(executor, message);
+			return new CallState(result);
+		}
+
+		// Linking and unlinking wait on Discord, and the game's queue must not; the answer follows when Discord gives it.
+		var feeds = services.GetRequiredService<IFeedService>();
+		var logger = services.GetRequiredService<ILogger<DiscordRelay>>();
+		// The answer is told outside this command's queue entry, so none of the entry's ambient state (its output
+		// lane among it, closed by then) may flow into the task.
+		using (ExecutionContext.SuppressFlow())
+		{
+			_ = Task.Run(() => AnswerAsync(notify, executor, logger, cancellationToken => action == "LINK"
+				? LinkAsync(relay, feeds, executor, channelId, cancellationToken)
+				: UnlinkAsync(relay, channelId, cancellationToken)));
+		}
+
+		return new CallState(channelId.ToString(CultureInfo.InvariantCulture));
+	}
+
+	/// <summary>Tells the admin how a link or unlink went. Runs off the game's queue, so nothing it throws reaches a caller.</summary>
+	private static async Task AnswerAsync(INotifyService notify, AnySharpObject executor, ILogger logger,
+		Func<CancellationToken, ValueTask<MString>> work)
+	{
+		using var timeout = new CancellationTokenSource(DiscordTimeout);
+		MString answer;
+		try
+		{
+			answer = await work(timeout.Token);
+		}
+		catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+		{
+			answer = Notice("Discord did not answer in time. @discord shows where the link stands.", NoticeKind.Error);
+		}
+		catch (Exception exception)
+		{
+			logger.LogError(exception, "[Discord] @discord failed.");
+			answer = Notice("That failed; the server log says why.", NoticeKind.Error);
+		}
+
+		await notify.Notify(executor, answer);
+	}
+
+	private static async ValueTask<MString> LinkAsync(DiscordRelay relay, IFeedService feeds, AnySharpObject executor,
+		ulong channelId, CancellationToken cancellationToken)
+	{
+		var objid = executor.Object().DBRef.ToString();
+		return await relay.LinkAsync(channelId, objid, new SecretAuthor(objid, executor.Object().Name), cancellationToken) switch
+		{
+			DiscordChannelLink link => await LinkedAsync(feeds, link),
+			Error<string> error => Notice(error.Value, NoticeKind.Error),
+		};
+	}
+
+	private static async ValueTask<MString> UnlinkAsync(DiscordRelay relay, ulong channelId, CancellationToken cancellationToken)
+		=> await relay.UnlinkAsync(channelId, cancellationToken) switch
+		{
+			DiscordChannelLink link => Notice($"Unlinked #{link.ChannelName}. Its feed discord/{link.FeedKey} stays, with its lines.", NoticeKind.Ok),
+			_ => Notice("That channel is not linked.", NoticeKind.Warn),
+		};
+
+	private static async ValueTask<MString> LinkedAsync(IFeedService feeds, DiscordChannelLink link)
+	{
+		var linked = $"Linked #{link.ChannelName} in {link.GuildName}. Lines sent on the feed discord/{link.FeedKey} are posted there.";
+		return await feeds.GetKindAsync(DiscordChannelLink.FeedKind) is Error<string>
+			? Notice($"{linked} Install the discord package for the feed kind they are sent on.", NoticeKind.Warn)
+			: Notice(linked, NoticeKind.Ok);
+	}
+
+	private static MString Overview(DiscordGatewayState gateway, IReadOnlyList<DiscordLinkStatus> links)
+	{
+		var connection = ServerLayout.KeyValues(
+		[
+			("Bot", MarkupText.Plain(gateway.BotName ?? "-")),
+			("Connection", MarkupText.Plain(Connection(gateway))),
+			("Servers", MarkupText.Plain(gateway.Guilds.ToString(CultureInfo.InvariantCulture))),
+		]);
+
+		Block linked = links.Count == 0
+			? ServerLayout.Body(MarkupText.Plain("No channels are linked. @discord/link <channel id> links one."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Channel")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Server")) { Priority = 2 },
+					new TableColumn(MarkupText.Plain("Id")) { Wrap = false, Priority = 3 },
+					new TableColumn(MarkupText.Plain("State")) { Min = 10 },
+				],
+				links.Select(status => ImmutableArray.Create(
+					"#" + status.Link.ChannelName, status.Link.GuildName, status.Link.FeedKey, State(status)).AsEnumerable()));
+
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord"), connection, linked), 78);
+	}
+
+	private static string Connection(DiscordGatewayState gateway) => gateway.Status switch
+	{
+		DiscordGatewayStatus.Connected => "connected",
+		DiscordGatewayStatus.Connecting => "connecting",
+		DiscordGatewayStatus.NoToken => "no bot token; store it with @secret discord.token=<token>",
+		DiscordGatewayStatus.BadToken => "Discord refused the bot token",
+		DiscordGatewayStatus.IntentsOff => $"turn on {string.Join(" and ", gateway.MissingIntents ?? [])} in the developer portal",
+		_ => gateway.Detail is { } detail ? $"cannot reach Discord: {detail}" : "cannot reach Discord",
+	};
+
+	private static string State(DiscordLinkStatus status) => status.State switch
+	{
+		DiscordLinkState.Faulted => $"stopped: {status.Link.Fault?.Reason ?? "a post failed"} @discord/resume {status.Link.FeedKey} once it is fixed.",
+		DiscordLinkState.Backlogged => $"behind, {status.Depth} lines waiting",
+		_ => "posting",
+	};
+
+	private static MString Notice(string text, NoticeKind kind) => NoticeMarkup.Message(Badge, text, kind);
+}

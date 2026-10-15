@@ -25,6 +25,8 @@
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+    <!-- A real world to keep links in, as SharpMUSH.Tests.ScenePlugin opens for scenes. -->
+    <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
   </ItemGroup>
 
 </Project>

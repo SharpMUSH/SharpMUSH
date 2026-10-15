@@ -134,6 +134,9 @@ public sealed class DiscordOutbox(DiscordOutboxOptions options, Random random)
 		}
 	}
 
+	/// <summary>Stops the link as if a post had failed with <paramref name="broken"/>: a link that was faulted when the server stopped.</summary>
+	public void Halt(LinkBroken broken) => Fault = broken;
+
 	/// <summary>An admin fixed the link. The post that failed is tried again, if it is not too old by now.</summary>
 	public void Resume()
 	{
