@@ -44,12 +44,9 @@ internal sealed class AttributeEvaluator(
 		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
+		// The attribute name is validated by the read itself (AttributeService.ReadAttributeAsync), with the same
+		// error, so it is not checked here as well.
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
-		if (!await AttributeService.CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
-		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
-		}
-
 		var realExecutor = executor;
 
 		if (ignorePermissions)
@@ -196,13 +193,18 @@ internal sealed class AttributeEvaluator(
 		bool ignoreLambda = false)
 	{
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
-		var split = objAndAttribute.Split("/");
-		var obj = split.First();
 		// Everything after the first /, as PennMUSH splits it: a #lambda's code may hold more.
-		var attribute = MarkupText.Join(MarkupText.Plain("/"), split.Skip(1));
-		var objPlainText = obj.ToPlainText();
+		var slash = objAndAttribute.IndexOf("/");
+		var objPlainText = (slash < 0 ? objAndAttribute : objAndAttribute.Substring(0, slash)).ToPlainText();
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
+		// A #lambda's code is evaluated as written, so it keeps the split-and-rejoin it has always had; every
+		// other caller only needs the name, and a substring of it builds no list of pieces.
+		var attribute = slash < 0
+			? MarkupText.Empty
+			: lambdaPredicate
+				? MarkupText.Join(MarkupText.Plain("/"), objAndAttribute.Split("/").Skip(1))
+				: objAndAttribute.Substring(slash + 1);
 
 		if (!applyPredicate && !lambdaPredicate && attribute.Length == 0)
 		{
@@ -253,7 +255,7 @@ internal sealed class AttributeEvaluator(
 				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
 					slimArgs = slimArgs.ToDictionary(pair => pair.Key,
-						pair => pair.Value with { Message = MarkupText.Plain(pair.Value.Message.ToPlainText()) });
+						pair => pair.Value with { Message = pair.Value.Message.WithoutVisualMarkup() });
 				}
 
 				var result = await parser.With(

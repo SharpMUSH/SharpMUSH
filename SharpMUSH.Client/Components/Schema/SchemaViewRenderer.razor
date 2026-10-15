@@ -14,8 +14,12 @@
 @if (_document?.Pages is null || !HasAnythingToShow)
 {
     @* No document, or every field was filtered out (e.g. a character with no profile data set) — show
-       a placeholder instead of collapsing to nothing, so the widget/page never silently disappears. *@
-    <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidNothingToDisplay"]</MudText>
+       a placeholder instead of collapsing to nothing, so the widget/page never silently disappears,
+       unless the host asked for nothing. *@
+    @if (!QuietWhenEmpty)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidNothingToDisplay"]</MudText>
+    }
 }
 else
 {
@@ -74,6 +78,9 @@ else
 
     /// <summary>Data values keyed by field key (value + per-viewer visibility), à la the profile API.</summary>
     [Parameter] public SchemaData? Data { get; set; }
+
+    /// <summary>Draw nothing, rather than the Nothing to display line, when nothing is visible: for a part of a larger whole, such as a name card.</summary>
+    [Parameter] public bool QuietWhenEmpty { get; set; }
 
     // What is showing: the parameters, until an action answers with a replacement document or data.
     private PortalSchemaDocument? _document;

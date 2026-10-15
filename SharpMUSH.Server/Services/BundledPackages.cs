@@ -85,6 +85,11 @@ public static class BundledPackages
 		// page is a separate application package so a game can run the queue in-game only.
 		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("jobs-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +app and +apps are names a game may already use for its own code, and a game
+		// decides for itself how characters are approved. Its portal page is a separate application package, as
+		// jobs-app is for jobs.
+		new("chargen", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Offered, not installed: a new game reads its messages from the stored text until the administrator
 		// chooses the Messages object (the setup wizard or the package page).
 		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -127,6 +132,13 @@ public static class BundledPackages
 		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins health and jobs, so +health shows staff load.
 		new("health-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +rel is a name a game may already use for its own code. It reads finger's fields.
+		// relationships-scene adds the last scene together and needs the Scene System; relationships-app (the web on a
+		// profile) and relationships-card (a line on the name card) are its portal widgets.
+		new("relationships", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("relationships-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("relationships-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("relationships-card", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
 		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
@@ -142,6 +154,9 @@ public static class BundledPackages
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it builds on scene and time, which a game chooses first.
 		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +alts is a name a game may already use for its own code. It hears PLAYER`UNLINK
+		// on the event handler, so an account forgets a hidden character that leaves it.
+		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

@@ -58,6 +58,14 @@ public record ObjectSearchFilter
 	public string? HasPower { get; init; }
 
 	/// <summary>
+	/// Filter by an indexed attribute's value (<c>lsearch</c>'s <c>INDEX</c> class): the object's own copy of the
+	/// attribute is listed in its index under a value equal to the probe, as <c>indexed(&lt;attr&gt;, =, &lt;value&gt;)</c>
+	/// finds it. The candidates come from the index. Null means no attribute filtering; an attribute with no ready index
+	/// matches nothing.
+	/// </summary>
+	public AttributeIndexProbe? AttributeValue { get; init; }
+
+	/// <summary>
 	/// Number of results to skip (for pagination with START). Null means no skip.
 	/// </summary>
 	public int? Skip { get; init; }
@@ -77,6 +85,11 @@ public record ObjectSearchFilter
 	/// </summary>
 	public bool HasFilters => Types != null || Owner != null || NamePattern != null ||
 														MinDbRef != null || MaxDbRef != null || Zone != null ||
-														Parent != null || HasFlag != null || HasPower != null ||
+														Parent != null || HasFlag != null || HasPower != null || AttributeValue != null ||
 														Skip != null || Limit != null;
 }
+
+/// <summary>An attribute index probe: objects whose own copy of <paramref name="Name"/> the index lists under <paramref name="Value"/>.</summary>
+/// <param name="Name">The attribute's long name.</param>
+/// <param name="Value">The value, as typed; the index folds it.</param>
+public sealed record AttributeIndexProbe(string Name, string Value);

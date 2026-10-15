@@ -423,7 +423,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	{
 		var result = await visitor.VisitChildren(context) ?? CallState.Empty;
 		var message = result.Message;
-		return result with { Message = stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message };
+		return result with { Message = stripAnsi ? message.WithoutVisualMarkup() : message };
 	};
 
 	internal bool BeginsRestrictedEvaluation(IFunctionContext context)

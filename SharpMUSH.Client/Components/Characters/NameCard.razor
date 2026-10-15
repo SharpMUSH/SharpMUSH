@@ -1,0 +1,96 @@
+@using SharpMUSH.Client.Models.Widgets
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* A character's name with its card: resting the pointer on the name opens a small card beside it with the
+   portrait, the profile's details and the name card's applications (CardApplications), such as what the
+   character is to the viewer. The card stays while the pointer is on the name or on the card, and Escape
+   closes it. The name itself still does what it did (opens the sheet or the profile), so the keyboard and a
+   touch screen reach the same things there. *@
+<span class="name-card" @onmouseenter="Enter" @onmouseleave="Leave" @onkeydown="OnKeyDown">
+    @ChildContent
+    @* Drawn only while open: a scene's story has a name per pose, and a closed popover would still be one each. *@
+    @if (_open)
+    {
+        <MudPopover Open="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="name-card-popover">
+            <div class="name-card-panel" role="group" aria-label="@Loc["RolNameCardLabel", CharacterName]"
+                 @onmouseenter="Enter" @onmouseleave="Leave" @onkeydown="OnKeyDown">
+                <div class="name-card-head">
+                    <CharacterAvatar Class="name-card-portrait" Name="@CharacterName" ImageUrl="@ImageUrl" Character="@CharacterName" Alt="" />
+                    <a class="name-card-name" href="@ProfileHref">@CharacterName</a>
+                </div>
+                <CascadingValue Value="@(new ProfilePageContext(CharacterName, false))">
+                    <SchemaWidget WidgetName="character-header" />
+                </CascadingValue>
+                <CardApplications CharacterName="@CharacterName" />
+            </div>
+        </MudPopover>
+    }
+</span>
+
+@code {
+    /// <summary>The character whose card this is. Empty opens no card: the name is drawn as it is.</summary>
+    [Parameter, EditorRequired] public string CharacterName { get; set; } = string.Empty;
+
+    /// <summary>Their picture, when the place the name is drawn already knows it.</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>The name, as the place it is drawn draws it (a link, or a button that opens the sheet).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>How long the pointer rests on the name before the card opens, so passing over a name does not.</summary>
+    [Parameter] public TimeSpan OpenDelay { get; set; } = TimeSpan.FromMilliseconds(450);
+
+    /// <summary>How long the card waits after the pointer leaves, so it can cross from the name to the card.</summary>
+    [Parameter] public TimeSpan CloseDelay { get; set; } = TimeSpan.FromMilliseconds(250);
+
+    private bool _open;
+    private CancellationTokenSource? _pending;
+
+    private string ProfileHref => "/character/" + Uri.EscapeDataString(CharacterName);
+
+    private Task Enter() => string.IsNullOrEmpty(CharacterName) ? Task.CompletedTask : After(_open ? TimeSpan.Zero : OpenDelay, true);
+
+    private Task Leave() => After(CloseDelay, false);
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && _open)
+        {
+            Cancel();
+            _open = false;
+        }
+    }
+
+    // Each move of the pointer replaces the one before it, so only the last decides.
+    private async Task After(TimeSpan delay, bool open)
+    {
+        Cancel();
+        if (open == _open)
+        {
+            return;
+        }
+
+        var pending = _pending = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(delay, pending.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        _open = open;
+        StateHasChanged();
+    }
+
+    private void Cancel()
+    {
+        _pending?.Cancel();
+        _pending?.Dispose();
+        _pending = null;
+    }
+
+    public void Dispose() => Cancel();
+}

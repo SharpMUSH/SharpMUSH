@@ -1,0 +1,35 @@
+format: 1.2
+package: relationships-app
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "The relationships package as a profile widget: a character's confirmed relationships drawn as a web, with the same list under it."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, relationships, profile, web]
+requires_server: ">=0.1"
+
+# An application package owns no objects. The relationships package serves the routes it points at:
+# GET /http/relationships/web/schema and /http/relationships/web/data?objid=<character>. What the web shows is
+# decided by that softcode for the viewer: a hidden relationship reaches only the two players and staff.
+depends:
+  - package: relationships
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/relationships/
+      branch: main
+
+# A widget for the profile scope: it joins every character's profile below the layout's own widgets until an
+# administrator places it somewhere else. Visitors see the relationships nobody hid, as they see the profile.
+application:
+  slug: relationships
+  display_name: Relationships
+  icon: hub
+  type: widget
+  schema_url: http/relationships/web/schema
+  data_url: http/relationships/web/data?objid={objid}
+  minimum_role: guest
+  zones: [MainContent]
+  scope: profile
+  order: 20

@@ -1,6 +1,6 @@
 format: 1
 package: scene-availability
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players or a scene's cast are all free."
 license: MIT
@@ -838,7 +838,7 @@ objects:
       # %0 and %1 instants, %2 the cast: Free, Busy and Not set, each the names in it.
       FUN`SCENE`CARD`FIELDS:
         value: |-
-          [setq(scene_card_answers,iter(%2,%i0^[if(strlen(setr(scene_card_free,u(%!/FUN`FREE`AT,%i0,%0,%1))),%q<scene_card_free>,-)]))][lfields(,Free[chr(30)]Busy[chr(30)]Not set,iter(1 0 -,firstof(itemize(squish(iter(%q<scene_card_answers>,if(strmatch(rest(%i0,^),%i1),name(first(%i0,^))),,|),|),|),tone(muted,nobody)),,chr(30)),chr(30))]
+          [setq(scene_card_answers,iter(%2,%i0^[if(strlen(setr(scene_card_free,u(%!/FUN`FREE`AT,%i0,%0,%1))),%q<scene_card_free>,-)]))][lfields(,Free%*<|>Busy%*<|>Not set,iter(1 0 -,firstof(itemize(squish(iter(%q<scene_card_answers>,if(strmatch(rest(%i0,^),%i1),name(first(%i0,^))),,|),|),|),tone(muted,nobody)),,%*<|>),%*<|>)]
         flags: [funsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
