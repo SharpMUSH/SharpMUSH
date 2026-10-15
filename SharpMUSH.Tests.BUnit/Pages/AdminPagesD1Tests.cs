@@ -262,6 +262,24 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		}
 	}
 
+	/// <summary>The scene system turned on while the overview is open: its Pose types card appears without a reload.</summary>
+	[Test]
+	public async Task Dashboard_FollowsTheSceneSystemBeingTurnedOn()
+	{
+		Auth.SetPolicies("layout.admin");
+		List<string> features = [];
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, features: features);
+		Services.AddSingleton<ServerInfoService>(serverInfo);
+		var cut = RenderPage(typeof(Dashboard));
+		cut.WaitForAssertion(() => cut.Find(".kit-page-head h1"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/scenes/types']").Count).IsEqualTo(0);
+
+		features.Add("scenes");
+		serverInfo.Refresh();
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/scenes/types']"), TimeSpan.FromSeconds(5));
+	}
+
 	/// <summary>A moderator (Royalty's scopes) is offered characters, moderation and the audit log, not configuration.</summary>
 	[Test]
 	public async Task Dashboard_OffersModerationToModerators()
@@ -510,6 +528,29 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		{
 			if (ApplyDisabled()) throw new InvalidOperationException("apply still waits");
 		}, TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// A package over a plugin the server is not running says which plugin it needs, and cannot be applied.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_NamesAMissingPlugin_AndCannotApply()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("scene-verse", null, "1.1.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Install, [], [], [],
+			[new("scene", "", null, null, IsConflict: false, IsPlugin: true)], [], []);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("scene-verse", "1.1.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=scene-verse");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
+		var alert = cut.Find(".mud-alert").TextContent;
+		await Assert.That(alert).Contains("PkgNeedsPlugin");
+		await Assert.That(alert).DoesNotContain("PkgRequires");
+		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled")).IsTrue();
 	}
 
 	/// <summary>

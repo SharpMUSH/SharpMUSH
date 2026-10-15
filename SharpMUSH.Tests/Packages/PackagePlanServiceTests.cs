@@ -37,7 +37,8 @@ public class PackagePlanServiceTests
 		IReadOnlyList<ManagedAttributeRecord>? otherManaged = null,
 		LivePackageState? live = null,
 		IReadOnlyDictionary<string, string>? configure = null,
-		IReadOnlyDictionary<string, PackageStructureBaseline>? structureBaselines = null) => new(
+		IReadOnlyDictionary<string, PackageStructureBaseline>? structureBaselines = null,
+		IReadOnlySet<string>? runningPlugins = null) => new(
 		manifest,
 		installed,
 		installedObjects ?? [],
@@ -48,7 +49,8 @@ public class PackagePlanServiceTests
 		new Dictionary<string, string> { ["room_zero"] = "#0:0" },
 		configure ?? new Dictionary<string, string>(),
 		new Dictionary<string, string>(),
-		structureBaselines);
+		structureBaselines,
+		runningPlugins);
 
 	private const string SimpleManifest =
 		"""
@@ -707,6 +709,39 @@ public class PackagePlanServiceTests
 
 		var satisfied = _service.ComputeChangeset(Inputs(manifest, allInstalled: [Installed("who-where", "2.1.0")]));
 		await Assert.That(satisfied.IsBlocked).IsFalse();
+	}
+
+	/// <summary>
+	/// A package that calls into a plugin installs only while the plugin runs: without it, its commands and functions
+	/// would call into nothing.
+	/// </summary>
+	[Test]
+	public async Task PluginNotRunning_Blocks_RunningPlugin_DoesNot()
+	{
+		var manifest = Parse(
+			"""
+			format: 1.7
+			package: probe
+			version: "1.0"
+			plugins: [scene]
+			objects:
+			  - ref: a
+			    type: thing
+			    name: A
+			""");
+
+		var absent = _service.ComputeChangeset(Inputs(manifest));
+		await Assert.That(absent.IsBlocked).IsTrue();
+		var issue = absent.DependencyIssues.Single();
+		await Assert.That(issue.IsPlugin).IsTrue();
+		await Assert.That(issue.PackageId).IsEqualTo("scene");
+
+		var otherPlugin = _service.ComputeChangeset(Inputs(manifest, runningPlugins: new HashSet<string> { "discord" }));
+		await Assert.That(otherPlugin.IsBlocked).IsTrue();
+
+		var running = _service.ComputeChangeset(Inputs(manifest,
+			runningPlugins: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Scene" }));
+		await Assert.That(running.IsBlocked).IsFalse();
 	}
 
 	[Test]

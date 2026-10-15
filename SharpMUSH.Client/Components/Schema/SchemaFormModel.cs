@@ -62,11 +62,11 @@ public sealed class SchemaFormModel
 
 			if (data?.Fields is not null && data.Fields.TryGetValue(key, out var datum) && datum.Value is { } value)
 			{
-				_values[key] = SchemaViewRenderer.ValueToString(value);
+				_values[key] = Seed(value);
 			}
 			else if (field.Default is { } fallback)
 			{
-				_values[key] = SchemaViewRenderer.ValueToString(fallback);
+				_values[key] = Seed(fallback);
 			}
 		}
 	}
@@ -214,9 +214,19 @@ public sealed class SchemaFormModel
 	{
 		foreach (var (key, value) in fields)
 		{
-			_values[key] = SchemaViewRenderer.ValueToString(value);
+			_values[key] = Seed(value);
 		}
 	}
+
+	/// <summary>A value from the prefill data, a default or an action's answer: JSON true and false stay
+	/// booleans, so a <c>boolean</c> field shows them; everything else is its text.</summary>
+	private static object Seed(JsonElement value)
+		=> value.ValueKind switch
+		{
+			JsonValueKind.True => true,
+			JsonValueKind.False => false,
+			_ => SchemaViewRenderer.ValueToString(value)
+		};
 
 	/// <summary>The width, out of 12, of one element in an N-column section, honouring its span.</summary>
 	public static int ColumnWidth(int columns, int span)

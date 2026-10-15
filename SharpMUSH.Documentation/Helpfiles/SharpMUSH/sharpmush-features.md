@@ -40,9 +40,9 @@
 -->
 # SharpMUSH Features
 
-SharpMUSH plays PennMUSH softcode and imports PennMUSH databases, and adds the systems below. Each
-line names the help topic that explains it. For where SharpMUSH still differs from PennMUSH, see
-[pennmush compatibility].
+SharpMUSH plays PennMUSH softcode and imports PennMUSH, RhostMUSH and TinyMUX databases, and adds
+the systems below. Each line names the help topic that explains it. For where SharpMUSH still
+differs from PennMUSH, see [pennmush compatibility].
 
 ## Accounts and the web portal
 

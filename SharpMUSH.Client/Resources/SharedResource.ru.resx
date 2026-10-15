@@ -3916,6 +3916,10 @@
     <value>Начните с чтения wiki, просмотра персонажей или участия в сцене.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Начните с чтения wiki или просмотра персонажей.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Читать wiki</value>
     <comment>MT</comment>
@@ -6148,5 +6152,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Изображение с предупреждением о содержимом не попадает в библиотеку изображений. Уберите предупреждение, чтобы поделиться им.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Уведомления</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Получайте уведомления на этом телефоне или компьютере, когда портал закрыт</value>
+    <comment>MT</comment>
   </data>
 </root>

@@ -285,18 +285,20 @@ public sealed record PackageStructureBaseline(
 		new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase));
 }
 
-/// <summary>A dependency or conflict violation that blocks apply (decisions 20.6, 20.20).</summary>
-/// <param name="PackageId">The other package involved.</param>
+/// <summary>A dependency, conflict or missing plugin that blocks apply (decisions 20.6, 20.20).</summary>
+/// <param name="PackageId">The other package involved, or the plugin's id when <paramref name="IsPlugin"/>.</param>
 /// <param name="Constraint">Declared constraint text (empty = any).</param>
 /// <param name="InstalledVersion">Its installed version, or null when not installed.</param>
 /// <param name="Source">The manifest's source hint, for "fetch it from here?" offers.</param>
 /// <param name="IsConflict">True for a <c>conflicts:</c> violation, false for an unmet dependency.</param>
+/// <param name="IsPlugin">True for a <c>plugins:</c> entry whose plugin is not running on this server.</param>
 public sealed record PackageDependencyIssue(
 	string PackageId,
 	string Constraint,
 	string? InstalledVersion,
 	PackageSourceHint? Source,
-	bool IsConflict);
+	bool IsConflict,
+	bool IsPlugin = false);
 
 /// <summary>A $command pattern collision with another installed package (warning, decision 20.20).</summary>
 /// <param name="Pattern">The normalized command pattern (e.g. <c>+bbread *</c>).</param>
@@ -360,6 +362,7 @@ public sealed record LiveObjectState(
 /// <param name="ConfigureAnswers">Resolution map: configure key → value (objid for dbref-typed); may be partial before review.</param>
 /// <param name="CrossPackageObjids">Resolution map: <c>pkg/ref</c> → objid for dependency-owned objects.</param>
 /// <param name="StructureBaselines">This package's managed object-structure baselines, keyed by objid (decision 20.13, extended for full structure diffs).</param>
+/// <param name="RunningPlugins">The ids of the plugins running now, which the manifest's <c>plugins:</c> are checked against; null is none.</param>
 public sealed record PackagePlanInputs(
 	PackageManifest Manifest,
 	InstalledPackageRecord? Installed,
@@ -371,4 +374,5 @@ public sealed record PackagePlanInputs(
 	IReadOnlyDictionary<string, string> WellKnownObjids,
 	IReadOnlyDictionary<string, string> ConfigureAnswers,
 	IReadOnlyDictionary<string, string> CrossPackageObjids,
-	IReadOnlyDictionary<string, PackageStructureBaseline>? StructureBaselines = null);
+	IReadOnlyDictionary<string, PackageStructureBaseline>? StructureBaselines = null,
+	IReadOnlySet<string>? RunningPlugins = null);
