@@ -93,6 +93,8 @@ STEXT_LAST: '$' 'L' -> popMode;
 ARG_STARTCARET: '<' -> popMode;
 // %=<name>, from TinyMUX: the executor's attribute <name>, or argument <n> when it is a number.
 ATTR_STARTCARET: '=<' -> popMode;
+// %*<text>: text marked as a list separator, which a list function splits on only where it is marked.
+DELIM_STARTCARET: '*<' -> popMode;
 OTHER_SUB: . -> popMode;
 
 // --------------- ESCAPING MODE -----------------

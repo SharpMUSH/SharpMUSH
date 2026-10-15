@@ -102,6 +102,7 @@ Other substitutions:<br>
     %u = text of the last command, after evaluation, available to locks/hooks<br>
     %> = the output of the last command, like a function's result: see [command output]<br>
     %| = what the command before a `;|` showed you: see [piping]<br>
+    %*`\<text\>` = `<text>` marked as a list separator, which list functions split on only where it is marked: see [list separators]<br>
     %? = The current function invocation and depth counts<br>
     %= = The dbref/attribute currently being evaluated, or `#LAMBDA/<code>` inside a #lambda<br>
     %+ = The number of arguments passed to the current ufun.<br>
