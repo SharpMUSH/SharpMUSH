@@ -36,6 +36,8 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   GET    api/objects/topology?rooms=N[&coordinates=X…]   — rooms, exits, coordinates, warnings
 ///   GET    api/objects/topology/document?rooms=N           — the same rooms as a room document
+///   POST   api/objects/topology/plan                        — what importing a room document would change
+///   POST   api/objects/topology/apply                       — make those changes { document, fingerprint }
 ///   GET    api/objects/{dbref}                              — name, type, owner, flags
 ///   GET    api/objects/{dbref}/attributes[?depth=N]         — visible attributes
 ///   GET    api/objects/{dbref}/attributes/{name}            — one attribute
@@ -149,6 +151,40 @@ public class ObjectsController(
 			Error<string> error => Conflict(new ApiErrorDto(error.Value))
 		};
 	}
+
+	/// <summary>What importing <paramref name="document"/> would change, without changing anything.</summary>
+	[HttpPost("topology/plan")]
+	[RequestSizeLimit(MaxDocumentBytes)]
+	public async Task<IActionResult> PlanRoomDocument([FromBody] RoomDocumentDto document, [FromServices] IWarningService warnings,
+		CancellationToken ct)
+	{
+		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
+		Response.Headers.CacheControl = "no-store";
+		return Ok(await Importer(warnings).PlanAsync(executor, document, ct));
+	}
+
+	/// <summary>
+	/// Makes the changes <see cref="PlanRoomDocument"/> listed, as the session's character, when they are still the
+	/// ones the builder confirmed (<see cref="RoomApplyRequest.Fingerprint"/>).
+	/// </summary>
+	[HttpPost("topology/apply")]
+	[RequestSizeLimit(MaxDocumentBytes)]
+	public async Task<IActionResult> ApplyRoomDocument([FromBody] RoomApplyRequest request, [FromServices] IWarningService warnings,
+		CancellationToken ct)
+	{
+		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
+		return await Importer(warnings).ApplyAsync(executor, request.Document, request.Fingerprint, ct) switch
+		{
+			RoomApplyDto applied => Ok(applied),
+			Error<string> refused => Conflict(new ApiErrorDto(refused.Value))
+		};
+	}
+
+	/// <summary>The largest room document the import endpoints read.</summary>
+	private const int MaxDocumentBytes = 4 * 1024 * 1024;
+
+	private RoomDocumentImporter Importer(IWarningService warnings) =>
+		new(mediator, permissionService, reality, attributeService, commandInvoker, Reader(warnings));
 
 	private RoomTopologyReader Reader(IWarningService warnings) =>
 		new(mediator, permissionService, reality, attributeService, warnings);

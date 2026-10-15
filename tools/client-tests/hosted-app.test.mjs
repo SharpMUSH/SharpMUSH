@@ -155,3 +155,21 @@ test('the host saves a package file only under a plain .json name', async () => 
     assert.equal(saved[0].type, 'application/json');
     instance.dispose();
 });
+
+test('a plan or an apply carries only a plain JSON object to the host, which confirms an apply itself', async () => {
+    const h = harness(), a = h.frame('a'), calls = [];
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' },
+        { invokeMethodAsync: async (...args) => { calls.push(args); return { cancelled: true }; } }, h.environment);
+    h.connect(a);
+    const cyclic = {}; cyclic.self = cyclic;
+    for (const document of [null, [], 'rooms', 3, cyclic, { rooms: 'x'.repeat(4 * 1024 * 1024) }])
+        for (const type of ['plan', 'apply'])
+            await a.port.postMessage({ type, channel: a.sent[0].channel, requestId: 1, document });
+    assert.deepEqual(calls, []);
+    const document = { format: 'sharpmush-rooms', version: 1, rooms: [] };
+    await a.port.postMessage({ type: 'plan', channel: a.sent[0].channel, requestId: 2, document });
+    await a.port.postMessage({ type: 'apply', channel: a.sent[0].channel, requestId: 3, document });
+    assert.deepEqual(calls.map(call => call[0]), ['PlanRoomDocument', 'ApplyRoomDocument']);
+    assert.deepEqual(a.port.received.slice(1).map(reply => [reply.type, reply.requestId]), [['plan-result', 2], ['apply-result', 3]]);
+    instance.dispose();
+});

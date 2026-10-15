@@ -13,6 +13,28 @@
 }
 else
 {
+    @if (_confirming is { } plan)
+    {
+        @* The host's own confirmation: the package cannot draw over it, skip it or change what it lists. *@
+        <MudPaper Outlined="true" Class="pa-4 mb-3" role="dialog" aria-labelledby="@(_frameId + "-confirm")">
+            <MudText Typo="Typo.h6" id="@(_frameId + "-confirm")">@Title asks to change the world</MudText>
+            <MudText Typo="Typo.body2" Class="mb-2">Each change is made as your character, through the game's own building commands.</MudText>
+            <ul class="mb-2" style="padding-inline-start:1.5rem;">
+                @foreach (var step in plan.Steps)
+                {
+                    <li>@step.Summary</li>
+                }
+            </ul>
+            @foreach (var note in plan.Notes)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@note</MudText>
+            }
+            <div class="d-flex gap-2 mt-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Decide(true))">Make @plan.Steps.Count @(plan.Steps.Count == 1 ? "change" : "changes")</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@(() => Decide(false))">Cancel</MudButton>
+            </div>
+        </MudPaper>
+    }
     <iframe id="@_frameId" title="@Title" sandbox="allow-scripts" style="width:100%;height:70vh;border:0;" />
 }
 
@@ -83,6 +105,55 @@ else
 
     public sealed record RoomDocumentResult(RoomDocumentDto? Document, string? Error);
 
+    private RoomPlanDto? _confirming;
+    private TaskCompletionSource<bool>? _decision;
+
+    /// <summary>What importing a room document would change.</summary>
+    [JSInvokable]
+    public async Task<RoomPlanDto?> PlanRoomDocument(JsonElement document)
+    {
+        using var response = await HttpClients.CreateClient("api").PostAsJsonAsync("api/objects/topology/plan", document, _lifetime.Token);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<RoomPlanDto>(_lifetime.Token);
+    }
+
+    /// <summary>
+    /// Imports a room document once the player has confirmed, in this component and not in the package's frame, the
+    /// changes the server worked out. The server refuses the apply when the changes it works out then are different.
+    /// </summary>
+    [JSInvokable]
+    public async Task<RoomImportResult> ApplyRoomDocument(JsonElement document)
+    {
+        if (_decision is not null) return new(null, null, "Another change is waiting to be confirmed.", false);
+        var plan = await PlanRoomDocument(document);
+        if (plan is null || plan.Problems.Count > 0 || plan.Steps.Count == 0) return new(plan, null, null, false);
+        _confirming = plan;
+        _decision = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await InvokeAsync(StateHasChanged);
+        bool confirmed;
+        try { confirmed = await _decision.Task.WaitAsync(_lifetime.Token); }
+        finally
+        {
+            _confirming = null;
+            _decision = null;
+            if (!_lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged);
+        }
+        if (!confirmed) return new(plan, null, null, true);
+        using var response = await HttpClients.CreateClient("api").PostAsJsonAsync("api/objects/topology/apply",
+            new { document, fingerprint = plan.Fingerprint }, _lifetime.Token);
+        if (response.IsSuccessStatusCode)
+            return new(plan, await response.Content.ReadFromJsonAsync<RoomApplyDto>(_lifetime.Token), null, false);
+        var error = response.Content.Headers.ContentType?.MediaType == "application/json"
+            ? (await response.Content.ReadFromJsonAsync<ApiErrorDto>(_lifetime.Token))?.Error
+            : null;
+        return new(plan, null, error ?? "The changes could not be made with the current character.", false);
+    }
+
+    private void Decide(bool confirmed) => _decision?.TrySetResult(confirmed);
+
+    /// <param name="Cancelled">The player turned the changes down.</param>
+    public sealed record RoomImportResult(RoomPlanDto? Plan, RoomApplyDto? Applied, string? Error, bool Cancelled);
+
     private static string Selection(int[] rooms, string[]? coordinates)
     {
         if (rooms.Length is < 1 or > 100 || rooms.Any(id => id < 0)) throw new ArgumentException("Invalid room selection.");
@@ -93,6 +164,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        _decision?.TrySetResult(false);
         await _lifetime.CancelAsync();
         try
         {
