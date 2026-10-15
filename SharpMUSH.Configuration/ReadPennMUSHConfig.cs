@@ -335,7 +335,20 @@ public static partial class ReadPennMushConfig
 
 		var named = configDictionary.Where(entry => entry.Value.Length > 0).Select(entry => entry.Key)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		return new PennMushConfigImport(work, skipped, named);
+		// A secret directive takes its last line, as an option does.
+		var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var groups in text
+							 .Select(line => splitter.Match(line.Trim()))
+							 .Where(match => match.Success)
+							 .Select(match => match.Groups))
+		{
+			if (PennMushConfigImport.SecretDirectives.TryGetValue(groups["Key"].Value, out var secret))
+			{
+				secrets[secret] = groups["Value"].Value.Trim();
+			}
+		}
+
+		return new PennMushConfigImport(work, skipped, named, secrets);
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
 	}

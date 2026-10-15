@@ -2395,6 +2395,8 @@ With no argument, or `/list`, @secret lists every secret the server or a plugin 
 
 An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
 
+Importing a PennMUSH `mush.cnf` in the web portal stores its `sql_password` as the `sql.password` secret, never as a configuration option.
+
 A typed value passes through your client, which may keep it in a log. Use the web portal's Secrets page, or an override, where that matters.
 
 Using @secret needs the `config.admin` permission. A plugin may name another permission that manages its own secret.

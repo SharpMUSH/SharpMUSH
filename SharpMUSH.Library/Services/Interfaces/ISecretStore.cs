@@ -39,4 +39,13 @@ public interface ISecretStore
 	/// <summary>Removes the stored value of <paramref name="name"/>. An override is left alone.</summary>
 	/// <returns>The secret's status afterwards, or <see cref="NotFound"/> when nothing was stored.</returns>
 	ValueTask<Found<SecretStatus>> ClearAsync(string name, CancellationToken cancellationToken = default);
+
+	/// <summary>What is stored under <paramref name="names"/> now, still encrypted, for <see cref="RestoreAsync"/>.</summary>
+	ValueTask<SecretSnapshot> SnapshotAsync(IEnumerable<string> names, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Puts the stored values of the snapshot's names back as they were when it was taken: a name that had none has
+	/// none again. Other names are left alone.
+	/// </summary>
+	ValueTask RestoreAsync(SecretSnapshot snapshot, CancellationToken cancellationToken = default);
 }

@@ -22,6 +22,9 @@ public sealed class SecretsData
 /// <param name="SetBy">Who set it.</param>
 public sealed record StoredSecret(string Ciphertext, DateTimeOffset SetAt, SecretAuthor SetBy);
 
+/// <summary>Some names' stored secrets as they stood, ciphertext only; null where nothing was stored.</summary>
+public sealed record SecretSnapshot(IReadOnlyDictionary<string, StoredSecret?> Stored);
+
 /// <inheritdoc />
 /// <remarks>
 /// Each name has a protector of its own (purpose <c>SharpMUSH.Secrets</c>, then the name), so one secret's
@@ -131,6 +134,33 @@ public sealed class SecretStore(
 		logger.LogInformation("Secret {Secret} cleared", name);
 		return Status(name, null);
 	}
+
+	/// <inheritdoc />
+	public async ValueTask<SecretSnapshot> SnapshotAsync(IEnumerable<string> names, CancellationToken cancellationToken = default)
+	{
+		var stored = (await LoadAsync()).Secrets;
+		return new SecretSnapshot(names.Distinct(StringComparer.Ordinal)
+			.ToDictionary(name => name, name => stored.GetValueOrDefault(name), StringComparer.Ordinal));
+	}
+
+	/// <inheritdoc />
+	public async ValueTask RestoreAsync(SecretSnapshot snapshot, CancellationToken cancellationToken = default)
+		=> await ChangeAsync(data =>
+		{
+			foreach (var (name, stored) in snapshot.Stored)
+			{
+				if (stored is null)
+				{
+					data.Secrets.Remove(name);
+				}
+				else
+				{
+					data.Secrets[name] = stored;
+				}
+			}
+
+			return true;
+		});
 
 	private SecretStatus Status(string name, StoredSecret? stored)
 	{

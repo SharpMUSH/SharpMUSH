@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -46,9 +47,7 @@ public class SecretsController(
 			return Forbid();
 		}
 
-		var author = new SecretAuthor(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
-			User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty);
-		return await secrets.SetAsync(name, request.Value ?? string.Empty, author, HttpContext.RequestAborted) switch
+		return await secrets.SetAsync(name, request.Value ?? string.Empty, PortalSecretAuthor.Of(User), HttpContext.RequestAborted) switch
 		{
 			SecretStatus status => await AuditedAsync(AuditActions.SecretSet, status),
 			Error<string> error => BadRequest(new { error = error.Value }),
