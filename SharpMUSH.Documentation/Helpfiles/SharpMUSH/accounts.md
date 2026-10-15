@@ -52,10 +52,14 @@ Staff link a character to an account without its password, for a player who lost
 
 A character on another account has to be unlinked from it first. The account takes on the character's roles, so only God links God and only a wizard links a wizard. Both are recorded in the audit log.
 
+Softcode reads links with [account()] and [accountchars()], and hears about them through the player\`link and player\`unlink events (see [events]).
+
 ::: seealso
 - [claim]
 - [make]
 - [login]
 - [@account]
+- [ACCOUNT()]
+- [ACCOUNTCHARS()]
 - [roles]
 :::

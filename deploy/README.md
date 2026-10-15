@@ -589,9 +589,9 @@ sharpmush_storage_bytes{kind="world_disk_free"} < ignoring(kind) sharpmush_stora
 sharpmush_storage_bytes{kind="leftover_worlds"} > 0                    # a .previous or .precompact world to clean up
 ```
 
-A PennMUSH import is checked the same way before it starts. It is refused with `507 Insufficient
-Storage` when the map or the disk clearly cannot hold three times the size of the uploaded files.
-Nothing is written in that case.
+A database import (PennMUSH, RhostMUSH or TinyMUX) is checked the same way before it starts. It
+is refused with `507 Insufficient Storage` when the map or the disk clearly cannot hold three times
+the size of the uploaded files. Nothing is written in that case.
 
 ### Earlier worlds
 
@@ -696,6 +696,7 @@ A purge frees pages inside the file for reuse. It does not shrink the file (see
 | `SHARPMUSH_HISTORY_SCENE_DELETED_MAX_AGE` | unset | Purge a deleted pose (its content and all its versions) once it has been deleted this long. |
 | `SHARPMUSH_HISTORY_AUDIT_MAX_AGE` | unset | Purge audit log entries older than this. The audit log takes no `_KEEP`. |
 | `SHARPMUSH_HISTORY_ROLLS_MAX_AGE` | unset | Purge recorded rolls (`@roll`, roll() with `record`) older than this. A purged roll's number is never reused. Rolls take no `_KEEP`. |
+| `SHARPMUSH_HISTORY_ACTIVITY_MAX_AGE` | unset | Purge the activity counts behind activity() and +health (poses per character, room and day) for days older than this. Each character's and room's last pose is kept. Activity takes no `_KEEP`. |
 | `SHARPMUSH_HISTORY_INTERVAL` | unset, so no scheduled pass | How often a pass runs, for example `1d`. `@storage/purge` runs one at any time. |
 | `SHARPMUSH_HISTORY_BATCH` | `256` | The most records one write transaction deletes. |
 | `SHARPMUSH_HISTORY_ARCHIVE_PATH` | unset, so no archive | Purged records are appended here as `<kind>-<date>.jsonl`, and flushed to disk, before they are deleted. |

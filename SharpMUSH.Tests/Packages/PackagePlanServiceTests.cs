@@ -37,7 +37,8 @@ public class PackagePlanServiceTests
 		IReadOnlyList<ManagedAttributeRecord>? otherManaged = null,
 		LivePackageState? live = null,
 		IReadOnlyDictionary<string, string>? configure = null,
-		IReadOnlyDictionary<string, PackageStructureBaseline>? structureBaselines = null) => new(
+		IReadOnlyDictionary<string, PackageStructureBaseline>? structureBaselines = null,
+		IReadOnlySet<string>? runningPlugins = null) => new(
 		manifest,
 		installed,
 		installedObjects ?? [],
@@ -48,7 +49,8 @@ public class PackagePlanServiceTests
 		new Dictionary<string, string> { ["room_zero"] = "#0:0" },
 		configure ?? new Dictionary<string, string>(),
 		new Dictionary<string, string>(),
-		structureBaselines);
+		structureBaselines,
+		runningPlugins);
 
 	private const string SimpleManifest =
 		"""
@@ -420,6 +422,41 @@ public class PackagePlanServiceTests
 	}
 
 	[Test]
+	public async Task Table_BothChangedOnDifferentLines_Merges()
+	{
+		var attr = UpgradeWith("a\nb\nc", "A\nb\nc", "a\\nb\\nC").Attributes.Single();
+		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Merge);
+		await Assert.That(attr.Conflict).IsNull();
+		await Assert.That(attr.MergedValue).IsEqualTo("A\nb\nC");
+		await Assert.That(attr.IsLocalEdit).IsTrue();
+	}
+
+	[Test]
+	public async Task Table_BothChangedTheSameLine_ConflictCarriesTheMarkedMerge()
+	{
+		var attr = UpgradeWith("a\nb", "a\nmine", "a\\ntheirs").Attributes.Single();
+		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(attr.Conflict).IsEqualTo(PackageConflictKind.ModifyModify);
+		await Assert.That(attr.MergedValue).IsEqualTo("a\n<<<<<<< game\nmine\n=======\ntheirs\n>>>>>>> package");
+	}
+
+	[Test]
+	public async Task Table_BothChangedAOneLineValue_ConflictWithoutAMerge()
+	{
+		var attr = UpgradeWith("old", "customized").Attributes.Single();
+		await Assert.That(attr.MergedValue).IsNull();
+	}
+
+	[Test]
+	public async Task LocalEdits_AreWhatTheGameChanged()
+	{
+		await Assert.That(UpgradeWith("value-new", "customized").Attributes.Single().IsLocalEdit).IsTrue();
+		await Assert.That(UpgradeWith("old", "customized").Attributes.Single().IsLocalEdit).IsTrue();
+		await Assert.That(UpgradeWith("old", "old").Attributes.Single().IsLocalEdit).IsFalse();
+		await Assert.That(UpgradeWith("same", "same", "same").Attributes.Single().IsLocalEdit).IsFalse();
+	}
+
+	[Test]
 	public async Task Table_BothChanged_Conflict_WithAllThreePanes()
 	{
 		var attr = UpgradeWith("old", "customized").Attributes.Single();
@@ -672,6 +709,39 @@ public class PackagePlanServiceTests
 
 		var satisfied = _service.ComputeChangeset(Inputs(manifest, allInstalled: [Installed("who-where", "2.1.0")]));
 		await Assert.That(satisfied.IsBlocked).IsFalse();
+	}
+
+	/// <summary>
+	/// A package that calls into a plugin installs only while the plugin runs: without it, its commands and functions
+	/// would call into nothing.
+	/// </summary>
+	[Test]
+	public async Task PluginNotRunning_Blocks_RunningPlugin_DoesNot()
+	{
+		var manifest = Parse(
+			"""
+			format: 1.7
+			package: probe
+			version: "1.0"
+			plugins: [scene]
+			objects:
+			  - ref: a
+			    type: thing
+			    name: A
+			""");
+
+		var absent = _service.ComputeChangeset(Inputs(manifest));
+		await Assert.That(absent.IsBlocked).IsTrue();
+		var issue = absent.DependencyIssues.Single();
+		await Assert.That(issue.IsPlugin).IsTrue();
+		await Assert.That(issue.PackageId).IsEqualTo("scene");
+
+		var otherPlugin = _service.ComputeChangeset(Inputs(manifest, runningPlugins: new HashSet<string> { "discord" }));
+		await Assert.That(otherPlugin.IsBlocked).IsTrue();
+
+		var running = _service.ComputeChangeset(Inputs(manifest,
+			runningPlugins: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Scene" }));
+		await Assert.That(running.IsBlocked).IsFalse();
 	}
 
 	[Test]

@@ -156,6 +156,8 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().AuditHistory);
 		services.AddSingleton<IRollStore>(sp => sp.GetRequiredService<LightningDatabase>());
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().RollHistory);
+		services.AddSingleton<IActivityStore>(sp => sp.GetRequiredService<LightningDatabase>());
+		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().ActivityHistory);
 		AddHistoryRetention(services);
 
 		return services;
@@ -194,6 +196,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IServerStateStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<ISessionRecordStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IReadMarkerStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IPushSubscriptionStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IPageLogStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IFeedStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IWikiStore>(sp => sp.GetRequiredService<TProvider>());

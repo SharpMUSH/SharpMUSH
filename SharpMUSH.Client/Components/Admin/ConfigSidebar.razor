@@ -6,6 +6,7 @@
 @inject AdminConfigService AdminConfigService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject ServerInfoService ServerInfo
 @implements IDisposable
 
 @* D1 §6.4 page sidebar for /admin/config: a tree of the six groups, the open group's sections as
@@ -81,7 +82,7 @@
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         // Configuration is a staff page, so whoever reaches it also has the overview to go back to.
-        _back = (await SharpMUSH.Client.Layout.BuildNavCatalog.VisibleAsync(Authorization, user))
+        _back = (await SharpMUSH.Client.Layout.BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo))
             .FirstOrDefault(e => e.Group == SharpMUSH.Client.Layout.BuildNavCatalog.Group.Overview)?.Href;
     }
 

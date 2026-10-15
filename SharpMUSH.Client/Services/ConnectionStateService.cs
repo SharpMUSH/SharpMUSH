@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SignalRState = Microsoft.AspNetCore.SignalR.Client.HubConnectionState;
 using LibraryState = SharpMUSH.Library.Services.Interfaces.HubConnectionState;
@@ -20,6 +21,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 {
 	private readonly IGameHubConnectionFactory _factory;
 	private readonly ILogger<ConnectionStateService> _logger;
+	private readonly ServerInfoService? _serverInfo;
 
 	private IGameHubConnection? _hub;
 	// Phase 9: scene realtime now rides a SEPARATE connection to the plugin-owned hub at /hubs/scene
@@ -40,6 +42,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	// without a hub until someone happens to ask for one.
 	private bool _wanted;
 	private CancellationTokenSource? _retry;
+	// Whether this tab is in view, as last reported by the page (PushInterop); the hub is told on every connect.
+	// Out of view until the page says otherwise, so a page that never reports cannot hold every @push back.
+	private bool _visible;
 
 	/// <summary>How long to wait before each new attempt after a start failed or the hub closed; the last delay
 	/// repeats. Settable for tests.</summary>
@@ -56,12 +61,18 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// <inheritdoc/>
 	public bool IsSceneLive => _sceneHub?.State == SignalRState.Connected;
 
+	/// <param name="serverInfo">
+	/// What the game has on. The scene connection is opened only while it has the Scene System: without the Scene
+	/// plugin nothing serves <c>/hubs/scene</c>. Null (tests that build the service by hand) opens it.
+	/// </param>
 	public ConnectionStateService(
 		IGameHubConnectionFactory factory,
-		ILogger<ConnectionStateService> logger)
+		ILogger<ConnectionStateService> logger,
+		ServerInfoService? serverInfo = null)
 	{
 		_factory = factory;
 		_logger = logger;
+		_serverInfo = serverInfo;
 	}
 
 	/// <inheritdoc/>
@@ -131,6 +142,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		{
 			_logger.LogInformation("[ConnectionStateService] Hub reconnected");
 			SetState(SignalRState.Connected);
+			await SendVisibilityAsync();
 			// The server is back. A scene connection still waiting out its own back-off would stay down until its
 			// next attempt, up to 30 s on, with the story saying live poses are not arriving.
 			await ReviveSceneHubAsync();
@@ -140,6 +152,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		{
 			await _hub.StartAsync();
 			SetState(SignalRState.Connected);
+			await SendVisibilityAsync();
 
 			// Phase 9: open the separate scene realtime connection (/hubs/scene). Best-effort — a scene-hub
 			// failure must not break the primary game connection; scene pages simply receive no live events.
@@ -186,6 +199,30 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
 			RetryLater();
+		}
+	}
+
+	/// <summary>
+	/// The tab was shown or hidden. The server keeps it per connection, so <c>@push</c> leaves a player alone while
+	/// one of their tabs is in view.
+	/// </summary>
+	public Task ReportVisibilityAsync(bool visible)
+	{
+		_visible = visible;
+		return SendVisibilityAsync();
+	}
+
+	private async Task SendVisibilityAsync()
+	{
+		if (_hub is not { State: SignalRState.Connected } hub) return;
+		try
+		{
+			await hub.InvokeAsync("ReportVisibility", _visible ? "visible" : "hidden");
+		}
+		catch (Exception ex)
+		{
+			// Best-effort: a server that missed it treats the tab as out of view, and the next change resends.
+			_logger.LogDebug(ex, "[ConnectionStateService] ReportVisibility failed");
 		}
 	}
 
@@ -288,6 +325,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// </summary>
 	private async Task ConnectSceneHubAsync()
 	{
+		if (_serverInfo is not null && !await _serverInfo.HasFeatureAsync(GameFeatures.Scenes)) return;
 		if (_sceneStart is { } pending)
 		{
 			await pending;
