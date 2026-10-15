@@ -8,7 +8,7 @@ A `kind: ui` package installs a versioned `ui.json` definition plus hash-verifie
 
 The reusable .NET/Razor host mounts a plain HTML application in an independent frame and hands it the authenticated instance configuration over a per-mount bridge. State is mount-local only. The initial bridge exposes bounded read-only topology. Assets contain no instance config; anonymous application metadata also omits config. All existing auth schemes, policies and engine permissions remain in place. Browser-code and owner-install gates are reused.
 
-The graph proof takes an explicit room-dbref selection and includes disconnected rooms. Exit dbrefs identify directed edges; room names are labels. No map IDs, classification conventions, coordinate attributes, spatial indexes, virtual locations, generation mechanisms or world mutations are added. The reader never evaluates dynamic destination softcode. Config schema/version incompatibility is explicit rather than an implicit reset or migration.
+The graph proof takes an explicit room-dbref selection and includes disconnected rooms. Exit dbrefs identify directed edges; room names are labels. Room positions are read from ordinary attributes (X, Y and Z unless the instance names others), the ones the `gmcp-room` package sends to a mapper; there are no map IDs, spatial indexes, virtual locations or generation mechanisms. The reader never evaluates dynamic destination softcode. Config schema/version incompatibility is explicit rather than an implicit reset or migration.
 
 See `examples/packages/builder-graph/README.md` for the exact initial package/config contract, example instances, limits and local verification commands. This is a local implementation, not a deployed or installed package.
 

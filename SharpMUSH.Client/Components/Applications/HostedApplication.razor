@@ -65,11 +65,30 @@ else
     }
 
     [JSInvokable]
-    public async Task<TopologyDto?> ReadTopology(int[] rooms)
+    public async Task<TopologyDto?> ReadTopology(int[] rooms, string[]? coordinates = null)
+        => await HttpClients.CreateClient("api").GetFromJsonAsync<TopologyDto>("api/objects/topology?" + Selection(rooms, coordinates), _lifetime.Token);
+
+    /// <summary>The selected rooms as a room document, or the server's reason for refusing one.</summary>
+    [JSInvokable]
+    public async Task<RoomDocumentResult> ReadRoomDocument(int[] rooms, string[]? coordinates = null)
+    {
+        using var response = await HttpClients.CreateClient("api").GetAsync("api/objects/topology/document?" + Selection(rooms, coordinates), _lifetime.Token);
+        if (response.IsSuccessStatusCode)
+            return new(await response.Content.ReadFromJsonAsync<RoomDocumentDto>(_lifetime.Token), null);
+        var error = response.Content.Headers.ContentType?.MediaType == "application/json"
+            ? (await response.Content.ReadFromJsonAsync<ApiErrorDto>(_lifetime.Token))?.Error
+            : null;
+        return new(null, error ?? "The rooms could not be exported with the current character.");
+    }
+
+    public sealed record RoomDocumentResult(RoomDocumentDto? Document, string? Error);
+
+    private static string Selection(int[] rooms, string[]? coordinates)
     {
         if (rooms.Length is < 1 or > 100 || rooms.Any(id => id < 0)) throw new ArgumentException("Invalid room selection.");
-        var query = string.Join("&", rooms.Select(id => "rooms=" + id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-        return await HttpClients.CreateClient("api").GetFromJsonAsync<TopologyDto>("api/objects/topology?" + query, _lifetime.Token);
+        if (coordinates is not null && coordinates.Length != 3) throw new ArgumentException("Name three coordinate attributes.");
+        return string.Join("&", rooms.Select(id => "rooms=" + id.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            .Concat((coordinates ?? []).Select(name => "coordinates=" + Uri.EscapeDataString(name))));
     }
 
     public async ValueTask DisposeAsync()

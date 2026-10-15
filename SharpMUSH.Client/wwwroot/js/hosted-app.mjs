@@ -20,6 +20,36 @@ function bootstrapFrame(channel, hostOrigin) {
     parent.postMessage({ type: 'hosted-ready', channel }, hostOrigin === 'null' ? '*' : hostOrigin, [pair.port2]);
 }
 
+const validRooms = rooms => Array.isArray(rooms) && rooms.length >= 1 && rooms.length <= 100
+    && rooms.every(id => Number.isInteger(id) && id >= 0 && id <= 2147483647);
+
+// Three attribute names, or nothing for the server's default (X, Y and Z).
+const validCoordinates = names => names === undefined
+    || (Array.isArray(names) && names.length === 3 && names.every(name => typeof name === 'string' && /^[A-Za-z0-9_`-]{1,64}$/.test(name)));
+
+// The read-only requests a package may make, each checked here before it reaches the authenticated API.
+function bridgeCall(data) {
+    if (!validRooms(data.rooms) || !validCoordinates(data.coordinates)) return null;
+    const coordinates = data.coordinates ?? null;
+    switch (data.type) {
+        case 'topology': return { method: ['ReadTopology', data.rooms, coordinates], reply: 'topology-result' };
+        case 'document': return { method: ['ReadRoomDocument', data.rooms, coordinates], reply: 'document-result' };
+        default: return null;
+    }
+}
+
+// A package cannot download from its sandboxed frame, so the host saves a JSON file for it: a plain name, at most 2 MiB.
+const maxSavedLength = 2 * 1024 * 1024;
+function saveFile(environment, data) {
+    if (typeof data.name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}\.json$/.test(data.name)
+        || typeof data.text !== 'string' || data.text.length > maxSavedLength) return;
+    const url = environment.URL.createObjectURL(new environment.Blob([data.text], { type: 'application/json' }));
+    const link = environment.document.createElement('a');
+    link.href = url; link.download = data.name; link.rel = 'noopener';
+    environment.document.body.append(link); link.click(); link.remove();
+    environment.setTimeout(() => environment.URL.revokeObjectURL(url), 1000);
+}
+
 export function mount(id, bootstrap, dotnet, environment = window) {
     const frame = environment.document.getElementById(id);
     if (!frame) throw new Error('Hosted application frame is missing.');
@@ -39,15 +69,15 @@ export function mount(id, bootstrap, dotnet, environment = window) {
             const data = event.data;
             if (disposed || !active || data?.channel !== channel) return;
             if (data.type === 'hosted-dispose') { revoke(); return; }
-            if (busy || data.type !== 'topology' || !Number.isSafeInteger(data.requestId) || !Array.isArray(data.rooms)
-                || data.rooms.length < 1 || data.rooms.length > 100
-                || data.rooms.some(id => !Number.isInteger(id) || id < 0 || id > 2147483647)) return;
+            if (data.type === 'save-file') { saveFile(environment, data); return; }
+            const call = bridgeCall(data);
+            if (busy || !call || !Number.isSafeInteger(data.requestId)) return;
             busy = true;
             try {
-                const result = await dotnet.invokeMethodAsync('ReadTopology', data.rooms);
-                if (!disposed && active) connection.postMessage({ type: 'topology-result', channel, requestId: data.requestId, result });
+                const result = await dotnet.invokeMethodAsync(...call.method);
+                if (!disposed && active) connection.postMessage({ type: call.reply, channel, requestId: data.requestId, result });
             } catch {
-                if (!disposed && active) connection.postMessage({ type: 'topology-result', channel, requestId: data.requestId,
+                if (!disposed && active) connection.postMessage({ type: call.reply, channel, requestId: data.requestId,
                     error: 'The graph could not be read with the current character.' });
             } finally { busy = false; }
         };
