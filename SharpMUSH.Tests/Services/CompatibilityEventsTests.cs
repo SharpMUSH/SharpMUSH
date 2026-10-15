@@ -10,6 +10,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -271,7 +272,8 @@ public class CompatibilityEventsTests
 				Net = options.Net with { SqlPlatform = "sqlite", SqlDatabase = database, SqlHost = null }
 			}).CurrentValue);
 			var events = Substitute.For<IEventService>();
-			await using var sql = new SqlService(monitor, new Lazy<IEventService>(() => events));
+			await using var sql = new SqlService(monitor, FixedSecrets.With(SecretDefinition.SqlPassword.Name, ""),
+				new Lazy<IEventService>(() => events));
 
 			await Assert.That(async () => await sql.ExecuteQueryAsync("SELECT 1")).Throws<SqliteException>();
 			await events.Received(1).TriggerEventAsync(SharpEvents.SqlConnectFail, null, "sqlite3", Arg.Any<string>());

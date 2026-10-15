@@ -42,7 +42,8 @@ locktype    Test for a valid locktype for @lock/`<string>` `<target>`. `<target>
 lockkey     Test for a valid lockkey for @lock me=`<string>`<br>
 rolename    Test for a valid role short name for @role/create: 1 to 32 lowercase letters, digits, `-` and `_`.<br>
 rolecategory Test for a valid role or permission category name for @role/category/create or @permission/category/create: 1 to 32 characters a player name may use, without `/`.<br>
-permission  Test for a valid custom permission name for @permission/define, such as `scene.close`. It does not say whether the name is taken.
+permission  Test for a valid custom permission name for @permission/define, such as `scene.close`. It does not say whether the name is taken.<br>
+roll        Test whether roll() can read `<string>` as a dice formula, whatever its names turn out to hold.
 
 Note that, for "playername", valid() returns 0 if the name is valid but currently in use by a player other than `<target>`.
 

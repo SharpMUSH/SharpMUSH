@@ -42,6 +42,7 @@ public static class ConfigSections
 			new("/admin/config/sitelock", "SitelockRules", Icons.Material.Outlined.Lock, "Sitelock"),
 			new("/admin/config/bannednames", "BannedNames", Icons.Material.Outlined.Block, "BannedNames"),
 			new("/admin/config/restrictions", "Restriction", Icons.Material.Outlined.GppBad, "Restrictions"),
+			new("/admin/config/secrets", "Secrets", Icons.Material.Outlined.Key, "AdmSecrets"),
 		]),
 		new("Content", "Content", "ContentCategoryDescription", Icons.Material.Outlined.Article, false,
 		[

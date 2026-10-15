@@ -108,6 +108,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IGameMessageService MessageService { get; }
 	private IConfigOptionWriter ConfigWriter { get; }
 
+	private ISecretStore Secrets { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -172,6 +174,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IMsspReportService msspReport,
 		IGameMessageService gameMessages,
 		IConfigOptionWriter configWriter,
+		ISecretStore secrets,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -228,6 +231,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		MsspReport = msspReport;
 		MessageService = gameMessages;
 		ConfigWriter = configWriter;
+		Secrets = secrets;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

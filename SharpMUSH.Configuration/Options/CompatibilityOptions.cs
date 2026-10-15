@@ -63,5 +63,13 @@ public record CompatibilityOptions(
 		Description = "Raise the PennMUSH events SharpMUSH has nothing of its own to raise from: the dump events on the dump_interval timer, db`dbck on the dbck_interval timer, log`huh, the sql and signal events, player`inactivity (which disconnects idle players after idle_timeout) and http`fail. A PennMUSH database import turns it on",
 		Group = "PennMUSH Compatibility",
 		Order = 3)]
-	bool CompatibilityEvents
+	bool CompatibilityEvents,
+
+	[property: SharpConfig(
+		Name = "innermost_tokens",
+		Category = "Compatibility",
+		Description = "Read ## and #@ from the innermost iter() or @dolist that is running, and #$ from the innermost switch whose action is running, wherever the token is written, as TinyMUX does. Off, they read the outermost one whose text they are written in, as PennMUSH does",
+		Group = "TinyMUX Compatibility",
+		Order = 1)]
+	bool InnermostTokens
 );

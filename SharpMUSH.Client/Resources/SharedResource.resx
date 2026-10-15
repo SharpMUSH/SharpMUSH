@@ -7942,6 +7942,69 @@
   <data name="AdmWebhooksOutcomeDropped" xml:space="preserve">
     <value>{0}; dropped</value>
   </data>
+  <data name="AdmSecrets" xml:space="preserve">
+    <value>Secrets</value>
+  </data>
+  <data name="AdmSecretsDescription" xml:space="preserve">
+    <value>Passwords, tokens and keys the server uses, such as the SQL password. A value is encrypted with the server's key ring and never shown again. An environment variable or a file in /run/secrets overrides a stored value.</value>
+  </data>
+  <data name="AdmSecretSetTitle" xml:space="preserve">
+    <value>Set a secret</value>
+  </data>
+  <data name="AdmSecretName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AdmSecretValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="AdmSecretsList" xml:space="preserve">
+    <value>Secrets</value>
+  </data>
+  <data name="AdmSecretsForbidden" xml:space="preserve">
+    <value>You may not manage any secret.</value>
+  </data>
+  <data name="AdmSecretsNone" xml:space="preserve">
+    <value>No secrets are declared or stored.</value>
+  </data>
+  <data name="AdmSecretStoredBy" xml:space="preserve">
+    <value>Stored {0} by {1}</value>
+  </data>
+  <data name="AdmSecretReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="AdmSecretClear" xml:space="preserve">
+    <value>Clear the stored value</value>
+  </data>
+  <data name="AdmSecretSaved" xml:space="preserve">
+    <value>{0} is set. Its value is never shown again.</value>
+  </data>
+  <data name="AdmSecretSavedOverridden" xml:space="preserve">
+    <value>{0} is set, but {1} overrides it while that is there.</value>
+  </data>
+  <data name="AdmSecretSaveFailed" xml:space="preserve">
+    <value>{0} was not set: {1}</value>
+  </data>
+  <data name="AdmSecretCleared" xml:space="preserve">
+    <value>{0} is cleared.</value>
+  </data>
+  <data name="AdmSecretClearFailed" xml:space="preserve">
+    <value>{0} was not cleared: {1}</value>
+  </data>
+  <data name="AdmSecretsLoadFailed" xml:space="preserve">
+    <value>The secrets could not be loaded: {0}</value>
+  </data>
+  <data name="AdmSecretSourceStored" xml:space="preserve">
+    <value>stored</value>
+  </data>
+  <data name="AdmSecretSourceOverride" xml:space="preserve">
+    <value>set by {0}</value>
+  </data>
+  <data name="AdmSecretSourceUnreadable" xml:space="preserve">
+    <value>unreadable: set it again</value>
+  </data>
+  <data name="AdmSecretSourceUnset" xml:space="preserve">
+    <value>not set</value>
+  </data>
   <data name="NavLibrarySearch" xml:space="preserve">
     <value>Search the image library</value>
   </data>

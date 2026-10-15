@@ -29,6 +29,10 @@ public sealed class WebhookPublishingEventService(
 		await inner.TriggerEventAsync(eventName, enactor, args);
 	}
 
+	/// <inheritdoc />
+	/// <remarks>Only the game's handler counts: a webhook hears an event but does not answer it in the game.</remarks>
+	public ValueTask<bool> HasHandlerAsync(string eventName) => inner.HasHandlerAsync(eventName);
+
 	private async ValueTask PublishAsync(string eventName, DBRef? enactor, IReadOnlyList<string> args)
 	{
 		try

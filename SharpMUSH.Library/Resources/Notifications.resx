@@ -3087,4 +3087,25 @@ PLAYERS:</value>
   <data name="AsciiTranslationUsage" xml:space="preserve">
     <value>Usage: @ascii[/remove] &lt;character&gt;[=&lt;text&gt;]</value>
   </data>
+  <data name="SecretUsage" xml:space="preserve">
+    <value>Usage: @secret[/list], @secret &lt;name&gt;=&lt;value&gt;, or @secret/clear &lt;name&gt;</value>
+  </data>
+  <data name="SecretSetFormat" xml:space="preserve">
+    <value>{0} is set. Its value is never shown again.</value>
+  </data>
+  <data name="SecretSetOverriddenFormat" xml:space="preserve">
+    <value>{0} is set, but {1} overrides it while that is there.</value>
+  </data>
+  <data name="SecretClearedFormat" xml:space="preserve">
+    <value>{0} is cleared.</value>
+  </data>
+  <data name="SecretClearedOverriddenFormat" xml:space="preserve">
+    <value>{0} is cleared, but {1} still sets it.</value>
+  </data>
+  <data name="SecretNotStoredFormat" xml:space="preserve">
+    <value>{0} has no stored value.</value>
+  </data>
+  <data name="SecretRefusedFormat" xml:space="preserve">
+    <value>{0}</value>
+  </data>
 </root>

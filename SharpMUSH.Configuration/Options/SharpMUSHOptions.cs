@@ -103,7 +103,8 @@ public record SharpMUSHOptions
 			TinyTrimFun: false,
 			ParenGroups: false,
 			HttpQRegisters: false,
-			CompatibilityEvents: false
+			CompatibilityEvents: false,
+			InnermostTokens: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,
@@ -272,7 +273,6 @@ public record SharpMUSHOptions
 			SocketFile: "netmush.sock",
 			SqlHost: null,
 			SqlPlatform: null,
-			SqlPassword: null,
 			SqlDatabase: null,
 			SqlUsername: null,
 			SslIpAddr: null,
