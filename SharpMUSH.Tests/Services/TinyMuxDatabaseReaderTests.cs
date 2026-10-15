@@ -155,7 +155,7 @@ public class TinyMuxDatabaseReaderTests
 		var database = await ReadV5();
 
 		await Assert.That(database.SourceOptions["mux_logic"] is true).IsTrue();
-		await Assert.That(database.SourceOptions["mux_list"] is true).IsTrue();
+		await Assert.That(database.SourceOptions["rhost_list"] is true).IsTrue();
 		await Assert.That(database.SourceOptions["innermost_tokens"] is true).IsTrue();
 		await Assert.That(database.SourceOptions["function_recursion_limit"]).IsEqualTo(500u);
 		await Assert.That(database.SourceOptions.ContainsKey("http_qregisters")).IsFalse();
@@ -173,7 +173,7 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(notes).Contains(note => note.StartsWith("Flag KEY imported as a custom flag"));
 		await Assert.That(notes).Contains(note => note.Contains("SpeechLock on an object that is not AUDITORIUM"));
 		await Assert.That(notes).Contains(note => note.StartsWith("Zone object's EnterLock copied"));
-		await Assert.That(notes).Contains(note => note.Contains("mux_list is being renamed rhost_list"));
+		await Assert.That(notes).Contains(note => note.StartsWith("Imported from a TinyMUX flatfile") && note.Contains("rhost_list"));
 		await Assert.That(notes).Contains(note => note.StartsWith("Attribute number 25 not imported"));
 	}
 

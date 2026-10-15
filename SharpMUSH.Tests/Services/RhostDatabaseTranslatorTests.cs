@@ -188,7 +188,7 @@ public class RhostDatabaseTranslatorTests
 			.IsEqualTo("$+hello *:@pemit %#=ansi(hr,Hello)%b%0, today is [timefmt($I:$M $d,secs())].");
 		await Assert.That(gadget.Attributes.First(a => a.Name == "DATA").Value)
 			.IsEqualTo("[timefmt($I:$m $y,secs())]|[timefmt(%0,secs())]");
-		// list() is not rewritten: the mux_list option reads it the RhostMUSH way.
+		// list() is not rewritten: the rhost_list option reads it the RhostMUSH way.
 		await Assert.That(gadget.Attributes.First(a => a.Name == "CMD_HELLO").Value).IsEqualTo("[list(a b,##)]");
 
 		await Assert.That(database.ImportNotes).Contains(n => n.StartsWith("#9/DESCRIBE: %c/%x colour written as ansi()") && n.Contains("%<065> written as A"));

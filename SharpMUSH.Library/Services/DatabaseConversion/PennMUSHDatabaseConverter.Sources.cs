@@ -72,8 +72,8 @@ public partial class PennMUSHDatabaseConverter
 	/// </summary>
 	/// <remarks>
 	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands, and
-	/// the options are left for the administrator to set. An option this server does not have (a rename on
-	/// another branch) is reported the same way.
+	/// the options are left for the administrator to set. An option name this server does not have is
+	/// reported the same way.
 	/// </remarks>
 	private async ValueTask EnableSourceOptionsAsync(PennMUSHDatabase source, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)

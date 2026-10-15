@@ -40,7 +40,7 @@ public static partial class RhostDatabaseTranslator
 		["rhost_printf"] = true,
 		["rhost_map_args"] = true,
 		["sidefx_flag"] = true,
-		["mux_list"] = true
+		["rhost_list"] = true
 	};
 
 	/// <summary>Reads a flatfile and, when given, the mail dumps, into the import's model.</summary>
@@ -112,6 +112,9 @@ public static partial class RhostDatabaseTranslator
 		report.Line($"{ServerName} comsys channels are not imported: a stock {ServerName} runs its channels in softcode " +
 			"(SOFTCOM), which comes across with the objects that hold it; a game built with the hardcoded comsys keeps each " +
 			"player's channels in the CHANNELS attribute, which is imported as an attribute and not turned into channels.");
+		report.Line($"Imported from a {ServerName} flatfile: the import turns on paren_groups, tiny_trim_fun, rhost_edit, " +
+			"rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and rhost_list, so the imported softcode reads its " +
+			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count.");
 		database.ImportNotes = report.Finish();
 		return database;
 	}

@@ -108,9 +108,9 @@ public class RhostImportTests
 			RhostPrintf = true,
 			RhostMapArgs = true,
 			SidefxFlag = true,
-			MuxList = true
+			RhostList = true
 		});
-		await Assert.That(result.Warnings).Contains(w => w.Contains("mux_list is being renamed rhost_list"));
+		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Imported from a RhostMUSH flatfile") && w.Contains("rhost_list"));
 		// The reader's decisions lead the warnings.
 		await Assert.That(result.Warnings[0]).StartsWith("Read a RhostMUSH flatfile");
 		// %m is TinyMUX's and RhostMUSH's last command, as it is here: no PennMUSH warning about it.

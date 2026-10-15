@@ -38,17 +38,13 @@ public static partial class TinyMuxDatabaseReader
 	/// runs list() as a loop, reads ##/#@/#$ from the innermost loop, trims before characters and reads
 	/// non-numbers as 0; it allows 500 levels of recursion and 32 KB values.
 	/// </summary>
-	/// <remarks>
-	/// mux_list is being renamed rhost_list on another branch; whichever name the server has when this
-	/// runs is set, and a name it does not know is reported.
-	/// </remarks>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
 	{
 		["paren_groups"] = true,
 		["mux_logic"] = true,
 		["mux_justify"] = true,
 		["mux_collation"] = true,
-		["mux_list"] = true,
+		["rhost_list"] = true,
 		["innermost_tokens"] = true,
 		["tiny_trim_fun"] = true,
 		["tiny_math"] = true,
@@ -724,9 +720,8 @@ public static partial class TinyMuxDatabaseReader
 		{
 			var notes = _database.ImportNotes;
 			notes.Add("Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
-				"mux_list, innermost_tokens, tiny_trim_fun, tiny_math and null_eq_zero, and raises function_recursion_limit to 500 " +
-				"and max_attribute_value_length to 32768, as TinyMUX softcode expects. mux_list is being renamed rhost_list; " +
-				"if this server has the new name, set rhost_list by hand.");
+				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math and null_eq_zero, and raises function_recursion_limit to 500 " +
+				"and max_attribute_value_length to 32768, as TinyMUX softcode expects.");
 			notes.Add("TinyMUX compresses runs of spaces in evaluated text and SharpMUSH keeps them; there is no option for it yet, " +
 				"so output that relied on it may show extra spaces.");
 			if (_longValues > 0)

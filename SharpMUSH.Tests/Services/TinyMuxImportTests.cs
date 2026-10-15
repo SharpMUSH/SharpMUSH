@@ -94,7 +94,7 @@ public class TinyMuxImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.ChannelsConverted).IsEqualTo(2);
 		await Assert.That(result.MailMessagesConverted).IsEqualTo(2);
-		await Assert.That(result.Warnings).Contains(w => w.Contains("mux_list is being renamed rhost_list"));
+		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Imported from a TinyMUX flatfile") && w.Contains("rhost_list"));
 		// %m is a register in TinyMUX as here, so its softcode is not warned about.
 		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("%m"));
 
@@ -119,7 +119,7 @@ public class TinyMuxImportTests
 
 		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
 		await Assert.That(stored.Compatibility.MuxLogic).IsTrue();
-		await Assert.That(stored.Compatibility.MuxList).IsTrue();
+		await Assert.That(stored.Compatibility.RhostList).IsTrue();
 		await Assert.That(stored.Compatibility.InnermostTokens).IsTrue();
 		await Assert.That(stored.Compatibility.ParenGroups).IsTrue();
 		await Assert.That(stored.Limit.FunctionRecursionLimit).IsGreaterThanOrEqualTo(500u);
