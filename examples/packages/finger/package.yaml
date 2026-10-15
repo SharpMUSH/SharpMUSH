@@ -372,7 +372,7 @@ objects:
         - `+finger/set <field>=<text>` sets a field: `+finger/set age=32`. A field is named by its key or its label: `+finger/set full name=Wren Ash`.
         - `+finger/set <field>=` with nothing after the `=` clears it.
 
-        What you type is kept exactly as typed: brackets and percent signs are plain text. Some fields, such as Alias and Last on, are worked out by the game, and some a game keeps for staff to set.
+        What you type is kept as typed, less the spaces around the =: brackets and percent signs are plain text. Some fields, such as Alias and Last on, are worked out by the game, and some a game keeps for staff to set.
 
         ## Hiding a field
 
