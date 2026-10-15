@@ -592,8 +592,8 @@ public partial record ParserState
 	}
 
 	/// <summary>
-	/// How many <c>ATTRIBUTE`CHANGE</c> events stand behind this evaluation (see
-	/// <see cref="Services.AttributeChangeChain"/>). The event's queue entry starts one deeper than the code that
+	/// How many attribute watch handlers (<c>@attribute/watch</c>) stand behind this evaluation (see
+	/// <see cref="Services.AttributeChangeChain"/>). A handler's queue entry starts one deeper than the code that
 	/// made the change, and the actions it queues keep its depth.
 	/// </summary>
 	public int AttributeChangeDepth

@@ -133,6 +133,13 @@ public interface IAttributeStore
 	ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Sets an attribute entry's <c>@attribute/watch</c> pattern (<see cref="SharpAttributeEntry.Watch"/>), or takes it
+	/// off with null. The entry's other settings stay.
+	/// </summary>
+	/// <returns>The entry as written, or <see cref="NotFound"/> when the table has no entry by that name.</returns>
+	ValueTask<Found<SharpAttributeEntry>> SetAttributeWatchAsync(string name, string? pattern, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
@@ -140,12 +147,20 @@ public interface IAttributeStore
 	/// <param name="value">The value to place into the attribute</param>
 	/// <param name="owner">Attribute Owner</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// As <see cref="SetAttributeAsync(DBRef,string[],MString,SharpPlayer,CancellationToken)"/>, reporting the write
+	/// when the leaf's full name is one of <paramref name="watched"/> (<c>@attribute/watch</c>).
+	/// </summary>
+	/// <param name="watched">The watched attributes' full names, upper case; only theirs is the previous value read.</param>
 	/// <returns>
-	/// <see cref="NotFound"/> when the object does not exist; otherwise the leaf's change when it carries
-	/// <c>watched</c> (after the write, so a leaf created with an entry's default flags counts), else
+	/// <see cref="NotFound"/> when the object does not exist; the leaf's change when its name is watched; else
 	/// <see cref="Success"/>.
 	/// </returns>
-	ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
+	ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
+		IReadOnlySet<string> watched, CancellationToken cancellationToken = default);
 
 	/// <summary>Changes only the existing leaf attribute owner, preserving all values and flags.</summary>
 	ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default);
@@ -230,11 +245,19 @@ public interface IAttributeStore
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// As <see cref="ClearAttributeAsync(DBRef,string[],CancellationToken)"/>, reporting the write when the node's full
+	/// name is one of <paramref name="watched"/>.
+	/// </summary>
 	/// <returns>
-	/// <see cref="NotFound"/> when the path does not exist; the leaf's change, with an empty new value, when
-	/// it carried <c>watched</c>; else <see cref="Success"/>.
+	/// <see cref="NotFound"/> when the path does not exist; the node's change, with an empty new value, when its name
+	/// is watched; else <see cref="Success"/>.
 	/// </returns>
-	ValueTask<AttributeWriteOutcome> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	ValueTask<AttributeWriteOutcome> ClearAttributeAsync(DBRef dbref, string[] attribute, IReadOnlySet<string> watched,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Wipe an attribute and all of its children.
@@ -243,10 +266,17 @@ public interface IAttributeStore
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// As <see cref="WipeAttributeAsync(DBRef,string[],CancellationToken)"/>, reporting each removed node whose full
+	/// name is one of <paramref name="watched"/>.
+	/// </summary>
 	/// <returns>
 	/// <see cref="NotFound"/> when the path does not exist; a change, with an empty new value, for each removed
-	/// attribute that carried <c>watched</c> (the node and its descendants, parent first); else
-	/// <see cref="Success"/>.
+	/// attribute whose name is watched (the node and its descendants, parent first); else <see cref="Success"/>.
 	/// </returns>
-	ValueTask<AttributeWriteOutcome> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	ValueTask<AttributeWriteOutcome> WipeAttributeAsync(DBRef dbref, string[] attribute, IReadOnlySet<string> watched,
+		CancellationToken cancellationToken = default);
 }

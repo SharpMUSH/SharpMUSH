@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Globalization;
 using System.Text;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Wiki;
 
@@ -239,7 +240,7 @@ public static class PackageManifestWriter
 		foreach (var entry in entries)
 		{
 			yaml.Append("  ").Append(Scalar(entry.Name)).Append(':');
-			if (entry.Flags.Count == 0 && entry.Limit is null && entry.Enum is null && !entry.Retroactive)
+			if (entry.Flags.Count == 0 && entry.Limit is null && entry.Enum is null && !entry.Retroactive && entry.Index is null && entry.Watch is null)
 			{
 				yaml.AppendLine(" {}");
 				continue;
@@ -269,6 +270,18 @@ public static class PackageManifestWriter
 			if (entry.Retroactive)
 			{
 				yaml.AppendLine("    retroactive: true");
+			}
+
+			if (entry.Index is { } index)
+			{
+				// Quoted: a split delimiter may be a character YAML would read otherwise.
+				yaml.Append("    index: ").AppendLine(index.Words.Length == 0 ? "true" : Quoted(index.Words));
+			}
+
+			if (entry.Watch is { } watch)
+			{
+				// The default pattern reads back from true; any other is quoted, for its backticks and wildcards.
+				yaml.Append("    watch: ").AppendLine(watch == AttributeWatch.DefaultPattern(entry.Name) ? "true" : Quoted(watch));
 			}
 		}
 	}

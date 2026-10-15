@@ -1,6 +1,6 @@
 format: 1
 package: health
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -234,14 +234,14 @@ objects:
         value: |-
           setq(as_of,u(%!/FUN`READ`AT,%0,$.asOf))[box(chain(u(%!/FUN`DISPLAY`FILTERS),u(%!/FUN`SCREEN`SUMMARYFIELDS,%0),%#,%q<days>)%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER)],Health)]
         flags: [funsyntax]
-      # The summary's fields, split by chr(30). Scenes appear only when something records them.
+      # The summary's fields, split by a marked separator, %*<|>. Scenes appear only when something records them.
       FUN`SCREEN`SUMMARYFIELDS:
         value: |-
           setqm(scenes,u(%!/FUN`READ`AT,%0,$.scenes),
           peak_players,u(%!/FUN`READ`AT,%0,$.peak.players))[lfields(,
-          Approved[chr(30)]Posed[chr(30)]Poses[if(strlen(%q<scenes>),[chr(30)]Scenes)][chr(30)]New approvals[chr(30)]Rooms used[chr(30)]Dead rooms[chr(30)]Drifting[chr(30)]Busiest hour,
-          [u(%!/FUN`READ`AT,%0,$.approved)][chr(30)][u(%!/FUN`DISPLAY`TREND,u(%!/FUN`READ`AT,%0,$.posed),u(%!/FUN`READ`AT,%0,$.posedBefore))][chr(30)][u(%!/FUN`DISPLAY`TREND,u(%!/FUN`READ`AT,%0,$.poses),u(%!/FUN`READ`AT,%0,$.posesBefore))][if(strlen(%q<scenes>),[chr(30)][u(%!/FUN`DISPLAY`TREND,%q<scenes>,u(%!/FUN`READ`AT,%0,$.scenesBefore))])][chr(30)][u(%!/FUN`READ`AT,%0,$.newApprovals)][chr(30)][u(%!/FUN`READ`AT,%0,$.roomsUsed)][chr(30)][u(%!/FUN`READ`AT,%0,$.roomsDead)][chr(30)][u(%!/FUN`READ`AT,%0,$.drifting)][chr(30)][if(strlen(%q<peak_players>),[u(%!/FUN`DISPLAY`WEEKDAY,u(%!/FUN`READ`AT,%0,$.peak.weekday))] [rjust(u(%!/FUN`READ`AT,%0,$.peak.hour),2,0)]:00 [tone(muted,· [round(%q<peak_players>,1)] posing · [u(%!/FUN`READ`AT,%0,$.zone)])],tone(muted,nobody posed))],
-          chr(30))]
+          Approved%*<|>Posed%*<|>Poses[if(strlen(%q<scenes>),%*<|>Scenes)]%*<|>New approvals%*<|>Rooms used%*<|>Dead rooms%*<|>Drifting%*<|>Busiest hour,
+          [u(%!/FUN`READ`AT,%0,$.approved)]%*<|>[u(%!/FUN`DISPLAY`TREND,u(%!/FUN`READ`AT,%0,$.posed),u(%!/FUN`READ`AT,%0,$.posedBefore))]%*<|>[u(%!/FUN`DISPLAY`TREND,u(%!/FUN`READ`AT,%0,$.poses),u(%!/FUN`READ`AT,%0,$.posesBefore))][if(strlen(%q<scenes>),%*<|>[u(%!/FUN`DISPLAY`TREND,%q<scenes>,u(%!/FUN`READ`AT,%0,$.scenesBefore))])]%*<|>[u(%!/FUN`READ`AT,%0,$.newApprovals)]%*<|>[u(%!/FUN`READ`AT,%0,$.roomsUsed)]%*<|>[u(%!/FUN`READ`AT,%0,$.roomsDead)]%*<|>[u(%!/FUN`READ`AT,%0,$.drifting)]%*<|>[if(strlen(%q<peak_players>),[u(%!/FUN`DISPLAY`WEEKDAY,u(%!/FUN`READ`AT,%0,$.peak.weekday))] [rjust(u(%!/FUN`READ`AT,%0,$.peak.hour),2,0)]:00 [tone(muted,· [round(%q<peak_players>,1)] posing · [u(%!/FUN`READ`AT,%0,$.zone)])],tone(muted,nobody posed))],
+          %*<|>)]
         flags: [funsyntax]
 
       # ---- +health/drifting -------------------------------------------------------

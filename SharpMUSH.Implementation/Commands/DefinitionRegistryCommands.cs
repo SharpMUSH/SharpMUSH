@@ -1669,7 +1669,7 @@ public partial class Commands : ICommandRestrictionApplier
 		=> flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase);
 
 	[SharpCommand(Name = "@ATTRIBUTE",
-		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE"],
+		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE", "INDEX", "WATCH"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["attribute", "options..."])]
 	public async ValueTask<Option<CallState>> Attribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1707,6 +1707,9 @@ public partial class Commands : ICommandRestrictionApplier
 			"ACCESS" => await SetAttributeAccessAsync(parser, executor, attrName, switches.Contains("RETROACTIVE")),
 			"DELETE" => await DeleteAttributeEntryAsync(executor, attrName),
 			"RENAME" => await RenameAttributeEntryAsync(parser, executor, attrName),
+			"INDEX" => await IndexAttributeEntryAsync(executor, attrName, args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty),
+			// No '=' at all takes the default pattern; an empty one turns watching off.
+			"WATCH" => await WatchAttributeEntryAsync(executor, attrName, args.GetValueOrDefault("1")?.Message.ToPlainText()),
 			// Penn's cmds.c tries /limit before /enum.
 			_ => await SetAttributeRestrictionAsync(executor, attrName,
 				args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty, isEnum: action == "ENUM")
@@ -1714,7 +1717,7 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	/// <summary>The <c>@attribute</c> switches that change the table, in the order they are tried; each is Wizard.</summary>
-	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "LIMIT", "ENUM"];
+	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "INDEX", "WATCH", "LIMIT", "ENUM"];
 
 	/// <summary>
 	/// @attribute/decompile [&lt;pattern&gt;]: the @attribute commands that would re-create each matching
@@ -1763,6 +1766,16 @@ public partial class Commands : ICommandRestrictionApplier
 			var target = entry.EnumDelimiter == ' ' ? entry.Name : $"{entry.EnumDelimiter} {entry.Name}";
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), executor, target, string.Join(entry.EnumDelimiter, choices));
 		}
+
+		if (entry.Index is { } index)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileIndexFormat), executor, entry.Name, index.Options.Words);
+		}
+
+		if (entry.Watch is { } watch)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileWatchFormat), executor, entry.Name, watch);
+		}
 	}
 
 	/// <summary>
@@ -1797,6 +1810,13 @@ public partial class Commands : ICommandRestrictionApplier
 
 		// Permissions only: the entry's limit or enum survives, as in Penn's do_attribute_access.
 		var current = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
+		if (current?.Index is not null && flagNames.Contains("INTERNAL", StringComparer.OrdinalIgnoreCase))
+		{
+			// An index never lists an internal copy, so an indexed entry cannot make every new copy internal.
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexedNotInternalFormat), executor, current.Name);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames,
 			current?.Limit, current?.Enum, current?.EnumDelimiter ?? ' '));
 		if (entry == null)
@@ -1830,6 +1850,157 @@ public partial class Commands : ICommandRestrictionApplier
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// <c>@attribute/index &lt;attr&gt;[=&lt;options&gt;]</c> puts an index on the entry's values and builds it, and
+	/// <c>=off</c> takes it off. The build runs in the background a batch at a time; the command waits for it as long
+	/// as its evaluation may, then says how far it got, and tells the caller again when it is ready.
+	/// </summary>
+	private async ValueTask<Option<CallState>> IndexAttributeEntryAsync(AnySharpObject executor, string target, string optionText)
+	{
+		var name = target.Trim().TrimStart('@').ToUpperInvariant();
+		if (await Mediator.Send(new GetAttributeEntryQuery(name)) is not SharpAttributeEntry entry)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		if (optionText.Trim().Equals("off", StringComparison.OrdinalIgnoreCase))
+		{
+			var dropped = await Mediator.Send(new DropAttributeIndexCommand(entry.Name));
+			await NotifyService.NotifyLocalized(executor, dropped
+					? nameof(ErrorMessages.Notifications.AttributeCommandIndexRemovedFormat)
+					: nameof(ErrorMessages.Notifications.AttributeCommandIndexNoneFormat),
+				executor, entry.Name);
+			return CallState.Empty;
+		}
+
+		return AttributeIndexOptions.Parse(optionText) switch
+		{
+			AttributeIndexOptions options => await SetAttributeIndexAsync(executor, entry, options),
+			Error<string> error => await RefuseIndexOptionsAsync(executor, error.Value)
+		};
+	}
+
+	/// <summary>
+	/// <c>@attribute/watch &lt;attr&gt;[=&lt;pattern&gt;]</c>: from now on every set, clear or wipe of a copy of the attribute,
+	/// on any object, runs the event handler's attributes matching the pattern (<see cref="AttributeWatch"/>). With no
+	/// <c>=</c> the pattern is <see cref="AttributeWatch.DefaultPattern"/>; an empty one turns watching off. As with
+	/// <c>/limit</c> and <c>/enum</c>, the attribute must already be in the table.
+	/// </summary>
+	private async ValueTask<Option<CallState>> WatchAttributeEntryAsync(AnySharpObject executor, string target, string? given)
+	{
+		var name = target.Trim().TrimStart('@').ToUpperInvariant();
+		if (await Mediator.Send(new GetAttributeEntryQuery(name)) is not SharpAttributeEntry entry)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		var pattern = given is null ? AttributeWatch.DefaultPattern(entry.Name) : AttributeWatch.Normalize(given);
+		if (pattern is null && entry.Watch is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandWatchNoneFormat), executor, entry.Name);
+			return CallState.Empty;
+		}
+
+		return await Mediator.Send(new SetAttributeWatchCommand(entry.Name, pattern)) switch
+		{
+			SharpAttributeEntry { Watch: { } watch } watched => await ReportWatchAsync(executor,
+				nameof(ErrorMessages.Notifications.AttributeCommandWatchSetFormat), watched.Name, watch),
+			SharpAttributeEntry unwatched => await ReportWatchAsync(executor,
+				nameof(ErrorMessages.Notifications.AttributeCommandWatchRemovedFormat), unwatched.Name),
+			_ => await ReportWatchGoneAsync(executor)
+		};
+	}
+
+	private async ValueTask<Option<CallState>> ReportWatchAsync(AnySharpObject executor, string key, params object[] args)
+	{
+		await NotifyService.NotifyLocalized(executor, key, executor, args);
+		return CallState.Empty;
+	}
+
+	/// <summary>The entry was deleted between the lookup and the write.</summary>
+	private async ValueTask<Option<CallState>> ReportWatchGoneAsync(AnySharpObject executor)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+		return new CallState(ErrorMessages.Returns.NotFound);
+	}
+
+	private async ValueTask<Option<CallState>> RefuseIndexOptionsAsync(AnySharpObject executor, string why)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexOptionsFormat), executor, why);
+		return new CallState(ErrorMessages.Returns.InvalidArguments);
+	}
+
+	private async ValueTask<Option<CallState>> SetAttributeIndexAsync(AnySharpObject executor, SharpAttributeEntry entry,
+		AttributeIndexOptions options)
+	{
+		if (entry.DefaultFlags.Contains("internal", StringComparer.OrdinalIgnoreCase))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexInternalFormat), executor, entry.Name);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (entry.Index is { Ready: true } current && current.Options == options)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexUnchangedFormat), executor, entry.Name, options.Describe());
+			return CallState.Empty;
+		}
+
+		return await Mediator.Send(new SetAttributeIndexCommand(entry.Name, options)) switch
+		{
+			SharpAttributeEntry indexed => await BuildAttributeIndexAsync(executor, indexed.Name, options),
+			Error<string> error => await RefuseIndexAsync(executor, error.Value)
+		};
+	}
+
+	private async ValueTask<Option<CallState>> RefuseIndexAsync(AnySharpObject executor, string why)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexRefusedFormat), executor, why);
+		return new CallState(ErrorMessages.Returns.InvalidArguments);
+	}
+
+	/// <summary>
+	/// Starts (or joins) the build and waits for it as long as the evaluation may, reporting as
+	/// <c>@attribute/retroactive</c> does: done, or how far it got and that it goes on.
+	/// </summary>
+	private async ValueTask<Option<CallState>> BuildAttributeIndexAsync(AnySharpObject executor, string name, AttributeIndexOptions options)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexSettingFormat), executor, name, options.Describe());
+		var build = AttributeIndexBuilder.Build(name);
+		try
+		{
+			await ReportIndexBuildAsync(executor, build, await build.Completion.WaitAsync(ExecutionBudget.CurrentToken));
+		}
+		catch (OperationCanceledException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexContinuingFormat), executor,
+				name, build.Scanned, build.Total, build.Indexed);
+			_ = ReportWhenBuiltAsync(executor, build);
+		}
+
+		return CallState.Empty;
+	}
+
+	private async Task ReportWhenBuiltAsync(AnySharpObject executor, AttributeIndexBuild build)
+	{
+		try
+		{
+			await ReportIndexBuildAsync(executor, build, await build.Completion);
+		}
+		catch (Exception ex)
+		{
+			// Stopped by shutdown or a failure the builder has logged; the build resumes at the next start.
+			Logger.LogDebug(ex, "No ready notice for the index on {Attribute}.", build.Name);
+		}
+	}
+
+	private ValueTask ReportIndexBuildAsync(AnySharpObject executor, AttributeIndexBuild build, Found<AttributeIndexBuildStep> outcome)
+		=> outcome is AttributeIndexBuildStep
+			? NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexReadyFormat), executor,
+				build.Name, build.Indexed, build.Scanned)
+			: NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexGoneFormat), executor, build.Name);
+
 	/// <summary>@attribute/rename: renames the table entry.</summary>
 	private async ValueTask<Option<CallState>> RenameAttributeEntryAsync(IMUSHCodeParser parser, AnySharpObject executor, string attrName)
 	{
@@ -1854,10 +2025,15 @@ public partial class Commands : ICommandRestrictionApplier
 
 		// Note: Existing attribute instances keep their original names - this only affects new instances
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRenamedFormat), executor, attrName, newName);
+		if (await Mediator.Send(new GetAttributeEntryQuery(newName.ToUpper())) is { Index: { Ready: false } })
+		{
+			// The index moved with the entry and builds again over the copies of the new name.
+			AttributeIndexBuilder.Build(newName.ToUpperInvariant());
+		}
 		return CallState.Empty;
 	}
 
-	/// <summary><c>@attribute &lt;attr&gt;</c>: the table entry's default flags, limit and enum.</summary>
+	/// <summary><c>@attribute &lt;attr&gt;</c>: the table entry's default flags, limit or enum, index and watch.</summary>
 	private async ValueTask<Option<CallState>> DescribeAttributeEntryAsync(AnySharpObject executor, string attrName)
 	{
 		var attrEntry = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
@@ -1888,6 +2064,17 @@ public partial class Commands : ICommandRestrictionApplier
 		if (attrEntry.Enum != null && attrEntry.Enum.Any())
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(attrEntry.EnumDelimiter, attrEntry.Enum));
+		}
+
+		if (attrEntry.Index is { } index)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexDescribeFormat), executor,
+				index.Options.Describe(), index.Ready ? "ready" : $"building, at #{index.ResumeAt}");
+		}
+
+		if (attrEntry.Watch is { } watch)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandWatchDescribeFormat), executor, watch);
 		}
 
 		return CallState.Empty;

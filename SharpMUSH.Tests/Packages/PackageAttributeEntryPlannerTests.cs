@@ -16,7 +16,8 @@ public class PackageAttributeEntryPlannerTests
 	private static PackageDeclarationLiveState Live(
 		IReadOnlyList<SharpAttributeEntry>? table = null,
 		IReadOnlyDictionary<(PackageDeclarationKind, string), string>? others = null,
-		IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>>? copies = null)
+		IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>>? copies = null,
+		IReadOnlyDictionary<string, long>? indexCopies = null)
 		=> new(
 			[.. Categories.RoleSeeds],
 			[.. Categories.PermissionSeeds],
@@ -26,11 +27,14 @@ public class PackageAttributeEntryPlannerTests
 			others ?? new Dictionary<(PackageDeclarationKind, string), string>(),
 			table ?? [],
 			PackageManifestService.AttributeEntryFlags,
-			copies);
+			copies,
+			indexCopies);
 
 	private static SharpAttributeEntry Entry(PackageAttributeEntrySpec spec) => new()
 	{
-		Name = spec.Name, DefaultFlags = [.. spec.Flags], Limit = spec.Limit, Enum = spec.Enum?.ToArray(), EnumDelimiter = spec.EnumDelimiter
+		Name = spec.Name, DefaultFlags = [.. spec.Flags], Limit = spec.Limit, Enum = spec.Enum?.ToArray(), EnumDelimiter = spec.EnumDelimiter,
+		Index = spec.Index is { } index ? new AttributeIndexDefinition(index, true, 0) : null,
+		Watch = spec.Watch
 	};
 
 	private static PackageDeclarationChange ChangeOf(PackageDeclarationPlan plan, string name)
@@ -231,5 +235,120 @@ public class PackageAttributeEntryPlannerTests
 
 		await Assert.That(ChangeOf(plan, "JOB`STATUS").Action).IsEqualTo(PackageDeclarationAction.NoChange);
 		await Assert.That(plan.AttributeEntryWrites).IsEmpty();
+	}
+
+	private static readonly PackageAttributeEntrySpec Level =
+		new("JOB`LEVEL", [], Index: new AttributeIndexOptions(Numeric: true));
+
+	[Test]
+	public async Task AnIndexedEntrySaysHowManyObjectsItBuildsOver()
+	{
+		var plan = PackageDeclarationPlanner.Plan(Declared(Level), null,
+			Live(indexCopies: new Dictionary<string, long> { ["JOB`LEVEL"] = 42 }), 5);
+
+		var change = ChangeOf(plan, "JOB`LEVEL");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Create);
+		await Assert.That(change.Detail!).Contains("Builds an index");
+		await Assert.That(change.Detail!).Contains("on 42 objects");
+		await Assert.That(plan.AttributeEntryWrites.Single().Entry.Index).IsEqualTo(Level.Index);
+	}
+
+	[Test]
+	public async Task TheGamesEntryWithoutTheIndexBlocks()
+	{
+		var theirs = Entry(Level with { Index = null });
+		var plan = PackageDeclarationPlanner.Plan(Declared(Level), null, Live([theirs]), 5);
+
+		var change = ChangeOf(plan, "JOB`LEVEL");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Blocked);
+		await Assert.That(change.Detail!).Contains("@attribute/index JOB`LEVEL=numeric");
+	}
+
+	[Test]
+	public async Task TheGamesEntryWithTheSameIndexIsUsed()
+	{
+		var plan = PackageDeclarationPlanner.Plan(Declared(Level), null, Live([Entry(Level)]), 5);
+
+		await Assert.That(plan.IsBlocked).IsFalse();
+		await Assert.That(ChangeOf(plan, "JOB`LEVEL").Action).IsEqualTo(PackageDeclarationAction.Existing);
+	}
+
+	[Test]
+	public async Task AnUpgradeThatAddsAnIndexUpdatesTheEntry()
+	{
+		var before = Level with { Index = null };
+		var plan = PackageDeclarationPlanner.Plan(Declared(Level), Declared(before),
+			Live([Entry(before)], indexCopies: new Dictionary<string, long> { ["JOB`LEVEL"] = 1 }), 5);
+
+		var change = ChangeOf(plan, "JOB`LEVEL");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Update);
+		await Assert.That(change.Detail!).Contains("on 1 object.");
+		await Assert.That(plan.AttributeEntryWrites.Single().Entry.Index).IsEqualTo(Level.Index);
+	}
+
+	[Test]
+	public async Task AnIndexStaffChangedSurvivesAnUpgradeThatKeepsTheDeclaredOne()
+	{
+		var staffs = Level with { Index = new AttributeIndexOptions(Numeric: true, Exact: true) };
+		var plan = PackageDeclarationPlanner.Plan(Declared(Level), Declared(Level), Live([Entry(staffs)]), 5);
+
+		await Assert.That(ChangeOf(plan, "JOB`LEVEL").Action).IsEqualTo(PackageDeclarationAction.NoChange);
+	}
+
+	private static readonly PackageAttributeEntrySpec Hp = new("HP", [], Watch: "WATCH`HP WATCH`HP`*");
+
+	[Test]
+	public async Task AWatchedEntrySaysSoWhenCreated()
+	{
+		var plan = PackageDeclarationPlanner.Plan(Declared(Hp), null, Live(), 5);
+
+		var change = ChangeOf(plan, "HP");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Create);
+		await Assert.That(change.Detail!).Contains("Watched: every change runs the event handler's WATCH`HP WATCH`HP`*.");
+		await Assert.That(plan.AttributeEntryWrites.Single().Entry.Watch).IsEqualTo(Hp.Watch);
+	}
+
+	[Test]
+	public async Task TheGamesEntryWithoutTheWatchBlocks()
+	{
+		var plan = PackageDeclarationPlanner.Plan(Declared(Hp), null, Live([Entry(Hp with { Watch = null })]), 5);
+
+		var change = ChangeOf(plan, "HP");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Blocked);
+		await Assert.That(change.Detail!).Contains("@attribute/watch HP=WATCH`HP WATCH`HP`*");
+	}
+
+	[Test]
+	public async Task TheGamesEntryWithTheSameWatchIsUsed()
+	{
+		var plan = PackageDeclarationPlanner.Plan(Declared(Hp), null, Live([Entry(Hp)]), 5);
+
+		await Assert.That(plan.IsBlocked).IsFalse();
+		await Assert.That(ChangeOf(plan, "HP").Action).IsEqualTo(PackageDeclarationAction.Existing);
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task AnUpgradeThatAddsOrDropsAWatchUpdatesTheEntry(bool adds)
+	{
+		var (before, after) = adds ? (Hp with { Watch = null }, Hp) : (Hp, Hp with { Watch = null });
+		var plan = PackageDeclarationPlanner.Plan(Declared(after), Declared(before), Live([Entry(before)]), 5);
+
+		var change = ChangeOf(plan, "HP");
+		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Update);
+		await Assert.That(change.Detail!).Contains(adds
+			? "Its no watch becomes watch WATCH`HP WATCH`HP`*."
+			: "Its watch WATCH`HP WATCH`HP`* becomes no watch.");
+		await Assert.That(plan.AttributeEntryWrites.Single().Entry.Watch).IsEqualTo(after.Watch);
+	}
+
+	[Test]
+	public async Task AWatchStaffChangedSurvivesAnUpgradeThatKeepsTheDeclaredOne()
+	{
+		var staffs = Hp with { Watch = "WATCH`HP`MINE" };
+		var plan = PackageDeclarationPlanner.Plan(Declared(Hp), Declared(Hp), Live([Entry(staffs)]), 5);
+
+		await Assert.That(ChangeOf(plan, "HP").Action).IsEqualTo(PackageDeclarationAction.NoChange);
 	}
 }

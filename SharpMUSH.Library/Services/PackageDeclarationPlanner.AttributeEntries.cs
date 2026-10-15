@@ -38,11 +38,15 @@ public static partial class PackageDeclarationPlanner
 	private static string ShowFlags(IEnumerable<string> flags)
 		=> string.Join(' ', flags.Select(f => f.ToUpperInvariant()).Distinct()) is { Length: > 0 } shown ? shown : "none";
 
-	/// <summary>What a new entry is made with: its default flags, and its limit or enum when it has one.</summary>
+	/// <summary>What a new entry is made with: its default flags, its limit or enum, and its watch, when it has them.</summary>
 	private static string Declares(PackageAttributeEntrySpec entry)
-		=> Restriction.Of(entry) is { Limit: null, Choices: null }
+		=> (Restriction.Of(entry) is { Limit: null, Choices: null }
 			? $"Default flags {ShowFlags(entry.Flags)}."
-			: $"Default flags {ShowFlags(entry.Flags)}; {Restriction.Of(entry)}.";
+			: $"Default flags {ShowFlags(entry.Flags)}; {Restriction.Of(entry)}.")
+			+ (entry.Watch is { } watch ? $" Watched: every change runs the event handler's {watch}." : string.Empty);
+
+	/// <summary>A watch pattern as the review screen shows it.</summary>
+	private static string ShowWatch(string? watch) => watch is null ? "no watch" : $"watch {watch}";
 
 	/// <summary>
 	/// Diffs the declared attribute entries against what the package owned and the game's table. An entry the game
@@ -82,21 +86,31 @@ public static partial class PackageDeclarationPlanner
 				continue;
 			}
 
+			if (merged.Index is not null && merged.Flags.Contains("internal", NoCase))
+			{
+				changes.Add(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Blocked,
+					"Its default flags would include internal, and an internal attribute cannot be indexed."));
+				continue;
+			}
+
 			keep.Add(spec);
 			if (current is null)
 			{
 				var write = new PackageAttributeEntryWrite(merged, spec.Retroactive);
 				writes.Add(write);
-				changes.Add(Retroactively(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Create,
-					baseline is null ? Declares(merged) : $"It had been deleted, so it is made again. {Declares(merged)}"), write, live));
+				var created = new PackageDeclarationChange(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Create,
+					baseline is null ? Declares(merged) : $"It had been deleted, so it is made again. {Declares(merged)}");
+				changes.Add(Retroactively(Indexing(created, merged, live), write, live));
 				continue;
 			}
 
 			var flagsChange = FlagKey(merged.Flags) != FlagKey(current.DefaultFlags);
 			var restrictionChange = Restriction.Of(merged) != Restriction.Of(current);
+			var indexChange = merged.Index != current.Index?.Options;
+			var watchChange = merged.Watch != current.Watch;
 			// A version that turns retroactive on gives the existing copies the flags even when the table is unchanged.
 			var retroactive = spec.Retroactive && (flagsChange || baseline is { Retroactive: false });
-			if (!flagsChange && !restrictionChange && !retroactive)
+			if (!flagsChange && !restrictionChange && !indexChange && !watchChange && !retroactive)
 			{
 				changes.Add(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.NoChange));
 				continue;
@@ -107,11 +121,13 @@ public static partial class PackageDeclarationPlanner
 			string[] what =
 			[
 				.. flagsChange ? [$"Default flags {ShowFlags(current.DefaultFlags)} become {ShowFlags(merged.Flags)}."] : Array.Empty<string>(),
-				.. restrictionChange ? [$"Its {Restriction.Of(current)} becomes {Restriction.Of(merged)}."] : Array.Empty<string>()
+				.. restrictionChange ? [$"Its {Restriction.Of(current)} becomes {Restriction.Of(merged)}."] : Array.Empty<string>(),
+				.. indexChange && merged.Index is null ? ["Its index is taken off."] : Array.Empty<string>(),
+				.. watchChange ? [$"Its {ShowWatch(current.Watch)} becomes {ShowWatch(merged.Watch)}."] : Array.Empty<string>()
 			];
-			changes.Add(Retroactively(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Update,
-				what.Length > 0 ? string.Join(" ", what) : null),
-				update, live));
+			var updated = new PackageDeclarationChange(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Update,
+				string.Join(" ", what) is { Length: > 0 } said ? said : null);
+			changes.Add(Retroactively(indexChange ? Indexing(updated, merged, live) : updated, update, live));
 		}
 
 		foreach (var baseline in owned.AttributeEntries.Where(b => declared.AttributeEntries.All(d => d.Name != b.Name)))
@@ -140,6 +156,22 @@ public static partial class PackageDeclarationPlanner
 				$"The game's entry has {theirs}, and the package needs {wanted}. Change the game's entry with @attribute/limit or @attribute/enum, or delete it with @attribute/delete, to install.");
 		}
 
+		// The package's queries read the index it declares; one with other options orders or matches differently.
+		if (spec.Index is { } index && current.Index?.Options != index)
+		{
+			var command = index.Words.Length == 0 ? $"@attribute/index {spec.Name}" : $"@attribute/index {spec.Name}={index.Words}";
+			var have = current.Index is { } theirIndex ? $"an index of {theirIndex.Options.Describe()}" : "no index";
+			return new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Blocked,
+				$"The game's entry has {have}, and the package needs an index of {index.Describe()}. Index it with {command}, or delete it with @attribute/delete, to install.");
+		}
+
+		// The package's watch handlers run only under the pattern it declares.
+		if (spec.Watch is { } watch && current.Watch != watch)
+		{
+			return new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Blocked,
+				$"The game's entry has {ShowWatch(current.Watch)}, and the package needs {ShowWatch(watch)}. Watch it with @attribute/watch {spec.Name}={watch}, or delete it with @attribute/delete, to install.");
+		}
+
 		var detail = "The game already has this entry; it is left as it is.";
 		if (FlagKey(spec.Flags) != FlagKey(current.DefaultFlags))
 		{
@@ -152,6 +184,23 @@ public static partial class PackageDeclarationPlanner
 		}
 
 		return new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Existing, detail);
+	}
+
+	/// <summary>
+	/// For a write that puts an index on, the build it starts, in the change: how many objects hold a copy for it to
+	/// list (<see cref="PackageDeclarationLiveState.IndexCopies"/>).
+	/// </summary>
+	private static PackageDeclarationChange Indexing(PackageDeclarationChange change, PackageAttributeEntrySpec entry,
+		PackageDeclarationLiveState live)
+	{
+		if (entry.Index is not { } index)
+		{
+			return change;
+		}
+
+		var count = live.IndexCopies?.GetValueOrDefault(entry.Name) ?? 0;
+		var note = $"Builds an index ({index.Describe()}) on {count} {(count == 1 ? "object" : "objects")}.";
+		return change with { Detail = change.Detail is null ? note : $"{change.Detail} {note}" };
 	}
 
 	/// <summary>For a retroactive write, how many existing copies get the new default flags, in the change.</summary>
@@ -179,6 +228,18 @@ public static partial class PackageDeclarationPlanner
 		var restriction = Restriction.Of(spec) == Restriction.Of(baseline)
 			? (current.Limit is { Length: > 0 } ? current.Limit : null, current.Enum is { Length: > 0 } ? (IReadOnlyList<string>)current.Enum : null, current.EnumDelimiter)
 			: (spec.Limit, spec.Enum, spec.EnumDelimiter);
-		return spec with { Flags = flags, Limit = restriction.Item1, Enum = restriction.Item2, EnumDelimiter = restriction.Item3 };
+		// The index merges as one field: a change staff made with @attribute/index stays unless the package changed it.
+		var index = spec.Index == baseline.Index ? current.Index?.Options : spec.Index;
+		// So does the watch: a pattern staff set with @attribute/watch stays unless the package changed its own.
+		var watch = spec.Watch == baseline.Watch ? current.Watch : spec.Watch;
+		return spec with
+		{
+			Flags = flags,
+			Limit = restriction.Item1,
+			Enum = restriction.Item2,
+			EnumDelimiter = restriction.Item3,
+			Index = index,
+			Watch = watch
+		};
 	}
 }

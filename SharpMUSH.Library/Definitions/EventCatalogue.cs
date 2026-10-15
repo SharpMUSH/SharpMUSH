@@ -162,10 +162,6 @@ public static class EventCatalogue
 		new("OBJECT`FLAG", Args(("objid", O), ("flag", W), ("type", W), ("set", B), ("change", W)), "Whoever set or cleared it",
 			"A flag or power with the event restriction was set or cleared.", EventPrivacy.Staff, false, Penn),
 
-		new(SharpEvents.AttributeChange, Args(("objid", O), ("attribute", T), ("old", M), ("new", M), ("enactor", O)),
-			"Whoever wrote the attribute, or God (#1) for the server's own bookkeeping",
-			"An attribute flagged watched was set, cleared or wiped.", EventPrivacy.Private, false, Sharp),
-
 		new("SQL`CONNECT", Args(("platform", W)), Nobody,
 			"The game connected to its SQL database.", EventPrivacy.Public, false, Penn),
 		new("SQL`CONNECTFAIL", Args(("platform", W), ("error", T)), Nobody,

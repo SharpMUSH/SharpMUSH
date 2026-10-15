@@ -14,6 +14,7 @@ public sealed class PackageDeclarationService(
 	IPackageRegistryService packages,
 	IAccountClaimsInvalidator claims,
 	IMediator mediator,
+	IAttributeIndexBuilder indexBuilder,
 	TimeProvider? clock = null) : IPackageDeclarationService
 {
 	private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -135,7 +136,8 @@ public sealed class PackageDeclarationService(
 			declared.AttributeEntries.Count > 0
 				? await mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken).Select(f => f.Name.ToLowerInvariant()).ToHashSetAsync(cancellationToken: cancellationToken)
 				: null,
-			await AttributeCopiesAsync(declared.AttributeEntries.Where(e => e.Retroactive).Select(e => e.Name).ToArray(), cancellationToken));
+			await AttributeCopiesAsync(declared.AttributeEntries.Where(e => e.Retroactive).Select(e => e.Name).ToArray(), cancellationToken),
+			await IndexCopiesAsync(declared.AttributeEntries, cancellationToken));
 		return PackageDeclarationPlanner.Plan(declared, owned, live, _clock.GetUtcNow().ToUnixTimeMilliseconds());
 	}
 
@@ -154,6 +156,8 @@ public sealed class PackageDeclarationService(
 			await mediator.Send(new CreateAttributeEntryCommand(entry.Name, [.. entry.Flags.Select(flag => flag.ToUpperInvariant())], entry.Limit,
 				entry.Enum is null ? null : [.. entry.Enum], entry.EnumDelimiter), cancellationToken);
 			writes.Track($"attribute entry {entry.Name}", () => RestoreAttributeEntryAsync(entry.Name, previous));
+			await PutIndexAsync(entry.Name, previous?.Index?.Options, entry.Index, cancellationToken);
+			await PutWatchAsync(entry.Name, previous?.Watch, entry.Watch, cancellationToken);
 		}
 
 		foreach (var name in plan.AttributeEntryRemovals)
@@ -210,7 +214,59 @@ public sealed class PackageDeclarationService(
 			return;
 		}
 
+		var now = await mediator.Send(new GetAttributeEntryQuery(name));
 		await mediator.Send(new CreateAttributeEntryCommand(previous.Name, previous.DefaultFlags, previous.Limit, previous.Enum, previous.EnumDelimiter));
+		await PutIndexAsync(previous.Name, now?.Index?.Options, previous.Index?.Options, CancellationToken.None);
+		await PutWatchAsync(previous.Name, now?.Watch, previous.Watch, CancellationToken.None);
+	}
+
+	/// <summary>Moves an entry's <c>@attribute/watch</c> pattern from <paramref name="had"/> to <paramref name="wanted"/>.</summary>
+	private async Task PutWatchAsync(string name, string? had, string? wanted, CancellationToken cancellationToken)
+	{
+		if (had != wanted)
+		{
+			await mediator.Send(new SetAttributeWatchCommand(name, wanted), cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Moves an entry's index from <paramref name="had"/> to <paramref name="wanted"/>: takes it off, or puts it on and
+	/// starts its build in the background. Queries on it answer <c>#-1 INDEX BUILDING</c> until the build is done.
+	/// </summary>
+	private async Task PutIndexAsync(string name, AttributeIndexOptions? had, AttributeIndexOptions? wanted,
+		CancellationToken cancellationToken)
+	{
+		if (had == wanted)
+		{
+			return;
+		}
+
+		if (wanted is null)
+		{
+			await mediator.Send(new DropAttributeIndexCommand(name), cancellationToken);
+			return;
+		}
+
+		if (await mediator.Send(new SetAttributeIndexCommand(name, wanted), cancellationToken) is SharpAttributeEntry)
+		{
+			indexBuilder.Build(name);
+		}
+	}
+
+	/// <summary>For each declared entry with an index, how many objects hold a copy of the attribute for it to list.</summary>
+	private async Task<IReadOnlyDictionary<string, long>> IndexCopiesAsync(
+		IReadOnlyList<PackageAttributeEntrySpec> entries, CancellationToken cancellationToken)
+	{
+		var counts = new Dictionary<string, long>(StringComparer.Ordinal);
+		foreach (var entry in entries)
+		{
+			if (entry.Index is { } index)
+			{
+				counts[entry.Name] = await mediator.Send(new CountAttributeCopiesQuery(entry.Name, index.Type), cancellationToken);
+			}
+		}
+
+		return counts;
 	}
 
 	/// <summary>The flags, lowercase, of every copy of each named attribute on an object: one pass over the world, or none for no names.</summary>

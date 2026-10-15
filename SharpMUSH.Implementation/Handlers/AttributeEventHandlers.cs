@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
@@ -12,8 +11,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Handlers;
 
 /// <summary>
-/// Raises <c>ATTRIBUTE`CHANGE</c> for each change to a <c>watched</c> attribute, unless the change was made
-/// <see cref="AttributeChangeChain.MaxDepth"/> handlers deep.
+/// Runs the event handler's attributes an <c>@attribute/watch</c> pattern names, for each change to a watched
+/// attribute, unless the change was made <see cref="AttributeChangeChain.MaxDepth"/> handlers deep.
 /// </summary>
 public class AttributeEventHandlers(
 	IMediator mediator,
@@ -26,19 +25,19 @@ public class AttributeEventHandlers(
 		if (AttributeChangeChain.Depth >= AttributeChangeChain.MaxDepth)
 		{
 			logger.LogWarning(
-				"{Event} not raised for {Target}/{Attribute}: {Depth} attribute changes deep, each made by the handler of the one before",
-				SharpEvents.AttributeChange, notification.Target, notification.Attribute, AttributeChangeChain.Depth);
+				"Watch handlers {Pattern} not run for {Target}/{Attribute}: {Depth} attribute changes deep, each made by the handler of the one before",
+				notification.Pattern, notification.Target, notification.Attribute, AttributeChangeChain.Depth);
 			return;
 		}
 
-		// The write may have named the object by number alone; the handler is given its objid, as other events are.
+		// The write may have named the object by number alone; the handler is given its objid, as events are.
 		var target = await mediator.Send(new GetObjectNodeQuery(notification.Target), ExecutionBudget.CurrentToken) switch
 		{
 			AnySharpObject found => found.Object().DBRef,
 			_ => notification.Target
 		};
 
-		await eventService.TriggerEventAsync(SharpEvents.AttributeChange,
+		await eventService.QueueAttributeWatchHandlersAsync(notification.Pattern,
 			notification.Enactor,
 			[
 				MarkupText.Plain(target.ToString()),

@@ -6,22 +6,24 @@ using SharpMUSH.Library.Notifications;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 /// <summary>
-/// The one place an attribute write's <c>watched</c> changes become <see cref="AttributeChangedNotification"/>s.
+/// The one place an attribute write's watched changes become <see cref="AttributeChangedNotification"/>s.
 /// Every set, clear and wipe handler answers through here, so no caller of those commands can write a watched
 /// attribute without it being announced.
 /// </summary>
 internal static class WatchedAttributeChanges
 {
 	/// <summary>Publishes each watched change in <paramref name="outcome"/>, then answers whether the write happened.</summary>
-	public static async ValueTask<bool> AnnounceAsync(this IPublisher publisher, AttributeWriteOutcome outcome, DBRef target,
-		DBRef? enactor, CancellationToken cancellationToken)
+	public static async ValueTask<bool> AnnounceAsync(this IPublisher publisher, AttributeWriteOutcome outcome,
+		WatchedAttributes watched, DBRef target, DBRef? enactor, CancellationToken cancellationToken)
 	{
-		if (outcome is WatchedAttributesChanged watched)
+		if (outcome is WatchedAttributesChanged changed)
 		{
-			foreach (var change in watched.Changes)
+			foreach (var change in changed.Changes)
 			{
-				await publisher.Publish(new AttributeChangedNotification(target, change.Name, change.OldValue, change.NewValue, enactor),
-					cancellationToken);
+				// A watch taken off between the read of the set and the write has no pattern left; it runs nothing.
+				if (watched.Patterns.GetValueOrDefault(change.Name) is not { } pattern) continue;
+				await publisher.Publish(new AttributeChangedNotification(target, change.Name, change.OldValue, change.NewValue, enactor,
+					pattern), cancellationToken);
 			}
 		}
 

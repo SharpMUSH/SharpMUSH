@@ -45,6 +45,9 @@ public sealed record StorageCapacityReport
 	/// <summary>Earlier worlds and half-finished copies still on disk beside the live one.</summary>
 	public required IReadOnlyList<LeftoverWorld> Leftovers { get; init; }
 
+	/// <summary>Every attribute index (<c>@attribute/index</c>) and the room it takes; empty when there are none.</summary>
+	public IReadOnlyList<AttributeIndexUsage> AttributeIndexes { get; init; } = [];
+
 	/// <summary>Reader slots freed since startup because the process holding them died mid-read. Each one
 	/// pinned pages writers could not reuse until it was freed.</summary>
 	public long StaleReadersCleared { get; init; }
