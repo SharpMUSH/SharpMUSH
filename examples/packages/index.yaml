@@ -52,12 +52,12 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 1.0.4
-    description: Dynamic Application (Area 21) — a character-application form (requires http-handler)
+    version: 2.0.0
+    description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires plus-help, plus-config, http-handler)
   - path: chargen-app/
     package: chargen-app
-    version: 1.0.1
-    description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
+    version: 2.0.0
+    description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
     version: 1.11.0
