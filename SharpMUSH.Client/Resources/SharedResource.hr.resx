@@ -6237,4 +6237,12 @@
     <value>Skica samo na ovom uređaju</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Obavijesti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primajte obavijesti na ovom telefonu ili računalu kada je portal zatvoren</value>
+    <comment>MT</comment>
+  </data>
 </root>

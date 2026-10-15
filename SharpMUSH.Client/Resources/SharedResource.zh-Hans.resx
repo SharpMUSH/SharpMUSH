@@ -6237,4 +6237,12 @@
     <value>草稿仅保存在此设备上</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>通知</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>门户关闭时在此手机或电脑上接收通知</value>
+    <comment>MT</comment>
+  </data>
 </root>

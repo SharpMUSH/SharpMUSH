@@ -60,7 +60,8 @@ public partial class AdministratorGuideTests
 		foreach (var required in new[]
 		{
 			"pennmush flatfile", "mush.cnf", "maildb", "chatdb", "rhostmush", "tinymux",
-			"no direct supported importer", "one-way", "rehearsal", "validation", "## 4. cut over",
+			"comsys.db", "pennmush_database_format", "what is left behind", "check by hand",
+			"one-way", "rehearsal", "validation", "## 4. cut over",
 			"<world>.previous", "point-in-time world copy", "identity and passwords", "objects and dbrefs",
 			"attributes and locks", "flags and powers", "channels and mail", "configuration",
 			"handlers and packages", "softcode", "connections", "portal", "integrations"

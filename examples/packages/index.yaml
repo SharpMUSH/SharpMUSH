@@ -142,10 +142,20 @@ packages:
     package: discord
     version: 1.0.0
     description: The discord feed kind and the discord.admin permission, for the Discord plugin's linked channels (@discord/link)
+  - path: notifications/
+    name: Notifications
+    package: notifications
+    version: 1.0.0
+    description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
+  - path: notifications-app/
+    name: Notifications in the portal
+    package: notifications-app
+    version: 1.0.0
+    description: Registers the notification settings as a portal page at /apps/notifications (requires notifications)
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.0
+    version: 1.0.1
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
   - path: roster-jobs/
     name: Roster applications in jobs

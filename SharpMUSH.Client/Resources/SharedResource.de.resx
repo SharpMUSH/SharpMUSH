@@ -6237,4 +6237,12 @@
     <value>Entwurf nur auf diesem Gerät</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Benachrichtigungen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Benachrichtigungen auf diesem Telefon oder Computer erhalten, wenn das Portal geschlossen ist</value>
+    <comment>MT</comment>
+  </data>
 </root>

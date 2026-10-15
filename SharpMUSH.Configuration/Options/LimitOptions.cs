@@ -366,4 +366,22 @@ public record LimitOptions(
 
 	[SharpConfig(Name = "max_gallery_images", Category = "Limit", Description = "Maximum number of images one character's profile gallery may hold; an upload past it is refused", Group = "Players", Order = 5, Min = 1, Max = 1000)]
 	public uint MaxGalleryImages { get; init; } = DefaultMaxGalleryImages;
+
+	/// <summary>Default seconds since a player's last input after which @push treats them as away.</summary>
+	public const uint DefaultPushIdleSeconds = 300;
+
+	[SharpConfig(Name = "push_idle_seconds", Category = "Limit", Description = "Seconds without input after which @push treats a player with no portal tab in view as away and notifies their devices", Group = "Players", Order = 6, Min = 0, Max = 86400)]
+	public uint PushIdleSeconds { get; init; } = DefaultPushIdleSeconds;
+
+	/// <summary>Default number of push notifications one player may be sent in a minute.</summary>
+	public const uint DefaultPushLimit = 10;
+
+	[SharpConfig(Name = "push_limit", Category = "Limit", Description = "Maximum push notifications @push sends one player in a minute; past it @push outputs limited", Group = "Players", Order = 7, Min = 1, Max = 1000)]
+	public uint PushLimit { get; init; } = DefaultPushLimit;
+
+	/// <summary>Default number of browsers one account may turn push notifications on in.</summary>
+	public const uint DefaultPushDevices = 10;
+
+	[SharpConfig(Name = "push_devices", Category = "Limit", Description = "Maximum browsers one account may turn push notifications on in; each @push sends one request per browser", Group = "Players", Order = 8, Min = 1, Max = 1000)]
+	public uint PushDevices { get; init; } = DefaultPushDevices;
 }

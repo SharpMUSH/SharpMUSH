@@ -6237,4 +6237,12 @@
     <value>Чернова само на това устройство</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Известия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Получавайте известия на този телефон или компютър, когато порталът е затворен</value>
+    <comment>MT</comment>
+  </data>
 </root>

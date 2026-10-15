@@ -6237,4 +6237,12 @@
     <value>Черновик только на этом устройстве</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Уведомления</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Получайте уведомления на этом телефоне или компьютере, когда портал закрыт</value>
+    <comment>MT</comment>
+  </data>
 </root>

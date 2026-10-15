@@ -6237,4 +6237,12 @@
     <value>Utkast bare på denne enheten</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Varsler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Få varsler på denne telefonen eller datamaskinen når portalen er lukket</value>
+    <comment>MT</comment>
+  </data>
 </root>

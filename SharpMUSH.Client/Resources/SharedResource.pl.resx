@@ -6237,4 +6237,12 @@
     <value>Szkic tylko na tym urządzeniu</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Powiadomienia</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Otrzymuj powiadomienia na tym telefonie lub komputerze, gdy portal jest zamknięty</value>
+    <comment>MT</comment>
+  </data>
 </root>

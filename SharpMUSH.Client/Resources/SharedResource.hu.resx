@@ -6237,4 +6237,12 @@
     <value>Piszkozat csak ezen az eszközön</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Értesítések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Értesítések erre a telefonra vagy számítógépre, amikor a portál zárva van</value>
+    <comment>MT</comment>
+  </data>
 </root>

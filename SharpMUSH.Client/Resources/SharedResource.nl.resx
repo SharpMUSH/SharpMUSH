@@ -6237,4 +6237,12 @@
     <value>Concept alleen op dit apparaat</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Meldingen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Ontvang meldingen op deze telefoon of computer als het portaal gesloten is</value>
+    <comment>MT</comment>
+  </data>
 </root>

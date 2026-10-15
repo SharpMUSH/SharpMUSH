@@ -6237,4 +6237,12 @@
     <value>Ciornă doar pe acest dispozitiv</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primește notificări pe acest telefon sau computer când portalul este închis</value>
+    <comment>MT</comment>
+  </data>
 </root>

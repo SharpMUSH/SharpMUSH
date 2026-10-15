@@ -6237,4 +6237,12 @@
     <value>Borrador solo en este dispositivo</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificaciones</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Recibe notificaciones en este teléfono u ordenador cuando el portal está cerrado</value>
+    <comment>MT</comment>
+  </data>
 </root>

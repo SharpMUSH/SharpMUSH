@@ -6237,4 +6237,12 @@
     <value>Rascunho só neste dispositivo</value>
     <comment>MT</comment>
   </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificações</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Receba notificações neste celular ou computador quando o portal estiver fechado</value>
+    <comment>MT</comment>
+  </data>
 </root>
