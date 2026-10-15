@@ -131,6 +131,15 @@ Never pack fields into one delimited value (`name|date|dues`). One attribute tre
 
 Read directly: ``get(obj/DATA`#30:171943`DUES)``. Key by **objid**, not dbref or name. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
 
+## Settings: `` DATA`CONFIG `` and `+config`
+
+A setting staff may change (a duration, a column count, a default view) is a `` DATA`CONFIG`<NAME> `` attribute on the object whose code reads it, holding the value, with leaves saying what it accepts: `TYPE` (`text integer number boolean duration choice list pattern object timezone`), `DEFAULT`, `DESCRIPTION`, `MIN`/`MAX`, `CHOICES`, `PATTERN`, `DELIMITER` (a list's separator when not a space), `OBJECTTYPE`, `CHECK`, `PERMISSION`. Register the object with the bundled `plus-config` package (a package attaches `` SYSTEM`<system> `` to `{{plus-config/registry}}`; hand-made code uses `+config/register <system>=<object>`), and `+config <system>/<name>=<value>` checks and writes it; `config.admin` changes it unless `PERMISSION` names another.
+
+- **Read it where it lives**: `` v(DATA`CONFIG`HOURS) ``, or `` get(<obj>/DATA`CONFIG`HOURS) `` from another object. No dependency on `+config` to read.
+- **Stored form is the usable form**: durations in seconds, booleans `1`/`0`, objects as objids, lists joined by their `DELIMITER`. Write the value and `DEFAULT` that way in the manifest.
+- **No settings object, no staff-only `+mything/set`, no `@config` option** for a package's own knob. Keyed tables whose entries have several fields (statuses with hours, pose types) keep their own commands.
+- Details: `+help config writing` on a game with the package.
+
 ## Pipeline functions (SharpMUSH-specific; prefer over hand-rolled loops)
 
 | Function | Shape | Use for |
