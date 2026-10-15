@@ -38,9 +38,9 @@ depends:
 #     says Core.Hello before anyone logs in, so this is where a player's +gui off is honoured.
 #   - External.Discord.Hello: External.Discord.Info and Status. External.Discord.Get: Status.
 #
-# A URL or id the settings leave empty is not sent. Every send is oob(..., supported). Mudlet lists
-# External.Discord but not Client.GUI or Client.Map: a Mudlet that has already sent its Core.Supports
-# list by the time an offer goes out is sent no Client package (see README.md).
+# A URL or id the settings leave empty is not sent. The Discord packages go through
+# oob(..., supported). Client.GUI and Client.Map do not: Mudlet never lists Client in Core.Supports,
+# and the script that would add it lives in the very interface being offered (see README.md).
 #
 # Two objects: the Mudlet Client, in the master room, carries +gui, the settings, the help and the
 # functions that build and send each package. It holds Send_OOB, which lets oob() reach a connection
@@ -200,9 +200,9 @@ objects:
       # ── Sending ──────────────────────────────────────────────────────────
       # Each takes %0 where to send (a player or a descriptor) and returns how many connections took it.
       FUN`SEND`GUI: |-
-        oob(%0,Client.GUI,u(%!/FUN`PAYLOAD`GUI),supported)
+        oob(%0,Client.GUI,u(%!/FUN`PAYLOAD`GUI))
       FUN`SEND`MAP: |-
-        if(strlen(v(DATA`CONFIG`MAP-URL)),oob(%0,Client.Map,u(%!/FUN`PAYLOAD`MAP),supported),0)
+        if(strlen(v(DATA`CONFIG`MAP-URL)),oob(%0,Client.Map,u(%!/FUN`PAYLOAD`MAP)),0)
       FUN`SEND`DISCORDINFO: |-
         oob(%0,External.Discord.Info,u(%!/FUN`PAYLOAD`DISCORDINFO),supported)
       # %1 the player, or nothing.
@@ -224,7 +224,7 @@ objects:
       # ── Screens ──────────────────────────────────────────────────────────
       # %0 how many connections took the interface just now.
       FUN`TEXT`ON: |-
-        Your client will be offered the game's interface when you connect.[if(%0,%bIt was offered it just now.,%bNone of your connections takes GMCP now%, so it will be offered next time.)]
+        Your client will be offered the game's interface when you connect.[if(%0,%bIt was offered just now.,%bNone of your connections takes GMCP now%, so it will be offered next time.)]
       # +gui: %0 the player. A screen reader is told in two sentences; anyone else sees the fields.
       FUN`DISPLAY`STATUS: |-
         if(strlen(v(DATA`CONFIG`GUI-URL)),if(u(%!/FUN`READER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))

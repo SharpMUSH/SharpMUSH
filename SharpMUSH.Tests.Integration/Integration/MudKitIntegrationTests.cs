@@ -592,8 +592,16 @@ public class MudKitIntegrationTests
 			await Assert.That(Frames(declined[player.Handle], "Client.GUI")).IsEmpty().Because("the player turned +gui off");
 
 			var on = await watch.SentWhile(async () =>
-				await Assert.That(await As(player, "+gui on")).Contains("It was offered it just now."), player.Handle);
+				await Assert.That(await As(player, "+gui on")).Contains("It was offered just now."), player.Handle);
 			await Assert.That(Frames(on[player.Handle], "Client.GUI")).Count().IsEqualTo(1);
+
+			var stock = await ClientAsync("MuStock", room,
+				"Char 1 Char.Skills 1 Char.Items 1 Room 1 IRE.Rift 1 IRE.Composer 1 External.Discord 1 Client.Media 1");
+			var stockConnected = await watch.SentWhile(
+				() => Events.TriggerEventAsync(SharpEvents.PlayerConnect, stock.DbRef, stock.Number, "1", stock.Handle.ToString()).AsTask(),
+				stock.Handle);
+			await Assert.That(Frames(stockConnected[stock.Handle], "Client.GUI")).Count().IsEqualTo(1)
+				.Because("a stock Mudlet never lists Client, so the interface is offered without the filter");
 
 			Task ConnectEvent() =>
 				Events.TriggerEventAsync(SharpEvents.PlayerConnect, player.DbRef, player.Number, "1", player.Handle.ToString()).AsTask();

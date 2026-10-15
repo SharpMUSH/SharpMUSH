@@ -17,11 +17,11 @@ Mudlet says `Core.Hello` before anyone has logged in, when no player's choice is
 `Client.GUI` waits for the login: that is what makes `+gui off` hold. A URL or id the settings leave
 empty is not sent, and before login the Discord status names only the game.
 
-Every send is `oob(..., supported)`. Mudlet lists `External.Discord` in `Core.Supports`, but not
-`Client.GUI` or `Client.Map`: once Mudlet has sent its list, `supported` keeps the Client packages
-from it unless a script adds `Client` (`sendGMCP([[Core.Supports.Add ["Client 1"] ]])`). The list is
-usually recorded before `` PLAYER`CONNECT `` runs, so a stock Mudlet is offered the map at `Core.Hello`
-at best. This is the cost of sending every package through `supported`; see the MUD-kit notes.
+The Discord packages are sent with `oob(..., supported)`; Mudlet lists `External.Discord`.
+`Client.GUI` and `Client.Map` are sent with plain `oob()`, to every connection that takes GMCP:
+Mudlet never lists `Client` in `Core.Supports`, and the script that would add it lives in the
+interface package being offered, so filtering them would keep them from every stock Mudlet. A client
+that does not know `Client.*` ignores it.
 
 ## +gui
 

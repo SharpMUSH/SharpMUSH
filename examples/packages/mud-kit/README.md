@@ -17,9 +17,10 @@ so a game takes only what it uses.
 - **The engine owns the protocol.** It negotiates GMCP, keeps each client's `Core.Supports` list
   (`gmcpsupports()`), and raises the events. The packages shape the game's data into the standard
   GMCP bodies and send them with `oob()`; the engine never builds a Room.Info itself.
-- **Every send is `oob(..., supported)`.** A client that listed modules in `Core.Supports` is sent only
+- **Sends go through `oob(..., supported)`.** A client that listed modules in `Core.Supports` is sent only
   what it listed (or a module it belongs to: `Room` covers `Room.Info`); one that listed nothing, such
-  as TinTin++, Blightmud or MUSHclient, is sent everything.
+  as TinTin++, Blightmud or MUSHclient, is sent everything. mudlet-client's `Client.GUI` and
+  `Client.Map` are the exception: Mudlet never lists `Client`, so they go to every GMCP connection.
 - **Event handlers, one level below the event.** Each package adds `` <EVENT>`<PACKAGE> `` attributes to the
   configured event handler, beside room-contents', comm-feed's and the game's own, and never edits
   another's (`help event`).
@@ -31,10 +32,9 @@ so a game takes only what it uses.
 ## Notes for Mudlet
 
 Mudlet's `Core.Supports` list is `Char`, `Char.Skills`, `Char.Items`, `Room`, `IRE.Rift`,
-`IRE.Composer`, `External.Discord` and `Client.Media`. Because every send goes through `supported`,
-a stock Mudlet that has sent its list is not sent `Comm.*`, `Client.GUI` or `Client.Map` until a script
-adds them:
+`IRE.Composer`, `External.Discord` and `Client.Media`. A stock Mudlet that has sent its list is
+therefore not sent `Comm.*` until a script adds it (the game's interface package is the place):
 
 ```lua
-sendGMCP([[Core.Supports.Add ["Comm.Channel 1", "Client 1"] ]])
+sendGMCP([[Core.Supports.Add ["Comm.Channel 1"] ]])
 ```
