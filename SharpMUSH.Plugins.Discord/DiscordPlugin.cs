@@ -14,6 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Discord.Links;
 using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Plugins.Discord.Outbox;
+using SharpMUSH.Plugins.Discord.Roles;
 
 namespace SharpMUSH.Plugins.Discord;
 
@@ -58,7 +59,8 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<IDiscordSpeakerStore, LightningDiscordSpeakerStore>();
 		services.AddSingleton(provider => new DiscordLinkTickets(TimeProvider.System));
 		services.AddSingleton<DiscordLinkedRole>();
-		services.AddSingleton<IDiscordLinkedRole>(provider => provider.GetRequiredService<DiscordLinkedRole>());
+		services.AddSingleton<IDiscordLinkedRole>(provider => new DiscordLinkedMember(
+			provider.GetRequiredService<DiscordLinkedRole>(), provider.GetRequiredService<DiscordRoleSync>()));
 		services.AddSingleton(provider => new DiscordAccounts(provider.GetRequiredService<IDiscordAccountStore>(),
 			provider.GetRequiredService<IDiscordSpeakerStore>(), provider.GetRequiredService<DiscordLinkTickets>(),
 			provider.GetRequiredService<IAccountService>(), provider.GetRequiredService<IDiscordLinkedRole>(), TimeProvider.System,
@@ -74,6 +76,18 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		services.AddSingleton<DiscordInboundHandler>();
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordInboundHandler>());
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordInboundHandler>());
+
+		services.AddSingleton<IDiscordRoleStore, LightningDiscordRoleStore>();
+		services.AddSingleton<IDiscordRoleHolders, DiscordRoleHolders>();
+		services.AddSingleton(provider => new DiscordRoleSync(provider.GetRequiredService<IDiscordRoleStore>(),
+			provider.GetRequiredService<IDiscordAccountStore>(), provider.GetRequiredService<IDiscordRoleHolders>(), TimeProvider.System,
+			provider.GetRequiredService<ILogger<DiscordRoleSync>>()));
+		services.AddSingleton<IDiscordRoles>(provider => provider.GetRequiredService<DiscordRoleSync>());
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordRoleSync>());
+		services.AddSingleton<IAccountChangeListener>(provider => provider.GetRequiredService<DiscordRoleSync>());
+		services.AddHostedService(provider => provider.GetRequiredService<DiscordRoleSync>());
+		services.AddSingleton(provider => new DiscordRoleMaps(provider.GetRequiredService<IDiscordRoleStore>(),
+			provider.GetRequiredService<IDiscordRoles>(), provider, TimeProvider.System));
 	}
 
 	public void MapEndpoints(IEndpointRouteBuilder endpoints)

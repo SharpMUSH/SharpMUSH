@@ -41,8 +41,9 @@ public static class DiscordCommandModule
 	/// <summary>How long a link or unlink waits on Discord before the admin is told it did not answer.</summary>
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
-	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "SPEAK", "OFF"],
-		Behavior = CB.Default | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = ["channel"])]
+	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "SPEAK", "OFF", "MAP", "UNMAP",
+			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY"],
+		Behavior = CB.Default | CB.EqSplit | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "role"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var services = parser.ServiceProvider;
@@ -59,6 +60,12 @@ public static class DiscordCommandModule
 		{
 			await notify.Notify(executor, Notice("Permission denied.", NoticeKind.Error));
 			return new CallState(PermissionDenied);
+		}
+
+		if (switches.Contains("MAP") || switches.Contains("UNMAP") || switches.Contains("DRIFT"))
+		{
+			var right = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText().Trim();
+			return await DiscordRoleCommands.RunAsync(parser, executor, switches, argument, right);
 		}
 
 		var relay = services.GetRequiredService<DiscordRelay>();
