@@ -52,7 +52,11 @@ else
     @foreach (var issue in _plan.Changeset.DependencyIssues)
     {
         <MudAlert Severity="Severity.Error">
-            @if (issue.IsConflict)
+            @if (issue.IsPlugin)
+            {
+                <text>@Loc["PkgNeedsPlugin", issue.PackageId]</text>
+            }
+            else if (issue.IsConflict)
             {
                 <text>@Loc["PkgConflictsWithInstalled"] <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
             }
@@ -81,6 +85,22 @@ else
     @foreach (var blocked in (_plan.Changeset.Wiki ?? []).Where(w => w.Action == PackageWikiAction.Blocked))
     {
         <MudAlert Severity="Severity.Error">@Loc["PkgWikiBlocked"] <b>@WikiLabel(blocked)</b>: @blocked.Detail</MudAlert>
+    }
+    @switch (_plan.Changeset.Compatibility)
+    {
+        case { Fit: PackageServerFit.BelowMinimum } below:
+            <MudAlert Severity="Severity.Error" id="pkg-server-minimum">@Loc["PkgServerBelowMinimum", below.Minimum ?? "", below.Server]</MudAlert>
+            break;
+        case { Fit: PackageServerFit.AboveMaximum } above:
+            <MudAlert Severity="Severity.Warning" id="pkg-server-maximum">
+                @Loc["PkgServerAboveMaximum", above.Maximum ?? "", above.Server]
+                <MudCheckBox T="bool" @bind-Value="_pastMaximumConfirmed" Color="Color.Warning" id="pkg-server-maximum-confirm"
+                             Label="@Loc["PkgServerPastMaximumConfirm"]" />
+            </MudAlert>
+            break;
+        case { Fit: PackageServerFit.NewerThanVerified } untested:
+            <MudAlert Severity="Severity.Warning" Dense="true" id="pkg-server-verified">@Loc["PkgServerNewerThanVerified", untested.Verified ?? "", untested.Server]</MudAlert>
+            break;
     }
 
     @foreach (var warning in _plan.ManifestWarnings)
@@ -444,6 +464,11 @@ else
 
     private bool _settingsConfirmed;
 
+    /// <summary>Whether the administrator confirmed applying a package on a server newer than its <c>maximum_server</c>.</summary>
+    private bool _pastMaximumConfirmed;
+
+    private bool PastMaximum => _plan?.Changeset.Compatibility?.Fit == PackageServerFit.AboveMaximum;
+
     /// <summary>Whether the administrator confirmed they trust a plugin package's author; a plugin cannot install without it.</summary>
     private bool _pluginTrusted;
 
@@ -463,6 +488,7 @@ else
         _plan is not null
         && !_plan.Changeset.IsBlocked
         && (!ChangesSettings || _settingsConfirmed)
+        && (!PastMaximum || _pastMaximumConfirmed)
         && (!IsPlugin || _pluginTrusted)
         && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))))
         && _wikiConflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(WikiDecisionKey(c))));
@@ -497,6 +523,7 @@ else
 
             _plan = plan;
             _settingsConfirmed = false;
+            _pastMaximumConfirmed = false;
             _renders = plan.Renders.ToDictionary(r => (r.TargetRef, r.Attribute), r => r);
             _conflicts = plan.Changeset.Attributes
                 .Where(a => a.Action == PackageAttributeAction.Conflict)
@@ -564,7 +591,8 @@ else
             })).ToList();
 
             switch (await Packages.ApplyAsync(new ApplyRequest(
-                _remote, _path, _version, new(_answers), decisions, AllowPluginCode: IsPlugin && _pluginTrusted)))
+                _remote, _path, _version, new(_answers), decisions, AllowPluginCode: IsPlugin && _pluginTrusted,
+                AllowPastMaximum: PastMaximum && _pastMaximumConfirmed)))
             {
                 case ApiFailure failure:
                     Snackbar.Add(failure.Message, Severity.Error);

@@ -82,20 +82,11 @@ public record CompatibilityOptions(
 	bool MuxCollation,
 
 	[property: SharpConfig(
-		Name = "mux_list",
-		Category = "Compatibility",
-		Description = "list() with two or three arguments is TinyMUX's loop: it evaluates its second argument for each element and tells each result to the enactor. With one argument it stays PennMUSH's list()",
-		Group = "TinyMUX Compatibility",
-		Order = 4)]
-	bool MuxList
-,
-
-	[property: SharpConfig(
 		Name = "innermost_tokens",
 		Category = "Compatibility",
 		Description = "Read ## and #@ from the innermost iter() or @dolist that is running, and #$ from the innermost switch whose action is running, wherever the token is written, as TinyMUX does. Off, they read the outermost one whose text they are written in, as PennMUSH does",
 		Group = "TinyMUX Compatibility",
-		Order = 5)]
+		Order = 4)]
 	bool InnermostTokens,
 
 	[property: SharpConfig(
@@ -136,5 +127,13 @@ public record CompatibilityOptions(
 		Description = "Let side-effect functions (pemit(), set(), create() ...) work only for an object with the SIDEFX flag or the softcode.sidefx permission, as RhostMUSH does; others get the disabled-function error",
 		Group = "RhostMUSH Compatibility",
 		Order = 5)]
-	bool SidefxFlag
+	bool SidefxFlag,
+
+	[property: SharpConfig(
+		Name = "rhost_list",
+		Category = "Compatibility",
+		Description = "list() with two to five arguments is RhostMUSH's loop, which takes TinyMUX's in its first three: it evaluates its second argument for each element and tells each result to the enactor, after an optional header, or to an optional target the enactor controls. list() then needs at least two arguments, so PennMUSH's list() is not reachable",
+		Group = "RhostMUSH Compatibility",
+		Order = 6)]
+	bool RhostList
 );

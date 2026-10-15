@@ -16,7 +16,10 @@ namespace SharpMUSH.Library.Services.DatabaseConversion;
 /// </remarks>
 internal sealed class PennMUSHConversionContext
 {
-	/// <summary>Where each source PennMUSH dbref ended up in the SharpMUSH database.</summary>
+	/// <summary>The server that wrote the source (<see cref="PennMUSHDatabase.SourceName"/>), for the import's messages.</summary>
+	public string SourceName { get; init; } = DatabaseDialect.PennMUSH.DisplayName();
+
+	/// <summary>Where each source dbref ended up in the SharpMUSH database.</summary>
 	public Dictionary<int, DBRef> DbrefMapping { get; } = [];
 
 	/// <summary>

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -292,7 +293,7 @@ public class PennMUSHDbrefPreservationTests
 	public async Task TheBundledPackagesMakeWayForTheSourceAndComeBackPastIt()
 	{
 		string[] bundled = ["plus-help", "scene"];
-		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
+		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptionsWithScenePlugin);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
 		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
@@ -388,7 +389,7 @@ public class PennMUSHDbrefPreservationTests
 	public async Task AnImportThatStopsPartWayStillPutsThePackagesBack()
 	{
 		string[] bundled = ["plus-help", "scene"];
-		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
+		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptionsWithScenePlugin);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
 		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
@@ -448,6 +449,19 @@ public class PennMUSHDbrefPreservationTests
 		services.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
 		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>>(sp =>
 			new StoredOptionsWrapper(sp.GetRequiredService<IExpandedDataStore>(), configured));
+	}
+
+	/// <summary>
+	/// <see cref="StoredOptions"/> on a world where the Scene plugin runs: the scene package names it, and is
+	/// refused without it.
+	/// </summary>
+	private static void StoredOptionsWithScenePlugin(IServiceCollection services)
+	{
+		StoredOptions(services);
+		var plugins = Substitute.For<IPluginManager>();
+		plugins.Registration("scene").Returns(new PluginRegistration(false, 0, 0));
+		services.RemoveAll<IPluginManager>();
+		services.AddSingleton(plugins);
 	}
 
 	private sealed class StoredOptionsWrapper(IExpandedDataStore store, SharpMUSHOptions configured)

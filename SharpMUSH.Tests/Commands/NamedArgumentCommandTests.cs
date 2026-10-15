@@ -45,6 +45,37 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	public async Task TriggerInlineHandsRegistersBackUnlessLocalized()
+	{
+		var thing = await NewThing("TrigRegs");
+		await Run($"&STEP {thing}=think setq(back,%<who> as %!)");
+		await Run($"&RUN {thing}=@trigger/inline/args {thing}/STEP=who,Bob; &OUT {thing}=%q<back>");
+		await Run($"&KEEP {thing}=think setq(back,mine); @trigger/inline/localize/args {thing}/STEP=who,Bob; &OUT2 {thing}=%q<back>");
+		await Run($"&CLEAR {thing}=think setq(old,gone); @trigger/inline/clearregs/args {thing}/STEP=who,Ann; &OUT3 {thing}=%q<old>|%q<back>");
+		await Run($"@trigger/inline {thing}/RUN");
+		await Run($"@trigger/inline {thing}/KEEP");
+		await Run($"&MISS {thing}=think setq(old,kept); @trigger/inline/clearregs/match {thing}/STEP=zzz; &OUT4 {thing}=%q<old>");
+		await Run($"@trigger/inline {thing}/CLEAR");
+		await Run($"@trigger/inline {thing}/MISS");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo($"Bob as #{thing.Number}");
+		await Assert.That(await Eval($"get({thing}/OUT2)")).IsEqualTo("mine");
+		await Assert.That(await Eval($"get({thing}/OUT3)")).IsEqualTo($"|Ann as #{thing.Number}")
+			.Because("/clearregs empties the caller's registers and still hands the triggered ones back");
+		await Assert.That(await Eval($"get({thing}/OUT4)")).IsEqualTo("kept")
+			.Because("a trigger whose /match fails clears nothing");
+	}
+
+	[Test]
+	public async Task TriggeredLoopBindsItsOwnIterationTokens()
+	{
+		var thing = await NewThing("TrigLoop");
+		await Run($"&INNER {thing}=@dolist/inline x y=&OUT {thing}=[get({thing}/OUT)]##");
+		await Run($"&OUTER {thing}=@dolist/inline a={{@trigger/inline {thing}/INNER}}");
+		await Run($"@trigger/inline {thing}/OUTER");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("xy");
+	}
+
+	[Test]
 	public async Task TriggerArgsRefusesAnUnpairedName()
 	{
 		var thing = await NewThing("TrigOdd");

@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.5.0
+version: 1.5.2
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
@@ -11,7 +11,7 @@ requires_server: ">=0.1"
 
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
@@ -208,7 +208,7 @@ objects:
 
         It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
         well as from theirs. A Status column appears when another package gives some player a status,
-        such as `+lfrp`.
+        such as `+status lfrp`.
       HELP`WHO`FILTERS: |-
         A package can put a status in `+who` without editing who-where. It adds a **filter** to the
         Who-Where Function Object: an attribute named `` FILTER`WHO`STATUS`<name> ``. For each player,

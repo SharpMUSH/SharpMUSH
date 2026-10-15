@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.Integration;
 /// +who by name, by idle or matching a name; +where grouped under a line per location, one player per line by
 /// location or by name, and a player in an unfindable room. The shared
 /// world has other tests' players connected, so the tests look at their own players' rows and the order between
-/// them, never at the whole list. Not in parallel: +where is global, and rp-finder's tests install who-where too.
+/// them, never at the whole list. Not in parallel: +where is global, and the status and watch tests install who-where too.
 /// </summary>
 [NotInParallel]
 public class WhoWhereIntegrationTests
@@ -92,7 +92,8 @@ public class WhoWhereIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
+			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "who-where", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("who-where must install from the catalogue");
