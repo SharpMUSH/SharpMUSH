@@ -70,4 +70,30 @@ public class PackageLocalEditInstallTests
 
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
+
+	[Test]
+	public async Task AHookTheGameAddedIsListedWithTheUpgrade()
+	{
+		var id = "hooks-" + Guid.NewGuid().ToString("N")[..8];
+		(await ApplyAsync(Manifest(id, "1.0.0", "one"))).Expect<PackageApplyResult>();
+		var objid = (await Registry.GetPackageObjectsAsync(id)).Single().Objid;
+		var dbref = DBRef.Parse(objid);
+
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
+		await Database.SetAttributeAsync(dbref, ["AUPDATE"], MarkupText.Plain("think local hook"), pm);
+
+		var plan = await Installer.PlanAsync(Manifest(id, "1.1.0", "two"));
+		await Assert.That(plan.LifecycleHook).IsEqualTo("AUPDATE");
+		var hook = plan.LocalHooks!.Single();
+		await Assert.That(hook.Objid).IsEqualTo(objid);
+		await Assert.That(hook.TargetRef).IsEqualTo("notes");
+		await Assert.That(hook.Value).IsEqualTo("think local hook");
+
+		// A first install has nothing of the game's to run.
+		var fresh = await Installer.PlanAsync(Manifest("hooks-new-" + Guid.NewGuid().ToString("N")[..8], "1.0.0", "one"));
+		await Assert.That(fresh.LifecycleHook).IsEqualTo("AINSTALL");
+		await Assert.That(fresh.LocalHooks!.Count).IsEqualTo(0);
+
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
 }

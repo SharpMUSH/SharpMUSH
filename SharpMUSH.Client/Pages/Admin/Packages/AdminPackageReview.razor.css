@@ -59,3 +59,8 @@
     padding-top: 16px;
     border-top: 1px solid var(--border-soft);
 }
+
+/* Each hook: where it runs, then its code. */
+.pkg-hook + .pkg-hook {
+    margin-top: 16px;
+}

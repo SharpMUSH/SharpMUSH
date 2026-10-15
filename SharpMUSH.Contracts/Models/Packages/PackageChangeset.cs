@@ -32,8 +32,20 @@ public sealed record PackageChangeset(
 	IReadOnlyList<PackageDeclarationChange>? Declarations = null,
 	IReadOnlyList<PackageSettingChange>? Settings = null,
 	IReadOnlyList<PackageWikiChange>? Wiki = null,
-	PackageServerCompatibility? Compatibility = null)
+	PackageServerCompatibility? Compatibility = null,
+	IReadOnlyList<PackageLocalHook>? LocalHooks = null)
 {
+	/// <summary>
+	/// The attribute the apply runs on each of the package's objects afterwards: <c>AINSTALL</c> on a first install,
+	/// <c>AUPDATE</c> on an upgrade, none otherwise.
+	/// </summary>
+	public string? LifecycleHook => Kind switch
+	{
+		PackageRevisionKind.Install => "AINSTALL",
+		PackageRevisionKind.Upgrade => "AUPDATE",
+		_ => null
+	};
+
 	/// <summary>
 	/// True when dependency/conflict issues, a declared item or setting that cannot be applied, or a server older than
 	/// the package's <c>requires_server</c>, prevent applying at all.
@@ -50,6 +62,16 @@ public sealed record PackageChangeset(
 		|| Structure.Any(s => s.Action == PackageStructureAction.Conflict)
 		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Conflict) ?? false);
 }
+
+/// <summary>
+/// A <see cref="PackageChangeset.LifecycleHook"/> attribute an existing package object holds that the package does not
+/// ship: the apply runs it all the same.
+/// </summary>
+/// <param name="TargetRef">The object's manifest ref.</param>
+/// <param name="Objid">The object.</param>
+/// <param name="Attribute">The hook's name.</param>
+/// <param name="Value">The code the apply runs.</param>
+public sealed record PackageLocalHook(string TargetRef, string Objid, string Attribute, string Value);
 
 /// <summary>Object-level classification.</summary>
 public enum PackageObjectAction

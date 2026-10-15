@@ -535,6 +535,22 @@ else
             </div>
         </KitCard>
     }
+
+    @* ── What runs after the apply ───────────────────────────────────── *@
+    @if (Hooks() is { Count: > 0 } hooks)
+    {
+        <KitCard Title="@Loc["PkgHooksCount", _plan.Changeset.LifecycleHook!, hooks.Count]" Sub="@Loc["PkgHooksSub"]" Class="pkg-hooks">
+            <div class="pkg-review-body">
+                @foreach (var hook in hooks)
+                {
+                    <div class="pkg-hook">
+                        <MudText Typo="Typo.subtitle2"><code>@hook.Where</code></MudText>
+                        <pre class="mush-pane">@hook.Code</pre>
+                    </div>
+                }
+            </div>
+        </KitCard>
+    }
 }
 </div>
 
@@ -672,6 +688,44 @@ else
 
     private static string DecisionKey(PackageAttributeChange change) =>
         $"{change.TargetRef}\0{change.Attribute}";
+
+    /// <summary>One lifecycle hook the apply runs afterwards, as it will read once the apply has written it.</summary>
+    private sealed record HookRow(string Where, string Code);
+
+    /// <summary>
+    /// The hooks the apply runs: the package's own, as the review's choices leave them, and any the game's objects
+    /// hold that the package does not ship.
+    /// </summary>
+    private List<HookRow> Hooks()
+    {
+        if (_plan?.Changeset is not { LifecycleHook: { } hook } changeset)
+        {
+            return [];
+        }
+
+        return changeset.Attributes
+            .Where(a => string.Equals(a.Attribute, hook, StringComparison.OrdinalIgnoreCase))
+            .Select(a => (Where: $"{a.TargetRef}/{a.Attribute}", Code: HookCode(a)))
+            .Concat((changeset.LocalHooks ?? []).Select(h => (Where: $"{h.TargetRef}/{h.Attribute}", Code: (string?)h.Value)))
+            .Where(h => !string.IsNullOrWhiteSpace(h.Code))
+            .Select(h => new HookRow(h.Where, h.Code!))
+            .ToList();
+    }
+
+    /// <summary>What an attribute holds after the apply, under the decision chosen for it.</summary>
+    private string? HookCode(PackageAttributeChange change) => change.Action switch
+    {
+        PackageAttributeAction.Delete or PackageAttributeAction.RemoveBaseline => null,
+        PackageAttributeAction.KeepLocal => change.LiveValue,
+        PackageAttributeAction.Merge => change.MergedValue,
+        PackageAttributeAction.Conflict => _decisions.GetValueOrDefault(DecisionKey(change)) switch
+        {
+            "TakeTheirs" => change.NewValue,
+            "UseCustom" => _customValues.GetValueOrDefault(DecisionKey(change)) ?? AttributeStartingText(change),
+            _ => change.LiveValue
+        },
+        _ => change.NewValue
+    };
 
     /// <summary>The installer keys a lock decision as the attribute <c>@LOCK`&lt;type&gt;</c> on its object.</summary>
     private static string LockDecisionAttribute(PackageStructureChange change) => $"@LOCK`{change.Element}";

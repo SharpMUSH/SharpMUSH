@@ -1861,6 +1861,12 @@
   <data name="PkgMergedWritten" xml:space="preserve">
     <value>Merged (what the upgrade writes)</value>
   </data>
+  <data name="PkgHooksCount" xml:space="preserve">
+    <value>Runs after the apply: {0} ({1})</value>
+  </data>
+  <data name="PkgHooksSub" xml:space="preserve">
+    <value>The apply runs this on its object after writing everything above. It follows the choices made on this page.</value>
+  </data>
   <data name="PkgLockConflictsCount" xml:space="preserve">
     <value>Lock conflicts ({0})</value>
   </data>

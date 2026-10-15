@@ -635,6 +635,60 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task PackageReview_ShowsTheHooksTheApplyRuns_AsTheChoicesLeaveThem()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("notes", "1.0.0", "1.1.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Upgrade, [],
+			[
+				new("notes", "#10:1", "AUPDATE", SharpMUSH.Library.Models.Packages.PackageAttributeAction.Conflict,
+					SharpMUSH.Library.Models.Packages.PackageConflictKind.ModifyModify, "@trigger me/OLD", "@trigger me/MINE",
+					"@trigger me/THEIRS"),
+				new("clock", "#11:1", "AUPDATE", SharpMUSH.Library.Models.Packages.PackageAttributeAction.Delete,
+					BaseValue: "@trigger me/GONE", LiveValue: "@trigger me/GONE"),
+				new("notes", "#10:1", "AINSTALL", SharpMUSH.Library.Models.Packages.PackageAttributeAction.AutoUpgrade,
+					BaseValue: "a", LiveValue: "a", NewValue: "b"),
+			],
+			[], [], [], [],
+			LocalHooks: [new("board", "#12:1", "AUPDATE", "@trigger me/LOCAL")]);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("notes", "1.1.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=notes");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".pkg-hooks"), TimeSpan.FromSeconds(5));
+		var hooks = cut.FindAll(".pkg-hook").Select(h => h.TextContent).ToList();
+		await Assert.That(hooks.Count).IsEqualTo(2);
+		await Assert.That(hooks[0]).Contains("notes/AUPDATE");
+		await Assert.That(hooks[0]).Contains("@trigger me/MINE");
+		await Assert.That(hooks[1]).Contains("board/AUPDATE");
+		await Assert.That(hooks[1]).Contains("@trigger me/LOCAL");
+	}
+
+	[Test]
+	public async Task PackageReview_ShowsNoHooks_WhenNoneRun()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("notes", "1.0.0", "1.1.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Upgrade, [],
+			[
+				new("notes", "#10:1", "DATA`TEXT", SharpMUSH.Library.Models.Packages.PackageAttributeAction.AutoUpgrade,
+					BaseValue: "a", LiveValue: "a", NewValue: "b"),
+			],
+			[], [], [], []);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("notes", "1.1.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=notes");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find("button"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Markup.Contains("DATA`TEXT"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".pkg-hooks").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Suggestions_EscapesTheWordWhenDeletingIt()
 	{
 		_api.Bodies["api/suggestion"] = """{"categories":{"slang":["a b?c#d"]}}""";
