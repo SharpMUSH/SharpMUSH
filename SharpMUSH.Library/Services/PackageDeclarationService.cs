@@ -151,7 +151,8 @@ public sealed class PackageDeclarationService(
 		{
 			var entry = write.Entry;
 			var previous = await mediator.Send(new GetAttributeEntryQuery(entry.Name), cancellationToken);
-			await mediator.Send(new CreateAttributeEntryCommand(entry.Name, [.. entry.Flags], entry.Limit,
+			// Upper case, as @attribute/access stores them, so @attribute shows one spelling.
+			await mediator.Send(new CreateAttributeEntryCommand(entry.Name, [.. entry.Flags.Select(flag => flag.ToUpperInvariant())], entry.Limit,
 				entry.Enum is null ? null : [.. entry.Enum], entry.EnumDelimiter), cancellationToken);
 			writes.Track($"attribute entry {entry.Name}", () => RestoreAttributeEntryAsync(entry.Name, previous));
 		}

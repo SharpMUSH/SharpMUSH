@@ -69,7 +69,7 @@ public class PackageAttributeEntryInstallTests
 
 		var entry = await Mediator.Send(new GetAttributeEntryQuery(attribute));
 		await Assert.That(entry).IsNotNull();
-		await Assert.That(entry!.DefaultFlags).IsEquivalentTo(["wizard", "no_command"]);
+		await Assert.That(entry!.DefaultFlags).IsEquivalentTo(["WIZARD", "NO_COMMAND"]);
 		await Assert.That(entry.Limit).IsEqualTo("^[a-z]+$");
 		var copy = await CopyAsync(thing, attribute);
 		await Assert.That(copy!.Flags.Select(f => f.Name.ToLowerInvariant())).IsEquivalentTo(["wizard", "no_command"]);

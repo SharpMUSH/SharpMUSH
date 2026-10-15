@@ -36,6 +36,12 @@ public static partial class PackageDeclarationPlanner
 
 	private static string ShowFlags(IEnumerable<string> flags) => FlagKey(flags) is { Length: > 0 } shown ? shown : "none";
 
+	/// <summary>What a new entry is made with: its default flags, and its limit or enum when it has one.</summary>
+	private static string Declares(PackageAttributeEntrySpec entry)
+		=> Restriction.Of(entry) is { Limit: null, Choices: null }
+			? $"Default flags {ShowFlags(entry.Flags)}."
+			: $"Default flags {ShowFlags(entry.Flags)}; {Restriction.Of(entry)}.";
+
 	/// <summary>
 	/// Diffs the declared attribute entries against what the package owned and the game's table. An entry the game
 	/// lacks is created and owned; one the game has and the package does not own is the game's, used as it is, unless
@@ -80,7 +86,7 @@ public static partial class PackageDeclarationPlanner
 				var write = new PackageAttributeEntryWrite(merged, spec.Retroactive);
 				writes.Add(write);
 				changes.Add(Retroactively(new(PackageDeclarationKind.Attribute, spec.Name, PackageDeclarationAction.Create,
-					baseline is null ? null : "It had been deleted, so it is made again."), write, live));
+					baseline is null ? Declares(merged) : $"It had been deleted, so it is made again. {Declares(merged)}"), write, live));
 				continue;
 			}
 
@@ -155,7 +161,7 @@ public static partial class PackageDeclarationPlanner
 		var wanted = FlagKey(write.Entry.Flags);
 		var copies = live.AttributeCopies?.GetValueOrDefault(write.Entry.Name) ?? [];
 		var count = copies.Count(flags => FlagKey(flags.Where(f => !NoCase.Equals(f, "branch"))) != wanted);
-		var note = $"Retroactive: {count} existing {(count == 1 ? "copy" : "copies")} of the attribute get{(count == 1 ? "s" : "")} these default flags.";
+		var note = $"Retroactive: {count} existing {(count == 1 ? "copy" : "copies")} of the attribute get{(count == 1 ? "s" : "")} the default flags {ShowFlags(write.Entry.Flags)}.";
 		return change with { Detail = change.Detail is null ? note : $"{change.Detail} {note}", Retroactive = count };
 	}
 
