@@ -78,7 +78,7 @@ public partial class CommandDiscoveryService(IMediator mediator, ILockService lo
 	}
 
 	/// <summary>Neither NO_COMMAND nor HALT: the object's <c>$</c>-commands are matched at all.</summary>
-	private static async ValueTask<bool> ListensForCommandsAsync(AnySharpObject obj, CancellationToken _)
+	public static async ValueTask<bool> ListensForCommandsAsync(AnySharpObject obj, CancellationToken _ = default)
 		=> !(await obj.HasFlag("NO_COMMAND") || await obj.HasFlag("HALT"));
 
 	/// <summary>

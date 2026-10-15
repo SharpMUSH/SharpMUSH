@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -32,6 +33,7 @@ internal sealed class EvaluationServices
 	private IPipeOutputCapture? _pipeCapture;
 	private ExecutorDebugFlags? _debugFlags;
 	private SoftcodeParseCache? _parseCache;
+	private ContextUse? _contextUse;
 
 	/// <param name="provider">Where the optional services are located.</param>
 	/// <param name="locateOptional">
@@ -136,6 +138,10 @@ internal sealed class EvaluationServices
 	/// <summary>Takes a piped command's output for the next command's <c>%|</c>; absent in hosts that do not register it.</summary>
 	public IPipeOutputCapture? PipeCapture
 		=> _pipeCapture ??= LocatesOptional ? Provider.GetService<IPipeOutputCapture>() : null;
+
+	/// <summary>Pushes what a typed line used onto the player's context stack; absent in hosts that do not register it.</summary>
+	public ContextUse? ContextUse
+		=> _contextUse ??= LocatesOptional ? Provider.GetService<ContextUse>() : null;
 
 	public EvaluationDiagnostics Diagnostics { get; }
 	public FunctionInvocationPipeline Functions { get; }
