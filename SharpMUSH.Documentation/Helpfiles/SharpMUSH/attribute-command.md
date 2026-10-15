@@ -173,7 +173,7 @@ An entry the game already has is the game's: the package uses it and never chang
 
 From format 1.8 an entry can also carry an `index:`, as `@attribute/index` would make it: `index: true` for the default, or the option words, such as `index: numeric type:thing`. An older manifest's `index:` is ignored. Installing the package builds the index in the background, and the review screen says how many objects it builds over. A game entry without the same index blocks the install until you index it.
 
-From format 1.9 an entry can also carry a `watch:`, as `@attribute/watch` would set it: `watch: true` for the default pattern, or the pattern itself, such as ``watch: WATCH`HP`*``. An older manifest's `watch:` is ignored. A game entry without the same watch blocks the install until you watch it that way. An upgrade that drops `watch:` stops watching the attribute, and uninstalling the package deletes the entry with its watch. The package's handler attributes on the event handler object come from its objects, as any other code does.
+From format 1.9 an entry can also carry a `watch:`, as `@attribute/watch` would set it: `watch: true` for the default pattern, or the pattern itself, such as ``watch: WATCH`HP`*``. An older manifest's `watch:` is ignored. A game entry without the same watch blocks the install until you watch it that way. An upgrade that drops `watch:` stops watching the attribute, and uninstalling the package deletes the entry with its watch.
 
 Example, in a package's manifest:
 ```
