@@ -63,9 +63,9 @@ objects:
   # routine per switch, INC`NEED` the guards they share, INC`DO` the writes (shared with the portal routes),
   # FUN` the reads, FUN`DISPLAY` and FUN`PAGE` the screens, WEB` the portal, ON` the hooks a game fills in.
   # DATA`CONFIG` holds the settings (+config chargen) and DATA`ROUTE` which routine each switch runs.
-  # The answers are the character's own attributes, set only through +app (the attribute is wizard-flagged).
-  # The form, state, rounds and comments are kept on the Chargen Store, so nobody can rewrite their own
-  # application's state or history.
+  # The answers and each submitted round are the character's own attributes, set only through +app (they are
+  # wizard-flagged). The form, state and comments are kept on the Chargen Store, so nobody can rewrite their
+  # own application's state.
   - ref: chargen
     type: thing
     name: Chargen
@@ -434,11 +434,11 @@ objects:
       # ---- applications ---------------------------------------------------------
       # An application is APP`<key> on the store, the character's objid, with STATE (draft, submitted, changes,
       # approved, waitlist or retired), CREATED, ROUND (how many times it was submitted), SUBMITTED (when it last
-      # was), DECIDED and BY (the last decision and who made it), WAITLISTED, and ROUND`<n> with AT and FIELD`<F>
-      # (each submission as it was sent; the draft is on the character). COMMENT`<n> holds a comment, with
-      # SECTION (empty for the whole application), AUTHOR (objid), NAME (the author's name then), AT, ROUND,
+      # was), DECIDED and BY (the last decision and who made it) and WAITLISTED. COMMENT`<n> holds a comment,
+      # with SECTION (empty for the whole application), AUTHOR (objid), NAME (the author's name then), AT, ROUND,
       # PRIVATE (1 for staff only) and KIND (comment, return, approve, waitlist or retire); COMMENTS is the last
-      # number.
+      # number. The answers are on the character: each field's attribute is the draft, and CHARGEN`ROUND`<n>
+      # (when it was sent) with CHARGEN`ROUND`<n>`<FIELD> is each submission as it was sent.
       #
       # %0 a key: its state, empty when there is no application.
       FUN`APP`STATE:
@@ -466,10 +466,10 @@ objects:
           setq(app_name_objid,get({{store}}/APP`%0))[if(isdbref(%q<app_name_objid>),name(%q<app_name_objid>),-)]
         flags: [funsyntax]
       # %0 a key, %1 a field, %2 a round, or nothing for the draft: what the field said. The draft is the
-      # character's own attribute; a round is the copy kept on the store when it was submitted.
+      # character's own attribute; a round is the copy kept on the character when it was submitted.
       FUN`APP`VALUE:
         value: |-
-          if(strlen(%2),get({{store}}/APP`%0`ROUND`%2`FIELD`%1),if(isdbref(setr(value_objid,get({{store}}/APP`%0))),get(%q<value_objid>/[u(%!/FUN`FIELD`ATTRIBUTE,%1)])))
+          if(isdbref(setr(value_objid,get({{store}}/APP`%0))),get(%q<value_objid>/[if(strlen(%2),CHARGEN`ROUND`%2`%1,u(%!/FUN`FIELD`ATTRIBUTE,%1))]))
         flags: [funsyntax]
       # %0 a field, %1 a key, %2 and %3 two rounds, either of them empty for the draft: 1 when the field differs.
       FUN`APP`DIFFERS:
@@ -636,7 +636,7 @@ objects:
       # Submits the draft as the next round. The caller has checked it may be submitted.
       INC`DO`SUBMIT:
         value: |-
-          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if strlen(u(%!/FUN`APP`VALUE,%q<app_key>,##))={&APP`%q<app_key>`ROUND`%q<submit_round>`FIELD`## {{store}}=u(%!/FUN`APP`VALUE,%q<app_key>,##)}}; &APP`%q<app_key>`ROUND`%q<submit_round>`AT {{store}}=secs(); &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,[name(%q<app_objid>)] [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b[chr(40)]round %q<submit_round>[chr(41)])]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if strlen(u(%!/FUN`APP`VALUE,%q<app_key>,##))={&CHARGEN`ROUND`%q<submit_round>`## %q<app_objid>=u(%!/FUN`APP`VALUE,%q<app_key>,##); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>`##=wizard}}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,[name(%q<app_objid>)] [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b[chr(40)]round %q<submit_round>[chr(41)])]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
         flags: [cmdsyntax]
       # Records how long the application waited for its decision, keeping the latest 200.
       INC`DO`RECORDWAIT:
@@ -1506,8 +1506,9 @@ objects:
         Output: `\[APP\] Done: Returned to Cora for changes.`
       HELP`APP`FORM: |-
         The form is the game's: sections, and fields in them. Changing it takes the `config.admin` permission.
-        Each answer is an attribute on the character, which only `+app` changes. What was said stays on the
-        character when a field moves or goes, and a new `attribute` does not move answers already given.
+        Each answer is an attribute on the character, which only `+app` changes, and each submission is kept
+        on the character too, in its CHARGEN tree. What was said stays on the character when a field
+        moves or goes, and a new `attribute` does not move answers already given.
 
         - `+apps/fields`: every section and field.
         - `+apps/section <key>=<title>`: add a section at the end, or retitle one.

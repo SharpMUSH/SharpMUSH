@@ -178,6 +178,10 @@ public class ChargenIntegrationTests
 			await Assert.That(diff).Contains("round 1 to").And.Contains("Born on the river barges.")
 				.And.Contains("Born on the barges of the Sallow.").And.DoesNotContain("A ferry pilot")
 				.Because("only what changed is shown");
+			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/CHARGEN`ROUND`1`BACKGROUND)]")).IsEqualTo("Born on the river barges.")
+				.Because("each round is kept on the character");
+			await Assert.That(await As(applicant, "&CHARGEN`ROUND`1`BACKGROUND me=Rewritten")).Contains("NO PERMISSION")
+				.Because("a character cannot rewrite what it submitted");
 
 			await Assert.That(await As(reviewer, $"+app/approve {applicant.Name}=Welcome.")).Contains($"Approved {applicant.Name}.");
 			await WebAppFactoryArg.QueueBarrierAsync();
