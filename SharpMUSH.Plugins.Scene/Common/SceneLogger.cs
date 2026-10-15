@@ -67,7 +67,7 @@ public static class SceneLogger
 	/// <summary>Every scene detail the logger defines (<c>DETAIL`&lt;KEY&gt;</c>), in order, and the attributes that do not read as one.</summary>
 	public static async ValueTask<SceneDetailCatalogue> DetailsAsync(IServiceProvider services)
 	{
-		if (await FindAsync(services) is not AnySharpObject logger) return SceneDetailCatalogue.Empty;
+		if (await FindAsync(services) is not { } logger) return SceneDetailCatalogue.Empty;
 
 		var attributes = services.GetRequiredService<IAttributeService>();
 		if (await attributes.GetAttributePatternAsync(logger, logger, DetailPrefix + "*", false, IAttributeService.AttributePatternMode.Wildcard)
