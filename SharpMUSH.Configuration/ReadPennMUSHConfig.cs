@@ -124,7 +124,12 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.MuxJustify)), d.Compatibility.MuxJustify),
 				Boolean(Get(nameof(CompatibilityOptions.MuxCollation)), d.Compatibility.MuxCollation),
 				Boolean(Get(nameof(CompatibilityOptions.MuxList)), d.Compatibility.MuxList),
-				Boolean(Get(nameof(CompatibilityOptions.InnermostTokens)), d.Compatibility.InnermostTokens)
+				Boolean(Get(nameof(CompatibilityOptions.InnermostTokens)), d.Compatibility.InnermostTokens),
+				Boolean(Get(nameof(CompatibilityOptions.RhostEdit)), d.Compatibility.RhostEdit),
+				Boolean(Get(nameof(CompatibilityOptions.RhostLattr)), d.Compatibility.RhostLattr),
+				Boolean(Get(nameof(CompatibilityOptions.RhostPrintf)), d.Compatibility.RhostPrintf),
+				Boolean(Get(nameof(CompatibilityOptions.RhostMapArgs)), d.Compatibility.RhostMapArgs),
+				Boolean(Get(nameof(CompatibilityOptions.SidefxFlag)), d.Compatibility.SidefxFlag)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),

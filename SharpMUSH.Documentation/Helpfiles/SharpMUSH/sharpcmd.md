@@ -1929,6 +1929,8 @@ Just like attributes, locks can be inherited from parents. By default, locks are
 
 A listing of lock types, such as pagelocks, look at [locktypes]. For the available key types, such as how to check an attribute on an object trying to pass a lock, see [lock keys].
 
+The switch may also name the lock with "lock" on the end, as RhostMUSH spells its switches: `@lock/enterlock` is `@lock/enter`, `@lock/tportlock` is `@lock/teleport` and `@lock/defaultlock` is `@lock/basic`. @unlock takes the same spellings. This works for every lock type in [locktypes]; RhostMUSH lock types that SharpMUSH does not have, such as `teloutlock` or `darklock`, are still unknown lock types. A user-defined lock whose name ends in "lock" keeps its own name. These spellings come from RhostMUSH.
+
 
 ::: seealso
 - [@LOCK-SIMPLE]

@@ -18,6 +18,7 @@ public class PennMUSHPasswordImportTests
 	[Arguments("Sha0", "XX25278519322861399308")]
 	[Arguments("Crypt", "XXuOowDRD5rnE")]
 	[Arguments("Mux", "$SHA1$b3JhY2xlISE=$ZpP9asZ4IHXYH2Xear7C9UcerSw=")]
+	[Arguments("ShaCrypt", "$6$rNJk6nKeO$isTkJZFSZzOIqUyiiEf.NXwZlhXi49Y4B/u0U3mAk843Fo0bEpzHOFaAyBz0nlipBE/aYVozVIlMOUEAZvjWo/")]
 	[Arguments("Plain", Password)]
 	public async Task AnImportedLegacyPasswordLogsInAndIsRehashed(string kind, string stored)
 	{

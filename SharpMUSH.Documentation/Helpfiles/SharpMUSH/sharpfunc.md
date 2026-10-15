@@ -39,6 +39,7 @@
 | [OBJ()]               | [OWNER()]             | [PFUN()]              | [POSS()]              |
 | [REGLATTR()]          | [REGREP()]            | [REGREPI()]           | [REGXATTR()]          |
 | [SET()]               | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 |
+| [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           |
 | [UARGS()]             | [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           |
 | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 | [WILDGREP()]          |
 | [WILDGREPI()]         | [XATTR()]             | [XGET()]              | [ZFUN()]              |
@@ -62,12 +63,13 @@
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
-|          |          |          |          |
-|----------|----------|----------|----------|
-| [AND()]  | [CAND()] | [COR()]  | [EQ()]   |
-| [GT()]   | [GTE()]  | [LT()]   | [LTE()]  |
-| [NAND()] | [NEQ()]  | [NOR()]  | [NOT()]  |
-| [OR()]   | [T()]    | [XOR()]  |          |
+|           |           |           |           |
+|-----------|-----------|-----------|-----------|
+| [AND()]   | [CAND()]  | [COR()]   | [EQ()]    |
+| [GT()]    | [GTE()]   | [LAND()]  | [LNOR()]  |
+| [LOR()]   | [LT()]    | [LTE()]   | [LXNOR()] |
+| [LXOR()]  | [NAND()]  | [NEQ()]   | [NOR()]   |
+| [NOT()]   | [OR()]    | [T()]     | [XOR()]   |
 
 ::: seealso
 - [boolean values]
@@ -151,19 +153,21 @@
 
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
-| [CHAIN()]       | [ELEMENTS()]    | [EVERY()]       | [EXTRACT()]     |
-| [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     | [FIRST()]       |
-| [FOLD()]        | [GRAB()]        | [GRABALL()]     | [INDEX()]       |
-| [ITEMIZE()]     | [ITEMS()]       | [ITER()]        | [JITER()]       |
-| [LAST()]        | [LDELETE()]     | [LINSERT()]     | [LISTSET()]     |
-| [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         | [MATCH()]       |
-| [MATCHALL()]    | [MEMBER()]      | [MIX()]         | [MUNGE()]       |
-| [NAMEGRAB()]    | [NAMEGRABALL()] | [RANDWORD()]    | [REMOVE()]      |
-| [REST()]        | [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    |
-| [SETSYMDIFF()]  | [SETUNION()]    | [SHUFFLE()]     | [SOME()]        |
-| [SORT()]        | [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      |
-| [STEP()]        | [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      |
-| [WORDPOS()]     | [WORDS()]       |                 |                 |
+| [CHAIN()]       | [CITER()]       | [ELEMENTS()]    | [EVERY()]       |
+| [EXTRACT()]     | [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     |
+| [FIRST()]       | [FOLD()]        | [GRAB()]        | [GRABALL()]     |
+| [INDEX()]       | [INF()]         | [ITEMIZE()]     | [ITEMS()]       |
+| [ITER()]        | [JITER()]       | [LAST()]        | [LDELETE()]     |
+| [LINSERT()]     | [LISTDIFF()]    | [LISTINTER()]   | [LISTSET()]     |
+| [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         |
+| [MATCH()]       | [MATCHALL()]    | [MEMBER()]      | [MIX()]         |
+| [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] | [NSITER()]      |
+| [RANDWORD()]    | [REMOVE()]      | [REST()]        | [REVWORDS()]    |
+| [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  | [SETUNION()]    |
+| [SHUFFLE()]     | [SOME()]        | [SORT()]        | [SORTBY()]      |
+| [SORTKEY()]     | [SPLICE()]      | [STEP()]        | [STEPARGS()]    |
+| [TABLE()]       | [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     |
+| [WORDS()]       |                 |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -178,12 +182,14 @@
 | [ATAN()]     | [ATAN2()]    | [BOUND()]    | [CEIL()]     |
 | [COS()]      | [CTU()]      | [DIST2D()]   | [DIST3D()]   |
 | [E()]        | [EXP()]      | [FDIV()]     | [FLOOR()]    |
-| [FMOD()]     | [FRACTION()] | [LMATH()]    | [LN()]       |
-| [LOG()]      | [MAX()]      | [MEAN()]     | [MEDIAN()]   |
-| [MIN()]      | [MUL()]      | [PI()]       | [POWER()]    |
-| [ROOT()]     | [ROUND()]    | [SIGN()]     | [SIN()]      |
-| [SQRT()]     | [STDDEV()]   | [SUB()]      | [TAN()]      |
-| [TRUNC()]    | [VAL()]      |              |              |
+| [FMOD()]     | [FRACTION()] | [LADD()]     | [LAVG()]     |
+| [LDIV()]     | [LMATH()]    | [LMAX()]     | [LMIN()]     |
+| [LMUL()]     | [LN()]       | [LOG()]      | [LSUB()]     |
+| [MAX()]      | [MEAN()]     | [MEDIAN()]   | [MIN()]      |
+| [MUL()]      | [PI()]       | [POWER()]    | [ROOT()]     |
+| [ROUND()]    | [SIGN()]     | [SIN()]      | [SQRT()]     |
+| [STDDEV()]   | [SUB()]      | [TAN()]      | [TRUNC()]    |
+| [VAL()]      |              |              |              |
 
   These functions operate only on integers (if passed floating point numbers, they will return an error or misbehave):
 
@@ -247,23 +253,23 @@
 | [ACCENT()]               | [AFTER()]                | [ALIGN()]                | [ALPHAMAX()]             |
 | [ALPHAMIN()]             | [ART()]                  | [BEFORE()]               | [BRACKETS()]             |
 | [CAPSTR()]               | [CASE()]                 | [CASEALL()]              | [CAT()]                  |
-| [CENTER()]               | [CHR()]                  | [COMP()]                 | [COND()]                 |
-| [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            | [DECOMPOSEWEB()]         |
-| [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         | [EDIT()]                 |
-| [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               | [FLIP()]                 |
-| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
-| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
-| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
-| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
-| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
-| [REGMATCH()]             | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               |
-| [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               |
-| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
-| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
-| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
-| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
-| [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            | [URLENCODE()]            |
-| [WRAP()]                 |                          |                          |                          |
+| [CENTER()]               | [CHR()]                  | [COLUMNS()]              | [COMP()]                 |
+| [COND()]                 | [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            |
+| [DECOMPOSEWEB()]         | [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         |
+| [EDIT()]                 | [ELEMENTPOS()]           | [ENCODE64()]             | [ENCRYPT()]              |
+| [ESCAPE()]               | [FLIP()]                 | [FOREACH()]              | [FORMDECODE()]           |
+| [FORMQ()]                | [GRAPHEMECOUNT()]        | [GRAPHEMES()]            | [HMAC()]                 |
+| [IF()]                   | [IFELSE()]               | [LCSTR()]                | [LEFT()]                 |
+| [LIT()]                  | [LJUST()]                | [LPOS()]                 | [MERGE()]                |
+| [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
+| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDERMARKDOWN()]       |
+| [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                | [RJUST()]                |
+| [SCRAMBLE()]             | [SECURE()]               | [SPACE()]                | [SPELLNUM()]             |
+| [SQUISH()]               | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
+| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         |
+| [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           |
+| [SWITCH()]               | [TR()]                   | [TRIM()]                 | [UCSTR()]                |
+| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -299,14 +305,14 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          | [LETQ()]           |
 | [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
 | [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
-| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [R()]              |
-| [RAND()]           | [RESTRICTEDEXPR()] | [ROLL()]           | [S()]              |
-| [SCAN()]           | [SET()]            | [SETQ()]           | [SETQM()]          |
-| [SETR()]           | [SETRM()]          | [SLEV()]           | [SOUNDEX()]        |
-| [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          | [SUGGEST()]        |
-| [TAG()]            | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       |
-| [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         |
-| [VALID()]          | [WIPE()]           |                    |                    |
+| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      |
+| [R()]              | [RAND()]           | [RESTRICTEDEXPR()] | [ROLL()]           |
+| [S()]              | [SCAN()]           | [SET()]            | [SETQ()]           |
+| [SETQM()]          | [SETR()]           | [SETRM()]          | [SLEV()]           |
+| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
+| [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        | [TEL()]            |
+| [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         |
+| [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
@@ -1532,6 +1538,8 @@ You say "I think this is an exam."
 
   edit() can not replace a literal single ^ or $. Use regedit() for that.
 
+  With the `rhost_edit` option on, edit() takes RhostMUSH's form, `edit(<string>, <search>, <replace>[, <first only>[, <ansi mode>]])`: a fourth argument starting with a nonzero number replaces only the first match, and the fifth is accepted and ignored. This form comes from RhostMUSH; see [compatibility config].
+
 
 ::: seealso
 - [@edit]
@@ -2660,6 +2668,8 @@ You say, "One|PLAYER"
 # reglattrp()
 `lattr(<object>[/<attribute pattern>][, <output separator>])`<br>
 `lattrp(<object>[/<attribute pattern>][, <output separator>])`<br>
+`lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`<br>
+`lattrp(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`<br>
 `reglattr(<object>[/<regexp>][, <output separator>])`<br>
 `reglattrp(<object>[/<regexp>][, <output separator>])`
 
@@ -2672,6 +2682,8 @@ You say, "One|PLAYER"
   lattrp() and reglattrp() also include attributes inherited from parents.
 
   When returning large numbers of attributes, the results may be truncated due to buffer limits. In these cases, you can use nattr() and xattr() to retrieve the results in smaller pieces.
+
+  With the `rhost_lattr` option on, lattr() and lattrp() take RhostMUSH's arguments instead of an output separator: `lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`. This form comes from RhostMUSH; see [compatibility config] for what each argument does.
 
 
 ::: seealso
@@ -3369,9 +3381,18 @@ th lt(1,3,2)
 - [LPORTS()]
 :::
 # map()
-`map([<object>/]<attribute>, <list>[, <delim>[, <osep>]])`
+`map([<object>/]<attribute>, <list>[, <delim>[, <osep>[, <arg1>, ... , <argN>]]])`
 
   This function works much like ITER(). The given `<attribute>` is evaluated once for each element of `<list>`, and the results of the evaluations are returned. For each evaluation, the current list element is passed to the attribute as %0, and its position in the list as %1. Elements of `<list>` are separated by `<delim>`, or a space if none is given, and the results are returned separated by `<osep>`, if given, or the delimiter otherwise.
+
+  Any arguments after `<osep>` are passed to the attribute as %1, %2 and so on, in place of the position. Passing them comes from RhostMUSH. With the `rhost_map_args` option on, %1 is empty when there are none, as on RhostMUSH, rather than the position (see [compatibility config]).
+
+  Example:
+```sharp
+> &show_args me=<%0:%1:%2>
+> think map(show_args, a b,,, x, y)
+<a:x:y> <b:x:y>
+```
 
   This is roughly equivilent to, though slightly more efficient than:<br>
 `iter(<list>, ulambda(<object>/<attribute>, %i0, inum(0)), <delim>, <osep>)`
@@ -5599,6 +5620,8 @@ strdistance(,e[chr(769)][chr(128512)])
   Numeric values use a strict invariant grammar: an optional sign, ASCII digits, and (for decimals) a decimal point. Spaces, separators, exponent notation, and Tiny math coercions are not accepted. Values outside signed 64-bit integer or .NET decimal range return the usual number error. Literal and string-value markup survives. Generated numeric text inherits the first input character's markup; markup on a directive's percent sign wraps its field. Padding is plain unless covered by that directive markup. Controls and newlines in strings are retained and use the library's display-width policy.
 
   The format may contain at most 65,536 UTF-16 code units, 1,024 directives including percent escapes, and 128 value fields. Width and string/integer precision are at most 65,536; decimal precision is at most 28. Exceeding these bounds returns `#-1 PRINTF FIELD LIMIT EXCEEDED` before large padding is allocated. Directives cannot cut through a grapheme cluster. The shared 5,242,880 UTF-16-unit result ceiling also applies; exceeding it stops evaluation with `#-1 OUTPUT EXCEEDED MAXIMUM SIZE`.
+
+  With the `rhost_printf` option on, printf() reads RhostMUSH's fields instead of these directives: a field is `$`, its codes, then `s`, as in `printf(|$-5s|$5s|,ab,cd)`, which returns `|ab   |   cd|`. That form wants at least one value, and the fields can wrap a value over several rows. This grammar comes from RhostMUSH; see [compatibility config] for its codes.
 
   Examples:
 ```sharp

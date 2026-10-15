@@ -19,6 +19,11 @@
       "lookup": "lsearch evaluation classes"
     },
     {
+      "id": "rhostmush-one-argument-form",
+      "heading": "RhostMUSH one-argument form",
+      "lookup": "lsearch rhostmush one argument form"
+    },
+    {
       "id": "search-examples",
       "heading": "Search examples",
       "lookup": "lsearch search examples"
@@ -56,6 +61,8 @@ lsearch() is free unless it includes either an eval-class search or an elock sea
 
 lsearchr() is like an lsearch() run through revwords(). Results are returned from highest dbref to lowest. search() is an alias for lsearch().
 
+search() and lsearch() also take the one-argument form RhostMUSH and TinyMUSH use, `search([<player>] <class>=<restriction>[, <low>[, <high>]])`; see [lsearch rhostmush one argument form].
+
 
 ::: seealso
 - [@search]
@@ -63,6 +70,32 @@ lsearchr() is like an lsearch() run through revwords(). Results are returned fro
 - [LPARENT()]
 - [LSTATS()]
 :::
+
+## RhostMUSH one-argument form
+
+`search([<player>] <class>=<restriction>[, <low>[, <high>]])`
+
+When the first argument holds an `=`, search(), lsearch() and nsearch() read it the way RhostMUSH and TinyMUSH write a search: one class and its restriction, after an optional player whose objects to search. Without a player, the search covers every owner you may search. `<low>` and `<high>` limit the dbrefs searched, with or without their `#`. This form comes from RhostMUSH; PennMUSH treats such an argument as a player name, which cannot contain `=`.
+
+The class may be shortened to any start of its name; where two names share a start, the first in this list wins:
+
+| Class | Finds |
+|---|---|
+| exits, objects (or things), rooms, players | objects of that type whose name contains `<restriction>` |
+| name | objects of any type whose name contains `<restriction>` |
+| type | objects of the type `<restriction>` names: rooms, exits, objects (or things), players, also shortened |
+| evaluate, eplayer, eroom, eobject (or ething), eexit | objects, of the type named, for which `<restriction>` evaluates true, as the EVAL classes |
+| flags | objects with every flag whose letter is in `<restriction>` |
+| parent | children of the object `<restriction>` |
+
+A players, type=players or parent search with no player covers every owner. An unknown class or type returns `#-1 INVALID SEARCH TYPE`, and an unknown player `#-1`.
+
+```sharp
+> think search(me th=lamp)
+#12 #40
+> think search(type=player,1,10)
+#1 #6
+```
 
 ## Search examples
 

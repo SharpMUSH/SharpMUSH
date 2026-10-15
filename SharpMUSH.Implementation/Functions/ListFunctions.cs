@@ -142,7 +142,8 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors,
+				extraArguments: ExtraPredicateArguments(parser, 4));
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.ToPlainText() == "1")
 				.Select(pair => pair.item);
@@ -174,7 +175,8 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors,
+				extraArguments: ExtraPredicateArguments(parser, 4));
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.Truthy(parser))
 				.Select(pair => pair.item);
@@ -548,7 +550,12 @@ public partial class Functions
 			MarkupText.Join(outputSep, list.Where((_, i) => !deleted.Contains(i))));
 	}
 
-	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
+	/// <summary>
+	/// map(): the attribute once per item, the item as %0. Arguments from position 4 on reach it as %1,
+	/// %2, ..., as RhostMUSH passes them. Without any, %1 is the item's position from 1, as PennMUSH
+	/// passes it, unless <c>rhost_map_args</c> is on, when %1 is empty as on RhostMUSH.
+	/// </summary>
+	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep", "argument..."])]
 	public async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -559,17 +566,20 @@ public partial class Functions
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var extras = ExtraPredicateArguments(parser, 4);
+		var withPosition = extras.Count == 0 && !Configuration.CurrentValue.Compatibility.RhostMapArgs;
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors, withPosition: true);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors,
+				withPosition, extras);
 			return errors.Complete(new CallState(MarkupText.Join(sep, lambdaResults)));
 		}
 
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
-				await CallAttributeForEachItemAsync(parser, function, list, errors, withPosition: true)))),
+				await CallAttributeForEachItemAsync(parser, function, list, errors, extras, withPosition)))),
 			CallState refusal => errors.Complete(refusal),
 		};
 	}
@@ -1619,7 +1629,8 @@ public partial class Functions
 
 	/// <summary>
 	/// Evaluates a #lambda or #apply expression for each item in a list, the item as %0 and, when
-	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them.
+	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them;
+	/// <paramref name="extraArguments"/>, when given, follow as %1, %2, ...
 	/// </summary>
 	private async ValueTask<List<MString>> EvaluateLambdaOrApplyForEachItemAsync(
 		IMUSHCodeParser parser,
@@ -1627,17 +1638,24 @@ public partial class Functions
 		MString rawAttrArg,
 		MString[] list,
 		ListEvaluationErrors errors,
-		bool withPosition = false)
+		bool withPosition = false,
+		Dictionary<string, CallState>? extraArguments = null)
 	{
 		var results = new List<MString>(list.Length);
 		for (var position = 0; position < list.Length; position++)
 		{
 			var item = list[position];
+			var arguments = ItemArguments(item, position, withPosition);
+			foreach (var (key, value) in extraArguments ?? [])
+			{
+				arguments.TryAdd(key, value);
+			}
+
 			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
 				parser,
 				executor,
 				rawAttrArg,
-				ItemArguments(item, position, withPosition));
+				arguments);
 			results.Add(errors.Record(evaluated));
 		}
 

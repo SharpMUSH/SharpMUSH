@@ -49,6 +49,31 @@
       "id": "innermost-loop-tokens",
       "heading": "Innermost loop tokens",
       "lookup": "compatibility config innermost loop tokens"
+    },
+    {
+      "id": "rhostmush-edit-modes-rhost-edit",
+      "heading": "RhostMUSH edit() modes: `rhost_edit`",
+      "lookup": "compatibility config rhostmush edit modes rhost edit"
+    },
+    {
+      "id": "rhostmush-lattr-arguments-rhost-lattr",
+      "heading": "RhostMUSH lattr() arguments: `rhost_lattr`",
+      "lookup": "compatibility config rhostmush lattr arguments rhost lattr"
+    },
+    {
+      "id": "rhostmush-map-arguments-rhost-map-args",
+      "heading": "RhostMUSH map() arguments: `rhost_map_args`",
+      "lookup": "compatibility config rhostmush map arguments rhost map args"
+    },
+    {
+      "id": "rhostmush-printf-fields-rhost-printf",
+      "heading": "RhostMUSH printf() fields: `rhost_printf`",
+      "lookup": "compatibility config rhostmush printf fields rhost printf"
+    },
+    {
+      "id": "rhostmush-side-effect-flag-sidefx-flag",
+      "heading": "RhostMUSH side-effect flag: `sidefx_flag`",
+      "lookup": "compatibility config rhostmush side effect flag sidefx flag"
     }
   ]
 }
@@ -250,4 +275,121 @@ With the option on, the same lines read the inner loop and the inner switch:
 x y x y
 > think switch(a,*,switch(b,*,#$))
 b
+```
+
+## RhostMUSH edit() modes: `rhost_edit`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_edit` off, edit() reads its arguments after the string as from/to pairs, as PennMUSH does,
+so `edit(abcabc,b,X,c,Y)` makes two edits. With it on, a fourth and fifth argument are RhostMUSH's
+mode arguments instead. A fourth that starts with a nonzero number replaces only the first match. The
+fifth chose how RhostMUSH edited ANSI codes; markup in SharpMUSH is never part of the text, so it is
+accepted and changes nothing. Three arguments mean the same either way, and more than five are an
+error with the option on.
+
+```sharp rhost_edit
+> think edit(abcabc,b,X,1)
+aXcabc
+> think edit(abcabc,b,X,c,Y)
+aXcaXc
+```
+
+## RhostMUSH lattr() arguments: `rhost_lattr`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_lattr` off, lattr() and lattrp() take an object and pattern and an optional output
+delimiter, as PennMUSH does. With it on, they take RhostMUSH's arguments:
+
+`lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`
+
+- `<target>` is a player whose view to list: only the attributes they may see are named. It is used
+  only when you control that player; otherwise the list is your own view. The names are always
+  separated by a space.
+- `<type>` narrows or summarises the list by its first character: `$` keeps attributes holding a
+  $-command and `^` those holding a ^-listen pattern; `&` keeps attributes with every attribute flag
+  whose letter is in `<flags>`, and `|` those with any of them; `l` answers the number of names and
+  of pages; a number answers that page (243 names a page, as on a default RhostMUSH); `~<start>-<count>`
+  answers `<count>` names from the `<start>`th; `>` and `<` answer the alphabetically last or first
+  name. `+` lists RhostMUSH's lock attributes, which SharpMUSH does not have, so it answers nothing; see
+  llocks().
+- `<regexp>`, when nonzero, makes `<pattern>` a regular expression.
+- `<tree>`, when nonzero, makes `*` stop at a backtick, as SharpMUSH and PennMUSH match attribute
+  trees. RhostMUSH has no attribute trees, so without it `*` also matches a backtick and
+  `lattr(<object>)` names every attribute, branches' leaves included.
+
+```sharp rhost_lattr
+> &RHOSTDOC_LATTR_CMD me=$rhostdoc:think hi
+> &RHOSTDOC_LATTR_TEXT me=hello
+> think lattr(me/RHOSTDOC_LATTR_*,,$)
+RHOSTDOC_LATTR_CMD
+> think lattr(me/RHOSTDOC_LATTR_*,,l)
+2 1
+> think lattr(me/RHOSTDOC_LATTR_*,|)
+RHOSTDOC_LATTR_CMD RHOSTDOC_LATTR_TEXT
+```
+
+## RhostMUSH map() arguments: `rhost_map_args`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+map() passes any arguments after its output separator to the attribute as %1, %2 and so on. With
+none, `rhost_map_args` off passes the item's position as %1, as PennMUSH does; with it on, %1 is empty,
+as on RhostMUSH.
+
+```sharp rhost_map_args
+> &RHOSTDOC_MAP me=<%0|%1>
+> think map(me/RHOSTDOC_MAP,a b)
+<a|> <b|>
+> think map(me/RHOSTDOC_MAP,a b,,,x)
+<a|x> <b|x>
+```
+
+## RhostMUSH printf() fields: `rhost_printf`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_printf` off, printf() reads `%` directives in SharpMUSH's own grammar (see printf()).
+With it on, it reads RhostMUSH's fields instead: a field is `$`, then any of the codes below, then
+`s`, and it takes the next value; `$$` is a dollar sign, and everything else is copied as it is.
+printf() then needs at least one value. A value with no field left for it is dropped, and a field
+with no value left is empty.
+
+- A number is the field's width; a value longer than it is cut, and a shorter one padded. Without
+  one the field is as wide as its value. A width starting with `0` pads with zeros.
+- `-` aligns left, `^` centres and `_` spreads the words across the width; the default is right.
+  Giving two of these is an error.
+- `+` never cuts the value, and `*` cuts from its start rather than its end.
+- `|` wraps the value onto further rows at the width, and `|"` wraps at a space where it can. `&`
+  starts a new row at each line of the value. Further rows show the text between fields as spaces.
+- `:<character>:` pads with that character rather than a space.
+- `.` leaves out a blank last row. `!` leaves out an empty field and the text after it.
+
+The less common codes (`@ < > ' `` ` `` # / ;`) are read as on RhostMUSH as well.
+
+```sharp rhost_printf
+> think printf(|$-5s|$5s|,ab,cd)
+|ab   |   cd|
+> think printf(<$10:.:s>,ab)
+<........ab>
+```
+
+## RhostMUSH side-effect flag: `sidefx_flag`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `sidefx_flag` off, side-effect functions (pemit(), set(), attrib_set(), create() and the rest that
+change the game) work for anyone, subject to `function_side_effects` and their own permission checks,
+as in PennMUSH. With it on, they work only for an object that has the SIDEFX flag or holds the
+`softcode.sidefx` permission; anything else gets `#-1 FUNCTION DISABLED`, the same answer as with side
+effects turned off. Anyone may set SIDEFX on what they control. The wizard role allows
+`softcode.sidefx`, so wizards need no flag, where on RhostMUSH a wizard needs the flag as well. A
+function's reading form, such as name() with one argument, is never affected.
+
+```sharp sidefx_flag
+> think hasflag(me,SIDEFX) [permission(me,softcode.sidefx)]
+0 1
+> think [attrib_set(me/RHOSTDOC_SIDEFX,ok)][get(me/RHOSTDOC_SIDEFX)]
+ok
 ```

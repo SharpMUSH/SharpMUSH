@@ -74,12 +74,14 @@ Case makes a difference in all substitutions; capitalizing the first letter afte
 
 If the ENACTOR's gender is set, you can use these substitutions to get the<br>
 right pronoun for him/her:<br>
-     %s = subjective pronoun: he, she, it, they. Same as subj(%#)<br>
-     %o = objective pronoun: him, her, it, them. Same as obj(%#)<br>
-     %p = possessive pronoun: his, her, its, their. Same as poss(%#).<br>
-     %a = absolute possessive: his, hers, its, theirs. Same as aposs(%#).
+     %s = subjective pronoun: he, she, they. Same as subj(%#)<br>
+     %o = objective pronoun: him, her, them. Same as obj(%#)<br>
+     %p = possessive pronoun: his, her, their. Same as poss(%#).<br>
+     %a = absolute possessive: his, hers, theirs. Same as aposs(%#).
 
-    Case makes a difference: %S will return He, She, It, They.
+    Only the first letter of the gender counts. See [GENDER].
+
+    Case makes a difference: %S will return He, She, They.
 
 Some attributes can be retrieved via substitutions:<br>
      %va-%vz = the contents of the object's VA-VZ attributes, respectively<br>
@@ -105,9 +107,11 @@ Other substitutions:<br>
     %+ = The number of arguments passed to the current ufun.<br>
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function<br>
     %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>    %`\<name\>` = the equivalent of r(name, args): the argument called `<name>`, from `uargs()`, a regexp `$-command` or `mapsql()`. `%<0>` is `%0`. Like `%0`, it ends with the call.<br>
-    %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.<br>
+    %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`. %iL (or %il) is the outermost one.<br>
+    %i_N = equivalent of inum(N), the position of that element in its list; %i_L is the outermost one's. From RhostMUSH.<br>
+    %-N = argument N, for N from 0 to 999 (up to three digits), the same as %`<N>`: `%-12` is the thirteenth argument. From RhostMUSH.<br>
     %dN = the list element of the Nth `@dolist` out, counting `@dolist`s only; %dL is the outermost. From RhostMUSH: see [@dolist].<br>
-    `%q<!name>`, `%i!N` and `%d!N` give 1 or 0 about the value instead of the value: see [bang notation].<br>
+    `%q<!name>`, `%i!N`, `%i_!N`, `%-!N` and `%d!N` give 1 or 0 about the value instead of the value: see [bang notation].<br>
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
 ::: seealso

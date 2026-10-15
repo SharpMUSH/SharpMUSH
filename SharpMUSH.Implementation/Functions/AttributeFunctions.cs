@@ -30,12 +30,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "his",
-					"F" or "Female" => "hers",
-					_ => "theirs"
-				}));
+				PronounCase.AbsolutePossessive));
 	}
 
 	/// <summary>
@@ -683,15 +678,13 @@ public partial class Functions
 	private static string AttributeListSeparator(IMUSHCodeParser parser, int argument)
 		=> ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, argument, " ").ToPlainText();
 
-	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
+	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, 1), matched));
+		=> ListAttributesWithLayoutAsync(parser, attribute.Name, false);
 
-	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
+	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, 1), matched));
+		=> ListAttributesWithLayoutAsync(parser, attribute.Name, true);
 
 	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -756,12 +749,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "him",
-					"F" or "Female" => "her",
-					_ => "them"
-				}));
+				PronounCase.Objective));
 	}
 
 	[SharpFunction(Name = "objeval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse, ParameterNames = ["object", "expression"])]
@@ -889,12 +877,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.PossessivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "his",
-					"F" or "Female" => "her",
-					_ => "their"
-				}));
+				PronounCase.Possessive));
 	}
 
 	[SharpFunction(Name = "regedit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["string", "pattern", "replacement"])]
@@ -1044,16 +1027,18 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "he",
-					"F" or "Female" => "she",
-					_ => "they"
-				}));
+				PronounCase.Subjective));
 	}
 
 	[SharpFunction(Name = "udefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default", "arguments..."])]
-	public async ValueTask<CallState> UserAttributeDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> UserAttributeDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> UserAttributeDefaultAsync(parser, asCaller: false);
+
+	/// <summary>
+	/// udefault()'s body: the attribute runs as the object that holds it, or, when
+	/// <paramref name="asCaller"/>, as the object calling the function (RhostMUSH's u2default()).
+	/// </summary>
+	private async ValueTask<CallState> UserAttributeDefaultAsync(IMUSHCodeParser parser, bool asCaller)
 	{
 		var selector = await parser.FunctionParse(parser.CurrentState.Arguments["0"].Message) ?? CallState.Empty;
 		var hadErrors = selector.HadErrors;
@@ -1084,7 +1069,7 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.LongName),
 					Arguments = arguments,
 					EnvironmentRegisters = arguments,
-					Executor = actualObject.Object().DBRef,
+					Executor = asCaller ? state.Executor : actualObject.Object().DBRef,
 					Caller = state.Executor
 				}, p => p.FunctionParse(value.Value)))!;
 			}));

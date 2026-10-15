@@ -73,7 +73,7 @@ public partial class Commands
 
 		var key = !unlock && args.TryGetValue("1", out var keyArg) ? keyArg.Message.ToPlainText() : string.Empty;
 		await LockHelpers.LockAsync(parser, LocateService, NotifyService, PermissionService, LockService, executor,
-			targetText, key, type);
+			targetText, key, type, rhostSpelling: fixedType is null);
 		return CallState.Empty;
 	}
 

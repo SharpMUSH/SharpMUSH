@@ -163,3 +163,11 @@ Options that help control compability with TinyMUSH servers.
 - `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
 - `mux_list=<boolean>`: Is list() with two or three arguments TinyMUX's, which tells the enactor each result of a loop?
 - `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
+
+The `rhost_` options below are for a game moved from RhostMUSH. Each is off by default, and off leaves the function as PennMUSH has it. See [compatibility config].
+
+- `rhost_edit=<boolean>`: Are edit()'s fourth and fifth arguments RhostMUSH's first-only and ANSI modes, rather than another from/to pair?
+- `rhost_lattr=<boolean>`: Do lattr() and lattrp() take RhostMUSH's target, type, flags, regexp and tree arguments, rather than an output separator?
+- `rhost_printf=<boolean>`: Does printf() read RhostMUSH's `$`-fields, rather than SharpMUSH's `%` directives?
+- `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?
+- `sidefx_flag=<boolean>`: Do side-effect functions work only for an object with the SIDEFX flag or the `softcode.sidefx` permission, as on RhostMUSH? Others get `#-1 FUNCTION DISABLED`.

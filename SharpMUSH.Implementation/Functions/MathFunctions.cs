@@ -548,6 +548,12 @@ public partial class Functions
 			return ErrorMessages.Returns.UnknownOperation;
 		}
 
+		return await ApplyLMathAsync(parser, operation, list);
+	}
+
+	/// <summary>One lmath() operation applied to a list of numbers already split out.</summary>
+	private async ValueTask<CallState> ApplyLMathAsync(IMUSHCodeParser parser, LMathOperation operation, MString[] list)
+	{
 		// lmath() skips the function table's arity check, so each PennMUSH routine answers a list
 		// of the wrong length itself; the scalar functions here leave that to the dispatcher.
 		var attribute = operation.Attribute;

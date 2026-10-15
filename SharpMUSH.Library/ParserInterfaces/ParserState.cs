@@ -154,6 +154,18 @@ public class LimitExceededFlag
 }
 
 /// <summary>
+/// RhostMUSH's <c>privatize()</c> switch, shared by every frame of one evaluation: while it is on,
+/// code that localizes the q-registers (<c>localize()</c>, <c>ulocal()</c> and the like) starts with
+/// them empty instead of with a copy of the caller's. A reference type for the same reason as
+/// <see cref="LimitExceededFlag"/>.
+/// </summary>
+public class RegisterPrivacyFlag
+{
+	/// <summary>Whether localized code starts with empty q-registers.</summary>
+	public bool Enabled { get; set; }
+}
+
+/// <summary>
 /// HTTP response context for building HTTP responses
 /// </summary>
 public class HttpResponseContext
@@ -437,6 +449,9 @@ public sealed record EvaluationContext
 	/// <summary>Set once a limit has been exceeded.</summary>
 	public LimitExceededFlag? LimitExceeded { get; init; }
 
+	/// <summary>Whether localized code starts with empty q-registers (<c>privatize()</c>).</summary>
+	public RegisterPrivacyFlag? RegisterPrivacy { get; init; }
+
 	/// <inheritdoc cref="ParserState.MoveDepth"/>
 	public InvocationCounter? MoveDepth { get; init; }
 
@@ -552,6 +567,13 @@ public partial record ParserState
 	{
 		get => Context.LimitExceeded;
 		init => Context = Context with { LimitExceeded = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.RegisterPrivacy"/>
+	public RegisterPrivacyFlag? RegisterPrivacy
+	{
+		get => Context.RegisterPrivacy;
+		init => Context = Context with { RegisterPrivacy = value };
 	}
 
 	/// <summary>
@@ -753,6 +775,7 @@ public partial record ParserState
 			FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations = new(),
 			LimitExceeded = new(),
+			RegisterPrivacy = new(),
 			MoveDepth = new(),
 			CommandText = null,
 			QueuedOutput = PipedOutput,
@@ -797,6 +820,7 @@ public partial record ParserState
 			FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations = new InvocationCounter(),
 			LimitExceeded = new LimitExceededFlag(),
+			RegisterPrivacy = new RegisterPrivacyFlag(),
 			MoveDepth = new InvocationCounter()
 		},
 		Arguments = new Dictionary<string, CallState>()
@@ -864,6 +888,7 @@ public partial record ParserState
 				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations = new InvocationCounter(),
 				LimitExceeded = new LimitExceededFlag(),
+				RegisterPrivacy = new RegisterPrivacyFlag(),
 				MoveDepth = new InvocationCounter(),
 				CommandText = commandText,
 				OutputLimit = outputLimit
@@ -1014,16 +1039,19 @@ public partial record ParserState
 	/// <returns>Success if it was a valid register.</returns>
 	public bool AddRegister(string register, MString value)
 	{
-		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
-		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
-		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
-		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
+		var canPeek = Registers.TryPeek(out var top);
+		if (!canPeek || string.IsNullOrEmpty(register))
 		{
 			return false;
 		}
 
-		var canPeek = Registers.TryPeek(out var top);
-		if (!canPeek)
+		// A RhostMUSH label (setq()'s third argument) writes the register it names.
+		register = RegisterLabels.Resolve(top!, register);
+
+		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
+		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
+		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
+		if (!RegisterNameRegex().IsMatch(register))
 		{
 			return false;
 		}

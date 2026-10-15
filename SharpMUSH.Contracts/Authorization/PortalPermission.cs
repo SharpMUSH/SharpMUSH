@@ -75,6 +75,12 @@ public static class PortalPermission
 	public const string FeedAdmin = "feed.admin";
 
 	/// <summary>
+	/// Calls side-effect functions (pemit(), set(), create() and the like) when the <c>sidefx_flag</c>
+	/// option asks for the SIDEFX flag, as RhostMUSH does. The <c>wizard</c> role allows it.
+	/// </summary>
+	public const string SideFx = "softcode.sidefx";
+
+	/// <summary>
 	/// Operates the running server: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and the
 	/// like. Part of what WIZARD meant; the <c>wizard</c> role allows it. Not <see cref="ServerAdmin"/>,
 	/// which is the owner's.
@@ -147,6 +153,7 @@ public static class PortalPermission
 		new(GameRoyalty, "EnumPermGameRoyalty", GroupGame, "EnumPermGameRoyaltyDesc"),
 		new(ChatAdmin, "EnumPermChatAdmin", GroupGame, "EnumPermChatAdminDesc"),
 		new(FeedAdmin, "EnumPermFeedAdmin", GroupGame, "EnumPermFeedAdminDesc"),
+		new(SideFx, "EnumPermSideFx", GroupGame, "EnumPermSideFxDesc"),
 		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
 		new(ProtectWizard, "EnumPermProtectWizard", GroupGame, "EnumPermProtectWizardDesc"),

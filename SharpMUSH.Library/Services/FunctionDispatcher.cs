@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -13,10 +14,11 @@ namespace SharpMUSH.Library.Services;
 public static class FunctionDispatcher
 {
 	public static async ValueTask<CallState> InvokeAsync(IMUSHCodeParser parser, FunctionDefinition definition,
-		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false)
+		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false,
+		bool sideEffectsNeedGrant = false)
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
-			argumentCount, permissionsChecked, deferredArguments, argumentsValidated: false);
+			argumentCount, permissionsChecked, deferredArguments, argumentsValidated: false, sideEffectsNeedGrant);
 		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
 			? result with { HadErrors = true } : result;
 	}
@@ -27,11 +29,14 @@ public static class FunctionDispatcher
 	/// arguments are deferred, so they are not checked a second time here.
 	/// </summary>
 	/// <param name="argumentCount">The number of arguments the call was written with.</param>
+	/// <param name="sideEffectsNeedGrant">The <c>sidefx_flag</c> option: a side-effect function also needs
+	/// <see cref="SideEffectsGranted"/> of the executor.</param>
 	public static async ValueTask<CallState> InvokeValidatedAsync(IMUSHCodeParser parser, FunctionDefinition definition,
-		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int argumentCount)
+		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int argumentCount,
+		bool sideEffectsNeedGrant = false)
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
-			argumentCount, permissionsChecked: true, deferredArguments: true, argumentsValidated: true);
+			argumentCount, permissionsChecked: true, deferredArguments: true, argumentsValidated: true, sideEffectsNeedGrant);
 		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
 			? result with { HadErrors = true } : result;
 	}
@@ -64,7 +69,7 @@ public static class FunctionDispatcher
 
 	private static async ValueTask<CallState> InvokeCoreAsync(IMUSHCodeParser parser, FunctionDefinition definition,
 		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount,
-		bool permissionsChecked, bool deferredArguments, bool argumentsValidated)
+		bool permissionsChecked, bool deferredArguments, bool argumentsValidated, bool sideEffectsNeedGrant)
 	{
 		EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 		var attribute = definition.Attribute;
@@ -97,7 +102,8 @@ public static class FunctionDispatcher
 		var emptyCall = count == 1 && parser.CurrentState.ArgumentsOrdered.Values.First().Message.Length == 0;
 		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count, emptyCall) is { } arityError)
 			return new CallState(arityError);
-		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
+		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs
+			&& (!sideEffects || (sideEffectsNeedGrant && executor is not null && !await SideEffectsGranted(executor))))
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);
 		if ((flags & NumericFlags) != 0
 			&& ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser) is { } error)
@@ -116,10 +122,14 @@ public static class FunctionDispatcher
 			logger.LogInformation("Function {Function} executed by {Executor}", name, executor!.Object().DBRef);
 
 		if (!flags.HasFlag(FunctionFlags.Localize)) return await definition.Function(parser);
+		// privatize(1) (RhostMUSH): localized code starts with no q-registers rather than a copy.
+		var privatized = parser.CurrentState.RegisterPrivacy?.Enabled == true;
 		var localized = parser.Push(parser.CurrentState with
 		{
 			Registers = new(parser.CurrentState.Registers.Reverse()
-				.Select(frame => new Dictionary<string, MString>(frame, frame.Comparer)))
+				.Select(frame => privatized
+					? new Dictionary<string, MString>(frame.Comparer)
+					: new Dictionary<string, MString>(frame, frame.Comparer)))
 		});
 		if (deferredArguments && flags.HasFlag(FunctionFlags.NoParse))
 		{
@@ -147,6 +157,14 @@ public static class FunctionDispatcher
 		}
 		return await definition.Function(localized);
 	}
+
+	/// <summary>
+	/// Whether <paramref name="executor"/> may call side-effect functions under the <c>sidefx_flag</c>
+	/// option, which comes from RhostMUSH: it has the SIDEFX flag, or the
+	/// <see cref="PortalPermission.SideFx"/> permission (which God and the <c>wizard</c> role hold).
+	/// </summary>
+	public static async ValueTask<bool> SideEffectsGranted(AnySharpObject executor)
+		=> await executor.HasFlag("SIDEFX") || await executor.Can(PortalPermission.SideFx);
 
 	/// <summary>Identity-dependent gates fail closed when the profile forbids object reads.</summary>
 	public static string? CheckPermissionWithoutObjectData(SharpFunctionAttribute attribute)

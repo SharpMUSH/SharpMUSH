@@ -96,5 +96,45 @@ public record CompatibilityOptions(
 		Description = "Read ## and #@ from the innermost iter() or @dolist that is running, and #$ from the innermost switch whose action is running, wherever the token is written, as TinyMUX does. Off, they read the outermost one whose text they are written in, as PennMUSH does",
 		Group = "TinyMUX Compatibility",
 		Order = 5)]
-	bool InnermostTokens
+	bool InnermostTokens,
+
+	[property: SharpConfig(
+		Name = "rhost_edit",
+		Category = "Compatibility",
+		Description = "Read edit()'s fourth and fifth arguments as RhostMUSH's mode flags (a nonzero fourth replaces only the first match) instead of another from/to pair",
+		Group = "RhostMUSH Compatibility",
+		Order = 1)]
+	bool RhostEdit,
+
+	[property: SharpConfig(
+		Name = "rhost_lattr",
+		Category = "Compatibility",
+		Description = "Read lattr()'s and lattrp()'s arguments as RhostMUSH lays them out: a target to list as, then a type, attribute flags, a regular expression switch and a tree switch, instead of an output delimiter",
+		Group = "RhostMUSH Compatibility",
+		Order = 2)]
+	bool RhostLattr,
+
+	[property: SharpConfig(
+		Name = "rhost_printf",
+		Category = "Compatibility",
+		Description = "Read printf()'s format with RhostMUSH's $-code grammar ($-10s, $^20:-:s ...) instead of SharpMUSH's %-code grammar",
+		Group = "RhostMUSH Compatibility",
+		Order = 3)]
+	bool RhostPrintf,
+
+	[property: SharpConfig(
+		Name = "rhost_map_args",
+		Category = "Compatibility",
+		Description = "In map(), leave %1 empty when no extra arguments are given, as RhostMUSH does, instead of passing the item's position",
+		Group = "RhostMUSH Compatibility",
+		Order = 4)]
+	bool RhostMapArgs,
+
+	[property: SharpConfig(
+		Name = "sidefx_flag",
+		Category = "Compatibility",
+		Description = "Let side-effect functions (pemit(), set(), create() ...) work only for an object with the SIDEFX flag or the softcode.sidefx permission, as RhostMUSH does; others get the disabled-function error",
+		Group = "RhostMUSH Compatibility",
+		Order = 5)]
+	bool SidefxFlag
 );

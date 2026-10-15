@@ -834,6 +834,112 @@ public class ControlFlowCommandTests
 			.Because("neither action's setq survives the switch");
 	}
 
+	/// <summary>
+	/// <c>@dolist/inline/localize</c>: q-registers are saved before each run of the action list and
+	/// restored after it (cmd_dolist folds QUEUE_PRESERVE_QREG into an inplace queue_type, and do_entry
+	/// localizes around each entry). The switch was accepted and ignored.
+	/// </summary>
+	[Test]
+	public async ValueTask DoList_InlineLocalize_RestoresRegistersAfterEachRun()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,start);@dolist/inline/localize a b={{@pemit #1=DlLoc_##_%q<dl>_{id};think setq(dl,%q<dl>##)}};@pemit #1=DlLoc_After_%q<dl>_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"DlLoc_a_start_{id}");
+		await Assert.That(messages).Contains($"DlLoc_b_start_{id}")
+			.Because("each run starts from the registers saved before it");
+		await Assert.That(messages).Contains($"DlLoc_After_start_{id}")
+			.Because("no run's setq survives the @dolist");
+	}
+
+	/// <summary>Without /localize an inline run sees and changes the caller's registers.</summary>
+	[Test]
+	public async ValueTask DoList_Inline_SharesRegistersWithTheCaller()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,start);@dolist/inline a b=think setq(dl,%q<dl>##);@pemit #1=DlShare_After_%q<dl>_{id}"));
+
+		await Assert.That(MessagesFor(executor)).Contains($"DlShare_After_startab_{id}");
+	}
+
+	/// <summary>/inplace is QUEUE_RECURSE, which includes QUEUE_PRESERVE_QREG: it localizes too.</summary>
+	[Test]
+	public async ValueTask DoList_Inplace_Localizes()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,start);@dolist/inplace a b=think setq(dl,%q<dl>##);@pemit #1=DlInplace_After_%q<dl>_{id}"));
+
+		await Assert.That(MessagesFor(executor)).Contains($"DlInplace_After_start_{id}");
+	}
+
+	/// <summary>
+	/// <c>/clearregs</c>, and RhostMUSH's <c>/clearreg</c> spelling: each inline run starts with no
+	/// q-registers. With /localize the caller's come back afterwards.
+	/// </summary>
+	[Test]
+	[Arguments("CLEARREGS")]
+	[Arguments("CLEARREG")]
+	public async ValueTask DoList_InlineClearRegs_StartsEachRunEmpty(string clearSwitch)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,start);@dolist/inline/localize/{clearSwitch} a b={{@pemit #1=DlClr_##_[%q<dl>]_{id};think setq(dl,set)}};@pemit #1=DlClr_After_%q<dl>_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"DlClr_a__{id}");
+		await Assert.That(messages).Contains($"DlClr_b__{id}")
+			.Because("the registers are cleared before each run");
+		await Assert.That(messages).Contains($"DlClr_After_start_{id}")
+			.Because("/localize puts the caller's registers back");
+	}
+
+	/// <summary>
+	/// A queued @dolist ignores both switches, as cmd_dolist does: the caller's registers are untouched
+	/// and each queued run starts from a copy of them.
+	/// </summary>
+	[Test]
+	public async ValueTask DoList_QueuedClearRegs_LeavesTheCallerAlone()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,kept);@dolist/clearregs a b=@pemit #1=DlQueued_##_%q<dl>_{id};@pemit #1=DlQueued_After_%q<dl>_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"DlQueued_After_kept_{id}")).IsTrue();
+		await Assert.That(await WaitForMessage(executor, $"DlQueued_b_kept_{id}")).IsTrue();
+	}
+
+	/// <summary>
+	/// Each queued run of a @dolist starts from its own copy of the registers (PE_INFO_CLONE), so one
+	/// run's setq() does not reach the next. They shared the caller's frame.
+	/// </summary>
+	[Test]
+	public async ValueTask DoList_QueuedRuns_DoNotShareRegisters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(dl,kept);@dolist a b={{think setq(dl,%q<dl>##);@pemit #1=DlCopy_%q<dl>_{id}}}"));
+
+		await Assert.That(await WaitForMessage(executor, $"DlCopy_keptb_{id}")).IsTrue()
+			.Because(string.Join(" | ", MessagesFor(executor).Where(heard => heard.Contains(id))));
+		await Assert.That(MessagesFor(executor)).Contains($"DlCopy_kepta_{id}");
+	}
+
 	[Test]
 	public async ValueTask Switch_Inline_BreakStopsLaterMatchingActions()
 	{
@@ -852,5 +958,41 @@ public class ControlFlowCommandTests
 			.Because("the break stops any further matching action");
 		await Assert.That(messages).DoesNotContain($"SwBrk_After_{id}")
 			.Because("the break also stops the calling action list");
+	}
+
+	/// <summary>
+	/// RhostMUSH's spellings of @switch's switches are other names for SharpMUSH's: /regall is
+	/// /all/regexp, /regfirst is /first/regexp, and /clearreg is /clearregs. A regexp is case-insensitive
+	/// and captures from the subject as written.
+	/// </summary>
+	[Test]
+	public async ValueTask Switch_RhostSwitchSpellings()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			"@switch/regall/inline ABC=^a(b),@pemit #1=RegAll_A_$1_51061,c$,@pemit #1=RegAll_B_51061,@pemit #1=RegAll_D_51061"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			"@switch/regfirst/inline ABC=^a(b),@pemit #1=RegFirst_A_$1_51062,c$,@pemit #1=RegFirst_B_51062"));
+		await Parser.CommandListParse(MarkupText.Plain(
+			"think setq(0,kept_51063);@switch/clearreg/inline/localize 1=1,@pemit #1=ClearReg_[%q0]_51063;@pemit #1=ClearRegAfter_%q0"));
+
+		await Assert.That(Heard(executor, "RegAll_A_B_51061")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "RegAll_B_51061")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "RegAll_D_51061")).IsEqualTo(0);
+		await Assert.That(Heard(executor, "RegFirst_A_B_51062")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "RegFirst_B_51062")).IsEqualTo(0);
+		await Assert.That(Heard(executor, "ClearReg__51063")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "ClearRegAfter_kept_51063")).IsEqualTo(1);
+	}
+
+	/// <summary>RhostMUSH's @dolist/space names the default space-separated list.</summary>
+	[Test]
+	public async ValueTask DoList_SpaceSwitchIsTheDefault()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/space/inline a,b c=@pemit #1=DolSpace_%i0_51064"));
+
+		await Assert.That(Heard(executor, "DolSpace_a,b_51064")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "DolSpace_c_51064")).IsEqualTo(1);
 	}
 }
