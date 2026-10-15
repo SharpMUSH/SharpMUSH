@@ -26,6 +26,13 @@ public class SharpAttributeEntry
 	/// ready or still being built.
 	/// </summary>
 	public AttributeIndexDefinition? Index { get; set; }
+
+	/// <summary>
+	/// What <c>@attribute/watch</c> made of the attribute, or null when it is not watched: one or more wildcard
+	/// patterns, separated by spaces, naming the event handler's attributes that run whenever a copy of this attribute
+	/// on any object is set, cleared or wiped (see <see cref="AttributeWatch"/>).
+	/// </summary>
+	public string? Watch { get; set; }
 }
 
 /// <summary>An attribute entry's index, as the entry stores it.</summary>

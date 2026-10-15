@@ -1076,7 +1076,7 @@ public partial class Commands
 
 		// did_it(player, thing, "USE", T("Used."), "OUSE", NULL, charge_action(thing) ? "AUSE" : "RUNOUT",
 		// NOTHING, AN_SYS) (set.c:1416-1417). The charge is spent before the triad runs.
-		var charged = await ChargeAction(objectToUse);
+		var charged = await ChargeAction(objectToUse, executor.Object().DBRef);
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: objectToUse,
 			What: "USE",
@@ -1097,9 +1097,10 @@ public partial class Commands
 	/// zero. The decremented value is written under the attribute's existing owner, as Penn's
 	/// <c>atr_add(..., Owner(b->creator), 0)</c> does. Penn's queue is single-threaded; here two
 	/// <c>USE</c>s of one object can run at once, so the read and the write share a gate striped by
-	/// object, as <c>MailDelivery</c>'s mailbox gates are, and one charge buys one <c>AUSE</c>.
+	/// object, as <c>MailDelivery</c>'s mailbox gates are, and one charge buys one <c>AUSE</c>. The
+	/// object doing the <c>USE</c> is the write's enactor, so a watch on <c>CHARGES</c> names it.
 	/// </remarks>
-	private async ValueTask<bool> ChargeAction(AnySharpObject thing)
+	private async ValueTask<bool> ChargeAction(AnySharpObject thing, DBRef user)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		var dbref = thing.Object().DBRef;
@@ -1107,7 +1108,7 @@ public partial class Commands
 		await gate.WaitAsync(token);
 		try
 		{
-			return await SpendCharge(thing, dbref, token);
+			return await SpendCharge(thing, dbref, user, token);
 		}
 		finally
 		{
@@ -1117,7 +1118,7 @@ public partial class Commands
 
 	private static readonly SemaphoreSlim[] ChargeGates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
-	private async ValueTask<bool> SpendCharge(AnySharpObject thing, DBRef dbref, CancellationToken token)
+	private async ValueTask<bool> SpendCharge(AnySharpObject thing, DBRef dbref, DBRef user, CancellationToken token)
 	{
 		var charges = await Mediator.CreateStream(new GetAttributeQuery(dbref, ["CHARGES"]), token)
 			.LastOrDefaultAsync(token);
@@ -1136,7 +1137,7 @@ public partial class Commands
 		var owner = await charges.Owner.WithCancellation(token)
 								?? await thing.Object().Owner.WithCancellation(token);
 		await Mediator.Send(new SetAttributeCommand(dbref, ["CHARGES"],
-			MarkupText.Plain((remaining - 1).ToString(CultureInfo.InvariantCulture)), owner), token);
+			MarkupText.Plain((remaining - 1).ToString(CultureInfo.InvariantCulture)), owner, user), token);
 		return true;
 	}
 

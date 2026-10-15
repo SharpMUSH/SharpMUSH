@@ -248,10 +248,11 @@ public partial class LightningDatabase
 	{
 		var replacement = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
-		// The flags, limit and enum are replaced; an index on the entry is not one of them and carries over.
+		// The flags, limit and enum are replaced; an index or a watch on the entry is not one of them and carries over.
 		var record = await Store.WriteAsync(tx =>
 		{
-			var written = replacement with { Index = ReadAttributeEntryRecord(tx, name)?.Index };
+			var stored = ReadAttributeEntryRecord(tx, name);
+			var written = replacement with { Index = stored?.Index, Watch = stored?.Watch };
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(written));
 			return written;
 		}, cancellationToken);
@@ -273,6 +274,21 @@ public partial class LightningDatabase
 		}, cancellationToken);
 		return created ? MapEntry(record) : null;
 	}
+
+	/// <summary>Sets the entry's <c>@attribute/watch</c> pattern, or takes it off with null; the entry must exist.</summary>
+	public async ValueTask<Found<SharpAttributeEntry>> SetAttributeWatchAsync(string name, string? pattern,
+		CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync<Found<SharpAttributeEntry>>(tx =>
+		{
+			if (ReadAttributeEntryRecord(tx, name) is not { } record)
+			{
+				return new NotFound();
+			}
+
+			var updated = record with { Watch = pattern };
+			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(updated));
+			return MapEntry(updated);
+		}, cancellationToken);
 
 	/// <summary>Deletes the entry, and with it any index on it; the copies on objects stay.</summary>
 	public async ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default)
@@ -317,29 +333,38 @@ public partial class LightningDatabase
 	/// </summary>
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
 		CancellationToken cancellationToken = default)
+		=> (await SetAttributeAsync(dbref, attribute, value, owner, WatchedAttributes.None.Names, cancellationToken)).Written();
+
+	/// <summary>
+	/// As <see cref="SetAttributeAsync(DBRef,string[],MString,SharpPlayer,CancellationToken)"/>, answering the leaf's
+	/// change when its full name is in <paramref name="watched"/>: only then is its previous value read, in the same
+	/// transaction.
+	/// </summary>
+	public async ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
+		IReadOnlySet<string> watched, CancellationToken cancellationToken = default)
 	{
 		if (attribute.Length == 0)
 		{
-			return false;
+			return new NotFound();
 		}
 
 		var n = (long)dbref.Number;
 		var write = PreparedAttributeWrite.From(new AttributeWrite(attribute, value, owner, []));
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
 			if (ReadObject(tx, n) is not { } found)
 			{
-				return false;
+				return new NotFound();
 			}
 
-			WriteAttributePath(tx, n, found.Record.Type, write);
+			var outcome = WriteAttributePath(tx, n, found.Record.Type, write, watched);
 			if (TouchesAliases(write.Path))
 			{
 				SyncPlayerAliases(tx, n);
 			}
 
-			return true;
+			return outcome;
 		}, cancellationToken);
 	}
 
@@ -361,7 +386,7 @@ public partial class LightningDatabase
 
 			foreach (var write in writes)
 			{
-				WriteAttributePath(tx, n, found.Record.Type, write);
+				WriteAttributePath(tx, n, found.Record.Type, write, WatchedAttributes.None.Names);
 			}
 
 			// The importer's path: an imported player's ALIAS is indexed as it lands.
@@ -396,11 +421,14 @@ public partial class LightningDatabase
 	/// The write's own flags land on its leaf alongside the entry's defaults. When the leaf's entry has an index,
 	/// the leaf's index entries follow its value in the same transaction (<see cref="IndexCopy"/>); the entry
 	/// is read here for its default flags anyway, so an attribute without an index costs nothing more.
+	/// Answers the leaf's change when its full name is one of <paramref name="watched"/>.
 	/// </summary>
-	private static void WriteAttributePath(ITx tx, long n, string objectType, PreparedAttributeWrite write)
+	private static AttributeWriteOutcome WriteAttributePath(ITx tx, long n, string objectType, PreparedAttributeWrite write,
+		IReadOnlySet<string> watched)
 	{
 		var path = write.Path;
 		var longName = string.Empty;
+		AttributeWriteOutcome outcome = new Success();
 
 		for (var level = 0; level < path.Length; level++)
 		{
@@ -435,6 +463,12 @@ public partial class LightningDatabase
 			// A node that already exists keeps its value unless it is the leaf being set.
 			if (isLeaf)
 			{
+				if (watched.Contains(longName))
+				{
+					var previous = existing is null ? MarkupText.Empty : ReadPreviousValue(tx, key);
+					outcome = new WatchedAttributesChanged([new WatchedAttributeChange(longName, previous, write.Source)]);
+				}
+
 				tx.Put(Tables.AttrVal, key, write.Value);
 				if (entry?.Index is { } index)
 				{
@@ -446,7 +480,13 @@ public partial class LightningDatabase
 				tx.Put(Tables.AttrVal, key, EmptyAttributeValue);
 			}
 		}
+
+		return outcome;
 	}
+
+	/// <summary>A node's stored value, read inside the write that is about to replace or remove it.</summary>
+	private static MString ReadPreviousValue(ITx tx, byte[] key)
+		=> DeserializeValue(tx.TryGet(Tables.AttrVal, key, out var bytes) ? bytes : null);
 
 	/// <summary>
 	/// The provider's one full-table write: attribute ownership is stored inside each
@@ -512,20 +552,32 @@ public partial class LightningDatabase
 	/// otherwise deletes it outright, dropping <c>branch</c> from the parent when that was its last child.
 	/// </summary>
 	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+		=> (await ClearAttributeAsync(dbref, attribute, WatchedAttributes.None.Names, cancellationToken)).Written();
+
+	/// <summary>
+	/// As <see cref="ClearAttributeAsync(DBRef,string[],CancellationToken)"/>, answering the node's change, with an
+	/// empty new value, when its full name is in <paramref name="watched"/>.
+	/// </summary>
+	public async ValueTask<AttributeWriteOutcome> ClearAttributeAsync(DBRef dbref, string[] attribute, IReadOnlySet<string> watched,
+		CancellationToken cancellationToken = default)
 	{
 		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
 		var n = (long)dbref.Number;
 		var empty = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
-			if (ReadPathPrefixes(tx, n, path).Count != path.Length || path.Length == 0)
+			var walk = ReadPathPrefixes(tx, n, path);
+			if (walk.Count != path.Length || path.Length == 0)
 			{
-				return false;
+				return new NotFound();
 			}
 
 			var longName = string.Join('`', path);
 			var key = Keys.Attr(n, longName);
+			AttributeWriteOutcome outcome = watched.Contains(longName)
+				? new WatchedAttributesChanged([new WatchedAttributeChange(longName, ReadPreviousValue(tx, key), MarkupText.Empty)])
+				: new Success();
 
 			// Emptied or gone, the copy has no index entry either way.
 			UnindexCopy(tx, n, longName);
@@ -545,7 +597,7 @@ public partial class LightningDatabase
 				SyncPlayerAliases(tx, n);
 			}
 
-			return true;
+			return outcome;
 		}, cancellationToken);
 	}
 
@@ -553,20 +605,29 @@ public partial class LightningDatabase
 	/// <c>LONGNAME`</c> in both tables, which is the whole subtree and nothing else (a sibling such as
 	/// <c>FOOZ</c> shares the <c>FOO</c> prefix but not the <c>FOO`</c> one).</summary>
 	public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+		=> (await WipeAttributeAsync(dbref, attribute, WatchedAttributes.None.Names, cancellationToken)).Written();
+
+	/// <summary>
+	/// As <see cref="WipeAttributeAsync(DBRef,string[],CancellationToken)"/>, answering a change, with an empty new value,
+	/// for each removed node whose full name is in <paramref name="watched"/>.
+	/// </summary>
+	public async ValueTask<AttributeWriteOutcome> WipeAttributeAsync(DBRef dbref, string[] attribute, IReadOnlySet<string> watched,
+		CancellationToken cancellationToken = default)
 	{
 		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
 		var n = (long)dbref.Number;
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
 			if (ReadPathPrefixes(tx, n, path).Count != path.Length || path.Length == 0)
 			{
-				return false;
+				return new NotFound();
 			}
 
 			var longName = string.Join('`', path);
 			var key = Keys.Attr(n, longName);
 			var descendants = Keys.Attr(n, longName + "`");
+			var outcome = WatchedRemovals(tx, n, longName, watched);
 
 			UnindexCopy(tx, n, longName);
 			UnindexCopies(tx, n, descendants);
@@ -580,8 +641,32 @@ public partial class LightningDatabase
 				SyncPlayerAliases(tx, n);
 			}
 
-			return true;
+			return outcome;
 		}, cancellationToken);
+	}
+
+	/// <summary>
+	/// The watched attributes a wipe of <paramref name="longName"/> removes, the node first and then its descendants in
+	/// key order, each with the value it held. Only the watched names are looked up, so a wipe of an unwatched subtree
+	/// reads nothing more.
+	/// </summary>
+	private static AttributeWriteOutcome WatchedRemovals(ITx tx, long n, string longName, IReadOnlySet<string> watched)
+	{
+		if (watched.Count == 0)
+		{
+			return new Success();
+		}
+
+		var below = longName + "`";
+		var changes = watched
+			.Where(name => name == longName || name.StartsWith(below, StringComparison.Ordinal))
+			.Order(StringComparer.Ordinal)
+			.Select(name => (Name: name, Key: Keys.Attr(n, name)))
+			.Where(removed => tx.TryGet(Tables.AttrMeta, removed.Key, out _))
+			.Select(removed => new WatchedAttributeChange(removed.Name, ReadPreviousValue(tx, removed.Key), MarkupText.Empty))
+			.ToList();
+
+		return changes.Count == 0 ? new Success() : new WatchedAttributesChanged(changes);
 	}
 
 	#endregion
@@ -1056,7 +1141,8 @@ public partial class LightningDatabase
 		Limit = string.IsNullOrEmpty(record.Limit) ? null : record.Limit,
 		Enum = record.Enum is { Length: > 0 } ? record.Enum : null,
 		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' ',
-		Index = record.Index is { } index ? MapIndex(index) : null
+		Index = record.Index is { } index ? MapIndex(index) : null,
+		Watch = string.IsNullOrEmpty(record.Watch) ? null : record.Watch
 	};
 
 	/// <summary>A space delimiter is the default and is not written, so older rows and new ones read alike.</summary>

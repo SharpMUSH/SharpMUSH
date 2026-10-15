@@ -78,16 +78,16 @@ public class EventService(
 			// %# is the object that caused the event (the player who connected, the wizard who ran @tel).
 			// A system event, or one whose enactor is gone, runs with God (#1) as its enactor so that %#
 			// is always a real dbref inside handler code (PennMUSH uses #-1, which many functions reject).
-			var resolvedEnactorRef = enactor is { Number: >= 0 } eventEnactor
-				&& await mediator.Send(new GetObjectNodeQuery(eventEnactor), ExecutionBudget.CurrentToken) is AnySharpObject
-					? eventEnactor
-					: new DBRef(1, null);
+			var resolvedEnactorRef = await ResolveEnactorAsync(enactor);
 
 			var handlerRef = eventHandler.Object().DBRef;
 			var arguments = EventArguments.Of(name, args);
+			// Another event keeps the depth of the code that raised it, so a chain that passes through one (a watch
+			// handler that moves something, whose OBJECT`MOVE handler sets HP) is still counted.
+			var run = new EventRun(handlerRef, resolvedEnactorRef, AttributeChangeChain.Depth);
 			if (EventCatalogue.Find(name) is { Stoppable: true })
 			{
-				await QueueInTurnAsync(name, handlerRef, resolvedEnactorRef, arguments, hearers);
+				await QueueInTurnAsync(name, run, arguments, hearers);
 				return;
 			}
 
@@ -98,8 +98,7 @@ public class EventService(
 			// a custom, non-wizard handler runs unprivileged.
 			foreach (var hearer in hearers)
 			{
-				var admission = await QueueHold.AdmitAsync(scheduler.Value, Body(hearer),
-					State(handlerRef, resolvedEnactorRef, arguments, hearer));
+				var admission = await QueueHold.AdmitAsync(scheduler.Value, Body(hearer), State(run, arguments, hearer));
 				if (!admission.Accepted)
 				{
 					logger.LogWarning("Event {EventName} was not queued for {Attribute}: {Reason}", name, hearer.Attribute,
@@ -120,6 +119,106 @@ public class EventService(
 				eventName,
 				enactor);
 		}
+	}
+
+	/// <inheritdoc />
+	public async ValueTask QueueAttributeWatchHandlersAsync(string pattern, DBRef? enactor, IReadOnlyList<MString> args)
+	{
+		try
+		{
+			if (await EventHandlerAsync() is not AnySharpObject eventHandler)
+			{
+				return;
+			}
+
+			var hearers = await WatchHandlersAsync(eventHandler, pattern);
+			if (hearers.Count == 0)
+			{
+				return;
+			}
+
+			// Each handler runs one change deeper than the code that made the change (see AttributeChangeChain).
+			var run = new EventRun(eventHandler.Object().DBRef, await ResolveEnactorAsync(enactor), AttributeChangeChain.Depth + 1);
+			var arguments = NamedArguments(AttributeWatch.ArgumentNames, args);
+
+			// As a non-stoppable event's attributes are: each its own queue entry, run by the handler with its own
+			// permissions, so the write that caused it never waits on it.
+			foreach (var hearer in hearers)
+			{
+				var admission = await QueueHold.AdmitAsync(scheduler.Value, Body(hearer), State(run, arguments, hearer));
+				if (!admission.Accepted)
+				{
+					logger.LogWarning("Attribute watch handler {Attribute} was not queued: {Reason}", hearer.Attribute, admission.Reason);
+				}
+			}
+		}
+		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExceeded == true)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			// A watch handler's failure must not break the write that caused it.
+			logger.LogError(ex, "Error queueing attribute watch handlers {Pattern} with enactor {Enactor}", pattern, enactor);
+		}
+	}
+
+	/// <summary>The configured event handler object, or <see cref="None"/> when none is set or it is gone.</summary>
+	private async ValueTask<AnyOptionalSharpObject> EventHandlerAsync()
+	{
+		var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
+		if (eventHandlerDbRef is null or 0)
+		{
+			return new None();
+		}
+
+		return await mediator.Send(new GetObjectNodeQuery(new DBRef((int)eventHandlerDbRef.Value, null)), ExecutionBudget.CurrentToken);
+	}
+
+	/// <summary>
+	/// %# for a handler: the object that caused the event, or God (#1) for a system event or one whose enactor is gone,
+	/// so that %# is always a real dbref inside handler code (PennMUSH uses #-1, which many functions reject).
+	/// </summary>
+	private async ValueTask<DBRef> ResolveEnactorAsync(DBRef? enactor)
+		=> enactor is { Number: >= 0 } eventEnactor
+			&& await mediator.Send(new GetObjectNodeQuery(eventEnactor), ExecutionBudget.CurrentToken) is AnySharpObject
+				? eventEnactor
+				: new DBRef(1, null);
+
+	/// <summary>
+	/// The handler's own attributes matching any wildcard in <paramref name="pattern"/>, each once, in name order. An
+	/// empty attribute (a branch that only holds the ones below it) runs nothing.
+	/// </summary>
+	private async ValueTask<IReadOnlyList<Hearer>> WatchHandlersAsync(AnySharpObject eventHandler, string pattern)
+	{
+		var found = new Dictionary<string, Hearer>(StringComparer.Ordinal);
+		foreach (var wildcard in AttributeWatch.Wildcards(pattern))
+		{
+			if (await attributeService.GetAttributePatternAsync(eventHandler, eventHandler, wildcard, checkParents: false,
+						IAttributeService.AttributePatternMode.Wildcard) is not SharpAttribute[] matched)
+			{
+				continue;
+			}
+
+			foreach (var attribute in matched.Where(attribute => attribute.Value.Length > 0))
+			{
+				found.TryAdd(attribute.LongName, new Hearer(attribute.LongName, attribute.Value));
+			}
+		}
+
+		return [.. found.Values.OrderBy(hearer => hearer.Attribute, StringComparer.Ordinal)];
+	}
+
+	/// <summary>%0-%9 by position, and each also by its name in <paramref name="names"/>.</summary>
+	private static Dictionary<string, CallState> NamedArguments(IReadOnlyList<string> names, IReadOnlyList<MString> args)
+	{
+		var named = args.Index().ToDictionary(x => x.Index.ToString(), x => new CallState(x.Item), StringComparer.OrdinalIgnoreCase);
+		foreach (var (name, value) in names.Zip(args))
+		{
+			named[name] = new CallState(value);
+		}
+
+		return named;
 	}
 
 	/// <summary>
@@ -154,7 +253,7 @@ public class EventService(
 	/// A stoppable event's attributes run in turn in one queue entry, as @include would run them, so one may call
 	/// <c>stopevent()</c> to keep the ones after it from running.
 	/// </summary>
-	private async ValueTask QueueInTurnAsync(string eventName, DBRef handler, DBRef enactor,
+	private async ValueTask QueueInTurnAsync(string eventName, EventRun run,
 		Dictionary<string, CallState> arguments, IReadOnlyList<Hearer> hearers)
 	{
 		var admission = await scheduler.Value.AdmitWork(async () =>
@@ -166,7 +265,7 @@ public class EventService(
 				using (EventStop.Enter(stop))
 				{
 					result = await parser.Value
-						.FromState(State(handler, enactor, arguments, hearer) with { ExecutionBudget = ExecutionBudget.Current })
+						.FromState(State(run, arguments, hearer) with { ExecutionBudget = ExecutionBudget.Current })
 						.CommandListParse(Body(hearer));
 				}
 
@@ -177,7 +276,7 @@ public class EventService(
 			}
 
 			return result;
-		}, $"event:{eventName}", "event", handler, enactor, notifyOnRejection: false);
+		}, $"event:{eventName}", "event", run.Handler, run.Enactor, notifyOnRejection: false);
 
 		if (!admission.Accepted)
 		{
@@ -190,15 +289,19 @@ public class EventService(
 	/// </summary>
 	private static MString Body(Hearer hearer) => MarkupText.Plain(hearer.Body.ToPlainText());
 
+	/// <summary>Who runs an event's attributes, as whom, and how many attribute changes stand behind it.</summary>
+	private readonly record struct EventRun(DBRef Handler, DBRef Enactor, int AttributeChangeDepth);
+
 	/// <summary>
 	/// The arguments are %0-%9, and each also by its name in EventArguments. Every attribute gets its own copy.
 	/// </summary>
-	private static ParserState State(DBRef handler, DBRef enactor, Dictionary<string, CallState> arguments, Hearer hearer)
-		=> ParserState.RootFor(handler) with
+	private static ParserState State(EventRun run, Dictionary<string, CallState> arguments, Hearer hearer)
+		=> ParserState.RootFor(run.Handler) with
 		{
-			Enactor = enactor,
+			Enactor = run.Enactor,
 			Arguments = new Dictionary<string, CallState>(arguments, StringComparer.OrdinalIgnoreCase),
 			EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
-			CurrentEvaluation = new DBAttribute(handler, hearer.Attribute)
+			CurrentEvaluation = new DBAttribute(run.Handler, hearer.Attribute),
+			AttributeChangeDepth = run.AttributeChangeDepth
 		};
 }

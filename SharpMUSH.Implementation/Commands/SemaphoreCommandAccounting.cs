@@ -22,7 +22,7 @@ public partial class Commands
 	private sealed record SemaphoreAccounting(Func<int, ValueTask> Persist, Func<ValueTask<bool>> Reconcile);
 
 	private async ValueTask<Result<SemaphoreAccounting>> SemaphoreCommandAccounting(
-		AnySharpObject target, string[] path, Func<int, int, long> nextCount, bool clearZero)
+		AnySharpObject target, string[] path, Func<int, int, long> nextCount, bool clearZero, DBRef enactor)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		var fullTarget = target.Object().DBRef;
@@ -65,8 +65,8 @@ public partial class Commands
 			expected = checked((int)nextCount(oldCount, selected));
 			if (original is null && clearZero && expected == 0) return;
 			var written = clearZero && expected == 0
-				? await Mediator.Send(new ClearAttributeCommand(fullTarget, path), ExecutionBudget.CurrentToken)
-				: await Mediator.Send(new SetAttributeCommand(fullTarget, path, MarkupText.Plain(expected.Value.ToString()), god), ExecutionBudget.CurrentToken);
+				? await Mediator.Send(new ClearAttributeCommand(fullTarget, path, enactor), ExecutionBudget.CurrentToken)
+				: await Mediator.Send(new SetAttributeCommand(fullTarget, path, MarkupText.Plain(expected.Value.ToString()), god, enactor), ExecutionBudget.CurrentToken);
 			if (!written) throw new InvalidOperationException("Semaphore count update failed.");
 			if (original is null && !(clearZero && expected == 0))
 				await SemaphoreAttributes.InitializeAsync(Mediator, fullTarget, path, ValidateCreated);

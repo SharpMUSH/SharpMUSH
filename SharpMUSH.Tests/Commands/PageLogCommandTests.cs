@@ -252,6 +252,9 @@ public class PageLogCommandTests
 		}
 
 		public ValueTask<bool> HasHandlerAsync(string eventName) => inner.HasHandlerAsync(eventName);
+
+		public ValueTask QueueAttributeWatchHandlersAsync(string pattern, DBRef? enactor, IReadOnlyList<MString> args)
+			=> inner.QueueAttributeWatchHandlersAsync(pattern, enactor, args);
 	}
 
 	private sealed class OrderNotingPageLog(IPageLogService inner, RecordingEvents events) : IPageLogService

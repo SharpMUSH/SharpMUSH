@@ -347,7 +347,8 @@ internal sealed class AttributeWriter(
 
 	private async ValueTask<Result<WrittenAttribute>> StoreAsync(AttributeWrite write, WritePlan plan, MString value)
 	{
-		await mediator.Send(new SetAttributeCommand(write.Obj.Object().DBRef, write.AttrPath, value, write.Creator));
+		await mediator.Send(new SetAttributeCommand(write.Obj.Object().DBRef, write.AttrPath, value, write.Creator,
+			write.Executor.Object().DBRef));
 		await WarnSyntaxErrorsAsync(write, value);
 		return new WrittenAttribute(IsQuiet(write, plan));
 	}
@@ -637,7 +638,7 @@ internal sealed class AttributeWriter(
 		// nodes that still have children.
 		if (!isWipe)
 		{
-			await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`')));
+			await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`'), executor.Object().DBRef));
 			return new ClearOutcome(Denied: false, Wiped: 0);
 		}
 
@@ -753,7 +754,7 @@ internal sealed class AttributeWriter(
 
 		if (descendants.Length == 0)
 		{
-			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`')));
+			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`'), executor.Object().DBRef));
 			return (true, 1);
 		}
 
@@ -779,7 +780,7 @@ internal sealed class AttributeWriter(
 		{
 			// Common case: nothing in the subtree is protected - one recursive delete, same
 			// as before this fix.
-			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`')));
+			await mediator.Send(new WipeAttributeCommand(dbref, rootName.Split('`'), executor.Object().DBRef));
 			return (true, 1 + descendants.Length);
 		}
 
@@ -831,13 +832,13 @@ internal sealed class AttributeWriter(
 		var deletedCount = 0;
 		foreach (var descendant in deepestFirst.Where(descendant => fullyClearable[descendant.LongName!]))
 		{
-			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
+			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`'), executor.Object().DBRef));
 			deletedCount++;
 		}
 
 		if (rootFullyClearable)
 		{
-			await mediator.Send(new ClearAttributeCommand(dbref, rootName.Split('`')));
+			await mediator.Send(new ClearAttributeCommand(dbref, rootName.Split('`'), executor.Object().DBRef));
 			deletedCount++;
 		}
 

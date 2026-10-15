@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
@@ -25,6 +26,13 @@ public class RenameAttributeEntryCommandHandler(IAttributeStore database, IAttri
 			oldEntry.Enum,
 			oldEntry.EnumDelimiter,
 			cancellationToken);
+
+		// A watch moves with the entry: copies of the new name are watched, under the same pattern.
+		if (renamed is not null && oldEntry.Watch is { } watch
+			&& await database.SetAttributeWatchAsync(request.NewName, watch, cancellationToken) is SharpAttributeEntry watched)
+		{
+			renamed = watched;
+		}
 
 		// The index moves with the entry: its old entries went with the old name, so it builds again over the copies
 		// of the new one. The caller starts the build.

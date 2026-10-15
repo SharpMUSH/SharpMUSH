@@ -157,6 +157,7 @@ public sealed class PackageDeclarationService(
 				entry.Enum is null ? null : [.. entry.Enum], entry.EnumDelimiter), cancellationToken);
 			writes.Track($"attribute entry {entry.Name}", () => RestoreAttributeEntryAsync(entry.Name, previous));
 			await PutIndexAsync(entry.Name, previous?.Index?.Options, entry.Index, cancellationToken);
+			await PutWatchAsync(entry.Name, previous?.Watch, entry.Watch, cancellationToken);
 		}
 
 		foreach (var name in plan.AttributeEntryRemovals)
@@ -216,6 +217,16 @@ public sealed class PackageDeclarationService(
 		var now = await mediator.Send(new GetAttributeEntryQuery(name));
 		await mediator.Send(new CreateAttributeEntryCommand(previous.Name, previous.DefaultFlags, previous.Limit, previous.Enum, previous.EnumDelimiter));
 		await PutIndexAsync(previous.Name, now?.Index?.Options, previous.Index?.Options, CancellationToken.None);
+		await PutWatchAsync(previous.Name, now?.Watch, previous.Watch, CancellationToken.None);
+	}
+
+	/// <summary>Moves an entry's <c>@attribute/watch</c> pattern from <paramref name="had"/> to <paramref name="wanted"/>.</summary>
+	private async Task PutWatchAsync(string name, string? had, string? wanted, CancellationToken cancellationToken)
+	{
+		if (had != wanted)
+		{
+			await mediator.Send(new SetAttributeWatchCommand(name, wanted), cancellationToken);
+		}
 	}
 
 	/// <summary>

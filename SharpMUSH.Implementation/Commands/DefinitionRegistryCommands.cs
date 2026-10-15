@@ -1669,7 +1669,7 @@ public partial class Commands : ICommandRestrictionApplier
 		=> flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase);
 
 	[SharpCommand(Name = "@ATTRIBUTE",
-		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE", "INDEX"],
+		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE", "INDEX", "WATCH"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["attribute", "options..."])]
 	public async ValueTask<Option<CallState>> Attribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1708,6 +1708,8 @@ public partial class Commands : ICommandRestrictionApplier
 			"DELETE" => await DeleteAttributeEntryAsync(executor, attrName),
 			"RENAME" => await RenameAttributeEntryAsync(parser, executor, attrName),
 			"INDEX" => await IndexAttributeEntryAsync(executor, attrName, args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty),
+			// No '=' at all takes the default pattern; an empty one turns watching off.
+			"WATCH" => await WatchAttributeEntryAsync(executor, attrName, args.GetValueOrDefault("1")?.Message.ToPlainText()),
 			// Penn's cmds.c tries /limit before /enum.
 			_ => await SetAttributeRestrictionAsync(executor, attrName,
 				args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty, isEnum: action == "ENUM")
@@ -1715,7 +1717,7 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	/// <summary>The <c>@attribute</c> switches that change the table, in the order they are tried; each is Wizard.</summary>
-	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "INDEX", "LIMIT", "ENUM"];
+	private static readonly string[] AttributeActionSwitches = ["ACCESS", "DELETE", "RENAME", "INDEX", "WATCH", "LIMIT", "ENUM"];
 
 	/// <summary>
 	/// @attribute/decompile [&lt;pattern&gt;]: the @attribute commands that would re-create each matching
@@ -1768,6 +1770,11 @@ public partial class Commands : ICommandRestrictionApplier
 		if (entry.Index is { } index)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileIndexFormat), executor, entry.Name, index.Options.Words);
+		}
+
+		if (entry.Watch is { } watch)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileWatchFormat), executor, entry.Name, watch);
 		}
 	}
 
@@ -1872,6 +1879,51 @@ public partial class Commands : ICommandRestrictionApplier
 			AttributeIndexOptions options => await SetAttributeIndexAsync(executor, entry, options),
 			Error<string> error => await RefuseIndexOptionsAsync(executor, error.Value)
 		};
+	}
+
+	/// <summary>
+	/// <c>@attribute/watch &lt;attr&gt;[=&lt;pattern&gt;]</c>: from now on every set, clear or wipe of a copy of the attribute,
+	/// on any object, runs the event handler's attributes matching the pattern (<see cref="AttributeWatch"/>). With no
+	/// <c>=</c> the pattern is <see cref="AttributeWatch.DefaultPattern"/>; an empty one turns watching off. As with
+	/// <c>/limit</c> and <c>/enum</c>, the attribute must already be in the table.
+	/// </summary>
+	private async ValueTask<Option<CallState>> WatchAttributeEntryAsync(AnySharpObject executor, string target, string? given)
+	{
+		var name = target.Trim().TrimStart('@').ToUpperInvariant();
+		if (await Mediator.Send(new GetAttributeEntryQuery(name)) is not SharpAttributeEntry entry)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		var pattern = given is null ? AttributeWatch.DefaultPattern(entry.Name) : AttributeWatch.Normalize(given);
+		if (pattern is null && entry.Watch is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandWatchNoneFormat), executor, entry.Name);
+			return CallState.Empty;
+		}
+
+		return await Mediator.Send(new SetAttributeWatchCommand(entry.Name, pattern)) switch
+		{
+			SharpAttributeEntry { Watch: { } watch } watched => await ReportWatchAsync(executor,
+				nameof(ErrorMessages.Notifications.AttributeCommandWatchSetFormat), watched.Name, watch),
+			SharpAttributeEntry unwatched => await ReportWatchAsync(executor,
+				nameof(ErrorMessages.Notifications.AttributeCommandWatchRemovedFormat), unwatched.Name),
+			_ => await ReportWatchGoneAsync(executor)
+		};
+	}
+
+	private async ValueTask<Option<CallState>> ReportWatchAsync(AnySharpObject executor, string key, params object[] args)
+	{
+		await NotifyService.NotifyLocalized(executor, key, executor, args);
+		return CallState.Empty;
+	}
+
+	/// <summary>The entry was deleted between the lookup and the write.</summary>
+	private async ValueTask<Option<CallState>> ReportWatchGoneAsync(AnySharpObject executor)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+		return new CallState(ErrorMessages.Returns.NotFound);
 	}
 
 	private async ValueTask<Option<CallState>> RefuseIndexOptionsAsync(AnySharpObject executor, string why)
@@ -1981,7 +2033,7 @@ public partial class Commands : ICommandRestrictionApplier
 		return CallState.Empty;
 	}
 
-	/// <summary><c>@attribute &lt;attr&gt;</c>: the table entry's default flags, limit and enum.</summary>
+	/// <summary><c>@attribute &lt;attr&gt;</c>: the table entry's default flags, limit or enum, index and watch.</summary>
 	private async ValueTask<Option<CallState>> DescribeAttributeEntryAsync(AnySharpObject executor, string attrName)
 	{
 		var attrEntry = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
@@ -2018,6 +2070,11 @@ public partial class Commands : ICommandRestrictionApplier
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandIndexDescribeFormat), executor,
 				index.Options.Describe(), index.Ready ? "ready" : $"building, at #{index.ResumeAt}");
+		}
+
+		if (attrEntry.Watch is { } watch)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandWatchDescribeFormat), executor, watch);
 		}
 
 		return CallState.Empty;

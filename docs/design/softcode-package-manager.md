@@ -206,13 +206,15 @@ default `flags`, and a `limit` or an `enum` (with its `delimiter`). The referenc
   `attributes:` needs `format: 1.5`. `index:` takes `true` or `@attribute/index`'s option words
   (`AttributeIndexOptions.Parse`), needs `format: 1.8`, and is refused with `internal` in the
   flags. Below 1.8 the key keeps its 1.5 reading, reserved and ignored, with a warning.
+  `watch:` takes `true` (`AttributeWatch.DefaultPattern`) or `@attribute/watch`'s pattern, needs
+  `format: 1.9`, and below it is ignored with a warning; `SetAttributeWatchCommand` applies it.
   The plan checks the live table and the game's attribute flags.
 - **Ownership.** An entry the package creates is recorded in `InstalledPackageRecord.Owned` with the
   values that version declared. An entry the game already has is the game's: the package uses it
   and never changes it; if its limit or enum contradicts the manifest's, the plan says so and blocks
   (different default flags are only noted). One owned by another installed package blocks the plan.
 - **Upgrade** is a field-wise three-way merge against `Owned`: the default flags as a set, the
-  limit-or-enum as one field, since each replaces the other, and the index as one field.
+  limit-or-enum as one field, since each replaces the other, and the index and the watch as one field each.
 - **Index.** Applying an entry with an index writes it with `SetAttributeIndexCommand` and starts
   the background build (`IAttributeIndexBuilder`); the plan's change says how many objects it builds
   over (`CountAttributeCopiesQuery`). A game's own entry without the declared index blocks the plan,

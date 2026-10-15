@@ -184,5 +184,17 @@ public static partial class ErrorMessages
 		public const string AttributeCommandIndexDescribeFormat = "  Index: {0} ({1})";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandDecompileIndexFormat = "@attribute/index {0}={1}";
+
+		// @attribute/watch: the event handler's attributes run when a copy of the attribute changes.
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandWatchSetFormat = "{0} is watched: every change to it runs the event handler's {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandWatchRemovedFormat = "{0} is no longer watched.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandWatchNoneFormat = "{0} is not watched.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandWatchDescribeFormat = "  Watch: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandDecompileWatchFormat = "@attribute/watch {0}={1}";
 	}
 }
