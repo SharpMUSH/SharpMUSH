@@ -32,5 +32,4 @@ example needs a second player, God or a server setting, the entry names the case
   [COMPATIBILITY NAMES]     functions and commands that exist here and not there<br>
   [COMPATIBILITY MAIL]      @mail forwarding, filters and folders<br>
   [COMPATIBILITY UNRESOLVED] known differences with no decision yet<br>
-  [COMPATIBILITY DEFECTS]   known differences that are bugs, with their issue<br>
-  [COMPATIBILITY MATCHED]   differences that used to exist and no longer do
+  [COMPATIBILITY DEFECTS]   known differences that are bugs, with their issue

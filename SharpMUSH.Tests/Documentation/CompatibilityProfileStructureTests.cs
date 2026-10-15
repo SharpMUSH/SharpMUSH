@@ -11,7 +11,7 @@ namespace SharpMUSH.Tests.Documentation;
 ///
 /// <para>An entry is a <c>## </c> heading and the text up to the next heading. Every entry is a
 /// decided difference unless its section says otherwise ([COMPATIBILITY UNRESOLVED], [COMPATIBILITY
-/// DEFECTS], [COMPATIBILITY MATCHED]) or <see cref="NotADifference"/> names it with the reason. A
+/// DEFECTS]) or <see cref="NotADifference"/> names it with the reason. A
 /// decided difference says <c>**A choice.**</c> and gives what PennMUSH does, what SharpMUSH does, why,
 /// a workaround and an example. The example is a <c>```sharp</c> block, or, when it needs a second
 /// player, God or a server setting, an <c>**Example.**</c> line naming the parity harness case that runs
@@ -30,7 +30,7 @@ public class CompatibilityProfileStructureTests
 
 	/// <summary>Sections whose entries are, by definition, not decisions.</summary>
 	private static readonly HashSet<string> UndecidedSections =
-		[Unresolved, "Compatibility Defects", "Compatibility Matched"];
+		[Unresolved, "Compatibility Defects"];
 
 	/// <summary>
 	/// Entries in a decided section that are not themselves a difference, and why. Anything else there

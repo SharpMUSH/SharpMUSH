@@ -124,9 +124,8 @@ a restriction before it runs.<br>
 think hello
 ```
 
-This is specifically about matching a built-in command name. It does not contradict the `$`-command
-rule in [compatibility matched]: once built-in dispatch has not matched, `$`-commands *are* matched
-against the fully evaluated line (a separate, later stage).
+This is specifically about matching a built-in command name. Once built-in dispatch has not matched,
+`$`-commands *are* matched against the fully evaluated line (a separate, later stage).
 
 ## Malformed expressions are an error, not silent text
 
