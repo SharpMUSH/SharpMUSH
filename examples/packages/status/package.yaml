@@ -1,6 +1,6 @@
 format: 1.2
 package: status
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -14,6 +14,12 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
   - package: who-where
     version: ">=1.3"
@@ -63,13 +69,75 @@ objects:
     attributes:
       DATA: |-
         Settings. One leaf per setting.
-      # The longest status line, note and place, in characters.
-      DATA`LENGTH`LINE: |-
+      # The settings +config shows and changes (plus-config). Code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG:
+        value: |-
+          How long a status line, note and place may be, and what +status/list says under the list.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Status
+      DATA`CONFIG`LINE-LENGTH: |-
         100
-      DATA`LENGTH`NOTE: |-
+      DATA`CONFIG`LINE-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`LINE-LENGTH`DEFAULT: |-
+        100
+      DATA`CONFIG`LINE-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`LINE-LENGTH`MAX: |-
         400
-      DATA`LENGTH`PLACE: |-
+      DATA`CONFIG`LINE-LENGTH`DESCRIPTION: |-
+        The longest status line, in characters.
+      DATA`CONFIG`LINE-LENGTH`LABEL: |-
+        Line length
+      DATA`CONFIG`LINE-LENGTH`EXAMPLE: |-
+        140
+      DATA`CONFIG`NOTE-LENGTH: |-
+        400
+      DATA`CONFIG`NOTE-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`NOTE-LENGTH`DEFAULT: |-
+        400
+      DATA`CONFIG`NOTE-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`NOTE-LENGTH`MAX: |-
+        2000
+      DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
+        The longest note, in characters.
+      DATA`CONFIG`NOTE-LENGTH`LABEL: |-
+        Note length
+      DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
+        800
+      DATA`CONFIG`PLACE-LENGTH: |-
         60
+      DATA`CONFIG`PLACE-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`PLACE-LENGTH`DEFAULT: |-
+        60
+      DATA`CONFIG`PLACE-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`PLACE-LENGTH`MAX: |-
+        200
+      DATA`CONFIG`PLACE-LENGTH`DESCRIPTION: |-
+        The longest place, in characters.
+      DATA`CONFIG`PLACE-LENGTH`LABEL: |-
+        Place length
+      DATA`CONFIG`PLACE-LENGTH`EXAMPLE: |-
+        80
+      DATA`CONFIG`LIST-FOOTER: |-
+
+      DATA`CONFIG`LIST-FOOTER`TYPE: |-
+        text
+      DATA`CONFIG`LIST-FOOTER`DEFAULT: |-
+
+      DATA`CONFIG`LIST-FOOTER`MAX: |-
+        200
+      DATA`CONFIG`LIST-FOOTER`DESCRIPTION: |-
+        A line shown under +status/list, such as where longer requests are posted.
+      DATA`CONFIG`LIST-FOOTER`LABEL: |-
+        List footer
+      DATA`CONFIG`LIST-FOOTER`EXAMPLE: |-
+        Longer requests: +bbread public/looking
       # Which INC` routine each switch runs: DATA`ROUTE`STATUS`<switch>. BARE is the command alone, ARG the
       # command with something after it and no switch.
       DATA`ROUTE: |-
@@ -285,17 +353,17 @@ objects:
       # +status <name>[=<line>]
       INC`STATUS`SET:
         value: |-
-          think setq(status_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_line,if(%q<cmd_has_equals>,%q<cmd_right_side>)); @assert lte(strlen(%q<status_line>),get(%!/DATA`LENGTH`LINE))=@pemit %#=notice(STATUS,Keep it to [get(%!/DATA`LENGTH`LINE)] characters. +status/note takes the rest.,warn); @include %!/INC`STATUS`TOUCH; &PLAYER`%q<viewer_key>`LINE {{store}}=%q<status_line>; @pemit %#=notice(STATUS,Your status: [u(%!/FUN`STATUS`TEXT,%#)],ok)%r[tone(muted,[u(%!/FUN`STATUS`LASTS,%q<status_name>)] +status/note adds an OOC note%, +status/place where to find you%, and +status/off ends it.)]
+          think setq(status_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_line,if(%q<cmd_has_equals>,%q<cmd_right_side>)); @assert lte(strlen(%q<status_line>),get(%!/DATA`CONFIG`LINE-LENGTH))=@pemit %#=notice(STATUS,Keep it to [get(%!/DATA`CONFIG`LINE-LENGTH)] characters. +status/note takes the rest.,warn); @include %!/INC`STATUS`TOUCH; &PLAYER`%q<viewer_key>`LINE {{store}}=%q<status_line>; @pemit %#=notice(STATUS,Your status: [u(%!/FUN`STATUS`TEXT,%#)],ok)%r[tone(muted,[u(%!/FUN`STATUS`LASTS,%q<status_name>)] +status/note adds an OOC note%, +status/place where to find you%, and +status/off ends it.)]
         flags: [cmdsyntax]
       # +status/note [<text>]
       INC`STATUS`NOTE:
         value: |-
-          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LENGTH`NOTE))=@pemit %#=notice(STATUS,Keep the note to [get(%!/DATA`LENGTH`NOTE)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`NOTE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Your note: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`NOTE {{store}}; @pemit %#=notice(STATUS,Your note is cleared.,ok)
+          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(STATUS,Keep the note to [get(%!/DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`NOTE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Your note: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`NOTE {{store}}; @pemit %#=notice(STATUS,Your note is cleared.,ok)
         flags: [cmdsyntax]
       # +status/place [<text>|here]
       INC`STATUS`PLACE:
         value: |-
-          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LENGTH`PLACE))=@pemit %#=notice(STATUS,Keep the place to [get(%!/DATA`LENGTH`PLACE)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strmatch(%q<cmd_argument>,here)={&PLAYER`%q<viewer_key>`PLACE {{store}}=here; @pemit %#=notice(STATUS,Others see where you are standing%, wherever you go.,ok)}; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`PLACE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Where to find you: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`PLACE {{store}}; @pemit %#=notice(STATUS,Your place is cleared.,ok)
+          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`PLACE-LENGTH))=@pemit %#=notice(STATUS,Keep the place to [get(%!/DATA`CONFIG`PLACE-LENGTH)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strmatch(%q<cmd_argument>,here)={&PLAYER`%q<viewer_key>`PLACE {{store}}=here; @pemit %#=notice(STATUS,Others see where you are standing%, wherever you go.,ok)}; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`PLACE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Where to find you: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`PLACE {{store}}; @pemit %#=notice(STATUS,Your place is cleared.,ok)
         flags: [cmdsyntax]
       # +status/off [<player>]: your own status, or anyone's for a moderator.
       INC`STATUS`OFF:
@@ -320,7 +388,7 @@ objects:
       # list is drawn.
       INC`STATUS`LIST:
         value: |-
-          think setq(status_filter,u(%!/FUN`STATUS`FIND,%q<cmd_argument>)); @assert cor(not(strlen(%q<cmd_argument>)),strlen(%q<status_filter>))=@pemit %#=notice(STATUS,There is no status '%q<cmd_argument>'. +status lists them.,warn); @include %!/INC`STATUS`SWEEP; think setq(status_players,u(%!/FUN`STATUS`PLAYERS,%q<status_live>,%q<status_filter>)); @assert words(%q<status_players>)=@pemit %#=notice(STATUS,if(strlen(%q<status_filter>),Nobody has the [lcstr(%q<status_filter>)] status right now.,Nobody has a status right now.) +status <name> sets yours.); @include/args %!/INC`PAGE`CHECK=list,%q<status_players>; @pemit %#=u(%!/FUN`STATUS`TABLE,u(%!/FUN`PAGE`ITEMS,%q<status_players>),if(strlen(%q<status_filter>),firstof(get({{store}}/STATUS`%q<status_filter>`TAG),%q<status_filter>),Statuses))%r[u(%!/FUN`PAGE`FOOTER,%q<status_players>,+status/list,+status/show <name> shows a note,lcstr(%q<status_filter>))][if(hasattr(%!,DATA`LIST`MORE),%r[tone(muted,get(%!/DATA`LIST`MORE))])]
+          think setq(status_filter,u(%!/FUN`STATUS`FIND,%q<cmd_argument>)); @assert cor(not(strlen(%q<cmd_argument>)),strlen(%q<status_filter>))=@pemit %#=notice(STATUS,There is no status '%q<cmd_argument>'. +status lists them.,warn); @include %!/INC`STATUS`SWEEP; think setq(status_players,u(%!/FUN`STATUS`PLAYERS,%q<status_live>,%q<status_filter>)); @assert words(%q<status_players>)=@pemit %#=notice(STATUS,if(strlen(%q<status_filter>),Nobody has the [lcstr(%q<status_filter>)] status right now.,Nobody has a status right now.) +status <name> sets yours.); @include/args %!/INC`PAGE`CHECK=list,%q<status_players>; @pemit %#=u(%!/FUN`STATUS`TABLE,u(%!/FUN`PAGE`ITEMS,%q<status_players>),if(strlen(%q<status_filter>),firstof(get({{store}}/STATUS`%q<status_filter>`TAG),%q<status_filter>),Statuses))%r[u(%!/FUN`PAGE`FOOTER,%q<status_players>,+status/list,+status/show <name> shows a note,lcstr(%q<status_filter>))][if(strlen(get(%!/DATA`CONFIG`LIST-FOOTER)),%r[tone(muted,get(%!/DATA`CONFIG`LIST-FOOTER))])]
         flags: [cmdsyntax]
       # %0 players, %1 the heading: the table of their statuses.
       FUN`STATUS`TABLE:
@@ -493,10 +561,10 @@ objects:
 
         ## Settings
 
-        Each setting is an attribute on the Status object:
+        `+config status` lists them and `+config status/<setting>=<value>` changes one (`config.admin`):
 
-        - `` DATA`LENGTH`LINE ``, `` DATA`LENGTH`NOTE `` and `` DATA`LENGTH`PLACE ``: the longest line, note and place. 100, 400 and 60.
-        - `` DATA`LIST`MORE ``: a line shown under `+status/list`, such as where longer requests are posted. Unset by default.
+        - `line-length`, `note-length` and `place-length`: the longest line, note and place. 100, 400 and 60.
+        - `list-footer`: a line shown under `+status/list`, such as where longer requests are posted. Empty by default.
 
   # The +who Status column (who-where 1.3): a player's status tag and line, cut to 40 characters. The filter runs
   # as the Who-Where Function Object, so it reads the store and nothing else.
@@ -511,3 +579,9 @@ objects:
     attributes:
       SRC`STATUS: |-
         {{status_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`STATUS: |-
+        {{status}}
