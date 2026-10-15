@@ -685,10 +685,10 @@
     <value>Selected File</value>
   </data>
   <data name="MailDatabaseOptional" xml:space="preserve">
-    <value>Mail database (optional): the PennMUSH maildb, for mail aliases</value>
+    <value>Mail database (optional): the PennMUSH maildb or TinyMUX mail.db, for mail and mail aliases</value>
   </data>
   <data name="ChatDatabaseOptional" xml:space="preserve">
-    <value>Chat database (optional): the PennMUSH chatdb, for channels</value>
+    <value>Chat database (optional): the PennMUSH chatdb or TinyMUX comsys.db, for channels</value>
   </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview File Content</value>
@@ -704,16 +704,16 @@
   <!-- ImportDatabase.razor     -->
   <!-- ======================== -->
   <data name="ImportPennMUSHDatabase" xml:space="preserve">
-    <value>Import PennMUSH Database</value>
+    <value>Import PennMUSH or TinyMUX Database</value>
   </data>
   <data name="ImportDatabaseDescription" xml:space="preserve">
-    <value>Upload a PennMUSH database file to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
+    <value>Upload a PennMUSH database or a TinyMUX flatfile to convert and import into SharpMUSH. The format is recognised from the file. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
   </data>
   <data name="DropDatabaseFile" xml:space="preserve">
     <value>Drop PennMUSH database file here or click</value>
   </data>
   <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Supported formats: .db, .txt (max 100MB)</value>
+    <value>Supported formats: .db, .flat, .txt (max 100MB)</value>
   </data>
   <data name="Uploading" xml:space="preserve">
     <value>Uploading...</value>
