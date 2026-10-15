@@ -161,6 +161,9 @@ internal static class EngineRegistration
 		// the concrete Server-layer BanEnforcementService, so Library stays off Server.
 		services.AddSingleton<IBanEnforcer>(sp => sp.GetRequiredService<BanEnforcementService>());
 		services.AddHostedService<BootstrapService>();
+		// Poses and scenes counted for the staff activity reports; ActivityFlushService writes them.
+		services.AddSingleton<IActivityLedger, ActivityLedger>();
+		services.AddSingleton<IActivityReportService, ActivityReportService>();
 		services.AddSingleton<SetupService>();
 		services.AddSingleton<GameFeatureService>();
 		services.AddSingleton<StarterWikiService>();
