@@ -5,6 +5,7 @@ using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Discord.Links;
 using SharpMUSH.Plugins.Discord.Members;
+using SharpMUSH.Plugins.Discord.Roles;
 
 namespace SharpMUSH.Tests.DiscordPlugin;
 
@@ -149,5 +150,51 @@ public class DiscordLinkStoreTests
 		await Assert.That(pairs.Get(old)).IsNull();
 		await Assert.That(pairs.Get(young)?.LineIds).IsEquivalentTo(new long[] { 2, 3 });
 		await Assert.That(await pairs.RemoveAsync(young)).IsTrue();
+	}
+
+	[Test]
+	public async Task ARoleMapping_IsKept_AndRemovingItDropsItsDrift()
+	{
+		var store = new LightningDiscordRoleStore(_db);
+		var mapping = new DiscordRoleMapping(500, 900, "Builders", "builder", DiscordRoleMode.Report, Now, "#1:1");
+		await store.SaveAsync(mapping);
+		await store.RecordAsync(500, new DiscordDrift(7, "ann", true, Now));
+
+		await Assert.That(store.Mapping(500)).IsEqualTo(mapping);
+		await Assert.That(store.Drifted(500, 7)).IsTrue();
+
+		await Assert.That(await store.RemoveAsync(500)).IsTrue();
+		await Assert.That(store.Mapping(500)).IsNull();
+		await Assert.That(store.Drifted(500, 7)).IsFalse();
+		await Assert.That(await store.RemoveAsync(500)).IsFalse();
+	}
+
+	[Test]
+	public async Task Drift_KeepsOnePerMember_UntilSettled()
+	{
+		var store = new LightningDiscordRoleStore(_db);
+		await store.SaveAsync(new DiscordRoleMapping(500, 900, "Builders", "builder", DiscordRoleMode.Report, Now, "#1:1"));
+		await store.RecordAsync(500, new DiscordDrift(7, "ann", true, Now));
+		await store.RecordAsync(500, new DiscordDrift(7, "ann", false, Now.AddMinutes(1)));
+		await store.RecordAsync(500, new DiscordDrift(8, "bo", true, Now));
+
+		var members = store.Drift().Single().Members;
+		await Assert.That(members.Select(drift => drift.UserId)).IsEquivalentTo(new ulong[] { 7, 8 });
+		await Assert.That(members.Single(drift => drift.UserId == 7).Added).IsFalse();
+
+		await store.SettleAsync(500, 7);
+		await store.SettleAsync(500, 8);
+		await Assert.That(store.Drift()).IsEmpty();
+	}
+
+	/// <summary>A pass that worked out drift before an unmap must not write it back after; a later mapping starts clean.</summary>
+	[Test]
+	public async Task Drift_OnARoleNoLongerMapped_IsDropped()
+	{
+		var store = new LightningDiscordRoleStore(_db);
+		await store.RecordAsync(600, new DiscordDrift(7, "ann", true, Now));
+
+		await Assert.That(store.Drifted(600, 7)).IsFalse();
+		await Assert.That(store.Drift()).IsEmpty();
 	}
 }
