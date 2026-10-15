@@ -127,3 +127,8 @@ packages:
     package: finger
     version: 1.0.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
+  - path: time/
+    name: Time
+    package: time
+    version: 1.0.0
+    description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
