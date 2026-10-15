@@ -5000,6 +5000,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Details</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Scènes waar {0} {1} is</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Alle scènes tonen</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Begonnen</value>
   </data>

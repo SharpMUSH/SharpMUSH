@@ -5000,6 +5000,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>详情</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>{0}为{1}的场景</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>显示全部场景</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>开始于</value>
   </data>

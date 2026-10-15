@@ -16,9 +16,11 @@ internal static class SceneJson
 	public static string Participant(int dbref) => $"/api/scenes?participant=%23{dbref}&count=50";
 
 	public static string Scene(string id, string title, string status = "active", string room = "The Salt Market",
-		int poses = 3, string? image = null, bool isPublic = true, long? scheduledFor = null, string? summary = null)
+		int poses = 3, string? image = null, bool isPublic = true, long? scheduledFor = null, string? summary = null,
+		IReadOnlyDictionary<string, string>? details = null)
 	{
 		var fields = new Dictionary<string, string> { ["title"] = title };
+		foreach (var (key, value) in details ?? new Dictionary<string, string>()) fields[key] = value;
 		if (image is not null) fields["image"] = image;
 		if (summary is not null) fields["summary"] = summary;
 		var meta = System.Text.Json.JsonSerializer.Serialize(fields);

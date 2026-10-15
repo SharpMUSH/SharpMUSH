@@ -5000,6 +5000,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Részletek</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Jelenetek, ahol {0}: {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Összes jelenet</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Kezdés</value>
   </data>

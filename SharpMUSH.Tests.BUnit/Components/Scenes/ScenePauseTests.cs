@@ -194,6 +194,28 @@ public class ScenePauseTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheOwner_SetsADetail_FromTheEditForm_WithPlusSceneSet()
+	{
+		_api.Extra["/api/scenes/details"] = """
+			{"details":[{"key":"verse","label":"Verse","hint":"The setting or universe.","choices":[],"many":false,"listed":true,"order":10}],
+			 "problems":[]}
+			""";
+		var cut = await RenderAsActingAsync(313, "active");
+		await cut.Find(".scene-detail-edit").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-detail input"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-edit-form").TextContent).Contains("The setting or universe.").Because("the hint helps the owner fill it in");
+		await cut.Find(".scene-edit-detail input").ChangeAsync("Marvel");
+
+		Answer("Marvel");
+		await cut.Find(".scene-edit-submit").ClickAsync();
+
+		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
+		var sent = Commands().Single();
+		await Assert.That(sent.Command).IsEqualTo("+scene/set S1/verse=Marvel");
+		await Assert.That(sent.Result).IsEqualTo("scene(S1,verse)");
+	}
+
+	[Test]
 	public async Task GoingToAnotherScene_ClosesTheForm()
 	{
 		var cut = await RenderAsActingAsync(313, "active");

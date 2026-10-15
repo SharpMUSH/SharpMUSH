@@ -4294,6 +4294,12 @@
   <data name="NavSceneDetails" xml:space="preserve">
     <value>Détails</value>
   </data>
+  <data name="RolSceneDetailShowing" xml:space="preserve">
+    <value>Scènes où {0} est {1}</value>
+  </data>
+  <data name="RolSceneDetailClear" xml:space="preserve">
+    <value>Afficher toutes les scènes</value>
+  </data>
   <data name="NavSceneStarted" xml:space="preserve">
     <value>Commencée</value>
   </data>

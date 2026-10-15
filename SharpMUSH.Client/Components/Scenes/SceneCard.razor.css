@@ -50,6 +50,33 @@
 	text-overflow: ellipsis;
 }
 
+/* the listed details, label then values, on one line that wraps between details, never inside a label */
+.scene-card-details {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 14px;
+	margin: 4px 0 0;
+	font-size: 12px;
+}
+
+.scene-card-detail {
+	display: flex;
+	gap: 5px;
+	min-width: 0;
+}
+
+.scene-card-detail dt {
+	flex-shrink: 0;
+	color: var(--text-faint);
+}
+
+.scene-card-detail dd {
+	margin: 0;
+	min-width: 0;
+	color: var(--text);
+	overflow-wrap: anywhere;
+}
+
 .scene-card-meta {
 	display: flex;
 	flex-wrap: wrap;
