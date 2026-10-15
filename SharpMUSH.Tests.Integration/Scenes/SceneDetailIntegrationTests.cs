@@ -246,13 +246,13 @@ public class SceneDetailIntegrationTests
 
 			var own = Key();
 			await Assert.That(await As(owner, $"+scene/set {own}=Kept")).Contains($"{own[..1].ToUpperInvariant()}{own[1..]} is now Kept.");
-			await God($"&DATA`OPEN_DETAILS {logger}=0");
+			await God($"&DATA`CONFIG`OPEN-DETAILS {logger}=0");
 			await Assert.That(await As(owner, $"+scene/set {Key()}=Refused")).Contains("+scene/details lists them");
 			await Assert.That(await Eval($"scene({scene},details)")).IsEqualTo($"{key} {own}");
 		}
 		finally
 		{
-			await God($"&DATA`OPEN_DETAILS {logger}=1");
+			await God($"&DATA`CONFIG`OPEN-DETAILS {logger}=1");
 			await God($"&DETAIL`{key.ToUpperInvariant()} {logger}");
 		}
 	}

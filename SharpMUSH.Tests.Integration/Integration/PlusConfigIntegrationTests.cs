@@ -57,7 +57,7 @@ public class PlusConfigIntegrationTests
 			"DATA`CONFIG`COLUMNS=2", "DATA`CONFIG`COLUMNS`TYPE=integer", "DATA`CONFIG`COLUMNS`MIN=1", "DATA`CONFIG`COLUMNS`MAX=4",
 			"DATA`CONFIG`ORDER=name", "DATA`CONFIG`ORDER`TYPE=choice", "DATA`CONFIG`ORDER`CHOICES=name idle",
 			"DATA`CONFIG`KEYS=QUOTE", "DATA`CONFIG`KEYS`TYPE=list", "DATA`CONFIG`KEYS`PATTERN=^[A-Z]+$",
-			"DATA`CONFIG`KEYS`DEFAULT=QUOTE",
+			"DATA`CONFIG`KEYS`DEFAULT=QUOTE", "DATA`CONFIG`KEYS`MIN=1", "DATA`CONFIG`KEYS`MAX=3",
 			"DATA`CONFIG`OPEN=0", "DATA`CONFIG`OPEN`TYPE=boolean",
 			"DATA`CONFIG`NAME=", "DATA`CONFIG`NAME`TYPE=text", "DATA`CONFIG`NAME`MAX=10",
 			"DATA`CONFIG`MATCH=", "DATA`CONFIG`MATCH`TYPE=pattern",
@@ -113,6 +113,8 @@ public class PlusConfigIntegrationTests
 			await Assert.That(await As(staff, $"+config/remove {system}/keys=quote")).Contains($"{system}/keys is now PREFS, was QUOTE, PREFS.");
 			await Assert.That(await As(staff, $"+config/reset {system}/keys")).Contains($"{system}/keys is now QUOTE, was PREFS.");
 			await Assert.That(await As(staff, $"+config/add {system}/order=name")).Contains("+config/add works on lists.");
+			await Assert.That(await As(staff, $"+config {system}/keys")).Contains("Words, each matching ^[A-Z]+$, from 1 to 3 items");
+			await Assert.That(await As(staff, $"+config/remove {system}/keys=QUOTE")).Contains("It must be at least 1 item.");
 
 			await Assert.That(await As(staff, $"+config {system}/nope=1")).Contains($"{system} has no setting called nope.");
 			await Assert.That(await As(staff, "+config nosuchsystem")).Contains("No system is called nosuchsystem.");
@@ -137,6 +139,9 @@ public class PlusConfigIntegrationTests
 			await Assert.That(await As(mortal, $"+config {system}/columns")).Contains("A whole number from 1 to 4");
 			await Assert.That(await As(mortal, $"+config {system}/columns=3")).Contains("needs the config.admin permission.");
 			await Assert.That(await As(mortal, $"+config/register x={obj}")).Contains("needs the config.admin permission.");
+
+			// A package's registration leaves with its package, never by hand: scene is installed at first boot.
+			await Assert.That(await As(staff, "+config/unregister scene")).Contains("scene is registered by its package");
 
 			// A CHECK on the system's object has the last word, and ACONFIG hears every change.
 			await God($"&DATA`CONFIG`COLUMNS`CHECK {obj}=CHECK`COLUMNS");

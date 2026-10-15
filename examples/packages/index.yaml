@@ -60,7 +60,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
   - path: scene/
     package: scene
-    version: 1.6.1
+    version: 1.7.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -122,11 +122,16 @@ packages:
     package: bboards-app
     version: 1.0.2
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
-  - path: rp-finder/
-    name: RP Finder
-    package: rp-finder
-    version: 1.0.1
-    description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)
+  - path: status/
+    name: Status
+    package: status
+    version: 1.1.0
+    description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
+  - path: watch/
+    name: Watch
+    package: watch
+    version: 1.0.0
+    description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: finger/
     name: Finger
     package: finger
@@ -137,6 +142,11 @@ packages:
     package: summary
     version: 1.0.0
     description: +summary — a line summing up your last pose, told to your room only and never recorded by a scene (requires plus-config)
+  - path: time/
+    name: Time
+    package: time
+    version: 1.1.0
+    description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: discord/
     name: Discord
     package: discord

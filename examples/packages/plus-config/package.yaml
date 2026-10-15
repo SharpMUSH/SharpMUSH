@@ -162,11 +162,11 @@ objects:
       # /add: the items after the ones already there; ones already there are not added twice.
       INC`ADD:
         value: |-
-          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @include %!/INC`NEED`LIST; @include/args %!/INC`WRITE=value,trim(squish([u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>)] %q<cmd_right_side>))
+          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @include %!/INC`NEED`LIST; @include/args %!/INC`WRITE=value,u(%!/FUN`TYPE`LIST`WITH,%q<system_object>,%q<cmd_setting>,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
       # /remove: every item named, in any case.
       INC`REMOVE:
         value: |-
-          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @include %!/INC`NEED`LIST; @include/args %!/INC`WRITE=value,u(%!/FUN`TYPE`LIST`WITHOUT,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
+          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @include %!/INC`NEED`LIST; @include/args %!/INC`WRITE=value,u(%!/FUN`TYPE`LIST`WITHOUT,%q<system_object>,%q<cmd_setting>,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
       # The default is the system's own and already stored form, so it is written as it is.
       INC`RESET:
         value: |-
@@ -203,10 +203,11 @@ objects:
         value: |-
           if(cand(u(%!/FUN`NAME`VALID,%0),isdbref(setr(system_found,u(%!/SYSTEM`%0)))),num(%q<system_found>))
         flags: [funsyntax]
-      # %0 a system: 1 when a package wrote its leaf. An installed {{ref}} is a recall of PM`REFS.
+      # %0 a system: 1 when a package wrote its leaf. An installed {{ref}} is a recall of PM`REFS`<ref>, or of
+      # PM`ATTACHED_REFS`<package>`<ref> on an object the package attaches to, as the registry is.
       FUN`SYSTEM`PACKAGED:
         value: |-
-          strmatch(get(%!/SYSTEM`%0),*PM`REFS*)
+          strmatch(get(%!/SYSTEM`%0),*PM`*REFS`*)
         flags: [funsyntax]
       # %0 an object: the line describing its system.
       FUN`SYSTEM`DESCRIPTION:
@@ -370,43 +371,61 @@ objects:
           capstr(itemize(u(%!/FUN`SETTING`META,%0,%1,CHOICES),%b,or))
         flags: [funsyntax]
 
-      # list: words, each one of CHOICES and matching PATTERN when they are given, MIN to MAX of them;
-      # stored space-separated, in the order given, each once.
+      # list: items split on DELIMITER (a space when it names none), each one of CHOICES and matching PATTERN
+      # when they are given, MIN to MAX of them; stored joined with the delimiter, in the order given, each
+      # once. CHOICES is split on the same delimiter.
       FUN`TYPE`LIST`PROBLEM:
         value: |-
-          cond(words(setr(list_refused,filterbool(%!/FUN`TYPE`LIST`REFUSED,%2,%b,%b,%0,%1))),u(%!/FUN`TYPE`LIST`WHY,%0,%1,%q<list_refused>),1,u(%!/FUN`DISPLAY`OUTSIDE,words(u(%!/FUN`TYPE`LIST`STORE,%0,%1,%2)),u(%!/FUN`SETTING`META,%0,%1,MIN),u(%!/FUN`SETTING`META,%0,%1,MAX),ITEMS))
+          setq(list_items,u(%!/FUN`TYPE`LIST`ITEMS,%0,%1,%2))[cond(words(setr(list_refused,filterbool(%!/FUN`TYPE`LIST`REFUSED,%q<list_items>,%q<list_delim>,%q<list_delim>,%0,%1)),%q<list_delim>),u(%!/FUN`TYPE`LIST`WHY,%0,%1,%q<list_refused>),1,u(%!/FUN`DISPLAY`OUTSIDE,words(u(%!/FUN`TYPE`LIST`STORE,%0,%1,%2),%q<list_delim>),u(%!/FUN`SETTING`META,%0,%1,MIN),u(%!/FUN`SETTING`META,%0,%1,MAX),ITEMS))]
+        flags: [funsyntax]
+      # The delimiter the list is split on.
+      FUN`TYPE`LIST`DELIMITER:
+        value: |-
+          if(strlen(setr(list_delimiter,u(%!/FUN`SETTING`META,%0,%1,DELIMITER))),%q<list_delimiter>,%b)
+        flags: [funsyntax]
+      # %2 a list as typed: its items, each trimmed, empty ones dropped, joined with the delimiter. Sets
+      # list_delim for the caller.
+      FUN`TYPE`LIST`ITEMS:
+        value: |-
+          setq(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1))[trim(squish(iter(%2,trim(%i0),%q<list_delim>,%q<list_delim>),%q<list_delim>),%q<list_delim>)]
         flags: [funsyntax]
       # %0 an item, %1 the object, %2 the setting: 1 when the list does not take it.
       FUN`TYPE`LIST`REFUSED:
         value: |-
-          cor(cand(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%1,%2,CHOICES))),not(member(lcstr(%q<list_choices>),lcstr(%0)))),cand(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%1,%2,PATTERN))),not(regmatch(%0,%q<list_pattern>))))
+          cor(cand(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%1,%2,CHOICES))),not(member(lcstr(%q<list_choices>),lcstr(%0),u(%!/FUN`TYPE`LIST`DELIMITER,%1,%2)))),cand(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%1,%2,PATTERN))),not(regmatch(%0,%q<list_pattern>))))
         flags: [funsyntax]
       # %2 the refused items: why.
       FUN`TYPE`LIST`WHY:
         value: |-
-          itemize(%2) [if(eq(words(%2),1),is,are)] not allowed. [if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),Choose from [itemize(%q<list_choices>)].,Each must match [u(%!/FUN`SETTING`META,%0,%1,PATTERN)].)]
+          setq(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1))[itemize(%2,%q<list_delim>)] [if(eq(words(%2,%q<list_delim>),1),is,are)] not allowed. [if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),Choose from [itemize(%q<list_choices>,%q<list_delim>)].,Each must match [u(%!/FUN`SETTING`META,%0,%1,PATTERN)].)]
         flags: [funsyntax]
       # Each item as CHOICES writes it, then each once, in the order given, case ignored.
       FUN`TYPE`LIST`STORE:
         value: |-
-          squish(trim(iter(setr(list_items,u(%!/FUN`TYPE`LIST`CANONICAL,%0,%1,squish(trim(%2)))),if(member(lcstr(extract(%q<list_items>,1,sub(inum(0),1))),lcstr(%i0)),,%i0),%b,%b)))
+          setq(list_items,u(%!/FUN`TYPE`LIST`CANONICAL,%0,%1,u(%!/FUN`TYPE`LIST`ITEMS,%0,%1,%2)))[trim(squish(iter(%q<list_items>,if(member(lcstr(extract(%q<list_items>,1,sub(inum(0),1),%q<list_delim>)),lcstr(%i0),%q<list_delim>),,%i0),%q<list_delim>,%q<list_delim>),%q<list_delim>),%q<list_delim>)]
         flags: [funsyntax]
+      # %2 items, joined with list_delim: each as CHOICES writes it.
       FUN`TYPE`LIST`CANONICAL:
         value: |-
-          if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),iter(%2,if(setr(list_at,member(lcstr(%q<list_choices>),lcstr(%i0))),extract(%q<list_choices>,%q<list_at>,1),%i0),%b,%b),%2)
+          if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),iter(%2,if(setr(list_at,member(lcstr(%q<list_choices>),lcstr(%i0),%q<list_delim>)),extract(%q<list_choices>,%q<list_at>,1,%q<list_delim>),%i0),%q<list_delim>,%q<list_delim>),%2)
         flags: [funsyntax]
-      # %0 a list, %1 items: the list without them, case ignored.
+      # %2 a list, %3 items as typed: the list with them after it. STORE drops the repeats.
+      FUN`TYPE`LIST`WITH:
+        value: |-
+          %2[u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1)]%3
+        flags: [funsyntax]
+      # %2 a list, %3 items as typed: the list without them, case ignored.
       FUN`TYPE`LIST`WITHOUT:
         value: |-
-          squish(trim(iter(%0,if(member(lcstr(%1),lcstr(%i0)),,%i0),%b,%b)))
+          setq(list_remove,u(%!/FUN`TYPE`LIST`ITEMS,%0,%1,%3))[trim(squish(iter(%2,if(member(lcstr(%q<list_remove>),lcstr(%i0),%q<list_delim>),,%i0),%q<list_delim>,%q<list_delim>),%q<list_delim>),%q<list_delim>)]
         flags: [funsyntax]
       FUN`TYPE`LIST`SHOW:
         value: |-
-          iter(%2,%i0,%b,%,%b)
+          iter(%2,%i0,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1),%,%b)
         flags: [funsyntax]
       FUN`TYPE`LIST`ALLOWED:
         value: |-
-          Words[if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),%, from [itemize(%q<list_choices>)])][if(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, each matching %q<list_pattern>)][u(%!/FUN`DISPLAY`RANGE,,u(%!/FUN`SETTING`META,%0,%1,MIN),u(%!/FUN`SETTING`META,%0,%1,MAX))]
+          if(strlen(trim(setr(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1)))),Items separated by %q<list_delim>,Words)[if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),%, from [itemize(%q<list_choices>,%q<list_delim>)])][if(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, each matching %q<list_pattern>)][setq(list_min,u(%!/FUN`SETTING`META,%0,%1,MIN),list_max,u(%!/FUN`SETTING`META,%0,%1,MAX))][if(cor(strlen(%q<list_min>),strlen(%q<list_max>)),%,[u(%!/FUN`DISPLAY`RANGE,,%q<list_min>,%q<list_max>)] [if(cand(xor(strlen(%q<list_min>),strlen(%q<list_max>)),eq(firstof(%q<list_max>,%q<list_min>),1)),item,items)])]
         flags: [funsyntax]
 
       # pattern: a regular expression the game can read.
@@ -464,10 +483,11 @@ objects:
         value: |-
           switch(%1,DURATION,u(%!/FUN`DISPLAY`DURATION,%0),ITEMS,%0 [if(eq(%0,1),item,items)],%0)
         flags: [funsyntax]
-      # %0 what it is, %1 the least, %2 the most, either may be empty, already as a person reads them.
+      # %0 what it is, %1 the least, %2 the most, either may be empty, already as a person reads them. With
+      # %0 empty, the bounds alone, to follow a comma.
       FUN`DISPLAY`RANGE:
         value: |-
-          %0[cond(cand(strlen(%1),strlen(%2)),%b[if(strlen(%0),from,From)] %1 to %2,strlen(%1),[if(strlen(%0),%,)] at least %1,strlen(%2),[if(strlen(%0),%,)] at most %2)]
+          %0[cond(cand(strlen(%1),strlen(%2)),%bfrom %1 to %2,strlen(%1),[if(strlen(%0),%,)] at least %1,strlen(%2),[if(strlen(%0),%,)] at most %2)]
         flags: [funsyntax]
       # %0 seconds: as a person reads them, 0 as 0s.
       FUN`DISPLAY`DURATION:
@@ -581,8 +601,8 @@ objects:
         - `boolean`: `yes` or `no`; `on`, `off`, `true`, `false`, `1` and `0` work too. Stored as 1 or 0.
         - `duration`: a length of time, such as `4h`, `30m`, `1d 12h` or `45` (seconds). Stored in seconds.
         - `choice`: one word from a short list.
-        - `list`: words separated by spaces, each kept once, sometimes from a fixed set. Use `/add` and
-          `/remove` to change a few.
+        - `list`: words separated by spaces, or items separated by another mark such as `|`, each kept
+          once, sometimes from a fixed set. Use `/add` and `/remove` to change a few.
         - `pattern`: a regular expression.
         - `object`: anything you can name or give a dbref for, sometimes only rooms or only players.
           Stored as an objid.
@@ -609,7 +629,8 @@ objects:
 
         The leaves are `TYPE` \(required\), `DEFAULT`, `DESCRIPTION`, `MIN` and `MAX` \(numbers, durations
         in seconds, a text's length, a list's size\), `CHOICES` \(for a choice, or a list's allowed
-        words\), `PATTERN` \(a text, or each word of a list\), `OBJECTTYPE` \(ROOM, PLAYER, THING, EXIT\),
+        words\), `PATTERN` \(a text, or each word of a list\), `DELIMITER` \(what splits a list's items,
+        when not a space\), `OBJECTTYPE` \(ROOM, PLAYER, THING, EXIT\),
         `PERMISSION` \(who may change it, instead of config.admin\) and `CHECK` \(the name of an attribute
         on the same object: it gets the value as `%%0` and the setting as `%%1`, and returns nothing when
         the value is fine or the reason it is not\). Write `DEFAULT` and the value in stored form.
