@@ -91,7 +91,16 @@ public class MudKitIntegrationTests
 
 	private static ConcurrentDictionary<string, string> Metadata(string? supports, bool screenReader)
 	{
-		var metadata = new ConcurrentDictionary<string, string> { ["ConnectionType"] = "telnet", ["GMCP"] = "1" };
+		// The times a real connection registers with; without them the player's idle time is unreadable and
+		// +who, which every connected test player shows up in, prints an error for it.
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+		var metadata = new ConcurrentDictionary<string, string>
+		{
+			["ConnectionStartTime"] = now,
+			["LastConnectionSignal"] = now,
+			["ConnectionType"] = "telnet",
+			["GMCP"] = "1"
+		};
 		if (supports is not null) metadata[GmcpSupports.MetadataKey] = supports;
 		if (screenReader) metadata[TerminalCapabilityReader.ScreenReaderKey] = "1";
 		return metadata;
