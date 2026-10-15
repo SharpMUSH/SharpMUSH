@@ -878,6 +878,9 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(tomHandle, "+scene/start");
 		var sceneId = await Eval($"get({tom}/MY.SID)");
 		await Assert.That(sceneId).IsNotEmpty();
+		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
+		bool Focused() => contexts.Read(DBRef.Parse(tom)).Any(weighted => weighted.Context.Name == "scene_focus");
+		await Assert.That(Focused()).IsTrue().Because("create pushes scene_focus for the palette");
 
 		// Pitch (set while focused, owner-gated).
 		await RunAndCollectAs(tomHandle, "+scene/pitch A tense standoff at dawn.");
@@ -889,11 +892,13 @@ public class SceneRoleplayIntegrationTests
 			.Because("deactivate clears the player's focus");
 		await Assert.That(await Eval($"scenemember({sceneId}, {tom}, role)")).DoesNotStartWith("#-1")
 			.Because("deactivate keeps membership");
+		await Assert.That(Focused()).IsFalse().Because("deactivate drops scene_focus with the focus");
 
 		// Activate: focus restored.
 		await RunAndCollectAs(tomHandle, $"+scene/activate {sceneId}");
 		await Assert.That(await Eval($"scenefocus({tom})")).IsEqualTo(sceneId)
 			.Because("activate re-focuses the player");
+		await Assert.That(Focused()).IsTrue().Because("activate pushes scene_focus again");
 
 		// Details card renders the fields (Volund-style `+scene <id>`).
 		var infoMsgs = await RunAndCollectAs(tomHandle, $"+scene {sceneId}");
@@ -902,6 +907,43 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(card).Contains("Pitch").Because("the details card should have a Pitch row");
 		await Assert.That(card).Contains("A tense standoff").Because("the pitch text should render in the card");
 		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
+	}
+
+	/// <summary>A player already in the room gets scene_here when a scene starts there and loses it when the
+	/// scene finishes, without moving: the palette's About and Join rows follow the scene.</summary>
+	[Test]
+	public async Task SceneHere_FollowsTheScene_ForThoseAlreadyInTheRoom()
+	{
+		await God1("@set #1=WIZARD");
+		var digOut = (await God1($"@dig HereRoom_{Tag}")).Message.ToPlainText().Trim();
+		var (amy, amyHandle) = await CreatePlayerAsync($"Amy_{Tag}", "pw_amy_123");
+		var (bo, _) = await CreatePlayerAsync($"Bo_{Tag}", "pw_bo_123");
+		await God1($"@tel {amy}={digOut}");
+		await God1($"@tel {bo}={digOut}");
+		// Other tests here park the Scene Logger in their own rooms, so its +scene/* verbs are only sure to match
+		// beside it.
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var loggerDbref = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid).ToString();
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
+		async Task<bool> BoHasSceneHere(bool expected)
+		{
+			// HERE`SYNC is queued by @trigger, so it may run just after the command returns.
+			for (var attempt = 0; attempt < 50; attempt++)
+			{
+				var has = contexts.Read(DBRef.Parse(bo)).Any(weighted => weighted.Context.Name == "scene_here");
+				if (has == expected) return has;
+				await Task.Delay(100);
+			}
+			return !expected;
+		}
+
+		await Assert.That(await BoHasSceneHere(false)).IsFalse().Because("no scene runs in the room yet");
+		await RunAndCollectAs(amyHandle, $"+scene/create HereTest_{Tag}");
+		await Assert.That(await BoHasSceneHere(true)).IsTrue().Because("creating a running scene tells the room");
+		await RunAndCollectAs(amyHandle, "+scene/finish");
+		await Assert.That(await BoHasSceneHere(false)).IsFalse().Because("finishing the scene tells the room");
 	}
 
 	/// <summary>
