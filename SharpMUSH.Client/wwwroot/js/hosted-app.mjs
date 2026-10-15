@@ -27,13 +27,27 @@ const validRooms = rooms => Array.isArray(rooms) && rooms.length >= 1 && rooms.l
 const validCoordinates = names => names === undefined
     || (Array.isArray(names) && names.length === 3 && names.every(name => typeof name === 'string' && /^[A-Za-z0-9_`-]{1,64}$/.test(name)));
 
-// The read-only requests a package may make, each checked here before it reaches the authenticated API.
+// A room document is a plain object of at most 4 MiB as JSON.
+const maxDocumentLength = 4 * 1024 * 1024;
+function validDocument(document) {
+    if (document === null || typeof document !== 'object' || Array.isArray(document)) return false;
+    try { return JSON.stringify(document).length <= maxDocumentLength; } catch { return false; }
+}
+
+// The requests a package may make, each checked here before it reaches the authenticated API. Reads name rooms;
+// a plan names a document and changes nothing; an apply is confirmed by the player in the host before anything changes.
 function bridgeCall(data) {
-    if (!validRooms(data.rooms) || !validCoordinates(data.coordinates)) return null;
-    const coordinates = data.coordinates ?? null;
     switch (data.type) {
-        case 'topology': return { method: ['ReadTopology', data.rooms, coordinates], reply: 'topology-result' };
-        case 'document': return { method: ['ReadRoomDocument', data.rooms, coordinates], reply: 'document-result' };
+        case 'topology':
+        case 'document': {
+            if (!validRooms(data.rooms) || !validCoordinates(data.coordinates)) return null;
+            const coordinates = data.coordinates ?? null;
+            return data.type === 'topology'
+                ? { method: ['ReadTopology', data.rooms, coordinates], reply: 'topology-result' }
+                : { method: ['ReadRoomDocument', data.rooms, coordinates], reply: 'document-result' };
+        }
+        case 'plan': return validDocument(data.document) ? { method: ['PlanRoomDocument', data.document], reply: 'plan-result' } : null;
+        case 'apply': return validDocument(data.document) ? { method: ['ApplyRoomDocument', data.document], reply: 'apply-result' } : null;
         default: return null;
     }
 }
@@ -78,7 +92,7 @@ export function mount(id, bootstrap, dotnet, environment = window) {
                 if (!disposed && active) connection.postMessage({ type: call.reply, channel, requestId: data.requestId, result });
             } catch {
                 if (!disposed && active) connection.postMessage({ type: call.reply, channel, requestId: data.requestId,
-                    error: 'The graph could not be read with the current character.' });
+                    error: 'The game could not answer for the current character.' });
             } finally { busy = false; }
         };
         connection.start();

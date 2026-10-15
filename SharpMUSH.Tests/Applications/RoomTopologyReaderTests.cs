@@ -223,7 +223,7 @@ public class RoomTopologyReaderTests
 		var first = document.Rooms[0];
 		await Assert.That(first.Description).IsEqualTo("A plain room.");
 		await Assert.That(first.Coordinates).IsEquivalentTo(new[] { 0d, 0d, 2d });
-		await Assert.That(first.Exits.Select(e => (e.Id, e.Name, e.To))).IsEquivalentTo(
+		await Assert.That(first.Exits!.Select(e => (e.Id, e.Name ?? "", e.To ?? ""))).IsEquivalentTo(
 			[("#11", "Garden", "#40"), ("#12", "South;s", "#20"), ("#13", "Portal", "variable")], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -233,7 +233,7 @@ public class RoomTopologyReaderTests
 		Exits(_objects.CreateExit(11, "secret", [], _a, _b).Expect<SharpExit>());
 		_reality.CanPerceiveAsync(_actor.Object().DBRef, _b.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
 		var document = (await Reader.ExportAsync(_actor, [10], RoomTopologyReader.DefaultCoordinates, default)).Expect<RoomDocumentDto>();
-		await Assert.That(document.Rooms[0].Exits[0].To).IsEqualTo("hidden");
+		await Assert.That(document.Rooms[0].Exits![0].To).IsEqualTo("hidden");
 	}
 
 	[Test]
