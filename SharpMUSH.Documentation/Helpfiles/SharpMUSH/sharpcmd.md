@@ -1414,9 +1414,10 @@ The same, reading the exits by name:
 :::
 # @http
 `@http <obj>/<attr>=<URL>[,<headers>]`<br>
-`@http/<verb> <obj>/<attr>=<URL>[,<data>[,<headers>]]`
+`@http/<verb> <obj>/<attr>=<URL>[,<data>[,<headers>]]`<br>
+`@http[/<verb>]/jsonheaders <obj>/<attr>=<URL>[,<data>],<json headers>`
 
-Sends an HTTP request to `<URL>` and, when the reply arrives, queues the action list in `<obj>/<attr>`. Without a switch the request is a GET. The other verbs are switches: /post, /put, /delete, /patch, /head, /options, /trace and /connect. Any commas in the URL or the data need to be escaped.
+Sends an HTTP request to `<URL>` and, when the reply arrives, queues the action list in `<obj>/<attr>`. Without a verb switch the request is a GET. The other verbs are switches: /post, /put, /delete, /patch, /head, /options, /trace and /connect. Any commas in the URL or the data need to be escaped.
 
 The action list receives:
 - %0: the body of the reply.
@@ -1433,6 +1434,8 @@ These are named arguments, so they belong to the action list alone. With the `ht
 - A User-Agent line replaces SharpMUSH's own.
 - A Content-Length line, a line with no colon, or a name with a space in it refuses the whole command with "Header value has a bad key:value set. Aborting."
 
+With /jsonheaders, `<headers>` is a JSON object instead: each member is a header name, and its value is a string, or a list of strings to send that header once for each. The same rules apply, and anything else in the object refuses the command with "Headers must be a JSON object of names and string values. Aborting." The easiest way to build one is json(); a JSON literal typed into the command needs an extra pair of braces around it, because the outer pair only groups the argument.
+
 To log in to the remote site, send an Authorization header. For HTTP Basic, that is `Authorization:Basic [encode64(<user>:<password>)]`.
 
 With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: %q`<content-type>` sets the type of `<data>` when no `<headers>` are given, and %q`<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
@@ -1448,6 +1451,19 @@ Sending JSON with a header of your own:
 > @http/post me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),Content-Type:application/json%rGame:MyMUSH
 ```
 Output: `200 baz MyMUSH`
+
+The same request with the headers as JSON:
+```sharp
+> @http/post/jsonheaders me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),json(object,Content-Type,"application/json",Game,"MyMUSH")
+```
+Output: `200 baz MyMUSH`
+
+A JSON literal, in its extra braces:
+```sharp
+> &SHOW me=think %<status> [json_query(%0,extract,$.headers.game)]
+> @http/jsonheaders me/SHOW=https://postman-echo.com/get,{{"Game":"MyMUSH"}}
+```
+Output: `200 MyMUSH`
 
 Logging in with HTTP Basic:
 ```sharp

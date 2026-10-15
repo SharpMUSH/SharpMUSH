@@ -301,6 +301,44 @@ public class HttpCommandTests
 	}
 
 	[Test]
+	public async Task HttpJsonHeadersTakeAnObjectOfNamesAndValues()
+	{
+		var run = await RunHttpAsync("HttpJsonHeaders", ["POST", "JSONHEADERS"],
+			["https://example.invalid/post", "{\"a\":1}",
+				"{\"Content-Type\":\"application/json\",\"X-One\":\" 1 \",\"Accept\":[\"text/plain\",\"application/json\"]}"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Post);
+		await Assert.That(run.Handler.Header("Content-Type")).IsEqualTo("application/json");
+		await Assert.That(run.Handler.Header("X-One")).IsEqualTo("1");
+		await Assert.That(run.Handler.Header("Accept")).IsEqualTo("text/plain, application/json");
+	}
+
+	[Test]
+	public async Task HttpJsonHeadersFollowTheUrlOnAGet()
+	{
+		var run = await RunHttpAsync("HttpJsonGet", ["JSONHEADERS"], ["https://example.invalid/get", "{\"X-Game\":\"MyMUSH\"}"]);
+
+		await Assert.That(run.Handler.Request!.Method).IsEqualTo(HttpMethod.Get);
+		await Assert.That(run.Handler.Header("X-Game")).IsEqualTo("MyMUSH");
+	}
+
+	[Test]
+	[Arguments("X-One:1")]
+	[Arguments("[\"X-One\",\"1\"]")]
+	[Arguments("{\"X-One\":1}")]
+	[Arguments("{\"X-One\":[\"1\",2]}")]
+	[Arguments("{\"Bad Name\":\"1\"}")]
+	[Arguments("{\"Content-Length\":\"12\"}")]
+	[Arguments("{\"X-One\":\"a\\nb\"}")]
+	public async Task HttpJsonHeadersRefuseAnythingButNamesAndStrings(string json)
+	{
+		var run = await RunHttpAsync("HttpJsonBad", ["POST", "JSONHEADERS"], ["https://example.invalid/post", "data", json]);
+
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidHttpHeader);
+		await Assert.That(run.ClientCreated).IsFalse();
+	}
+
+	[Test]
 	public async Task HttpReadsContentTypeAndUserpassRegistersOnlyWithHttpQRegisters()
 	{
 		var registers = new Dictionary<string, string> { ["CONTENT-TYPE"] = "text/csv", ["USERPASS"] = "user:secret" };

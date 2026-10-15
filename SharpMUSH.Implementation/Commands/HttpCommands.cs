@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -16,7 +17,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@HTTP",
-		Switches = ["DELETE", "POST", "PUT", "GET", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH"],
+		Switches = ["DELETE", "POST", "PUT", "GET", "HEAD", "CONNECT", "OPTIONS", "TRACE", "PATCH", "JSONHEADERS"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged | CB.NoGuest, MinArgs = 0, MaxArgs = 4, ParameterNames = ["url", "code"])]
 	public async ValueTask<Option<CallState>> Http(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -60,7 +61,7 @@ public partial class Commands
 			LocateFlags.All,
 			async found =>
 			{
-				var method = switches.FirstOrDefault() switch
+				var method = switches.FirstOrDefault(s => s != "JSONHEADERS") switch
 				{
 					"DELETE" => HttpMethod.Delete,
 					"POST" => HttpMethod.Post,
@@ -83,9 +84,13 @@ public partial class Commands
 				// A GET has no body, so its headers follow the URL; every other verb takes them after the data.
 				var isGet = method == HttpMethod.Get;
 				var headersText = (isGet ? dataArg : headersArg)?.Message.ToPlainText();
-				if (ParseRequestHeaders(headersText) is not RequestHeaders headers)
+				var jsonHeaders = switches.Contains("JSONHEADERS");
+				var parsedHeaders = jsonHeaders ? ParseJsonHeaders(headersText) : ParseRequestHeaders(headersText);
+				if (parsedHeaders is not RequestHeaders headers)
 				{
-					await NotifyService.Notify(executor, "Header value has a bad key:value set. Aborting.", executor);
+					await NotifyService.Notify(executor, jsonHeaders
+						? "Headers must be a JSON object of names and string values. Aborting."
+						: "Header value has a bad key:value set. Aborting.", executor);
 					return new CallState(ErrorMessages.Returns.InvalidHttpHeader);
 				}
 
@@ -176,19 +181,74 @@ public partial class Commands
 	/// </summary>
 	private static Result<RequestHeaders> ParseRequestHeaders(string? text)
 	{
-		var lines = new List<(string Name, string Value)>();
-		string? contentType = null;
+		var pairs = new List<(string Name, string Value)>();
 		foreach (var line in (text ?? string.Empty).Split('\n',
 			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
 		{
 			var colon = line.IndexOf(':');
 			if (colon < 0) return new Error<string>(line);
+			pairs.Add((line[..colon].Trim(), line[(colon + 1)..].Trim()));
+		}
 
-			var name = line[..colon].Trim();
-			var value = line[(colon + 1)..].Trim();
+		return CheckHeaders(pairs);
+	}
+
+	/// <summary>
+	/// Reads <c>@http/jsonheaders</c>' headers: a JSON object whose members are header names, each with a string
+	/// value or an array of strings (the header sent once per string). Anything else fails the whole argument,
+	/// as do the names and values <see cref="ParseRequestHeaders"/> refuses. Empty text sends no headers.
+	/// </summary>
+	private static Result<RequestHeaders> ParseJsonHeaders(string? text)
+	{
+		if (string.IsNullOrWhiteSpace(text)) return new RequestHeaders([], null);
+
+		JsonDocument document;
+		try
+		{
+			document = JsonDocument.Parse(text);
+		}
+		catch (JsonException)
+		{
+			return new Error<string>(text);
+		}
+
+		using (document)
+		{
+			if (document.RootElement.ValueKind != JsonValueKind.Object) return new Error<string>(text);
+
+			var pairs = new List<(string Name, string Value)>();
+			foreach (var member in document.RootElement.EnumerateObject())
+			{
+				switch (member.Value.ValueKind)
+				{
+					case JsonValueKind.String:
+						pairs.Add((member.Name, member.Value.GetString()!.Trim()));
+						break;
+					case JsonValueKind.Array when member.Value.EnumerateArray().All(v => v.ValueKind == JsonValueKind.String):
+						pairs.AddRange(member.Value.EnumerateArray().Select(v => (member.Name, v.GetString()!.Trim())));
+						break;
+					default:
+						return new Error<string>(member.Name);
+				}
+			}
+
+			return CheckHeaders(pairs);
+		}
+	}
+
+	/// <summary>
+	/// Fails on a name that is not an HTTP token, a value holding a control character, or a Content-Length
+	/// header (the body sets that); takes the Content-Type header out as the body's type.
+	/// </summary>
+	private static Result<RequestHeaders> CheckHeaders(List<(string Name, string Value)> pairs)
+	{
+		var lines = new List<(string Name, string Value)>();
+		string? contentType = null;
+		foreach (var (name, value) in pairs)
+		{
 			if (name.Length == 0 || !name.All(IsTokenChar) || value.Any(c => char.IsControl(c) && c != '\t')
 				|| name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-				return new Error<string>(line);
+				return new Error<string>(name);
 
 			if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
 				contentType = value;

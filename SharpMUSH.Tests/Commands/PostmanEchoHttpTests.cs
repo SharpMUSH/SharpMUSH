@@ -294,6 +294,12 @@ public class PostmanEchoHttpTests
 	[Arguments("think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]",
 		"@http/post me/SHOW=https://postman-echo.com/post,json(object,bar,\"baz\"),Content-Type:application/json%rGame:MyMUSH",
 		"200 baz MyMUSH")]
+	[Arguments("think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]",
+		"@http/post/jsonheaders me/SHOW=https://postman-echo.com/post,json(object,bar,\"baz\"),json(object,Content-Type,\"application/json\",Game,\"MyMUSH\")",
+		"200 baz MyMUSH")]
+	[Arguments("think %<status> [json_query(%0,extract,$.headers.game)]",
+		"@http/jsonheaders me/SHOW=https://postman-echo.com/get,{{\"Game\":\"MyMUSH\"}}",
+		"200 MyMUSH")]
 	[Arguments("think %<status> %0",
 		"@http me/SHOW=https://postman-echo.com/basic-auth,Authorization:Basic [encode64(postman:password)]",
 		"200 {\"authenticated\":true}")]
