@@ -20,11 +20,12 @@ public partial class Commands
 	/// <summary>
 	/// <c>@secret</c>: the server's secrets (<see cref="ISecretStore"/>). With no argument, or <c>/list</c>, it
 	/// lists them and where each value comes from; <c>&lt;name&gt;=&lt;value&gt;</c> stores one, replacing what was
-	/// stored; <c>/clear &lt;name&gt;</c> removes the stored value. Nothing shows a value again. The command is
+	/// stored; <c>/clear &lt;name&gt;</c> removes the stored value; <c>/host &lt;name&gt;=&lt;hosts&gt;</c> sets the hosts
+	/// <c>@http</c> may send it to. Nothing shows a value again. The command is
 	/// not evaluated, so a value is stored exactly as typed. Guarded in the command, by <c>config.admin</c> or the
 	/// permission a secret's declaration names, so a <c>@command/restrict</c> never opens it wider.
 	/// </summary>
-	[SharpCommand(Name = "@SECRET", Switches = ["LIST", "CLEAR"],
+	[SharpCommand(Name = "@SECRET", Switches = ["LIST", "CLEAR", "HOST"],
 		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest | CB.NoGagged,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "value"])]
 	public async ValueTask<Option<CallState>> Secret(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -45,6 +46,19 @@ public partial class Commands
 
 			await NotifyService.Notify(executor, SecretListing(listed), executor);
 			return CallState.Empty;
+		}
+
+		if (switches.Contains("HOST"))
+		{
+			if (name.Length == 0 || !hasValue)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SecretUsage), executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			}
+
+			return await MayManageSecret(executor, name)
+				? await SetSecretHosts(executor, name, args["1"].Message.ToPlainText())
+				: await SecretPermissionDenied(executor);
 		}
 
 		if (name.Length == 0 || switches.Contains("CLEAR") == hasValue)
@@ -87,6 +101,24 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	private async ValueTask<Option<CallState>> SetSecretHosts(AnySharpObject executor, string name, string hosts)
+	{
+		switch (await Secrets.SetHostsAsync(name, hosts.Split(' ', StringSplitOptions.RemoveEmptyEntries)))
+		{
+			case Error<string> error:
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SecretRefusedFormat), executor, error.Value);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			case SecretStatus { Hosts: { } bound }:
+				await Audit.RecordAsync(executor, AuditActions.SecretHosts, AuditTargets.Of(AuditTargetKinds.Secret, name), bound);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SecretHostsFormat), executor, name, bound);
+				return CallState.Empty;
+			default:
+				await Audit.RecordAsync(executor, AuditActions.SecretHosts, AuditTargets.Of(AuditTargetKinds.Secret, name));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SecretNoHostsFormat), executor, name);
+				return CallState.Empty;
+		}
 	}
 
 	private async ValueTask<Option<CallState>> ClearSecret(AnySharpObject executor, string name)
@@ -138,7 +170,8 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Each secret, where its value comes from, when (UTC) and by whom it was stored, and what it is for.
+	/// Each secret, where its value comes from, when (UTC) and by whom it was stored, the hosts <c>@http</c> may send
+	/// it to, and what it is for.
 	/// </summary>
 	private static MString SecretListing(IReadOnlyList<SecretStatus> secrets)
 	{
@@ -158,11 +191,16 @@ public partial class Commands
 					secret is { SetAt: { } at, SetBy: { } by }
 						? $"{at.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} by {SecretAuthorText(by)}"
 						: "-",
-					secret.Description ?? "-",
+					SecretUseText(secret),
 				}));
 
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Secrets ({secrets.Count})"), body), 78);
 	}
+
+	/// <summary>What the secret is for, then the hosts @http may send it to.</summary>
+	private static string SecretUseText(SecretStatus secret)
+		=> string.Join(' ', new[] { secret.Description, secret.Hosts is { } hosts ? $"@http may send it to {hosts}." : null }
+			.OfType<string>()) is { Length: > 0 } text ? text : "-";
 
 	/// <summary>A character as its name and dbref; an account, which set it in the portal, as its name.</summary>
 	private static string SecretAuthorText(SecretAuthor author)

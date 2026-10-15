@@ -283,7 +283,7 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@http/get me/{attrName}={PostmanEchoBase}/get,{token}"));
 
-		await Assert.That(Announced(player.DbRef, msg => msg == "Headers must be a JSON object of names and string values. Aborting.")).IsEqualTo(1);
+		await Assert.That(Announced(player.DbRef, msg => msg == "Headers must be a JSON object of header names and values. Aborting.")).IsEqualTo(1);
 	}
 
 	/// <summary>
@@ -300,6 +300,9 @@ public class PostmanEchoHttpTests
 	[Arguments("think %<status> %0",
 		"@http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,\"Basic [encode64(postman:password)]\")",
 		"200 {\"authenticated\":true}")]
+	[Arguments("think [json_query(json_query(%<headers>,get,content-type),unescape)]",
+		"@http me/SHOW=https://postman-echo.com/get",
+		"application/json; charset=utf-8")]
 	[Arguments("think [if(%<http-overflow>,Reply too long.,Reply complete.)]",
 		"@http me/SHOW=https://postman-echo.com/get",
 		"Reply complete.")]
@@ -313,6 +316,34 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(request));
 
 		await WaitForNotify(player.DbRef, msg => msg == expected);
+	}
+
+	/// <summary>
+	/// The secret example in <c>help @http</c>, run by God, who may set secrets: the stored login reaches the site
+	/// without passing through softcode.
+	/// </summary>
+	[Test]
+	public async ValueTask HelpSecretExampleLogsIn()
+	{
+		var secret = "http.postman." + string.Concat(TestIsolationHelpers.GenerateUniqueName("l").Where(char.IsAsciiLetterOrDigit)).ToLowerInvariant();
+		var attrName = GenerateAttributeName("SHOWSECRET");
+		var token = GenerateUniqueToken();
+		var secrets = WebAppFactoryArg.Services.GetRequiredService<ISecretStore>();
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@secret {secret}=postman:password"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@secret/host {secret}=postman-echo.com"));
+			await SetCallbackAttributeWithContent(attrName, $"think {token} %<status> %0");
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+				$"@http me/{attrName}=https://postman-echo.com/basic-auth,json(object,Authorization,json(object,secret,\"{secret}\",scheme,\"Basic\"))"));
+
+			await WaitForNotify(WebAppFactoryArg.ExecutorDBRef, msg => msg == $"{token} 200 {{\"authenticated\":true}}");
+		}
+		finally
+		{
+			await secrets.ClearAsync(secret);
+			await secrets.SetHostsAsync(secret, []);
+		}
 	}
 
 	[Test]

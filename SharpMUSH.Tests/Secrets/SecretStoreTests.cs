@@ -256,4 +256,53 @@ public class SecretStoreTests
 			return ValueTask.CompletedTask;
 		}
 	}
+
+	[Test]
+	public async Task HostsAreKeptApartFromTheValueAndNormalized()
+	{
+		using var host = new Host(environment: new() { ["SHARPMUSH_SECRET_HTTP_API_TOKEN"] = "from-env" });
+
+		var set = (await host.Store.SetHostsAsync("http.api.token", ["API.Example.com", " *.example.org ", "api.example.com"])).Expect<SecretStatus>();
+
+		await Assert.That(set.Hosts).IsEqualTo("*.example.org api.example.com");
+		await Assert.That(set.Source).IsEqualTo(SecretSource.Environment);
+		await Assert.That(await host.Store.HostsAsync("http.api.token")).IsEquivalentTo(["*.example.org", "api.example.com"]);
+		await Assert.That((await host.Store.ListAsync()).Single(s => s.Name == "http.api.token").Hosts).IsEqualTo("*.example.org api.example.com");
+	}
+
+	[Test]
+	public async Task NoHostsClearsTheList()
+	{
+		using var host = new Host();
+		await host.Store.SetHostsAsync("http.api.token", ["api.example.com"]);
+
+		var cleared = (await host.Store.SetHostsAsync("http.api.token", [])).Expect<SecretStatus>();
+
+		await Assert.That(cleared.Hosts).IsNull();
+		await Assert.That(await host.Store.HostsAsync("http.api.token")).IsEmpty();
+	}
+
+	[Test]
+	[Arguments("https://api.example.com")]
+	[Arguments("api.example.com/path")]
+	[Arguments("*")]
+	[Arguments("a.*.example.com")]
+	public async Task ABadHostIsRefused(string bad)
+	{
+		using var host = new Host();
+
+		await Assert.That(await host.Store.SetHostsAsync("http.api.token", [bad]) is Error<string>).IsTrue();
+		await Assert.That(await host.Store.HostsAsync("http.api.token")).IsEmpty();
+	}
+
+	[Test]
+	[Arguments("api.example.com", true)]
+	[Arguments("API.EXAMPLE.COM", true)]
+	[Arguments("x.api.example.com", false)]
+	[Arguments("deep.example.org", true)]
+	[Arguments("a.deep.example.org", true)]
+	[Arguments("example.org", false)]
+	[Arguments("badexample.org", false)]
+	public async Task HostPatternsMatchExactlyOrUnderAWildcard(string candidate, bool allowed)
+		=> await Assert.That(SecretHosts.Allows(["api.example.com", "*.example.org"], candidate)).IsEqualTo(allowed);
 }

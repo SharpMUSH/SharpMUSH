@@ -34,6 +34,7 @@ public sealed record SecretAuthor(string Id, string Name);
 /// <param name="SetBy">Who set the stored value.</param>
 /// <param name="ManagedBy">The permission that may set it besides <c>config.admin</c>, when its declaration names one.</param>
 /// <param name="Declared">Whether the server or a plugin reads it.</param>
+/// <param name="Hosts">The hosts <c>@http</c> may send it to, space-separated; null when it may be sent nowhere.</param>
 public sealed record SecretStatus(
 	string Name,
 	string? Description,
@@ -43,7 +44,8 @@ public sealed record SecretStatus(
 	DateTimeOffset? SetAt,
 	SecretAuthor? SetBy,
 	string? ManagedBy,
-	bool Declared);
+	bool Declared,
+	string? Hosts = null);
 
 /// <summary><c>PUT api/secrets/{name}</c>: the new value. It is never sent back.</summary>
 public sealed record SecretSetRequest(string Value);

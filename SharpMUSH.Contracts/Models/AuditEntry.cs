@@ -155,6 +155,7 @@ public static class AuditActions
 	public const string ServerRestart = "server.restart";
 	public const string SecretSet = "secret.set";
 	public const string SecretClear = "secret.clear";
+	public const string SecretHosts = "secret.hosts";
 
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
@@ -164,6 +165,6 @@ public static class AuditActions
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
-		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart, SecretSet, SecretClear
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart, SecretSet, SecretClear, SecretHosts
 	];
 }

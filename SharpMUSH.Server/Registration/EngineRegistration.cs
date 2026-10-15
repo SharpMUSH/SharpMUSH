@@ -359,6 +359,15 @@ internal static class EngineRegistration
 																 | System.Net.DecompressionMethods.Deflate
 																 | System.Net.DecompressionMethods.Brotli
 			});
+		// @http with a secret in its headers: no redirects, so the secret goes only to the host it is bound to.
+		services.AddHttpClient(SharpMUSH.Implementation.Commands.Commands.SecretHttpClient)
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+			{
+				AllowAutoRedirect = false,
+				AutomaticDecompression = System.Net.DecompressionMethods.GZip
+																 | System.Net.DecompressionMethods.Deflate
+																 | System.Net.DecompressionMethods.Brotli
+			});
 		services.AddMediator();
 
 		return services;

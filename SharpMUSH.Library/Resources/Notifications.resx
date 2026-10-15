@@ -3074,7 +3074,13 @@ PLAYERS:</value>
     <value>Usage: @ascii[/remove] &lt;character&gt;[=&lt;text&gt;]</value>
   </data>
   <data name="SecretUsage" xml:space="preserve">
-    <value>Usage: @secret[/list], @secret &lt;name&gt;=&lt;value&gt;, or @secret/clear &lt;name&gt;</value>
+    <value>Usage: @secret[/list], @secret &lt;name&gt;=&lt;value&gt;, @secret/clear &lt;name&gt;, or @secret/host &lt;name&gt;=[&lt;host&gt; ...]</value>
+  </data>
+  <data name="SecretHostsFormat" xml:space="preserve">
+    <value>@http may send {0} to: {1}</value>
+  </data>
+  <data name="SecretNoHostsFormat" xml:space="preserve">
+    <value>@http may send {0} to no host.</value>
   </data>
   <data name="SecretSetFormat" xml:space="preserve">
     <value>{0} is set. Its value is never shown again.</value>
