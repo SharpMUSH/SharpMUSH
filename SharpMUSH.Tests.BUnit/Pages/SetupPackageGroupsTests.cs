@@ -27,6 +27,23 @@ public class SetupPackageGroupsTests
 	}
 
 	[Test]
+	public async Task APackageNamingUncategorized_JoinsThePackagesWithNone_UnderTheTranslatedTitle()
+	{
+		var groups = SetupPackageGroups.For(
+		[
+			Package("named", "UNCATEGORIZED"),
+			Package("loose", null),
+			Package("scene", "Sans catégorie"),
+		], "Sans catégorie");
+
+		await Assert.That(groups.Select(g => (g.Title, g.Packages.Count))).IsEquivalentTo(new[]
+		{
+			("Sans catégorie", 1), ("Sans catégorie", 2),
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(groups[1].Packages.Select(p => p.Package.Id)).IsEquivalentTo(new[] { "named", "loose" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task APackageThatBuildsOnAnotherOfItsGroup_IsListedUnderIt()
 	{
 		var group = SetupPackageGroups.For(

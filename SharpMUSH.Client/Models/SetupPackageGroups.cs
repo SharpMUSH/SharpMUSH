@@ -13,14 +13,19 @@ public static class SetupPackageGroups
 {
 	/// <summary>
 	/// <paramref name="packages"/> by category, ignoring case, in the order the server lists them. A package with no
-	/// category is listed under <paramref name="uncategorized"/>, last, with any that name it. In a group, a package
-	/// that builds on another of the group's packages is listed under it.
+	/// category, or with the category <see cref="Uncategorized"/>, is listed last under <paramref name="uncategorizedTitle"/>.
+	/// In a group, a package that builds on another of the group's packages is listed under it.
 	/// </summary>
-	public static IReadOnlyList<SetupPackageGroup> For(IReadOnlyList<BundledPackageState> packages, string uncategorized) => packages
-		.GroupBy(p => p.Category ?? uncategorized, StringComparer.OrdinalIgnoreCase)
-		.OrderBy(group => string.Equals(group.Key, uncategorized, StringComparison.OrdinalIgnoreCase))
-		.Select(group => new SetupPackageGroup(group.Key, Gathered(group.ToList())))
+	public static IReadOnlyList<SetupPackageGroup> For(IReadOnlyList<BundledPackageState> packages, string uncategorizedTitle) => packages
+		.GroupBy(p => p.Category is { } category && !string.Equals(category, Uncategorized, StringComparison.OrdinalIgnoreCase)
+			? category
+			: string.Empty, StringComparer.OrdinalIgnoreCase)
+		.OrderBy(group => group.Key.Length == 0)
+		.Select(group => new SetupPackageGroup(group.Key.Length == 0 ? uncategorizedTitle : group.Key, Gathered(group.ToList())))
 		.ToList();
+
+	/// <summary>The category a package without one is listed under, whatever language the wizard shows it in.</summary>
+	public const string Uncategorized = "Uncategorized";
 
 	/// <summary>
 	/// <paramref name="group"/> with each package that builds on no other package of the group followed by those that
