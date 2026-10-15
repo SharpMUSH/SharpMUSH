@@ -10,6 +10,12 @@
             <Pill Tag="true">@KindName(Package.Package.Kind)</Pill>
         }
         <Pill Tag="true">v@(Package.Package.Version)</Pill>
+        @if (Package.Package.PastMaximum is { } past)
+        {
+            <span title="@Loc["PkgPastMaximumTooltip", past.Server, past.Maximum, past.At.ToString("yyyy-MM-dd")]">
+                <Pill Tag="true" Warn="true">@Loc["PkgPastMaximumChip", past.Maximum]</Pill>
+            </span>
+        }
         @if (!string.IsNullOrEmpty(Package.Package.SourceRepo))
         {
             <Pill Tag="true">@Package.Package.SourceRepo</Pill>

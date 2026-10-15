@@ -42,7 +42,8 @@ public partial class PackageInstallService(
 	IPackageDeclarationService declarations,
 	IPackageSettingService settings,
 	IPackageWikiService wiki,
-	Lazy<IRuntimeRegistrationService> registrations) : IPackageInstallService
+	Lazy<IRuntimeRegistrationService> registrations,
+	EngineVersion engine) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 

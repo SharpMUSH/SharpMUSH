@@ -24,7 +24,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
-		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
+		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki"
 	};
 
@@ -133,6 +133,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 		var conventionPrefix = OptionalString(doc, "convention_prefix", issues);
 		var requiresServer = ReadConstraintField(doc, "requires_server", issues);
+		var (verifiedServer, maximumServer) = ReadServerRange(doc, requiresServer, issues);
 
 		var replaces = OptionalString(doc, "replaces", issues);
 		if (replaces is not null && (!PackageSlugRegex().IsMatch(replaces) || replaces == name))
@@ -200,7 +201,9 @@ public partial class PackageManifestService : IPackageManifestService
 			declarations.IsEmpty ? null : declarations,
 			settings.Count == 0 ? null : settings,
 			locale,
-			wiki.Count == 0 ? null : wiki);
+			wiki.Count == 0 ? null : wiki,
+			verifiedServer,
+			maximumServer);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}

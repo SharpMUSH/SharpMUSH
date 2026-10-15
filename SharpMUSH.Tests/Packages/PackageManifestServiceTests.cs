@@ -91,7 +91,7 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task NewerFormatMinor_Warns_NewerMajor_Rejects()
 	{
-		var minor = _service.ParseManifest(MinimalManifest("format: 1.5")).Expect<ParsedPackageManifest>();
+		var minor = _service.ParseManifest(MinimalManifest("format: 1.7")).Expect<ParsedPackageManifest>();
 		await Assert.That(minor.Warnings.Any(w => w.Path == "format")).IsTrue();
 
 		var major = _service.ParseManifest(MinimalManifest("format: 2")).Expect<PackageManifestFailure>();

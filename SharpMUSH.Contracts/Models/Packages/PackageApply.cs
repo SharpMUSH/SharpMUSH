@@ -46,12 +46,17 @@ public sealed record PackageApplySource(string Repo, string? Path, string Commit
 /// refused unless this is true <i>and</i> the server's managed-package allow-list
 /// permits the package id. Ignored for softcode/application packages.
 /// </param>
+/// <param name="AllowPastMaximum">
+/// The administrator's confirmation to apply a package on a server newer than its <c>maximum_server</c>. Such an
+/// apply is refused without it, and recorded on <see cref="InstalledPackageRecord.PastMaximum"/> with it.
+/// </param>
 public sealed record PackageApplyRequest(
 	PackageApplySource Source,
 	IReadOnlyDictionary<string, string> ConfigureAnswers,
 	IReadOnlyList<PackageConflictDecision> ConflictDecisions,
 	int KeepRevisions = 10,
-	bool AllowPluginCode = false);
+	bool AllowPluginCode = false,
+	bool AllowPastMaximum = false);
 
 /// <summary>Result of a successful apply.</summary>
 /// <param name="Revision">The revision number this apply recorded.</param>
