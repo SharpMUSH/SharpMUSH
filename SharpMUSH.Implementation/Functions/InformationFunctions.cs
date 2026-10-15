@@ -1408,15 +1408,15 @@ public partial class Functions
 	/// <c>#-1</c>. Names come back upper-case, except flags and powers, which keep their own casing as
 	/// <c>@list flags</c> shows them.
 	/// </summary>
-	/// <summary>
-	/// PennMUSH's list(): names of functions, commands, attributes and so on. Under mux_list it is
-	/// TinyMUX's instead, iter() that tells the enactor each result in turn and returns nothing,
-	/// which is why the arguments are not evaluated before the call.
-	/// </summary>
-	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	/// <remarks>
+	/// Under rhost_list it is RhostMUSH's list() instead (TinyMUX's three-argument form plus a header
+	/// and a target), iter() that tells each result in turn and returns nothing, which is why the
+	/// arguments are not evaluated before the call.
+	/// </remarks>
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.NoParse)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (Compatibility(parser).MuxList)
+		if (Compatibility(parser).RhostList)
 		{
 			return await TellEachAsync(parser);
 		}
@@ -1481,8 +1481,12 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// TinyMUX's list(list, action[, delimiter]): the action is evaluated for each element, as by
-	/// iter(), and each result is told to the enactor. The call itself returns nothing.
+	/// RhostMUSH's list(list, action[, delimiter][, header][, target]), whose first three arguments
+	/// are TinyMUX's list(): the action is evaluated for each element, as by iter(), and each result is
+	/// told to the enactor. The call itself returns nothing, and an empty list tells nothing, not even
+	/// the header. A header that is not empty is told once, before the results. The header and the
+	/// results go to the target instead when the enactor controls it; a target that is not found or
+	/// not controlled is ignored without a word, as RhostMUSH ignores it.
 	/// </summary>
 	private async ValueTask<CallState> TellEachAsync(IMUSHCodeParser parser)
 	{
@@ -1497,6 +1501,12 @@ public partial class Functions
 		var delimiter = args.TryGetValue("2", out var a2) && a2.Message.Length > 0
 			? errors.Record(await a2.GetParsedResultAsync())
 			: MarkupText.Space;
+		var items = MushText.SplitList(delimiter, list);
+		if (items is [] or [{ Length: 0 }])
+		{
+			return errors.Complete(CallState.Empty);
+		}
+
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var iteration = new IterationWrapper<MString>
@@ -1508,11 +1518,19 @@ public partial class Functions
 		parser.CurrentState.IterationRegisters.Push(iteration);
 		try
 		{
-			foreach (var item in MushText.SplitList(delimiter, list))
+			var recipient = args.TryGetValue("4", out var a4) && a4.Message.Length > 0
+				? await ListRecipientAsync(parser, enactor, executor, errors.Record(await a4.GetParsedResultAsync()))
+				: enactor;
+			if (args.TryGetValue("3", out var a3) && a3.Message.Length > 0)
+			{
+				await NotifyService.Notify(recipient, errors.Record(await a3.GetParsedResultAsync()), executor);
+			}
+
+			foreach (var item in items)
 			{
 				iteration.Value = item;
 				iteration.Iteration++;
-				await NotifyService.Notify(enactor, errors.Record(await args["1"].GetParsedResultAsync()), executor);
+				await NotifyService.Notify(recipient, errors.Record(await args["1"].GetParsedResultAsync()), executor);
 				if (iteration.Break)
 				{
 					break;
@@ -1526,6 +1544,17 @@ public partial class Functions
 
 		return errors.Complete(CallState.Empty);
 	}
+
+	/// <summary>
+	/// RhostMUSH's list() target: the name is matched as the executor would match it, and the match
+	/// is used only when the enactor controls it. Anything else leaves the enactor.
+	/// </summary>
+	private async ValueTask<AnySharpObject> ListRecipientAsync(IMUSHCodeParser parser, AnySharpObject enactor,
+		AnySharpObject executor, MString name)
+		=> await LocateService.Locate(parser, executor, executor, name.ToPlainText(), LocateFlags.All) is AnySharpObject target
+			&& await PermissionService.Controls(enactor, target)
+				? target
+				: enactor;
 
 	/// <summary>Command names of one type — "builtin", "local", or anything else for both — sorted, upper-case.</summary>
 	private static IEnumerable<string> CommandNames(IMUSHCodeParser parser, string type)

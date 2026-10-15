@@ -89,7 +89,7 @@ public class FunctionArityParityTests : ServerTestBase
 		["case"] = "a default alone, as TinyMUX's switch(x,default) is default",
 		["caseall"] = "a default alone, as TinyMUX's switch(x,default) is default",
 		["wrap"] = "TinyMUX's wrap(text,width,justify,left,right,hanging,osep,first width)",
-		["list"] = "TinyMUX's list(list,action,delimiter) under mux_list",
+		["list"] = "RhostMUSH's list(list,eval,delimiter,header,target), TinyMUX's in its first three, under rhost_list",
 
 		// RhostMUSH's map() passes arguments after <osep> to the attribute as %1 onwards. PennMUSH
 		// refuses a fifth argument, so no PennMUSH call reaches them.

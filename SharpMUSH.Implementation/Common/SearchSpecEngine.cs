@@ -304,9 +304,8 @@ public static class SearchSpecEngine
 						break;
 					}
 
-					// Replace ## with the object's dbref number in the expression
-					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
-					var expression = evalExpression.Replace("##", objectDbRefNum);
+					// ## becomes the candidate's dbref as #N, as PennMUSH's raw_search writes it with unparse_dbref.
+					var expression = evalExpression.Replace("##", $"#{typedObj.Object().DBRef.Number}");
 
 					var evalResult = await parser.FunctionParse(MarkupText.Plain(expression));
 					hadErrors |= evalResult?.HadErrors == true;

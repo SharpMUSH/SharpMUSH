@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -78,7 +79,9 @@ public class SecretCommandTests
 			var cleared = await AsGod($"@secret/host {name}=");
 
 			await Assert.That(set).Contains($"@http may send {name} to: *.example.org api.example.com");
-			await Assert.That(listed).Contains("api.example.com");
+			// The listing is a table whose columns are as wide as the secrets other tests have stored, so a
+			// host may wrap across lines: compare with the table's layout taken out.
+			await Assert.That(Regex.Replace(listed, @"[\s│]", "")).Contains("api.example.com");
 			await Assert.That(cleared).Contains($"@http may send {name} to no host.");
 			await Assert.That(await Secrets.HostsAsync(name)).IsEmpty();
 		}
