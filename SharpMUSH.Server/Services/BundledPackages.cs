@@ -101,6 +101,10 @@ public static class BundledPackages
 		new("rp-finder", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
+		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
+		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

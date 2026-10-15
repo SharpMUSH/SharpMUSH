@@ -36,6 +36,8 @@ which games can add as a remote in the admin panel.
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 | [`rp-finder/`](rp-finder/) | Finding roleplay: a `+lfrp` status that runs out and ends at logoff, shown in who-where's `+who` through a ``FILTER`WHO`STATUS`` filter, and a watch list run from the master room's `ACONNECT`/`ADISCONNECT` that respects page locks, DARK and a player's choice to hide; `+watch` and `+friend` follow Volund's FRIEND global (requires who-where) |
 | [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
+| [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
+| [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
 
 ## The manifest: `package.yaml`
 
