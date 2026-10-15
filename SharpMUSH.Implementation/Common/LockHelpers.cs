@@ -30,20 +30,22 @@ public static class LockHelpers
 	/// form has been handed to <c>@atrlock</c>. An empty key is <c>do_unlock</c>.
 	/// </summary>
 	/// <param name="type">The lock type as typed, or <see langword="null"/> for the Basic lock.</param>
+	/// <param name="rhostSpelling">Whether a type no lock answers to may be RhostMUSH's <c>&lt;type&gt;lock</c>
+	/// spelling of a standard lock (<see cref="RhostLockType"/>); the lock commands' switches take it.</param>
 	public static async ValueTask<Result<Success>> LockAsync(IMUSHCodeParser parser, ILocateService locateService,
 		INotifyService notifyService, IPermissionService permissionService, ILockService lockService,
-		AnySharpObject executor, string name, string key, string? type)
+		AnySharpObject executor, string name, string key, string? type, bool rhostSpelling = false)
 	{
 		if (key.Length == 0)
 		{
-			return await UnlockAsync(parser, locateService, notifyService, lockService, executor, name, type);
+			return await UnlockAsync(parser, locateService, notifyService, lockService, executor, name, type, rhostSpelling);
 		}
 
 		// lock.c:715-731: match_result, which is silent, so do_lock words both failures itself.
 		return await locateService.Locate(parser, executor, executor, name, LocateFlags.All) switch
 		{
 			AnySharpObject target => await LockLocatedAsync(notifyService, permissionService, lockService, executor,
-				target, key, type ?? string.Empty),
+				target, key, type ?? string.Empty, rhostSpelling),
 			Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch }
 				=> await RefusedAsync(notifyService, executor, ErrorMessages.Notifications.DontKnowWhichOneToLock),
 			_ => await RefusedAsync(notifyService, executor, ErrorMessages.Notifications.DontSeeWhatYouWantToLock)
@@ -53,7 +55,7 @@ public static class LockHelpers
 	/// <inheritdoc cref="LockAsync"/>
 	private static async ValueTask<Result<Success>> LockLocatedAsync(INotifyService notifyService,
 		IPermissionService permissionService, ILockService lockService, AnySharpObject executor, AnySharpObject target,
-		string key, string type)
+		string key, string type, bool rhostSpelling)
 	{
 		// lock.c:725-727.
 		if (!await permissionService.Controls(executor, target))
@@ -67,6 +69,7 @@ public static class LockHelpers
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Notifications.DontUnderstandThatKey);
 		}
 
+		type = await WithRhostSpellingAsync(lockService, target, type, rhostSpelling);
 		return await lockService.ResolveWriteNameAsync(target, type) switch
 		{
 			string lockName => await ReportedAsync(notifyService, executor, target, lockName,
@@ -86,11 +89,12 @@ public static class LockHelpers
 	/// parent chain; <c>delete_lock</c> then finds nothing of the object's own to remove and succeeds.
 	/// </remarks>
 	public static async ValueTask<Result<Success>> UnlockAsync(IMUSHCodeParser parser, ILocateService locateService,
-		INotifyService notifyService, ILockService lockService, AnySharpObject executor, string name, string? type)
+		INotifyService notifyService, ILockService lockService, AnySharpObject executor, string name, string? type,
+		bool rhostSpelling = false)
 		=> await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, name, ControlledMatch) switch
 		{
 			AnySharpObject target => await UnlockLocatedAsync(notifyService, lockService, executor, target,
-				type ?? string.Empty),
+				await WithRhostSpellingAsync(lockService, target, type ?? string.Empty, rhostSpelling)),
 			Error<string> reported => reported,
 			_ => new Error<string>(ErrorMessages.Returns.NoMatch)
 		};
@@ -123,6 +127,34 @@ public static class LockHelpers
 		return await ReportedAsync(notifyService, executor, target, lockName,
 			await lockService.UnsetAsync(executor, target, type), nameof(ErrorMessages.Notifications.ObjectUnlocked));
 	}
+
+	/// <summary>
+	/// The standard lock RhostMUSH's <c>&lt;type&gt;lock</c> switch spelling names — <c>enterlock</c> for
+	/// Enter, <c>tportlock</c> for Teleport, <c>defaultlock</c> for Basic — or <see langword="null"/> when
+	/// <paramref name="type"/> is not one, as it is for Rhost's locks SharpMUSH has no
+	/// <see cref="LockType"/> for (<c>teloutlock</c>, <c>darklock</c>, <c>zonetolock</c>, ...).
+	/// </summary>
+	public static string? RhostLockType(string type)
+	{
+		if (type.Length <= 4 || !type.EndsWith("lock", StringComparison.OrdinalIgnoreCase)) return null;
+		var stem = type[..^4];
+		if (stem.Equals("default", StringComparison.OrdinalIgnoreCase)) return nameof(LockType.Basic);
+		var canonical = LockNames.Canonical(stem);
+		return Enum.GetNames<LockType>().Contains(canonical, StringComparer.Ordinal) ? canonical : null;
+	}
+
+	/// <summary>
+	/// <paramref name="type"/>, or the standard lock its RhostMUSH spelling names when that is asked for and
+	/// nothing answers to <paramref name="type"/> as typed. Only a name that is otherwise an unknown lock type
+	/// is read the Rhost way, so a user lock that happens to be called <c>enterlock</c> keeps its name.
+	/// </summary>
+	private static async ValueTask<string> WithRhostSpellingAsync(ILockService lockService, AnySharpObject target,
+		string type, bool rhostSpelling)
+		=> rhostSpelling && RhostLockType(type) is { } standard
+			&& await lockService.ResolveWriteNameAsync(target, type)
+				is Error<string> { Value: ErrorMessages.Notifications.UnknownLockType }
+			? standard
+			: type;
 
 	/// <summary>
 	/// PennMUSH <c>do_lset</c> (<c>src/lock.c:905-955</c>): <c>&lt;object&gt;/&lt;lock&gt;</c> and a flag list.

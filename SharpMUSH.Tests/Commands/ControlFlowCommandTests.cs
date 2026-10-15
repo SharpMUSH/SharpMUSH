@@ -830,4 +830,40 @@ public class ControlFlowCommandTests
 		await Assert.That(messages).DoesNotContain($"SwBrk_After_{id}")
 			.Because("the break also stops the calling action list");
 	}
+
+	/// <summary>
+	/// RhostMUSH's spellings of @switch's switches are other names for SharpMUSH's: /regall is
+	/// /all/regexp, /regfirst is /first/regexp, and /clearreg is /clearregs. A regexp is case-insensitive
+	/// and captures from the subject as written.
+	/// </summary>
+	[Test]
+	public async ValueTask Switch_RhostSwitchSpellings()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			"@switch/regall/inline ABC=^a(b),@pemit #1=RegAll_A_$1_51061,c$,@pemit #1=RegAll_B_51061,@pemit #1=RegAll_D_51061"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			"@switch/regfirst/inline ABC=^a(b),@pemit #1=RegFirst_A_$1_51062,c$,@pemit #1=RegFirst_B_51062"));
+		await Parser.CommandListParse(MarkupText.Plain(
+			"think setq(0,kept_51063);@switch/clearreg/inline/localize 1=1,@pemit #1=ClearReg_[%q0]_51063;@pemit #1=ClearRegAfter_%q0"));
+
+		await Assert.That(Heard(executor, "RegAll_A_B_51061")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "RegAll_B_51061")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "RegAll_D_51061")).IsEqualTo(0);
+		await Assert.That(Heard(executor, "RegFirst_A_B_51062")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "RegFirst_B_51062")).IsEqualTo(0);
+		await Assert.That(Heard(executor, "ClearReg__51063")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "ClearRegAfter_kept_51063")).IsEqualTo(1);
+	}
+
+	/// <summary>RhostMUSH's @dolist/space names the default space-separated list.</summary>
+	[Test]
+	public async ValueTask DoList_SpaceSwitchIsTheDefault()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/space/inline a,b c=@pemit #1=DolSpace_%i0_51064"));
+
+		await Assert.That(Heard(executor, "DolSpace_a,b_51064")).IsEqualTo(1);
+		await Assert.That(Heard(executor, "DolSpace_c_51064")).IsEqualTo(1);
+	}
 }

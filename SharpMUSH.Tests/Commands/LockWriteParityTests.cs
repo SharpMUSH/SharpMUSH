@@ -356,4 +356,44 @@ public class LockWriteParityTests
 
 		await Factory.Notifications.WaitForAsync(player.DbRef, $"{name}(#{DBRef.Parse(target).Number}) - Basic unlocked.");
 	}
+
+	/// <summary>
+	/// RhostMUSH names its lock switches with "lock" on the end; each one SharpMUSH has a lock type for
+	/// is that lock, for @lock and @unlock both.
+	/// </summary>
+	[Test]
+	[Arguments("enterlock", "Enter")]
+	[Arguments("uselock", "Use")]
+	[Arguments("tportlock", "Teleport")]
+	[Arguments("defaultlock", "Basic")]
+	[Arguments("droptolock", "DropTo")]
+	[Arguments("chownlock", "ChOwn")]
+	public async Task RhostLockSwitchNamesTheStandardLock(string rhostSwitch, string lockType)
+	{
+		var target = await Create();
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lock/{rhostSwitch} {target}=#FALSE"));
+		await Assert.That(await Read($"lock({target}/{lockType})")).IsEqualTo("#FALSE");
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@unlock/{rhostSwitch} {target}"));
+		await Assert.That(await Read($"lock({target}/{lockType})")).IsEqualTo("*UNLOCKED*");
+	}
+
+	/// <summary>A RhostMUSH lock SharpMUSH has no type for stays an unknown lock type.</summary>
+	[Test]
+	public async Task RhostLockSwitchWithoutAStandardLockIsUnknown()
+	{
+		var target = await Create();
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lock/teloutlock {target}=#FALSE"));
+		await Assert.That(await Read($"llocks({target})")).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>A user lock whose name ends in "lock" keeps answering to it.</summary>
+	[Test]
+	public async Task UserLockEndingInLockKeepsItsName()
+	{
+		var target = await Create();
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lock/user:enterlock {target}=#TRUE"));
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lock/enterlock {target}=#FALSE"));
+		await Assert.That(await Read($"lock({target}/user:enterlock)")).IsEqualTo("#FALSE");
+		await Assert.That(await Read($"lock({target}/Enter)")).IsEqualTo("*UNLOCKED*");
+	}
 }
