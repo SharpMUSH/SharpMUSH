@@ -23,7 +23,10 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Kind">Package kind: a softcode package (objects/attributes), an application package (a portal registration), or a plugin package (a compiled C# plugin).</param>
 /// <param name="Application">The dynamic-application registration this package installs, when <see cref="Kind"/> is <see cref="PackageKind.Application"/>; otherwise null.</param>
 /// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Plugin"/>; otherwise null.</param>
-/// <param name="Declarations">The roles, permissions and categories the package declares, or null for none (see <see cref="Declared"/>).</param>
+/// <param name="Declarations">
+/// The roles, permissions and categories the package declares, and its attribute entries (<c>attributes:</c>,
+/// format 1.5), or null for none (see <see cref="Declared"/>).
+/// </param>
 /// <param name="Settings">The configuration options the package sets (<c>settings:</c>, format 1.3), or null for none.</param>
 /// <param name="Locale">The locale the package's wiki pages are written in (<c>locale:</c>, format 1.4), canonical, or null for the game's <c>wiki_default_locale</c>.</param>
 /// <param name="Wiki">The wiki pages the package ships (<c>wiki:</c>, format 1.4), or null for none.</param>

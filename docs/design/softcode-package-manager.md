@@ -191,12 +191,41 @@ content pack. The reference is `examples/packages/README.md`. The decisions:
   pre-package backup covers them.
 - **Rollback** leaves wiki pages as they are; a page's history is the way back for its text.
 
+### Attribute entries (format 1.5)
+
+`attributes:` maps an attribute name to the standard attribute entry `@attribute` would make:
+default `flags`, and a `limit` or an `enum` (with its `delimiter`). The reference is
+`examples/packages/README.md`. Entries ride with roles and permissions: they are part of
+`PackageDeclarations` (`Attributes`), planned by `PackageDeclarationPlanner` and written by
+`IPackageDeclarationService` through the Mediator (`CreateAttributeEntryCommand`,
+`DeleteAttributeEntryCommand`). The decisions:
+
+- **Validity.** The manifest reader checks the name (`@attribute`'s characters, `` ` `` only between
+  branches), each flag against the built-in attribute flags (`branch` refused), that a `limit`
+  compiles as `@attribute/limit` compiles it, and that an entry has a limit or an enum, not both.
+  `attributes:` needs `format: 1.5`. `index:` is reserved for path 6 and ignored with a warning. The
+  plan checks the live table and the game's attribute flags.
+- **Ownership.** An entry the package creates is recorded in `InstalledPackageRecord.Owned` with the
+  values that version declared. An entry the game already has is the game's: the package uses it
+  and never changes it; if its limit or enum contradicts the manifest's, the plan says so and blocks
+  (different default flags are only noted). One owned by another installed package blocks the plan.
+- **Upgrade** is a field-wise three-way merge against `Owned`: the default flags as a set, and the
+  limit-or-enum as one field, since each replaces the other.
+- **Removal** (a dropped entry, or uninstall) deletes the entry, whatever relies on it; stored values
+  on objects are left alone, since an entry only sets defaults and checks.
+- **Retroactive.** Default flags apply to new copies only, unless the entry sets `retroactive: true`
+  and the apply writes its flags. The plan counts the existing copies whose flags differ
+  (`PackageDeclarationChange.Retroactive`), the review screen shows the count and waits for a
+  confirm, and the apply gives each copy exactly the entry's flags through the operation's
+  `PackageWriteTransaction` (so a failed apply undoes them), keeping `branch` and the copy's owner.
+- **Rollback** restores objects and attributes only.
+
 ### Engine version range (format 1.6)
 
 `requires_server` (lower-bound clauses only), `verified_server` (a version) and `maximum_server` (one to
 three components; the ones left out match anything, `PackageVersionCeiling`) place a package against
 the server's `EngineVersion`, registered from `VersionInfo.SharpMUSHVersion`, the version `version()`
-reports. Format 1.5 is reserved for the attribute-entries block. The reference is
+reports. The reference is
 `examples/packages/README.md`; the decisions:
 
 - **Only the minimum blocks.** A server below `requires_server` blocks the plan

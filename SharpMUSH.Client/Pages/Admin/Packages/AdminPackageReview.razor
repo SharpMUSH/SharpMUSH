@@ -219,7 +219,7 @@ else
     }
 
     @* ── Roles, permissions and categories ──────────────────────── *@
-    @if (_plan.Changeset.Declarations is { Count: > 0 } declarations)
+    @if (RoleDeclarations is { Count: > 0 } declarations)
     {
         <KitCard Title="@Loc["PkgDeclarationsCount", declarations.Count]">
             <div class="pkg-review-body">
@@ -234,6 +234,31 @@ else
                         <MudTd data-label="@Loc["PkgDetails"]"><MudText Typo="Typo.caption">@context.Detail</MudText></MudTd>
                     </RowTemplate>
                 </MudTable>
+            </div>
+        </KitCard>
+    }
+
+    @* ── Attribute entries (format 1.5) ─────────────────────────── *@
+    @if (AttributeEntries is { Count: > 0 } attributeEntries)
+    {
+        <KitCard Title="@Loc["PkgAttributeEntriesCount", attributeEntries.Count]" Sub="@Loc["PkgAttributeEntriesSub"]" Class="pkg-attribute-entries">
+            <div class="pkg-review-body">
+                <MudTable Items="attributeEntries" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgAttributeEntryRetroactive"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgName"]"><code>@context.Name</code></MudTd>
+                        <MudTd data-label="@Loc["PkgAction"]"><MudChip T="string" Size="Size.Small" Color="@DeclarationColor(context.Action)">@context.Action</MudChip></MudTd>
+                        <MudTd data-label="@Loc["PkgAttributeEntryRetroactive"]">@(context.Retroactive?.ToString() ?? "")</MudTd>
+                        <MudTd data-label="@Loc["PkgDetails"]"><MudText Typo="Typo.caption">@context.Detail</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+                @if (ChangesExistingAttributes)
+                {
+                    <MudCheckBox T="bool" @bind-Value="_retroactiveConfirmed" Color="Color.Primary" id="pkg-retroactive-confirm"
+                                 Label="@Loc["PkgAttributeEntriesConfirm", RetroactiveCopies]" />
+                }
             </div>
         </KitCard>
     }
@@ -480,11 +505,28 @@ else
     private bool ChangesSettings =>
         _plan?.Changeset.Settings?.Any(s => s.Action is PackageSettingAction.Set or PackageSettingAction.Restore) ?? false;
 
+    private bool _retroactiveConfirmed;
+
+    /// <summary>The roles, permissions and categories in the plan; attribute entries have a card of their own.</summary>
+    private List<PackageDeclarationChange> RoleDeclarations =>
+        (_plan?.Changeset.Declarations ?? []).Where(d => d.Kind != PackageDeclarationKind.Attribute).ToList();
+
+    /// <summary>The standard attribute entries in the plan (format 1.5).</summary>
+    private List<PackageDeclarationChange> AttributeEntries =>
+        (_plan?.Changeset.Declarations ?? []).Where(d => d.Kind == PackageDeclarationKind.Attribute).ToList();
+
+    /// <summary>How many attributes already on objects a retroactive entry changes.</summary>
+    private int RetroactiveCopies => AttributeEntries.Sum(d => d.Retroactive ?? 0);
+
+    /// <summary>Whether applying changes the flags of attributes already on objects, which the admin confirms first.</summary>
+    private bool ChangesExistingAttributes => RetroactiveCopies > 0;
+
     private bool CanApply =>
         _plan is not null
         && !_plan.Changeset.IsBlocked
         && (!ChangesSettings || _settingsConfirmed)
         && (!PastMaximum || _pastMaximumConfirmed)
+        && (!ChangesExistingAttributes || _retroactiveConfirmed)
         && (!IsPlugin || _pluginTrusted)
         && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))))
         && _wikiConflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(WikiDecisionKey(c))));
@@ -520,6 +562,7 @@ else
             _plan = plan;
             _settingsConfirmed = false;
             _pastMaximumConfirmed = false;
+            _retroactiveConfirmed = false;
             _renders = plan.Renders.ToDictionary(r => (r.TargetRef, r.Attribute), r => r);
             _conflicts = plan.Changeset.Attributes
                 .Where(a => a.Action == PackageAttributeAction.Conflict)
