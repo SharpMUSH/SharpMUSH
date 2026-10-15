@@ -22,6 +22,14 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 	/// <summary>Discord's close code for a privileged intent the application has not turned on.</summary>
 	private const int DisallowedIntents = 4014;
 
+	/// <summary>
+	/// Discord's close codes for a shard, API version or intent it refuses (4010-4013). Discord.Net retries these
+	/// forever, and each retry spends one of the day's thousand logins.
+	/// </summary>
+	private const int FirstRefusedSetting = 4010;
+
+	private const int LastRefusedSetting = 4013;
+
 	private readonly Channel<bool> _reconnect = Channel.CreateBounded<bool>(
 		new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
 
@@ -43,9 +51,6 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 				await _reconnect.Reader.ReadAsync(stoppingToken);
 				await DisconnectAsync();
 			}
-		}
-		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-		{
 		}
 		finally
 		{
@@ -131,10 +136,12 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 			return Task.CompletedTask;
 		}
 
-		DiscordGatewayStatus? status = (exception as WebSocketClosedException ?? exception.InnerException as WebSocketClosedException)?.CloseCode switch
+		var closeCode = (exception as WebSocketClosedException ?? exception.InnerException as WebSocketClosedException)?.CloseCode;
+		DiscordGatewayStatus? status = closeCode switch
 		{
 			AuthenticationFailed => DiscordGatewayStatus.BadToken,
 			DisallowedIntents => DiscordGatewayStatus.IntentsOff,
+			>= FirstRefusedSetting and <= LastRefusedSetting => DiscordGatewayStatus.Unreachable,
 			_ => null,
 		};
 

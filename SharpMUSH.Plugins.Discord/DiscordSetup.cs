@@ -50,19 +50,22 @@ public static class DiscordSetup
 
 	/// <summary>
 	/// The gateway intents the bot asks for. Message Content and Server Members are privileged: the admin turns
-	/// them on in the developer portal, or Discord closes the connection.
+	/// them on in the developer portal, or Discord closes the connection. Guild Webhooks says when a linked
+	/// channel's webhook is deleted.
 	/// </summary>
 	public const GatewayIntents Intents =
-		GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMembers;
+		GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.GuildWebhooks
+		| GatewayIntents.MessageContent | GatewayIntents.GuildMembers;
 
 	/// <summary>
-	/// What the bot does in a server, and nothing more: read and post in linked channels, post as speakers through
-	/// its webhooks, give the Linked and mapped roles, delete a line deleted in the game, and publish scenes as
-	/// Scheduled Events. Creating events also lets it edit and delete its own.
+	/// What the bot does in a server, and nothing more: read and post in linked channels and their threads, post
+	/// as speakers through its webhooks, give the Linked and mapped roles, and publish scenes as Scheduled Events.
+	/// A webhook's own token edits and deletes its posts, so the bot needs no Manage Messages; creating events
+	/// also lets it edit and delete its own.
 	/// </summary>
 	public const GuildPermission Permissions =
-		GuildPermission.ViewChannel | GuildPermission.SendMessages | GuildPermission.ReadMessageHistory
-		| GuildPermission.ManageWebhooks | GuildPermission.ManageRoles | GuildPermission.ManageMessages
+		GuildPermission.ViewChannel | GuildPermission.SendMessages | GuildPermission.SendMessagesInThreads
+		| GuildPermission.ReadMessageHistory | GuildPermission.ManageWebhooks | GuildPermission.ManageRoles
 		| GuildPermission.CreateEvents;
 
 	/// <summary>The link that adds the bot to a server, with its slash commands and exactly <see cref="Permissions"/>.</summary>

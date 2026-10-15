@@ -10,9 +10,9 @@ public class DiscordSetupTests
 	[Test]
 	public async Task TheInviteAsksForExactlyThePermissionsTheBotUses()
 	{
-		// Discord's bits: view channel 1<<10, send 1<<11, manage messages 1<<13, history 1<<16, manage roles 1<<28,
-		// manage webhooks 1<<29, create events 1<<44.
-		const ulong expected = (1UL << 10) | (1UL << 11) | (1UL << 13) | (1UL << 16) | (1UL << 28) | (1UL << 29) | (1UL << 44);
+		// Discord's bits: view channel 1<<10, send 1<<11, history 1<<16, manage roles 1<<28, manage webhooks 1<<29,
+		// send in threads 1<<38, create events 1<<44.
+		const ulong expected = (1UL << 10) | (1UL << 11) | (1UL << 16) | (1UL << 28) | (1UL << 29) | (1UL << 38) | (1UL << 44);
 
 		await Assert.That(DiscordSetup.InviteUrl(Application)).IsEqualTo(
 			$"https://discord.com/oauth2/authorize?client_id={Application}&permissions={expected}&scope=bot+applications.commands");
