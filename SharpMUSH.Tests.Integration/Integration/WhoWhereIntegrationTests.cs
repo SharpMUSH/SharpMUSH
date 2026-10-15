@@ -260,13 +260,13 @@ public class WhoWhereIntegrationTests
 	}
 
 	/// <summary>
-	/// Large data, the costly shape: every player in a room of their own. +where groups the players in one pass and
-	/// sends each location from an @dolist, so its own command costs a few function calls (<c>%?</c>) a player and each
-	/// location's are its own. The one-per-line views stay under a fixed number a player. At 33 a player (#1865)
-	/// +where passed function_invocation_limit (25000) with about 760 players connected.
+	/// Large data, the costly shape: every player in a room of their own. Each screen is sent in parts through
+	/// @dolist, so the command's own evaluation costs a few function calls (<c>%?</c>) a player and each part's are
+	/// its own. At 33 a player in one evaluation (#1865), +where passed function_invocation_limit (25000) with
+	/// about 760 players connected.
 	/// </summary>
 	[Test]
-	public async Task WhereCostsAFixedNumberOfCallsPerPlayer()
+	public async Task EveryScreenCostsItsCommandAFewCallsPerPlayer()
 	{
 		try
 		{
@@ -278,16 +278,23 @@ public class WhoWhereIntegrationTests
 			}
 
 			var list = string.Join(' ', players.Select(p => $"#{p.DbRef.Number}"));
-			foreach (var (view, perPlayer) in new[] { ("WW_FN_WHERE", 5), ("WW_FN_WHERE_ROOM", 25), ("WW_FN_WHERE_NAME", 25) })
+			foreach (var screen in new[] { "WW_FN_WHERE", "WW_FN_WHERE_ROOM", "WW_FN_WHERE_NAME", "WW_FN_WHO" })
 			{
-				// %? is the calls made so far, then the depth; the few around the view count too.
-				var calls = await God($"think [setq(0,u({Functions}/{view},{list}))][first(%?)]");
-				await Assert.That(int.Parse(calls)).IsLessThan(players.Count * perPlayer)
-					.Because($"{view} must cost fewer than {perPlayer} calls a player");
+				// %? is the calls made so far, then the depth; the few around the screen count too.
+				var calls = await God($"think [setq(0,u({Functions}/{screen},{list}))][first(%?)]");
+				await Assert.That(int.Parse(calls)).IsLessThan(players.Count * 5)
+					.Because($"{screen} must cost its command fewer than 5 calls a player");
 			}
 
-			var grouped = await As(players[0], "+where");
-			await Assert.That(grouped).Contains(players[149].Name).And.DoesNotContain("LIMIT EXCEEDED");
+			// Small parts, so every screen is built across several runs and the rows meet at part boundaries.
+			await God($"&WW_PART_PLAYERS {Functions}=40");
+			await God($"&WW_PART_ROOMS {Functions}=40");
+			foreach (var command in new[] { "+where", "+where/room", "+where/name", "+who", "+who/idle", "+who WcP" })
+			{
+				var screen = await As(players[0], command);
+				await Assert.That(screen).Contains(players[149].Name).And.Contains(players[0].Name)
+					.And.DoesNotContain("LIMIT EXCEEDED").And.DoesNotContain("#-1").Because(command);
+			}
 		}
 		finally
 		{
