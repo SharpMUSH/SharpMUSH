@@ -76,7 +76,8 @@ ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
 `{value,label}`.
 
 **Display elements (for `view`, also usable in `form`):** `markdown`, `image` (`src_field`),
-`table` (`rows_field` + `columns`), `keyvalue` (`fields`), `timeline` (`rows_field`), `divider`,
+`table` (`rows_field` + `columns`), `keyvalue` (`fields`; a value of `{text,link}` is a link),
+`timeline` (`rows_field`), `graph` (`src_field` holding `{nodes,edges}`, `link`, `empty`), `divider`,
 `button`. A form draws them exactly as a view does, so one `form` document can show a ticket's
 history above its comment box. Markdown never passes raw HTML through, and links with a scheme
 other than `http`/`https`/`mailto` are dropped.
