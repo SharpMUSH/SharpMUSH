@@ -119,6 +119,9 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 
 		// Forget the failure only if nobody has started a newer fetch in the meantime.
 		_ = Interlocked.CompareExchange(ref _info, null, pending);
+		// A first read that failed gave its readers the defaults (no application on), so the answer that follows
+		// is compared with those: FeatureGate shows the Scene System's links once the server is back.
+		_lastAnswer ??= Fallback;
 		return Fallback;
 	}
 
