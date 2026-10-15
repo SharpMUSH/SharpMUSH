@@ -29,9 +29,8 @@ public sealed class PlayerActivity(IExpandedObjectDataService serverData)
 			var lastSeen = await LoadAsync();
 			var hour = HourOf(now);
 
-			foreach (var player in players)
+			foreach (var player in players.Where(player => !lastSeen.TryGetValue(player, out var seen) || seen < hour))
 			{
-				if (lastSeen.TryGetValue(player, out var seen) && seen >= hour) continue;
 				lastSeen[player] = hour;
 				_unsaved = true;
 			}
