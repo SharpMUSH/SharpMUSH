@@ -31,6 +31,8 @@ If you nest iter()s, ## and #@ refer to the first/outermost iter(). For the curr
 
 "##" and "#@" count only where they are written in the iter() itself. In the code of an attribute the pattern calls, such as u(), they are plain text unless that code runs an iter() of its own. They are also plain text outside any iter() or @dolist, and inside lit() or after \.
 
+With the `innermost_tokens` option on, ## and #@ name the innermost iter() or @dolist that is running, as TinyMUX's do, and they also work in the code of an attribute the pattern calls. See [compatibility config innermost loop tokens].
+
 parse() is an alias for iter().
 
 ::: seealso

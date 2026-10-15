@@ -64,6 +64,13 @@ think [switch(a,*,u(me/SWSHOW))] [switch(a,*,u(me/SWOWN))] [switch(abc,#$,yes,no
 &SWSHOW me
 &SWOWN me
 
+::case sc.tokenbinding  with loops and switches nested in each other, ## #@ #$ name the outermost (innermost_tokens off)
+think [iter(a b,##[iter(x,##)])] [iter(a b,iter(##,##))] [switch(a,*,iter(x y,#$##))] [iter(a b,switch(c,*,switch(d,*,###$)))]
+@dolist a b=think dol [iter(x y,##:#@)]
+@dolist/inline a b=@switch/inline s=*,think dolsw ##:#$
+@switch/inline o=*,@dolist/inline x y=think swdol #$:##
+::settle
+
 ::case sc.attrs  attribute functions on the fixture object
 think [get([first(lcon(*Alice))]/COLOR)]
 think [name(first(lcon(*Alice)))] [type(first(lcon(*Alice)))] [owner(first(lcon(*Alice)))=owner(*Alice)]

@@ -1113,14 +1113,15 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// <c>##</c> or <c>#@</c>: the element or position, counting from 1, of the outermost <c>iter()</c> or
 	/// <c>@dolist</c> this evaluation started. PennMUSH splices both into a loop's text before evaluating it, so
 	/// the outermost loop takes every one written inside it, a nested loop's included, and never one in the code
-	/// of an attribute the loop calls. With no such loop, or in a pass that does not evaluate, it is text.
+	/// of an attribute the loop calls. With <c>innermost_tokens</c> on they read the innermost loop running,
+	/// wherever they are written, as TinyMUX does. With no such loop, or in a pass that does not evaluate, it is
+	/// text.
 	/// </summary>
 	public override ValueTask<CallState?> VisitIterationToken([NotNull] IterationTokenContext context)
 	{
 		var state = parser.CurrentState;
 		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval
-				|| state.IterationRegisters.LastOrDefault(frame => frame.Spliced
-					&& ReferenceEquals(frame.Evaluation, state.CurrentEvaluation)) is not { } loop)
+				|| BoundFrame(state.IterationRegisters, frame => frame.Spliced, frame => frame.Evaluation) is not { } loop)
 		{
 			return ValueTask.FromResult<CallState?>(new CallState(GetContextText(context), context.Depth()));
 		}
@@ -1136,20 +1137,40 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// or <c>@select</c> this evaluation started whose action is running. PennMUSH splices it into the action
 	/// before evaluating it, so the outermost switch takes every one written inside its action, a nested switch's
 	/// included, and none in its patterns or in the code of an attribute it calls. <c>case()</c> splices nothing.
+	/// With <c>innermost_tokens</c> on it reads the innermost such switch, wherever it is written, as TinyMUX does.
 	/// With no such switch, or in a pass that does not evaluate, it is text.
 	/// </summary>
 	public override ValueTask<CallState?> VisitSwitchSubject([NotNull] SwitchSubjectContext context)
 	{
 		var state = parser.CurrentState;
 		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval
-				|| state.SwitchStack.LastOrDefault(frame => frame is { Spliced: true, InAction: true }
-					&& ReferenceEquals(frame.Evaluation, state.CurrentEvaluation)) is not { } subject)
+				|| BoundFrame(state.SwitchStack, frame => frame is { Spliced: true, InAction: true }, frame => frame.Evaluation)
+					is not { } subject)
 		{
 			return ValueTask.FromResult<CallState?>(new CallState(GetContextText(context), context.Depth()));
 		}
 
 		EvaluationRestrictions.DemandSubstitution(context.GetText(), state.Restrictions);
 		return ValueTask.FromResult<CallState?>(new CallState(subject.Text, context.Depth()));
+	}
+
+	/// <summary>
+	/// The frame a <c>##</c>, <c>#@</c> or <c>#$</c> reads, from a stack that enumerates innermost first. By default
+	/// the outermost <paramref name="binds"/> frame this evaluation started, as PennMUSH's splice gives; with
+	/// <c>innermost_tokens</c> on, the innermost one of any evaluation, as TinyMUX looks the value up when the token
+	/// is evaluated. A per-attribute <c>mux</c> dialect would choose this from the evaluation frame instead of the
+	/// game-wide option.
+	/// </summary>
+	private T? BoundFrame<T>(IEnumerable<T> innermostFirst, Func<T, bool> binds, Func<T, DBAttribute?> evaluation)
+		where T : class
+	{
+		if (Configuration.CurrentValue.Compatibility.InnermostTokens)
+		{
+			return innermostFirst.FirstOrDefault(binds);
+		}
+
+		var current = parser.CurrentState.CurrentEvaluation;
+		return innermostFirst.LastOrDefault(frame => binds(frame) && ReferenceEquals(evaluation(frame), current));
 	}
 
 	/// <summary>

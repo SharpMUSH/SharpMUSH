@@ -36,6 +36,8 @@ In the `<list>` that is evaluated, or the `<default>`, "#$" stands for `<str>`. 
 
 "#$" counts only where it is written in the switch() itself. In an `<expr>`, in the code of an attribute a `<list>` calls such as u(), outside any switch, and inside lit() or after \, it is plain text. case() and caseall() leave it as text, for TinyMUSH 3 compatibility.
 
+With the `innermost_tokens` option on, #$ names the innermost switch whose `<list>` or `<default>` is running, as TinyMUX's does, and it also works in the code of an attribute that `<list>` calls. See [compatibility config innermost loop tokens].
+
 
 ::: seealso
 - [RESWITCH()]
