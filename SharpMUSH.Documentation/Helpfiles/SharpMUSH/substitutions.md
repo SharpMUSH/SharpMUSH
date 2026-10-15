@@ -74,12 +74,14 @@ Case makes a difference in all substitutions; capitalizing the first letter afte
 
 If the ENACTOR's gender is set, you can use these substitutions to get the<br>
 right pronoun for him/her:<br>
-     %s = subjective pronoun: he, she, it, they. Same as subj(%#)<br>
-     %o = objective pronoun: him, her, it, them. Same as obj(%#)<br>
-     %p = possessive pronoun: his, her, its, their. Same as poss(%#).<br>
-     %a = absolute possessive: his, hers, its, theirs. Same as aposs(%#).
+     %s = subjective pronoun: he, she, they. Same as subj(%#)<br>
+     %o = objective pronoun: him, her, them. Same as obj(%#)<br>
+     %p = possessive pronoun: his, her, their. Same as poss(%#).<br>
+     %a = absolute possessive: his, hers, theirs. Same as aposs(%#).
 
-    Case makes a difference: %S will return He, She, It, They.
+    Only the first letter of the gender counts. See [GENDER].
+
+    Case makes a difference: %S will return He, She, They.
 
 Some attributes can be retrieved via substitutions:<br>
      %va-%vz = the contents of the object's VA-VZ attributes, respectively<br>

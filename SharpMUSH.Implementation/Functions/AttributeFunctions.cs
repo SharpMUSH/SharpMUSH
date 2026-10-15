@@ -30,12 +30,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "his",
-					"F" or "Female" => "hers",
-					_ => "theirs"
-				}));
+				PronounCase.AbsolutePossessive));
 	}
 
 	/// <summary>
@@ -756,12 +751,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "him",
-					"F" or "Female" => "her",
-					_ => "them"
-				}));
+				PronounCase.Objective));
 	}
 
 	[SharpFunction(Name = "objeval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse, ParameterNames = ["object", "expression"])]
@@ -889,12 +879,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.PossessivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "his",
-					"F" or "Female" => "her",
-					_ => "their"
-				}));
+				PronounCase.Possessive));
 	}
 
 	[SharpFunction(Name = "regedit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["string", "pattern", "replacement"])]
@@ -1044,12 +1029,7 @@ public partial class Functions
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService, Mediator, parser, onObject,
 				Configuration.CurrentValue.Attribute.GenderAttribute,
 				Configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
-				x => x switch
-				{
-					"M" or "Male" => "he",
-					"F" or "Female" => "she",
-					_ => "they"
-				}));
+				PronounCase.Subjective));
 	}
 
 	[SharpFunction(Name = "udefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default", "arguments..."])]
