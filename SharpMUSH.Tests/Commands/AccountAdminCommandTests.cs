@@ -68,7 +68,9 @@ public class AccountAdminCommandTests
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/list {_username}"));
 
-		var listing = WebAppFactoryArg.Notifications.For(_actor.DbRef).Last(m => m.Contains($"{_username}*:", StringComparison.Ordinal));
+		var heard = WebAppFactoryArg.Notifications.For(_actor.DbRef);
+		var listing = await Assert.That(heard.LastOrDefault(m => m.Contains($"{_username}*:", StringComparison.Ordinal))).IsNotNull()
+			.Because($"the listing should name {_username}*; heard: {string.Join(" | ", heard)}");
 		await Assert.That(listing).Matches($@"{Regex.Escape(_username)}\*: +active");
 		await Assert.That(listing).Contains("* must change password at next login");
 	}
