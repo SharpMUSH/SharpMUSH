@@ -141,7 +141,7 @@ hixx
 
 ## Parenthesis groups: `paren_groups`
 
-**A choice.** Off by default; importing a PennMUSH database turns it on.
+**A choice.** Off by default; importing a PennMUSH, RhostMUSH or TinyMUX database turns it on.
 
 **PennMUSH** treats a `(` that starts no function call as opening a literal group: its commas are
 text, and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments.<br>
@@ -317,7 +317,8 @@ RHOSTDOC_LATTR_CMD RHOSTDOC_LATTR_TEXT
 
 ## RhostMUSH list() loop: `rhost_list`
 
-Off by default; meant for a game moved from RhostMUSH or TinyMUX.
+Off by default; meant for a game moved from RhostMUSH or TinyMUX, and importing a RhostMUSH or TinyMUX
+database turns it on.
 
 PennMUSH's `list()` names the game's functions, commands, flags and so on. RhostMUSH's
 `list(<list>, <eval>[, <delimiter>][, <header>][, <target>])` evaluates `<eval>` for each element,

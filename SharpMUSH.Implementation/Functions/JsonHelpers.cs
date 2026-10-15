@@ -94,11 +94,6 @@ public static class JsonHelpers
 
 	public static ValueTask<CallState> ArrayJSON(OrderedArguments args)
 	{
-		if (args.Count < 2)
-		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
-		}
-
 		try
 		{
 			var elements = args
@@ -125,11 +120,6 @@ public static class JsonHelpers
 
 	public static ValueTask<CallState> ObjectJSON(OrderedArguments args)
 	{
-		if (args.Count < 3)
-		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
-		}
-
 		if (args.Count % 2 == 0)
 		{
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, "json")));

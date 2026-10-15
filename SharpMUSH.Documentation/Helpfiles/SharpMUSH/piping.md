@@ -14,15 +14,17 @@
 
 In an action list, `;|` separates two commands like `;` does, and pipes the first into the second: what the first command shows you is passed to the second instead, which reads it as `%|`. Spaces may come between the `;` and the `|`.
 
+To try a list at the prompt, run it with `@force/noeval me={...}`. Without `/noeval`, `@force` evaluates the list once before running it, while `%|` is still empty.
+
 ```sharp
-> @force me={think [ansi(hr,Hello)] there ;| @pemit me=Got [words(%|)] words: %|}
+> @force/noeval me={think [ansi(hr,Hello)] there ;| @pemit me=Got [words(%|)] words: %|}
 Got 2 words: Hello there
 ```
 
 `%|` holds every line the piped command showed you, joined with `%r`, colors and other markup kept. `stripansi()` removes the markup; there is no terminal code to translate.
 
 ```sharp
-> @force me={@dolist/inline red green=think ##;| think Colors: [edit(%|,%r,%b-%b)]}
+> @force/noeval me={@dolist/inline red green=think ##;| think Colors: [edit(%|,%r,%b-%b)]}
 Colors: red - green
 ```
 

@@ -3916,6 +3916,10 @@
     <value>Comece lendo o wiki, vendo os personagens ou entrando em uma cena.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Comece lendo o wiki ou vendo os personagens.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Ler o wiki</value>
     <comment>MT</comment>
@@ -6148,6 +6152,14 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Uma imagem com aviso de conteúdo fica fora da biblioteca de imagens. Remova o aviso para compartilhá-la.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Notificações</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Receba notificações neste celular ou computador quando o portal estiver fechado</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPaletteGroupInput" xml:space="preserve">
     <value>Este prompt</value>

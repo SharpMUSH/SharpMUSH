@@ -3916,6 +3916,10 @@
     <value>Legen Sie los: Lesen Sie das Wiki, stöbern Sie in den Charakteren oder steigen Sie in eine Szene ein.</value>
     <comment>MT — wiki kept but capitalized as a German noun, consistent with the Wiki-Seite guidance.</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Legen Sie los: Lesen Sie das Wiki oder stöbern Sie in den Charakteren.</value>
+    <comment>MT — wiki kept but capitalized as a German noun, consistent with the Wiki-Seite guidance.</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Wiki lesen</value>
     <comment>MT</comment>
@@ -6148,6 +6152,14 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Ein Bild mit Inhaltswarnung bleibt aus der Bildbibliothek heraus. Entferne die Warnung, um es zu teilen.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Benachrichtigungen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Benachrichtigungen auf diesem Telefon oder Computer erhalten, wenn das Portal geschlossen ist</value>
+    <comment>MT</comment>
   </data>
   <data name="NavPaletteGroupInput" xml:space="preserve">
     <value>Diese Eingabe</value>

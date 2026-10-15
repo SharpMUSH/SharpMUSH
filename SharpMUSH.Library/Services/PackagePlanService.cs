@@ -15,7 +15,7 @@ public class PackagePlanService : IPackagePlanService
 		var manifest = inputs.Manifest;
 		var notes = new List<string>();
 
-		var dependencyIssues = CheckDependenciesAndConflicts(manifest, inputs.AllInstalledPackages);
+		var dependencyIssues = CheckDependenciesAndConflicts(manifest, inputs.AllInstalledPackages, inputs.RunningPlugins ?? new HashSet<string>());
 		var (objects, objidByRef, deletedObjids) = ClassifyObjects(inputs, notes);
 		var attributes = ClassifyAttributes(inputs, objidByRef, deletedObjids, notes);
 		var structure = ClassifyStructure(inputs, objidByRef, deletedObjids, notes);
@@ -46,13 +46,19 @@ public class PackagePlanService : IPackagePlanService
 
 	/// <summary>
 	/// The admission gate every package kind passes before anything is written: each declared
-	/// dependency must be installed at a satisfying version, and no declared conflict may be. The
-	/// plan engine reports these as blockers; a managed install, which has no plan, calls this directly.
+	/// dependency must be installed at a satisfying version, no declared conflict may be, and each
+	/// plugin in <c>plugins:</c> must be running. The plan engine reports these as blockers; a managed
+	/// install, which has no plan, calls this directly.
 	/// </summary>
 	public static IReadOnlyList<PackageDependencyIssue> CheckDependenciesAndConflicts(
-		PackageManifest manifest, IReadOnlyList<InstalledPackageRecord> allInstalled)
+		PackageManifest manifest, IReadOnlyList<InstalledPackageRecord> allInstalled, IReadOnlySet<string> runningPlugins)
 	{
 		var issues = new List<PackageDependencyIssue>();
+		foreach (var plugin in manifest.RequiredPlugins.Where(p => !runningPlugins.Contains(p)))
+		{
+			issues.Add(new PackageDependencyIssue(plugin, "", null, null, IsConflict: false, IsPlugin: true));
+		}
+
 		var installedById = allInstalled.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
 		foreach (var dependency in manifest.Dependencies)
@@ -434,8 +440,27 @@ public class PackagePlanService : IPackagePlanService
 			(false, true) => Make(PackageAttributeAction.AutoUpgrade),
 			(true, false) => Make(PackageAttributeAction.KeepLocal),
 			(true, true) when liveValue == newValue => Make(PackageAttributeAction.NoChange),
-			(true, true) => Make(PackageAttributeAction.Conflict, PackageConflictKind.ModifyModify)
+			(true, true) => MergeLines(Make(PackageAttributeAction.Conflict, PackageConflictKind.ModifyModify))
 		};
+	}
+
+	/// <summary>
+	/// Both sides changed a value: merged line by line when it has several lines, as a wiki page body is. Lines
+	/// only one side changed take that side's; a clash stays a conflict, carrying the merge with the clashes
+	/// marked. A value whose new side still waits on apply-time refs is not merged, since those lines change.
+	/// </summary>
+	private static PackageAttributeChange MergeLines(PackageAttributeChange conflict)
+	{
+		if (conflict is not { BaseValue: { } baseValue, LiveValue: { } liveValue, NewValue: { } newValue, RequiresApplyResolution: false }
+			|| !(baseValue.Contains('\n') || liveValue.Contains('\n') || newValue.Contains('\n')))
+		{
+			return conflict;
+		}
+
+		var merge = LineMerge.Merge(baseValue, liveValue, newValue);
+		return merge.IsClean
+			? conflict with { Action = PackageAttributeAction.Merge, Conflict = null, MergedValue = merge.Resolve(preferOurs: true) }
+			: conflict with { MergedValue = merge.Marked("game", "package") };
 	}
 
 	// ── Object structure: flags, powers, locks, attribute flags ─────────────
