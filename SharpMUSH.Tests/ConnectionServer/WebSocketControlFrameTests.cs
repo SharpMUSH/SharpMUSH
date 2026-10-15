@@ -62,4 +62,23 @@ public class WebSocketControlFrameTests
 		await Assert.That(WebSocketControlFrame.TryParseTerminalTypes(tooMany, out _)).IsFalse();
 		await Assert.That(WebSocketControlFrame.TryParseTerminalTypes(tooLong, out _)).IsFalse();
 	}
+
+	[Test]
+	public async Task TimeZoneFrameParses()
+	{
+		var ok = WebSocketControlFrame.TryParseTimeZone("{\"type\":\"environ\",\"vars\":{\"TZ\":\"Europe/Paris\"}}", out var zone);
+		await Assert.That(ok).IsTrue();
+		await Assert.That(zone).IsEqualTo("Europe/Paris");
+	}
+
+	[Test]
+	[Arguments("look north")]
+	[Arguments("{\"type\":\"environ\",\"vars\":{}}")]
+	[Arguments("{\"type\":\"environ\",\"vars\":{\"TZ\":5}}")]
+	[Arguments("{\"type\":\"environ\",\"vars\":{\"TZ\":\"\"}}")]
+	[Arguments("{\"type\":\"naws\",\"vars\":{\"TZ\":\"UTC\"}}")]
+	public async Task NonTimeZoneFrameReturnsFalse(string message)
+	{
+		await Assert.That(WebSocketControlFrame.TryParseTimeZone(message, out _)).IsFalse();
+	}
 }

@@ -3,6 +3,7 @@ using MarkupString.Ansi;
 using MarkupString.Html;
 using MarkupString.Mxp;
 using MarkupString.Pueblo;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Tests;
 
@@ -18,7 +19,7 @@ public static class MarkupRegistryBootstrap
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators();
 		}
 	}
 }

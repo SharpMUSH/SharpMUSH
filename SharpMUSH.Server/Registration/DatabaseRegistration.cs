@@ -71,6 +71,7 @@ internal static class DatabaseRegistration
 		// Relations a provider cannot own - an object's location changes under other actors - resolve
 		// through the Mediator's cached queries; the providers ask through this seam and know nothing
 		// of the cache.
+		services.AddSingleton<Implementation.Services.ObjectRelationMemo>();
 		services.AddSingleton<IObjectRelationLoader, Implementation.Services.MediatorObjectRelationLoader>();
 
 		// Config-driven path/map-size so production picks a durable location while tests default to a

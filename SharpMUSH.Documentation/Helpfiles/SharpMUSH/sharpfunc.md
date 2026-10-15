@@ -96,14 +96,15 @@
 
 |                |                |                |                |
 |----------------|----------------|----------------|----------------|
-| [ADDRLOG()]    | [CMDS()]       | [CONN()]       | [CONNLOG()]    |
-| [CONNRECORD()] | [DOING()]      | [HEIGHT()]     | [HIDDEN()]     |
-| [HOST()]       | [IDLE()]       | [IPADDR()]     | [LPORTS()]     |
-| [LWHO()]       | [LWHOID()]     | [MWHO()]       | [MWHOID()]     |
-| [NMWHO()]      | [NWHO()]       | [PLAYER()]     | [PORTS()]      |
-| [PUEBLO()]     | [RECV()]       | [SENT()]       | [SSL()]        |
-| [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      | [XMWHOID()]    |
-| [XWHO()]       | [XWHOID()]     | [ZMWHO()]      | [ZWHO()]       |
+| [ADDRLOG()]    | [CLIENTZONE()] | [CMDS()]       | [CONN()]       |
+| [CONNLOG()]    | [CONNRECORD()] | [DOING()]      | [HEIGHT()]     |
+| [HIDDEN()]     | [HOST()]       | [IDLE()]       | [IPADDR()]     |
+| [LPORTS()]     | [LWHO()]       | [LWHOID()]     | [MWHO()]       |
+| [MWHOID()]     | [NMWHO()]      | [NWHO()]       | [PLAYER()]     |
+| [PORTS()]      | [PUEBLO()]     | [RECV()]       | [SENT()]       |
+| [SSL()]        | [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      |
+| [XMWHOID()]    | [XWHO()]       | [XWHOID()]     | [ZMWHO()]      |
+| [ZWHO()]       |                |                |                |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -270,7 +271,7 @@
 | [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         |
 | [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           |
 | [SWITCH()]               | [TR()]                   | [TRIM()]                 | [UCSTR()]                |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
+| [UNMARK()]               | [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -915,6 +916,25 @@ You say, "65"
 say chr(65)
 You say, "A"
 ```
+# clientzone()
+`clientzone(<player|descriptor>)`
+
+  Returns the time zone the player's client reported for its connection, such as Europe/Paris, or nothing when it reported none. The web portal reports the browser's zone. A telnet client reports one when it sends TZ through NEW-ENVIRON, which BSD telnet does after `environ export TZ` and PuTTY does when TZ is set under Connection, Data, Environment variables. Most MUD clients send none.
+
+  The zone is only what the client said. It never changes the player's TZ attribute; softcode decides what to do with it, and the socket\`timezone event says when a client reports one. A player who is not connected gives #-1 NOT CONNECTED. You must be See_All to use this function on another player or a descriptor that is not yours.
+
+  Example, in the web portal:
+```sharp
+think clientzone(me)
+Europe/Paris
+```
+
+::: seealso
+- [SSL()]
+- [TERMINFO()]
+- [TIME()]
+- [EVENTS]
+:::
 # clone()
 `clone(<object>[, <new name>[, <dbref>[, preserve]]])`
 
@@ -1106,7 +1126,9 @@ You say, "709395750"
       Ddd MMM DD HH:MM:SS YYYY<br>
   where Ddd is the day of the week, MMM is the month, DD is the day of the month, HH is the hour in 24-hour time, MM is the minutes, SS is the seconds, and YYYY is the year. If you supply an incorrectly formatted string, it will return #-1.
 
-  convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too. If no `<timezone>` is given, the server's timezone is used.
+  convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too, such as America/New_York, with their summer time. If no `<timezone>` is given, the server's timezone is used.
+
+  convtime() also reads other ways of writing a date and time, such as 2026-10-30 20:00, in the same zone. A time that names its own offset, such as 2026-10-30T20:00:00Z or 2026-10-30T20:00:00+02:00, keeps it. A time the zone skips when summer time starts, such as 2027-03-14 02:30 in America/New_York, returns #-1 INVALID TIME; written in the format above, it is moved on past the gap, as PennMUSH does.
 
   If the extended convtime() is supported (See @config compile), more formats for the date are enabled, including ones missing the day of week and year, and a 'Month Day Year' format. In this case, convtime() can also handle dates prior to 1970 (in which case a negative number will be returned).
 
@@ -1118,6 +1140,9 @@ You say, "Wed Jun 24 10:22:54 1992"
 
     > say convtime(Wed Jun 24 10:22:54 1992)<br>
     You say, "709395774"
+
+    > say convtime(2026-10-30 20:00,America/New_York)<br>
+    You say, "1793404800"
 
 
 ::: seealso
@@ -1290,6 +1315,13 @@ a&lt;b&gt; <span style="color: var(--ms-ansi-9, #ff5555)">red</span>
 ```sharp
 think decompose(This is \[a [ansi(y,test)]\][space(3)])
 This is \[a%b[ansi(y,test)]\] %b%b
+```
+
+  A marked list separator decomposes into the `%*<...>` that makes it: see [list separators].
+
+```sharp
+think decompose(a|b%*<|>c)
+a|b%*<|>c
 ```
 
   A layout (box(), rule(), flex(), item(), figure(), fields(), tree(), node(), gauge(), bullets(), grid(), datatable(), datacolumns() and gradient()) decomposes into the call that builds it, with only the options that differ from the function's defaults. The game's layout_border and layout_theme are left out, so the call takes whatever the game has when it runs. A datacolumns() comes back as the datatable() it draws, and a badge() as its ansi().
@@ -1720,10 +1752,13 @@ think elock(Dancing Slippers/drop, Princess)
 
   This function prevents code injection in strings entered by players. It is only needed when `<string>` will be passed through a command or function which will evaluate it again, which can usually be avoided. Since the function preserves the original string, it is, in most cases, a better choice than secure(), but decompose() is often better still.
 
+  Marked list separators in `<string>` lose their mark, as with unmark(): see [list separators].
+
 
 ::: seealso
 - [DECOMPOSE()]
 - [SECURE()]
+- [UNMARK()]
 :::
 # eval()
 # get_eval()
@@ -4890,10 +4925,13 @@ You say, "cfaedb"
     ( ) [ ] { } $ % , ^ ;<br>
   Note that the use of this function is very rarely needed.
 
+  Marked list separators in `<string>` lose their mark, as with unmark(): see [list separators].
+
 
 ::: seealso
 - [DECOMPOSE()]
 - [ESCAPE()]
+- [UNMARK()]
 :::
 # set()
 `set(<object>[/<attribute pattern>], <flag>)`<br>
@@ -5622,7 +5660,7 @@ My name
 # stripansi()
 `stripansi(<string>)`
 
-  Returns the string with all ansi and HTML codes removed.
+  Returns the string with all ansi and HTML codes removed. Marked list separators stay marked: see [list separators].
 
 
 ::: seealso
@@ -6408,6 +6446,26 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [SETUNION()]
 - [SORT()]
+:::
+# unmark()
+`unmark(<string>)`
+
+  Returns `<string>` with its marked list separators unmarked and its colour kept, so nothing in it splits a list on a marked delimiter. Use it on text a player typed before it goes into a list: a player can write `%*<|>` in a command's arguments as they can write colour. secure() and escape() unmark their text too. See [list separators].
+
+  Examples:
+```sharp
+think words(a%*<|>b, %*<|>)
+2
+think words(unmark(a%*<|>b), %*<|>)
+1
+```
+
+
+::: seealso
+- [list separators]
+- [SECURE()]
+- [ESCAPE()]
+- [DECOMPOSE()]
 :::
 # v()
 # v-function
