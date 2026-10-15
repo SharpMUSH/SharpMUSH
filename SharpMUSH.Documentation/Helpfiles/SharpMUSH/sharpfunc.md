@@ -63,12 +63,13 @@
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
-|          |          |          |          |
-|----------|----------|----------|----------|
-| [AND()]  | [CAND()] | [COR()]  | [EQ()]   |
-| [GT()]   | [GTE()]  | [LT()]   | [LTE()]  |
-| [NAND()] | [NEQ()]  | [NOR()]  | [NOT()]  |
-| [OR()]   | [T()]    | [XOR()]  |          |
+|           |           |           |           |
+|-----------|-----------|-----------|-----------|
+| [AND()]   | [CAND()]  | [COR()]   | [EQ()]    |
+| [GT()]    | [GTE()]   | [LAND()]  | [LNOR()]  |
+| [LOR()]   | [LT()]    | [LTE()]   | [LXNOR()] |
+| [LXOR()]  | [NAND()]  | [NEQ()]   | [NOR()]   |
+| [NOT()]   | [OR()]    | [T()]     | [XOR()]   |
 
 ::: seealso
 - [boolean values]
@@ -181,12 +182,14 @@
 | [ATAN()]     | [ATAN2()]    | [BOUND()]    | [CEIL()]     |
 | [COS()]      | [CTU()]      | [DIST2D()]   | [DIST3D()]   |
 | [E()]        | [EXP()]      | [FDIV()]     | [FLOOR()]    |
-| [FMOD()]     | [FRACTION()] | [LMATH()]    | [LN()]       |
-| [LOG()]      | [MAX()]      | [MEAN()]     | [MEDIAN()]   |
-| [MIN()]      | [MUL()]      | [PI()]       | [POWER()]    |
-| [ROOT()]     | [ROUND()]    | [SIGN()]     | [SIN()]      |
-| [SQRT()]     | [STDDEV()]   | [SUB()]      | [TAN()]      |
-| [TRUNC()]    | [VAL()]      |              |              |
+| [FMOD()]     | [FRACTION()] | [LADD()]     | [LAVG()]     |
+| [LDIV()]     | [LMATH()]    | [LMAX()]     | [LMIN()]     |
+| [LMUL()]     | [LN()]       | [LOG()]      | [LSUB()]     |
+| [MAX()]      | [MEAN()]     | [MEDIAN()]   | [MIN()]      |
+| [MUL()]      | [PI()]       | [POWER()]    | [ROOT()]     |
+| [ROUND()]    | [SIGN()]     | [SIN()]      | [SQRT()]     |
+| [STDDEV()]   | [SUB()]      | [TAN()]      | [TRUNC()]    |
+| [VAL()]      |              |              |              |
 
   These functions operate only on integers (if passed floating point numbers, they will return an error or misbehave):
 
