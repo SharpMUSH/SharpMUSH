@@ -4581,7 +4581,7 @@
     <value>Content · Spellcheck</value>
   </data>
   <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Server · PennMUSH import</value>
+    <value>Server · Database import</value>
   </data>
   <data name="AdmDiagnosticsKicker" xml:space="preserve">
     <value>Build · Queue diagnostics</value>
@@ -4893,10 +4893,10 @@
     <value>Bring an existing game?</value>
   </data>
   <data name="AdmSetupImportLead" xml:space="preserve">
-    <value>Moving from PennMUSH? Import its database now, before anyone else connects, with its mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your PennMUSH God; your portal account stays linked to it and keeps the password you just chose.</value>
+    <value>Moving from PennMUSH, RhostMUSH or TinyMUX? Import its database now, before anyone else connects, with a PennMUSH game's mush.cnf beside it. Objects, attributes, locks, mail and channels come across. Player #1 takes the name and in-game password of your old game's God; your portal account stays linked to it and keeps the password you just chose.</value>
   </data>
   <data name="AdmSetupImportPenn" xml:space="preserve">
-    <value>Import a PennMUSH database</value>
+    <value>Import a PennMUSH, RhostMUSH or TinyMUX database</value>
   </data>
   <data name="AdmSetupStartFresh" xml:space="preserve">
     <value>Start a new game</value>
@@ -4923,7 +4923,7 @@
     <value>Saving…</value>
   </data>
   <data name="AdmSetupDoneLead" xml:space="preserve">
-    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and a PennMUSH database in PennMUSH import.</value>
+    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and another game's database in Database import.</value>
   </data>
   <data name="AdmSetupBack" xml:space="preserve">
     <value>Back</value>
@@ -6108,7 +6108,7 @@
     <value>Server status</value>
   </data>
   <data name="AdmImportLabel" xml:space="preserve">
-    <value>PennMUSH import</value>
+    <value>Database import</value>
   </data>
   <data name="AdmCardSoftcode" xml:space="preserve">
     <value>Edit the attributes on objects you control, and try code in a console.</value>
@@ -6162,7 +6162,7 @@
     <value>Every server setting, by section, with import and export.</value>
   </data>
   <data name="AdmCardImport" xml:space="preserve">
-    <value>Bring a PennMUSH database into this game.</value>
+    <value>Bring a PennMUSH, RhostMUSH or TinyMUX database into this game.</value>
   </data>
   <data name="RolEditScene" xml:space="preserve">
     <value>Edit scene</value>

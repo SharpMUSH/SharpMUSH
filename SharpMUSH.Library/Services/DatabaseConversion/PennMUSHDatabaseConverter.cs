@@ -171,7 +171,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		// Per-conversion, never a field: the converter is a singleton, so state kept on it is shared
 		// with every other import running at the same time. See PennMUSHConversionContext.
-		var context = new PennMUSHConversionContext();
+		var context = new PennMUSHConversionContext { SourceName = pennDatabase.SourceName };
 		var errors = context.Errors;
 		var warnings = context.Warnings;
 		warnings.AddRange(pennDatabase.ImportNotes);
@@ -191,7 +191,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var channelsConverted = 0;
 		var channelMembersConverted = 0;
 
-		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
+		_logger.LogInformation("Converting {Count} {Source} objects to SharpMUSH format", totalObjects, pennDatabase.SourceName);
 
 		void ReportProgress(string phase, double percentComplete)
 		{
@@ -345,7 +345,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			removed.Add((uint)number);
 			context.Warnings.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
-				"PennMUSH has no such object.");
+				$"{context.SourceName} has no such object.");
 		}
 
 		await _mediator.Send(new ReleaseTrailingDbrefsCommand(), cancellationToken);
@@ -1663,7 +1663,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (reusedSender.Count > 0)
 		{
 			context.Warnings.Add($"{reusedSender.Values.Sum()} mail message(s) name a sender whose creation time differs from " +
-				$"the one the message recorded, so PennMUSH showed them as from !Purged!; they are imported as from that dbref " +
+				$"the one the message recorded, so {context.SourceName} showed them as from !Purged!; they are imported as from that dbref " +
 				$"({Tally(reusedSender)})");
 		}
 
@@ -2339,7 +2339,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (piping.Count > 0)
 		{
 			var more = piping.Count > piping.Shown.Count ? $" and {piping.Count - piping.Shown.Count} more" : string.Empty;
-			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which PennMUSH reads as a plain | and SharpMUSH as command piping; " +
+			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which {pennDatabase.SourceName} reads as a plain | and SharpMUSH as command piping; " +
 				$"softcode is not rewritten, so write | where | was meant: {string.Join(", ", piping.Shown)}{more}");
 		}
 
@@ -2347,7 +2347,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var more = tinyMuxSubstitutions.Count > tinyMuxSubstitutions.Shown.Count
 				? $" and {tinyMuxSubstitutions.Count - tinyMuxSubstitutions.Shown.Count} more" : string.Empty;
-			warnings.Add($"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which PennMUSH evaluates to m and =< and SharpMUSH " +
+			warnings.Add($"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which {pennDatabase.SourceName} evaluates to m and =< and SharpMUSH " +
 				"to the running command and an attribute or argument; softcode is not rewritten, so write m or =< where they were meant: " +
 				$"{string.Join(", ", tinyMuxSubstitutions.Shown)}{more}");
 		}

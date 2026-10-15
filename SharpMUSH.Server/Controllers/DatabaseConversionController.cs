@@ -69,7 +69,7 @@ public class DatabaseConversionController(
 		var sourceBytes = file.Length + (mailFile?.Length ?? 0) + (chatFile?.Length ?? 0) + (mailFolderFile?.Length ?? 0);
 		if (capacity.Measure().ImportShortfall(sourceBytes) is { Length: > 0 } shortfall)
 		{
-			logger.LogWarning("PennMUSH import refused before it started: {Reason}", shortfall);
+			logger.LogWarning("Database import refused before it started: {Reason}", shortfall);
 			return StatusCode(StatusCodes.Status507InsufficientStorage, shortfall);
 		}
 
@@ -86,7 +86,7 @@ public class DatabaseConversionController(
 				await file.CopyToAsync(stream, cancellationToken);
 			}
 
-			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
+			logger.LogInformation("Uploaded database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
 
 			// An empty file is still passed on, so the import reports it rather than dropping it unmentioned.
 			if (mailFile is not null)
@@ -94,7 +94,7 @@ public class DatabaseConversionController(
 				mailTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
 				await using var mailStream = System.IO.File.Create(mailTempPath);
 				await mailFile.CopyToAsync(mailStream, cancellationToken);
-				logger.LogInformation("Uploaded PennMUSH mail database file: {FileName} ({Size} bytes)", mailFile.FileName,
+				logger.LogInformation("Uploaded mail database file: {FileName} ({Size} bytes)", mailFile.FileName,
 					mailFile.Length);
 			}
 
@@ -103,7 +103,7 @@ public class DatabaseConversionController(
 				chatTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.chatdb");
 				await using var chatStream = System.IO.File.Create(chatTempPath);
 				await chatFile.CopyToAsync(chatStream, cancellationToken);
-				logger.LogInformation("Uploaded PennMUSH chat database file: {FileName} ({Size} bytes)", chatFile.FileName,
+				logger.LogInformation("Uploaded chat database file: {FileName} ({Size} bytes)", chatFile.FileName,
 					chatFile.Length);
 			}
 
@@ -132,7 +132,7 @@ public class DatabaseConversionController(
 				catch (Exception ex) when (ex is IOException or FormatException or InvalidOperationException
 					or ArgumentException)
 				{
-					logger.LogWarning(ex, "The configuration uploaded with a PennMUSH database could not be read");
+					logger.LogWarning(ex, "The configuration uploaded with a database could not be read");
 					DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath, folderTempPath], logger);
 					return BadRequest($"Error importing configuration: {ex.Message}");
 				}
@@ -152,7 +152,7 @@ public class DatabaseConversionController(
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error uploading PennMUSH database file");
+			logger.LogError(ex, "Error uploading database file");
 			// A failure after the mush.cnf went in (writing it, or starting the conversion) takes it back out.
 			if (restore is not null)
 			{

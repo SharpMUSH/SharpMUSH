@@ -43,13 +43,13 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 	{
 		if (string.IsNullOrWhiteSpace(_databaseFilePath))
 		{
-			_logger.LogInformation("PennMUSH database conversion not configured (PENNMUSH_DATABASE_PATH not set)");
+			_logger.LogInformation("Database import not configured (PENNMUSH_DATABASE_PATH not set)");
 			return;
 		}
 
 		if (!File.Exists(_databaseFilePath))
 		{
-			_logger.LogError("PennMUSH database file not found: {FilePath}", _databaseFilePath);
+			_logger.LogError("Database file to import not found: {FilePath}", _databaseFilePath);
 			return;
 		}
 
@@ -70,7 +70,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			if (result.IsSuccessful)
 			{
 				_logger.LogInformation(
-					"PennMUSH database conversion completed successfully in {Duration}. " +
+					"Database conversion completed successfully in {Duration}. " +
 					"Converted: {Players} players, {Rooms} rooms, {Things} things, {Exits} exits, {Attributes} attributes",
 					result.Duration,
 					result.PlayersConverted,
@@ -95,7 +95,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			else
 			{
 				_logger.LogError(
-					"PennMUSH database conversion failed with {ErrorCount} errors",
+					"Database conversion failed with {ErrorCount} errors",
 					result.Errors.Count);
 
 				foreach (var error in result.Errors.Take(10))
@@ -116,7 +116,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Fatal error during PennMUSH database conversion");
+			_logger.LogError(ex, "Fatal error during database conversion");
 
 			if (_stopOnFailure)
 			{

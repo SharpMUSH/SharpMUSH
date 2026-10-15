@@ -115,9 +115,8 @@ public partial class PennMUSHDatabaseConverter
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			_logger.LogWarning(ex, "Could not set {Options} for the imported {Source} softcode", names, source.SourceName);
-			context.Warnings.Add($"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them " +
-				"(PennMUSH's writes literal parentheses unescaped and reads @http's %q<status>): set them in the configuration " +
-				"and reload it.");
+			context.Warnings.Add($"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
+				"set them in the configuration and reload it.");
 		}
 	}
 
