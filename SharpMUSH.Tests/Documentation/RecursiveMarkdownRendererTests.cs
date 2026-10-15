@@ -65,6 +65,26 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("Hello, world!");
 	}
 
+	/// <summary>
+	/// Markdig keeps the blank line that ends a list inside the list, on its last item, so the document
+	/// has to look there for it as well as between the two blocks.
+	/// </summary>
+	[Test]
+	[Arguments("Before.\n\n- one\n- two\n\nAfter.", "Before.\n\n* one\n* two\n\nAfter.")]
+	[Arguments("1. one\n2. two\n\nAfter.", "1. one\n2. two\n\nAfter.")]
+	[Arguments("- one\n  - inner\n\nAfter.", "* one\n  * inner\n\nAfter.")]
+	[Arguments("- one\n\n- two\n\nAfter.", "* one\n* two\n\nAfter.")]
+	[Arguments("- one\n\n\nAfter.", "* one\n\n\nAfter.")]
+	[Arguments("> - quoted\n\nAfter.", "  * quoted\n\nAfter.")]
+	[Arguments("- one\n\n> After.", "* one\n\n  After.")]
+	[Arguments("- one\n- two\n\n- three", "* one\n* two\n* three")]
+	public async Task RenderList_KeepsTheBlankLineAfterIt(string markdown, string expected)
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async Task RenderBoldText_ShouldApplyMarkup()
 	{

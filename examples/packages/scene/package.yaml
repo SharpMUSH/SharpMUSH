@@ -1,12 +1,16 @@
-format: 1.2
+format: 1.7
 package: scene
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [scene, rp, logging, capture, hooks]
 requires_server: ">=0.1"
+
+# +scene, the capture hooks and every scene*() call run on the Scene plugin. Without it running the
+# package does not install, and turning the plugin off uninstalls it.
+plugins: [scene]
 
 # +help carries the topics below. The dependency is what makes {{plus-help/librarian}} a legal
 # attach target, and it is what makes uninstalling scene take its help registration with it.

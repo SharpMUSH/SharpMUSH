@@ -102,6 +102,25 @@ public class ServerInfoServiceTests
 		await Assert.That(changes).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// A first read that failed gave its readers no applications; the answer after it that lists one is announced,
+	/// so a FeatureGate that read the fallback shows the application without a reload.
+	/// </summary>
+	[Test]
+	public async Task AnAnswerAfterAFailedFirstRead_IsAnnounced()
+	{
+		var answers = new Queue<Func<HttpResponseMessage>>([Unavailable, () => WithFeatures(GameFeatures.Scenes)]);
+		using var handler = new CapturingHttpHandler(() => answers.Dequeue()());
+		var service = new ServerInfoService(new SingleClientFactory(handler));
+		var changes = 0;
+		service.Changed += () => changes++;
+
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse();
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+
+		await Assert.That(changes).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task ATimeoutDegradesToTheDefaults()
 	{
@@ -141,12 +160,13 @@ public class ServerInfoServiceTests
 	}
 
 	[Test]
-	public async Task AFailedReadAssumesANewGamesApplications()
+	public async Task AFailedReadAssumesNoApplication()
 	{
 		using var handler = new CapturingHttpHandler(Unavailable);
 		var service = new ServerInfoService(new SingleClientFactory(handler));
 
-		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsTrue();
+		await Assert.That(await service.HasFeatureAsync(GameFeatures.Scenes)).IsFalse()
+			.Because("the Scene plugin may not be running, and the portal cannot tell");
 		await Assert.That(await service.HasFeatureAsync(GameFeatures.WikiReader)).IsFalse();
 	}
 

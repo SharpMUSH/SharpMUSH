@@ -1,0 +1,620 @@
+format: 1.2
+package: roster
+version: 1.0.1
+authors: [SharpMUSH]
+description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [roster, characters, accounts, canon, staff]
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+# Who manages the roster is a permission, so it moves with roles: @role/assign <player>=roster-admin, or
+# @permission/allow <player>=softcode.roster.manage for one person. Nobody holds it until something allows
+# it, wizards included; God and administrator holders hold every permission.
+categories:
+  roles:
+    - name: Roster
+      description: Roles for the people who manage the character roster.
+  permissions:
+    - name: Roster
+      description: Managing the character roster.
+permissions:
+  - name: softcode.roster.manage
+    category: Roster
+    description: Add, change, hand out, take back and remove roster characters, and read their staff notes.
+roles:
+  - slug: roster-admin
+    name: Roster Admin
+    category: Roster
+    priority: 10
+    permissions:
+      softcode.roster.manage: allow
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), links
+  # characters to accounts and takes them off (@account/link, @account/unlink), resets a returned character's
+  # password (@newpassword) and drops its connections (@boot), and reads every character's account (account()).
+  #
+  # +roster is added with /noparse/rsnoparse and hooked to CMD`ROSTER, so what a player types reaches the code
+  # exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`<SWITCH> one routine per
+  # switch, INC`API` what other code calls, INC`STATE` and INC`HISTORY` the writes everything shares, EVENT` the
+  # link and unlink events. FUN` reads: FUN`ENTRY` the records, FUN`DISPLAY` the screens. DATA` the settings,
+  # one leaf each. Every record is kept on the Roster Store, never on a character, so nobody can rewrite their
+  # own entry.
+  #
+  # Other objects call the API with @trigger/inline, so each step runs as the Roster, where {{roster}} and
+  # {{store}} resolve, and hands its Q-registers back.
+  - ref: roster
+    type: thing
+    name: Roster
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings. One leaf per setting.
+      # How many roster characters one account may hold at once. 0 is no limit.
+      DATA`MAX`PER`ACCOUNT: |-
+        1
+      # +roster/idle with no number lists held characters nobody has played for this many days.
+      DATA`IDLE`DAYS: |-
+        60
+      # Shown under an available character and under +roster: how a player gets one. A package that adds a way
+      # to apply sets DATA`HOW`TO`GET`<its name>, which is shown instead while it is installed.
+      DATA`HOW`TO`GET: |-
+        Ask staff how to take on a roster character.
+      # Told to the account's characters when one of theirs goes back to the roster.
+      DATA`RETURN`MESSAGE: |-
+        Its password has been changed, so it is no longer yours to play.
+      # Fields +roster/set may not write: the roster keeps them itself.
+      DATA`FIELDS`RESERVED: |-
+        STATE HOLDER ACCOUNTNAME SINCE ADDED
+      # Fields shown first on an entry, in this order. Others follow in name order; NOTES last, to staff only.
+      DATA`FIELDS`ORDER: |-
+        GROUP SUMMARY
+      # Which routine each switch runs: DATA`ROUTE`<switch>. BARE is +roster alone, ARG +roster <name>. A route
+      # with a / in it names an attribute on another object, which is how another package adds a switch:
+      # roster-jobs sets DATA`ROUTE`APPLY to its own routine.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`BARE: |-
+        LIST
+      DATA`ROUTE`ARG: |-
+        SHOW
+      DATA`ROUTE`ALL: |-
+        ALL
+      DATA`ROUTE`ADD: |-
+        ADD
+      DATA`ROUTE`REMOVE: |-
+        REMOVE
+      DATA`ROUTE`SET: |-
+        SET
+      DATA`ROUTE`ASSIGN: |-
+        ASSIGN
+      DATA`ROUTE`RETURN: |-
+        RETURN
+      DATA`ROUTE`CLOSE: |-
+        CLOSE
+      DATA`ROUTE`OPEN: |-
+        OPEN
+      DATA`ROUTE`IDLE: |-
+        IDLE
+      DATA`ROUTE`HISTORY: |-
+        HISTORY
+      # The routines only roster staff may run.
+      DATA`STAFF`ROUTES: |-
+        ADD REMOVE SET ASSIGN RETURN CLOSE OPEN IDLE HISTORY
+
+      # ---- command --------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`ROSTER:
+        value: |-
+          $(?is)^\+roster(/\S*)?(?\: +(.*))?$:@include/args {{roster}}/INC`COMMAND`RUN=switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch and who may use it, and runs
+      # the routine.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(ROSTER,Only players use the roster.,warn); think u({{roster}}/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(ROSTER,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(ROSTER,+roster has no /%q<cmd_switch> switch. +help roster lists them.,warn); @assert cor(not(member(get({{roster}}/DATA`STAFF`ROUTES),%q<cmd_route>)),u({{roster}}/FUN`IS`STAFF,%#))=@pemit %#=notice(ROSTER,Only roster staff can use +roster/%q<cmd_switch>.,error); @break strmatch(%q<cmd_route>,*/*)={@trigger/inline/nobreak/spoof %q<cmd_route>}; @include {{roster}}/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch (the one switch),
+      # cmd_argument, cmd_left_side and cmd_right_side around the first =, cmd_has_equals and cmd_route (the
+      # routine to run). A switch of anything but letters has no route.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%1),
+          cmd_has_equals,strmatch(%1,*=*),
+          cmd_left_side,trim(before(%1,=)),
+          cmd_right_side,trim(after(%1,=)),
+          cmd_route,if(strlen(%q<cmd_switch>),if(regmatch(%q<cmd_switch>,^%[a-z%]+$),u({{roster}}/DATA`ROUTE`[ucstr(%q<cmd_switch>)])),u({{roster}}/DATA`ROUTE`[if(strlen(%q<cmd_argument>),ARG,BARE)])))
+        flags: [funsyntax]
+      # %0 a player: 1 when they may manage the roster.
+      FUN`IS`STAFF:
+        value: |-
+          permission(%0,softcode.roster.manage)
+        flags: [funsyntax]
+
+      # ---- shared reads ---------------------------------------------------------
+      # %0 an object: the key its records are filed under. An objid cannot be part of an attribute name, so
+      # #12:1790888816538 is filed as 12_1790888816538.
+      FUN`KEY:
+        value: |-
+          edit(objid(%0),#,,:,_)
+        flags: [funsyntax]
+      # %0 typed text: the objid of the character it names, or nothing.
+      FUN`CHARACTER:
+        value: |-
+          if(isdbref(setr(roster_found,pmatch(%0))),objid(%q<roster_found>))
+        flags: [funsyntax]
+      # %0 a character: 1 when it is on the roster.
+      FUN`ENTRY`HAS:
+        value: |-
+          cand(strlen(%0),hasattr({{store}},ENTRY`[u({{roster}}/FUN`KEY,%0)]))
+        flags: [funsyntax]
+      # %0 a character, %1 a field: that field of its entry.
+      FUN`ENTRY`GET:
+        value: |-
+          get({{store}}/ENTRY`[u({{roster}}/FUN`KEY,%0)]`%1)
+        flags: [funsyntax]
+      # %0 a character: available, held or closed. A character on an account is held whatever its entry says,
+      # so a link made from the portal shows at once.
+      FUN`ENTRY`STATE:
+        value: |-
+          if(strlen(account(%0)),held,firstof(u({{roster}}/FUN`ENTRY`GET,%0,STATE),available))
+        flags: [funsyntax]
+      # Every character on the roster that still exists.
+      FUN`ENTRY`ALL:
+        value: |-
+          filterbool({{roster}}/FUN`ENTRY`EXISTS,iter(lattr({{store}}/ENTRY`*),get({{store}}/%i0)))
+        flags: [funsyntax]
+      FUN`ENTRY`EXISTS:
+        value: |-
+          cand(isdbref(%0),hastype(%0,player))
+        flags: [funsyntax]
+      # %0 a state: the roster characters in it.
+      FUN`ENTRY`INSTATE:
+        value: |-
+          filterbool({{roster}}/FUN`ENTRY`ISSTATE,u({{roster}}/FUN`ENTRY`ALL),,,%0)
+        flags: [funsyntax]
+      FUN`ENTRY`ISSTATE:
+        value: |-
+          strmatch(u({{roster}}/FUN`ENTRY`STATE,%0),%1)
+        flags: [funsyntax]
+      # %0 characters: sorted by group, characters with no group last, then by name.
+      FUN`ENTRY`SORT:
+        value: |-
+          sortkey({{roster}}/FUN`ENTRY`SORTKEY,%0)
+        flags: [funsyntax]
+      FUN`ENTRY`SORTKEY:
+        value: |-
+          setq(roster_sort_group,u({{roster}}/FUN`ENTRY`GET,%0,GROUP))[if(strlen(%q<roster_sort_group>),0,1)][lcstr(%q<roster_sort_group>)]|[lcstr(name(%0))]
+        flags: [funsyntax]
+      # %0 an account's name: the roster characters it holds now.
+      FUN`ENTRY`HELDBY:
+        value: |-
+          filterbool({{roster}}/FUN`ENTRY`ISHELDBY,u({{roster}}/FUN`ENTRY`ALL),,,%0)
+        flags: [funsyntax]
+      FUN`ENTRY`ISHELDBY:
+        value: |-
+          strmatch(account(%0,name),%1)
+        flags: [funsyntax]
+      # %0 a character: when it was last played, in seconds: its last login or logout, whichever is later, or
+      # when it was handed out when it has been neither since.
+      FUN`ENTRY`LASTPLAYED:
+        value: |-
+          max(firstof(u({{roster}}/FUN`ENTRY`GET,%0,SINCE),0),u({{roster}}/FUN`TIME`SECONDS,get(%0/LAST)),u({{roster}}/FUN`TIME`SECONDS,get(%0/LASTLOGOUT)))
+        flags: [funsyntax]
+      # %0 a time as LAST holds it: seconds, or 0 when there is none.
+      FUN`TIME`SECONDS:
+        value: |-
+          if(isint(setr(roster_seconds,convtime(%0))),%q<roster_seconds>,0)
+        flags: [funsyntax]
+      # %0 typed text: the name of the account it means. A character on an account means that account; anything
+      # else is taken as an account's name, and must look like one, since it is handed to @account/link.
+      FUN`ACCOUNT`NAMED:
+        value: |-
+          if(isdbref(setr(roster_named,pmatch(%0))),firstof(account(%q<roster_named>,name),u({{roster}}/FUN`ACCOUNT`WORD,%0)),u({{roster}}/FUN`ACCOUNT`WORD,%0))
+        flags: [funsyntax]
+      FUN`ACCOUNT`WORD:
+        value: |-
+          if(regmatch(%0,^%[A-Za-z0-9_.@+-%]+$),%0)
+        flags: [funsyntax]
+      # %0 a character: the connected characters on its account, itself left out.
+      FUN`ACCOUNT`CONNECTED:
+        value: |-
+          filterbool({{roster}}/FUN`IS`CONNECTED,setdiff(accountchars(%0),objid(%0)))
+        flags: [funsyntax]
+      FUN`IS`CONNECTED:
+        value: |-
+          gte(conn(%0),0)
+        flags: [funsyntax]
+
+      # ---- API ------------------------------------------------------------------
+      # What other code calls, from a WIZARD object. Each step takes named arguments, leaves %q<roster_error>
+      # empty when it worked and the reason when it did not, and tells nobody: the caller says what happened.
+      # Call them with @trigger/inline/nobreak/args, which runs them as the Roster and hands %q<roster_error> back. They run the same checks and the
+      # same ON` steps as the commands.
+      #
+      # @trigger/inline/nobreak/args Roster/INC`API`ASSIGN=character,<name or objid>,to,<character or account>,actor,<objid>[,reason,<text>]
+      INC`API`ASSIGN:
+        value: |-
+          @include {{roster}}/INC`API`START; @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)={think setq(roster_error,name(%q<roster_char>) is not on the roster.)}; @assert not(strlen(account(%q<roster_char>)))={think setq(roster_error,name(%q<roster_char>) is already held by account [account(%q<roster_char>,name)]. Return it to the roster first.)}; @assert strlen(setr(roster_to,u({{roster}}/FUN`ACCOUNT`NAMED,%<to>)))={think setq(roster_error,'%<to>' is not a character on an account%, or an account's name.)}; @include {{roster}}/INC`API`LIMIT; think setq(roster_key,u({{roster}}/FUN`KEY,%q<roster_char>)); &ENTRY`%q<roster_key>`STATE {{store}}=assigning; @force/inline me=@account/link %q<roster_to>=%q<roster_char>; @assert strlen(setr(roster_account,account(%q<roster_char>)))={think setq(roster_error,There is no account called '%q<roster_to>'.); &ENTRY`%q<roster_key>`STATE {{store}}=available}; @include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,%<reason>; @if words(setr(roster_told,u({{roster}}/FUN`ACCOUNT`CONNECTED,%q<roster_char>)))={@pemit/list %q<roster_told>=notice(ROSTER,name(%q<roster_char>) is yours now. Play it from your account: play [name(%q<roster_char>)])}
+        flags: [cmdsyntax]
+      # Stops an assign that would give account %q<roster_to> more roster characters than DATA`MAX`PER`ACCOUNT.
+      INC`API`LIMIT:
+        value: |-
+          think setq(roster_limit,get({{roster}}/DATA`MAX`PER`ACCOUNT)); @assert cor(not(%q<roster_limit>),lt(words(u({{roster}}/FUN`ENTRY`HELDBY,%q<roster_to>)),%q<roster_limit>))={think setq(roster_error,Account %q<roster_to> already holds [words(u({{roster}}/FUN`ENTRY`HELDBY,%q<roster_to>))] roster [if(eq(%q<roster_limit>,1),character,characters)]%, the most one account may.)}
+        flags: [cmdsyntax]
+      # @trigger/inline/nobreak/args Roster/INC`API`RETURN=character,<name or objid>,actor,<objid>[,reason,<text>]
+      INC`API`RETURN:
+        value: |-
+          @include {{roster}}/INC`API`START; @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)={think setq(roster_error,name(%q<roster_char>) is not on the roster.)}; @assert strlen(setr(roster_account,account(%q<roster_char>)))={think setq(roster_error,name(%q<roster_char>) is not held by anyone.)}; think setqm(roster_account_name,account(%q<roster_char>,name),roster_told,u({{roster}}/FUN`ACCOUNT`CONNECTED,%q<roster_char>)); &ENTRY`[u({{roster}}/FUN`KEY,%q<roster_char>)]`HOLDER {{store}}; @force/inline me=@account/unlink %q<roster_account_name>=%q<roster_char>; @assert not(strlen(account(%q<roster_char>)))={think setq(roster_error,name(%q<roster_char>) could not be taken off account %q<roster_account_name>.); &ENTRY`[u({{roster}}/FUN`KEY,%q<roster_char>)]`HOLDER {{store}}=%q<roster_account>}; @include/args {{roster}}/INC`STATE`FREE=character,%q<roster_char>,account,%q<roster_account>,accountname,%q<roster_account_name>,actor,%<actor>,reason,%<reason>,event,returned; @if words(%q<roster_told>)={@pemit/list %q<roster_told>=notice(ROSTER,name(%q<roster_char>) has gone back to the roster[if(strlen(%<reason>),: %<reason>,.)] [get({{roster}}/DATA`RETURN`MESSAGE)])}
+        flags: [cmdsyntax]
+      # @trigger/inline/nobreak/args Roster/INC`API`ADD=character,<name or objid>,actor,<objid>[,group,<group>]
+      INC`API`ADD:
+        value: |-
+          @include {{roster}}/INC`API`START; @assert not(u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>))={think setq(roster_error,name(%q<roster_char>) is already on the roster.)}; @assert not(cor(strmatch(num(%q<roster_char>),#1),hasrole(%q<roster_char>,wizard),hasrole(%q<roster_char>,royalty)))={think setq(roster_error,name(%q<roster_char>) is staff. Staff characters never go on the roster.)}; think setq(roster_key,u({{roster}}/FUN`KEY,%q<roster_char>)); &ENTRY`%q<roster_key> {{store}}=%q<roster_char>; &ENTRY`%q<roster_key>`ADDED {{store}}=secs(); @if strlen(%<group>)={&ENTRY`%q<roster_key>`GROUP {{store}}=%<group>}; @break strlen(setr(roster_account,account(%q<roster_char>)))={@include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,On an account when it was added.,event,added,step,ADD}; &ENTRY`%q<roster_key>`STATE {{store}}=available; &ENTRY`%q<roster_key>`SINCE {{store}}=secs(); @newpassword/generate %q<roster_char>; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,added,actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,ADD,character,%q<roster_char>,actor,%<actor>,reason,%<reason>
+        flags: [cmdsyntax]
+      # @trigger/inline/nobreak/args Roster/INC`API`REMOVE=character,<name or objid>,actor,<objid>[,reason,<text>]
+      # The character, its account and its history stay; only its entry goes.
+      INC`API`REMOVE:
+        value: |-
+          @include {{roster}}/INC`API`START; @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)={think setq(roster_error,name(%q<roster_char>) is not on the roster.)}; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,removed,actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,REMOVE,character,%q<roster_char>,actor,%<actor>,reason,%<reason>; @wipe {{store}}/ENTRY`[u({{roster}}/FUN`KEY,%q<roster_char>)]
+        flags: [cmdsyntax]
+      # Every API step's start: clears roster_error and finds %<character>, leaving its objid in roster_char.
+      INC`API`START:
+        value: |-
+          think setqm(roster_error,,roster_char,if(cand(isdbref(%<character>),hastype(%<character>,player)),objid(%<character>),u({{roster}}/FUN`CHARACTER,%<character>))); @assert strlen(%q<roster_char>)={think setq(roster_error,There is no character called '%<character>'.)}
+        flags: [cmdsyntax]
+      # Reads for other code: u(Roster/FUN`API`STATE,<character>) is available, held or closed, and empty off
+      # the roster; u(Roster/FUN`API`FIELD,<character>,<field>) one field; u(Roster/FUN`API`LIST[,<state>])
+      # the roster's characters, in one state when given.
+      FUN`API`STATE:
+        value: |-
+          u({{roster}}/FUN`API`STATEOF,if(isdbref(%0),objid(%0),u({{roster}}/FUN`CHARACTER,%0)))
+        flags: [funsyntax]
+      FUN`API`STATEOF:
+        value: |-
+          if(u({{roster}}/FUN`ENTRY`HAS,%0),u({{roster}}/FUN`ENTRY`STATE,%0))
+        flags: [funsyntax]
+      FUN`API`FIELD:
+        value: |-
+          u({{roster}}/FUN`API`FIELDOF,if(isdbref(%0),objid(%0),u({{roster}}/FUN`CHARACTER,%0)),ucstr(%1))
+        flags: [funsyntax]
+      FUN`API`FIELDOF:
+        value: |-
+          if(u({{roster}}/FUN`ENTRY`HAS,%0),u({{roster}}/FUN`ENTRY`GET,%0,%1))
+        flags: [funsyntax]
+      FUN`API`LIST:
+        value: |-
+          if(strlen(%0),u({{roster}}/FUN`ENTRY`INSTATE,lcstr(%0)),u({{roster}}/FUN`ENTRY`ALL))
+        flags: [funsyntax]
+
+      # ---- state changes --------------------------------------------------------
+      # %<character> is held by %<account> (an account id): records the holder, adds the history line (%<event>,
+      # assigned when not given) and runs the ON`ASSIGN steps.
+      INC`STATE`HELD:
+        value: |-
+          think setq(roster_key,u({{roster}}/FUN`KEY,%<character>)); &ENTRY`%q<roster_key>`HOLDER {{store}}=%<account>; &ENTRY`%q<roster_key>`STATE {{store}}=held; &ENTRY`%q<roster_key>`ACCOUNTNAME {{store}}=account(%<character>,name); &ENTRY`%q<roster_key>`SINCE {{store}}=secs(); @include/args {{roster}}/INC`HISTORY`ADD=character,%<character>,event,firstof(%<event>,assigned),actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,firstof(%<step>,ASSIGN),character,%<character>,actor,%<actor>,reason,%<reason>
+        flags: [cmdsyntax]
+      # %<character> has left account %<account> (%<accountname>): available again, its password changed so
+      # nobody logs in to it by name, its connections dropped, the history line added (%<event>) and the
+      # ON`RETURN steps run.
+      INC`STATE`FREE:
+        value: |-
+          think setq(roster_key,u({{roster}}/FUN`KEY,%<character>)); &ENTRY`%q<roster_key>`STATE {{store}}=available; &ENTRY`%q<roster_key>`HOLDER {{store}}; &ENTRY`%q<roster_key>`ACCOUNTNAME {{store}}; &ENTRY`%q<roster_key>`SINCE {{store}}=secs(); @newpassword/generate %<character>; @dolist/inline ports(%<character>)={@boot/port/silent ##}; @include/args {{roster}}/INC`HISTORY`ADD=character,%<character>,event,%<event>,actor,%<actor>,reason,%<reason>,accountname,%<accountname>; @include/args {{roster}}/INC`ON`RUN=step,RETURN,character,%<character>,actor,%<actor>,reason,%<reason>,account,%<account>
+        flags: [cmdsyntax]
+      # Adds a line to %<character>'s history: %<event>, the account it concerns (%<accountname>, else the one
+      # holding it now), %<actor> and %<reason>. Names are kept beside objids, so a line still reads after the
+      # actor is gone.
+      INC`HISTORY`ADD:
+        value: |-
+          think setqm(roster_history_key,u({{roster}}/FUN`KEY,%<character>),roster_history_number,inc(default({{store}}/HISTORY`%q<roster_history_key>,0)),roster_history_entry,HISTORY`%q<roster_history_key>`%q<roster_history_number>); &HISTORY`%q<roster_history_key> {{store}}=%q<roster_history_number>; &%q<roster_history_entry>`TIME {{store}}=secs(); &%q<roster_history_entry>`EVENT {{store}}=%<event>; &%q<roster_history_entry>`ACCOUNT {{store}}=firstof(%<accountname>,account(%<character>,name)); @if strlen(%<actor>)={&%q<roster_history_entry>`ACTOR {{store}}=%<actor>; &%q<roster_history_entry>`ACTORNAME {{store}}=name(%<actor>)}; @if strlen(%<reason>)={&%q<roster_history_entry>`REASON {{store}}=%<reason>}
+        flags: [cmdsyntax]
+      # Runs every ON`<%<step>>`<name> attribute on the Roster, in name order, each queued as the Roster with
+      # character, actor, reason and account (an account id, held now or just left) as named arguments. Another
+      # package adds a step by setting such an attribute here.
+      INC`ON`RUN:
+        value: |-
+          @dolist/inline sort(lattr({{roster}}/ON`%<step>`*))={@trigger/args {{roster}}/##=character,%<character>,actor,%<actor>,reason,%<reason>,account,firstof(%<account>,account(%<character>))}
+        flags: [cmdsyntax]
+
+      # ---- events ---------------------------------------------------------------
+      # PLAYER`LINK and PLAYER`UNLINK, from the Event Handler: a link or unlink made anywhere, the portal, a
+      # claim or @account. One the roster made itself is already recorded, and changes nothing.
+      EVENT`LINK:
+        value: |-
+          @assert u({{roster}}/FUN`ENTRY`HAS,%<objid>); @break strmatch(u({{roster}}/FUN`ENTRY`GET,%<objid>,STATE),assigning); @break strmatch(u({{roster}}/FUN`ENTRY`GET,%<objid>,HOLDER),%<account>); @include/args {{roster}}/INC`STATE`HELD=character,%<objid>,account,%<account>,reason,Linked outside the roster.,event,linked
+        flags: [cmdsyntax]
+      EVENT`UNLINK:
+        value: |-
+          @assert u({{roster}}/FUN`ENTRY`HAS,%<objid>); @assert strmatch(u({{roster}}/FUN`ENTRY`GET,%<objid>,HOLDER),%<account>); @include/args {{roster}}/INC`STATE`FREE=character,%<objid>,account,%<account>,accountname,u({{roster}}/FUN`ENTRY`GET,%<objid>,ACCOUNTNAME),reason,Unlinked outside the roster.,event,unlinked
+        flags: [cmdsyntax]
+
+      # ---- players --------------------------------------------------------------
+      # +roster: the available characters.
+      INC`LIST:
+        value: |-
+          think setq(roster_list,u({{roster}}/FUN`ENTRY`SORT,u({{roster}}/FUN`ENTRY`INSTATE,available))); @assert words(%q<roster_list>)=@pemit %#=notice(ROSTER,No roster characters are available right now.[if(words(u({{roster}}/FUN`ENTRY`ALL)),%b+roster/all lists every one.)]); @pemit %#=rule(Roster)%r[u({{roster}}/FUN`DISPLAY`TABLE,%q<roster_list>,0)]%r[rule(words(%q<roster_list>) available · +roster <name> for more)]%r[tone(muted,u({{roster}}/FUN`DISPLAY`HOWTOGET))]
+        flags: [cmdsyntax]
+      # +roster/all: every roster character, with its state.
+      INC`ALL:
+        value: |-
+          think setq(roster_list,u({{roster}}/FUN`ENTRY`SORT,u({{roster}}/FUN`ENTRY`ALL))); @assert words(%q<roster_list>)=@pemit %#=notice(ROSTER,The roster is empty.); @pemit %#=rule(Roster)%r[u({{roster}}/FUN`DISPLAY`TABLE,%q<roster_list>,1)]%r[rule(words(u({{roster}}/FUN`ENTRY`INSTATE,available)) of [words(%q<roster_list>)] available · +roster <name> for more)]
+        flags: [cmdsyntax]
+      # +roster <name>
+      INC`SHOW:
+        value: |-
+          @include {{roster}}/INC`NEED`ENTRY; @pemit %#=u({{roster}}/FUN`DISPLAY`ENTRY,%q<roster_char>,u({{roster}}/FUN`IS`STAFF,%#))
+        flags: [cmdsyntax]
+      # Stops a command whose argument (before any =) is not a roster character; else leaves it in roster_char.
+      INC`NEED`ENTRY:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ROSTER,Which character? +roster/%q<cmd_switch> <name>,warn); @assert strlen(setr(roster_char,u({{roster}}/FUN`CHARACTER,%q<cmd_left_side>)))=@pemit %#=notice(ROSTER,There is no character called '%q<cmd_left_side>'.,warn); @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is not on the roster.,warn)
+        flags: [cmdsyntax]
+
+      # ---- staff ----------------------------------------------------------------
+      # +roster/add <name>[=<group>]
+      INC`ADD:
+        value: |-
+          @include/nobreak/args {{roster}}/INC`API`ADD=character,%q<cmd_left_side>,actor,%:,group,%q<cmd_right_side>; @assert not(strlen(%q<roster_error>))=@pemit %#=notice(ROSTER,%q<roster_error>,warn); @pemit %#=notice(ROSTER,name(%q<roster_char>) is on the roster[if(strlen(%q<cmd_right_side>),%b%(%q<cmd_right_side>%))]%, [u({{roster}}/FUN`ENTRY`STATE,%q<roster_char>)].[if(strmatch(u({{roster}}/FUN`ENTRY`STATE,%q<roster_char>),available),%bIts password has been changed%, so only an account it is given to can play it.)],ok)
+        flags: [cmdsyntax]
+      # +roster/remove <name>
+      INC`REMOVE:
+        value: |-
+          @include/nobreak/args {{roster}}/INC`API`REMOVE=character,%q<cmd_left_side>,actor,%:,reason,%q<cmd_right_side>; @assert not(strlen(%q<roster_error>))=@pemit %#=notice(ROSTER,%q<roster_error>,warn); @pemit %#=notice(ROSTER,name(%q<roster_char>) is off the roster. The character and its account are as they were.,ok)
+        flags: [cmdsyntax]
+      # +roster/assign <name>=<character or account>
+      INC`ASSIGN:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ROSTER,Give it to whom? +roster/assign <name>=<character or account>,warn); @include/nobreak/args {{roster}}/INC`API`ASSIGN=character,%q<cmd_left_side>,to,%q<cmd_right_side>,actor,%:; @assert not(strlen(%q<roster_error>))=@pemit %#=notice(ROSTER,%q<roster_error>,warn); @pemit %#=notice(ROSTER,name(%q<roster_char>) is now held by account [account(%q<roster_char>,name)].,ok)
+        flags: [cmdsyntax]
+      # +roster/return <name>[=<reason>]
+      INC`RETURN:
+        value: |-
+          @include/nobreak/args {{roster}}/INC`API`RETURN=character,%q<cmd_left_side>,actor,%:,reason,%q<cmd_right_side>; @assert not(strlen(%q<roster_error>))=@pemit %#=notice(ROSTER,%q<roster_error>,warn); @pemit %#=notice(ROSTER,name(%q<roster_char>) is back on the roster%, taken from account %q<roster_account_name>. Its password has been changed and its connections closed.,ok)
+        flags: [cmdsyntax]
+      # +roster/close <name> and +roster/open <name>: whether an unheld character is offered.
+      INC`CLOSE:
+        value: |-
+          @include {{roster}}/INC`NEED`ENTRY; @assert strmatch(u({{roster}}/FUN`ENTRY`STATE,%q<roster_char>),available)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is [u({{roster}}/FUN`ENTRY`STATE,%q<roster_char>)]%, not available.,warn); &ENTRY`[u({{roster}}/FUN`KEY,%q<roster_char>)]`STATE {{store}}=closed; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,closed,actor,%:,reason,%q<cmd_right_side>; @pemit %#=notice(ROSTER,name(%q<roster_char>) is closed: listed%, but not offered. +roster/open offers it again.,ok)
+        flags: [cmdsyntax]
+      INC`OPEN:
+        value: |-
+          @include {{roster}}/INC`NEED`ENTRY; @assert strmatch(u({{roster}}/FUN`ENTRY`STATE,%q<roster_char>),closed)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is [u({{roster}}/FUN`ENTRY`STATE,%q<roster_char>)]%, not closed.,warn); &ENTRY`[u({{roster}}/FUN`KEY,%q<roster_char>)]`STATE {{store}}=available; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,opened,actor,%:,reason,%q<cmd_right_side>; @pemit %#=notice(ROSTER,name(%q<roster_char>) is available again.,ok)
+        flags: [cmdsyntax]
+      # +roster/set <name>/<field>=<value>: a field of the entry. No value clears it.
+      INC`SET:
+        value: |-
+          think setqm(roster_set_name,before(%q<cmd_left_side>,/),roster_set_field,ucstr(after(%q<cmd_left_side>,/))); @assert cand(strlen(%q<roster_set_name>),strlen(%q<roster_set_field>),%q<cmd_has_equals>)=@pemit %#=notice(ROSTER,+roster/set <name>/<field>=<value>,warn); @assert strlen(setr(roster_char,u({{roster}}/FUN`CHARACTER,%q<roster_set_name>)))=@pemit %#=notice(ROSTER,There is no character called '%q<roster_set_name>'.,warn); @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is not on the roster.,warn); @assert cand(regmatch(%q<roster_set_field>,^%[A-Z%]%[A-Z0-9_%]*$),lte(strlen(%q<roster_set_field>),30))=@pemit %#=notice(ROSTER,A field's name is a letter and then letters%, digits or _%, up to 30.,warn); @assert not(member(get({{roster}}/DATA`FIELDS`RESERVED),%q<roster_set_field>))=@pemit %#=notice(ROSTER,The roster keeps %q<roster_set_field> itself.,warn); think setq(roster_set_attribute,ENTRY`[u({{roster}}/FUN`KEY,%q<roster_char>)]`%q<roster_set_field>); @break strlen(%q<cmd_right_side>)={&%q<roster_set_attribute> {{store}}=%q<cmd_right_side>; @pemit %#=notice(ROSTER,name(%q<roster_char>)'s [lcstr(%q<roster_set_field>)] field is set.,ok)}; &%q<roster_set_attribute> {{store}}; @pemit %#=notice(ROSTER,name(%q<roster_char>)'s [lcstr(%q<roster_set_field>)] field is cleared.,ok)
+        flags: [cmdsyntax]
+      # +roster/idle [<days>]: held characters nobody has played for that long.
+      INC`IDLE:
+        value: |-
+          think setq(roster_days,firstof(%q<cmd_argument>,get({{roster}}/DATA`IDLE`DAYS))); @assert cand(isint(%q<roster_days>),gt(%q<roster_days>,0))=@pemit %#=notice(ROSTER,+roster/idle <days>: a whole number of days.,warn); think setq(roster_list,sortkey({{roster}}/FUN`ENTRY`LASTPLAYED,filterbool({{roster}}/FUN`ENTRY`ISIDLE,u({{roster}}/FUN`ENTRY`INSTATE,held),,,sub(secs(),mul(%q<roster_days>,86400))),n)); @assert words(%q<roster_list>)=@pemit %#=notice(ROSTER,Every held character has been played in the last %q<roster_days> day[if(neq(%q<roster_days>,1),s)].); @pemit %#=rule(Idle roster characters)%r[u({{roster}}/FUN`DISPLAY`IDLE,%q<roster_list>)]%r[rule(words(%q<roster_list>) not played in %q<roster_days> day[if(neq(%q<roster_days>,1),s)] · +roster/return <name> takes one back)]
+        flags: [cmdsyntax]
+      FUN`ENTRY`ISIDLE:
+        value: |-
+          lt(u({{roster}}/FUN`ENTRY`LASTPLAYED,%0),%1)
+        flags: [funsyntax]
+      # +roster/history <name>
+      INC`HISTORY:
+        value: |-
+          think setq(roster_char,u({{roster}}/FUN`CHARACTER,%q<cmd_left_side>)); @assert strlen(%q<roster_char>)=@pemit %#=notice(ROSTER,There is no character called '%q<cmd_left_side>'.,warn); think setq(roster_history_count,default({{store}}/HISTORY`[u({{roster}}/FUN`KEY,%q<roster_char>)],0)); @assert %q<roster_history_count>=@pemit %#=notice(ROSTER,name(%q<roster_char>) has no roster history.); @pemit %#=rule(name(%q<roster_char>): roster history)%r[u({{roster}}/FUN`DISPLAY`HISTORY,%q<roster_char>,%q<roster_history_count>)]%r[rule()]
+        flags: [cmdsyntax]
+
+      # ---- screens --------------------------------------------------------------
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's priority,
+      # %2 each column's share of the spare width, %3 each column's least width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+        flags: [funsyntax]
+      # %0 characters, %1 1 to add a State column: name, group and summary. The summary takes the spare width
+      # and wraps; the group goes first when the screen is narrow.
+      FUN`DISPLAY`TABLE:
+        value: |-
+          if(%1,datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r1%r1,%r%r1,%r%r20),u({{roster}}/FUN`DISPLAY`COLUMN`NAME,%0),u({{roster}}/FUN`DISPLAY`COLUMN`GROUP,%0),u({{roster}}/FUN`DISPLAY`COLUMN`SUMMARY,%0),u({{roster}}/FUN`DISPLAY`COLUMN`STATE,%0)),datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2,1%r2%r1,%r%r1,%r%r20),u({{roster}}/FUN`DISPLAY`COLUMN`NAME,%0),u({{roster}}/FUN`DISPLAY`COLUMN`GROUP,%0),u({{roster}}/FUN`DISPLAY`COLUMN`SUMMARY,%0)))
+        flags: [funsyntax]
+      # %0 characters: one column of the roster table, its heading first.
+      FUN`DISPLAY`COLUMN`NAME:
+        value: |-
+          ansi(h,Name)%r[iter(%0,name(%i0),,%r)]
+        flags: [funsyntax]
+      FUN`DISPLAY`COLUMN`GROUP:
+        value: |-
+          ansi(h,Group)%r[iter(%0,firstof(u({{roster}}/FUN`ENTRY`GET,%i0,GROUP),-),,%r)]
+        flags: [funsyntax]
+      FUN`DISPLAY`COLUMN`SUMMARY:
+        value: |-
+          ansi(h,Summary)%r[iter(%0,firstof(u({{roster}}/FUN`ENTRY`GET,%i0,SUMMARY),-),,%r)]
+        flags: [funsyntax]
+      FUN`DISPLAY`COLUMN`STATE:
+        value: |-
+          ansi(h,State)%r[iter(%0,u({{roster}}/FUN`DISPLAY`STATE,%i0),,%r)]
+        flags: [funsyntax]
+      # How a player gets a character: a package's DATA`HOW`TO`GET`<name>, the first by name, else the game's own.
+      FUN`DISPLAY`HOWTOGET:
+        value: |-
+          if(words(setr(roster_how,lattr({{roster}}/DATA`HOW`TO`GET`*))),get({{roster}}/[first(%q<roster_how>)]),get({{roster}}/DATA`HOW`TO`GET))
+        flags: [funsyntax]
+      # %0 a character: its state in the reader's theme colour for it.
+      FUN`DISPLAY`STATE:
+        value: |-
+          switch(setr(roster_state,u({{roster}}/FUN`ENTRY`STATE,%0)),available,tone(success,available),held,tone(muted,held),tone(warning,%q<roster_state>))
+        flags: [funsyntax]
+      # %0 a character, %1 1 when the reader is roster staff: the entry as labelled values, framed with the name.
+      FUN`DISPLAY`ENTRY:
+        value: |-
+          setq(roster_fields,u({{roster}}/FUN`DISPLAY`FIELDS,%0,%1))[box(lfields(,iter(%q<roster_fields>,u({{roster}}/FUN`DISPLAY`LABEL,%i0),,chr(30)),iter(%q<roster_fields>,u({{roster}}/FUN`DISPLAY`VALUE,%0,%i0),,chr(30)),chr(30))[if(strmatch(u({{roster}}/FUN`ENTRY`STATE,%0),available),%r[rule()]%r[u({{roster}}/FUN`DISPLAY`HOWTOGET)])],name(%0))]
+        flags: [funsyntax]
+      # %0 a character, %1 1 for staff: which fields its entry shows, in order, leaving out the empty ones.
+      FUN`DISPLAY`FIELDS:
+        value: |-
+          filterbool({{roster}}/FUN`DISPLAY`HASVALUE,STATE [get({{roster}}/DATA`FIELDS`ORDER)] [u({{roster}}/FUN`DISPLAY`EXTRAFIELDS,%0)][if(%1,%bHOLDER NOTES)],,,%0)
+        flags: [funsyntax]
+      # %0 a character: the fields a game added with +roster/set, in name order.
+      FUN`DISPLAY`EXTRAFIELDS:
+        value: |-
+          setdiff(iter(lattr({{store}}/ENTRY`[u({{roster}}/FUN`KEY,%0)]`*),last(%i0,`)),[get({{roster}}/DATA`FIELDS`RESERVED)] [get({{roster}}/DATA`FIELDS`ORDER)] NOTES)
+        flags: [funsyntax]
+      FUN`DISPLAY`HASVALUE:
+        value: |-
+          strlen(u({{roster}}/FUN`DISPLAY`VALUE,%1,%0))
+        flags: [funsyntax]
+      # %0 a field: its label.
+      FUN`DISPLAY`LABEL:
+        value: |-
+          switch(%0,HOLDER,Held by,capstr(lcstr(edit(%0,_,%b))))
+        flags: [funsyntax]
+      # %0 a character, %1 a field: what its entry shows for it.
+      FUN`DISPLAY`VALUE:
+        value: |-
+          switch(%1,STATE,u({{roster}}/FUN`DISPLAY`STATE,%0),HOLDER,if(strlen(account(%0)),account [account(%0,name)] since [timefmt($Y-$m-$d,u({{roster}}/FUN`ENTRY`GET,%0,SINCE))]),u({{roster}}/FUN`ENTRY`GET,%0,%1))
+        flags: [funsyntax]
+      # %0 held characters: who holds each and when it was last played.
+      FUN`DISPLAY`IDLE:
+        value: |-
+          datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r1,%r1,),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Account)]%r[iter(%0,account(%i0,name),,%r)],[ansi(h,Held since)]%r[iter(%0,timefmt($Y-$m-$d,u({{roster}}/FUN`ENTRY`GET,%i0,SINCE)),,%r)],>[ansi(h,Last played)]%r[iter(%0,u({{roster}}/FUN`DISPLAY`AGO,u({{roster}}/FUN`ENTRY`LASTPLAYED,%i0)),,%r)])
+        flags: [funsyntax]
+      # %0 seconds since the epoch: how long ago, in days.
+      FUN`DISPLAY`AGO:
+        value: |-
+          if(%0,[div(sub(secs(),%0),86400)] days ago,never)
+        flags: [funsyntax]
+      # %0 a character, %1 how many history lines it has: the history, newest first.
+      FUN`DISPLAY`HISTORY:
+        value: |-
+          setq(roster_history_root,HISTORY`[u({{roster}}/FUN`KEY,%0)])[datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r3%r2,%r%r%r%r1,%r%r%r%r20),[ansi(h,Date)]%r[iter(revwords(lnum(1,%1)),timefmt($Y-$m-$d,get({{store}}/%q<roster_history_root>`%i0`TIME)),,%r)],[ansi(h,What)]%r[iter(revwords(lnum(1,%1)),get({{store}}/%q<roster_history_root>`%i0`EVENT),,%r)],[ansi(h,Account)]%r[iter(revwords(lnum(1,%1)),firstof(get({{store}}/%q<roster_history_root>`%i0`ACCOUNT),-),,%r)],[ansi(h,By)]%r[iter(revwords(lnum(1,%1)),u({{roster}}/FUN`DISPLAY`ACTOR,%q<roster_history_root>`%i0),,%r)],[ansi(h,Reason)]%r[iter(revwords(lnum(1,%1)),firstof(get({{store}}/%q<roster_history_root>`%i0`REASON),-),,%r)])]
+        flags: [funsyntax]
+      # %0 a history line's attribute: who did it, by their name now or the name kept with the line.
+      FUN`DISPLAY`ACTOR:
+        value: |-
+          setq(roster_actor,get({{store}}/%0`ACTOR))[if(strlen(%q<roster_actor>),if(isdbref(%q<roster_actor>),name(%q<roster_actor>),get({{store}}/%0`ACTORNAME)),-)]
+        flags: [funsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +roster; @hook/override/inline +roster={{roster}},CMD`ROSTER
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger {{roster}}/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger {{roster}}/STARTUP
+        flags: [cmdsyntax]
+
+  # Every record. Inside the Roster, so no player can reach it, and no_command, so nothing kept on it is ever
+  # matched as a command.
+  #
+  # ENTRY`<key> holds the character's objid; beneath it STATE (available, held or closed), HOLDER (the account
+  # id holding it), ACCOUNTNAME, SINCE (when it was handed out or came back, in seconds), ADDED, and the fields:
+  # GROUP, SUMMARY, NOTES and any +roster/set adds. HISTORY`<key> counts its history lines, each one
+  # HISTORY`<key>`<n> with TIME, EVENT, ACCOUNT, ACTOR, ACTORNAME and REASON beneath it. History stays when an
+  # entry is removed.
+  - ref: store
+    type: thing
+    name: Roster Store
+    location: "{{roster}}"
+    flags: [no_command]
+    attributes:
+      ENTRY: |-
+        Roster entries, one branch per character key.
+      HISTORY: |-
+        Roster history, one branch per character key.
+
+  # The links and unlinks made anywhere, handed to the Roster to run as itself.
+  - ref: events
+    target: "{{$event_handler}}"
+    attributes:
+      PLAYER`LINK`ROSTER: |-
+        @trigger/args {{roster}}/EVENT`LINK=objid,%<objid>,account,%<account>
+      PLAYER`UNLINK`ROSTER: |-
+        @trigger/args {{roster}}/EVENT`UNLINK=objid,%<objid>,account,%<account>
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are
+  # evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: roster_help
+    type: thing
+    name: Roster Help
+    location: "{{roster}}"
+    attributes:
+      HELP: |-
+        The character roster.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      HELP`ROSTER: |-
+        The **roster** is the game's characters kept for players to take on: canon characters, or ones a player left behind.
+
+        - `+roster` lists the characters available now, by group.
+        - `+roster <name>` shows one: its group, its summary and anything else staff wrote about it, and how to get it.
+        - `+roster/all` lists every roster character, with whether it is available, held or closed.
+
+        A character is **available** when nobody holds it, **held** when it is on someone's account, and **closed** when the game keeps it listed but is not offering it.
+
+        A character you are given is linked to your account. Play it from your account like any other: `play <name>` at the account menu, or the character list in the web portal. Its password is the game's, not yours.
+
+        How you ask for a character is up to the game. `+roster` says how, under the list.
+      HELP`ROSTER`STAFF: |-
+        Staff with the `softcode.roster.manage` permission, which the `roster-admin` role allows, manage the roster.
+
+        - `+roster/add <name>\[=<group>\]` puts a character on the roster. One on nobody's account is available, and its password is changed, so only an account it is given to can play it. One already on an account is held, by that account. God, wizards and royalty are refused.
+        - `+roster/set <name>/<field>=<text>` writes a field: `group`, `summary`, `notes` \(shown to staff only\) or any other a game wants, such as `faction` or `played_by`. Leave the text out to clear it.
+        - `+roster/assign <name>=<character or account>` links it to an account: the account a character you name is on, or the account with that name. An account holds at most one roster character unless the game changed that.
+        - `+roster/return <name>\[=<reason>\]` takes it off its account and back to available. Its password is changed and its connections closed, and the account's connected characters are told.
+        - `+roster/close <name>` keeps it listed but not offered, and `+roster/open <name>` offers it again.
+        - `+roster/remove <name>` takes it off the roster. The character and its account stay as they are.
+        - `+roster/idle \[<days>\]` lists held characters nobody has played for that many days, 60 unless the game changed it.
+        - `+roster/history <name>` shows who held it and who changed it, newest first.
+
+        A character linked or unlinked some other way, by `@account/link`, a claim or the web portal, is held or available on the roster at once, and its history says so.
+      HELP`ROSTER`SETTINGS: |-
+        Each setting is an attribute on the Roster object in the master room:
+
+        - `` DATA`MAX`PER`ACCOUNT ``: how many roster characters one account may hold at once. 1 by default; 0 is no limit.
+        - `` DATA`IDLE`DAYS ``: the days `+roster/idle` uses when given none. 60.
+        - `` DATA`HOW`TO`GET ``: the line under `+roster` and under an available character saying how a player gets one.
+        - `` DATA`RETURN`MESSAGE ``: what the account's characters are told when one of theirs goes back to the roster.
+        - `` DATA`FIELDS`ORDER ``: the fields an entry shows first, in order. `GROUP SUMMARY`.
+      HELP`ROSTER`CODE: |-
+        Code on a WIZARD object can change the roster the way the commands do, and read it.
+
+        - ``@trigger/inline/nobreak/args Roster/INC`API`ASSIGN=character,<name>,to,<character or account>,actor,<objid>\[,reason,<text>\]`` gives a character to an account. `` INC`API`RETURN ``, `` INC`API`ADD `` \(with `group`\) and `` INC`API`REMOVE `` take the same arguments. Each leaves `\%q<roster_error>` empty when it worked and says why when it did not, and tells nobody.
+        - ``u\(Roster/FUN`API`STATE,<character>\)`` is available, held or closed, and empty off the roster. ``u\(Roster/FUN`API`FIELD,<character>,<field>\)`` reads one field. ``u\(Roster/FUN`API`LIST\[,<state>\]\)`` lists the roster's characters.
+
+        ## Steps
+
+        After a change, the Roster runs every `` ON`<STEP>`<name> `` attribute on itself, in name order, each queued with `\%<character>`, `\%<actor>`, `\%<reason>` and `\%<account>` \(the account's id\). The steps are `ADD`, `ASSIGN`, `RETURN` and `REMOVE`. Wiping a returned character's notes, welcoming a new holder by mail or posting to a channel belongs here:
+
+        ``&ON`RETURN`WIPE Roster=&NOTES \%<character>``
+
+        ## Switches
+
+        `` DATA`ROUTE`<SWITCH> `` on the Roster names the routine a switch runs. A value with a / in it is an attribute on another object, run with `@trigger/inline/spoof` as the command runs, so another package adds a switch without changing the roster.
+      HELP`ROSTER`HOW: |-
+        The roster has no way to apply built in, because games choose differently. Three common ones:
+
+        - Players ask staff, and staff use `+roster/assign`. Write how to ask in `` DATA`HOW`TO`GET `` on the Roster.
+        - Players apply through the job queue: install the `roster-jobs` package, which adds `+roster/apply`.
+        - A game's own code calls `` INC`API`ASSIGN `` when its own process says yes. See `+help roster code`.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`ROSTER: |-
+        {{roster_help}}

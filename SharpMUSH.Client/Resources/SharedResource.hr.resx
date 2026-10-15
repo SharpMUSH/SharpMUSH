@@ -3916,6 +3916,10 @@
     <value>Započnite čitanjem wikija, pregledavanjem likova ili uključivanjem u scenu.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Započnite čitanjem wikija ili pregledavanjem likova.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Pročitajte wiki</value>
     <comment>MT</comment>
@@ -6148,5 +6152,97 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Slika s upozorenjem o sadržaju ostaje izvan knjižnice slika. Uklonite upozorenje da biste je podijelili.</value>
+  </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Dodaj u kalendar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Dodajte raspored u svoj kalendar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Vaša aplikacija za kalendar prikazuje svaku scenu u vašem lokalnom vremenu i svaki sat provjerava promjene.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Javne scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Sve javne scene u rasporedu. Ovu adresu može koristiti svatko.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Vaša privatna poveznica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Prikazuje i privatne scene koje ovaj lik može vidjeti. Svatko s poveznicom može je čitati, zato je zadržite za sebe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Samo scene koje vodim ili kojima sam se pridružio</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Ova se adresa prikazuje samo sada. Kopirajte je u aplikaciju za kalendar prije nego što napustite stranicu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Privatnu poveznicu napravili ste {0}. Napravite novu da biste opet vidjeli adresu; stara prestaje raditi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Napravi moju privatnu poveznicu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Napravi novu poveznicu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Isključi je</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Adresa kalendara</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Kopiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Adresa kalendara kopirana</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Pretplati se</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Spremanje skice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Skica spremljena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Skica samo na ovom uređaju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Obavijesti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primajte obavijesti na ovom telefonu ili računalu kada je portal zatvoren</value>
+    <comment>MT</comment>
   </data>
 </root>

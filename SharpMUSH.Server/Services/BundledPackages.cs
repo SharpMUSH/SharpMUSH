@@ -2,6 +2,7 @@ using System.Reflection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
 
@@ -107,6 +108,15 @@ public static class BundledPackages
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: which game events notify a player's phone or browser (@push) is the game's
+		// choice, and +notify lands an object in the master room. Its settings page is a separate application
+		// package, as jobs-app is for jobs.
+		new("notifications", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("notifications-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
+		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
+		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it builds on scene and time, which a game chooses first.
 		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
@@ -133,6 +143,17 @@ public static class BundledPackages
 
 	/// <inheritdoc cref="BundledPackageSource.IsCatalogueSource"/>
 	public static bool IsCatalogueSource(string? sourceRepo) => BundledPackageSource.IsCatalogueSource(sourceRepo);
+
+	/// <summary>
+	/// The plugins a bundled package names in <c>plugins:</c>: without each of them running, its commands call into
+	/// nothing, so it is neither installed nor offered.
+	/// </summary>
+	public static IReadOnlyList<string> RequiredPlugins(string packageId, IPackageManifestService manifests)
+		=> manifests.ParseManifest(ManifestYaml(packageId)) switch
+		{
+			ParsedPackageManifest parsed => parsed.Manifest.RequiredPlugins,
+			_ => []
+		};
 
 	/// <summary>
 	/// The README a bundled package ships, in Markdown: its <c>examples/packages/&lt;id&gt;/README.md</c> when this
@@ -179,6 +200,13 @@ public static class BundledPackages
 			lines.Add("");
 			lines.Add("## Requires");
 			lines.AddRange(manifest.Dependencies.Select(d => $"- `{d.PackageId}` {d.Constraint}"));
+		}
+
+		if (manifest.RequiredPlugins.Count > 0)
+		{
+			lines.Add("");
+			lines.Add("## Plugins");
+			lines.AddRange(manifest.RequiredPlugins.Select(p => $"- `{p}`"));
 		}
 
 		// An attach entry adds attributes to an object the package does not create.

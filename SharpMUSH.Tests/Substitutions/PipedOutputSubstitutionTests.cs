@@ -154,6 +154,39 @@ public class PipedOutputSubstitutionTests
 	}
 
 	[Test]
+	// PennMUSH's @force evaluates its action list once before running it (help @force2), so a %> in it is
+	// read then, before any command of the list has run.
+	public async Task ForceReadsPercentGreaterBeforeItsListRuns()
+	{
+		var value = Unique("forced");
+		await Assert.That(await Direct($"@force me={{think {value};think got=%>}}"))
+			.IsEquivalentTo([value, "got="]);
+	}
+
+	[Test]
+	public async Task ForceNoevalLeavesPercentGreaterToItsList()
+	{
+		var value = Unique("forced");
+		await Assert.That(await Direct($"@force/noeval me={{think {value};think got=%>}}"))
+			.IsEquivalentTo([value, $"got={value}"]);
+	}
+
+	[Test]
+	public async Task HelpExampleDigThenName()
+	{
+		var name = Unique("pipekitchen");
+		var output = await Direct($"@force/noeval me={{@dig {name};think Dug [name(%>)] as [num(%>)].}}");
+		await Assert.That(output[^1]).StartsWith($"Dug {name} as #");
+	}
+
+	[Test]
+	public async Task HelpExamplePipeIntoPemit()
+	{
+		await Assert.That(await Direct("@force/noeval me={think [ansi(hr,Hello)] there ;| @pemit me=Got [words(%|)] words: %|}"))
+			.IsEquivalentTo(["Got 2 words: Hello there"]);
+	}
+
+	[Test]
 	public async Task ExitOutputsTheDestination()
 	{
 		var exit = Unique("pipeexit");

@@ -120,6 +120,37 @@ public class GameFeatureServiceTests
 		await Assert.That(scene.Available).IsFalse();
 	}
 
+	/// <summary>
+	/// Every bundled package that calls the Scene plugin names it in <c>plugins:</c>, so without the plugin none of
+	/// them is offered, and the packages that do not need it still are.
+	/// </summary>
+	[Test]
+	public async Task WithoutTheScenePlugin_NoPackageOverItIsAvailable()
+	{
+		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
+
+		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id))
+			.IsEquivalentTo(["scene", "scene-verse", "radio-scene"]);
+		await Assert.That(new Game().Features().PackagesOver("scene"))
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse"]);
+	}
+
+	/// <summary>
+	/// Asking the wizard for a package over a plugin that is not running reports it by name and installs nothing over
+	/// the plugin, not even the package it depends on that needs the plugin too.
+	/// </summary>
+	[Test]
+	public async Task Asking_ForAPackageOverAMissingPlugin_IsReported_NotInstalled()
+	{
+		var game = new Game();
+
+		var result = await game.Features(scenePlugin: false).ApplyPackagesAsync(["scene-verse"], CancellationToken.None);
+
+		await Assert.That(result is Error<string> { Value: var message } && message.Contains("scene plugin")).IsTrue();
+		await Assert.That(game.Installed).IsEquivalentTo(["plus-help"])
+			.Because("+help needs no plugin; scene and scene-verse both call the Scene plugin");
+	}
+
 	/// <summary>The offer is every bundled package, with what it attaches to and needs, from its manifest.</summary>
 	[Test]
 	public async Task ThePackages_AreEveryBundledOne_WithTheirHandlerAndDependencies()
