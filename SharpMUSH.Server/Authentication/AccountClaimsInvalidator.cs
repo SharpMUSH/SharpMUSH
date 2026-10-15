@@ -20,12 +20,16 @@ public sealed class AccountClaimsInvalidator(IFusionCache cache, ObjectVersions 
 	/// <remarks>
 	/// Also expires every object's cached grants: the account's roles and overrides reach each character
 	/// linked to it, and which characters those are is what a link or unlink changes. The tag's version moves
-	/// first, as <c>CacheInvalidationBehavior</c> moves it, for the grants kept outside the cache.
+	/// as <c>CacheInvalidationBehavior</c> moves it, for the grants kept outside the cache.
 	/// </remarks>
 	public async ValueTask InvalidateAsync(string accountId, CancellationToken ct = default)
 	{
-		await cache.RemoveByTagAsync(AccountClaimsService.AccountCacheTag(accountId), token: ct);
+		// The write has happened, so the grants go whether or not the caller is still waiting. The version
+		// moves on both sides of the removal: a reader that saw the first move and then the entry about to
+		// be removed would otherwise keep it under that version.
 		versions.BumpTag(Library.Definitions.CacheTags.Grants);
-		await cache.RemoveByTagAsync(Library.Definitions.CacheTags.Grants, token: ct);
+		await cache.RemoveByTagAsync(Library.Definitions.CacheTags.Grants, token: CancellationToken.None);
+		versions.BumpTag(Library.Definitions.CacheTags.Grants);
+		await cache.RemoveByTagAsync(AccountClaimsService.AccountCacheTag(accountId), token: ct);
 	}
 }

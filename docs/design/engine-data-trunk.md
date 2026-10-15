@@ -107,8 +107,9 @@ not before it, so the removal happens after the store in every interleaving.
 An answer kept outside the cache is checked against the same versions. `ObjectRelationMemo` keeps
 each object's grants, owner and location (the last two as the object id they name, resolved
 through the node cache on each read) until the object's version or the `grants` tag's version
-moves, and `ExecutorDebugFlags` keeps DEBUG the same way. So a write that removes a tag without
-the Mediator moves the tag's version first, as `AccountClaimsInvalidator` does.
+moves, and `ExecutorDebugFlags` keeps DEBUG the same way. Such a reader can see the version move
+and then an entry that is about to be removed, so every removal moves the version on both sides of
+it, and a write that removes a tag without the Mediator does the same (`AccountClaimsInvalidator`).
 
 ## 8. One engine process, stated
 
