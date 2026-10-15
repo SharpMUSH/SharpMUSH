@@ -233,11 +233,13 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
-	[Arguments(false, false)]
-	[Arguments(true, false)]
-	[Arguments(false, true)]
-	[Arguments(true, true)]
-	public async Task RestrictedDebugExecutorDoesNotForwardExpressionOrResults(bool denied, bool substitutionTrace)
+	[Arguments(false, false, "")]
+	[Arguments(true, false, "")]
+	[Arguments(false, true, "")]
+	[Arguments(true, true, "")]
+	[Arguments(false, false, "!!$")]
+	[Arguments(true, false, "!!$")]
+	public async Task RestrictedDebugExecutorDoesNotForwardExpressionOrResults(bool denied, bool substitutionTrace, string bang)
 	{
 		var connection = Factory.Services.GetRequiredService<IConnectionService>();
 		DBRef target;
@@ -254,9 +256,11 @@ public class RestrictedExpressionTests
 		var state = ParserState.RootFor(target);
 		var heard = Factory.Notifications.DeliveryCountFor(target);
 		var parser = Factory.FunctionParser.FromState(state);
-		var expression = denied ? "restrictedexpr(ucstr,get(%0),private-input)" : "restrictedexpr(ucstr,ucstr(%0),private-input)";
+		var expression = bang + (denied ? "restrictedexpr(ucstr,get(%0),private-input)" : "restrictedexpr(ucstr,ucstr(%0),private-input)");
 		var result = (await parser.FunctionParse(MarkupText.Plain(expression), substitutionTrace))!.Message.ToPlainText();
-		if (denied) await Assert.That(result).Contains("RESTRICTED EXPRESSION");
+		// A bang answers 1 about the wrapper's result and still opens restricted evaluation.
+		if (bang != "") await Assert.That(result).IsEqualTo("1");
+		else if (denied) await Assert.That(result).Contains("RESTRICTED EXPRESSION");
 		else await Assert.That(result).IsEqualTo("PRIVATE-INPUT");
 		await Assert.That(Said(target, heard)).IsFalse();
 	}

@@ -238,6 +238,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 	/// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
 	/// (so /enable, /disable, /delete take effect immediately and never leak).
 	/// </summary>
+	/// <summary>Whether <paramref name="name"/> calls a function: a built-in or an @function.</summary>
+	public bool IsFunction(IMUSHCodeParser parser, string name) => TryResolveFunction(parser, name, out _);
+
 	private bool TryResolveFunction(IMUSHCodeParser parser, string name, out FunctionDefinition definition)
 	{
 		if (parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
