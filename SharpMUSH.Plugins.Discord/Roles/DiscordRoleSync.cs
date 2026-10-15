@@ -176,7 +176,15 @@ public sealed class DiscordRoleSync(
 		{
 			foreach (var guild in Guilds())
 			{
-				await PassAsync(guild, cancellationToken);
+				// A server Discord refuses must not stop the pass over the others.
+				try
+				{
+					await PassAsync(guild, cancellationToken);
+				}
+				catch (Exception exception) when (exception is HttpException or HttpRequestException or TimeoutException)
+				{
+					logger.LogWarning("[Discord] Could not go over {Guild}'s mapped roles: {Reason}", guild.Name, exception.Message);
+				}
 			}
 		}), null, PassEvery, PassEvery);
 
@@ -216,15 +224,28 @@ public sealed class DiscordRoleSync(
 			? [.. client.Guilds.Where(guild => Mapped(guild.Id))]
 			: [];
 
-	private IReadOnlyList<DiscordRoleMapping> MappingsIn(SocketGuild guild)
-		=> [.. roles.Mappings().Where(mapping => mapping.GuildId == guild.Id && Unmanageable(guild.GetRole(mapping.RoleId)) is null)];
+	/// <summary>
+	/// The guild's mappings the bot can apply: not to a Discord role it cannot manage, nor to a game role that has come to
+	/// allow administrator since it was mapped, which would show on Discord who holds every permission.
+	/// </summary>
+	private async Task<IReadOnlyList<DiscordRoleMapping>> MappingsInAsync(SocketGuild guild, CancellationToken cancellationToken)
+	{
+		var mappings = roles.Mappings().Where(mapping => mapping.GuildId == guild.Id).ToList();
+		if (mappings.Count == 0)
+		{
+			return [];
+		}
+
+		var administrative = await holders.AdministrativeAsync(cancellationToken);
+		return [.. mappings.Where(mapping => !administrative.Contains(mapping.Slug) && Unmanageable(guild.GetRole(mapping.RoleId)) is null)];
+	}
 
 	private async Task<IReadOnlySet<string>?> HeldAsync(ulong userId, CancellationToken cancellationToken)
 		=> accounts.Get(userId) is { Linked: true } link ? await holders.HeldAsync(link.AccountId, cancellationToken) : null;
 
 	private async Task ChangedAsync(SocketGuildUser member, CancellationToken cancellationToken)
 	{
-		var mappings = MappingsIn(member.Guild);
+		var mappings = await MappingsInAsync(member.Guild, cancellationToken);
 		if (member.IsBot || mappings.Count == 0)
 		{
 			return;
@@ -240,7 +261,7 @@ public sealed class DiscordRoleSync(
 
 	private async Task PassAsync(SocketGuild guild, CancellationToken cancellationToken)
 	{
-		var mappings = MappingsIn(guild);
+		var mappings = await MappingsInAsync(guild, cancellationToken);
 		if (mappings.Count == 0)
 		{
 			return;
@@ -249,17 +270,25 @@ public sealed class DiscordRoleSync(
 		await guild.DownloadUsersAsync();
 		foreach (var member in guild.Users.Where(member => !member.IsBot))
 		{
-			var linked = accounts.Get(member.Id) is { Linked: true };
-			var decision = DiscordRolePlan.Pass(Member(member), mappings, await HeldAsync(member.Id, cancellationToken), linked,
-				roleId => roles.Drifted(roleId, member.Id));
-			await RecordAsync(decision.Drift, cancellationToken);
-			await ApplyAsync(guild, decision.Changes, "Roles held in the game");
+			// One member Discord refuses must not stop the ones after it, on this pass or any later one.
+			try
+			{
+				var linked = accounts.Get(member.Id) is { Linked: true };
+				var decision = DiscordRolePlan.Pass(Member(member), mappings, await HeldAsync(member.Id, cancellationToken), linked,
+					roleId => roles.Drifted(roleId, member.Id));
+				await RecordAsync(decision.Drift, cancellationToken);
+				await ApplyAsync(guild, decision.Changes, "Roles held in the game");
+			}
+			catch (Exception exception) when (exception is HttpException or HttpRequestException or TimeoutException)
+			{
+				logger.LogWarning("[Discord] Could not update {Member}'s mapped roles: {Reason}", member.Username, exception.Message);
+			}
 		}
 	}
 
 	private async Task ObservedAsync(SocketGuildUser member, CancellationToken cancellationToken)
 	{
-		var mappings = MappingsIn(member.Guild);
+		var mappings = await MappingsInAsync(member.Guild, cancellationToken);
 		if (member.IsBot || mappings.Count == 0)
 		{
 			return;
