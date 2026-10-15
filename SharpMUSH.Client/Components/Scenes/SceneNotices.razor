@@ -25,17 +25,26 @@
 @code {
     [Parameter, EditorRequired] public required string SceneId { get; set; }
 
+    /// <summary>The character reading. Switching character keeps the page mounted, and one character's
+    /// notices are not the next one's.</summary>
+    [Parameter] public string? ViewerName { get; set; }
+
     private readonly List<SceneEventMessage> _notices = [];
 
     private string? _shownScene;
 
+    private string? _shownViewer;
+
     protected override void OnInitialized() => SceneHub.OnSceneEventReceived += OnSceneEvent;
 
-    // The page is reused when the route moves to another scene: the last scene's notices go with it.
+    // The page is reused when the route moves to another scene or the reader switches character: the
+    // notices shown so far go with it.
     protected override void OnParametersSet()
     {
-        if (string.Equals(_shownScene, SceneId, StringComparison.Ordinal)) return;
+        if (string.Equals(_shownScene, SceneId, StringComparison.Ordinal)
+            && string.Equals(_shownViewer, ViewerName, StringComparison.Ordinal)) return;
         _shownScene = SceneId;
+        _shownViewer = ViewerName;
         _notices.Clear();
     }
 

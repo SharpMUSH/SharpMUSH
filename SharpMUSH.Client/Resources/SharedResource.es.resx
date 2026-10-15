@@ -6167,4 +6167,10 @@
     <value>Recibe notificaciones en este teléfono u ordenador cuando el portal está cerrado</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Solo tú ves esto.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Avisos para ti</value>
+  </data>
 </root>

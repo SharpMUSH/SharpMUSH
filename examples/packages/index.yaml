@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.6.0
+    version: 1.6.1
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -115,7 +115,7 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.0.0
+    version: 1.0.2
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: bboards/
     name: BBoards
@@ -175,7 +175,7 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.0
+    version: 1.0.1
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
   - path: roster-jobs/
     name: Roster applications in jobs

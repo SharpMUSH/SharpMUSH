@@ -89,7 +89,7 @@ else
             <div class="scene-live-banner" role="status">@Loc["RolSceneLiveFeedDown"]</div>
         }
 
-        <SceneNotices SceneId="@Id" />
+        <SceneNotices SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" />
 
         @* column-reverse keeps the story at its newest pose as poses arrive, as Play's does. *@
         <div class="scene-live-scroll" data-input-region>

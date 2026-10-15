@@ -6167,4 +6167,10 @@
     <value>Primește notificări pe acest telefon sau computer când portalul este închis</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Doar tu vezi asta.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notificări pentru tine</value>
+  </data>
 </root>

@@ -202,18 +202,24 @@ public class StatusIntegrationTests
 			// A short room name keeps Location to one line, so only the Status cell wraps and Unwrapped reads it whole.
 			await God($"@name {await God($"think loc(#{ann.DbRef.Number})")}=GaR");
 
-			// Only staff who change the game's configuration change the statuses on offer.
-			await Assert.That(await As(ann, "+status/add scene=x")).Contains("Only staff who change the game's configuration");
-			await Assert.That(await As(ann, "+status/options lfrp/hours=1")).Contains("Only staff who change the game's configuration");
-			await Assert.That(await As(admin, "+status/add scene=In a scene, but come and join.")).Contains("Added scene.");
-			await Assert.That(await As(admin, "+status/add scene=again")).Contains("There is already a status called scene.");
-			await Assert.That(await As(admin, "+status/add two words=x")).Contains("one word of up to 20 letters");
-			await Assert.That(await As(admin, "+status/options scene/tag=Open scene")).Contains("scene shows as Open scene.");
-			await Assert.That(await As(admin, "+status/options scene/hours=1")).Contains("It lasts 1 hour.");
-			await Assert.That(await As(admin, "+status/options scene/hours=x")).Contains("Hours are a whole number");
-			await Assert.That(await As(admin, "+status/options scene/colour=red")).Contains("A status has hours, logoff, tag and means.");
-			await Assert.That(await As(admin, "+status/options scene/logoff=on")).Contains("It lasts 1 hour or until you log off.");
-			await Assert.That(await As(admin, "+status/options scene/logoff=off")).Contains("It lasts 1 hour.");
+			// Staff who change the game's configuration change the statuses on offer, a +config table.
+			await Assert.That(await As(ann, "+config/add status/statuses/scene=x")).Contains("Changing status/statuses needs the config.admin permission.");
+			await Assert.That(await As(ann, "+config status/statuses/lfrp/lasts=1h")).Contains("Changing status/statuses needs the config.admin permission.");
+			await Assert.That(await As(admin, "+config/add status/statuses/scene=In a scene, but come and join.")).Contains("Added status/statuses/scene.");
+			await Assert.That(await As(admin, "+config/add status/statuses/scene=again")).Contains("status/statuses already has scene.");
+			await Assert.That(await As(admin, "+config/add status/statuses/two words=x")).Contains("An entry's name is letters, digits, - and _.");
+			await Assert.That(await As(admin, $"+config/add status/statuses/{new string('a', 21)}=x")).Contains("An entry's name must match");
+			await Assert.That(await As(admin, "+config/add status/statuses/quiet")).Contains("+config/add status/statuses/quiet=<means>");
+			await Assert.That(await As(admin, "+config status/statuses/scene/tag=Open scene")).Contains("status/statuses/scene/tag is now Open scene, was none.");
+			await Assert.That(await As(admin, "+config status/statuses/scene/lasts=1h")).Contains("status/statuses/scene/lasts is now 1h, was 0s.");
+			await Assert.That(await As(admin, "+config status/statuses/scene/lasts=x")).Contains("Give a length of time");
+			await Assert.That(await As(admin, "+config status/statuses/scene/colour=red")).Contains("Its fields are means, tag, lasts, and logoff.");
+			await Assert.That(await As(admin, "+config status/statuses/scene/logoff=yes")).Contains("status/statuses/scene/logoff is now yes, was no.");
+			await Assert.That(await As(ann, "+status")).Contains("1h or logoff");
+			await As(admin, "+config/reset status/statuses/scene/logoff");
+			await Assert.That(await God($"think get({Store}/STATUS`SCENE`LASTS):[get({Store}/STATUS`SCENE`LOGOFF)]")).IsEqualTo("3600:0");
+			await Assert.That(await As(bo, "+config status/statuses")).Contains("scene").And.Contains("Tag: Open scene");
+			await Assert.That(await As(bo, "+config status/statuses/scene")).Contains("Text, from 1 to 200").And.Contains("Ends at logoff");
 			await Assert.That(await As(ann, "+status")).Contains("scene").And.Contains("In a scene, but come and join.").And.Contains("1h");
 			await Assert.That(await As(ann, "+status scene=The tavern")).Contains("Your status: Open scene: The tavern")
 				.And.Contains("It lasts 1 hour.");
@@ -231,7 +237,8 @@ public class StatusIntegrationTests
 			await As(admin, "+config/reset status/line-length");
 
 			// Removing a status takes it from everyone who had it.
-			await Assert.That(await As(admin, "+status/remove scene")).Contains("Removed scene, and cleared it from 1 player.");
+			var removed = await As(admin, "+config/remove status/statuses/scene");
+			await Assert.That(removed).Contains("Removed status/statuses/scene.").And.Contains("Cleared scene from 1 player.");
 			await Assert.That(await God($"think lattr({Store}/STATUS`SCENE*)")).IsEqualTo(string.Empty);
 			await Assert.That(await As(ann, "+status")).Contains("You have no status.").And.DoesNotContain("Open scene");
 			await Assert.That(Unwrapped(await As(bo, "+who"))).DoesNotContain("Openscene");
@@ -256,7 +263,8 @@ public class StatusIntegrationTests
 			await Assert.That(await As(ann, "+status/list/0")).Contains("Pages start at 1");
 
 			await Assert.That(await As(ann, "+help status")).Contains("+status lfrp=").And.Contains("+status/list");
-			await Assert.That(await As(ann, "+help status staff")).Contains("+status/options <name>/hours=<hours>");
+			await Assert.That(await As(ann, "+help status staff")).Contains("+config status/statuses/<name>/lasts=<time>");
+			await Assert.That(await As(ann, "+status/options lfrp/hours=1")).Contains("+status has no /options switch.");
 		}
 		finally
 		{
