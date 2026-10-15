@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
 using SignalRState = Microsoft.AspNetCore.SignalR.Client.HubConnectionState;
 using LibraryState = SharpMUSH.Library.Services.Interfaces.HubConnectionState;
@@ -20,6 +21,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 {
 	private readonly IGameHubConnectionFactory _factory;
 	private readonly ILogger<ConnectionStateService> _logger;
+	private readonly ServerInfoService? _serverInfo;
 
 	private IGameHubConnection? _hub;
 	// Phase 9: scene realtime now rides a SEPARATE connection to the plugin-owned hub at /hubs/scene
@@ -56,12 +58,18 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// <inheritdoc/>
 	public bool IsSceneLive => _sceneHub?.State == SignalRState.Connected;
 
+	/// <param name="serverInfo">
+	/// What the game has on. The scene connection is opened only while it has the Scene System: without the Scene
+	/// plugin nothing serves <c>/hubs/scene</c>. Null (tests that build the service by hand) opens it.
+	/// </param>
 	public ConnectionStateService(
 		IGameHubConnectionFactory factory,
-		ILogger<ConnectionStateService> logger)
+		ILogger<ConnectionStateService> logger,
+		ServerInfoService? serverInfo = null)
 	{
 		_factory = factory;
 		_logger = logger;
+		_serverInfo = serverInfo;
 	}
 
 	/// <inheritdoc/>
@@ -288,6 +296,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// </summary>
 	private async Task ConnectSceneHubAsync()
 	{
+		if (_serverInfo is not null && !await _serverInfo.HasFeatureAsync(GameFeatures.Scenes)) return;
 		if (_sceneStart is { } pending)
 		{
 			await pending;

@@ -3916,6 +3916,10 @@
     <value>Начните с чтения wiki, просмотра персонажей или участия в сцене.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Начните с чтения wiki или просмотра персонажей.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Читать wiki</value>
     <comment>MT</comment>

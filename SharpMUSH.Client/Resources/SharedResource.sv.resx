@@ -3916,6 +3916,10 @@
     <value>Kom igång genom att läsa wikin, bläddra bland karaktärer eller hoppa in i en scen.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Kom igång genom att läsa wikin eller bläddra bland karaktärer.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Läs wikin</value>
     <comment>MT</comment>

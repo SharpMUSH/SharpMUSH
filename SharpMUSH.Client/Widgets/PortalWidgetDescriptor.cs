@@ -20,6 +20,7 @@ namespace SharpMUSH.Client.Widgets;
 /// should carry <c>[WidgetConfigKey]</c> — <c>BuiltInWidgetCatalogueTests</c> fails a config model
 /// that documents no keys, and the localization tests fail a key with no resx description.
 /// </param>
+/// <param name="Feature">The optional application the widget shows (a <c>GameFeatures</c> id), or null for none.</param>
 public sealed record PortalWidgetDescriptor(
 	string Name,
 	string DisplayName,
@@ -28,4 +29,5 @@ public sealed record PortalWidgetDescriptor(
 	Type ComponentType,
 	[property: DynamicallyAccessedMembers(
 		DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicConstructors)]
-	Type? ConfigType = null) : IPortalWidget;
+	Type? ConfigType = null,
+	string? Feature = null) : IPortalWidget;
