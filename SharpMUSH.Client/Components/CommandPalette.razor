@@ -114,6 +114,24 @@
                         </li>
                     }
                 </ul>
+                @if (_query.Length == 0 && _server is { } server && (server.Invalid.Count > 0 || server.Dropped > 0))
+                {
+                    @* Only someone who may examine an object is told what is wrong with its entries. *@
+                    <div class="kit-palette-note kit-palette-problems">
+                        @if (server.Invalid.Count > 0)
+                        {
+                            <div>@Loc["NavPaletteInvalid"]</div>
+                            @foreach (var problem in server.Invalid)
+                            {
+                                <div class="kit-palette-problem">@problem</div>
+                            }
+                        }
+                        @if (server.Dropped > 0)
+                        {
+                            <div>@string.Format(Loc["NavPaletteDropped"], server.Dropped)</div>
+                        }
+                    </div>
+                }
             }
             </MudFocusTrap>
         </div>

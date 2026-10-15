@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Pokreni međuspremnik</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Stavke palete koje nisu valjane:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} stavki palete izostavljeno je jer su prešle ograničenja.</value>
+  </data>
 </root>

@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Kør bufferen</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Paletposter, der ikke er gyldige:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} paletposter blev udeladt, fordi grænsen var nået.</value>
+  </data>
 </root>

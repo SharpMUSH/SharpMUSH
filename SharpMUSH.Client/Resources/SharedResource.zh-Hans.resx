@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>运行缓冲区</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>无效的命令面板条目：</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>有 {0} 个命令面板条目因超出限制而未显示。</value>
+  </data>
 </root>

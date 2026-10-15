@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Rulează bufferul</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Intrări de paletă care nu sunt valide:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} intrări de paletă au fost omise, peste limite.</value>
+  </data>
 </root>

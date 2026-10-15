@@ -5483,4 +5483,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Exécuter le tampon</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Entrées de palette non valides :</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} entrées de palette ont été omises, au-delà des limites.</value>
+  </data>
 </root>

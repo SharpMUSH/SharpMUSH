@@ -172,3 +172,14 @@
 	color: var(--text-faint);
 	margin-bottom: 4px;
 }
+
+.kit-palette-problems {
+	border-top: 1px solid var(--border-soft);
+	max-height: 20vh;
+	overflow-y: auto;
+}
+
+.kit-palette-problem {
+	font-family: var(--font-mono);
+	color: var(--text-dim);
+}

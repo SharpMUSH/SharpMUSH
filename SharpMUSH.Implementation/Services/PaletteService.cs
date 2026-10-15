@@ -32,6 +32,7 @@ public sealed class PaletteService(
 	ISystemNames systems,
 	IInputSessionService inputs,
 	IAttributeService attributes,
+	IPermissionService permissions,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : IPaletteService
 {
 	public async ValueTask<PaletteResponse> ResolveAsync(AnySharpObject character, Guid? inputSession = null,
@@ -108,8 +109,15 @@ public sealed class PaletteService(
 
 				var found = await mediator.Send(new GetPaletteEntriesQuery(holder), cancellationToken);
 				if (found.Entries.Count == 0 && found.Invalid.Count == 0) continue;
-				invalid.AddRange(found.Invalid.Select(reason => $"{reference}/{reason}"));
-				dropped += found.Dropped;
+
+				// What is wrong with an object's entries is told only to someone who may examine it.
+				var examines = (found.Invalid.Count > 0 || found.Entries.Any(entry => entry.Attribute is not null))
+					&& await permissions.CanExamine(character, holder);
+				if (examines)
+				{
+					invalid.AddRange(found.Invalid.Select(reason => $"{reference}/{reason}"));
+					dropped += found.Dropped;
+				}
 
 				// Someone else's personal entries are theirs. The player's own need not answer $-commands
 				// (players are NO_COMMAND by default) unless an entry runs one of them.
@@ -147,7 +155,7 @@ public sealed class PaletteService(
 							.Select(command => command.Attribute.LongName.ToUpperInvariant())];
 						if (!commandNames.Contains(attribute))
 						{
-							invalid.Add($"{reference}/{entry.Name}: {attribute} is not a $-command");
+							if (examines) invalid.Add($"{reference}/{entry.Name}: {attribute} is not a $-command");
 							continue;
 						}
 					}

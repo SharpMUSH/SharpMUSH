@@ -109,8 +109,18 @@ public class PaletteServiceTests
 			var offered = palette.Entries.Where(entry => entry.Id.StartsWith(scene.Thing.Object().DBRef + "/")).Select(entry => entry.Label).ToArray();
 
 			await Assert.That(offered).IsEquivalentTo(new[] { "Open" });
-			await Assert.That(palette.Invalid).Contains($"{scene.Thing.Object().DBRef}/GONE: CMD`GONE is not a $-command");
-			await Assert.That(palette.Invalid).Contains($"{scene.Thing.Object().DBRef}/BROKEN: not a JSON object");
+			await Assert.That(palette.Invalid).IsEmpty().Because("the player may not examine the thing");
+
+			// Someone who may examine it is told what is wrong.
+			using (var budget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+			using (budget.Enter())
+			{
+				await WebAppFactoryArg.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@set {scene.Thing.Object().DBRef}=VISUAL"));
+			}
+
+			var examined = await Palette.ResolveAsync(scene.Player);
+			await Assert.That(examined.Invalid).Contains($"{scene.Thing.Object().DBRef}/GONE: CMD`GONE is not a $-command");
+			await Assert.That(examined.Invalid).Contains($"{scene.Thing.Object().DBRef}/BROKEN: not a JSON object");
 		}
 		finally
 		{

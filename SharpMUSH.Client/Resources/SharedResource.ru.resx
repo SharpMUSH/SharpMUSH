@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Выполнить буфер</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Недопустимые записи палитры:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} записей палитры пропущено из-за ограничений.</value>
+  </data>
 </root>

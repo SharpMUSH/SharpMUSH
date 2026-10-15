@@ -8035,4 +8035,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Run the buffer</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Palette entries that are not valid:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} palette entries were left out, past the limits.</value>
+  </data>
 </root>

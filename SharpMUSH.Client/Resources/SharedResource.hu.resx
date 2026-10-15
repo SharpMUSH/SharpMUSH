@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Puffer futtatása</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Érvénytelen palettabejegyzések:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} palettabejegyzés kimaradt, mert túllépte a korlátokat.</value>
+  </data>
 </root>

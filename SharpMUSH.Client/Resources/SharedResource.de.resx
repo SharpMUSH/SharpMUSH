@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Puffer ausführen</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Ungültige Paletteneinträge:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} Paletteneinträge wurden ausgelassen, weil das Limit erreicht war.</value>
+  </data>
 </root>

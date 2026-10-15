@@ -354,4 +354,18 @@ public class CommandPaletteTests : BunitContext
 		await Assert.That(Labels(cut)).Contains("page");
 		await Assert.That(Labels(cut)).Contains("Help on page");
 	}
+
+	[Test]
+	public async Task EntriesThatAreNotValid_AreListedBelowTheEmptyPalette()
+	{
+		_palette.Response = Response([]) with { Invalid = ["#10/BROKEN: not a JSON object"], Dropped = 3 };
+		var cut = RenderOpen();
+		cut.WaitForElement(".kit-palette-problems");
+
+		await Assert.That(cut.Find(".kit-palette-problem").TextContent).IsEqualTo("#10/BROKEN: not a JSON object");
+		await Assert.That(cut.Find(".kit-palette-problems").TextContent).Contains("3 palette entries were left out");
+
+		await cut.Find("input").InputAsync("who");
+		await Assert.That(cut.FindAll(".kit-palette-problems")).IsEmpty();
+	}
 }

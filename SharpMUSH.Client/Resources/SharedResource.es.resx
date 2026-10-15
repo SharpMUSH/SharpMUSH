@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Ejecutar el búfer</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Entradas de la paleta que no son válidas:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>Se omitieron {0} entradas de la paleta por superar los límites.</value>
+  </data>
 </root>

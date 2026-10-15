@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Buffer uitvoeren</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Paletitems die niet geldig zijn:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} paletitems zijn weggelaten omdat de limiet bereikt was.</value>
+  </data>
 </root>

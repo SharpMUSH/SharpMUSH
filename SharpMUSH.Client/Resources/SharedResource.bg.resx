@@ -6188,4 +6188,10 @@
   <data name="NavPaletteRunBuffer" xml:space="preserve">
     <value>Изпълни буфера</value>
   </data>
+  <data name="NavPaletteInvalid" xml:space="preserve">
+    <value>Невалидни записи в палитрата:</value>
+  </data>
+  <data name="NavPaletteDropped" xml:space="preserve">
+    <value>{0} записи в палитрата бяха пропуснати заради ограниченията.</value>
+  </data>
 </root>
