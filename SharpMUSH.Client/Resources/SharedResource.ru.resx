@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Показать ещё</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Хронология</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Без даты</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Смотреть все</value>
   </data>
@@ -6152,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Изображение с предупреждением о содержимом не попадает в библиотеку изображений. Уберите предупреждение, чтобы поделиться им.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Уведомления</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Получайте уведомления на этом телефоне или компьютере, когда портал закрыт</value>
+    <comment>MT</comment>
   </data>
 </root>

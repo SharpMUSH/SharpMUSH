@@ -141,26 +141,30 @@ public static class SceneFunctions
 
 	/// <summary>
 	/// The details <paramref name="scene"/> has a value for: the catalogue's in its order, then any other key a player
-	/// set, by name. A built-in field kept in the bag (the title, the pitch) is not a detail.
+	/// set, by name. A built-in field kept in the bag (the title, the pitch) is not a detail, and neither is one the
+	/// catalogue keeps hidden: scene(&lt;id&gt;,&lt;key&gt;) still reads it.
 	/// </summary>
 	internal static IEnumerable<string> DetailKeys(Contracts.Scene scene, SceneDetailCatalogue catalogue)
 	{
-		var set = scene.Meta.Where(m => !string.IsNullOrWhiteSpace(m.Value) && SceneDetails.Normalize(m.Key) is string)
+		var hidden = catalogue.Details.Where(d => d.Hidden).Select(d => d.Key).ToHashSet(StringComparer.Ordinal);
+		var set = scene.Meta.Where(m => !string.IsNullOrWhiteSpace(m.Value) && SceneDetails.Normalize(m.Key) is string && !hidden.Contains(m.Key))
 			.Select(m => m.Key).ToHashSet(StringComparer.Ordinal);
 		var listed = catalogue.Details.Select(d => d.Key).Where(set.Contains).ToList();
 		return listed.Concat(set.Except(listed).Order(StringComparer.Ordinal));
 	}
 
 	/// <summary>
-	/// scenelist([&lt;filter&gt;][, &lt;from&gt;][, &lt;to&gt;])
+	/// scenelist([&lt;filter&gt;][, &lt;from&gt;][, &lt;to&gt;][, &lt;player&gt;])
 	/// Returns a space-separated list of scene ids. Filter: active | recent |
 	/// scheduled | upcoming | mine (default recent). upcoming is scheduled without the scenes
 	/// that never started and are more than an hour past their time. The optional UTC-millis
-	/// from/to bounds window the scheduled and upcoming filters.
+	/// from/to bounds window the scheduled and upcoming filters. At most 50 scenes, the most recent. With mine,
+	/// &lt;player&gt; lists every scene that player belongs to rather than the reader's: still only the ones the reader
+	/// may see.
 	/// </summary>
-	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 3,
+	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 4,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["filter", "from", "to"])]
+		ParameterNames = ["filter", "from", "to", "player"])]
 	public static async ValueTask<CallState> SceneList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -202,7 +206,18 @@ public static class SceneFunctions
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var viewer = await ViewerDbrefAsync(parser);
-		var scenes = await service.ListScenesAsync(filter, viewer, from, to);
+		var count = 50;
+		if (filter == "mine" && args.TryGetValue("3", out var playerArg) && playerArg.Message.ToPlainText().Trim() is { Length: > 0 } player)
+		{
+			if (await SceneLocate.ObjIdAsync(parser, await SceneLocate.PlayerOrSelf(parser, player)) is not { } member)
+			{
+				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+			}
+			// A player's whole history, which a timeline is drawn from, not the 50 most recent.
+			(viewer, count) = (member, int.MaxValue);
+		}
+
+		var scenes = await service.ListScenesAsync(filter, viewer, from, to, count);
 
 		// Every other read function gates on SceneVisibleToAsync, so a private scene answers
 		// #-1 PERMISSION — but the storage's `active`/`finished`/`recent`/`scheduled` filters carry no
@@ -675,7 +690,8 @@ public static class SceneFunctions
 
 	/// <summary>
 	/// scenedetail(&lt;key&gt;[, &lt;field&gt;])
-	/// One field of a scene detail: label (the default), hint, choices (split by |), many, listed, tone or order.
+	/// One field of a scene detail: label (the default), hint, choices (split by |), many, listed, tone, order, hidden or
+	/// sort.
 	/// </summary>
 	[SharpFunction(Name = "scenedetail", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -703,6 +719,8 @@ public static class SceneFunctions
 			"listed" => detail.Listed ? "1" : "0",
 			"tone" => detail.Tone,
 			"order" => detail.Order.ToString(System.Globalization.CultureInfo.InvariantCulture),
+			"hidden" => detail.Hidden ? "1" : "0",
+			"sort" => detail.Sort,
 			_ => NoSuchDetailField,
 		});
 	}
@@ -781,6 +799,7 @@ public static class SceneFunctions
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var scene = await service.CreateSceneAsync(room, owner, title);
+		await SceneStatusEvent.CreatedAsync(parser, scene);
 		return new CallState(scene.Id);
 	}
 
@@ -805,12 +824,14 @@ public static class SceneFunctions
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(service, id);
+		var statusBefore = SceneStatusEvent.IsStatus(key) ? await SceneStatusEvent.StatusOfAsync(service, id) : string.Empty;
 		if (await service.SetSceneMetaAsync(id, key, value) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
 		await SceneRoomRefresh.AfterSetAsync(parser, key, roomBefore, scene);
+		await SceneStatusEvent.AfterSetAsync(parser, key, statusBefore, scene);
 		return new CallState(scene.Id);
 	}
 

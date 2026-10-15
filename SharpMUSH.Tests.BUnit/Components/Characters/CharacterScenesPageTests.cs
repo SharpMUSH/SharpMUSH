@@ -69,6 +69,50 @@ public class CharacterScenesPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task NoTimeline_WithoutADetailThatOrdersScenes()
+	{
+		_fake.Extra[FirstPage] = Scenes(1, 2);
+		_fake.Extra["/api/scenes/details"] = """
+			{"details":[{"key":"verse","label":"Verse","hint":"","choices":[],"many":false,"listed":true,"order":10}],"problems":[]}
+			""";
+
+		var catalogue = await Services.GetRequiredService<SharpMUSH.Client.Services.SceneDetailService>().LoadAsync();
+		await Assert.That(catalogue.Details.Count).IsEqualTo(1).Because("the page reads the catalogue already loaded");
+
+		var cut = RenderPage();
+		await Assert.That(cut.FindAll(".kit-chip").Select(c => c.TextContent))
+			.IsEquivalentTo(new[] { "All", "Live", "Upcoming", "Finished" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task TheTimeline_ListsFinishedScenesInTheirDetailsOrder_EachUnderItsDate()
+	{
+		_fake.Extra[FirstPage] = Scenes(1, 2);
+		_fake.Extra["/api/scenes/details"] = """
+			{"details":[
+				{"key":"icdate","label":"IC date","hint":"","choices":[],"many":false,"listed":false,"order":1,"sort":"icsecs"},
+				{"key":"icsecs","label":"IC moment","hint":"","choices":[],"many":false,"listed":false,"order":2,"hidden":true}],"problems":[]}
+			""";
+		_fake.Extra["/api/scenes?participant=%23312&count=26&state=finished&sort=icdate"] = """
+			[{"id":"9","status":"finished","isPublic":true,"isTempRoom":false,"startedAt":1,"lastActivityAt":5,"poseCount":3,"ownerName":"Ilsa","starterName":"Ilsa","roomName":"Docks",
+			  "meta":{"title":"Before the War","icdate":"Saturday, 14 March 2026, 19:30","icsecs":"1773516600"}},
+			 {"id":"4","status":"finished","isPublic":true,"isTempRoom":false,"startedAt":1,"lastActivityAt":9,"poseCount":3,"ownerName":"Ilsa","starterName":"Ilsa","roomName":"Inn",
+			  "meta":{"title":"Old Business"}}]
+			""";
+
+		var cut = RenderPage();
+		cut.WaitForAssertion(() => cut.FindAll(".kit-chip").Single(c => c.TextContent == "Timeline"), TimeSpan.FromSeconds(5));
+
+		await cut.FindAll(".kit-chip").Single(c => c.TextContent == "Timeline").ClickAsync(new());
+		cut.WaitForState(() => cut.FindAll(".char-scenes-date").Count == 2, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".char-scenes-dated").Select(r => (r.QuerySelector(".char-scenes-date")!.TextContent, r.QuerySelector(".scene-card-title")!.TextContent)))
+			.IsEquivalentTo(new[] { ("Saturday, 14 March 2026, 19:30", "Before the War"), ("Not dated", "Old Business") },
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.Find(".char-scenes-undated").TextContent).IsEqualTo("Not dated");
+	}
+
+	[Test]
 	public async Task ACharacterNobodyIsCalled_SaysSo()
 	{
 		var cut = RenderPage("Nobody");

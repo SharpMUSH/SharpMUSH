@@ -10,6 +10,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Push;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -108,6 +109,10 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private ISecretStore Secrets { get; }
 
+	private IWebPushService WebPush { get; }
+
+	private IPortalPresence PortalPresence { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -172,6 +177,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IGameMessageService gameMessages,
 		IConfigOptionWriter configWriter,
 		ISecretStore secrets,
+		IWebPushService webPush,
+		IPortalPresence portalPresence,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -228,6 +235,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		MessageService = gameMessages;
 		ConfigWriter = configWriter;
 		Secrets = secrets;
+		WebPush = webPush;
+		PortalPresence = portalPresence;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 
