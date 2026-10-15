@@ -260,7 +260,7 @@ public class GameFeatureServiceTests
 	{
 		var game = new Game("scene");
 
-		var result = await game.Features().ApplyPackagesAsync(["chargen"], CancellationToken.None);
+		var result = await game.Features().ApplyPackagesAsync(["no-such-package"], CancellationToken.None);
 
 		await Assert.That(result is Error<string>).IsTrue();
 		await Assert.That(game.Calls).IsEmpty();
