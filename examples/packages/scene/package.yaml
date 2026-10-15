@@ -1,6 +1,6 @@
 format: 1.7
 package: scene
-version: 1.10.0
+version: 1.11.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -684,7 +684,7 @@ objects:
       # pattern for all three: $+scene/pause *=* would also match here, and both would run.
       CMD`PAUSE`ID:
         value: |-
-          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert strmatch(setr(st,scene(%q<SceneID>,status)),active)=@pemit %#=[notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<SceneID>,%q<st>),warn)]; think [setq(When,trim(after(%1,chr(61))))][setq(At,if(strlen(%q<When>),u(%!/FUN`SCHED_WHEN,%q<When>)))]; @assert or(not(strlen(%q<When>)),isint(%q<At>))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_TIME)],warn)]; @assert or(not(strlen(%q<When>)),gt(%q<At>,mul(secs(),1000)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_PAST_TIME)],warn)]; @scene/set %q<SceneID>/status=paused; @trigger %!/HERE`SYNC=[scene(%q<SceneID>,room)]; @scene/set %q<SceneID>/scheduledfor=%q<At>; @pemit %#=[notice(SCENE,Scene %q<SceneID> paused[if(strlen(%q<At>),%b[chr(40)]rescheduled for [convsecs(div(%q<At>,1000))][chr(41)])]. It is on the schedule until +scene/start %q<SceneID> resumes it.,ok)]
+          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert strmatch(setr(st,scene(%q<SceneID>,status)),active)=@pemit %#=[notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<SceneID>,%q<st>),warn)]; think [setq(When,trim(after(%1,chr(61))))][setq(At,if(strlen(%q<When>),u(%!/FUN`SCHED_WHEN,%q<When>,u(%!/FUN`ZONE,%#))))]; @assert or(not(strlen(%q<When>)),isint(%q<At>))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_TIME)],warn)]; @assert or(not(strlen(%q<When>)),gt(%q<At>,mul(secs(),1000)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_PAST_TIME)],warn)]; @scene/set %q<SceneID>/status=paused; @trigger %!/HERE`SYNC=[scene(%q<SceneID>,room)]; @scene/set %q<SceneID>/scheduledfor=%q<At>; @pemit %#=[notice(SCENE,Scene %q<SceneID> paused[if(strlen(%q<At>),%b[chr(40)]rescheduled for [u(%!/FUN`AT,%q<At>,u(%!/FUN`ZONE,%#))][chr(41)])]. It is on the schedule until +scene/start %q<SceneID> resumes it.,ok)]
         flags: [REGEXP]
 
       CMD`FINISH:
@@ -942,22 +942,23 @@ objects:
         flags: [REGEXP]
 
       # ---- scheduling (+scene/schedule ...): roomless future scenes --------------
-      # FUN`SCHED_WHEN(<when>) is UTC milliseconds, or #-1 when it can't be read. It takes what +job/due takes,
-      # so players have one way to write a time: +<n>h, +<n>d or +<n>w from now, or a date convtime() reads
-      # (2026-12-31 20:00); and epoch seconds, which the portal sends. Every verb that takes a time refuses one
+      # FUN`SCHED_WHEN(<when>[, <zone>]) is UTC milliseconds, or #-1 when it can't be read. It takes what
+      # +job/due takes, so players have one way to write a time: +<n>h, +<n>d or +<n>w from now, or a date
+      # convtime() reads (2026-12-31 20:00), read in <zone> (FUN`ZONE, the player's own); and epoch seconds,
+      # which the portal sends. Every verb that takes a time refuses one
       # it can't read, or one already past, before it writes anything: a scene scheduled for no time, or for
       # one gone, was on no list its owner could find it on.
       # Rescheduling a running scene pauses it: a scene with a time to come is not live. The schedule
       # (scenelist(scheduled)) lists every paused scene, with or without a time.
       FUN`SCHED_WHEN: |-
-        [setq(_x,edit(trim(lcstr(%0)),+,,%b,))][switch(1,not(strlen(%q<_x>)),#-1,cand(isint(left(%q<_x>,dec(strlen(%q<_x>)))),match(h d w,right(%q<_x>,1))),mul(add(secs(),mul(left(%q<_x>,dec(strlen(%q<_x>))),switch(right(%q<_x>,1),h,3600,w,604800,86400))),1000),isint(trim(%0)),mul(trim(%0),1000),isint(setr(_c,convtime(trim(%0)))),mul(%q<_c>,1000),#-1)]
+        [setq(_x,edit(trim(lcstr(%0)),+,,%b,))][switch(1,not(strlen(%q<_x>)),#-1,cand(isint(left(%q<_x>,dec(strlen(%q<_x>)))),match(h d w,right(%q<_x>,1))),mul(add(secs(),mul(left(%q<_x>,dec(strlen(%q<_x>))),switch(right(%q<_x>,1),h,3600,w,604800,86400))),1000),isint(trim(%0)),mul(trim(%0),1000),isint(setr(_c,if(strlen(%1),convtime(trim(%0),%1),convtime(trim(%0))))),mul(%q<_c>,1000),#-1)]
       CMD`SCHEDULE:
         value: |-
-          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert cand(pos(chr(61),%1),strlen(setr(Title,trim(before(%1,chr(61))))))=@pemit %#=[notice(SCENE,[get(%!/DATA`USAGE`SCHEDULE)],warn)]; @assert isint(setr(At,u(%!/FUN`SCHED_WHEN,after(%1,chr(61)))))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_TIME)],warn)]; @assert gt(%q<At>,mul(secs(),1000))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_PAST_TIME)],warn)]; @assert setr(SceneID,scenecreate(,%#,%q<Title>)); @scene/member %q<SceneID>/owner=%#; @scene/set %q<SceneID>/status=scheduled; @scene/set %q<SceneID>/scheduledfor=%q<At>; @pemit %#=[notice(SCENE,Scheduled scene %q<SceneID> "%q<Title>" for [convsecs(div(%q<At>,1000))].,ok)]
+          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert cand(pos(chr(61),%1),strlen(setr(Title,trim(before(%1,chr(61))))))=@pemit %#=[notice(SCENE,[get(%!/DATA`USAGE`SCHEDULE)],warn)]; @assert isint(setr(At,u(%!/FUN`SCHED_WHEN,after(%1,chr(61)),u(%!/FUN`ZONE,%#))))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_TIME)],warn)]; @assert gt(%q<At>,mul(secs(),1000))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_PAST_TIME)],warn)]; @assert setr(SceneID,scenecreate(,%#,%q<Title>)); @scene/member %q<SceneID>/owner=%#; @scene/set %q<SceneID>/status=scheduled; @scene/set %q<SceneID>/scheduledfor=%q<At>; @pemit %#=[notice(SCENE,Scheduled scene %q<SceneID> "%q<Title>" for [u(%!/FUN`AT,%q<At>,u(%!/FUN`ZONE,%#))].,ok)]
         flags: [REGEXP]
       CMD`RESCHEDULE:
         value: |-
-          $(?is)^\+scene/res(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert cand(pos(chr(61),%1),strlen(setr(SceneID,trim(before(%1,chr(61))))))=@pemit %#=[notice(SCENE,[get(%!/DATA`USAGE`RESCHEDULE)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert not(match(finished cancelled,setr(st,scene(%q<SceneID>,status))))=@pemit %#=[notice(SCENE,Scene %q<SceneID> is %q<st>. Only a scene still to come can be rescheduled.,warn)]; @assert isint(setr(At,u(%!/FUN`SCHED_WHEN,after(%1,chr(61)))))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_TIME)],warn)]; @assert gt(%q<At>,mul(secs(),1000))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_PAST_TIME)],warn)]; @scene/set %q<SceneID>/scheduledfor=%q<At>; @scene/set %q<SceneID>/status=[switch(%q<st>,active,paused,%q<st>)]; @trigger %!/HERE`SYNC=[scene(%q<SceneID>,room)]; @pemit %#=[notice(SCENE,Rescheduled scene %q<SceneID> for [convsecs(div(%q<At>,1000))].[if(strmatch(%q<st>,active),%bIt is paused until +scene/start %q<SceneID> resumes it.)],ok)]
+          $(?is)^\+scene/res(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert cand(pos(chr(61),%1),strlen(setr(SceneID,trim(before(%1,chr(61))))))=@pemit %#=[notice(SCENE,[get(%!/DATA`USAGE`RESCHEDULE)],warn)]; @assert not(strmatch(scene(%q<SceneID>,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %q<SceneID>,warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert not(match(finished cancelled,setr(st,scene(%q<SceneID>,status))))=@pemit %#=[notice(SCENE,Scene %q<SceneID> is %q<st>. Only a scene still to come can be rescheduled.,warn)]; @assert isint(setr(At,u(%!/FUN`SCHED_WHEN,after(%1,chr(61)),u(%!/FUN`ZONE,%#))))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_TIME)],warn)]; @assert gt(%q<At>,mul(secs(),1000))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_PAST_TIME)],warn)]; @scene/set %q<SceneID>/scheduledfor=%q<At>; @scene/set %q<SceneID>/status=[switch(%q<st>,active,paused,%q<st>)]; @trigger %!/HERE`SYNC=[scene(%q<SceneID>,room)]; @pemit %#=[notice(SCENE,Rescheduled scene %q<SceneID> for [u(%!/FUN`AT,%q<At>,u(%!/FUN`ZONE,%#))].[if(strmatch(%q<st>,active),%bIt is paused until +scene/start %q<SceneID> resumes it.)],ok)]
         flags: [REGEXP]
       # +scene/unschedule and +scene/cancel take a scene off the schedule for good: its time is cleared
       # and its status is `cancelled`, so it is in no list but the archive. (@scene/delete is the POSE
@@ -969,35 +970,36 @@ objects:
           $(?is)^\+scene/(?\:uns(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?|ca(?\:n(?\:c(?\:e(?\:l)?)?)?)?) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert not(strmatch(scene(%1,status),cancelled))=@pemit %#=[notice(SCENE,Scene %1 is already cancelled.,warn)]; @assert or(orflags(%#,Wz),not(match(active finished,scene(%1,status))))=@pemit %#=[notice(SCENE,Scene %1 is [scene(%1,status)]. Only a scene that has not started can be cancelled.,warn)]; @assert or(orflags(%#,Wz),not(scene(%1,posecount)))=@pemit %#=[notice(SCENE,Scene %1 has poses in it\, so only a wizard can cancel it.,error)]; @scene/set %1/scheduledfor=; @scene/set %1/status=cancelled; @trigger %!/HERE`SYNC=[scene(%1,room)]; @pemit %#=[notice(SCENE,Cancelled scene %1.,ok)]
         flags: [REGEXP]
       # The schedule reads like a calendar: scenes in time order, the day named on the first scene of
-      # each day, the scenes with no time last. One table, so the columns line up from day to day.
+      # each day, the scenes with no time last. One table, so the columns line up from day to day. %1 is
+      # the reader's zone (FUN`ZONE), so the days and times are theirs.
       FUN`SCHED_TABLE: |-
-        [setq(pday,)][datacolumns(u(%!/FUN`TABLE`OPTS,1|2|3|5|6,|||12,1|1|1|1|2|2,|||1),[ansi(h,Day)]%r[iter(%0,if(strmatch(setr(day,u(%!/FUN`SCHED_DAY,%i0)),%q<pday>),,[setq(pday,%q<day>)]%q<day>),,%r)],[ansi(h,Time)]%r[iter(%0,switch(setr(sw,scene(%i0,scheduledfor)),,-,timefmt($H:$M,div(%q<sw>,1000))),,%r)],>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Status)]%r[iter(%0,u(%!/FUN`SCHED_STATUS,%i0),,%r)],>[ansi(h,RSVP)]%r[iter(%0,words(scenemembers(%i0)),,%r)])]
+        [setq(pday,)][datacolumns(u(%!/FUN`TABLE`OPTS,1|2|3|5|6,|||12,1|1|1|1|2|2,|||1),[ansi(h,Day)]%r[iter(%0,if(strmatch(setr(day,u(%!/FUN`SCHED_DAY,%i0,%1)),%q<pday>),,[setq(pday,%q<day>)]%q<day>),,%r)],[ansi(h,Time)]%r[iter(%0,switch(setr(sw,scene(%i0,scheduledfor)),,-,u(%!/FUN`TIMEFMT,$H:$M,div(%q<sw>,1000),%1)),,%r)],>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Status)]%r[iter(%0,u(%!/FUN`SCHED_STATUS,%i0),,%r)],>[ansi(h,RSVP)]%r[iter(%0,words(scenemembers(%i0)),,%r)])]
       # A scheduled scene whose time has passed without it starting reads "late", as on the portal.
       FUN`SCHED_STATUS: |-
         [setq(sf,scene(%0,scheduledfor))][if(cand(strmatch(setr(st,scene(%0,status)),scheduled),strlen(%q<sf>),lt(%q<sf>,mul(secs(),1000))),late,%q<st>)]
-      # The day a scene falls on: "Sat Dec 12", with the year only when it is not this one.
+      # The day a scene falls on in zone %1: "Sat Dec 12", with the year only when it is not this one.
       FUN`SCHED_DAY: |-
-        [switch(setr(sw,scene(%0,scheduledfor)),,No time set,[timefmt($a $b,setr(ss,div(%q<sw>,1000)))] [add(timefmt($d,%q<ss>),0)][if(neq(timefmt($Y,%q<ss>),timefmt($Y,secs())),%b[timefmt($Y,%q<ss>)])])]
+        [switch(setr(sw,scene(%0,scheduledfor)),,No time set,[u(%!/FUN`TIMEFMT,$a $b,setr(ss,div(%q<sw>,1000)),%1)] [add(u(%!/FUN`TIMEFMT,$d,%q<ss>,%1),0)][if(neq(u(%!/FUN`TIMEFMT,$Y,%q<ss>,%1),u(%!/FUN`TIMEFMT,$Y,secs(),%1)),%b[u(%!/FUN`TIMEFMT,$Y,%q<ss>,%1)])])]
       # How far ahead +scene/upcoming looks unless asked for more. The portal's schedule shows them all.
       DATA`SCHEDULE_DAYS: |-
         30
       DATA`DENY_BAD_DAYS: |-
         How many days ahead? Give a whole number of 1 or more, or all.
-      # FUN`SCHED_RENDER(<days>|all). scenelist(upcoming) is the schedule in time order, untimed scenes
+      # FUN`SCHED_RENDER(<days>|all, <zone>). scenelist(upcoming) is the schedule in time order, untimed scenes
       # last, without a scene more than an hour past its time that never started, as on the portal.
       # The window keeps every scene due before its end: one a little past its time is "late" but may
       # still start, and an untimed one has no time to be beyond it. In
       # FUN`SCHED_TABLE, %q<pday> is the day of the row before, so a day is named only where it changes.
       FUN`SCHED_RENDER: |-
-        [setq(all,scenelist(upcoming))][setq(lim,if(isint(%0),mul(add(secs(),mul(%0,86400)),1000)))][setq(lst,if(strlen(%q<lim>),squish(iter(%q<all>,if(lt(firstof(scene(%i0,scheduledfor),0),%q<lim>),%i0))),%q<all>))][box([if(words(%q<lst>),u(%!/FUN`SCHED_TABLE,%q<lst>),Nothing is scheduled[if(isint(%0),%bin the next %0 days)].)],Scheduled Scenes,,u(%!/FUN`FRAME))]%r[u(%!/FUN`SCHED_FOOT,%0,words(%q<lst>),sub(words(%q<all>),words(%q<lst>)))]
-      # "2 in the next 30 days", and how to see the rest when the window hides some.
+        [setq(all,scenelist(upcoming))][setq(lim,if(isint(%0),mul(add(secs(),mul(%0,86400)),1000)))][setq(lst,if(strlen(%q<lim>),squish(iter(%q<all>,if(lt(firstof(scene(%i0,scheduledfor),0),%q<lim>),%i0))),%q<all>))][box([if(words(%q<lst>),u(%!/FUN`SCHED_TABLE,%q<lst>,%1),Nothing is scheduled[if(isint(%0),%bin the next %0 days)].)],Scheduled Scenes,,u(%!/FUN`FRAME))]%r[u(%!/FUN`SCHED_FOOT,%0,words(%q<lst>),sub(words(%q<all>),words(%q<lst>)),%1)]
+      # "2 in the next 30 days", how to see the rest when the window hides some, and whose times they are.
       FUN`SCHED_FOOT: |-
-        [if(isint(%0),%1 in the next %0 days[if(%2,[chr(44)] %2 later: +scenes <days>)],%1 scheduled)]
+        [if(isint(%0),%1 in the next %0 days[if(%2,[chr(44)] %2 later: +scenes <days>)],%1 scheduled)] · [if(strlen(%3),times in %3,game time)]
       # +scene/upcoming [<days>|all], and the names other games use for it: +scenes, +events,
       # +scenes/upcoming, +events/upcoming. One regexp pattern, so the aliases and the command cannot drift.
       CMD`UPCOMING:
         value: |-
-          $(?is)^\+(?\:scene/up(?\:c(?\:o(?\:m(?\:i(?\:n(?\:g)?)?)?)?)?)?|(?\:scenes|events)(?\:/upcoming)?)(?\: +(.+))?$: @assert or(not(strlen(%1)),strmatch(%1,all),and(isint(%1),gt(%1,0)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_DAYS)],warn)]; @pemit %#=[u(%!/FUN`SCHED_RENDER,firstof(%1,get(%!/DATA`SCHEDULE_DAYS)))]
+          $(?is)^\+(?\:scene/up(?\:c(?\:o(?\:m(?\:i(?\:n(?\:g)?)?)?)?)?)?|(?\:scenes|events)(?\:/upcoming)?)(?\: +(.+))?$: @assert or(not(strlen(%1)),strmatch(%1,all),and(isint(%1),gt(%1,0)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_BAD_DAYS)],warn)]; @pemit %#=[u(%!/FUN`SCHED_RENDER,firstof(%1,get(%!/DATA`SCHEDULE_DAYS)),u(%!/FUN`ZONE,%#))]
         flags: [REGEXP]
 
       # ---- participation (+scene/deactivate | /activate): pause/resume w/o leaving -
@@ -1020,13 +1022,32 @@ objects:
       FUN`SCENE_FIELD: |-
         switch(setr(val,scene(%0,%1)),#-1*,%2,,%2,%q<val>)
 
-      # Scene timestamps are Unix MILLIseconds; timefmt() wants seconds.
+      # ---- time zones -------------------------------------------------------------
+      # Every time a player reads or types is in their own zone: the TZ attribute +timezone (the time
+      # package) sets, or &TZ me=<zone> without it. A player with none, or one the server does not
+      # know, gets the game's time, as before. Only the reader's own zone is ever used, so a zone kept
+      # hidden with +timezone/hide is never shown to anyone else.
+      # FUN`ZONE(<player>): their zone, or nothing for the game's time.
+      FUN`ZONE: |-
+        [setq(_tz,get(%0/TZ))][if(cand(strlen(%q<_tz>),not(strmatch(timefmt($Z,0,%q<_tz>),#-1*))),%q<_tz>)]
+      # FUN`ZONE`LABEL(<zone>): the zone's name, or "game time".
+      FUN`ZONE`LABEL: |-
+        [if(strlen(%0),%0,game time)]
+      # FUN`TIMEFMT(<format>, <seconds>, <zone>): timefmt() in <zone>, or in the game's time without one.
+      FUN`TIMEFMT: |-
+        [if(strlen(%2),timefmt(%0,%1,%2),timefmt(%0,%1))]
+      # FUN`AT(<milliseconds>, <zone>): a time for a message, with whose it is: Wed Oct 21 19:00:00 2026
+      # (America/New_York).
+      FUN`AT: |-
+        [if(strlen(%1),convsecs(div(%0,1000),%1),convsecs(div(%0,1000)))] [chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)]
+
+      # Scene timestamps are Unix MILLIseconds; timefmt() wants seconds. FUN`WHEN(<milliseconds>, <zone>).
       #
       # This trimmed the last three digits as text for a while, because div() was 32-bit and answered
       # #-1 ARGUMENTS MUST BE INTEGERS for any real timestamp. #857 made the integer functions 64-bit,
       # so the arithmetic says what it means again.
       FUN`WHEN: |-
-        [timefmt($b $d $I:$M$p,div(%0,1000))]
+        [u(%!/FUN`TIMEFMT,$b $d $I:$M$p,div(%0,1000),%1)]
 
       # The scene's page on this game's own website, worked out rather than stored: mud_url is the
       # standard config for a game's web address, and the path follows from the id. Empty when the game
@@ -1043,13 +1064,14 @@ objects:
       # one gives a path no server answers.
       FUN`NO_TRAILING_SLASH: |-
         [switch(right(%0,1),/,[left(%0,sub(strlen(%0),1))],%0)]
-      # The card's fields. fields() takes its pairs as arguments, and an empty pair still draws a line,
-      # so the URL row is in one call or the other rather than blanked.
+      # The card's fields, its times in zone %1. fields() takes its pairs as arguments, and an empty pair still draws a line,
+      # so the URL row is in one call or the other rather than blanked. The zone is named once: after Scheduled, or after
+      # Created when nothing is scheduled.
       FUN`INFO`FIELDS: |-
-        [setq(sw,scene(%0,scheduledfor))][if(strlen(setr(url,u(%!/FUN`URL,%0))),fields(,Status,scene(%0,status),Owner,scene(%0,ownername),Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet),Created,u(%!/FUN`WHEN,scene(%0,startedat)),Scheduled,if(strlen(%q<sw>),u(%!/FUN`WHEN,%q<sw>),-),Watchers,switch(scene(%0,public),1,Anyone,Members only),URL,%q<url>),fields(,Status,scene(%0,status),Owner,scene(%0,ownername),Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet),Created,u(%!/FUN`WHEN,scene(%0,startedat)),Scheduled,if(strlen(%q<sw>),u(%!/FUN`WHEN,%q<sw>),-),Watchers,switch(scene(%0,public),1,Anyone,Members only)))]
+        [setq(sw,scene(%0,scheduledfor))][if(strlen(setr(url,u(%!/FUN`URL,%0))),fields(,Status,scene(%0,status),Owner,scene(%0,ownername),Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet),Created,[u(%!/FUN`WHEN,scene(%0,startedat),%1)][if(not(strlen(%q<sw>)),%b[chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)])],Scheduled,if(strlen(%q<sw>),[u(%!/FUN`WHEN,%q<sw>,%1)] [chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)],-),Watchers,switch(scene(%0,public),1,Anyone,Members only),URL,%q<url>),fields(,Status,scene(%0,status),Owner,scene(%0,ownername),Where,u(%!/FUN`SCENE_FIELD,%0,roomname,No room yet),Created,[u(%!/FUN`WHEN,scene(%0,startedat),%1)][if(not(strlen(%q<sw>)),%b[chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)])],Scheduled,if(strlen(%q<sw>),[u(%!/FUN`WHEN,%q<sw>,%1)] [chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)],-),Watchers,switch(scene(%0,public),1,Anyone,Members only)))]
       # The card's body goes through the CARD filters before it is boxed.
       INC`DISPLAY`INFO: |-
-        @pemit %#=[box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>)%r[rule(Pitch)]%r[u(%!/FUN`SCENE_FIELD,%<scene>,summary,-)]%r[if(words(setr(_dk,scene(%<scene>,details))),[rule(Details)]%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<_dk>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],%<scene>),Scene %<scene>: [u(%!/FUN`LIST_TITLE,%<scene>)],,u(%!/FUN`FRAME))]
+        @pemit %#=[box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>,u(%!/FUN`ZONE,%#))%r[rule(Pitch)]%r[u(%!/FUN`SCENE_FIELD,%<scene>,summary,-)]%r[if(words(setr(_dk,scene(%<scene>,details))),[rule(Details)]%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<_dk>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],%<scene>),Scene %<scene>: [u(%!/FUN`LIST_TITLE,%<scene>)],,u(%!/FUN`FRAME))]
       # +scene/title [<id>=]<text> and +scene/pitch [<id>=]<text>: the focused scene, or the one named.
       # The id is digits, so a title or pitch that merely has an = in it is not taken for one.
       CMD`TITLE:
@@ -1376,6 +1398,10 @@ objects:
 
         Rescheduling a running scene pauses it. A scheduled or paused scene records nothing and is not
         listed as live until its owner starts it. A finished or cancelled scene can't be rescheduled.
+
+        Times are your own. A date and time you type is read in your time zone, and the schedule, a
+        scene's card and every message show times in it, with the zone named. Your zone is the one
+        `+timezone` sets; without one, times are the game's.
       HELP`SCENE`TYPES: |-
         Every line in a scene has a **type**: in character \(`ic`\), out of character \(`ooc`\), narration,
         and whatever else the game adds, such as `radio`. The type decides how the line looks, here and in
