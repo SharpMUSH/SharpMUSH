@@ -277,6 +277,7 @@
                 await _input.FocusAsync();
             }
         }
+        // The dialog closed between rendering and focusing, so the element is gone and nothing needs focus.
         catch (InvalidOperationException) { }
     }
 
