@@ -117,7 +117,8 @@ public class RhostImportTests
 		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("use %m or %=<"));
 		// Rewritten softcode is a list of its own, with one warning pointing at it.
 		await Assert.That(result.SoftcodeRewrites).IsNotEmpty();
-		await Assert.That(result.SoftcodeRewrites).DoesNotContain(line => result.Warnings.Contains(line));
+		await Assert.That(result.SoftcodeRewrites).DoesNotContain(rewrite => result.Warnings.Contains(rewrite.ToString()));
+		await Assert.That(result.SourceName).IsEqualTo("RhostMUSH");
 		await Assert.That(result.Warnings).Contains(w =>
 			w.StartsWith($"Softcode was rewritten in {result.SoftcodeRewrites.Count} attribute(s) so SharpMUSH reads it as RhostMUSH did"));
 	}

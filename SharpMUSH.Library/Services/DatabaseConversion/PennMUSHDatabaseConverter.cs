@@ -182,7 +182,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		var stopwatch = Stopwatch.StartNew();
-		var result = new ConversionResult { SoftcodeRewrites = rewrites };
+		var result = new ConversionResult { SourceName = pennDatabase.SourceName, SoftcodeRewrites = rewrites };
 
 		var totalObjects = pennDatabase.Objects.Count;
 		var playersConverted = 0;
@@ -300,9 +300,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>The warning that heads the report when the import rewrote softcode, pointing at the full list.</summary>
-	internal static string RewriteSummary(string sourceName, IReadOnlyCollection<string> rewrites)
+	internal static string RewriteSummary(string sourceName, IReadOnlyCollection<SoftcodeRewrite> rewrites)
 	{
-		var byHand = rewrites.Count(line => line.Contains("check by hand", StringComparison.Ordinal));
+		var byHand = rewrites.Count(rewrite => rewrite.ByHand);
 		return $"Softcode was rewritten in {rewrites.Count} attribute(s) so SharpMUSH reads it as {sourceName} did; " +
 			"each one is listed under Rewritten softcode" +
 			(byHand > 0 ? $", and {byHand} of them say check by hand where the rewrite could not carry the code over exactly." : ".");

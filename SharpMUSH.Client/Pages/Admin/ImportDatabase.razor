@@ -8,6 +8,7 @@
 @inject ILogger<ImportDatabase> Logger
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 <PageTitle>@Loc["ImportPennMUSHDatabase"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
@@ -293,14 +294,18 @@
                             <div class="dbimport-tile dbimport-tile-wide">
                                 <SectionLabel Class="dbimport-label dbimport-label-warning">@Loc["AdmImportRewrites", _result.SoftcodeRewrites.Count]</SectionLabel>
                                 <MudText Typo="Typo.body2">@Loc["AdmImportRewritesLead"]</MudText>
-                                <MudList T="string" Dense="true">
+                                <div class="dbimport-rewrites">
                                     @foreach (var rewrite in _result.SoftcodeRewrites)
                                     {
-                                        <MudListItem T="string">
-                                            <MudText Class="dbimport-rewrite">@rewrite</MudText>
-                                        </MudListItem>
+                                        <details class="dbimport-rewrite">
+                                            <summary class="dbimport-rewrite-note">@rewrite</summary>
+                                            <div class="dbimport-rewrite-label">@Loc["AdmImportRewriteBefore"]</div>
+                                            <pre class="dbimport-rewrite-code">@rewrite.Before</pre>
+                                            <div class="dbimport-rewrite-label">@Loc["AdmImportRewriteAfter"]</div>
+                                            <pre class="dbimport-rewrite-code">@rewrite.After</pre>
+                                        </details>
                                     }
-                                </MudList>
+                                </div>
                             </div>
                         }
 
@@ -322,6 +327,7 @@
 
                     <div class="dbimport-actions dbimport-actions-start">
                         <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Primary="true" OnClick="Reset">@Loc["ImportAnotherDatabase"]</CapsuleButton>
+                        <CapsuleButton Icon="@Icons.Material.Filled.Download" OnClick="DownloadLog">@Loc["AdmImportDownloadLog"]</CapsuleButton>
                     </div>
                 </div>
             </ChildContent>
@@ -357,6 +363,7 @@
     private string? _sessionId;
     private ConversionProgress? _progress;
     private ConversionResult? _result;
+    private DateTimeOffset _finished;
     private System.Threading.Timer? _progressTimer;
     private string? _error;
 
@@ -501,6 +508,7 @@
                 {
                     case ConversionResult result:
                         _result = result;
+                        _finished = DateTimeOffset.UtcNow;
                         _pollError = null;
                         _isConverting = false;
                         _progressTimer?.Dispose();
@@ -564,6 +572,25 @@
         _error = null;
         _pollError = null;
         _progressTimer?.Dispose();
+    }
+
+    /// <summary>The whole report as a text file, rewritten softcode before and after included, to read or send in for help.</summary>
+    private async Task DownloadLog()
+    {
+        if (_result is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", ImportLog.FileName(_finished), "text/plain",
+                ImportLog.Write(_result, _finished));
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "The import log could not be downloaded");
+        }
     }
 
     private string FormatTimeSpan(TimeSpan ts)

@@ -173,9 +173,43 @@ public class AdminImportRefusalTests : TrackingBunitContext
 	[Test]
 	public async Task DatabaseImport_ListsTheRewrittenSoftcode()
 	{
-		const string rewritten = "#9/DESCRIBE: %c/%x colour written as ansi()";
-		const string byHand = "#10/AWAY: %c/%x colour written as ansi(); check by hand: colour-code-in-register";
-		AddServices((_, path) => path switch
+		var rewritten = new SoftcodeRewrite("#9/DESCRIBE", "%c/%x colour written as ansi()", "%crRed%cn", "ansi(r,Red)");
+		var byHand = new SoftcodeRewrite("#10/AWAY", "%c/%x colour written as ansi(); check by hand: colour-code-in-register",
+			"[setq(0,%cr)]%q0", "[setq(0,)]%q0");
+		AddRewriteServices(rewritten, byHand);
+
+		var cut = await StartConversion();
+
+		cut.WaitForAssertion(() => cut.Find(".dbimport-rewrite"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".dbimport-rewrite-note").Select(line => line.TextContent))
+			.IsEquivalentTo([rewritten.ToString(), byHand.ToString()]);
+		await Assert.That(cut.FindAll(".dbimport-rewrite-code").Select(code => code.TextContent))
+			.IsEquivalentTo(["%crRed%cn", "ansi(r,Red)", "[setq(0,%cr)]%q0", "[setq(0,)]%q0"]);
+		await Assert.That(cut.Markup).Contains("AdmImportRewrites(2)").And.Contains("AdmImportRewritesLead")
+			.And.Contains("AdmImportRewriteBefore").And.Contains("AdmImportRewriteAfter");
+	}
+
+	/// <summary>The whole report downloads as a text file, the rewritten softcode before and after included.</summary>
+	[Test]
+	public async Task DatabaseImport_DownloadsTheImportLog()
+	{
+		var rewritten = new SoftcodeRewrite("#9/DESCRIBE", "%c/%x colour written as ansi()", "%crRed%cn", "ansi(r,Red)");
+		AddRewriteServices(rewritten);
+
+		var cut = await StartConversion();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-rewrite"), TimeSpan.FromSeconds(5));
+		await cut.FindAll("button").First(button => button.TextContent.Contains("AdmImportDownloadLog")).ClickAsync();
+
+		var save = JSInterop.Invocations.Single(call => call.Identifier == "SharpMUSH.Files.saveText");
+		await Assert.That((string)save.Arguments[0]!).StartsWith("sharpmush-import-").And.EndsWith(".log");
+		await Assert.That((string)save.Arguments[1]!).IsEqualTo("text/plain");
+		await Assert.That((string)save.Arguments[2]!).Contains("Source: RhostMUSH")
+			.And.Contains("#9/DESCRIBE: %c/%x colour written as ansi()")
+			.And.Contains("    %crRed%cn").And.Contains("    ansi(r,Red)");
+	}
+
+	private void AddRewriteServices(params SoftcodeRewrite[] rewrites)
+		=> AddServices((_, path) => path switch
 		{
 			"api/databaseconversion/upload" => Started(),
 			"api/databaseconversion/progress/s1" => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionProgress
@@ -184,18 +218,11 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			})),
 			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionResult
 			{
-				Warnings = ["Softcode was rewritten in 2 attribute(s)"],
-				SoftcodeRewrites = [rewritten, byHand]
+				SourceName = "RhostMUSH",
+				Warnings = [$"Softcode was rewritten in {rewrites.Length} attribute(s)"],
+				SoftcodeRewrites = [.. rewrites]
 			}))
 		});
-
-		var cut = await StartConversion();
-
-		cut.WaitForAssertion(() => cut.Find(".dbimport-rewrite"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll(".dbimport-rewrite").Select(line => line.TextContent))
-			.IsEquivalentTo([rewritten, byHand]);
-		await Assert.That(cut.Markup).Contains("AdmImportRewrites(2)").And.Contains("AdmImportRewritesLead");
-	}
 
 	[Test]
 	public async Task ConfigHome_SaysWhyItHasNoCounts()

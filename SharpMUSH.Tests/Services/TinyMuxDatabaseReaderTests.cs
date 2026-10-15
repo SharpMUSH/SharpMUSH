@@ -235,9 +235,19 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(limbo).Contains("\u001b[");
 		await Assert.That(Object(database, 1).Attributes.First(a => a.Name == "AWAY").Value).IsEqualTo("[setq(0,)]%q0Gone");
 
-		await Assert.That(database.SoftcodeRewrites).Contains("#0/DESCRIBE: %c/%x colour written as ansi()");
-		await Assert.That(database.SoftcodeRewrites).Contains("#1/AWAY: %c/%x colour written as ansi(); " +
+		var lines = database.SoftcodeRewrites.Select(rewrite => rewrite.ToString()).ToList();
+		await Assert.That(lines).Contains("#0/DESCRIBE: %c/%x colour written as ansi()");
+		await Assert.That(lines).Contains("#1/AWAY: %c/%x colour written as ansi(); " +
 			"check by hand: colour-code-in-register; check by hand: trailing-codes-dropped");
+
+		// Before and after, with the stored colour left out: it is code points no one could read.
+		var away = database.SoftcodeRewrites.First(rewrite => rewrite.Attribute == "#1/AWAY");
+		await Assert.That(away.Before).IsEqualTo("[setq(0,%cr)]%q0Gone%cn");
+		await Assert.That(away.After).IsEqualTo("[setq(0,)]%q0Gone");
+		await Assert.That(away.ByHand).IsTrue();
+		var describe = database.SoftcodeRewrites.First(rewrite => rewrite.Attribute == "#0/DESCRIBE");
+		await Assert.That(describe.Before).StartsWith("%crWelcome%cn to ");
+		await Assert.That(describe.After).IsEqualTo("ansi(r,Welcome)%bto Limbo.");
 	}
 
 	[Test]

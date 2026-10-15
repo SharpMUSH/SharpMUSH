@@ -511,7 +511,7 @@ public static partial class RhostDatabaseTranslator
 		said.AddRange(rest.Notes);
 		if (said.Count > 0)
 		{
-			report.Rewrites.Add($"#{dbref}/{name}: {string.Join("; ", said)}");
+			report.Rewrites.Add(new SoftcodeRewrite($"#{dbref}/{name}", string.Join("; ", said), value, rest.Text));
 		}
 
 		return rest.Text;
@@ -601,7 +601,7 @@ public static partial class RhostDatabaseTranslator
 		public List<string> Lines { get; } = [];
 
 		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
-		public List<string> Rewrites { get; } = [];
+		public List<SoftcodeRewrite> Rewrites { get; } = [];
 
 		public void Line(string line) => Lines.Add(line);
 

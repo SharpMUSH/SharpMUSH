@@ -17,6 +17,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 	private readonly IOptions<SharpMUSHOptions> _options;
 	private readonly ILogger<PennMUSHDatabaseConversionService> _logger;
 	private readonly IHostApplicationLifetime _lifetime;
+	private readonly TimeProvider _time;
 	private readonly bool _stopOnFailure;
 	private readonly string? _databaseFilePath;
 	private readonly string? _databaseFormat;
@@ -25,12 +26,14 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		IPennMUSHDatabaseConverter converter,
 		IOptions<SharpMUSHOptions> options,
 		ILogger<PennMUSHDatabaseConversionService> logger,
-		IHostApplicationLifetime lifetime)
+		IHostApplicationLifetime lifetime,
+		TimeProvider time)
 	{
 		_converter = converter;
 		_options = options;
 		_logger = logger;
 		_lifetime = lifetime;
+		_time = time;
 		_stopOnFailure = string.Equals(
 			Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE"),
 			"true",
@@ -65,6 +68,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		{
 			var result = await _converter.ConvertDatabaseAsync(new DatabaseImportFiles(_databaseFilePath, Format: format),
 				new Progress<ConversionProgress>(), stoppingToken);
+			WriteLog(result);
 
 			if (result.IsSuccessful)
 			{
@@ -92,6 +96,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 				}
 
 				// Every one, not the first ten: an administrator reads this list to check the rewritten code.
+				// The text before and after each is in the import log.
 				if (result.SoftcodeRewrites.Count > 0)
 				{
 					_logger.LogWarning("Rewritten softcode, {Count} attribute(s):", result.SoftcodeRewrites.Count);
@@ -132,6 +137,26 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 				_logger.LogCritical("Stopping application due to conversion exception");
 				_lifetime.StopApplication();
 			}
+		}
+	}
+
+	/// <summary>
+	/// Writes the whole report, every rewritten attribute's text before and after included, beside the imported
+	/// file. A directory the server cannot write to costs only the file: the report is in the server log too.
+	/// </summary>
+	private void WriteLog(ConversionResult result)
+	{
+		var directory = Path.GetDirectoryName(Path.GetFullPath(_databaseFilePath!))!;
+		var finished = _time.GetUtcNow();
+		var path = Path.Combine(directory, ImportLog.FileName(finished));
+		try
+		{
+			File.WriteAllText(path, ImportLog.Write(result, finished));
+			_logger.LogInformation("Import log written to {Path}", path);
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			_logger.LogWarning("Could not write the import log to {Path}: {Reason}", path, ex.Message);
 		}
 	}
 }

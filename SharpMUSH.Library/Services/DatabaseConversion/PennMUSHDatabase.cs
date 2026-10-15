@@ -62,11 +62,10 @@ public class PennMUSHDatabase
 	public List<string> ImportNotes { get; set; } = [];
 
 	/// <summary>
-	/// Every attribute whose softcode the reader rewrote so SharpMUSH reads it as the source server did, one
-	/// line each: <c>#dbref/ATTRIBUTE: what was rewritten</c>, with <c>check by hand</c> and the reason where
-	/// the rewrite could not carry the code over exactly. The import reports them in a list of their own.
+	/// Every attribute whose softcode the reader rewrote so SharpMUSH reads it as the source server did, with
+	/// its text before and after. The import reports them in a list of their own.
 	/// </summary>
-	public List<string> SoftcodeRewrites { get; set; } = [];
+	public List<SoftcodeRewrite> SoftcodeRewrites { get; set; } = [];
 
 	/// <summary>
 	/// Configuration options, by name, that the source's softcode needs, which the import sets once the

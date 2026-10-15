@@ -328,7 +328,7 @@ public static partial class TinyMuxDatabaseReader
 		private int _longValues;
 
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
-		private readonly List<string> _rewrites = [];
+		private readonly List<SoftcodeRewrite> _rewrites = [];
 
 		private void Tally(string what, int dbref)
 		{
@@ -740,7 +740,9 @@ public static partial class TinyMuxDatabaseReader
 			said.AddRange(colour.Flags.Select(flag => $"check by hand: {flag}"));
 			if (said.Count > 0)
 			{
-				_rewrites.Add($"#{dbref}/{name}: {string.Join("; ", said)}");
+				// Shown to the administrator, so the stored colour, which is private-use code points, is left out.
+				_rewrites.Add(new SoftcodeRewrite($"#{dbref}/{name}", string.Join("; ", said),
+					TinyMuxColour.Strip(value), TinyMuxColour.Strip(colour.Text)));
 			}
 
 			return colour.Text;

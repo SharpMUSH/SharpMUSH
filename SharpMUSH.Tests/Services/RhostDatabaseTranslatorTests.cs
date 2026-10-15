@@ -191,9 +191,16 @@ public class RhostDatabaseTranslatorTests
 		// list() is not rewritten: the rhost_list option reads it the RhostMUSH way.
 		await Assert.That(gadget.Attributes.First(a => a.Name == "CMD_HELLO").Value).IsEqualTo("[list(a b,##)]");
 
-		await Assert.That(database.SoftcodeRewrites).Contains(n => n.StartsWith("#9/DESCRIBE: %c/%x colour written as ansi()") && n.Contains("%<065> written as A"));
-		await Assert.That(database.SoftcodeRewrites).Contains(n => n.StartsWith("#10/DATA:") && n.Contains("timefmt() format %0 left as written"));
-		await Assert.That(database.SoftcodeRewrites).Contains(n => n.StartsWith("#10/DESCRIBE:") && n.Contains("check by hand: colour-code-in-register"));
+		var lines = database.SoftcodeRewrites.Select(rewrite => rewrite.ToString()).ToList();
+		await Assert.That(lines).Contains(n => n.StartsWith("#9/DESCRIBE: %c/%x colour written as ansi()") && n.Contains("%<065> written as A"));
+		await Assert.That(lines).Contains(n => n.StartsWith("#10/DATA:") && n.Contains("timefmt() format %0 left as written"));
+		await Assert.That(lines).Contains(n => n.StartsWith("#10/DESCRIBE:") && n.Contains("check by hand: colour-code-in-register"));
+
+		// Each rewrite carries the attribute's text as stored and as imported.
+		var describe = database.SoftcodeRewrites.First(rewrite => rewrite.Attribute == "#9/DESCRIBE");
+		await Assert.That(describe.Before).IsEqualTo("A shiny widget%r%xbBlue text%xn and %<065>.");
+		await Assert.That(describe.After).IsEqualTo("A shiny widget%r[ansi(b,Blue text)]%band A.");
+		await Assert.That(describe.ByHand).IsFalse();
 	}
 
 	[Test]
