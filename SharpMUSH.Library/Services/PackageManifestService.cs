@@ -24,6 +24,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
+		"category",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
 		"attributes"
@@ -61,6 +62,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 	private const int MaxPackageIdLength = 64;
 	private const int MaxKeywords = 5;
+	private const int MaxCategoryLength = 40;
 
 	[GeneratedRegex("^[a-z][a-z0-9-]*$")]
 	private static partial Regex PackageSlugRegex();
@@ -132,6 +134,7 @@ public partial class PackageManifestService : IPackageManifestService
 				$"{keywords.Count} keywords listed; at most {MaxKeywords} are used by the browse UI."));
 		}
 
+		var category = ReadCategory(doc, format, issues);
 		var conventionPrefix = OptionalString(doc, "convention_prefix", issues);
 		var requiresServer = ReadConstraintField(doc, "requires_server", issues);
 		var (verifiedServer, maximumServer) = ReadServerRange(doc, requiresServer, issues);
@@ -212,7 +215,8 @@ public partial class PackageManifestService : IPackageManifestService
 			wiki.Count == 0 ? null : wiki,
 			verifiedServer,
 			maximumServer,
-			plugins.Count == 0 ? null : plugins);
+			plugins.Count == 0 ? null : plugins,
+			category);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}
@@ -243,6 +247,39 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		return plugins;
+	}
+
+	/// <summary>The first format in which <c>category:</c> means something; below it the key is ignored.</summary>
+	public static PackageFormatVersion CategoryFormat { get; } = new(1, 10);
+
+	/// <summary>
+	/// Reads <c>category:</c> (format 1.10): the one group the package is listed under where packages are offered
+	/// together, in the words the listing shows. Spaces are collapsed; an empty value is the same as none.
+	/// </summary>
+	private static string? ReadCategory(
+		Dictionary<string, object?> doc, PackageFormatVersion format, List<PackageManifestIssue> issues)
+	{
+		if (OptionalString(doc, "category", issues) is not { } text)
+		{
+			return null;
+		}
+
+		if (format.Major == CategoryFormat.Major && format.Minor < CategoryFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning("category",
+				$"'category' needs format {CategoryFormat} or later and is ignored; set format: {CategoryFormat}."));
+			return null;
+		}
+
+		var category = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+		if (category.Length > MaxCategoryLength)
+		{
+			issues.Add(PackageManifestIssue.Error("category",
+				$"'category' is {category.Length} characters long; at most {MaxCategoryLength} are allowed."));
+			return null;
+		}
+
+		return category.Length == 0 ? null : category;
 	}
 
 	public PackageManifestResult<PackageIndex> ParseIndex(string yaml)

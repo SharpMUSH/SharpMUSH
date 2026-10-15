@@ -14,7 +14,7 @@ public class DiscordGatewayServiceTests
 	{
 		var secrets = Substitute.For<ISecretStore>();
 		secrets.GetAsync(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name, Arg.Any<CancellationToken>()).Returns(new FoundResult<string>(new NotFound()));
-		using var gateway = new DiscordGatewayService(secrets, NullLogger<DiscordGatewayService>.Instance);
+		using var gateway = new DiscordGatewayService(secrets, [], NullLogger<DiscordGatewayService>.Instance);
 
 		await gateway.StartAsync(cancellationToken);
 		var state = await SettledAsync(gateway, cancellationToken);
@@ -29,11 +29,13 @@ public class DiscordGatewayServiceTests
 		var secrets = Substitute.For<ISecretStore>();
 		secrets.GetAsync(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name, Arg.Any<CancellationToken>())
 			.Returns(new FoundResult<string>(new NotFound()), new FoundResult<string>("not a bot token"));
-		using var gateway = new DiscordGatewayService(secrets, NullLogger<DiscordGatewayService>.Instance);
+		using var gateway = new DiscordGatewayService(secrets, [], NullLogger<DiscordGatewayService>.Instance);
 
 		await gateway.StartAsync(cancellationToken);
 		await SettledAsync(gateway, cancellationToken);
 		gateway.Reconnect();
+		await Assert.That(gateway.State.Status).IsEqualTo(DiscordGatewayStatus.Connecting)
+			.Because("whoever asked reads the reconnect as under way, not the state it replaces");
 		while (gateway.State.Status is DiscordGatewayStatus.NoToken or DiscordGatewayStatus.Connecting)
 		{
 			await Task.Delay(10, cancellationToken);

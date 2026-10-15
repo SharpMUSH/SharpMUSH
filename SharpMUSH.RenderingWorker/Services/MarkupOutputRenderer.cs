@@ -115,9 +115,12 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 
 	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures)
 	{
+		var showSeparators = connection.Preferences?.ShowSeparators == true;
 		if (connection.ConnectionType == WebSocketConnectionType)
 		{
-			// Forward the markup untouched inside the out-of-band envelope; the browser renders it.
+			// Forward the markup inside the out-of-band envelope; the browser renders it. Untouched, unless the
+			// reader asked to see list separators.
+			if (showSeparators) markup = MarkupTextSerializer.Serialize(ListSeparators.Show(MarkupTextSerializer.Deserialize(markup)));
 			var envelope = JsonSerializer.Serialize(new { type = "markup", data = markup });
 			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
 		}
@@ -138,6 +141,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var fold = FoldFor(connection.Capabilities, connection.AsciiTranslations);
 		var reader = ReaderTheme(connection.Preferences?.Theme);
 		var deserialized = MarkupTextSerializer.Deserialize(markup);
+		if (showSeparators) deserialized = ListSeparators.Show(deserialized);
 		// Tones are coloured after the layout: a block laid out again is drawn from its own copy of the text, which
 		// still holds the tone's span.
 		var ms = ToneMarkup.ForTelnet(Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),

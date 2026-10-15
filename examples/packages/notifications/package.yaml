@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: notifications
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [notifications, push, page, mail, portal]
+category: Community
 requires_server: ">=0.1"
 
 # Its portal routes are children of http-handler's GET and POST verbs, and its help is a +help source.

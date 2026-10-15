@@ -16,6 +16,9 @@ public static class GameFeatures
 	/// <summary>The in-game wiki reader: <c>+wiki</c> listings and articles from the portal's wiki.</summary>
 	public const string WikiReader = "wiki-reader";
 
+	/// <summary>The Discord link: linked channels, and members linking their accounts. The <c>discord</c> package over the Discord plugin.</summary>
+	public const string Discord = "discord";
+
 	/// <summary>
 	/// What a new game has before anyone chooses — the applications the server installs at first boot.
 	/// Also what the portal assumes when it cannot ask the server.
@@ -79,8 +82,9 @@ public record SetHandlerRequest(string Mode, int? Dbref = null);
 /// Whether a new game has it: one installed at first boot that the administrator has not turned off. A game
 /// without it — after a PennMUSH import, which removes the handlers it was built on — is offered it ticked.
 /// </param>
+/// <param name="Category">The manifest's <c>category:</c>, which the wizard groups packages by, or null for none.</param>
 public record BundledPackageState(string Id, string Description, bool Installed, string? Requires, bool Available,
-	IReadOnlyList<string> DependsOn, bool Recommended = false);
+	IReadOnlyList<string> DependsOn, bool Recommended = false, string? Category = null);
 
 /// <summary>The first-run wizard's state after the game has been claimed.</summary>
 /// <param name="Pending">True from the claim until the administrator finishes or dismisses the wizard.</param>

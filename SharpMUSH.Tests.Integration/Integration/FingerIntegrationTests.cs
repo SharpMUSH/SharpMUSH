@@ -104,6 +104,12 @@ public class FingerIntegrationTests
 			await Assert.That(await As(bo, $"+oocfinger {ann.Name}")).Contains("US Eastern").And.Contains($"{ann.Name} · OOC")
 				.And.Contains("Last on:");
 
+			// A list separator a player stores with softcode is taken off before the card splits its fields on one.
+			await As(ann, "think attrib_set(me/PROFILE`FULLNAME,Fg%*<|>Split)");
+			await Assert.That(await God($"think strlen(get(#{ann.DbRef.Number}/PROFILE`FULLNAME))")).IsEqualTo("8");
+			await Assert.That(await As(bo, $"+finger {ann.Name}")).Contains("Full Name: Fg|Split");
+			await As(ann, $"+finger/set full name={name}");
+
 			await Assert.That(await As(ann, "+finger/set age=")).Contains("Your Age is cleared.");
 			await Assert.That(await As(ann, "+finger/set age=")).Contains("Your Age is not set.");
 			await Assert.That(await As(bo, $"+finger {ann.Name}")).DoesNotContain("Age");

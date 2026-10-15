@@ -163,9 +163,25 @@ public class DiscordRelayTests
 		}
 	}
 
+	private sealed class RecordingMessages : IDiscordMessages
+	{
+		public TaskCompletionSource<(ulong Channel, ulong Message)> Deleted { get; } =
+			new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		public Task DeleteAsync(ulong channelId, ulong messageId, string reason, CancellationToken cancellationToken)
+		{
+			Deleted.TrySetResult((channelId, messageId));
+			return Task.CompletedTask;
+		}
+
+		public Task DirectMessageAsync(ulong userId, string text, CancellationToken cancellationToken) => Task.CompletedTask;
+	}
+
 	private sealed class Harness
 	{
 		public MemoryLinkStore Store { get; } = new();
+		public MemoryMessagePairs Pairs { get; } = new();
+		public RecordingMessages Messages { get; } = new();
 		public MemorySecrets Secrets { get; } = new();
 		public List<FakePoster> Posters { get; } = [];
 		public HashSet<ulong> Gone { get; } = [];
@@ -175,7 +191,7 @@ public class DiscordRelayTests
 		public DiscordRelay Relay(params WebhookCreation[] webhooks) => Relay(new QueuedWebhooks(webhooks));
 
 		public DiscordRelay Relay(IDiscordWebhooks webhooks)
-			=> new(Store, Secrets, webhooks, link =>
+			=> new(Store, Secrets, webhooks, Pairs, Messages, link =>
 				{
 					var poster = new FakePoster(link.WebhookId);
 					poster.Gone.UnionWith(Gone);
@@ -189,9 +205,10 @@ public class DiscordRelayTests
 	private static WebhookCreation Webhook(ulong id, string token)
 		=> new(new CreatedWebhook(id, token, 900, "Guild", "general"));
 
-	private static FeedLine Line(string kind, string key, string text, string audience = "", DBRef[]? to = null)
+	private static FeedLine Line(string kind, string key, string text, string audience = "", DBRef[]? to = null,
+		string origin = "")
 		=> new(new SharpFeedMessage(1, kind, key, Now, new DBRef(5), "Alice", new DBRef(5), "Alice", null, "", "say",
-			MString.Plain(text), Audience: audience), [], true, "", to ?? []);
+			MString.Plain(text), Audience: audience), [], true, origin, to ?? []);
 
 	[Test, Timeout(30_000)]
 	public async Task ALinkedChannel_GetsItsFeedsLines_AsTheSpeaker(CancellationToken cancellationToken)
@@ -209,6 +226,25 @@ public class DiscordRelayTests
 		await Assert.That(harness.Secrets.Values["discord.webhook.4242"]).IsEqualTo("token-1");
 		await Assert.That(harness.Store.Get(Channel)?.ChannelName).IsEqualTo("general");
 		await Assert.That($"{post.Speaker}: {post.Content}").IsEqualTo("Alice: Hello, Discord.");
+	}
+
+	[Test, Timeout(30_000)]
+	public async Task ALineFromDiscord_ReplacesTheMembersMessage_AndIsPairedWithItsPost(CancellationToken cancellationToken)
+	{
+		var harness = new Harness();
+		var relay = harness.Relay(Webhook(1, "token-1"));
+		await relay.StartAsync(cancellationToken);
+		await relay.LinkAsync(Channel, "#1:1", Admin, cancellationToken);
+
+		await relay.LineSentAsync(Line("discord", "4242", "From Discord.", origin: "discord/777"), cancellationToken);
+		var post = await harness.Posters.Single().Posted.Task.WaitAsync(cancellationToken);
+		var deleted = await harness.Messages.Deleted.Task.WaitAsync(cancellationToken);
+		await relay.StopAsync(cancellationToken);
+
+		await Assert.That(post.Replaces).IsEquivalentTo(new ulong[] { 777 });
+		await Assert.That(deleted).IsEqualTo((Channel, 777UL));
+		await Assert.That(harness.Pairs.Get(1)?.ChannelId).IsEqualTo(Channel).Because("the post was message 1");
+		await Assert.That(harness.Pairs.Get(1)?.LineIds).IsEquivalentTo(new long[] { 1 });
 	}
 
 	[Test, Timeout(30_000)]

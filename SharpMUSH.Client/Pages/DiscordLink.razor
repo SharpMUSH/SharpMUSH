@@ -1,0 +1,94 @@
+@page "/account/discord/link"
+@layout SettingsLayout
+@attribute [Authorize]
+@using SharpMUSH.Library.Models.Portal.Discord
+@inject DiscordAccountService Discord
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["DiscordLinkTitle"] — @Loc["AppTitle"]</PageTitle>
+
+@* Reached from the link /link sends in Discord. The ticket proves which Discord user asked; confirming here, signed
+   in, proves which account is theirs. *@
+<div class="discord-link-page">
+    <PlainPageHeader Kicker="@($"{Loc["Settings"]} · {Loc["AuthAccount"]}")" Title="@Loc["DiscordLinkTitle"]"
+                     Description="@Loc["DiscordLinkDescription"]" />
+
+    <FeatureGate Feature="@GameFeatures.Discord">
+        <KitCard>
+            <div class="discord-link-card">
+                @if (!_loaded)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                }
+                else if (_linked is { } linked)
+                {
+                    <MudAlert Severity="Severity.Success">@Loc["DiscordLinkDone", linked.Username ?? ""]</MudAlert>
+                    <a class="discord-link-back" href="account#discord">@Loc["DiscordLinkBack"]</a>
+                }
+                else
+                {
+                    @switch (_ticket)
+                    {
+                        case DiscordLinkTicketView ticket:
+                            <div class="discord-link-user">
+                                @if (ticket.AvatarUrl is { } avatar)
+                                {
+                                    <img class="discord-link-avatar" src="@ApiUrl.Resolve(avatar)" alt="" />
+                                }
+                                <div>
+                                    <div class="discord-link-name">@ticket.Username</div>
+                                    <div class="discord-link-meta">@Loc["DiscordLinkExpires", ticket.ExpiresAt.LocalDateTime.ToString("t")]</div>
+                                </div>
+                            </div>
+                            <p>@Loc["DiscordLinkConfirmBody"]</p>
+                            @if (_error is not null)
+                            {
+                                <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+                            }
+                            <button class="discord-link-confirm" disabled="@_busy" @onclick="() => ConfirmAsync()">@Loc["DiscordLinkConfirm"]</button>
+                            break;
+                        case ApiFailure failure:
+                            <MudAlert Severity="Severity.Warning">@failure.Message</MudAlert>
+                            break;
+                    }
+                }
+            </div>
+        </KitCard>
+    </FeatureGate>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "ticket")] public string? TicketId { get; set; }
+
+    private ApiResult<DiscordLinkTicketView> _ticket;
+    private DiscordAccountView? _linked;
+    private string? _error;
+    private bool _loaded;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ticket = string.IsNullOrWhiteSpace(TicketId)
+            ? new ApiFailure(ApiFailureKind.NotFound, Loc["DiscordLinkNoTicket"])
+            : await Discord.TicketAsync(TicketId);
+        _loaded = true;
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (string.IsNullOrWhiteSpace(TicketId)) return;
+        _busy = true;
+        _error = null;
+        switch (await Discord.ConfirmAsync(TicketId))
+        {
+            case DiscordAccountView view:
+                _linked = view;
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        _busy = false;
+    }
+}

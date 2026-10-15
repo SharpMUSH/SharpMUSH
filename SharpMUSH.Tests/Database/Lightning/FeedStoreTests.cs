@@ -267,6 +267,23 @@ public class FeedStoreTests
 	}
 
 	[Test]
+	public async Task DeletingALine_TakesItFromRecallAndTheCounts()
+	{
+		var ann = await NewPlayer("Ann");
+		for (var id = 1; id <= 3; id++) await _db.AppendFeedMessageAsync(Line(id, ann, $"line {id}"), Keep());
+		var before = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+
+		await Assert.That(await _db.DeleteFeedMessageAsync(2)).IsTrue();
+
+		await Assert.That((await _db.GetFeedMessagesAsync("radio", "101.5", 0, 0)).Select(l => l.Id)).IsEquivalentTo(new long[] { 1, 3 });
+		await Assert.That(await _db.GetFeedMessageAsync(2) is NotFound).IsTrue();
+		var after = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		await Assert.That(after.Messages).IsEqualTo(2);
+		await Assert.That(after.Bytes).IsEqualTo(before.Bytes / 3 * 2).Because("the three lines are the same length");
+		await Assert.That(await _db.DeleteFeedMessageAsync(2)).IsFalse();
+	}
+
+	[Test]
 	public async Task Usage_TotalsEachKind_AndStoredBytesFollowTheLinesKept()
 	{
 		var ann = await NewPlayer("Ann");

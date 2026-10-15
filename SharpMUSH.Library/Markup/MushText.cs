@@ -30,15 +30,26 @@ public static class MushText
 	/// <summary>
 	/// Splits <paramref name="text"/> on <paramref name="delimiter"/>. A single-space delimiter is
 	/// PennMUSH's "words" delimiter and drops empty items, so runs of spaces do not produce blank
-	/// list entries; every other delimiter keeps them.
+	/// list entries; every other delimiter keeps them. A marked delimiter (<c>%*&lt;|&gt;</c>) splits
+	/// only where the same text is marked, and keeps empty items whatever its text.
 	/// </summary>
 	public static MarkupText[] SplitList(MarkupText delimiter, MarkupText text)
+	{
+		var items = Split(delimiter, text);
+		return delimiter.Text == " " && !ListSeparators.IsMarked(delimiter) ? Array.FindAll(items, x => x.Length > 0) : items;
+	}
+
+	/// <summary>
+	/// Every item of <paramref name="text"/> between occurrences of <paramref name="delimiter"/>, empty ones
+	/// included: <see cref="MarkupText.Split(string)"/>, except that a marked delimiter splits only where the
+	/// same text is marked (<see cref="ListSeparators"/>).
+	/// </summary>
+	public static MarkupText[] Split(MarkupText delimiter, MarkupText text)
 	{
 		ArgumentNullException.ThrowIfNull(delimiter);
 		ArgumentNullException.ThrowIfNull(text);
 
-		var items = text.Split(delimiter.Text);
-		return delimiter.Text == " " ? Array.FindAll(items, x => x.Length > 0) : items;
+		return ListSeparators.IsMarked(delimiter) ? ListSeparators.Split(text, delimiter.Text) : text.Split(delimiter.Text);
 	}
 
 	/// <summary>

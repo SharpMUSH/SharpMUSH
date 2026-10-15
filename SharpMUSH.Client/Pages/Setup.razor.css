@@ -253,6 +253,18 @@
 	color: var(--text-dim);
 }
 
+.setup-group-count {
+	margin-left: 0.5rem;
+	letter-spacing: 0.04em;
+	text-transform: none;
+	font-weight: 400;
+}
+
+/* A package listed under the one it builds on. */
+.setup-app--addon {
+	margin-left: 1.5rem;
+}
+
 .setup-handler-desc,
 .setup-handler-now {
 	margin: 0 0 0.5rem;

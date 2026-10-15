@@ -167,6 +167,14 @@ public sealed class PluginCatalog
 	/// <summary>An empty catalog, for hosts (or tests) that do not load plugins.</summary>
 	public static PluginCatalog Empty() => new();
 
+	/// <summary>A catalog of what a start found, without the plugins themselves, for tests that read only the entries.</summary>
+	internal static PluginCatalog ForEntries(IEnumerable<PluginBootEntry> entries)
+	{
+		var catalog = new PluginCatalog();
+		catalog._entries.AddRange(entries);
+		return catalog;
+	}
+
 	/// <summary>
 	/// Build a catalog directly from already-instantiated plugins, classifying each into the same
 	/// contribution buckets <see cref="Build"/> uses but without any DLL load or DI application. For tests

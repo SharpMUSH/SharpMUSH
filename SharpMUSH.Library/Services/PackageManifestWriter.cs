@@ -67,7 +67,9 @@ public static class PackageManifestWriter
 
 	private static void WriteHeader(StringBuilder yaml, PackageManifest manifest)
 	{
-		yaml.Append("format: ").AppendLine(manifest.Format.ToString());
+		// Quoted when a reader that types scalars would read it as a different number: 1.10 is not 1.1.
+		var format = manifest.Format.ToString();
+		yaml.Append("format: ").AppendLine(format.EndsWith('0') && format.Contains('.') ? $"\"{format}\"" : format);
 		yaml.Append("package: ").AppendLine(Scalar(manifest.Name));
 		yaml.Append("version: ").AppendLine(Scalar(manifest.Version.ToString()));
 
@@ -90,6 +92,8 @@ public static class PackageManifestWriter
 		{
 			yaml.Append("keywords: ").AppendLine(Flow(manifest.Keywords));
 		}
+
+		AppendOptional(yaml, "category", manifest.Category);
 
 		AppendOptional(yaml, "convention_prefix", manifest.ConventionPrefix);
 
@@ -239,7 +243,7 @@ public static class PackageManifestWriter
 		foreach (var entry in entries)
 		{
 			yaml.Append("  ").Append(Scalar(entry.Name)).Append(':');
-			if (entry.Flags.Count == 0 && entry.Limit is null && entry.Enum is null && !entry.Retroactive)
+			if (entry.Flags.Count == 0 && entry.Limit is null && entry.Enum is null && !entry.Retroactive && entry.Index is null)
 			{
 				yaml.AppendLine(" {}");
 				continue;
@@ -269,6 +273,12 @@ public static class PackageManifestWriter
 			if (entry.Retroactive)
 			{
 				yaml.AppendLine("    retroactive: true");
+			}
+
+			if (entry.Index is { } index)
+			{
+				// Quoted: a split delimiter may be a character YAML would read otherwise.
+				yaml.Append("    index: ").AppendLine(index.Words.Length == 0 ? "true" : Quoted(index.Words));
 			}
 		}
 	}

@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: scene-here
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Tells the command palette about the scene where a player stands: entering a room with a scene running pushes scene_here onto their context stack, and entering one without drops it."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, rp, palette, context]
+category: Scenes
 requires_server: ">=0.1"
 
 # The scene package's palette entries for the scene in the room (About, Join) rise while scene_here is on

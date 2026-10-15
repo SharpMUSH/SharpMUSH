@@ -15,7 +15,10 @@ namespace SharpMUSH.Plugins.Discord;
 /// The bot's one connection to Discord. It reads <c>discord.token</c> when the server starts and again on
 /// <see cref="Reconnect"/>, and keeps <see cref="State"/> current for the admin page's checklist.
 /// </summary>
-public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordGatewayService> logger)
+public sealed class DiscordGatewayService(
+	ISecretStore secrets,
+	IEnumerable<IDiscordClientHandler> handlers,
+	ILogger<DiscordGatewayService> logger)
 	: BackgroundService, IDiscordWebhooks
 {
 	/// <summary>Discord's close code for a token it does not accept.</summary>
@@ -44,10 +47,38 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 	/// <summary>How many sessions the current client has started; a resume is not a new one.</summary>
 	private int _sessions;
 
-	public DiscordGatewayState State => _state with { Guilds = _client?.Guilds.Count ?? 0 };
+	public DiscordGatewayState State => _client is { } client
+		? _state with
+		{
+			Guilds = client.Guilds.Count,
+			CannotBanIn = [.. client.Guilds.Where(guild => guild.CurrentUser is { GuildPermissions.BanMembers: false }).Select(guild => guild.Name)],
+		}
+		: _state;
 
-	/// <summary>Drops the connection and logs in again with the token stored now.</summary>
-	public void Reconnect() => _reconnect.Writer.TryWrite(true);
+	/// <summary>
+	/// The text channels the bot can see in each server it is in, with the permissions a link needs there that it lacks;
+	/// empty while it is not connected.
+	/// </summary>
+	public IReadOnlyList<DiscordTextChannel> TextChannels()
+		=> _client is { ConnectionState: ConnectionState.Connected } client
+			? client.Guilds
+				.SelectMany(guild => guild.TextChannels
+					.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel) && guild.CurrentUser.GetPermissions(channel).ViewChannel)
+					.OrderBy(channel => channel.Position)
+					.Select(channel => new DiscordTextChannel(channel.Id, channel.Name, guild.Id, guild.Name,
+						DiscordSetup.MissingInChannel(guild.CurrentUser.GetPermissions(channel)))))
+				.ToList()
+			: [];
+
+	/// <summary>
+	/// Drops the connection and logs in again with the token stored now. The state reads connecting from here on, so
+	/// whoever asked sees the reconnect under way rather than the state it replaces.
+	/// </summary>
+	public void Reconnect()
+	{
+		_state = new DiscordGatewayState(DiscordGatewayStatus.Connecting);
+		_reconnect.Writer.TryWrite(true);
+	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
@@ -94,11 +125,18 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 			DefaultRetryMode = RetryMode.RetryRatelimit,
 			// Rate-limit resets by Discord's relative header, so a skewed host clock cannot cut a wait short.
 			UseSystemClock = false,
+			// The Linked role goes to every linked member, so the bot keeps every member of its servers in mind.
+			AlwaysDownloadUsers = true,
 		});
 		client.Log += LogAsync;
 		client.Disconnected += exception => OnDisconnectedAsync(client, exception);
 		client.Connected += () => OnConnectedAsync(client);
 		client.Ready += () => OnReadyAsync(client);
+		foreach (var handler in handlers)
+		{
+			handler.Attach(client);
+		}
+
 		_sessions = 0;
 		_client = client;
 

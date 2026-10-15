@@ -5102,11 +5102,11 @@
   <data name="AdmSetupPackagesLead" xml:space="preserve">
     <value>Every package this server ships. Add or remove any of them; what a package needs comes with it. You can change them later under Packages.</value>
   </data>
-  <data name="AdmSetupPkgGroupPortal" xml:space="preserve">
-    <value>Built on your handlers</value>
+  <data name="AdmSetupPkgGroupUncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
   </data>
-  <data name="AdmSetupPkgGroupGame" xml:space="preserve">
-    <value>In the game</value>
+  <data name="AdmSetupPkgGroupCount" xml:space="preserve">
+    <value>{0} of {1}</value>
   </data>
   <data name="AdmSetupPkgNeededBy" xml:space="preserve">
     <value>Needed by {0}.</value>
@@ -5164,6 +5164,18 @@
   </data>
   <data name="AdmSetupPkgJobsAppDesc" xml:space="preserve">
     <value>A Jobs page in the portal where players file and follow requests and staff answer, claim and close them.</value>
+  </data>
+  <data name="AdmSetupPkgChargenTitle" xml:space="preserve">
+    <value>Character applications</value>
+  </data>
+  <data name="AdmSetupPkgChargenDesc" xml:space="preserve">
+    <value>+app: a character's application stays a draft until it is submitted, staff comment on each section and return or approve it, and applicants see their place in the queue. An optional cap on characters keeps a waitlist. Needs the HTTP handler.</value>
+  </data>
+  <data name="AdmSetupPkgChargenAppTitle" xml:space="preserve">
+    <value>Character applications in the portal</value>
+  </data>
+  <data name="AdmSetupPkgChargenAppDesc" xml:space="preserve">
+    <value>An Application page in the portal where players fill in and submit their application, and reviewers read, compare, comment on and decide them.</value>
   </data>
   <data name="AdmSetupPkgBBoardsTitle" xml:space="preserve">
     <value>Bulletin boards</value>
@@ -8179,6 +8191,237 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>An image with a content warning stays out of the image library. Take the warning off to share it.</value>
   </data>
+  <data name="DiscordAccountTitle" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="DiscordAccountDescription" xml:space="preserve">
+    <value>Link your Discord account to speak in the game's linked Discord channels.</value>
+  </data>
+  <data name="DiscordAccountLinkedAs" xml:space="preserve">
+    <value>Linked as</value>
+  </data>
+  <data name="DiscordAccountLinkedOn" xml:space="preserve">
+    <value>since {0}</value>
+  </data>
+  <data name="DiscordAccountUnlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="DiscordAccountNotLinked" xml:space="preserve">
+    <value>Not linked. In the game's Discord server, type /link and open the link the bot sends you.</value>
+  </data>
+  <data name="DiscordLinkTitle" xml:space="preserve">
+    <value>Link Discord</value>
+  </data>
+  <data name="DiscordLinkDescription" xml:space="preserve">
+    <value>Confirm that this Discord account is yours.</value>
+  </data>
+  <data name="DiscordLinkDone" xml:space="preserve">
+    <value>Linked to Discord as {0}.</value>
+  </data>
+  <data name="DiscordLinkBack" xml:space="preserve">
+    <value>Back to your account</value>
+  </data>
+  <data name="DiscordLinkExpires" xml:space="preserve">
+    <value>This link works until {0}.</value>
+  </data>
+  <data name="DiscordLinkConfirmBody" xml:space="preserve">
+    <value>Confirming links this Discord account to the game account you are signed in to. Unlink it any time from your account page or with /unlink in Discord.</value>
+  </data>
+  <data name="DiscordLinkConfirm" xml:space="preserve">
+    <value>Link this Discord account</value>
+  </data>
+  <data name="DiscordLinkNoTicket" xml:space="preserve">
+    <value>This page needs the link the bot sends when you type /link in Discord.</value>
+  </data>
+  <data name="AdmCardDiscord" xml:space="preserve">
+    <value>The bot, linked channels, role mappings and linked members.</value>
+  </data>
+  <data name="AdmDiscordTitle" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="AdmDiscordDescription" xml:space="preserve">
+    <value>The game's Discord bot: its connection, the channels it links, the roles it gives and the members who linked their accounts.</value>
+  </data>
+  <data name="AdmDiscordForbidden" xml:space="preserve">
+    <value>This page needs the discord.admin permission.</value>
+  </data>
+  <data name="AdmDiscordLoadFailed" xml:space="preserve">
+    <value>Could not load the Discord link: {0}</value>
+  </data>
+  <data name="AdmDiscordConnection" xml:space="preserve">
+    <value>Connection</value>
+  </data>
+  <data name="AdmDiscordConnectionSub" xml:space="preserve">
+    <value>What setting up the bot still needs.</value>
+  </data>
+  <data name="AdmDiscordConnectionAs" xml:space="preserve">
+    <value>Signed in as {0}, in {1} server(s).</value>
+  </data>
+  <data name="AdmDiscordStatusConnected" xml:space="preserve">
+    <value>connected</value>
+  </data>
+  <data name="AdmDiscordStatusConnecting" xml:space="preserve">
+    <value>connecting</value>
+  </data>
+  <data name="AdmDiscordStatusNoToken" xml:space="preserve">
+    <value>no token</value>
+  </data>
+  <data name="AdmDiscordStatusBadToken" xml:space="preserve">
+    <value>token refused</value>
+  </data>
+  <data name="AdmDiscordStatusIntentsOff" xml:space="preserve">
+    <value>intents off</value>
+  </data>
+  <data name="AdmDiscordStatusUnreachable" xml:space="preserve">
+    <value>unreachable</value>
+  </data>
+  <data name="AdmDiscordOpen" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="AdmDiscordInvite" xml:space="preserve">
+    <value>Add the bot to a server</value>
+  </data>
+  <data name="AdmDiscordToken" xml:space="preserve">
+    <value>Set the bot token</value>
+  </data>
+  <data name="AdmDiscordMirrorBans" xml:space="preserve">
+    <value>Mirror game bans to Discord</value>
+  </data>
+  <data name="AdmDiscordMirrorBansSub" xml:space="preserve">
+    <value>A banned account's member is banned in every server the bot is in, and unbanned when the game ban ends. The bot needs Ban Members.</value>
+  </data>
+  <data name="AdmDiscordReconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="AdmDiscordChannels" xml:space="preserve">
+    <value>Linked channels</value>
+  </data>
+  <data name="AdmDiscordChannelsSub" xml:space="preserve">
+    <value>Each is the feed discord/&lt;channel id&gt;. Lines sent on it are posted in the channel.</value>
+  </data>
+  <data name="AdmDiscordChannelsNone" xml:space="preserve">
+    <value>No channel is linked.</value>
+  </data>
+  <data name="AdmDiscordStatePosting" xml:space="preserve">
+    <value>posting</value>
+  </data>
+  <data name="AdmDiscordStateBacklogged" xml:space="preserve">
+    <value>{0} waiting</value>
+  </data>
+  <data name="AdmDiscordStateStopped" xml:space="preserve">
+    <value>stopped</value>
+  </data>
+  <data name="AdmDiscordOpenTo" xml:space="preserve">
+    <value>open to {0}</value>
+  </data>
+  <data name="AdmDiscordLinkedOn" xml:space="preserve">
+    <value>linked {0}</value>
+  </data>
+  <data name="AdmDiscordResume" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="AdmDiscordGate" xml:space="preserve">
+    <value>Let only linked members post</value>
+  </data>
+  <data name="AdmDiscordUnlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="AdmDiscordLinkChannel" xml:space="preserve">
+    <value>Discord channel</value>
+  </data>
+  <data name="AdmDiscordMissing" xml:space="preserve">
+    <value>(the bot lacks {0})</value>
+  </data>
+  <data name="AdmDiscordLink" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="AdmDiscordRoles" xml:space="preserve">
+    <value>Role mappings</value>
+  </data>
+  <data name="AdmDiscordRolesSub" xml:space="preserve">
+    <value>A linked member holds the Discord role while their account holds the game role.</value>
+  </data>
+  <data name="AdmDiscordRolesNone" xml:space="preserve">
+    <value>No roles are mapped.</value>
+  </data>
+  <data name="AdmDiscordStateApplied" xml:space="preserve">
+    <value>applied</value>
+  </data>
+  <data name="AdmDiscordStateBroken" xml:space="preserve">
+    <value>broken</value>
+  </data>
+  <data name="AdmDiscordStateDrift" xml:space="preserve">
+    <value>{0} changed by hand</value>
+  </data>
+  <data name="AdmDiscordByHand" xml:space="preserve">
+    <value>Changes by hand</value>
+  </data>
+  <data name="AdmDiscordModeReport" xml:space="preserve">
+    <value>Listed below</value>
+  </data>
+  <data name="AdmDiscordModeEnforce" xml:space="preserve">
+    <value>Put back at once</value>
+  </data>
+  <data name="AdmDiscordUnmap" xml:space="preserve">
+    <value>Unmap</value>
+  </data>
+  <data name="AdmDiscordGameRole" xml:space="preserve">
+    <value>Game role</value>
+  </data>
+  <data name="AdmDiscordDiscordRole" xml:space="preserve">
+    <value>Discord role</value>
+  </data>
+  <data name="AdmDiscordDiscordRoleHint" xml:space="preserve">
+    <value>Its name, or its id.</value>
+  </data>
+  <data name="AdmDiscordConfirmStaff" xml:space="preserve">
+    <value>Show on Discord who is staff</value>
+  </data>
+  <data name="AdmDiscordMap" xml:space="preserve">
+    <value>Map</value>
+  </data>
+  <data name="AdmDiscordDrift" xml:space="preserve">
+    <value>Changed by hand</value>
+  </data>
+  <data name="AdmDiscordDriftSub" xml:space="preserve">
+    <value>Mapped roles given or taken on Discord against the game's roles.</value>
+  </data>
+  <data name="AdmDiscordDriftNone" xml:space="preserve">
+    <value>No mapped role was changed by hand.</value>
+  </data>
+  <data name="AdmDiscordDriftGiven" xml:space="preserve">
+    <value>was given @{0} without {1} in the game</value>
+  </data>
+  <data name="AdmDiscordDriftTaken" xml:space="preserve">
+    <value>lost @{0} while holding {1} in the game</value>
+  </data>
+  <data name="AdmDiscordSettle" xml:space="preserve">
+    <value>Put @{0} back</value>
+  </data>
+  <data name="AdmDiscordSettleAll" xml:space="preserve">
+    <value>Put every role back</value>
+  </data>
+  <data name="AdmDiscordDriftHint" xml:space="preserve">
+    <value>To keep Discord's version instead, unmap the role.</value>
+  </data>
+  <data name="AdmDiscordMembers" xml:space="preserve">
+    <value>Linked members</value>
+  </data>
+  <data name="AdmDiscordMembersSub" xml:space="preserve">
+    <value>Discord accounts linked to game accounts. Unlinking takes the Linked role and every mapped role.</value>
+  </data>
+  <data name="AdmDiscordSearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="AdmDiscordMembersNone" xml:space="preserve">
+    <value>No member has linked a Discord account.</value>
+  </data>
+  <data name="AdmDiscordMembersNoMatch" xml:space="preserve">
+    <value>No linked member matches.</value>
+  </data>
+  <data name="AdmDiscordAccountGone" xml:space="preserve">
+    <value>(account gone)</value>
+  </data>
   <data name="AdmActivityTitle" xml:space="preserve">
     <value>Activity</value>
   </data>
@@ -8325,6 +8568,15 @@
   </data>
   <data name="AdmActivityDeadEmpty" xml:space="preserve">
     <value>Every room has seen a pose.</value>
+  </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>Diagram</value>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} to {1}: {2}</value>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>{0}'s card</value>
   </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notifications</value>

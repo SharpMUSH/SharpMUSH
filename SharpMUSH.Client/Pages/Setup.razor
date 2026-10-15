@@ -190,14 +190,17 @@
 
                 @foreach (var group in PackageGroups)
                 {
-                    <h3 class="setup-group-title">@Loc[group.TitleKey]</h3>
+                    <h3 class="setup-group-title">
+                        @group.Title
+                        <span class="setup-group-count">@Loc["AdmSetupPkgGroupCount", group.Packages.Count(p => Effective.Contains(p.Package.Id)), group.Packages.Count]</span>
+                    </h3>
                     <ul class="setup-apps">
-                        @foreach (var package in group.Packages)
+                        @foreach (var (package, addOn) in group.Packages)
                         {
                             var id = package.Id;
                             var needed = NeededBy(id);
                             var on = Effective.Contains(id);
-                            <li class="setup-app @(package.Available ? null : "setup-app--unavailable")" @key="id">
+                            <li class="setup-app @(addOn ? "setup-app--addon" : null) @(package.Available ? null : "setup-app--unavailable")" @key="id">
                                 <label class="setup-app-label">
                                     <input id="setup-pkg-@id" class="setup-app-check" type="checkbox"
                                            checked="@on" disabled="@(_busy || needed is not null || (!package.Available && !on))"
@@ -311,8 +314,6 @@
 
     /// <summary>How many clashing attributes are listed before the rest are counted.</summary>
     private const int ClashesShown = 8;
-
-    private sealed record PackageGroup(string TitleKey, IReadOnlyList<BundledPackageState> Packages);
 
     /// <summary>
     /// <c>?step=handlers</c> (or <c>packages</c>): where the database import sends the administrator back to.
@@ -641,12 +642,7 @@
         _busy = false;
     }
 
-    /// <summary>The handlers' packages first, then the game's own, each in the server's (dependency) order.</summary>
-    private IEnumerable<PackageGroup> PackageGroups =>
-    [
-        new("AdmSetupPkgGroupPortal", _packages.Where(p => p.Requires is not null).ToList()),
-        new("AdmSetupPkgGroupGame", _packages.Where(p => p.Requires is null).ToList()),
-    ];
+    private IEnumerable<SetupPackageGroup> PackageGroups => SetupPackageGroups.For(_packages, Loc["AdmSetupPkgGroupUncategorized"]);
 
     private string HandlerTitle(string kind) => kind == HandlerKinds.Http
         ? Loc["AdmSetupHandlerHttpTitle"]
@@ -679,6 +675,8 @@
         "wiki-reader" => Loc["AdmSetupAppWikiReaderTitle"],
         "jobs" => Loc["AdmSetupPkgJobsTitle"],
         "jobs-app" => Loc["AdmSetupPkgJobsAppTitle"],
+        "chargen" => Loc["AdmSetupPkgChargenTitle"],
+        "chargen-app" => Loc["AdmSetupPkgChargenAppTitle"],
         "bboards" => Loc["AdmSetupPkgBBoardsTitle"],
         "bboards-app" => Loc["AdmSetupPkgBBoardsAppTitle"],
         "messages" => Loc["AdmSetupPkgMessagesTitle"],
@@ -697,6 +695,8 @@
         "wiki-reader" => Loc["AdmSetupAppWikiReaderDesc"],
         "jobs" => Loc["AdmSetupPkgJobsDesc"],
         "jobs-app" => Loc["AdmSetupPkgJobsAppDesc"],
+        "chargen" => Loc["AdmSetupPkgChargenDesc"],
+        "chargen-app" => Loc["AdmSetupPkgChargenAppDesc"],
         "bboards" => Loc["AdmSetupPkgBBoardsDesc"],
         "bboards-app" => Loc["AdmSetupPkgBBoardsAppDesc"],
         "messages" => Loc["AdmSetupPkgMessagesDesc"],

@@ -1,40 +1,45 @@
-format: 1.1
+format: "1.10"
 package: chargen-app
-version: 1.0.1
+version: 2.0.1
 kind: application
 authors: [SharpMUSH]
-description: "Registers the character-application form (chargen) as a portal page at /apps/chargen."
+description: "Registers character applications (the chargen package) as a portal page at /apps/chargen: the applicant's own application as a form, and for reviewers the queue, the waitlist and each application with its comments and what changed."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
-keywords: [portal, application, form, chargen]
+keywords: [portal, application, form, chargen, review]
+category: Characters
 requires_server: ">=0.1"
 
-# An application package owns no objects — it depends on the softcode package
-# that provides its HTTP-handler routes (the schema + submit handlers) and
-# registers the portal entry point that renders them.
+# An application package owns no objects. The chargen package serves the routes it points at:
+# GET /http/chargen/schema, /http/chargen/data and /http/chargen/nav, and POST /http/chargen/act. Everything
+# the page shows, and every button on it, is decided by that softcode for the character viewing it.
 depends:
   - package: chargen
-    version: ">=1.0"
+    version: ">=2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: chargen/
 
-# The installing admin chooses who may open the application. A {{?configure}}
-# ref in an application field is prompted at review and substituted at apply,
-# exactly like refs in attribute values.
+# The installing admin chooses who may open the application, players by default. A {{?configure}} ref in an
+# application field is prompted at review and substituted at apply, exactly like refs in attribute values.
 configure:
   access:
     label: "Minimum portal role that may open the application"
     type: string
     default: player
 
+# Every player may open it: applicants fill in and follow their own application there, and reviewers read the
+# queue. {path} is what follows /apps/chargen/: nothing for the viewer's own application, queue, waitlist, all
+# or decided for a list, or an application's key. The sidebar comes from nav_url.
 application:
   slug: chargen
   display_name: Character Application
   icon: assignment_ind
   type: page
-  schema_url: http/chargen/schema
-  submit_route: http/chargen
+  schema_url: http/chargen/schema?at={path}
+  data_url: http/chargen/data?at={path}
+  submit_route: http/chargen/act
   minimum_role: "{{?access}}"
-  nav_placement: main
+  nav_placement: Play
+  nav_url: http/chargen/nav
   order: 50

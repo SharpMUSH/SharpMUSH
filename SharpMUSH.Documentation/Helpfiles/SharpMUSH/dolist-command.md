@@ -26,7 +26,7 @@
 
 `@dolist[/<switches>][/notify][/delimit <delim>] <list>=<action list>`
 
-@dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list. The `/space` switch asks for the default, a space-separated list, and changes nothing; it comes from RhostMUSH.
+@dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list. A marked `<delim>`, such as `%*<|>`, splits only where it is marked: see [list separators]. The `/space` switch asks for the default, a space-separated list, and changes nothing; it comes from RhostMUSH.
 
 Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
 

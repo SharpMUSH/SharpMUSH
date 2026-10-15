@@ -23,7 +23,7 @@ if (!MarkupRegistry.IsConfigured)
 	// policy as it is written — including markup built before it reached us.
 	// WithLayoutImages: a figure()'s picture is shown only when the game's image_hosts allows its host.
 	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal)
-		.WithLayoutImages(PortalImagePolicy.Allows);
+		.WithLayoutImages(PortalImagePolicy.Allows).WithListSeparators();
 }
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -33,6 +33,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddSharedResourceLocalization();
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
@@ -47,6 +48,8 @@ builder.Services.AddSingleton<ApplicationRegistryClient>();
 builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
+builder.Services.AddSingleton<DiscordAccountService>();
+builder.Services.AddSingleton<DiscordAdminService>();
 builder.Services.AddSingleton<MailService>();
 builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 // Scene data is served by the server API; the WASM client has no local ISceneService

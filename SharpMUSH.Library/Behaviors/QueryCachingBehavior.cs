@@ -50,7 +50,12 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 
 		if (versioned && versions.Of(number) != before)
 		{
+			// The version moves on both sides of this removal, as a write's does. A caller that joined this
+			// factory after the write's own moves got the pre-write value under the current version, and an
+			// answer kept outside the cache from it (ObjectRelationMemo) must not stand past this removal.
+			versions.Bump(number);
 			await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
+			versions.Bump(number);
 		}
 
 		return value;

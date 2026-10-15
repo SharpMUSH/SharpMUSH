@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: who-where
-version: 1.7.0
+version: 1.7.2
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [who, where, social]
+category: Community
 convention_prefix: WW_
 requires_server: ">=0.1"
 
@@ -73,7 +74,7 @@ objects:
         100
       # %0 a screen: starts it, setting ww_view, and ww_key and ww_rs for a table.
       WW_FN_START: |-
-        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,chr(9246))][setq(ww_after,v(DATA`CONFIG`IDLE-AFTER))]
+        setq(ww_view,%0)[setq(ww_key,[after(%#,#)]_[rand(1000000000)])][setq(ww_rs,%*<|>)][setq(ww_after,v(DATA`CONFIG`IDLE-AFTER))]
       # %0 a list, %1 how many to a run, %2 the list's delimiter (a space when empty): the runs, split by |.
       WW_FN_SPLIT: |-
         setq(ww_d,if(strlen(%2),%2,%b))[if(words(%0,%q<ww_d>),iter(lnum(0,dec(ceil(fdiv(words(%0,%q<ww_d>),%1)))),extract(%0,inc(mul(%i0,%1)),%1,%q<ww_d>),,|))]
@@ -81,9 +82,8 @@ objects:
       WW_FN_PART: |-
         u(%!/WW_FN_%q<ww_view>_PART,%0)
       # A table is built on this object while its runs are sent, one row per player in WW_TMP`<ww_key>:
-      # the cells split by %r, which no name holds, and the rows by U+241E (ww_rs), since chr() refuses
-      # control characters such as chr(30). The key is the reader and a random number, so two screens
-      # built at once keep apart.
+      # the cells split by %r, which no name holds, and the rows by a marked separator (ww_rs). The key
+      # is the reader and a random number, so two screens built at once keep apart.
       # %0 rows: added to the table.
       WW_FN_ROWS_ADD: |-
         if(strlen(%0),attrib_set(%!/WW_TMP`%q<ww_key>,[if(hasattr(%!,WW_TMP`%q<ww_key>),[xget(%!,WW_TMP`%q<ww_key>)]%q<ww_rs>)]%0))
@@ -172,7 +172,7 @@ objects:
         if(strlen(%q<ww_prefix>),u(%!/WW_FN_MATCHING,%0,%q<ww_prefix>),%0)
       # %0 a player: their row.
       WW_FN_WHO_ROW: |-
-        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r[first(get(%0/ALIAS),;)]%r[etime(%q<ww_idle>,3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)]
+        unmark([u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r[first(get(%0/ALIAS),;)]%r[etime(%q<ww_idle>,3)]%r[etime(conn(%0),3)]%r[firstof(ucstr(left(get(%0/SEX),1)),?)]%r[u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%0))]%r[chain(%q<ww_filters>,,%0)])
       # %0 the rows: the box, or a warning when +who <name> matched nobody.
       WW_FN_WHO_SCREEN: |-
         if(strlen(%0),box([u(%!/WW_FN_WHO_TABLE,%0)][u(%!/WW_FN_FOOT,u(%!/WW_FN_WHO_COUNT,words(%0,%q<ww_rs>)))],Who's Online),notice(WHO,Nobody connected has a name starting with %q<ww_prefix>.,warn))
@@ -266,7 +266,7 @@ objects:
         case(%0,-,u(%!/WW_FN_WHERE_SCREEN,u(%!/WW_FN_ROWS_TAKE)),null(u(%!/WW_FN_ROWS_ADD,iter(%0,u(%!/WW_FN_WHERE_ROW,%i0,u(%!/WW_FN_PLACE,u(%!/WW_FN_ROOM,%i0))),,%q<ww_rs>))))
       # %0 a player, %1 where they are: their row, with how long they have been idle.
       WW_FN_WHERE_ROW: |-
-        [u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r%1%r[etime(%q<ww_idle>,3)]
+        unmark([u(%!/WW_FN_NAME,%0,setr(ww_idle,idle(%0)))]%r%1%r[etime(%q<ww_idle>,3)])
       # %0 the rows: the box with the table and the count.
       WW_FN_WHERE_SCREEN: |-
         box(ldatatable(u(%!/WW_FN_OPTS,1%r3,1%r1%r2,%r1,%r12),[tone(strong,Name)]%r[tone(strong,Location)]%r>[tone(strong,Idle)],%0,%q<ww_rs>)[u(%!/WW_FN_FOOT,[words(%0,%q<ww_rs>)] connected)],%q<ww_title>)

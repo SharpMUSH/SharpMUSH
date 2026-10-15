@@ -1,0 +1,67 @@
+/* Laid out as the account page is: a column of cards under the header. */
+.discord-link-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    max-width: 56rem;
+}
+
+.discord-link-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 14px 16px 16px;
+}
+
+.discord-link-card p {
+    margin: 0;
+}
+
+.discord-link-back {
+    color: var(--accent);
+}
+
+.discord-link-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.discord-link-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.discord-link-name {
+    font-weight: 600;
+}
+
+.discord-link-meta {
+    color: var(--text-dim);
+    font-size: 0.875rem;
+}
+
+.discord-link-confirm {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: var(--accent-on);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.discord-link-confirm:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* a narrow page gives the confirm button the card's whole width, an easier tap */
+@container page (max-width: 48rem) {
+    .discord-link-confirm {
+        align-self: stretch;
+    }
+}
