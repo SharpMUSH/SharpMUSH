@@ -920,6 +920,11 @@ public class SceneRoleplayIntegrationTests
 		var (bo, _) = await CreatePlayerAsync($"Bo_{Tag}", "pw_bo_123");
 		await God1($"@tel {amy}={digOut}");
 		await God1($"@tel {bo}={digOut}");
+		// Other tests here park the Scene Logger in their own rooms, so its +scene/* verbs are only sure to match
+		// beside it.
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var loggerDbref = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid).ToString();
+		await God1($"@tel {loggerDbref}={digOut}");
 
 		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
 		async Task<bool> BoHasSceneHere(bool expected)
