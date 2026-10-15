@@ -118,6 +118,7 @@ public class BundledPackagesTests
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("plus-config"));
 		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("who-where"));
 		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("finger"));
+		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("info"));
 	}
 
 	/// <summary>

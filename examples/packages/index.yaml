@@ -142,6 +142,11 @@ packages:
     package: time
     version: 1.1.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
+  - path: info/
+    name: Info Files
+    package: info
+    version: 1.0.0
+    description: +info, +pinfo, +journal and +notebook — public and private files on a character, a journal shared entry by entry, and plot notebooks a group writes together
   - path: discord/
     name: Discord
     package: discord
