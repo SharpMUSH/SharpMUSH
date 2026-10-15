@@ -1,0 +1,525 @@
+format: 1.7
+package: scene-safety
+version: 1.0.2
+authors: [SharpMUSH]
+description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, safety, consent, content-warning, rp]
+requires_server: ">=0.1"
+
+# The summary and the signal call the Scene plugin's scene functions and @scene/notice, so it installs only
+# while the plugin runs.
+plugins: [scene]
+
+# The scene package draws the +scene card and the join message, where the summary and a joining player's own
+# warning are added, +help carries the topics below, and +config the settings.
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+  - package: scene
+    version: ">=1.7"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), reads
+  # every scene member's account with account(), sends @scene/notice, and reads the Safety Store, which no
+  # player can.
+  #
+  # +safety is added with /noparse/rsnoparse and hooked to CMD`SAFETY, so what a player types reaches the code
+  # exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`SAFETY` one routine per
+  # switch, FUN`KEY` where a player's lines and veils are filed, FUN`LIST` the topic lists, FUN`TOUCH` the
+  # matching, FUN`SCENE` the owner's summary, FUN`SIGNAL` the pause and skip text. DATA`CONFIG` the settings.
+  - ref: safety
+    type: thing
+    name: Scene Safety
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings and routes. One leaf each.
+      # The settings +config shows and changes (plus-config). Code reads each with v(DATA`CONFIG`<NAME>).
+      DATA`CONFIG:
+        value: |-
+          The topics +safety suggests, which scene detail holds content warnings, and how often a player may signal.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Scene safety
+      DATA`CONFIG`TOPICS: |-
+        Animal harm|Body horror|Child harm|Death|Drug use|Gore|Racism|Self-harm|Sexual content|Slavery|Spiders|Suicide|Torture|Violence
+      DATA`CONFIG`TOPICS`TYPE: |-
+        list
+      DATA`CONFIG`TOPICS`DEFAULT: |-
+        Animal harm|Body horror|Child harm|Death|Drug use|Gore|Racism|Self-harm|Sexual content|Slavery|Spiders|Suicide|Torture|Violence
+      DATA`CONFIG`TOPICS`DELIMITER: |-
+        |
+      DATA`CONFIG`TOPICS`DESCRIPTION: |-
+        The topics +safety/topics suggests. Players may also name their own.
+      DATA`CONFIG`TOPICS`LABEL: |-
+        Suggested topics
+      DATA`CONFIG`TOPICS`EXAMPLE: |-
+        Gore|Spiders|Clowns
+      DATA`CONFIG`WARNING-DETAIL: |-
+        warning
+      DATA`CONFIG`WARNING-DETAIL`TYPE: |-
+        text
+      DATA`CONFIG`WARNING-DETAIL`DEFAULT: |-
+        warning
+      DATA`CONFIG`WARNING-DETAIL`PATTERN: |-
+        ^[a-z][a-z0-9_-]*$
+      DATA`CONFIG`WARNING-DETAIL`DESCRIPTION: |-
+        The scene detail that holds a scene's content warnings, split by |. scene-verse names it warning.
+      DATA`CONFIG`WARNING-DETAIL`LABEL: |-
+        Warning detail
+      DATA`CONFIG`WARNING-DETAIL`EXAMPLE: |-
+        cw
+      DATA`CONFIG`TOPIC-LENGTH: |-
+        40
+      DATA`CONFIG`TOPIC-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`TOPIC-LENGTH`DEFAULT: |-
+        40
+      DATA`CONFIG`TOPIC-LENGTH`MIN: |-
+        1
+      DATA`CONFIG`TOPIC-LENGTH`MAX: |-
+        200
+      DATA`CONFIG`TOPIC-LENGTH`DESCRIPTION: |-
+        The longest line or veil, in characters.
+      DATA`CONFIG`TOPIC-LENGTH`LABEL: |-
+        Topic length
+      DATA`CONFIG`TOPIC-LENGTH`EXAMPLE: |-
+        60
+      DATA`CONFIG`NOTE-LENGTH: |-
+        200
+      DATA`CONFIG`NOTE-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`NOTE-LENGTH`DEFAULT: |-
+        200
+      DATA`CONFIG`NOTE-LENGTH`MIN: |-
+        0
+      DATA`CONFIG`NOTE-LENGTH`MAX: |-
+        1000
+      DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
+        The longest note a pause or skip may carry, in characters. 0 allows none.
+      DATA`CONFIG`NOTE-LENGTH`LABEL: |-
+        Note length
+      DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
+        0
+      DATA`CONFIG`SIGNAL-WAIT: |-
+        60
+      DATA`CONFIG`SIGNAL-WAIT`TYPE: |-
+        duration
+      DATA`CONFIG`SIGNAL-WAIT`DEFAULT: |-
+        60
+      DATA`CONFIG`SIGNAL-WAIT`MIN: |-
+        0
+      DATA`CONFIG`SIGNAL-WAIT`MAX: |-
+        3600
+      DATA`CONFIG`SIGNAL-WAIT`DESCRIPTION: |-
+        How long a player waits between one pause or skip and the next.
+      DATA`CONFIG`SIGNAL-WAIT`LABEL: |-
+        Wait between signals
+      DATA`CONFIG`SIGNAL-WAIT`EXAMPLE: |-
+        30s
+      # Which INC` routine each switch runs: DATA`ROUTE`<switch>. BARE is the command alone, ARG the command with
+      # something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`BARE: |-
+        SAFETY`MINE
+      DATA`ROUTE`ARG: |-
+        SAFETY`ARG
+      DATA`ROUTE`LINE: |-
+        SAFETY`LINE
+      DATA`ROUTE`VEIL: |-
+        SAFETY`VEIL
+      DATA`ROUTE`REMOVE: |-
+        SAFETY`REMOVE
+      DATA`ROUTE`CLEAR: |-
+        SAFETY`CLEAR
+      DATA`ROUTE`TOPICS: |-
+        SAFETY`TOPICS
+      DATA`ROUTE`SCENE: |-
+        SAFETY`SCENE
+      DATA`ROUTE`PAUSE: |-
+        SAFETY`PAUSE
+      DATA`ROUTE`SKIP: |-
+        SAFETY`SKIP
+
+      # ---- commands -------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SAFETY:
+        value: |-
+          $(?is)^\+safety(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch, and runs the routine. Only
+      # players keep lines and veils.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SAFETY,Only players keep lines and veils.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SAFETY,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SAFETY,+safety has no /%q<cmd_switch> switch. +help safety lists them.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch (the one switch),
+      # cmd_argument, cmd_route (the INC` routine to run), viewer_key (where the player's lines and veils are
+      # filed) and viewer_topics (what they typed, split by |, each trimmed, the empty ones dropped).
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%1),
+          cmd_route,get(%!/DATA`ROUTE`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_key,u(%!/FUN`KEY,%#),
+          viewer_topics,u(%!/FUN`LIST`TYPED,%q<cmd_argument>))
+        flags: [funsyntax]
+
+      # ---- where a player's lines and veils are filed -------------------------------
+      # Lines and veils belong to the person, not the character: every character on one account shares them.
+      # A character on no account keeps its own. A record is RECORD`<key> on the store, its value the account id
+      # or objid it belongs to, with LINES and VEILS beneath, each split by |.
+      #
+      # %0 a player: the key their lines and veils are filed under. An account is A<id> (node_accounts/5 is A5),
+      # a character on no account C<objid> (#12:1790888816538 is C12_1790888816538).
+      FUN`KEY:
+        value: |-
+          setq(key_account,account(%0))[if(cand(strlen(%q<key_account>),not(strmatch(%q<key_account>,#-*))),A[last(%q<key_account>,/)],C[edit(objid(%0),#,,:,_)])]
+        flags: [funsyntax]
+      # %0 a player: what their record's root names, the account id or objid.
+      FUN`KEY`OWNER:
+        value: |-
+          setq(key_account,account(%0))[if(cand(strlen(%q<key_account>),not(strmatch(%q<key_account>,#-*))),%q<key_account>,objid(%0))]
+        flags: [funsyntax]
+      # %0 a key: its lines. %1 LINES or VEILS.
+      FUN`RECORD:
+        value: |-
+          get({{store}}/RECORD`%0`%1)
+        flags: [funsyntax]
+
+      # ---- topic lists, split by | ------------------------------------------------------
+      # %0 typed text: its topics split by |, each trimmed and squished, the empty ones dropped.
+      FUN`LIST`TYPED:
+        value: |-
+          squish(iter(%0,squish(%i0),|,|),|)
+        flags: [funsyntax]
+      # %0 a list, %1 a topic: 1 when the list holds it, in any case.
+      FUN`LIST`HAS:
+        value: |-
+          member(lcstr(%0),lcstr(%1),|)
+        flags: [funsyntax]
+      # fold() step: %0 the list so far, %1 a topic to add unless it is there in some case.
+      FUN`LIST`ADDONE:
+        value: |-
+          if(u(%!/FUN`LIST`HAS,%0,%1),%0,squish(%0|%1,|))
+        flags: [funsyntax]
+      # %0 a list, %1 topics: the list with them added, in the order they were first given.
+      FUN`LIST`ADD:
+        value: |-
+          fold(%!/FUN`LIST`ADDONE,%1,%0,|)
+        flags: [funsyntax]
+      # %0 a list, %1 topics: the list without them, in any case.
+      FUN`LIST`DROP:
+        value: |-
+          squish(iter(%0,if(u(%!/FUN`LIST`HAS,%1,%i0),,%i0),|,|),|)
+        flags: [funsyntax]
+      # %0 a list: its topics with a dot between, since a topic may hold a comma, or nothing.
+      FUN`LIST`SHOW:
+        value: |-
+          edit(%0,|,%b[chr(183)]%b)
+        flags: [funsyntax]
+      # %0 a topic: 1 when it is no longer than the game allows.
+      FUN`LIST`FITS:
+        value: |-
+          lte(strlen(%0),v(DATA`CONFIG`TOPIC-LENGTH))
+        flags: [funsyntax]
+
+      # ---- touching a content warning --------------------------------------------------
+      # A line or veil touches a warning when either holds the other as whole words, in any case: a line of
+      # spiders touches the warning "Spiders and snakes", and a line of graphic violence touches "Violence".
+      # Compared as text, so * and ? in either mean nothing.
+      #
+      # %0 a topic, %1 a warning.
+      FUN`TOUCH:
+        value: |-
+          setqm(touch_topic,%b[lcstr(squish(%0))]%b,
+          touch_warning,%b[lcstr(squish(%1))]%b)[cor(pos(%q<touch_topic>,%q<touch_warning>),pos(%q<touch_warning>,%q<touch_topic>))]
+        flags: [funsyntax]
+      # %0 topics split by |, %1 a warning: 1 when any of them touches it.
+      FUN`TOUCH`ANY:
+        value: |-
+          words(iter(%0,if(u(%!/FUN`TOUCH,%i0,%1),x),|,%b))
+        flags: [funsyntax]
+      # %0 topics, %1 warnings, both split by |: the warnings they touch, split by |.
+      FUN`TOUCH`WARNINGS:
+        value: |-
+          squish(iter(%1,if(u(%!/FUN`TOUCH`ANY,%0,%i0),%i0),|,|),|)
+        flags: [funsyntax]
+
+      # ---- a scene's summary, for its owner --------------------------------------------
+      # %0 a scene: its content warnings, split by |.
+      FUN`SCENE`WARNINGS:
+        value: |-
+          squish(scene(%0,v(DATA`CONFIG`WARNING-DETAIL)),|)
+        flags: [funsyntax]
+      # %0 a scene, %1 a player: 1 when they own it.
+      FUN`SCENE`OWNS:
+        value: |-
+          member(scenemembers(%0,owner),num(%1))
+        flags: [funsyntax]
+      # %0 a scene: the keys of everyone in it but its owners, once each. Two characters on one account count once.
+      FUN`SCENE`KEYS:
+        value: |-
+          setunion(iter(setdiff(scenemembers(%0),scenemembers(%0,owner)),u(%!/FUN`KEY,%i0)),)
+        flags: [funsyntax]
+      # %0 keys, %1 a warning, %2 LINES or VEILS: how many of them have one touching it.
+      FUN`SCENE`COUNT:
+        value: |-
+          words(iter(%0,if(u(%!/FUN`TOUCH`ANY,u(%!/FUN`RECORD,%i0,%2),%1),x)))
+        flags: [funsyntax]
+      # %0 a scene: the owner's summary, or nothing when no line or veil touches its warnings. It counts, per
+      # warning, the people whose lines and veils touch it, and never shows a name or the words they used.
+      FUN`SCENE`SUMMARY:
+        value: |-
+          setqm(summary_warnings,u(%!/FUN`SCENE`WARNINGS,%0),
+          summary_keys,u(%!/FUN`SCENE`KEYS,%0),
+          summary_lines,iter(%q<summary_warnings>,u(%!/FUN`SCENE`COUNT,%q<summary_keys>,%i0,LINES),|,|),
+          summary_veils,iter(%q<summary_warnings>,u(%!/FUN`SCENE`COUNT,%q<summary_keys>,%i0,VEILS),|,|),
+          summary_rows,squish(iter(%q<summary_warnings>,if(add(extract(%q<summary_lines>,inum(0),1,|),extract(%q<summary_veils>,inum(0),1,|)),inum(0)),|,%b)))[if(words(%q<summary_rows>),rule(Safety)%r[u(%!/FUN`SCENE`TABLE)]%r[tone(muted,u(%!/FUN`SCENE`NOTE,words(%q<summary_keys>)))])]
+        flags: [funsyntax]
+      # The summary's table: one row per warning touched, from the registers FUN`SCENE`SUMMARY sets.
+      FUN`SCENE`TABLE:
+        value: |-
+          datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,2%r3),grow,json(string,1%r%r),min,json(string,16%r%r)),[tone(strong,Content warning)]%r[iter(%q<summary_rows>,extract(%q<summary_warnings>,%i0,1,|),,%r)],>[tone(strong,Lines)]%r[iter(%q<summary_rows>,extract(%q<summary_lines>,%i0,1,|),,%r)],>[tone(strong,Veils)]%r[iter(%q<summary_rows>,extract(%q<summary_veils>,%i0,1,|),,%r)])
+        flags: [funsyntax]
+      # %0 how many other people are in the scene: what the counts mean, and when they are not anonymous.
+      FUN`SCENE`NOTE:
+        value: |-
+          How many of the other players have a line or a veil touching each warning. Names, and the words they used, are never shown.[if(eq(%0,1),%bOnly one other player is in this scene%, so these are theirs.)]
+        flags: [funsyntax]
+      # A filter on the +scene card (scene's CARD point), run as the Scene Logger with %# the reader: %0 the card,
+      # %1 the scene. The owner sees the summary under the card's own body; everyone else sees the card as it was.
+      FUN`FILTER`CARD:
+        value: |-
+          %0[if(u(%!/FUN`SCENE`OWNS,%1,%#),setq(card_summary,u(%!/FUN`SCENE`SUMMARY,%1))[if(strlen(%q<card_summary>),%r%q<card_summary>)])]
+        flags: [funsyntax]
+      # A filter on joining (scene's JOIN point): %0 the join message, %1 the scene, %2 the player. A player whose
+      # own lines or veils touch the scene's warnings is told which, and how to signal.
+      FUN`FILTER`JOIN:
+        value: |-
+          %0[setq(join_key,u(%!/FUN`KEY,%2))][setq(join_warnings,u(%!/FUN`SCENE`WARNINGS,%1))][setq(join_lines,u(%!/FUN`TOUCH`WARNINGS,u(%!/FUN`RECORD,%q<join_key>,LINES),%q<join_warnings>))][setq(join_veils,u(%!/FUN`TOUCH`WARNINGS,u(%!/FUN`RECORD,%q<join_key>,VEILS),%q<join_warnings>))][if(strlen(%q<join_lines>%q<join_veils>),%r[notice(SAFETY,u(%!/FUN`JOIN`TEXT,%q<join_lines>,%q<join_veils>),warn)])]
+        flags: [funsyntax]
+      # %0 the warnings a joining player's lines touch, %1 those their veils touch.
+      FUN`JOIN`TEXT:
+        value: |-
+          if(strlen(%0),This scene's content warnings touch your lines: [u(%!/FUN`LIST`SHOW,%0)].)[if(strlen(%1),[if(strlen(%0),%b)]They touch your veils: [u(%!/FUN`LIST`SHOW,%1)].)] +safety/pause or +safety/skip tells its owner without your name.
+        flags: [funsyntax]
+
+      # ---- the signal -----------------------------------------------------------------
+      # %0 pause or skip, %1 the scene, %2 the note: what the owner is told.
+      FUN`SIGNAL`TEXT:
+        value: |-
+          notice(SAFETY,Someone in scene %1 asks to [if(strmatch(%0,skip),skip what is happening now,pause)].[if(strlen(%2),%bThey add: %2)] Nobody else was told.,warn)
+        flags: [funsyntax]
+      # %0 a player: 1 when they are connected and can be told.
+      FUN`SIGNAL`CONNECTED:
+        value: |-
+          gte(conn(%0),0)
+        flags: [funsyntax]
+      # %0 a player: the key their last signal is filed under, the character's own, so alts wait apart.
+      FUN`SIGNAL`KEY:
+        value: |-
+          edit(objid(%0),#,,:,_)
+        flags: [funsyntax]
+
+      # ---- the routines ---------------------------------------------------------------
+      # +safety: the player's own lines and veils, and what to type.
+      INC`SAFETY`MINE:
+        value: |-
+          @pemit %#=u(%!/FUN`DISPLAY`MINE,%q<viewer_key>)
+        flags: [cmdsyntax]
+      # %0 a key: its lines and veils as labelled values, with the commands under them.
+      FUN`DISPLAY`MINE:
+        value: |-
+          rule(Your lines and veils)%r[fields(,Lines,firstof(u(%!/FUN`LIST`SHOW,u(%!/FUN`RECORD,%0,LINES)),-),Veils,firstof(u(%!/FUN`LIST`SHOW,u(%!/FUN`RECORD,%0,VEILS)),-))]%r[rule(Only you see these)]%r[tone(muted,A line is something you do not want in a scene at all. A veil may happen%, but off screen. +safety/line <topic> and +safety/veil <topic> add one%, +safety/remove <topic> takes it off%, and +safety/topics suggests some. In a scene%, +safety/pause and +safety/skip ask its owner to stop without your name.)]
+        flags: [funsyntax]
+      # +safety <text>: a switch is needed.
+      INC`SAFETY`ARG:
+        value: |-
+          @pemit %#=notice(SAFETY,+safety takes a switch: +safety/line <topic> or +safety/veil <topic>. +help safety lists them.,warn)
+        flags: [cmdsyntax]
+      # +safety/line <topic>[|<topic>...] and +safety/veil: %<kind> the list added to, %<other> the other one,
+      # which loses them, %<noun> line or veil.
+      INC`SAFETY`ADD:
+        value: |-
+          @assert words(%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,+safety/%<noun> <topic>%, or several split by |.,warn); @assert every(%!/FUN`LIST`FITS,%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,Keep each to [v(DATA`CONFIG`TOPIC-LENGTH)] characters.,warn); &RECORD`%q<viewer_key> {{store}}=u(%!/FUN`KEY`OWNER,%#); think setqm(add_kept,u(%!/FUN`LIST`ADD,u(%!/FUN`RECORD,%q<viewer_key>,%<kind>),%q<viewer_topics>),add_other,u(%!/FUN`LIST`DROP,u(%!/FUN`RECORD,%q<viewer_key>,%<other>),%q<viewer_topics>)); @include/args %!/INC`SAFETY`WRITE=kind,%<kind>,list,%q<add_kept>; @include/args %!/INC`SAFETY`WRITE=kind,%<other>,list,%q<add_other>; @pemit %#=notice(SAFETY,Your [lcstr(%<kind>)]: [u(%!/FUN`LIST`SHOW,u(%!/FUN`RECORD,%q<viewer_key>,%<kind>))]. Nobody else sees them.,ok)
+        flags: [cmdsyntax]
+      # Writes %<list> as the player's %<kind>, or clears it when it is empty. @if, not @break: an included @break
+      # would stop the routine that included it.
+      INC`SAFETY`WRITE:
+        value: |-
+          @if strlen(%<list>)={&RECORD`%q<viewer_key>`%<kind> {{store}}=%<list>},{&RECORD`%q<viewer_key>`%<kind> {{store}}}
+        flags: [cmdsyntax]
+      INC`SAFETY`LINE:
+        value: |-
+          @include/args %!/INC`SAFETY`ADD=kind,LINES,other,VEILS,noun,line
+        flags: [cmdsyntax]
+      INC`SAFETY`VEIL:
+        value: |-
+          @include/args %!/INC`SAFETY`ADD=kind,VEILS,other,LINES,noun,veil
+        flags: [cmdsyntax]
+      # +safety/remove <topic>[|<topic>...]: off whichever list holds it.
+      INC`SAFETY`REMOVE:
+        value: |-
+          @assert words(%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,+safety/remove <topic>%, or several split by |.,warn); think setqm(remove_lines,u(%!/FUN`RECORD,%q<viewer_key>,LINES),remove_veils,u(%!/FUN`RECORD,%q<viewer_key>,VEILS)); @assert words(iter(%q<viewer_topics>,if(u(%!/FUN`LIST`HAS,%q<remove_lines>|%q<remove_veils>,%i0),x),|,%b))=@pemit %#=notice(SAFETY,Not one of your lines or veils: [u(%!/FUN`LIST`SHOW,%q<viewer_topics>)]. +safety lists them.,warn); think setqm(remove_lines,u(%!/FUN`LIST`DROP,%q<remove_lines>,%q<viewer_topics>),remove_veils,u(%!/FUN`LIST`DROP,%q<remove_veils>,%q<viewer_topics>)); @include/args %!/INC`SAFETY`WRITE=kind,LINES,list,%q<remove_lines>; @include/args %!/INC`SAFETY`WRITE=kind,VEILS,list,%q<remove_veils>; @pemit %#=notice(SAFETY,Removed. +safety shows what is left.,ok)
+        flags: [cmdsyntax]
+      # +safety/clear: every line and veil.
+      INC`SAFETY`CLEAR:
+        value: |-
+          @assert hasattr({{store}},RECORD`%q<viewer_key>)=@pemit %#=notice(SAFETY,You have no lines or veils.,warn); &RECORD`%q<viewer_key>`LINES {{store}}; &RECORD`%q<viewer_key>`VEILS {{store}}; &RECORD`%q<viewer_key> {{store}}; @pemit %#=notice(SAFETY,Your lines and veils are cleared.,ok)
+        flags: [cmdsyntax]
+      # +safety/topics: the topics the game suggests.
+      INC`SAFETY`TOPICS:
+        value: |-
+          @pemit %#=rule(Topics)%r[grid(v(DATA`CONFIG`TOPICS),|)]%r[rule(+safety/line <topic> or +safety/veil <topic>)]%r[tone(muted,Any other words work too.)]
+        flags: [cmdsyntax]
+      # +safety/scene [<id>]: the owner's summary of the focused scene, or the one named.
+      INC`SAFETY`SCENE:
+        value: |-
+          think setq(scene_id,firstof(%q<cmd_argument>,scenefocus(%#))); @assert cand(strlen(%q<scene_id>),not(strmatch(%q<scene_id>,#-*)))=@pemit %#=notice(SAFETY,Name a scene: +safety/scene <id>%, or focus on one with +scene/join <id>.,warn); @assert not(strmatch(scene(%q<scene_id>,status),#-*))=@pemit %#=notice(SAFETY,There is no scene %q<scene_id>.,warn); @assert u(%!/FUN`SCENE`OWNS,%q<scene_id>,%#)=@pemit %#=notice(SAFETY,Only scene %q<scene_id>'s owner sees its summary.,warn); @assert words(u(%!/FUN`SCENE`WARNINGS,%q<scene_id>),|)=@pemit %#=notice(SAFETY,Scene %q<scene_id> has no content warnings. +scene/set [v(DATA`CONFIG`WARNING-DETAIL)]=<warning> gives it one.,warn); @assert strlen(setr(scene_summary,u(%!/FUN`SCENE`SUMMARY,%q<scene_id>)))=@pemit %#=notice(SAFETY,No line or veil of the other players in scene %q<scene_id> touches its content warnings.,ok); @pemit %#=%q<scene_summary>
+        flags: [cmdsyntax]
+      INC`SAFETY`PAUSE:
+        value: |-
+          @include/args %!/INC`SAFETY`SIGNAL=kind,pause
+        flags: [cmdsyntax]
+      INC`SAFETY`SKIP:
+        value: |-
+          @include/args %!/INC`SAFETY`SIGNAL=kind,skip
+        flags: [cmdsyntax]
+      # +safety/pause [<note>] and +safety/skip [<note>]: %<kind>. Tells the focused scene's connected owners, through
+      # @scene/notice, from this object: the owner never learns who asked from the message.
+      INC`SAFETY`SIGNAL:
+        value: |-
+          think setq(signal_scene,scenefocus(%#)); @assert cand(strlen(%q<signal_scene>),not(strmatch(%q<signal_scene>,#-*)))=@pemit %#=notice(SAFETY,Focus on a scene first: +scene/join <id>.,warn); think setq(signal_owners,scenemembers(%q<signal_scene>,owner)); @assert words(%q<signal_owners>)=@pemit %#=notice(SAFETY,Scene %q<signal_scene> has no owner to tell.,warn); @break member(%q<signal_owners>,num(%#))=@pemit %#=notice(SAFETY,You run scene %q<signal_scene>%, so the call is yours. +scene/pause pauses it.,warn); @assert lte(strlen(%q<cmd_argument>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(SAFETY,if(v(DATA`CONFIG`NOTE-LENGTH),Keep the note to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,This game sends a pause or skip without a note.),warn); think setq(signal_wait,sub(add(default({{store}}/SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)],0),v(DATA`CONFIG`SIGNAL-WAIT)),secs())); @assert lte(%q<signal_wait>,0)=@pemit %#=notice(SAFETY,You signalled a moment ago. Try again in %q<signal_wait>s.,warn); think setq(signal_live,filterbool(%!/FUN`SIGNAL`CONNECTED,%q<signal_owners>)); @assert words(%q<signal_live>)=@pemit %#=notice(SAFETY,Scene %q<signal_scene>'s owner is not connected%, so nobody was told.,warn); &SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)] {{store}}=secs(); think setq(signal_text,u(%!/FUN`SIGNAL`TEXT,%<kind>,%q<signal_scene>,%q<cmd_argument>)); @dolist/inline %q<signal_live>={@scene/notice %q<signal_scene>/##=%q<signal_text>}; @pemit %#=notice(SAFETY,Scene %q<signal_scene>'s owner was asked to [if(strmatch(%<kind>,skip),skip,pause)]%, without your name.[if(eq(words(u(%!/FUN`SCENE`KEYS,%q<signal_scene>)),1),%bWith only you and them in the scene%, they will know it was you.)],ok)
+        flags: [cmdsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +safety; @hook/override/inline +safety=%!,CMD`SAFETY
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # Every player's lines and veils, and when each character last signalled. Inside the Scene Safety object, so no
+  # player can reach it, and no_command, so nothing kept on it is ever matched as a command. Staff who can examine
+  # anything can read it; nothing in the package shows it to anyone but the player it belongs to.
+  - ref: store
+    type: thing
+    name: Safety Store
+    location: "{{safety}}"
+    flags: [no_command]
+    attributes:
+      RECORD: |-
+        Lines and veils, one branch per account (A<id>) or character on no account (C<objid>), with LINES and VEILS beneath, split by |.
+      SIGNAL: |-
+        When each character last sent a pause or skip, in seconds, one leaf per character.
+
+  # The owner's summary on the +scene card, and a joining player's own warning (+help scene filters). They run as
+  # the Scene Logger, which may call the Scene Safety object's functions.
+  - ref: scene_filters
+    target: "{{scene/logger}}"
+    attributes:
+      FILTER`CARD`SAFETY: |-
+        u({{safety}}/FUN`FILTER`CARD,%0,%1)
+      FILTER`JOIN`SAFETY: |-
+        u({{safety}}/FUN`FILTER`JOIN,%0,%1,%2)
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are
+  # evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: safety_help
+    type: thing
+    name: Safety Help
+    location: "{{safety}}"
+    attributes:
+      HELP: |-
+        Lines, veils and stopping a scene: +safety.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SAFETY: |-
+        scene|scene join
+      HELP`SAFETY: |-
+        `+safety` keeps your **lines** and **veils**, and lets you ask a scene's owner to pause or skip without saying who you are.
+
+        - A **line** is something you do not want in a scene at all.
+        - A **veil** is something that may happen, but off screen: fade to black.
+
+        Nobody else sees them. They belong to your account, so every character on it shares them.
+
+        - `+safety` shows yours.
+        - `+safety/line <topic>` adds a line, and `+safety/veil <topic>` a veil. Name several split by `|`: `+safety/line Spiders|Gore`.
+        - `+safety/remove <topic>` takes one off. `+safety/clear` takes them all off.
+        - `+safety/topics` suggests topics. Any other words work too.
+
+        For example:
+
+        `+safety/veil Sexual content`
+
+        Output: `\[SAFETY\] Done: Your veils: Sexual content. Nobody else sees them.`
+
+        ## In a scene
+
+        When a scene's content warnings touch one of your lines or veils, you are told as you join it, and its owner sees how many players have one: never who, and never the words you used.
+
+        - `+safety/pause \[<note>\]` asks your focused scene's owner to pause.
+        - `+safety/skip \[<note>\]` asks them to skip what is happening now.
+
+        Only the owner is told, and not by whom. In a scene of two, they can tell it was you; `+safety` says so when you send it. A short note is optional: `+safety/skip Can we move past this?`
+
+        Output, to the owner: `\[SAFETY\] Warning: Someone in scene 4 asks to skip what is happening now. They add: Can we move past this? Nobody else was told.`
+
+        ## Running a scene
+
+        - `+safety/scene \[<id>\]` shows the owner of a scene, for each content warning, how many of the other players have a line or veil touching it. The same count appears on the scene's `+scene` card, for its owner only.
+
+        A line or veil touches a warning when either contains the other as whole words: a line of `Spiders` touches the warning `Spiders and snakes`. The warnings are the scene's `warning` detail \(`+help scene verse`\).
+      HELP`SAFETY`STAFF: |-
+        Staff who change the game's configuration set these with `+config safety`:
+
+        - `topics`: the topics `+safety/topics` suggests, split by `|`. `+config/add safety/topics=Clowns` adds one.
+        - `warning-detail`: the scene detail holding content warnings. `warning`, which scene-verse adds.
+        - `topic-length`: the longest line or veil. 40.
+        - `note-length`: the longest note on a pause or skip. 200; 0 allows none.
+        - `signal-wait`: how long a player waits between signals. 60 seconds.
+
+        Lines and veils are kept on the Safety Store inside it. A player's own are shown only to them, and a scene owner sees only counts. Staff who can examine every object can read the store.
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`SAFETY: |-
+        {{safety}}
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SAFETY: |-
+        {{safety_help}}

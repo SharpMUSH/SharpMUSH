@@ -183,6 +183,7 @@ Arguments are comma-separated with **`content` last**; references are **dbrefs**
 | `FOCUS` | `@scene/focus <playerDbref>=<sceneId>` (set the player's current scene; empty = clear) |
 | `SHOWAS` | `@scene/showas <sceneId>/<playerDbref>=<name>` (member-edge persona; an empty name clears it) |
 | `PLOT` | `@scene/plot[/create\|/link\|/unlink] <plot>[=<sceneId>]` |
+| `NOTICE` | `@scene/notice <sceneId>/<playerDbref>=<text>` (tells that member alone, and shows it in their open live scene view; the sender is the object running it) |
 
 Each arm calls exactly one `ISceneService` method, then publishes a
 `SceneEventMessage`. There are **no temp-room, schedule, or start/pause/finish

@@ -413,7 +413,8 @@ public class PackagesController(
 				a.BaseValue is null ? null : MushcodeHighlighter.ToHtml(a.BaseValue),
 				a.LiveValue is null ? null : MushcodeHighlighter.ToHtml(a.LiveValue),
 				a.NewValue is null ? null : MushcodeHighlighter.ToHtml(a.NewValue),
-				MushcodeHighlighter.FindDangerousPatterns(a.NewValue ?? "")))
+				MushcodeHighlighter.FindDangerousPatterns(a.MergedValue ?? a.NewValue ?? ""),
+				a.MergedValue is null ? null : MushcodeHighlighter.ToHtml(a.MergedValue)))
 			.ToList();
 
 		return Ok(new PlanResponse(

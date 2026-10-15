@@ -40,6 +40,7 @@ public class ControllerAuthorizationTests
 	{
 		await Assert.That(ClassAuthorize<AdminCharactersController>()!.Policy).IsEqualTo(PortalPermission.PlayersView);
 		await Assert.That(ClassAuthorize<AdminAuditController>()!.Policy).IsEqualTo(PortalPermission.PlayersModerate);
+		await Assert.That(ClassAuthorize<AdminActivityController>()!.Policy).IsEqualTo(PortalPermission.PlayersView);
 
 		var boot = typeof(AdminCharactersController).GetMethod(nameof(AdminCharactersController.Boot))!;
 		var attr = (AuthorizeAttribute?)Attribute.GetCustomAttribute(boot, typeof(AuthorizeAttribute));

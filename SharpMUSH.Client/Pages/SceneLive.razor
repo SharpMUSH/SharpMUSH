@@ -10,7 +10,7 @@
 @inject IConnectionStateService Hub
 @inject ITerminalService Terminal
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>@Loc["RolLiveScene"] — @Loc["AppTitle"]</PageTitle>
 
@@ -45,7 +45,7 @@ else if (_notFound)
 else
 {
     var scene = _scene!;
-    <div class="scene-live-page full-height">
+    <div class="scene-live-page full-height" @ref="_page">
 
         <header class="scene-live-header">
             <div class="scene-live-heading">
@@ -89,6 +89,8 @@ else
             <div class="scene-live-banner" role="status">@Loc["RolSceneLiveFeedDown"]</div>
         }
 
+        <SceneNotices SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" />
+
         @* column-reverse keeps the story at its newest pose as poses arrive, as Play's does. *@
         <div class="scene-live-scroll" data-input-region>
             <div class="scene-live-story">
@@ -103,10 +105,19 @@ else
                 <div class="scene-live-card" data-input-region>
                     <div class="scene-live-bar">
                         <TypeChips Items="_modes" Selected="@_mode" SelectedChanged="OnModeChanged" AriaLabel="@Loc["RolComposeMode"]" />
+                        <span class="scene-live-bar-end">
+                        @if (SavedLabel is { } saved)
+                        {
+                            @* Where the draft is: on the server for this character's other devices, or only here. *@
+                            <span class="scene-live-saved" data-state="@_sync?.State" title="@saved">
+                                <MudIcon Icon="@SavedIcon" Style="font-size:16px;" aria-hidden="true" /><span class="scene-live-saved-label">@saved</span>
+                            </span>
+                        }
                         @if (_field is not null)
                         {
                             <FormatMenu Target="_field" ButtonClass="scene-live-tool" OnRawChanged="raw => _draft.SetRaw(raw)" />
                         }
+                        </span>
                     </div>
                     @* A FormattedInput, as in Play: the pose is written as styled text (the format menu colours a
                        selection) and sent as decompose() writes it, or as softcode with the menu's switch. Plain
@@ -119,7 +130,7 @@ else
                     <div class="scene-live-foot">
                         <span class="scene-live-hint">@Loc["RolComposeSendHint"]</span>
                         <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">
-                            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:16px;" /><span>@Loc["Send"]</span>
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:16px;" aria-hidden="true" /><span class="scene-live-send-label">@Loc["Send"]</span>
                         </button>
                     </div>
                 </div>
@@ -165,6 +176,10 @@ else
         draft.Changed += OnDraftChanged;
     }
 
+    private SceneDraftSync? _sync;
+
+    private void OnSyncChanged() => _ = InvokeAsync(StateHasChanged);
+
     private void OnDraftChanged()
     {
         _ = SaveDraftAsync();
@@ -175,6 +190,8 @@ else
     {
         _modes = [(Ic, Label(Ic)), (Ooc, Label(Ooc))];
         Watch(_draft);
+        _sync = new SceneDraftSync(SceneService, JS);
+        _sync.StateChanged += OnSyncChanged;
     }
 
     /// <summary>
@@ -183,6 +200,7 @@ else
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await WatchComposeAsync();
         if (_field is not null) await LoadDraftAsync();
         if (_field == _menuFor) return;
         _menuFor = _field;
@@ -225,66 +243,68 @@ else
     /// </summary>
     private string DraftKey => $"scene.draft.{Terminal.ConnectedPlayerName}.{Id}";
 
-    /// <summary>A kept draft: the mode, the text, and when it was styled, the styled text (a serialized MString).</summary>
-    private sealed record Draft(string Mode, string Text, string? Markup = null);
-
     private string? _loadedKey;
     private bool _reading;
 
-    private async Task SaveDraftAsync()
+    /// <summary>
+    /// Keeps the draft in this browser and, once typing pauses, on the server for this character's other devices
+    /// (<see cref="SceneDraftSync"/>). <paramref name="now"/> sends it at once: a pose just went out, and the other
+    /// devices have to empty theirs.
+    /// </summary>
+    private async Task SaveDraftAsync(bool now = false)
     {
-        if (_reading || _loadedKey != DraftKey) return;
-        if (_draft.Value.Length == 0 && _mode == Ic)
-        {
-            await JS.RemoveItemAsync(BrowserStore.Local, DraftKey);
-            return;
-        }
+        if (_reading || _loadedKey != DraftKey || _sync is null) return;
         var markup = !_draft.Raw && !_draft.Text.Runs.IsDefaultOrEmpty ? MarkupTextSerializer.Serialize(_draft.Text) : null;
-        await JS.SetItemAsync(BrowserStore.Local, DraftKey, JsonSerializer.Serialize(new Draft(_mode, _draft.Value, markup)));
+        await _sync.KeepAsync(_mode, _draft.Value, markup, now);
     }
 
-    /// <summary>Reads this scene's kept draft once, unless something was typed before it could be.</summary>
+    /// <summary>Reads this scene's kept draft once; something typed before it could be read is kept instead.</summary>
     private async Task LoadDraftAsync()
     {
-        if (_loadedKey == DraftKey) return;
+        if (_loadedKey == DraftKey || _sync is null) return;
         // Another scene's page in the same component: its draft is already kept under its own key.
         var switched = _loadedKey is not null;
+        var typed = !switched && _draft.Value.Length > 0;
         _loadedKey = DraftKey;
-        if (switched)
+        if (switched) Apply(null);
+
+        var kept = await _sync.LoadAsync(DraftKey, Id);
+        if (typed)
         {
-            _reading = true;
-            _mode = Ic;
-            _draft.Clear();
-            _reading = false;
-            StateHasChanged();
-        }
-        else if (_draft.Value.Length > 0)
-        {
+            await SaveDraftAsync();
             return;
         }
-        if (await JS.GetItemAsync(BrowserStore.Local, DraftKey) is not { Length: > 0 } json) return;
+        Apply(kept);
+    }
+
+    /// <summary>Shows a kept draft (or none) in the field without writing it back.</summary>
+    private void Apply(SceneDraftSync.Kept? kept)
+    {
+        _reading = true;
         try
         {
-            if (JsonSerializer.Deserialize<Draft>(json) is not { } draft) return;
-            _reading = true;
-            _mode = _modes.Any(m => m.Key == draft.Mode) ? draft.Mode : Ic;
-            _draft.Load(Styled(draft) ?? MarkupText.Plain(draft.Text ?? string.Empty), _draft.Raw);
-            StateHasChanged();
-        }
-        catch (JsonException)
-        {
-            // Not a draft this page wrote: start empty.
+            _mode = kept is not null && _modes.Any(m => m.Key == kept.Mode) ? kept.Mode : Ic;
+            _draft.Load(Styled(kept) ?? MarkupText.Plain(kept?.Text ?? string.Empty), _draft.Raw);
         }
         finally
         {
             _reading = false;
         }
+        StateHasChanged();
     }
 
-    /// <summary>The kept styled text, when there is one and it still reads.</summary>
-    private static MarkupText? Styled(Draft draft)
+    /// <summary>The page came back into view (layout.js watchSceneCompose): read a draft written on another device.</summary>
+    [JSInvokable]
+    public Task OnPageShown() => InvokeAsync(async () =>
     {
-        if (draft.Markup is not { Length: > 0 } markup) return null;
+        if (_sync is null || _loadedKey != DraftKey) return;
+        if (await _sync.RefreshAsync() is { } newer) Apply(newer);
+    });
+
+    /// <summary>The kept styled text, when there is one and it still reads.</summary>
+    private static MarkupText? Styled(SceneDraftSync.Kept? draft)
+    {
+        if (draft?.Markup is not { Length: > 0 } markup) return null;
         try
         {
             var text = MarkupTextSerializer.Deserialize(markup);
@@ -296,9 +316,80 @@ else
         }
     }
 
-    public void Dispose()
+    private string? SavedLabel => _sync?.State switch
     {
+        SceneDraftSync.SyncState.Saving => Loc["RolDraftSaving"].Value,
+        SceneDraftSync.SyncState.Saved => Loc["RolDraftSaved"].Value,
+        SceneDraftSync.SyncState.DeviceOnly => Loc["RolDraftDeviceOnly"].Value,
+        _ => null,
+    };
+
+    private string SavedIcon => _sync?.State switch
+    {
+        SceneDraftSync.SyncState.DeviceOnly => Icons.Material.Outlined.CloudOff,
+        SceneDraftSync.SyncState.Saving => Icons.Material.Outlined.CloudUpload,
+        _ => Icons.Material.Outlined.CloudDone,
+    };
+
+    private ElementReference _page;
+    private bool _watching;
+    private IJSObjectReference? _composeWatch;
+    private DotNetObjectReference<SceneLive>? _self;
+    private bool _disposed;
+
+    /// <summary>
+    /// Starts layout.js watchSceneCompose once the page is drawn: the compose sheet rides the on-screen keyboard,
+    /// and the draft is read again when the tab comes back into view.
+    /// </summary>
+    private async Task WatchComposeAsync()
+    {
+        if (_watching || _page.Context is null) return;
+        _watching = true;
+        _self ??= DotNetObjectReference.Create(this);
+        try
+        {
+            var watch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.watchSceneCompose", _page, _self);
+            if (_disposed)
+            {
+                await ReleaseAsync(watch);
+                return;
+            }
+            _composeWatch = watch;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+        {
+            // Without the watch the compose sheet stays where the page puts it; the keyboard dock is optional.
+        }
+    }
+
+    private static async Task ReleaseAsync(IJSObjectReference watch)
+    {
+        try
+        {
+            await watch.InvokeVoidAsync("dispose");
+            await watch.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+        {
+            // The page or the circuit is already gone, and the watch with it.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
         if (_watched is not null) _watched.Changed -= OnDraftChanged;
+        if (_sync is not null)
+        {
+            _sync.StateChanged -= OnSyncChanged;
+            _sync.Dispose();
+        }
+        if (_composeWatch is { } watch)
+        {
+            _composeWatch = null;
+            await ReleaseAsync(watch);
+        }
+        _self?.Dispose();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -373,6 +464,7 @@ else
         var command = $"+scene/{_mode} {Id}={_draft.ToSoftcode()[0]}";
 
         _draft.Clear();
+        _ = SaveDraftAsync(now: true);
 
         // Down the terminal websocket, already open as this character; the hub is for RECEIVING the
         // pose back.
