@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.6.1
+    version: 1.7.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -60,7 +60,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
   - path: scene/
     package: scene
-    version: 1.8.0
+    version: 1.10.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -107,6 +107,11 @@ packages:
     package: radio-scene
     version: 1.3.0
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
+  - path: scene-here/
+    name: Scene here
+    package: scene-here
+    version: 1.0.0
+    description: Pushes the scene_here context as players move, so the command palette offers the scene in their room (requires scene and the event handler)
   - path: scene-verse/
     name: Verse and canon in scenes
     package: scene-verse
@@ -117,10 +122,20 @@ packages:
     package: scene-safety
     version: 1.0.2
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
+  - path: highlights/
+    name: Highlights
+    package: highlights
+    version: 1.0.0
+    description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
+  - path: highlights-app/
+    name: Highlights in the portal
+    package: highlights-app
+    version: 1.0.0
+    description: Registers the highlights as a portal page at /apps/highlights, with a button under each pose (requires highlights)
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.2.2
+    version: 1.3.0
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help and http-handler)
   - path: bboards-app/
     name: BBoards in the portal
@@ -187,3 +202,8 @@ packages:
     package: roster-jobs
     version: 1.0.0
     description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs and plus-help)
+  - path: scene-availability/
+    name: Scene Availability
+    package: scene-availability
+    version: 1.0.0
+    description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group or a scene's cast are all free

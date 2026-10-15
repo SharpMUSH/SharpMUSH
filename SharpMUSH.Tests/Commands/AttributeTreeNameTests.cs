@@ -99,4 +99,18 @@ public class AttributeTreeNameTests
 		var listed = await Output($"@grep/list {thing}/FUN**=cent");
 		await Assert.That(listed).Contains("FUN`FOOTER`DISPLAY`CENTER");
 	}
+
+	/// <summary>
+	/// A name get() cannot read is never written: a ':' is not an attribute name character, so
+	/// &amp; and attrib_set() both refuse it rather than storing an attribute nothing can read back.
+	/// </summary>
+	[Test]
+	public async Task A_name_with_a_colon_is_refused()
+	{
+		var thing = await Read($"create(ColonName{Guid.NewGuid():N})");
+
+		await Assert.That(await Output($"&DATA`#1:2 {thing}=value")).Contains("That's not a good name for an attribute.");
+		await Assert.That(await Read($"attrib_set({thing}/DATA`#3:4,value)")).StartsWith("#-1");
+		await Assert.That(await Read($"lattr({thing}/**)")).IsEmpty();
+	}
 }
