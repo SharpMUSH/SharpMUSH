@@ -4387,10 +4387,6 @@
     <value>Дребна редакция</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Все още няма качени ресурси.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Няма намерени ресурси.</value>
     <comment>MT</comment>
@@ -6089,5 +6085,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Подреждане</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Търсене в библиотеката с изображения</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Все още няма изображения в библиотеката.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Няма съвпадащо име на файл.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Или изберете от библиотеката с изображения</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>В общата библиотека с изображения. При премахване от галерията файлът се запазва.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Споделяне в библиотеката с изображения</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Всеки влязъл ще може да го използва в уики страница или в галерия. Това не може да се отмени.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Изображението не можа да бъде споделено: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Библиотека</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Споделяне в библиотеката</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>В общата библиотека</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Всеки влязъл може да го избере за уики страница или галерия. Това не може да се отмени.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Ограничаване до разрешение</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Само притежателите на това разрешение го намират в библиотеката. Оставете празно за всички.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Една галерия</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Всички</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Заключено: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Неуспешно запазване: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Изображение с предупреждение за съдържание остава извън библиотеката с изображения. Махнете предупреждението, за да го споделите.</value>
   </data>
 </root>

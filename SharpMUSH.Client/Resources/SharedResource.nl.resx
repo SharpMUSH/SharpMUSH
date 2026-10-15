@@ -4387,10 +4387,6 @@
     <value>Kleine bewerking</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Nog geen bestanden geüpload.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Geen bestanden gevonden.</value>
     <comment>MT</comment>
@@ -6089,5 +6085,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Herschikken</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Doorzoek de afbeeldingenbibliotheek</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Nog geen afbeeldingen in de bibliotheek.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Geen bestandsnaam komt overeen.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Of kies uit de afbeeldingenbibliotheek</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>In de gedeelde afbeeldingenbibliotheek. Bij verwijderen uit de galerij blijft het bestand bewaard.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Delen in de afbeeldingenbibliotheek</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Iedereen die is aangemeld kan het dan gebruiken op een wikipagina of in een galerij. Dit kan niet ongedaan worden gemaakt.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Kon de afbeelding niet delen: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliotheek</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Delen in de bibliotheek</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>In de gedeelde bibliotheek</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Iedereen die is aangemeld kan het kiezen voor een wikipagina of een galerij. Dit kan niet ongedaan worden gemaakt.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Beperken tot een recht</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Alleen wie dit recht heeft vindt het in de bibliotheek. Laat leeg voor iedereen.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Eén galerij</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Iedereen</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Vergrendeld: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Opslaan mislukt: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Een afbeelding met een inhoudswaarschuwing blijft buiten de afbeeldingenbibliotheek. Haal de waarschuwing weg om haar te delen.</value>
   </data>
 </root>

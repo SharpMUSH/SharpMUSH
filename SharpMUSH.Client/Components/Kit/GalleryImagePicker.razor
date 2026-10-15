@@ -1,7 +1,9 @@
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Choosing a character's banner or avatar: upload a new file, or pick one of the images already in
-   the gallery. A modal over the page like the image viewer; Escape or a click outside closes it.
+@* Choosing a character's banner or avatar, or adding an image: upload a new file, pick one of the
+   images already in the gallery, or pick one from the shared image library, which is used without
+   being copied. A modal over the page like the image viewer; Escape or a click outside closes it.
    The image in that role now is marked and pressed. An image with a warning cannot take either role,
    which shows without a click, so it is offered covered and disabled. *@
 @if (Open)
@@ -21,32 +23,37 @@
                     <CapsuleButton Class="kit-picker-upload-button" Primary="true" Icon="@Icons.Material.Outlined.FileUpload" Disabled="Busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavPickerUpload"]</CapsuleButton>
                 </CustomContent>
             </MudFileUpload>
-            <div class="kit-picker-label">@Loc["NavPickerFromGallery"]</div>
-            @if (Items.Count == 0)
+            @if (ShowGallery)
             {
-                <div class="kit-picker-empty">@Loc["NavPickerGalleryEmpty"]</div>
+                <div class="kit-picker-label">@Loc["NavPickerFromGallery"]</div>
+                @if (Items.Count == 0)
+                {
+                    <div class="kit-picker-empty">@Loc["NavPickerGalleryEmpty"]</div>
+                }
+                else
+                {
+                    <div class="kit-picker-grid">
+                        @foreach (var item in Items)
+                        {
+                            var current = item.AssetId == SelectedAssetId;
+                            <button type="button" class="@($"kit-picker-item{(current ? " kit-picker-item--current" : "")}{(item.Warning is null ? "" : " kit-picker-item--covered")}")"
+                                    aria-pressed="@(current ? "true" : "false")" aria-label="@(item.Warning is { } label ? Loc["NavGalleryWarningLabel", label].Value : item.Caption ?? item.AssetId)"
+                                    disabled="@(Busy || item.Warning is not null)" @onclick="@(() => PickAsync(item))">
+                                @if (item.Warning is { } warning)
+                                {
+                                    <span class="kit-picker-cover">@warning</span>
+                                }
+                                else if (ImageUrlPolicy.IsRenderable(item.Url))
+                                {
+                                    <img src="@ApiUrl.Resolve(item.Url)" alt="" />
+                                }
+                            </button>
+                        }
+                    </div>
+                }
             }
-            else
-            {
-                <div class="kit-picker-grid">
-                    @foreach (var item in Items)
-                    {
-                        var current = item.AssetId == SelectedAssetId;
-                        <button type="button" class="@($"kit-picker-item{(current ? " kit-picker-item--current" : "")}{(item.Warning is null ? "" : " kit-picker-item--covered")}")"
-                                aria-pressed="@(current ? "true" : "false")" aria-label="@(item.Warning is { } label ? Loc["NavGalleryWarningLabel", label].Value : item.Caption ?? item.AssetId)"
-                                disabled="@(Busy || item.Warning is not null)" @onclick="@(() => PickAsync(item))">
-                            @if (item.Warning is { } warning)
-                            {
-                                <span class="kit-picker-cover">@warning</span>
-                            }
-                            else if (ImageUrlPolicy.IsRenderable(item.Url))
-                            {
-                                <img src="@ApiUrl.Resolve(item.Url)" alt="" />
-                            }
-                        </button>
-                    }
-                </div>
-            }
+            <div class="kit-picker-label">@Loc["NavPickerFromLibrary"]</div>
+            <ImageLibraryGrid Exclude="@InGallery" ContentTypes="@GalleryTypes" Disabled="Busy" OnPick="PickLibraryAsync" />
         </div>
         </MudFocusTrap>
     </div>
@@ -75,6 +82,18 @@
     /// <summary>An image already in the gallery was chosen. The picker closes first.</summary>
     [Parameter] public EventCallback<GalleryEntry> OnPick { get; set; }
 
+    /// <summary>Offer the gallery's own images: false when adding an image, which they already are.</summary>
+    [Parameter] public bool ShowGallery { get; set; } = true;
+
+    /// <summary>A file from the shared image library was chosen. The picker closes first.</summary>
+    [Parameter] public EventCallback<LibraryAssetInfo> OnPickLibrary { get; set; }
+
+    /// <summary>The types a gallery takes; the library also holds SVG drawings for the wiki.</summary>
+    private static readonly IReadOnlySet<string> GalleryTypes =
+        new HashSet<string>(["image/png", "image/jpeg", "image/gif", "image/webp"], StringComparer.OrdinalIgnoreCase);
+
+    private IReadOnlySet<string> InGallery => Items.Select(i => i.AssetId).ToHashSet(StringComparer.Ordinal);
+
     private const string ScrimStyle = "background: rgba(var(--scrim-ink), 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);";
 
     private async Task UploadAsync(IBrowserFile? file)
@@ -88,6 +107,12 @@
     {
         await CloseAsync();
         await OnPick.InvokeAsync(item);
+    }
+
+    private async Task PickLibraryAsync(LibraryAssetInfo asset)
+    {
+        await CloseAsync();
+        await OnPickLibrary.InvokeAsync(asset);
     }
 
     private Task CloseAsync() => OpenChanged.InvokeAsync(false);

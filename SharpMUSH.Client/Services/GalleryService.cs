@@ -69,6 +69,23 @@ public class GalleryService(IHttpClientFactory httpClientFactory, CharacterDirec
 		return Written(await Client.PostContentApiAsync<List<GalleryEntry>>(url, content, NoGallery));
 	}
 
+	/// <summary>
+	/// Adds a file from the shared image library, without copying it, and answers with the updated gallery.
+	/// As <see cref="GalleryUse.Banner"/> or <see cref="GalleryUse.Avatar"/> it takes that place.
+	/// </summary>
+	public async Task<ApiResult<List<GalleryEntry>>> AddFromLibraryAsync(string name, string assetId, GalleryUse use = GalleryUse.Image) =>
+		Written(await Client.PostApiAsync<GalleryLibraryPick, List<GalleryEntry>>($"{GalleryUrl(name)}/library",
+			new GalleryLibraryPick(assetId, use switch
+			{
+				GalleryUse.Banner => "banner",
+				GalleryUse.Avatar => "avatar",
+				_ => null,
+			}), NoGallery));
+
+	/// <summary>Puts an uploaded image in the shared image library, for good, and answers with the gallery.</summary>
+	public Task<ApiResult<List<GalleryEntry>>> ShareAsync(string name, string assetId) =>
+		Client.PostApiAsync<object?, List<GalleryEntry>>($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}/share", null, NoGallery);
+
 	/// <summary>Deletes an image and answers with the updated gallery.</summary>
 	public async Task<ApiResult<List<GalleryEntry>>> DeleteAsync(string name, string assetId) =>
 		Written(await Client.DeleteApiAsync<List<GalleryEntry>>($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}", NoGallery));

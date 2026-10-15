@@ -1643,9 +1643,6 @@
   <data name="WkDirectiveCategoryHeader" xml:space="preserve">
     <value>Catégorie : {0}</value>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Aucun média téléversé pour le moment.</value>
-  </data>
   <data name="WkHistoryPageTitle" xml:space="preserve">
     <value>Historique : {0}</value>
   </data>
@@ -5383,5 +5380,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Réorganiser</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Rechercher dans la bibliothèque d'images</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Aucune image dans la bibliothèque pour l'instant.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Aucun nom de fichier ne correspond.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Ou choisir dans la bibliothèque d'images</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>Dans la bibliothèque d'images partagée. Le retirer de la galerie conserve le fichier.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Partager dans la bibliothèque d'images</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Toute personne connectée pourra l'utiliser sur une page wiki ou dans une galerie. Impossible d'annuler.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Impossible de partager l'image : {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliothèque</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Partage dans la bibliothèque</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>Dans la bibliothèque partagée</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Toute personne connectée peut le choisir pour une page wiki ou une galerie. Impossible d'annuler.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Réserver à une permission</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Seuls les détenteurs de cette permission le trouvent dans la bibliothèque. Laisser vide pour tout le monde.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Une galerie</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Tout le monde</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Verrouillé : {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Enregistrement impossible : {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Une image avec un avertissement de contenu reste hors de la bibliothèque d'images. Retirez l'avertissement pour la partager.</value>
   </data>
 </root>

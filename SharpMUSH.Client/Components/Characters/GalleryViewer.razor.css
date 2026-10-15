@@ -65,8 +65,20 @@
 	cursor: default;
 }
 
+.gallery-share {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.gallery-share small {
+	color: var(--text-dim);
+}
+
 .gallery-details-cancel,
-.gallery-report-cancel {
+.gallery-report-cancel,
+.gallery-share-button {
 	padding: 6px 16px;
 	border: 1px solid var(--border);
 	border-radius: 999px;
@@ -79,7 +91,8 @@
 }
 
 .gallery-details-cancel:disabled,
-.gallery-report-cancel:disabled {
+.gallery-report-cancel:disabled,
+.gallery-share-button:disabled {
 	opacity: 0.5;
 	cursor: default;
 }

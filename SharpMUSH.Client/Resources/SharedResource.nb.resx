@@ -4387,10 +4387,6 @@
     <value>Mindre endring</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Ingen filer er lastet opp ennå.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Fant ingen filer.</value>
     <comment>MT</comment>
@@ -6089,5 +6085,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Omorganiser</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Søk i bildebiblioteket</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Ingen bilder i biblioteket ennå.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Ingen filnavn passer.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Eller velg fra bildebiblioteket</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>I det delte bildebiblioteket. Fjernes det fra galleriet, beholdes filen.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Del i bildebiblioteket</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Alle som er logget inn kan da bruke det på en wikiside eller i et galleri. Dette kan ikke angres.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Kunne ikke dele bildet: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliotek</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Deling i biblioteket</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>I det delte biblioteket</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Alle som er logget inn kan velge det til en wikiside eller et galleri. Dette kan ikke angres.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Begrens til en tillatelse</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Bare de med denne tillatelsen finner det i biblioteket. La feltet stå tomt for alle.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Ett galleri</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Låst: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Kunne ikke lagre: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Et bilde med innholdsadvarsel holdes utenfor bildebiblioteket. Fjern advarselen for å dele det.</value>
   </data>
 </root>

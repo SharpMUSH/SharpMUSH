@@ -43,6 +43,7 @@ public class ProfilePageContextTests : TrackingBunitContext
 			.AddSingleton(factory)
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<CharacterDirectoryService>()))
+			.AddSingleton(sp => new WikiAssetService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiAssetService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
@@ -59,7 +60,12 @@ public class ProfilePageContextTests : TrackingBunitContext
 	{
 		var cut = RenderWithContext(canEdit: true);
 		cut.WaitForState(() => !cut.Markup.Contains("mud-progress"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Markup).Contains("type=\"file\"");
+		await cut.Find("button.gallery-add").ClickAsync();
+		await Assert.That(cut.Find("[role='dialog'] .kit-picker-upload").InnerHtml).Contains("type=\"file\"")
+			.Because("Add image offers an upload beside the image library");
+		await Assert.That(cut.FindAll("[role='dialog'] .kit-library").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("[role='dialog'] .kit-picker-grid").Count).IsEqualTo(0)
+			.Because("the gallery's own images are already in it");
 	}
 
 	[TUnit.Core.Test]
@@ -68,5 +74,6 @@ public class ProfilePageContextTests : TrackingBunitContext
 		var cut = RenderWithContext(canEdit: false);
 		cut.WaitForState(() => !cut.Markup.Contains("mud-progress"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Markup).DoesNotContain("type=\"file\"");
+		await Assert.That(cut.FindAll("button.gallery-add").Count).IsEqualTo(0);
 	}
 }

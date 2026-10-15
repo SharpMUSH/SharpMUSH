@@ -123,7 +123,8 @@ else
         <GalleryImagePicker @bind-Open="_pickerOpen" Items="_gallery" Busy="_busy"
                             Title="@(_pickFor == GalleryUse.Avatar ? Loc["NavCharChangeAvatar"] : Loc["NavCharChangeBanner"])"
                             SelectedAssetId="@(_pickFor == GalleryUse.Avatar ? _gallery.FirstOrDefault(g => g.IsIcon)?.AssetId : _gallery.FirstOrDefault(g => g.IsBanner)?.AssetId)"
-                            OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync" />
+                            OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync"
+                            OnPickLibrary="@(asset => WriteAsync(Gallery.AddFromLibraryAsync(Name, asset.Id, _pickFor), "GalleryUploadFailed"))" />
     }
 }
 

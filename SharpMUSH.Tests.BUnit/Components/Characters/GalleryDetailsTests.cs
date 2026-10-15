@@ -92,6 +92,43 @@ public class GalleryDetailsTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".kit-viewer-actions .gallery-edit").Count).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// An uploaded image stays in its gallery until the owner shares it; then it is in the image library
+	/// and the form says removing it keeps the file.
+	/// </summary>
+	[Test]
+	public async Task TheOwner_SharesAnImageInTheLibrary()
+	{
+		var post = Capture(HttpMethod.Post);
+		_fake.Extra[$"POST {GalleryPath}/c/share"] = """
+			[{"assetId":"a","fileName":"a.jpg","url":"/api/wiki-assets/a/a.jpg","caption":"Tomas","order":0,"isIcon":true,"isBanner":false,"shared":false},
+			 {"assetId":"b","fileName":"b.jpg","url":"/api/wiki-assets/b/b.jpg","caption":"After the fight","order":1,"isIcon":false,"isBanner":false,"warning":"blood","shared":false},
+			 {"assetId":"c","fileName":"c.jpg","url":"/api/wiki-assets/c/c.jpg","caption":"Docks","order":2,"isIcon":false,"isBanner":false,"shared":true}]
+			""";
+		var cut = Widget(canEdit: true);
+		await cut.FindAll("button.gallery-small-tile")[1].ClickAsync();
+		await cut.Find(".kit-viewer-actions button.gallery-edit").ClickAsync();
+
+		await Assert.That(cut.FindAll(".gallery-share-state").Count).IsEqualTo(0);
+		await cut.Find("button.gallery-share-button").ClickAsync();
+
+		WaitFor(cut, post);
+		cut.WaitForAssertion(() => cut.Find(".gallery-share-state"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button.gallery-share-button").Count).IsEqualTo(0).Because("sharing cannot be taken back");
+	}
+
+	/// <summary>The library shows a picture uncovered, so an image with a warning is not offered for it.</summary>
+	[Test]
+	public async Task AWarnedImage_IsNotOfferedForTheLibrary()
+	{
+		var cut = Widget(canEdit: true);
+		await cut.FindAll("button.gallery-small-tile")[0].ClickAsync();
+		await cut.Find(".kit-viewer-actions button.gallery-edit").ClickAsync();
+
+		await Assert.That(cut.FindAll("button.gallery-share-button").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".gallery-share-warned").Count).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task TheOwner_EditsCaptionTagsAndWarning()
 	{

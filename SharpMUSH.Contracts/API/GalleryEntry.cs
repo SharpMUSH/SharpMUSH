@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SharpMUSH.Library.API;
 
 /// <summary>
@@ -16,6 +18,8 @@ namespace SharpMUSH.Library.API;
 /// <param name="Tags">Lower-case words the gallery page filters by; null when there are none.</param>
 /// <param name="Warning">A content warning ("blood"). The portal covers the image until the viewer chooses to see
 /// it, and an image with one is never the avatar or the banner, which show without a click.</param>
+/// <param name="Shared">The file is in the shared image library, so removing it from the gallery keeps it. Filled
+/// in by the list endpoint from the file itself, never stored in <c>PROFILE`GALLERY</c>.</param>
 public record GalleryEntry(
 	string AssetId,
 	string FileName,
@@ -25,7 +29,13 @@ public record GalleryEntry(
 	bool IsIcon,
 	bool IsBanner = false,
 	IReadOnlyList<string>? Tags = null,
-	string? Warning = null);
+	string? Warning = null,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Shared = null);
+
+/// <summary>A file from the shared image library to add to a gallery: <c>POST /api/profile/{name}/gallery/library</c>.</summary>
+/// <param name="AssetId">The file's id in the library.</param>
+/// <param name="Use">Null for a gallery image, or <c>avatar</c> or <c>banner</c>, as on an upload.</param>
+public sealed record GalleryLibraryPick(string AssetId, string? Use = null);
 
 /// <summary>A report of a gallery image to the game's staff: <c>POST /api/profile/{name}/gallery/{assetId}/report</c>.</summary>
 /// <param name="Reason">Why the image should be looked at; required.</param>

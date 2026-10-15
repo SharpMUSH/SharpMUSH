@@ -73,6 +73,7 @@
                                 </div>
                                 <div class="adm-media-card-body">
                                     <div class="adm-media-name" title="@a.FileName">@a.FileName</div>
+                                    <div class="adm-media-sharing"><Pill Tag="true">@SharingLabel(a)</Pill></div>
                                     <div class="adm-media-card-foot">
                                         <span class="adm-media-size">@Loc.FormatBytes(a.SizeBytes)</span>
                                         <span class="adm-media-actions">
@@ -80,6 +81,11 @@
                                                 <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
                                                                aria-label="@Loc["WkCopyUrl"]"
                                                                OnClick="@(() => CopyUrlAsync(a.Url))" />
+                                            </MudTooltip>
+                                            <MudTooltip Text="@Loc["WkLibrarySharing"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                                                               Class="adm-media-sharing-button" aria-label="@Loc["WkLibrarySharing"]"
+                                                               OnClick="@(() => EditSharing(a))" />
                                             </MudTooltip>
                                             <MudTooltip Text="@Loc["Delete"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
@@ -138,12 +144,20 @@
                                         <span class="adm-media-list-mono">@context.Item.UploaderDbref</span>
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <TemplateColumn Sortable="false" CellStyle="width:80px;">
+                                <TemplateColumn Title="@Loc["WkColLibrary"]" Sortable="false">
+                                    <CellTemplate>
+                                        <Pill Tag="true">@SharingLabel(context.Item)</Pill>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Sortable="false" CellStyle="width:112px;">
                                     <CellTemplate>
                                         <span class="adm-media-actions">
                                             <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
                                                            title="@Loc["WkCopyUrl"]" aria-label="@Loc["WkCopyUrl"]"
                                                            OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                                                           Class="adm-media-sharing-button" title="@Loc["WkLibrarySharing"]" aria-label="@Loc["WkLibrarySharing"]"
+                                                           OnClick="@(() => EditSharing(context.Item))" />
                                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                            Color="Color.Error" title="@Loc["Delete"]" aria-label="@Loc["Delete"]"
                                                            OnClick="@(() => ConfirmDeleteAsync(context.Item))" />
@@ -162,6 +176,23 @@
     </KitCard>
 </div>
 
+<ConfirmDialog @bind-Visible="_showSharing" Title="@Loc["WkLibrarySharing"]" ConfirmText="@Loc["Save"]" ConfirmColor="Color.Primary"
+               Busy="_savingSharing" OnConfirm="SaveSharingAsync">
+    @if (_sharingTarget is { } target)
+    {
+        <div class="adm-media-sharing-form">
+            <MudText Typo="Typo.body2">@target.FileName</MudText>
+            @if (target.Private)
+            {
+                <MudCheckBox T="bool" @bind-Value="_shareTarget" Label="@Loc["WkLibraryShare"]" Class="adm-media-share" />
+                <MudText Typo="Typo.caption">@Loc["WkLibraryShareHelp"]</MudText>
+            }
+            <MudTextField T="string" @bind-Value="_lock" Label="@Loc["WkLibraryLock"]" HelperText="@Loc["WkLibraryLockHelp"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-media-lock" />
+        </div>
+    }
+</ConfirmDialog>
+
 <ConfirmDialog @bind-Visible="_showDeleteConfirm" Title="@Loc["WkDeleteAssetTitle"]" ConfirmText="@Loc["Delete"]" OnConfirm="ExecuteDeleteAsync">
     <MudText>@Loc["WkDeleteAssetConfirm", _deleteTarget?.FileName ?? string.Empty]</MudText>
 </ConfirmDialog>
@@ -175,7 +206,50 @@
     private bool _showDeleteConfirm;
     private WikiAssetInfo? _deleteTarget;
 
+    private bool _showSharing;
+    private bool _savingSharing;
+    private WikiAssetInfo? _sharingTarget;
+    private bool _shareTarget;
+    private string? _lock;
+
     private long TotalSizeBytes => _assets.Sum(a => a.SizeBytes);
+
+    /// <summary>Who finds the file in the shared library: one gallery only, everyone, or holders of its lock.</summary>
+    private string SharingLabel(WikiAssetInfo asset) => (asset.Private, asset.Lock) switch
+    {
+        (true, _) => Loc["WkLibraryPrivate"],
+        (false, null) => Loc["WkLibraryEveryone"],
+        (false, { } permission) => Loc["WkLibraryLocked", permission],
+    };
+
+    private void EditSharing(WikiAssetInfo asset)
+    {
+        (_sharingTarget, _shareTarget, _lock, _showSharing) = (asset, !asset.Private, asset.Lock, true);
+    }
+
+    private async Task SaveSharingAsync()
+    {
+        if (_sharingTarget is not { } target) return;
+        _savingSharing = true;
+        try
+        {
+            switch (await AssetService.SetSharingAsync(target.Id, _shareTarget, string.IsNullOrWhiteSpace(_lock) ? null : _lock.Trim()))
+            {
+                case LibraryAssetInfo saved:
+                    var index = _assets.FindIndex(a => a.Id == target.Id);
+                    if (index >= 0) _assets[index] = target with { Private = !_shareTarget, Lock = saved.Lock };
+                    (_showSharing, _sharingTarget) = (false, null);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["WkLibrarySharingFailed", failure.Message], Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _savingSharing = false;
+        }
+    }
 
     private IReadOnlyList<(string Key, string Label)> KindItems =>
         [.. new[] { "all", "image", "video", "document" }.Select(kind => (kind, Loc[KindLabelKey(kind)].Value))];

@@ -75,11 +75,7 @@
             @if (EffectiveCanEdit && _error is null && !_loading)
             {
                 <div class="gallery-upload">
-                    <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes">
-                        <CustomContent>
-                            <CapsuleButton Class="gallery-add" Icon="@Icons.Material.Outlined.AddPhotoAlternate" Disabled="_busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavGalleryAdd"]</CapsuleButton>
-                        </CustomContent>
-                    </MudFileUpload>
+                    <CapsuleButton Class="gallery-add" Icon="@Icons.Material.Outlined.AddPhotoAlternate" Disabled="_busy" OnClick="@(() => _pickerOpen = true)">@Loc["NavGalleryAdd"]</CapsuleButton>
                 </div>
             }
         </ChildContent>
@@ -88,6 +84,11 @@
 
 <GalleryViewer CharacterName="@(_resolvedName ?? string.Empty)" Items="@_items" CanEdit="@EffectiveCanEdit"
                @bind-Open="_viewerOpen" Index="@_viewerIndex" Label="@Title" OnChanged="OnChanged" />
+@if (EffectiveCanEdit)
+{
+    <GalleryImagePicker @bind-Open="_pickerOpen" Items="_items" ShowGallery="false" Busy="_busy" Title="@Loc["NavGalleryAdd"]"
+                        OnUpload="UploadAsync" OnPickLibrary="AddFromLibraryAsync" />
+}
 
 @code {
     [Parameter] public string? CharacterName { get; set; }
@@ -104,6 +105,7 @@
     private bool _loading = true;
     private bool _busy;
     private bool _viewerOpen;
+    private bool _pickerOpen;
     private int _viewerIndex;
 
     /// <summary>Why the gallery could not be read — which is not the same as it having no images.</summary>
@@ -178,6 +180,13 @@
     {
         if (file is null || _resolvedName is null) return;
         await WriteAsync(Gallery.UploadAsync(_resolvedName, file), "GalleryUploadFailed");
+    }
+
+    /// <summary>A file from the shared image library, added without being copied.</summary>
+    private async Task AddFromLibraryAsync(LibraryAssetInfo asset)
+    {
+        if (_resolvedName is null) return;
+        await WriteAsync(Gallery.AddFromLibraryAsync(_resolvedName, asset.Id), "GalleryUploadFailed");
     }
 
     /// <summary>A write from the viewer: the gallery as the server now holds it.</summary>

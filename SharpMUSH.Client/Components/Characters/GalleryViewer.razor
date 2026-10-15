@@ -61,6 +61,21 @@
                     <input class="gallery-warning-input" type="text" maxlength="100" @bind="_warning" aria-describedby="gallery-warning-help" />
                     <small id="gallery-warning-help">@Loc["NavGalleryWarningHelp"]</small>
                 </label>
+                <div class="gallery-share">
+                    @if (editing.Shared == true)
+                    {
+                        <small class="gallery-share-state">@Loc["NavGalleryShared"]</small>
+                    }
+                    else if (editing.Warning is not null)
+                    {
+                        <small class="gallery-share-warned">@Loc["NavGalleryShareWarned"]</small>
+                    }
+                    else
+                    {
+                        <button type="button" class="gallery-share-button" disabled="@_busy" aria-describedby="gallery-share-help" @onclick="@(() => ShareAsync(editing))">@Loc["NavGalleryShare"]</button>
+                        <small id="gallery-share-help">@Loc["NavGalleryShareHelp"]</small>
+                    }
+                </div>
                 <div class="gallery-form-actions">
                     <button type="button" class="gallery-details-cancel" disabled="@_busy" @onclick="@(() => _editing = null)">@Loc["Cancel"]</button>
                     <button type="submit" class="gallery-details-save" disabled="@_busy">@Loc["Save"]</button>
@@ -203,6 +218,10 @@
     /// <summary>Makes <paramref name="entry"/> the banner, or removes the banner when it is null.</summary>
     private Task SetBannerAsync(GalleryEntry? entry) =>
         WriteAsync(Gallery.ReplaceAsync(CharacterName, GalleryService.WithBanner(Whole, entry?.AssetId)), "GallerySetBannerFailed");
+
+    /// <summary>Puts the image in the shared image library, for good.</summary>
+    private Task ShareAsync(GalleryEntry entry) =>
+        WriteAsync(Gallery.ShareAsync(CharacterName, entry.AssetId), "NavGalleryShareFailed");
 
     private Task DeleteAsync(GalleryEntry entry) =>
         WriteAsync(Gallery.DeleteAsync(CharacterName, entry.AssetId), "GalleryDeleteFailed");

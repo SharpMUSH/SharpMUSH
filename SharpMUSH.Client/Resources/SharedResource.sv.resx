@@ -4387,10 +4387,6 @@
     <value>Mindre ändring</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Inga filer har laddats upp än.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Inga filer hittades.</value>
     <comment>MT</comment>
@@ -6089,5 +6085,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Ordna om</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Sök i bildbiblioteket</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Inga bilder i biblioteket ännu.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Inget filnamn matchar.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Eller välj från bildbiblioteket</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>I det delade bildbiblioteket. Tas den bort ur galleriet behålls filen.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Dela i bildbiblioteket</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Alla som är inloggade kan då använda den på en wikisida eller i ett galleri. Det går inte att ångra.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Det gick inte att dela bilden: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Bibliotek</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Delning i biblioteket</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>I det delade biblioteket</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Alla som är inloggade kan välja den till en wikisida eller ett galleri. Det går inte att ångra.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Begränsa till en behörighet</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Bara de med denna behörighet hittar den i biblioteket. Lämna tomt för alla.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Ett galleri</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Alla</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Låst: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Det gick inte att spara: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>En bild med innehållsvarning hålls utanför bildbiblioteket. Ta bort varningen för att dela den.</value>
   </data>
 </root>

@@ -37,7 +37,10 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   /api/profile/{name}/gallery          — upload an image (wiki.edit; owner/staff); <c>?use=banner</c> or
 ///                                                 <c>?use=avatar</c> makes it the banner or the avatar
 ///   PUT    /api/profile/{name}/gallery          — replace order/captions/tags/warnings/icon/banner (wiki.edit; owner/staff)
-///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (wiki.edit; owner/staff)
+///   POST   /api/profile/{name}/gallery/library — add a file from the shared image library (wiki.edit; owner/staff)
+///   POST   /api/profile/{name}/gallery/{assetId}/share — put an uploaded image in the shared library (wiki.edit; owner/staff)
+///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (wiki.edit; owner/staff); the file goes with it
+///                                                 unless it is shared
 ///   POST   /api/profile/{name}/gallery/{assetId}/report — report an image to staff (signed in, playing a character)
 ///   GET    /api/gallery/reports                 — whether the game takes reports (anonymous)
 /// </summary>
@@ -51,6 +54,7 @@ public class GalleryController(
 	IVisibleWorldProjection projection,
 	IAccountService accounts,
 	IEventService events,
+	IAdministrativeCapabilityService capabilities,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<GalleryController> logger) : ControllerBase
 {
@@ -71,8 +75,18 @@ public class GalleryController(
 			return NotFound();
 		}
 
-		var entries = await ReadGalleryAsync(character);
-		return entries.OrderBy(e => e.Order).ToList();
+		return await WithSharingAsync((await ReadGalleryAsync(character)).OrderBy(e => e.Order), ct);
+	}
+
+	/// <summary>The entries with <see cref="GalleryEntry.Shared"/> read from each file, as every answer carries them.</summary>
+	private async Task<List<GalleryEntry>> WithSharingAsync(IEnumerable<GalleryEntry> entries, CancellationToken ct)
+	{
+		var shared = new List<GalleryEntry>();
+		foreach (var entry in entries)
+		{
+			shared.Add(entry with { Shared = await assetService.FindAsync(entry.AssetId, ct) is WikiAsset { Private: false } });
+		}
+		return shared;
 	}
 
 	[HttpPost]
@@ -117,8 +131,9 @@ public class GalleryController(
 		var uploaderDbref = User.GetActingCharacter()?.ToString();
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized("Missing character identity.");
+		// An upload belongs to this gallery until its owner shares it, so removing it deletes the file.
 		await using var content = file.OpenReadStream();
-		return await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct) switch
+		return await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, isPrivate: true, ct) switch
 		{
 			WikiAsset asset => await AddToGalleryAsync(name, character, asset, role, uploaderDbref),
 			Error<string> saveError => StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value }),
@@ -175,7 +190,70 @@ public class GalleryController(
 		var added = normalized.First(e => e.AssetId == asset.Id);
 		await events.TriggerEventAsync(SharpEvents.GalleryAdd, User.GetActingCharacter(),
 			character.Object().DBRef.ToString(), asset.Id, added.Url, role.ToString().ToLowerInvariant());
-		return Ok(normalized);
+		return Ok(await WithSharingAsync(normalized, HttpContext.RequestAborted));
+	}
+
+	/// <summary>
+	/// Adds a file from the shared image library to the gallery, without copying it: a picture already on
+	/// the wiki or in another gallery is used, not uploaded again. Only a file the caller finds in the
+	/// library (<see cref="WikiAssetLibrary.Finds"/>), and only an image a gallery takes.
+	/// </summary>
+	[HttpPost("library")]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
+	public async Task<IActionResult> AddFromLibrary(string name, [FromBody] GalleryLibraryPick pick, CancellationToken ct)
+	{
+		if (ParseUse(pick.Use) is not { } role)
+			return BadRequest(new ApiErrorDto($"'{pick.Use}' is not a use for an image. Use 'banner' or 'avatar'."));
+
+		var (character, allowed) = await ResolveAndAuthorizeAsync(name, ct);
+		if (character is null) return NotFound();
+		if (!allowed) return Forbid();
+
+		var viewer = await LibraryViewer.ResolveAsync(User, capabilities, ct);
+		if (await assetService.FindAsync(pick.AssetId, ct) is not WikiAsset asset
+				|| !WikiAssetLibrary.Finds(asset, viewer.Scopes, viewer.Dbref))
+			return NotFound(new ApiErrorDto("No such file in the image library."));
+		if (!AllowedContentTypes.Contains(asset.ContentType))
+			return StatusCode(StatusCodes.Status415UnsupportedMediaType,
+				new ApiErrorDto($"{asset.FileName} is not a PNG, JPEG, GIF or WebP image."));
+
+		var gallery = await ReadGalleryAsync(character);
+		if (gallery.Any(e => e.AssetId == asset.Id))
+			return Conflict(new ApiErrorDto($"{asset.FileName} is already in this gallery."));
+		var limit = options.CurrentValue.Limit.MaxGalleryImages;
+		if (gallery.Count >= limit)
+			return Conflict(new ApiErrorDto($"A gallery holds at most {limit} images. Remove one before adding another."));
+		if (viewer.Dbref is null)
+			return Unauthorized("Missing character identity.");
+
+		return await AddToGalleryAsync(name, character, asset, role, viewer.Dbref);
+	}
+
+	/// <summary>
+	/// Puts an image uploaded to this gallery in the shared image library, so a wiki page or another gallery
+	/// can use it. It cannot be taken back: once shared, removing it from this gallery keeps the file. An
+	/// image with a content warning is refused, since the library would show it uncovered.
+	/// </summary>
+	[HttpPost("{assetId}/share")]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
+	public async Task<IActionResult> Share(string name, string assetId, CancellationToken ct)
+	{
+		var (character, allowed) = await ResolveAndAuthorizeAsync(name, ct);
+		if (character is null) return NotFound();
+		if (!allowed) return Forbid();
+		var gallery = await ReadGalleryAsync(character);
+		if (gallery.FirstOrDefault(e => e.AssetId == assetId) is not { } entry)
+			return NotFound();
+		// The library shows a picture as it is; a warning is this gallery's and would not cover it there.
+		if (entry.Warning is not null)
+			return Conflict(new ApiErrorDto("An image with a content warning stays out of the library. Take the warning off to share it."));
+		if (await assetService.FindAsync(assetId, ct) is not WikiAsset asset)
+			return NotFound();
+
+		if (asset.Private && await assetService.SetSharingAsync(assetId, isPrivate: false, asset.Lock, ct) is NotFound _)
+			return NotFound();
+		logger.LogInformation("Gallery image shared on {Character}: asset={Asset}", LogSanitizer.Sanitize(name), assetId);
+		return Ok(await WithSharingAsync(gallery.OrderBy(e => e.Order), ct));
 	}
 
 	[HttpPut]
@@ -218,7 +296,7 @@ public class GalleryController(
 		var sanitized = GalleryRules.Normalize(kept);
 		var write = await WriteGalleryAsync(character, sanitized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
-		return Ok(sanitized);
+		return Ok(await WithSharingAsync(sanitized, ct));
 	}
 
 	[HttpDelete("{assetId}")]
@@ -240,8 +318,10 @@ public class GalleryController(
 		var normalized = GalleryRules.Normalize(entries);
 		var write = await WriteGalleryAsync(character, normalized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
-		await assetService.DeleteAsync(assetId);
-		return Ok(normalized);
+		// A shared file may be on a wiki page or in another gallery; only one kept to this gallery goes.
+		if (await assetService.FindAsync(assetId, ct) is WikiAsset { Private: true })
+			await assetService.DeleteAsync(assetId);
+		return Ok(await WithSharingAsync(normalized, ct));
 	}
 
 	/// <summary>

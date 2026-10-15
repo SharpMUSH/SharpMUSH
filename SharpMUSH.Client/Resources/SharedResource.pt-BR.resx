@@ -4387,10 +4387,6 @@
     <value>Edição menor</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Nenhum arquivo enviado ainda.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nenhum arquivo encontrado.</value>
     <comment>MT</comment>
@@ -6089,5 +6085,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Reordenar</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Pesquisar na biblioteca de imagens</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Ainda não há imagens na biblioteca.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Nenhum nome de arquivo corresponde.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Ou escolher da biblioteca de imagens</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>Na biblioteca de imagens compartilhada. Remover da galeria mantém o arquivo.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Compartilhar na biblioteca de imagens</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Qualquer pessoa conectada poderá usá-la em uma página wiki ou em uma galeria. Não é possível desfazer.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Não foi possível compartilhar a imagem: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Biblioteca</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Compartilhamento na biblioteca</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>Na biblioteca compartilhada</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Qualquer pessoa conectada pode escolhê-lo para uma página wiki ou uma galeria. Não é possível desfazer.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Restringir a uma permissão</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Só quem tem esta permissão o encontra na biblioteca. Deixe vazio para todos.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Uma galeria</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Todos</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Bloqueado: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Não foi possível salvar: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>Uma imagem com aviso de conteúdo fica fora da biblioteca de imagens. Remova o aviso para compartilhá-la.</value>
   </data>
 </root>

@@ -4387,10 +4387,6 @@
     <value>Apró módosítás</value>
     <comment>MT</comment>
   </data>
-  <data name="WkNoAssets" xml:space="preserve">
-    <value>Még nincs feltöltött fájl.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nem található fájl.</value>
     <comment>MT</comment>
@@ -6089,5 +6085,62 @@
   <data name="WidTableMove" xml:space="preserve">
     <value>Átrendezés</value>
     <comment>MT</comment>
+  </data>
+  <data name="NavLibrarySearch" xml:space="preserve">
+    <value>Keresés a képtárban</value>
+  </data>
+  <data name="NavLibraryEmpty" xml:space="preserve">
+    <value>Még nincs kép a képtárban.</value>
+  </data>
+  <data name="NavLibraryNoMatch" xml:space="preserve">
+    <value>Egy fájlnév sem egyezik.</value>
+  </data>
+  <data name="NavPickerFromLibrary" xml:space="preserve">
+    <value>Vagy válasszon a képtárból</value>
+  </data>
+  <data name="NavGalleryShared" xml:space="preserve">
+    <value>A közös képtárban van. A galériából eltávolítva a fájl megmarad.</value>
+  </data>
+  <data name="NavGalleryShare" xml:space="preserve">
+    <value>Megosztás a képtárban</value>
+  </data>
+  <data name="NavGalleryShareHelp" xml:space="preserve">
+    <value>Bármely bejelentkezett felhasználó használhatja wikioldalon vagy galériában. Nem vonható vissza.</value>
+  </data>
+  <data name="NavGalleryShareFailed" xml:space="preserve">
+    <value>Nem sikerült megosztani a képet: {0}</value>
+  </data>
+  <data name="WkColLibrary" xml:space="preserve">
+    <value>Képtár</value>
+  </data>
+  <data name="WkLibrarySharing" xml:space="preserve">
+    <value>Megosztás a képtárban</value>
+  </data>
+  <data name="WkLibraryShare" xml:space="preserve">
+    <value>A közös képtárban</value>
+  </data>
+  <data name="WkLibraryShareHelp" xml:space="preserve">
+    <value>Bármely bejelentkezett felhasználó kiválaszthatja wikioldalhoz vagy galériához. Nem vonható vissza.</value>
+  </data>
+  <data name="WkLibraryLock" xml:space="preserve">
+    <value>Jogosultsághoz kötés</value>
+  </data>
+  <data name="WkLibraryLockHelp" xml:space="preserve">
+    <value>Csak e jogosultság birtokosai találják meg a képtárban. Hagyja üresen, ha mindenkinek szól.</value>
+  </data>
+  <data name="WkLibraryPrivate" xml:space="preserve">
+    <value>Egy galéria</value>
+  </data>
+  <data name="WkLibraryEveryone" xml:space="preserve">
+    <value>Mindenki</value>
+  </data>
+  <data name="WkLibraryLocked" xml:space="preserve">
+    <value>Zárolva: {0}</value>
+  </data>
+  <data name="WkLibrarySharingFailed" xml:space="preserve">
+    <value>Nem sikerült menteni: {0}</value>
+  </data>
+  <data name="NavGalleryShareWarned" xml:space="preserve">
+    <value>A tartalmi figyelmeztetéssel ellátott kép kimarad a képtárból. Vegye le a figyelmeztetést a megosztáshoz.</value>
   </data>
 </root>

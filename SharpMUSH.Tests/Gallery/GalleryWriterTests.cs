@@ -63,6 +63,17 @@ public class GalleryWriterTests
 		await Assert.That(store.Attributes[GalleryWriter.GalleryAttribute]).Contains("\"a\"");
 	}
 
+	/// <summary>Whether a file is shared is read from the file each time, never kept in the gallery.</summary>
+	[Test]
+	public async Task AWrite_DoesNotStoreWhetherAFileIsShared()
+	{
+		var store = new Store(Before());
+		var result = await GalleryWriter.WriteAsync(store, [Entry("a", icon: true) with { Shared = true }], NullLogger.Instance);
+
+		result.Expect<Success>();
+		await Assert.That(store.Attributes[GalleryWriter.GalleryAttribute]).DoesNotContain("Shared");
+	}
+
 	[Test]
 	[Arguments("IMAGE")]
 	[Arguments("IMAGE`ALT")]
