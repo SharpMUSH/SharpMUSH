@@ -9,6 +9,10 @@ lexer grammar SharpMUSHLexer;
 
 fragment WS: [ \r\n\f\t]*;
 
+// A '\' or '%' that ends the text has nothing to escape or substitute: PennMUSH drops the '\' and keeps
+// the '%' as text (src/parse.c). Each is one token, so neither is left waiting for a character.
+ESCAPE_AT_END: '\\' EOF;
+PERCENT_AT_END: '%' EOF;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[' WS;
 CBRACK: ']';
