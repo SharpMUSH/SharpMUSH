@@ -182,7 +182,7 @@ public class PackageManifestWriterTests
 		];
 		var original = Maximal() with
 		{
-			Format = PackageManifestService.AttributeEntriesFormat,
+			Format = PackageManifestService.AttributeIndexFormat,
 			Declarations = PackageDeclarations.None with { Attributes = entries }
 		};
 		var again = RoundTrip(original).Declared.AttributeEntries;

@@ -12,6 +12,9 @@ public partial class PackageManifestService
 	/// <summary>The first format with the <c>attributes:</c> block.</summary>
 	public static PackageFormatVersion AttributeEntriesFormat { get; } = new(1, 5);
 
+	/// <summary>The first format in which an entry's <c>index:</c> means something; below it the key is ignored.</summary>
+	public static PackageFormatVersion AttributeIndexFormat { get; } = new(1, 8);
+
 	private static readonly IReadOnlySet<string> KnownAttributeEntryKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"flags", "limit", "enum", "delimiter", "retroactive", "index"
@@ -109,7 +112,7 @@ public partial class PackageManifestService
 					continue;
 			}
 
-			if (ReadAttributeEntry(name, entry, path, issues) is { } spec)
+			if (ReadAttributeEntry(name, entry, path, format, issues) is { } spec)
 			{
 				result.Add(spec);
 			}
@@ -119,7 +122,8 @@ public partial class PackageManifestService
 	}
 
 	private static PackageAttributeEntrySpec? ReadAttributeEntry(
-		string name, Dictionary<string, object?> entry, string path, List<PackageManifestIssue> issues)
+		string name, Dictionary<string, object?> entry, string path, PackageFormatVersion format,
+		List<PackageManifestIssue> issues)
 	{
 		foreach (var key in entry.Keys.Where(k => !KnownAttributeEntryKeys.Contains(k)))
 		{
@@ -226,7 +230,7 @@ public partial class PackageManifestService
 			ok = false;
 		}
 
-		var index = ReadAttributeIndex(entry, path, issues, ref ok);
+		var index = ReadAttributeIndex(entry, path, format, issues, ref ok);
 		if (index is not null && flags.Contains("internal"))
 		{
 			issues.Add(PackageManifestIssue.Error($"{path}.index", "An internal attribute cannot be indexed: no copy of it is ever listed."));
@@ -242,8 +246,15 @@ public partial class PackageManifestService
 	/// (<c>numeric type:thing</c>) or a list (<c>[numeric, type:thing]</c>).
 	/// </summary>
 	private static AttributeIndexOptions? ReadAttributeIndex(Dictionary<string, object?> entry, string path,
-		List<PackageManifestIssue> issues, ref bool ok)
+		PackageFormatVersion format, List<PackageManifestIssue> issues, ref bool ok)
 	{
+		if (entry.ContainsKey("index") && format.Major == AttributeIndexFormat.Major && format.Minor < AttributeIndexFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning($"{path}.index",
+				$"'index' needs format {AttributeIndexFormat} or later and is ignored; set format: {AttributeIndexFormat}."));
+			return null;
+		}
+
 		string words;
 		switch (entry.GetValueOrDefault("index"))
 		{

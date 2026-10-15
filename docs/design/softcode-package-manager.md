@@ -204,9 +204,8 @@ default `flags`, and a `limit` or an `enum` (with its `delimiter`). The referenc
   branches), each flag against the built-in attribute flags (`branch` refused), that a `limit`
   compiles as `@attribute/limit` compiles it, and that an entry has a limit or an enum, not both.
   `attributes:` needs `format: 1.5`. `index:` takes `true` or `@attribute/index`'s option words
-  (`AttributeIndexOptions.Parse`), and is refused with `internal` in the flags. It stays in 1.5
-  rather than starting 1.6: the block that carries it was new in 1.5 and unreleased when the key
-  got its meaning, so no published 1.5 manifest relies on the earlier "reserved, ignored" reading.
+  (`AttributeIndexOptions.Parse`), needs `format: 1.8`, and is refused with `internal` in the
+  flags. Below 1.8 the key keeps its 1.5 reading, reserved and ignored, with a warning.
   The plan checks the live table and the game's attribute flags.
 - **Ownership.** An entry the package creates is recorded in `InstalledPackageRecord.Owned` with the
   values that version declared. An entry the game already has is the game's: the package uses it

@@ -119,7 +119,7 @@ Output: once the package is installed, ``@attribute JOB`STATUS`` shows the defau
 
 An entry the game already has is the game's: the package uses it and never changes it, and if its limit or enum differs from the manifest's, the package cannot be installed until the two agree. An entry the package created follows it: an upgrade changes only what the new version changed, so your own `@attribute/access` on it survives, and uninstalling the package deletes the entry. Values already stored on objects stay.
 
-An entry can also carry an `index:`, as `@attribute/index` would make it: `index: true` for the default, or the option words, such as `index: numeric type:thing`. Installing the package builds the index in the background, and the review screen says how many objects it builds over. A game entry without the same index blocks the install until you index it.
+From format 1.8 an entry can also carry an `index:`, as `@attribute/index` would make it: `index: true` for the default, or the option words, such as `index: numeric type:thing`. An older manifest's `index:` is ignored. Installing the package builds the index in the background, and the review screen says how many objects it builds over. A game entry without the same index blocks the install until you index it.
 
 Default flags reach new copies of the attribute only. An entry with `retroactive: true` also gives them to every copy already on an object, like `@attribute/access/retroactive` but keeping each copy's owner; the portal's review screen shows how many copies change and asks you to confirm before it applies.
 

@@ -28,8 +28,8 @@ public class PackageAttributeEntryManifestTests
 	private static IReadOnlyList<PackageManifestIssue> Errors(PackageManifestResult<ParsedPackageManifest> result)
 		=> result.Expect<PackageManifestFailure>().Issues.Where(i => i.Severity == PackageManifestIssueSeverity.Error).ToList();
 
-	private IReadOnlyList<PackageAttributeEntrySpec> Entries(string body)
-		=> Parse(body).Expect<ParsedPackageManifest>().Manifest.Declared.AttributeEntries;
+	private IReadOnlyList<PackageAttributeEntrySpec> Entries(string body, string format = "1.5")
+		=> Parse(body, format).Expect<ParsedPackageManifest>().Manifest.Declared.AttributeEntries;
 
 	[Test]
 	public async Task EveryFieldParses()
@@ -243,7 +243,7 @@ public class PackageAttributeEntryManifestTests
 			    index: [exact, "split:|"]
 			  JOB`NOTE:
 			    index: false
-			""");
+			""", "1.8");
 
 		await Assert.That(entries.Single(e => e.Name == "JOB`STATUS").Index).IsEqualTo(AttributeIndexOptions.Default);
 		await Assert.That(entries.Single(e => e.Name == "JOB`LEVEL").Index)
@@ -262,7 +262,7 @@ public class PackageAttributeEntryManifestTests
 			    index: { fold: case }
 			  JOB`LEVEL:
 			    index: sorted
-			"""));
+			""", "1.8"));
 		await Assert.That(errors.Select(e => e.Path)).IsEquivalentTo(["attributes.JOB`STATUS.index", "attributes.JOB`LEVEL.index"]);
 	}
 
@@ -274,8 +274,22 @@ public class PackageAttributeEntryManifestTests
 			  JOB`SECRET:
 			    flags: [internal]
 			    index: true
-			"""));
+			""", "1.8"));
 		await Assert.That(errors.Single().Path).IsEqualTo("attributes.JOB`SECRET.index");
+	}
+
+	/// <summary>Before format 1.8 <c>index:</c> was reserved, so an older manifest's is ignored with a warning.</summary>
+	[Test]
+	public async Task AnIndexBeforeFormat18IsIgnored()
+	{
+		var parsed = Parse("""
+			attributes:
+			  JOB`LEVEL:
+			    index: numeric
+			""").Expect<ParsedPackageManifest>();
+
+		await Assert.That(parsed.Manifest.Declared.AttributeEntries.Single().Index).IsNull();
+		await Assert.That(parsed.Warnings.Select(w => w.Path)).Contains("attributes.JOB`LEVEL.index");
 	}
 
 	/// <summary>The reader knows the attribute flags a new world is seeded with, less <c>branch</c>.</summary>
