@@ -194,6 +194,16 @@
       "tracking": "#1641",
       "profile": "Mail listings are drawn as titled sections",
       "command": "@mail/folder"
+    },
+    {
+      "id": "KD-0019",
+      "scenario": "30-softcode",
+      "case": "sc.subjectcaseif",
+      "step": 0,
+      "reason": "SharpMUSH binds #$ in case(), caseall(), if() and ifelse() as TinyMUX does; PennMUSH leaves it as text there.",
+      "tracking": "#1849",
+      "profile": "`#$` in `case()` and `if()`",
+      "command": "think [case(moof,moof,#$)] [caseall(ab,ab,#$)] [if(abc,#$)] [ifelse(0,x,#$)]"
     }
   ]
 }

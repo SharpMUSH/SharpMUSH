@@ -1136,16 +1136,15 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// <c>#$</c>: the subject of the outermost <c>switch()</c>, <c>switchall()</c>, <c>reswitch()</c>, <c>@switch</c>
 	/// or <c>@select</c> this evaluation started whose action is running. PennMUSH splices it into the action
 	/// before evaluating it, so the outermost switch takes every one written inside its action, a nested switch's
-	/// included, and none in its patterns or in the code of an attribute it calls. <c>case()</c> splices nothing.
-	/// With <c>innermost_tokens</c> on it reads the innermost such switch, wherever it is written, as TinyMUX does.
-	/// With no such switch, or in a pass that does not evaluate, it is text.
+	/// included, and none in its patterns or in the code of an attribute it calls. With no such switch, the
+	/// outermost <c>case()</c>, <c>caseall()</c>, <c>if()</c> or <c>ifelse()</c> whose action is running binds it, as
+	/// TinyMUX's do; PennMUSH leaves it as text there. With <c>innermost_tokens</c> on it reads the innermost of all
+	/// of them, wherever it is written, as TinyMUX does. With none, or in a pass that does not evaluate, it is text.
 	/// </summary>
 	public override ValueTask<CallState?> VisitSwitchSubject([NotNull] SwitchSubjectContext context)
 	{
 		var state = parser.CurrentState;
-		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval
-				|| BoundFrame(state.SwitchStack, frame => frame is { Spliced: true, InAction: true }, frame => frame.Evaluation)
-					is not { } subject)
+		if (state.ParseMode is ParseMode.NoParse or ParseMode.NoEval || BoundSwitch(state.SwitchStack) is not { } subject)
 		{
 			return ValueTask.FromResult<CallState?>(new CallState(GetContextText(context), context.Depth()));
 		}
@@ -1153,6 +1152,16 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		EvaluationRestrictions.DemandSubstitution(context.GetText(), state.Restrictions);
 		return ValueTask.FromResult<CallState?>(new CallState(subject.Text, context.Depth()));
 	}
+
+	/// <summary>
+	/// The switch <c>#$</c> reads. A spliced one goes first by default, so code written for PennMUSH reads the
+	/// switch it read there; with <c>innermost_tokens</c> on, every kind is alike.
+	/// </summary>
+	private SwitchFrame? BoundSwitch(IEnumerable<SwitchFrame> innermostFirst) =>
+		Configuration.CurrentValue.Compatibility.InnermostTokens
+			? BoundFrame(innermostFirst, frame => frame.InAction, frame => frame.Evaluation)
+			: BoundFrame(innermostFirst, frame => frame is { Spliced: true, InAction: true }, frame => frame.Evaluation)
+				?? BoundFrame(innermostFirst, frame => frame.InAction, frame => frame.Evaluation);
 
 	/// <summary>
 	/// The frame a <c>##</c>, <c>#@</c> or <c>#$</c> reads, from a stack that enumerates innermost first. By default

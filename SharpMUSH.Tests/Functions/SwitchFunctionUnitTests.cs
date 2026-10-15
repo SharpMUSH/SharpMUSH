@@ -184,16 +184,25 @@ public class SwitchFunctionUnitTests
 	}
 
 	/// <summary>
-	/// #$ is the subject in the list or default that runs, as PennMUSH's fun_switch splices it; case() and
-	/// caseall() leave it alone. A nested switch's #$ names the outermost switch whose list it is written in.
+	/// #$ is the subject in the list or default that runs, as PennMUSH's fun_switch splices it. A nested switch's
+	/// #$ names the outermost switch whose list it is written in. case(), caseall(), if() and ifelse() bind it too,
+	/// as TinyMUX's do, but give way to a switch() family around or inside them, which PennMUSH code expects.
 	/// </summary>
 	[Test]
 	[Arguments("switch(moof,*a*,foo,*b*,bar,*t*,neat,#$)", "moof")]
 	[Arguments("switch(abc,a*,<#$>,no)", "<abc>")]
 	[Arguments("switchall(abc,a*,#$,*c,-#$)", "abc-abc")]
-	[Arguments("case(moof,moof,#$)", "#$")]
-	[Arguments("caseall(moof,moof,#$,x,#$)", "#$")]
-	[Arguments("case(moof,x,no,#$)", "#$")]
+	[Arguments("case(moof,moof,#$)", "moof")]
+	[Arguments("caseall(moof,moof,#$,moof,-#$)", "moof-moof")]
+	[Arguments("case(moof,x,no,#$)", "moof")]
+	[Arguments("case(b,#$,x,y)", "y")]
+	[Arguments("if(1,#$)", "1")]
+	[Arguments("if(0,x,<#$>)", "<0>")]
+	[Arguments("ifelse(abc,#$,no)", "abc")]
+	[Arguments("if(1,switch(b,*,#$))", "b")]
+	[Arguments("switch(a,*,if(1,#$))", "a")]
+	[Arguments("if(abc,case(d,d,#$))", "abc")]
+	[Arguments("if(#$,#$)", "#$")]
 	[Arguments("reswitch(abc,^a,#$)", "abc")]
 	[Arguments("switch(a,*,switch(b,*,#$))", "a")]
 	[Arguments("switch(a,*,switch(b,*,%$0#$))", "ba")]
@@ -201,6 +210,9 @@ public class SwitchFunctionUnitTests
 	[Arguments("case(a,a,switch(b,*,#$))", "b")]
 	[Arguments("switch(a,*,case(b,b,#$))", "a")]
 	[Arguments("iter(x y,switch(##,*,#$))", "x y")]
+	// if() is not a switch: stext(), %$0 and slev() pass over it.
+	[Arguments("if(1,[stext(0)]-[slev()]-%$0)", "-0-#-1 REGISTER OUT OF RANGE")]
+	[Arguments("switch(a,*,if(1,[stext(0)]-[slev()]-%$0))", "a-1-a")]
 	public async Task HashDollarIsTheSubject(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

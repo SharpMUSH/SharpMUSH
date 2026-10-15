@@ -229,7 +229,8 @@ public class IterationWrapper<T>
 
 /// <summary>
 /// One switch's subject, which <c>stext()</c> and <c>%$&lt;n&gt;</c> read, and which <c>#$</c> reads while one of
-/// its actions runs.
+/// its actions runs. An <c>if()</c> or <c>ifelse()</c> pushes one too, for <c>#$</c> only
+/// (<see cref="Conditional"/>).
 /// </summary>
 public sealed class SwitchFrame
 {
@@ -237,10 +238,19 @@ public sealed class SwitchFrame
 	public required MString Text { get; init; }
 
 	/// <summary>
-	/// Whether <c>#$</c> reads this switch: true for <c>switch()</c>, <c>reswitch()</c>, <c>@switch</c> and
-	/// <c>@select</c>, which PennMUSH splices it into, and false for <c>case()</c>, which it does not.
+	/// Whether PennMUSH splices <c>#$</c> into this switch's action: true for <c>switch()</c>, <c>reswitch()</c>,
+	/// <c>@switch</c> and <c>@select</c>, false for <c>case()</c>, <c>if()</c> and <c>ifelse()</c>, which leave it
+	/// as text there. <c>#$</c> reads an unspliced one only when no spliced one binds it, so code written for
+	/// PennMUSH reads the same switch it did there.
 	/// </summary>
 	public bool Spliced { get; init; }
+
+	/// <summary>
+	/// An <c>if()</c> or <c>ifelse()</c>, whose condition <c>#$</c> reads in the branch it runs, as TinyMUX's
+	/// does. It is not a switch, so <c>stext()</c>, <c>%$&lt;n&gt;</c> and <c>slev()</c> skip it
+	/// (<see cref="ParserState.SwitchFrames"/>).
+	/// </summary>
+	public bool Conditional { get; init; }
 
 	/// <summary>
 	/// The attribute being evaluated when the switch started, compared by reference: <c>#$</c> reads it only
@@ -255,7 +265,10 @@ public sealed class SwitchFrame
 	public bool InAction { get; set; }
 
 	/// <summary>A copy for a queued action, which must not see the switch move on to its next pattern.</summary>
-	public SwitchFrame Clone() => new() { Text = Text, Spliced = Spliced, Evaluation = Evaluation, InAction = InAction };
+	public SwitchFrame Clone() => new()
+	{
+		Text = Text, Spliced = Spliced, Conditional = Conditional, Evaluation = Evaluation, InAction = InAction
+	};
 }
 
 /// <summary>
@@ -495,6 +508,12 @@ public partial record ParserState
 		get => Context.SwitchStack;
 		init => Context = Context with { SwitchStack = value };
 	}
+
+	/// <summary>
+	/// The switches <c>stext()</c>, <c>%$&lt;n&gt;</c> and <c>slev()</c> count, innermost first: the
+	/// <see cref="SwitchStack"/> without its <c>if()</c> frames.
+	/// </summary>
+	public IEnumerable<SwitchFrame> SwitchFrames => SwitchStack.Where(frame => !frame.Conditional);
 
 	/// <inheritdoc cref="EvaluationContext.ExecutionStack"/>
 	public ConcurrentStack<Execution> ExecutionStack

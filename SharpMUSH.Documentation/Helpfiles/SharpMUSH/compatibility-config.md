@@ -130,10 +130,11 @@ PennMUSH.
 
 With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$`
 names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action
-they are written in. In the code of an attribute that the loop or switch calls, they are plain text.
+they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the
+code of an attribute that the loop or switch calls, they are plain text.
 
 With it on, `##` and `#@` name the innermost `iter()` or `@dolist` that is running, and `#$` names
-the innermost switch whose action is running. This also applies in the code of an attribute that
+the innermost switch, `case()`, `if()` or `ifelse()` whose action is running. This also applies in the code of an attribute that
 the loop or switch calls. Either way, the value is inserted as text and is never evaluated as code.
 
 To get the same result with either setting, use `%i0` or `itext(0)` for the current element,

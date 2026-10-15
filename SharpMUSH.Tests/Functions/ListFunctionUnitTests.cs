@@ -121,7 +121,9 @@ public class ListFunctionUnitTests
 	[Arguments("##:#@ #$", "##:#@ #$", "##:#@ #$")]
 	[Arguments("switch(a,*,switch(b,*,#$))", "a", "b")]
 	[Arguments("switch(b,*,switch(b,#$,x,y))", "x", "x")]
-	[Arguments("switch(a,*,case(b,b,#$))", "a", "a")]
+	[Arguments("switch(a,*,case(b,b,#$))", "a", "b")]
+	[Arguments("switch(a,*,if(1,#$))", "a", "1")]
+	[Arguments("if(abc,case(d,d,#$))", "abc", "d")]
 	[Arguments("iter(x y,switch(##,*,#$))", "x y", "x y")]
 	[Arguments("switch(a,*,iter(x y,#$##))", "ax ay", "ax ay")]
 	public async Task IterationTokensInnermost(string function, string outermost, string innermost)
