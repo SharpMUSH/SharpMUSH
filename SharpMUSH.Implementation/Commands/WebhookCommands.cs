@@ -1,6 +1,7 @@
 using System.Globalization;
 using MarkupString.Layout;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
@@ -30,13 +31,13 @@ public partial class Commands
 	};
 
 	private static readonly string[] WebhookOperations =
-		["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "SECRET", "ROTATE", "TEST", "DELETE"];
+		["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "ROTATE", "TEST", "DELETE"];
 
 	/// <summary>
 	/// <c>@webhook</c>: endpoints outside the game that hear its events (<c>help @webhook</c>). A SharpMUSH
 	/// command; PennMUSH has no outbound events.
 	/// </summary>
-	[SharpCommand(Name = "@WEBHOOK", Switches = ["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "SECRET", "ROTATE", "TEST", "DELETE"],
+	[SharpCommand(Name = "@WEBHOOK", Switches = ["LIST", "CREATE", "URL", "EVENTS", "ENABLE", "DISABLE", "ROTATE", "TEST", "DELETE"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, CommandLock = "PERM^config.admin",
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["webhook", "value"])]
 	public async ValueTask<Option<CallState>> Webhook(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -47,6 +48,7 @@ public partial class Commands
 		var name = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
 		var value = (args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "").Trim();
 		var executorRef = executor.Object().DBRef;
+		var author = new SecretAuthor(executorRef.ToString(), executor.Object().Name);
 
 		var operation = operations.Length switch
 		{
@@ -69,11 +71,11 @@ public partial class Commands
 				WebhookSubscription found => await WebhookReplyAsync(executor, WebhookInfo(found, Webhooks.Status(found.Name)), found.Name),
 				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
 			},
-			"CREATE" => await Webhooks.CreateAsync(name, value, [], EventPrivacy.Public, executorRef.ToString()) switch
+			"CREATE" => await Webhooks.CreateAsync(name, value, [], EventPrivacy.Public, executorRef.ToString(), author) switch
 			{
-				WebhookSubscription created => await WebhookChangedAsync(executor, AuditActions.WebhookCreate, created,
-					$"Webhook {created.Name} created. It hears no events yet: set them with @webhook/events {created.Name}=<pattern> ...\n"
-					+ $"Its signing secret is {created.Secret}", $"url {WebhookAddress.Redacted(created.Url)}"),
+				WebhookIssued created => await WebhookChangedAsync(executor, AuditActions.WebhookCreate, created.Subscription,
+					$"Webhook {created.Subscription.Name} created. It hears no events yet: set them with @webhook/events {created.Subscription.Name}=<pattern> ...\n"
+					+ WebhookSecretSaid(created), $"url {WebhookAddress.Redacted(created.Subscription.Url)}"),
 				Error<string> error => await WebhookReplyAsync(executor, error.Value, ok: false),
 			},
 			"URL" => await WebhookChangeAsync(executor, name, await Webhooks.SetUrlAsync(name, value),
@@ -89,12 +91,13 @@ public partial class Commands
 				changed => $"Webhook {changed.Name} is on.", "enabled"),
 			"DISABLE" => await WebhookChangeAsync(executor, name, await Webhooks.SetEnabledAsync(name, false),
 				changed => $"Webhook {changed.Name} is off.", "disabled"),
-			"ROTATE" => await WebhookChangeAsync(executor, name, await Webhooks.RotateSecretAsync(name),
-				changed => $"Webhook {changed.Name} has a new signing secret: {changed.Secret}\nThe old one no longer verifies.", "secret rotated"),
-			"SECRET" => await Webhooks.GetAsync(name) switch
+			"ROTATE" => await Webhooks.RotateSecretAsync(name, author) switch
 			{
-				WebhookSubscription found => await WebhookReplyAsync(executor, $"Webhook {found.Name}'s signing secret is {found.Secret}", found.Name),
+				WebhookIssued rotated => await WebhookChangedAsync(executor, AuditActions.WebhookChange, rotated.Subscription,
+					$"Webhook {rotated.Subscription.Name}'s old signing secret no longer verifies.\n{WebhookSecretSaid(rotated)}",
+					"secret rotated"),
 				NotFound => await WebhookReplyAsync(executor, $"There is no webhook called {name}.", ok: false),
+				Error<string> error => await WebhookReplyAsync(executor, error.Value, ok: false),
 			},
 			"TEST" => await Webhooks.TestAsync(name, executorRef) switch
 			{
@@ -112,6 +115,13 @@ public partial class Commands
 			_ => await WebhookReplyAsync(executor, "Choose one @webhook operation.", ok: false),
 		};
 	}
+
+	/// <summary>The new secret, said once: it is in the secret store from now on and never shown again.</summary>
+	private static string WebhookSecretSaid(WebhookIssued issued) => issued switch
+	{
+		{ OverriddenBy: { } overriddenBy } => $"Its signing secret is set by {overriddenBy}, which the server signs with instead.",
+		_ => $"Its signing secret is {issued.Secret}\nCopy it now: it is not shown again. @webhook/rotate makes a new one.",
+	};
 
 	private async ValueTask<Option<CallState>> WebhookChangeAsync(AnySharpObject executor, string name,
 		FoundResult<WebhookSubscription> result, Func<WebhookSubscription, string> said, string details)
@@ -178,6 +188,7 @@ public partial class Commands
 				EventPrivacy.Staff => "public and staff events, not private ones",
 				_ => "public events only"
 			})),
+			("Secret", MarkupText.Plain(WebhookSubscription.SecretName(subscription.Name))),
 			("Created", MarkupText.Plain($"{WebhookTime(subscription.CreatedAt)}{(subscription.CreatedBy is { } by ? $" by {by}" : "")}")),
 			("Delivered", MarkupText.Plain($"{status.Delivered.ToString(CultureInfo.InvariantCulture)}{(status.LastDelivered is { } at ? $", last {WebhookTime(at)}" : "")}")),
 			("Failed tries", MarkupText.Plain($"{status.FailedAttempts.ToString(CultureInfo.InvariantCulture)}{(status.LastFailed is { } failed ? $", last {WebhookTime(failed)}" : "")}")),

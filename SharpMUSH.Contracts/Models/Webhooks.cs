@@ -64,8 +64,13 @@ public sealed record WebhookCreateRequest(string Name, string? Url, IReadOnlyLis
 /// <summary>A change to a subscription; what is left out stays as it is. An empty <see cref="Url"/> removes the address.</summary>
 public sealed record WebhookUpdateRequest(string? Url, IReadOnlyList<string>? Events, bool? Enabled);
 
-/// <summary>A subscription's signing secret, given on creation, on rotation and when asked for.</summary>
-public sealed record WebhookSecret(string Name, string Secret);
+/// <summary>
+/// A subscription's new signing secret, given once: on creation and on rotation. It is kept in the secret store
+/// as <see cref="SecretName"/>, and never shown again.
+/// </summary>
+/// <param name="Secret">The secret; null when <see cref="OverriddenBy"/> sets it instead.</param>
+/// <param name="OverriddenBy">The environment variable or file whose value signs instead of the store's, when one does.</param>
+public sealed record WebhookSecret(string Name, string SecretName, string? Secret, string? OverriddenBy);
 
 /// <summary>The id of a test delivery that was sent.</summary>
 public sealed record WebhookTestSent(string Name, string MessageId);

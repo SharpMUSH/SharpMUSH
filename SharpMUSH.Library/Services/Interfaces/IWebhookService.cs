@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using System.Threading.Channels;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -20,13 +21,14 @@ public interface IWebhookService
 	ValueTask<Found<WebhookSubscription>> GetAsync(string name);
 
 	/// <summary>
-	/// Adds a subscription with a new secret. <paramref name="url"/> may be empty for one heard only through
-	/// its event stream. <paramref name="createdBy"/> names who made it: an objid, or a portal account, and
-	/// <paramref name="reach"/> what they may be told about (<see cref="WebhookSubscription.Reach"/>). Fails on a
-	/// taken or malformed name, an unusable address or a malformed pattern.
+	/// Adds a subscription with a new secret, saved in the secret store as <paramref name="author"/>'s and
+	/// answered once. <paramref name="url"/> may be empty for one heard only through its event stream.
+	/// <paramref name="createdBy"/> names who made it: an objid, or a portal account, and <paramref name="reach"/>
+	/// what they may be told about (<see cref="WebhookSubscription.Reach"/>). Fails on a taken or malformed name, an
+	/// unusable address or a malformed pattern.
 	/// </summary>
-	ValueTask<Result<WebhookSubscription>> CreateAsync(string name, string? url, IReadOnlyList<string> events, EventPrivacy reach,
-		string? createdBy);
+	ValueTask<Result<WebhookIssued>> CreateAsync(string name, string? url, IReadOnlyList<string> events, EventPrivacy reach,
+		string? createdBy, SecretAuthor author);
 
 	/// <summary>Points the subscription at <paramref name="url"/>, or at nothing (stream only).</summary>
 	ValueTask<FoundResult<WebhookSubscription>> SetUrlAsync(string name, string? url);
@@ -41,12 +43,13 @@ public interface IWebhookService
 	ValueTask<FoundResult<WebhookSubscription>> SetEnabledAsync(string name, bool enabled);
 
 	/// <summary>
-	/// Gives the subscription a new secret; deliveries still waiting are signed with it, and its open streams are
-	/// closed, to connect again with the new one.
+	/// Gives the subscription a new secret, saved in the secret store as <paramref name="author"/>'s and answered
+	/// once; deliveries still waiting are signed with it, and its open streams are closed, to connect again with
+	/// the new one.
 	/// </summary>
-	ValueTask<FoundResult<WebhookSubscription>> RotateSecretAsync(string name);
+	ValueTask<FoundResult<WebhookIssued>> RotateSecretAsync(string name, SecretAuthor author);
 
-	/// <summary>Removes the subscription. Its waiting deliveries are dropped and its streams closed.</summary>
+	/// <summary>Removes the subscription and its stored secret. Its waiting deliveries are dropped and its streams closed.</summary>
 	ValueTask<Found<WebhookSubscription>> DeleteAsync(string name);
 
 	/// <summary>

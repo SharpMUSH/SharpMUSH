@@ -22,7 +22,8 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/webhooks")]
 [AllowAnonymous]
-public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<WebhookOptions> options) : ControllerBase
+public sealed class WebhookStreamController(IWebhookService webhooks, ISecretStore secrets, IOptions<WebhookOptions> options)
+	: ControllerBase
 {
 	private static readonly TimeSpan CloseHandshakeWait = TimeSpan.FromSeconds(5);
 
@@ -36,7 +37,7 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 		}
 
 		// One answer for an unknown name and a wrong secret, so the names cannot be found by asking.
-		if (await webhooks.GetAsync(name) is not WebhookSubscription subscription || !Presents(subscription.Secret))
+		if (await webhooks.GetAsync(name) is not WebhookSubscription subscription || !await PresentsAsync(subscription.Name))
 		{
 			Response.StatusCode = StatusCodes.Status401Unauthorized;
 			return;
@@ -51,7 +52,7 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 		using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 		using var lease = webhooks.OpenStream(subscription.Name, events.Writer);
 		// A rotation or delete between the check above and OpenStream closed no writer of this stream's.
-		if (await webhooks.GetAsync(name) is not WebhookSubscription current || current.Secret != subscription.Secret)
+		if (await webhooks.GetAsync(name) is not WebhookSubscription || !await PresentsAsync(subscription.Name))
 		{
 			events.Writer.TryComplete();
 		}
@@ -95,8 +96,10 @@ public sealed class WebhookStreamController(IWebhookService webhooks, IOptions<W
 		}
 	}
 
-	private bool Presents(string secret)
-		=> Request.Headers.Authorization.ToString() is var header
+	/// <summary>Whether the request's bearer is the subscription's secret, as the secret store has it now.</summary>
+	private async ValueTask<bool> PresentsAsync(string subscription)
+		=> await secrets.GetAsync(WebhookSubscription.SecretName(subscription), HttpContext.RequestAborted) is string secret
+			&& Request.Headers.Authorization.ToString() is var header
 			&& header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
 			&& WebhookSignature.SecretEquals(secret, header["Bearer ".Length..].Trim());
 

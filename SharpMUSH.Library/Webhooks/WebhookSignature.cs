@@ -21,17 +21,30 @@ public static class WebhookSignature
 	/// <summary>A new secret: 32 random bytes.</summary>
 	public static string NewSecret() => SecretPrefix + Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
+	/// <summary>
+	/// Whether <paramref name="secret"/> can sign: a key in base64, with or without its <c>whsec_</c> prefix. A value
+	/// an operator set by hand (<c>@secret</c>, or an override) may not be.
+	/// </summary>
+	public static bool CanSign(string secret)
+	{
+		var key = Unprefixed(secret);
+		return key.Length > 0 && Convert.TryFromBase64String(key, new byte[key.Length], out _);
+	}
+
 	/// <summary>The <c>webhook-signature</c> value for one delivery attempt.</summary>
-	/// <param name="secret">The subscription's secret, with or without its <c>whsec_</c> prefix.</param>
+	/// <param name="secret">The subscription's secret, with or without its <c>whsec_</c> prefix (<see cref="CanSign"/>).</param>
 	/// <param name="messageId">The delivery's id, the same on every attempt.</param>
 	/// <param name="timestamp">The attempt's time, in Unix seconds.</param>
 	/// <param name="body">The body exactly as sent.</param>
 	public static string Sign(string secret, string messageId, long timestamp, string body)
 	{
-		var key = Convert.FromBase64String(secret.StartsWith(SecretPrefix, StringComparison.Ordinal) ? secret[SecretPrefix.Length..] : secret);
+		var key = Convert.FromBase64String(Unprefixed(secret));
 		var mac = HMACSHA256.HashData(key, Encoding.UTF8.GetBytes($"{messageId}.{timestamp}.{body}"));
 		return "v1," + Convert.ToBase64String(mac);
 	}
+
+	private static string Unprefixed(string secret)
+		=> secret.StartsWith(SecretPrefix, StringComparison.Ordinal) ? secret[SecretPrefix.Length..] : secret;
 
 	/// <summary>Whether <paramref name="presented"/> is <paramref name="secret"/>, compared in constant time.</summary>
 	public static bool SecretEquals(string secret, string presented)

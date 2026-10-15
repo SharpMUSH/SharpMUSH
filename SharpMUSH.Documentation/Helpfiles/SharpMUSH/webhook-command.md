@@ -21,7 +21,7 @@
       "id": "webhook-signing",
       "heading": "Checking the signature",
       "lookup": "@webhook signing",
-      "aliases": ["@webhook/secret", "@webhook/rotate"]
+      "aliases": ["@webhook/rotate", "webhook secret"]
     },
     {
       "id": "webhook-retries",
@@ -63,9 +63,9 @@ The events are the same ones the event handler gets (see [events] and [event lis
 - `@webhook/enable <name>` and `@webhook/disable <name>`
 - `@webhook/delete <name>`
 
-A name is up to 64 letters, digits, `-` and `_`. Case does not matter.
+A name is up to 48 letters and digits. Case does not matter.
 
-`@webhook/create` makes a webhook and shows its signing secret (see [@webhook signing]). A new webhook hears no events. `@webhook/events` sets the events it hears, replacing any it had. Each pattern is an event name, where `*` matches anything and `?` matches one character. ``PLAYER`*`` is every player event, and `*` is every event.
+`@webhook/create` makes a webhook and shows its signing secret, once (see [@webhook signing]). A new webhook hears no events. `@webhook/events` sets the events it hears, replacing any it had. Each pattern is an event name, where `*` matches anything and `?` matches one character. ``PLAYER`*`` is every player event, and `*` is every event.
 
 A webhook is sent only the events that whoever last set its events may be told about:
 
@@ -84,6 +84,7 @@ Example:
 > @webhook/create logger=https://logs.example.com/game
 Webhook logger created. It hears no events yet: set them with @webhook/events logger=<pattern> ...
 Its signing secret is whsec_kJ0p3q9u5xv0Zr0c3D8m2YyZq1n6bq7N0gH8Qy3m5Lw=
+Copy it now: it is not shown again. @webhook/rotate makes a new one.
 > @webhook/events logger=player`connect player`disconnect channel`message
 Webhook logger now hears: PLAYER`CONNECT PLAYER`DISCONNECT CHANNEL`MESSAGE
 ```
@@ -115,7 +116,6 @@ Three headers come with it: `webhook-id` (the delivery's id, the same on every r
 
 ## Checking the signature
 
-- `@webhook/secret <name>`
 - `@webhook/rotate <name>`
 
 Every delivery is signed with the webhook's secret, following the Standard Webhooks specification. That specification has libraries for most languages that check a delivery in one call. To check it by hand:
@@ -126,7 +126,21 @@ Every delivery is signed with the webhook's secret, following the Standard Webho
 
 A receiver should also refuse a timestamp more than a few minutes old.
 
-`@webhook/secret` shows the secret again. `@webhook/rotate` gives the webhook a new secret. The old one stops working at once, including for deliveries still waiting to be retried, and any open event stream is closed.
+The secret is shown once, when the webhook is created, and never again. It is kept in the server's secret store (see [@secret]) as `webhook.<name>.signing`, with the name in lower case, so `@secret` lists it and a copy of the world alone does not hold it. `@webhook <name>` shows the secret's name on the "Secret" line.
+
+`@webhook/rotate` gives the webhook a new secret and shows it, once. The old one stops working at once, including for deliveries still waiting to be retried, and any open event stream is closed. A lost secret is replaced this way.
+
+An operator can set the secret outside the game, like any other secret: the environment variable `SHARPMUSH_SECRET_WEBHOOK_<NAME>_SIGNING`, or a file named `webhook.<name>.signing` in the secrets directory. Deliveries are then signed with that value, and `@webhook/create` and `@webhook/rotate` name the override instead of showing a secret. The value must be `whsec_` followed by a key in base64.
+
+If the secret is missing, cleared with `@secret/clear`, or not a key, each try fails with a message saying so (see [@webhook retries]) until `@webhook/rotate` makes a new one.
+
+Example:
+```
+> @webhook/rotate logger
+Webhook logger's old signing secret no longer verifies.
+Its signing secret is whsec_Qm9n6Zr3c0Lw8kJ1p5q2u7xv4D9mYyZq0bq3N5gH6Qw=
+Copy it now: it is not shown again. @webhook/rotate makes a new one.
+```
 
 ## Failures and retries
 
@@ -156,4 +170,5 @@ Nothing is kept for a stream that is not connected, and a program that falls beh
 - [events]
 - [event list]
 - [@http]
+- [@secret]
 :::

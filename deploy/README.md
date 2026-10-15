@@ -160,7 +160,14 @@ Wizards send the game's events to programs outside it with `@webhook` (see `help
 delivery is a signed HTTPS `POST` from the server, so the server needs outbound HTTPS to wherever
 the webhooks point. Tools without a public address connect to the server instead, at
 `wss://<your-domain>/api/webhooks/<name>/stream`, which the `Caddyfile` passes through with the
-rest of the API. The limits are environment variables on the server:
+rest of the API.
+
+Each webhook's signing secret is a secret like the others, `webhook.<name>.signing`, so the key ring
+above must come with the world for deliveries to stay signed. Losing it shows the secret as unreadable
+and each delivery fails until `@webhook/rotate` makes a new one. `SHARPMUSH_SECRET_WEBHOOK_<NAME>_SIGNING`
+sets one from outside the game (`whsec_` and a base64 key).
+
+The limits are environment variables on the server:
 
 - `Webhooks__MaxAttempts` (default `9`), `Webhooks__FirstRetryDelay` (`00:00:05`, each later wait five
   times longer) and `Webhooks__MaxRetryDelay` (`02:00:00`): how long a failing delivery is retried.

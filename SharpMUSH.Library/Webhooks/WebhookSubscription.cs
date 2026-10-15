@@ -3,12 +3,16 @@ using SharpMUSH.Library.Definitions;
 namespace SharpMUSH.Library.Webhooks;
 
 /// <summary>
-/// An endpoint outside the game that hears the game's events: what it hears, where they are sent and
-/// the secret that signs them. Kept in the world, in <see cref="WebhooksData"/>.
+/// An endpoint outside the game that hears the game's events: what it hears and where they are sent. Kept in
+/// the world, in <see cref="WebhooksData"/>. The secret that signs them is in the secret store, under
+/// <see cref="SecretName"/>.
 /// </summary>
 public sealed record WebhookSubscription
 {
-	/// <summary>The subscription's key, unique without regard to case: letters, digits, <c>-</c> and <c>_</c>.</summary>
+	/// <summary>The longest name: what the secret store's names leave room for around it.</summary>
+	public const int MaxNameLength = 48;
+
+	/// <summary>The subscription's key, unique without regard to case: letters and digits.</summary>
 	public string Name { get; init; } = string.Empty;
 
 	/// <summary>
@@ -19,9 +23,6 @@ public sealed record WebhookSubscription
 
 	/// <summary>The events delivered: event names or patterns (<c>*</c>, <c>?</c>), such as <c>PLAYER`*</c>. None delivers nothing.</summary>
 	public IReadOnlyList<string> Events { get; init; } = [];
-
-	/// <summary>The signing secret, <c>whsec_</c> and the key in base64 (<see cref="WebhookSignature"/>).</summary>
-	public string Secret { get; init; } = string.Empty;
 
 	/// <summary>Whether events are delivered. A disabled subscription keeps its settings and hears nothing.</summary>
 	public bool Enabled { get; init; } = true;
@@ -39,6 +40,13 @@ public sealed record WebhookSubscription
 	/// (<see cref="ReachOf"/>). An event more private than this is withheld even when a pattern matches it.
 	/// </summary>
 	public EventPrivacy Reach { get; init; } = EventPrivacy.Public;
+
+	/// <summary>
+	/// The secret-store name of the signing secret of the subscription called <paramref name="name"/>:
+	/// <c>webhook.&lt;name&gt;.signing</c>, in lower case. Its value is <c>whsec_</c> and the key in base64
+	/// (<see cref="WebhookSignature"/>).
+	/// </summary>
+	public static string SecretName(string name) => $"webhook.{name.ToLowerInvariant()}.signing";
 
 	/// <summary>Whether <paramref name="eventName"/> is one this subscription hears and may be sent.</summary>
 	public bool Hears(string eventName)
@@ -63,6 +71,17 @@ public sealed record WebhookSubscription
 			_ => EventPrivacy.Public
 		};
 }
+
+/// <summary>
+/// A subscription and its new signing secret, as a create or a rotation answers them: the only time the secret
+/// is shown.
+/// </summary>
+/// <param name="Secret">The new secret, saved in the secret store; null when an override sets it instead.</param>
+/// <param name="OverriddenBy">
+/// The environment variable or file that sets the secret instead of the store, when one does: the receiver
+/// checks signatures with that value, and the one generated is never used.
+/// </param>
+public sealed record WebhookIssued(WebhookSubscription Subscription, string? Secret, string? OverriddenBy);
 
 /// <summary>Every webhook subscription in the world, stored as one server document.</summary>
 public sealed class WebhooksData

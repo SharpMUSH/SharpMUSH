@@ -2,12 +2,15 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Channels;
 using Mediator;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Implementation.Services.Webhooks;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Webhooks;
 
 namespace SharpMUSH.Tests.Services.Webhooks;
@@ -25,6 +28,13 @@ public class WebhookDeliveryTests
 	{
 		public ManualClock Clock { get; } = new(new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero));
 		public RecordingEndpoint Endpoint { get; } = new();
+		public static SecretAuthor Author { get; } = new("#1:1", "God");
+		public MemoryServerData World { get; } = new();
+
+		/// <summary>The environment the secret store reads overrides from.</summary>
+		public Dictionary<string, string> Environment { get; } = [];
+
+		public SecretStore Secrets { get; }
 		public WebhookDispatcher Dispatcher { get; }
 		public WebhookService Webhooks { get; }
 
@@ -33,13 +43,20 @@ public class WebhookDeliveryTests
 			var settings = new WebhookOptions();
 			configure?.Invoke(settings);
 			var options = Options.Create(settings);
-			Dispatcher = new WebhookDispatcher(Endpoint, Clock, options, NullLogger<WebhookDispatcher>.Instance);
-			Webhooks = new WebhookService(new MemoryServerData(), Substitute.For<IMediator>(), Dispatcher, Clock, options,
+			Secrets = new SecretStore(new MemoryServerData(), new EphemeralDataProtectionProvider(), [],
+				new SecretStoreOptions(Path.Join(Path.GetTempPath(), $"no-secrets-{Guid.NewGuid():N}"), Environment.GetValueOrDefault),
+				Clock, NullLogger<SecretStore>.Instance);
+			Dispatcher = new WebhookDispatcher(Endpoint, Secrets, Clock, options, NullLogger<WebhookDispatcher>.Instance);
+			Webhooks = new WebhookService(World, Substitute.For<IMediator>(), Dispatcher, Secrets, Clock, options,
 				NullLogger<WebhookService>.Instance);
 		}
 
+		public async Task<WebhookIssued> IssueAsync(string name = "relay", string? url = Url, params string[] events)
+			=> (await Webhooks.CreateAsync(name, url, events.Length == 0 ? ["PLAYER`*"] : events, EventPrivacy.Private, "#1", Author))
+				.Expect<WebhookIssued>();
+
 		public async Task<WebhookSubscription> CreateAsync(string name = "relay", string? url = Url, params string[] events)
-			=> (await Webhooks.CreateAsync(name, url, events.Length == 0 ? ["PLAYER`*"] : events, EventPrivacy.Private, "#1")).Expect<WebhookSubscription>();
+			=> (await IssueAsync(name, url, events)).Subscription;
 
 		public Task<int> RunAsync() => Dispatcher.RunDueAsync(Webhooks.Current, Webhooks.MarkGoneAsync, CancellationToken.None);
 
@@ -50,7 +67,7 @@ public class WebhookDeliveryTests
 	public async Task AHeardEventIsPostedOnceSignedWithItsArgumentsByName()
 	{
 		var fixture = new Fixture();
-		var subscription = await fixture.CreateAsync();
+		var (subscription, secret, _) = await fixture.IssueAsync();
 
 		await fixture.ConnectAsync();
 		var sent = await fixture.RunAsync();
@@ -65,7 +82,7 @@ public class WebhookDeliveryTests
 		await Assert.That(id).StartsWith("msg_");
 		await Assert.That(timestamp).IsEqualTo(fixture.Clock.GetUtcNow().ToUnixTimeSeconds());
 		await Assert.That(request.Headers[WebhookSignature.SignatureHeader])
-			.IsEqualTo(WebhookSignature.Sign(subscription.Secret, id, timestamp, request.Body));
+			.IsEqualTo(WebhookSignature.Sign(secret!, id, timestamp, request.Body));
 
 		using var body = JsonDocument.Parse(request.Body);
 		var root = body.RootElement;
@@ -87,7 +104,7 @@ public class WebhookDeliveryTests
 	public async Task AnEventMorePrivateThanTheSubscriptionsReachIsWithheld()
 	{
 		var fixture = new Fixture();
-		(await fixture.Webhooks.CreateAsync("relay", Url, ["*"], EventPrivacy.Staff, "#1")).Expect<WebhookSubscription>();
+		(await fixture.Webhooks.CreateAsync("relay", Url, ["*"], EventPrivacy.Staff, "#1", Fixture.Author)).Expect<WebhookIssued>();
 
 		await fixture.ConnectAsync();
 		await fixture.Webhooks.PublishAsync("LOG`ERR", null, ["disk full"]);
@@ -238,17 +255,17 @@ public class WebhookDeliveryTests
 	{
 		var fixture = new Fixture();
 		fixture.Endpoint.Answer(HttpStatusCode.InternalServerError);
-		var subscription = await fixture.CreateAsync();
+		var (subscription, secret, _) = await fixture.IssueAsync();
 
 		await fixture.ConnectAsync();
 		await fixture.RunAsync();
-		var rotated = (await fixture.Webhooks.RotateSecretAsync(subscription.Name)).Expect<WebhookSubscription>();
+		var rotated = (await fixture.Webhooks.RotateSecretAsync(subscription.Name, Fixture.Author)).Expect<WebhookIssued>();
 		fixture.Clock.Advance(TimeSpan.FromSeconds(5));
 		await fixture.RunAsync();
 
 		var retry = fixture.Endpoint.Received[1];
-		await Assert.That(rotated.Secret).IsNotEqualTo(subscription.Secret);
-		await Assert.That(retry.Headers[WebhookSignature.SignatureHeader]).IsEqualTo(WebhookSignature.Sign(rotated.Secret,
+		await Assert.That(rotated.Secret).IsNotEqualTo(secret);
+		await Assert.That(retry.Headers[WebhookSignature.SignatureHeader]).IsEqualTo(WebhookSignature.Sign(rotated.Secret!,
 			retry.Headers[WebhookSignature.IdHeader], long.Parse(retry.Headers[WebhookSignature.TimestampHeader]), retry.Body));
 	}
 
@@ -288,7 +305,8 @@ public class WebhookDeliveryTests
 	}
 
 	[Test]
-	[Arguments("bad name", Url, "letters, digits")]
+	[Arguments("bad name", Url, "letters and digits")]
+	[Arguments("mail-relay", Url, "letters and digits")]
 	[Arguments("plain", "http://hooks.example.com/game", "must use https")]
 	[Arguments("local", "https://127.0.0.1/hook", "private network")]
 	[Arguments("internal", "https://10.0.0.5/hook", "private network")]
@@ -297,7 +315,7 @@ public class WebhookDeliveryTests
 	{
 		var fixture = new Fixture();
 
-		var result = await fixture.Webhooks.CreateAsync(name, url, ["*"], EventPrivacy.Private, "#1");
+		var result = await fixture.Webhooks.CreateAsync(name, url, ["*"], EventPrivacy.Private, "#1", Fixture.Author);
 
 		await Assert.That(result.Expect<Error<string>>().Value).Contains(reason);
 	}
@@ -311,9 +329,9 @@ public class WebhookDeliveryTests
 			options.AllowPrivateNetworks = true;
 		});
 
-		var result = await fixture.Webhooks.CreateAsync("lan", "http://127.0.0.1:9000/hook", ["*"], EventPrivacy.Private, "#1");
+		var result = await fixture.Webhooks.CreateAsync("lan", "http://127.0.0.1:9000/hook", ["*"], EventPrivacy.Private, "#1", Fixture.Author);
 
-		await Assert.That(result.Expect<WebhookSubscription>().Url).IsEqualTo("http://127.0.0.1:9000/hook");
+		await Assert.That(result.Expect<WebhookIssued>().Subscription.Url).IsEqualTo("http://127.0.0.1:9000/hook");
 	}
 
 	[Test]
@@ -322,8 +340,67 @@ public class WebhookDeliveryTests
 		var fixture = new Fixture();
 		await fixture.CreateAsync("Relay");
 
-		var second = await fixture.Webhooks.CreateAsync("relay", Url, ["*"], EventPrivacy.Private, "#1");
+		var second = await fixture.Webhooks.CreateAsync("relay", Url, ["*"], EventPrivacy.Private, "#1", Fixture.Author);
 
 		await Assert.That(second.Expect<Error<string>>().Value).Contains("already");
+	}
+
+	[Test]
+	public async Task TheSecretIsKeptInTheSecretStoreAndNotInTheWorld()
+	{
+		var fixture = new Fixture();
+		var (subscription, secret, overriddenBy) = await fixture.IssueAsync("Relay");
+
+		await Assert.That(overriddenBy).IsNull();
+		await Assert.That(secret).StartsWith(WebhookSignature.SecretPrefix);
+		await Assert.That((await fixture.Secrets.GetAsync("webhook.relay.signing")).Expect<string>()).IsEqualTo(secret!);
+		var world = System.Text.Json.JsonSerializer.Serialize(await fixture.World.GetExpandedServerDataAsync<WebhooksData>());
+		await Assert.That(world).DoesNotContain(WebhookSignature.SecretPrefix);
+
+		await fixture.Webhooks.DeleteAsync(subscription.Name);
+
+		(await fixture.Secrets.GetAsync("webhook.relay.signing")).Expect<NotFound>();
+	}
+
+	[Test]
+	public async Task AMissingSecretFailsTheTryUntilANewOneIsMade()
+	{
+		var fixture = new Fixture();
+		var subscription = await fixture.CreateAsync();
+		await fixture.Secrets.ClearAsync(WebhookSubscription.SecretName(subscription.Name));
+
+		await fixture.ConnectAsync();
+		await fixture.RunAsync();
+
+		await Assert.That(fixture.Endpoint.Received).IsEmpty();
+		var failed = fixture.Webhooks.Status(subscription.Name).Recent.Single();
+		await Assert.That(failed.Outcome).IsEqualTo(WebhookAttemptOutcome.Retrying);
+		await Assert.That(failed.Error).Contains("webhook.relay.signing is not set");
+
+		var rotated = (await fixture.Webhooks.RotateSecretAsync(subscription.Name, Fixture.Author)).Expect<WebhookIssued>();
+		fixture.Clock.Advance(TimeSpan.FromSeconds(5));
+		await fixture.RunAsync();
+
+		var request = fixture.Endpoint.Received.Single();
+		await Assert.That(request.Headers[WebhookSignature.SignatureHeader]).IsEqualTo(WebhookSignature.Sign(rotated.Secret!,
+			request.Headers[WebhookSignature.IdHeader], long.Parse(request.Headers[WebhookSignature.TimestampHeader]), request.Body));
+	}
+
+	[Test]
+	public async Task AnOverrideSignsInsteadAndNoSecretIsShown()
+	{
+		var fixture = new Fixture();
+		var overriding = WebhookSignature.NewSecret();
+		fixture.Environment["SHARPMUSH_SECRET_WEBHOOK_RELAY_SIGNING"] = overriding;
+
+		var issued = await fixture.IssueAsync();
+		await fixture.ConnectAsync();
+		await fixture.RunAsync();
+
+		await Assert.That(issued.Secret).IsNull();
+		await Assert.That(issued.OverriddenBy).IsEqualTo("SHARPMUSH_SECRET_WEBHOOK_RELAY_SIGNING");
+		var request = fixture.Endpoint.Received.Single();
+		await Assert.That(request.Headers[WebhookSignature.SignatureHeader]).IsEqualTo(WebhookSignature.Sign(overriding,
+			request.Headers[WebhookSignature.IdHeader], long.Parse(request.Headers[WebhookSignature.TimestampHeader]), request.Body));
 	}
 }

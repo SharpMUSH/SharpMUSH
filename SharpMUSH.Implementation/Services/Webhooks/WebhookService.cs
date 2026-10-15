@@ -8,6 +8,7 @@ using System.Threading.Channels;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -22,6 +23,7 @@ public sealed partial class WebhookService(
 	IExpandedObjectDataService serverData,
 	IMediator mediator,
 	WebhookDispatcher dispatcher,
+	ISecretStore secrets,
 	TimeProvider time,
 	IOptions<WebhookOptions> options,
 	ILogger<WebhookService> logger) : IWebhookService
@@ -44,7 +46,7 @@ public sealed partial class WebhookService(
 		public ConcurrentDictionary<string, ImmutableArray<WebhookSubscription>> Hearing { get; } = new(StringComparer.OrdinalIgnoreCase);
 	}
 
-	[GeneratedRegex("^[A-Za-z0-9_-]{1,64}$")]
+	[GeneratedRegex("^[A-Za-z0-9]{1,48}$")]
 	private static partial Regex NamePattern();
 
 	/// <inheritdoc />
@@ -71,12 +73,12 @@ public sealed partial class WebhookService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<Result<WebhookSubscription>> CreateAsync(string name, string? url, IReadOnlyList<string> events,
-		EventPrivacy reach, string? createdBy)
+	public async ValueTask<Result<WebhookIssued>> CreateAsync(string name, string? url, IReadOnlyList<string> events,
+		EventPrivacy reach, string? createdBy, SecretAuthor author)
 	{
 		if (!NamePattern().IsMatch(name))
 		{
-			return new Error<string>("A webhook's name is letters, digits, - and _, up to 64 of them.");
+			return new Error<string>($"A webhook's name is letters and digits, up to {WebhookSubscription.MaxNameLength} of them.");
 		}
 
 		if (CheckUrl(url) is { } urlError) return new Error<string>(urlError);
@@ -97,14 +99,15 @@ public sealed partial class WebhookService(
 				Url = string.IsNullOrWhiteSpace(url) ? null : url.Trim(),
 				Events = Normalize(events),
 				Reach = reach,
-				Secret = WebhookSignature.NewSecret(),
 				Enabled = true,
 				CreatedBy = createdBy,
 				CreatedAt = time.GetUtcNow(),
 			};
-			data.Subscriptions.Add(subscription);
-			await SaveAsync(data);
-			return subscription;
+			return await IssueAsync(subscription, author) switch
+			{
+				WebhookIssued issued => await AddedAsync(data, issued),
+				Error<string> error => error,
+			};
 		}
 		finally
 		{
@@ -130,12 +133,52 @@ public sealed partial class WebhookService(
 		=> Lift(await ChangeAsync(name, subscription => subscription with { Enabled = enabled, DisabledReason = null }));
 
 	/// <inheritdoc />
-	public async ValueTask<FoundResult<WebhookSubscription>> RotateSecretAsync(string name)
+	public async ValueTask<FoundResult<WebhookIssued>> RotateSecretAsync(string name, SecretAuthor author)
 	{
-		var changed = await ChangeAsync(name, subscription => subscription with { Secret = WebhookSignature.NewSecret() });
+		// Under the write lock, so a delete at the same time cannot leave a secret behind for a webhook that is gone.
+		await _writeLock.WaitAsync();
+		try
+		{
+			if (Find((await LoadAsync()).Subscriptions, name) is not { } subscription) return new NotFound();
+			return await IssueAsync(subscription, author) switch
+			{
+				WebhookIssued issued => Rotated(issued),
+				Error<string> error => error,
+			};
+		}
+		finally
+		{
+			_writeLock.Release();
+		}
+	}
+
+	/// <summary>
+	/// Gives <paramref name="subscription"/> a new signing secret in the secret store. The answer carries it, or,
+	/// when an override sets the secret instead, names the override.
+	/// </summary>
+	private async ValueTask<Result<WebhookIssued>> IssueAsync(WebhookSubscription subscription, SecretAuthor author)
+	{
+		var secret = WebhookSignature.NewSecret();
+		return await secrets.SetAsync(WebhookSubscription.SecretName(subscription.Name), secret, author) switch
+		{
+			SecretStatus { Override: { } overriddenBy } => new WebhookIssued(subscription, null, overriddenBy),
+			SecretStatus => new WebhookIssued(subscription, secret, null),
+			Error<string> error => error,
+		};
+	}
+
+	private async ValueTask<Result<WebhookIssued>> AddedAsync(WebhooksData data, WebhookIssued issued)
+	{
+		data.Subscriptions.Add(issued.Subscription);
+		await SaveAsync(data);
+		return issued;
+	}
+
+	private WebhookIssued Rotated(WebhookIssued issued)
+	{
 		// A stream was let in with the old secret; it must connect again with the new one.
-		if (changed is WebhookSubscription rotated) CloseStreams(rotated.Name);
-		return Lift(changed);
+		CloseStreams(issued.Subscription.Name);
+		return issued;
 	}
 
 	/// <inheritdoc />
@@ -156,6 +199,7 @@ public sealed partial class WebhookService(
 			_writeLock.Release();
 		}
 
+		await secrets.ClearAsync(WebhookSubscription.SecretName(removed.Name));
 		dispatcher.Forget(removed.Name);
 		CloseStreams(removed.Name);
 		return removed;

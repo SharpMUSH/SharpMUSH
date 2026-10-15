@@ -3,6 +3,8 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Webhooks;
 
 namespace SharpMUSH.Implementation.Services.Webhooks;
@@ -13,8 +15,8 @@ namespace SharpMUSH.Implementation.Services.Webhooks;
 /// <see cref="WebhookOptions.MaxAttempts"/> tries have failed and it is dropped. Waiting deliveries live in
 /// memory: a restart drops them.
 ///
-/// <para>Each try reads the subscription afresh, so a changed address or a rotated secret applies to
-/// deliveries already waiting, and a deleted or disabled subscription's deliveries are dropped.</para>
+/// <para>Each try reads the subscription and its secret afresh, so a changed address or a rotated secret applies
+/// to deliveries already waiting, and a deleted or disabled subscription's deliveries are dropped.</para>
 /// </summary>
 public sealed class WebhookDispatcher : IDisposable
 {
@@ -22,6 +24,7 @@ public sealed class WebhookDispatcher : IDisposable
 	public const string ClientName = "webhooks";
 
 	private readonly IHttpClientFactory _clients;
+	private readonly ISecretStore _secrets;
 	private readonly TimeProvider _time;
 	private readonly WebhookOptions _options;
 	private readonly ILogger<WebhookDispatcher> _logger;
@@ -55,10 +58,11 @@ public sealed class WebhookDispatcher : IDisposable
 		public readonly Queue<WebhookAttempt> Recent = new();
 	}
 
-	public WebhookDispatcher(IHttpClientFactory clients, TimeProvider time, IOptions<WebhookOptions> options,
+	public WebhookDispatcher(IHttpClientFactory clients, ISecretStore secrets, TimeProvider time, IOptions<WebhookOptions> options,
 		ILogger<WebhookDispatcher> logger)
 	{
 		_clients = clients;
+		_secrets = secrets;
 		_time = time;
 		_options = options.Value;
 		_logger = logger;
@@ -182,26 +186,12 @@ public sealed class WebhookDispatcher : IDisposable
 		}
 
 		var started = _time.GetTimestamp();
-		int? status = null;
-		string? error = null;
-		try
+		(int? Status, string? Error) tried = await SigningSecretAsync(subscription.Name) switch
 		{
-			using var timeout = new CancellationTokenSource(_options.Timeout, _time);
-			using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-			using var request = Request(subscription, pending.Message);
-			using var response = await _clients.CreateClient(ClientName)
-				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, linked.Token);
-			status = (int)response.StatusCode;
-			if (!response.IsSuccessStatusCode) error = $"answered {status} {response.ReasonPhrase}".TrimEnd();
-		}
-		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-		{
-			error = $"no answer within {_options.Timeout.TotalSeconds:0.#}s";
-		}
-		catch (HttpRequestException ex)
-		{
-			error = ex.InnerException?.Message ?? ex.Message;
-		}
+			string secret => await SendAsync(subscription, secret, pending.Message, cancellationToken),
+			Error<string> missing => (null, missing.Value),
+		};
+		var (status, error) = tried;
 
 		var duration = _time.GetElapsedTime(started);
 		_durations.Record(duration.TotalSeconds, new KeyValuePair<string, object?>("subscription", subscription.Name));
@@ -238,6 +228,45 @@ public sealed class WebhookDispatcher : IDisposable
 
 		_logger.LogDebug("Webhook {Subscription} delivery {Id} failed ({Error}); try {Next} of {Max} queued",
 			pending.Subscription, pending.Message.Id, error, pending.Attempt + 1, _options.MaxAttempts);
+	}
+
+	/// <summary>
+	/// The secret deliveries are signed with, from the secret store. Missing, unreadable on this host, or not a key
+	/// (set by hand), the delivery fails like any other try and is tried again: setting the secret right lets it through.
+	/// </summary>
+	private async ValueTask<Result<string>> SigningSecretAsync(string subscription)
+	{
+		var name = WebhookSubscription.SecretName(subscription);
+		return await _secrets.GetAsync(name) switch
+		{
+			string secret when WebhookSignature.CanSign(secret) => secret,
+			string => new Error<string>($"secret {name} is not a signing key: @webhook/rotate {subscription} makes one"),
+			NotFound => new Error<string>($"secret {name} is not set: @webhook/rotate {subscription} makes one"),
+			Error<string> unreadable => new Error<string>($"secret {name}: {unreadable.Value}"),
+		};
+	}
+
+	private async ValueTask<(int? Status, string? Error)> SendAsync(WebhookSubscription subscription, string secret,
+		WebhookMessage message, CancellationToken cancellationToken)
+	{
+		try
+		{
+			using var timeout = new CancellationTokenSource(_options.Timeout, _time);
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+			using var request = Request(subscription, secret, message);
+			using var response = await _clients.CreateClient(ClientName)
+				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, linked.Token);
+			var status = (int)response.StatusCode;
+			return (status, response.IsSuccessStatusCode ? null : $"answered {status} {response.ReasonPhrase}".TrimEnd());
+		}
+		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+		{
+			return (null, $"no answer within {_options.Timeout.TotalSeconds:0.#}s");
+		}
+		catch (HttpRequestException ex)
+		{
+			return (null, ex.InnerException?.Message ?? ex.Message);
+		}
 	}
 
 	private WebhookAttempt Attempt(Pending pending, int? status, string? error, TimeSpan duration, WebhookAttemptOutcome outcome)
@@ -296,7 +325,7 @@ public sealed class WebhookDispatcher : IDisposable
 		return ledger;
 	}
 
-	private HttpRequestMessage Request(WebhookSubscription subscription, WebhookMessage message)
+	private HttpRequestMessage Request(WebhookSubscription subscription, string secret, WebhookMessage message)
 	{
 		var timestamp = _time.GetUtcNow().ToUnixTimeSeconds();
 		var request = new HttpRequestMessage(HttpMethod.Post, subscription.Url)
@@ -306,7 +335,7 @@ public sealed class WebhookDispatcher : IDisposable
 		request.Headers.Add("User-Agent", "SharpMUSH-Webhooks");
 		request.Headers.Add(WebhookSignature.IdHeader, message.Id);
 		request.Headers.Add(WebhookSignature.TimestampHeader, timestamp.ToString(System.Globalization.CultureInfo.InvariantCulture));
-		request.Headers.Add(WebhookSignature.SignatureHeader, WebhookSignature.Sign(subscription.Secret, message.Id, timestamp, message.Body));
+		request.Headers.Add(WebhookSignature.SignatureHeader, WebhookSignature.Sign(secret, message.Id, timestamp, message.Body));
 		return request;
 	}
 

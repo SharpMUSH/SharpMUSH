@@ -16,6 +16,10 @@ namespace SharpMUSH.Tests.Commands;
 public class WebhookCommandTests : ServerTestBase
 {
 	private IWebhookService Webhooks => WebAppFactoryArg.Services.GetRequiredService<IWebhookService>();
+	private ISecretStore Secrets => WebAppFactoryArg.Services.GetRequiredService<ISecretStore>();
+
+	private async Task<string> SecretOfAsync(string name)
+		=> (await Secrets.GetAsync(WebhookSubscription.SecretName(name))).Expect<string>();
 
 	private async Task<string> HeardAfterAsync(string command)
 	{
@@ -26,7 +30,9 @@ public class WebhookCommandTests : ServerTestBase
 			.Select(delivery => delivery.Message));
 	}
 
-	private static string UniqueName(string prefix) => TestIsolationHelpers.GenerateUniqueName(prefix).Replace(' ', '_');
+	/// <summary>A unique webhook name: letters and digits only.</summary>
+	private static string UniqueName(string prefix)
+		=> new(TestIsolationHelpers.GenerateUniqueName(prefix).Where(char.IsAsciiLetterOrDigit).ToArray());
 
 	[Test]
 	public async Task AMortalCannotRunIt()
@@ -43,13 +49,14 @@ public class WebhookCommandTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task CreateShowsTheSecretAndTheSubscriptionCanBeChangedAndDeleted()
+	public async Task CreateShowsTheSecretOnceAndTheSubscriptionCanBeChangedAndDeleted()
 	{
 		var name = UniqueName("hook");
 
 		var created = await HeardAfterAsync($"@webhook/create {name}=https://hooks.example.com/{name}");
 		var subscription = (await Webhooks.GetAsync(name)).Expect<WebhookSubscription>();
-		await Assert.That(created).Contains(subscription.Secret);
+		var secret = await SecretOfAsync(name);
+		await Assert.That(created).Contains(secret).And.Contains("not shown again");
 		await Assert.That(subscription.Events).IsEmpty();
 
 		var events = await HeardAfterAsync($"@webhook/events {name}=player`* object`create");
@@ -59,18 +66,23 @@ public class WebhookCommandTests : ServerTestBase
 		await Assert.That(listed).Contains(name);
 
 		var info = await HeardAfterAsync($"@webhook {name}");
-		await Assert.That(info).Contains($"https://hooks.example.com/{name}").And.DoesNotContain(subscription.Secret);
+		await Assert.That(info).Contains($"https://hooks.example.com/{name}").And.Contains(WebhookSubscription.SecretName(name))
+			.And.DoesNotContain(secret);
+
+		var reveal = await HeardAfterAsync($"@webhook/secret {name}");
+		await Assert.That(reveal).DoesNotContain(secret);
 
 		await HeardAfterAsync($"@webhook/disable {name}");
 		await Assert.That((await Webhooks.GetAsync(name)).Expect<WebhookSubscription>().Enabled).IsFalse();
 
 		var rotated = await HeardAfterAsync($"@webhook/rotate {name}");
-		var after = (await Webhooks.GetAsync(name)).Expect<WebhookSubscription>();
-		await Assert.That(after.Secret).IsNotEqualTo(subscription.Secret);
-		await Assert.That(rotated).Contains(after.Secret);
+		var after = await SecretOfAsync(name);
+		await Assert.That(after).IsNotEqualTo(secret);
+		await Assert.That(rotated).Contains(after);
 
 		await HeardAfterAsync($"@webhook/delete {name}");
 		await Assert.That(await Webhooks.GetAsync(name) is NotFound).IsTrue();
+		(await Secrets.GetAsync(WebhookSubscription.SecretName(name))).Expect<NotFound>();
 	}
 
 	[Test]
@@ -120,7 +132,7 @@ public class WebhookCommandTests : ServerTestBase
 		var name = UniqueName("socket");
 		await Cmd($"@webhook/create {name}");
 		await Cmd($"@webhook/events {name}=OBJECT`CREATE");
-		var secret = (await Webhooks.GetAsync(name)).Expect<WebhookSubscription>().Secret;
+		var secret = await SecretOfAsync(name);
 
 		var client = WebAppFactoryArg.CreateWebSocketClient();
 		client.ConfigureRequest = request => request.Headers.Authorization = $"Bearer {secret}";

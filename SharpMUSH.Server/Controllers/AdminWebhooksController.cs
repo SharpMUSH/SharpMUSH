@@ -8,19 +8,19 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Webhooks;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
 /// Webhook subscriptions, behind <c>config.admin</c>: the same as <c>@webhook</c> in the game. The secret is
-/// only ever in the answer to a create, a rotation or <c>GET …/secret</c>.
+/// kept in the secret store, and is only ever in the answer to a create or a rotation.
 ///
 /// Routes:
 ///   GET    api/admin/webhooks               — every subscription, with its delivery status
 ///   GET    api/admin/webhooks/{name}        — one subscription, with its recent tries
 ///   POST   api/admin/webhooks               — create one; answers its secret
 ///   PATCH  api/admin/webhooks/{name}        — change its address, events or state
-///   GET    api/admin/webhooks/{name}/secret — its secret
 ///   POST   api/admin/webhooks/{name}/rotate — give it a new secret
 ///   POST   api/admin/webhooks/{name}/test   — send it a WEBHOOK`TEST event
 ///   DELETE api/admin/webhooks/{name}        — delete it
@@ -47,9 +47,10 @@ public sealed class AdminWebhooksController(
 
 	[HttpPost]
 	public async Task<ActionResult<WebhookSecret>> Create([FromBody] WebhookCreateRequest request)
-		=> await webhooks.CreateAsync(request.Name ?? "", request.Url, request.Events ?? [], await ReachAsync(), Creator()) switch
+		=> await webhooks.CreateAsync(request.Name ?? "", request.Url, request.Events ?? [], await ReachAsync(), Creator(),
+				PortalSecretAuthor.Of(User)) switch
 		{
-			WebhookSubscription created => await CreatedAsync(created),
+			WebhookIssued created => await CreatedAsync(created),
 			Error<string> error => BadRequest(error.Value),
 		};
 
@@ -87,19 +88,11 @@ public sealed class AdminWebhooksController(
 			};
 	}
 
-	[HttpGet("{name}/secret")]
-	public async Task<ActionResult<WebhookSecret>> Secret(string name)
-		=> await webhooks.GetAsync(name) switch
-		{
-			WebhookSubscription found => Ok(new WebhookSecret(found.Name, found.Secret)),
-			Library.DiscriminatedUnions.NotFound => NotFound(),
-		};
-
 	[HttpPost("{name}/rotate")]
 	public async Task<ActionResult<WebhookSecret>> Rotate(string name)
-		=> await webhooks.RotateSecretAsync(name) switch
+		=> await webhooks.RotateSecretAsync(name, PortalSecretAuthor.Of(User)) switch
 		{
-			WebhookSubscription changed => await RotatedAsync(changed),
+			WebhookIssued rotated => await RotatedAsync(rotated),
 			Library.DiscriminatedUnions.NotFound => NotFound(),
 			Error<string> error => BadRequest(error.Value),
 		};
@@ -152,10 +145,14 @@ public sealed class AdminWebhooksController(
 			request.Enabled is { } enabled ? enabled ? "enabled" : "disabled" : null,
 		}.OfType<string>());
 
-	private async Task<ActionResult<WebhookSecret>> CreatedAsync(WebhookSubscription created)
+	private static WebhookSecret Secret(WebhookIssued issued)
+		=> new(issued.Subscription.Name, WebhookSubscription.SecretName(issued.Subscription.Name), issued.Secret, issued.OverriddenBy);
+
+	private async Task<ActionResult<WebhookSecret>> CreatedAsync(WebhookIssued created)
 	{
-		await audit.RecordPortalAsync(User, AuditActions.WebhookCreate, Target(created), $"url {WebhookAddress.Redacted(created.Url)}");
-		return CreatedAtAction(nameof(Get), new { name = created.Name }, new WebhookSecret(created.Name, created.Secret));
+		await audit.RecordPortalAsync(User, AuditActions.WebhookCreate, Target(created.Subscription),
+			$"url {WebhookAddress.Redacted(created.Subscription.Url)}");
+		return CreatedAtAction(nameof(Get), new { name = created.Subscription.Name }, Secret(created));
 	}
 
 	private async Task<ActionResult<WebhookView>> ChangedAsync(WebhookSubscription changed, string details)
@@ -164,10 +161,10 @@ public sealed class AdminWebhooksController(
 		return Ok(View(changed));
 	}
 
-	private async Task<ActionResult<WebhookSecret>> RotatedAsync(WebhookSubscription changed)
+	private async Task<ActionResult<WebhookSecret>> RotatedAsync(WebhookIssued rotated)
 	{
-		await audit.RecordPortalAsync(User, AuditActions.WebhookChange, Target(changed), "secret rotated");
-		return Ok(new WebhookSecret(changed.Name, changed.Secret));
+		await audit.RecordPortalAsync(User, AuditActions.WebhookChange, Target(rotated.Subscription), "secret rotated");
+		return Ok(Secret(rotated));
 	}
 
 	private async Task<IActionResult> DeletedAsync(WebhookSubscription removed)

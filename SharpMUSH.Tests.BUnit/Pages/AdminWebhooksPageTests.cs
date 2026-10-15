@@ -21,6 +21,9 @@ internal sealed class WebhooksApiHandler : HttpMessageHandler
 {
 	public const string Secret = "whsec_dGVzdHNlY3JldA==";
 
+	/// <summary>The override a create answers sets the secret, instead of a secret; null for none.</summary>
+	public string? OverriddenBy { get; set; }
+
 	public List<(HttpMethod Method, string Path, string Body)> Requests { get; } = [];
 
 	private readonly List<WebhookView> _webhooks =
@@ -48,7 +51,8 @@ internal sealed class WebhooksApiHandler : HttpMessageHandler
 		{
 			var created = (await request.Content!.ReadFromJsonAsync<WebhookCreateRequest>(cancellationToken))!;
 			_webhooks.Add(new WebhookView(created.Name, created.Url, created.Events ?? [], "public", true, null, null, DateTimeOffset.UnixEpoch, WebhookStatus.None));
-			return new HttpResponseMessage(HttpStatusCode.Created) { Content = JsonContent.Create(new WebhookSecret(created.Name, Secret)) };
+			var issued = new WebhookSecret(created.Name, $"webhook.{created.Name}.signing", OverriddenBy is null ? Secret : null, OverriddenBy);
+			return new HttpResponseMessage(HttpStatusCode.Created) { Content = JsonContent.Create(issued) };
 		}
 
 		if (request.Method == HttpMethod.Post && path.EndsWith("/test", StringComparison.Ordinal))
@@ -71,9 +75,10 @@ public class AdminWebhooksPageTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	private (IRenderedComponent<SharpMUSH.Client.Pages.Admin.AdminWebhooks> Page, WebhooksApiHandler Api) RenderPage()
+	private (IRenderedComponent<SharpMUSH.Client.Pages.Admin.AdminWebhooks> Page, WebhooksApiHandler Api) RenderPage(
+		string? overriddenBy = null)
 	{
-		var api = new WebhooksApiHandler();
+		var api = new WebhooksApiHandler { OverriddenBy = overriddenBy };
 		var client = Track(new HttpClient(api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
@@ -133,5 +138,30 @@ public class AdminWebhooksPageTests : TrackingBunitContext
 			if (cut.FindAll("[data-webhook='relay']").Count == 0) throw new InvalidOperationException("list not reloaded yet");
 		});
 		await Assert.That(cut.Find("[data-webhook='relay'] .adm-hooks-reach").GetAttribute("data-reach")).IsEqualTo("public");
+	}
+
+	[Test]
+	public async Task ASecretAnOverrideSetsIsNamedNotShown()
+	{
+		var (cut, _) = RenderPage("SHARPMUSH_SECRET_WEBHOOK_RELAY_SIGNING");
+
+		await cut.Find("#webhook-new-name input, input#webhook-new-name").ChangeAsync("relay");
+		await cut.Find("#webhook-create").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll("#webhook-secret").Count == 0) throw new InvalidOperationException("secret not shown yet");
+		});
+
+		await Assert.That(cut.Find("#webhook-secret-overridden").TextContent).Contains("SHARPMUSH_SECRET_WEBHOOK_RELAY_SIGNING");
+		await Assert.That(cut.FindAll("#webhook-secret code").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task AWebhooksSecretCannotBeShownAgain()
+	{
+		var (cut, _) = RenderPage();
+
+		await Assert.That(cut.Markup).DoesNotContain("ShowSecret");
+		await Assert.That(cut.FindAll("#webhook-secret").Count).IsEqualTo(0);
 	}
 }

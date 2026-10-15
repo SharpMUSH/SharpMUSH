@@ -10,7 +10,7 @@
 @inject NavigationManager Navigation
 
 @* Webhooks: what @webhook does in the game. Each one's address, events and state, edited in place; its
-   delivery counts and recent tries; its secret only when asked for, created or rotated. *@
+   delivery counts and recent tries; its secret once, when created or rotated, and never again. *@
 
 <PageTitle>@Loc["AdmWebhooksTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
@@ -39,10 +39,17 @@
         <MudAlert Severity="Severity.Info" id="webhook-secret" ShowCloseIcon="true" CloseIconClicked="() => _shownSecret = null">
             <div class="adm-hooks-secret">
                 <strong>@Loc["AdmWebhooksSecretTitle", secret.Name]</strong>
-                <code>@secret.Secret</code>
-                <span>@Loc["AdmWebhooksSecretHint"]</span>
-                <span>@Loc["AdmWebhooksStreamHint", StreamAddress(secret.Name)]</span>
-                <div><MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => CopyAsync(secret.Secret)">@Loc["AdmWebhooksCopy"]</MudButton></div>
+                @if (secret.Secret is { } value)
+                {
+                    <code>@value</code>
+                    <span>@Loc["AdmWebhooksSecretHint", secret.SecretName]</span>
+                    <span>@Loc["AdmWebhooksStreamHint", StreamAddress(secret.Name)]</span>
+                    <div><MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => CopyAsync(value)">@Loc["AdmWebhooksCopy"]</MudButton></div>
+                }
+                else
+                {
+                    <span id="webhook-secret-overridden">@Loc["AdmWebhooksSecretOverridden", secret.OverriddenBy ?? secret.SecretName]</span>
+                }
             </div>
         </MudAlert>
     }
@@ -88,7 +95,6 @@
                                     @(hook.Enabled ? Loc["AdmWebhooksTurnOff"] : Loc["AdmWebhooksTurnOn"])
                                 </MudButton>
                                 <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => TestAsync(hook)">@Loc["AdmWebhooksTest"]</MudButton>
-                                <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => ShowSecretAsync(hook)">@Loc["AdmWebhooksShowSecret"]</MudButton>
                                 <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="_busy" OnClick="() => RotateAsync(hook)">@Loc["AdmWebhooksRotate"]</MudButton>
                                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="_busy" OnClick="() => DeleteAsync(hook)">@Loc["AdmWebhooksDelete"]</MudButton>
                             </div>
@@ -227,19 +233,6 @@
             WebhookTestSent => Done(Loc["AdmWebhooksTestSent", hook.Name]),
             ApiFailure failure => failure.Message,
         });
-
-    private async Task ShowSecretAsync(WebhookView hook)
-    {
-        switch (await Webhooks.SecretAsync(hook.Name))
-        {
-            case WebhookSecret secret:
-                _shownSecret = secret;
-                break;
-            case ApiFailure failure:
-                Snackbar.Add(failure.Message, Severity.Error);
-                break;
-        }
-    }
 
     private async Task RotateAsync(WebhookView hook)
     {

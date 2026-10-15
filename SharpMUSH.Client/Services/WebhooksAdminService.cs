@@ -22,9 +22,6 @@ public class WebhooksAdminService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<WebhookView>> UpdateAsync(string name, WebhookUpdateRequest request) =>
 		Client.PatchApiAsync<WebhookUpdateRequest, WebhookView>(Path(name), request, WhenEmpty);
 
-	public Task<ApiResult<WebhookSecret>> SecretAsync(string name) =>
-		Client.GetApiAsync<WebhookSecret>($"{Path(name)}/secret", WhenEmpty);
-
 	public Task<ApiResult<WebhookSecret>> RotateAsync(string name) =>
 		Client.PostApiAsync<object?, WebhookSecret>($"{Path(name)}/rotate", null, WhenEmpty);
 

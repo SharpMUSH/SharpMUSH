@@ -7817,7 +7817,7 @@
     <value>Name</value>
   </data>
   <data name="AdmWebhooksNameHint" xml:space="preserve">
-    <value>Letters, digits, - and _.</value>
+    <value>Letters and digits, up to 48.</value>
   </data>
   <data name="AdmWebhooksAddress" xml:space="preserve">
     <value>Address</value>
@@ -7847,7 +7847,7 @@
     <value>Signing secret for {0}</value>
   </data>
   <data name="AdmWebhooksSecretHint" xml:space="preserve">
-    <value>The endpoint checks each delivery's signature with this secret. Keep it private.</value>
+    <value>The endpoint checks each delivery's signature with this secret. Copy it now: it is kept in the secret store as {0} and not shown again. Rotate makes a new one.</value>
   </data>
   <data name="AdmWebhooksStreamHint" xml:space="preserve">
     <value>Tools without an address of their own can read the events from {0}, sending Authorization: Bearer and the secret.</value>
@@ -7900,8 +7900,8 @@
   <data name="AdmWebhooksTestSent" xml:space="preserve">
     <value>Sent a test event to {0}.</value>
   </data>
-  <data name="AdmWebhooksShowSecret" xml:space="preserve">
-    <value>Show secret</value>
+  <data name="AdmWebhooksSecretOverridden" xml:space="preserve">
+    <value>Deliveries are signed with the secret {0} sets, not with one made here.</value>
   </data>
   <data name="AdmWebhooksRotate" xml:space="preserve">
     <value>New secret</value>
