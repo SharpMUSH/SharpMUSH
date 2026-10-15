@@ -86,7 +86,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 			? _pagesById.Values
 			: _pagesById.Values.Where(p => p.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase));
 
-	public Task<Result<WikiPage>> CreatePageAsync(WikiPage page)
+	public Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)
 	{
 		var id = Interlocked.Increment(ref _idCounter).ToString(CultureInfo.InvariantCulture);
 		var stored = page with { Id = id };
@@ -98,7 +98,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 				$"A wiki page with slug '{stored.Slug}' already exists in namespace '{stored.Namespace}'."));
 
 		_pagesById[id] = stored;
-		AppendRevision(id, string.Empty, 1, stored.MarkdownSource, stored.AuthorDbref, null, stored.CreatedAt);
+		AppendRevision(id, string.Empty, 1, stored.MarkdownSource, stored.AuthorDbref, editSummary, stored.CreatedAt);
 		return Task.FromResult<Result<WikiPage>>(stored);
 	}
 
@@ -157,6 +157,16 @@ public sealed class InMemoryWikiStore : IWikiStore
 
 	public Task<bool> SetCategoryPinnedAsync(string category, bool pinned)
 		=> Task.FromResult(pinned ? _pinned.TryAdd(category, 0) : _pinned.TryRemove(category, out _));
+
+	public Task<Found<WikiPage>> SetPageTitleAsync(string id, string title)
+	{
+		if (!_pagesById.TryGetValue(id, out var existing))
+			return Task.FromResult<Found<WikiPage>>(new NotFound());
+
+		var updated = existing with { Title = title };
+		_pagesById[id] = updated;
+		return Task.FromResult<Found<WikiPage>>(updated);
+	}
 
 	public Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
 	{

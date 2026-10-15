@@ -102,13 +102,20 @@ public interface IWikiService
 	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, slug) already
 	/// exists, or when <paramref name="sourceLocale"/> is non-blank and not a recognised locale tag.
 	/// </summary>
+	/// <param name="slug">
+	/// The page's slug when it is not the title's (<c>WikiHelpers.Slugify</c> is still applied): a package page keeps
+	/// the slug its manifest names whatever its title says. Null derives it from <paramref name="title"/>.
+	/// </param>
+	/// <param name="editSummary">The summary of revision 1, such as the package and version that wrote the page.</param>
 	Task<Result<WikiPage>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
 		WikiNamespace ns = WikiNamespace.Main,
 		string? sourceLocale = null,
-		IEnumerable<string>? categories = null);
+		IEnumerable<string>? categories = null,
+		string? slug = null,
+		string? editSummary = null);
 
 	/// <summary>
 	/// Updates an existing page's Markdown content.  Increments the revision counter,
@@ -120,6 +127,14 @@ public interface IWikiService
 		string markdown,
 		string editorDbref,
 		string? editSummary = null);
+
+	/// <summary>
+	/// Sets a page's title. Like <see cref="SetMetadataAsync"/> it writes no revision, and the slug never moves: a
+	/// link to the page by its old title still reaches it, and its identity is unchanged. The title is trimmed.
+	/// Returns the updated page, <c>NotFound</c> when no page with <paramref name="id"/> exists, or <c>Error</c>
+	/// for a blank title or one with a line break.
+	/// </summary>
+	Task<FoundResult<WikiPage>> SetTitleAsync(string id, string title);
 
 	/// <summary>
 	/// Deletes a wiki page, all its revisions, all its translations and those translations' revisions.
