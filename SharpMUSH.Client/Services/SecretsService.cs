@@ -14,6 +14,10 @@ public class SecretsService(IHttpClientFactory httpClientFactory)
 		Client.PutApiAsync<SecretSetRequest, SecretStatus>($"api/secrets/{Uri.EscapeDataString(name)}", new SecretSetRequest(value),
 			"The server did not say what it stored.");
 
+	public Task<ApiResult<SecretStatus>> SetHostsAsync(string name, IReadOnlyList<string> hosts) =>
+		Client.PutApiAsync<SecretHostsRequest, SecretStatus>($"api/secrets/{Uri.EscapeDataString(name)}/hosts", new SecretHostsRequest(hosts),
+			"The server did not say which hosts it stored.");
+
 	public Task<ApiResult<SecretStatus>> ClearAsync(string name) =>
 		Client.DeleteApiAsync<SecretStatus>($"api/secrets/{Uri.EscapeDataString(name)}", "The server did not say what it cleared.");
 }

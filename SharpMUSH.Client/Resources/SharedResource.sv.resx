@@ -21,7 +21,7 @@
     <comment>MT — the rule values are machine tokens and stay English.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Åtkomstregler (kommaseparerade)</value>
+    <value>Åtkomstregler</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Författare (kommaseparerade)</value>
+    <value>Författare</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — abbreviations work identically in Swedish; identical to English by design.</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Objekt-id (ett per rad, t.ex. #847:1778518155494)</value>
+    <value>Objekt-id</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — privilege levels kept English per glossary.</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Begränsningar (kommaseparerade)</value>
+    <value>Begränsningar</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

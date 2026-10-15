@@ -51,11 +51,8 @@
                     <span>@Loc["NavGalleryCaption"]</span>
                     <input class="gallery-caption-input" type="text" maxlength="300" @bind="_caption" />
                 </label>
-                <label class="gallery-field">
-                    <span>@Loc["NavGalleryTags"]</span>
-                    <input class="gallery-tags-input" type="text" @bind="_tags" aria-describedby="gallery-tags-help" />
-                    <small id="gallery-tags-help">@Loc["NavGalleryTagsHelp"]</small>
-                </label>
+                <ListEditor Items="_tags" ItemsChanged="@(tags => _tags = tags)" Label="@Loc["NavGalleryTags"]"
+                            Help="@Loc["NavGalleryTagsHelp"]" Normalize="GalleryService.NormalizeTag" Class="gallery-tags-editor" />
                 <label class="gallery-field">
                     <span>@Loc["NavGalleryWarning"]</span>
                     <input class="gallery-warning-input" type="text" maxlength="100" @bind="_warning" aria-describedby="gallery-warning-help" />
@@ -131,7 +128,7 @@
     /// <summary>The image whose details are being edited, and the values typed so far.</summary>
     private string? _editing;
     private string? _caption;
-    private string? _tags;
+    private IReadOnlyList<string> _tags = [];
     private string? _warning;
 
     /// <summary>The image being reported, and why.</summary>
@@ -173,7 +170,7 @@
             _editing = null;
             return;
         }
-        (_editing, _caption, _tags, _warning) = (entry.AssetId, entry.Caption, string.Join(", ", entry.Tags ?? []), entry.Warning);
+        (_editing, _caption, _tags, _warning) = (entry.AssetId, entry.Caption, entry.Tags ?? [], entry.Warning);
     }
 
     private void StartReporting(GalleryEntry entry)

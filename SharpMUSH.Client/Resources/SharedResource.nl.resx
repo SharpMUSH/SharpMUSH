@@ -21,7 +21,7 @@
     <comment>MT — rule tokens are machine values, kept English.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Toegangsregels (kommagescheiden)</value>
+    <value>Toegangsregels</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Auteurs (kommagescheiden)</value>
+    <value>Auteurs</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Object-id's (één per regel, bijv. #847:1778518155494)</value>
+    <value>Object-id's</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Beperkingen (kommagescheiden)</value>
+    <value>Beperkingen</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

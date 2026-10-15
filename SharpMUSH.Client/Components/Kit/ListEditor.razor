@@ -1,0 +1,108 @@
+@* A list of short values, such as hosts or tags, edited one value at a time: each value is a chip with a ×
+   that removes it, and the field after the chips adds one on Enter, on the + button, when it loses focus, or
+   when a separator is typed (a pasted "a, b" adds both). *@
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="list-editor @Class" role="group" aria-labelledby="@_labelId">
+    <span class="list-editor-label" id="@_labelId">@Label</span>
+    <div class="list-editor-box">
+        @for (var i = 0; i < Items.Count; i++)
+        {
+            var index = i;
+            <span class="list-editor-chip @(Mono ? "list-editor-chip--mono" : null)">
+                @Items[index]
+                <button type="button" class="list-editor-x" aria-label="@($"{Loc["LayRemove"]} {Items[index]}")"
+                        disabled="@Disabled" @onclick="@(() => RemoveAsync(index))">×</button>
+            </span>
+        }
+        @* form names no form, so Enter adds a value here rather than submitting a form the editor sits in. *@
+        <input class="list-editor-input @(Mono ? "list-editor-input--mono" : null)" type="text" form="@NoForm"
+               placeholder="@Placeholder" aria-label="@($"{Loc["Add"]}: {Label}")" disabled="@Disabled"
+               value="@_draft" @oninput="OnInputAsync" @onchange="CommitAsync" @onkeydown="OnKeyDownAsync" />
+        <button type="button" class="list-editor-add" aria-label="@($"{Loc["Add"]}: {Label}")" title="@Loc["Add"]"
+                disabled="@(Disabled || string.IsNullOrWhiteSpace(_draft))" @onclick="CommitAsync">+</button>
+    </div>
+    @if (Help is not null)
+    {
+        <small class="list-editor-help">@Help</small>
+    }
+</div>
+
+@code {
+    private const string NoForm = "list-editor-no-form";
+
+    private readonly string _labelId = $"list-editor-{Guid.NewGuid():N}";
+    private string _draft = string.Empty;
+
+    /// <summary>The values, in order.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Items { get; set; } = [];
+
+    /// <summary>Called with the new list after a value is added or removed.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> ItemsChanged { get; set; }
+
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Help { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Monospace chips, for names a machine reads: hosts, object ids.</summary>
+    [Parameter] public bool Mono { get; set; }
+
+    /// <summary>Characters that end a value as it is typed or pasted; a comma unless the values may hold one.</summary>
+    [Parameter] public char[] Separators { get; set; } = [','];
+
+    /// <summary>Applied to each value before it is added, such as lower-casing a host; a value that comes out
+    /// empty, or equal to one already listed, is not added.</summary>
+    [Parameter] public Func<string, string>? Normalize { get; set; }
+
+    private async Task OnInputAsync(ChangeEventArgs e)
+    {
+        var text = e.Value?.ToString() ?? string.Empty;
+        var last = text.LastIndexOfAny(Separators);
+        if (last < 0)
+        {
+            _draft = text;
+            return;
+        }
+
+        // Everything up to the last separator is finished; what follows is still being typed.
+        _draft = text[(last + 1)..];
+        await AddAsync(text[..last]);
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CommitAsync();
+        }
+    }
+
+    private async Task CommitAsync()
+    {
+        var text = _draft;
+        _draft = string.Empty;
+        await AddAsync(text);
+    }
+
+    private async Task AddAsync(string text)
+    {
+        List<string> items = [.. Items];
+        foreach (var part in text.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var value = Normalize?.Invoke(part) ?? part;
+            if (value.Length > 0 && !items.Contains(value, StringComparer.Ordinal))
+            {
+                items.Add(value);
+            }
+        }
+
+        if (items.Count != Items.Count)
+        {
+            await ItemsChanged.InvokeAsync(items);
+        }
+    }
+
+    private Task RemoveAsync(int index) => ItemsChanged.InvokeAsync([.. Items.Where((_, i) => i != index)]);
+}

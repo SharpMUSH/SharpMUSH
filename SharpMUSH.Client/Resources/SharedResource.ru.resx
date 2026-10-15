@@ -21,7 +21,7 @@
     <comment>MT — !connect and suspect are sitelock rule keywords and stay as-is.</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Правила доступа (через запятую)</value>
+    <value>Правила доступа</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT — here 'author' is the verb; rendered as a nominal heading. package → пакет per locale sheet.</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Авторы (через запятую)</value>
+    <value>Авторы</value>
     <comment>MT — consistent with ValuesCommaSeparated.</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — the counts carry no ICU plural, so the nouns are inverted before colons in the genitive plural, which is correct for every number. Longer than the abbreviated English; Russian has no equally short unambiguous abbreviation for «атрибут».</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Идентификаторы объектов (по одному в строке, например #847:1778518155494)</value>
+    <value>Идентификаторы объектов</value>
     <comment>MT — the dbref example is code and is kept verbatim.</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — kept in English: MUSH flag names typed literally into this field.</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Ограничения (через запятую)</value>
+    <value>Ограничения</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">
