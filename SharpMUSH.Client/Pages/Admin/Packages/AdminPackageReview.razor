@@ -377,7 +377,7 @@ else
             {
                 <Pill Tag="true" Warn="true">@Loc.Plural("PkgConflictCount", "count", _conflicts.Count)</Pill>
             }
-            @if (_plan.Changeset.Attributes.Any(a => a.IsLocalEdit))
+            @if (HasLocalEdits)
             {
                 <MudSwitch T="bool" @bind-Value="_onlyLocalEdits" Color="Color.Primary" id="pkg-only-local-edits"
                            Label="@Loc["PkgOnlyLocalEdits"]" />
@@ -386,7 +386,7 @@ else
         <ChildContent>
         <div class="pkg-review-body">
             <MudExpansionPanels MultiExpansion="true" Dense="true">
-                @foreach (var change in _plan.Changeset.Attributes.Where(a => !_onlyLocalEdits || a.IsLocalEdit))
+                @foreach (var change in _plan.Changeset.Attributes.Where(a => !_onlyLocalEdits || !HasLocalEdits || a.IsLocalEdit))
                 {
                     var render = RenderFor(change);
                     <MudExpansionPanel Expanded="@(change.Action is PackageAttributeAction.Conflict or PackageAttributeAction.Merge)">
@@ -558,6 +558,12 @@ else
 
     /// <summary>Whether the attribute list shows only what this game changed.</summary>
     private bool _onlyLocalEdits;
+
+    /// <summary>
+    /// Whether the plan has an attribute this game changed. The filter applies only then: a replan can leave none,
+    /// and the switch is hidden with nothing to turn it off.
+    /// </summary>
+    private bool HasLocalEdits => _plan?.Changeset.Attributes.Any(a => a.IsLocalEdit) == true;
 
     private bool _settingsConfirmed;
 
