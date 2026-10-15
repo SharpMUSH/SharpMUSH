@@ -67,6 +67,8 @@ public partial class Functions
 			parser.ServiceProvider.GetRequiredService<IRealityPolicy>(), ConnectionService, ExecutionBudget.CurrentToken);
 		var god = await HelperFunctions.GetGod(Mediator);
 		var map = new JsonObject();
+		// Exit names match without regard to case, so North and north are one name to a player.
+		var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		await foreach (var item in container.Content(Mediator).WithCancellation(ExecutionBudget.CurrentToken))
 		{
@@ -76,7 +78,7 @@ public partial class Functions
 			var name = exit.Object.Name.Split(';')[0];
 
 			// Two exits of one name: the first, as typing the name would take it.
-			if (map.ContainsKey(name)) continue;
+			if (!named.Add(name)) continue;
 
 			map[name] = await ExitDestinationNumberAsync(god, viewer, exit);
 		}

@@ -240,6 +240,27 @@ public class MudClientFunctionTests
 			.Because("seeing as someone else needs control of them or the room's own gate");
 	}
 
+	/// <summary>
+	/// Exit names match without regard to case, so of North and north only the first is reachable by
+	/// typing it: only that one is listed.
+	/// </summary>
+	[Test]
+	public async Task ExitMap_NamesDifferingOnlyByCase_ListOne()
+	{
+		var room = await Dig("ExitMapCaseRoom");
+		var upper = await Dig("ExitMapCaseUpper");
+		var lower = await Dig("ExitMapCaseLower");
+		await AsGod($"@open North;n=#{upper.Number},,#{room.Number}");
+		await AsGod($"@open north=#{lower.Number},,#{room.Number}");
+
+		var map = Map(await EvalAs(God, $"exitmap(#{room.Number})"));
+		var north = map.Where(pair => pair.Key.Equals("north", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+		await Assert.That(north.Length).IsEqualTo(1);
+		await Assert.That(north[0].Value).IsEqualTo(north[0].Key == "North" ? upper.Number : lower.Number)
+			.Because("the name kept is the exit whose destination is listed");
+	}
+
 	[Test]
 	public async Task ExitMap_OfSomethingNotARoom_IsAnError()
 	{
