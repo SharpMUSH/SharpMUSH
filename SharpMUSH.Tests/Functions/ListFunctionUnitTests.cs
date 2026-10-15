@@ -316,6 +316,25 @@ public class ListFunctionUnitTests
 	}
 
 	/// <summary>
+	/// Arguments after the output separator reach the attribute as %1, %2, ... in place of the position,
+	/// as RhostMUSH passes them (a live RhostMUSH answers these). PennMUSH refuses a fifth argument.
+	/// filter() and filterbool() already passed them to an attribute, and now to a #lambda as well.
+	/// </summary>
+	[Test]
+	[Arguments("map(test/EXTRA_MAP,a b,,,x,y)", "<a|x|y> <b|x|y>")]
+	[Arguments("map(test/EXTRA_MAP,a b,,|,x)", "<a|x|>|<b|x|>")]
+	[Arguments("map(test/EXTRA_MAP,a:b,:,-,,y)", "<a||y>-<b||y>")]
+	[Arguments(@"map(#lambda/<\%0|\%1|\%2>,a b,,,x,y)", "<a|x|y> <b|x|y>")]
+	[Arguments(@"filter(#lambda/strmatch\(\%0\,\%1\),ab cd ae,,,a*)", "ab ae")]
+	[Arguments(@"filterbool(#lambda/strmatch\(\%0\,\%1\),ab cd ae,,,c*)", "cd")]
+	public async Task MapPassesExtraArguments(string function, string expected)
+	{
+		var objNum = await CreateObjectWithAttribute("map_extra_obj", "EXTRA_MAP", "<%0|%1|%2>");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function.Replace("test", $"#{objNum}")));
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	/// <summary>
 	/// PennMUSH reads a bare attribute name as one on the executor.
 	/// </summary>
 	[Test]

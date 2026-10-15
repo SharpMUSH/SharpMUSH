@@ -3352,9 +3352,17 @@ th lt(1,3,2)
 - [LPORTS()]
 :::
 # map()
-`map([<object>/]<attribute>, <list>[, <delim>[, <osep>]])`
+`map([<object>/]<attribute>, <list>[, <delim>[, <osep>[, <arg1>, ... , <argN>]]])`
 
   This function works much like ITER(). The given `<attribute>` is evaluated once for each element of `<list>`, and the results of the evaluations are returned. For each evaluation, the current list element is passed to the attribute as %0, and its position in the list as %1. Elements of `<list>` are separated by `<delim>`, or a space if none is given, and the results are returned separated by `<osep>`, if given, or the delimiter otherwise.
+
+  Any arguments after `<osep>` are passed to the attribute as %1, %2 and so on, in place of the position. Passing them comes from RhostMUSH.
+
+  Example:
+```sharp
+> think map(#lambda/<%0:%1:%2>, a b,,, x, y)
+<a:x:y> <b:x:y>
+```
 
   This is roughly equivilent to, though slightly more efficient than:<br>
 `iter(<list>, ulambda(<object>/<attribute>, %i0, inum(0)), <delim>, <osep>)`
