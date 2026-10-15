@@ -94,7 +94,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.FeedUpkeepService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
-		services.AddHostedService<Services.CompatibilityEventsService>();
+		services.AddHostedService<Services.InactivityCheckService>();
 		services.AddHostedService<Services.SignalEventsService>();
 		services.AddHostedService<Services.RecurringJobRunner>();
 		services.AddHostedService<Services.ExpiredSessionSweepService>();

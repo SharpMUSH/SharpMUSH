@@ -50,19 +50,6 @@ public enum EventPrivacy
 	Private
 }
 
-/// <summary>Whether a SharpMUSH server raises an event.</summary>
-public enum EventSupport
-{
-	/// <summary>Raised when the thing it names happens.</summary>
-	Raised,
-
-	/// <summary>
-	/// A PennMUSH event SharpMUSH has nothing of its own to raise from, raised only while the
-	/// <c>compatibility_events</c> option is on (<c>help compatibility events</c>).
-	/// </summary>
-	Compatibility
-}
-
 /// <summary>Which engine an event comes from. A PennMUSH event keeps PennMUSH's argument text exactly.</summary>
 public enum EventOrigin
 {
@@ -89,7 +76,6 @@ public sealed record EventArgument(string Name, EventArgumentKind Kind);
 /// hears it. Fixed per event.
 /// </param>
 /// <param name="Origin">Which engine the event comes from.</param>
-/// <param name="Support">Whether this server raises it.</param>
 public sealed record EventDefinition(
 	string Name,
 	IReadOnlyList<EventArgument> Arguments,
@@ -97,8 +83,7 @@ public sealed record EventDefinition(
 	string Description,
 	EventPrivacy Privacy,
 	bool Stoppable,
-	EventOrigin Origin,
-	EventSupport Support = EventSupport.Raised)
+	EventOrigin Origin)
 {
 	/// <summary>The group the event is listed under in <c>help event list</c>, lower case.</summary>
 	public string Group => Name[..Name.IndexOf('`')].ToLowerInvariant();
@@ -108,7 +93,7 @@ public sealed record EventDefinition(
 }
 
 /// <summary>
-/// Every event a SharpMUSH game can raise, the PennMUSH ones among them only while <c>compatibility_events</c> is on. The single description
+/// Every event a SharpMUSH game raises. The single description
 /// of an event: <see cref="EventArguments"/> names the arguments from it, help is checked against it, and an event
 /// raised anywhere must be in it.
 /// </summary>
@@ -135,17 +120,17 @@ public static class EventCatalogue
 	/// <summary>Every event, in the order <c>help event list</c> gives them.</summary>
 	public static readonly IReadOnlyList<EventDefinition> All =
 	[
-		new("DUMP`5MIN", Args(("message", T), ("forking", B)), Nobody,
-			"The database will be saved in five minutes.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
-		new("DUMP`1MIN", Args(("message", T), ("forking", B)), Nobody,
-			"The database will be saved in one minute.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
-		new("DUMP`COMPLETE", Args(("message", T), ("forking", B)), Nobody,
-			"The database was saved.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
-		new("DUMP`ERROR", Args(("message", T), ("forking", B), ("status", T)), Nobody,
-			"The database could not be saved.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
+		new(SharpEvents.Dump5Min, Args(("message", T), ("forking", B)), Nobody,
+			"A scheduled backup of the world will be taken in five minutes.", EventPrivacy.Public, false, Penn),
+		new(SharpEvents.Dump1Min, Args(("message", T), ("forking", B)), Nobody,
+			"A scheduled backup of the world will be taken in one minute.", EventPrivacy.Public, false, Penn),
+		new(SharpEvents.DumpComplete, Args(("message", T), ("forking", B)), "Whoever ran @backup or @dump, or God (#1) for a scheduled backup",
+			"A backup of the world was written.", EventPrivacy.Public, false, Penn),
+		new(SharpEvents.DumpError, Args(("message", T), ("forking", B), ("status", T)), "Whoever ran @backup or @dump, or God (#1) for a scheduled backup",
+			"A backup of the world could not be written.", EventPrivacy.Public, false, Penn),
 
-		new("DB`DBCK", [], Nobody,
-			"The scheduled database consistency check finished.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
+		new(SharpEvents.DbDbck, [], "Whoever ran @dbck",
+			"@dbck read the newest backup of the world through without a fault.", EventPrivacy.Public, false, Penn),
 		new("DB`PURGE", [], Nobody,
 			"The scheduled purge of destroyed objects finished.", EventPrivacy.Public, false, Penn),
 		new("DB`WCHECK", [], Nobody,
@@ -164,7 +149,7 @@ public static class EventCatalogue
 		new("LOG`CHECK", Args(("message", T)), "Whoever ran @log",
 			"A message was written to the check log.", EventPrivacy.Private, false, Penn),
 		new("LOG`HUH", Args(("message", T)), Nobody,
-			"A command was not understood (Huh?).", EventPrivacy.Private, false, Penn, EventSupport.Compatibility),
+			"A command was not understood (Huh?).", EventPrivacy.Private, false, Penn),
 
 		new("OBJECT`CREATE", Args(("objid", O), ("clone", O)), "The creator",
 			"An object other than a player was created.", EventPrivacy.Staff, false, Penn),
@@ -178,16 +163,16 @@ public static class EventCatalogue
 			"A flag or power with the event restriction was set or cleared.", EventPrivacy.Staff, false, Penn),
 
 		new("SQL`CONNECT", Args(("platform", W)), Nobody,
-			"The game connected to its SQL database.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
+			"The game connected to its SQL database.", EventPrivacy.Public, false, Penn),
 		new("SQL`CONNECTFAIL", Args(("platform", W), ("error", T)), Nobody,
-			"The game could not connect to its SQL database.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
+			"The game could not connect to its SQL database.", EventPrivacy.Public, false, Penn),
 		new("SQL`DISCONNECT", Args(("platform", W), ("error", T)), Nobody,
-			"The game lost its SQL connection.", EventPrivacy.Public, false, Penn, EventSupport.Compatibility),
+			"The game lost its SQL connection.", EventPrivacy.Public, false, Penn),
 
 		new("SIGNAL`USR1", [], Nobody,
-			"The server process received SIGUSR1.", EventPrivacy.Public, true, Penn, EventSupport.Compatibility),
+			"The server process received SIGUSR1.", EventPrivacy.Public, true, Penn),
 		new("SIGNAL`USR2", [], Nobody,
-			"The server process received SIGUSR2.", EventPrivacy.Public, true, Penn, EventSupport.Compatibility),
+			"The server process received SIGUSR2.", EventPrivacy.Public, true, Penn),
 
 		new("PLAYER`CREATE", Args(("objid", O), ("name", T), ("how", W), ("descriptor", N), ("email", T)),
 			"Whoever ran @pcreate, or God (#1) for a player made at the connect screen",
@@ -199,7 +184,7 @@ public static class EventCatalogue
 				("idle", N), ("received/sent/commands", T)),
 			"The player", "One of a player's connections closed.", EventPrivacy.Private, false, Penn),
 		new("PLAYER`INACTIVITY", [], Nobody,
-			"Idle players were disconnected or hidden.", EventPrivacy.Staff, false, Penn, EventSupport.Compatibility),
+			"Idle players were disconnected or hidden.", EventPrivacy.Staff, false, Penn),
 		new(SharpEvents.PlayerChannels, Args(("objid", O), ("cause", W), ("channel", T)), "Whoever caused the change",
 			"A connected player's channel list may have changed.", EventPrivacy.Staff, false, Sharp),
 		new("PLAYER`WARN", Args(("objid", O), ("reason", T), ("account", T)), "The staff member's character",
@@ -224,7 +209,7 @@ public static class EventCatalogue
 		new("HTTP`BLOCKED", Args(("descriptor", N), ("ip", Ip), ("method", W), ("path", T), ("reason", T)), Nobody,
 			"A sitelock refused an HTTP request.", EventPrivacy.Private, false, Penn),
 		new("HTTP`FAIL", Args(("descriptor", N), ("ip", Ip), ("reason", T)), Nobody,
-			"An HTTP request could not be read.", EventPrivacy.Private, false, Penn, EventSupport.Compatibility),
+			"An HTTP request could not be read.", EventPrivacy.Private, false, Penn),
 		new("HTTP`COMMAND",
 			Args(("ip", Ip), ("method", W), ("path", T), ("status", N), ("content-type", T), ("request-length", N),
 				("response-length", N)),
@@ -250,10 +235,10 @@ public static class EventCatalogue
 			"The sender", "A player received @mail.", EventPrivacy.Private, false, Sharp),
 
 		new(SharpEvents.BackupComplete, Args(("name", T), ("bytes", N)),
-			"Whoever ran @backup, or God (#1) for a scheduled copy",
+			"Whoever ran @backup or @dump, or God (#1) for a scheduled copy",
 			"A copy of the world was written.", EventPrivacy.Public, false, Sharp),
 		new(SharpEvents.BackupError, Args(("reason", T)),
-			"Whoever ran @backup, or God (#1) for a scheduled copy",
+			"Whoever ran @backup or @dump, or God (#1) for a scheduled copy",
 			"A copy of the world could not be written.", EventPrivacy.Public, false, Sharp),
 	];
 

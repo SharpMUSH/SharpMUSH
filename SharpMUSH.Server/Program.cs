@@ -226,7 +226,6 @@ public class Program
 		SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher dispatcher,
 		SitelockGuard sitelock,
 		SharpMUSH.Library.Services.Interfaces.IEventService events,
-		SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> options,
 		ILogger<Program> logger)
 	{
 		var request = context.Request;
@@ -260,10 +259,7 @@ public class Program
 		catch (BadHttpRequestException ex)
 		{
 			// PennMUSH spec: http`fail (descriptor, IP, reason), for a request too malformed to answer.
-			if (options.CurrentValue.Compatibility.CompatibilityEvents)
-			{
-				await events.TriggerEventAsync(SharpEvents.HttpFail, null, "", clientIp, ex.Message);
-			}
+			await events.TriggerEventAsync(SharpEvents.HttpFail, null, "", clientIp, ex.Message);
 
 			context.Response.StatusCode = ex.StatusCode;
 			return;

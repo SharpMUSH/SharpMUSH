@@ -24,26 +24,26 @@ public partial class EventCatalogueTests
 	public async Task EveryRaiseNamesACataloguedEventThroughSharpEvents()
 	{
 		var offenders = Raises()
-			.Where(raise => raise.Event is not { } name || EventCatalogue.Find(name) is not { Support: EventSupport.Raised or EventSupport.Compatibility })
+			.Where(raise => raise.Event is not { } name || EventCatalogue.Find(name) is null)
 			.Select(raise => $"{raise.File}: {raise.Expression}")
 			.ToArray();
 
 		await Assert.That(offenders).IsEmpty()
-			.Because("every raise names its event as a SharpEvents constant for an event the catalogue marks raised: "
+			.Because("every raise names its event as a SharpEvents constant for an event the catalogue lists: "
 				+ string.Join(", ", offenders));
 	}
 
 	[Test]
-	public async Task EveryEventTheCatalogueMarksRaisedIsRaised()
+	public async Task EveryCataloguedEventIsRaised()
 	{
 		var raised = Raises().Select(raise => raise.Event).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
 		var neverRaised = EventCatalogue.All
-			.Where(definition => definition.Support is EventSupport.Raised or EventSupport.Compatibility && !raised.Contains(definition.Name))
+			.Where(definition => !raised.Contains(definition.Name))
 			.Select(definition => definition.Name)
 			.ToArray();
 
 		await Assert.That(neverRaised).IsEmpty()
-			.Because("an event marked raised that nothing raises is documented as working while it is dead: "
+			.Because("a catalogued event that nothing raises is documented as working while it is dead: "
 				+ string.Join(", ", neverRaised));
 	}
 
@@ -62,42 +62,12 @@ public partial class EventCatalogueTests
 		var help = File.ReadAllText(HelpFile("sharpevents.md"))
 			.Replace("\\`", "`");
 		var missing = EventCatalogue.All
-			.Where(definition => definition.Support is EventSupport.Raised or EventSupport.Compatibility)
 			.Where(definition => !help.Contains(HelpSignature(definition), StringComparison.Ordinal))
 			.Select(HelpSignature)
 			.ToArray();
 
 		await Assert.That(missing).IsEmpty()
 			.Because("help event <group> documents each raised event as **name** (*argument*, ...): " + string.Join(", ", missing));
-	}
-
-	[Test]
-	public async Task HelpSaysEachCompatibilityEventNeedsTheOption()
-	{
-		var help = File.ReadAllText(HelpFile("sharpevents.md"))
-			.Replace("\\`", "`");
-		var unmarked = EventCatalogue.All
-			.Where(definition => definition.Support == EventSupport.Compatibility)
-			.Where(definition => !HelpTopicAround(help, HelpSignature(definition)).Contains("compatibility_events", StringComparison.Ordinal))
-			.Select(definition => definition.Name)
-			.ToArray();
-
-		await Assert.That(unmarked).IsEmpty()
-			.Because("an event raised only under compatibility_events says so in its help topic: " + string.Join(", ", unmarked));
-	}
-
-	/// <summary>The help topic (from one <c># </c> heading to the next) that holds <paramref name="text"/>.</summary>
-	private static string HelpTopicAround(string help, string text)
-	{
-		var at = help.IndexOf(text, StringComparison.Ordinal);
-		if (at < 0)
-		{
-			return string.Empty;
-		}
-
-		var start = help.LastIndexOf("\n# ", at, StringComparison.Ordinal);
-		var end = help.IndexOf("\n# ", at, StringComparison.Ordinal);
-		return help[(start < 0 ? 0 : start)..(end < 0 ? help.Length : end)];
 	}
 
 	private static string HelpSignature(EventDefinition definition)

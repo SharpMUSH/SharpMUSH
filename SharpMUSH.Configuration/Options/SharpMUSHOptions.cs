@@ -102,8 +102,7 @@ public record SharpMUSHOptions
 			TinyMath: false,
 			TinyTrimFun: false,
 			ParenGroups: false,
-			HttpQRegisters: false,
-			CompatibilityEvents: false
+			HttpQRegisters: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,
@@ -167,8 +166,6 @@ public record SharpMUSHOptions
 		),
 		Dump = new DumpOptions(
 			PurgeInterval: "10m1s",
-			DumpInterval: "1h",
-			DbckInterval: "9m59s",
 			DumpMessage: "GAME: Saving database. Game may freeze for a few moments.",
 			DumpComplete: "GAME: Save complete.",
 			DumpWarning5Min: "GAME: Database save in 5 minutes.",

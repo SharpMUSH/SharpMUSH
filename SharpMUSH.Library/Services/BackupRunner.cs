@@ -8,17 +8,17 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 /// <inheritdoc />
-public class DumpService(
-	IWorldSaveService save,
+public class BackupRunner(
+	IWorldBackupService backups,
 	IEventService events,
 	IGameBroadcastService broadcast,
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ILogger<DumpService> logger) : IDumpService
+	ILogger<BackupRunner> logger) : IBackupRunner
 {
 	/// <summary>PennMUSH's own text for a failed save (src/game.c:344), shown to wizards and royalty.</summary>
 	public const string SaveFailed = "GAME: ERROR! Database save failed!";
 
-	/// <summary>The forking argument: SharpMUSH never forks to save.</summary>
+	/// <summary>The dump events' forking argument: a backup never forks.</summary>
 	private const string NoFork = "0";
 
 	/// <inheritdoc />
@@ -26,7 +26,7 @@ public class DumpService(
 	{
 		var dump = options.CurrentValue.Dump;
 
-		// src/timer.c:209 dbsave_warn_event: the event, then the message to everyone (a non-forking save).
+		// src/timer.c:209 dbsave_warn_event: the event, then the message to everyone.
 		if (minutes == 5)
 		{
 			await events.TriggerEventAsync(SharpEvents.Dump5Min, null, dump.DumpWarning5Min ?? "", NoFork);
@@ -40,30 +40,32 @@ public class DumpService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<Result<Success>> DumpAsync(DBRef? enactor)
+	public async ValueTask<Result<WorldBackup>> RunAsync(DBRef? enactor, CancellationToken cancellationToken = default)
 	{
 		var dump = options.CurrentValue.Dump;
 		await ShowAsync(dump.DumpMessage);
 
-		return await save.SaveAsync() switch
+		return await backups.CreateAsync(cancellationToken) switch
 		{
-			Success success => await CompletedAsync(enactor, dump.DumpComplete, success),
+			WorldBackup written => await WrittenAsync(enactor, dump.DumpComplete, written),
 			Error<string> error => await FailedAsync(enactor, error)
 		};
 	}
 
 	/// <summary>src/game.c:645-651: <c>DUMP`COMPLETE</c> (message, forking), then the message to everyone.</summary>
-	private async ValueTask<Result<Success>> CompletedAsync(DBRef? enactor, string? message, Success success)
+	private async ValueTask<Result<WorldBackup>> WrittenAsync(DBRef? enactor, string? message, WorldBackup written)
 	{
+		await events.TriggerEventAsync(SharpEvents.BackupComplete, enactor, written.Name, written.SizeBytes.ToString());
 		await events.TriggerEventAsync(SharpEvents.DumpComplete, enactor, message ?? "", NoFork);
 		await ShowAsync(message);
-		return success;
+		return written;
 	}
 
 	/// <summary>src/game.c:342-346: <c>DUMP`ERROR</c> (message, forking, <c>PERROR</c> reason), then wizards and royalty are told.</summary>
-	private async ValueTask<Result<Success>> FailedAsync(DBRef? enactor, Error<string> error)
+	private async ValueTask<Result<WorldBackup>> FailedAsync(DBRef? enactor, Error<string> error)
 	{
-		logger.LogError("Database save failed: {Reason}", error.Value);
+		logger.LogError("World backup failed: {Reason}", error.Value);
+		await events.TriggerEventAsync(SharpEvents.BackupError, enactor, error.Value);
 		await events.TriggerEventAsync(SharpEvents.DumpError, enactor, SaveFailed, NoFork, $"PERROR {error.Value}");
 		await broadcast.BroadcastToFlagAsync(["WIZARD", "ROYALTY"], "", SaveFailed);
 		return error;

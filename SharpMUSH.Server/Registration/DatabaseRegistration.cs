@@ -151,7 +151,6 @@ internal static class DatabaseRegistration
 		// history kinds (wiki revisions, audit entries).
 		services.AddSingleton<IStorageCapacityService>(sp => new LightningStorageCapacityService(
 			sp.GetRequiredService<LightningDatabase>(), sp.GetRequiredService<IWorldBackupService>(), compactBackups));
-		services.AddSingleton<IWorldSaveService>(sp => new LightningWorldSaveService(sp.GetRequiredService<LightningDatabase>()));
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().WikiHistory);
 		services.AddSingleton<IAuditStore>(sp => sp.GetRequiredService<LightningDatabase>());
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningDatabase>().AuditHistory);

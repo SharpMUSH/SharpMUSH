@@ -19,10 +19,10 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// The PennMUSH events raised only while <c>compatibility_events</c> is on: the save cycle and its warnings,
-/// <c>DB`DBCK</c>, the inactivity check, the SQL connection events, user signals and <c>LOG`HUH</c>.
+/// PennMUSH's own events: the dump events around a backup and the schedule's warnings, the inactivity check, the SQL
+/// connection events, user signals and <c>LOG`HUH</c>.
 /// </summary>
-public class CompatibilityEventsTests
+public class PennMUSHEventsTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -32,105 +32,136 @@ public class CompatibilityEventsTests
 
 	private static readonly DateTimeOffset Start = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
-	private static IOptionsWrapper<SharpMUSHOptions> Options(bool on, Func<SharpMUSHOptions, SharpMUSHOptions>? mutate = null)
+	private static IOptionsWrapper<SharpMUSHOptions> Options(Func<SharpMUSHOptions, SharpMUSHOptions>? mutate = null)
 	{
 		var defaults = SharpMUSHOptions.Default();
-		var configured = defaults with
-		{
-			Compatibility = defaults.Compatibility with { CompatibilityEvents = on },
-			Dump = defaults.Dump with { DumpInterval = "10m", DbckInterval = "3m" }
-		};
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(mutate is null ? configured : mutate(configured));
+		options.CurrentValue.Returns(mutate is null ? defaults : mutate(defaults));
 		return options;
 	}
 
-	private sealed record Timers(CompatibilityEventsService Service, IDumpService Dump, IEventService Events, IConnectionService Connections, IMessageBus Bus);
+	private sealed record Inactivity(InactivityCheckService Service, IEventService Events, IConnectionService Connections, IMessageBus Bus);
 
-	private Timers CreateTimers(IOptionsWrapper<SharpMUSHOptions> options, params IConnectionService.ConnectionData[] connections)
+	private Inactivity CreateInactivity(params IConnectionService.ConnectionData[] connections)
 	{
-		var dump = Substitute.For<IDumpService>();
 		var events = Substitute.For<IEventService>();
 		var connectionService = Substitute.For<IConnectionService>();
 		connectionService.GetAll().Returns(_ => connections.ToAsyncEnumerable());
 		var bus = Substitute.For<IMessageBus>();
-		var service = new CompatibilityEventsService(options, dump, events, connectionService,
+		var service = new InactivityCheckService(Options(), events, connectionService,
 			WebAppFactoryArg.Services.GetRequiredService<INotifyService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPermissionService>(),
-			Mediator, bus, Substitute.For<TimeProvider>(), NullLogger<CompatibilityEventsService>.Instance);
-		return new Timers(service, dump, events, connectionService, bus);
+			Mediator, bus, Substitute.For<TimeProvider>(), NullLogger<InactivityCheckService>.Instance);
+		return new Inactivity(service, events, connectionService, bus);
+	}
+
+	private static WorldBackupScheduleService CreateSchedule(IBackupRunner runner)
+		=> new(Substitute.For<IWorldBackupService>(), runner, Substitute.For<TimeProvider>(),
+			NullLogger<WorldBackupScheduleService>.Instance);
+
+	private static readonly WorldBackup Written = new("20260101T000000Z", "/backups/20260101T000000Z", Start, 4096);
+
+	[Test]
+	public async Task TheBackupScheduleWarnsAtFiveAndOneMinutesThenBacksUp()
+	{
+		var runner = Substitute.For<IBackupRunner>();
+		runner.RunAsync(Arg.Any<DBRef?>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
+		var schedule = CreateSchedule(runner);
+		var interval = TimeSpan.FromMinutes(10);
+
+		await schedule.TickAsync(Start, interval);
+		await schedule.TickAsync(Start + TimeSpan.FromMinutes(4) + TimeSpan.FromSeconds(59), interval);
+		await runner.DidNotReceive().WarnAsync(Arg.Any<int>());
+
+		await schedule.TickAsync(Start + TimeSpan.FromMinutes(5), interval);
+		await runner.Received(1).WarnAsync(5);
+
+		await schedule.TickAsync(Start + TimeSpan.FromMinutes(9), interval);
+		await runner.Received(1).WarnAsync(1);
+		await runner.DidNotReceive().RunAsync(Arg.Any<DBRef?>(), Arg.Any<CancellationToken>());
+
+		await schedule.TickAsync(Start + TimeSpan.FromMinutes(10), interval);
+		await runner.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
+
+		await schedule.TickAsync(Start + TimeSpan.FromMinutes(15), interval);
+		await runner.Received(2).WarnAsync(5);
 	}
 
 	[Test]
-	public async Task TheSaveCycleWarnsAtFiveAndOneMinutesThenSaves()
+	public async Task AScheduleShorterThanFiveMinutesWarnsOnlyAtOne()
 	{
-		var timers = CreateTimers(Options(true));
+		var runner = Substitute.For<IBackupRunner>();
+		runner.RunAsync(Arg.Any<DBRef?>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
+		var schedule = CreateSchedule(runner);
+		var interval = TimeSpan.FromMinutes(3);
 
-		await timers.Service.TickAsync(Start);
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(4) + TimeSpan.FromSeconds(59));
-		await timers.Dump.DidNotReceive().WarnAsync(Arg.Any<int>());
-
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(5));
-		await timers.Dump.Received(1).WarnAsync(5);
-
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(9));
-		await timers.Dump.Received(1).WarnAsync(1);
-		await timers.Dump.DidNotReceive().DumpAsync(Arg.Any<DBRef?>());
-
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(10));
-		await timers.Dump.Received(1).DumpAsync(null);
-
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(15));
-		await timers.Dump.Received(2).WarnAsync(5);
-	}
-
-	[Test]
-	public async Task ChangingDumpIntervalStartsTheCycleAgain()
-	{
-		var interval = "10m";
-		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(_ => Options(true, configured => configured with
+		foreach (var minutes in new[] { 0, 1, 2, 3 })
 		{
-			Dump = configured.Dump with { DumpInterval = interval }
-		}).CurrentValue);
-		var timers = CreateTimers(options);
-
-		await timers.Service.TickAsync(Start);
-		interval = "3m";
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(12));
-		await timers.Dump.DidNotReceive().DumpAsync(Arg.Any<DBRef?>());
-
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(14));
-		await timers.Dump.Received(1).WarnAsync(1);
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(15));
-		await timers.Dump.Received(1).DumpAsync(null);
-	}
-
-	[Test]
-	public async Task DbckIsRaisedEveryDbckInterval()
-	{
-		var timers = CreateTimers(Options(true));
-
-		await timers.Service.TickAsync(Start);
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(3));
-		await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(6));
-
-		await timers.Events.Received(2).TriggerEventAsync(SharpEvents.DbDbck, null);
-	}
-
-	[Test]
-	public async Task NothingRunsWithTheOptionOff()
-	{
-		var timers = CreateTimers(Options(false));
-
-		foreach (var minutes in new[] { 0, 3, 5, 9, 10, 20 })
-		{
-			await timers.Service.TickAsync(Start + TimeSpan.FromMinutes(minutes));
+			await schedule.TickAsync(Start + TimeSpan.FromMinutes(minutes), interval);
 		}
 
-		await timers.Dump.DidNotReceive().WarnAsync(Arg.Any<int>());
-		await timers.Dump.DidNotReceive().DumpAsync(Arg.Any<DBRef?>());
-		await timers.Events.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
+		await runner.DidNotReceive().WarnAsync(5);
+		await runner.Received(1).WarnAsync(1);
+		await runner.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task AWarningRaisesItsDumpEventThenTellsEveryone()
+	{
+		var events = Substitute.For<IEventService>();
+		var broadcast = Substitute.For<IGameBroadcastService>();
+		var runner = new BackupRunner(Substitute.For<IWorldBackupService>(), events, broadcast, Options(),
+			NullLogger<BackupRunner>.Instance);
+
+		await runner.WarnAsync(5);
+		await runner.WarnAsync(1);
+
+		Received.InOrder(() =>
+		{
+			events.TriggerEventAsync(SharpEvents.Dump5Min, null, "GAME: Database save in 5 minutes.", "0");
+			broadcast.BroadcastAsync("GAME: Database save in 5 minutes.");
+			events.TriggerEventAsync(SharpEvents.Dump1Min, null, "GAME: Database save in 1 minute.", "0");
+			broadcast.BroadcastAsync("GAME: Database save in 1 minute.");
+		});
+	}
+
+	[Test]
+	public async Task AWrittenBackupRaisesBackupAndDumpComplete()
+	{
+		var backups = Substitute.For<IWorldBackupService>();
+		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
+		var events = Substitute.For<IEventService>();
+		var broadcast = Substitute.For<IGameBroadcastService>();
+		var runner = new BackupRunner(backups, events, broadcast, Options(), NullLogger<BackupRunner>.Instance);
+
+		var result = await runner.RunAsync(new DBRef(1));
+
+		await Assert.That(result.Expect<WorldBackup>()).IsEqualTo(Written);
+		Received.InOrder(() =>
+		{
+			broadcast.BroadcastAsync("GAME: Saving database. Game may freeze for a few moments.");
+			events.TriggerEventAsync(SharpEvents.BackupComplete, new DBRef(1), Written.Name, "4096");
+			events.TriggerEventAsync(SharpEvents.DumpComplete, new DBRef(1), "GAME: Save complete.", "0");
+			broadcast.BroadcastAsync("GAME: Save complete.");
+		});
+	}
+
+	[Test]
+	public async Task AFailedBackupRaisesDumpErrorAndTellsWizards()
+	{
+		var backups = Substitute.For<IWorldBackupService>();
+		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(new Error<string>("disk full")));
+		var events = Substitute.For<IEventService>();
+		var broadcast = Substitute.For<IGameBroadcastService>();
+		var runner = new BackupRunner(backups, events, broadcast, Options(), NullLogger<BackupRunner>.Instance);
+
+		await runner.RunAsync(null);
+
+		await events.Received(1).TriggerEventAsync(SharpEvents.BackupError, null, "disk full");
+		await events.Received(1).TriggerEventAsync(SharpEvents.DumpError, null, BackupRunner.SaveFailed, "0", "PERROR disk full");
+		await events.DidNotReceive().TriggerEventAsync(SharpEvents.DumpComplete, Arg.Any<DBRef?>(), Arg.Any<string[]>());
+		await broadcast.Received(1).BroadcastToFlagAsync(Arg.Is<IReadOnlyCollection<string>>(flags => flags.SequenceEqual(new[] { "WIZARD", "ROYALTY" })), "", BackupRunner.SaveFailed);
+		await broadcast.DidNotReceive().BroadcastAsync("GAME: Save complete.");
 	}
 
 	/// <summary>A play connection whose last input was at the Unix epoch: idle past any limit.</summary>
@@ -148,7 +179,7 @@ public class CompatibilityEventsTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "IdleMortal");
 		var connection = IdleConnection(player);
-		var timers = CreateTimers(Options(true), connection);
+		var timers = CreateInactivity(connection);
 
 		await timers.Service.InactivityCheckAsync(60);
 
@@ -162,7 +193,7 @@ public class CompatibilityEventsTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "IdlePortal");
 		var connection = IdleConnection(player, PresenceClasses.Portal);
-		var timers = CreateTimers(Options(true), connection);
+		var timers = CreateInactivity(connection);
 
 		await timers.Service.InactivityCheckAsync(60);
 
@@ -176,7 +207,7 @@ public class CompatibilityEventsTests
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "IdleWizard");
 		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player}=WIZARD UNFINDABLE"));
 		var connection = IdleConnection(player);
-		var timers = CreateTimers(Options(true), connection);
+		var timers = CreateInactivity(connection);
 
 		await timers.Service.InactivityCheckAsync(60);
 
@@ -189,40 +220,11 @@ public class CompatibilityEventsTests
 	public async Task NoIdleTimeoutDisconnectsNobody()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "IdleNoLimit");
-		var timers = CreateTimers(Options(true), IdleConnection(player));
+		var timers = CreateInactivity(IdleConnection(player));
 
 		await timers.Service.InactivityCheckAsync(0);
 
 		await timers.Connections.DidNotReceive().Disconnect(Arg.Any<long>(), Arg.Any<string?>());
-	}
-
-	[Test]
-	public async Task ASaveRaisesDumpCompleteWithItsMessage()
-	{
-		var save = Substitute.For<IWorldSaveService>();
-		save.SaveAsync(Arg.Any<CancellationToken>()).Returns(new Result<Success>(new Success()));
-		var events = Substitute.For<IEventService>();
-		var broadcast = Substitute.For<IGameBroadcastService>();
-		var dump = new DumpService(save, events, broadcast, Options(true), NullLogger<DumpService>.Instance);
-
-		await dump.DumpAsync(new DBRef(1));
-
-		await events.Received(1).TriggerEventAsync(SharpEvents.DumpComplete, new DBRef(1), "GAME: Save complete.", "0");
-	}
-
-	[Test]
-	public async Task AFailedSaveRaisesDumpErrorWithItsReason()
-	{
-		var save = Substitute.For<IWorldSaveService>();
-		save.SaveAsync(Arg.Any<CancellationToken>()).Returns(new Result<Success>(new Error<string>("disk full")));
-		var events = Substitute.For<IEventService>();
-		var broadcast = Substitute.For<IGameBroadcastService>();
-		var dump = new DumpService(save, events, broadcast, Options(true), NullLogger<DumpService>.Instance);
-
-		await dump.DumpAsync(null);
-
-		await events.Received(1).TriggerEventAsync(SharpEvents.DumpError, null, DumpService.SaveFailed, "0", "PERROR disk full");
-		await events.DidNotReceive().TriggerEventAsync(SharpEvents.DumpComplete, Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 
 	[Test]
@@ -231,7 +233,7 @@ public class CompatibilityEventsTests
 		var events = Substitute.For<IEventService>();
 		events.HasHandlerAsync(SharpEvents.SignalUsr1).Returns(true);
 		var restart = Substitute.For<IServerRestart>();
-		var service = new SignalEventsService(Options(true), events, Substitute.For<IDumpService>(), restart,
+		var service = new SignalEventsService(events, Substitute.For<IBackupRunner>(), restart,
 			NullLogger<SignalEventsService>.Instance);
 
 		await service.HandleAsync(SignalEventsService.UserSignal.Usr1);
@@ -244,15 +246,15 @@ public class CompatibilityEventsTests
 	public async Task ASignalNobodyHearsTakesPennMUSHsDefault()
 	{
 		var events = Substitute.For<IEventService>();
-		var dump = Substitute.For<IDumpService>();
+		var backups = Substitute.For<IBackupRunner>();
 		var restart = Substitute.For<IServerRestart>();
-		var service = new SignalEventsService(Options(true), events, dump, restart, NullLogger<SignalEventsService>.Instance);
+		var service = new SignalEventsService(events, backups, restart, NullLogger<SignalEventsService>.Instance);
 
 		await service.HandleAsync(SignalEventsService.UserSignal.Usr1);
 		await service.HandleAsync(SignalEventsService.UserSignal.Usr2);
 
 		await restart.Received(1).RestartAsync("SIGUSR1");
-		await dump.Received(1).DumpAsync(null);
+		await backups.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
 		await events.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 
@@ -266,7 +268,7 @@ public class CompatibilityEventsTests
 			var bad = Path.Join(directory.FullName, "missing", "game.db");
 			var database = bad;
 			var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
-			monitor.CurrentValue.Returns(_ => Options(true, options => options with
+			monitor.CurrentValue.Returns(_ => Options(options => options with
 			{
 				Net = options.Net with { SqlPlatform = "sqlite", SqlDatabase = database, SqlHost = null }
 			}).CurrentValue);
@@ -301,13 +303,7 @@ public class CompatibilityEventsTests
 		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&{attribute} #9=think [if(strmatch(%0,*zz{marker}),set(#9,HEARD_{marker}:%0))]"));
 
-		using (TestOptionsOverride.Scope(options => options with
-		{
-			Compatibility = options.Compatibility with { CompatibilityEvents = true }
-		}))
-		{
-			await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"zz{marker}"));
-		}
+		await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"zz{marker}"));
 
 		await WebAppFactoryArg.QueueBarrierAsync();
 		var heard = (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get(#9/HEARD_{marker})"))).ToPlainText();

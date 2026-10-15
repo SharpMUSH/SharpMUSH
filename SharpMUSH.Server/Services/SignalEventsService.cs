@@ -2,22 +2,19 @@ using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// SIGUSR1 and SIGUSR2 as PennMUSH reads them (src/signal.c, src/timer.c:109-139), while <c>compatibility_events</c>
-/// is on: <c>SIGNAL`USR1</c> or <c>SIGNAL`USR2</c> when the event handler has an attribute for it, otherwise
-/// the default, a restart for USR1 and a save for USR2. With the option off the signal keeps the runtime's own
-/// action. Unix only: Windows has no user signals.
+/// SIGUSR1 and SIGUSR2 as PennMUSH reads them (src/signal.c, src/timer.c:109-139): <c>SIGNAL`USR1</c> or
+/// <c>SIGNAL`USR2</c> when the event handler has an attribute for it, otherwise the default, a restart for USR1 and a
+/// backup for USR2. Unix only: Windows has no user signals.
 /// </summary>
 public sealed class SignalEventsService(
-	IOptionsWrapper<SharpMUSHOptions> options,
 	IEventService events,
-	IDumpService dump,
+	IBackupRunner backups,
 	IServerRestart restart,
 	ILogger<SignalEventsService> logger) : BackgroundService
 {
@@ -56,11 +53,6 @@ public sealed class SignalEventsService(
 
 	private void Receive(PosixSignalContext context, UserSignal signal)
 	{
-		if (!options.CurrentValue.Compatibility.CompatibilityEvents)
-		{
-			return;
-		}
-
 		context.Cancel = true;
 		_received.Writer.TryWrite(signal);
 	}
@@ -81,7 +73,7 @@ public sealed class SignalEventsService(
 				await events.TriggerEventAsync(SharpEvents.SignalUsr2, null);
 				break;
 			case UserSignal.Usr2:
-				await dump.DumpAsync(null);
+				await backups.RunAsync(null);
 				break;
 		}
 	}

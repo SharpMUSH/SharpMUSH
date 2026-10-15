@@ -96,12 +96,10 @@ These options affect database saves and other periodic checks.
 - `dump_complete=<string>`: Notification message for the end of a save.
 - `dump_warning_1min=<string>`: Notification one minute before a save.
 - `dump_warning_5min=<string>`: Notification five minutes before a save.
-- `dump_interval=<time>`: Seconds between database saves.
 - `warn_interval=<time>`: Seconds between automatic @wchecks.
 - `purge_interval=<time>`: Seconds between automatic @purges.
-- `dbck_interval=<time>`: Seconds between automatic @dbcks.
 
-The save messages, dump_interval and dbck_interval apply only while compatibility_events is on: SharpMUSH writes every change as it happens and keeps its links consistent, so it runs PennMUSH's save and check timers only for the events they raise (see [event dump] and [event db]). An empty message is not shown.
+A save is a backup: the messages are shown around every `@backup`, `@dump` and scheduled backup, and an empty one is not shown. How often backups are scheduled is the server's SHARPMUSH_BACKUP_INTERVAL setting, not an option, so PennMUSH's dump_interval is read and ignored; so is dbck_interval, since `@dbck` runs only when asked (see [event dump] and [event db]).
 
 # @config flags
 These options set the default flags for newly-created objects and channels. Each is a
@@ -160,4 +158,3 @@ Options that help control compability with TinyMUSH servers.
 - `tiny_math=<boolean>`: Is a string where a number is expected considered a 0?
 - `silent_pemit=<boolean>`: Does @pemit default to @pemit/silent?
 - `paren_groups=<boolean>`: Does an unescaped `(` that starts no function call open a literal group, as in PennMUSH? Its commas are text and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments. When off, escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`. Importing a PennMUSH database turns it on.
-- `compatibility_events=<boolean>`: Does the game raise the PennMUSH events it has nothing of its own to raise from: the dump events on the dump_interval timer, db\`dbck on the dbck_interval timer, log\`huh, the sql and signal events, player\`inactivity (which disconnects idle players after idle_timeout) and http\`fail? See [compatibility events]. Importing a PennMUSH database turns it on.

@@ -71,4 +71,38 @@ public class BackupCommandTests : ServerTestBase
 				|| message.Contains("Backups in ", StringComparison.OrdinalIgnoreCase)))
 			.IsTrue();
 	}
+
+	/// <summary>
+	/// <c>@dump</c> is a backup with PennMUSH's dump events around it, and <c>@dbck</c> reads the newest copy
+	/// through and raises <c>DB`DBCK</c>. Both are heard on the event handler as God, who ran them.
+	/// </summary>
+	[Test]
+	public async Task DumpRaisesDumpCompleteAndDbckRaisesDbDbck()
+	{
+		if (!BackupService.IsSupported)
+		{
+			return;
+		}
+
+		var marker = TestIsolationHelpers.GenerateUniqueName("dump").ToUpperInvariant();
+		await Cmd($"&DUMP`COMPLETE`{marker} #9=think set(#9,HEARD_DUMP_{marker}:%#/%0/%1)");
+		await Cmd($"&DB`DBCK`{marker} #9=think set(#9,HEARD_DBCK_{marker}:%#)");
+		try
+		{
+			await Cmd("@dump");
+			var checkedName = await Cmd("@dbck");
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(await Eval($"get(#9/HEARD_DUMP_{marker})")).IsEqualTo("#1/GAME: Save complete./0");
+			await Assert.That(await Eval($"get(#9/HEARD_DBCK_{marker})")).IsEqualTo("#1");
+			await Assert.That(checkedName).IsEqualTo(BackupService.List()[0].Name);
+		}
+		finally
+		{
+			await Cmd($"&DUMP`COMPLETE`{marker} #9");
+			await Cmd($"&DB`DBCK`{marker} #9");
+			await Cmd($"&HEARD_DUMP_{marker} #9");
+			await Cmd($"&HEARD_DBCK_{marker} #9");
+		}
+	}
 }

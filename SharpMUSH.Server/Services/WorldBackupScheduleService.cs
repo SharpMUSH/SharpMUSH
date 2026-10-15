@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -15,12 +13,23 @@ namespace SharpMUSH.Server.Services;
 /// <para>Off unless an interval is configured, and inert on a provider that cannot copy its own
 /// world. Set the interval to comfortably less than the snapshot tool's own period: the copy the
 /// snapshot picks up is as stale as the last run, and it costs a full copy each time.</para>
+///
+/// <para>This is PennMUSH's dump cycle: everyone is warned five minutes and one minute before each copy, and the
+/// copy raises the dump events (<see cref="IBackupRunner"/>).</para>
 /// </summary>
 public sealed class WorldBackupScheduleService(
 	IWorldBackupService backups,
-	IEventService events,
+	IBackupRunner runner,
+	TimeProvider time,
 	ILogger<WorldBackupScheduleService> logger) : BackgroundService
 {
+	private static readonly TimeSpan FiveMinutes = TimeSpan.FromMinutes(5);
+	private static readonly TimeSpan OneMinute = TimeSpan.FromMinutes(1);
+
+	private DateTimeOffset? _cycleStart;
+	private bool _warnedFive;
+	private bool _warnedOne;
+
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		if (!backups.IsSupported)
@@ -44,31 +53,66 @@ public sealed class WorldBackupScheduleService(
 		logger.LogInformation(
 			"Scheduled world backups every {Interval} into {Root}, keeping {Keep}", interval, backups.Root, backups.Keep);
 
-		// PeriodicTimer, so the first copy is one interval away rather than competing with startup.
-		using var timer = new PeriodicTimer(interval);
+		// Checked every second so the warnings land on time; the first copy is one interval away rather than
+		// competing with startup.
+		using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1), time);
 		try
 		{
 			while (await timer.WaitForNextTickAsync(stoppingToken))
 			{
-				switch (await backups.CreateAsync(stoppingToken))
-				{
-					case WorldBackup backup:
-						logger.LogInformation("Scheduled world backup {Name} written", backup.Name);
-						await events.TriggerEventAsync(SharpEvents.BackupComplete, null, backup.Name, backup.SizeBytes.ToString());
-						break;
-					// Reported and dropped: one failed copy must not end the schedule, because the next
-					// interval may well succeed and a stopped schedule is silent.
-					case Error<string> error:
-						logger.LogError("Scheduled world backup failed: {Error}", error.Value);
-						await events.TriggerEventAsync(SharpEvents.BackupError, null, error.Value);
-						break;
-				}
+				await TickAsync(time.GetUtcNow(), interval, stoppingToken);
 			}
 		}
 		catch (OperationCanceledException)
 		{
 			// Shutdown.
 		}
+	}
+
+	/// <summary>
+	/// PennMUSH's dump cycle (src/timer.c:194-240) at <paramref name="now"/>: the warnings five minutes and one
+	/// minute before the copy, each only when the interval is longer, then the copy, and the next cycle starts.
+	/// A failed copy is reported and the schedule carries on, because the next one may well succeed and a stopped
+	/// schedule is silent.
+	/// </summary>
+	public async ValueTask TickAsync(DateTimeOffset now, TimeSpan interval, CancellationToken cancellationToken = default)
+	{
+		if (_cycleStart is not { } start)
+		{
+			StartCycle(now);
+			return;
+		}
+
+		var due = start + interval;
+		if (!_warnedFive && interval > FiveMinutes && now >= due - FiveMinutes)
+		{
+			_warnedFive = true;
+			await runner.WarnAsync(5);
+		}
+
+		if (!_warnedOne && interval > OneMinute && now >= due - OneMinute)
+		{
+			_warnedOne = true;
+			await runner.WarnAsync(1);
+		}
+
+		if (now < due)
+		{
+			return;
+		}
+
+		StartCycle(now);
+		if (await runner.RunAsync(null, cancellationToken) is WorldBackup backup)
+		{
+			logger.LogInformation("Scheduled world backup {Name} written", backup.Name);
+		}
+	}
+
+	private void StartCycle(DateTimeOffset now)
+	{
+		_cycleStart = now;
+		_warnedFive = false;
+		_warnedOne = false;
 	}
 
 	/// <summary>

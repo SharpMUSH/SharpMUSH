@@ -1430,12 +1430,6 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
 		public const string ListNotUnderstood = "I don't understand what you want to @list.";
 
-		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
-
-		public const string DumpStarting = "Dumping...";
-
-		public const string DumpComplete = "Dump complete.";
-
 		public const string InactivityTimeout = "*** Inactivity timeout ***";
 
 		public const string InactivityHidden = "*** Inactivity limit reached. You are now HIDDEN. ***";

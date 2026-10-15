@@ -32,7 +32,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 	/// <summary>
 	/// As <see cref="SqlService(IOptionsMonitor{SharpMUSHOptions})"/>, raising PennMUSH's <c>SQL`CONNECT</c>,
-	/// <c>SQL`CONNECTFAIL</c> and <c>SQL`DISCONNECT</c> while <c>compatibility_events</c> is on.
+	/// <c>SQL`CONNECTFAIL</c> and <c>SQL`DISCONNECT</c>.
 	/// </summary>
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config, Lazy<IEventService> events)
 	{
@@ -390,7 +390,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 	private async ValueTask RaiseAsync(string? error, bool disconnected)
 	{
-		if (_events is null || !_config.CurrentValue.Compatibility.CompatibilityEvents)
+		if (_events is null)
 		{
 			return;
 		}

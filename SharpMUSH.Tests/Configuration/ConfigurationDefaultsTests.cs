@@ -58,6 +58,8 @@ public class ConfigurationDefaultsTests
 		["chunk_swap_initial_size"] = "Penn's attribute chunk store.",
 		["attr_compression"] = "Penn's attribute chunk store.",
 		["forking_dump"] = "Penn forks to write its flatfile.",
+		["dbck_interval"] = "Penn's database consistency pass; @dbck checks the newest backup on demand.",
+		["dump_interval"] = "Penn's dump timer; backups run every SHARPMUSH_BACKUP_INTERVAL.",
 		["help_command"] = "Penn registers help files as commands; SharpMUSH indexes its own helpfiles.",
 		["ahelp_command"] = "Penn registers help files as commands.",
 		["restrict_command"] = "A directive, not an option: read into Restriction.CommandRestrictions.",

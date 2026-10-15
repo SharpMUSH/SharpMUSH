@@ -172,6 +172,12 @@ public static partial class ErrorMessages
 		public const string BackupCompleteFormat = "Backup {0} written ({1}). Keeping {2}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BackupFailedFormat = "Backup failed: {0}";
+		/// <summary><c>@dbck</c>: the newest backup was read through. {0} its name, {1} tables, {2} entries.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupCheckedFormat = "Backup {0} checked: {1} tables, {2} entries read.";
+		/// <summary><c>@dbck</c>: the newest backup did not pass, or there is none. {0} why.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupCheckFailedFormat = "Check failed: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BackupListHeaderFormat = "Backups in {0}:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

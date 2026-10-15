@@ -52,10 +52,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor);
-		if (Configuration.CurrentValue.Compatibility.CompatibilityEvents)
-		{
-			await LogHuhAsync(executor, parser.CurrentState.CommandText?.Raw.ToPlainText() ?? string.Empty);
-		}
+		await LogHuhAsync(executor, parser.CurrentState.CommandText?.Raw.ToPlainText() ?? string.Empty);
 
 		return new CallState(ErrorMessages.Returns.Huh);
 	}

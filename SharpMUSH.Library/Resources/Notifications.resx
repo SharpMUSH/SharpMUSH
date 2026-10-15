@@ -2594,18 +2594,7 @@
     <value>I don't understand what you want to @list.</value>
   </data>
 
-  <!-- @dump -->
-  <data name="DumpDoesNothing" xml:space="preserve">
-    <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
-  </data>
-  <data name="DumpStarting" xml:space="preserve">
-    <value>Dumping...</value>
-  </data>
-  <data name="DumpComplete" xml:space="preserve">
-    <value>Dump complete.</value>
-  </data>
-
-  <!-- compatibility_events: the inactivity check -->
+  <!-- the inactivity check -->
   <data name="InactivityTimeout" xml:space="preserve">
     <value>*** Inactivity timeout ***</value>
   </data>
@@ -2625,6 +2614,12 @@
   </data>
   <data name="BackupFailedFormat" xml:space="preserve">
     <value>Backup failed: {0}</value>
+  </data>
+  <data name="BackupCheckedFormat" xml:space="preserve">
+    <value>Backup {0} checked: {1} tables, {2} entries read.</value>
+  </data>
+  <data name="BackupCheckFailedFormat" xml:space="preserve">
+    <value>Check failed: {0}</value>
   </data>
   <data name="BackupListHeaderFormat" xml:space="preserve">
     <value>Backups in {0}:</value>

@@ -55,13 +55,5 @@ public record CompatibilityOptions(
 		Description = "Also hand HTTP softcode q-registers, as PennMUSH does, besides the named arguments: STATUS and CONTENT-TYPE to an @http callback, and HDR.<name> and HEADERS to the http_handler. A PennMUSH database import turns it on",
 		Group = "PennMUSH Compatibility",
 		Order = 2)]
-	bool HttpQRegisters,
-
-	[property: SharpConfig(
-		Name = "compatibility_events",
-		Category = "Compatibility",
-		Description = "Raise the PennMUSH events SharpMUSH has nothing of its own to raise from: the dump events on the dump_interval timer, db`dbck on the dbck_interval timer, log`huh, the sql and signal events, player`inactivity (which disconnects idle players after idle_timeout) and http`fail. A PennMUSH database import turns it on",
-		Group = "PennMUSH Compatibility",
-		Order = 3)]
-	bool CompatibilityEvents
+	bool HttpQRegisters
 );

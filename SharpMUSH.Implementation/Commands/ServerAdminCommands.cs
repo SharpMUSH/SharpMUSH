@@ -97,24 +97,14 @@ public partial class Commands
 		CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = ["type"])]
 	public async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// PennMUSH's dump writes the world out; SharpMUSH's world is always on disk, so its dump is a backup.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!Configuration.CurrentValue.Compatibility.CompatibilityEvents)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpDoesNothing), executor);
-			return new None();
-		}
-
-		// do_dump (src/game.c:209-215): the save, with its dump events, between "Dumping..." and "Dump complete.".
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpStarting), executor);
-		await DumpService.DumpAsync(executor.Object().DBRef);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpComplete), executor);
-		return new None();
+		return await BackupNowAsync(executor);
 	}
 
 	/// <summary>
 	/// Takes a hot copy of the world into the backup directory, so a snapshot tool has a consistent
-	/// one to read while the game runs. This is what <c>@dump</c> would be if SharpMUSH kept the world
-	/// in memory: it does not, so <c>@dump</c> has nothing to write out and this copies instead.
+	/// one to read while the game runs. <c>@dump</c> does the same.
 	///
 	/// <para><c>/LIST</c> reports the copies already on disk, newest first. A provider that cannot copy
 	/// its own world says why, in its own terms — a database server this game only talks to is not the
@@ -126,6 +116,11 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
+		if (!parser.CurrentState.Switches.Contains("LIST"))
+		{
+			return await BackupNowAsync(executor);
+		}
+
 		if (!WorldBackupService.IsSupported)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
@@ -133,23 +128,31 @@ public partial class Commands
 			return new None();
 		}
 
-		if (parser.CurrentState.Switches.Contains("LIST"))
+		var existing = WorldBackupService.List();
+		if (existing.Count == 0)
 		{
-			var existing = WorldBackupService.List();
-			if (existing.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListEmpty), executor);
-				return new None();
-			}
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListEmpty), executor);
+			return new None();
+		}
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListHeaderFormat),
-				executor, WorldBackupService.Root);
-			foreach (var backup in existing)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListRowFormat),
-					executor, backup.Name, DescribeBytes(backup.SizeBytes));
-			}
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListHeaderFormat),
+			executor, WorldBackupService.Root);
+		foreach (var backup in existing)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListRowFormat),
+				executor, backup.Name, DescribeBytes(backup.SizeBytes));
+		}
 
+		return new None();
+	}
+
+	/// <summary>Writes a backup for <c>@backup</c> or <c>@dump</c>, with the dump messages and events.</summary>
+	private async ValueTask<Option<CallState>> BackupNowAsync(AnySharpObject executor)
+	{
+		if (!WorldBackupService.IsSupported)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
+				executor, WorldBackupService.UnavailableReason);
 			return new None();
 		}
 
@@ -157,7 +160,7 @@ public partial class Commands
 		// wedged command.
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
 
-		return await WorldBackupService.CreateAsync() switch
+		return await BackupRunner.RunAsync(executor.Object().DBRef) switch
 		{
 			WorldBackup written => await BackupWrittenAsync(executor, written),
 			Error<string> failure => await BackupFailedAsync(executor, failure.Value),
@@ -167,8 +170,6 @@ public partial class Commands
 	/// <summary>Reports a finished <c>@backup</c> copy and returns its name.</summary>
 	private async ValueTask<Option<CallState>> BackupWrittenAsync(AnySharpObject executor, WorldBackup written)
 	{
-		await EventService.TriggerEventAsync(SharpEvents.BackupComplete, executor.Object().DBRef, written.Name,
-			written.SizeBytes.ToString());
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
 			executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
 		return new CallState(written.Name);
@@ -177,7 +178,6 @@ public partial class Commands
 	/// <summary>Reports why <c>@backup</c> wrote no copy.</summary>
 	private async ValueTask<Option<CallState>> BackupFailedAsync(AnySharpObject executor, string reason)
 	{
-		await EventService.TriggerEventAsync(SharpEvents.BackupError, executor.Object().DBRef, reason);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
 			reason);
 		return new None();
@@ -192,12 +192,35 @@ public partial class Commands
 		_ => $"{bytes} B"
 	};
 
+	/// <summary>
+	/// PennMUSH's consistency check, for a world LMDB keeps consistent as it writes: <c>@dbck</c> reads the newest
+	/// backup through instead, so a damaged copy is found before it is needed, and raises <c>DB`DBCK</c> when it
+	/// passes.
+	/// </summary>
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH), executor);
-		return CallState.Empty;
+		return await WorldBackupService.CheckLatestAsync() switch
+		{
+			WorldBackupCheck check => await BackupCheckedAsync(executor, check),
+			Error<string> failure => await BackupCheckFailedAsync(executor, failure.Value)
+		};
+	}
+
+	private async ValueTask<Option<CallState>> BackupCheckedAsync(AnySharpObject executor, WorldBackupCheck check)
+	{
+		await EventService.TriggerEventAsync(SharpEvents.DbDbck, executor.Object().DBRef);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCheckedFormat), executor,
+			check.Backup.Name, check.Tables, check.Entries);
+		return new CallState(check.Backup.Name);
+	}
+
+	private async ValueTask<Option<CallState>> BackupCheckFailedAsync(AnySharpObject executor, string reason)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCheckFailedFormat), executor,
+			reason);
+		return new None();
 	}
 
 	/// <remarks>

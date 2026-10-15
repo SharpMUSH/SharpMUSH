@@ -29,7 +29,7 @@ public partial class ScheduledTaskManagementService(
 	/// Parses a PennMUSH time interval string like "1h", "10m1s", "5d" into a TimeSpan.
 	/// Returns TimeSpan.Zero if the string is "0" or invalid.
 	/// </summary>
-	internal static TimeSpan ParseTimeInterval(string interval)
+	private static TimeSpan ParseTimeInterval(string interval)
 	{
 		if (string.IsNullOrWhiteSpace(interval) || interval == "0")
 		{

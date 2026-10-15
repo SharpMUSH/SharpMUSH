@@ -33,7 +33,6 @@ public static class SharpEvents
 	public const string HttpBlocked = "HTTP`BLOCKED";
 	public const string HttpCommand = "HTTP`COMMAND";
 
-	// PennMUSH's events SharpMUSH has nothing of its own to raise from, raised only while compatibility_events is on.
 	public const string Dump5Min = "DUMP`5MIN";
 	public const string Dump1Min = "DUMP`1MIN";
 	public const string DumpComplete = "DUMP`COMPLETE";

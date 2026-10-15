@@ -84,7 +84,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IWorldBackupService WorldBackupService { get; }
 
-	private IDumpService DumpService { get; }
+	private IBackupRunner BackupRunner { get; }
 
 	private IServerRestart ServerRestart { get; }
 
@@ -158,7 +158,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
-		IDumpService dumpService,
+		IBackupRunner backupRunner,
 		IServerRestart serverRestart,
 		Lazy<IPluginAdministration> pluginAdministration,
 		IStorageCapacityService storageCapacity,
@@ -213,7 +213,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
-		DumpService = dumpService;
+		BackupRunner = backupRunner;
 		ServerRestart = serverRestart;
 		PluginAdministration = pluginAdministration;
 		StorageCapacity = storageCapacity;
