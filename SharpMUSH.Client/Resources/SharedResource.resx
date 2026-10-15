@@ -3260,6 +3260,9 @@
   <data name="WidQuickstartIntro" xml:space="preserve">
     <value>Get started by reading the wiki, browsing characters, or jumping into a scene.</value>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Get started by reading the wiki or browsing characters.</value>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Read the Wiki</value>
   </data>
