@@ -211,6 +211,47 @@ public class LayoutFunctionTests
 			.IsEqualTo(Lines("Mail", "+> Inbox", "*> Sent"));
 	}
 
+	/// <summary>A list form draws what its variadic form draws given the same items, in a terminal and in the portal.</summary>
+	[Test]
+	[Arguments("lflex({{\"sep\":\" | \",\"width\":40}},iter(Strength Agility,item(##,12),,^),^)", "flex({{\"sep\":\" | \",\"width\":40}},item(Strength,12),item(Agility,12))")]
+	[Arguments("ltree({{\"width\":30}},iter(Public Staff,lnode(##,switch(##,Public,+chat +ooc,+admin)),,^),^)", "tree({{\"width\":30}},node(Public,+chat,+ooc),node(Staff,+admin))")]
+	[Arguments("lnode(Mail,Inbox^Sent,^)", "node(Mail,Inbox,Sent)")]
+	[Arguments("ldatatable({{\"width\":30}},Name|>Idle,Mannaz|0s Raya|5m)", "datatable({{\"width\":30}},Name|>Idle,Mannaz|0s,Raya|5m)")]
+	[Arguments("ldatatable({{\"width\":30,\"delim\":\";\"}},Name;Doing,Raya;In the garden%rMannaz;Hooooo?,%r)", "datatable({{\"width\":30,\"delim\":\";\"}},Name;Doing,Raya;In the garden,Mannaz;Hooooo?)")]
+	public async Task AListForm_DrawsWhatItsVariadicFormDraws(string listForm, string variadic)
+	{
+		var fromList = await Eval(listForm);
+		var fromArguments = await Eval(variadic);
+
+		await Assert.That(fromList.ToPlainText()).IsEqualTo(fromArguments.ToPlainText());
+		await Assert.That(fromList.Render(MarkupFormat.Html)).IsEqualTo(fromArguments.Render(MarkupFormat.Html));
+	}
+
+	/// <summary>An empty list draws nothing, a node alone or a table's headings alone, once the options are read.</summary>
+	[Test]
+	public async Task AListForm_GivenAnEmptyList_DrawsWhatItHas()
+	{
+		await Assert.That((await Eval("lflex({{\"width\":20}},)")).ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That((await Eval("ltree(,%b)")).ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That((await Eval("lnode(Mail,)")).ToPlainText()).IsEqualTo((await Eval("node(Mail)")).ToPlainText());
+		await Assert.That(TrimLines(await Eval("ldatatable({{\"width\":20}},Name|Idle,)"))).IsEqualTo(TrimLines(await Eval("datatable({{\"width\":20}},Name|Idle)")));
+		await Assert.That((await Eval("lflex({{\"width\":0}},)")).ToPlainText()).IsEqualTo(ErrorMessages.Returns.ArgRange);
+		await Assert.That((await Eval("ltree({{\"guide\":\"nope\"}},a b)")).ToPlainText()).IsEqualTo("#-1 UNKNOWN GUIDE STYLE");
+	}
+
+	/// <summary>A list holding only a sound is not empty: the sound reaches the client as it does from the variadic form.</summary>
+	[Test]
+	[Arguments("lflex(,sound(door.wav))", "flex(,sound(door.wav))")]
+	[Arguments("ltree(,sound(door.wav))", "tree(,sound(door.wav))")]
+	[Arguments("ldatatable(,Sound,sound(door.wav))", "datatable(,Sound,sound(door.wav))")]
+	public async Task AListForm_KeepsAListOfOnlyASound(string listForm, string variadic)
+	{
+		var fromList = (await Eval(listForm)).Render(MarkupFormat.Mxp);
+
+		await Assert.That(fromList).Contains("<SOUND door.wav>");
+		await Assert.That(fromList).IsEqualTo((await Eval(variadic)).Render(MarkupFormat.Mxp));
+	}
+
 	[Test]
 	public async Task Gradient_ColoursEachCharacterAlongTheWay_SkippingSpaces()
 	{

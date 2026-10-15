@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 /// <summary>
 /// The smaller layout pieces: <c>gauge()</c>, <c>bullets()</c>, <c>grid()</c>, <c>datatable()</c>,
-/// <c>datacolumns()</c>, <c>badge()</c>, <c>notice()</c> and <c>gradient()</c>. Like <c>box()</c>, each returns the text a
+/// <c>ldatatable()</c>, <c>datacolumns()</c>, <c>badge()</c>, <c>notice()</c> and <c>gradient()</c>. Like <c>box()</c>, each returns the text a
 /// terminal shows with the layout riding on it.
 /// </summary>
 public partial class Functions
@@ -150,6 +150,20 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		return ValueTask.FromResult(BuildDataTable(parser, Arg(args, 0), delimiter =>
 			(MushText.SplitList(delimiter, Arg(args, 1)), [.. Rest(args, 2).Select(row => MushText.SplitList(delimiter, row))])));
+	}
+
+	/// <summary>
+	/// <c>ldatatable(&lt;options&gt;, &lt;headings&gt;, &lt;rows&gt;[, &lt;delimiter&gt;])</c> — <c>datatable()</c>
+	/// with its rows given as one list, split on the delimiter (a space when none is given), so one
+	/// <c>iter()</c> can make a row for each record. Each row's cells are split by <c>|</c> as before.
+	/// </summary>
+	[SharpFunction(Name = "ldatatable", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["options", "headings", "rows", "delimiter"])]
+	public ValueTask<CallState> ListDataTable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var rows = ListItems(Arg(args, 2), Arg(args, 3));
+		return ValueTask.FromResult(BuildDataTable(parser, Arg(args, 0), delimiter =>
+			(MushText.SplitList(delimiter, Arg(args, 1)), [.. rows.Select(row => MushText.SplitList(delimiter, row))])));
 	}
 
 	/// <summary>
@@ -337,9 +351,12 @@ public partial class Functions
 	private static LayoutMarkup? LayoutOf(MString text) =>
 		text.Runs.IsDefaultOrEmpty ? null : text.Runs[0].Markups.OfType<LayoutMarkup>().FirstOrDefault();
 
-	/// <summary>A list's items split on its delimiter (a space when none is given); none for an empty list.</summary>
+	/// <summary>
+	/// A list's items split on its delimiter (a space when none is given); none for an empty list. A list
+	/// of only a point such as <c>sound()</c> is not empty: its carrier is in <c>Text</c>, not in the plain text.
+	/// </summary>
 	private static MString[] ListItems(MString list, MString delimiter) =>
-		list.ToPlainText().Trim().Length == 0
+		string.IsNullOrWhiteSpace(list.Text)
 			? []
 			: MushText.SplitList(delimiter.Length == 0 ? MarkupText.Space : delimiter, list);
 
