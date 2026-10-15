@@ -316,6 +316,9 @@ public class RpFinderIntegrationTests
 			await InstallAsync();
 			var ann = await Player("WhAnn");
 			var bo = await Player("WhBo");
+			// A short room name keeps Location to one line, so only the Status cell wraps and Unwrapped reads it whole.
+			var annRoom = await God($"think loc(#{ann.DbRef.Number})");
+			await God($"@name {annRoom}=WhR");
 
 			await Assert.That(await As(bo, "+who")).DoesNotContain("Status").Because("nobody has a status yet");
 			var line = TestIsolationHelpers.GenerateUniqueName("WhLine");
