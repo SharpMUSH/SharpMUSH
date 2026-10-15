@@ -107,6 +107,8 @@ public static class BundledPackages
 		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: it builds on scene and time, which a game chooses first.
+		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

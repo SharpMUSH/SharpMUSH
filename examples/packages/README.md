@@ -39,6 +39,7 @@ which games can add as a remote in the admin panel.
 | [`finger/`](finger/) | Character profiles: `+finger` and `+oocfinger` drawn with `lfields()` from a field list kept one attribute per field (``FIELD`<view>`<order>`<KEY>``), values in each player's ``PROFILE`<KEY>`` read with `get()` and hidden per field with the `visual` attribute flag, and fields the game works out from a ``SHOW`<KEY>`` beside them |
 | [`time/`](time/) | Time zones and an IC clock: `+time` shows the game's time and the player's own, `+time 8pm Pacific` converts a time (with a Discord timestamp), `+timezone` keeps the player's zone in `TZ` as PennMUSH does, and a Clock object holds the IC calendar settings and the functions other packages read the time through |
 | [`discord/`](discord/) | The game's side of the Discord plugin: declares the `discord.admin` permission and defines the `discord` feed kind, so every line sent on `discord/<channel id>` is posted in that linked Discord channel |
+| [`scene-availability/`](scene-availability/) | When characters are free: `+avail/busy` and `+avail/free` keep dates, ranges and repeating patterns (weekly, every 2 weeks, the 2nd Tuesday, until a date, with dates skipped) in the player's own zone, `+avail/find` lists the times a group is all free, and a ``FILTER`CARD`` on the Scene Logger shows who of a scheduled scene's cast is free at its time (requires scene and time) |
 
 ## The manifest: `package.yaml`
 

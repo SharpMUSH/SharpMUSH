@@ -142,3 +142,8 @@ packages:
     package: discord
     version: 1.0.0
     description: The discord feed kind and the discord.admin permission, for the Discord plugin's linked channels (@discord/link)
+  - path: scene-availability/
+    name: Scene Availability
+    package: scene-availability
+    version: 1.0.0
+    description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group or a scene's cast are all free
