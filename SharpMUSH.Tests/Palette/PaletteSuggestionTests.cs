@@ -120,9 +120,15 @@ public class PaletteSuggestionTests
 	}
 
 	[Test]
+	public async ValueTask AnInsertLine_KeepsItsTrailingSpace()
+		=> await Assert.That(PaletteEntry.Parse("mail", """{"label":"Write mail","line":" @mail ","action":"insert"}""")
+			.Expect<PaletteEntry>().Line).IsEqualTo("@mail ");
+
+	[Test]
 	[Arguments("not json", "not a JSON object")]
 	[Arguments("""{"line":"+who"}""", "no label")]
 	[Arguments("""{"label":"Who"}""", "no line")]
+	[Arguments("""{"label":"Who","line":"   "}""", "no line")]
 	[Arguments("""{"label":"Who","line":"+who","action":"explode"}""", "action is neither run nor insert")]
 	public async ValueTask ABadEntry_SaysWhy(string value, string reason)
 		=> await Assert.That(PaletteEntry.Parse("X", value).Expect<Error<string>>().Value).IsEqualTo(reason);

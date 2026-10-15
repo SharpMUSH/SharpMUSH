@@ -137,6 +137,14 @@ public class PaletteRankerTests
 	}
 
 	[Test]
+	public async Task Typing_OffersAnEntrysHelpTopic()
+	{
+		var roll = Entry("ROLL", "Roll dice", "@roll <formula>") with { Help = "@roll" };
+
+		await Assert.That(PaletteRanker.Search(Snapshot([roll]), "roll").Select(row => row.Href)).Contains("/help/%40roll");
+	}
+
+	[Test]
 	public async Task Typing_PutsAPinnedRow_AboveAnEqualMatch()
 	{
 		var first = Entry("A", "Scene list", "+scene/list", system: "a");

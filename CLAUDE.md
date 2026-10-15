@@ -340,6 +340,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - `guided-input-ordering.md` — per-handle publication order; guided-input prompts and lifecycle notices display in commit order
 - `messaging-retention.md` — bus vs replay retention, stream byte budgets, handler retry/terminate semantics, bounded replay reads
 - `softcode-grammar.md` — the softcode parser grammar is generated: edit `SharpMUSH.Parser.Generated/generate-parser.py` and run it, never `SharpMUSHParser.g4` or `SharpMUSHParser.Contexts.cs` by hand
+- `command-palette.md` — palette entries (``PALETTE`<NAME>`` attributes), the per-character context stack (`@context`, automatic pushes from typed `$`-commands), `context()`, pins, and how the portal orders rows
 
 `docs/todo/area-NN-*.md` files track implementation status for each portal area.
 

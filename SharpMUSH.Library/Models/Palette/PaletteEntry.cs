@@ -65,7 +65,8 @@ public sealed record PaletteEntry(
 			var root = document.RootElement;
 
 			if (Text(root, "label") is not { Length: > 0 } label) return new Error<string>("no label");
-			if (Text(root, "line") is not { Length: > 0 } line) return new Error<string>("no line");
+			// The line keeps a trailing space, which an insert leaves for the player to type after.
+			if (Text(root, "line", trimEnd: false) is not { } line || line.Trim().Length == 0) return new Error<string>("no line");
 			if (label.Length > MaxLabelLength) return new Error<string>($"label longer than {MaxLabelLength}");
 			if (line.Length > MaxLineLength) return new Error<string>($"line longer than {MaxLineLength}");
 			// A client sends the line as it stands, and a line break would send a second line.
@@ -100,9 +101,9 @@ public sealed record PaletteEntry(
 		}
 	}
 
-	private static string? Text(JsonElement root, string key)
+	private static string? Text(JsonElement root, string key, bool trimEnd = true)
 		=> root.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String
-			? value.GetString()?.Trim()
+			? trimEnd ? value.GetString()?.Trim() : value.GetString()?.TrimStart()
 			: null;
 
 	private static string? Short(JsonElement root, string key)

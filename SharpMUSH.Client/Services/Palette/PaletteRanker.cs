@@ -91,7 +91,8 @@ public static class PaletteRanker
 			.. entries.Select(row => raised.GetValueOrDefault(row.Id) ?? row),
 			.. snapshot.PageRows,
 			.. snapshot.Destinations,
-			.. BuiltinRows(snapshot).Where(row => !declared.Contains(row.Key))
+			.. BuiltinRows(snapshot).Where(row => !declared.Contains(row.Key)),
+			.. entries.Select(row => row.Entry?.Help).OfType<string>().Select(topic => HelpRow(snapshot, topic))
 		];
 
 		return [.. candidates
@@ -192,16 +193,22 @@ public static class PaletteRanker
 
 	private static IEnumerable<PaletteRow> BuiltinRows(PaletteSnapshot snapshot)
 	{
-		var words = snapshot.Words ?? new();
 		foreach (var name in snapshot.Server?.Builtins ?? [])
 		{
 			var command = name.ToLowerInvariant();
 			yield return new PaletteRow($"cmd:{command}", PaletteLines.Key(command), PaletteRowKind.Builtin, command,
 				MudBlazor.Icons.Material.Outlined.Terminal, Line: command + " ", Order: PaletteRow.BuiltinOrder);
-			yield return new PaletteRow($"help:{command}", $"help:{command}", PaletteRowKind.Help, string.Format(words.HelpOnFormat, command),
-				MudBlazor.Icons.Material.Outlined.HelpOutline, Href: $"/help/{Uri.EscapeDataString(command)}",
-				Order: PaletteRow.BuiltinOrder);
+			yield return HelpRow(snapshot, command);
 		}
+	}
+
+	/// <summary>A row that opens the help topic <paramref name="topic"/>.</summary>
+	private static PaletteRow HelpRow(PaletteSnapshot snapshot, string topic)
+	{
+		var name = topic.ToLowerInvariant();
+		return new PaletteRow($"help:{name}", $"help:{name}", PaletteRowKind.Help,
+			string.Format((snapshot.Words ?? new()).HelpOnFormat, name), MudBlazor.Icons.Material.Outlined.HelpOutline,
+			Href: $"/help/{Uri.EscapeDataString(name)}", Order: PaletteRow.BuiltinOrder);
 	}
 
 	/// <summary>The row a pin names, when it is within reach now.</summary>
