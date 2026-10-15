@@ -6,6 +6,7 @@ using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Implementation;
 using SharpMUSH.LanguageServer.Handlers;
 using SharpMUSH.LanguageServer.Services;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -13,7 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 // MarkupRegistry.Default, which throws until something sets it.
 if (!MarkupRegistry.IsConfigured)
 {
-	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithListSeparators();
 }
 
 var logPath = Path.Combine(

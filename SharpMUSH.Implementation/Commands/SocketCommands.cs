@@ -620,6 +620,7 @@ public partial class Commands
 		var colorEnabled = await player.HasFlag("COLOR");
 		var xterm256Enabled = await player.HasFlag("XTERM256");
 		var truecolorEnabled = await player.HasFlag("TRUECOLOR");
+		var showSeparators = await player.HasFlag("SHOW_SEPARATORS");
 
 		if (MessageBus != null)
 		{
@@ -628,7 +629,8 @@ public partial class Commands
 				ansiEnabled,
 				colorEnabled,
 				xterm256Enabled,
-				truecolorEnabled
+				truecolorEnabled,
+				showSeparators
 			));
 
 			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}, TRUECOLOR={Truecolor}",

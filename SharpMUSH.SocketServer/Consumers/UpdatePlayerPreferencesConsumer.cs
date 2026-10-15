@@ -36,7 +36,8 @@ public class UpdatePlayerPreferencesConsumer(
 				Xterm256Enabled: message.Xterm256Enabled,
 				TruecolorEnabled: message.TruecolorEnabled,
 				Locale: existingPreferences?.Locale ?? "en",
-				Theme: existingPreferences?.Theme
+				Theme: existingPreferences?.Theme,
+				ShowSeparators: message.ShowSeparators
 			);
 
 			var success = connectionService.UpdatePreferences(message.Handle, updatedPreferences);
