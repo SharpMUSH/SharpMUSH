@@ -195,6 +195,17 @@ public class PackageManifestWriterTests
 	}
 
 	[Test]
+	public async Task CategoryRoundTrips_WithTheFormatQuoted()
+	{
+		var original = Maximal() with { Format = new PackageFormatVersion(1, 10), Category = "Staff" };
+
+		await Assert.That(PackageManifestWriter.Write(original)).Contains("format: \"1.10\"");
+		var again = RoundTrip(original);
+		await Assert.That(again.Format).IsEqualTo(new PackageFormatVersion(1, 10));
+		await Assert.That(again.Category).IsEqualTo("Staff");
+	}
+
+	[Test]
 	public async Task PluginsRoundTrip()
 	{
 		var again = RoundTrip(Maximal() with { Plugins = ["scene", "discord"] });
