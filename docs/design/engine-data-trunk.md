@@ -105,9 +105,11 @@ and removes the entry it just stored if the version moved. The comparison is aft
 not before it, so the removal happens after the store in every interleaving.
 
 An answer kept outside the cache is checked against the same versions. `ObjectRelationMemo` keeps
-each object's grants, owner and location (the last two as the object id they name, resolved
-through the node cache on each read) until the object's version or the `grants` tag's version
-moves, and `ExecutorDebugFlags` keeps DEBUG the same way. Such a reader can see the version move
+each object's grants, flags, owner and location until the object's version moves, or for grants
+the `grants` tag's version and for flags the `flag-list` tag's. Owner and location are kept as the
+object id they name and the object it resolved to, which stands while that object's own version
+has not moved since it was resolved; otherwise the id is resolved through the node cache again.
+`ExecutorDebugFlags` keeps DEBUG the same way. Such a reader can see the version move
 and then an entry that is about to be removed, so every removal moves the version on both sides of
 it, and a write that removes a tag without the Mediator does the same (`AccountClaimsInvalidator`).
 
