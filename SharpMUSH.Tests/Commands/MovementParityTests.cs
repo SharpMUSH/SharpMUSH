@@ -149,6 +149,32 @@ public class MovementParityTests
 		await Assert.That(arrival.Any(m => m == $"{mover.Name} has arrived.")).IsTrue();
 	}
 
+	/// <summary>
+	/// <c>notify_except2</c> leaves the mover out of its own OENTER. The move replaces the mover's
+	/// cached node, so the destination's contents hold a different instance from the one the move
+	/// started with, and the exclusion has to match on the object, not the instance.
+	/// </summary>
+	[Test]
+	public async ValueTask TheMoverDoesNotHearItsOwnArrival()
+	{
+		var (mover, _, to, _) = await Corridor("SelfArrive");
+		var greeter = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SelfArriveGreet");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {greeter.DbRef}={to}"));
+
+		var greeterBefore = WebAppFactoryArg.Notifications.CountFor(greeter.DbRef);
+
+		var heard = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out")));
+
+		var greeterHeard = WebAppFactoryArg.Notifications.For(greeter.DbRef).Skip(greeterBefore).ToList();
+
+		await Assert.That(heard.Any(m => m.Contains("has arrived."))).IsFalse();
+
+		// The control: the arrival was sent, to the room, just not to the mover.
+		await Assert.That(greeterHeard.Any(m => m == $"{mover.Name} has arrived.")).IsTrue();
+	}
+
 	[Test]
 	public async ValueTask ADarkWizardArrivesSilently()
 	{

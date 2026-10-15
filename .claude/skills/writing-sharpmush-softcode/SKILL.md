@@ -123,13 +123,13 @@ Never build nested `@switch` ladders for validation. Guard with `@assert`/`@brea
 Never pack fields into one delimited value (`name|date|dues`). One attribute tree branch per record, one leaf per fact, `no_command` on the root (restrictive attribute flags inherit down; granting ones like `visual` don't):
 
 ```
-&DATA obj=Guild records, one branch per member objid.
+&DATA obj=Guild records, one branch per member: objid #30:171943 is DATA`30`171943.
 @set obj/DATA=no_command
-&DATA`#30:171943`NAME obj=Ivory Syndicate
-&DATA`#30:171943`DUES obj=150
+&DATA`30`171943`NAME obj=Ivory Syndicate
+&DATA`30`171943`DUES obj=150
 ```
 
-Read directly: ``get(obj/DATA`#30:171943`DUES)``. Key by **objid**, not dbref or name. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
+Read directly: ``get(obj/DATA`30`171943`DUES)``. Key by **objid**, not dbref or name, but never by the objid as written: `:` is not an attribute name character, so `&DATA`#30:171943`NAME` is refused. ``edit(after(objid(<obj>),#),:,`)`` makes the key. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
 
 ## Settings: `` DATA`CONFIG `` and `+config`
 

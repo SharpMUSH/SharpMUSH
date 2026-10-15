@@ -223,10 +223,19 @@ public class GameFeatureService(
 		=> [.. Catalogue.Where(entry => entry.Value.Plugins?.Contains(pluginId, StringComparer.OrdinalIgnoreCase) ?? false)
 			.Select(entry => entry.Key)];
 
-	/// <summary>Whether every plugin bundled package <paramref name="packageId"/> names in <c>plugins:</c> is loaded.</summary>
-	private bool PluginsLoaded(string packageId)
-		=> Catalogue.GetValueOrDefault(packageId).Plugins is not { } required
-			|| required.All(plugin => plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)));
+	/// <summary>
+	/// Whether every plugin bundled package <paramref name="packageId"/> names in <c>plugins:</c> is loaded, and every
+	/// plugin its bundled dependencies name: a portal page over a package that needs a plugin needs that plugin too.
+	/// </summary>
+	private bool PluginsLoaded(string packageId, HashSet<string>? seen = null)
+	{
+		var entry = Catalogue.GetValueOrDefault(packageId);
+		seen ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		return seen.Add(packageId)
+			&& (entry.Plugins is not { } required
+				|| required.All(plugin => plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase))))
+			&& (entry.DependsOn ?? []).All(dependency => seen.Contains(dependency) || PluginsLoaded(dependency, seen));
+	}
 
 	/// <summary>Each bundled package's description, bundled dependencies and plugins, read from its embedded manifest once.</summary>
 	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins)> Catalogue
