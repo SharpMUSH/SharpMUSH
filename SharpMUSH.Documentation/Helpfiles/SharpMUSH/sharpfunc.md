@@ -151,18 +151,19 @@
 
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
-| [CHAIN()]       | [ELEMENTS()]    | [EVERY()]       | [EXTRACT()]     |
-| [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     | [FIRST()]       |
-| [FOLD()]        | [GRAB()]        | [GRABALL()]     | [INDEX()]       |
-| [ITEMIZE()]     | [ITEMS()]       | [ITER()]        | [JITER()]       |
-| [LAST()]        | [LDELETE()]     | [LINSERT()]     | [LISTSET()]     |
-| [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         | [MATCH()]       |
-| [MATCHALL()]    | [MEMBER()]      | [MIX()]         | [MUNGE()]       |
-| [NAMEGRAB()]    | [NAMEGRABALL()] | [RANDWORD()]    | [REMOVE()]      |
-| [REST()]        | [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    |
-| [SETSYMDIFF()]  | [SETUNION()]    | [SHUFFLE()]     | [SOME()]        |
-| [SORT()]        | [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      |
-| [STEP()]        | [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      |
+| [CHAIN()]       | [CITER()]       | [ELEMENTS()]    | [EVERY()]       |
+| [EXTRACT()]     | [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     |
+| [FIRST()]       | [FOLD()]        | [GRAB()]        | [GRABALL()]     |
+| [INDEX()]       | [INF()]         | [ITEMIZE()]     | [ITEMS()]       |
+| [ITER()]        | [JITER()]       | [LAST()]        | [LDELETE()]     |
+| [LINSERT()]     | [LISTSET()]     | [LOCKFILTER()]  | [LREPLACE()]    |
+| [MAP()]         | [MATCH()]       | [MATCHALL()]    | [MEMBER()]      |
+| [MIX()]         | [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] |
+| [NSITER()]      | [RANDWORD()]    | [REMOVE()]      | [REST()]        |
+| [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  |
+| [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
+| [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
+| [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      | [WHILE()]       |
 | [WORDPOS()]     | [WORDS()]       |                 |                 |
 
 ::: seealso
