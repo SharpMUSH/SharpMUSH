@@ -142,6 +142,7 @@ public sealed class PushInterop(IJSRuntime js, ConnectionStateService connection
 		}
 		catch (JSException)
 		{
+			// push.js is missing or failed: a notification click opens a new tab instead of focusing this one.
 		}
 		catch (InvalidOperationException)
 		{

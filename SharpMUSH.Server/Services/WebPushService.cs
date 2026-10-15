@@ -296,6 +296,7 @@ public sealed class WebPushService(
 		}
 		catch (OperationCanceledException)
 		{
+			// The server is stopping; a retry still waiting is dropped with the rest of the queue.
 		}
 	}
 
