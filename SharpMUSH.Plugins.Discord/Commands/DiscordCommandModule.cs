@@ -22,7 +22,8 @@ namespace SharpMUSH.Plugins.Discord.Commands;
 /// <summary>
 /// <c>@discord</c>: the bot's connection and the linked Discord channels. With no switch it shows both;
 /// <c>/link &lt;channel id&gt;</c> links a channel to the feed <c>discord/&lt;channel id&gt;</c>, <c>/unlink</c> drops a link
-/// and deletes its webhook, and <c>/resume</c> starts a stopped link again. Every switch needs <c>discord.admin</c>.
+/// and deletes its webhook, <c>/resume</c> starts a stopped link again, and <c>/connect</c> logs the bot in again after
+/// its token or intents change. Every switch needs <c>discord.admin</c>.
 /// Linking and unlinking return the channel id at once and tell the admin how it went when Discord answers.
 /// </summary>
 public static class DiscordCommandModule
@@ -35,7 +36,7 @@ public static class DiscordCommandModule
 	/// <summary>How long a link or unlink waits on Discord before the admin is told it did not answer.</summary>
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
-	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "LIST"],
+	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST"],
 		Behavior = CB.Default | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = ["channel"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -51,10 +52,18 @@ public static class DiscordCommandModule
 		var switches = parser.CurrentState.Switches.ToArray();
 		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
 		var relay = services.GetRequiredService<DiscordRelay>();
+		var gateway = services.GetRequiredService<DiscordGatewayService>();
+		if (switches.Contains("CONNECT"))
+		{
+			gateway.Reconnect();
+			await notify.Notify(executor, Notice("Connecting to Discord. @discord shows how it went.", NoticeKind.Ok));
+			return CallState.Empty;
+		}
+
 		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME");
 		if (action is null)
 		{
-			await notify.Notify(executor, Overview(services.GetRequiredService<DiscordGatewayService>().State, relay.Links()));
+			await notify.Notify(executor, Overview(gateway.State, relay.Links()));
 			return CallState.Empty;
 		}
 
@@ -169,9 +178,10 @@ public static class DiscordCommandModule
 	{
 		DiscordGatewayStatus.Connected => "connected",
 		DiscordGatewayStatus.Connecting => "connecting",
-		DiscordGatewayStatus.NoToken => "no bot token; store it with @secret discord.token=<token>",
-		DiscordGatewayStatus.BadToken => "Discord refused the bot token",
-		DiscordGatewayStatus.IntentsOff => $"turn on {string.Join(" and ", gateway.MissingIntents ?? [])} in the developer portal",
+		DiscordGatewayStatus.NoToken => "no bot token; set it with @secret discord.token=<token>, then @discord/connect",
+		DiscordGatewayStatus.BadToken => "Discord refused the bot token; set a new one, then @discord/connect",
+		DiscordGatewayStatus.IntentsOff =>
+			$"turn on {string.Join(" and ", gateway.MissingIntents ?? [])} in the developer portal, then @discord/connect",
 		_ => gateway.Detail is { } detail ? $"cannot reach Discord: {detail}" : "cannot reach Discord",
 	};
 
