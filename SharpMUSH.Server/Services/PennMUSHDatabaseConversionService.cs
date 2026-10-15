@@ -8,8 +8,8 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>
 /// Background service that imports a database on startup if configured: <c>PENNMUSH_DATABASE_PATH</c> names a
-/// PennMUSH outdb or a RhostMUSH flatfile, told apart by its first lines unless
-/// <c>PENNMUSH_DATABASE_FORMAT</c> (<c>pennmush</c> or <c>rhostmush</c>) says which.
+/// PennMUSH outdb, a RhostMUSH flatfile or a TinyMUX flatfile, told apart by its first lines unless
+/// <c>PENNMUSH_DATABASE_FORMAT</c> (<c>pennmush</c>, <c>rhostmush</c> or <c>tinymux</c>) says which.
 /// </summary>
 public class PennMUSHDatabaseConversionService : BackgroundService
 {
@@ -56,7 +56,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		if (!Enum.TryParse<DatabaseImportFormat>(string.IsNullOrWhiteSpace(_databaseFormat) ? nameof(DatabaseImportFormat.Auto) : _databaseFormat,
 				ignoreCase: true, out var format) || !Enum.IsDefined(format))
 		{
-			_logger.LogError("PENNMUSH_DATABASE_FORMAT is {Format}; it takes auto, pennmush or rhostmush", _databaseFormat);
+			_logger.LogError("PENNMUSH_DATABASE_FORMAT is {Format}; it takes auto, pennmush, rhostmush or tinymux", _databaseFormat);
 			return;
 		}
 

@@ -65,7 +65,8 @@ public interface IPennMUSHDatabaseConverter
 
 	/// <summary>
 	/// Convert a database and the files that came with it, with progress reporting: a PennMUSH outdb with its
-	/// maildb and chatdb, or a RhostMUSH flatfile with its mail dumps, in the format
+	/// maildb and chatdb, a RhostMUSH flatfile with its mail dumps, or a TinyMUX flatfile with its mail.db and
+	/// comsys.db, in the format
 	/// <see cref="DatabaseImportFiles.Format"/> names or, left on <see cref="DatabaseImportFormat.Auto"/>, the one
 	/// the database's first lines show. The path overloads above are this with <see cref="DatabaseImportFormat.Auto"/>.
 	/// </summary>

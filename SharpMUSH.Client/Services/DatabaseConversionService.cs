@@ -20,7 +20,7 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 	/// <summary>
 	/// Uploads the object database and, when given, the maildb (sent as <c>mailFile</c>), the chatdb
 	/// (sent as <c>chatFile</c>) and RhostMUSH's mail folder dump (sent as <c>mailFolderFile</c>), with the
-	/// database's <paramref name="format"/> (<c>auto</c>, <c>pennmush</c> or <c>rhostmush</c>). Answers the id
+	/// database's <paramref name="format"/> (<c>auto</c>, <c>pennmush</c>, <c>rhostmush</c> or <c>tinymux</c>). Answers the id
 	/// of the conversion session it started.
 	/// </summary>
 	public async Task<ApiResult<string>> UploadDatabaseAsync(Stream fileStream, string fileName, Stream? mailStream = null,

@@ -26,6 +26,23 @@ public static partial class RhostDatabaseTranslator
 
 	private const string ServerName = "RhostMUSH";
 
+	/// <summary>
+	/// The options RhostMUSH softcode needs. It writes literal parentheses unescaped (<c>paren_groups</c>),
+	/// reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c> and <c>list()</c> as
+	/// RhostMUSH defines them, and lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>).
+	/// </summary>
+	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
+	{
+		["paren_groups"] = true,
+		["tiny_trim_fun"] = true,
+		["rhost_edit"] = true,
+		["rhost_lattr"] = true,
+		["rhost_printf"] = true,
+		["rhost_map_args"] = true,
+		["sidefx_flag"] = true,
+		["mux_list"] = true
+	};
+
 	/// <summary>Reads a flatfile and, when given, the mail dumps, into the import's model.</summary>
 	public static async Task<PennMUSHDatabase> ReadAsync(string flatfilePath, string? mailPath, string? folderPath,
 		CancellationToken cancellationToken = default)
@@ -79,6 +96,7 @@ public static partial class RhostDatabaseTranslator
 		{
 			Version = $"{ServerName} flatfile +V{flatfile.Version}",
 			Dialect = DatabaseDialect.RhostMUSH,
+			SourceOptions = CompatibilityOptions(),
 			Objects = objects,
 			FlagDefinitions = definitions.Flags,
 			PowerDefinitions = definitions.Powers,

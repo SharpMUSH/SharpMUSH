@@ -33,8 +33,9 @@ public class DatabaseConversionController(
 	/// <summary>
 	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>), chatdb (<c>chatFile</c>) and
 	/// <c>mush.cnf</c> (<c>configFile</c>) optionally alongside; or a RhostMUSH flatfile, with its mail dump
-	/// (<c>mailFile</c>) and folder dump (<c>mailFolderFile</c>). <c>format</c> is <c>auto</c> (the default: told
-	/// from the file), <c>pennmush</c> or <c>rhostmush</c>.
+	/// (<c>mailFile</c>) and folder dump (<c>mailFolderFile</c>); or a TinyMUX flatfile, with its <c>mail.db</c>
+	/// (<c>mailFile</c>) and <c>comsys.db</c> (<c>chatFile</c>). <c>format</c> is <c>auto</c> (the default: told
+	/// from the file), <c>pennmush</c>, <c>rhostmush</c> or <c>tinymux</c>.
 	/// </summary>
 	/// <remarks>
 	/// The <c>mush.cnf</c> is applied once every file is in and just before the conversion starts, so the conversion
@@ -55,7 +56,7 @@ public class DatabaseConversionController(
 
 		if (!TryParseFormat(format, out var importFormat))
 		{
-			return BadRequest($"Unknown database format \"{format}\": it takes auto, pennmush or rhostmush.");
+			return BadRequest($"Unknown database format \"{format}\": it takes auto, pennmush, rhostmush or tinymux.");
 		}
 
 		if (configFile is { Length: > MaxConfigFileSize })

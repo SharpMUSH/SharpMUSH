@@ -97,7 +97,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	/// <summary>
 	/// Reads the files into the import's model, in the format asked for or the one the database's first lines
-	/// show: a PennMUSH outdb with its maildb and chatdb, or a RhostMUSH flatfile with its mail dumps.
+	/// show: a PennMUSH outdb with its maildb and chatdb, a RhostMUSH flatfile with its mail dumps, or a TinyMUX
+	/// flatfile with its <c>mail.db</c> and <c>comsys.db</c>.
 	/// </summary>
 	private async Task<PennMUSHDatabase> ReadDatabaseAsync(DatabaseImportFiles files, CancellationToken cancellationToken)
 	{
@@ -107,6 +108,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return dialect switch
 		{
 			DatabaseDialect.RhostMUSH => await ReadRhostDatabaseAsync(files, cancellationToken),
+			DatabaseDialect.TinyMUX => await ReadTinyMuxAsync(files, cancellationToken),
 			_ => await ReadPennDatabaseAsync(files.Database, files.Mail, files.Chat, cancellationToken)
 		};
 	}
@@ -233,6 +235,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Objects created", 0.25);
 
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
+			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
@@ -251,7 +254,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Channels imported", 0.97);
 
 			await ReinstallPackagesAsync(context);
-			await EnableCompatibilityAsync(pennDatabase.Dialect, context, cancellationToken);
+			await EnableSourceOptionsAsync(pennDatabase, context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
 
@@ -289,78 +292,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		return result;
-	}
-
-	/// <summary>
-	/// Turns on the compatibility options the imported softcode was written for, in the configuration of the
-	/// world being written. Written through the Mediator, like the objects, so it lands in the same world, and
-	/// signalled so a running game rereads its configuration.
-	/// </summary>
-	/// <remarks>
-	/// <para>PennMUSH softcode writes a literal parenthesis inside a function's arguments unescaped, which
-	/// SharpMUSH reads as PennMUSH does only with <c>paren_groups</c> on, and reads an @http response's status
-	/// and content type from q-registers (<c>http_qregisters</c>).</para>
-	/// <para>RhostMUSH softcode writes parentheses the same way (<c>paren_groups</c>), and reads <c>trim()</c>,
-	/// <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c> and <c>list()</c> as RhostMUSH defines them
-	/// (<c>tiny_trim_fun</c>, <c>rhost_edit</c>, <c>rhost_lattr</c>, <c>rhost_printf</c>, <c>rhost_map_args</c>,
-	/// <c>mux_list</c>), and lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>).</para>
-	/// <para>It runs after the whole world is written, so a failure here is a warning: the conversion stands,
-	/// and the options are left for the administrator to set.</para>
-	/// </remarks>
-	private async ValueTask EnableCompatibilityAsync(DatabaseDialect dialect, PennMUSHConversionContext context,
-		CancellationToken cancellationToken)
-	{
-		var warnings = context.Warnings;
-		var (names, reason) = dialect switch
-		{
-			DatabaseDialect.RhostMUSH => (
-				"paren_groups, tiny_trim_fun, rhost_edit, rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and mux_list",
-				"imported RhostMUSH softcode reads its parentheses, trim(), edit(), lattr(), printf(), map() and list() the " +
-				"RhostMUSH way, and its SIDEFX flags only count with sidefx_flag on"),
-			_ => ("paren_groups and http_qregisters",
-				"imported softcode that writes literal parentheses unescaped or reads @http's %q<status> needs them")
-		};
-
-		try
-		{
-			var options = _options.CurrentValue;
-			var compatibility = dialect switch
-			{
-				DatabaseDialect.RhostMUSH => options.Compatibility with
-				{
-					ParenGroups = true,
-					TinyTrimFun = true,
-					RhostEdit = true,
-					RhostLattr = true,
-					RhostPrintf = true,
-					RhostMapArgs = true,
-					SidefxFlag = true,
-					MuxList = true
-				},
-				_ => options.Compatibility with { ParenGroups = true, HttpQRegisters = true }
-			};
-			if (compatibility == options.Compatibility) return;
-
-			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
-				options with
-				{
-					Compatibility = compatibility,
-					Database = context.WrittenDatabaseOptions ?? options.Database
-				}), cancellationToken);
-			_configurationReload?.SignalChange();
-			_logger.LogInformation("Turned on {Options} for the imported {Dialect} softcode", names, dialect);
-			if (dialect == DatabaseDialect.RhostMUSH)
-			{
-				warnings.Add($"Turned on {names} for the imported RhostMUSH softcode. mux_list is being renamed rhost_list " +
-					"in a parallel change; after that lands, the option to look for is rhost_list.");
-			}
-		}
-		catch (Exception ex) when (ex is not OperationCanceledException)
-		{
-			_logger.LogWarning(ex, "Could not turn on {Options} for the imported {Dialect} softcode", names, dialect);
-			warnings.Add($"{names} could not be turned on ({ex.Message}); {reason}: set them to yes in the " +
-				"configuration and reload it.");
-		}
 	}
 
 	/// <summary>
@@ -2336,7 +2267,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				NoteRelocatedReferences(pennObj, sharpDbRef, relocated);
 			}
 
-			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions);
+			NotePipedOutput(pennObj, sharpDbRef, pipedOutput, piping, tinyMuxSubstitutions, pennDatabase.SharesPipingSubstitutions);
 
 			if (pennObj.Attributes.Count == 0)
 			{
@@ -2401,7 +2332,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (pipedOutput.Count > 0)
 		{
 			var more = pipedOutput.Count > pipedOutput.Shown.Count ? $" and {pipedOutput.Count - pipedOutput.Shown.Count} more" : string.Empty;
-			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which PennMUSH evaluates to > and SharpMUSH to the last command's output; " +
+			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which {pennDatabase.SourceName} evaluates to > and SharpMUSH to the last command's output; " +
 				$"softcode is not rewritten, so write > where > was meant: {string.Join(", ", pipedOutput.Shown)}{more}");
 		}
 
@@ -2452,16 +2383,22 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> (or <c>; |</c>) as a <c>;</c> before a command starting with <c>|</c>.
 	/// Here they are the last command's output and command piping. It also records each that uses
 	/// <c>%m</c> or <c>%=&lt;</c>, which PennMUSH evaluates to <c>m</c> and <c>=&lt;</c> and SharpMUSH, as
-	/// TinyMUX does, to the running command and an attribute or argument.
+	/// TinyMUX does, to the running command and an attribute or argument. A source that reads all of these as
+	/// SharpMUSH does (<paramref name="sharesPiping"/>, TinyMUX) is checked only for <c>%&gt;</c>.
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
-		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions)
+		AttributeMentions piping, AttributeMentions tinyMuxSubstitutions, bool sharesPiping)
 	{
 		foreach (var pennAttr in pennObj.Attributes)
 		{
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '>'))
 			{
 				pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
+			}
+
+			if (sharesPiping)
+			{
+				continue;
 			}
 
 			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '|') || PipesCommand(pennAttr.Value))
