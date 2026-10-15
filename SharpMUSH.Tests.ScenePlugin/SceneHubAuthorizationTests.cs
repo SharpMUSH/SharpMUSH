@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Plugins.Scene.Commands;
 using SharpMUSH.Plugins.Scene.Web;
 using System.Reflection;
 using System.Security.Claims;
@@ -101,7 +102,7 @@ public class SceneHubAuthorizationTests
 
 		await hub.JoinScene("scene-1");
 
-		await Assert.That(groups.Added).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1") });
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
 	}
 
 	[Test]
@@ -112,7 +113,7 @@ public class SceneHubAuthorizationTests
 
 		await hub.JoinScene("scene-1");
 
-		await Assert.That(groups.Added).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1") });
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
 		// The owner check must answer on its own — a membership lookup would mask a broken owner comparison.
 		await Assert.That(service.MemberLookups).IsEmpty();
 	}
@@ -125,7 +126,7 @@ public class SceneHubAuthorizationTests
 
 		await hub.JoinScene("scene-1");
 
-		await Assert.That(groups.Added).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1") });
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
 		// The storage resolves the reference against the live object, so it must be handed a parseable
 		// dbref — the canonical objid spelling, not a hash-stripped fragment.
 		await Assert.That(service.MemberLookups).Contains(SceneFixture.GodObjid);
@@ -190,8 +191,36 @@ public class SceneHubAuthorizationTests
 
 		await hub.LeaveScene("scene-1");
 
-		await Assert.That(groups.Removed).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1") });
+		await Assert.That(groups.Removed).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1"), ("conn-001", "scene:scene-1:char:7") });
 		await Assert.That(service.SceneLookups).IsEmpty();
+	}
+
+	/// <summary>A connection also joins its character's own group on the scene, where a notice for that member alone goes.</summary>
+	[Test]
+	public async Task JoinScene_AlsoJoinsTheCharactersOwnGroup()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
+
+		await hub.JoinScene("scene-1");
+
+		await Assert.That(groups.Added).IsEquivalentTo(new[] { ("conn-001", "scene:scene-1"), ("conn-001", "scene:scene-1:char:7") });
+	}
+
+	[Test]
+	public async Task GroupFor_ANotice_GoesToItsRecipientOnly()
+	{
+		var notice = SceneBroadcast.BuildMessage("scene-1", "notice", null, null) with { Recipient = "#7" };
+
+		await Assert.That(SceneHub.GroupFor(notice)).IsEqualTo("scene:scene-1:char:7");
+	}
+
+	[Test]
+	public async Task GroupFor_AnEventWithNoRecipient_GoesToTheScene()
+	{
+		var pose = SceneBroadcast.BuildMessage("scene-1", "pose", null, null);
+
+		await Assert.That(SceneHub.GroupFor(pose)).IsEqualTo("scene:scene-1");
 	}
 
 	/// <summary>Records group membership calls instead of performing them.</summary>

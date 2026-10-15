@@ -82,6 +82,34 @@ public static class SceneBroadcast
 	}
 
 	/// <summary>
+	/// Publishes a "notice" for one member of a scene to <c>game.scene.{sceneId}</c>; the bridge hands it to
+	/// that member's connections on the scene alone. Best-effort, like <see cref="PublishSceneEventAsync"/>.
+	/// </summary>
+	/// <param name="recipient">The member's dbref (<c>#12</c>).</param>
+	public static async ValueTask PublishNoticeAsync(IMUSHCodeParser parser, string sceneId, string recipient, MString text)
+	{
+		var options = parser.ServiceProvider.GetService<NatsOptions>();
+		if (options is null) return;
+
+		try
+		{
+			var message = BuildMessage(sceneId, "notice", null, null) with
+			{
+				Content = text.ToPlainText(),
+				Markup = MarkupTextSerializer.Serialize(text),
+				Recipient = recipient,
+			};
+			var nats = await GetConnectionAsync(options.Url);
+			await nats.PublishAsync(SubjectForScene(sceneId), message, serializer: NatsJsonSerializer<SceneEventMessage>.Default);
+		}
+		catch (Exception ex)
+		{
+			parser.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(typeof(SceneBroadcast))
+				.LogWarning(ex, "Scene {SceneId}: a notice was not published to the live feed", sceneId);
+		}
+	}
+
+	/// <summary>
 	/// Projects a <see cref="ScenePose"/> onto the realtime <see cref="SceneEventMessage"/>.
 	/// ActorName prefers <see cref="ScenePose.ShowAsName"/>, falling back to AuthorName.
 	/// </summary>
