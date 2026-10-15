@@ -38,12 +38,17 @@ A context is the set of facts that decide what the five tokens mean:
 | F | inside a function call, since the last brace (a brace starts over) |
 | B | inside a brace, at any depth |
 | K | inside a register, argument or capture name (`%q<...>`, `%<...>`, `$<...>`) |
-| P | with paren_groups: outside a group, inside one (its `)` closes it), or in brackets or a name inside one |
+| P | with paren_groups: inside a group (its `)` closes it) |
 | G | paren_groups is on |
 
-That is 128 combinations. Many treat the five tokens alike and have the same successors, so the
-generator merges them into 52 classes, giving 422 rules. A copy is named for its class: `Top_` or
-`Call_`, then the letters of the tokens that are text there (R `)`, S `;`, C `,`, E `=`, A `>`), then
+A bracket and a name start over: what they hold is read as a plain string, whatever is around them,
+so only the bracket's `]` or the name's `>` ends them, as PennMUSH's `process_expression` reads a
+`[` with `PT_BRACKET` alone and a name with `PT_GT` alone. `cat(a,[x,y])` is `a x,y`, `think [x;y]`
+does not split the command, and the comma in `cat(a,%q<x,y>)` is part of the name.
+
+That leaves 60 reachable combinations. Many treat the five tokens alike and have the same
+successors, so the generator merges them into 26 classes, giving 172 rules. A copy is named for its
+class: `Top_` or `Call_`, then the letters of the tokens that are text there (R `)`, S `;`, C `,`, E `=`, A `>`), then
 `_G` with paren_groups. `beginGenericText__Top_RSCEA` takes all five as text;
 `function__Call_SEA` is a call whose `)` and `,` are structure.
 
@@ -98,7 +103,6 @@ did. With paren_groups:
 
 - A group left open inside a call takes the call's `)`, as `process_expression` does.
 - An open group no longer runs past the `=`, `;` or `,` that ends the argument or command it is in.
-- A `)` inside brackets inside a group is text.
 
 ## Error messages
 

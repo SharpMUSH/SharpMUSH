@@ -15,10 +15,11 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 	public object? Value { get; }
 
 	/// <summary>
-	/// Equal when both hold the same model instance. The object node cache hands out one instance per
-	/// object, so in practice that means the same object.
+	/// Equal when both are the same object (same objid). Not the same model instance: a write such as a
+	/// move replaces the cached node, so an instance read before it and one read after it are two
+	/// instances of one object.
 	/// </summary>
-	public override bool Equals(object? obj) => obj is AnySharpObject other && Equals(Value, other.Value);
+	public override bool Equals(object? obj) => obj is AnySharpObject other && Object().DBRef == other.Object().DBRef;
 
 	public override int GetHashCode() => Object().DBRef.GetHashCode();
 
