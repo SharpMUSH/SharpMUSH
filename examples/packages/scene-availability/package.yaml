@@ -1,6 +1,6 @@
 format: "1.10"
 package: scene-availability
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players or a scene's cast are all free."
 license: MIT
@@ -703,7 +703,7 @@ objects:
           week_starts,iter(lnum(0,%3),u(%!/FUN`DAY`AT,add(%1,%i0),0,%2)),
           week_from,first(%q<week_starts>),
           week_mask,u(%!/FUN`MASK`PLAYER,%0,%q<week_from>,div(sub(last(%q<week_starts>),%q<week_from>),%q<week_step>),%q<week_step>),
-          week_busy,u(%!/FUN`SCREEN`WEEK`BUSY,%0,%q<week_from>,last(%q<week_starts>),%4))][datacolumns(u(%!/FUN`DISPLAY`TABLE,1,|1|1),[ansi(h,Day)]%r[iter(lnum(0,dec(%3)),u(%!/FUN`DISPLAY`DAY,add(%1,%i0)),,%r)],[ansi(h,Free)]%r[iter(lnum(0,dec(%3)),u(%!/FUN`SCREEN`WEEK`FREE,extract(%q<week_starts>,inc(%i0),1),extract(%q<week_starts>,add(%i0,2),1),%2),,%r)],[ansi(h,Busy)]%r[iter(lnum(0,dec(%3)),u(%!/FUN`SCREEN`WEEK`BUSYDAY,extract(%q<week_starts>,inc(%i0),1),extract(%q<week_starts>,add(%i0,2),1),%2),,%r)])]
+          week_busy,u(%!/FUN`SCREEN`WEEK`BUSY,%0,%q<week_from>,last(%q<week_starts>),%4))][datacolumns(u(%!/FUN`DISPLAY`TABLE,1,|1|1),[tone(strong,Day)]%r[iter(lnum(0,dec(%3)),u(%!/FUN`DISPLAY`DAY,add(%1,%i0)),,%r)],[tone(strong,Free)]%r[iter(lnum(0,dec(%3)),u(%!/FUN`SCREEN`WEEK`FREE,extract(%q<week_starts>,inc(%i0),1),extract(%q<week_starts>,add(%i0,2),1),%2),,%r)],[tone(strong,Busy)]%r[iter(lnum(0,dec(%3)),u(%!/FUN`SCREEN`WEEK`BUSYDAY,extract(%q<week_starts>,inc(%i0),1),extract(%q<week_starts>,add(%i0,2),1),%2),,%r)])]
         flags: [funsyntax]
       # %0 and %1 the instants a day starts and ends, %2 the zone: the free runs in %q<week_mask> that day, as
       # 18:00-23:00, all day, or a muted dash.
@@ -732,7 +732,7 @@ objects:
       # %0 a key and %1 the reader's zone: the entries table, a row an entry.
       FUN`SCREEN`ENTRIES:
         value: |-
-          [setq(entries_list,u(%!/FUN`PLAYER`ENTRIES,%0))][datacolumns(u(%!/FUN`DISPLAY`TABLE,1|2,||1|1),>[ansi(h,#)]%r[iter(%q<entries_list>,%i0,,%r)],[ansi(h,Kind)]%r[iter(%q<entries_list>,u(%!/FUN`DISPLAY`KIND,get({{calendar}}/PLAYER`%0`%i0`KIND)),,%r)],[ansi(h,When)]%r[iter(%q<entries_list>,u(%!/FUN`ENTRY`DESCRIBE,%0,%i0,%1),,%r)],[ansi(h,Note)]%r[iter(%q<entries_list>,firstof(get({{calendar}}/PLAYER`%0`%i0`NOTE),tone(muted,-)),,%r)])]
+          [setq(entries_list,u(%!/FUN`PLAYER`ENTRIES,%0))][datacolumns(u(%!/FUN`DISPLAY`TABLE,1|2,||1|1),>[tone(strong,#)]%r[iter(%q<entries_list>,%i0,,%r)],[tone(strong,Kind)]%r[iter(%q<entries_list>,u(%!/FUN`DISPLAY`KIND,get({{calendar}}/PLAYER`%0`%i0`KIND)),,%r)],[tone(strong,When)]%r[iter(%q<entries_list>,u(%!/FUN`ENTRY`DESCRIBE,%0,%i0,%1),,%r)],[tone(strong,Note)]%r[iter(%q<entries_list>,firstof(get({{calendar}}/PLAYER`%0`%i0`NOTE),tone(muted,-)),,%r)])]
         flags: [funsyntax]
       # +avail: the reader's entries and their week.
       FUN`SCREEN`MINE:
@@ -748,7 +748,7 @@ objects:
       # times as a table, and how to book one.
       FUN`SCREEN`FIND:
         value: |-
-          [setq(find_shown,extract(%0,1,u(%!/FUN`CONFIG,FIND-RESULTS)))][box([if(words(%q<find_shown>),datacolumns(u(%!/FUN`DISPLAY`TABLE,1|2|3|4,|||1),[ansi(h,Day)]%r[iter(%q<find_shown>,timefmt($a $d $b,first(%i0,:),%2),,%r)],[ansi(h,From)]%r[iter(%q<find_shown>,timefmt($H:$M,first(%i0,:),%2),,%r)],[ansi(h,Until)]%r[iter(%q<find_shown>,u(%!/FUN`SCREEN`FIND`UNTIL,first(%i0,:),rest(%i0,:),%2),,%r)],[ansi(h,Free for)]%r[iter(%q<find_shown>,u(%!/FUN`DISPLAY`LENGTH,sub(rest(%i0,:),first(%i0,:))),,%r)]),No time in the next [u(%!/FUN`CONFIG,FIND-DAYS)] days has them all free for [u(%!/FUN`DISPLAY`LENGTH,%3)].)]%r[rule()]%r[u(%!/FUN`SCREEN`FIND`FOOT,%0,%1,%2,%3)],%4,,u(%!/FUN`DISPLAY`FRAME))]
+          [setq(find_shown,extract(%0,1,u(%!/FUN`CONFIG,FIND-RESULTS)))][box([if(words(%q<find_shown>),datacolumns(u(%!/FUN`DISPLAY`TABLE,1|2|3|4,|||1),[tone(strong,Day)]%r[iter(%q<find_shown>,timefmt($a $d $b,first(%i0,:),%2),,%r)],[tone(strong,From)]%r[iter(%q<find_shown>,timefmt($H:$M,first(%i0,:),%2),,%r)],[tone(strong,Until)]%r[iter(%q<find_shown>,u(%!/FUN`SCREEN`FIND`UNTIL,first(%i0,:),rest(%i0,:),%2),,%r)],[tone(strong,Free for)]%r[iter(%q<find_shown>,u(%!/FUN`DISPLAY`LENGTH,sub(rest(%i0,:),first(%i0,:))),,%r)]),No time in the next [u(%!/FUN`CONFIG,FIND-DAYS)] days has them all free for [u(%!/FUN`DISPLAY`LENGTH,%3)].)]%r[rule()]%r[u(%!/FUN`SCREEN`FIND`FOOT,%0,%1,%2,%3)],%4,,u(%!/FUN`DISPLAY`FRAME))]
         flags: [funsyntax]
       # %0 and %1 a run's instants, %2 the zone: when it ends, with the day when it is not the day it starts.
       FUN`SCREEN`FIND`UNTIL:

@@ -1,6 +1,6 @@
 format: "1.10"
 package: wiki-reader
-version: 1.6.3
+version: 1.6.4
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -38,7 +38,7 @@ objects:
       # syntax-highlight and lay out better than a template would here.
       RENDERMARKUP`H1:
         value: |-
-          [ansi(h,%0)]
+          [tone(strong,%0)]
         flags: [funsyntax]
       RENDERMARKUP`H2:
         value: |-
@@ -202,15 +202,15 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`TABLE:
         value: |-
-          [@@(%0 page references — a table of each page and its title, joined with %r and split on a newline so a title holding a | stays one cell. The title takes the spare width)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12),grow,json(string,%r1)),[ansi(h,Page)]%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Title)]%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)])]
+          [@@(%0 page references — a table of each page and its title, joined with %r and split on a newline so a title holding a | stays one cell. The title takes the spare width)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12),grow,json(string,%r1)),[tone(strong,Page)]%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Title)]%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`CATTABLE:
         value: |-
-          [@@(%0 category keys — each category, clickable, and how many pages are in it)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,12),grow,json(string,1)),[ansi(h,Category)]%r[iter(%0,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(%0,words(wikicategory(%i0)),%b,%r)])]
+          [@@(%0 category keys — each category, clickable, and how many pages are in it)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,12),grow,json(string,1)),[tone(strong,Category)]%r[iter(%0,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%r)],>[tone(strong,Pages)]%r[iter(%0,words(wikicategory(%i0)),%b,%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`RECENTTABLE:
         value: |-
-          [@@(%0 page references — same as TABLE with the last edit's age)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r1%r2),grow,json(string,%r1)),[ansi(h,Page)]%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Title)]%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)],[ansi(h,Edited)]%r[iter(%0,[trim(timestring(sub(secs(),wiki(%i0,updated))))] ago,%b,%r)])]
+          [@@(%0 page references — same as TABLE with the last edit's age)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r1%r2),grow,json(string,%r1)),[tone(strong,Page)]%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Title)]%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)],[tone(strong,Edited)]%r[iter(%0,[trim(timestring(sub(secs(),wiki(%i0,updated))))] ago,%b,%r)])]
         flags: [funsyntax]
 
       FUN`DISPLAY`LISTING:
@@ -235,7 +235,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages. What it holds is left out first on a narrow screen)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r2%r1),grow,json(string,%r1)),[ansi(h,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[ansi(h,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category %[<name>%]%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
+          [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages. What it holds is left out first on a narrow screen)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r2%r1),grow,json(string,%r1)),[tone(strong,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[tone(strong,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[tone(strong,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category %[<name>%]%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
 
       # Takes its arguments by name (@include/args), so a title carrying what the reader typed, commas

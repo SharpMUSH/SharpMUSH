@@ -1,6 +1,6 @@
 format: "1.10"
 package: roster
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -431,19 +431,19 @@ objects:
       # %0 characters: one column of the roster table, its heading first.
       FUN`DISPLAY`COLUMN`NAME:
         value: |-
-          ansi(h,Name)%r[iter(%0,name(%i0),,%r)]
+          tone(strong,Name)%r[iter(%0,name(%i0),,%r)]
         flags: [funsyntax]
       FUN`DISPLAY`COLUMN`GROUP:
         value: |-
-          ansi(h,Group)%r[iter(%0,firstof(u({{roster}}/FUN`ENTRY`GET,%i0,GROUP),-),,%r)]
+          tone(strong,Group)%r[iter(%0,firstof(u({{roster}}/FUN`ENTRY`GET,%i0,GROUP),-),,%r)]
         flags: [funsyntax]
       FUN`DISPLAY`COLUMN`SUMMARY:
         value: |-
-          ansi(h,Summary)%r[iter(%0,firstof(u({{roster}}/FUN`ENTRY`GET,%i0,SUMMARY),-),,%r)]
+          tone(strong,Summary)%r[iter(%0,firstof(u({{roster}}/FUN`ENTRY`GET,%i0,SUMMARY),-),,%r)]
         flags: [funsyntax]
       FUN`DISPLAY`COLUMN`STATE:
         value: |-
-          ansi(h,State)%r[iter(%0,u({{roster}}/FUN`DISPLAY`STATE,%i0),,%r)]
+          tone(strong,State)%r[iter(%0,u({{roster}}/FUN`DISPLAY`STATE,%i0),,%r)]
         flags: [funsyntax]
       # How a player gets a character: a package's DATA`HOW`TO`GET`<name>, the first by name, else the game's own.
       FUN`DISPLAY`HOWTOGET:
@@ -487,7 +487,7 @@ objects:
       # %0 held characters: who holds each and when it was last played.
       FUN`DISPLAY`IDLE:
         value: |-
-          datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r1,%r1,),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Account)]%r[iter(%0,account(%i0,name),,%r)],[ansi(h,Held since)]%r[iter(%0,timefmt($Y-$m-$d,u({{roster}}/FUN`ENTRY`GET,%i0,SINCE)),,%r)],>[ansi(h,Last played)]%r[iter(%0,u({{roster}}/FUN`DISPLAY`AGO,u({{roster}}/FUN`ENTRY`LASTPLAYED,%i0)),,%r)])
+          datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r1,%r1,),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],[tone(strong,Account)]%r[iter(%0,account(%i0,name),,%r)],[tone(strong,Held since)]%r[iter(%0,timefmt($Y-$m-$d,u({{roster}}/FUN`ENTRY`GET,%i0,SINCE)),,%r)],>[tone(strong,Last played)]%r[iter(%0,u({{roster}}/FUN`DISPLAY`AGO,u({{roster}}/FUN`ENTRY`LASTPLAYED,%i0)),,%r)])
         flags: [funsyntax]
       # %0 seconds since the epoch: how long ago, in days.
       FUN`DISPLAY`AGO:
@@ -497,7 +497,7 @@ objects:
       # %0 a character, %1 how many history lines it has: the history, newest first.
       FUN`DISPLAY`HISTORY:
         value: |-
-          setq(roster_history_root,HISTORY`[u({{roster}}/FUN`KEY,%0)])[datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r3%r2,%r%r%r%r1,%r%r%r%r20),[ansi(h,Date)]%r[iter(revwords(lnum(1,%1)),timefmt($Y-$m-$d,get({{store}}/%q<roster_history_root>`%i0`TIME)),,%r)],[ansi(h,What)]%r[iter(revwords(lnum(1,%1)),get({{store}}/%q<roster_history_root>`%i0`EVENT),,%r)],[ansi(h,Account)]%r[iter(revwords(lnum(1,%1)),firstof(get({{store}}/%q<roster_history_root>`%i0`ACCOUNT),-),,%r)],[ansi(h,By)]%r[iter(revwords(lnum(1,%1)),u({{roster}}/FUN`DISPLAY`ACTOR,%q<roster_history_root>`%i0),,%r)],[ansi(h,Reason)]%r[iter(revwords(lnum(1,%1)),firstof(get({{store}}/%q<roster_history_root>`%i0`REASON),-),,%r)])]
+          setq(roster_history_root,HISTORY`[u({{roster}}/FUN`KEY,%0)])[datacolumns(u({{roster}}/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r3%r2,%r%r%r%r1,%r%r%r%r20),[tone(strong,Date)]%r[iter(revwords(lnum(1,%1)),timefmt($Y-$m-$d,get({{store}}/%q<roster_history_root>`%i0`TIME)),,%r)],[tone(strong,What)]%r[iter(revwords(lnum(1,%1)),get({{store}}/%q<roster_history_root>`%i0`EVENT),,%r)],[tone(strong,Account)]%r[iter(revwords(lnum(1,%1)),firstof(get({{store}}/%q<roster_history_root>`%i0`ACCOUNT),-),,%r)],[tone(strong,By)]%r[iter(revwords(lnum(1,%1)),u({{roster}}/FUN`DISPLAY`ACTOR,%q<roster_history_root>`%i0),,%r)],[tone(strong,Reason)]%r[iter(revwords(lnum(1,%1)),firstof(get({{store}}/%q<roster_history_root>`%i0`REASON),-),,%r)])]
         flags: [funsyntax]
       # %0 a history line's attribute: who did it, by their name now or the name kept with the line.
       FUN`DISPLAY`ACTOR:

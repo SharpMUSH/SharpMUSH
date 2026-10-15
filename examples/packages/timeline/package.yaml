@@ -1,6 +1,6 @@
 format: "1.10"
 package: timeline
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "IC dates on scenes and a timeline for each character: a scene is dated in the game's IC calendar when it starts, +scene/date dates a flashback, and +timeline lists a character's finished scenes in IC order."
 license: MIT
@@ -194,7 +194,7 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`TABLE:
         value: |-
-          datacolumns(u({{scene/logger}}/FUN`TABLE`OPTS,1,|12,1|1|2,|1),[ansi(h,IC date)]%r[iter(%0,firstof(scene(%i0,icdate),tone(muted,not dated)),,%r)],[ansi(h,Scene)]%r[iter(%0,u({{scene/logger}}/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Where)]%r[iter(%0,firstof(scene(%i0,roomname),-),,%r)])
+          datacolumns(u({{scene/logger}}/FUN`TABLE`OPTS,1,|12,1|1|2,|1),[tone(strong,IC date)]%r[iter(%0,firstof(scene(%i0,icdate),tone(muted,not dated)),,%r)],[tone(strong,Scene)]%r[iter(%0,u({{scene/logger}}/FUN`LIST_LINK,%i0),,%r)],[tone(strong,Where)]%r[iter(%0,firstof(scene(%i0,roomname),-),,%r)])
         flags: [funsyntax]
       FUN`SCREEN`FOOTER:
         value: |-

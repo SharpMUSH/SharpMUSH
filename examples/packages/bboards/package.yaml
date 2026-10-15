@@ -1,6 +1,6 @@
 format: "1.10"
 package: bboards
-version: 1.3.2
+version: 1.3.3
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -769,7 +769,7 @@ objects:
       # Category %1's head row at level %0 in the board table: its name in the Board column, the other
       # columns left blank. Adds a line to %q<table_column_1> to %q<table_column_4>.
       FUN`DISPLAY`BOARDTABLE`CATEGORY: |-
-        [setqm(table_column_1,%q<table_column_1>%r,table_column_2,%q<table_column_2>%r[ansi(h,u(%!/FUN`STORE`CATEGORYNAME,%0,%1))],table_column_3,%q<table_column_3>%r,table_column_4,%q<table_column_4>%r)]
+        [setqm(table_column_1,%q<table_column_1>%r,table_column_2,%q<table_column_2>%r[tone(strong,u(%!/FUN`STORE`CATEGORYNAME,%0,%1))],table_column_3,%q<table_column_3>%r,table_column_4,%q<table_column_4>%r)]
       # Board %0's row in the board table for viewer %1 at number path %2: number, name (and how many boards
       # it holds), new items, last active. Sets %q<table_board>, %q<board_number>, %q<table_row_new_count> and %q<board_subboard_count>,
       # adds to %q<board_table_new_total> and a line to %q<table_column_1> to %q<table_column_4>.
@@ -878,7 +878,7 @@ objects:
       # Post %0's head: title, who and when, where (the top board and the last two when it is deeper
       # than three), and whether it is closed. %1 is the viewer.
       FUN`DISPLAY`POSTHEAD: |-
-        [ansi(h,firstof(get(%0/TITLE),%(removed%)))]%r[setqm(post_byline,squish([u(%!/FUN`DISPLAY`AUTHOR,%0,,%q<viewer_objid>)]%, [u(%!/FUN`DISPLAY`TIMESTAMP,get(%0/AT))][if(get(%0/EDITED),%, edited [u(%!/FUN`DISPLAY`TIME,get(%0/EDITED))])][if(member(get(u(%!/FUN`STORE`PARENT,%0)/PINS),%0),%, pinned)]),post_ancestry,revwords(u(%!/FUN`STORE`ANCESTRY,u(%!/FUN`STORE`PARENT,%0))),post_board_path,if(gt(words(%q<post_ancestry>),3),[u(%!/FUN`DISPLAY`BOARDNAME,first(%q<post_ancestry>))] / ... / [u(%!/FUN`DISPLAY`BOARDNAME,extract(%q<post_ancestry>,dec(words(%q<post_ancestry>)),1))] / [u(%!/FUN`DISPLAY`BOARDNAME,last(%q<post_ancestry>))],u(%!/FUN`DISPLAY`BOARDNAMES,u(%!/FUN`STORE`PARENT,%0))))][flex(json(object,justify,json(string,between)),item(%q<post_byline>),item(%q<post_board_path>,>auto))][if(get(%0/CLOSED),%rClosed to comments by [name(get(%0/CLOSED`BY))]%, [u(%!/FUN`DISPLAY`TIME,get(%0/CLOSED))].)]
+        [tone(strong,firstof(get(%0/TITLE),%(removed%)))]%r[setqm(post_byline,squish([u(%!/FUN`DISPLAY`AUTHOR,%0,,%q<viewer_objid>)]%, [u(%!/FUN`DISPLAY`TIMESTAMP,get(%0/AT))][if(get(%0/EDITED),%, edited [u(%!/FUN`DISPLAY`TIME,get(%0/EDITED))])][if(member(get(u(%!/FUN`STORE`PARENT,%0)/PINS),%0),%, pinned)]),post_ancestry,revwords(u(%!/FUN`STORE`ANCESTRY,u(%!/FUN`STORE`PARENT,%0))),post_board_path,if(gt(words(%q<post_ancestry>),3),[u(%!/FUN`DISPLAY`BOARDNAME,first(%q<post_ancestry>))] / ... / [u(%!/FUN`DISPLAY`BOARDNAME,extract(%q<post_ancestry>,dec(words(%q<post_ancestry>)),1))] / [u(%!/FUN`DISPLAY`BOARDNAME,last(%q<post_ancestry>))],u(%!/FUN`DISPLAY`BOARDNAMES,u(%!/FUN`STORE`PARENT,%0))))][flex(json(object,justify,json(string,between)),item(%q<post_byline>),item(%q<post_board_path>,>auto))][if(get(%0/CLOSED),%rClosed to comments by [name(get(%0/CLOSED`BY))]%, [u(%!/FUN`DISPLAY`TIME,get(%0/CLOSED))].)]
       # Post %0 (number path %2) and its comments, as viewer %1, page %3 (1 when empty). A page holds
       # FUN`THREAD`PAGESIZE comments in thread order; a page that starts inside a conversation quotes its top
       # comment first. Sets %q<thread_last_seen> to what reading this page marks read: the post's LAST on the
@@ -1146,7 +1146,7 @@ objects:
       # its first comment when that is not among them. Sets %q<thread_last_seen> to what this marks read: the
       # last comment shown when more are new, else the post's LAST.
       FUN`SCREEN`NEXT: |-
-        [u(%!/FUN`SCREEN`NEXT`PICK,%0,%1,%3)][rule(%2%b%b[squish([if(%q<unread_count>,new post[if(words(%q<new_items_shown>),%,)])] [if(words(%q<next_new_comments>),u(%!/FUN`DISPLAY`PLURAL,words(%q<next_new_comments>),new comment))])])]%r[if(%q<unread_count>,[u(%!/FUN`DISPLAY`POSTHEAD,%0,%1)]%r%r[if(strlen(get(%0/REMOVED)),tone(muted,%(This post was [u(%!/FUN`DISPLAY`REMOVEDBY,get(%0/REMOVED))].%)),u(%!/FUN`DISPLAY`BODY,%0))],ansi(h,get(%0/TITLE)))][if(words(%q<new_items_shown>),%r[u(%!/FUN`SCREEN`NEXT`COMMENTS,%0,%1)],%r)]%r[rule(switch(1,t(%q<next_more_here>),%q<next_more_here> more new here,t(%q<next_left_elsewhere>),%q<next_left_elsewhere> more new,nothing more new))]%r[if(cor(%q<next_more_here>,%q<next_left_elsewhere>),[u(%!/FUN`DISPLAY`LINK,+bbnext,+bbnext)] for the next.%b%b)][u(%!/FUN`DISPLAY`LINK,+bbread %2,+bbread %2)] for the whole thread.
+        [u(%!/FUN`SCREEN`NEXT`PICK,%0,%1,%3)][rule(%2%b%b[squish([if(%q<unread_count>,new post[if(words(%q<new_items_shown>),%,)])] [if(words(%q<next_new_comments>),u(%!/FUN`DISPLAY`PLURAL,words(%q<next_new_comments>),new comment))])])]%r[if(%q<unread_count>,[u(%!/FUN`DISPLAY`POSTHEAD,%0,%1)]%r%r[if(strlen(get(%0/REMOVED)),tone(muted,%(This post was [u(%!/FUN`DISPLAY`REMOVEDBY,get(%0/REMOVED))].%)),u(%!/FUN`DISPLAY`BODY,%0))],tone(strong,get(%0/TITLE)))][if(words(%q<new_items_shown>),%r[u(%!/FUN`SCREEN`NEXT`COMMENTS,%0,%1)],%r)]%r[rule(switch(1,t(%q<next_more_here>),%q<next_more_here> more new here,t(%q<next_left_elsewhere>),%q<next_left_elsewhere> more new,nothing more new))]%r[if(cor(%q<next_more_here>,%q<next_left_elsewhere>),[u(%!/FUN`DISPLAY`LINK,+bbnext,+bbnext)] for the next.%b%b)][u(%!/FUN`DISPLAY`LINK,+bbread %2,+bbread %2)] for the whole thread.
       # What +bbnext shows viewer %1 of post %0, with %2 new items in all. Sets %q<thread_mark> (what they have
       # read up to), %q<unread_count> (1 when the post is unread), the FUN`THREAD`ORDER registers, %q<next_new_comments> (the
       # new comments not theirs), %q<new_items_shown> (the ones shown) in %q<next_sorted_comments> thread order, %q<next_more_here> (new
@@ -1341,7 +1341,7 @@ objects:
       # At the top of level %0, before a top board: its category's head row when the category changes
       # here, and in %q<tree_is_last_sibling> whether the board is the last of its category.
       FUN`DISPLAY`TREEROWS`CATEGORY: |-
-        [setqm(tree_category_index,inc(%q<tree_category_index>),tree_category_current,extract(%q<tree_top_categories>,%q<tree_category_index>,1),tree_is_last_sibling,cor(eq(%q<tree_category_index>,words(%q<tree_top_boards>)),not(strmatch(%q<tree_category_current>,extract(%q<tree_top_categories>,inc(%q<tree_category_index>),1)))))][if(not(strmatch(%q<tree_category_current>,%q<tree_last_category>)),[ansi(h,u(%!/FUN`STORE`CATEGORYNAME,%0,%q<tree_category_current>))]^^^^^^%r)][setq(tree_last_category,%q<tree_category_current>)]
+        [setqm(tree_category_index,inc(%q<tree_category_index>),tree_category_current,extract(%q<tree_top_categories>,%q<tree_category_index>,1),tree_is_last_sibling,cor(eq(%q<tree_category_index>,words(%q<tree_top_boards>)),not(strmatch(%q<tree_category_current>,extract(%q<tree_top_categories>,inc(%q<tree_category_index>),1)))))][if(not(strmatch(%q<tree_category_current>,%q<tree_last_category>)),[tone(strong,u(%!/FUN`STORE`CATEGORYNAME,%0,%q<tree_category_current>))]^^^^^^%r)][setq(tree_last_category,%q<tree_category_current>)]
       # How many levels of boards a tree shows below where it starts.
       FUN`DISPLAY`TREEDEPTH: |-
         4

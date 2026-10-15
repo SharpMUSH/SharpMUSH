@@ -1,6 +1,6 @@
 format: "1.10"
 package: plus-help
-version: 1.5.3
+version: 1.5.4
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -270,7 +270,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SRCTABLE:
         value: |-
-          [@@(%0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and split on a newline, so a description holding a | stays one cell)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[ansi(h,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[ansi(h,Covers)]%r[iter(%0,edit(u(%!/FUN`GET`SRCDESC,%i0),%r,%b),%b,%r)])]
+          [@@(%0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and split on a newline, so a description holding a | stays one cell)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[tone(strong,Covers)]%r[iter(%0,edit(u(%!/FUN`GET`SRCDESC,%i0),%r,%b),%b,%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
@@ -286,7 +286,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(named: title · list the records · page · pages how many · head the command and its switches · tail what follows them. The next page is head/<n> tail. The summaries are cut to what is left of the reader's width beside the widest topic name, less the gap)][setq(sl,u(%!/FUN`GET`SLICE,%<list>,%<page>))][setq(cw,max(20,sub(width(%#,78),add(2,lmath(max,iter(%q<sl>,strlen(u(%!/FUN`GET`RNAME,%i0))))))))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[ansi(h,Topic)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Summary)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`SUMMARY,%i0,%q<cw>),%b,%r)])],%<title>,,u(%!/FUN`GET`FRAME))]%r[words(%<list>)] [if(eq(words(%<list>),1),topic,topics)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])]
+          [@@(named: title · list the records · page · pages how many · head the command and its switches · tail what follows them. The next page is head/<n> tail. The summaries are cut to what is left of the reader's width beside the widest topic name, less the gap)][setq(sl,u(%!/FUN`GET`SLICE,%<list>,%<page>))][setq(cw,max(20,sub(width(%#,78),add(2,lmath(max,iter(%q<sl>,strlen(u(%!/FUN`GET`RNAME,%i0))))))))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Topic)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Summary)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`SUMMARY,%i0,%q<cw>),%b,%r)])],%<title>,,u(%!/FUN`GET`FRAME))]%r[words(%<list>)] [if(eq(words(%<list>),1),topic,topics)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])]
         flags: [funsyntax]
       # One subtopic, named as it is known under its parent, running the full +help for it.
       FUN`DISPLAY`CHILD:
@@ -316,7 +316,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SOURCES:
         value: |-
-          [@@(%0 every record — the registry and what each entry contributes; a source whose object is gone is said to be missing rather than shown a #-1)][setq(srcs,u(%!/FUN`GET`SOURCES))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1),grow,json(string,%r%r1)),[ansi(h,Source)]%r[iter(%q<srcs>,%i0,%b,%r)],[ansi(h,Object)]%r[iter(%q<srcs>,firstof(num(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),-),%b,%r)],[ansi(h,Name)]%r[iter(%q<srcs>,firstof(name(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),object is missing),%b,%r)],>[ansi(h,Topics)]%r[iter(%q<srcs>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])],Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
+          [@@(%0 every record — the registry and what each entry contributes; a source whose object is gone is said to be missing rather than shown a #-1)][setq(srcs,u(%!/FUN`GET`SOURCES))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1),grow,json(string,%r%r1)),[tone(strong,Source)]%r[iter(%q<srcs>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<srcs>,firstof(num(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<srcs>,firstof(name(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<srcs>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])],Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
         flags: [funsyntax]
 
       # ── Markdown rendering ──────────────────────────────────────────────────
@@ -328,7 +328,7 @@ objects:
       # Send_OOB for cmdlink(), and the librarian does.
       RENDERMARKUP`H1:
         value: |-
-          [ansi(h,%0)]
+          [tone(strong,%0)]
         flags: [funsyntax]
       RENDERMARKUP`H2:
         value: |-

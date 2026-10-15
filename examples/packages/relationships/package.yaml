@@ -1,6 +1,6 @@
 format: "1.10"
 package: relationships
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -603,7 +603,7 @@ objects:
       # ---- +rel/types ---------------------------------------------------------------
       INC`TYPES:
         value: |-
-          @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r1,%r%r),[tone(strong,Type)]%r[iter(u(%!/FUN`TYPE`KEYS),if(strlen(setr(types_tone,u(%!/FUN`TYPE`TONE,%i0))),tone(%q<types_tone>,u(%!/FUN`TYPE`LABEL,%i0)),u(%!/FUN`TYPE`LABEL,%i0)),,%r)],[tone(strong,Key)]%r[iter(u(%!/FUN`TYPE`KEYS),lcstr(%i0),,%r)],[ansi(h,The other side)]%r[iter(u(%!/FUN`TYPE`KEYS),u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%i0)),,%r)])%r[rule()]%r[tone(muted,+rel/set <name>=<type> · a type is named by its key or its label)],Relationship types,,u(%!/FUN`DISPLAY`FRAME))
+          @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r1,%r%r),[tone(strong,Type)]%r[iter(u(%!/FUN`TYPE`KEYS),if(strlen(setr(types_tone,u(%!/FUN`TYPE`TONE,%i0))),tone(%q<types_tone>,u(%!/FUN`TYPE`LABEL,%i0)),u(%!/FUN`TYPE`LABEL,%i0)),,%r)],[tone(strong,Key)]%r[iter(u(%!/FUN`TYPE`KEYS),lcstr(%i0),,%r)],[tone(strong,The other side)]%r[iter(u(%!/FUN`TYPE`KEYS),u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%i0)),,%r)])%r[rule()]%r[tone(muted,+rel/set <name>=<type> · a type is named by its key or its label)],Relationship types,,u(%!/FUN`DISPLAY`FRAME))
         flags: [cmdsyntax]
 
       # ---- settings ------------------------------------------------------------------

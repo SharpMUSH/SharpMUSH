@@ -1,6 +1,6 @@
 format: "1.10"
 package: radio
-version: 1.2.4
+version: 1.2.5
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -171,7 +171,7 @@ objects:
         @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`IS`ADMIN,%q<id>,%#)=@pemit %#=[notice(RADIO,Only an admin of [u({{radio}}/FUN`NAME,%q<id>)] can do that.,error)]
       # +radio: the frequencies the player may tune in to.
       INC`LIST: |-
-        think [setq(ids,squish(iter(u({{radio}}/FUN`IDS),if(u({{radio}}/FUN`CAN`JOIN,%i0,%#),%i0))))]; @assert words(%q<ids>)=@pemit %#=[notice(RADIO,There are no frequencies you can tune in to.)]; @pemit %#=[rule(Radio)]%r[datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r%r%r1)),[ansi(h,Frequency)]%r[iter(%q<ids>,u({{radio}}/FUN`NAME,%i0),,%r)],[ansi(h,Category)]%r[iter(%q<ids>,firstof(get({{radio}}/F`%i0`CATEGORY),-),,%r)],[ansi(h,You)]%r[iter(%q<ids>,u({{radio}}/FUN`STATE,%i0,%#),,%r)],[ansi(h,About)]%r[iter(%q<ids>,firstof(edit(get({{radio}}/F`%i0`DESC),%r,%b),-),,%r)])]%r[rule(+radio/join <frequency> tunes in)]
+        think [setq(ids,squish(iter(u({{radio}}/FUN`IDS),if(u({{radio}}/FUN`CAN`JOIN,%i0,%#),%i0))))]; @assert words(%q<ids>)=@pemit %#=[notice(RADIO,There are no frequencies you can tune in to.)]; @pemit %#=[rule(Radio)]%r[datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r%r%r1)),[tone(strong,Frequency)]%r[iter(%q<ids>,u({{radio}}/FUN`NAME,%i0),,%r)],[tone(strong,Category)]%r[iter(%q<ids>,firstof(get({{radio}}/F`%i0`CATEGORY),-),,%r)],[tone(strong,You)]%r[iter(%q<ids>,u({{radio}}/FUN`STATE,%i0,%#),,%r)],[tone(strong,About)]%r[iter(%q<ids>,firstof(edit(get({{radio}}/F`%i0`DESC),%r,%b),-),,%r)])]%r[rule(+radio/join <frequency> tunes in)]
       INC`SEND: |-
         @include {{radio}}/INC`NEED`JOINED; @assert u({{radio}}/FUN`CAN`TALK,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not speak on [u({{radio}}/FUN`NAME,%q<id>)].,error)]; @assert strlen(%q<rhs>)=@pemit %#=[notice(RADIO,What do you want to say?,warn)]; @assert cor(not(feedinfo(radio/%q<id>,max_length)),lte(strlen(%q<rhs>),feedinfo(radio/%q<id>,max_length)))=@pemit %#=[notice(RADIO,[u({{radio}}/FUN`NAME,%q<id>)] takes messages of up to [feedinfo(radio/%q<id>,max_length)] characters.,warn)]; think [setq(ae,get({{radio}}/P`%q<me>`ALTEREGO`%q<id>))]; @if strlen(%q<ae>)={@feed/send/as radio/%q<id>=%q<ae>/%q<rhs>},{@feed/send radio/%q<id>=%q<rhs>}
       INC`JOIN: |-

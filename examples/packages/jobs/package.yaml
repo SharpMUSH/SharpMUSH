@@ -1,6 +1,6 @@
 format: "1.10"
 package: jobs
-version: 1.10.1
+version: 1.10.2
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -702,7 +702,7 @@ objects:
       # joined with %r and split on a newline, so a title holding a | stays one cell; the title wraps and
       # every other column is shown whole or, on a narrow screen, left out (Bucket and Updated first).
       FUN`TABLE: |-
-        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2),grow,json(string,%r%r1)),>[ansi(h,#)]%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),tone(info,*))][get(%i0/JOB`NUM)],,%r)],[ansi(h,Bucket)]%r[iter(%0,name(get(%i0/JOB`BUCKET)),,%r)],[ansi(h,Title)]%r[iter(%0,edit(get(%i0/JOB`TITLE),%r,%b),,%r)],[ansi(h,Status)]%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/JOB`BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),tone(error,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],[ansi(h,Updated)]%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/JOB`BUCKET),%1),JOB`UPDATED`AT,JOB`PUBLIC`AT)])),,%r)])]
+        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2),grow,json(string,%r%r1)),>[tone(strong,#)]%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),tone(info,*))][get(%i0/JOB`NUM)],,%r)],[tone(strong,Bucket)]%r[iter(%0,name(get(%i0/JOB`BUCKET)),,%r)],[tone(strong,Title)]%r[iter(%0,edit(get(%i0/JOB`TITLE),%r,%b),,%r)],[tone(strong,Status)]%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/JOB`BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),tone(error,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],[tone(strong,Updated)]%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/JOB`BUCKET),%1),JOB`UPDATED`AT,JOB`PUBLIC`AT)])),,%r)])]
       # Every screen is a box() with no sides, corners or tees, as +help's and +wiki's are: a titled line
       # across the top, dividers and a bottom line across the whole width, and nothing beside the text, so
       # a reply copied from a terminal carries no |.
@@ -1036,7 +1036,7 @@ objects:
       # ---- buckets --------------------------------------------------------------
       # Buckets %0 as person %1 sees them; a * marks one they work.
       FUN`BTABLE: |-
-        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r3),min,json(string,%r%r%r12),priority,json(string,1%r1%r2%r1),grow,json(string,%r%r%r1)),[ansi(h,Bucket)]%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)][if(not(u({{jobs}}/FUN`TAKES`JOBS,%i0)),%b[chr(40)]disabled[chr(41)])],,%r)],>[ansi(h,Open)]%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],[ansi(h,First answer)]%r[iter(%0,firstof(u({{jobs}}/FUN`WAIT`SHORT,%i0),-),,%r)],[ansi(h,What it is for)]%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
+        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r3),min,json(string,%r%r%r12),priority,json(string,1%r1%r2%r1),grow,json(string,%r%r%r1)),[tone(strong,Bucket)]%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)][if(not(u({{jobs}}/FUN`TAKES`JOBS,%i0)),%b[chr(40)]disabled[chr(41)])],,%r)],>[tone(strong,Open)]%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],[tone(strong,First answer)]%r[iter(%0,firstof(u({{jobs}}/FUN`WAIT`SHORT,%i0),-),,%r)],[tone(strong,What it is for)]%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
       INC`BUCKET`LIST: |-
         @pemit %#=[box([u({{jobs}}/FUN`BTABLE,u({{jobs}}/FUN`BUCKETS`SEEN,%#),%#)]%r[rule()]%r[if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,Job buckets,,u({{jobs}}/FUN`FRAME))]
       # One bucket. Its permission, role, locks and hooks are for the people who work it; everyone else

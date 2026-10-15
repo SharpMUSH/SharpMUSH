@@ -1,6 +1,6 @@
 format: "1.10"
 package: info
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -393,7 +393,7 @@ objects:
       # %0 file ids: name, when it was last set, and whether staff locked it.
       FUN`FILE`TABLE:
         value: |-
-          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,2%r3,1%r3%r2,1%r%r),[ansi(h,File)]%r[iter(%0,cmdlink(setr(file_row_name,u(%!/FUN`FILE`NAME,%i0)),u(%!/FUN`FILE`READCMD,%q<file_row_name>),Read it),%b,%r)],[ansi(h,Updated)]%r[iter(%0,u(%!/FUN`DISPLAY`WHEN,u(%!/FUN`FILE`LEAF,%i0,SET)),%b,%r)],[ansi(h,Locked)]%r[iter(%0,if(strlen(u(%!/FUN`FILE`LEAF,%i0,LOCKED)),locked,-),%b,%r)])
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,2%r3,1%r3%r2,1%r%r),[tone(strong,File)]%r[iter(%0,cmdlink(setr(file_row_name,u(%!/FUN`FILE`NAME,%i0)),u(%!/FUN`FILE`READCMD,%q<file_row_name>),Read it),%b,%r)],[tone(strong,Updated)]%r[iter(%0,u(%!/FUN`DISPLAY`WHEN,u(%!/FUN`FILE`LEAF,%i0,SET)),%b,%r)],[tone(strong,Locked)]%r[iter(%0,if(strlen(u(%!/FUN`FILE`LEAF,%i0,LOCKED)),locked,-),%b,%r)])
         flags: [funsyntax]
       # %0 a file id: the file as a card.
       FUN`FILE`CARD:
@@ -571,7 +571,7 @@ objects:
       # %0 entries, newest first.
       FUN`JOURNAL`TABLE:
         value: |-
-          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r3%r4,%r%r1%r),[ansi(h,#)]%r[iter(%0,%i0,%b,%r)],[ansi(h,Written)]%r[iter(%0,u(%!/FUN`DISPLAY`DAY,u(%!/FUN`JOURNAL`LEAF,%i0,AT)),%b,%r)],[ansi(h,Title)]%r[iter(%0,cmdlink(u(%!/FUN`JOURNAL`LEAF,%i0,TITLE),u(%!/FUN`JOURNAL`READCMD,%i0),Read it),%b,%r)],[ansi(h,Read by)]%r[iter(%0,u(%!/FUN`JOURNAL`SHARING,%i0),%b,%r)])
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r3%r4,%r%r1%r),[tone(strong,#)]%r[iter(%0,%i0,%b,%r)],[tone(strong,Written)]%r[iter(%0,u(%!/FUN`DISPLAY`DAY,u(%!/FUN`JOURNAL`LEAF,%i0,AT)),%b,%r)],[tone(strong,Title)]%r[iter(%0,cmdlink(u(%!/FUN`JOURNAL`LEAF,%i0,TITLE),u(%!/FUN`JOURNAL`READCMD,%i0),Read it),%b,%r)],[tone(strong,Read by)]%r[iter(%0,u(%!/FUN`JOURNAL`SHARING,%i0),%b,%r)])
         flags: [funsyntax]
       # %0 an entry, as a card.
       FUN`JOURNAL`CARD:
