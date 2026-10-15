@@ -305,9 +305,11 @@ public partial class TelnetServer
 		public async Task RegisterAsync()
 		{
 			var telnet = _telnet!;
+			// The address alone, as PennMUSH's ipaddr() and a WebSocket connection give it: sitelock rules, @ban and
+			// softcode read it as an address.
 			var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 				? "unknown"
-				: $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
+				: WebSocketServer.ClientAddress(remoteEndpoint.Address);
 
 			// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
 			// terminated TLS, so this is the handshake that happened rather than anything the client says

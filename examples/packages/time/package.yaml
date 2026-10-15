@@ -226,7 +226,7 @@ objects:
         flags: [funsyntax]
       INC`ZONE`SHOW:
         value: |-
-          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
+          @assert strlen(%q<viewer_zone>)=@pemit %#=notice(TIME,You have not set a time zone. [if(strlen(setr(client_zone,u(%!/FUN`ZONE`CLIENT,%#))),Your client says yours is %q<client_zone>: +timezone/detect sets it.,[if(u(%!/FUN`LOOKUP`OK,%#),+timezone/detect looks yours up from where you connect. )]+timezone <zone> sets it%, such as +timezone America/New_York%, and +timezone/match <your time> finds yours from the time where you are.)]); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<viewer_zone>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<viewer_zone>)] for you.[if(u(%!/FUN`ZONE`HIDDEN,%#),%bOnly you and staff see it.)])
         flags: [cmdsyntax]
       # +timezone <zone>. The zone is kept in TZ, which the engine makes visual, so other packages read it through
       # the Clock. God is beyond any object's reach, so the write is checked.
@@ -253,10 +253,26 @@ objects:
         value: |-
           u({{clock}}/FUN`ZONE`CHECK,clientzone(%0))
         flags: [funsyntax]
-      # +timezone/detect: the zone the player's client reported, set as if they had typed it.
+      # %0 a zone and where it came from, client or ip: the sentence that offers it.
+      FUN`ZONE`SUGGESTED:
+        value: |-
+          switch(%1,ip,Where you connect from suggests your time zone is %0,Your client says your time zone is %0)
+        flags: [funsyntax]
+      # %0 client or ip: where a zone set without the player typing it came from.
+      FUN`ZONE`SOURCE:
+        value: |-
+          switch(%0,ip,guessed from where you connect,from your client)
+        flags: [funsyntax]
+      # +timezone/detect: the zone the player's client reported, set as if they had typed it. With none, and
+      # DATA`CONFIG`DETECT-IP not off, asks the zone service where they connect from (INC`ZONE`LOOKUP).
       INC`ZONE`DETECT:
         value: |-
-          think setq(client_zone,u(%!/FUN`ZONE`CLIENT,%#)); @assert strlen(%q<client_zone>)=@pemit %#=notice(TIME,Your client has not reported a time zone. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @assert comp(%q<client_zone>,%q<viewer_zone>)=@pemit %#=notice(TIME,Your time zone is already %q<client_zone>.); &TZ %#=%q<client_zone>; @assert strmatch(get(%#/TZ),%q<client_zone>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<client_zone> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<client_zone>,%q<now>)]%, from your client. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<client_zone>)] for you.,ok)
+          think setq(client_zone,u(%!/FUN`ZONE`CLIENT,%#)); @assert cor(strlen(%q<client_zone>),not(u(%!/FUN`LOOKUP`OK,%#)))=@include/args %!/INC`ZONE`LOOKUP=player,%:,mode,detect; @assert strlen(%q<client_zone>)=@pemit %#=notice(TIME,Your client has not reported a time zone. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%:,zone,%q<client_zone>,from,client
+        flags: [cmdsyntax]
+      # %<player>, %<zone> and %<from> (client or ip): sets the zone the player asked for with +timezone/detect.
+      INC`ZONE`TAKE:
+        value: |-
+          think setq(now,secs()); @assert comp(%<zone>,get(%<player>/TZ))=@pemit %<player>=notice(TIME,Your time zone is already %<zone>.); &TZ %<player>=%<zone>; @assert strmatch(get(%<player>/TZ),%<zone>)=@pemit %<player>=notice(TIME,Your TZ attribute could not be set. &TZ me=%<zone> sets it.,error); @pemit %<player>=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%<zone>,%q<now>)]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%<zone>)] for you.,ok)
         flags: [cmdsyntax]
       # +timezone/match <time>: the zones on the Clock's match-zones list whose clock reads that time now, each a
       # link to +timezone <zone>. A player types a round time a few minutes off, so the nearest time within half an
@@ -288,12 +304,47 @@ objects:
         flags: [funsyntax]
 
       # ---- detected zones ---------------------------------------------------------
-      # A client's zone, from player`connect (login 1) and socket`timezone (login 0), with %<player> and %<zone>.
-      # Fills an empty TZ when DATA`CONFIG`DETECT is set, hidden, since the player did not choose to share where
-      # they are; when it is offer, says so once a login. A zone the player set is never touched.
+      # From player`connect (login 1) and socket`timezone (login 0): %<player>, %<zone> (the client's, or nothing)
+      # and, at login, %<address>. A player who set a zone is left alone. With no client zone, a login asks the zone
+      # service where the player connects from (INC`ZONE`LOOKUP).
       EVENT`ZONE:
         value: |-
-          think setq(zone_detect,get({{clock}}/DATA`CONFIG`DETECT)); @break cor(strmatch(%q<zone_detect>,off),not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(u({{clock}}/FUN`ZONE`VALID,%<zone>))); @break cand(strmatch(%q<zone_detect>,offer),not(%<login>)); @assert strmatch(%q<zone_detect>,set)=@pemit %<player>=notice(TIME,Your client says your time zone is %<zone>. +timezone/detect sets it.); &TZ %<player>=%<zone>; @set %<player>/TZ=!visual; @assert strmatch(get(%<player>/TZ),%<zone>); @pemit %<player>=notice(TIME,Your time zone is now [u({{clock}}/FUN`ZONE`LABEL,%<zone>,secs())]%, from your client. Only you and staff see it: +timezone/unhide shares it%, and +timezone <zone> changes it.,ok)
+          @break cor(not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(cor(strlen(%<zone>),%<login>))); @assert strlen(%<zone>)=@include/args %!/INC`ZONE`LOOKUP=player,%<player>,mode,login; @include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%<zone>,from,client,login,%<login>
+        flags: [cmdsyntax]
+      # %<player>, %<zone>, %<from> (client or ip) and %<login>. Fills an empty TZ when the setting for that source
+      # (DATA`CONFIG`DETECT for the client's, DATA`CONFIG`DETECT-IP for the address's) is set, hidden, since the
+      # player did not choose to share where they are; when it is offer, says so once a login.
+      INC`ZONE`SETTLE:
+        value: |-
+          think setq(zone_detect,get({{clock}}/DATA`CONFIG`[if(strmatch(%<from>,ip),DETECT-IP,DETECT)])); @break cor(strmatch(%q<zone_detect>,off),not(hastype(%<player>,player)),hasattr(%<player>,TZ),not(u({{clock}}/FUN`ZONE`VALID,%<zone>))); @break cand(strmatch(%q<zone_detect>,offer),not(%<login>)); @assert strmatch(%q<zone_detect>,set)=@pemit %<player>=notice(TIME,[u(%!/FUN`ZONE`SUGGESTED,%<zone>,%<from>)]. +timezone/detect sets it.); &TZ %<player>=%<zone>; @set %<player>/TZ=!visual; @assert strmatch(get(%<player>/TZ),%<zone>); @pemit %<player>=notice(TIME,Your time zone is now [u({{clock}}/FUN`ZONE`LABEL,%<zone>,secs())]%, [u(%!/FUN`ZONE`SOURCE,%<from>)]. Only you and staff see it: +timezone/unhide shares it%, and +timezone <zone> changes it.,ok)
+        flags: [cmdsyntax]
+
+      # ---- the zone service --------------------------------------------------------
+      # Only when DATA`CONFIG`DETECT-IP is not off: the player's address goes to the service DATA`CONFIG`IP-SERVICE
+      # names, over https. A private or unknown address is never sent.
+
+      # %0 a player: 1 when a lookup may run for them now: the setting is on and they connect from a public address.
+      FUN`LOOKUP`OK:
+        value: |-
+          cand(not(strmatch(get({{clock}}/DATA`CONFIG`DETECT-IP),off)),u(%!/FUN`ADDRESS`PUBLIC,ipaddr(%0)))
+        flags: [funsyntax]
+      # %0 an address: 1 unless it is no IPv4 or IPv6 address, or a loopback, private or link-local one, which no
+      # service can place.
+      FUN`ADDRESS`PUBLIC:
+        value: |-
+          not(cor(not(cor(strmatch(%0,*.*.*.*),strmatch(%0,*:*))),strmatch(%0,#-*),strmatch(%0,127.*),strmatch(%0,10.*),strmatch(%0,192.168.*),strmatch(%0,169.254.*),strmatch(%0,0.*),cand(strmatch(%0,172.*.*.*),gte(elements(%0,2,.),16),lte(elements(%0,2,.),31)),strmatch(%0,::1),strmatch(%0,fc*:*),strmatch(%0,fd*:*),strmatch(%0,fe80:*)))
+        flags: [funsyntax]
+      # %<player> and %<mode> (login or detect): sends the player's address to the zone service. The reply runs
+      # LOOKUP`<number>, written here for this player, which hands it to INC`ZONE`REPLY and is then cleared.
+      INC`ZONE`LOOKUP:
+        value: |-
+          @assert u(%!/FUN`LOOKUP`OK,%<player>); think setqm(lookup_attr,LOOKUP`[after(num(%<player>),#)],lookup_url,edit(get({{clock}}/DATA`CONFIG`IP-SERVICE),<ip>,urlencode(ipaddr(%<player>)))); @assert strmatch(%q<lookup_url>,https://*); &%q<lookup_attr> %!=@include/args %!/INC`ZONE`REPLY=player,%<player>,mode,%<mode>; @http %!/%q<lookup_attr>=%q<lookup_url>
+        flags: [cmdsyntax]
+      # The zone service's reply: %0 the body, %<status>, with %<player> and %<mode>. A zone the server knows, at
+      # the reply's DATA`CONFIG`IP-FIELD, is settled as a login's (INC`ZONE`SETTLE) or taken for +timezone/detect.
+      INC`ZONE`REPLY:
+        value: |-
+          &LOOKUP`[after(num(%<player>),#)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%0,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -462,6 +513,46 @@ objects:
         Zone from the client
       DATA`CONFIG`DETECT`EXAMPLE: |-
         offer
+      DATA`CONFIG`DETECT-IP: |-
+        off
+      DATA`CONFIG`DETECT-IP`TYPE: |-
+        choice
+      DATA`CONFIG`DETECT-IP`CHOICES: |-
+        set offer off
+      DATA`CONFIG`DETECT-IP`DEFAULT: |-
+        off
+      DATA`CONFIG`DETECT-IP`DESCRIPTION: |-
+        What to do for a player who set no zone and whose client reports none: set fills it in from where they connect, hidden; offer tells them at login; off does nothing. Anything but off sends each such player's address to the zone service, ip-service.
+      DATA`CONFIG`DETECT-IP`LABEL: |-
+        Zone from where a player connects
+      DATA`CONFIG`DETECT-IP`EXAMPLE: |-
+        offer
+      DATA`CONFIG`IP-SERVICE: |-
+        https://ipinfo.io/<ip>/json
+      DATA`CONFIG`IP-SERVICE`TYPE: |-
+        text
+      DATA`CONFIG`IP-SERVICE`DEFAULT: |-
+        https://ipinfo.io/<ip>/json
+      DATA`CONFIG`IP-SERVICE`CHECK: |-
+        CHECK`IP`SERVICE
+      DATA`CONFIG`IP-SERVICE`DESCRIPTION: |-
+        The https address that answers with the zone of an address, as JSON, <ip> standing for the address. Used only when detect-ip is not off.
+      DATA`CONFIG`IP-SERVICE`LABEL: |-
+        Zone service
+      DATA`CONFIG`IP-SERVICE`EXAMPLE: |-
+        https://ipwho.is/<ip>
+      DATA`CONFIG`IP-FIELD: |-
+        timezone
+      DATA`CONFIG`IP-FIELD`TYPE: |-
+        text
+      DATA`CONFIG`IP-FIELD`DEFAULT: |-
+        timezone
+      DATA`CONFIG`IP-FIELD`DESCRIPTION: |-
+        Where the zone is in the zone service's reply, as a JSON path: timezone for ipinfo.io, timezone.id for ipwho.is.
+      DATA`CONFIG`IP-FIELD`LABEL: |-
+        Zone in the reply
+      DATA`CONFIG`IP-FIELD`EXAMPLE: |-
+        timezone.id
       DATA`CONFIG`MATCH-ZONES: |-
         Pacific/Honolulu America/Anchorage America/Los_Angeles America/Vancouver America/Phoenix America/Denver America/Mexico_City America/Chicago America/Bogota America/New_York America/Toronto America/Halifax America/St_Johns America/Sao_Paulo America/Argentina/Buenos_Aires Atlantic/Azores UTC Europe/London Europe/Dublin Europe/Lisbon Africa/Lagos Europe/Paris Europe/Berlin Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Stockholm Europe/Warsaw Africa/Johannesburg Africa/Cairo Europe/Athens Europe/Helsinki Europe/Istanbul Europe/Moscow Asia/Tehran Asia/Dubai Asia/Karachi Asia/Kolkata Asia/Kathmandu Asia/Dhaka Asia/Bangkok Asia/Jakarta Asia/Singapore Asia/Shanghai Asia/Manila Australia/Perth Asia/Seoul Asia/Tokyo Australia/Darwin Australia/Adelaide Australia/Brisbane Australia/Sydney Pacific/Auckland
       DATA`CONFIG`MATCH-ZONES`TYPE: |-
@@ -481,6 +572,9 @@ objects:
       # +config's CHECK for MATCH-ZONES (%0 the zones): every one a zone the server knows.
       CHECK`ZONES: |-
         if(every(%!/FUN`ZONE`VALID,%0,%b,zone_unknown),,The server knows no zone called [itemize(%q<zone_unknown>)].)
+      # +config's CHECK for IP-SERVICE (%0 the address): https, with <ip> in it.
+      CHECK`IP`SERVICE: |-
+        if(cand(strmatch(%0,https://*),strmatch(%0,*<ip>*)),,Give an https address with <ip> where the address goes%, such as https://ipinfo.io/<ip>/json.)
       # +config's CHECK for IC-MONTHS and IC-WEEKDAYS (%0 the names, %1 the setting): every name or none.
       CHECK`IC`NAMES: |-
         setq(ic_need,if(strmatch(%1,ic-months),12,7))[if(cand(words(%0,|),neq(words(%0,|),%q<ic_need>)),Give all %q<ic_need> names%, or none for the real ones.)]
@@ -677,6 +771,9 @@ objects:
         - `zone`: the game's time zone, the one `+time` calls game time. `UTC` by default.
         - `format`: how a time is written, in `timefmt\(\)`'s codes. `$a $d $b $Y, $H:$M` by default, which writes `Thu 15 Oct 2026, 20:00`.
         - `detect`: what a zone a player's client reports does when they set none. `set`, the default, fills it in, hidden, and tells them; `offer` tells them at login, and `+timezone/detect` sets it; `off` does nothing. See `+help timezone client`.
+        - `detect-ip`: what to do for a player who set no zone and whose client reports none. `off`, the default, does nothing. `set` and `offer` ask the zone service where the player connects from, at login, and then work as for `detect`. Anything but `off` sends those players' addresses to that service, so say so in your game's privacy policy. A guess from an address is often wrong behind a VPN, a proxy or a mobile network, so `offer` suits it better than `set`.
+        - `ip-service`: the zone service, an https address with `<ip>` where the address goes. `https://ipinfo.io/<ip>/json` by default, which answers 50,000 lookups a month without an account. `https://ipwho.is/<ip>` is another. A private address, such as a player on the same network as the game, is never sent.
+        - `ip-field`: where the zone is in the service's reply, as a JSON path. `timezone` by default, for ipinfo.io; `timezone.id` for ipwho.is.
         - `match-zones`: the zones `+timezone/match` offers, in the order it lists them. Each must be a zone the server knows. About fifty by default, at least one for each offset most players live in.
 
         Short names a player may give `+timezone` or `+time` are attributes on the Clock object, inside the Time object in the master room: `` ALIAS`<name> ``, one each, its value the zone. A short name wins over a zone of the same name.
@@ -744,7 +841,7 @@ objects:
         - `+timezone <zone>` sets it: `+timezone America/New_York`.
         - `+timezone/clear` clears it. Times are then shown and read in the game's.
         - `+timezone/hide` keeps your zone to you and staff: `+time <name>` tells anyone else you keep it to yourself, and other packages read nothing. `+timezone/unhide` shows it again.
-        - `+timezone/detect` sets the zone your client reported.
+        - `+timezone/detect` sets the zone your client reported. When it reported none, a game may look up where you connect from instead.
         - `+timezone/match <time>` lists the zones where it is that time now, each a link that sets it: `+timezone/match 8:15pm`.
 
         A zone is named the way the tz database names it: a region and a city, such as `America/Chicago`, `Europe/Berlin` or `Australia/Perth`, or `UTC`. Capitals are put in for you, so `america/new_york` works. Short names work too:
@@ -788,7 +885,9 @@ objects:
         - PuTTY reports it when you add `TZ` with your zone, such as `Europe/Paris`, under Connection, Data, Environment variables.
         - Mudlet, TinTin++, MUSHclient and most other MUD clients report none. Use `+timezone/match` or `+timezone <zone>`.
 
-        A zone set this way is hidden, since you did not choose to share it: `+timezone/unhide` shares it. A zone you set yourself is never changed. A game may only tell you what your client reported, and leave setting it to `+timezone/detect`, or ignore it: see `+help time settings`.
+        When your client reports no zone, a game may look one up from where you connect from, by asking a zone service on the internet. Staff decide whether it does and which service it asks. The guess is often wrong behind a VPN or on a mobile network.
+
+        A zone set this way is hidden, since you did not choose to share it: `+timezone/unhide` shares it. A zone you set yourself is never changed. A game may only tell you what it found, and leave setting it to `+timezone/detect`, or ignore it: see `+help time settings`.
 
         Output, on logging in from the web portal in Paris with no zone set: `\[TIME\] Done: Your time zone is now Europe/Paris \(UTC+02:00\), from your client. Only you and staff see it: +timezone/unhide shares it, and +timezone <zone> changes it.`
 

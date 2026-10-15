@@ -337,6 +337,87 @@ public class TimeIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// What the Time object does with a zone a lookup found for <paramref name="player"/> at login: INC`ZONE`SETTLE, as
+	/// the zone service's reply hands it over.
+	/// </summary>
+	private Task<string> SettlesFromAddress(TestIsolationHelpers.TestPlayer player, string zone) =>
+		Told(player, $"@trigger/args {Time}/INC`ZONE`SETTLE=player,#{player.DbRef.Number},zone,{zone},from,ip,login,1");
+
+	/// <summary>
+	/// The zone service's reply, <paramref name="body"/> with <paramref name="status"/>, for a login lookup: run as the
+	/// LOOKUP`&lt;number&gt; attribute INC`ZONE`LOOKUP writes on the Time object runs, by an attribute of the same shape.
+	/// </summary>
+	private async Task<string> Replies(TestIsolationHelpers.TestPlayer player, int status, string body)
+	{
+		await God($"&REPLY`TEST {Time}=@include/args {Time}/INC`ZONE`REPLY=status,{status},player,#{player.DbRef.Number},mode,login");
+		return await Told(player, $"@trigger {Time}/REPLY`TEST={{{{{body}}}}}");
+	}
+
+	[Test]
+	public async Task TheAddressIsUsedOnlyWhenTheGameTurnsItOn()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("IpAnn");
+			var number = ann.DbRef.Number;
+			var staff = await Player("IpStaff");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			// Off by default: a zone found from the address does nothing.
+			await Assert.That(await SettlesFromAddress(ann, "Europe/Paris")).DoesNotContain("[TIME]");
+			await Assert.That(await God($"think hasattr(#{number},TZ)")).IsEqualTo("0");
+
+			await Assert.That(await As(staff, "+config time/detect-ip=offer")).Contains("time/detect-ip is now offer, was off.");
+			await Assert.That(await SettlesFromAddress(ann, "Europe/Paris"))
+				.Contains("Where you connect from suggests your time zone is Europe/Paris. +timezone/detect sets it.");
+			await Assert.That(await God($"think hasattr(#{number},TZ)")).IsEqualTo("0");
+
+			await As(staff, "+config time/detect-ip=set");
+			await Assert.That(await SettlesFromAddress(ann, "Europe/Paris"))
+				.Contains("Your time zone is now Europe/Paris (UTC+0");
+			await Assert.That(await God($"think get(#{number}/TZ)")).IsEqualTo("Europe/Paris");
+			await Assert.That(await Think($"hasflag(#{number}/TZ,visual)")).IsEqualTo("0");
+
+			// Once a zone is set, a later one changes nothing.
+			await Assert.That(await SettlesFromAddress(ann, "Asia/Tokyo")).DoesNotContain("[TIME]");
+			await Assert.That(await God($"think get(#{number}/TZ)")).IsEqualTo("Europe/Paris");
+
+			// The service's reply: the zone at ip-field, only from a 200 and only a zone the server knows.
+			var bo = await Player("IpBo");
+			await Assert.That(await Replies(bo, 429, "\"timezone\":\"Asia/Tokyo\"")).DoesNotContain("[TIME]");
+			await Assert.That(await Replies(bo, 200, "\"timezone\":\"Nowhere/Land\"")).DoesNotContain("[TIME]");
+			await Assert.That(await God($"think hasattr(#{bo.DbRef.Number},TZ)")).IsEqualTo("0");
+			await As(staff, "+config time/ip-field=timezone.id");
+			await Assert.That(await Replies(bo, 200, "\"timezone\":{\"id\":\"Asia/Tokyo\"}"))
+				.Contains("Your time zone is now Asia/Tokyo (UTC+09:00), guessed from where you connect.");
+
+			// Only an address on the internet is ever sent, and only to an https service.
+			foreach (var (address, sent) in new[]
+			{
+				("81.2.69.142", "1"), ("2a00:1450:4001::200e", "1"), ("172.32.0.1", "1"),
+				("127.0.0.1", "0"), ("10.1.2.3", "0"), ("192.168.0.9", "0"), ("172.20.0.1", "0"), ("169.254.1.1", "0"),
+				("::1", "0"), ("fd12:3456::1", "0"), ("fe80::1", "0"), ("localhost", "0"), ("UNKNOWN", "0"), ("#-1 NOT CONNECTED", "0"),
+			})
+			{
+				await Assert.That(await Think($"u({Time}/FUN`ADDRESS`PUBLIC,{address})")).IsEqualTo(sent).Because(address);
+			}
+
+			await Assert.That(await As(staff, "+config time/ip-service=http://ipinfo.io/<ip>/json")).Contains("Give an https address with <ip>");
+			await Assert.That(await As(staff, "+config time/ip-service=https://ipwho.is/<ip>")).Contains("time/ip-service is now https://ipwho.is/<ip>");
+
+			// A test connection's address is not one, so a real login sends nothing even with the lookup on.
+			var cy = await Player("IpCy");
+			await Assert.That(await LogsIn(cy)).DoesNotContain("[TIME]");
+			await Assert.That(await Think($"lattr({Time}/LOOKUP`*)")).IsEqualTo(string.Empty);
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	[Test]
 	public async Task MatchListsTheZonesAtATypedTime()
 	{
