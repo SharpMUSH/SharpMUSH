@@ -8073,6 +8073,7 @@
   </data>
   <data name="DiscordLinkNoTicket" xml:space="preserve">
     <value>This page needs the link the bot sends when you type /link in Discord.</value>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notifications</value>
   </data>

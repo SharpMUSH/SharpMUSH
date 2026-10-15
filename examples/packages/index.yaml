@@ -140,7 +140,7 @@ packages:
   - path: discord/
     name: Discord
     package: discord
-    version: 1.0.0
+    version: 1.1.0
     description: The discord feed kind and the discord.admin permission, for the Discord plugin's linked channels (@discord/link)
   - path: notifications/
     name: Notifications

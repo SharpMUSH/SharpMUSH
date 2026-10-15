@@ -127,9 +127,11 @@ public class GameFeatureServiceTests
 	[Test]
 	public async Task WithoutTheScenePlugin_NoPackageOverItIsAvailable()
 	{
-		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
+		var features = new Game().Features(scenePlugin: false);
+		var packages = await features.PackagesAsync();
 
-		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id))
+		// The Discord plugin is not loaded here either; its packages are someone else's test.
+		await Assert.That(packages.Where(p => !p.Available).Select(p => p.Id).Except(features.PackagesOver("discord")))
 			.IsEquivalentTo(["scene", "scene-verse", "radio-scene"]);
 		await Assert.That(new Game().Features().PackagesOver("scene"))
 			.IsEquivalentTo(["scene", "radio-scene", "scene-verse"]);
