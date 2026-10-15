@@ -827,7 +827,8 @@ public partial class Functions
 	[SharpFunction(Name = "escape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Escape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message;
+		// Escaped text is someone else's, so its list separators (%*<...>) go as secure() takes them off.
+		var arg0 = parser.CurrentState.Arguments["0"].Message.WithoutDataMarkup();
 		var text = arg0.ToPlainText();
 		if (text.Length == 0)
 		{
@@ -1514,9 +1515,11 @@ public partial class Functions
 	}
 
 	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeDecomposer.SoftcodeSpecial"/> character becomes a space.</summary>
+	/// <remarks>List separators (<c>%*&lt;...&gt;</c>) are taken off too: secured text is someone else's, and its
+	/// characters must not split a list.</remarks>
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.WithoutDataMarkup()
 			.Apply(text => SoftcodeDecomposer.SoftcodeSpecial().Replace(text, " ")));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
@@ -1632,7 +1635,15 @@ public partial class Functions
 
 	[SharpFunction(Name = "stripansi", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.ToPlainText());
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.WithoutVisualMarkup());
+
+	/// <summary>
+	/// The text with its list separators (<c>%*&lt;...&gt;</c>) taken off and its colour kept, so nothing in it
+	/// splits a list: for text a player typed, before it goes into one.
+	/// </summary>
+	[SharpFunction(Name = "unmark", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
+	public ValueTask<CallState> Unmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.WithoutDataMarkup());
 
 	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count-controls"])]
 	public ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)

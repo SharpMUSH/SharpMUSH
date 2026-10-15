@@ -253,7 +253,7 @@ internal sealed class AttributeEvaluator(
 				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
 					slimArgs = slimArgs.ToDictionary(pair => pair.Key,
-						pair => pair.Value with { Message = MarkupText.Plain(pair.Value.Message.ToPlainText()) });
+						pair => pair.Value with { Message = pair.Value.Message.WithoutVisualMarkup() });
 				}
 
 				var result = await parser.With(
