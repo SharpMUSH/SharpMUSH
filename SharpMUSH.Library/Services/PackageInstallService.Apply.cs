@@ -23,8 +23,8 @@ public partial class PackageInstallService
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
-		IPluginPackageBinarySource? binarySource = null)
-		=> await gate.RunAsync(() => ApplyExclusiveAsync(manifest, request, binarySource, cancellationToken), cancellationToken) switch
+		IPackageFileSource? fileSource = null)
+		=> await gate.RunAsync(() => ApplyExclusiveAsync(manifest, request, fileSource, cancellationToken), cancellationToken) switch
 		{
 			CommittedApply committed => await RunLifecycleAsync(committed, cancellationToken),
 			Error<string> error => error
@@ -55,7 +55,7 @@ public partial class PackageInstallService
 	private async Task<Result<CommittedApply>> ApplyExclusiveAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		IPluginPackageBinarySource? binarySource,
+		IPackageFileSource? fileSource,
 		CancellationToken cancellationToken)
 	{
 		// Managed packages (Phase 4) carry a compiled C# plugin DLL rather than
@@ -64,7 +64,7 @@ public partial class PackageInstallService
 		// list) and return. The plugin loads on the next boot.
 		if (manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
-			return await ApplyManagedAsync(manifest, request, binarySource, cancellationToken) switch
+			return await ApplyManagedAsync(manifest, request, fileSource, cancellationToken) switch
 			{
 				PackageApplyResult applied => new CommittedApply(applied, null),
 				Error<string> error => error
@@ -74,6 +74,16 @@ public partial class PackageInstallService
 		if (manifest.Objects.Any(o => o.Type == PackageObjectType.Player))
 		{
 			return new Error<string>("Packages containing player objects are not yet supported by the apply engine.");
+		}
+
+		// A content pack's file: pages are read once, here, so the plan and the apply see the same text.
+		switch (await PackageWikiBodies.LoadAsync(manifest, fileSource, cancellationToken))
+		{
+			case PackageManifest loaded:
+				manifest = loaded;
+				break;
+			case Error<string> error:
+				return error;
 		}
 
 		var inputs = await GatherInputsAsync(manifest, request.ConfigureAnswers, cancellationToken);
@@ -96,6 +106,13 @@ public partial class PackageInstallService
 			return new Error<string>($"Plan is blocked: {string.Join("; ", blockedSettings.Select(s => $"setting {s.Option}: {s.Detail}"))}");
 		}
 
+		var wikiPlan = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages,
+			DeclaredPermissions(manifest), cancellationToken);
+		if (wikiPlan.Where(w => w.Action == PackageWikiAction.Blocked).ToArray() is { Length: > 0 } blockedPages)
+		{
+			return new Error<string>($"Plan is blocked: {string.Join("; ", blockedPages.Select(w => $"wiki page {w.TargetRef}/{w.Page}: {w.Detail}"))}");
+		}
+
 		var decisions = request.ConflictDecisions.ToDictionary(
 			d => DecisionKey(d.TargetRef, d.Attribute), d => d, StringComparer.Ordinal);
 		var undecided = changeset.Attributes
@@ -106,6 +123,9 @@ public partial class PackageInstallService
 				.Where(s => s.Action == PackageStructureAction.Conflict
 					&& !decisions.ContainsKey(DecisionKey(s.TargetRef, LockDecisionAttribute(s.Element))))
 				.Select(s => $"{s.TargetRef}/lock:{s.Element}"))
+			.Concat(wikiPlan
+				.Where(w => w.Action == PackageWikiAction.Conflict && !decisions.ContainsKey(DecisionKey(w.TargetRef, w.Page)))
+				.Select(w => $"{w.TargetRef}/{w.Page}"))
 			.ToList();
 		if (undecided.Count > 0)
 		{
@@ -165,11 +185,12 @@ public partial class PackageInstallService
 	}
 
 	/// <summary>
-	/// What follows a committed apply inside the gate: pruning old revisions, which is not part of the
-	/// apply and is not undone. Its lifecycle hooks run once the gate is released.
+	/// What follows a committed apply inside the gate: deleting the wiki pages it let go of untouched and pruning
+	/// old revisions, which are not part of the apply and are not undone. Its lifecycle hooks run once the gate is released.
 	/// </summary>
 	private async Task<CommittedApply> AfterCommitAsync(ApplyRun run, PackageApplyResult applied)
 	{
+		await wiki.DeleteReleasedAsync(run.WikiDeletions, WikiEditor(run.PackageManager), run.Notes);
 		await registry.PrunePackageRevisionsAsync(run.Manifest.Name, run.Request.KeepRevisions);
 		return new CommittedApply(applied, run.Changeset);
 	}
@@ -201,6 +222,9 @@ public partial class PackageInstallService
 		public IReadOnlyList<PackageSettingRecord>? Settings { get; set; }
 
 		public List<string> Notes { get; } = [.. Changeset.Notes];
+
+		/// <summary>The wiki pages this apply let go of untouched, deleted once it commits.</summary>
+		public List<PackageWikiDeletion> WikiDeletions { get; } = [];
 
 		/// <summary>Live values of attributes this apply overwrote, for the revision's pre-apply record.</summary>
 		public List<PackageRevisionSnapshotAttribute> PreApply { get; } = [];
@@ -251,6 +275,11 @@ public partial class PackageInstallService
 		if (await ApplySettingsAsync(run) is Error<string> settingError)
 		{
 			return settingError;
+		}
+
+		if (await ApplyWikiAsync(run, cancellationToken) is Error<string> wikiError)
+		{
+			return wikiError;
 		}
 
 		await RetireRemovedObjectsAsync(run, cancellationToken);
@@ -427,6 +456,30 @@ public partial class PackageInstallService
 		return null;
 	}
 
+	/// <summary>
+	/// Pass 4d: the wiki pages the package ships (format 1.4), once its permissions exist so a page can require one.
+	/// The pages it lets go of untouched are deleted after the commit, which cannot be undone.
+	/// </summary>
+	private async Task<Error<string>?> ApplyWikiAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		switch (await wiki.ApplyAsync(run.Writes, run.Manifest.Name, run.Manifest.Version.ToString(), run.Manifest.WikiPages,
+			DeclaredPermissions(run.Manifest), run.Manifest.Locale,
+			change => run.Decisions.GetValueOrDefault(DecisionKey(change.TargetRef, change.Page)),
+			WikiEditor(run.PackageManager), run.Notes, cancellationToken))
+		{
+			case Error<string> error:
+				return error;
+			case IReadOnlyList<PackageWikiDeletion> deletions:
+				run.WikiDeletions.AddRange(deletions);
+				break;
+		}
+
+		return null;
+	}
+
+	/// <summary>Who the package's wiki pages are written as: the Package Manager wizard.</summary>
+	private static string WikiEditor(SharpPlayer packageManager) => packageManager.Object.DBRef.ToString();
+
 	/// <summary>Pass 5: objects removed from the package are marked GOING, the @destroy convention.</summary>
 	private async Task RetireRemovedObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
 	{
@@ -533,10 +586,10 @@ public partial class PackageInstallService
 	private async Task<Result<PackageApplyResult>> ApplyManagedAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		IPluginPackageBinarySource? binarySource,
+		IPackageFileSource? fileSource,
 		CancellationToken cancellationToken)
 	{
-		if (binarySource is null)
+		if (fileSource is null)
 		{
 			return new Error<string>(
 				$"Plugin package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
@@ -553,7 +606,7 @@ public partial class PackageInstallService
 			return Blocked(issues);
 		}
 
-		return await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken) switch
+		return await managedInstaller.DeployAsync(manifest, request, fileSource, cancellationToken) switch
 		{
 			IReadOnlyList<string> deployed => await RecordManagedDeploymentAsync(manifest, request, deployed),
 			Error<string> error => error,

@@ -42,6 +42,7 @@ public class PackageOperationGateTests
 			services.GetRequiredService<ILockService>(),
 			services.GetRequiredService<IPackageDeclarationService>(),
 			services.GetRequiredService<IPackageSettingService>(),
+			services.GetRequiredService<IPackageWikiService>(),
 			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>());
 	}
 

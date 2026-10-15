@@ -117,6 +117,18 @@ public partial class PackageInstallService
 	{
 		var packageId = installed.Id;
 		var notes = new List<string>();
+		var editor = WikiEditor(writes.PackageManager);
+
+		// Its wiki pages go when nobody changed them, after the commit; a changed one stays as the game's.
+		IReadOnlyList<PackageWikiDeletion> wikiDeletions = [];
+		switch (await wiki.ApplyAsync(writes, packageId, installed.Version, [], [], null, _ => null, editor, notes, cancellationToken))
+		{
+			case Error<string> wikiError:
+				return wikiError;
+			case IReadOnlyList<PackageWikiDeletion> deletions:
+				wikiDeletions = deletions;
+				break;
+		}
 
 		// Its roles, permissions and categories go unless the game relies on them.
 		if (installed.Owned is not null
@@ -168,6 +180,7 @@ public partial class PackageInstallService
 
 		await registry.RemoveInstalledPackageAsync(packageId);
 		writes.Commit();
+		await wiki.DeleteReleasedAsync(wikiDeletions, editor, notes);
 
 		// What its STARTUP registered in memory goes with its objects: a hook, a global function or an
 		// @command/add command left pointing at one would keep running its code until a restart.
@@ -429,6 +442,11 @@ public partial class PackageInstallService
 		if (installed.Settings is not null)
 		{
 			notes.Add("Configuration options are left as they are: a rollback restores objects and attributes only.");
+		}
+
+		if ((await registry.GetPackageWikiPagesAsync(packageId)).Count > 0)
+		{
+			notes.Add("Wiki pages are left as they are: a rollback restores objects and attributes only.");
 		}
 
 		var newRevision = installed.CurrentRevision + 1;

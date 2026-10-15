@@ -29,9 +29,15 @@ public partial class PackageInstallService
 		return changeset with
 		{
 			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken),
-			Settings = await PlanSettingsAsync(inputs, changeset)
+			Settings = await PlanSettingsAsync(inputs, changeset),
+			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),
+				cancellationToken)
 		};
 	}
+
+	/// <summary>The custom permissions the manifest declares, which its wiki pages may require before they exist.</summary>
+	private static IReadOnlyCollection<string> DeclaredPermissions(PackageManifest manifest)
+		=> [.. manifest.Declared.Permissions.Select(p => p.Name)];
 
 	/// <summary>What the package's configuration options would do; nothing when it sets none and owns none.</summary>
 	private async Task<IReadOnlyList<PackageSettingChange>> PlanSettingsAsync(PackagePlanInputs inputs, PackageChangeset changeset)

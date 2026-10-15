@@ -78,6 +78,10 @@ else
     {
         <MudAlert Severity="Severity.Error">@Loc["PkgSettingBlocked"] <b>@blocked.Option</b>: @blocked.Detail</MudAlert>
     }
+    @foreach (var blocked in (_plan.Changeset.Wiki ?? []).Where(w => w.Action == PackageWikiAction.Blocked))
+    {
+        <MudAlert Severity="Severity.Error">@Loc["PkgWikiBlocked"] <b>@WikiLabel(blocked)</b>: @blocked.Detail</MudAlert>
+    }
 
     @foreach (var warning in _plan.ManifestWarnings)
     {
@@ -139,6 +143,8 @@ else
     }
 
     @* ── Objects ──────────────────────────────────────────────────────── *@
+    @if (!IsContentPack)
+    {
     <KitCard Title="@Loc["PkgObjectsCount", _plan.Changeset.Objects.Count]">
         <div class="pkg-review-body">
             <MudTable Items="_plan.Changeset.Objects" Dense="true" Elevation="0" Class="pkg-objects-table">
@@ -168,6 +174,7 @@ else
             </MudTable>
         </div>
     </KitCard>
+    }
 
     @* ── Configuration options ───────────────────────────────────── *@
     @if (_plan.Changeset.Settings is { Count: > 0 } settings)
@@ -215,7 +222,119 @@ else
         </KitCard>
     }
 
+    @* ── Wiki pages ───────────────────────────────────────────────────── *@
+    @if (_plan.Changeset.Wiki is { Count: > 0 } wikiPages)
+    {
+        <KitCard Title="@Loc["PkgWikiPagesCount", wikiPages.Count]" Sub="@Loc["PkgWikiPagesSub"]" Class="pkg-wiki">
+            <Controls>
+                @if (_wikiConflicts.Count > 0)
+                {
+                    <Pill Tag="true" Warn="true">@Loc["PkgConflictCount", _wikiConflicts.Count]</Pill>
+                }
+            </Controls>
+            <ChildContent>
+            <div class="pkg-review-body">
+                <MudTable Items="wikiPages" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgWikiPage"]</MudTh><MudTh>@Loc["PkgWikiTitle"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgWikiPage"]"><code>@WikiLabel(context)</code></MudTd>
+                        <MudTd data-label="@Loc["PkgWikiTitle"]">@context.Title</MudTd>
+                        <MudTd data-label="@Loc["PkgAction"]">
+                            <MudChip T="string" Size="Size.Small" Color="@WikiColor(context.Action)">
+                                @(context.Action == PackageWikiAction.Conflict
+                                    ? Loc["PkgConflictLabel", context.Conflict?.ToString() ?? string.Empty].Value
+                                    : context.Action.ToString())
+                            </MudChip>
+                        </MudTd>
+                        <MudTd data-label="@Loc["PkgDetails"]">
+                            @foreach (var line in context.Changes ?? [])
+                            {
+                                <MudText Typo="Typo.caption">@line</MudText>
+                            }
+                            @if (context.Detail is not null)
+                            {
+                                <MudText Typo="Typo.caption">@context.Detail</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+                @if (_wikiConflicts.Count > 0)
+                {
+                    <MudExpansionPanels MultiExpansion="true" Dense="true">
+                        @foreach (var change in _wikiConflicts)
+                        {
+                            var key = WikiDecisionKey(change);
+                            <MudExpansionPanel Expanded="true">
+                                <TitleContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <code>@WikiLabel(change)</code>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                            @Loc["PkgConflictLabel", change.Conflict?.ToString() ?? string.Empty]
+                                        </MudChip>
+                                    </MudStack>
+                                </TitleContent>
+                                <ChildContent>
+                                    <MudGrid>
+                                        @if (change.BaseMarkdown is not null)
+                                        {
+                                            <MudItem xs="12" md="4">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgBaseAsInstalled"]</MudText>
+                                                <pre class="mush-pane">@change.BaseMarkdown</pre>
+                                            </MudItem>
+                                        }
+                                        @if (change.LiveMarkdown is not null)
+                                        {
+                                            <MudItem xs="12" md="4">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgLiveYourVersion"]</MudText>
+                                                <pre class="mush-pane">@change.LiveMarkdown</pre>
+                                            </MudItem>
+                                        }
+                                        @if (change.NewMarkdown is not null)
+                                        {
+                                            <MudItem xs="12" md="4">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgNewVersion", _plan.Version]</MudText>
+                                                <pre class="mush-pane">@change.NewMarkdown</pre>
+                                            </MudItem>
+                                        }
+                                        @if (change.MergedMarkdown is not null)
+                                        {
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgWikiMerged"]</MudText>
+                                                <pre class="mush-pane">@change.MergedMarkdown</pre>
+                                            </MudItem>
+                                        }
+                                    </MudGrid>
+
+                                    <MudRadioGroup T="string"
+                                                   Value="@(_decisions.GetValueOrDefault(key) ?? "")"
+                                                   ValueChanged="@(v => _decisions[key] = v)">
+                                        <MudRadio T="string" Value="@("KeepMine")">@Loc["PkgKeepMine"]</MudRadio>
+                                        <MudRadio T="string" Value="@("TakeTheirs")">@Loc["PkgTakeTheirs"]</MudRadio>
+                                        <MudRadio T="string" Value="@("UseCustom")">@Loc["PkgWikiEditMerged"]</MudRadio>
+                                    </MudRadioGroup>
+                                    @if (_decisions.GetValueOrDefault(key) == "UseCustom")
+                                    {
+                                        <MudTextField T="string"
+                                                      Value="@(_customValues.GetValueOrDefault(key) ?? WikiStartingText(change))"
+                                                      ValueChanged="@(v => _customValues[key] = v)"
+                                                      Label="@Loc["PkgWikiMergedLabel"]" Lines="12" Variant="Variant.Outlined" />
+                                    }
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        }
+                    </MudExpansionPanels>
+                }
+            </div>
+            </ChildContent>
+        </KitCard>
+    }
+
     @* ── Attributes ───────────────────────────────────────────────────── *@
+    @if (!IsContentPack)
+    {
     <KitCard Title="@Loc["PkgAttributesCount", _plan.Changeset.Attributes.Count]">
         <Controls>
             @if (_conflicts.Count > 0)
@@ -303,6 +422,7 @@ else
         </div>
         </ChildContent>
     </KitCard>
+    }
 }
 </div>
 
@@ -320,6 +440,7 @@ else
     private readonly Dictionary<string, string> _customValues = new();
     private Dictionary<(string, string), AttributeRenderDto> _renders = new();
     private List<PackageAttributeChange> _conflicts = [];
+    private List<PackageWikiChange> _wikiConflicts = [];
 
     private bool _settingsConfirmed;
 
@@ -327,6 +448,10 @@ else
     private bool _pluginTrusted;
 
     private bool IsPlugin => _plan?.Kind is PackageKind.Plugin or PackageKind.Ui;
+
+    /// <summary>A content pack ships wiki pages and nothing else, so it has no objects or attributes to show.</summary>
+    private bool IsContentPack =>
+        _plan is { Changeset: { Objects.Count: 0, Attributes.Count: 0, Wiki.Count: > 0 } };
 
     private bool IsUpload => string.Equals(_remote, "upload", StringComparison.OrdinalIgnoreCase);
 
@@ -339,7 +464,8 @@ else
         && !_plan.Changeset.IsBlocked
         && (!ChangesSettings || _settingsConfirmed)
         && (!IsPlugin || _pluginTrusted)
-        && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))));
+        && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))))
+        && _wikiConflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(WikiDecisionKey(c))));
 
     protected override async Task OnInitializedAsync()
     {
@@ -375,6 +501,15 @@ else
             _conflicts = plan.Changeset.Attributes
                 .Where(a => a.Action == PackageAttributeAction.Conflict)
                 .ToList();
+            _wikiConflicts = (plan.Changeset.Wiki ?? [])
+                .Where(w => w.Action == PackageWikiAction.Conflict)
+                .ToList();
+
+            // A page staff edited is kept by default; the administrator chooses to take the package's instead.
+            foreach (var change in _wikiConflicts)
+            {
+                _decisions.TryAdd(WikiDecisionKey(change), "KeepMine");
+            }
         }
         finally
         {
@@ -387,6 +522,16 @@ else
 
     private static string DecisionKey(PackageAttributeChange change) =>
         $"{change.TargetRef}\0{change.Attribute}";
+
+    private static string WikiDecisionKey(PackageWikiChange change) =>
+        $"{change.TargetRef}\0{change.Page}";
+
+    private static string WikiLabel(PackageWikiChange change) =>
+        change.Namespace == "main" ? change.Page : $"{change.Namespace}:{change.Page}";
+
+    /// <summary>Where an edited page starts: the merge with its clashes marked, else the game's page, else the package's.</summary>
+    private static string WikiStartingText(PackageWikiChange change) =>
+        change.MergedMarkdown ?? change.LiveMarkdown ?? change.NewMarkdown ?? "";
 
     private async Task ApplyAsync()
     {
@@ -407,7 +552,16 @@ else
                     resolution == PackageConflictResolution.UseCustom
                         ? _customValues.GetValueOrDefault(key) ?? c.LiveValue ?? ""
                         : null);
-            }).ToList();
+            }).Concat(_wikiConflicts.Select(c =>
+            {
+                var key = WikiDecisionKey(c);
+                var resolution = Enum.Parse<PackageConflictResolution>(_decisions[key]);
+                return new PackageConflictDecision(
+                    c.TargetRef, c.Page, resolution,
+                    resolution == PackageConflictResolution.UseCustom
+                        ? _customValues.GetValueOrDefault(key) ?? WikiStartingText(c)
+                        : null);
+            })).ToList();
 
             switch (await Packages.ApplyAsync(new ApplyRequest(
                 _remote, _path, _version, new(_answers), decisions, AllowPluginCode: IsPlugin && _pluginTrusted)))
@@ -455,6 +609,15 @@ else
         PackageDeclarationAction.Blocked => Color.Error,
         PackageDeclarationAction.Update or PackageDeclarationAction.Release => Color.Warning,
         PackageDeclarationAction.Existing => Color.Tertiary,
+        _ => Color.Default
+    };
+
+    private static Color WikiColor(PackageWikiAction action) => action switch
+    {
+        PackageWikiAction.Conflict => Color.Warning,
+        PackageWikiAction.Create or PackageWikiAction.Update => Color.Info,
+        PackageWikiAction.Delete or PackageWikiAction.Blocked => Color.Error,
+        PackageWikiAction.Adopt or PackageWikiAction.Release => Color.Tertiary,
         _ => Color.Default
     };
 

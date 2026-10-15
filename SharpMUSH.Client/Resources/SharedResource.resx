@@ -1722,6 +1722,30 @@
   <data name="PkgObjectsCount" xml:space="preserve">
     <value>Objects ({0})</value>
   </data>
+  <data name="PkgWikiPagesCount" xml:space="preserve">
+    <value>Wiki pages ({0})</value>
+  </data>
+  <data name="PkgWikiPagesSub" xml:space="preserve">
+    <value>Pages the package writes into the wiki. A page staff have changed is never deleted; it stays the game's.</value>
+  </data>
+  <data name="PkgWikiPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="PkgWikiTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="PkgWikiBlocked" xml:space="preserve">
+    <value>Wiki page</value>
+  </data>
+  <data name="PkgWikiMerged" xml:space="preserve">
+    <value>Merged, clashes marked</value>
+  </data>
+  <data name="PkgWikiEditMerged" xml:space="preserve">
+    <value>Edit the merged page</value>
+  </data>
+  <data name="PkgWikiMergedLabel" xml:space="preserve">
+    <value>Page text (Markdown)</value>
+  </data>
   <data name="PkgDeclarationsCount" xml:space="preserve">
     <value>Roles and permissions ({0})</value>
   </data>

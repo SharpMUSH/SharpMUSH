@@ -41,6 +41,7 @@ public partial class PackageInstallService(
 	ILockService locks,
 	IPackageDeclarationService declarations,
 	IPackageSettingService settings,
+	IPackageWikiService wiki,
 	Lazy<IRuntimeRegistrationService> registrations) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
