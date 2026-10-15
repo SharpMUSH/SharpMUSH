@@ -58,6 +58,15 @@ CHAR`SKILLS`PHYSICAL
 
 Attribute names may not start or end with the backtick, and may not contain two backticks in a row.
 
+A name may not contain a colon either, so an objid such as #30:171943 cannot be part of one. Turn it into a key first:
+
+```sharp
+> think edit(after(#30:171943,#),:,`)
+30`171943
+```
+
+Output: the objid's two numbers as two levels of a tree, such as DATA`30`171943`NAME.
+
 All attributes are either branch attributes or leaf attributes. A branch attribute is an attribute that has other branches or leaves beneath it; a leaf attribute is one that does not. Any attribute may act as a branch. If you try to create an unsupported leaf, branch attributes will be created as needed to support it.
 
 ## Browsing trees

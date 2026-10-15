@@ -9,6 +9,11 @@
 	overflow-wrap: anywhere;
 }
 
+/* A markdown element's HTML is built by the renderer, not this component, so its links need ::deep. */
+.schema-markdown ::deep a {
+	color: var(--accent);
+}
+
 .schema-image {
 	display: block;
 	max-width: 100%;

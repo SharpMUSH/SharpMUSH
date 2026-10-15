@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -168,14 +169,8 @@ public partial class Functions
 		};
 	}
 
-	private async ValueTask<bool> CanInvokeLockCommandAsync(IMUSHCodeParser parser, AnySharpObject executor, string command)
-	{
-		if (!parser.CommandLibrary.TryGetValue(command, out var definition)) return false;
-		var attribute = definition.LibraryInformation.Attribute;
-		if (attribute.Behavior.HasFlag(CommandBehavior.NoOp) || attribute.Behavior.HasFlag(CommandBehavior.Internal)) return false;
-		if (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(attribute, executor)) return false;
-		return string.IsNullOrEmpty(attribute.CommandLock) || await LockService.Evaluate(attribute.CommandLock, executor, executor);
-	}
+	private static ValueTask<bool> CanInvokeLockCommandAsync(IMUSHCodeParser parser, AnySharpObject executor, string command)
+		=> parser.ServiceProvider.GetRequiredService<ICommandPermission>().CanRunAsync(executor, command);
 
 	private async ValueTask<CallState> ReadLockAsync(IMUSHCodeParser parser, string denied,
 		Func<AnySharpObject, AnySharpObject, ResolvedLock?, ValueTask<CallState>> read)
