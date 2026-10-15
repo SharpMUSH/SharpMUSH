@@ -859,7 +859,7 @@ braceExplicitEvaluationString__Top_RSCE:
 bracePattern__Top_RSCE: OBRACE braceExplicitEvaluationString__Top_RSCE? CBRACE;
 regexpCapture__Top_RSCE: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSCE? CCARET?;
 validSubstitution__Top_RSCE: complexSubstitutionSymbol__Top_RSCE | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSCE: (REG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | ATTR_STARTCARET explicitEvaluationString__Top_RSCE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST | ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSCE: (REG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | ATTR_STARTCARET explicitEvaluationString__Top_RSCE CCARET | DELIM_STARTCARET explicitEvaluationString__Top_RSCE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST | ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSCE: beginGenericText__Top_RSCE | FUNCHAR;
 beginGenericText__Top_RSCE: CPAREN | SEMICOLON | COMMAWS | EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi);
 
@@ -1054,7 +1054,7 @@ braceExplicitEvaluationString__Top_RSCE_G:
 bracePattern__Top_RSCE_G: OBRACE braceExplicitEvaluationString__Top_RSCE_G? CBRACE;
 regexpCapture__Top_RSCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSCE_G? CCARET?;
 validSubstitution__Top_RSCE_G: complexSubstitutionSymbol__Top_RSCE_G | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSCE_G: (REG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | ATTR_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST | ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSCE_G: (REG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | ATTR_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | DELIM_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST | ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSCE_G: beginGenericText__Top_RSCE_G;
 beginGenericText__Top_RSCE_G: CPAREN | SEMICOLON | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi);
 

@@ -94,6 +94,11 @@
       "id": "name-is-an-attribute-or-argument",
       "heading": "`%=<name>` is an attribute or argument",
       "lookup": "compatibility parser name is an attribute or argument"
+    },
+    {
+      "id": "text-is-a-list-separator",
+      "heading": "`%*<text>` is a list separator",
+      "lookup": "compatibility parser text is a list separator"
     }
   ]
 }
@@ -467,4 +472,22 @@ PennMUSH's: the attribute being evaluated, such as `#1/FN`, or `#LAMBDA/<code>` 
 > &MUXDOC me=hello
 > think %=<muxdoc>
 hello
+```
+
+## `%*<text>` is a list separator
+
+**A choice.**
+
+**PennMUSH** has no `%*` substitution and prints the character after the `%`, so `%*<|>` is
+`*<|>`. RhostMUSH and TinyMUX do the same.<br>
+**SharpMUSH** reads `%*<text>` as `<text>` marked as a list separator. A list function given a
+marked delimiter splits only where it is marked: see [list separators].<br>
+**Why.** A list item can then hold its delimiter's characters, such as a `|` in a box border, without
+splitting.<br>
+**Workaround.** Write `*<` without the `%` where the text was meant. Importing a PennMUSH database
+names every attribute that uses `%*<`.
+
+```sharp
+> think words(a|b%*<|>c,%*<|>)
+2
 ```

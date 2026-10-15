@@ -5,6 +5,7 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -140,6 +141,7 @@ public static partial class Substitutions
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
 		if (context.ARG_STARTCARET() is not null) return new CallState(parser.CurrentState.Argument(symbol.Message.ToPlainText()));
 		if (context.ATTR_STARTCARET() is not null) return await HandleAttributeOrArgument(symbol, parser, mediator, attributeService);
+		if (context.DELIM_STARTCARET() is not null) return new CallState(ListSeparators.Mark(symbol.Message));
 		return HandleRegistrySymbol(symbol, parser);
 	}
 
