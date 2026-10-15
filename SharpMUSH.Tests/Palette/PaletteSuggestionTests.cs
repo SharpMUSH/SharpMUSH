@@ -107,11 +107,10 @@ public class PaletteSuggestionTests
 	public async ValueTask AnEntry_IsReadFromItsJson()
 	{
 		var entry = PaletteEntry.Parse("join",
-			"""{"label":"Join the scene here","line":"+scene/join <scene>","attr":"cmd`join","when":"scene_here","urgent":1,"keywords":["rp","pose"],"order":2}""")
+			"""{"label":"Join the scene here","line":"+scene/join <scene>","when":"scene_here","urgent":1,"keywords":["rp","pose"],"order":2}""")
 			.Expect<PaletteEntry>();
 
 		await Assert.That(entry.Name).IsEqualTo("JOIN");
-		await Assert.That(entry.Attribute).IsEqualTo("CMD`JOIN");
 		await Assert.That(entry.When).IsEquivalentTo(new[] { "scene_here" });
 		await Assert.That(entry.Urgent).IsTrue();
 		await Assert.That(entry.Keywords).IsEqualTo("rp pose");

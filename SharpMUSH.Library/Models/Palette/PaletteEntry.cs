@@ -9,12 +9,10 @@ namespace SharpMUSH.Library.Models.Palette;
 /// object and is data; only <see cref="Lock"/> is ever evaluated, as a lock.
 /// </summary>
 /// <param name="Name">The attribute's last segment, upper case.</param>
-/// <param name="Attribute">The <c>$</c>-command attribute the line runs, if it runs one.</param>
 public sealed record PaletteEntry(
 	string Name,
 	string Label,
 	string Line,
-	string? Attribute,
 	PaletteAction Action,
 	string? Lock,
 	string? Context,
@@ -84,7 +82,6 @@ public sealed record PaletteEntry(
 				name.ToUpperInvariant(),
 				label,
 				line,
-				Text(root, "attr")?.ToUpperInvariant() is { Length: > 0 } attribute ? attribute : null,
 				chosen,
 				Text(root, "lock") is { Length: > 0 } entryLock ? entryLock : null,
 				Text(root, "context")?.ToLowerInvariant() is { Length: > 0 } context ? context : null,

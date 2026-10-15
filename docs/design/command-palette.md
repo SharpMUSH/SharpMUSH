@@ -8,7 +8,7 @@ the player and builder reference; this document is the model behind them.
 ## Model
 
 - **Entries** are attributes ``PALETTE`<NAME>`` on the object whose command they run. The value is a
-  JSON object (label, line with `<slot>`s, `attr`, `action` run or insert, `lock`, `always`, `when`,
+  JSON object (label, line with `<slot>`s, `action` run or insert, `lock`, `always`, `when`,
   `urgent`, `context`, `info`, `group`, `icon`, `keywords`, `help`, `order`). It is data; only `lock`
   is evaluated.
 - **The context stack** is per character, in memory (`IContextStack`, `ContextStack`). A context is a
@@ -31,10 +31,9 @@ the player and builder reference; this document is the model behind them.
 
 `PaletteService` walks the command scopes in dispatch order (`CommandScopes.CandidatesIn`, shared with
 `CommandDispatcher`). An entry is offered when its object is perceived; answers commands (not
-NO_COMMAND or HALT) with `@lock/command` and `@lock/use` passing; is not another player; has an `attr`
-that is one of its `$`-commands, or, without one, a built-in first word the player may run
+NO_COMMAND or HALT) with `@lock/command` and `@lock/use` passing; is not another player; has, if its line starts with a built-in, a first word the player may run
 (`ICommandPermission`, shared with the lock functions); and its own lock passes. The player's own
-entries skip the answering checks unless they name an `attr`. Running a line never relies on this: it
+entries skip the answering checks. Running a line never relies on this: it
 runs as typed and the command checks again.
 
 While an `@input` session captures the player's lines, entries with `"context":"input"` are read from

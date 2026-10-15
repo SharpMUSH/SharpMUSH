@@ -111,7 +111,7 @@ public sealed class PaletteService(
 				if (found.Entries.Count == 0 && found.Invalid.Count == 0) continue;
 
 				// What is wrong with an object's entries is told only to someone who may examine it.
-				var examines = (found.Invalid.Count > 0 || found.Entries.Any(entry => entry.Attribute is not null))
+				var examines = (found.Invalid.Count > 0 || found.Dropped > 0)
 					&& await permissions.CanExamine(character, holder);
 				if (examines)
 				{
@@ -120,7 +120,7 @@ public sealed class PaletteService(
 				}
 
 				// Someone else's personal entries are theirs. The player's own need not answer $-commands
-				// (players are NO_COMMAND by default) unless an entry runs one of them.
+				// (players are NO_COMMAND by default).
 				var isSelf = reference.Number == self.Number;
 				if (holder.IsPlayer && !isSelf) continue;
 				if (!isSelf && !await perceive(reference, cancellationToken)) continue;
@@ -138,7 +138,6 @@ public sealed class PaletteService(
 					_ => PaletteScope.Master
 				};
 				var system = await systems.SystemOfAsync(reference, cancellationToken);
-				HashSet<string>? commandNames = null;
 
 				foreach (var entry in found.Entries.Where(entry => !IsInput(entry)))
 				{
@@ -148,18 +147,7 @@ public sealed class PaletteService(
 						continue;
 					}
 
-					if (entry.Attribute is { } attribute)
-					{
-						if (!answers) continue;
-						commandNames ??= [.. (await mediator.Send(new GetCommandAttributesQuery(holder), cancellationToken))
-							.Select(command => command.Attribute.LongName.ToUpperInvariant())];
-						if (!commandNames.Contains(attribute))
-						{
-							if (examines) invalid.Add($"{reference}/{entry.Name}: {attribute} is not a $-command");
-							continue;
-						}
-					}
-					else if (FirstWord(entry.Line) is { } word && commands.IsBuiltin(word)
+					if (FirstWord(entry.Line) is { } word && commands.IsBuiltin(word)
 						&& !await commands.CanRunAsync(character, word))
 					{
 						continue;
