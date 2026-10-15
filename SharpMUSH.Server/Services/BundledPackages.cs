@@ -103,6 +103,8 @@ public static class BundledPackages
 		new("watch", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +time is a name a game may already use for its own code.
+		new("time", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];

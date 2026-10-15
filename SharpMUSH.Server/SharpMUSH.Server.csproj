@@ -323,6 +323,10 @@
       <Link>BundledPackages\finger.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.finger.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\time\package.yaml">
+      <Link>BundledPackages\time.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord\package.yaml">
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>
