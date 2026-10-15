@@ -1,8 +1,8 @@
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// Validates that the example <c>chargen</c> package's GET`CHARGEN`SCHEMA route answers with
-/// DATA`CHARGEN`SCHEMA, and that the stored schema is a valid Portal Schema Document (Area 21).
+/// Checks the example <c>chargen</c> package's portal half without a server: each route on the HTTP handler hands
+/// over to the Chargen object, and every fixed piece of JSON the schemas are built from parses.
 /// </summary>
 public class ChargenSchemaTests
 {
@@ -23,31 +23,49 @@ public class ChargenSchemaTests
 		throw new DirectoryNotFoundException("Could not locate examples/packages above the test directory.");
 	}
 
-	/// <summary>Pulls the single-line block-scalar value of an attribute key from the package YAML.</summary>
-	private static string AttributeBody(string yaml, string key)
+	/// <summary>Each single-line block-scalar attribute of the package YAML whose key starts with <paramref name="prefix"/>.</summary>
+	private static IEnumerable<(string Key, string Body)> Attributes(string yaml, string prefix)
 	{
 		var lines = yaml.ReplaceLineEndings("\n").Split('\n');
 		for (var i = 0; i < lines.Length - 1; i++)
 		{
-			if (lines[i].TrimStart().StartsWith(key + ": |-", StringComparison.Ordinal))
+			var line = lines[i].Trim();
+			if (line.StartsWith(prefix, StringComparison.Ordinal) && line.EndsWith(": |-", StringComparison.Ordinal))
 			{
-				return lines[i + 1].Trim();
+				yield return (line[..^4], lines[i + 1].Trim());
 			}
 		}
+	}
 
-		throw new InvalidOperationException($"Attribute {key} not found in manifest.");
+	private static Task<string> ManifestAsync() =>
+		File.ReadAllTextAsync(Path.Combine(ExamplesRoot(), "chargen", "package.yaml"));
+
+	[Test]
+	public async Task EveryRouteHandsOverToTheChargenObject()
+	{
+		var routes = Attributes(await ManifestAsync(), "GET`CHARGEN`").Concat(Attributes(await ManifestAsync(), "POST`CHARGEN`")).ToList();
+
+		await Assert.That(routes.Select(r => r.Key)).IsEquivalentTo(["GET`CHARGEN`SCHEMA", "GET`CHARGEN`DATA", "GET`CHARGEN`NAV", "POST`CHARGEN`ACT"]);
+		foreach (var (key, body) in routes)
+		{
+			await Assert.That(body).StartsWith("@respond/type application/json;").Or.Contains("@force {{chargen}}=").Because(key);
+			await Assert.That(body).Contains("{{chargen}}/WEB`").Because(key);
+		}
 	}
 
 	[Test]
-	public async Task ChargenSchema_IsValidJson()
+	public async Task TheFixedJsonParses()
 	{
-		var yaml = await File.ReadAllTextAsync(Path.Combine(ExamplesRoot(), "chargen", "package.yaml"));
-		await Assert.That(AttributeBody(yaml, "GET`CHARGEN`SCHEMA")).EndsWith("think v(DATA`CHARGEN`SCHEMA)");
+		var pieces = Attributes(await ManifestAsync(), "DATA`WEB`").ToList();
 
-		using var doc = System.Text.Json.JsonDocument.Parse(AttributeBody(yaml, "DATA`CHARGEN`SCHEMA"));
-		await Assert.That(doc.RootElement.GetProperty("kind").GetString()).IsEqualTo("form");
-		await Assert.That(doc.RootElement.TryGetProperty("pages", out var pages)).IsTrue();
-		await Assert.That(pages.GetArrayLength()).IsEqualTo(1);
-		await Assert.That(doc.RootElement.TryGetProperty("actions", out _)).IsTrue();
+		await Assert.That(pieces.Count).IsGreaterThan(5);
+		foreach (var (key, body) in pieces)
+		{
+			using var doc = System.Text.Json.JsonDocument.Parse(body);
+			await Assert.That(doc.RootElement.ValueKind).IsEqualTo(System.Text.Json.JsonValueKind.Object).Because(key);
+		}
+
+		using var action = System.Text.Json.JsonDocument.Parse(pieces.Single(p => p.Key == "DATA`WEB`ACTION").Body);
+		await Assert.That(action.RootElement.GetProperty("route").GetString()).IsEqualTo("/http/chargen/act");
 	}
 }

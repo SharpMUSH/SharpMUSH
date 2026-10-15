@@ -82,6 +82,11 @@ public static class BundledPackages
 		// page is a separate application package so a game can run the queue in-game only.
 		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("jobs-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +app and +apps are names a game may already use for its own code, and a game
+		// decides for itself how characters are approved. Its portal page is a separate application package, as
+		// jobs-app is for jobs.
+		new("chargen", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Offered, not installed: a new game reads its messages from the stored text until the administrator
 		// chooses the Messages object (the setup wizard or the package page).
 		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: false),

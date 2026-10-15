@@ -1,35 +1,1544 @@
-format: 1
+format: 1.2
 package: chargen
-version: 1.0.4
+version: 2.0.0
 authors: [SharpMUSH]
-description: "Example Dynamic Application (Area 21) — a character-application form served as a Portal Schema Document over the HTTP verb routers."
+description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
-keywords: [http, portal, application, form, chargen]
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [chargen, applications, approval, review, waitlist]
 requires_server: ">=0.1"
 
-# Requires the verb routers — its GET`*/POST`* routes are backtick children of the
-# GET/POST verbs that http-handler provides.
+# plus-help carries the +help topics, plus-config the settings, and http-handler owns the GET/POST verb
+# routers the portal routes hang off.
 depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
   - package: http-handler
     version: ">=1.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: http-handler/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+
+# One permission, for the people who read applications, comment on them, and return or approve them. A game
+# hands it out with the role below (@role/assign <player>=application-reviewer) or to one player
+# (@permission/allow <player>=softcode.chargen.review). Changing the form is config.admin, as +config is.
+categories:
+  roles:
+    - name: Applications
+      description: Roles for the people who review character applications.
+  permissions:
+    - name: Applications
+      description: Reviewing character applications.
+permissions:
+  - name: softcode.chargen.review
+    category: Applications
+    description: Read every character application, comment on it, and return or approve it.
+roles:
+  - slug: application-reviewer
+    name: Application Reviewer
+    category: Applications
+    priority: 10
+    permissions:
+      softcode.chargen.review: allow
 
 objects:
-  - ref: handler
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # assigns and removes the approved role, and sends @mail for the characters it tells.
+  #
+  # +app and +apps are added with /noparse/rsnoparse and hooked to CMD`APP and CMD`APPS, so what a player
+  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`APP` and INC`APPS` one
+  # routine per switch, INC`NEED` the guards they share, INC`DO` the writes (shared with the portal routes),
+  # FUN` the reads, FUN`DISPLAY` and FUN`PAGE` the screens, WEB` the portal, ON` the hooks a game fills in.
+  # DATA`CONFIG` holds the settings (+config chargen) and DATA`ROUTE` which routine each switch runs.
+  # Applications and the form are kept on the Chargen Store, never on a player, so nobody can rewrite their
+  # own application's state.
+  - ref: chargen
+    type: thing
+    name: Chargen
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings: +config chargen ---------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code reads
+      # the value with get(); see plus-config's README.
+      DATA`CONFIG:
+        value: |-
+          How character applications are reviewed.
+        flags: [no_command]
+      DATA`CONFIG`CAP: |-
+        0
+      DATA`CONFIG`CAP`TYPE: |-
+        integer
+      DATA`CONFIG`CAP`DEFAULT: |-
+        0
+      DATA`CONFIG`CAP`MIN: |-
+        0
+      DATA`CONFIG`CAP`DESCRIPTION: |-
+        The most active characters, counted as holders of the approved role. Past it, an approved application waits for a place. 0 is no cap.
+      DATA`CONFIG`APPROVED-ROLE: |-
+        approved
+      DATA`CONFIG`APPROVED-ROLE`TYPE: |-
+        text
+      DATA`CONFIG`APPROVED-ROLE`DEFAULT: |-
+        approved
+      DATA`CONFIG`APPROVED-ROLE`MAX: |-
+        32
+      DATA`CONFIG`APPROVED-ROLE`CHECK: |-
+        FUN`CONFIG`CHECK`ROLE
+      DATA`CONFIG`APPROVED-ROLE`DESCRIPTION: |-
+        The role an approved character gets. Removing it frees a place under the cap.
+      DATA`CONFIG`SHOW-QUEUE: |-
+        1
+      DATA`CONFIG`SHOW-QUEUE`TYPE: |-
+        boolean
+      DATA`CONFIG`SHOW-QUEUE`DEFAULT: |-
+        1
+      DATA`CONFIG`SHOW-QUEUE`DESCRIPTION: |-
+        Whether applicants see their place in the queue and the typical wait, and +apps/queue answers anyone.
+      DATA`CONFIG`WAIT-SAMPLE: |-
+        20
+      DATA`CONFIG`WAIT-SAMPLE`TYPE: |-
+        integer
+      DATA`CONFIG`WAIT-SAMPLE`DEFAULT: |-
+        20
+      DATA`CONFIG`WAIT-SAMPLE`MIN: |-
+        1
+      DATA`CONFIG`WAIT-SAMPLE`MAX: |-
+        200
+      DATA`CONFIG`WAIT-SAMPLE`DESCRIPTION: |-
+        How many of the latest decisions the typical wait is the middle of.
+      DATA`CONFIG`MAIL-OFFLINE: |-
+        1
+      DATA`CONFIG`MAIL-OFFLINE`TYPE: |-
+        boolean
+      DATA`CONFIG`MAIL-OFFLINE`DEFAULT: |-
+        1
+      DATA`CONFIG`MAIL-OFFLINE`DESCRIPTION: |-
+        Whether a decision or comment reaches an applicant who is not connected by @mail.
+      # %0 a role's short name: nothing when it is one, else the reason.
+      FUN`CONFIG`CHECK`ROLE:
+        value: |-
+          if(cor(not(strlen(%0)),valid(rolename,%0)),,There is no role '%0'. @role/list lists them.)
+        flags: [funsyntax]
+      # +config tells this object when a setting changes. A higher cap may free places for the waitlist.
+      ACONFIG:
+        value: |-
+          @break comp(%<setting>,cap); @include/localize %!/INC`DO`ADMITNEXT
+        flags: [cmdsyntax]
+
+      # ---- routes ---------------------------------------------------------------
+      # Which INC` routine each switch runs: DATA`ROUTE`<APP|APPS>`<switches>, the switches joined by backticks.
+      # BARE is the command alone, ARG the command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`APP`BARE: |-
+        APP`MINE
+      DATA`ROUTE`APP`ARG: |-
+        APP`SHOW
+      DATA`ROUTE`APP`SET: |-
+        APP`SET
+      DATA`ROUTE`APP`WRITE: |-
+        APP`WRITE
+      DATA`ROUTE`APP`SUBMIT: |-
+        APP`SUBMIT
+      DATA`ROUTE`APP`WITHDRAW: |-
+        APP`WITHDRAW
+      DATA`ROUTE`APP`DIFF: |-
+        APP`DIFF
+      DATA`ROUTE`APP`COMMENT: |-
+        APP`COMMENT
+      DATA`ROUTE`APP`NOTE: |-
+        APP`NOTE
+      DATA`ROUTE`APP`RETURN: |-
+        APP`RETURN
+      DATA`ROUTE`APP`APPROVE: |-
+        APP`APPROVE
+      DATA`ROUTE`APP`RETIRE: |-
+        APP`RETIRE
+      DATA`ROUTE`APPS`BARE: |-
+        APPS`QUEUE
+      DATA`ROUTE`APPS`QUEUE: |-
+        APPS`PUBLIC
+      DATA`ROUTE`APPS`WAITLIST: |-
+        APPS`WAITLIST
+      DATA`ROUTE`APPS`ALL: |-
+        APPS`ALL
+      DATA`ROUTE`APPS`DECIDED: |-
+        APPS`DECIDED
+      DATA`ROUTE`APPS`FIELDS: |-
+        APPS`FIELDS
+      DATA`ROUTE`APPS`SECTION: |-
+        APPS`SECTION
+      DATA`ROUTE`APPS`SECTION`ORDER: |-
+        APPS`SECTION`ORDER
+      DATA`ROUTE`APPS`SECTION`REMOVE: |-
+        APPS`SECTION`REMOVE
+      DATA`ROUTE`APPS`FIELD: |-
+        APPS`FIELD
+      DATA`ROUTE`APPS`FIELD`LABEL: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`SECTION: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`TYPE: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`CHOICES: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`REQUIRED: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`MAX: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`ORDER: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`HELP: |-
+        APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`REMOVE: |-
+        APPS`FIELD`REMOVE
+      # The routines that take a page as a last switch: +apps/2.
+      DATA`PAGED: |-
+        APPS`QUEUE APPS`WAITLIST APPS`ALL APPS`DECIDED
+
+      # ---- commands -------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`APP:
+        value: |-
+          $(?is)^\+app(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,app,table,APP,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`APPS:
+        value: |-
+          $(?is)^\+apps(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,apps,table,APPS,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switches and the page, and runs the
+      # routine. Only players have applications.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(APP,Only players have applications.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert strlen(%q<cmd_route>)=@pemit %#=notice(APP,if(strlen(%q<cmd_switch>),+%q<cmd_word> has no /%q<cmd_switch> switch.,+%q<cmd_word> takes nothing after it.) +help app lists the commands.,warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(APP,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(APP,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_table,
+      # cmd_switch_list (every switch but a page), page_given and page_number (a last switch of digits, else 1),
+      # cmd_switch (the switches joined by /), cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side
+      # around the first =, cmd_route (the INC` routine to run), page_size (rows on one page), viewer_objid,
+      # viewer_key, viewer_staff (may review) and viewer_admin (may change the form).
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_table,%1,
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          page_given,isint(last(%q<cmd_switch_list>)),
+          page_number,if(%q<page_given>,last(%q<cmd_switch_list>),1),
+          cmd_switch_list,if(%q<page_given>,ldelete(%q<cmd_switch_list>,words(%q<cmd_switch_list>)),%q<cmd_switch_list>),
+          cmd_switch,edit(%q<cmd_switch_list>,%b,/),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(edit(%q<cmd_switch>,/,`)),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          page_size,u(%!/FUN`PAGE`SIZE),
+          viewer_objid,objid(%#),
+          viewer_key,u(%!/FUN`KEY,%#),
+          viewer_staff,u(%!/FUN`IS`REVIEWER,%#),
+          viewer_admin,permission(%#,config.admin))
+        flags: [funsyntax]
+      # %0 a player: 1 when they may review applications.
+      FUN`IS`REVIEWER:
+        value: |-
+          permission(%0,softcode.chargen.review)
+        flags: [funsyntax]
+
+      # ---- shared reads ---------------------------------------------------------
+      # %0 an object: the key its application is filed under. An objid cannot be part of an attribute name,
+      # so #12:1790888816538 is filed as 12_1790888816538.
+      FUN`KEY:
+        value: |-
+          edit(objid(%0),#,,:,_)
+        flags: [funsyntax]
+      # %0 typed text: the objid of the player it names, or nothing.
+      FUN`PLAYER:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+      # %0 seconds: a short duration, 5m or 2d.
+      FUN`DISPLAY`DURATION:
+        value: |-
+          trim(etime(max(0,%0),3))
+        flags: [funsyntax]
+      # %0 a time in seconds: how long ago it was, or - when there is none.
+      FUN`DISPLAY`AGO:
+        value: |-
+          if(isint(%0),[u(%!/FUN`DISPLAY`DURATION,sub(secs(),%0))] ago,-)
+        flags: [funsyntax]
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
+      # priority, %2 each column's share of the spare width, %3 each column's least width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+        flags: [funsyntax]
+      # How many rows fit on the reader's screen, under a heading, a table's own heading and a footer.
+      FUN`PAGE`SIZE:
+        value: |-
+          max(5,sub(height(%#,24),6))
+        flags: [funsyntax]
+      # %0 a list: how many pages it takes.
+      FUN`PAGE`COUNT:
+        value: |-
+          max(1,ceil(fdiv(words(%0),%q<page_size>)))
+        flags: [funsyntax]
+      # %0 a list: the items on page %q<page_number>, %q<page_size> to a page.
+      FUN`PAGE`ITEMS:
+        value: |-
+          extract(%0,inc(mul(dec(%q<page_number>),%q<page_size>)),%q<page_size>)
+        flags: [funsyntax]
+      # %0 a list, %1 the command for its pages as typed, %2 the hint when there is one page.
+      FUN`PAGE`FOOTER:
+        value: |-
+          setq(page_count,u(%!/FUN`PAGE`COUNT,%0))[rule(if(gt(%q<page_count>,1),page %q<page_number> of %q<page_count>[if(lt(%q<page_number>,%q<page_count>),%b· %1/[inc(%q<page_number>)])],%2))]
+        flags: [funsyntax]
+      # Stops a command whose list %<list> has no page %q<page_number>.
+      INC`PAGE`CHECK:
+        value: |-
+          think setq(page_count,u(%!/FUN`PAGE`COUNT,%<list>)); @assert lte(%q<page_number>,%q<page_count>)=@pemit %#=notice(APP,There [if(eq(%q<page_count>,1),is only one page,are only %q<page_count> pages)].,warn)
+        flags: [cmdsyntax]
+
+      # ---- the form -------------------------------------------------------------
+      # The form is kept on the store: SECTION`<KEY> its title, with ORDER; FIELD`<KEY> its label, with
+      # SECTION, TYPE (text, long or choice), CHOICES (split by |), REQUIRED (1 or 0), MAX (characters), ORDER
+      # and HELP. Keys are upper case; players type them in any case.
+      #
+      # %0 a section: where it comes in the form.
+      FUN`FORM`SECTION`ORDER:
+        value: |-
+          default({{store}}/SECTION`%0`ORDER,99)
+        flags: [funsyntax]
+      # %0 a field: where it comes in its section.
+      FUN`FORM`FIELD`ORDER:
+        value: |-
+          default({{store}}/FIELD`%0`ORDER,99)
+        flags: [funsyntax]
+      # The sections, in order.
+      FUN`FORM`SECTIONS:
+        value: |-
+          sortkey(%!/FUN`FORM`SECTION`ORDER,iter(lattr({{store}}/SECTION`*),after(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 a section: its fields, in order.
+      FUN`FORM`FIELDS:
+        value: |-
+          sortkey(%!/FUN`FORM`FIELD`ORDER,filterbool(%!/FUN`FORM`FIELD`IN,iter(lattr({{store}}/FIELD`*),after(%i0,`)),,,%0),n)
+        flags: [funsyntax]
+      # %0 a field, %1 a section: 1 when the field is in it.
+      FUN`FORM`FIELD`IN:
+        value: |-
+          not(comp(get({{store}}/FIELD`%0`SECTION),%1))
+        flags: [funsyntax]
+      # Every field, section by section.
+      FUN`FORM`ALLFIELDS:
+        value: |-
+          squish(iter(u(%!/FUN`FORM`SECTIONS),u(%!/FUN`FORM`FIELDS,%i0)))
+        flags: [funsyntax]
+      # %0 typed text: the key it names when it is a word of letters, digits, - and _, upper case.
+      FUN`FORM`KEY:
+        value: |-
+          if(cand(lte(strlen(%0),30),regmatch(%0,^%[A-Za-z0-9_-%]+$)),ucstr(%0))
+        flags: [funsyntax]
+      # %0 typed text: the field it names, or nothing.
+      FUN`FIELD`FIND:
+        value: |-
+          setq(field_found,u(%!/FUN`FORM`KEY,%0))[if(cand(strlen(%q<field_found>),hasattr({{store}},FIELD`%q<field_found>)),%q<field_found>)]
+        flags: [funsyntax]
+      # %0 typed text: the section it names, or nothing.
+      FUN`SECTION`FIND:
+        value: |-
+          setq(section_found,u(%!/FUN`FORM`KEY,%0))[if(cand(strlen(%q<section_found>),hasattr({{store}},SECTION`%q<section_found>)),%q<section_found>)]
+        flags: [funsyntax]
+      FUN`FIELD`LABEL:
+        value: |-
+          firstof(get({{store}}/FIELD`%0),lcstr(%0))
+        flags: [funsyntax]
+      FUN`FIELD`TYPE:
+        value: |-
+          firstof(get({{store}}/FIELD`%0`TYPE),text)
+        flags: [funsyntax]
+      # %0 a field: the most characters it takes.
+      FUN`FIELD`MAX:
+        value: |-
+          firstof(get({{store}}/FIELD`%0`MAX),if(strmatch(u(%!/FUN`FIELD`TYPE,%0),long),4000,200))
+        flags: [funsyntax]
+      # %0 a choice field, %1 typed text: the choice it names, as the form writes it, or nothing.
+      FUN`FIELD`CHOICE:
+        value: |-
+          setq(field_choices,get({{store}}/FIELD`%0`CHOICES))[setq(field_choice_at,member(lcstr(%q<field_choices>),lcstr(trim(%1)),|))][if(%q<field_choice_at>,extract(%q<field_choices>,%q<field_choice_at>,1,|))]
+        flags: [funsyntax]
+      # %0 a field: its label, and its key in muted text when a player could not guess the key from the label.
+      FUN`FIELD`NAME:
+        value: |-
+          setq(field_label,u(%!/FUN`FIELD`LABEL,%0))[%q<field_label>][if(comp(lcstr(%q<field_label>),lcstr(%0)),%b[tone(muted,lcstr(%0))])]
+        flags: [funsyntax]
+      # %0 a section: its title, and its key in muted text when a player could not guess the key from the title.
+      FUN`SECTION`NAME:
+        value: |-
+          setq(section_title,firstof(get({{store}}/SECTION`%0),lcstr(%0)))[%q<section_title>][if(comp(lcstr(%q<section_title>),lcstr(%0)),%b[tone(muted,lcstr(%0))])]
+        flags: [funsyntax]
+      # %0 a field, %1 typed text: nothing when the text fits the field, else the reason.
+      FUN`FIELD`PROBLEM:
+        value: |-
+          switch(1,gt(strlen(%1),u(%!/FUN`FIELD`MAX,%0)),Keep [lcstr(u(%!/FUN`FIELD`LABEL,%0))] to [u(%!/FUN`FIELD`MAX,%0)] characters.,cand(strlen(%1),strmatch(u(%!/FUN`FIELD`TYPE,%0),choice),not(strlen(u(%!/FUN`FIELD`CHOICE,%0,%1)))),[u(%!/FUN`FIELD`LABEL,%0)] is one of: [edit(get({{store}}/FIELD`%0`CHOICES),|,%,%b)].,)
+        flags: [funsyntax]
+      # %0 a field, %1 text that fits it: the text as it is kept. A choice is kept as the form writes it.
+      FUN`FIELD`STORED:
+        value: |-
+          if(cand(strlen(%1),strmatch(u(%!/FUN`FIELD`TYPE,%0),choice)),u(%!/FUN`FIELD`CHOICE,%0,%1),%1)
+        flags: [funsyntax]
+
+      # ---- applications ---------------------------------------------------------
+      # An application is APP`<key> on the store, the character's objid, with STATE (draft, submitted, changes,
+      # approved, waitlist or retired), CREATED, ROUND (how many times it was submitted), SUBMITTED (when it last
+      # was), DECIDED and BY (the last decision and who made it), WAITLISTED, FIELD`<F> (the draft) and ROUND`<n>
+      # with AT and FIELD`<F> (each submission as it was sent). COMMENT`<n> holds a comment, with SECTION (empty
+      # for the whole application), AUTHOR (objid), NAME (the author's name then), AT, ROUND, PRIVATE (1 for
+      # staff only) and KIND (comment, return, approve, waitlist or retire); COMMENTS is the last number.
+      #
+      # %0 a key: its state, empty when there is no application.
+      FUN`APP`STATE:
+        value: |-
+          get({{store}}/APP`%0`STATE)
+        flags: [funsyntax]
+      # %0 a state: how it reads.
+      FUN`STATE`LABEL:
+        value: |-
+          switch(%0,draft,Draft,submitted,Submitted,changes,Needs changes,approved,Approved,waitlist,Waitlisted,retired,Retired,Not started)
+        flags: [funsyntax]
+      # %0 a state: the theme colour it is shown in.
+      FUN`STATE`TONE:
+        value: |-
+          switch(%0,submitted,info,changes,warning,approved,success,waitlist,secondary,muted)
+        flags: [funsyntax]
+      # %0 a state: 1 when its owner may change the application.
+      FUN`STATE`EDITABLE:
+        value: |-
+          match(draft changes retired,firstof(%0,draft))
+        flags: [funsyntax]
+      # %0 a key: the character's name, or a dash when the character is gone.
+      FUN`APP`NAME:
+        value: |-
+          setq(app_name_objid,get({{store}}/APP`%0))[if(isdbref(%q<app_name_objid>),name(%q<app_name_objid>),-)]
+        flags: [funsyntax]
+      # %0 a key, %1 a field, %2 a round, or nothing for the draft: what the field said.
+      FUN`APP`VALUE:
+        value: |-
+          get({{store}}/APP`%0`[if(strlen(%2),ROUND`%2`)]FIELD`%1)
+        flags: [funsyntax]
+      # %0 a field, %1 a key, %2 and %3 two rounds, either of them empty for the draft: 1 when the field differs.
+      FUN`APP`DIFFERS:
+        value: |-
+          comp(u(%!/FUN`APP`VALUE,%1,%0,%2),u(%!/FUN`APP`VALUE,%1,%0,%3))
+        flags: [funsyntax]
+      # %0 a key, %1 and %2 two rounds, either empty for the draft: the fields that differ between them, in form order.
+      FUN`APP`CHANGED:
+        value: |-
+          filterbool(%!/FUN`APP`DIFFERS,u(%!/FUN`FORM`ALLFIELDS),,,%0,%1,%2)
+        flags: [funsyntax]
+      # %0 a field, %1 a key: 1 when a required field of that application's draft is empty.
+      FUN`APP`MISSES:
+        value: |-
+          cand(get({{store}}/FIELD`%0`REQUIRED),not(strlen(u(%!/FUN`APP`VALUE,%1,%0))))
+        flags: [funsyntax]
+      # Every application's key.
+      FUN`APP`KEYS:
+        value: |-
+          iter(lattr({{store}}/APP`*),after(%i0,`))
+        flags: [funsyntax]
+      # %0 a key, %1 states: 1 when the application is in one of them.
+      FUN`APP`IN:
+        value: |-
+          match(%1,get({{store}}/APP`%0`STATE))
+        flags: [funsyntax]
+      # %0 states, %1 the leaf to sort by: the applications in those states, oldest first by that leaf.
+      FUN`APP`SELECT:
+        value: |-
+          iter(sort(iter(filterbool(%!/FUN`APP`IN,u(%!/FUN`APP`KEYS),,,%0),[default({{store}}/APP`%i0`%1,0)]:%i0)),after(%i0,:))
+        flags: [funsyntax]
+      # The submitted applications, the longest waiting first. This is the queue.
+      FUN`QUEUE:
+        value: |-
+          u(%!/FUN`APP`SELECT,submitted,SUBMITTED)
+        flags: [funsyntax]
+      # The waitlisted applications, first approved first.
+      FUN`WAITLIST:
+        value: |-
+          u(%!/FUN`APP`SELECT,waitlist,WAITLISTED)
+        flags: [funsyntax]
+      # How many characters hold the approved role.
+      FUN`ACTIVE:
+        value: |-
+          setq(active_role,get(%!/DATA`CONFIG`APPROVED-ROLE))[if(cand(strlen(%q<active_role>),valid(rolename,%q<active_role>)),words(lsearch(all,type,player,elock,role^%q<active_role>)),0)]
+        flags: [funsyntax]
+      # 1 when there is a cap and it is reached.
+      FUN`FULL:
+        value: |-
+          setq(full_cap,default(%!/DATA`CONFIG`CAP,0))[cand(gt(%q<full_cap>,0),gte(u(%!/FUN`ACTIVE),%q<full_cap>))]
+        flags: [funsyntax]
+      # The typical wait in seconds: the middle of the latest decisions' waits, or nothing before the first.
+      FUN`WAIT`TYPICAL:
+        value: |-
+          setq(wait_sample,extract(revwords(get({{store}}/WAITS)),1,default(%!/DATA`CONFIG`WAIT-SAMPLE,20)))[if(words(%q<wait_sample>),extract(sort(%q<wait_sample>,n),ceil(fdiv(words(%q<wait_sample>),2)),1))]
+        flags: [funsyntax]
+      # %0 a key: where it stands in the queue or on the waitlist, as a sentence, or nothing.
+      FUN`QUEUE`TEXT:
+        value: |-
+          switch(get({{store}}/APP`%0`STATE),submitted,setq(queue_list,u(%!/FUN`QUEUE))[setq(queue_wait,u(%!/FUN`WAIT`TYPICAL))]Number [member(%q<queue_list>,%0)] of [words(%q<queue_list>)] in the queue.[if(strlen(%q<queue_wait>),%bApplications usually get an answer in about [u(%!/FUN`DISPLAY`DURATION,%q<queue_wait>)].)],waitlist,Number [member(u(%!/FUN`WAITLIST),%0)] on the waitlist. [u(%!/FUN`PLACES`TEXT)],)
+        flags: [funsyntax]
+      # The places under the cap, as a sentence.
+      FUN`PLACES`TEXT:
+        value: |-
+          setq(places_cap,default(%!/DATA`CONFIG`CAP,0))[if(gt(%q<places_cap>,0),[u(%!/FUN`ACTIVE)] of %q<places_cap> places are taken.,There is no cap on characters.)]
+        flags: [funsyntax]
+      # %0 a key, %1 a section (empty for the whole application, * for every one), %2 1 for a reviewer: the comments
+      # they may read there, oldest first.
+      FUN`APP`COMMENTS:
+        value: |-
+          setq(comment_count,default({{store}}/APP`%0`COMMENTS,0))[if(gt(%q<comment_count>,0),filterbool(%!/FUN`APP`COMMENT`SEEN,lnum(1,%q<comment_count>),,,%0,%1,%2))]
+        flags: [funsyntax]
+      # %0 a comment, %1 a key, %2 a section or *, %3 1 for a reviewer: 1 when it is there and they may read it.
+      FUN`APP`COMMENT`SEEN:
+        value: |-
+          cand(hasattr({{store}},APP`%1`COMMENT`%0),cor(not(comp(%2,*)),not(comp(get({{store}}/APP`%1`COMMENT`%0`SECTION),%2))),cor(%3,not(get({{store}}/APP`%1`COMMENT`%0`PRIVATE))))
+        flags: [funsyntax]
+      # %0 a comment's kind: how it is introduced.
+      FUN`COMMENT`KIND:
+        value: |-
+          switch(%0,return,%b· asked for changes,approve,%b· approved,waitlist,%b· approved for the waitlist,retire,%b· retired,)
+        flags: [funsyntax]
+
+      # ---- screens --------------------------------------------------------------
+      # %0 a key, %1 comment numbers: each comment, a muted line naming who wrote it and when, then its text.
+      FUN`DISPLAY`COMMENTS:
+        value: |-
+          iter(%1,%r[tone(muted,[get({{store}}/APP`%0`COMMENT`%i0`NAME)] · [u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`COMMENT`%i0`AT))][u(%!/FUN`COMMENT`KIND,get({{store}}/APP`%0`COMMENT`%i0`KIND))][if(get({{store}}/APP`%0`COMMENT`%i0`PRIVATE),%b· staff only)])]%r[get({{store}}/APP`%0`COMMENT`%i0)],%b,)
+        flags: [funsyntax]
+      # %0 a key, %1 a section, %2 the round shown (empty for the draft), %3 the fields to mark as changed, %4 1 for
+      # a reviewer: the section's title, its answers and its comments. An empty answer shows the field's help.
+      FUN`DISPLAY`SECTION:
+        value: |-
+          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,[u(%!/FUN`FIELD`NAME,%i0)][if(member(%3,%i0),%b[tone(warning,*)])],%b,chr(30)),iter(%q<section_fields>,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,firstof(get({{store}}/FIELD`%i0`HELP),-))),%b,chr(30)),chr(30))])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
+        flags: [funsyntax]
+      # %0 a key, %1 1 when the reader is its owner, %2 1 for a reviewer, %3 the character: the whole application in a box.
+      # The owner reads the draft and sees * on what they changed since they last submitted; a reviewer reads the
+      # last submission and sees * on what changed since the one before.
+      FUN`DISPLAY`APP:
+        value: |-
+          setqm(display_state,get({{store}}/APP`%0`STATE),
+          display_round,default({{store}}/APP`%0`ROUND,0),
+          display_source,if(cor(%1,not(%q<display_round>)),,%q<display_round>),
+          display_changed,switch(1,%1,if(cand(%q<display_round>,u(%!/FUN`STATE`EDITABLE,%q<display_state>)),u(%!/FUN`APP`CHANGED,%0,%q<display_round>,)),gt(%q<display_round>,1),u(%!/FUN`APP`CHANGED,%0,dec(%q<display_round>),%q<display_round>),),
+          display_queue,if(cor(%2,get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/FUN`QUEUE`TEXT,%0)),
+          display_general,u(%!/FUN`APP`COMMENTS,%0,,%2))[box(lfields(,State[chr(30)]Submitted[if(strlen(%q<display_queue>),[chr(30)]Queue)],[tone(u(%!/FUN`STATE`TONE,%q<display_state>),u(%!/FUN`STATE`LABEL,%q<display_state>))][if(%q<display_round>,%b· round %q<display_round>)][chr(30)][u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`SUBMITTED))][if(strlen(%q<display_queue>),[chr(30)]%q<display_queue>)],chr(30))[if(words(%q<display_general>),%r[rule(Messages)][u(%!/FUN`DISPLAY`COMMENTS,%0,%q<display_general>)])]%r[iter(u(%!/FUN`FORM`SECTIONS),u(%!/FUN`DISPLAY`SECTION,%0,%i0,%q<display_source>,%q<display_changed>,%2),%b,%r)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`HINT,%0,%1,%q<display_state>,%q<display_round>,words(%q<display_changed>)))],Application: [name(%3)])]
+        flags: [funsyntax]
+      # %0 a key, %1 1 for its owner, %2 its state, %3 its round, %4 how many fields are marked changed: what to do
+      # next, in a line.
+      FUN`DISPLAY`HINT:
+        value: |-
+          if(%1,switch(firstof(%2,draft),submitted,Staff have it. +app/withdraw takes it back to change something.,approved,Approved.,waitlist,Approved. You get a place when one opens.,[if(strmatch(%2,changes),Staff asked for changes.%b)]+app/set <field>=<text> fills in a field%, +app/write <field> a long one. +app/submit sends it to staff.[if(%4,%b* marks what you changed since you last submitted.)]),+app/comment [u(%!/FUN`APP`NAME,%0)]/<section>=<text> · +app/return [u(%!/FUN`APP`NAME,%0)]=<what to change> · +app/approve [u(%!/FUN`APP`NAME,%0)][if(%4,%b· * changed since round [dec(%3)]: +app/diff [u(%!/FUN`APP`NAME,%0)])])
+        flags: [funsyntax]
+      # %0 a key, %1 and %2 two rounds, either empty for the draft, %3 the heading: each field that differs, what it
+      # said and what it says.
+      FUN`DISPLAY`DIFF:
+        value: |-
+          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,[rule([u(%!/FUN`FIELD`LABEL,%i0)] · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`%i0`SECTION)]),-)])]%r[lfields(,Was[chr(30)]Now,[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%1),tone(muted,empty))][chr(30)][firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),tone(muted,empty))],chr(30))],%b,%r),Nothing changed.),%3)]
+        flags: [funsyntax]
+
+      # ---- telling people -------------------------------------------------------
+      # Tells %<who> (an objid) %<text>, and by @mail with subject %<subject> when they are not connected and the
+      # mail-offline setting is on.
+      INC`DO`TELL:
+        value: |-
+          @if isdbref(%<who>)={@pemit %<who>=notice(APP,%<text>); @if cand(get(%!/DATA`CONFIG`MAIL-OFFLINE),lt(conn(%<who>),0))={@mail/silent num(%<who>)=%<subject>/%<text>}}
+        flags: [cmdsyntax]
+      # Tells every connected reviewer %<text>.
+      INC`DO`TELLSTAFF:
+        value: |-
+          @dolist/inline filterbool(%!/FUN`IS`REVIEWER,mwho())={@pemit ##=notice(APP,%<text>)}
+        flags: [cmdsyntax]
+
+      # ---- writes ---------------------------------------------------------------
+      # Every write goes through these, from a command or a portal route. %q<app_key> names the application and
+      # %q<app_objid> its character.
+      #
+      # Starts the application if it has not been.
+      INC`DO`TOUCH:
+        value: |-
+          @if not(hasattr({{store}},APP`%q<app_key>))={&APP`%q<app_key> {{store}}=%q<app_objid>; &APP`%q<app_key>`STATE {{store}}=draft; &APP`%q<app_key>`ROUND {{store}}=0; &APP`%q<app_key>`CREATED {{store}}=secs()}
+        flags: [cmdsyntax]
+      # Sets field %<field> of the draft to %<value>, which already fits it; empty clears it.
+      INC`DO`SET:
+        value: |-
+          @include %!/INC`DO`TOUCH; @if strlen(%<value>)={&APP`%q<app_key>`FIELD`%<field> {{store}}=u(%!/FUN`FIELD`STORED,%<field>,%<value>)},{&APP`%q<app_key>`FIELD`%<field> {{store}}}
+        flags: [cmdsyntax]
+      # Adds a comment by %<author> on section %<section> (empty for the whole application): %<text>, %<private> 1
+      # for staff only, %<kind> comment, return, approve, waitlist or retire. Sets comment_number.
+      INC`DO`COMMENT:
+        value: |-
+          think setq(comment_number,inc(default({{store}}/APP`%q<app_key>`COMMENTS,0))); &APP`%q<app_key>`COMMENTS {{store}}=%q<comment_number>; &APP`%q<app_key>`COMMENT`%q<comment_number> {{store}}=%<text>; &APP`%q<app_key>`COMMENT`%q<comment_number>`SECTION {{store}}=%<section>; &APP`%q<app_key>`COMMENT`%q<comment_number>`AUTHOR {{store}}=%<author>; &APP`%q<app_key>`COMMENT`%q<comment_number>`NAME {{store}}=name(%<author>); &APP`%q<app_key>`COMMENT`%q<comment_number>`AT {{store}}=secs(); &APP`%q<app_key>`COMMENT`%q<comment_number>`ROUND {{store}}=default({{store}}/APP`%q<app_key>`ROUND,0); &APP`%q<app_key>`COMMENT`%q<comment_number>`KIND {{store}}=firstof(%<kind>,comment); @if %<private>={&APP`%q<app_key>`COMMENT`%q<comment_number>`PRIVATE {{store}}=1}
+        flags: [cmdsyntax]
+      # Submits the draft as the next round. The caller has checked it may be submitted.
+      INC`DO`SUBMIT:
+        value: |-
+          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if strlen(get({{store}}/APP`%q<app_key>`FIELD`##))={&APP`%q<app_key>`ROUND`%q<submit_round>`FIELD`## {{store}}=get({{store}}/APP`%q<app_key>`FIELD`##)}}; &APP`%q<app_key>`ROUND`%q<submit_round>`AT {{store}}=secs(); &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,[name(%q<app_objid>)] [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b[chr(40)]round %q<submit_round>[chr(41)])]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+        flags: [cmdsyntax]
+      # Records how long the application waited for its decision, keeping the latest 200.
+      INC`DO`RECORDWAIT:
+        value: |-
+          think setq(recorded_waits,[get({{store}}/WAITS)] [sub(secs(),default({{store}}/APP`%q<app_key>`SUBMITTED,secs()))]); &WAITS {{store}}=trim(extract(%q<recorded_waits>,max(1,sub(words(%q<recorded_waits>),199)),200))
+        flags: [cmdsyntax]
+      # Returns the submitted application to its owner, asking for changes: %<actor> who, %<message> what.
+      INC`DO`RETURN:
+        value: |-
+          @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`STATE {{store}}=changes; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,%<message>,private,0,kind,return; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,[name(%<actor>)] asked for changes to your application: %<message> +app shows it.; @trigger/args %!/ON`RETURN=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>
+        flags: [cmdsyntax]
+      # Approves the submitted application, %<actor> who, %<message> what they said, if anything. With the cap
+      # reached it goes on the waitlist instead.
+      INC`DO`APPROVE:
+        value: |-
+          @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`BY {{store}}=%<actor>; @if u(%!/FUN`FULL)={&APP`%q<app_key>`STATE {{store}}=waitlist; &APP`%q<app_key>`WAITLISTED {{store}}=secs(); &APP`%q<app_key>`DECIDED {{store}}=secs(); @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved. Every place is taken%, so it waits for one.),private,0,kind,waitlist; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,Your application is approved%, and waits for a place: every place is taken. You get one when it opens.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)]; @trigger/args %!/ON`WAITLIST=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>},{@include/args %!/INC`DO`ADMIT=actor,%<actor>,message,%<message>,record,1}
+        flags: [cmdsyntax]
+      # Approves the application for good: the state, the role, the comment (%<record> 1 to write it) and the hook.
+      INC`DO`ADMIT:
+        value: |-
+          &APP`%q<app_key>`STATE {{store}}=approved; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`WAITLISTED {{store}}; think setq(admit_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<admit_role>),valid(rolename,%q<admit_role>))={@role/assign %q<app_objid>=%q<admit_role>}; @if %<record>={@include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved.),private,0,kind,approve}; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,if(%<record>,Your application is approved.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)],A place opened: your application is approved.); @trigger/args %!/ON`APPROVE=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>
+        flags: [cmdsyntax]
+      # Admits waitlisted applications, first approved first, while there are places.
+      INC`DO`ADMITNEXT:
+        value: |-
+          think setq(admit_list,u(%!/FUN`WAITLIST)); think setq(admit_cap,default(%!/DATA`CONFIG`CAP,0)); think setq(admit_free,if(gt(%q<admit_cap>,0),max(0,sub(%q<admit_cap>,u(%!/FUN`ACTIVE))),words(%q<admit_list>))); @dolist/inline extract(%q<admit_list>,1,%q<admit_free>)={think setqm(app_key,##,app_objid,get({{store}}/APP`##)); @include/args %!/INC`DO`ADMIT=actor,get({{store}}/APP`##`BY),message,,record,0}
+        flags: [cmdsyntax]
+      # Retires the approved application, %<actor> who: the role goes, and the place frees.
+      INC`DO`RETIRE:
+        value: |-
+          &APP`%q<app_key>`STATE {{store}}=retired; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; think setq(retire_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<retire_role>),valid(rolename,%q<retire_role>),hasrole(%q<app_objid>,%q<retire_role>))={@role/unassign %q<app_objid>=%q<retire_role>}; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,Retired.,private,0,kind,retire; @trigger/args %!/ON`RETIRE=0,%q<app_objid>,1,%<actor>,2,,character,%q<app_objid>,actor,%<actor>; @include/localize %!/INC`DO`ADMITNEXT
+        flags: [cmdsyntax]
+
+      # ---- guards ---------------------------------------------------------------
+      # Sets app_key and app_objid to the player's own application.
+      INC`NEED`MINE:
+        value: |-
+          think setqm(app_key,%q<viewer_key>,app_objid,%q<viewer_objid>,app_state,u(%!/FUN`APP`STATE,%q<viewer_key>))
+        flags: [cmdsyntax]
+      # Stops a command whose player's application cannot be changed now.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert u(%!/FUN`STATE`EDITABLE,%q<app_state>)=@pemit %#=notice(APP,switch(%q<app_state>,submitted,Staff have your application. +app/withdraw takes it back to change it.,waitlist,Your application is approved and waits for a place.,Your application is approved. There is nothing to change.),warn)
+        flags: [cmdsyntax]
+      # Stops a command whose player may not review applications.
+      INC`NEED`REVIEWER:
+        value: |-
+          @assert %q<viewer_staff>=@pemit %#=notice(APP,Only application reviewers can do that.,error)
+        flags: [cmdsyntax]
+      # Stops a command whose player may not change the form.
+      INC`NEED`ADMIN:
+        value: |-
+          @assert %q<viewer_admin>=@pemit %#=notice(APP,Only staff who change the game's configuration can change the form.,error)
+        flags: [cmdsyntax]
+      # Stops a reviewer deciding their own application.
+      INC`NEED`OTHER:
+        value: |-
+          @assert comp(%q<app_objid>,%q<viewer_objid>)=@pemit %#=notice(APP,Someone else decides your own application.,warn)
+        flags: [cmdsyntax]
+      # Sets app_key, app_objid and app_state to the application of the player named %<name>, and stops the
+      # command when there is none.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(%<name>)=@pemit %#=notice(APP,Name the character whose application it is.,warn); @assert strlen(setr(app_objid,u(%!/FUN`PLAYER,%<name>)))=@pemit %#=notice(APP,There is no player called '%<name>'.,warn); think setq(app_key,u(%!/FUN`KEY,%q<app_objid>)); @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,[name(%q<app_objid>)] has no application.,warn); think setq(app_state,u(%!/FUN`APP`STATE,%q<app_key>))
+        flags: [cmdsyntax]
+
+      # ---- the applicant ----------------------------------------------------------
+      # +app: the player's own application.
+      INC`APP`MINE:
+        value: |-
+          @include %!/INC`NEED`MINE; @pemit %#=u(%!/FUN`DISPLAY`APP,%q<app_key>,1,%q<viewer_staff>,%q<app_objid>)
+        flags: [cmdsyntax]
+      # +app <name>: someone's application, for a reviewer.
+      INC`APP`SHOW:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @pemit %#=u(%!/FUN`DISPLAY`APP,%q<app_key>,strmatch(%q<app_objid>,%q<viewer_objid>),1,%q<app_objid>)
+        flags: [cmdsyntax]
+      # +app/set <field>=<text>
+      INC`APP`SET:
+        value: |-
+          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert %q<cmd_has_equals>=@pemit %#=notice(APP,+app/set <field>=<text>. +app lists the fields.,warn); @assert strlen(setr(field_key,u(%!/FUN`FIELD`FIND,%q<cmd_left_side>)))=@pemit %#=notice(APP,There is no field '%q<cmd_left_side>'. +app lists them.,warn); @assert not(strlen(setr(field_problem,u(%!/FUN`FIELD`PROBLEM,%q<field_key>,%q<cmd_right_side>))))=@pemit %#=notice(APP,%q<field_problem>,warn); @include/args %!/INC`DO`SET=field,%q<field_key>,value,%q<cmd_right_side>; @pemit %#=notice(APP,if(strlen(%q<cmd_right_side>),[u(%!/FUN`FIELD`LABEL,%q<field_key>)] saved.,[u(%!/FUN`FIELD`LABEL,%q<field_key>)] cleared.),ok)
+        flags: [cmdsyntax]
+      # +app/write <field>: collects lines until .done, then saves them as the field.
+      INC`APP`WRITE:
+        value: |-
+          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(field_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'. +app lists them.,warn); @include %!/INC`DO`TOUCH; &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}=%q<field_key>; @input/start Type [lcstr(u(%!/FUN`FIELD`LABEL,%q<field_key>))]%, as many lines as you like. It replaces what is there. Send .done on a line by itself to save it.=.done,INPUT`WRITE`DONE,*,INPUT`WRITE`LINE,1800
+        flags: [cmdsyntax]
+      # One line typed for +app/write: %0, never evaluated.
+      INPUT`WRITE`LINE:
+        value: |-
+          think setq(app_key,u(%!/FUN`KEY,%#)); &APP`%q<app_key>`WRITING {{store}}=[get({{store}}/APP`%q<app_key>`WRITING)][if(strlen(get({{store}}/APP`%q<app_key>`WRITING)),%r)]%0; @input/prompt Next line, or .done to save:
+        flags: [cmdsyntax]
+      # The end of +app/write: .done, or the time running out.
+      INPUT`WRITE`DONE:
+        value: |-
+          think setqm(app_key,u(%!/FUN`KEY,%#),app_objid,objid(%#),field_key,get({{store}}/APP`[u(%!/FUN`KEY,%#)]`WRITING`FIELD),field_text,get({{store}}/APP`[u(%!/FUN`KEY,%#)]`WRITING)); &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}; @assert strlen(%q<field_key>); @assert u(%!/FUN`STATE`EDITABLE,u(%!/FUN`APP`STATE,%q<app_key>))=@pemit %#=notice(APP,Your application cannot be changed now%, so nothing was saved.,warn); @assert not(strlen(setr(field_problem,u(%!/FUN`FIELD`PROBLEM,%q<field_key>,%q<field_text>))))=@pemit %#=notice(APP,%q<field_problem> Nothing was saved.,warn); @include/args %!/INC`DO`SET=field,%q<field_key>,value,%q<field_text>; @pemit %#=notice(APP,[u(%!/FUN`FIELD`LABEL,%q<field_key>)] saved[if(strmatch(r(reason,args),timeout),%b- time ran out%, so it was saved as it was)].,ok)
+        flags: [cmdsyntax]
+      # +app/submit
+      INC`APP`SUBMIT:
+        value: |-
+          @include %!/INC`NEED`MINE; @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,There is nothing to submit yet. +app/set <field>=<text> starts your application.,warn); @include %!/INC`NEED`EDITABLE; @assert not(words(setr(app_missing,filterbool(%!/FUN`APP`MISSES,u(%!/FUN`FORM`ALLFIELDS),,,%q<app_key>))))=@pemit %#=notice(APP,Fill in [itemize(iter(%q<app_missing>,lcstr(u(%!/FUN`FIELD`LABEL,%i0)),%b,|),|)] first.,warn); @include %!/INC`DO`SUBMIT; @pemit %#=notice(APP,Submitted. [if(get(%!/DATA`CONFIG`SHOW-QUEUE),u(%!/FUN`QUEUE`TEXT,%q<app_key>),Staff will read it.)],ok)
+        flags: [cmdsyntax]
+      # +app/withdraw: takes a submitted application back, to change it.
+      INC`APP`WITHDRAW:
+        value: |-
+          @include %!/INC`NEED`MINE; @assert strmatch(%q<app_state>,submitted)=@pemit %#=notice(APP,Your application is not with staff.,warn); &APP`%q<app_key>`STATE {{store}}=draft; @pemit %#=notice(APP,Your application is back with you. Change it%, then +app/submit.,ok)
+        flags: [cmdsyntax]
+      # +app/diff [<round>] for the owner, +app/diff <name>[=<round>] for a reviewer: what changed since that round,
+      # by default the one before the last.
+      INC`APP`DIFF:
+        value: |-
+          @if cand(%q<viewer_staff>,strlen(%q<cmd_left_side>),not(isint(%q<cmd_left_side>)))={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(diff_from,%q<cmd_right_side>)},{@include %!/INC`NEED`MINE; think setq(diff_from,%q<cmd_argument>)}; @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,You have no application.,warn); think setqm(diff_owner,strmatch(%q<app_objid>,%q<viewer_objid>),diff_round,default({{store}}/APP`%q<app_key>`ROUND,0)); @assert %q<diff_round>=@pemit %#=notice(APP,It has not been submitted yet%, so there is nothing to compare.,warn); think setq(diff_to,if(cand(%q<diff_owner>,u(%!/FUN`STATE`EDITABLE,%q<app_state>)),,%q<diff_round>)); think setq(diff_from,firstof(%q<diff_from>,if(strlen(%q<diff_to>),dec(%q<diff_round>),%q<diff_round>))); @assert cand(isint(%q<diff_from>),gt(%q<diff_from>,0),lte(%q<diff_from>,%q<diff_round>))=@pemit %#=notice(APP,if(gt(%q<diff_round>,1),Name a round from 1 to %q<diff_round>.,It has been submitted once%, so there is nothing earlier to compare.),warn); @pemit %#=u(%!/FUN`DISPLAY`DIFF,%q<app_key>,%q<diff_from>,%q<diff_to>,Changes since round %q<diff_from>[if(strlen(%q<diff_to>),%b· round %q<diff_to>,%b· the draft)])
+        flags: [cmdsyntax]
+      # +app/comment <section>=<text> for the owner, +app/comment <name>[/<section>]=<text> for a reviewer.
+      INC`APP`COMMENT:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(APP,if(%q<viewer_staff>,+app/comment <name>/<section>=<text>%, or <name>=<text> for the whole application.,+app/comment <section>=<text>%, or =<text> for the whole application.),warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(APP,Say something after the =.,warn); @assert lte(strlen(%q<cmd_right_side>),4000)=@pemit %#=notice(APP,Keep a comment to 4000 characters.,warn); @if %q<viewer_staff>={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(comment_typed,trim(after(%q<cmd_left_side>,/)))},{@include %!/INC`NEED`MINE; think setq(comment_typed,%q<cmd_left_side>)}; @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,You have no application yet. +app/set <field>=<text> starts one.,warn); @assert cor(not(strlen(%q<comment_typed>)),strlen(setr(comment_section,u(%!/FUN`SECTION`FIND,%q<comment_typed>))))=@pemit %#=notice(APP,There is no section '%q<comment_typed>'. +app lists them.,warn); @include/args %!/INC`DO`COMMENT=section,%q<comment_section>,author,%q<viewer_objid>,text,%q<cmd_right_side>,private,0,kind,comment; @pemit %#=notice(APP,Comment added.,ok); @if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,[name(%#)] commented on their application. +app [name(%#)] reads it.}},{@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,[name(%#)] commented on your application. +app shows it.}
+        flags: [cmdsyntax]
+      # +app/note <name>[/<section>]=<text>: a comment only reviewers read.
+      INC`APP`NOTE:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(APP,+app/note <name>/<section>=<text>%, or <name>=<text> for the whole application.,warn); @include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(comment_typed,trim(after(%q<cmd_left_side>,/))); @assert cor(not(strlen(%q<comment_typed>)),strlen(setr(comment_section,u(%!/FUN`SECTION`FIND,%q<comment_typed>))))=@pemit %#=notice(APP,There is no section '%q<comment_typed>'.,warn); @include/args %!/INC`DO`COMMENT=section,%q<comment_section>,author,%q<viewer_objid>,text,%q<cmd_right_side>,private,1,kind,comment; @pemit %#=notice(APP,Staff note added. [name(%q<app_objid>)] does not see it.,ok)
+        flags: [cmdsyntax]
+
+      # ---- reviewers --------------------------------------------------------------
+      # +app/return <name>=<what to change>
+      INC`APP`RETURN:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(APP,+app/return <name>=<what to change>,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include %!/INC`NEED`OTHER; @assert strmatch(%q<app_state>,submitted)=@pemit %#=notice(APP,[name(%q<app_objid>)]'s application is not waiting for a decision.,warn); @include/args %!/INC`DO`RETURN=actor,%q<viewer_objid>,message,%q<cmd_right_side>; @pemit %#=notice(APP,Returned to [name(%q<app_objid>)] for changes.,ok)
+        flags: [cmdsyntax]
+      # +app/approve <name>[=<message>]
+      INC`APP`APPROVE:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include %!/INC`NEED`OTHER; @assert strmatch(%q<app_state>,submitted)=@pemit %#=notice(APP,[name(%q<app_objid>)]'s application is not waiting for a decision.,warn); @include/args %!/INC`DO`APPROVE=actor,%q<viewer_objid>,message,%q<cmd_right_side>; @pemit %#=notice(APP,if(strmatch(u(%!/FUN`APP`STATE,%q<app_key>),waitlist),Approved [name(%q<app_objid>)]. Every place is taken%, so they wait for one: [u(%!/FUN`QUEUE`TEXT,%q<app_key>)],Approved [name(%q<app_objid>)].),ok)
+        flags: [cmdsyntax]
+      # +app/retire <name>: an approved character stops counting against the cap.
+      INC`APP`RETIRE:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`OTHER; @assert strmatch(%q<app_state>,approved)=@pemit %#=notice(APP,Only an approved application can be retired.,warn); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; @pemit %#=notice(APP,Retired [name(%q<app_objid>)]. [u(%!/FUN`PLACES`TEXT)],ok)
+        flags: [cmdsyntax]
+
+      # ---- lists ------------------------------------------------------------------
+      # +apps/queue: how many wait, and for how long, without names. Anyone may ask.
+      INC`APPS`PUBLIC:
+        value: |-
+          @assert cor(%q<viewer_staff>,get(%!/DATA`CONFIG`SHOW-QUEUE))=@pemit %#=notice(APP,This game does not show the queue.,warn); think setqm(public_queue,words(u(%!/FUN`QUEUE)),public_wait,u(%!/FUN`WAIT`TYPICAL),public_cap,default(%!/DATA`CONFIG`CAP,0)); @pemit %#=box(fields(,Waiting,%q<public_queue> application[if(neq(%q<public_queue>,1),s)],Typical wait,if(strlen(%q<public_wait>),about [u(%!/FUN`DISPLAY`DURATION,%q<public_wait>)],not known yet),Places,if(gt(%q<public_cap>,0),[u(%!/FUN`ACTIVE)] of %q<public_cap> taken%, [words(u(%!/FUN`WAITLIST))] waiting,no cap)),Applications)
+        flags: [cmdsyntax]
+      # +apps[/<page>]: the queue, the longest waiting first. Waitlisted applications are admitted first if a
+      # place opened.
+      INC`APPS`QUEUE:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @include/localize %!/INC`DO`ADMITNEXT; think setq(list_keys,u(%!/FUN`QUEUE)); @assert words(%q<list_keys>)=@pemit %#=notice(APP,No applications are waiting. +apps/all lists every one.); @include/args %!/INC`PAGE`CHECK=list,%q<list_keys>; think setq(list_page,u(%!/FUN`PAGE`ITEMS,%q<list_keys>)); @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4%r5,1%r1%r2%r1%r3,%r1%r%r%r,%r16%r%r%r),[tone(strong,#)]%r[iter(%q<list_page>,member(%q<list_keys>,%i0),,%r)],[tone(strong,Name)]%r[iter(%q<list_page>,u(%!/FUN`APP`NAME,%i0),,%r)],>[tone(strong,Round)]%r[iter(%q<list_page>,get({{store}}/APP`%i0`ROUND),,%r)],>[tone(strong,Waiting)]%r[iter(%q<list_page>,u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/APP`%i0`SUBMITTED))),,%r)],[tone(strong,Changed)]%r[iter(%q<list_page>,if(gt(get({{store}}/APP`%i0`ROUND),1),words(u(%!/FUN`APP`CHANGED,%i0,dec(get({{store}}/APP`%i0`ROUND)),get({{store}}/APP`%i0`ROUND))) field[if(neq(words(u(%!/FUN`APP`CHANGED,%i0,dec(get({{store}}/APP`%i0`ROUND)),get({{store}}/APP`%i0`ROUND))),1),s)],new),,%r)])%r[u(%!/FUN`PAGE`FOOTER,%q<list_keys>,+apps,+app <name> reads one)],Applications waiting)
+        flags: [cmdsyntax]
+      # +apps/waitlist[/<page>]: approved applications waiting for a place, first approved first.
+      INC`APPS`WAITLIST:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; @include/localize %!/INC`DO`ADMITNEXT; think setq(list_keys,u(%!/FUN`WAITLIST)); @assert words(%q<list_keys>)=@pemit %#=notice(APP,Nobody is on the waitlist. [u(%!/FUN`PLACES`TEXT)]); @include/args %!/INC`PAGE`CHECK=list,%q<list_keys>; think setq(list_page,u(%!/FUN`PAGE`ITEMS,%q<list_keys>)); @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r1%r2,%r1%r%r,%r16%r%r),[tone(strong,#)]%r[iter(%q<list_page>,member(%q<list_keys>,%i0),,%r)],[tone(strong,Name)]%r[iter(%q<list_page>,u(%!/FUN`APP`NAME,%i0),,%r)],>[tone(strong,Waiting)]%r[iter(%q<list_page>,u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/APP`%i0`WAITLISTED))),,%r)],[tone(strong,Approved by)]%r[iter(%q<list_page>,if(isdbref(get({{store}}/APP`%i0`BY)),name(get({{store}}/APP`%i0`BY)),-),,%r)])%r[u(%!/FUN`PAGE`FOOTER,%q<list_keys>,+apps/waitlist,u(%!/FUN`PLACES`TEXT))],Waitlist)
+        flags: [cmdsyntax]
+      # +apps/all[/<page>]: every application still open (not approved, waitlisted or retired), by name.
+      INC`APPS`ALL:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; think setq(list_keys,sortby(%!/FUN`LIST`BYNAME,filterbool(%!/FUN`APP`IN,u(%!/FUN`APP`KEYS),,,draft submitted changes))); @assert words(%q<list_keys>)=@pemit %#=notice(APP,There are no open applications.); @include/args %!/INC`PAGE`CHECK=list,%q<list_keys>; think setq(list_page,u(%!/FUN`PAGE`ITEMS,%q<list_keys>)); @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r2,1%r%r%r,16%r%r%r),[tone(strong,Name)]%r[iter(%q<list_page>,u(%!/FUN`APP`NAME,%i0),,%r)],[tone(strong,State)]%r[iter(%q<list_page>,tone(u(%!/FUN`STATE`TONE,get({{store}}/APP`%i0`STATE)),u(%!/FUN`STATE`LABEL,get({{store}}/APP`%i0`STATE))),,%r)],>[tone(strong,Round)]%r[iter(%q<list_page>,get({{store}}/APP`%i0`ROUND),,%r)],>[tone(strong,Started)]%r[iter(%q<list_page>,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%i0`CREATED)),,%r)])%r[u(%!/FUN`PAGE`FOOTER,%q<list_keys>,+apps/all,+app <name> reads one)],Open applications)
+        flags: [cmdsyntax]
+      # +apps/decided[/<page>]: approved, waitlisted and retired applications, the latest decision first.
+      INC`APPS`DECIDED:
+        value: |-
+          @include %!/INC`NEED`REVIEWER; think setq(list_keys,revwords(u(%!/FUN`APP`SELECT,approved waitlist retired,DECIDED))); @assert words(%q<list_keys>)=@pemit %#=notice(APP,No application has been approved yet.); @include/args %!/INC`PAGE`CHECK=list,%q<list_keys>; think setq(list_page,u(%!/FUN`PAGE`ITEMS,%q<list_keys>)); @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4%r5,1%r1%r3%r2%r2,1%r%r%r%r,16%r%r%r%r),[tone(strong,Name)]%r[iter(%q<list_page>,u(%!/FUN`APP`NAME,%i0),,%r)],[tone(strong,State)]%r[iter(%q<list_page>,tone(u(%!/FUN`STATE`TONE,get({{store}}/APP`%i0`STATE)),u(%!/FUN`STATE`LABEL,get({{store}}/APP`%i0`STATE))),,%r)],>[tone(strong,Rounds)]%r[iter(%q<list_page>,get({{store}}/APP`%i0`ROUND),,%r)],>[tone(strong,Decided)]%r[iter(%q<list_page>,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%i0`DECIDED)),,%r)],[tone(strong,By)]%r[iter(%q<list_page>,if(isdbref(get({{store}}/APP`%i0`BY)),name(get({{store}}/APP`%i0`BY)),-),,%r)])%r[u(%!/FUN`PAGE`FOOTER,%q<list_keys>,+apps/decided,+app/retire <name> frees a place)],Decided applications)
+        flags: [cmdsyntax]
+      # %0 a key: its character's name, for sorting.
+      FUN`LIST`BYNAME:
+        value: |-
+          comp(lcstr(u(%!/FUN`APP`NAME,%0)),lcstr(u(%!/FUN`APP`NAME,%1)))
+        flags: [funsyntax]
+
+      # ---- the form, for staff ------------------------------------------------------
+      # +apps/fields: every section and its fields.
+      INC`APPS`FIELDS:
+        value: |-
+          think setq(form_fields,u(%!/FUN`FORM`ALLFIELDS)); @pemit %#=box([iter(u(%!/FUN`FORM`SECTIONS),[rule([u(%!/FUN`SECTION`NAME,%i0)] [tone(muted,order [u(%!/FUN`FORM`SECTION`ORDER,%i0)])])]%r[u(%!/FUN`DISPLAY`FIELDS,u(%!/FUN`FORM`FIELDS,%i0))],%b,%r)]%r[rule()]%r[tone(muted,if(%q<viewer_admin>,+apps/field <key>=<section>/<label> adds or moves a field. +help app form has the rest.,+app/set <field>=<text> fills one in.))],Application form)
+        flags: [cmdsyntax]
+      # %0 fields: a table of them, or a line saying there are none.
+      FUN`DISPLAY`FIELDS:
+        value: |-
+          if(words(%0),datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r2%r3,%r1%r%r%r1,%r10%r%r%r12),[tone(strong,Field)]%r[iter(%0,lcstr(%i0),,%r)],[tone(strong,Label)]%r[iter(%0,u(%!/FUN`FIELD`LABEL,%i0),,%r)],[tone(strong,Type)]%r[iter(%0,u(%!/FUN`FIELD`TYPE,%i0)[if(get({{store}}/FIELD`%i0`REQUIRED),%b· required)],,%r)],>[tone(strong,Max)]%r[iter(%0,u(%!/FUN`FIELD`MAX,%i0),,%r)],[tone(strong,Notes)]%r[iter(%0,firstof(if(strmatch(u(%!/FUN`FIELD`TYPE,%i0),choice),edit(get({{store}}/FIELD`%i0`CHOICES),|,%b/%b)),get({{store}}/FIELD`%i0`HELP),-),,%r)]),tone(muted,No fields.))
+        flags: [funsyntax]
+      # +apps/section <key>=<title>: adds a section at the end, or retitles one.
+      INC`APPS`SECTION:
+        value: |-
+          @include %!/INC`NEED`ADMIN; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(APP,+apps/section <key>=<title>,warn); @assert strlen(setr(form_key,u(%!/FUN`FORM`KEY,%q<cmd_left_side>)))=@pemit %#=notice(APP,A section key is one word of up to 30 letters%, digits%, - and _.,warn); @assert lte(strlen(%q<cmd_right_side>),60)=@pemit %#=notice(APP,Keep a title to 60 characters.,warn); think setq(form_new,not(hasattr({{store}},SECTION`%q<form_key>))); &SECTION`%q<form_key> {{store}}=%q<cmd_right_side>; @if %q<form_new>={&SECTION`%q<form_key>`ORDER {{store}}=inc(words(u(%!/FUN`FORM`SECTIONS)))}; @pemit %#=notice(APP,if(%q<form_new>,Added the section %q<cmd_right_side>. +apps/field <key>=[lcstr(%q<form_key>)]/<label> puts a field in it.,Retitled [lcstr(%q<form_key>)] to %q<cmd_right_side>.),ok)
+        flags: [cmdsyntax]
+      # +apps/section/order <key>=<number>
+      INC`APPS`SECTION`ORDER:
+        value: |-
+          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`SECTION`FIND,%q<cmd_left_side>)))=@pemit %#=notice(APP,There is no section '%q<cmd_left_side>'.,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0))=@pemit %#=notice(APP,The order is a whole number: lower comes first.,warn); &SECTION`%q<form_key>`ORDER {{store}}=%q<cmd_right_side>; @pemit %#=notice(APP,[get({{store}}/SECTION`%q<form_key>)] now comes [ordinal(member(u(%!/FUN`FORM`SECTIONS),%q<form_key>))].,ok)
+        flags: [cmdsyntax]
+      # +apps/section/remove <key>: an empty section only.
+      INC`APPS`SECTION`REMOVE:
+        value: |-
+          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`SECTION`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no section '%q<cmd_argument>'.,warn); @assert not(words(u(%!/FUN`FORM`FIELDS,%q<form_key>)))=@pemit %#=notice(APP,Move or remove its fields first: [lcstr(u(%!/FUN`FORM`FIELDS,%q<form_key>))].,warn); think setq(form_title,get({{store}}/SECTION`%q<form_key>)); &SECTION`%q<form_key>`ORDER {{store}}; &SECTION`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the section %q<form_title>. Comments on it stay with each application.,ok)
+        flags: [cmdsyntax]
+      # +apps/field <key>=<section>/<label>: adds a text field at the end of the section, or moves and relabels one.
+      INC`APPS`FIELD:
+        value: |-
+          @include %!/INC`NEED`ADMIN; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_right_side>,*/*))=@pemit %#=notice(APP,+apps/field <key>=<section>/<label>,warn); @assert strlen(setr(form_key,u(%!/FUN`FORM`KEY,%q<cmd_left_side>)))=@pemit %#=notice(APP,A field key is one word of up to 30 letters%, digits%, - and _.,warn); @assert strlen(setr(form_section,u(%!/FUN`SECTION`FIND,before(%q<cmd_right_side>,/))))=@pemit %#=notice(APP,There is no section '[before(%q<cmd_right_side>,/)]'. +apps/section <key>=<title> adds one.,warn); think setq(form_label,trim(after(%q<cmd_right_side>,/))); @assert cand(strlen(%q<form_label>),lte(strlen(%q<form_label>),60))=@pemit %#=notice(APP,A label is 1 to 60 characters.,warn); think setq(form_new,not(hasattr({{store}},FIELD`%q<form_key>))); &FIELD`%q<form_key> {{store}}=%q<form_label>; @if cor(%q<form_new>,comp(get({{store}}/FIELD`%q<form_key>`SECTION),%q<form_section>))={&FIELD`%q<form_key>`ORDER {{store}}=inc(words(u(%!/FUN`FORM`FIELDS,%q<form_section>)))}; &FIELD`%q<form_key>`SECTION {{store}}=%q<form_section>; @if %q<form_new>={&FIELD`%q<form_key>`TYPE {{store}}=text; &FIELD`%q<form_key>`REQUIRED {{store}}=0}; @pemit %#=notice(APP,if(%q<form_new>,Added the field %q<form_label> to [get({{store}}/SECTION`%q<form_section>)]. +apps/field/type [lcstr(%q<form_key>)]=long makes it take many lines.,[lcstr(%q<form_key>)] is %q<form_label>%, in [get({{store}}/SECTION`%q<form_section>)].),ok)
+        flags: [cmdsyntax]
+      # +apps/field/<option> <key>=<value>: label, section, type, choices, required, max, order or help. Each
+      # option is its own check, FUN`FORM`OPTION`<OPTION>, which gives the value to keep, or #-1 and the reason.
+      INC`APPS`FIELD`OPTION:
+        value: |-
+          @include %!/INC`NEED`ADMIN; think setq(form_option,ucstr(last(%q<cmd_switch_list>))); @assert %q<cmd_has_equals>=@pemit %#=notice(APP,+apps/field/[lcstr(%q<form_option>)] <key>=<value>,warn); @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_left_side>)))=@pemit %#=notice(APP,There is no field '%q<cmd_left_side>'. +apps/fields lists them.,warn); think setq(form_value,u(%!/FUN`FORM`OPTION`%q<form_option>,%q<cmd_right_side>,%q<form_key>)); @assert not(strmatch(%q<form_value>,#-1 *))=@pemit %#=notice(APP,after(%q<form_value>,#-1%b),warn); think setq(form_leaf,FIELD`%q<form_key>[if(comp(%q<form_option>,LABEL),`%q<form_option>)]); @if strlen(%q<form_value>)={&%q<form_leaf> {{store}}=%q<form_value>},{&%q<form_leaf> {{store}}}; @pemit %#=notice(APP,[u(%!/FUN`FIELD`LABEL,%q<form_key>)] [lcstr(%q<form_option>)]: [if(strlen(%q<form_value>),switch(%q<form_option>,REQUIRED,if(%q<form_value>,yes,no),SECTION,get({{store}}/SECTION`%q<form_value>),%q<form_value>),back to the default)],ok)
+        flags: [cmdsyntax]
+      # %0 typed text, %1 the field: what each option keeps, or #-1 and the reason.
+      FUN`FORM`OPTION`LABEL:
+        value: |-
+          if(cand(strlen(%0),lte(strlen(%0),60)),%0,#-1 A label is 1 to 60 characters.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`SECTION:
+        value: |-
+          firstof(u(%!/FUN`SECTION`FIND,%0),#-1 There is no section '%0'.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`TYPE:
+        value: |-
+          if(member(text long choice,lcstr(%0)),lcstr(%0),#-1 A type is text%, long or choice.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`CHOICES:
+        value: |-
+          if(lte(strlen(%0),400),trim(iter(%0,trim(%i0),|,|),b,|),#-1 Keep the choices to 400 characters.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`REQUIRED:
+        value: |-
+          switch(lcstr(%0),yes,1,on,1,1,1,true,1,no,0,off,0,0,0,false,0,#-1 Say yes or no.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`MAX:
+        value: |-
+          if(cor(not(strlen(%0)),cand(isint(%0),gte(%0,1),lte(%0,8000))),%0,#-1 Max is a number of characters from 1 to 8000%, or nothing for the default.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`ORDER:
+        value: |-
+          if(cand(isint(%0),gte(%0,0)),%0,#-1 The order is a whole number: lower comes first.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`HELP:
+        value: |-
+          if(lte(strlen(%0),200),%0,#-1 Keep help to 200 characters.)
+        flags: [funsyntax]
+      # +apps/field/remove <key>: the field leaves the form. What applications said in it stays with them.
+      INC`APPS`FIELD`REMOVE:
+        value: |-
+          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'.,warn); think setq(form_label,get({{store}}/FIELD`%q<form_key>)); @dolist/inline SECTION TYPE CHOICES REQUIRED MAX ORDER HELP={&FIELD`%q<form_key>`## {{store}}}; &FIELD`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the field %q<form_label>. What applications said in it stays with them.,ok)
+        flags: [cmdsyntax]
+
+      # ---- portal -----------------------------------------------------------------
+      # The chargen-app package shows these at /apps/chargen. The routes on the HTTP handler (at the end) read
+      # the schema, data and sidebar through u(), and run WEB`ACT here with @force, so writes run as this
+      # object and their "Set." lines never reach the response. %<viewer> is the character the portal signed
+      # in as; a u() function gets it as an argument. Schemas and data are JSON built with json(); lists of
+      # JSON values go to WEB`ARR %r-separated, since json() never writes a line break.
+      #
+      # Pages, by the address after /apps/chargen/: nothing, the viewer's own application; queue, waitlist,
+      # all and decided, the lists (queue alone, for someone who is not a reviewer, is the public count);
+      # a key, one application, for a reviewer. Form inputs are field_<field>, comment_<section> and
+      # comment_all, private_<section> and private_all (a reviewer's Staff only switch), and message.
+      #
+      # %0 %r-separated JSON values: a JSON array of them.
+      WEB`ARR:
+        value: |-
+          if(strlen(%0),json_array(%0,%r),json_array())
+        flags: [funsyntax]
+      WEB`EMPTY:
+        value: |-
+          chr(123)[chr(125)]
+        flags: [funsyntax]
+      # %0 %r-separated "key":value pairs: a JSON object of them.
+      WEB`OBJ:
+        value: |-
+          chr(123)[edit(%0,%r,%,)][chr(125)]
+        flags: [funsyntax]
+      WEB`B:
+        value: |-
+          json(boolean,if(%0,true,false))
+        flags: [funsyntax]
+      # One datum: JSON value %0, shown when %1 is true.
+      WEB`V:
+        value: |-
+          json(object,value,if(%1,%0,json(string,)),visible,u(%!/WEB`B,%1))
+        flags: [funsyntax]
+      # %0 a data key, %1 a JSON value, %2 1 to show it: one "key":datum pair for WEB`OBJ.
+      WEB`PAIR:
+        value: |-
+          json(string,%0):[u(%!/WEB`V,%1,%2)]
+        flags: [funsyntax]
+      # Field %0 of the posted JSON in %q<body>, unquoted; nothing when it is missing.
+      WEB`GET:
+        value: |-
+          setq(web_got,json_query(%q<body>,get,%0))[switch(%q<web_got>,null,,"*,json_query(%q<web_got>,unescape),%q<web_got>)]
+        flags: [funsyntax]
+      # Posted switch %0: 1 when it is on.
+      WEB`ON:
+        value: |-
+          t(match(true 1 yes on,lcstr(u(%!/WEB`GET,%0))))
+        flags: [funsyntax]
+      # A schema document: kind %0, title %1, sections %2 (%r-separated), actions object %3.
+      WEB`DOC:
+        value: |-
+          json_fill(get(%!/DATA`WEB`DOC),/kind,%0,/title,%1,/pages/0/title,%1,/pages/0/sections,u(%!/WEB`ARR,%2),/actions,firstof(%3,u(%!/WEB`EMPTY)))
+        flags: [funsyntax]
+      # WEB`DOC's template: json_fill() puts the kind, title, sections and actions into it.
+      DATA`WEB`DOC: |-
+        {"kind":"","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{}}
+      # A section: name %0, order %1, elements %2 (%r-separated).
+      WEB`SEC:
+        value: |-
+          json(object,name,json(string,%0),order,json(number,%1),columns,json(number,1),elements,u(%!/WEB`ARR,%2))
+        flags: [funsyntax]
+      WEB`MD:
+        value: |-
+          json(object,kind,json(string,markdown),value,json(string,%0))
+        flags: [funsyntax]
+      # A button: label %0, the op it posts %1, the application's key %2 (empty for the viewer's own), colour
+      # %3, a question asked first %4, the action %5 (act unless named).
+      WEB`BTN:
+        value: |-
+          json(object,kind,json(string,button),label,json(string,%0),action,json(string,firstof(%5,act)),values,json(object,op,json(string,%1),key,json(string,%2)),color,json(string,firstof(%3,secondary)),variant,json(string,if(match(primary success,%3),filled,outlined)),confirm,json(string,%4))
+        flags: [funsyntax]
+      # An input: key %0, label %1, type %2, help %3, 1 when required %4, most characters %5 (0 for no limit),
+      # options %6 (a JSON array, for a select).
+      WEB`INPUT:
+        value: |-
+          json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,%2),help,json(string,%3),options,firstof(%6,json_array()),validation,json(object,required,u(%!/WEB`B,%4),max_length,json(number,firstof(%5,100000))))
+        flags: [funsyntax]
+      # %0 a field of the form: its input.
+      WEB`INPUT`FIELD:
+        value: |-
+          setq(web_input_type,u(%!/FUN`FIELD`TYPE,%0))[u(%!/WEB`INPUT,field_[lcstr(%0)],u(%!/FUN`FIELD`LABEL,%0),switch(%q<web_input_type>,long,textarea,choice,select,text),get({{store}}/FIELD`%0`HELP),get({{store}}/FIELD`%0`REQUIRED),u(%!/FUN`FIELD`MAX,%0),if(strmatch(%q<web_input_type>,choice),u(%!/WEB`ARR,iter(get({{store}}/FIELD`%0`CHOICES),json(object,value,json(string,%i0),label,json(string,%i0)),|,%r))))]
+        flags: [funsyntax]
+      # %0 a section key, or empty for the whole application, %1 1 for a reviewer: the comment box, and a
+      # reviewer's Staff only switch.
+      WEB`INPUT`COMMENT:
+        value: |-
+          setq(web_box,firstof(lcstr(%0),all))[u(%!/WEB`INPUT,comment_%q<web_box>,if(%1,if(strlen(%0),Comment on this section,Comment on the whole application),if(strlen(%0),Reply to staff on this section,Message to staff)),textarea,,0,4000)][if(%1,%r[json(object,kind,json(string,field),key,json(string,private_%q<web_box>),label,json(string,Staff only),type,json(string,boolean))])]
+        flags: [funsyntax]
+      # %0 the rows field, %1 the text when there are none: a timeline of comments.
+      WEB`TIMELINE:
+        value: |-
+          json(object,kind,json(string,timeline),rows_field,json(string,%0),empty,json(string,%1))
+        flags: [funsyntax]
+      # The act action, as JSON; submit is the same, and the portal checks required fields before it posts it.
+      WEB`ACTION:
+        value: |-
+          get(%!/DATA`WEB`ACTION)
+        flags: [funsyntax]
+      DATA`WEB`ACTION: |-
+        {"transport":"http","method":"POST","route":"/http/chargen/act","payload":"fields","on_success":{"reset_fields":true},"on_error":{"bind_field_errors":true}}
+      WEB`ERR:
+        value: |-
+          json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))
+        flags: [funsyntax]
+      # %0 %r-separated "key":"message" pairs: the errors shown on those inputs.
+      WEB`ERRS:
+        value: |-
+          json(object,ok,json(boolean,false),errors,u(%!/WEB`OBJ,%0))
+        flags: [funsyntax]
+      # %0 a key: a well-formed application key, or nothing.
+      WEB`KEY:
+        value: |-
+          if(regmatch(%0,^%[0-9%]+_%[0-9%]+$),%0)
+        flags: [funsyntax]
+      # %0 a state: the MudBlazor colour it is shown in.
+      WEB`COLOR:
+        value: |-
+          setq(web_tone,u(%!/FUN`STATE`TONE,%0))[switch(%q<web_tone>,muted,default,%q<web_tone>)]
+        flags: [funsyntax]
+
+      # schemas: GET /http/chargen/schema?at=<path>
+      WEB`SCHEMA:
+        value: |-
+          switch(1,not(strlen(%<viewer>)),u(%!/WEB`SCHEMA`ANON),not(strlen(%<at>)),u(%!/WEB`SCHEMA`MINE,%<viewer>),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`SCHEMA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`KEY,%<viewer>)),u(%!/WEB`SCHEMA`MINE,%<viewer>),u(%!/WEB`SCHEMA`APP,%<viewer>,u(%!/WEB`KEY,%<at>)))
+        flags: [funsyntax]
+      WEB`SCHEMA`ANON:
+        value: |-
+          u(%!/WEB`DOC,view,Character application,u(%!/WEB`SEC,,1,u(%!/WEB`MD,Sign in with a character to apply.)))
+        flags: [funsyntax]
+      # %0 a title, %1 the text: a page that only says something.
+      WEB`SCHEMA`SAY:
+        value: |-
+          u(%!/WEB`DOC,view,%0,u(%!/WEB`SEC,,1,u(%!/WEB`MD,%1)))
+        flags: [funsyntax]
+      # The status lines both application pages start with; WEB`DATA`STATUS fills them in.
+      WEB`STATUS:
+        value: |-
+          json(object,kind,json(string,keyvalue),fields,json(array,json(string,State),json(string,Submitted),json(string,Queue)))
+        flags: [funsyntax]
+      # %0 a key, %1 a section, %2 a round (empty for the draft): each answer, its label in bold.
+      WEB`ANSWERS:
+        value: |-
+          iter(u(%!/FUN`FORM`FIELDS,%1),u(%!/WEB`MD,**[u(%!/FUN`FIELD`LABEL,%i0)]**%r%r[firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),_Not answered._)]),%b,%r)
+        flags: [funsyntax]
+
+      # The viewer %0's own application: a form while they may change it, the answers once staff have it.
+      # Comments from staff sit under the section they are about, with a box to reply.
+      WEB`SCHEMA`MINE:
+        value: |-
+          setqm(web_key,u(%!/FUN`KEY,%0),
+          web_state,u(%!/FUN`APP`STATE,%q<web_key>),
+          web_editable,u(%!/FUN`STATE`EDITABLE,%q<web_state>),
+          web_open,not(match(approved waitlist,%q<web_state>)),
+          web_sections,u(%!/FUN`FORM`SECTIONS))[u(%!/WEB`DOC,form,Application: [name(%0)],[u(%!/WEB`SEC,,1,[u(%!/WEB`STATUS)]%r[u(%!/WEB`MD,u(%!/WEB`HINT`MINE,%q<web_state>))])][if(words(u(%!/FUN`APP`COMMENTS,%q<web_key>,,0)),%r[u(%!/WEB`SEC,Messages,2,u(%!/WEB`TIMELINE,comments_all,))])][iter(%q<web_sections>,%r[u(%!/WEB`SEC,get({{store}}/SECTION`%i0),add(#@,2),u(%!/WEB`SECTION`MINE,%q<web_key>,%i0,%q<web_editable>,%q<web_open>))])][if(%q<web_open>,%r[u(%!/WEB`SEC,,90,[u(%!/WEB`INPUT`COMMENT,,0)][if(%q<web_editable>,%r[u(%!/WEB`BTN,Save draft,save)],[if(hasattr({{store}},APP`%q<web_key>),%r[u(%!/WEB`BTN,Send,comment,,primary)])][if(strmatch(%q<web_state>,submitted),%r[u(%!/WEB`BTN,Withdraw,withdraw,,warning,Take your application back from staff to change it? You submit it again when you are done.)])])])])],if(%q<web_editable>,json(object,act,u(%!/WEB`ACTION),submit,u(%!/WEB`ACTION)),json(object,act,u(%!/WEB`ACTION))))]
+        flags: [funsyntax]
+      # %0 a state: what to do next, on the viewer's own page.
+      WEB`HINT`MINE:
+        value: |-
+          switch(firstof(%0,draft),submitted,Staff have your application. Withdraw takes it back if you want to change something.,approved,Your application is approved.,waitlist,Your application is approved. Every place is taken%, so you get one when it opens.,changes,Staff asked for changes: their comments are under the sections they are about. Change what they asked%, then Submit.,retired,This character was retired. Change what you like and Submit to apply again.,Fill in the form. Save draft keeps it without sending it%; Submit sends it to staff.)
+        flags: [funsyntax]
+      # %0 a key, %1 a section, %2 1 while it may be changed, %3 1 while it is open: the section's elements on
+      # its owner's page.
+      WEB`SECTION`MINE:
+        value: |-
+          setq(web_section_comments,words(u(%!/FUN`APP`COMMENTS,%0,%1,0)))[if(%2,iter(u(%!/FUN`FORM`FIELDS,%1),u(%!/WEB`INPUT`FIELD,%i0),%b,%r),u(%!/WEB`ANSWERS,%0,%1,))][if(%q<web_section_comments>,%r[u(%!/WEB`TIMELINE,comments_[lcstr(%1)],)][if(%3,%r[u(%!/WEB`INPUT`COMMENT,%1,0)])])]
+        flags: [funsyntax]
+
+      # One application, key %1, for reviewer %0: the last submission section by section, what changed since
+      # the one before, the comments with a box under each, and the decision.
+      WEB`SCHEMA`APP:
+        value: |-
+          switch(0,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`SCHEMA`SAY,Character application,Only application reviewers can read other applications.),cand(strlen(%1),hasattr({{store}},APP`%1)),u(%!/WEB`SCHEMA`SAY,Character application,There is no such application.),u(%!/WEB`SCHEMA`APP`SEEN,%0,%1))
+        flags: [funsyntax]
+      WEB`SCHEMA`APP`SEEN:
+        value: |-
+          setqm(web_state,u(%!/FUN`APP`STATE,%1),
+          web_round,default({{store}}/APP`%1`ROUND,0),
+          web_source,if(%q<web_round>,%q<web_round>),
+          web_name,u(%!/FUN`APP`NAME,%1))[u(%!/WEB`DOC,form,Application: %q<web_name>,[u(%!/WEB`SEC,,1,[u(%!/WEB`STATUS)]%r[u(%!/WEB`MD,u(%!/WEB`HINT`STAFF,%q<web_state>,%q<web_round>))])]%r[u(%!/WEB`SEC,Messages,2,[u(%!/WEB`TIMELINE,comments_all,No messages yet.)]%r[u(%!/WEB`INPUT`COMMENT,,1)]%r[u(%!/WEB`BTN,Comment,comment,%1)])][iter(u(%!/FUN`FORM`SECTIONS),%r[u(%!/WEB`SEC,get({{store}}/SECTION`%i0),add(#@,2),u(%!/WEB`SECTION`STAFF,%1,%i0,%q<web_source>,%q<web_round>))])][if(match(submitted approved,%q<web_state>),%r[u(%!/WEB`SEC,Decision,90,u(%!/WEB`DECISION,%1,%q<web_state>,%q<web_name>))])],json(object,act,u(%!/WEB`ACTION)))]
+        flags: [funsyntax]
+      # %0 a state, %1 its round: what the reviewer reads first.
+      WEB`HINT`STAFF:
+        value: |-
+          switch(%0,submitted,if(gt(%1,1),This is round %1. Each section shows what changed since round [dec(%1)].,This is the first submission.) Comments go to the applicant unless you switch on Staff only.,changes,Returned for changes. You see what was last submitted.,draft,Not submitted. You see the draft.,u(%!/FUN`STATE`LABEL,%0).)
+        flags: [funsyntax]
+      # %0 a key, %1 a section, %2 the round shown, %3 the last round: the section's elements for a reviewer.
+      WEB`SECTION`STAFF:
+        value: |-
+          setq(web_section_changed,if(gt(%3,1),filterbool(%!/FUN`FORM`FIELD`IN,u(%!/FUN`APP`CHANGED,%0,dec(%3),%3),,,%1)))[u(%!/WEB`ANSWERS,%0,%1,%2)][if(words(%q<web_section_changed>),%r[u(%!/WEB`MD,_Changed since round [dec(%3)]:_)]%r[json(object,kind,json(string,table),rows_field,json(string,diff_[lcstr(%1)]),columns,json(array,json(object,key,json(string,field),label,json(string,Field)),json(object,key,json(string,before),label,json(string,Round [dec(%3)])),json(object,key,json(string,after),label,json(string,Round %3))))])]%r[u(%!/WEB`TIMELINE,comments_[lcstr(%1)],No comments on this section.)]%r[u(%!/WEB`INPUT`COMMENT,%1,1)]%r[u(%!/WEB`BTN,Comment,comment,%0)]
+        flags: [funsyntax]
+      # %0 a key, %1 its state, %2 the character's name: the decision buttons.
+      WEB`DECISION:
+        value: |-
+          if(strmatch(%1,approved),u(%!/WEB`BTN,Retire,retire,%0,error,Retire %2? They lose the approved role and their place goes to the next on the waitlist.),[u(%!/WEB`INPUT,message,Message to the applicant,textarea,Asking for changes needs one%; approving does not.,0,4000)]%r[u(%!/WEB`BTN,Ask for changes,return,%0,warning)]%r[u(%!/WEB`BTN,Approve,approve,%0,success,Approve %2?[if(u(%!/FUN`FULL),%bEvery place is taken%, so they go on the waitlist.)])])
+        flags: [funsyntax]
+
+      # %0 the viewer, %1 queue, waitlist, all or decided: a list of applications, for a reviewer. Anyone else
+      # gets the public queue.
+      WEB`SCHEMA`LIST:
+        value: |-
+          switch(1,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`DOC,view,u(%!/WEB`LIST`TITLE,%1),u(%!/WEB`SEC,,1,[u(%!/WEB`MD,u(%!/WEB`LIST`HINT,%1))]%r[json(object,kind,json(string,table),rows_field,json(string,rows),columns,u(%!/WEB`LIST`COLUMNS,%1),empty,json(string,u(%!/WEB`LIST`EMPTY,%1)))])),cand(strmatch(%1,queue),get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/WEB`DOC,view,Applications,u(%!/WEB`SEC,,1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Waiting),json(string,Typical wait),json(string,Places))))),u(%!/WEB`SCHEMA`SAY,Applications,Only application reviewers see this list.))
+        flags: [funsyntax]
+      WEB`LIST`TITLE:
+        value: |-
+          switch(%0,queue,Applications waiting,waitlist,Waitlist,all,Open applications,Decided applications)
+        flags: [funsyntax]
+      WEB`LIST`HINT:
+        value: |-
+          switch(%0,queue,The longest waiting first.,waitlist,Approved while every place was taken%, first approved first. [u(%!/FUN`PLACES`TEXT)],all,Every application not yet decided%, by name.,The latest decision first.)
+        flags: [funsyntax]
+      WEB`LIST`EMPTY:
+        value: |-
+          switch(%0,queue,No applications are waiting.,waitlist,Nobody is on the waitlist.,all,There are no open applications.,No application has been decided yet.)
+        flags: [funsyntax]
+      # %0 a list: its columns, from DATA`WEB`COLUMN`<NAME>, each a column's JSON.
+      WEB`LIST`COLUMNS:
+        value: |-
+          json_array(iter(switch(%0,queue,PLACE NAME ROUND WAITING CHANGED,waitlist,PLACE NAME WAITLISTED BY,all,NAME STATE ROUND STARTED,NAME STATE ROUND DECIDED BY),get(%!/DATA`WEB`COLUMN`%i0),%b,%r),%r)
+        flags: [funsyntax]
+      DATA`WEB`COLUMN`PLACE: |-
+        {"key":"place","label":"#"}
+      DATA`WEB`COLUMN`NAME: |-
+        {"key":"name","label":"Name","link":"/apps/chargen/{key}"}
+      DATA`WEB`COLUMN`STATE: |-
+        {"key":"state","label":"State","type":"chip","color_key":"state_color"}
+      DATA`WEB`COLUMN`ROUND: |-
+        {"key":"round","label":"Round"}
+      DATA`WEB`COLUMN`WAITING: |-
+        {"key":"waiting","label":"Waiting"}
+      DATA`WEB`COLUMN`CHANGED: |-
+        {"key":"changed","label":"Changed"}
+      DATA`WEB`COLUMN`WAITLISTED: |-
+        {"key":"waitlisted","label":"Waiting"}
+      DATA`WEB`COLUMN`BY: |-
+        {"key":"by","label":"Decided by"}
+      DATA`WEB`COLUMN`STARTED: |-
+        {"key":"started","label":"Started"}
+      DATA`WEB`COLUMN`DECIDED: |-
+        {"key":"decided","label":"Decided"}
+
+      # data: GET /http/chargen/data?at=<path>, for the page WEB`SCHEMA drew.
+      WEB`DATA:
+        value: |-
+          json(object,fields,switch(1,not(strlen(%<viewer>)),u(%!/WEB`EMPTY),not(strlen(%<at>)),u(%!/WEB`DATA`APP,u(%!/FUN`KEY,%<viewer>),0,1),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`DATA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`KEY,%<viewer>)),u(%!/WEB`DATA`APP,%<at>,0,1),cand(u(%!/FUN`IS`REVIEWER,%<viewer>),strlen(u(%!/WEB`KEY,%<at>))),u(%!/WEB`DATA`APP,%<at>,1,0),u(%!/WEB`EMPTY)))
+        flags: [funsyntax]
+      # %0 a key, %1 1 for a reviewer, %2 1 for its owner: the status lines, the comments in every section, the
+      # changes since the round before (for a reviewer) and the draft (for its owner).
+      WEB`DATA`APP:
+        value: |-
+          setqm(web_data_state,u(%!/FUN`APP`STATE,%0),
+          web_data_round,default({{store}}/APP`%0`ROUND,0),
+          web_data_queue,if(cor(%1,get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/FUN`QUEUE`TEXT,%0)))[u(%!/WEB`OBJ,[u(%!/WEB`PAIR,State,json(string,[u(%!/FUN`STATE`LABEL,%q<web_data_state>)][if(%q<web_data_round>,%b· round %q<web_data_round>)]),1)]%r[u(%!/WEB`PAIR,Submitted,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`SUBMITTED))),1)]%r[u(%!/WEB`PAIR,Queue,json(string,%q<web_data_queue>),strlen(%q<web_data_queue>))]%r[u(%!/WEB`PAIR,comments_all,u(%!/WEB`COMMENTS,%0,,%1),1)][iter(u(%!/FUN`FORM`SECTIONS),%r[u(%!/WEB`PAIR,comments_[lcstr(%i0)],u(%!/WEB`COMMENTS,%0,%i0,%1),1)][if(cand(%1,gt(%q<web_data_round>,1)),%r[u(%!/WEB`PAIR,diff_[lcstr(%i0)],u(%!/WEB`DIFF,%0,%i0,dec(%q<web_data_round>),%q<web_data_round>),1)])],%b,)][if(%2,iter(u(%!/FUN`FORM`ALLFIELDS),%r[u(%!/WEB`PAIR,field_[lcstr(%i0)],json(string,u(%!/FUN`APP`VALUE,%0,%i0)),1)],%b,))])]
+        flags: [funsyntax]
+      # %0 a key, %1 a section (empty for the whole application), %2 1 for a reviewer: the comments there, as
+      # timeline entries.
+      WEB`COMMENTS:
+        value: |-
+          u(%!/WEB`ARR,iter(u(%!/FUN`APP`COMMENTS,%0,%1,%2),u(%!/WEB`COMMENT,%0,%i0),%b,%r))
+        flags: [funsyntax]
+      # %0 a key, %1 a comment: its timeline entry, tagged with the decision it came with or Staff only.
+      WEB`COMMENT:
+        value: |-
+          setqm(web_comment,APP`%0`COMMENT`%1,
+          web_comment_tag,if(get({{store}}/%q<web_comment>`PRIVATE),Staff only,switch(get({{store}}/%q<web_comment>`KIND),return,Asked for changes,approve,Approved,waitlist,Waitlisted,retire,Retired,)))[json(object,author,json(string,get({{store}}/%q<web_comment>`NAME)),time,json(number,firstof(get({{store}}/%q<web_comment>`AT),0)),body,json(string,get({{store}}/%q<web_comment>)),format,json(string,markdown),tag,json(string,%q<web_comment_tag>),tag_color,json(string,switch(%q<web_comment_tag>,Staff only,warning,Asked for changes,warning,Approved,success,Waitlisted,info,default)))]
+        flags: [funsyntax]
+      # %0 a key, %1 a section, %2 and %3 two rounds: a table row for each of the section's fields that differs.
+      WEB`DIFF:
+        value: |-
+          u(%!/WEB`ARR,iter(filterbool(%!/FUN`FORM`FIELD`IN,u(%!/FUN`APP`CHANGED,%0,%2,%3),,,%1),json(object,field,json(string,u(%!/FUN`FIELD`LABEL,%i0)),before,json(string,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),-)),after,json(string,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%3),-))),%b,%r))
+        flags: [funsyntax]
+      # %0 the viewer, %1 the list: its rows, or for someone who is not a reviewer the public queue.
+      WEB`DATA`LIST:
+        value: |-
+          switch(1,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`OBJ,u(%!/WEB`PAIR,rows,u(%!/WEB`ROWS,u(%!/WEB`LIST`KEYS,%1)),1)),cand(strmatch(%1,queue),get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/WEB`DATA`PUBLIC),u(%!/WEB`EMPTY))
+        flags: [funsyntax]
+      WEB`LIST`KEYS:
+        value: |-
+          switch(%0,queue,u(%!/FUN`QUEUE),waitlist,u(%!/FUN`WAITLIST),all,sortby(%!/FUN`LIST`BYNAME,filterbool(%!/FUN`APP`IN,u(%!/FUN`APP`KEYS),,,draft submitted changes)),revwords(u(%!/FUN`APP`SELECT,approved waitlist retired,DECIDED)))
+        flags: [funsyntax]
+      # %0 keys: a table row for each, every list's columns in one.
+      WEB`ROWS:
+        value: |-
+          u(%!/WEB`ARR,iter(%0,u(%!/WEB`ROW,%i0,#@),%b,%r))
+        flags: [funsyntax]
+      WEB`ROW:
+        value: |-
+          setqm(web_row_state,get({{store}}/APP`%0`STATE),
+          web_row_round,default({{store}}/APP`%0`ROUND,0),
+          web_row_changed,if(gt(%q<web_row_round>,1),words(u(%!/FUN`APP`CHANGED,%0,dec(%q<web_row_round>),%q<web_row_round>))))[json(object,key,json(string,%0),place,json(string,%1),name,json(string,u(%!/FUN`APP`NAME,%0)),state,json(string,u(%!/FUN`STATE`LABEL,%q<web_row_state>)),state_color,json(string,u(%!/WEB`COLOR,%q<web_row_state>)),round,json(string,%q<web_row_round>),waiting,json(string,u(%!/FUN`DISPLAY`DURATION,sub(secs(),default({{store}}/APP`%0`SUBMITTED,secs())))),changed,json(string,if(strlen(%q<web_row_changed>),%q<web_row_changed> field[if(neq(%q<web_row_changed>,1),s)],new)),waitlisted,json(string,u(%!/FUN`DISPLAY`DURATION,sub(secs(),default({{store}}/APP`%0`WAITLISTED,secs())))),started,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`CREATED))),decided,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`DECIDED))),by,json(string,if(isdbref(get({{store}}/APP`%0`BY)),name(get({{store}}/APP`%0`BY)),-)))]
+        flags: [funsyntax]
+      # The public queue: how many wait, for how long, and the places, without names.
+      WEB`DATA`PUBLIC:
+        value: |-
+          setqm(web_public_count,words(u(%!/FUN`QUEUE)),
+          web_public_wait,u(%!/FUN`WAIT`TYPICAL),
+          web_public_cap,default(%!/DATA`CONFIG`CAP,0))[u(%!/WEB`OBJ,[u(%!/WEB`PAIR,Waiting,json(string,%q<web_public_count> application[if(neq(%q<web_public_count>,1),s)]),1)]%r[u(%!/WEB`PAIR,Typical wait,json(string,if(strlen(%q<web_public_wait>),about [u(%!/FUN`DISPLAY`DURATION,%q<web_public_wait>)],not known yet)),1)]%r[u(%!/WEB`PAIR,Places,json(string,if(gt(%q<web_public_cap>,0),[u(%!/FUN`ACTIVE)] of %q<web_public_cap> taken%, [words(u(%!/FUN`WAITLIST))] waiting,no cap)),1)])]
+        flags: [funsyntax]
+
+      # sidebar: GET /http/chargen/nav
+      # Viewer %0's sidebar: their application, the public queue when the game shows it, and for a reviewer the
+      # lists with their counts. Nobody signed in gets no links, and the portal shows the app's own.
+      WEB`NAV:
+        value: |-
+          json(object,groups,if(strlen(%0),u(%!/WEB`ARR,[json(object,label,json(string,),items,u(%!/WEB`ARR,[u(%!/WEB`LINK,My application,/apps/chargen,assignment_ind)][if(cand(not(u(%!/FUN`IS`REVIEWER,%0)),get(%!/DATA`CONFIG`SHOW-QUEUE)),%r[u(%!/WEB`LINK,Queue,/apps/chargen/queue,hourglass_top)])]))][if(u(%!/FUN`IS`REVIEWER,%0),%r[json(object,label,json(string,Review),items,u(%!/WEB`ARR,[u(%!/WEB`LINK,Waiting,/apps/chargen/queue,inbox,words(u(%!/FUN`QUEUE)))]%r[u(%!/WEB`LINK,Waitlist,/apps/chargen/waitlist,hourglass_top,words(u(%!/FUN`WAITLIST)))]%r[u(%!/WEB`LINK,Open,/apps/chargen/all,view_list)]%r[u(%!/WEB`LINK,Decided,/apps/chargen/decided,inventory_2)]))])]),json_array()))
+        flags: [funsyntax]
+      # A sidebar link: label %0, path %1, Material icon %2, and count %3 when there is one.
+      WEB`LINK:
+        value: |-
+          if(strlen(%3),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2),count,json(number,%3)),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2)))
+        flags: [funsyntax]
+
+      # actions: POST /http/chargen/act, run with @force so the writes are this object's. %q<body> is the posted
+      # JSON: op (save, submit, withdraw, comment, return, approve or retire; nothing is submit, the portal's own
+      # Submit button), key (the application, empty for the viewer's own) and the inputs. Each op leaves the
+      # answer in %q<out>.
+      WEB`ACT:
+        value: |-
+          think setqm(out,u(%!/WEB`ERR,Something went wrong.),web_op,lcstr(firstof(u(%!/WEB`GET,op),submit)),web_target,u(%!/WEB`GET,key)); @assert cand(strlen(%<viewer>),hastype(%<viewer>,player))=think setq(out,u(%!/WEB`ERR,Sign in with a character first.)); think setqm(viewer_objid,objid(%<viewer>),viewer_key,u(%!/FUN`KEY,%<viewer>),viewer_staff,u(%!/FUN`IS`REVIEWER,%<viewer>)); @assert match(save submit withdraw comment return approve retire,%q<web_op>)=think setq(out,u(%!/WEB`ERR,There is no such action.)); @include %!/WEB`ACT`%q<web_op>
+        flags: [cmdsyntax]
+      # The application the action is about: the posted key's, for a reviewer, else the viewer's own.
+      WEB`NEED`APP:
+        value: |-
+          @if cand(strlen(%q<web_target>),comp(%q<web_target>,%q<viewer_key>))={@assert %q<viewer_staff>=think setq(out,u(%!/WEB`ERR,Only application reviewers can do that.)); @assert cand(strlen(u(%!/WEB`KEY,%q<web_target>)),hasattr({{store}},APP`%q<web_target>))=think setq(out,u(%!/WEB`ERR,There is no such application.)); think setqm(app_key,%q<web_target>,app_objid,get({{store}}/APP`%q<web_target>))},{think setqm(app_key,%q<viewer_key>,app_objid,%q<viewer_objid>)}; think setq(app_state,u(%!/FUN`APP`STATE,%q<app_key>))
+        flags: [cmdsyntax]
+      # A decision: a reviewer's, on someone else's application.
+      WEB`NEED`DECIDER:
+        value: |-
+          @include %!/WEB`NEED`APP; @assert %q<viewer_staff>=think setq(out,u(%!/WEB`ERR,Only application reviewers can do that.)); @assert comp(%q<app_key>,%q<viewer_key>)=think setq(out,u(%!/WEB`ERR,Someone else decides your own application.))
+        flags: [cmdsyntax]
+      # Checks every posted field (field_<field>) and saves the ones that changed. A problem is shown on its input.
+      WEB`SAVE`FIELDS:
+        value: |-
+          think setq(web_errors,iter(filterbool(%!/WEB`FIELD`WRONG,u(%!/FUN`FORM`ALLFIELDS)),[json(string,field_[lcstr(%i0)])]:[json(string,u(%!/FUN`FIELD`PROBLEM,%i0,u(%!/WEB`GET,field_[lcstr(%i0)])))],%b,%r)); @assert not(strlen(%q<web_errors>))=think setq(out,u(%!/WEB`ERRS,%q<web_errors>)); @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if comp(u(%!/WEB`GET,field_[lcstr(##)]),u(%!/FUN`APP`VALUE,%q<app_key>,##))={@include/args %!/INC`DO`SET=field,##,value,u(%!/WEB`GET,field_[lcstr(##)])}}
+        flags: [cmdsyntax]
+      # %0 a field: 1 when what was posted for it does not fit.
+      WEB`FIELD`WRONG:
+        value: |-
+          t(strlen(u(%!/FUN`FIELD`PROBLEM,%0,u(%!/WEB`GET,field_[lcstr(%0)]))))
+        flags: [funsyntax]
+      # %0 a comment box: 1 when what was posted in it is too long.
+      WEB`BOX`LONG:
+        value: |-
+          gt(strlen(u(%!/WEB`GET,comment_%0)),4000)
+        flags: [funsyntax]
+      # Adds what is typed in each comment box (comment_<section>, comment_all), a reviewer's Staff only when
+      # private_<section> is on, and tells whoever should know. Sets web_commented to how many were added.
+      WEB`SAVE`COMMENTS:
+        value: |-
+          think setq(web_boxes,squish(iter(lcstr(u(%!/FUN`FORM`SECTIONS)) all,if(strlen(trim(u(%!/WEB`GET,comment_%i0))),%i0)))); think setq(web_long,iter(filterbool(%!/WEB`BOX`LONG,%q<web_boxes>),[json(string,comment_%i0)]:[json(string,Keep a comment to 4000 characters.)],%b,%r)); @assert not(strlen(%q<web_long>))=think setq(out,u(%!/WEB`ERRS,%q<web_long>)); think setq(web_commented,words(%q<web_boxes>)); @dolist/inline %q<web_boxes>={@include/args %!/INC`DO`COMMENT=section,if(comp(##,all),ucstr(##)),author,%q<viewer_objid>,text,trim(u(%!/WEB`GET,comment_##)),private,cand(%q<viewer_staff>,u(%!/WEB`ON,private_##)),kind,comment}; @if %q<web_commented>={@if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,[name(%q<viewer_objid>)] commented on their application. +app [name(%q<viewer_objid>)] reads it.}},{@if words(squish(iter(%q<web_boxes>,if(u(%!/WEB`ON,private_%i0),,%i0))))={@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,[name(%q<viewer_objid>)] commented on your application. +app shows it.}}}
+        flags: [cmdsyntax]
+      # Save draft: the fields and any comments.
+      WEB`ACT`SAVE:
+        value: |-
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; think setq(out,u(%!/WEB`DONE,Saved.))
+        flags: [cmdsyntax]
+      WEB`NEED`EDITABLE:
+        value: |-
+          @assert u(%!/FUN`STATE`EDITABLE,%q<app_state>)=think setq(out,u(%!/WEB`ERR,switch(%q<app_state>,submitted,Staff have your application. Withdraw takes it back to change it.,Your application is approved. There is nothing to change.)))
+        flags: [cmdsyntax]
+      # Submit: saves, then checks the required fields are filled in and sends it to staff.
+      WEB`ACT`SUBMIT:
+        value: |-
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; @include %!/INC`DO`TOUCH; think setq(web_missing,iter(filterbool(%!/FUN`APP`MISSES,u(%!/FUN`FORM`ALLFIELDS),,,%q<app_key>),[json(string,field_[lcstr(%i0)])]:[json(string,Fill this in before you submit.)],%b,%r)); @assert not(strlen(%q<web_missing>))=think setq(out,u(%!/WEB`ERRS,%q<web_missing>)); @include %!/INC`DO`SUBMIT; think setq(out,u(%!/WEB`DONE,Submitted. [if(get(%!/DATA`CONFIG`SHOW-QUEUE),u(%!/FUN`QUEUE`TEXT,%q<app_key>),Staff will read it.)]))
+        flags: [cmdsyntax]
+      WEB`ACT`WITHDRAW:
+        value: |-
+          @include %!/WEB`NEED`APP; @assert strmatch(%q<app_state>,submitted)=think setq(out,u(%!/WEB`ERR,Your application is not with staff.)); &APP`%q<app_key>`STATE {{store}}=draft; think setq(out,u(%!/WEB`DONE,Your application is back with you. Change it%, then Submit.))
+        flags: [cmdsyntax]
+      WEB`ACT`COMMENT:
+        value: |-
+          @include %!/WEB`NEED`APP; @assert hasattr({{store}},APP`%q<app_key>)=think setq(out,u(%!/WEB`ERR,Start your application first.)); @include %!/WEB`SAVE`COMMENTS; @assert %q<web_commented>=think setq(out,u(%!/WEB`ERR,Write a comment first.)); think setq(out,u(%!/WEB`DONE,Comment added.))
+        flags: [cmdsyntax]
+      WEB`ACT`RETURN:
+        value: |-
+          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,submitted)=think setq(out,u(%!/WEB`ERR,This application is not waiting for a decision.)); think setq(web_message,trim(u(%!/WEB`GET,message))); @assert strlen(%q<web_message>)=think setq(out,u(%!/WEB`ERRS,[json(string,message)]:[json(string,Say what to change.)])); @include %!/WEB`SAVE`COMMENTS; @include/args %!/INC`DO`RETURN=actor,%q<viewer_objid>,message,%q<web_message>; think setq(out,u(%!/WEB`DONE,Returned to [name(%q<app_objid>)] for changes.))
+        flags: [cmdsyntax]
+      WEB`ACT`APPROVE:
+        value: |-
+          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,submitted)=think setq(out,u(%!/WEB`ERR,This application is not waiting for a decision.)); @include %!/WEB`SAVE`COMMENTS; @include/args %!/INC`DO`APPROVE=actor,%q<viewer_objid>,message,trim(u(%!/WEB`GET,message)); think setq(out,u(%!/WEB`DONE,if(strmatch(u(%!/FUN`APP`STATE,%q<app_key>),waitlist),Approved [name(%q<app_objid>)]. Every place is taken%, so they wait for one.,Approved [name(%q<app_objid>)].)))
+        flags: [cmdsyntax]
+      WEB`ACT`RETIRE:
+        value: |-
+          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,approved)=think setq(out,u(%!/WEB`ERR,Only an approved application can be retired.)); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; think setq(out,u(%!/WEB`DONE,Retired [name(%q<app_objid>)]. [u(%!/FUN`PLACES`TEXT)]))
+        flags: [cmdsyntax]
+      # After a change: message %0, the inputs emptied (the owner's own fields put back), and the page drawn again.
+      WEB`DONE:
+        value: |-
+          setq(web_own,not(comp(%q<app_key>,%q<viewer_key>)))[json(object,ok,json(boolean,true),message,json(string,%0),fields,if(%q<web_own>,u(%!/WEB`FIELDS`MINE,%q<app_key>),u(%!/WEB`EMPTY)),schema,if(%q<web_own>,u(%!/WEB`SCHEMA`MINE,%q<viewer_objid>),u(%!/WEB`SCHEMA`APP,%q<viewer_objid>,%q<app_key>)),data,json(object,fields,if(%q<web_own>,u(%!/WEB`DATA`APP,%q<app_key>,0,1),u(%!/WEB`DATA`APP,%q<app_key>,1,0))))]
+        flags: [funsyntax]
+      # %0 a key: the draft's fields as input values.
+      WEB`FIELDS`MINE:
+        value: |-
+          u(%!/WEB`OBJ,iter(u(%!/FUN`FORM`ALLFIELDS),[json(string,field_[lcstr(%i0)])]:[json(string,u(%!/FUN`APP`VALUE,%0,%i0))],%b,%r))
+        flags: [funsyntax]
+
+      # ---- hooks ------------------------------------------------------------------
+      # A game fills these in. Each runs as this object after the change, with the names and positions given.
+      ON`SUBMIT: |-
+        @@ {Runs after an application is submitted. %<character> (%0): the applicant's objid. %<round> how many times it has been submitted. Example, telling a staff channel: @cemit Staff=[name(%<character>)] submitted an application.}
+      ON`RETURN: |-
+        @@ {Runs after a reviewer asks for changes. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they asked.}
+      ON`APPROVE: |-
+        @@ {Runs after an application is approved, once the approved role is given; also when a waitlisted one gets its place. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they said, if anything. Example, sending the new character home: @tel %<character>=#123; @link %<character>=#123}
+      ON`WAITLIST: |-
+        @@ {Runs after an application is approved with every place taken, so it waits for one. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they said, if anything.}
+      ON`RETIRE: |-
+        @@ {Runs after an approved character is retired and loses the approved role. %<character> (%0): the character's objid. %<actor> (%1): the reviewer's objid.}
+
+      # ---- lifecycle --------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +app; @hook/override/inline +app=%!,CMD`APP; @command/add/noparse/rsnoparse +apps; @hook/override/inline +apps=%!,CMD`APPS
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # Applications and the form. Inside the Chargen object, so no player can reach it, and no_command, so nothing
+  # kept on it is ever matched as a command.
+  - ref: store
+    type: thing
+    name: Chargen Store
+    location: "{{chargen}}"
+    flags: [no_command]
+    attributes:
+      # WAITS (unset until the first decision) is how long the latest decisions took, in seconds, oldest first.
+      APP: |-
+        Applications, one branch per character key.
+      SECTION: |-
+        The form's sections, one branch per key: the title, with ORDER.
+      SECTION`CONCEPT: |-
+        Concept
+      SECTION`CONCEPT`ORDER: |-
+        1
+      SECTION`HISTORY: |-
+        History
+      SECTION`HISTORY`ORDER: |-
+        2
+      SECTION`PERSONALITY: |-
+        Personality
+      SECTION`PERSONALITY`ORDER: |-
+        3
+      FIELD: |-
+        The form's fields, one branch per key: the label, with SECTION, TYPE, CHOICES, REQUIRED, MAX, ORDER and HELP.
+      FIELD`CONCEPT: |-
+        Concept
+      FIELD`CONCEPT`SECTION: |-
+        CONCEPT
+      FIELD`CONCEPT`TYPE: |-
+        text
+      FIELD`CONCEPT`REQUIRED: |-
+        1
+      FIELD`CONCEPT`MAX: |-
+        120
+      FIELD`CONCEPT`ORDER: |-
+        1
+      FIELD`CONCEPT`HELP: |-
+        Who they are, in a line.
+      FIELD`ARCHETYPE: |-
+        Archetype
+      FIELD`ARCHETYPE`SECTION: |-
+        CONCEPT
+      FIELD`ARCHETYPE`TYPE: |-
+        choice
+      FIELD`ARCHETYPE`CHOICES: |-
+        Fighter|Scholar|Rogue|Mystic
+      FIELD`ARCHETYPE`REQUIRED: |-
+        1
+      FIELD`ARCHETYPE`ORDER: |-
+        2
+      FIELD`BACKGROUND: |-
+        Background
+      FIELD`BACKGROUND`SECTION: |-
+        HISTORY
+      FIELD`BACKGROUND`TYPE: |-
+        long
+      FIELD`BACKGROUND`REQUIRED: |-
+        1
+      FIELD`BACKGROUND`ORDER: |-
+        1
+      FIELD`BACKGROUND`HELP: |-
+        Where they come from and what brought them here.
+      FIELD`PERSONALITY: |-
+        Personality
+      FIELD`PERSONALITY`SECTION: |-
+        PERSONALITY
+      FIELD`PERSONALITY`TYPE: |-
+        long
+      FIELD`PERSONALITY`REQUIRED: |-
+        0
+      FIELD`PERSONALITY`ORDER: |-
+        1
+      FIELD`PERSONALITY`HELP: |-
+        How they come across, and what they want.
+      FIELD`HOOKS: |-
+        Story hooks
+      FIELD`HOOKS`SECTION: |-
+        PERSONALITY
+      FIELD`HOOKS`TYPE: |-
+        long
+      FIELD`HOOKS`REQUIRED: |-
+        0
+      FIELD`HOOKS`ORDER: |-
+        2
+      FIELD`HOOKS`HELP: |-
+        Threads other players can pick up.
+
+  # ---- help storage -------------------------------------------------------------------
+  # A plain thing, not the WIZARD Chargen object: the librarian cannot u() a privileged object's attributes.
+  # Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: chargen_help
+    type: thing
+    name: Chargen Help
+    location: "{{chargen}}"
+    attributes:
+      HELP: |-
+        Character applications: applying, and reviewing them.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree.
+      SEE`APP`REVIEW: |-
+        app settings
+      SEE`APP`FORM: |-
+        app settings
+      SEE`APP`SETTINGS: |-
+        app review|config
+      HELP`APP: |-
+        Before a character plays, staff read their application. You fill it in, send it, and talk it over with
+        staff until they approve it.
+
+        ## How an application moves
+
+        - **Draft**: yours to change. Nothing reaches staff until you submit.
+        - **Submitted**: staff have it. You can still comment, and `+app/withdraw` takes it back.
+        - **Needs changes**: staff sent it back with comments. Change what they asked and submit again.
+        - **Approved**: done. When the game limits how many characters play at once and every place is
+          taken, an approved application waits on a **waitlist** and gets the next place that opens.
+
+        Every time you submit is a **round**. Staff see what you changed since the round before.
+
+        ## Commands
+
+        - `+app`: your application, with your place in the queue and the typical wait.
+        - `+app/set <field>=<text>`: fill in a field. An empty text clears it.
+        - `+app/write <field>`: write a long field over many lines. Send `.done` on a line by itself to save.
+        - `+app/submit`: send it to staff.
+        - `+app/withdraw`: take a submitted application back to change it.
+        - `+app/comment <section>=<text>`: answer staff about one section; `+app/comment =<text>` about the
+          whole application.
+        - `+app/diff \[<round>\]`: what you changed since that round, by default the last one you submitted.
+        - `+apps/queue`: how many applications are waiting and the typical wait.
+
+        A `*` in `+app` marks a field you changed since you last submitted.
+
+        Example:
+
+        ```
+        +app/set archetype=rogue
+        ```
+
+        Output: `\[APP\] Done: Archetype saved.`
+
+        The web portal has the same application at /apps/chargen.
+      HELP`APP`REVIEW: |-
+        Reviewers hold the `softcode.chargen.review` permission, usually through the
+        `application-reviewer` role.
+
+        ## Reading
+
+        - `+apps`: the queue, the longest waiting first, with how many fields changed since the round before.
+        - `+apps/waitlist`, `+apps/all` \(every application not yet decided\), `+apps/decided`.
+        - `+app <name>`: one application as last submitted. A `*` marks a field that changed since the round
+          before.
+        - `+app/diff <name>\[=<round>\]`: each changed field, what it said and what it says.
+
+        Lists come in pages when they outgrow your screen, and the page is a last switch: `+apps/decided/2`.
+
+        ## Talking it over
+
+        - `+app/comment <name>/<section>=<text>`: a comment on one section the applicant reads;
+          `+app/comment <name>=<text>` is about the whole application.
+        - `+app/note <name>/<section>=<text>`: the same, for reviewers only.
+
+        ## Deciding
+
+        - `+app/return <name>=<what to change>`: send it back for changes.
+        - `+app/approve <name>\[=<message>\]`: approve it. The character gets the approved role. With every place
+          taken, it goes on the waitlist instead and is approved when a place opens.
+        - `+app/retire <name>`: an approved character stops playing. They lose the role and their place goes
+          to the first on the waitlist.
+
+        Nobody decides their own application. The applicant hears each decision and each comment, by @mail
+        when they are not connected.
+
+        Example:
+
+        ```
+        +app/return Cora=Name the river in your background.
+        ```
+
+        Output: `\[APP\] Done: Returned to Cora for changes.`
+      HELP`APP`FORM: |-
+        The form is the game's: sections, and fields in them. Changing it takes the `config.admin` permission.
+        What applications already said stays with them when a field moves or goes.
+
+        - `+apps/fields`: every section and field.
+        - `+apps/section <key>=<title>`: add a section at the end, or retitle one.
+        - `+apps/section/order <key>=<number>`: lower comes first.
+        - `+apps/section/remove <key>`: an empty section only.
+        - `+apps/field <key>=<section>/<label>`: add a text field at the end of a section, or move and relabel one.
+        - `+apps/field/remove <key>`.
+
+        A key is one word of letters, digits, `-` and `_`. Each field has options, set with
+        `+apps/field/<option> <key>=<value>`; an empty value puts one back to its default:
+
+        | Option | Value |
+        |---|---|
+        | `label` | what the form calls it |
+        | `section` | the section it is in |
+        | `type` | `text` \(a line\), `long` \(paragraphs\) or `choice` |
+        | `choices` | for a choice field: the choices, split by vertical bars |
+        | `required` | `yes` when it must be filled in before submitting |
+        | `max` | the most characters: 200 for text and 4000 for long by default |
+        | `order` | where it comes in its section |
+        | `help` | a line shown under an empty field |
+
+        Example:
+
+        ```
+        +apps/field/choices archetype=Fighter|Scholar|Rogue|Mystic
+        ```
+
+        Output: `\[APP\] Done: Archetype choices: Fighter|Scholar|Rogue|Mystic`
+      HELP`APP`SETTINGS: |-
+        `+config chargen` lists the settings; `+config chargen/<setting>=<value>` changes one.
+
+        | Setting | Default | What it does |
+        |---|---|---|
+        | `cap` | 0 | The most characters with the approved role. 0 is no cap. |
+        | `approved-role` | approved | The role approval gives. |
+        | `show-queue` | 1 | Applicants see their place and the typical wait, and anyone can use `+apps/queue`. |
+        | `wait-sample` | 20 | How many of the latest decisions the typical wait is the middle of. |
+        | `mail-offline` | 1 | Applicants who are not connected hear about decisions and comments by @mail. |
+
+        Raising the cap admits the waitlist into the new places at once.
+
+        ## Hooks
+
+        The Chargen object runs these attributes as itself after each change, when a game sets them:
+        `` ON`SUBMIT ``, `` ON`RETURN ``, `` ON`APPROVE ``, `` ON`WAITLIST `` and `` ON`RETIRE ``. Each gets
+        `%%<character>` \(%%0\), the applicant's objid; the decisions also get `%%<actor>` \(%%1\), the reviewer,
+        and `%%<message>` \(%%2\).
+
+        Example, sending each approved character to the docks:
+
+        ```
+        &ON`APPROVE Chargen=@tel %%<character>=#123; @link %%<character>=#123
+        ```
+
+        Output: nothing; the next approval runs it.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`CHARGEN: |-
+        {{chargen_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`CHARGEN: |-
+        {{chargen}}
+
+  # ---- portal routes ------------------------------------------------------------------
+  # Routes on the HTTP handler, as children of http-handler's GET and POST verbs. The chargen-app package reads
+  # /http/chargen/schema and /http/chargen/data with ?at= set to the address after /apps/chargen/, its sidebar
+  # from /http/chargen/nav, and posts its buttons to /http/chargen/act. %<viewer> is the character the portal
+  # signed in as. The handler must be WIZARD (the seeded one is) to @force the Chargen object, which does the
+  # work so its "Set." lines never land in the response. POST`CHARGEN`ACT puts %<body> in %q<body>: a forced
+  # command's arguments lose a value's outer braces.
+  - ref: routes
     target: "{{$http_handler}}"
     attributes:
-      # ── Routes (children of http-handler's GET/POST verbs) ───────────────
-      # GET /http/chargen/schema — the form schema the portal renders, read from DATA`CHARGEN`SCHEMA.
       GET`CHARGEN`SCHEMA: |-
-        @respond/type application/json; think v(DATA`CHARGEN`SCHEMA)
-      # The form, as JSON: v() returns it without evaluating it, so the whole schema is one function call.
-      DATA`CHARGEN`SCHEMA: |-
-        {"kind":"form","schema_version":1,"title":"Character Application","pages":[{"key":"main","title":"Application","order":1,"sections":[{"name":"About","order":1,"elements":[{"kind":"field","key":"charname","label":"Character Name","type":"text","validation":{"required":true,"max_length":60}},{"kind":"field","key":"concept","label":"Concept","type":"text"},{"kind":"field","key":"class","label":"Class","type":"select","options":[{"value":"fighter","label":"Fighter"},{"value":"wizard","label":"Wizard"},{"value":"rogue","label":"Rogue"}]},{"kind":"field","key":"background","label":"Background","type":"mstring"}]}]}],"actions":{"submit":{"transport":"http","method":"POST","route":"/http/chargen/submit","payload":"fields","on_success":{"toast":"Application submitted!"},"on_error":{"bind_field_errors":true}}}}
-
-      # POST /http/chargen/submit — validate and acknowledge. %<body> = posted field JSON.
-      # Demonstration: requires a non-empty character name, returns the structured envelope.
-      POST`CHARGEN`SUBMIT: |-
-        @respond/type application/json; think firstof(if(not(edit(json_query(%<body>,get,charname),",)),json(object,ok,json(boolean,false),errors,json(object,charname,json(string,A character name is required.)))),json(object,ok,json(boolean,true),message,json(string,Application received. Staff will review it.),redirect,json(string,/characters)))
+        @respond/type application/json; think [uargs({{chargen}}/WEB`SCHEMA,viewer,%<viewer>,at,%q<form.at>)]
+      GET`CHARGEN`DATA: |-
+        @respond/type application/json; think [uargs({{chargen}}/WEB`DATA,viewer,%<viewer>,at,%q<form.at>)]
+      GET`CHARGEN`NAV: |-
+        @respond/type application/json; think [u({{chargen}}/WEB`NAV,%<viewer>)]
+      POST`CHARGEN`ACT: |-
+        think [setq(body,%<body>)]; @force {{chargen}}=@include/args/nobreak {{chargen}}/WEB`ACT=viewer,%<viewer>; @respond/type application/json; think %q<out>
