@@ -3,6 +3,16 @@
     "use strict";
     window.SharpMUSH = window.SharpMUSH || {};
 
+    // The browser's time zone, such as Europe/Paris, or "" when it gives none. The terminal reports it to the game
+    // as a telnet client reports TZ through NEW-ENVIRON.
+    window.SharpMUSH.timeZone = function () {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+        } catch (e) {
+            return "";
+        }
+    };
+
     // Puts a scrolling container (the onboarding shell between wizard steps) back at its top.
     window.SharpMUSH.scrollToTop = function (selector) {
         var el = document.querySelector(selector);

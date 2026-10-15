@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using ZiggyCreatures.Caching.Fusion;
@@ -21,6 +22,7 @@ namespace SharpMUSH.Server.Authentication;
 /// </remarks>
 public sealed class AccountClaimsInvalidator(
 	IFusionCache cache,
+	ObjectVersions versions,
 	Lazy<IEnumerable<IAccountChangeListener>>? listeners = null,
 	ILogger<AccountClaimsInvalidator>? logger = null) : IAccountClaimsInvalidator
 {
@@ -28,12 +30,18 @@ public sealed class AccountClaimsInvalidator(
 
 	/// <remarks>
 	/// Also expires every object's cached grants: the account's roles and overrides reach each character
-	/// linked to it, and which characters those are is what a link or unlink changes.
+	/// linked to it, and which characters those are is what a link or unlink changes. The tag's version moves
+	/// as <c>CacheInvalidationBehavior</c> moves it, for the grants kept outside the cache.
 	/// </remarks>
 	public async ValueTask InvalidateAsync(string accountId, CancellationToken ct = default)
 	{
+		// The write has happened, so the grants go whether or not the caller is still waiting. The version
+		// moves on both sides of the removal: a reader that saw the first move and then the entry about to
+		// be removed would otherwise keep it under that version.
+		versions.BumpTag(Library.Definitions.CacheTags.Grants);
+		await cache.RemoveByTagAsync(Library.Definitions.CacheTags.Grants, token: CancellationToken.None);
+		versions.BumpTag(Library.Definitions.CacheTags.Grants);
 		await cache.RemoveByTagAsync(AccountClaimsService.AccountCacheTag(accountId), token: ct);
-		await cache.RemoveByTagAsync(Library.Definitions.CacheTags.Grants, token: ct);
 		foreach (var listener in listeners?.Value ?? [])
 		{
 			try
