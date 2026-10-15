@@ -58,7 +58,7 @@ public class PackageAttributeEntryPlannerTests
 		await Assert.That(plan.IsBlocked).IsFalse();
 		var change = ChangeOf(plan, "JOB`STATUS");
 		await Assert.That(change.Action).IsEqualTo(PackageDeclarationAction.Existing);
-		await Assert.That(change.Detail!).Contains("default flags stay wizard");
+		await Assert.That(change.Detail!).Contains("default flags stay WIZARD");
 		await Assert.That(plan.AttributeEntryWrites).IsEmpty();
 		await Assert.That(plan.Owned.AttributeEntries).IsEmpty();
 	}

@@ -34,7 +34,9 @@ public static partial class PackageDeclarationPlanner
 	private static string FlagKey(IEnumerable<string> flags)
 		=> string.Join(' ', flags.Select(f => f.ToLowerInvariant()).Distinct().Order(StringComparer.Ordinal));
 
-	private static string ShowFlags(IEnumerable<string> flags) => FlagKey(flags) is { Length: > 0 } shown ? shown : "none";
+	/// <summary>Default flags as @attribute shows them: uppercase, each once, in declared order.</summary>
+	private static string ShowFlags(IEnumerable<string> flags)
+		=> string.Join(' ', flags.Select(f => f.ToUpperInvariant()).Distinct()) is { Length: > 0 } shown ? shown : "none";
 
 	/// <summary>What a new entry is made with: its default flags, and its limit or enum when it has one.</summary>
 	private static string Declares(PackageAttributeEntrySpec entry)
