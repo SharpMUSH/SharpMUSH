@@ -49,7 +49,8 @@
     /// <summary>Monospace chips, for names a machine reads: hosts, object ids.</summary>
     [Parameter] public bool Mono { get; set; }
 
-    /// <summary>Characters that end a value as it is typed or pasted; a comma unless the values may hold one.</summary>
+    /// <summary>Characters that end a value as it is typed or pasted; a comma unless the values may hold one.
+    /// None: a value ends only on Enter, the + button or leaving the field.</summary>
     [Parameter] public char[] Separators { get; set; } = [','];
 
     /// <summary>Applied to each value before it is added, such as lower-casing a host; a value that comes out
@@ -89,7 +90,11 @@
     private async Task AddAsync(string text)
     {
         List<string> items = [.. Items];
-        foreach (var part in text.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        // Split with no separators splits on white space, so none means the whole text is one value.
+        string[] parts = Separators.Length == 0
+            ? [text.Trim()]
+            : text.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var part in parts)
         {
             var value = Normalize?.Invoke(part) ?? part;
             if (value.Length > 0 && !items.Contains(value, StringComparer.Ordinal))

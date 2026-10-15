@@ -137,6 +137,43 @@ public class ClientIdentityConsumer(ILogger<ClientIdentityConsumer> logger, ICon
 }
 
 /// <summary>
+/// Consumes the time zone a client reported (NEW-ENVIRON <c>TZ</c>, or the web portal's browser zone): recorded on the
+/// connection for <c>clientzone()</c> when it names a zone, and handed to softcode as SOCKET`TIMEZONE. A zone the
+/// connection already reported is not raised again.
+/// </summary>
+public class ClientTimeZoneConsumer(ILogger<ClientTimeZoneConsumer> logger, IConnectionService connectionService, IEventService eventService)
+	: IMessageConsumer<ClientTimeZoneMessage>
+{
+	public async Task HandleAsync(ClientTimeZoneMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] ClientTimeZoneMessage - Handle: {Handle}", message.Handle);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping time zone for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		if (ConnectionTimeZone.Parse(message.Zone) is not string zone)
+		{
+			logger.LogDebug("Ignoring time zone the server does not know from handle {Handle}", message.Handle);
+			return;
+		}
+
+		var connection = connectionService.Get(message.Handle);
+		if (connection is null || connection.Metadata.GetValueOrDefault(ConnectionTimeZone.Key) == zone) return;
+
+		connectionService.Update(message.Handle, ConnectionTimeZone.Key, zone);
+
+		var player = connection.Ref;
+		await eventService.TriggerEventAsync(SharpEvents.SocketTimeZone, player,
+			message.Handle.ToString(CultureInfo.InvariantCulture),
+			zone,
+			player is { } dbref ? $"#{dbref.Number}" : string.Empty);
+	}
+}
+
+/// <summary>
 /// Consumes GMCP agreement: GMCP metadata follows the negotiation, so <c>oob()</c> reaches a client
 /// that agreed to GMCP before it has sent a package of its own, and stops when it withdraws.
 /// </summary>
