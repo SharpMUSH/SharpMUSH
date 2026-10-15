@@ -117,11 +117,16 @@ packages:
     package: bboards-app
     version: 1.0.2
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
-  - path: rp-finder/
-    name: RP Finder
-    package: rp-finder
-    version: 1.0.1
-    description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)
+  - path: status/
+    name: Status
+    package: status
+    version: 1.0.0
+    description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
+  - path: watch/
+    name: Watch
+    package: watch
+    version: 1.0.0
+    description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: finger/
     name: Finger
     package: finger

@@ -1,0 +1,454 @@
+format: 1.2
+package: status
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [status, lfrp, roleplay, who]
+requires_server: ">=0.1"
+
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: who-where
+    version: ">=1.3"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/
+      branch: main
+
+# One permission, for the people who keep statuses tidy: clear anyone's status. A game hands it out with the role below
+# (@role/assign <player>=status-moderator) or to one player (@permission/allow <player>=softcode.status.moderate).
+categories:
+  roles:
+    - name: Status
+      description: Roles for the people who look after +status.
+  permissions:
+    - name: Status
+      description: Looking after +status.
+permissions:
+  - name: softcode.status.moderate
+    category: Status
+    description: Clear anyone's status.
+roles:
+  - slug: status-moderator
+    name: Status Moderator
+    category: Status
+    priority: 10
+    permissions:
+      softcode.status.moderate: allow
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook), reads
+  # every player's connection and idle time, and hears every disconnect through ADISCONNECT, which runs on
+  # master room objects for everyone.
+  #
+  # +status is added with /noparse/rsnoparse and hooked to CMD`STATUS, so what a player types reaches the code
+  # exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`STATUS` one routine per
+  # switch, FUN`STATUS` the reads, FUN`DISPLAY` and FUN`PAGE` for screens. DATA` the settings, one leaf each.
+  # The statuses a player may choose and every player's status are kept on the Status Store, never on a player,
+  # so nobody can rewrite someone else's status.
+  - ref: status
+    type: thing
+    name: Status
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings. One leaf per setting.
+      # The longest status line, note and place, in characters.
+      DATA`LENGTH`LINE: |-
+        100
+      DATA`LENGTH`NOTE: |-
+        400
+      DATA`LENGTH`PLACE: |-
+        60
+      # Which INC` routine each switch runs: DATA`ROUTE`STATUS`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`STATUS`BARE: |-
+        STATUS`MINE
+      DATA`ROUTE`STATUS`ARG: |-
+        STATUS`SET
+      DATA`ROUTE`STATUS`NOTE: |-
+        STATUS`NOTE
+      DATA`ROUTE`STATUS`PLACE: |-
+        STATUS`PLACE
+      DATA`ROUTE`STATUS`OFF: |-
+        STATUS`OFF
+      DATA`ROUTE`STATUS`SHOW: |-
+        STATUS`SHOW
+      DATA`ROUTE`STATUS`LIST: |-
+        STATUS`LIST
+      # The routines that take a page as a last switch: +status/list/2.
+      DATA`PAGED: |-
+        STATUS`LIST
+
+      # ---- commands -------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`STATUS:
+        value: |-
+          $(?is)^\+status(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,status,table,STATUS,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # Parses the command into registers every routine shares, checks the switch and the page, and runs the
+      # routine. Only players have a status.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(STATUS,Only players have a status.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(STATUS,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(STATUS,+%q<cmd_word> has no /%q<cmd_switch> switch. +help status lists them.,warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(STATUS,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(STATUS,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_table,
+      # cmd_switch_list (every switch but a page), page_given and page_number (a last switch of digits, else 1), cmd_switch (the
+      # one other switch), cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the first =,
+      # cmd_route (the INC` routine to run), page_size (rows on one page), viewer_objid and viewer_key.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_table,%1,
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          page_given,isint(last(%q<cmd_switch_list>)),
+          page_number,if(%q<page_given>,last(%q<cmd_switch_list>),1),
+          cmd_switch_list,if(%q<page_given>,ldelete(%q<cmd_switch_list>,words(%q<cmd_switch_list>)),%q<cmd_switch_list>),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          page_size,u(%!/FUN`PAGE`SIZE),
+          viewer_objid,objid(%#),
+          viewer_key,u(%!/FUN`KEY,%#))
+        flags: [funsyntax]
+      # 1 when the player running the command may moderate statuses.
+      FUN`IS`MODERATOR:
+        value: |-
+          permission(%#,softcode.status.moderate)
+        flags: [funsyntax]
+
+      # ---- shared reads ---------------------------------------------------------
+      # %0 an object: the key its status is filed under. An objid cannot be part of an attribute name,
+      # so #12:1790888816538 is filed as 12_1790888816538.
+      FUN`KEY:
+        value: |-
+          edit(objid(%0),#,,:,_)
+        flags: [funsyntax]
+      # %0 typed text: the objid of the player it names, or nothing.
+      FUN`PLAYER:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+      # %0 seconds: a short duration, 5m or 2h.
+      FUN`DISPLAY`DURATION:
+        value: |-
+          trim(etime(max(0,%0),3))
+        flags: [funsyntax]
+      # %0 text, %1 a length: the text cut to that length, ending ... when it was cut.
+      FUN`DISPLAY`SHORT:
+        value: |-
+          if(gt(strlen(%0),%1),left(%0,sub(%1,3))...,%0)
+        flags: [funsyntax]
+      # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
+      # priority, %2 each column's share of the spare width, %3 each column's least width.
+      FUN`DISPLAY`TABLEOPTIONS:
+        value: |-
+          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+        flags: [funsyntax]
+      # How many rows fit on the reader's screen, under a heading, a table's own heading and a footer.
+      FUN`PAGE`SIZE:
+        value: |-
+          max(5,sub(height(%#,24),6))
+        flags: [funsyntax]
+      # %0 a list: how many pages it takes.
+      FUN`PAGE`COUNT:
+        value: |-
+          max(1,ceil(fdiv(words(%0),%q<page_size>)))
+        flags: [funsyntax]
+      # %0 a list: the items on page %q<page_number>, %q<page_size> to a page.
+      FUN`PAGE`ITEMS:
+        value: |-
+          extract(%0,inc(mul(dec(%q<page_number>),%q<page_size>)),%q<page_size>)
+        flags: [funsyntax]
+      # %0 a list, %1 the command for its pages as typed, %2 the hint when there is one page, %3 what follows the
+      # command's switches, if anything: the closing rule.
+      FUN`PAGE`FOOTER:
+        value: |-
+          setq(page_count,u(%!/FUN`PAGE`COUNT,%0))[rule(if(gt(%q<page_count>,1),page %q<page_number> of %q<page_count>[if(lt(%q<page_number>,%q<page_count>),%b· %1/[inc(%q<page_number>)][if(strlen(%3),%b%3)])],%2))]
+        flags: [funsyntax]
+      # Stops a command whose list %<list> has no page %q<page_number>.
+      INC`PAGE`CHECK:
+        value: |-
+          think setq(page_count,u(%!/FUN`PAGE`COUNT,%<list>)); @assert lte(%q<page_number>,%q<page_count>)=@pemit %#=notice(STATUS,There [if(eq(%q<page_count>,1),is only one page,are only %q<page_count> pages)].,warn)
+        flags: [cmdsyntax]
+
+      # ---- statuses -------------------------------------------------------------
+      # The statuses a player may choose are STATUS`<NAME> on the store, with TAG, HOURS and LOGOFF beneath.
+      # A player's status is PLAYER`<key> on the store (the player's objid), with NAME (which status), LINE, NOTE,
+      # PLACE, SET (when it was last set, in seconds) and UNTIL (when it runs out; unset, never) beneath it. All of
+      # it is kept on the store so the +who filter reads everything it needs from there.
+      #
+      # The statuses, by name.
+      FUN`STATUS`NAMES:
+        value: |-
+          iter(lattr({{store}}/STATUS`*),after(%i0,`))
+        flags: [funsyntax]
+      # %0 typed text: the status it names, upper case, or nothing.
+      FUN`STATUS`FIND:
+        value: |-
+          if(cand(eq(words(%0),1),member(u(%!/FUN`STATUS`NAMES),ucstr(%0))),ucstr(%0))
+        flags: [funsyntax]
+      # %0 a key: 1 when that player has a status the game still offers that has not run out. %1, when given, is secs().
+      FUN`STATUS`ACTIVE:
+        value: |-
+          setq(status_until,get({{store}}/PLAYER`%0`UNTIL))[cand(member(u(%!/FUN`STATUS`NAMES),get({{store}}/PLAYER`%0`NAME)),cor(not(strlen(%q<status_until>)),gt(%q<status_until>,firstof(%1,secs()))))]
+        flags: [funsyntax]
+      # %0 a status: when one set now runs out, or nothing when it lasts until it is changed.
+      FUN`STATUS`UNTIL:
+        value: |-
+          if(gt(default({{store}}/STATUS`%0`HOURS,0),0),add(secs(),mul(get({{store}}/STATUS`%0`HOURS),3600)))
+        flags: [funsyntax]
+      # %0 a status: how long it lasts, as a sentence.
+      FUN`STATUS`LASTS:
+        value: |-
+          setq(status_hours,default({{store}}/STATUS`%0`HOURS,0))[if(gt(%q<status_hours>,0),It lasts %q<status_hours> hour[if(neq(%q<status_hours>,1),s)][if(get({{store}}/STATUS`%0`LOGOFF),%bor until you log off)].,if(get({{store}}/STATUS`%0`LOGOFF),It lasts until you log off.,It lasts until you change it.))]
+        flags: [funsyntax]
+      # %0 a status: how long it lasts, in a few words for a table.
+      FUN`STATUS`LASTSSHORT:
+        value: |-
+          setq(status_hours,default({{store}}/STATUS`%0`HOURS,0))[if(gt(%q<status_hours>,0),%q<status_hours>h[if(get({{store}}/STATUS`%0`LOGOFF),%bor logoff)],if(get({{store}}/STATUS`%0`LOGOFF),until logoff,until changed))]
+        flags: [funsyntax]
+      # %0 a player with a status: its tag, and its line after a colon.
+      FUN`STATUS`TEXT:
+        value: |-
+          setq(status_text_key,u(%!/FUN`KEY,%0))[setq(status_text_name,get({{store}}/PLAYER`%q<status_text_key>`NAME))][setq(status_text_line,get({{store}}/PLAYER`%q<status_text_key>`LINE))][firstof(get({{store}}/STATUS`%q<status_text_name>`TAG),%q<status_text_name>)][if(strlen(%q<status_text_line>),: %q<status_text_line>)]
+        flags: [funsyntax]
+      # %0 a player: 1 when they have a status.
+      FUN`STATUS`HAS:
+        value: |-
+          u(%!/FUN`STATUS`ACTIVE,u(%!/FUN`KEY,%0))
+        flags: [funsyntax]
+      # %0 a player: where their status says to find them. "here" is wherever they are standing now.
+      FUN`STATUS`PLACE:
+        value: |-
+          setq(status_place,get({{store}}/PLAYER`[u(%!/FUN`KEY,%0)]`PLACE))[if(strmatch(%q<status_place>,here),name(room(%0)),%q<status_place>)]
+        flags: [funsyntax]
+      # %0 the keys of the statuses that have not run out, %1 a status or nothing for any: the connected players
+      # the reader can see among them, least idle first.
+      FUN`STATUS`PLAYERS:
+        value: |-
+          sort(setinter(iter(%0,if(cor(not(strlen(%1)),not(comp(get({{store}}/PLAYER`%i0`NAME),%1))),num(get({{store}}/PLAYER`%i0)))),lwho(%#)),idle)
+        flags: [funsyntax]
+      # Stops a command whose player has no status, and sets status_name to the one they have.
+      INC`STATUS`NEEDACTIVE:
+        value: |-
+          @assert u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)=@pemit %#=notice(STATUS,Choose a status first: +status <name>. +status lists them.,warn); think setq(status_name,get({{store}}/PLAYER`%q<viewer_key>`NAME))
+        flags: [cmdsyntax]
+      # Starts or renews the player's status as %q<status_name>. A status that had run out, or was another one,
+      # loses its line, note and place first.
+      INC`STATUS`TOUCH:
+        value: |-
+          @if cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),comp(get({{store}}/PLAYER`%q<viewer_key>`NAME),%q<status_name>))={@include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>}; &PLAYER`%q<viewer_key> {{store}}=%q<viewer_objid>; &PLAYER`%q<viewer_key>`NAME {{store}}=%q<status_name>; &PLAYER`%q<viewer_key>`SET {{store}}=secs(); &PLAYER`%q<viewer_key>`UNTIL {{store}}=u(%!/FUN`STATUS`UNTIL,%q<status_name>)
+        flags: [cmdsyntax]
+      # Clears the status filed under %<key>, leaves first.
+      INC`STATUS`CLEAR:
+        value: |-
+          &PLAYER`%<key>`NAME {{store}}; &PLAYER`%<key>`LINE {{store}}; &PLAYER`%<key>`NOTE {{store}}; &PLAYER`%<key>`PLACE {{store}}; &PLAYER`%<key>`SET {{store}}; &PLAYER`%<key>`UNTIL {{store}}; &PLAYER`%<key> {{store}}
+        flags: [cmdsyntax]
+      # +status: the player's own status, and the statuses they may choose.
+      INC`STATUS`MINE:
+        value: |-
+          @pemit %#=if(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>),u(%!/FUN`STATUS`CARD,%#),notice(STATUS,You have no status.))%r[u(%!/FUN`STATUS`CHOICES)]
+        flags: [cmdsyntax]
+      # The statuses a player may choose, as a table.
+      FUN`STATUS`CHOICES:
+        value: |-
+          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),[tone(strong,Name)]%r[iter(%q<status_names>,lcstr(%i0),,%r)],[tone(strong,Means)]%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],[tone(strong,Lasts)]%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTSSHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)]
+        flags: [funsyntax]
+      # +status <name>[=<line>]
+      INC`STATUS`SET:
+        value: |-
+          think setq(status_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_line,if(%q<cmd_has_equals>,%q<cmd_right_side>)); @assert lte(strlen(%q<status_line>),get(%!/DATA`LENGTH`LINE))=@pemit %#=notice(STATUS,Keep it to [get(%!/DATA`LENGTH`LINE)] characters. +status/note takes the rest.,warn); @include %!/INC`STATUS`TOUCH; &PLAYER`%q<viewer_key>`LINE {{store}}=%q<status_line>; @pemit %#=notice(STATUS,Your status: [u(%!/FUN`STATUS`TEXT,%#)],ok)%r[tone(muted,[u(%!/FUN`STATUS`LASTS,%q<status_name>)] +status/note adds an OOC note%, +status/place where to find you%, and +status/off ends it.)]
+        flags: [cmdsyntax]
+      # +status/note [<text>]
+      INC`STATUS`NOTE:
+        value: |-
+          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LENGTH`NOTE))=@pemit %#=notice(STATUS,Keep the note to [get(%!/DATA`LENGTH`NOTE)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`NOTE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Your note: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`NOTE {{store}}; @pemit %#=notice(STATUS,Your note is cleared.,ok)
+        flags: [cmdsyntax]
+      # +status/place [<text>|here]
+      INC`STATUS`PLACE:
+        value: |-
+          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`LENGTH`PLACE))=@pemit %#=notice(STATUS,Keep the place to [get(%!/DATA`LENGTH`PLACE)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strmatch(%q<cmd_argument>,here)={&PLAYER`%q<viewer_key>`PLACE {{store}}=here; @pemit %#=notice(STATUS,Others see where you are standing%, wherever you go.,ok)}; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`PLACE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Where to find you: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`PLACE {{store}}; @pemit %#=notice(STATUS,Your place is cleared.,ok)
+        flags: [cmdsyntax]
+      # +status/off [<player>]: your own status, or anyone's for a moderator.
+      INC`STATUS`OFF:
+        value: |-
+          @break strlen(%q<cmd_argument>)={@include %!/INC`STATUS`OFFOTHER}; @assert hasattr({{store}},PLAYER`%q<viewer_key>)=@pemit %#=notice(STATUS,You have no status.,warn); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>; @pemit %#=notice(STATUS,Your status is cleared.,ok)
+        flags: [cmdsyntax]
+      INC`STATUS`OFFOTHER:
+        value: |-
+          @assert u(%!/FUN`IS`MODERATOR)=@pemit %#=notice(STATUS,Only a status moderator can clear someone else's status.,error); @assert strlen(setr(status_target,u(%!/FUN`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(STATUS,There is no player called '%q<cmd_argument>'.,warn); think setq(status_target_key,u(%!/FUN`KEY,%q<status_target>)); @assert hasattr({{store}},PLAYER`%q<status_target_key>)=@pemit %#=notice(STATUS,[name(%q<status_target>)] has no status.,warn); @include/args %!/INC`STATUS`CLEAR=key,%q<status_target_key>; @pemit %#=notice(STATUS,[name(%q<status_target>)]'s status is cleared.,ok); @pemit %q<status_target>=notice(STATUS,[name(%#)] cleared your status.)
+        flags: [cmdsyntax]
+      # +status/show [<player>]
+      INC`STATUS`SHOW:
+        value: |-
+          think setq(status_target,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<status_target>)=@pemit %#=notice(STATUS,There is no player called '%q<cmd_argument>'.,warn); @assert cand(u(%!/FUN`STATUS`HAS,%q<status_target>),member(lwho(%#),num(%q<status_target>)))=@pemit %#=notice(STATUS,if(strmatch(%q<status_target>,%q<viewer_objid>),You have no status.,[name(%q<status_target>)] has no status.)); @pemit %#=u(%!/FUN`STATUS`CARD,%q<status_target>)
+        flags: [cmdsyntax]
+      # %0 a player with a status: it as labelled values.
+      FUN`STATUS`CARD:
+        value: |-
+          setq(status_card_key,u(%!/FUN`KEY,%0))[rule(name(%0))]%r[fields(,Status,u(%!/FUN`STATUS`TEXT,%0),Note,firstof(get({{store}}/PLAYER`%q<status_card_key>`NOTE),-),Where,firstof(u(%!/FUN`STATUS`PLACE,%0),-),Since,[u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/PLAYER`%q<status_card_key>`SET)))] ago,Idle,u(%!/FUN`DISPLAY`DURATION,idle(%0)))]%r[rule()]
+        flags: [funsyntax]
+      # +status/list[/<page>] [<status>]: who has a status, or that one. Statuses that ran out are cleared as the
+      # list is drawn.
+      INC`STATUS`LIST:
+        value: |-
+          think setq(status_filter,u(%!/FUN`STATUS`FIND,%q<cmd_argument>)); @assert cor(not(strlen(%q<cmd_argument>)),strlen(%q<status_filter>))=@pemit %#=notice(STATUS,There is no status '%q<cmd_argument>'. +status lists them.,warn); @include %!/INC`STATUS`SWEEP; think setq(status_players,u(%!/FUN`STATUS`PLAYERS,%q<status_live>,%q<status_filter>)); @assert words(%q<status_players>)=@pemit %#=notice(STATUS,if(strlen(%q<status_filter>),Nobody has the [lcstr(%q<status_filter>)] status right now.,Nobody has a status right now.) +status <name> sets yours.); @include/args %!/INC`PAGE`CHECK=list,%q<status_players>; @pemit %#=u(%!/FUN`STATUS`TABLE,u(%!/FUN`PAGE`ITEMS,%q<status_players>),if(strlen(%q<status_filter>),firstof(get({{store}}/STATUS`%q<status_filter>`TAG),%q<status_filter>),Statuses))%r[u(%!/FUN`PAGE`FOOTER,%q<status_players>,+status/list,+status/show <name> shows a note,lcstr(%q<status_filter>))][if(hasattr(%!,DATA`LIST`MORE),%r[tone(muted,get(%!/DATA`LIST`MORE))])]
+        flags: [cmdsyntax]
+      # %0 players, %1 the heading: the table of their statuses.
+      FUN`STATUS`TABLE:
+        value: |-
+          rule(%1)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r4,1%r1%r2%r3,%r1,%r20%r10),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],[tone(strong,Status)]%r[iter(%0,u(%!/FUN`STATUS`TEXT,%i0),,%r)],[tone(strong,Where)]%r[iter(%0,firstof(u(%!/FUN`STATUS`PLACE,%i0),-),,%r)],>[tone(strong,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)])]
+        flags: [funsyntax]
+      # Clears every status that has run out, or whose player is gone, and sets status_live to the keys of the rest.
+      INC`STATUS`SWEEP:
+        value: |-
+          think setq(status_keys,iter(lattr({{store}}/PLAYER`*),after(%i0,`))); think setq(status_live,filterbool(%!/FUN`STATUS`LIVE,%q<status_keys>,,,secs())); @dolist/inline setdiff(%q<status_keys>,%q<status_live>)={@include/args %!/INC`STATUS`CLEAR=key,##}
+        flags: [cmdsyntax]
+      # %0 a key, %1 secs(): 1 when the status has not run out and its player still exists.
+      FUN`STATUS`LIVE:
+        value: |-
+          cand(u(%!/FUN`STATUS`ACTIVE,%0,%1),isdbref(get({{store}}/PLAYER`%0)))
+        flags: [funsyntax]
+
+      # ---- disconnect -----------------------------------------------------------
+      # Master room ADISCONNECT runs for every player, as this object, with %# the player and %1 how many
+      # connections they have left. A status whose LOGOFF is set ends with the last connection.
+      ADISCONNECT:
+        value: |-
+          @assert cand(eq(%1,0),hastype(%#,player)); think setq(viewer_key,u(%!/FUN`KEY,%#)); @assert hasattr({{store}},PLAYER`%q<viewer_key>); @assert cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),get({{store}}/STATUS`[get({{store}}/PLAYER`%q<viewer_key>`NAME)]`LOGOFF)); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>
+        flags: [cmdsyntax]
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +status; @hook/override/inline +status=%!,CMD`STATUS
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The statuses a player may choose, and every player's status. Inside the Status object, so no player can
+  # reach it, and no_command, so nothing kept on it is ever matched as a command.
+  #
+  # A status is STATUS`<NAME>, its value what it means, with TAG (what +who shows), HOURS (how long it lasts
+  # from when it is set; 0 until it is changed) and LOGOFF (1 when logging off ends it) beneath. A game adds,
+  # changes or removes statuses here.
+  - ref: store
+    type: thing
+    name: Status Store
+    location: "{{status}}"
+    flags: [no_command]
+    attributes:
+      STATUS: |-
+        The statuses a player may choose, one branch each, named as a player types it.
+      STATUS`LFRP: |-
+        Looking for roleplay now.
+      STATUS`LFRP`TAG: |-
+        LFRP
+      STATUS`LFRP`HOURS: |-
+        4
+      STATUS`LFRP`LOGOFF: |-
+        1
+      STATUS`RP_OK: |-
+        Not looking, but glad to be asked.
+      STATUS`RP_OK`TAG: |-
+        RP OK
+      STATUS`RP_OK`HOURS: |-
+        0
+      STATUS`RP_OK`LOGOFF: |-
+        0
+      PLAYER: |-
+        Every player's status, one branch per player key.
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: status_help
+    type: thing
+    name: Status Help
+    location: "{{status}}"
+    attributes:
+      HELP: |-
+        Saying whether you are looking for roleplay: +status.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`STATUS: |-
+        who
+      HELP`STATUS: |-
+        `+status` tells others whether you are up for roleplay, and shows who else is.
+
+        - `+status lfrp=<line>` says you are looking for roleplay now, and what you would like to play: `+status lfrp=Stacking wood by the cabin, glad of company`.
+        - `+status rp_ok` says you are not looking, but are glad to be asked.
+        - `+status` on its own shows your status and every status you can choose. Your game may have more.
+        - `+status/off` clears it.
+
+        The line after `=` is optional. While you have a status, it shows in the Status column of `+who`.
+
+        - `+status/note <text>` adds an OOC note: what kind of scene, how long you have, what you would rather not play.
+        - `+status/place <text>` says where to find you. `+status/place here` shows wherever you are standing, as you move.
+
+        Leave the text out of `/note` or `/place` to clear it. Choosing another status clears both.
+
+        `lfrp` lasts a few hours from when you last changed it \(four, unless the game changed it\), and ends when you log off. `rp_ok` lasts until you change it.
+
+        ## Finding someone
+
+        - `+status/list` lists everyone connected with a status, least idle first. `+status/list lfrp` lists only those looking. A long list comes in pages: `+status/list/2`.
+        - `+status/show <name>` shows one person's status with their note. `+status/show` on its own shows yours.
+
+        The list shows only who you could see in `WHO`.
+      HELP`STATUS`STAFF: |-
+        Staff with the `softcode.status.moderate` permission, which the `status-moderator` role allows, look after statuses:
+
+        - `+status/off <name>` clears someone's status, and tells them.
+
+        ## Statuses
+
+        The statuses are kept on the Status Store, inside the Status object in the master room. Each is an attribute named for the status, holding what it means, with three beneath it:
+
+        - `` STATUS`<NAME>`TAG ``: what `+who` shows, such as `LFRP`.
+        - `` STATUS`<NAME>`HOURS ``: how many hours it lasts from when it is set; 0 lasts until it is changed.
+        - `` STATUS`<NAME>`LOGOFF ``: 1 when logging off ends it.
+
+        Removing a status's attribute takes it away from everyone who had it.
+
+        ## Settings
+
+        Each setting is an attribute on the Status object:
+
+        - `` DATA`LENGTH`LINE ``, `` DATA`LENGTH`NOTE `` and `` DATA`LENGTH`PLACE ``: the longest line, note and place. 100, 400 and 60.
+        - `` DATA`LIST`MORE ``: a line shown under `+status/list`, such as where longer requests are posted. Unset by default.
+
+  # The +who Status column (who-where 1.3): a player's status tag and line, cut to 40 characters. The filter runs
+  # as the Who-Where Function Object, so it reads the store and nothing else.
+  - ref: who_status
+    target: "{{who-where/ww_functions}}"
+    attributes:
+      FILTER`WHO`STATUS`STATUS: |-
+        setq(status_who_key,PLAYER`[edit(objid(%1),#,,:,_)])[setq(status_who_name,get({{store}}/%q<status_who_key>`NAME))][setq(status_who_until,get({{store}}/%q<status_who_key>`UNTIL))][if(cand(strlen(%q<status_who_name>),hasattr({{store}},STATUS`%q<status_who_name>),cor(not(strlen(%q<status_who_until>)),gt(%q<status_who_until>,secs()))),setq(status_who_line,get({{store}}/%q<status_who_key>`LINE))[setq(status_who_text,firstof(get({{store}}/STATUS`%q<status_who_name>`TAG),%q<status_who_name>)[if(strlen(%q<status_who_line>),: %q<status_who_line>)])][if(gt(strlen(%q<status_who_text>),40),left(%q<status_who_text>,37)...,%q<status_who_text>)],%0)]
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`STATUS: |-
+        {{status_help}}
