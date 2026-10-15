@@ -26,6 +26,7 @@ public class TextFileService : ITextFileService
 	private readonly IOptions<SharpMUSHOptions> _options;
 	private readonly ILogger<TextFileService> _logger;
 	private readonly PluginCatalog? _plugins;
+	private readonly Lazy<IPluginManager>? _pluginManager;
 
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
@@ -35,14 +36,20 @@ public class TextFileService : ITextFileService
 	/// The plugins this start loaded. Each may ship help of its own in <c>&lt;plugin folder&gt;/&lt;category&gt;/*.md</c>, which
 	/// is indexed with the engine's while the plugin is loaded.
 	/// </param>
+	/// <param name="pluginManager">
+	/// The running plugins. A plugin unloaded since the start leaves the catalog's report as it was, so whether it was is
+	/// asked here; the manager reindexes when one is unloaded or reloaded.
+	/// </param>
 	public TextFileService(
 		IOptions<SharpMUSHOptions> options,
 		ILogger<TextFileService> logger,
-		PluginCatalog? plugins = null)
+		PluginCatalog? plugins = null,
+		Lazy<IPluginManager>? pluginManager = null)
 	{
 		_options = options;
 		_logger = logger;
 		_plugins = plugins;
+		_pluginManager = pluginManager;
 
 		if (_options.Value.TextFile.CacheOnStartup)
 		{
@@ -360,23 +367,24 @@ public class TextFileService : ITextFileService
 		return categoryIndex;
 	}
 
-	/// <summary>The folders of the plugins this start loaded, in load order.</summary>
+	/// <summary>The folders of the plugins this start loaded and not unloaded since, in load order.</summary>
 	private IEnumerable<string> PluginDirectories() =>
 		_plugins?.Entries
-			.Where(entry => entry.Status == PluginBootStatus.Loaded && Directory.Exists(entry.Directory))
+			.Where(entry => entry.Status == PluginBootStatus.Loaded && Directory.Exists(entry.Directory)
+				&& _pluginManager?.Value.WasUnloaded(entry.Id) != true)
 			.Select(entry => entry.Directory) ?? [];
 
 	/// <summary>
 	/// Indexes a plugin's help file into a copy of the index and keeps the copy only when the whole file indexed. A
-	/// plugin's topic that clashes with the engine's, or a file that does not parse, is left out and logged; the
-	/// engine's help, and the server, carry on without it.
+	/// plugin file with a topic that clashes with one already indexed, even an old-style one, or a file that does not
+	/// parse, is left out whole and logged; the engine's help, and the server, carry on without it.
 	/// </summary>
 	private void IndexPluginFile(string filePath, string category, ref Dictionary<string, IndexEntry> index)
 	{
 		var attempt = new Dictionary<string, IndexEntry>(index, StringComparer.OrdinalIgnoreCase);
 		try
 		{
-			IndexMarkdownFile(filePath, category, attempt);
+			IndexMarkdownFile(filePath, category, attempt, plugin: true);
 			index = attempt;
 		}
 		catch (Exception exception) when (exception is InvalidDataException or System.Text.Json.JsonException)
@@ -385,7 +393,8 @@ public class TextFileService : ITextFileService
 		}
 	}
 
-	private void IndexMarkdownFile(string filePath, string category, Dictionary<string, IndexEntry> index)
+	/// <param name="plugin">Whether the file is a plugin's, which may not repeat a lookup even in an old-style file.</param>
+	private void IndexMarkdownFile(string filePath, string category, Dictionary<string, IndexEntry> index, bool plugin = false)
 	{
 		var parsed = HelpArticleParser.Parse(File.ReadAllText(filePath), category);
 		foreach (var source in parsed)
@@ -400,7 +409,7 @@ public class TextFileService : ITextFileService
 				var entry = new IndexEntry(filePath, 0, 0, help.Topic, help, hidden);
 				if (!index.TryAdd(lookup, entry))
 				{
-					if (source.Declared || index[lookup].Help?.Article?.Id.StartsWith("legacy:", StringComparison.Ordinal) == false)
+					if (plugin || source.Declared || index[lookup].Help?.Article?.Id.StartsWith("legacy:", StringComparison.Ordinal) == false)
 					{
 						throw new InvalidDataException($"Duplicate help lookup in {category}: {lookup}");
 					}
