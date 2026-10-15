@@ -74,6 +74,8 @@ objects:
         value: |-
           What +who and +where show.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Who and Where
       DATA`CONFIG`IDLE-AFTER: |-
         3600
       DATA`CONFIG`IDLE-AFTER`TYPE: |-
@@ -84,6 +86,10 @@ objects:
         60
       DATA`CONFIG`IDLE-AFTER`DESCRIPTION: |-
         How long a player is idle before +who draws their name muted.
+      DATA`CONFIG`IDLE-AFTER`LABEL: |-
+        Idle after
+      DATA`CONFIG`IDLE-AFTER`EXAMPLE: |-
+        45m
       DATA`CONFIG`WHO-ORDER: |-
         name
       DATA`CONFIG`WHO-ORDER`TYPE: |-
@@ -94,6 +100,10 @@ objects:
         name
       DATA`CONFIG`WHO-ORDER`DESCRIPTION: |-
         The order +who lists players in. +who/name and +who/idle pick one.
+      DATA`CONFIG`WHO-ORDER`LABEL: |-
+        Bare +who order
+      DATA`CONFIG`WHO-ORDER`EXAMPLE: |-
+        idle
       DATA`CONFIG`WHERE-VIEW: |-
         grouped
       DATA`CONFIG`WHERE-VIEW`TYPE: |-
@@ -104,6 +114,10 @@ objects:
         grouped
       DATA`CONFIG`WHERE-VIEW`DESCRIPTION: |-
         What +where shows: players under a line per location, or one per line by room or by name.
+      DATA`CONFIG`WHERE-VIEW`LABEL: |-
+        Bare +where view
+      DATA`CONFIG`WHERE-VIEW`EXAMPLE: |-
+        room
       # %0 a player: their name, muted when they have been idle the idle-after setting or longer.
       WW_FN_NAME: |-
         if(gte(idle(%0),v(DATA`CONFIG`IDLE-AFTER)),tone(muted,name(%0)),name(%0))

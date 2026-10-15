@@ -54,6 +54,7 @@ public class PlusConfigIntegrationTests
 			"DATA`CONFIG=A system under test.",
 			"DATA`CONFIG`HOURS=14400", "DATA`CONFIG`HOURS`TYPE=duration", "DATA`CONFIG`HOURS`DEFAULT=14400",
 			"DATA`CONFIG`HOURS`MIN=600", "DATA`CONFIG`HOURS`DESCRIPTION=How long a status lasts.",
+			"DATA`CONFIG`HOURS`LABEL=Status length", "DATA`CONFIG`HOURS`EXAMPLE=2h", "DATA`CONFIG`LABEL=Test system",
 			"DATA`CONFIG`COLUMNS=2", "DATA`CONFIG`COLUMNS`TYPE=integer", "DATA`CONFIG`COLUMNS`MIN=1", "DATA`CONFIG`COLUMNS`MAX=4",
 			"DATA`CONFIG`ORDER=name", "DATA`CONFIG`ORDER`TYPE=choice", "DATA`CONFIG`ORDER`CHOICES=name idle",
 			"DATA`CONFIG`KEYS=QUOTE", "DATA`CONFIG`KEYS`TYPE=list", "DATA`CONFIG`KEYS`PATTERN=^[A-Z]+$",
@@ -83,7 +84,10 @@ public class PlusConfigIntegrationTests
 		{
 			var listing = await As(staff, $"+config {system}");
 			await Assert.That(listing).Contains("A system under test.").And.Contains("hours").And.Contains("4h")
-				.And.Contains("How long a status lasts.");
+				.And.Contains("Status length.").And.Contains("Settings: Test system");
+			await Assert.That(await As(staff, $"+config {system}/hours")).Contains("Name:").And.Contains("Status length")
+				.And.Contains($"+config {system}/hours=2h");
+			await Assert.That(await As(staff, $"+config {system}/label")).Contains($"{system} has no setting called label.");
 			await Assert.That(await As(staff, "+config")).Contains(system);
 
 			// A duration is read the way stringsecs() reads it and kept in seconds.

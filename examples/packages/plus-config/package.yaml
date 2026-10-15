@@ -214,17 +214,22 @@ objects:
         value: |-
           get(%0/DATA`CONFIG)
         flags: [funsyntax]
+      # %0 an object: the display name of its system, from the LABEL leaf beside its settings.
+      FUN`SYSTEM`LABEL:
+        value: |-
+          get(%0/DATA`CONFIG`LABEL)
+        flags: [funsyntax]
 
       # ── Declarations ────────────────────────────────────────────────────────
       # %0 an object: the settings it declares (a DATA`CONFIG`<NAME> with a TYPE), by name, lower case.
       FUN`SETTING`ALL:
         value: |-
-          sort(squish(trim(iter(lattr(%0/DATA`CONFIG`*),if(hasattr(%0,%i0`TYPE),lcstr(last(%i0,`))),%b,%b))))
+          sort(squish(trim(iter(lattr(%0/DATA`CONFIG`*),if(cand(hasattr(%0,%i0`TYPE),not(strmatch(%i0,DATA`CONFIG`LABEL))),lcstr(last(%i0,`))),%b,%b))))
         flags: [funsyntax]
       # %0 an object, %1 a name: 1 when the object declares that setting.
       FUN`SETTING`EXISTS:
         value: |-
-          cand(u(%!/FUN`NAME`VALID,%1),hasattr(%0,DATA`CONFIG`%1`TYPE))
+          cand(u(%!/FUN`NAME`VALID,%1),not(strmatch(%1,label)),hasattr(%0,DATA`CONFIG`%1`TYPE))
         flags: [funsyntax]
       # %0 an object, %1 a setting, %2 a leaf: that leaf, as written.
       FUN`SETTING`META:
@@ -502,6 +507,11 @@ objects:
           json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
         flags: [funsyntax]
       # %0 the footer's text, under a rule.
+      # %0 a display name, %1 a description: both, the name in bold, or "not described" when neither is given.
+      FUN`DISPLAY`DESCRIBED:
+        value: |-
+          cond(cand(strlen(%0),strlen(%1)),[tone(strong,%0)]. %1,strlen(%0),tone(strong,%0),strlen(%1),%1,1,tone(muted,not described))
+        flags: [funsyntax]
       FUN`DISPLAY`FOOTER:
         value: |-
           %r[rule()]%r[tone(muted,%0)]
@@ -511,12 +521,12 @@ objects:
       # %0 the systems.
       FUN`SCREEN`INDEX:
         value: |-
-          box(datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1%r2,1%r2%r1,%r%r1,%r%r12),[tone(strong,System)]%r[iter(%0,%i0,%b,%r)],>[tone(strong,Settings)]%r[iter(%0,words(u(%!/FUN`SETTING`ALL,u(%!/FUN`SYSTEM`OBJECT,%i0))),%b,%r)],[tone(strong,About)]%r[iter(%0,u(%!/FUN`SYSTEM`DESCRIPTION,u(%!/FUN`SYSTEM`OBJECT,%i0)),%b,%r)])[u(%!/FUN`DISPLAY`FOOTER,+config <system> lists one system's settings.)],Settings)
+          box(datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1%r2,1%r2%r1,%r%r1,%r%r12),[tone(strong,System)]%r[iter(%0,%i0,%b,%r)],>[tone(strong,Settings)]%r[iter(%0,words(u(%!/FUN`SETTING`ALL,u(%!/FUN`SYSTEM`OBJECT,%i0))),%b,%r)],[tone(strong,About)]%r[iter(%0,u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SYSTEM`LABEL,setr(index_object,u(%!/FUN`SYSTEM`OBJECT,%i0))),u(%!/FUN`SYSTEM`DESCRIPTION,%q<index_object>)),%b,%r)])[u(%!/FUN`DISPLAY`FOOTER,+config <system> lists one system's settings.)],Settings)
         flags: [funsyntax]
       # %0 the system, %1 its object, %2 its settings. A value that is not the default is marked *.
       FUN`SCREEN`SYSTEM:
         value: |-
-          box([if(strlen(setr(screen_about,u(%!/FUN`SYSTEM`DESCRIPTION,%1))),%q<screen_about>%r%r)][datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r1%r3%r2,%r%r%r1,%r%r%r12),[tone(strong,Setting)]%r[iter(%2,%i0[if(u(%!/FUN`SETTING`CHANGED,%1,%i0),*)],%b,%r)],[tone(strong,Value)]%r[iter(%2,u(%!/FUN`VALUE`SHOW,%1,%i0,u(%!/FUN`VALUE`GET,%1,%i0)),%b,%r)],[tone(strong,Allowed)]%r[iter(%2,u(%!/FUN`VALUE`ALLOWED,%1,%i0),%b,%r)],[tone(strong,What it does)]%r[iter(%2,u(%!/FUN`SETTING`META,%1,%i0,DESCRIPTION),%b,%r)])][u(%!/FUN`DISPLAY`FOOTER,u(%!/FUN`SCREEN`SYSTEMFOOTER,%0,%1,%2))],Settings: %0)
+          box([if(strlen(setr(screen_about,u(%!/FUN`SYSTEM`DESCRIPTION,%1))),%q<screen_about>%r%r)][datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r1%r3%r2,%r%r%r1,%r%r%r12),[tone(strong,Setting)]%r[iter(%2,%i0[if(u(%!/FUN`SETTING`CHANGED,%1,%i0),*)],%b,%r)],[tone(strong,Value)]%r[iter(%2,u(%!/FUN`VALUE`SHOW,%1,%i0,u(%!/FUN`VALUE`GET,%1,%i0)),%b,%r)],[tone(strong,Allowed)]%r[iter(%2,u(%!/FUN`VALUE`ALLOWED,%1,%i0),%b,%r)],[tone(strong,What it does)]%r[iter(%2,u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SETTING`META,%1,%i0,LABEL),u(%!/FUN`SETTING`META,%1,%i0,DESCRIPTION)),%b,%r)])][u(%!/FUN`DISPLAY`FOOTER,u(%!/FUN`SCREEN`SYSTEMFOOTER,%0,%1,%2))],Settings: [firstof(u(%!/FUN`SYSTEM`LABEL,%1),%0)])
         flags: [funsyntax]
       FUN`SCREEN`SYSTEMFOOTER:
         value: |-
@@ -529,11 +539,11 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`SETTINGLABELS:
         value: |-
-          Value[chr(30)]Default[chr(30)]Allowed[chr(30)]What it does[chr(30)]Changed by
+          [if(hasattr(%0,DATA`CONFIG`%1`LABEL),Name[chr(30)])]Value[chr(30)]Default[chr(30)]Allowed[if(hasattr(%0,DATA`CONFIG`%1`EXAMPLE),[chr(30)]Example)][chr(30)]What it does[chr(30)]Changed by
         flags: [funsyntax]
       FUN`SCREEN`SETTINGVALUES:
         value: |-
-          u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`VALUE`GET,%1,%2))[chr(30)][if(hasattr(%1,DATA`CONFIG`%2`DEFAULT),u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`SETTING`META,%1,%2,DEFAULT)),tone(muted,none))][chr(30)][u(%!/FUN`VALUE`ALLOWED,%1,%2)][chr(30)][firstof(u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION),tone(muted,not described))][chr(30)]The [u(%!/FUN`SETTING`PERMISSION,%1,%2)] permission
+          [if(hasattr(%1,DATA`CONFIG`%2`LABEL),[u(%!/FUN`SETTING`META,%1,%2,LABEL)][chr(30)])][u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`VALUE`GET,%1,%2))][chr(30)][if(hasattr(%1,DATA`CONFIG`%2`DEFAULT),u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`SETTING`META,%1,%2,DEFAULT)),tone(muted,none))][chr(30)][u(%!/FUN`VALUE`ALLOWED,%1,%2)][if(hasattr(%1,DATA`CONFIG`%2`EXAMPLE),[chr(30)]+config %0/%2=[u(%!/FUN`SETTING`META,%1,%2,EXAMPLE)])][chr(30)][firstof(u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION),tone(muted,not described))][chr(30)]The [u(%!/FUN`SETTING`PERMISSION,%1,%2)] permission
         flags: [funsyntax]
       FUN`SCREEN`SETTINGFOOTER:
         value: |-
@@ -627,7 +637,8 @@ objects:
 
         Output: nothing; the leaves are data.
 
-        The leaves are `TYPE` \(required\), `DEFAULT`, `DESCRIPTION`, `MIN` and `MAX` \(numbers, durations
+        The leaves are `TYPE` \(required\), `DEFAULT`, `DESCRIPTION`, `LABEL` \(a display name such as
+        Idle after\), `EXAMPLE` \(a value as typed, shown as an example\), `MIN` and `MAX` \(numbers, durations
         in seconds, a text's length, a list's size\), `CHOICES` \(for a choice, or a list's allowed
         words\), `PATTERN` \(a text, or each word of a list\), `DELIMITER` \(what splits a list's items,
         when not a space\), `OBJECTTYPE` \(ROOM, PLAYER, THING, EXIT\),
@@ -639,6 +650,8 @@ objects:
         registers by attaching a `` SYSTEM`<system> `` leaf to the Config Registry instead, and the package
         manager adds and removes it. After a change the object's `ACONFIG` attribute, if it has one, is
         triggered with `%%<setting>`, `%%<value>`, `%%<previous>` and `%%<by>`.
+
+        `` DATA`CONFIG`LABEL `` is the system's display name, so no setting may be called `label`.
 
   - ref: config_help_registration
     target: "{{plus-help/librarian}}"
