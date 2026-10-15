@@ -376,7 +376,7 @@ public static partial class ErrorMessages
 		public const string NoTextGiven = "#-1 NO TEXT GIVEN";
 		public const string NoSuchLockType = "#-1 NO SUCH LOCK TYPE";
 		public const string ChannelPermissionDenied = "#-1 CHANNEL PERMISSION DENIED";
-		public const string GetRequestsCannotHaveBody = "#-1 GET REQUESTS CANNOT HAVE A BODY";
+		public const string InvalidHttpHeader = "#-1 INVALID HEADER";
 		public const string CannotRenameInbox = "#-1 CANNOT RENAME THE INBOX FOLDER";
 		public const string InvalidMailArguments = "#-1 INVALID ARGUMENTS FOR MAIL COMMAND";
 		public const string InvalidMailFolderArguments = "#-1 INVALID ARGUMENTS FOR MAIL FOLDER COMMAND";

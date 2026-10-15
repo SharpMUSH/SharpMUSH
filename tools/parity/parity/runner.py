@@ -26,8 +26,9 @@ class StepRecord:
 
 
 class Target:
-    def __init__(self, name: str, host: str, port: int, token_prefix: str):
+    def __init__(self, name: str, host: str, port: int, token_prefix: str, echo_url: str = ""):
         self.name, self.host, self.port, self.prefix = name, host, port, token_prefix
+        self.echo_url = echo_url  # replaces {{echo}} in a command
 
 
 def run_scenario(target: Target, scenario: Scenario) -> tuple[list[StepRecord], dict]:
@@ -82,15 +83,18 @@ def _execute(target, sessions, banners, step, rec):
         rec.output = session.settle() if session.logged_in else session.sync_prelogin()
         _sync_others(sessions, step.session, rec)
         return
-    session.send(step.text)
+    session.send(step.text.replace("{{echo}}", target.echo_url))
     if not session.logged_in:  # kept open after login-fail: `think` does not exist before login
         rec.output = session.sync_prelogin()
         _sync_others(sessions, step.session, rec)
         return
+    # Output that arrives after the command has run (an @http reply) is read before the sentinel is
+    # sent, so it lands in this step on both servers however fast each one answers.
+    early = session.read_line_ending(step.until) if step.until else ""
     # Barrier 1: the acting session's own sentinel returns only after its command has run.
     # PennMUSH executes one command per player per cycle, so sentinels sent to other sessions
     # at the same time could run *before* the command; they are therefore sent afterwards.
-    rec.output = session.sync_finish(session.sync_start())
+    rec.output = early + session.sync_finish(session.sync_start())
     _sync_others(sessions, step.session, rec)
 
 

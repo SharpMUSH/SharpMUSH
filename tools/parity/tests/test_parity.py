@@ -3,13 +3,16 @@ import json
 import sys
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from parity import compare, scenario
+from parity.echo import EchoSite
 from parity.normalize import DbrefCanonicalizer, normalize
-from parity.runner import StepRecord, _execute
+from parity.runner import StepRecord, Target, _execute
 from parity.scenario import Step
 from parity.session import split_telnet, strip_telnet
 
@@ -83,6 +86,14 @@ class ScenarioTests(unittest.TestCase):
     def test_command_before_login_is_an_error(self):
         with self.assertRaises(scenario.ScenarioError):
             self.load("::case a\nthink hi\n")
+
+    def test_until_applies_to_the_next_command_only(self):
+        s = self.load("::case a\n::login w Wiz pw\n::until DONE\n@http me/A={{echo}}\nthink hi\n")
+        self.assertEqual([st.until for st in s.cases[0].steps], ["", "DONE", ""])
+
+    def test_until_needs_a_command_after_it(self):
+        with self.assertRaises(scenario.ScenarioError):
+            self.load("::case a\n::login w Wiz pw\n::until DONE\n")
 
 
 class CompareTests(unittest.TestCase):
@@ -242,6 +253,20 @@ class RunnerTests(unittest.TestCase):
             self.calls.append("prelogin")
             return "prelogin"
 
+        def send(self, line):
+            self.calls.append(f"send {line}")
+
+        def read_line_ending(self, text):
+            self.calls.append(f"until {text}")
+            return f"late {text}\n"
+
+        def sync_start(self):
+            self.calls.append("sync")
+            return "t"
+
+        def sync_finish(self, token):
+            return "after\n"
+
     def test_settle_before_login_uses_the_prelogin_sentinel(self):
         bad = self.FakeSession(logged_in=False)
         rec = StepRecord("s", "c", 0, "settle", "bad", "")
@@ -254,6 +279,37 @@ class RunnerTests(unittest.TestCase):
         rec = StepRecord("s", "c", 0, "settle", "wiz", "")
         _execute(None, {"wiz": wiz}, {}, Step(kind="settle", session="wiz"), rec)
         self.assertEqual(wiz.calls, ["settle"])
+
+    def test_until_reads_late_output_before_the_sentinel_and_echo_is_filled_in(self):
+        wiz = self.FakeSession(logged_in=True)
+        rec = StepRecord("s", "c", 0, "command", "wiz", "@http me/A={{echo}}/get")
+        target = Target("t", "127.0.0.1", 1, "P", "http://127.0.0.1:9")
+        _execute(target, {"wiz": wiz}, {}, Step("command", "@http me/A={{echo}}/get", "wiz", until="DONE"), rec)
+        self.assertEqual(wiz.calls, ["send @http me/A=http://127.0.0.1:9/get", "until DONE", "sync"])
+        self.assertEqual(rec.output, "late DONE\nafter\n")
+
+
+class EchoSiteTests(unittest.TestCase):
+    def test_describes_what_the_request_chose(self):
+        site = EchoSite().start()
+        try:
+            req = urllib.request.Request(site.url + "/post", data=b"a=1", method="POST",
+                                         headers={"Content-Type": "text/csv", "X-B": "2", "X-A": "1"})
+            with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req) as reply:
+                self.assertEqual(reply.read().decode(), "POST type=text/csv auth=- x-a=1 x-b=2 body=a=1")
+        finally:
+            site.stop()
+
+    def test_auth_asks_for_a_login(self):
+        site = EchoSite().start()
+        try:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            with self.assertRaises(urllib.error.HTTPError) as refused:
+                opener.open(site.url + "/auth")
+            self.assertEqual(refused.exception.code, 401)
+            self.assertEqual(refused.exception.headers["WWW-Authenticate"], 'Basic realm="parity"')
+        finally:
+            site.stop()
 
 
 if __name__ == "__main__":
