@@ -1,0 +1,302 @@
+format: 1.7
+package: timeline
+version: 1.0.0
+authors: [SharpMUSH]
+description: "IC dates on scenes and a timeline for each character: a scene is dated in the game's IC calendar when it starts, +scene/date dates a flashback, and +timeline lists a character's finished scenes in IC order."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, timeline, calendar, ic, date]
+requires_server: ">=0.1"
+
+# +scene/date, +timeline and the dating call the Scene plugin's scene functions, so it installs only while the
+# plugin runs.
+plugins: [scene]
+
+# The IC calendar is the time package's: its Clock says what IC moment a real one is and how an IC date is written.
+# The scene package keeps the scenes and their details; this one adds two details and reads them back.
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: scene
+    version: ">=1.6"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+  - package: time
+    version: ">=1.1"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/time/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it writes the IC date onto other people's scenes
+  # (@scene/set), which only a wizard may.
+  #
+  # A scene's IC date is two scene details: icsecs, the IC moment in seconds (the Clock's FUN`IC`SECS, before its
+  # years are added), which orders the timeline, and icdate, the words it is written in, as the Clock's FORMAT`IC
+  # writes it. Both are written together here. +scene/set icdate=<words> changes only the words, so a scene can read
+  # "The night of the storm" and keep its place.
+  #
+  # Trees: CMD` the $-commands, INC`DATE` and INC`TIMELINE` one routine each, FUN`READ` reads a typed date,
+  # FUN`DATE` writes one, FUN`TIMELINE` builds the list and FUN`SCREEN` draws it. DATA`CONFIG` the settings.
+  - ref: timeline
+    type: thing
+    name: Timeline
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # Settings, one leaf each, with what +config needs to describe and check them.
+      DATA: |-
+        Settings and the words the commands answer with.
+      DATA`CONFIG: |-
+        IC dates on scenes and the +timeline list.
+      DATA`CONFIG`STAMP: |-
+        1
+      DATA`CONFIG`STAMP`DESCRIPTION: |-
+        Give a scene the IC date when it starts, unless it has one.
+      DATA`CONFIG`STAMP`TYPE: |-
+        boolean
+      DATA`CONFIG`STAMP`DEFAULT: |-
+        1
+      DATA`DENY_FORMAT: |-
+        Write the IC date year first, as the calendar shows it: 2026-03-14, or 2026-03-14 19:30. +scene/date now gives the IC date now.
+
+      # ---- +scene/date ------------------------------------------------------------
+      # +scene/date [<id>], +scene/date [<id>=]<date> and +scene/date/clear [<id>]. What follows the command is
+      # used as typed and never evaluated.
+      CMD`DATE:
+        value: |-
+          $(?is)^\+scene/date(?\: +(.*))?$:think u(%!/FUN`COMMAND`PARSE,%1); @include %!/INC`DATE`SCENE; @break strlen(%q<date_typed>)={@include %!/INC`DATE`SET}; @pemit %#=u(%!/FUN`DATE`SHOWN,%q<scene>)
+        flags: [regexp, cmdsyntax]
+      CMD`DATE`CLEAR:
+        value: |-
+          $(?is)^\+scene/date/clear(?\: +(.*))?$:think setq(scene,firstof(trim(%1),scenefocus(%#))); @include %!/INC`DATE`SCENE; @include %!/INC`DATE`OWNER; @include %!/INC`DATE`WRITE=%q<scene>,; @pemit %#=notice(SCENE,Scene %q<scene> has no IC date now. +scene/date %q<scene>=<date> gives it one.,ok)
+        flags: [regexp, cmdsyntax]
+      # %0 what followed +scene/date. Sets scene (the id given before = or alone, else the focused scene) and
+      # date_typed (the date after =, or the whole text when it is not an id).
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_text,trim(squish(%0)),
+          cmd_id,if(strmatch(%q<cmd_text>,*=*),trim(before(%q<cmd_text>,=)),if(isint(%q<cmd_text>),%q<cmd_text>)),
+          date_typed,if(strmatch(%q<cmd_text>,*=*),trim(after(%q<cmd_text>,=)),if(isint(%q<cmd_text>),,%q<cmd_text>)),
+          scene,firstof(%q<cmd_id>,scenefocus(%#)))
+        flags: [funsyntax]
+      # The scene in %q<scene> exists and the player may see it.
+      INC`DATE`SCENE:
+        value: |-
+          @assert not(strmatch(%q<scene>,#-1*))=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NO_FOCUS),warn); @assert not(strmatch(scene(%q<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene>,warn)
+        flags: [cmdsyntax]
+      # Only an approved player who owns the scene, or staff, dates it: the rule +scene/set keeps.
+      INC`DATE`OWNER:
+        value: |-
+          @assert u({{scene/logger}}/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_APPROVAL),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NOT_OWNER),error)
+        flags: [cmdsyntax]
+      INC`DATE`SET:
+        value: |-
+          @include %!/INC`DATE`OWNER; think u(%!/FUN`READ`DATE,%q<date_typed>); @assert strlen(%q<read_secs>)=@pemit %#=notice(SCENE,%q<read_error>,warn); @include %!/INC`DATE`WRITE=%q<scene>,%q<read_secs>; @pemit %#=notice(SCENE,Scene %q<scene> takes place on [scene(%q<scene>,icdate)].,ok)
+        flags: [cmdsyntax]
+      # %0 a scene and %1 an IC moment in seconds, or nothing to clear it: both details, written together.
+      INC`DATE`WRITE:
+        value: |-
+          @scene/set %0/icsecs=%1; @scene/set %0/icdate=if(strlen(%1),u(%!/FUN`DATE`WRITE,%1))
+        flags: [cmdsyntax]
+      # What +scene/date says about scene %0.
+      FUN`DATE`SHOWN:
+        value: |-
+          if(strlen(scene(%0,icdate)),notice(SCENE,Scene %0 takes place on [scene(%0,icdate)].),notice(SCENE,Scene %0 has no IC date yet. It gets one when it starts%, or +scene/date %0=<date> gives it one.))
+        flags: [funsyntax]
+
+      # ---- reading and writing an IC date -------------------------------------------
+      # %0 an IC moment in seconds: the words the Clock writes it in.
+      FUN`DATE`WRITE:
+        value: |-
+          u({{time/clock}}/FUN`IC`WRITE,timefmt($Y $m $d $w $H $M $S,%0,UTC))
+        flags: [funsyntax]
+      # %0 a typed IC date: now, or <year>-<month>-<day>[ <hour>:<minute>] with the year as the IC calendar shows
+      # it. Sets read_secs (the IC moment, in seconds) or read_error (why it is not a date).
+      FUN`READ`DATE:
+        value: |-
+          setqm(read_now,strmatch(%0,now),
+          read_day,first(%0),
+          read_clock,firstof(rest(%0),0:00),
+          read_ok,cand(lte(words(%0),2),eq(words(%q<read_day>,-),3),isint(edit(%q<read_day>,-,)),eq(words(%q<read_clock>,:),2),isint(edit(%q<read_clock>,:,)),eq(strlen(last(%q<read_clock>,:)),2)),
+          read_year,sub(first(%q<read_day>,-),get({{time/clock}}/DATA`CONFIG`IC-YEARS)),
+          read_instant,if(cand(%q<read_ok>,gte(%q<read_year>,1),lte(%q<read_year>,9999)),convtime([rjust(%q<read_year>,4,0)]-[rjust(extract(%q<read_day>,2,1,-),2,0)]-[rjust(last(%q<read_day>,-),2,0)]T[rjust(first(%q<read_clock>,:),2,0)]:[last(%q<read_clock>,:)]:00Z)),
+          read_secs,case(1,%q<read_now>,u({{time/clock}}/FUN`IC`SECS),u(%!/FUN`READ`SAME,%q<read_instant>),%q<read_instant>),
+          read_error,if(not(strlen(%q<read_secs>)),if(%q<read_ok>,'%0' is not a date in the IC calendar.,get(%!/DATA`DENY_FORMAT))))
+        flags: [funsyntax]
+      # %0 a moment FUN`READ`DATE read: 1 when it is the date and time typed, so a 31 April or a 25:00 that the
+      # conversion rolled over to another day is refused.
+      FUN`READ`SAME:
+        value: |-
+          cand(isint(%0),eq(timefmt($Y,%0,UTC),%q<read_year>),eq(timefmt($m,%0,UTC),extract(%q<read_day>,2,1,-)),eq(timefmt($d,%0,UTC),last(%q<read_day>,-)),eq(timefmt($H,%0,UTC),first(%q<read_clock>,:)),eq(timefmt($M,%0,UTC),last(%q<read_clock>,:)))
+        flags: [funsyntax]
+
+      # ---- dating a scene when it starts ----------------------------------------------
+      # Triggered by the event handler's SCENE`STATUS`TIMELINE when scene %0 becomes active, as the player who
+      # started it: a scene with no IC date gets the IC date now. One resumed from a pause keeps its date.
+      TRIG`STAMP:
+        value: |-
+          @assert v(DATA`CONFIG`STAMP); @break strlen(scene(%0,icsecs)); @include %!/INC`DATE`WRITE=%0,u({{time/clock}}/FUN`IC`SECS)
+        flags: [cmdsyntax]
+
+      # ---- +timeline ------------------------------------------------------------------
+      # +timeline[/<page>] [<name>]: a character's finished scenes, in IC order.
+      CMD`TIMELINE:
+        value: |-
+          $(?is)^\+timeline(/\S*)?(?\: +(.*))?$:think u(%!/FUN`TIMELINE`PARSE,%1,%2); @assert isint(%q<page>)=@pemit %#=notice(TIMELINE,+timeline has no %q<switch> switch. +timeline/2 shows the second page.,warn); @assert isdbref(%q<who>)=@pemit %#=notice(TIMELINE,There is no player called '%q<name>'.,warn); think setq(scenes,u(%!/FUN`TIMELINE`SCENES,%q<who>)); @assert words(%q<scenes>)=@pemit %#=notice(TIMELINE,if(strmatch(%q<who>,%#),You have no finished scenes yet.,[name(%q<who>)] has no finished scenes you can see.)); think setq(pages,ceil(fdiv(words(%q<scenes>),%q<size>))); @assert lte(%q<page>,%q<pages>)=@pemit %#=notice(TIMELINE,There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] - you asked for page %q<page>.,warn); @pemit %#=u(%!/FUN`SCREEN`TIMELINE)
+        flags: [regexp, cmdsyntax]
+      # %0 the switch as typed (/2), %1 the name. Sets switch, page (empty for a switch that is not a page), name,
+      # who (the player's dbref, the reader's own with no name) and size, the rows that fit the reader's screen under
+      # the title, headings, rule and footer.
+      FUN`TIMELINE`PARSE:
+        value: |-
+          setqm(switch,%0,
+          page,if(strlen(%0),if(cand(isint(after(%0,/)),gt(after(%0,/),0)),after(%0,/)),1),
+          name,trim(squish(%1)),
+          who,if(strlen(%q<name>),pmatch(%q<name>),%#),
+          size,max(5,sub(height(%#,24),8)))
+        flags: [funsyntax]
+      # %0 a player: the finished scenes they were in that the reader may see, earliest IC date first, the ones
+      # with no IC date last.
+      FUN`TIMELINE`SCENES:
+        value: |-
+          sortkey(%!/FUN`TIMELINE`KEY,filterbool(%!/FUN`TIMELINE`FINISHED,scenelist(mine,,,%0)),n)
+        flags: [funsyntax]
+      FUN`TIMELINE`FINISHED:
+        value: |-
+          strmatch(scene(%0,status),finished)
+        flags: [funsyntax]
+      # %0 a scene: its IC moment, or a number past any date for a scene with none.
+      FUN`TIMELINE`KEY:
+        value: |-
+          if(isint(setr(key,scene(%0,icsecs))),%q<key>,999999999999999)
+        flags: [funsyntax]
+
+      # ---- screens ---------------------------------------------------------------------
+      # One page of %q<scenes> for %q<who>, as a table: the IC date, the scene (a link to its card) and where.
+      FUN`SCREEN`TIMELINE:
+        value: |-
+          box(u(%!/FUN`SCREEN`TABLE,extract(%q<scenes>,add(mul(sub(%q<page>,1),%q<size>),1),%q<size>))%r[rule()]%r[u(%!/FUN`SCREEN`FOOTER)],Timeline: [name(%q<who>)],,u({{scene/logger}}/FUN`FRAME))
+        flags: [funsyntax]
+      FUN`SCREEN`TABLE:
+        value: |-
+          datacolumns(u({{scene/logger}}/FUN`TABLE`OPTS,1,|12,1|1|2,|1),[ansi(h,IC date)]%r[iter(%0,firstof(scene(%i0,icdate),tone(muted,not dated)),,%r)],[ansi(h,Scene)]%r[iter(%0,u({{scene/logger}}/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Where)]%r[iter(%0,firstof(scene(%i0,roomname),-),,%r)])
+        flags: [funsyntax]
+      FUN`SCREEN`FOOTER:
+        value: |-
+          tone(muted,[if(gt(%q<pages>,1),Page %q<page> of %q<pages> · [if(lt(%q<page>,%q<pages>),+timeline/[inc(%q<page>)][if(strlen(%q<name>),%b%q<name>)] for the next · )])]+scene <id> opens a scene)
+        flags: [funsyntax]
+
+  # The two details, on the Scene Logger, read by the Scene plugin (+help scene details). icdate shows on a scene's
+  # card, at the top of its log and on its page in the portal; icsecs is hidden, and orders scenes by IC date
+  # (sort), in +timeline and on the portal's timeline. Uninstalling the package takes them away; scenes keep their
+  # values, shown under their keys.
+  - ref: details
+    target: "{{scene/logger}}"
+    attributes:
+      DETAIL`ICDATE: |-
+        {"label":"IC date","hint":"When the scene takes place in the game's calendar. It is set when the scene starts; +scene/date sets another.","sort":"icsecs","order":1}
+      DETAIL`ICSECS: |-
+        {"label":"IC moment","hint":"The IC date in seconds, which orders the timeline. +scene/date sets it.","hidden":true,"order":2}
+
+  # Dating a scene when it starts: the Scene plugin raises SCENE`STATUS when a scene is made or its status changes
+  # (help event scene). The event handler runs this beside any other package's, and hands the work to the Timeline.
+  - ref: event
+    target: "{{$event_handler}}"
+    attributes:
+      SCENE`STATUS`TIMELINE: |-
+        @assert strmatch(%<status>,active); @trigger {{timeline}}/TRIG`STAMP=%<scene>
+
+  # +help timeline, and +help scene date beside the scene package's topics. Bodies are evaluated, so brackets,
+  # parentheses and percent signs are escaped.
+  - ref: timeline_help
+    type: thing
+    name: Timeline Help
+    location: "{{timeline}}"
+    attributes:
+      HELP: |-
+        IC dates on scenes and each character's timeline: +scene/date and +timeline.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`TIMELINE: |-
+        scene date|time ic
+      HELP`TIMELINE: |-
+        `+timeline` lists a character's finished scenes in the order they happen in the game's IC calendar, earliest first, with each scene's IC date and where it was played.
+
+        - `+timeline` shows yours.
+        - `+timeline <name>` shows another character's: the scenes you can see. A private scene shows only to the people in it.
+        - `+timeline/2 \[<name>\]` shows the second page, and so on. Each page but the last ends with the command for the next.
+
+        A scene's title is a link: a client that can click opens its card, as `+scene <id>` does. The portal shows the same list on a character's scenes page, under Timeline.
+
+        For example:
+
+        `+timeline`
+
+        Output: a table of IC dates, scene titles and rooms, under the title `Timeline: <your name>`.
+
+        A scene is placed by its IC date, which it gets when it starts: see `+help scene date`. A flashback dated in the past sits among the scenes of that time, however long after them it was played. Scenes with no IC date come last, marked `not dated`.
+
+        ## Settings
+
+        `+config timeline/stamp`: `yes`, as shipped, gives a scene the IC date when it starts. `+config timeline/stamp=no` leaves every scene undated until its owner dates it. A page holds as many scenes as fit your screen.
+
+        The IC calendar itself, its start, its speed, its months and how a date is written, is the time package's: see `+help time ic`.
+      HELP`TIMELINE`CODE: |-
+        A scene's IC date is two scene details, readable with `scene\(\)` by anyone who can see the scene:
+
+        - `` scene\(<id>,icdate\) ``: the words, as the Clock's `` FORMAT`IC `` writes them.
+        - `` scene\(<id>,icsecs\) ``: the IC moment in seconds, before the calendar's years are added. It orders the timeline, and the portal's.
+
+        `` u\(<Timeline>/FUN`TIMELINE`SCENES,<player>\) `` gives a player's finished scenes in IC order, as the reader may see them, and `` u\(<Timeline>/FUN`DATE`WRITE,<seconds>\) `` writes an IC moment in words.
+
+        The Scene plugin raises an event when a scene starts \(`help event scene`\). This package's `` SCENE`STATUS`TIMELINE `` on the event handler is how a scene is dated then.
+
+  - ref: scene_date_help
+    target: "{{scene/scene_help}}"
+    attributes:
+      SEE`SCENE`DATE: |-
+        timeline|time ic|scene details
+      HELP`SCENE`DATE: |-
+        A scene's **IC date** says when it takes place in the game's calendar. A scene gets the IC date when it starts, so most scenes never need one set. A flashback, or a scene planned for another day, is dated by hand:
+
+        - `+scene/date` — your focused scene's IC date
+        - `+scene/date <date>` — date your focused scene
+        - `+scene/date <id>=<date>` — date a scene you own without focusing it
+        - `+scene/date <id>` — any scene's IC date
+        - `+scene/date/clear \[<id>\]` — take the date off
+
+        Write the date year first, as the IC calendar shows it: `2026-03-14`, or `2026-03-14 19:30` with a time. Without a time it is midnight. `now` is the IC date now.
+
+        For example:
+
+        `+scene/date 2026-03-14 19:30`
+
+        Output: `\[SCENE\] Done: Scene 12 takes place on Saturday, 14 March 2026, 19:30.`
+
+        The IC date shows on the scene's card, at the top of its log and on its page in the portal, and places the scene in its players' `+timeline`. `+scene/set icdate=<words>` changes only the words shown, such as `The night of the storm`, and the scene keeps its place. Only the scene's owner, or staff, can date it.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`TIMELINE: |-
+        {{timeline_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`TIMELINE: |-
+        {{timeline}}

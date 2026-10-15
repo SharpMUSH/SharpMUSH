@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Покажи още</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Хронология</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Без дата</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Виж всички</value>
   </data>
@@ -6153,6 +6159,90 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Изображение с предупреждение за съдържание остава извън библиотеката с изображения. Махнете предупреждението, за да го споделите.</value>
   </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Добави към календара</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Добавете графика към календара си</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Приложението за календар показва всяка сцена във вашето местно време и проверява за промени всеки час.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Затвори</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Публични сцени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Всички публични сцени в графика. Всеки може да използва този адрес.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Вашата лична връзка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Показва и частните сцени, които този персонаж вижда. Всеки с връзката може да я чете, затова я пазете за себе си.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Само сцени, които водя или към които съм се присъединил</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Този адрес се показва само сега. Копирайте го в приложението за календар, преди да напуснете страницата.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Създадохте лична връзка на {0}. Създайте нова, за да видите адреса отново; старата спира да работи.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Създай моята лична връзка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Създай нова връзка</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Изключи я</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Адрес на календара</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Копирай</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Адресът на календара е копиран</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Абонирай се</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Черновата се запазва</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Черновата е запазена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Чернова само на това устройство</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Известия</value>
     <comment>MT</comment>
@@ -6160,6 +6250,12 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Получавайте известия на този телефон или компютър, когато порталът е затворен</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Само вие виждате това.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Известия за вас</value>
   </data>
   <data name="NavPaletteGroupInput" xml:space="preserve">
     <value>Тази подкана</value>

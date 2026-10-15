@@ -31,6 +31,7 @@ internal sealed class EvaluationServices
 	private IPluginHookDispatcher? _pluginHooks;
 	private IRealityPolicy? _reality;
 	private IPipeOutputCapture? _pipeCapture;
+	private IActivityLedger? _activity;
 	private ExecutorDebugFlags? _debugFlags;
 	private SoftcodeParseCache? _parseCache;
 	private ContextUse? _contextUse;
@@ -142,6 +143,10 @@ internal sealed class EvaluationServices
 	/// <summary>Pushes what a typed line used onto the player's context stack; absent in hosts that do not register it.</summary>
 	public ContextUse? ContextUse
 		=> _contextUse ??= LocatesOptional ? Provider.GetService<ContextUse>() : null;
+
+	/// <summary>Counts poses for the staff activity reports; absent in hosts that do not register it.</summary>
+	public IActivityLedger? Activity
+		=> _activity ??= LocatesOptional ? Provider.GetService<IActivityLedger>() : null;
 
 	public EvaluationDiagnostics Diagnostics { get; }
 	public FunctionInvocationPipeline Functions { get; }
