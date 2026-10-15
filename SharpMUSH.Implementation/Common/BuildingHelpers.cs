@@ -728,6 +728,14 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
+	/// Whether <paramref name="receiver"/> has a quota slot for one more object: the quota half of
+	/// <c>can_pay_fees(newowner, ...)</c> that PennMUSH's <c>do_chown</c> asks (<c>src/set.c:226</c>).
+	/// </summary>
+	public static ValueTask<bool> CanReceiveAsync(IMediator mediator, IOptionsWrapper<SharpMUSHOptions> configuration,
+		SharpPlayer receiver)
+		=> AdmitsBuildAsync(mediator, configuration, new AnySharpObject(receiver), receiver);
+
+	/// <summary>
 	/// <c>pay_quota</c> (<c>src/predicat.c:601-613</c>): <c>USE_QUOTA &amp;&amp; !NoQuota(who) &amp;&amp;
 	/// (curr - cost &lt; 0)</c> is the refusal, so the system being off and the holder being exempt
 	/// each let anything through.

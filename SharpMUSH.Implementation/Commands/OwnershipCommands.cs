@@ -27,51 +27,82 @@ public partial class Commands
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj =>
+			// do_chown (src/set.c:196-203): the new owner is "me" or any player by name, wherever they are.
+			async obj => executor is SharpPlayer self && newOwnerName.Equals("me", StringComparison.OrdinalIgnoreCase)
+				? await ChownAsync(executor, obj, self, preserve)
+				: await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
+					executor, executor, newOwnerName,
+					async newOwner => await ChownAsync(executor, obj, newOwner, preserve)));
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_chown</c> (<c>src/set.c:205-239</c>) once both sides are found: a player keeps
+	/// itself, <see cref="IObjectRelationshipService.CanChown"/> asks <c>chown_ok</c>, a thing has to be
+	/// carried, <c>/preserve</c> is a wizard's, and the new owner needs a quota slot unless it is a Zone
+	/// Master. The old owner's slot frees itself: SharpMUSH counts what an owner holds.
+	/// </summary>
+	private async ValueTask<CallState> ChownAsync(AnySharpObject executor, AnySharpObject obj,
+		SharpPlayer newOwner, bool preserve)
+	{
+		if (obj.IsPlayer && !executor.IsGod())
+		{
+			return await Refused(nameof(ErrorMessages.Notifications.PlayersAlwaysOwnThemselves));
+		}
+
+		if (!await ObjectRelationshipService.CanChown(executor, obj, newOwner))
+		{
+			return await Refused(nameof(ErrorMessages.Notifications.PermissionDenied));
+		}
+
+		if (obj is SharpThing thing && !await executor.IsPriv()
+			&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef)
+		{
+			return await Refused(nameof(ErrorMessages.Notifications.MustCarryToChown));
+		}
+
+		if (preserve && !await executor.IsWizard())
+		{
+			return await Refused(nameof(ErrorMessages.Notifications.ChownPreserveIsForWizards));
+		}
+
+		var receiver = new AnySharpObject(newOwner);
+		if (!await receiver.HasFlag("SHARED") && await CantReceiveAsync(receiver, newOwner) is { } why)
+		{
+			// can_pay_fees (src/predicat.c:435-463) tells the new owner why; do_chown adds a line for
+			// whoever gave it, when that is someone else.
+			await NotifyService.NotifyLocalized(newOwner.Object.DBRef, why, executor);
+			if (newOwner.Object.DBRef != executor.Object().DBRef)
 			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-					executor, executor, newOwnerName, LocateFlags.All,
-					async newOwnerObj =>
-					{
-						if (newOwnerObj is not SharpPlayer newOwnerPlayer)
-						{
-							return await NotifyService.NotifyAndReturn(
-								executor.Object().DBRef,
-								errorReturn: ErrorMessages.Returns.InvalidPlayer,
-								notifyMessage: ErrorMessages.Notifications.MustBePlayer,
-								shouldNotify: true);
-						}
-
-						var result = await ObjectRelationshipService.SetOwner(executor, obj, newOwnerPlayer, true);
-
-						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
-						// @chown leaves the object as it was.
-						if (result.Message.ToPlainText() == ErrorMessages.Returns.PermissionDenied)
-						{
-							return result;
-						}
-
-						if (!preserve)
-						{
-							await ResetForNewOwnerAsync(executor, obj, newOwnerPlayer.Object);
-						}
-
-						// do_chown (src/set.c:238): every successful @chown says so, QUIET or not.
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OwnerChanged), executor);
-						return result;
-					}
-				);
+				await NotifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.ChownReceiverHasNoQuota), executor);
 			}
-		);
+
+			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+		}
+
+		await Mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
+
+		if (!preserve)
+		{
+			await ResetForNewOwnerAsync(executor, obj, newOwner.Object);
+		}
+
+		// do_chown (src/set.c:238): every successful @chown says so, QUIET or not.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OwnerChanged), executor);
+		return true;
+
+		async ValueTask<string?> CantReceiveAsync(AnySharpObject who, SharpPlayer player)
+			=> await who.IsGuest()
+				? nameof(ErrorMessages.Notifications.GuestCantBuild)
+				: await BuildingHelpers.CanReceiveAsync(Mediator, Configuration, player)
+					? null
+					: nameof(ErrorMessages.Notifications.BuildingQuotaExhausted);
+
+		async ValueTask<CallState> Refused(string key)
+		{
+			await NotifyService.NotifyLocalized(executor, key, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 	}
 
 	/// <summary>
