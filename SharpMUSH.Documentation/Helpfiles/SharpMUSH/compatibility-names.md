@@ -129,12 +129,12 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
 
 **A choice.**
 
-**PennMUSH** has no `SCENE_ROOM` or `TRUECOLOR` flag and no `See_OOB`, `Send_Image` or `Unkillable`
+**PennMUSH** has no `SCENE_ROOM`, `SIDEFX` or `TRUECOLOR` flag and no `See_OOB`, `Send_Image` or `Unkillable`
 power.<br>
-**SharpMUSH** defines all five, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name
+**SharpMUSH** defines all six, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name
 them among PennMUSH's own, in the same sorted, comma-separated line.<br>
 **Why.** `SCENE_ROOM` belongs to the scene plugin and
-`TRUECOLOR` marks a client that takes 24-bit colour; `Send_Image` lets a character show pictures
+`TRUECOLOR` marks a client that takes 24-bit colour; `SIDEFX` lets an object call side-effect functions when the `sidefx_flag` option is on, as on RhostMUSH; `Send_Image` lets a character show pictures
 without the rest of `Send_OOB`, and the approved role holds it; `See_OOB` and `Unkillable` are reserved for
 SharpMUSH subsystems. An imported PennMUSH database has none of them set.<br>
 **Workaround.** None needed for imported code: nothing PennMUSH wrote can set or test a name it never
@@ -142,4 +142,4 @@ had. Code that walks `list(flags)` should expect names it does not know, as it a
 game's own `@flag/add` flags.
 
 **Example.** The parity case `admin.lists` in `tools/parity/scenarios/20-admin-commands.scn` lists
-both, and the harness accepts exactly these five names on SharpMUSH's side.
+both, and the harness accepts exactly these six names on SharpMUSH's side.

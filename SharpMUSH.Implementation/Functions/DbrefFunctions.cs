@@ -572,6 +572,13 @@ public partial class Functions
 		var classArg = args["0"].Message.ToPlainText();
 		AnySharpObject? classObj = null;
 
+		// A first argument holding '=' names no player, since a name cannot contain one, so PennMUSH
+		// answers it "Unknown owner." and #-1: it is free for RhostMUSH's one-argument form.
+		if (!useRegex && classArg.Contains('='))
+		{
+			return await TinySearchAsync(parser, executor);
+		}
+
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
 			var maybeClass = await LocateService.Locate(parser, executor, executor, classArg, LocateFlags.All);
@@ -595,12 +602,19 @@ public partial class Functions
 				args[(i + 1).ToString()].Message.ToPlainText()));
 		}
 
+		return await RunListSearchAsync(parser, executor, classObj?.Object().DBRef, pairs, useRegex);
+	}
+
+	/// <summary>Runs an lsearch() spec and answers its matches as dbrefs, or #-1 once the searcher is told why not.</summary>
+	private async ValueTask<CallState> RunListSearchAsync(IMUSHCodeParser parser, AnySharpObject executor, DBRef? owner,
+		IReadOnlyList<SearchSpecEngine.SearchPair> pairs, bool useRegex)
+	{
 		Result<SearchSpecEngine.SearchResult> outcome;
 		try
 		{
 			outcome = await SearchSpecEngine.ExecuteResultAsync(
 				parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
-				executor, classObj?.Object().DBRef, pairs, useRegex);
+				executor, owner, pairs, useRegex);
 		}
 		catch (System.Text.RegularExpressions.RegexParseException) when (useRegex)
 		{

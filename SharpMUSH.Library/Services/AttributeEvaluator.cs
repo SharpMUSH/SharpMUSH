@@ -263,7 +263,7 @@ internal sealed class AttributeEvaluator(
 					},
 					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
-						logger)
+						logger, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag)
 				);
 
 				return result;

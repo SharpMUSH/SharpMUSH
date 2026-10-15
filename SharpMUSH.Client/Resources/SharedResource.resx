@@ -5126,6 +5126,12 @@
   <data name="EnumPermFeedAdminDesc" xml:space="preserve">
     <value>Defines and runs feeds, the message pipelines game systems such as a radio or a phone are built on: their kinds, taps, members and limits.</value>
   </data>
+  <data name="EnumPermSideFx" xml:space="preserve">
+    <value>Game · Side-effect functions</value>
+  </data>
+  <data name="EnumPermSideFxDesc" xml:space="preserve">
+    <value>Calls side-effect functions such as pemit(), set() and create() when the sidefx_flag option asks for the SIDEFX flag, as if the object had it.</value>
+  </data>
   <data name="EnumPermServerOperate" xml:space="preserve">
     <value>Game · Operate the server</value>
   </data>

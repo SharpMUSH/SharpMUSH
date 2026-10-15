@@ -483,6 +483,22 @@ A SAFE object cannot be destroyed with `@destroy`. Only a Wizard can remove the 
 
 A SHARED exit can be triggered from either end. When someone uses a SHARED exit from its destination, they go to its source. This is useful for creating two-way passages with a single exit.
 
+# SIDEFX
+
+**Flag: SIDEFX (all types)**
+
+This flag matters only when the `sidefx_flag` option is on. Then a side-effect function, one that changes the game rather than only answering (pemit(), set(), attrib_set(), create(), name() with a new name and the like), works only for an object that has SIDEFX or holds the `softcode.sidefx` permission, which the wizard role allows. Anything else gets `#-1 FUNCTION DISABLED`, the same answer as when side effects are turned off for everyone. Reading forms, such as name() with one argument, are never affected.
+
+Anyone may set SIDEFX on an object they control. With the option off, which is the default, the flag does nothing.
+
+The flag and the option come from RhostMUSH.
+
+
+::: seealso
+- [compatibility config]
+- [roles]
+:::
+
 # STICKY
 
 **Flag: STICKY (things, rooms)**

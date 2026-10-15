@@ -187,6 +187,65 @@ public class SearchFunctionUnitTests
 		await Assert.That(dbrefs).Contains(hiddenThing.Number);
 	}
 
+	// --- RhostMUSH's one-argument form: search([<player>] <class>=<restriction>[,<low>[,<high>]]) ----
+	//
+	// PennMUSH reads a first argument as the owner and a name cannot hold '=', so these were all
+	// "Unknown owner." and #-1 before.
+
+	[Test]
+	public async Task TinySearch_NameClassFindsTheObject()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("TinySearchName");
+		var match = await CreateThingAsync($"{token}_Match");
+		var control = await CreateThingAsync($"Other{token}");
+
+		var result = ReturnedDbRefs(await SearchAsync($"search(name={token}_)"));
+
+		await Assert.That(result).Contains(match.Number);
+		await Assert.That(result).DoesNotContain(control.Number);
+	}
+
+	[Test]
+	public async Task TinySearch_ShortClassAndOwner()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("TinySearchOwner");
+		var match = await CreateThingAsync($"{token}_Match");
+
+		await Assert.That(ReturnedDbRefs(await SearchAsync($"search(me th={token}_)"))).IsEquivalentTo(new[] { match.Number });
+		await Assert.That(ReturnedDbRefs(await SearchAsync($"search(#1 objects={token}_)"))).IsEquivalentTo(new[] { match.Number });
+		await Assert.That(ReturnedDbRefs(await SearchAsync($"search(me rooms={token}_)"))).IsEmpty();
+	}
+
+	[Test]
+	public async Task TinySearch_TypeClassTakesAPrefix()
+	{
+		var result = ReturnedDbRefs(await SearchAsync("search(type=pl)"));
+
+		await Assert.That(result).Contains(1);
+		await Assert.That(result).DoesNotContain(0);
+	}
+
+	[Test]
+	public async Task TinySearch_RangeLimitsTheDbrefs()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("TinySearchRange");
+		var first = await CreateThingAsync($"{token}_A");
+		var second = await CreateThingAsync($"{token}_B");
+
+		await Assert.That(ReturnedDbRefs(await SearchAsync($"search(things={token}_,#{second.Number})")))
+			.IsEquivalentTo(new[] { second.Number });
+		await Assert.That(ReturnedDbRefs(await SearchAsync($"search(things={token}_,{first.Number},{first.Number})")))
+			.IsEquivalentTo(new[] { first.Number });
+		await Assert.That(await SearchAsync($"nsearch(things={token}_)")).IsEqualTo("2");
+	}
+
+	[Test]
+	[Arguments("search(type=bogus)", "#-1 INVALID SEARCH TYPE")]
+	[Arguments("search(totally=x)", "#-1 INVALID SEARCH TYPE")]
+	[Arguments("search(NoSuchPlayerAnywhere name=x)", "#-1")]
+	public async Task TinySearch_Errors(string expression, string expected)
+		=> await Assert.That(await SearchAsync(expression)).IsEqualTo(expected);
+
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
 		var result = await TestIsolationHelpers.CreateObjectCommandAsync(WebAppFactoryArg.CommandParser, ConnectionService, name);

@@ -678,15 +678,13 @@ public partial class Functions
 	private static string AttributeListSeparator(IMUSHCodeParser parser, int argument)
 		=> ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, argument, " ").ToPlainText();
 
-	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
+	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, 1), matched));
+		=> ListAttributesWithLayoutAsync(parser, attribute.Name, false);
 
-	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
+	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "delimiter"])]
 	public ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard,
-			matched => string.Join(AttributeListSeparator(parser, 1), matched));
+		=> ListAttributesWithLayoutAsync(parser, attribute.Name, true);
 
 	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)

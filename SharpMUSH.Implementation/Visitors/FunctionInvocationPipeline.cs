@@ -201,7 +201,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			var result = await FunctionDispatcher.InvokeValidatedAsync(newParser,
 				definition, executor,
 				configuration.CurrentValue.Function.FunctionSideEffects, services.NotifyService, visitor.Logger,
-				argumentCount: args.Length);
+				argumentCount: args.Length, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag);
 
 			return Bounded(result, currentState, limitExceeded, contextDepth);
 		}

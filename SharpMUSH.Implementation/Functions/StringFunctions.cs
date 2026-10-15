@@ -765,6 +765,16 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var str = args["0"].Message;
 
+		if (args.Count is 4 or 5 && Configuration.CurrentValue.Compatibility.RhostEdit)
+		{
+			return ValueTask.FromResult(new CallState(RhostEdit(str, args)));
+		}
+
+		if (args.Count > 5 && Configuration.CurrentValue.Compatibility.RhostEdit)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, "EDIT", 5, args.Count)));
+		}
+
 		for (var i = 1; i < args.Count - 1; i += 2)
 		{
 			var search = args[i.ToString()].Message.ToPlainText();
@@ -780,6 +790,34 @@ public partial class Functions
 		}
 
 		return ValueTask.FromResult(new CallState(str));
+	}
+
+	/// <summary>
+	/// edit() with <c>rhost_edit</c> on and a fourth or fifth argument: one from/to pair, and RhostMUSH's
+	/// mode arguments. A fourth that starts with a nonzero integer replaces only the first match. The
+	/// fifth chooses how RhostMUSH edits ANSI codes; markup here is never part of the text, so it changes
+	/// nothing.
+	/// </summary>
+	private static MString RhostEdit(MString str, IReadOnlyDictionary<string, CallState> args)
+	{
+		var search = args["1"].Message.ToPlainText();
+		var replace = args["2"].Message;
+		var firstOnly = SearchSpecEngine.LeadingInteger(args["3"].Message.ToPlainText().Trim()) != 0;
+
+		switch (search)
+		{
+			case "^":
+				return MarkupText.Concat(replace, str);
+			case "$":
+				return MarkupText.Concat(str, replace);
+			case "":
+				return MarkupText.Concat([replace, .. SplitIntoGraphemes(str).SelectMany(g => new[] { g, replace })]);
+			case var _ when !firstOnly:
+				return str.ReplaceAll(search, replace);
+			default:
+				var index = str.IndexOf(search);
+				return index < 0 ? str : str.Replace(index, search.Length, replace);
+		}
 	}
 
 	/// <summary>

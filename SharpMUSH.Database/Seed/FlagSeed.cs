@@ -81,6 +81,10 @@ public static class FlagSeed
 		("TRUECOLOR", "", ["TRUECOLOUR","RGB","24BIT"], [], [], ["PLAYER"]),
 		("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("OPEN_OK", "", null, [], [], ["ROOM"]),
+		// RhostMUSH's SIDEFX: with the sidefx_flag option on, side-effect functions work only for an
+		// object holding it (or the softcode.sidefx permission). Anyone may set it, as on RhostMUSH; its
+		// letter there is PennMUSH's SUSPECT, so it has none here. Off, the flag does nothing.
+		("SIDEFX", "", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		// PennMUSH hdrs/flag_tab.h:19,74 - GOING is F_INTERNAL, GOING_TWICE F_INTERNAL | F_DARK. Only the
 		// server sets or clears them (@destroy, @undestroy, the purge), and list_all_flags never shows them.
 		("GOING", "G", null, ["internal"], ["internal"], ["ROOM","PLAYER","EXIT","THING"]),
