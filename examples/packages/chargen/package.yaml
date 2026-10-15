@@ -485,6 +485,11 @@ objects:
         value: |-
           match(%1,get({{store}}/APP`%0`STATE))
         flags: [funsyntax]
+      # %0 an application: 1 when it is undecided and has been submitted at least once, so staff may see it.
+      FUN`APP`OPEN:
+        value: |-
+          cand(u(%!/FUN`APP`IN,%0,draft submitted changes),get({{store}}/APP`%0`ROUND))
+        flags: [funsyntax]
       # %0 states, %1 the leaf to sort by: the applications in those states, oldest first by that leaf.
       FUN`APP`SELECT:
         value: |-
@@ -684,7 +689,7 @@ objects:
       # command when there is none.
       INC`NEED`TARGET:
         value: |-
-          @assert strlen(%<name>)=@pemit %#=notice(APP,Name the character whose application it is.,warn); @assert strlen(setr(app_objid,u(%!/FUN`PLAYER,%<name>)))=@pemit %#=notice(APP,There is no player called '%<name>'.,warn); think setq(app_key,u(%!/FUN`KEY,%q<app_objid>)); @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,[name(%q<app_objid>)] has no application.,warn); think setq(app_state,u(%!/FUN`APP`STATE,%q<app_key>))
+          @assert strlen(%<name>)=@pemit %#=notice(APP,Name the character whose application it is.,warn); @assert strlen(setr(app_objid,u(%!/FUN`PLAYER,%<name>)))=@pemit %#=notice(APP,There is no player called '%<name>'.,warn); think setq(app_key,u(%!/FUN`KEY,%q<app_objid>)); @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,[name(%q<app_objid>)] has no application.,warn); @assert cor(strmatch(%q<app_objid>,objid(%#)),get({{store}}/APP`%q<app_key>`ROUND))=@pemit %#=notice(APP,[name(%q<app_objid>)] has not submitted an application yet.,warn); think setq(app_state,u(%!/FUN`APP`STATE,%q<app_key>))
         flags: [cmdsyntax]
 
       # ---- the applicant ----------------------------------------------------------
@@ -782,7 +787,7 @@ objects:
       # +apps/all[/<page>]: every application still open (not approved, waitlisted or retired), by name.
       INC`APPS`ALL:
         value: |-
-          @include %!/INC`NEED`REVIEWER; think setq(list_keys,sortby(%!/FUN`LIST`BYNAME,filterbool(%!/FUN`APP`IN,u(%!/FUN`APP`KEYS),,,draft submitted changes))); @assert words(%q<list_keys>)=@pemit %#=notice(APP,There are no open applications.); @include/args %!/INC`PAGE`CHECK=list,%q<list_keys>; think setq(list_page,u(%!/FUN`PAGE`ITEMS,%q<list_keys>)); @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r2,1%r%r%r,16%r%r%r),[tone(strong,Name)]%r[iter(%q<list_page>,u(%!/FUN`APP`NAME,%i0),,%r)],[tone(strong,State)]%r[iter(%q<list_page>,tone(u(%!/FUN`STATE`TONE,get({{store}}/APP`%i0`STATE)),u(%!/FUN`STATE`LABEL,get({{store}}/APP`%i0`STATE))),,%r)],>[tone(strong,Round)]%r[iter(%q<list_page>,get({{store}}/APP`%i0`ROUND),,%r)],>[tone(strong,Started)]%r[iter(%q<list_page>,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%i0`CREATED)),,%r)])%r[u(%!/FUN`PAGE`FOOTER,%q<list_keys>,+apps/all,+app <name> reads one)],Open applications)
+          @include %!/INC`NEED`REVIEWER; think setq(list_keys,sortby(%!/FUN`LIST`BYNAME,filterbool(%!/FUN`APP`OPEN,u(%!/FUN`APP`KEYS)))); @assert words(%q<list_keys>)=@pemit %#=notice(APP,There are no open applications.); @include/args %!/INC`PAGE`CHECK=list,%q<list_keys>; think setq(list_page,u(%!/FUN`PAGE`ITEMS,%q<list_keys>)); @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r2,1%r%r%r,16%r%r%r),[tone(strong,Name)]%r[iter(%q<list_page>,u(%!/FUN`APP`NAME,%i0),,%r)],[tone(strong,State)]%r[iter(%q<list_page>,tone(u(%!/FUN`STATE`TONE,get({{store}}/APP`%i0`STATE)),u(%!/FUN`STATE`LABEL,get({{store}}/APP`%i0`STATE))),,%r)],>[tone(strong,Round)]%r[iter(%q<list_page>,get({{store}}/APP`%i0`ROUND),,%r)],>[tone(strong,Started)]%r[iter(%q<list_page>,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%i0`CREATED)),,%r)])%r[u(%!/FUN`PAGE`FOOTER,%q<list_keys>,+apps/all,+app <name> reads one)],Open applications)
         flags: [cmdsyntax]
       # +apps/decided[/<page>]: approved, waitlisted and retired applications, the latest decision first.
       INC`APPS`DECIDED:
@@ -1044,7 +1049,7 @@ objects:
       # the one before, the comments with a box under each, and the decision.
       WEB`SCHEMA`APP:
         value: |-
-          switch(0,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`SCHEMA`SAY,Character application,Only application reviewers can read other applications.),cand(strlen(%1),hasattr({{store}},APP`%1)),u(%!/WEB`SCHEMA`SAY,Character application,There is no such application.),u(%!/WEB`SCHEMA`APP`SEEN,%0,%1))
+          switch(0,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`SCHEMA`SAY,Character application,Only application reviewers can read other applications.),cand(strlen(%1),hasattr({{store}},APP`%1),get({{store}}/APP`%1`ROUND)),u(%!/WEB`SCHEMA`SAY,Character application,There is no such application.),u(%!/WEB`SCHEMA`APP`SEEN,%0,%1))
         flags: [funsyntax]
       WEB`SCHEMA`APP`SEEN:
         value: |-
@@ -1116,7 +1121,7 @@ objects:
       # data: GET /http/chargen/data?at=<path>, for the page WEB`SCHEMA drew.
       WEB`DATA:
         value: |-
-          json(object,fields,switch(1,not(strlen(%<viewer>)),u(%!/WEB`EMPTY),not(strlen(%<at>)),u(%!/WEB`DATA`APP,u(%!/FUN`KEY,%<viewer>),0,1),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`DATA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`KEY,%<viewer>)),u(%!/WEB`DATA`APP,%<at>,0,1),cand(u(%!/FUN`IS`REVIEWER,%<viewer>),strlen(u(%!/WEB`KEY,%<at>))),u(%!/WEB`DATA`APP,%<at>,1,0),u(%!/WEB`EMPTY)))
+          json(object,fields,switch(1,not(strlen(%<viewer>)),u(%!/WEB`EMPTY),not(strlen(%<at>)),u(%!/WEB`DATA`APP,u(%!/FUN`KEY,%<viewer>),0,1),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`DATA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`KEY,%<viewer>)),u(%!/WEB`DATA`APP,%<at>,0,1),cand(u(%!/FUN`IS`REVIEWER,%<viewer>),strlen(u(%!/WEB`KEY,%<at>)),get({{store}}/APP`%<at>`ROUND)),u(%!/WEB`DATA`APP,%<at>,1,0),u(%!/WEB`EMPTY)))
         flags: [funsyntax]
       # %0 a key, %1 1 for a reviewer, %2 1 for its owner: the status lines, the comments in every section, the
       # changes since the round before (for a reviewer) and the draft (for its owner).
@@ -1150,7 +1155,7 @@ objects:
         flags: [funsyntax]
       WEB`LIST`KEYS:
         value: |-
-          switch(%0,queue,u(%!/FUN`QUEUE),waitlist,u(%!/FUN`WAITLIST),all,sortby(%!/FUN`LIST`BYNAME,filterbool(%!/FUN`APP`IN,u(%!/FUN`APP`KEYS),,,draft submitted changes)),revwords(u(%!/FUN`APP`SELECT,approved waitlist retired,DECIDED)))
+          switch(%0,queue,u(%!/FUN`QUEUE),waitlist,u(%!/FUN`WAITLIST),all,sortby(%!/FUN`LIST`BYNAME,filterbool(%!/FUN`APP`OPEN,u(%!/FUN`APP`KEYS))),revwords(u(%!/FUN`APP`SELECT,approved waitlist retired,DECIDED)))
         flags: [funsyntax]
       # %0 keys: a table row for each, every list's columns in one.
       WEB`ROWS:
@@ -1195,7 +1200,7 @@ objects:
       # The application the action is about: the posted key's, for a reviewer, else the viewer's own.
       WEB`NEED`APP:
         value: |-
-          @if cand(strlen(%q<web_target>),comp(%q<web_target>,%q<viewer_key>))={@assert %q<viewer_staff>=think setq(out,u(%!/WEB`ERR,Only application reviewers can do that.)); @assert cand(strlen(u(%!/WEB`KEY,%q<web_target>)),hasattr({{store}},APP`%q<web_target>))=think setq(out,u(%!/WEB`ERR,There is no such application.)); think setqm(app_key,%q<web_target>,app_objid,get({{store}}/APP`%q<web_target>))},{think setqm(app_key,%q<viewer_key>,app_objid,%q<viewer_objid>)}; think setq(app_state,u(%!/FUN`APP`STATE,%q<app_key>))
+          @if cand(strlen(%q<web_target>),comp(%q<web_target>,%q<viewer_key>))={@assert %q<viewer_staff>=think setq(out,u(%!/WEB`ERR,Only application reviewers can do that.)); @assert cand(strlen(u(%!/WEB`KEY,%q<web_target>)),hasattr({{store}},APP`%q<web_target>),get({{store}}/APP`%q<web_target>`ROUND))=think setq(out,u(%!/WEB`ERR,There is no such application.)); think setqm(app_key,%q<web_target>,app_objid,get({{store}}/APP`%q<web_target>))},{think setqm(app_key,%q<viewer_key>,app_objid,%q<viewer_objid>)}; think setq(app_state,u(%!/FUN`APP`STATE,%q<app_key>))
         flags: [cmdsyntax]
       # A decision: a reviewer's, on someone else's application.
       WEB`NEED`DECIDER:
@@ -1224,9 +1229,14 @@ objects:
           think setq(web_boxes,squish(iter(lcstr(u(%!/FUN`FORM`SECTIONS)) all,if(strlen(trim(u(%!/WEB`GET,comment_%i0))),%i0)))); think setq(web_long,iter(filterbool(%!/WEB`BOX`LONG,%q<web_boxes>),[json(string,comment_%i0)]:[json(string,Keep a comment to 4000 characters.)],%b,%r)); @assert not(strlen(%q<web_long>))=think setq(out,u(%!/WEB`ERRS,%q<web_long>)); think setq(web_commented,words(%q<web_boxes>)); @dolist/inline %q<web_boxes>={@include/args %!/INC`DO`COMMENT=section,if(comp(##,all),ucstr(##)),author,%q<viewer_objid>,text,trim(u(%!/WEB`GET,comment_##)),private,cand(%q<viewer_staff>,u(%!/WEB`ON,private_##)),kind,comment}; @if %q<web_commented>={@if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,[name(%q<viewer_objid>)] commented on their application. +app [name(%q<viewer_objid>)] reads it.}},{@if words(squish(iter(%q<web_boxes>,if(u(%!/WEB`ON,private_%i0),,%i0))))={@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,[name(%q<viewer_objid>)] commented on your application. +app shows it.}}}
         flags: [cmdsyntax]
       # Save draft: the fields and any comments.
+      # Stops an action only the applicant may take on someone else's application.
+      WEB`NEED`MINE:
+        value: |-
+          @assert strmatch(%q<app_key>,%q<viewer_key>)=think setq(out,u(%!/WEB`ERR,Only the applicant can do that.))
+        flags: [cmdsyntax]
       WEB`ACT`SAVE:
         value: |-
-          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; think setq(out,u(%!/WEB`DONE,Saved.))
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; think setq(out,u(%!/WEB`DONE,Saved.))
         flags: [cmdsyntax]
       WEB`NEED`EDITABLE:
         value: |-
@@ -1235,11 +1245,11 @@ objects:
       # Submit: saves, then checks the required fields are filled in and sends it to staff.
       WEB`ACT`SUBMIT:
         value: |-
-          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; @include %!/INC`DO`TOUCH; think setq(web_missing,iter(filterbool(%!/FUN`APP`MISSES,u(%!/FUN`FORM`ALLFIELDS),,,%q<app_key>),[json(string,field_[lcstr(%i0)])]:[json(string,Fill this in before you submit.)],%b,%r)); @assert not(strlen(%q<web_missing>))=think setq(out,u(%!/WEB`ERRS,%q<web_missing>)); @include %!/INC`DO`SUBMIT; think setq(out,u(%!/WEB`DONE,Submitted. [if(get(%!/DATA`CONFIG`SHOW-QUEUE),u(%!/FUN`QUEUE`TEXT,%q<app_key>),Staff will read it.)]))
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; @include %!/INC`DO`TOUCH; think setq(web_missing,iter(filterbool(%!/FUN`APP`MISSES,u(%!/FUN`FORM`ALLFIELDS),,,%q<app_key>),[json(string,field_[lcstr(%i0)])]:[json(string,Fill this in before you submit.)],%b,%r)); @assert not(strlen(%q<web_missing>))=think setq(out,u(%!/WEB`ERRS,%q<web_missing>)); @include %!/INC`DO`SUBMIT; think setq(out,u(%!/WEB`DONE,Submitted. [if(get(%!/DATA`CONFIG`SHOW-QUEUE),u(%!/FUN`QUEUE`TEXT,%q<app_key>),Staff will read it.)]))
         flags: [cmdsyntax]
       WEB`ACT`WITHDRAW:
         value: |-
-          @include %!/WEB`NEED`APP; @assert strmatch(%q<app_state>,submitted)=think setq(out,u(%!/WEB`ERR,Your application is not with staff.)); &APP`%q<app_key>`STATE {{store}}=draft; think setq(out,u(%!/WEB`DONE,Your application is back with you. Change it%, then Submit.))
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @assert strmatch(%q<app_state>,submitted)=think setq(out,u(%!/WEB`ERR,Your application is not with staff.)); &APP`%q<app_key>`STATE {{store}}=draft; think setq(out,u(%!/WEB`DONE,Your application is back with you. Change it%, then Submit.))
         flags: [cmdsyntax]
       WEB`ACT`COMMENT:
         value: |-
@@ -1410,7 +1420,7 @@ objects:
 
         ## How an application moves
 
-        - **Draft**: yours to change. Nothing reaches staff until you submit.
+        - **Draft**: yours to change. Staff cannot see it until you first submit it.
         - **Submitted**: staff have it. You can still comment, and `+app/withdraw` takes it back.
         - **Needs changes**: staff sent it back with comments. Change what they asked and submit again.
         - **Approved**: done. When the game limits how many characters play at once and every place is

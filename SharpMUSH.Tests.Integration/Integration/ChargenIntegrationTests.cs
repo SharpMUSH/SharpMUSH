@@ -143,6 +143,9 @@ public class ChargenIntegrationTests
 				.Because("a choice is kept as the form writes it");
 			await Assert.That(await As(applicant, "+app/set nosuch=x")).Contains("There is no field 'nosuch'.");
 			await Assert.That(await As(applicant, "+app/submit")).Contains("Fill in concept and background first.");
+			await Assert.That(await As(reviewer, $"+app {applicant.Name}")).Contains($"{applicant.Name} has not submitted an application yet.")
+				.Because("staff see an application only once it has been submitted");
+			await Assert.That(await As(reviewer, "+apps/all")).DoesNotContain(applicant.Name);
 
 			await As(applicant, "+app/set concept=A ferry pilot, who never misses a tide");
 			await As(applicant, "+app/set background=Born on the river barges.");
@@ -299,6 +302,8 @@ public class ChargenIntegrationTests
 			await Assert.That(saved.GetProperty("fields").GetProperty("field_concept").GetString()).IsEqualTo("A pilot, {who} never misses a tide")
 				.Because("a value reaches the store whole, commas and braces too");
 			await Assert.That(saved.GetProperty("fields").GetProperty("field_archetype").GetString()).IsEqualTo("Rogue");
+			await Assert.That((await Http("GET", $"/chargen/schema?at={key}", "", reviewer)).ToString())
+				.Contains("There is no such application.").Because("staff see an application only once it has been submitted");
 			var tooLong = await Http("POST", "/chargen/act", $$"""{"op":"save","field_concept":"{{new string('x', 121)}}"}""", applicant);
 			await Assert.That(tooLong.GetProperty("errors").GetProperty("field_concept").GetString()).IsEqualTo("Keep concept to 120 characters.");
 			var missing = await Http("POST", "/chargen/act",
@@ -316,6 +321,12 @@ public class ChargenIntegrationTests
 			var queue = await Http("GET", "/chargen/data?at=queue", "", reviewer);
 			await Assert.That(Datum(queue, "rows")[0].GetProperty("name").GetString()).IsEqualTo(applicant.Name);
 			await Assert.That(Datum(queue, "rows")[0].GetProperty("key").GetString()).IsEqualTo(key);
+
+			var hijack = await Http("POST", "/chargen/act",
+				$$"""{"op":"save","key":"{{key}}","field_concept":"Not theirs"}""", reviewer);
+			await Assert.That(hijack.ToString()).Contains("Only the applicant can do that.");
+			var withdrawn = await Http("POST", "/chargen/act", $$"""{"op":"withdraw","key":"{{key}}"}""", reviewer);
+			await Assert.That(withdrawn.ToString()).Contains("Only the applicant can do that.");
 
 			var note = await Http("POST", "/chargen/act",
 				$$"""{"op":"comment","key":"{{key}}","comment_history":"Which river?","comment_all":"Thin.","private_all":true}""", reviewer);
