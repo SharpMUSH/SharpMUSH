@@ -177,6 +177,7 @@ Each reads what it needs by name (see [named arguments]). A name means the same 
 | `%<to>` | the `/to` list | %6 | | | |
 | `%<recipients>` | who receives it | | %2 | | %2 |
 | `%<recipient>` | the one recipient this line is for | | | %1 | |
+| `%<origin>` | where a line from outside the game came from, such as `discord/<message id>`; empty for a line sent in the game | | | | %7 |
 
 The positions are there for code written before the names; new code is easier to read with the names.
 

@@ -243,6 +243,8 @@ public static class EventCatalogue
 
 		new(SharpEvents.SceneStatus, Args(("scene", N), ("status", W), ("previous", W)), "Whoever made the scene or changed its status",
 			"A scene was made, or its status changed (the Scene plugin).", EventPrivacy.Staff, false, Sharp),
+		new(SharpEvents.SceneChange, Args(("scene", N), ("key", W), ("previous", T)), "Whoever changed the scene",
+			"A scene's time, title or another of its keys changed (the Scene plugin).", EventPrivacy.Staff, false, Sharp),
 
 		new(SharpEvents.BackupComplete, Args(("name", T), ("bytes", N)),
 			"Whoever ran @backup or @dump, or God (#1) for a scheduled copy",

@@ -4,11 +4,28 @@ namespace SharpMUSH.Plugins.Discord.Outbox;
 
 /// <summary>A feed line on its way to one Discord channel, already rendered as Discord text.</summary>
 /// <param name="At">When the game sent it; the outbox drops it once it is older than <see cref="DiscordOutboxOptions.MaxAge"/>.</param>
-public sealed record OutboundLine(string Speaker, string? AvatarUrl, string Text, DateTimeOffset At);
+/// <param name="LineId">The stored feed line it is, so deleting its post can take the line out of recall; 0 when not stored.</param>
+/// <param name="Replaces">The member's Discord message it came in as, deleted once this goes out in its place.</param>
+public sealed record OutboundLine(string Speaker, string? AvatarUrl, string Text, DateTimeOffset At, long LineId = 0,
+	ulong? Replaces = null);
 
 /// <summary>One webhook post: one or more lines of one speaker.</summary>
 /// <param name="Lines">How many queued lines it carries, so a dropped post is counted as the lines it held.</param>
-public sealed record DiscordPost(string Speaker, string? AvatarUrl, string Content, int Lines);
+public sealed record DiscordPost(string Speaker, string? AvatarUrl, string Content, int Lines)
+{
+	/// <summary>The stored feed lines it carries.</summary>
+	public IReadOnlyList<long> LineIds { get; init; } = [];
+
+	/// <summary>The members' messages it stands in for.</summary>
+	public IReadOnlyList<ulong> Replaces { get; init; } = [];
+
+	/// <summary>Two posts are equal when they say the same and carry the same lines, in the same lists or not.</summary>
+	public bool Equals(DiscordPost? other)
+		=> other is not null && Speaker == other.Speaker && AvatarUrl == other.AvatarUrl && Content == other.Content
+			&& Lines == other.Lines && LineIds.SequenceEqual(other.LineIds) && Replaces.SequenceEqual(other.Replaces);
+
+	public override int GetHashCode() => HashCode.Combine(Speaker, AvatarUrl, Content, Lines);
+}
 
 public enum DiscordLinkState
 {
@@ -195,29 +212,37 @@ public sealed class DiscordOutbox(DiscordOutboxOptions options, Random random)
 		_queue.RemoveFirst();
 		if (first.Text.Length > options.MaxContent)
 		{
-			// The parts go back in front, so they leave before any later line, each as a line of its own.
+			// The parts go back in front, so they leave before any later line, each as a line of its own. Each carries
+			// the line, so deleting any of them takes it out of recall; the member's original goes with the first.
 			var parts = Split(first.Text, options.MaxContent, options.MaxParts);
 			foreach (var part in parts.Skip(1).Reverse())
 			{
-				_queue.AddFirst(first with { Text = part });
+				_queue.AddFirst(first with { Text = part, Replaces = null });
 			}
 
-			return new DiscordPost(first.Speaker, first.AvatarUrl, parts[0], 1);
+			return Post(first.Speaker, first.AvatarUrl, parts[0], [first]);
 		}
 
 		var content = new StringBuilder(first.Text);
-		var lines = 1;
+		List<OutboundLine> carried = [first];
 		while (_queue.First is { Value: var next }
 			&& next.Speaker == first.Speaker && next.AvatarUrl == first.AvatarUrl
 			&& content.Length + 1 + next.Text.Length <= options.MaxContent)
 		{
 			content.Append('\n').Append(next.Text);
-			lines++;
+			carried.Add(next);
 			_queue.RemoveFirst();
 		}
 
-		return new DiscordPost(first.Speaker, first.AvatarUrl, content.ToString(), lines);
+		return Post(first.Speaker, first.AvatarUrl, content.ToString(), carried);
 	}
+
+	private static DiscordPost Post(string speaker, string? avatarUrl, string content, IReadOnlyList<OutboundLine> lines)
+		=> new(speaker, avatarUrl, content, lines.Count)
+		{
+			LineIds = [.. lines.Where(line => line.LineId > 0).Select(line => line.LineId)],
+			Replaces = [.. lines.Select(line => line.Replaces).OfType<ulong>()],
+		};
 
 	/// <summary>A notice that went out settles the count; lines dropped while it was in flight are owed again.</summary>
 	private void Done()

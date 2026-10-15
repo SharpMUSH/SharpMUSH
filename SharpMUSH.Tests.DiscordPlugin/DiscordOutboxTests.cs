@@ -30,6 +30,26 @@ public class DiscordOutboxTests
 	}
 
 	[Test]
+	public async Task APost_CarriesItsLines_AndTheMessagesItReplaces()
+	{
+		var outbox = Outbox(new DiscordOutboxOptions(MaxContent: 20));
+		outbox.Enqueue(Line("Ann", "one") with { LineId = 7, Replaces = 70 });
+		outbox.Enqueue(Line("Ann", "two") with { LineId = 8 });
+		outbox.Enqueue(Line("Bo", "aaaa bbbb cccc dddd eeee") with { LineId = 9, Replaces = 90 });
+
+		var joined = outbox.Next(Start);
+		outbox.Report(new Posted(1), Start);
+		var first = outbox.Next(Start);
+		outbox.Report(new Posted(2), Start);
+		var second = outbox.Next(Start);
+
+		await Assert.That(joined).IsEqualTo(new DiscordPost("Ann", null, "one\ntwo", 2) { LineIds = [7, 8], Replaces = [70] });
+		await Assert.That(first).IsEqualTo(new DiscordPost("Bo", null, "aaaa bbbb cccc dddd", 1) { LineIds = [9], Replaces = [90] });
+		await Assert.That(second).IsEqualTo(new DiscordPost("Bo", null, "eeee", 1) { LineIds = [9] })
+			.Because("every part pairs with the line, and the original goes once");
+	}
+
+	[Test]
 	public async Task EachSpeaker_GetsTheirOwnPost_InOrder()
 	{
 		var outbox = Outbox();

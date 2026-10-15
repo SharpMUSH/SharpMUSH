@@ -63,6 +63,7 @@ public sealed class PluginManager(
 	}
 
 	private readonly Dictionary<string, TrackedPlugin> _tracked = new(StringComparer.OrdinalIgnoreCase);
+	private readonly HashSet<string> _unloaded = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _gate = new();
 
 	public Task LoadAllAsync(CancellationToken cancellationToken)
@@ -105,6 +106,7 @@ public sealed class PluginManager(
 			{
 				// Last registration wins on a duplicate id (e.g. a reload replacing the tracked entry).
 				_tracked[plugin.Id] = tracked;
+				_unloaded.Remove(plugin.Id);
 			}
 
 			return (commandCount, functionCount);
@@ -124,6 +126,15 @@ public sealed class PluginManager(
 			return _tracked.TryGetValue(pluginId, out var tracked)
 				? new PluginRegistration(tracked.IsUnloadable, tracked.CommandNames.Count, tracked.FunctionNames.Count)
 				: null;
+		}
+	}
+
+	/// <inheritdoc />
+	public bool WasUnloaded(string pluginId)
+	{
+		lock (_gate)
+		{
+			return _unloaded.Contains(pluginId);
 		}
 	}
 
@@ -200,6 +211,7 @@ public sealed class PluginManager(
 	/// </summary>
 	private async Task NotifyPluginsChangedAsync()
 	{
+		await ReindexHelpAsync();
 		if (changeNotifier is null)
 		{
 			return;
@@ -212,6 +224,24 @@ public sealed class PluginManager(
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Plugin-change notification failed; the unload/reload itself succeeded.");
+		}
+	}
+
+	/// <summary>Indexes help again, so an unloaded plugin's topics go and a reloaded one's come back.</summary>
+	private async Task ReindexHelpAsync()
+	{
+		if (serviceProvider.GetService(typeof(ITextFileService)) is not ITextFileService help)
+		{
+			return;
+		}
+
+		try
+		{
+			await help.ReindexAsync();
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Reindexing help after a plugin change failed; the unload/reload itself succeeded.");
 		}
 	}
 
@@ -236,6 +266,7 @@ public sealed class PluginManager(
 
 			tracked = found;
 			_tracked.Remove(pluginId);
+			_unloaded.Add(pluginId);
 		}
 
 		// Remove only the entries this plugin actually added (collision-skipped names were never recorded),

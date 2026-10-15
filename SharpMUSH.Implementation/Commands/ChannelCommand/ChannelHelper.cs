@@ -606,12 +606,13 @@ public static class ChannelHelper
 	/// PennMUSH <c>do_cemit</c>'s gates (<c>src/extchat.c:1649-1665</c>): See_All + Pemit_All skips them
 	/// entirely, since such a player could enumerate the channel's members and <c>@pemit</c> them anyway.
 	/// Otherwise the type gate and <c>Chan_Can_Cemit</c> apply. Note <c>LOUD</c> does NOT bypass this —
-	/// Penn only consults it in <c>do_chat</c>.
+	/// Penn only consults it in <c>do_chat</c>. Penn's <c>Pemit_All</c> is <c>Wizard(x) || has_power(x, "PEMIT_ALL")</c>
+	/// (<c>hdrs/mushdb.h:56</c>), so a wizard needs no power of that name.
 	/// </summary>
 	public static async ValueTask<CemitCheck> CemitRefusal(IChannelPermissionService permissionService,
 		AnySharpObject who, SharpChannel channel)
 	{
-		if (await who.IsSee_All() && await who.HasPower("Pemit_All"))
+		if (await who.IsSee_All() && (await who.IsWizard() || await who.HasPower("Pemit_All")))
 		{
 			return new CemitCheck(null, true);
 		}

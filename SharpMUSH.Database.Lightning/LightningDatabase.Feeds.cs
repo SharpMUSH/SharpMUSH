@@ -368,6 +368,23 @@ public partial class LightningDatabase
 			return purged;
 		}, cancellationToken);
 
+	public async ValueTask<bool> DeleteFeedMessageAsync(long id, CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync(tx =>
+		{
+			if (!tx.TryGet(Tables.FeedMessageId, Keys.Dbref(id), out var key)
+				|| !tx.TryGet(Tables.FeedMessage, key, out var bytes))
+			{
+				return false;
+			}
+
+			var (kind, feedKey) = SplitFeed(key.AsSpan(0, key.Length - 9));
+			var feed = Without(ReadFeed(tx, kind, feedKey), Codec.Deserialize<FeedMessageRecord>(bytes));
+			tx.Delete(Tables.FeedMessage, key);
+			tx.Delete(Tables.FeedMessageId, Keys.Dbref(id));
+			tx.Put(Tables.Feed, FeedKey(kind, feedKey), Codec.Serialize(feed));
+			return true;
+		}, cancellationToken);
+
 	public ValueTask<IReadOnlyList<SharpFeedTap>> GetFeedTapsAsync(string? kind, CancellationToken cancellationToken = default)
 	{
 		var prefix = kind is null ? [] : Keys.Concat(Keys.Str(kind), Keys.Sep);
