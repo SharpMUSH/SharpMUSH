@@ -170,7 +170,7 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.0
+    version: 1.0.1
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
   - path: roster-jobs/
     name: Roster applications in jobs

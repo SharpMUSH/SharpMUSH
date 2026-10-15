@@ -1319,18 +1319,6 @@ public partial class Commands
 		//   /spoof: preserve the current enactor (the original player who started the chain)
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : executor.Object().DBRef;
 
-		// Q-registers from the calling context are copied into the triggered attribute unless
-		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
-		// is run will be copied and made available in the triggered attribute").
-		// /inline without /localize (PennMUSH @trigger2 help) lets the triggered attribute override the caller's
-		// Q-registers, so it can hand values back the way an @include does: it works on the caller's own set.
-		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-		parser.CurrentState.Registers.TryPeek(out var currentRegs);
-		var sharesRegisters = switches.Contains("INLINE") && !switches.Contains("LOCALIZE");
-		registerStack.Push(switches.Contains("CLEARREGS") || currentRegs is null
-			? new Dictionary<string, MString>()
-			: sharesRegisters ? currentRegs : new Dictionary<string, MString>(currentRegs));
-
 		if (switches.Contains("MATCH"))
 		{
 			var testString = matchArg!.Message.ToPlainText();
@@ -1356,6 +1344,28 @@ public partial class Commands
 			{
 				return CallState.Empty;
 			}
+		}
+
+		// Q-registers from the calling context are copied into the triggered attribute unless
+		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
+		// is run will be copied and made available in the triggered attribute").
+		// /inline without /localize (PennMUSH @trigger2 help) lets the triggered attribute override the caller's
+		// Q-registers, so it can hand values back the way an @include does: it works on the caller's own set,
+		// which /clearregs empties first (RegisterScope's bare QUEUE_CLEAR_QREG case). After /match, so an unmatched
+		// trigger leaves the caller's registers alone.
+		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+		parser.CurrentState.Registers.TryPeek(out var currentRegs);
+		var clearsRegisters = switches.Contains("CLEARREGS");
+		if (switches.Contains("INLINE") && !switches.Contains("LOCALIZE") && currentRegs is not null)
+		{
+			if (clearsRegisters) currentRegs.Clear();
+			registerStack.Push(currentRegs);
+		}
+		else
+		{
+			registerStack.Push(clearsRegisters || currentRegs is null
+				? new Dictionary<string, MString>()
+				: new Dictionary<string, MString>(currentRegs));
 		}
 
 		// Note: INLINE switch executes immediately (current default behavior).

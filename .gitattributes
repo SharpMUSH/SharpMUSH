@@ -20,5 +20,10 @@
 *.exe binary
 *.snk binary
 
+# RhostMUSH dumps write a line break inside a value as \r\n and mark records with \x01: kept byte for byte.
+*.flat -text -diff
+SharpMUSH.Tests/Services/TestData/*.mail -text -diff
+SharpMUSH.Tests/Services/TestData/*.folder -text -diff
+
 # Generated lockfiles keep whatever the tool writes.
 package-lock.json -diff
