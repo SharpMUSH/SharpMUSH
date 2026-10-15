@@ -6,10 +6,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models.Portal.Discord;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Discord.Links;
+using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Plugins.Discord.Outbox;
 
 namespace SharpMUSH.Plugins.Discord;
@@ -45,6 +48,18 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		});
 		services.AddSingleton<IFeedLineListener>(provider => provider.GetRequiredService<DiscordRelay>());
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordRelay>());
+
+		services.AddSingleton<IDiscordAccountStore, LightningDiscordAccountStore>();
+		services.AddSingleton(provider => new DiscordLinkTickets(TimeProvider.System));
+		services.AddSingleton<DiscordLinkedRole>();
+		services.AddSingleton<IDiscordLinkedRole>(provider => provider.GetRequiredService<DiscordLinkedRole>());
+		services.AddSingleton(provider => new DiscordAccounts(provider.GetRequiredService<IDiscordAccountStore>(),
+			provider.GetRequiredService<DiscordLinkTickets>(), provider.GetRequiredService<IAccountService>(),
+			provider.GetRequiredService<IDiscordLinkedRole>(), TimeProvider.System,
+			provider.GetRequiredService<ILogger<DiscordAccounts>>()));
+		services.AddSingleton<DiscordSlashCommands>();
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordLinkedRole>());
+		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordSlashCommands>());
 	}
 
 	public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -69,10 +84,53 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 			gateway.Reconnect();
 			return Results.Accepted();
 		});
+
+		// A member confirming the ticket /link gave them in Discord, while signed in to their game account.
+		group.MapGet("link/{ticket}", (string ticket, DiscordAccounts accounts)
+			=> accounts.Ticket(ticket) is { } found
+				? Results.Ok(new DiscordLinkTicketView(found.User.Username, found.User.AvatarUrl, found.ExpiresAt))
+				: Results.NotFound("That link has expired or was already used. Type /link in Discord for a new one."));
+
+		group.MapPost("link/{ticket}", async (string ticket, ClaimsPrincipal user, DiscordAccounts accounts,
+			CancellationToken cancellationToken) =>
+		{
+			if (Account(user) is not { } account)
+			{
+				return Results.Forbid();
+			}
+
+			return await accounts.ConfirmAsync(ticket, account, cancellationToken) switch
+			{
+				DiscordAccountLink link => Results.Ok(View(link)),
+				Error<string> error => Results.Conflict(error.Value),
+			};
+		});
+
+		group.MapGet("account", (ClaimsPrincipal user, DiscordAccounts accounts)
+			=> Account(user) is { } account ? Results.Ok(View(accounts.ForAccount(account))) : Results.Forbid());
+
+		group.MapDelete("account", async (ClaimsPrincipal user, DiscordAccounts accounts, CancellationToken cancellationToken) =>
+		{
+			if (Account(user) is not { } account)
+			{
+				return Results.Forbid();
+			}
+
+			return await accounts.UnlinkAccountAsync(account, cancellationToken) switch
+			{
+				DiscordAccountLink => Results.Ok(View(null)),
+				_ => Results.NotFound("This account is not linked to Discord."),
+			};
+		});
 	}
+
+	private static string? Account(ClaimsPrincipal user)
+		=> user.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } account ? account : null;
+
+	private static DiscordAccountView View(DiscordAccountLink? link) => new(link?.Username, link?.LinkedAt);
 
 	private static async Task<bool> MayAdministerAsync(ClaimsPrincipal user, IAdministrativeCapabilityService capabilities,
 		CancellationToken cancellationToken)
-		=> user.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } account
+		=> Account(user) is { } account
 			&& await capabilities.AuthorizeAsync(new CapabilityActor(account), AdminPermission, cancellationToken);
 }

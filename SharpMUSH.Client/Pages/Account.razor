@@ -118,6 +118,10 @@
                                    OnUnlink="@(character => UnlinkCharacterAsync(character.DbrefNumber, character.Name))" />
 
             <PasskeyList State="_passkeyList" @bind-Busy="_busy" />
+
+            <FeatureGate Feature="@GameFeatures.Discord">
+                <DiscordAccountCard />
+            </FeatureGate>
         }
     }
 

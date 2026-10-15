@@ -65,6 +65,7 @@ public class GameFeatureService(
 	[
 		new(GameFeatures.Scenes, "scene", RequiredPlugin: "scene"),
 		new(GameFeatures.WikiReader, "wiki-reader"),
+		new(GameFeatures.Discord, "discord", RequiredPlugin: "discord"),
 	];
 
 	/// <inheritdoc />

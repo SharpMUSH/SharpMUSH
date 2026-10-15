@@ -1,0 +1,55 @@
+@using SharpMUSH.Library.Models.Portal.Discord
+@inject IStringLocalizer<SharedResource> Loc
+@inject DiscordAccountService Discord
+
+@* The anchor the Settings sidebar's Discord row would land on. *@
+<div id="discord" class="acct-anchor">
+    <KitCard Title="@Loc["DiscordAccountTitle"]" Sub="@Loc["DiscordAccountDescription"]">
+        <div class="acct-section">
+            @if (!_loaded)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+            }
+            @switch (_state)
+            {
+                case DiscordAccountView { Linked: true } view:
+                    <div class="acct-row">
+                        <div class="acct-value">
+                            <span class="acct-label">@Loc["DiscordAccountLinkedAs"]</span> @view.Username
+                            @if (view.LinkedAt is { } at)
+                            {
+                                <span class="acct-flag">@Loc["DiscordAccountLinkedOn", at.LocalDateTime.ToString("d")]</span>
+                            }
+                        </div>
+                        <button class="acct-btn acct-btn-outline" disabled="@_busy" @onclick="UnlinkAsync">@Loc["DiscordAccountUnlink"]</button>
+                    </div>
+                    break;
+                case DiscordAccountView:
+                    <div class="acct-empty">@Loc["DiscordAccountNotLinked"]</div>
+                    break;
+                case ApiFailure failure:
+                    <MudAlert Severity="Severity.Error">@failure.Message</MudAlert>
+                    break;
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    private ApiResult<DiscordAccountView> _state;
+    private bool _loaded;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = await Discord.GetAsync();
+        _loaded = true;
+    }
+
+    private async Task UnlinkAsync()
+    {
+        _busy = true;
+        _state = await Discord.UnlinkAsync();
+        _busy = false;
+    }
+}

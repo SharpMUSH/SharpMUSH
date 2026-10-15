@@ -7978,4 +7978,46 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>An image with a content warning stays out of the image library. Take the warning off to share it.</value>
   </data>
+  <data name="DiscordAccountTitle" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="DiscordAccountDescription" xml:space="preserve">
+    <value>Link your Discord account to speak in the game's linked Discord channels.</value>
+  </data>
+  <data name="DiscordAccountLinkedAs" xml:space="preserve">
+    <value>Linked as</value>
+  </data>
+  <data name="DiscordAccountLinkedOn" xml:space="preserve">
+    <value>since {0}</value>
+  </data>
+  <data name="DiscordAccountUnlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="DiscordAccountNotLinked" xml:space="preserve">
+    <value>Not linked. In the game's Discord server, type /link and open the link the bot sends you.</value>
+  </data>
+  <data name="DiscordLinkTitle" xml:space="preserve">
+    <value>Link Discord</value>
+  </data>
+  <data name="DiscordLinkDescription" xml:space="preserve">
+    <value>Confirm that this Discord account is yours.</value>
+  </data>
+  <data name="DiscordLinkDone" xml:space="preserve">
+    <value>Linked to Discord as {0}.</value>
+  </data>
+  <data name="DiscordLinkBack" xml:space="preserve">
+    <value>Back to your account</value>
+  </data>
+  <data name="DiscordLinkExpires" xml:space="preserve">
+    <value>This link works until {0}.</value>
+  </data>
+  <data name="DiscordLinkConfirmBody" xml:space="preserve">
+    <value>Confirming links this Discord account to the game account you are signed in to. Unlink it any time from your account page or with /unlink in Discord.</value>
+  </data>
+  <data name="DiscordLinkConfirm" xml:space="preserve">
+    <value>Link this Discord account</value>
+  </data>
+  <data name="DiscordLinkNoTicket" xml:space="preserve">
+    <value>This page needs the link the bot sends when you type /link in Discord.</value>
+  </data>
 </root>

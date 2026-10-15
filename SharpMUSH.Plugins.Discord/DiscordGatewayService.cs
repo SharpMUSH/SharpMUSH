@@ -15,7 +15,10 @@ namespace SharpMUSH.Plugins.Discord;
 /// The bot's one connection to Discord. It reads <c>discord.token</c> when the server starts and again on
 /// <see cref="Reconnect"/>, and keeps <see cref="State"/> current for the admin page's checklist.
 /// </summary>
-public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordGatewayService> logger)
+public sealed class DiscordGatewayService(
+	ISecretStore secrets,
+	IEnumerable<IDiscordClientHandler> handlers,
+	ILogger<DiscordGatewayService> logger)
 	: BackgroundService, IDiscordWebhooks
 {
 	/// <summary>Discord's close code for a token it does not accept.</summary>
@@ -94,11 +97,18 @@ public sealed class DiscordGatewayService(ISecretStore secrets, ILogger<DiscordG
 			DefaultRetryMode = RetryMode.RetryRatelimit,
 			// Rate-limit resets by Discord's relative header, so a skewed host clock cannot cut a wait short.
 			UseSystemClock = false,
+			// The Linked role goes to every linked member, so the bot keeps every member of its servers in mind.
+			AlwaysDownloadUsers = true,
 		});
 		client.Log += LogAsync;
 		client.Disconnected += exception => OnDisconnectedAsync(client, exception);
 		client.Connected += () => OnConnectedAsync(client);
 		client.Ready += () => OnReadyAsync(client);
+		foreach (var handler in handlers)
+		{
+			handler.Attach(client);
+		}
+
 		_sessions = 0;
 		_client = client;
 

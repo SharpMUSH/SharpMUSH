@@ -4,6 +4,7 @@ using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Discord.Links;
+using SharpMUSH.Plugins.Discord.Members;
 
 namespace SharpMUSH.Tests.DiscordPlugin;
 
@@ -95,5 +96,23 @@ public class DiscordLinkStoreTests
 		await after.Migrate();
 
 		await Assert.That(new LightningDiscordLinkStore(after).Get(10)?.ChannelName).IsEqualTo("general");
+	}
+
+	[Test]
+	public async Task AnAccountLink_IsFoundByUserAndByAccount_UntilItIsUnlinked()
+	{
+		var store = new LightningDiscordAccountStore(_db);
+		var link = new DiscordAccountLink(77, "acct-1", "ann", Now);
+		await store.SaveAsync(link);
+		await store.SaveGuildAsync(new DiscordGuildRecord(900, 55));
+
+		var reopened = new LightningDiscordAccountStore(_db);
+		await Assert.That(reopened.Get(77)).IsEqualTo(link);
+		await Assert.That(reopened.ForAccount("acct-1")).IsEqualTo(link);
+		await Assert.That(reopened.Guild(900)?.LinkedRoleId).IsEqualTo(55UL);
+
+		await reopened.SaveAsync(link with { UnlinkedAt = Now });
+		await Assert.That(reopened.ForAccount("acct-1")).IsNull();
+		await Assert.That(reopened.Get(77)?.Linked).IsFalse();
 	}
 }
