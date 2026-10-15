@@ -112,7 +112,10 @@ internal static class PackageToolApp
 		var warningsFail = strict && parsed.Warnings.Count > 0;
 		PrintIssues(label, parsed.Warnings);
 
-		var binariesOk = VerifyBinaries(yaml, packageDir, label) & VerifyWikiPages(parsed.Manifest, packageDir, label);
+		// Both checks run, so one report names every problem.
+		var binariesVerified = VerifyBinaries(yaml, packageDir, label);
+		var wikiVerified = VerifyWikiPages(parsed.Manifest, packageDir, label, strict);
+		var binariesOk = binariesVerified && wikiVerified;
 
 		if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
 		{
@@ -128,23 +131,22 @@ internal static class PackageToolApp
 
 	/// <summary>
 	/// Verifies that every <c>file:</c> wiki page of a content pack is in the package directory, UTF-8 text and
-	/// within the size limit, read the way the server reads it. True when there is nothing to read or all of it reads.
+	/// within the size limit, and links every page in full, read the way the server reads it. True when there is
+	/// nothing to read or all of it reads; a link that looks like a typo is a warning, which fails under strict.
 	/// </summary>
-	private static bool VerifyWikiPages(PackageManifest manifest, string packageDir, string label)
+	private static bool VerifyWikiPages(PackageManifest manifest, string packageDir, string label, bool strict)
 	{
-		if (!PackageWikiBodies.NeedsFiles(manifest))
+		switch (PackageWikiBodies.LoadAsync(manifest, new DirectoryPackageFileSource(packageDir)).GetAwaiter().GetResult())
 		{
-			return true;
+			case Error<string> error:
+				Console.WriteLine($"ERROR {label}: {error.Value}");
+				return false;
+			case PackageWikiLoad loaded:
+				PrintIssues(label, loaded.Warnings);
+				return !(strict && loaded.Warnings.Count > 0);
 		}
 
-		if (PackageWikiBodies.LoadAsync(manifest, new DirectoryPackageFileSource(packageDir)).GetAwaiter().GetResult()
-			is Error<string> error)
-		{
-			Console.WriteLine($"ERROR {label}: {error.Value}");
-			return false;
-		}
-
-		return true;
+		return false;
 	}
 
 	private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder().Build();

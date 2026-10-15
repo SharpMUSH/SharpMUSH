@@ -146,8 +146,8 @@ validators and reload as `@config/set`). The decisions:
 
 ### Wiki pages (format 1.4)
 
-`wiki:` lists pages a package ships: each a `(namespace, page)` slug in `main`, `help` or `category`,
-a title, categories, the per-page `requires:` (view, edit, delete) and the pin of a category page,
+`wiki:` lists pages a package ships: each `page: namespace:slug` (one key; the namespace, required and
+lower case, is `main`, `help` or `category`; the slug already in slug form), a title, categories, the per-page `requires:` (view, edit, delete) and the pin of a category page,
 with its body in a package file or inline. A package with `wiki:` may leave out `objects:`: a
 content pack. The reference is `examples/packages/README.md`. The decisions:
 
@@ -156,6 +156,12 @@ content pack. The reference is `examples/packages/README.md`. The decisions:
   `PackageWikiBodies`, strict UTF-8, at most 1 MB each. The plan carries the text, so review and
   apply see the same pages. The bundled catalogue embeds manifests only and has no file source:
   no bundled package ships wiki pages.
+- **Links are full.** `PackageWikiLinks` walks each body with the wiki's own Markdig pipeline
+  (`WikiLinkInline.Target`) and requires every `[[Target]]` / `[[Display|Target]]` to be
+  `Namespace:slug`: a bare or title-cased target is an error naming the file and the link. A
+  full link to an unshipped page that looks like a typo for a shipped one is a warning; links
+  outside the package are allowed. Inline bodies are checked when the manifest is read, file
+  bodies when `PackageWikiBodies` reads them, so the server and both validators agree.
 - **Softcode never reads wiki data.** Page text is literal Markdown with no `{{ref}}`
   substitution, and there is no function that reads it. A table softcode rolls on is attributes in
   a softcode package.

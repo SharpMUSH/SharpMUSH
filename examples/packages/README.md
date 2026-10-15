@@ -395,17 +395,15 @@ version: 1.0.0
 locale: en                      # the pages' language; default the game's wiki default locale
 
 wiki:
-  - page: coast_road            # required — the page's slug, its identity; never taken from the title
-    namespace: main             # main (default) | help | category
+  - page: main:coast_road       # required — namespace:slug, the page's identity; never taken from the title
     title: Coast Road           # required
     categories: [Travel]        # optional — category names
     file: wiki/coast-road.md    # the body: a file inside the package directory...
-  - page: travel
-    namespace: category
+  - page: category:travel
     title: Travel
     pin: true                   # category pages only: pin the category to the wiki home
     file: wiki/category/travel.md
-  - page: smugglers
+  - page: main:smugglers
     title: Smugglers
     published: true             # optional — default true; false ships a draft
     requires:                   # optional — what the page itself requires, per action
@@ -413,16 +411,26 @@ wiki:
       edit: [wiki.admin]
     markdown: |                 # ...or inline Markdown; exactly one of file and markdown
       # Smugglers
-      The smugglers use the sea caves below the [[Coast Road]].
+      The smugglers use the sea caves below the [[Coast Road|main:coast_road]].
 ```
 
-- **`page`** is a slug the wiki keeps as it is: lowercase, `_` for a space, no
-  `/`, `#` or `?`. With `namespace` it names the page; changing either makes
-  a new page and drops the old one. A pair may be listed once.
-- **`namespace`** is `main`, `help` or `category`. Biographies (`character`)
-  and engine pages (`system`) are the game's, and a package cannot ship them.
-  A category page's `page` is the category's key: `lowered_abilities` is the
-  page of the category `Lowered Abilities`.
+- **`page`** is `namespace:slug`, such as `main:blinded`,
+  `help:orc_license_notice` or `category:conditions`. The namespace is
+  required and written in lower case: `main`, `help` or `category`.
+  Biographies (`character`) and engine pages (`system`) are the game's, and a
+  package cannot ship them. The slug is one the wiki keeps as it is:
+  lowercase, `_` for a space, no `/`, `#`, `?` or `:`. Changing either part
+  makes a new page and drops the old one; a page may be listed once. A
+  category page's slug is the category's key: `category:lowered_abilities` is
+  the page of the category `Lowered Abilities`.
+- **Links name pages in full.** Every wiki link in a page's text is
+  `[[Display|namespace:slug]]` (the namespace prefix in any case, the slug as
+  the wiki keeps it), so it reaches the same page however the game titles it
+  and whichever language reads it. A bare `[[Blinded]]`, or a title such as
+  `[[Help:ORC License Notice]]`, is an error naming the file and the link. A
+  link to a page outside the package is fine; one that looks like a typo for a
+  page the package ships — the same slug in another namespace, or a page whose
+  title is the slug — is a warning.
 - **`file`** is a path relative to the package directory, with `/` between
   folders and no `..`. The file is UTF-8 text of at most 1 MB. It is read
   once, when the package is planned, so the review screen and the install see

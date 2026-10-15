@@ -10,7 +10,7 @@ public partial class PackageManifestService
 {
 	private static readonly IReadOnlySet<string> KnownWikiKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"page", "namespace", "title", "categories", "file", "markdown", "requires", "published", "pin"
+		"page", "title", "categories", "file", "markdown", "requires", "published", "pin"
 	};
 
 	/// <summary>The namespaces a package page may be in. Biographies and engine pages are not package content.</summary>
@@ -80,6 +80,12 @@ public partial class PackageManifestService
 			result.Add(page);
 		}
 
+		// Inline bodies are here to check; a file: body is checked when it is read (PackageWikiBodies).
+		foreach (var page in result.Where(page => page.Markdown is not null))
+		{
+			issues.AddRange(PackageWikiLinks.Check(page, result, $"wiki {page.Label}"));
+		}
+
 		return result;
 	}
 
@@ -88,14 +94,13 @@ public partial class PackageManifestService
 	{
 		var errors = issues.Count(i => i.Severity == PackageManifestIssueSeverity.Error);
 
-		var page = (entry.GetValueOrDefault("page") as string)?.Trim() ?? "";
-		if (!IsPageSlug(page))
+		if (entry.ContainsKey("namespace"))
 		{
-			issues.Add(PackageManifestIssue.Error($"{path}.page",
-				$"'{page}' is not a page slug: lowercase, no spaces (use _), no '/', and one the wiki keeps as it is, such as coast_road."));
+			issues.Add(PackageManifestIssue.Error($"{path}.namespace",
+				"'namespace' is part of 'page': write the page as namespace:slug, such as help:orc_license_notice."));
 		}
 
-		var ns = ReadWikiNamespace(entry, path, issues);
+		var name = ReadWikiPageName(entry, path, issues);
 
 		var title = (entry.GetValueOrDefault("title") as string)?.Trim() ?? "";
 		if (title.Length == 0 || title.Any(char.IsControl))
@@ -107,19 +112,58 @@ public partial class PackageManifestService
 		var (file, markdown) = ReadWikiBody(entry, path, issues);
 		var published = ReadWikiFlag(entry, "published", path, true, issues);
 		var pin = ReadWikiFlag(entry, "pin", path, false, issues);
-		if (pin && ns is not WikiNamespace.Category)
+		if (pin && name is { Namespace: not WikiNamespace.Category })
 		{
 			issues.Add(PackageManifestIssue.Error($"{path}.pin", "Only a category page can pin its category to the wiki home."));
 		}
 
 		var requires = ReadWikiRequires(entry, path, declaredPermissions, issues);
 
-		if (issues.Count(i => i.Severity == PackageManifestIssueSeverity.Error) > errors || ns is not { } pageNamespace)
+		if (issues.Count(i => i.Severity == PackageManifestIssueSeverity.Error) > errors || name is not { } page)
 		{
 			return null;
 		}
 
-		return new PackageWikiPageSpec(page, pageNamespace, title, categories, file, markdown, requires, published, pin);
+		return new PackageWikiPageSpec(page.Slug, page.Namespace, title, categories, file, markdown, requires, published, pin);
+	}
+
+	/// <summary>
+	/// The page's identity, <c>page: &lt;namespace&gt;:&lt;slug&gt;</c>: a namespace a package may ship (main, help or
+	/// category, lower case) and a slug the wiki keeps as it is. Null, with the error, otherwise.
+	/// </summary>
+	private static (WikiNamespace Namespace, string Slug)? ReadWikiPageName(
+		Dictionary<string, object?> entry, string path, List<PackageManifestIssue> issues)
+	{
+		var text = (entry.GetValueOrDefault("page") as string)?.Trim() ?? "";
+		var colon = text.IndexOf(':');
+		if (colon < 0)
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.page",
+				$"'{text}' does not name its namespace: write namespace:slug, such as main:{(text.Length == 0 ? "coast_road" : WikiHelpers.Slugify(text))}."));
+			return null;
+		}
+
+		var prefix = text[..colon];
+		var slug = text[(colon + 1)..];
+		if (prefix is not ("main" or "help" or "category"))
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.page",
+				WikiHelpers.ParseNamespace(prefix) is { } ns && PackageWikiNamespaces.Contains(ns)
+					? $"'{prefix}' is written in lower case: {WikiHelpers.NamespaceName(ns)}:{slug}."
+					: WikiHelpers.ParseNamespace(prefix) is { } other
+						? $"A package cannot ship {WikiHelpers.NamespaceName(other)} pages: biographies and engine pages are the game's. Use main, help or category."
+						: $"'{prefix}' is not a namespace: main, help or category."));
+			return null;
+		}
+
+		if (!IsPageSlug(slug))
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.page",
+				$"'{slug}' is not a page slug: lowercase, no spaces (use _), no ':' or '/', and one the wiki keeps as it is, such as {prefix}:coast_road."));
+			return null;
+		}
+
+		return WikiHelpers.ParseNamespace(prefix) is { } parsed ? (parsed, slug) : null;
 	}
 
 	/// <summary>A slug the wiki keeps as it is, and one a URL and a key can carry.</summary>
@@ -127,31 +171,7 @@ public partial class PackageManifestService
 		=> page.Length > 0
 			&& System.Text.Encoding.UTF8.GetByteCount(page) <= MaxPageSlugBytes
 			&& WikiHelpers.Slugify(page) == page
-			&& !page.Any(c => char.IsWhiteSpace(c) || char.IsControl(c) || c is '/' or '\\' or '#' or '?');
-
-	private static WikiNamespace? ReadWikiNamespace(Dictionary<string, object?> entry, string path, List<PackageManifestIssue> issues)
-	{
-		if (entry.GetValueOrDefault("namespace") is not { } node)
-		{
-			return WikiNamespace.Main;
-		}
-
-		var text = node as string;
-		if (WikiHelpers.ParseNamespace(text) is not { } ns)
-		{
-			issues.Add(PackageManifestIssue.Error($"{path}.namespace", $"'{node}' is not a namespace: main, help or category."));
-			return null;
-		}
-
-		if (!PackageWikiNamespaces.Contains(ns))
-		{
-			issues.Add(PackageManifestIssue.Error($"{path}.namespace",
-				$"A package cannot ship {WikiHelpers.NamespaceName(ns)} pages: biographies and engine pages are the game's. Use main, help or category."));
-			return null;
-		}
-
-		return ns;
-	}
+			&& !page.Any(c => char.IsWhiteSpace(c) || char.IsControl(c) || c is ':' or '/' or '\\' or '#' or '?');
 
 	private static IReadOnlyList<string> ReadWikiCategories(Dictionary<string, object?> entry, string path, List<PackageManifestIssue> issues)
 	{

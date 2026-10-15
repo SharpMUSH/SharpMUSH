@@ -600,7 +600,11 @@ public class PackagesController(
 
 		return await PackageWikiBodies.LoadAsync(fetched.Manifest, files, cancellationToken) switch
 		{
-			PackageManifest loaded => fetched with { Manifest = loaded },
+			PackageWikiLoad loaded => fetched with
+			{
+				Manifest = loaded.Manifest,
+				Warnings = [.. fetched.Warnings, .. loaded.Warnings.Select(w => w.ToString())]
+			},
 			Error<string> error => UnprocessableEntity(new { Message = "The manifest is invalid.", Issues = new[] { error.Value } }),
 		};
 	}

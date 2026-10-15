@@ -39,7 +39,9 @@ public sealed class DirectoryPackageFileSource(string directory) : IPackageFileS
 			return null;
 		}
 
-		var full = Path.GetFullPath(Path.Combine(_root, normalized.Replace('/', Path.DirectorySeparatorChar)));
+		// Join, not Combine: Combine drops the root when the second part is rooted. Normalize refuses a rooted path, and
+		// the containment check below holds whatever it lets through.
+		var full = Path.GetFullPath(Path.Join(_root, normalized.Replace('/', Path.DirectorySeparatorChar)));
 		var inside = full.StartsWith(_root.EndsWith(Path.DirectorySeparatorChar) ? _root : _root + Path.DirectorySeparatorChar,
 			StringComparison.Ordinal);
 		if (!inside || !File.Exists(full) || new FileInfo(full).LinkTarget is not null)
@@ -64,15 +66,17 @@ public static class PackageWikiBodies
 	public static bool NeedsFiles(PackageManifest manifest) => manifest.WikiPages.Any(page => page.Markdown is null);
 
 	/// <summary>
-	/// <paramref name="manifest"/> with every page's body read from <paramref name="files"/>, or every file that is
-	/// missing, too large or not UTF-8 text.
+	/// <paramref name="manifest"/> with every page's body read from <paramref name="files"/>, and the warnings about
+	/// those bodies' links; or every file that is missing, too large or not UTF-8 text, and every link in them that
+	/// does not name its page in full (<see cref="PackageWikiLinks"/>). Inline bodies were checked when the manifest
+	/// was read.
 	/// </summary>
-	public static async Task<Result<PackageManifest>> LoadAsync(
+	public static async Task<Result<PackageWikiLoad>> LoadAsync(
 		PackageManifest manifest, IPackageFileSource? files, CancellationToken cancellationToken = default)
 	{
 		if (!NeedsFiles(manifest))
 		{
-			return manifest;
+			return new PackageWikiLoad(manifest, []);
 		}
 
 		if (files is null)
@@ -82,6 +86,7 @@ public static class PackageWikiBodies
 
 		var problems = new List<string>();
 		var pages = new List<PackageWikiPageSpec>();
+		var read = new List<(PackageWikiPageSpec Page, string File)>();
 		foreach (var page in manifest.WikiPages)
 		{
 			if (page.Markdown is not null || page.File is null)
@@ -93,7 +98,9 @@ public static class PackageWikiBodies
 			switch (await ReadBodyAsync(files, page.File, cancellationToken))
 			{
 				case string markdown:
-					pages.Add(page with { Markdown = markdown });
+					var loaded = page with { Markdown = markdown };
+					pages.Add(loaded);
+					read.Add((loaded, page.File));
 					break;
 				case Error<string> error:
 					problems.Add($"{page.Label}: {error.Value}");
@@ -101,9 +108,13 @@ public static class PackageWikiBodies
 			}
 		}
 
+		var issues = read.SelectMany(body => PackageWikiLinks.Check(body.Page, manifest.WikiPages, body.File)).ToList();
+		problems.AddRange(issues.Where(i => i.Severity == PackageManifestIssueSeverity.Error).Select(i => i.ToString()));
+
 		return problems.Count > 0
 			? new Error<string>($"Wiki pages cannot be read: {string.Join("; ", problems)}")
-			: manifest with { Wiki = pages };
+			: new PackageWikiLoad(manifest with { Wiki = pages },
+				issues.Where(i => i.Severity != PackageManifestIssueSeverity.Error).ToList());
 	}
 
 	private static async Task<Result<string>> ReadBodyAsync(IPackageFileSource files, string path, CancellationToken cancellationToken)
@@ -129,3 +140,8 @@ public static class PackageWikiBodies
 		}
 	}
 }
+
+/// <summary>A manifest with its wiki bodies read, and the warnings about their links.</summary>
+/// <param name="Manifest">The manifest, every page carrying its body.</param>
+/// <param name="Warnings">Links that look like a typo for a page the package ships.</param>
+public sealed record PackageWikiLoad(PackageManifest Manifest, IReadOnlyList<PackageManifestIssue> Warnings);

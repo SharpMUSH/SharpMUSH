@@ -21,7 +21,10 @@ public class AccountAdminCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_actor!.DbRef, _actor.Handle);
 	private TestIsolationHelpers.TestPlayer? _actor;
-	private readonly string _username = TestIsolationHelpers.GenerateUniqueName("account");
+	// The trailing "z" is never a hex digit, so no other test's name contains this one: @account/list matches by
+	// substring, and "account_<run>_3f" would otherwise also list "account_<run>_3f1", whose wider listing wraps
+	// each name across two lines.
+	private readonly string _username = TestIsolationHelpers.GenerateUniqueName("account") + "z";
 	private readonly string _email = $"{Guid.NewGuid():N}@example.com";
 
 	[Before(Test)]

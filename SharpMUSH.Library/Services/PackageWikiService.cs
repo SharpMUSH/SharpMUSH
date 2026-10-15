@@ -95,7 +95,7 @@ public sealed class PackageWikiService(
 					NotFound => $"Wiki page {deletion.Title} was already gone.",
 				});
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
 				// The operation has committed; a page that could not be deleted is left as the game's.
 				notes.Add($"Wiki page {deletion.Title} could not be deleted and is left as the game's: {ex.Message}");

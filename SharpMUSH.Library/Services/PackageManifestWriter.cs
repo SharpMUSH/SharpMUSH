@@ -230,11 +230,8 @@ public static class PackageManifestWriter
 		yaml.AppendLine("wiki:");
 		foreach (var page in pages)
 		{
-			yaml.Append("  - page: ").AppendLine(Scalar(page.Page));
-			if (page.Namespace != WikiNamespace.Main)
-			{
-				yaml.Append("    namespace: ").AppendLine(page.NamespaceName);
-			}
+			// namespace:slug is a plain scalar: a slug has no space, '#' or second colon.
+			yaml.Append("  - page: ").AppendLine(page.Label);
 
 			yaml.Append("    title: ").AppendLine(Scalar(page.Title));
 			if (page.Categories.Count > 0)

@@ -37,7 +37,7 @@ public class PackageWikiInstallTests
 	/// <summary>A main page <c>&lt;id&gt;_road</c> in the category <c>&lt;id&gt;</c>, with <paramref name="body"/>.</summary>
 	private static string Road(string id, string body, string title = "Coast Road")
 		=> $"""
-			  - page: {id}_road
+			  - page: main:{id}_road
 			    title: {title}
 			    categories: [{id}]
 			    markdown: |
@@ -47,8 +47,7 @@ public class PackageWikiInstallTests
 	/// <summary>The category page of <c>&lt;id&gt;</c>, pinned to the wiki home.</summary>
 	private static string Category(string id)
 		=> $"""
-			  - page: {id}
-			    namespace: category
+			  - page: category:{id}
 			    title: Travel {id}
 			    pin: true
 			    markdown: Roads and ferries.
@@ -220,7 +219,7 @@ public class PackageWikiInstallTests
 			    category: Coast {{id}}
 			""";
 		var secret = $"""
-			  - page: {id}_secret
+			  - page: main:{id}_secret
 			    title: Secret
 			    requires:
 			      view: [{permission}]
@@ -257,7 +256,7 @@ public class PackageWikiInstallTests
 			Directory.CreateDirectory(Path.Combine(dir.FullName, "wiki"));
 			await File.WriteAllTextAsync(Path.Combine(dir.FullName, "wiki", "road.md"), "# From a file\r\n");
 			var manifest = Manifest(id, "1.0.0", $"""
-				  - page: {id}_road
+				  - page: main:{id}_road
 				    title: From a File
 				    file: wiki/road.md
 				""");

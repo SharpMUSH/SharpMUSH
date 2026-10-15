@@ -18,18 +18,17 @@ categories:
       description: Permissions of the coast-guide content pack.
 
 wiki:
-  - page: coast_road
+  - page: main:coast_road
     title: Coast Road
     categories: [Travel]
     file: wiki/coast-road.md
 
-  - page: travel
-    namespace: category
+  - page: category:travel
     title: Travel
     pin: true
     file: wiki/category/travel.md
 
-  - page: smugglers
+  - page: main:smugglers
     title: Smugglers
     categories: [Travel]
     requires:
@@ -39,4 +38,4 @@ wiki:
       # Smugglers
 
       Game master's notes. The smugglers use the sea caves below the
-      [[Coast Road]] at low tide, and pay the toll keeper to look away.
+      [[Coast Road|main:coast_road]] at low tide, and pay the toll keeper to look away.

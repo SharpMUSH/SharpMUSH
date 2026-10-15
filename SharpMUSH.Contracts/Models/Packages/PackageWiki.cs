@@ -71,8 +71,8 @@ public sealed record PackageWikiPageSpec(
 	/// <summary>The namespace as stored and routed, lowercase.</summary>
 	public string NamespaceName => WikiHelpers.NamespaceName(Namespace);
 
-	/// <summary><c>Help:orc_license_notice</c>, the way messages name the page.</summary>
-	public string Label => $"{(Namespace == WikiNamespace.Main ? "" : $"{Namespace}:")}{Page}";
+	/// <summary><c>help:orc_license_notice</c>, the way a manifest names the page and messages name it.</summary>
+	public string Label => $"{NamespaceName}:{Page}";
 }
 
 /// <summary>

@@ -50,14 +50,20 @@ foreach (var manifestPath in manifestPaths)
 			Report(relative, parsed.Warnings);
 			manifestsByDir[Path.GetRelativePath(root, Path.GetDirectoryName(manifestPath)!)] = parsed.Manifest;
 
-			// A content pack's file: pages must be in its directory, UTF-8 and within the size limit.
+			// A content pack's file: pages must be in its directory, UTF-8, within the size limit, and link in full.
 			var pages = parsed.Manifest.WikiPages.Count;
-			if (pages > 0 && await PackageWikiBodies.LoadAsync(parsed.Manifest,
-				new DirectoryPackageFileSource(Path.GetDirectoryName(manifestPath)!)) is Error<string> unreadable)
+			if (pages > 0)
 			{
-				failed = true;
-				Console.WriteLine($"ERROR {relative}: {unreadable.Value}");
-				break;
+				switch (await PackageWikiBodies.LoadAsync(parsed.Manifest, new DirectoryPackageFileSource(Path.GetDirectoryName(manifestPath)!)))
+				{
+					case Error<string> unreadable:
+						failed = true;
+						Console.WriteLine($"ERROR {relative}: {unreadable.Value}");
+						continue;
+					case PackageWikiLoad loaded:
+						Report(relative, loaded.Warnings);
+						break;
+				}
 			}
 
 			Console.WriteLine($"OK    {relative}: {parsed.Manifest.Name} {parsed.Manifest.Version}"

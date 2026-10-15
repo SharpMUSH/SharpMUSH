@@ -79,8 +79,8 @@ public partial class PackageInstallService
 		// A content pack's file: pages are read once, here, so the plan and the apply see the same text.
 		switch (await PackageWikiBodies.LoadAsync(manifest, fileSource, cancellationToken))
 		{
-			case PackageManifest loaded:
-				manifest = loaded;
+			case PackageWikiLoad loaded:
+				manifest = loaded.Manifest;
 				break;
 			case Error<string> error:
 				return error;

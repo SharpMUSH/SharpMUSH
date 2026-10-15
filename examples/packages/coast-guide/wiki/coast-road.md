@@ -8,4 +8,4 @@ on foot to the lighthouse, with one inn halfway.
 - Fog rolls in most mornings until noon.
 - The bridge at Gull Point washes out in winter storms.
 
-See [[Category:Travel]] for the other roads.
+See [[Travel|category:travel]] for the other roads.

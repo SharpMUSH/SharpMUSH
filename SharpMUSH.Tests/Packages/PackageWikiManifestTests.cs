@@ -31,18 +31,16 @@ public class PackageWikiManifestTests
 		var manifest = Manifest("""
 			locale: pt-br
 			wiki:
-			  - page: coast_road
+			  - page: main:coast_road
 			    title: Coast Road
 			    categories: [Travel, Places of Note]
 			    file: wiki/coast-road.md
-			  - page: travel
-			    namespace: category
+			  - page: category:travel
 			    title: Travel
 			    pin: true
 			    markdown: |
 			      Roads and ferries.
-			  - page: smugglers
-			    namespace: help
+			  - page: help:smugglers
 			    title: Smugglers
 			    published: false
 			    requires:
@@ -81,7 +79,7 @@ public class PackageWikiManifestTests
 	{
 		var parsed = Parse("""
 			wiki:
-			  - page: smugglers
+			  - page: main:smugglers
 			    title: Smugglers
 			    requires:
 			      view: [coast.gm]
@@ -103,7 +101,7 @@ public class PackageWikiManifestTests
 			  - name: coast.gm
 			    category: Coast
 			wiki:
-			  - page: smugglers
+			  - page: main:smugglers
 			    title: Smugglers
 			    requires:
 			      view: [coast.gm]
@@ -114,19 +112,26 @@ public class PackageWikiManifestTests
 	}
 
 	[Test]
-	[Arguments("page: Coast Road\n    title: T\n    markdown: x", "is not a page slug")]
-	[Arguments("page: coast/road\n    title: T\n    markdown: x", "is not a page slug")]
-	[Arguments("page: road\n    namespace: character\n    title: T\n    markdown: x", "cannot ship character pages")]
-	[Arguments("page: road\n    namespace: lore\n    title: T\n    markdown: x", "is not a namespace")]
-	[Arguments("page: road\n    title: T", "exactly one of 'file' and 'markdown'")]
-	[Arguments("page: road\n    title: T\n    file: a.md\n    markdown: x", "exactly one of 'file' and 'markdown'")]
-	[Arguments("page: road\n    title: T\n    file: ../secrets.md", "is not a file inside the package directory")]
-	[Arguments("page: road\n    title: T\n    file: /etc/passwd", "is not a file inside the package directory")]
-	[Arguments("page: road\n    title: T\n    pin: true\n    markdown: x", "Only a category page")]
-	[Arguments("page: road\n    title: T\n    published: maybe\n    markdown: x", "must be true or false")]
-	[Arguments("page: road\n    markdown: x", "needs a title")]
-	[Arguments("page: road\n    title: T\n    requires:\n      read: [wiki.admin]\n    markdown: x", "is not an action")]
-	[Arguments("page: road\n    title: T\n    requires:\n      view: [\"not a permission!\"]\n    markdown: x", "is not a permission")]
+	[Arguments("page: main:Coast Road\n    title: T\n    markdown: x", "is not a page slug")]
+	[Arguments("page: main:coast/road\n    title: T\n    markdown: x", "is not a page slug")]
+	[Arguments("page: main:road:side\n    title: T\n    markdown: x", "is not a page slug")]
+	[Arguments("page: \"main:\"\n    title: T\n    markdown: x", "is not a page slug")]
+	[Arguments("page: road\n    title: T\n    markdown: x", "does not name its namespace")]
+	[Arguments("page: Coast Road\n    title: T\n    markdown: x", "such as main:coast_road")]
+	[Arguments("page: Help:road\n    title: T\n    markdown: x", "is written in lower case: help:road")]
+	[Arguments("page: character:road\n    title: T\n    markdown: x", "cannot ship character pages")]
+	[Arguments("page: system:road\n    title: T\n    markdown: x", "cannot ship system pages")]
+	[Arguments("page: lore:road\n    title: T\n    markdown: x", "is not a namespace")]
+	[Arguments("page: main:road\n    namespace: help\n    title: T\n    markdown: x", "'namespace' is part of 'page'")]
+	[Arguments("page: main:road\n    title: T", "exactly one of 'file' and 'markdown'")]
+	[Arguments("page: main:road\n    title: T\n    file: a.md\n    markdown: x", "exactly one of 'file' and 'markdown'")]
+	[Arguments("page: main:road\n    title: T\n    file: ../secrets.md", "is not a file inside the package directory")]
+	[Arguments("page: main:road\n    title: T\n    file: /etc/passwd", "is not a file inside the package directory")]
+	[Arguments("page: main:road\n    title: T\n    pin: true\n    markdown: x", "Only a category page")]
+	[Arguments("page: main:road\n    title: T\n    published: maybe\n    markdown: x", "must be true or false")]
+	[Arguments("page: main:road\n    markdown: x", "needs a title")]
+	[Arguments("page: main:road\n    title: T\n    requires:\n      read: [wiki.admin]\n    markdown: x", "is not an action")]
+	[Arguments("page: main:road\n    title: T\n    requires:\n      view: [\"not a permission!\"]\n    markdown: x", "is not a permission")]
 	public async Task ABadPageIsRefused(string entry, string expected)
 	{
 		var errors = Errors($"wiki:\n  - {entry}\n");
@@ -139,7 +144,7 @@ public class PackageWikiManifestTests
 	[Test]
 	public async Task AnUnknownPageKeyIsAWarning()
 	{
-		var parsed = Parse("wiki:\n  - page: road\n    title: T\n    colour: blue\n    markdown: x\n").Expect<ParsedPackageManifest>();
+		var parsed = Parse("wiki:\n  - page: main:road\n    title: T\n    colour: blue\n    markdown: x\n").Expect<ParsedPackageManifest>();
 
 		await Assert.That(parsed.Warnings.Single().Message).Contains("colour");
 	}
@@ -149,10 +154,10 @@ public class PackageWikiManifestTests
 	{
 		var errors = Errors("""
 			wiki:
-			  - page: road
+			  - page: main:road
 			    title: Road
 			    markdown: one
-			  - page: road
+			  - page: main:road
 			    title: Road again
 			    markdown: two
 			""");
@@ -164,24 +169,23 @@ public class PackageWikiManifestTests
 	public async Task TheSameSlugInTwoNamespacesIsTwoPages()
 		=> await Assert.That(Manifest("""
 			wiki:
-			  - page: travel
+			  - page: main:travel
 			    title: Travel
 			    markdown: one
-			  - page: travel
-			    namespace: category
+			  - page: category:travel
 			    title: Travel
 			    markdown: two
 			""").WikiPages.Count).IsEqualTo(2);
 
 	[Test]
 	public async Task ABadLocaleIsRefused()
-		=> await Assert.That(Errors("locale: \"not a locale!\"\nwiki:\n  - page: road\n    title: Road\n    markdown: x\n")
+		=> await Assert.That(Errors("locale: \"not a locale!\"\nwiki:\n  - page: main:road\n    title: Road\n    markdown: x\n")
 			.Any(e => e.Path == "locale")).IsTrue();
 
 	[Test]
 	public async Task APluginPackageCannotShipPages()
 	{
-		var yaml = PluginPackageFixture.Yaml("wiki-plugin", "1.0.0") + "\nwiki:\n  - page: road\n    title: Road\n    markdown: x\n";
+		var yaml = PluginPackageFixture.Yaml("wiki-plugin", "1.0.0") + "\nwiki:\n  - page: main:road\n    title: Road\n    markdown: x\n";
 		var errors = _service.ParseManifest(yaml).Expect<PackageManifestFailure>().Issues;
 
 		await Assert.That(errors.Any(e => e.Path == "wiki" && e.Severity == PackageManifestIssueSeverity.Error)).IsTrue();
@@ -193,20 +197,18 @@ public class PackageWikiManifestTests
 		var manifest = Manifest("""
 			locale: en
 			wiki:
-			  - page: coast_road
+			  - page: main:coast_road
 			    title: Coast Road
 			    categories: [Travel]
 			    file: wiki/coast-road.md
-			  - page: travel
-			    namespace: category
+			  - page: category:travel
 			    title: Travel
 			    pin: true
 			    markdown: |
 			      Roads and ferries.
 
 			        An indented line.
-			  - page: notes
-			    namespace: help
+			  - page: help:notes
 			    title: "Notes: the coast"
 			    published: false
 			    requires:
@@ -218,6 +220,8 @@ public class PackageWikiManifestTests
 		var again = _service.ParseManifest(yaml).Expect<ParsedPackageManifest>().Manifest;
 
 		await Assert.That(yaml).DoesNotContain("objects:");
+		await Assert.That(yaml).DoesNotContain("namespace:");
+		await Assert.That(yaml).Contains("  - page: category:travel\n");
 		await Assert.That(again.Locale).IsEqualTo("en");
 		await Assert.That(again.WikiPages.Select(Describe)).IsEquivalentTo(manifest.WikiPages.Select(Describe));
 	}
@@ -234,12 +238,12 @@ public class PackageWikiManifestTests
 		var dir = Directory.CreateTempSubdirectory("wiki-pack-");
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(dir.FullName, "wiki"));
-			await File.WriteAllTextAsync(Path.Combine(dir.FullName, "wiki", "coast-road.md"), "﻿# Coast Road\r\nText.\r\n");
-			var manifest = Manifest("wiki:\n  - page: coast_road\n    title: Coast Road\n    file: wiki/coast-road.md\n");
+			Directory.CreateDirectory(Path.Join(dir.FullName, "wiki"));
+			await File.WriteAllTextAsync(Path.Join(dir.FullName, "wiki", "coast-road.md"), "﻿# Coast Road\r\nText.\r\n");
+			var manifest = Manifest("wiki:\n  - page: main:coast_road\n    title: Coast Road\n    file: wiki/coast-road.md\n");
 
 			await Assert.That(PackageWikiBodies.NeedsFiles(manifest)).IsTrue();
-			var loaded = (await PackageWikiBodies.LoadAsync(manifest, new DirectoryPackageFileSource(dir.FullName))).Expect<PackageManifest>();
+			var loaded = (await PackageWikiBodies.LoadAsync(manifest, new DirectoryPackageFileSource(dir.FullName))).Expect<PackageWikiLoad>().Manifest;
 
 			await Assert.That(loaded.WikiPages.Single().Markdown).IsEqualTo("# Coast Road\nText.\n");
 			await Assert.That(PackageWikiBodies.NeedsFiles(loaded)).IsFalse();
@@ -256,18 +260,18 @@ public class PackageWikiManifestTests
 		var dir = Directory.CreateTempSubdirectory("wiki-pack-");
 		try
 		{
-			await File.WriteAllBytesAsync(Path.Combine(dir.FullName, "binary.md"), [0xC3, 0x28]);
-			await File.WriteAllBytesAsync(Path.Combine(dir.FullName, "huge.md"),
+			await File.WriteAllBytesAsync(Path.Join(dir.FullName, "binary.md"), [0xC3, 0x28]);
+			await File.WriteAllBytesAsync(Path.Join(dir.FullName, "huge.md"),
 				Encoding.UTF8.GetBytes(new string('x', PackageWikiBodies.MaxBodyBytes + 1)));
 			var manifest = Manifest("""
 				wiki:
-				  - page: missing
+				  - page: main:missing
 				    title: Missing
 				    file: missing.md
-				  - page: binary
+				  - page: main:binary
 				    title: Binary
 				    file: binary.md
-				  - page: huge
+				  - page: main:huge
 				    title: Huge
 				    file: huge.md
 				""");
@@ -291,18 +295,124 @@ public class PackageWikiManifestTests
 		var outer = Directory.CreateTempSubdirectory("wiki-outer-");
 		try
 		{
-			var inner = Directory.CreateDirectory(Path.Combine(outer.FullName, "pack"));
-			await File.WriteAllTextAsync(Path.Combine(outer.FullName, "secret.md"), "secret");
+			var inner = Directory.CreateDirectory(Path.Join(outer.FullName, "pack"));
+			await File.WriteAllTextAsync(Path.Join(outer.FullName, "secret.md"), "secret");
 			var files = new DirectoryPackageFileSource(inner.FullName);
 
 			await Assert.That(await files.ReadFileAsync("../secret.md")).IsNull();
-			await Assert.That(await files.ReadFileAsync(Path.Combine(outer.FullName, "secret.md"))).IsNull();
+			await Assert.That(await files.ReadFileAsync(Path.Join(outer.FullName, "secret.md"))).IsNull();
+			await File.WriteAllTextAsync(Path.Join(inner.FullName, "page.md"), "page");
+			await Assert.That(await files.ReadFileAsync("page.md")).IsNotNull();
+			await Assert.That(await files.ReadFileAsync(Path.Join(inner.FullName, "page.md"))).IsNull();
+			await Assert.That(await files.ReadFileAsync("/etc/passwd")).IsNull();
+			await Assert.That(await files.ReadFileAsync("C:/Windows/win.ini")).IsNull();
 			await Assert.That(PackageFilePath.Normalize("wiki/./a.md")).IsNull();
 			await Assert.That(PackageFilePath.Normalize(" wiki/a.md ")).IsEqualTo("wiki/a.md");
 		}
 		finally
 		{
 			outer.Delete(recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task ThePageLabelIsTheManifestsName()
+		=> await Assert.That(Manifest("wiki:\n  - page: help:orc_license_notice\n    title: ORC License Notice\n    markdown: x\n")
+			.WikiPages.Single().Label).IsEqualTo("help:orc_license_notice");
+
+	[Test]
+	[Arguments("See [[Blinded]].", "[[Blinded]]")]
+	[Arguments("See [[Help:ORC License Notice]].", "[[Help:ORC License Notice]]")]
+	[Arguments("See [[the notice|Help:ORC License Notice]].", "[[the notice|Help:ORC License Notice]]")]
+	[Arguments("See [[Blinded|blinded]].", "[[Blinded|blinded]]")]
+	[Arguments("See [[Blinded|Main:Blinded]].", "[[Blinded|Main:Blinded]]")]
+	[Arguments("See [[Lore|lore:dragons]].", "[[Lore|lore:dragons]]")]
+	public async Task AnInlineLinkThatDoesNotNameItsPageInFullIsRefused(string body, string link)
+	{
+		var errors = Errors($"wiki:\n  - page: main:conditions\n    title: Conditions\n    markdown: \"{body}\"\n");
+
+		await Assert.That(errors.Any(e => e.Path == "wiki main:conditions" && e.Message.Contains($"The link {link} must name its page in full")))
+			.IsTrue().Because(string.Join("; ", errors));
+	}
+
+	[Test]
+	public async Task FullLinksPassInAnyNamespaceCaseAndOutsideThePackage()
+	{
+		var parsed = Parse("""
+			wiki:
+			  - page: main:blinded
+			    title: Blinded
+			    markdown: Blind.
+			  - page: main:conditions
+			    title: Conditions
+			    markdown: |
+			      [[Blinded|Main:blinded]], [[Blinded|main:blinded]], [[help:orc_license_notice]],
+			      [[the rules|Help:core_rules]] and [[Travel|Category:travel]]. `[[Not a link]]` is code.
+			""").Expect<ParsedPackageManifest>();
+
+		await Assert.That(parsed.Warnings).IsEmpty();
+	}
+
+	[Test]
+	[Arguments("[[Blinded|help:blinded]]", "did you mean main:blinded?")]
+	[Arguments("[[Blinded|main:blinded_]]", "")]
+	[Arguments("[[Dazzled|main:dazzled]]", "did you mean main:dazzled_condition?")]
+	[Arguments("[[Dazzled|main:dazzled-condition]]", "did you mean main:dazzled_condition?")]
+	public async Task AFullLinkThatLooksLikeATypoForAShippedPageIsAWarning(string link, string expected)
+	{
+		var parsed = Parse($"""
+			wiki:
+			  - page: main:blinded
+			    title: Blinded
+			    markdown: Blind.
+			  - page: main:dazzled_condition
+			    title: Dazzled
+			    markdown: Dazzled.
+			  - page: main:conditions
+			    title: Conditions
+			    markdown: "See {link}."
+			""").Expect<ParsedPackageManifest>();
+
+		if (expected.Length == 0)
+		{
+			await Assert.That(parsed.Warnings).IsEmpty();
+			return;
+		}
+
+		await Assert.That(parsed.Warnings.Single().Message).Contains(expected);
+	}
+
+	[Test]
+	public async Task FileBodyLinksAreCheckedNamingTheFile()
+	{
+		var dir = Directory.CreateTempSubdirectory("wiki-pack-");
+		try
+		{
+			await File.WriteAllTextAsync(Path.Join(dir.FullName, "bad.md"), "See [[Blinded]] and [[ORC|Help:ORC License Notice]].\n");
+			await File.WriteAllTextAsync(Path.Join(dir.FullName, "good.md"), "See [[Blinded|Main:blinded]] and [[Blind|help:blinded]].\n");
+			var manifest = Manifest("""
+				wiki:
+				  - page: main:blinded
+				    title: Blinded
+				    file: good.md
+				  - page: main:bad
+				    title: Bad
+				    file: bad.md
+				""");
+
+			var error = (await PackageWikiBodies.LoadAsync(manifest, new DirectoryPackageFileSource(dir.FullName))).Expect<Error<string>>();
+			await Assert.That(error.Value).Contains("bad.md: The link [[Blinded]] must name its page in full");
+			await Assert.That(error.Value).Contains("[[ORC|Help:ORC License Notice]]");
+			await Assert.That(error.Value).DoesNotContain("good.md");
+
+			var good = manifest with { Wiki = [manifest.WikiPages[0]] };
+			var loaded = (await PackageWikiBodies.LoadAsync(good, new DirectoryPackageFileSource(dir.FullName))).Expect<PackageWikiLoad>();
+			await Assert.That(loaded.Warnings.Single().ToString()).Contains("good.md");
+			await Assert.That(loaded.Warnings.Single().Message).Contains("did you mean main:blinded?");
+		}
+		finally
+		{
+			dir.Delete(recursive: true);
 		}
 	}
 }
