@@ -27,7 +27,7 @@ public class SecretsControllerTests
 	private static (SecretsController Controller, ISecretStore Store) Create(params string[] granted)
 	{
 		var store = new SecretStore(new SecretStoreTests.InMemoryWorld(), new EphemeralDataProtectionProvider(),
-			[SecretDefinition.SqlPassword, Token], new SecretStoreOptions(Path.Combine(Path.GetTempPath(), $"no-secrets-{Guid.NewGuid():N}"), _ => null),
+			[SecretDefinition.SqlPassword, Token], new SecretStoreOptions(Path.Join(Path.GetTempPath(), $"no-secrets-{Guid.NewGuid():N}"), _ => null),
 			new SecretStoreTests.FixedClock(DateTimeOffset.UnixEpoch), NullLogger<SecretStore>.Instance);
 
 		var authorization = Substitute.For<IAuthorizationService>();

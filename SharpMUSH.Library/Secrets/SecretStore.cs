@@ -186,7 +186,7 @@ public sealed class SecretStore(
 			return new Overridden(SecretSource.Environment, variable, environment);
 		}
 
-		var path = Path.Combine(options.FilesPath, name);
+		var path = Path.Join(options.FilesPath, name);
 		try
 		{
 			// A mounted secret usually ends in the newline its editor added; the value does not.
