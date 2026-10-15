@@ -157,19 +157,18 @@ think [get(me/TRAILPCT)] [u(me/TRAILPCT)] [get(me/TRAILBS)] [u(me/TRAILBS)]
 
 ::case sc.gender-first-letter  only the first letter of SEX picks the pronoun: M male, F/W female, T/P plural (get_gender, src/funstr.c)
 ::as wiz
-think [setq(0,create(SexProbe))]
-@sex SexProbe=m
-think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
-@sex SexProbe=Male
-think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
-@sex SexProbe=f
-think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
-@sex SexProbe=woman
-think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
-@sex SexProbe=plural
-think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
-@sex SexProbe=t
-think [subj(SexProbe)] [obj(SexProbe)] [poss(SexProbe)] [aposs(SexProbe)]
+@sex me=m
+think [subj(me)] [obj(me)] [poss(me)] [aposs(me)]
+@sex me=Male
+think [subj(me)] [obj(me)] [poss(me)] [aposs(me)]
+@sex me=f
+think [subj(me)] [obj(me)] [poss(me)] [aposs(me)]
+@sex me=woman
+think [subj(me)] [obj(me)] [poss(me)] [aposs(me)]
+@sex me=plural
+think [subj(me)] [obj(me)] [poss(me)] [aposs(me)]
+@sex me=t
+think [subj(me)] [obj(me)] [poss(me)] [aposs(me)]
 @sex me=male
 think %s %o %p %a %S
 @sex me=woman
