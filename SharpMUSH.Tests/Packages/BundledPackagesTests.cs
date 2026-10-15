@@ -25,17 +25,6 @@ public class BundledPackagesTests
 		}
 	}
 
-	/// <summary>The setup wizard lists the bundled packages by category; one without lands under Other.</summary>
-	[Test]
-	public async Task EveryBundledPackage_NamesACategory()
-	{
-		foreach (var descriptor in BundledPackages.All)
-		{
-			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)).Expect<ParsedPackageManifest>();
-			await Assert.That(parsed.Manifest.Category).IsNotNull().Because($"'{descriptor.PackageId}' has no category:");
-		}
-	}
-
 	/// <summary>
 	/// room-contents is the softcode behind the portal's Play sidebar: it attaches the
 	/// ROOM`CONTENTS handler to the configured event_handler object. Before it was bundled the

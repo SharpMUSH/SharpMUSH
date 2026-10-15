@@ -10,18 +10,37 @@ public class SetupPackageGroupsTests
 		=> new(id, "", Installed: false, Requires: null, Available: true, dependsOn, Category: category);
 
 	[Test]
-	public async Task GroupsByCategory_InTheServersOrder_WithNoCategoryLast()
+	public async Task GroupsByCategory_InTheServersOrder_WithUncategorizedLast()
 	{
 		var groups = SetupPackageGroups.For(
 		[
 			Package("loose", null),
 			Package("scene", "Scenes"),
+			Package("named", "uncategorized"),
 			Package("jobs", "Staff"),
 			Package("scene-verse", "scenes", "scene"),
-		]);
+		], "Uncategorized");
 
-		await Assert.That(groups.Select(g => g.Title)).IsEquivalentTo(new[] { "Scenes", "Staff", null }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(groups.Select(g => g.Title)).IsEquivalentTo(new[] { "Scenes", "Staff", "Uncategorized" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(groups[0].Packages.Select(p => p.Package.Id)).IsEquivalentTo(new[] { "scene", "scene-verse" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(groups[2].Packages.Select(p => p.Package.Id)).IsEquivalentTo(new[] { "loose", "named" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task APackageNamingUncategorized_JoinsThePackagesWithNone_UnderTheTranslatedTitle()
+	{
+		var groups = SetupPackageGroups.For(
+		[
+			Package("named", "UNCATEGORIZED"),
+			Package("loose", null),
+			Package("scene", "Sans catégorie"),
+		], "Sans catégorie");
+
+		await Assert.That(groups.Select(g => (g.Title, g.Packages.Count))).IsEquivalentTo(new[]
+		{
+			("Sans catégorie", 1), ("Sans catégorie", 2),
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(groups[1].Packages.Select(p => p.Package.Id)).IsEquivalentTo(new[] { "named", "loose" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
@@ -35,7 +54,7 @@ public class SetupPackageGroupsTests
 			Package("health-jobs", "Staff", "health", "jobs"),
 			Package("scene", "Scenes"),
 			Package("timeline", "Staff", "scene"),
-		]).Single(g => g.Title == "Staff");
+		], "Uncategorized").Single(g => g.Title == "Staff");
 
 		await Assert.That(group.Packages.Select(p => (p.Package.Id, p.AddOn))).IsEquivalentTo(new[]
 		{
@@ -52,7 +71,7 @@ public class SetupPackageGroupsTests
 			Package("highlights", "Scenes", "scene"),
 			Package("time", "Scenes"),
 			Package("highlights-app", "Scenes", "highlights"),
-		]).Single();
+		], "Uncategorized").Single();
 
 		await Assert.That(group.Packages.Select(p => (p.Package.Id, p.AddOn))).IsEquivalentTo(new[]
 		{
