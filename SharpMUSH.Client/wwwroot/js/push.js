@@ -8,6 +8,9 @@
     "use strict";
     window.SharpMUSH = window.SharpMUSH || {};
 
+    // Absent where the page's scripts are loaded outside a browser (the client node tests).
+    var nav = typeof navigator === "undefined" ? {} : navigator;
+
     var installPrompt = null;
     window.addEventListener("beforeinstallprompt", function (event) {
         event.preventDefault();
@@ -16,10 +19,10 @@
 
     var registration = null;
     function worker() {
-        if (!("serviceWorker" in navigator)) return Promise.resolve(null);
+        if (!("serviceWorker" in nav)) return Promise.resolve(null);
         if (!registration) {
-            registration = navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
-                .then(function () { return navigator.serviceWorker.ready; })
+            registration = nav.serviceWorker.register("/service-worker.js", { scope: "/" })
+                .then(function () { return nav.serviceWorker.ready; })
                 .catch(function () { registration = null; return null; });
         }
         return registration;
@@ -44,7 +47,7 @@
     }
 
     function supported() {
-        return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+        return "serviceWorker" in nav && "PushManager" in window && "Notification" in window;
     }
 
     var character = null;
@@ -59,8 +62,8 @@
                 supported: supported(),
                 permission: "Notification" in window ? Notification.permission : "unsupported",
                 endpoint: null,
-                standalone: window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true,
-                ios: /iPhone|iPad|iPod/.test(navigator.userAgent),
+                standalone: window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true,
+                ios: /iPhone|iPad|iPod/.test(nav.userAgent),
                 canInstall: installPrompt !== null
             };
             if (!info.supported) return Promise.resolve(info);
@@ -122,14 +125,14 @@
             }
             document.addEventListener("visibilitychange", report);
             report();
-            if ("serviceWorker" in navigator) {
-                navigator.serviceWorker.addEventListener("message", function (event) {
+            if ("serviceWorker" in nav) {
+                nav.serviceWorker.addEventListener("message", function (event) {
                     if (event.data && event.data.type === "open" && typeof event.data.path === "string") {
                         dotnet.invokeMethodAsync("Open", event.data.path).catch(function () { });
                     }
                 });
                 // A worker that started after this tab (first visit, or an update) learns the character too.
-                navigator.serviceWorker.addEventListener("controllerchange", function () { worker().then(tellWorker); });
+                nav.serviceWorker.addEventListener("controllerchange", function () { worker().then(tellWorker); });
             }
         },
 
