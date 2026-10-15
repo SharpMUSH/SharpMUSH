@@ -1,13 +1,17 @@
+@using SharpMUSH.Library.Models.Portal.Applications
+@using SharpMUSH.Client.Models.Applications
 @implements IDisposable
 @inject ILayoutService LayoutService
+@inject ApplicationCatalog Catalog
 
 @* Loads a named layout scope and renders one of its zones, refreshing live when an admin saves that
    scope. Pages use this to compose themselves from admin-customizable widgets instead of hard-coded
-   markup. *@
+   markup. A widget application registered for the scope joins the zone it names first after the
+   placed widgets, unless the layout already places it, so installing one needs no layout edit. *@
 
 @if (_layout is not null)
 {
-    <ZoneRenderer Zone="Zone" Layout="_layout" Grid="Grid" />
+    <ZoneRenderer Zone="Zone" Layout="WithScopeApplications(_layout)" Grid="Grid" />
 }
 
 @code {
@@ -27,6 +31,38 @@
     {
         LayoutService.OnLayoutChanged += HandleChanged;
         await ReloadAsync();
+        if (!Catalog.Loaded.IsCompleted)
+        {
+            // The scope's applications arrive with the catalog; draw the placed widgets meanwhile.
+            _ = Catalog.Loaded.ContinueWith(_ => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged), TaskScheduler.Default);
+        }
+    }
+
+    /// <summary>
+    /// The layout with the scope's widget applications added to this zone: those whose first zone this scope
+    /// renders is this one and that the layout does not place anywhere. The zone's own gate still checks
+    /// each one's role.
+    /// </summary>
+    private LayoutConfiguration WithScopeApplications(LayoutConfiguration layout)
+    {
+        var zones = LayoutScopes.Find(Scope)?.Zones ?? [Zone];
+        var placed = layout.Zones.Values.SelectMany(list => list).Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var joining = Catalog.ForScope(Scope)
+            .Where(a => a.KindEnum == ApplicationKind.Widget && !placed.Contains(a.Slug))
+            .Where(a => a.ZoneEnums.Where(zones.Contains).Take(1).Contains(Zone))
+            .ToList();
+        if (joining.Count == 0)
+        {
+            return layout;
+        }
+
+        var own = layout.Zones.TryGetValue(Zone, out var list) ? list : [];
+        var next = own.Count == 0 ? 0 : own.Max(p => p.Order) + 1;
+        var merged = new Dictionary<WidgetZone, List<WidgetPlacement>>(layout.Zones)
+        {
+            [Zone] = [.. own, .. joining.Select((a, i) => new WidgetPlacement(a.Slug, next + i, null))],
+        };
+        return layout with { Zones = merged };
     }
 
     protected override async Task OnParametersSetAsync()
@@ -57,5 +93,11 @@
         });
     }
 
-    public void Dispose() => LayoutService.OnLayoutChanged -= HandleChanged;
+    private bool _disposed;
+
+    public void Dispose()
+    {
+        _disposed = true;
+        LayoutService.OnLayoutChanged -= HandleChanged;
+    }
 }

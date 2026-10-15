@@ -1,0 +1,35 @@
+format: 1.2
+package: relationships-card
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "The relationships package on the portal's name card: the relationship between you and the character, your note about them, and any line another package adds."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, relationships, card]
+requires_server: ">=0.1"
+
+# An application package owns no objects. The relationships package serves the routes it points at:
+# GET /http/relationships/card/schema and /http/relationships/card/data?objid=<character>, the same lines +rel
+# <name> shows in the game.
+depends:
+  - package: relationships
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/relationships/
+      branch: main
+
+# A widget for the card scope: the name card that opens over a character's name shows it under their profile, to
+# players only, since a visitor has no relationship or note to show.
+application:
+  slug: relationship-card
+  display_name: Relationship
+  icon: favorite
+  type: widget
+  schema_url: http/relationships/card/schema
+  data_url: http/relationships/card/data?objid={objid}
+  minimum_role: player
+  zones: [MainContent]
+  scope: card
+  order: 10
