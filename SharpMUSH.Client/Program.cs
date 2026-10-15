@@ -77,6 +77,7 @@ builder.Services.AddSingleton<GameMessagesService>();
 builder.Services.AddSingleton<PortalThemesAdminService>();
 builder.Services.AddSingleton<AdminCharactersService>();
 builder.Services.AddSingleton<AdminAuditService>();
+builder.Services.AddSingleton<AdminActivityService>();
 builder.Services.AddSingleton<AdminBansService>();
 builder.Services.AddSingleton<AdminServerService>();
 // Registers the terminal facades — see AddTerminalServices for the rationale.
