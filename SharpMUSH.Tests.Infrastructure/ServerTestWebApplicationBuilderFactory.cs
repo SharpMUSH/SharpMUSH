@@ -71,6 +71,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			options => options.EnableBestPracticesAdvisor = false));
 		builder.ConfigureTestServices(TestHostServices.RemoveRecurringJobRunner);
 		builder.ConfigureTestServices(TestHostServices.RecordServerRestarts);
+		builder.ConfigureTestServices(TestHostServices.RecordFeedLines);
 
 		if (worldPath is not null)
 		{
