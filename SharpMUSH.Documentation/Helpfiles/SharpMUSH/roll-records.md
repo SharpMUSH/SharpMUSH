@@ -26,7 +26,7 @@ Anyone can type "Alice rolls 20" with @emit. A kept roll is one the game made an
 
 ```sharp
 > @roll 2d6+3
-Alice rolls 2d6[4, 5] + 3 = 12 (roll 57)
+[DICE] Alice rolls 2d6[4, 5] + 3 = 12 (roll 57)
 ```
 
 Output: the room sees the roll and its number, 57.
@@ -38,9 +38,9 @@ roll() keeps a roll when its options say `"record":true`, and then returns JSON 
 ```sharp
 > think roll(1d20+5,,lit({"record":true}))
 {"id":58,"at":"2026-10-15T20:16:40.007Z","roller":"#12:1760558400000","name":"Alice","formula":"1d20+5","total":11,"text":"1d20[6] + 5 = 11","dice":[{"formula":"1d20","faces":20,"total":6,"results":[{"result":6,"active":true}]}]}
-> &cmd`roll #20=$+roll *:@remit %l=[setq(r,roll(%0,%#,lit({"record":true})))][name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)])
+> &cmd`roll #20=$+roll *:@remit %l=[setq(r,roll(%0,%#,lit({"record":true})))][notice(DICE,[name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)]))]
 > +roll 2d6
-Alice rolls 2d6[3, 1] = 4 (roll 59)
+[DICE] Alice rolls 2d6[3, 1] = 4 (roll 59)
 ```
 
 Output: the JSON, then a +roll command on #20 that shows its own line with the number. The roll is Alice's, and rollinfo() names #20 as `by`.

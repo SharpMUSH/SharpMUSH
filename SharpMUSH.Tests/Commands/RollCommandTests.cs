@@ -42,7 +42,7 @@ public partial class RollCommandTests
 	}
 
 	private string HeardRoll(DBRef who, string roller)
-		=> WebAppFactoryArg.Notifications.For(who).Single(m => m.StartsWith($"{roller} rolls ", StringComparison.Ordinal));
+		=> WebAppFactoryArg.Notifications.For(who).Single(m => m.StartsWith($"[DICE] {roller} rolls ", StringComparison.Ordinal));
 
 	[Test]
 	public async Task AtRollTellsTheRoomAndKeepsTheRoll()
@@ -53,7 +53,7 @@ public partial class RollCommandTests
 
 		var heard = HeardRoll(watcher.DbRef, roller.Name);
 		var id = RollId().Match(heard).Groups[1].Value;
-		await Assert.That(heard).IsEqualTo($"{roller.Name} rolls 2d1[1, 1] + 1 = 3 (roll {id})");
+		await Assert.That(heard).IsEqualTo($"[DICE] {roller.Name} rolls 2d1[1, 1] + 1 = 3 (roll {id})");
 		await Assert.That(HeardRoll(roller.DbRef, roller.Name)).IsEqualTo(heard);
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(id);
 
@@ -74,7 +74,7 @@ public partial class RollCommandTests
 
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("@roll 1d1+[add(1,1)]"));
 
-		await Assert.That(HeardRoll(watcher.DbRef, roller.Name)).StartsWith($"{roller.Name} rolls 1d1[1] + 2 = 3 (roll ");
+		await Assert.That(HeardRoll(watcher.DbRef, roller.Name)).StartsWith($"[DICE] {roller.Name} rolls 1d1[1] + 2 = 3 (roll ");
 	}
 
 	[Test]
@@ -85,19 +85,37 @@ public partial class RollCommandTests
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("@roll/noeval {1d1,2}kh + 1d1[fire]"));
 
 		await Assert.That(HeardRoll(watcher.DbRef, roller.Name))
-			.StartsWith($"{roller.Name} rolls {{1d1[1], 2}}kh[(1), 2] + 1d1[1] fire = 3 (roll ");
+			.StartsWith($"[DICE] {roller.Name} rolls {{1d1[1], 2}}kh[(1), 2] + 1d1[1] fire = 3 (roll ");
 	}
 
 	[Test]
-	public async Task AtRollReadsDataAfterTheEquals()
+	public async Task AtRollReadsTheRollersAttributes()
 	{
-		var (roller, watcher) = await TwoInARoomAsync("RollData");
+		var (roller, watcher) = await TwoInARoomAsync("RollOwn");
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("&STAT`DEX me=2"));
 
-		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("@roll 1d1+@stat.dex=me"));
+		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("@roll 1d1+@stat.dex"));
 
 		await Assert.That(HeardRoll(watcher.DbRef, roller.Name))
-			.StartsWith($"{roller.Name} rolls 1d1[1] + stat.dex(2) = 3 (roll ");
+			.StartsWith($"[DICE] {roller.Name} rolls 1d1[1] + stat.dex(2) = 3 (roll ");
+	}
+
+	[Test]
+	public async Task AtRollReadsTheObjectOrJsonAfterTheEquals()
+	{
+		var (roller, watcher) = await TwoInARoomAsync("RollData");
+		var created = await CommandParser.CommandParse(roller.Handle, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("Goblin")}"));
+		var goblin = DBRef.Parse(created.Message.ToPlainText().Trim());
+		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain($"&ATTACK #{goblin.Number}=4"));
+
+		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain($"@roll 1d1+@attack=#{goblin.Number}"));
+		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("""@roll 1d1+bonus=[lit({"bonus":3})]"""));
+
+		var heard = WebAppFactoryArg.Notifications.For(watcher.DbRef)
+			.Where(m => m.StartsWith($"[DICE] {roller.Name} rolls ", StringComparison.Ordinal)).ToList();
+		await Assert.That(heard[0]).StartsWith($"[DICE] {roller.Name} rolls 1d1[1] + attack(4) = 5 (roll ");
+		await Assert.That(heard[1]).StartsWith($"[DICE] {roller.Name} rolls 1d1[1] + bonus(3) = 4 (roll ");
 	}
 
 	[Test]
@@ -121,13 +139,13 @@ public partial class RollCommandTests
 		var command = DBRef.Parse(created.Message.ToPlainText().Trim());
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain($"@set #{command.Number}=!no_command"));
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain(
-			$$"""&cmd`roll #{{command.Number}}=$+roll *:@remit %l=[setq(r,roll(%0,%#,lit({"record":true})))][name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)])"""));
+			$$"""&cmd`roll #{{command.Number}}=$+roll *:@remit %l=[setq(r,roll(%0,%#,lit({"record":true})))][notice(DICE,[name(%#)] rolls [json_query(%qr,extract,$.text)] (roll [json_query(%qr,extract,$.id)]))]"""));
 
 		await CommandParser.CommandParse(roller.Handle, ConnectionService, MarkupText.Plain("+roll 2d1+1"));
 
 		var heard = HeardRoll(watcher.DbRef, roller.Name);
 		var id = RollId().Match(heard).Groups[1].Value;
-		await Assert.That(heard).IsEqualTo($"{roller.Name} rolls 2d1[1, 1] + 1 = 3 (roll {id})");
+		await Assert.That(heard).IsEqualTo($"[DICE] {roller.Name} rolls 2d1[1, 1] + 1 = 3 (roll {id})");
 		await Assert.That(await Evaluate($"json_query(rollinfo({id}),extract,$.text)")).IsEqualTo("2d1[1, 1] + 1 = 3");
 		await Assert.That(await Evaluate($"json_query(rollinfo({id}),extract,$.name)")).IsEqualTo(roller.Name);
 		await Assert.That(await Evaluate($"json_query(rollinfo({id}),extract,$.by)")).StartsWith($"#{command.Number}:");
