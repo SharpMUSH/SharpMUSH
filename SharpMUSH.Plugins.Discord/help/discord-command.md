@@ -55,7 +55,7 @@
 
 The Discord plugin links channels on a Discord server to the game, through a bot the game runs itself. Each linked channel is a feed, `discord/<channel id>`: every line sent on that feed is posted in the channel under the speaker's name, and a linked member's message in the channel comes back as a line on the feed, spoken by the character they chose.
 
-`@discord` alone shows the bot's connection and the linked channels. Everything but `@discord/speak` needs the `discord.admin` permission, which the wizard role allows.
+`@discord` alone shows the bot's connection and the linked channels. Everything but `@discord/speak` needs the `discord.admin` permission. Nobody holds it until it is given, wizards included: `@role/assign <player>=discord-admin` gives the discord package's Discord Admin role, which allows it.
 
 Discord ids are numbers. To copy one, turn on Developer Mode in Discord's User Settings, under Advanced, then right-click a channel, role or server and choose Copy ID.
 

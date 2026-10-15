@@ -1,8 +1,8 @@
 format: 1.7
 package: discord
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
-description: "The game's side of the Discord link: the discord.admin permission, and the Discord Bridge that owns the discord feed kind. Each linked Discord channel is the feed discord/<channel id>, and every line sent on it is posted in that channel. The Discord plugin does the posting; @discord/link links a channel."
+description: "The game's side of the Discord link: the discord.admin permission, the Discord Admin role that allows it, and the Discord Bridge that owns the discord feed kind. Each linked Discord channel is the feed discord/<channel id>, and every line sent on it is posted in that channel. The Discord plugin does the posting; @discord/link links a channel."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, chat, bridge, feed]
@@ -12,9 +12,14 @@ requires_server: ">=0.1"
 # install, and turning the plugin off uninstalls it.
 plugins: [discord]
 
-# Who runs the Discord link is a permission, so a game can hand it to one staff role and take it back
-# without touching any other: @role/allow <role>=discord.admin. Wizards hold it already.
+# Who runs the Discord link is a permission, so a game can hand it out and take it back without touching
+# anything else. Nobody holds it until something allows it, wizards included; God and administrator holders
+# hold every permission. The Discord Admin role allows it: @role/assign <player>=discord-admin, or
+# @role/allow <role>=discord.admin for a staff role the game already has.
 categories:
+  roles:
+    - name: Discord
+      description: Roles for the people who run the game's link to Discord.
   permissions:
     - name: Discord
       description: Running the game's link to Discord.
@@ -22,6 +27,13 @@ permissions:
   - name: discord.admin
     category: Discord
     description: Set up the Discord bot, link and unlink Discord channels, and start a stopped link again.
+roles:
+  - slug: discord-admin
+    name: Discord Admin
+    category: Discord
+    priority: 12
+    permissions:
+      discord.admin: allow
 
 objects:
   # The discord feed kind's owner, so its attributes are the kind's tie-ins (help @feed tie-ins). Lines reach

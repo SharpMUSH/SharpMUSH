@@ -280,7 +280,7 @@ To mimic old behaviour:
 ```
 
 - **scene\`change** (*scene*, *key*, *previous*)
-- Triggered by the Scene plugin when `@scene/set <id>/<key>=` or sceneset() changes any key of a scene but its status, which has scene\`status: its time (`scheduledfor`), title, room, whether it is public, or a detail. `+scene/schedule`, `/reschedule` and `/title` change keys this way. *<key>* is the key's name in lower case, and *<previous>* what it held before, empty when it was unset: a time in milliseconds since 1970, a flag as 1 or 0, a room or owner as its dbref. Read the new value with `scene(<scene>,<key>)`. Setting a key to what it already holds triggers nothing. %# is whoever changed it. Only raised while the Scene plugin is loaded.
+- Triggered by the Scene plugin when `@scene/set <id>/<key>=` or sceneset() changes any key of a scene but its status, which has scene\`status, and its plot, which links the scene to a plot rather than setting a key: its time (`scheduledfor`), title, room, whether it is public, or a detail. `+scene/schedule`, `/reschedule` and `/title` change keys this way. *<key>* is the key's name in lower case, and *<previous>* what it held before, empty when it was unset: a time in milliseconds since 1970, a flag as 1 or 0, a room or owner as its dbref. Read the new value with `scene(<scene>,<key>)`. Setting a key to what it already holds triggers nothing. %# is whoever changed it. Only raised while the Scene plugin is loaded.
 
 ### Example
 ```sharp

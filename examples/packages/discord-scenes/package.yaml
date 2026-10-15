@@ -13,10 +13,10 @@ requires_server: ">=0.1"
 plugins: [scene, discord]
 
 # The scene package gives scenes their schedule (+scene/schedule, /reschedule, /cancel); the discord package
-# holds the discord.admin permission @discord/event needs.
+# holds the Discord Admin role, whose discord.admin permission @discord/event needs.
 depends:
   - package: discord
-    version: ">=1.1 <2.0"
+    version: ">=1.2 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/discord/
@@ -41,8 +41,9 @@ depends:
       branch: main
 
 objects:
-  # Publishes the scenes. WIZARD because @discord/event needs discord.admin, which wizards hold, and because it
-  # reads members-only scenes to decide whether to publish them.
+  # Publishes the scenes. WIZARD because it reads members-only scenes to decide whether to publish them, and
+  # because a wizard may give itself a role below its own: AINSTALL gives it the discord package's Discord Admin
+  # role, since @discord/event needs discord.admin and wizards do not hold it.
   #
   # Each scene is the Discord event scene-<id>. TRIG`SYNC looks at the scene as it is now and does what that
   # calls for, so the order the events arrive in does not matter, and running it twice changes nothing.
@@ -55,6 +56,8 @@ objects:
     location: "{{$master_room}}"
     flags: [WIZARD]
     attributes:
+      AINSTALL: |-
+        @role/assign me=discord-admin
       DATA: |-
         Settings.
       DATA`CONFIG: |-
@@ -92,12 +95,14 @@ objects:
       # %0 a scene, %1 what changed: status, or the key SCENE`CHANGE named.
       #
       # - finished or cancelled: the event ends (status only, so a cancel that also clears the time ends it once).
+      # - waiting without a time to come, or made members-only: the event is taken down. A scene just made has none
+      #   to take.
+      # Those two run with PUBLISH off too, so an event already published never outlives its scene. The rest do not:
       # - active: the event shows as happening (status only; a running scene's event is not published again).
       # - waiting with a time still to come, public or PRIVATE on: published, or updated.
-      # - waiting without one, or made members-only: the event is taken down. A scene just made has none to take.
       TRIG`SYNC:
         value: |-
-          @assert v(DATA`CONFIG`PUBLISH); think u(%!/FUN`SCENE`READ,%0); @switch/first 1=cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>)),{@discord/event/end scene-%0},cand(strmatch(%1,status),strmatch(%q<scene_status>,active)),{@discord/event/start scene-%0},%q<scene_listed>,{@discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)},cand(%q<scene_waiting>,match(status scheduledfor public,%1),comp(%q<scene_status>,new)),{@discord/event/end scene-%0}
+          think u(%!/FUN`SCENE`READ,%0); @switch/first 1=cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>)),{@discord/event/end scene-%0},cand(%q<scene_waiting>,not(%q<scene_listed>),match(status scheduledfor public,%1),comp(%q<scene_status>,new)),{@discord/event/end scene-%0},not(v(DATA`CONFIG`PUBLISH)),{@@ Publishing is off: take events down, put none up.},cand(strmatch(%1,status),strmatch(%q<scene_status>,active)),{@discord/event/start scene-%0},%q<scene_listed>,{@discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)}
         flags: [cmdsyntax]
       # %0 a scene. Sets scene_status, scene_at (its time in milliseconds, or empty), scene_waiting (not yet
       # started, or paused) and scene_listed (waiting, with a time still to come, and public or PRIVATE on).
@@ -174,7 +179,7 @@ objects:
         - `+config discord-scenes/private`: `no`, as shipped. `yes` publishes members-only scenes too, and everyone in the Discord server sees their titles and times.
         - `+config discord-scenes/length`: how long an event lasts from its start, `3h` as shipped. Discord needs an end; a scene that runs longer is ended when it finishes.
 
-        The bot needs the Create Events permission in the server. `@discord/event` lists what the game has published \(`help @discord events`\).
+        The bot needs the Create Events permission in the server. The package's Discord Scenes object publishes the events, and holds the Discord Admin role to do it. `@discord/event` lists what the game has published \(`help @discord events`\).
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"

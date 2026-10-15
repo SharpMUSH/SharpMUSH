@@ -130,7 +130,7 @@ public static class SharpEvents
 
 	/// <summary>
 	/// Fired by the Scene plugin when <c>@scene/set</c> or <c>sceneset()</c> changes a key of a scene other than its
-	/// status: its time, title, room, a detail. Args: (scene id, key, its value before). The enactor is whoever changed it.
+	/// status and its plot link: its time, title, room, a detail. Args: (scene id, key, its value before). The enactor is whoever changed it.
 	/// </summary>
 	public const string SceneChange = "SCENE`CHANGE";
 }

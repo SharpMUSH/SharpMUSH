@@ -91,6 +91,15 @@ public class SceneChangeEventTests
 		await events.DidNotReceiveWithAnyArgs().TriggerEventAsync(default!, default, default(string[])!);
 	}
 
+	/// <summary>A plot is a link the scene is filed under, not a key it holds: linking one fires nothing.</summary>
+	[Test]
+	public async Task A_plot_link_fires_nothing()
+	{
+		var previous = await SceneChangeEvent.ValueBeforeAsync(new FixedSceneService(Scheduled(null)), "42", "Plot");
+
+		await Assert.That(previous).IsNull();
+	}
+
 	[Test]
 	public async Task A_missing_scene_fires_nothing()
 	{

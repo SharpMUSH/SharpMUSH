@@ -17,12 +17,15 @@ public static class SceneChangeEvent
 {
 	/// <summary>
 	/// What <paramref name="key"/> of <paramref name="sceneId"/> holds before a write, or null when the write is to the
-	/// status, or the scene is missing: no event follows either.
+	/// status or the plot, or the scene is missing: no event follows any of them. A plot is a link the scene is filed
+	/// under, not a value the scene holds.
 	/// </summary>
 	public static async ValueTask<string?> ValueBeforeAsync(ISceneService sceneService, string sceneId, string key) =>
-		!SceneStatusEvent.IsStatus(key) && await sceneService.GetSceneAsync(sceneId) is Contracts.Scene scene
+		!SceneStatusEvent.IsStatus(key) && !IsPlot(key) && await sceneService.GetSceneAsync(sceneId) is Contracts.Scene scene
 			? ValueOf(scene, key)
 			: null;
+
+	private static bool IsPlot(string key) => key.Trim().Equals("plot", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>Fires the event when <paramref name="key"/> now holds something other than <paramref name="previous"/>.</summary>
 	public static ValueTask AfterSetAsync(IMUSHCodeParser parser, string key, string? previous, Contracts.Scene scene) =>
