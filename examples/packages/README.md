@@ -629,7 +629,7 @@ only once the administrator ticks "Install it anyway". On 1.9.0 it is refused.
 `category:` is the group a package is listed under where packages are offered
 together. The setup wizard lists the bundled packages by it; within a category, a
 package that needs another of the same category is listed under it (`jobs-app`
-under `jobs`), and packages with none come last under Other. One name, up to 40
+under `jobs`), and packages with none come last under Uncategorized. One name, up to 40
 characters. Write the format quoted, `format: "1.10"`, so YAML tools that type
 numbers do not read it as 1.1; below 1.10 `category:` is ignored with a warning.
 
