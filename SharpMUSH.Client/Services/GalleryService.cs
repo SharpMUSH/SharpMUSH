@@ -147,19 +147,22 @@ public class GalleryService(IHttpClientFactory httpClientFactory, CharacterDirec
 	}
 
 	/// <summary>The gallery with <paramref name="assetId"/>'s caption, tags and warning replaced; blank clears.</summary>
-	public static IReadOnlyList<GalleryEntry> WithDetails(IEnumerable<GalleryEntry> items, string assetId, string? caption, string? tags, string? warning) =>
+	public static IReadOnlyList<GalleryEntry> WithDetails(IEnumerable<GalleryEntry> items, string assetId, string? caption, IReadOnlyList<string> tags, string? warning) =>
 		[.. items.Select(i => i.AssetId != assetId
 			? i
 			: i with
 			{
 				Caption = string.IsNullOrWhiteSpace(caption) ? null : caption.Trim(),
-				Tags = ParseTags(tags) is { Count: > 0 } parsed ? parsed : null,
+				Tags = CleanTags(tags) is { Count: > 0 } cleaned ? cleaned : null,
 				Warning = string.IsNullOrWhiteSpace(warning) ? null : warning.Trim(),
 			})];
 
-	/// <summary>Tags typed as a comma-separated list: trimmed, lower-cased, each once.</summary>
-	public static IReadOnlyList<string> ParseTags(string? text) =>
-		[.. (text ?? string.Empty).Split(',').Select(t => t.Trim().ToLowerInvariant()).Where(t => t.Length > 0).Distinct(StringComparer.Ordinal)];
+	/// <summary>A tag as the gallery stores it: trimmed and lower-cased.</summary>
+	public static string NormalizeTag(string tag) => tag.Trim().ToLowerInvariant();
+
+	/// <summary>The tags an owner gave: each normalized, the empty ones dropped, each once.</summary>
+	public static IReadOnlyList<string> CleanTags(IEnumerable<string> tags) =>
+		[.. tags.Select(NormalizeTag).Where(t => t.Length > 0).Distinct(StringComparer.Ordinal)];
 
 	/// <summary>Every tag the gallery's images carry, in the order they first appear.</summary>
 	public static IReadOnlyList<string> AllTags(IEnumerable<GalleryEntry> items) =>

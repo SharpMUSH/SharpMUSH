@@ -104,6 +104,7 @@
                         _updates.TryGetValue(p.Package.Id, out var update);
                         <InstalledPackageRow Package="p" Update="update" Busy="_busy"
                                              OnCheck="@(() => CheckUpdateAsync(p.Package.Id))"
+                                             OnReadme="@(() => ShowReadmeAsync(p.Package.Id, p.Package.Id))"
                                              OnHistory="@(() => OpenHistoryAsync(p.Package.Id))"
                                              OnUninstall="@(() => OpenUninstall(p))" />
                     }
@@ -112,6 +113,8 @@
         </div>
     </KitCard>
 </div>
+
+<PackageReadmeDialog @ref="_readme" />
 
 <MudDialog @bind-Visible="_showHistory" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">@Loc["PkgRevisionsOf", _historyPackage ?? string.Empty]</MudText></TitleContent>
@@ -232,7 +235,8 @@
             @foreach (var plugin in _plugins.Plugins)
             {
                 var pl = plugin;
-                <PluginRow Plugin="pl" Busy="@(_busy || _restarting)" OnToggle="@(() => TogglePluginAsync(pl, !pl.Enabled))" />
+                <PluginRow Plugin="pl" Busy="@(_busy || _restarting)" OnToggle="@(() => TogglePluginAsync(pl, !pl.Enabled))"
+                           OnReadme="@(package => ShowReadmeAsync(pl.Name, package))" />
             }
         </div>
         }
@@ -258,6 +262,12 @@
             rows = rows.Where(p => p.Package.Id.Contains(_search, StringComparison.OrdinalIgnoreCase));
         return rows;
     }
+
+    private PackageReadmeDialog? _readme;
+
+    /// <summary>Opens the README the installed package <paramref name="id"/> was applied with, titled <paramref name="title"/>.</summary>
+    private Task ShowReadmeAsync(string title, string id)
+        => _readme?.ShowAsync(title, () => Packages.GetInstalledReadmeAsync(id)) ?? Task.CompletedTask;
 
     private bool _showHistory;
     private string? _historyPackage;

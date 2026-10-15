@@ -21,7 +21,7 @@
     <comment>MT — example values kept verbatim</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Regras de acesso (separadas por vírgula)</value>
+    <value>Regras de acesso</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Autores (separados por vírgula)</value>
+    <value>Autores</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>IDs de objetos (um por linha, ex.: #847:1778518155494)</value>
+    <value>IDs de objetos</value>
     <comment>MT</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — privilege-level names after "e.g." left in English per the glossary</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Restrições (separadas por vírgula)</value>
+    <value>Restrições</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

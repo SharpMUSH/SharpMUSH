@@ -21,7 +21,7 @@
     <comment>MT — rule tokens are literal input values, kept in English</comment>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Pravila pristupa (odvojena zarezom)</value>
+    <value>Pravila pristupa</value>
     <comment>MT</comment>
   </data>
   <data name="Add" xml:space="preserve">
@@ -2186,7 +2186,7 @@
     <comment>MT — English uses "author" as a verb; Croatian uses the verbal noun</comment>
   </data>
   <data name="PkgAuthorsLabel" xml:space="preserve">
-    <value>Autori (odvojeni zarezom)</value>
+    <value>Autori</value>
     <comment>MT</comment>
   </data>
   <data name="PkgAvailableFrom" xml:space="preserve">
@@ -2450,7 +2450,7 @@
     <comment>MT — compact abbreviations kept to match the English width</comment>
   </data>
   <data name="PkgObjectIdsLabel" xml:space="preserve">
-    <value>Identifikatori objekata (jedan po retku, npr. #847:1778518155494)</value>
+    <value>Identifikatori objekata</value>
     <comment>MT — example dbref kept verbatim</comment>
   </data>
   <data name="PkgObjects" xml:space="preserve">
@@ -2890,7 +2890,7 @@
     <comment>MT — lowercase privilege/flag names are literal input values; kept in English</comment>
   </data>
   <data name="RestrictionsLabel" xml:space="preserve">
-    <value>Ograničenja (odvojena zarezom)</value>
+    <value>Ograničenja</value>
     <comment>MT</comment>
   </data>
   <data name="RolAddRole" xml:space="preserve">

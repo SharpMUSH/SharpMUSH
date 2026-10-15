@@ -1,7 +1,7 @@
 @using SharpMUSH.Library.Models.Packages
 @inject IStringLocalizer<SharedResource> Loc
 
-@* An installed package: its kind, version, source and update state, and the check, history and uninstall actions. *@
+@* An installed package: its kind, version, source and update state, and the check, README, history and uninstall actions. *@
 <PackageRow Icon="@KindIcon(Package.Package.Kind)" Kind="@Package.Package.Kind.ToString().ToLowerInvariant()"
             IconTitle="@KindName(Package.Package.Kind)" Name="@Package.Package.Id">
     <Tags>
@@ -57,6 +57,10 @@
                 @Loc["PkgCheck"]
             </MudButton>
         }
+        <MudTooltip Text="@Loc["PkgShowReadme", Package.Package.Id]">
+            <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" aria-label="@Loc["PkgShowReadme", Package.Package.Id]"
+                           OnClick="@OnReadme" />
+        </MudTooltip>
         <MudTooltip Text="@Loc["PkgRevisionHistory"]">
             <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["PkgRevisionHistory"]"
                            OnClick="@OnHistory" />
@@ -78,6 +82,7 @@
     [Parameter] public bool Busy { get; set; }
 
     [Parameter] public EventCallback OnCheck { get; set; }
+    [Parameter] public EventCallback OnReadme { get; set; }
     [Parameter] public EventCallback OnHistory { get; set; }
     [Parameter] public EventCallback OnUninstall { get; set; }
 

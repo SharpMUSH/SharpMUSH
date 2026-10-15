@@ -569,7 +569,8 @@ public partial class PackageInstallService
 				.ToList(),
 			run.FinalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
 			structureSnapshot,
-			pastMaximum);
+			pastMaximum,
+			run.Request.Readme);
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
@@ -684,7 +685,7 @@ public partial class PackageInstallService
 		// A minimal revision snapshot: a managed package has no objects/attributes,
 		// so history records only the version + commit it deposited.
 		var snapshot = new PackageRevisionSnapshot(
-			manifest.Version.ToString(), [], [], []);
+			manifest.Version.ToString(), [], [], [], Readme: request.Readme);
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
 			installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,

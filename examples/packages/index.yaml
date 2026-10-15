@@ -18,8 +18,8 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.3.1
-    description: +who and +where commands; other packages add a Status column to +who with filters
+    version: 1.5.1
+    description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
     package: bbs-lite
@@ -122,3 +122,8 @@ packages:
     package: rp-finder
     version: 1.0.1
     description: +lfrp and +watch — a looking-for-RP status shown in +who, and hearing when the people you watch connect (requires who-where)
+  - path: finger/
+    name: Finger
+    package: finger
+    version: 1.0.1
+    description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time

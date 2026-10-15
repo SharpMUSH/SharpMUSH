@@ -41,19 +41,21 @@ Boxes, titled rules, columns, labelled fields, trees and pictures, described onc
 |---|---|
 | [BOX()] | a frame with a title in its top edge |
 | [RULE()] | a line across, with a title in it |
-| [FLEX()] and [ITEM()] | things side by side |
-| [FIELDS()] | labels and values, the values lined up |
-| [TREE()] and [NODE()] | items under their parents |
+| [FLEX()], [LFLEX()] and [ITEM()] | things side by side |
+| [FIELDS()] and [LFIELDS()] | labels and values, the values lined up |
+| [TREE()], [LTREE()], [NODE()] and [LNODE()] | items under their parents |
 | [FIGURE()] | a picture, with text art for a terminal |
 | [GAUGE()] | a bar filled to a value |
 | [BULLETS()] | a bulleted or numbered list |
 | [GRID()] | short items in as many columns as fit |
-| [DATATABLE()] and [DATACOLUMNS()] | a table that gives way on a narrow screen, given by rows or by columns |
+| [DATATABLE()], [LDATATABLE()] and [DATACOLUMNS()] | a table that gives way on a narrow screen, given by rows or by columns |
 | [GRADIENT()] | text shaded through colours |
 | [BADGE()] | a coloured status tag |
 | [TONE()] | text in a theme colour, which each reader sees in their own theme |
 | [NOTICE()] | a message led by the badge of the system it comes from |
 | [THEMES()], [THEME()] and [SWATCH()] | colour themes for layouts; see [LAYOUT THEMES] |
+
+The l-prefixed forms take their items as one list instead of an argument each, for code that only knows how many there are when it runs, such as a row per player from one [ITER()].
 
 ## Text and nesting
 
