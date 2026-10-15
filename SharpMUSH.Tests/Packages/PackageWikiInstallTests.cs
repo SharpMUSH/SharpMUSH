@@ -253,8 +253,8 @@ public class PackageWikiInstallTests
 		var dir = Directory.CreateTempSubdirectory("wiki-install-");
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(dir.FullName, "wiki"));
-			await File.WriteAllTextAsync(Path.Combine(dir.FullName, "wiki", "road.md"), "# From a file\r\n");
+			Directory.CreateDirectory(Path.Join(dir.FullName, "wiki"));
+			await File.WriteAllTextAsync(Path.Join(dir.FullName, "wiki", "road.md"), "# From a file\r\n");
 			var manifest = Manifest(id, "1.0.0", $"""
 				  - page: main:{id}_road
 				    title: From a File
