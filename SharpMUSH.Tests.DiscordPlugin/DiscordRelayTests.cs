@@ -101,12 +101,33 @@ public class DiscordRelayTests
 		}
 	}
 
+	/// <summary>Holds every request until <see cref="Release"/>, then hands out a new webhook for each.</summary>
+	private sealed class HeldWebhooks : IDiscordWebhooks
+	{
+		private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private int _calls;
+
+		public int Calls => _calls;
+		public TaskCompletionSource Asked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		public void Release() => _released.TrySetResult();
+
+		public async Task<WebhookCreation> CreateWebhookAsync(ulong channelId, CancellationToken cancellationToken)
+		{
+			var call = (ulong)Interlocked.Increment(ref _calls);
+			Asked.TrySetResult();
+			await _released.Task.WaitAsync(cancellationToken);
+			return Webhook(call, $"token-{call}");
+		}
+	}
+
 	/// <summary>Records posts; a webhook id in <see cref="Gone"/> fails as Discord does for a deleted webhook.</summary>
 	private sealed class FakePoster(ulong webhookId) : IDiscordLinkPoster
 	{
 		private readonly List<DiscordPost> _posts = [];
 
 		public HashSet<ulong> Gone { get; } = [];
+		public bool Refusing { get; set; }
 		public TaskCompletionSource<DiscordPost> Posted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public bool Deleted { get; private set; }
 		public ulong WebhookId { get; set; } = webhookId;
@@ -116,6 +137,11 @@ public class DiscordRelayTests
 			if (Gone.Contains(WebhookId))
 			{
 				throw new DiscordLinkException(DiscordFailures.UnknownWebhook, "The channel's webhook was deleted or reset.");
+			}
+
+			if (Refusing)
+			{
+				throw new InvalidOperationException("Cannot send an empty message.");
 			}
 
 			lock (_posts)
@@ -144,11 +170,16 @@ public class DiscordRelayTests
 		public List<FakePoster> Posters { get; } = [];
 		public HashSet<ulong> Gone { get; } = [];
 
-		public DiscordRelay Relay(params WebhookCreation[] webhooks)
-			=> new(Store, Secrets, new QueuedWebhooks(webhooks), link =>
+		public bool Refusing { get; init; }
+
+		public DiscordRelay Relay(params WebhookCreation[] webhooks) => Relay(new QueuedWebhooks(webhooks));
+
+		public DiscordRelay Relay(IDiscordWebhooks webhooks)
+			=> new(Store, Secrets, webhooks, link =>
 				{
 					var poster = new FakePoster(link.WebhookId);
 					poster.Gone.UnionWith(Gone);
+					poster.Refusing = Refusing;
 					Posters.Add(poster);
 					return poster;
 				},
@@ -158,9 +189,9 @@ public class DiscordRelayTests
 	private static WebhookCreation Webhook(ulong id, string token)
 		=> new(new CreatedWebhook(id, token, 900, "Guild", "general"));
 
-	private static FeedLine Line(string kind, string key, string text, string audience = "")
+	private static FeedLine Line(string kind, string key, string text, string audience = "", DBRef[]? to = null)
 		=> new(new SharpFeedMessage(1, kind, key, Now, new DBRef(5), "Alice", new DBRef(5), "Alice", null, "", "say",
-			MString.Plain(text), Audience: audience), [], true, "");
+			MString.Plain(text), Audience: audience), [], true, "", to ?? []);
 
 	[Test, Timeout(30_000)]
 	public async Task ALinkedChannel_GetsItsFeedsLines_AsTheSpeaker(CancellationToken cancellationToken)
@@ -191,6 +222,8 @@ public class DiscordRelayTests
 		await relay.LineSentAsync(Line("radio", "4242", "another kind"), cancellationToken);
 		await relay.LineSentAsync(Line("discord", "999", "a channel not linked"), cancellationToken);
 		await relay.LineSentAsync(Line("discord", "4242", "for some members only", audience: "staff"), cancellationToken);
+		await relay.LineSentAsync(Line("discord", "4242", "for two people", to: [new DBRef(7), new DBRef(8)]),
+			cancellationToken);
 		await relay.LineSentAsync(Line("discord", "4242", "this one"), cancellationToken);
 		var post = await harness.Posters.Single().Posted.Task.WaitAsync(cancellationToken);
 		await relay.StopAsync(cancellationToken);
@@ -291,6 +324,45 @@ public class DiscordRelayTests
 		await Assert.That(status.State).IsEqualTo(DiscordLinkState.Faulted);
 		await Assert.That(status.Depth).IsEqualTo(1);
 		await Assert.That(harness.Posters.Single().Posted.Task.IsCompleted).IsFalse();
+	}
+
+	[Test, Timeout(30_000)]
+	public async Task TwoLinksOfOneChannelAtOnce_MakeOneWebhook(CancellationToken cancellationToken)
+	{
+		var harness = new Harness();
+		var webhooks = new HeldWebhooks();
+		var relay = harness.Relay(webhooks);
+
+		var first = relay.LinkAsync(Channel, "#1:1", Admin, cancellationToken);
+		await webhooks.Asked.Task.WaitAsync(cancellationToken);
+		var second = relay.LinkAsync(Channel, "#2:1", Admin, cancellationToken);
+		webhooks.Release();
+		var results = await Task.WhenAll(first, second);
+		await relay.StopAsync(cancellationToken);
+
+		await Assert.That(results[0] is DiscordChannelLink { WebhookId: 1 }).IsTrue();
+		await Assert.That(results[1] is Error<string> { Value: "#general is already linked." }).IsTrue();
+		await Assert.That(webhooks.Calls).IsEqualTo(1);
+		await Assert.That(harness.Secrets.Values["discord.webhook.4242"]).IsEqualTo("token-1");
+	}
+
+	[Test, Timeout(30_000)]
+	public async Task TooManyRefusedPosts_StopTheLink_AcrossARestart(CancellationToken cancellationToken)
+	{
+		var harness = new Harness { Refusing = true };
+		var relay = harness.Relay(Webhook(1, "token-1"));
+		await relay.StartAsync(cancellationToken);
+		await relay.LinkAsync(Channel, "#1:1", Admin, cancellationToken);
+
+		for (var i = 0; i < new DiscordOutboxOptions().RejectionsBeforeFault; i++)
+		{
+			await relay.LineSentAsync(Line("discord", "4242", $"refused {i}"), cancellationToken);
+		}
+
+		var faulted = await harness.Store.Faulted.Task.WaitAsync(cancellationToken);
+		await relay.StopAsync(cancellationToken);
+
+		await Assert.That(faulted.Fault?.Reason).IsEqualTo("Discord refused 5 messages within a minute.");
 	}
 
 	[Test]

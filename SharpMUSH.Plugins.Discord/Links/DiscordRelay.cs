@@ -39,6 +39,11 @@ public sealed class DiscordRelay(
 	public static readonly TimeSpan RecreateInterval = TimeSpan.FromMinutes(10);
 
 	private readonly ConcurrentDictionary<ulong, LinkRunner> _links = new();
+
+	/// <summary>
+	/// One link, unlink or resume at a time, so two admins linking the same channel cannot both make it a webhook.
+	/// </summary>
+	private readonly SemaphoreSlim _changing = new(1, 1);
 	private readonly CancellationTokenSource _stopping = new();
 
 	public IReadOnlyList<DiscordLinkStatus> Links()
@@ -58,6 +63,20 @@ public sealed class DiscordRelay(
 	public async Task<Result<DiscordChannelLink>> LinkAsync(ulong channelId, string linkedBy, SecretAuthor author,
 		CancellationToken cancellationToken)
 	{
+		await _changing.WaitAsync(cancellationToken);
+		try
+		{
+			return await LinkNewAsync(channelId, linkedBy, author, cancellationToken);
+		}
+		finally
+		{
+			_changing.Release();
+		}
+	}
+
+	private async Task<Result<DiscordChannelLink>> LinkNewAsync(ulong channelId, string linkedBy, SecretAuthor author,
+		CancellationToken cancellationToken)
+	{
 		if (store.Get(channelId) is { } existing)
 		{
 			return new Error<string>($"#{existing.ChannelName} is already linked.");
@@ -73,6 +92,19 @@ public sealed class DiscordRelay(
 	/// <summary>Stops posting to the channel, deletes its webhook as far as Discord lets it, and forgets the link.</summary>
 	/// <returns>The link that was dropped, or <see cref="NotFound"/>.</returns>
 	public async Task<Found<DiscordChannelLink>> UnlinkAsync(ulong channelId, CancellationToken cancellationToken)
+	{
+		await _changing.WaitAsync(cancellationToken);
+		try
+		{
+			return await DropAsync(channelId, cancellationToken);
+		}
+		finally
+		{
+			_changing.Release();
+		}
+	}
+
+	private async Task<Found<DiscordChannelLink>> DropAsync(ulong channelId, CancellationToken cancellationToken)
 	{
 		if (store.Get(channelId) is not { } link)
 		{
@@ -95,6 +127,19 @@ public sealed class DiscordRelay(
 	/// <returns>The link, or <see cref="NotFound"/>.</returns>
 	public async Task<Found<DiscordChannelLink>> ResumeAsync(ulong channelId, CancellationToken cancellationToken)
 	{
+		await _changing.WaitAsync(cancellationToken);
+		try
+		{
+			return await RestartAsync(channelId, cancellationToken);
+		}
+		finally
+		{
+			_changing.Release();
+		}
+	}
+
+	private async Task<Found<DiscordChannelLink>> RestartAsync(ulong channelId, CancellationToken cancellationToken)
+	{
 		if (store.Get(channelId) is not { } link)
 		{
 			return new NotFound();
@@ -116,11 +161,15 @@ public sealed class DiscordRelay(
 		return resumed;
 	}
 
-	/// <summary>Hands a line on a linked channel's feed to that channel's sender, unless it was meant for only some members.</summary>
+	/// <summary>
+	/// Hands a line on a linked channel's feed to that channel's sender, unless it was meant for only some members:
+	/// named with <c>@feed/send/to</c>, or marked by its system (a channel's <c>seeall</c> line).
+	/// </summary>
 	public ValueTask LineSentAsync(FeedLine line, CancellationToken cancellationToken)
 	{
 		var message = line.Message;
 		if (string.Equals(message.Kind, DiscordChannelLink.FeedKind, StringComparison.OrdinalIgnoreCase)
+			&& line.To.Count == 0
 			&& message.Audience.Length == 0
 			&& ulong.TryParse(message.Key, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId)
 			&& _links.TryGetValue(channelId, out var runner))

@@ -114,13 +114,17 @@ public sealed class DiscordLinkSender(
 		{
 			var outcome = await PostAsync(post, cancellationToken);
 			TimeSpan wait;
+			LinkBroken? stopped;
 			lock (outbox)
 			{
+				var before = outbox.Fault;
 				wait = outbox.Report(outcome, time.GetUtcNow());
+				// A broken link, or one rejection too many: either way the link has just stopped.
+				stopped = before is null ? outbox.Fault : null;
 			}
 
 			Log(outcome);
-			if (outcome is LinkBroken broken && faulted is not null)
+			if (stopped is { } broken && faulted is not null)
 			{
 				await faulted(broken, cancellationToken);
 			}

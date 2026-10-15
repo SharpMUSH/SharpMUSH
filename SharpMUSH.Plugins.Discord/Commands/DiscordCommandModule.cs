@@ -63,7 +63,14 @@ public static class DiscordCommandModule
 		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME");
 		if (action is null)
 		{
-			await notify.Notify(executor, Overview(gateway.State, relay.Links()));
+			var state = gateway.State;
+			await notify.Notify(executor, Overview(state, relay.Links()));
+			// Outside the panel, so it copies whole.
+			if (state.ApplicationId is { } applicationId)
+			{
+				await notify.Notify(executor, MarkupText.Plain($"Add the bot to a server: {DiscordSetup.InviteUrl(applicationId)}"));
+			}
+
 			return CallState.Empty;
 		}
 

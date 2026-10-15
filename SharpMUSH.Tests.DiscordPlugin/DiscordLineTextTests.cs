@@ -1,3 +1,5 @@
+using MarkupString;
+using MarkupString.Ansi;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Discord.Links;
 
@@ -9,8 +11,11 @@ public class DiscordLineTextTests
 
 	private static SharpFeedMessage Message(string style, string text, string name = "Alice", string display = "",
 		MString? line = null)
-		=> new(1, "discord", "123", Now, new DBRef(5), name, new DBRef(5), name, null, "", style, MString.Plain(text),
-			display, line);
+		=> Message(style, MString.Plain(text), name, display, line);
+
+	private static SharpFeedMessage Message(string style, MString text, string name = "Alice", string display = "",
+		MString? line = null)
+		=> new(1, "discord", "123", Now, new DBRef(5), name, new DBRef(5), name, null, "", style, text, display, line);
 
 	[Test]
 	[Arguments("say", "Hello there.", "Hello there.")]
@@ -32,6 +37,18 @@ public class DiscordLineTextTests
 		var line = DiscordLineText.From(Message("say", "a *b* c"));
 
 		await Assert.That(line.Text).IsEqualTo(@"a \*b\* c");
+	}
+
+	[Test]
+	public async Task Bold_BecomesDiscordBold_AndColourIsDropped()
+	{
+		var text = MarkupText.Concat(
+			MarkupText.Concat(MarkupText.Wrap(AnsiMarkup.Create(bold: true), MarkupText.Plain("Loud")), MarkupText.Plain(" and ")),
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)), MarkupText.Plain("red")));
+
+		var line = DiscordLineText.From(Message("say", text));
+
+		await Assert.That(line.Text).IsEqualTo("**Loud** and red");
 	}
 
 	[Test]
