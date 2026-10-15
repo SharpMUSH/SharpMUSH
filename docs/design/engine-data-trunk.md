@@ -104,6 +104,12 @@ bumps it before the key goes, and `QueryCachingBehavior` compares the version af
 and removes the entry it just stored if the version moved. The comparison is after the store,
 not before it, so the removal happens after the store in every interleaving.
 
+An answer kept outside the cache is checked against the same versions. `ObjectRelationMemo` keeps
+each object's grants, owner and location (the last two as the object id they name, resolved
+through the node cache on each read) until the object's version or the `grants` tag's version
+moves, and `ExecutorDebugFlags` keeps DEBUG the same way. So a write that removes a tag without
+the Mediator moves the tag's version first, as `AccountClaimsInvalidator` does.
+
 ## 8. One engine process, stated
 
 **Decision:** The engine cache is the in-memory FusionCache only. `ObjectVersions`, the in-memory
