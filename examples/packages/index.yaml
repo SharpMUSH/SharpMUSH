@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.5.1
+    version: 1.6.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -67,6 +67,11 @@ packages:
     package: plus-help
     version: 1.5.1
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
+  - path: plus-config/
+    name: "+config"
+    package: plus-config
+    version: 1.0.0
+    description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
   - path: hello-ui/
     name: Hello UI
     package: hello-ui
@@ -125,7 +130,7 @@ packages:
   - path: finger/
     name: Finger
     package: finger
-    version: 1.0.1
+    version: 1.1.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
   - path: discord/
     name: Discord

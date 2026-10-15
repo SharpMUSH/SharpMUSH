@@ -70,6 +70,9 @@ public static class BundledPackages
 		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
 		// which is why this installs at first boot rather than shipping available-and-unenabled.
 		new("plus-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// +config after +help, whose librarian carries its topics, and before the packages that register
+		// their settings with it.
+		new("plus-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
