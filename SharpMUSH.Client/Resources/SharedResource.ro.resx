@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Arată mai multe</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Cronologie</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Fără dată</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Vezi tot</value>
   </data>
@@ -6153,6 +6159,90 @@
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>O imagine cu avertisment de conținut rămâne în afara bibliotecii de imagini. Scoate avertismentul ca s-o partajezi.</value>
   </data>
+  <data name="RolCalendarOpen" xml:space="preserve">
+    <value>Adaugă în calendar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTitle" xml:space="preserve">
+    <value>Adaugă programul în calendarul tău</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSub" xml:space="preserve">
+    <value>Aplicația de calendar afișează fiecare scenă la ora ta locală și verifică modificările în fiecare oră.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarClose" xml:space="preserve">
+    <value>Închide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublic" xml:space="preserve">
+    <value>Scene publice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPublicHint" xml:space="preserve">
+    <value>Toate scenele publice din program. Oricine poate folosi această adresă.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivate" xml:space="preserve">
+    <value>Linkul tău privat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarPrivateHint" xml:space="preserve">
+    <value>Arată și scenele private pe care le vede acest personaj. Oricine are linkul îl poate citi, așa că păstrează-l pentru tine.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMineOnly" xml:space="preserve">
+    <value>Doar scenele pe care le conduc sau la care m-am alăturat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarShownOnce" xml:space="preserve">
+    <value>Această adresă apare doar acum. Copiaz-o în aplicația de calendar înainte să părăsești pagina.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMadeOn" xml:space="preserve">
+    <value>Ai creat un link privat pe {0}. Creează unul nou ca să vezi din nou adresa; cel vechi nu va mai funcționa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMake" xml:space="preserve">
+    <value>Creează linkul meu privat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarMakeNew" xml:space="preserve">
+    <value>Creează un link nou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarTurnOff" xml:space="preserve">
+    <value>Dezactivează-l</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarAddress" xml:space="preserve">
+    <value>Adresa calendarului</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopy" xml:space="preserve">
+    <value>Copiază</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarCopied" xml:space="preserve">
+    <value>Adresa calendarului a fost copiată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolCalendarSubscribe" xml:space="preserve">
+    <value>Abonează-te</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaving" xml:space="preserve">
+    <value>Se salvează ciorna</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftSaved" xml:space="preserve">
+    <value>Ciornă salvată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolDraftDeviceOnly" xml:space="preserve">
+    <value>Ciornă doar pe acest dispozitiv</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notificări</value>
     <comment>MT</comment>
@@ -6160,6 +6250,12 @@
   <data name="NavSettingsNotificationsDescription" xml:space="preserve">
     <value>Primește notificări pe acest telefon sau computer când portalul este închis</value>
     <comment>MT</comment>
+  </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Doar tu vezi asta.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notificări pentru tine</value>
   </data>
   <data name="NavPaletteGroupInput" xml:space="preserve">
     <value>Acest prompt</value>

@@ -238,6 +238,9 @@ public static class EventCatalogue
 			Args(("recipient", O), ("sender", O), ("number", N), ("subject", M), ("urgent", B)),
 			"The sender", "A player received @mail.", EventPrivacy.Private, false, Sharp),
 
+		new(SharpEvents.SceneStatus, Args(("scene", N), ("status", W), ("previous", W)), "Whoever made the scene or changed its status",
+			"A scene was made, or its status changed (the Scene plugin).", EventPrivacy.Staff, false, Sharp),
+
 		new(SharpEvents.BackupComplete, Args(("name", T), ("bytes", N)),
 			"Whoever ran @backup or @dump, or God (#1) for a scheduled copy",
 			"A copy of the world was written.", EventPrivacy.Public, false, Sharp),
