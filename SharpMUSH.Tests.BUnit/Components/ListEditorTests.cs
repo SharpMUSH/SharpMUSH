@@ -49,6 +49,17 @@ public class ListEditorTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task WithNoSeparatorsAValueKeepsItsSpacesAndCommas()
+	{
+		var cut = Render(separators: []);
+
+		await cut.Find(".list-editor-input").InputAsync(Typed("Two references, one of them staff"));
+		await cut.Find(".list-editor-input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+		await Assert.That(_items).IsEquivalentTo(new[] { "Two references, one of them staff" });
+	}
+
+	[Test]
 	public async Task LosingFocusAddsWhatWasTyped()
 	{
 		var cut = Render();

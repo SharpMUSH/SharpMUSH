@@ -264,15 +264,15 @@ public class JobsIntegrationTests
 			await As(staff, "+job/note 1=Staff eyes only.");
 			await As(staff, "+job/reply 1=Which floor?");
 			var read = await As(player, "+job 1");
-			await Assert.That(read).Contains("#1").And.Contains("#2").And.DoesNotContain("#3")
-				.Because("a player's messages are numbered without the hidden ones");
-			await Assert.That(await As(staff, "+job 1")).Contains("#3");
+			await Assert.That(read).Contains("#1").And.Contains("#2").And.Contains("#3").And.DoesNotContain("#4")
+				.Because("a player's messages are numbered without the hidden ones: the request, the bucket's first reply and staff's");
+			await Assert.That(await As(staff, "+job 1")).Contains("#4");
 
 			await Assert.That(await As(player, "+job/edit 1/1=nomatch/zzz"))
 				.Contains("Message 1 on job 1 has no \"nomatch\" in it. Nothing changed.");
 			await Assert.That(await As(player, "+job/edit 1=a/b")).Contains("+job/edit <#>/<message>=<old text>/<new text>");
-			await Assert.That(await As(player, "+job/edit 1/2=floor/x")).Contains("You can only edit your own messages.")
-				.Because("message 2 to the player is staff's reply, not the hidden note");
+			await Assert.That(await As(player, "+job/edit 1/3=floor/x")).Contains("You can only edit your own messages.")
+				.Because("message 3 to the player is staff's reply, not the hidden note");
 			await Assert.That(await As(player, "+job/edit 1/1=room/suite")).Contains("Message 1 on job 1 is changed.");
 			await Assert.That(await As(player, "+job 1")).Contains("A suite, please.");
 
@@ -595,8 +595,8 @@ public class JobsIntegrationTests
 			await As(staff, "+job/complete 1=Finished, with commas.");
 			await WebAppFactoryArg.QueueBarrierAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
-				.Contains($"HOOKDONE 1 1 {staff.Name} {player.Name} 4=4")
-				.Because("the claim and its turn are log entries 2 and 3, the closing message 4");
+				.Contains($"HOOKDONE 1 1 {staff.Name} {player.Name} 5=5")
+				.Because("after the bucket's first reply (2), the claim and its turn are log entries 3 and 4, the closing message 5");
 			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef)))
 				.Contains("HOOKTURN 1 new>staff new>staff");
 
@@ -700,6 +700,186 @@ public class JobsIntegrationTests
 			var stranger = await Player("JobsWebX");
 			var hidden = await Http("GET", "/jobs/schema?at=1", "", stranger);
 			await Assert.That(hidden.ToString()).Contains("There is no job 1.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	private async Task<string> Bucket(string name) =>
+		await God($"think [first(iter(lsearch(all,type,thing),if(cand(strmatch(name(%i0),{name}),hasattr(%i0,SLUG),not(hasflag(%i0,GOING))),%i0)))]");
+
+	[Test]
+	public async Task ANewJobGetsTheBucketsFirstReplyWithHowSoonItUsuallyAnswers()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsAckP");
+			var staff = await Player("JobsAckS", "job-admin");
+			var requests = await Bucket("Requests");
+
+			var filed = await As(player, "+request Room=A room, please.");
+			await Assert.That(filed).Contains("Filed job 1 in Requests: Room. Staff aim to answer within 3 days.")
+				.Because("until it has measured three jobs, a bucket promises its turnaround");
+			await Assert.That(await God("think [job(1,entries)]")).IsEqualTo("2");
+			var read = await As(player, "+job 1");
+			await Assert.That(read).Contains("Requests \u00b7").And.Contains("Thanks. Staff have your request and will answer here.")
+				.And.Contains("Within 3 days");
+			await Assert.That(await As(player, "+jobs")).DoesNotContain("*1").Because("the first reply does not make the job unread for its filer");
+
+			await As(staff, "+job/reply 1=Which floor?");
+			await Assert.That(await God($"think [words(get({requests}/STATS`ANSWER))]")).IsEqualTo("1")
+				.Because("staff's first reply is one sample of how soon the bucket answers");
+			await As(staff, "+job/reply 1=Second floor it is.");
+			await Assert.That(await God($"think [words(get({requests}/STATS`ANSWER))]")).IsEqualTo("1")
+				.Because("only the first answer counts");
+			await As(staff, "+job/approve 1=Done.");
+			await Assert.That(await God($"think [words(get({requests}/STATS`CLOSE))]")).IsEqualTo("1")
+				.Because("closing a player's job is one sample of how soon the bucket closes");
+
+			await God($"&STATS`ANSWER {requests}=7200 14400 30000 9000 86400");
+			await God($"&STATS`CLOSE {requests}=90000 200000 150000");
+			var bucket = await As(staff, "+bucket Requests");
+			await Assert.That(bucket).Contains("About 4 hours (the last 5 jobs)")
+				.And.Contains("About 2 days (the last 3 jobs)");
+			await Assert.That(await As(player, "+buckets")).Contains("about 4 hours");
+			await Assert.That(await As(player, "+request Desc=A description.")).Contains("Staff usually answer in about 4 hours.");
+
+			await God("+config jobs/wait-sample=3");
+			await As(staff, "+job/reply 2=Done.");
+			await Assert.That(await God($"think [get({requests}/STATS`ANSWER)]")).StartsWith("9000 86400 ")
+				.Because("the bucket keeps only the latest wait-sample answers");
+
+			await As(staff, "+bucket/set Requests/acknowledge=");
+			await As(player, "+request Quiet=No first reply.");
+			await Assert.That(await God("think [job(3,entries)]")).IsEqualTo("1").Because("an empty acknowledge sends none");
+			await As(staff, "+bucket/set Requests/acknowledge=Got it.");
+			await As(staff, $"+job/create Requests/From staff=Staff work.");
+			await Assert.That(await God("think [job(4,entries)]")).IsEqualTo("1").Because("staff filing need no acknowledgement");
+		}
+		finally
+		{
+			await God("+config/reset jobs/wait-sample");
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task AnAuditedBucketApprovesAtOnceAndEachRevertRunsItsOwnHook()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsAudP");
+			var other = await Player("JobsAudO");
+			var staff = await Player("JobsAudS", "job-admin");
+			var building = await Bucket("Building");
+			await God($"&ON`APPROVE {building}=@pemit %<filer>=AUDAPPROVE %<job> [name(%<actor>)]");
+			await God($"&ON`REVERT {building}=@pemit %<filer>=AUDREVERT %<job> [name(%<actor>)] %<entry>=%3");
+
+			await Assert.That(await As(staff, "+bucket/set Building/audit=yes")).Contains("Building audit is yes.");
+			var filed = await As(player, "+request Building/Bench=A bench in the plaza.");
+			await Assert.That(filed).Contains("It is approved at once, and staff look it over later.")
+				.And.DoesNotContain("Building approved your job").Because("the filer is told once");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(string.Join("\n", Notifications.For(player.DbRef))).Contains("AUDAPPROVE 1 Building")
+				.Because("approving at once runs the bucket's own ON`APPROVE, as the bucket");
+			await Assert.That(await God("think [job(1,outcome)] [job(1,audit)]")).IsEqualTo("approved pending");
+
+			await As(other, "+request Building/Lamp=A lamp.");
+			await Assert.That(await As(staff, "+jobs/audit")).Contains("Bench").And.Contains("Lamp").And.Contains("Approved, to check");
+			await Assert.That(await As(staff, "+job/audit 2")).Contains("Job 2 is checked: its approval stands.");
+			await Assert.That(await God("think [job(2,audit)]")).IsEqualTo("passed");
+			await Assert.That(await As(staff, "+jobs/audit")).Contains("Bench").And.DoesNotContain("Lamp");
+
+			await Assert.That(await As(player, "+job/revert 1=No.")).Contains("Only staff");
+			await Assert.That(await As(staff, "+job/revert 1=The plaza has no room.")).Contains("Job 1 is reverted.");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(string.Join("\n", Notifications.For(player.DbRef))).Contains($"AUDREVERT 1 {staff.Name} 3=3");
+			await Assert.That(await God("think [job(1,outcome)] [job(1,audit)]")).IsEqualTo("reverted reverted");
+			await Assert.That(await As(player, "+job 1")).Contains("Reverted").And.Contains("The plaza has no room.");
+			await Assert.That(await As(staff, "+jobs/audit")).Contains("No jobs.");
+
+			await Assert.That(await As(staff, $"+bucket/lock Building/audit=#{staff.DbRef.Number}")).Contains($"Building audit lock: #{staff.DbRef.Number}");
+			await As(player, "+request Building/Door=A door.");
+			await Assert.That(await God("think [job(3,state)] [job(3,entries)]")).IsEqualTo("new 2")
+				.Because("someone the audit lock refuses waits for staff, with the bucket's first reply");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task AChecklistIsCopiedOntoEachJobAndTickedOffByStaff()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsChkP");
+			var staff = await Player("JobsChkS", "job-admin");
+			var applications = await Bucket("Applications");
+			await God($"&ON`CHECK {applications}=@pemit %<actor>=CHECKED %<job> %<step> %<done>");
+
+			await Assert.That(await As(staff, "+bucket/set Applications/checklist=Sheet checked|Background, read twice")).Contains("Sheet checked and Background, read twice");
+			await Assert.That(await As(staff, $"+bucket/set Applications/checklist={new string('x', 101)}")).Contains("Checklist is up to 20 steps");
+			await As(player, "+request Applications/Mara=Please.");
+			await As(staff, "+bucket/set Applications/checklist=Changed later");
+
+			var read = await As(player, "+job 1");
+			await Assert.That(read).Contains("0 of 2 done").And.Contains("1. [ ] Sheet checked").And.Contains("2. [ ] Background, read twice")
+				.Because("a job keeps the checklist its bucket had when it was filed");
+			await Assert.That(await As(player, "+job/check 1=1")).Contains("Only staff");
+			await Assert.That(await As(staff, "+job/check 1=3")).Contains("Job 1 has no step 3.");
+			await Assert.That(await As(staff, "+job/check 1=1")).Contains("Step 1 of job 1 is done: Sheet checked");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef))).Contains("CHECKED 1 1 1");
+			await Assert.That(await God("think [job(1,done)]/[job(1,steps)]")).IsEqualTo("1/2");
+			await Assert.That(await As(player, "+job 1")).Contains($"1. [x] Sheet checked \u00b7 {staff.Name}");
+			await As(staff, "+job/uncheck 1=1");
+			await Assert.That(await God("think [job(1,done)]")).IsEqualTo("0");
+
+			await Assert.That(await As(staff, "+job/status 1=Reading the background next.")).Contains("The player reads on job 1: Reading the background next.");
+			await Assert.That(await As(player, "+job 1")).Contains("Update:").And.Contains("Reading the background next.");
+			await Assert.That(await God("think [job(1,update)]")).IsEqualTo("Reading the background next.");
+			await Assert.That(await As(staff, "+job/status 1=")).Contains("Job 1 has no update now.");
+			await Assert.That(await God("think [job(1,update)]")).IsEqualTo(string.Empty);
+
+			var saved = await Http("POST", "/jobs/act",
+				"""{"op":"bucket","bucket":"applications","checklist":["Sheet checked","Two references, one of them staff"]}""", staff);
+			await Assert.That(saved.GetProperty("ok").GetBoolean()).IsTrue().Because(saved.ToString());
+			await Assert.That(await God($"think [get({applications}/CHECKLIST)]")).IsEqualTo("Sheet checked|Two references, one of them staff")
+				.Because("the portal posts the checklist as a list, so a step may hold a comma");
+			var form = await Http("GET", "/jobs/data?at=buckets/applications", "", staff);
+			await Assert.That(form.GetProperty("fields").GetProperty("checklist").GetProperty("value").GetArrayLength()).IsEqualTo(2);
+			var job = await Http("GET", "/jobs/data?at=1", "", staff);
+			await Assert.That(job.GetProperty("fields").GetProperty("steps").GetProperty("value").GetArrayLength()).IsEqualTo(2);
+
+			var cleared = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","checklist":[]}""", staff);
+			await Assert.That(cleared.GetProperty("ok").GetBoolean()).IsTrue().Because(cleared.ToString());
+			await Assert.That(await God($"think [get({applications}/CHECKLIST)]")).IsEqualTo(string.Empty)
+				.Because("removing every step in the portal clears the checklist");
+
+			await Assert.That(await As(staff, "+bucket/lock Applications/audit=(((")).Contains("That is not a lock.");
+			await Assert.That(await As(staff, "+bucket/lock Applications/work=")).Contains("Someone has to work Applications");
+			var badLock = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","audit_lock":"((("}""", staff);
+			await Assert.That(badLock.GetProperty("errors").GetProperty("audit_lock").GetString()).IsEqualTo("That is not a lock.");
+			var noWorkers = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","work_lock":""}""", staff);
+			await Assert.That(noWorkers.GetProperty("errors").GetProperty("work_lock").GetString()).StartsWith("Someone has to work the bucket");
+			var locked = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","audit_lock":"role^approved"}""", staff);
+			await Assert.That(locked.GetProperty("ok").GetBoolean()).IsTrue().Because(locked.ToString());
+			await Assert.That(await God($"think [lock({applications}/audit)]")).IsEqualTo("ROLE^approved");
+			var lockForm = await Http("GET", "/jobs/data?at=buckets/applications", "", staff);
+			await Assert.That(lockForm.GetProperty("fields").GetProperty("audit_lock").GetProperty("value").GetString()).IsEqualTo("ROLE^approved");
+
+			var worker = await Player("JobsChkW", "job-admin-applications");
+			var refused = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"applications","audit_lock":""}""", worker);
+			await Assert.That(refused.GetProperty("errors").GetProperty("_global").GetString()).IsEqualTo("Only a Job Admin can change a bucket's locks.")
+				.Because("someone who works a bucket may change its settings, but not who works it");
+			await Assert.That(await God($"think [lock({applications}/audit)]")).IsEqualTo("ROLE^approved");
 		}
 		finally
 		{

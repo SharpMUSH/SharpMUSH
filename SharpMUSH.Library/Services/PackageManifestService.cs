@@ -25,7 +25,8 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
-		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins"
+		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
+		"attributes"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -170,6 +171,11 @@ public partial class PackageManifestService : IPackageManifestService
 		var binary = ReadBinaries(doc, kind, issues);
 		var declarations = ReadDeclarations(doc, kind, issues);
 		ValidateDeclarations(declarations, issues);
+		if (ReadAttributeEntries(doc, kind, format, issues) is { Count: > 0 } attributeEntries)
+		{
+			declarations = declarations with { Attributes = attributeEntries };
+		}
+
 		var settings = ReadSettings(doc, kind, issues);
 		var locale = ReadLocale(doc, issues);
 		var wiki = ReadWiki(doc, kind, declarations, issues);

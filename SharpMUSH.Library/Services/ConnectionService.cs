@@ -28,13 +28,21 @@ public class ConnectionService(
 	private ImmutableArray<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
 	/// <summary>
-	/// Guards <see cref="Disconnect"/>'s atomic remove-and-count against a race between two of the same
-	/// player's handles disconnecting at genuinely the same time. Both the removal from
-	/// <see cref="_sessionState"/> and the subsequent count of the player's remaining connections happen
-	/// inside this lock, so whichever of two concurrent <see cref="Disconnect"/> calls for the same
-	/// player runs second always sees the first one's handle already gone, never as "still connected."
+	/// Each player's handles, so a lookup by player reads only that player's connections instead of
+	/// scanning every one. <c>idle()</c> and <c>conn()</c> look a player up on each call, which made a
+	/// listing of every player cost connections squared. Written only under <see cref="_bindingLock"/>;
+	/// read without it.
 	/// </summary>
-	private readonly Lock _disconnectLock = new();
+	private readonly ConcurrentDictionary<DBRef, ImmutableHashSet<long>> _handlesByPlayer = [];
+
+	/// <summary>
+	/// Held around every change that adds a handle, removes one or changes the player it is bound to,
+	/// together with the matching change to <see cref="_handlesByPlayer"/>, so the index never disagrees
+	/// with <see cref="_sessionState"/>. It also makes <see cref="Disconnect"/>'s remove-and-count atomic:
+	/// whichever of two of a player's handles disconnecting at the same time runs second sees the first
+	/// one already gone, never as "still connected."
+	/// </summary>
+	private readonly Lock _bindingLock = new();
 
 	public async ValueTask Disconnect(long handle, string? sessionId = null)
 	{
@@ -42,12 +50,13 @@ public class ConnectionService(
 		if (get is null || (!string.IsNullOrEmpty(sessionId) && get.Metadata.GetValueOrDefault("SessionId") != sessionId)) return;
 
 		int? remainingConnections;
-		lock (_disconnectLock)
+		lock (_bindingLock)
 		{
 			if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
+			Reindex(handle, get.Ref, null);
 
 			remainingConnections = get.Ref is { } playerRef
-				? _sessionState.Count(x => x.Value.Ref == playerRef)
+				? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count
 				: null;
 		}
 
@@ -72,15 +81,18 @@ public class ConnectionService(
 	public IConnectionService.ConnectionData? Get(long handle) =>
 		_sessionState.GetValueOrDefault(handle);
 
-	// Both enumerate the dictionary itself. Its Values property takes every bucket lock and copies the
-	// whole table on each call; the enumerator does neither. It is not a point-in-time snapshot, which
-	// nothing here relied on: each caller re-checks a connection it acts on.
+	// The handle set is read without the lock, so a handle may have been rebound since; the Ref check
+	// drops it rather than answering for the wrong player.
 	public IAsyncEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
-		_sessionState
-			.Select(x => x.Value)
+		_handlesByPlayer.GetValueOrDefault(reference, [])
+			.Select(Get)
+			.OfType<IConnectionService.ConnectionData>()
 			.Where(x => x.Ref == reference)
 			.ToAsyncEnumerable();
 
+	// Enumerates the dictionary itself. Its Values property takes every bucket lock and copies the
+	// whole table on each call; the enumerator does neither. It is not a point-in-time snapshot, which
+	// nothing here relied on: each caller re-checks a connection it acts on.
 	public IAsyncEnumerable<IConnectionService.ConnectionData> GetAll() =>
 		_sessionState
 			.Select(x => x.Value)
@@ -98,7 +110,7 @@ public class ConnectionService(
 		if (get is null) return;
 
 		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return;
-		if (!_sessionState.TryUpdate(handle, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, get)) return;
+		if (!Replace(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn })) return;
 
 		if (stateStore != null)
 		{
@@ -127,7 +139,7 @@ public class ConnectionService(
 
 		// State is updated before the notification is published, so a PLAYER`DISCONNECT handler asking
 		// for the player's remaining connections does not count the one that is leaving.
-		if (!_sessionState.TryUpdate(handle, get with { Ref = null, State = IConnectionService.ConnectionState.Connected }, get)) return;
+		if (!Replace(get, get with { Ref = null, State = IConnectionService.ConnectionState.Connected })) return;
 
 		if (stateStore != null)
 		{
@@ -178,7 +190,7 @@ public class ConnectionService(
 		if ((get.Ref is not null || (get.State == IConnectionService.ConnectionState.AccountMode &&
 			get.Metadata.GetValueOrDefault("AccountId") != accountId)) && !await RevokeResumeAsync(get)) return;
 		var oldState = get.State;
-		if (!_sessionState.TryUpdate(handle, get with { Ref = null, State = IConnectionService.ConnectionState.AccountMode }, get)) return;
+		if (!Replace(get, get with { Ref = null, State = IConnectionService.ConnectionState.AccountMode })) return;
 		get.Metadata["AccountId"] = accountId;
 
 		if (stateStore != null)
@@ -198,6 +210,35 @@ public class ConnectionService(
 
 		telemetryService?.RecordConnectionEvent("account_mode");
 		UpdateConnectionMetrics();
+	}
+
+	/// <summary>Swaps <paramref name="current"/> for <paramref name="next"/> if it is still the stored entry.</summary>
+	private bool Replace(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next)
+	{
+		lock (_bindingLock)
+		{
+			if (!_sessionState.TryUpdate(current.Handle, next, current)) return false;
+			Reindex(current.Handle, current.Ref, next.Ref);
+			return true;
+		}
+	}
+
+	/// <summary>Moves <paramref name="handle"/> from <paramref name="from"/>'s set to <paramref name="to"/>'s. Caller holds <see cref="_bindingLock"/>.</summary>
+	private void Reindex(long handle, DBRef? from, DBRef? to)
+	{
+		if (from == to) return;
+
+		if (from is { } former && _handlesByPlayer.TryGetValue(former, out var formerHandles))
+		{
+			var rest = formerHandles.Remove(handle);
+			if (rest.IsEmpty) _handlesByPlayer.TryRemove(former, out _);
+			else _handlesByPlayer[former] = rest;
+		}
+
+		if (to is { } player)
+		{
+			_handlesByPlayer[player] = _handlesByPlayer.GetValueOrDefault(player, []).Add(handle);
+		}
 	}
 
 	private async Task<bool> RevokeResumeAsync(IConnectionService.ConnectionData connection)
@@ -328,10 +369,19 @@ public class ConnectionService(
 
 		// Redelivery keeps the same incarnation, including after engine reconciliation. A new
 		// socket must never inherit a previous occupant's login; delayed old registrations lose.
-		var stored = _sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
-			ShouldReplaceRegistration(existing, newEntry) ? newEntry : existing);
+		IConnectionService.ConnectionData? replaced = null;
+		lock (_bindingLock)
+		{
+			var stored = _sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
+			{
+				replaced = existing;
+				return ShouldReplaceRegistration(existing, newEntry) ? newEntry : existing;
+			});
 
-		if (!ReferenceEquals(stored, newEntry)) return;
+			if (!ReferenceEquals(stored, newEntry)) return;
+			// A restored entry it replaces may have been bound; the new socket is not.
+			Reindex(handle, replaced?.Ref, null);
+		}
 
 		if (stateStore != null && string.IsNullOrEmpty(metadata.GetValueOrDefault("SessionId")))
 		{
@@ -410,15 +460,20 @@ public class ConnectionService(
 			// Marked so Register can tell this remembered entry from a live one it owns; see Register.
 			metadata[ReconciledMarker] = "1";
 
-			_sessionState.TryAdd(handle, new IConnectionService.ConnectionData(
-				handle,
-				data.PlayerObjid is null ? null : DBRef.Parse(data.PlayerObjid),
-				state,
-				createOutputFunction(handle),
-				createPromptOutputFunction(handle),
-				encodingFunction,
-				metadata
-			));
+			var player = data.PlayerObjid is null ? null : (DBRef?)DBRef.Parse(data.PlayerObjid);
+			lock (_bindingLock)
+			{
+				if (!_sessionState.TryAdd(handle, new IConnectionService.ConnectionData(
+					handle,
+					player,
+					state,
+					createOutputFunction(handle),
+					createPromptOutputFunction(handle),
+					encodingFunction,
+					metadata
+				))) continue;
+				Reindex(handle, null, player);
+			}
 		}
 
 		UpdateConnectionMetrics();

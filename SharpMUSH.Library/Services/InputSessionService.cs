@@ -82,12 +82,14 @@ public sealed class InputSessionService : IInputSessionService
 	private readonly TimeProvider _time;
 	private readonly HandlePublicationLane? _lane;
 	private readonly IOptionsWrapper<SharpMUSHOptions>? _configuration;
+	private readonly ContextUse? _contextUse;
 
 	public InputSessionService(IConnectionService connections, IMediator mediator, IAttributeService attributes,
 		IPermissionService permissions, INotifyService notify, TimeProvider? timeProvider = null,
-		IOptionsWrapper<SharpMUSHOptions>? configuration = null)
+		IOptionsWrapper<SharpMUSHOptions>? configuration = null, ContextUse? contextUse = null)
 	{
 		_configuration = configuration;
+		_contextUse = contextUse;
 		_connections = connections;
 		_mediator = mediator;
 		_attributes = attributes;
@@ -134,6 +136,18 @@ public sealed class InputSessionService : IInputSessionService
 			}
 		}
 		finally { SendEnded(); }
+	}
+
+	public InputSession? FindCapturing(Guid id)
+	{
+		long handle;
+		lock (_gate)
+		{
+			if (_sessions.Values.FirstOrDefault(entry => entry.Session.Id == id) is not { } entry) return null;
+			handle = entry.Session.Connection.Handle;
+		}
+
+		return GetCapturing(handle) is { } session && session.Id == id ? session : null;
 	}
 
 	public InputSession? GetCapturing(long handle)
@@ -525,6 +539,9 @@ public sealed class InputSessionService : IInputSessionService
 		}
 		var exit = ReferenceEquals(route, session.Exit);
 		if (exit) Discard(session);
+		// A line the session took is the player using its system, as a typed $-command is.
+		if (!timeout && _contextUse is { } contextUse)
+			await contextUse.RecordAsync(character, [route.Target], ExecutionBudget.CurrentToken);
 		// A named argument, as a regexp's named group is, so it lives only as long as this run; it
 		// replaces a group of the same name.
 		arguments[ReasonArgument] = new CallState(MString.Plain(timeout ? "timeout" : exit ? "exit" : "input"), 0);
