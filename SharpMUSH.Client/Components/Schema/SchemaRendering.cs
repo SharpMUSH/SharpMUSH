@@ -162,6 +162,22 @@ public static partial class SchemaRendering
 		return IsSafeUrl(href) ? href : null;
 	}
 
+	/// <summary>
+	/// A keyvalue's value: a string or number as its text, or <c>{ text, link }</c> as text with the page it links
+	/// to. The link is null when there is none or it is not one the portal may follow (<see cref="IsSafeUrl"/>).
+	/// </summary>
+	public static (string Text, string? Link) ReadKeyValue(JsonElement? value)
+	{
+		if (value is not { ValueKind: JsonValueKind.Object } item)
+		{
+			return (SchemaViewRenderer.ValueToString(value), null);
+		}
+
+		var text = item.TryGetProperty("text", out var t) ? SchemaViewRenderer.ValueToString(t) : string.Empty;
+		var link = item.TryGetProperty("link", out var l) ? SchemaViewRenderer.ValueToString(l) : string.Empty;
+		return (text, string.IsNullOrWhiteSpace(link) || !IsSafeUrl(link) ? null : link);
+	}
+
 	/// <summary>One action button on a timeline entry.</summary>
 	public sealed record TimelineAction(string Label, string Action, IReadOnlyDictionary<string, JsonElement>? Values, string? Confirm);
 

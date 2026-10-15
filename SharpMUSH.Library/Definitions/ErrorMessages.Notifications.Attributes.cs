@@ -157,5 +157,32 @@ public static partial class ErrorMessages
 		public const string AttributeCommandDecompileLimitFormat = "@attribute/limit {0}={1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandDecompileEnumFormat = "@attribute/enum {0}={1}";
+		// @attribute/index: attribute value indexes.
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexSettingFormat = "Indexing {0}: {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexReadyFormat = "Index on {0} ready: {1} copies on {2} objects indexed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexContinuingFormat = "Index on {0}: {1} of {2} objects looked at so far, {3} copies indexed. It goes on building in the background; you will be told when it is ready.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexUnchangedFormat = "{0} is already indexed that way: {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexRemovedFormat = "Index on {0} removed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexNoneFormat = "{0} has no index.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexGoneFormat = "The index on {0} was taken off before it was ready.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexInternalFormat = "{0} is internal by default, so no copy of it could be indexed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexOptionsFormat = "Index options: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexRefusedFormat = "Cannot index: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexedNotInternalFormat = "{0} is indexed. Take the index off with @attribute/index {0}=off before making it internal.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandIndexDescribeFormat = "  Index: {0} ({1})";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandDecompileIndexFormat = "@attribute/index {0}={1}";
 	}
 }

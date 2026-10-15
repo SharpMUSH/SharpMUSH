@@ -23,6 +23,12 @@ public static class LayoutScopes
 	public const string Profile = "profile";
 	public const string Play = "play";
 
+	/// <summary>
+	/// The name card (a character's sheet in Play, a name's hover card elsewhere). It has no layout of its own:
+	/// every widget application registered for it is drawn there, by order.
+	/// </summary>
+	public const string Card = "card";
+
 	public static readonly IReadOnlyList<LayoutScope> All =
 	[
 		new(Global, "LayScopeGlobal", "LayScopeGlobalDesc",

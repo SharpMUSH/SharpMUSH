@@ -5165,6 +5165,18 @@
   <data name="AdmSetupPkgJobsAppDesc" xml:space="preserve">
     <value>A Jobs page in the portal where players file and follow requests and staff answer, claim and close them.</value>
   </data>
+  <data name="AdmSetupPkgChargenTitle" xml:space="preserve">
+    <value>Character applications</value>
+  </data>
+  <data name="AdmSetupPkgChargenDesc" xml:space="preserve">
+    <value>+app: a character's application stays a draft until it is submitted, staff comment on each section and return or approve it, and applicants see their place in the queue. An optional cap on characters keeps a waitlist. Needs the HTTP handler.</value>
+  </data>
+  <data name="AdmSetupPkgChargenAppTitle" xml:space="preserve">
+    <value>Character applications in the portal</value>
+  </data>
+  <data name="AdmSetupPkgChargenAppDesc" xml:space="preserve">
+    <value>An Application page in the portal where players fill in and submit their application, and reviewers read, compare, comment on and decide them.</value>
+  </data>
   <data name="AdmSetupPkgBBoardsTitle" xml:space="preserve">
     <value>Bulletin boards</value>
   </data>
@@ -8325,6 +8337,15 @@
   </data>
   <data name="AdmActivityDeadEmpty" xml:space="preserve">
     <value>Every room has seen a pose.</value>
+  </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>Diagram</value>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} to {1}: {2}</value>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>{0}'s card</value>
   </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Notifications</value>

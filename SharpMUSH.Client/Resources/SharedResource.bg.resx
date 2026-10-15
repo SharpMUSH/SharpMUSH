@@ -6243,6 +6243,18 @@
     <value>Чернова само на това устройство</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraph" xml:space="preserve">
+    <value>Диаграма</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEdge" xml:space="preserve">
+    <value>{0} към {1}: {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolNameCardLabel" xml:space="preserve">
+    <value>Карта на {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavNotifications" xml:space="preserve">
     <value>Известия</value>
     <comment>MT</comment>

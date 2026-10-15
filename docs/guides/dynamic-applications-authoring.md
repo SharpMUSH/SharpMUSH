@@ -3,9 +3,10 @@
 > **Status — implemented.** The rendering client, registry, and routes described here are
 > built and tested (`docs/todo/area-21-applications.md`). The softcode contract below is the
 > same HTTP-handler model the character-profile API uses
-> (`examples/packages/profile-handler/package.yaml`), and the worked example lives at
-> `examples/packages/chargen/` — its GET`CHARGEN`SCHEMA is covered by a test that asserts it
-> evaluates to valid JSON. **[SCREENSHOT]** markers await capture from a served deployment.
+> (`examples/packages/profile-handler/package.yaml`). `examples/packages/chargen/` (character
+> applications) and `examples/packages/jobs/` are complete examples: a form, lists, buttons and a
+> sidebar, each built for the viewer, and integration tests drive their routes.
+> **[SCREENSHOT]** markers await capture from a served deployment.
 
 ## The model in one paragraph
 
@@ -78,7 +79,8 @@ removed; a value may hold a comma. Give it a JSON array in the data, and it post
 `json(array,json(string,Sheet checked),json(string,Background read))`.
 
 **Display elements (for `view`, also usable in `form`):** `markdown`, `image` (`src_field`),
-`table` (`rows_field` + `columns`), `keyvalue` (`fields`), `timeline` (`rows_field`), `divider`,
+`table` (`rows_field` + `columns`), `keyvalue` (`fields`; a value of `{text,link}` is a link),
+`timeline` (`rows_field`), `graph` (`src_field` holding `{nodes,edges}`, `link`, `empty`), `divider`,
 `button`. A form draws them exactly as a view does, so one `form` document can show a ticket's
 history above its comment box. Markdown never passes raw HTML through, and links with a scheme
 other than `http`/`https`/`mailto` are dropped.

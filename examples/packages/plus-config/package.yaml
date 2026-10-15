@@ -1,6 +1,6 @@
 format: 1
 package: plus-config
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -644,15 +644,15 @@ objects:
       # %0 the system, %1 its object, %2 the setting.
       FUN`SCREEN`SETTING:
         value: |-
-          box(lfields(,u(%!/FUN`SCREEN`SETTINGLABELS,%1,%2),u(%!/FUN`SCREEN`SETTINGVALUES,%0,%1,%2),chr(30))[u(%!/FUN`DISPLAY`FOOTER,u(%!/FUN`SCREEN`SETTINGFOOTER,%0,%1,%2))],%0/%2)
+          box(lfields(,u(%!/FUN`SCREEN`SETTINGLABELS,%1,%2),u(%!/FUN`SCREEN`SETTINGVALUES,%0,%1,%2),%*<|>)[u(%!/FUN`DISPLAY`FOOTER,u(%!/FUN`SCREEN`SETTINGFOOTER,%0,%1,%2))],%0/%2)
         flags: [funsyntax]
       FUN`SCREEN`SETTINGLABELS:
         value: |-
-          [if(hasattr(%0,DATA`CONFIG`%1`LABEL),Name[chr(30)])]Value[chr(30)]Default[chr(30)]Allowed[if(hasattr(%0,DATA`CONFIG`%1`EXAMPLE),[chr(30)]Example)][chr(30)]What it does[chr(30)]Changed by
+          [if(hasattr(%0,DATA`CONFIG`%1`LABEL),Name%*<|>)]Value%*<|>Default%*<|>Allowed[if(hasattr(%0,DATA`CONFIG`%1`EXAMPLE),%*<|>Example)]%*<|>What it does%*<|>Changed by
         flags: [funsyntax]
       FUN`SCREEN`SETTINGVALUES:
         value: |-
-          [if(hasattr(%1,DATA`CONFIG`%2`LABEL),[u(%!/FUN`SETTING`META,%1,%2,LABEL)][chr(30)])][u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`VALUE`GET,%1,%2))][chr(30)][if(hasattr(%1,DATA`CONFIG`%2`DEFAULT),u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`SETTING`META,%1,%2,DEFAULT)),tone(muted,none))][chr(30)][u(%!/FUN`VALUE`ALLOWED,%1,%2)][if(hasattr(%1,DATA`CONFIG`%2`EXAMPLE),[chr(30)]+config %0/%2=[u(%!/FUN`SETTING`META,%1,%2,EXAMPLE)])][chr(30)][firstof(u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION),tone(muted,not described))][chr(30)]The [u(%!/FUN`SETTING`PERMISSION,%1,%2)] permission
+          [if(hasattr(%1,DATA`CONFIG`%2`LABEL),[u(%!/FUN`SETTING`META,%1,%2,LABEL)]%*<|>)][u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`VALUE`GET,%1,%2))]%*<|>[if(hasattr(%1,DATA`CONFIG`%2`DEFAULT),u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`SETTING`META,%1,%2,DEFAULT)),tone(muted,none))]%*<|>[u(%!/FUN`VALUE`ALLOWED,%1,%2)][if(hasattr(%1,DATA`CONFIG`%2`EXAMPLE),%*<|>+config %0/%2=[u(%!/FUN`SETTING`META,%1,%2,EXAMPLE)])]%*<|>[firstof(u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION),tone(muted,not described))]%*<|>The [u(%!/FUN`SETTING`PERMISSION,%1,%2)] permission
         flags: [funsyntax]
       FUN`SCREEN`SETTINGFOOTER:
         value: |-
