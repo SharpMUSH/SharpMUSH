@@ -14,6 +14,7 @@
 @inject NavigationManager Nav
 
 <PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"])</PageTitle>
+<PalettePage Kind="@($"app:{Slug}")" />
 
 <AppSectionFrame App="_app">
 <div class="app-page">
