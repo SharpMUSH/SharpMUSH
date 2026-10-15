@@ -21,7 +21,7 @@ public sealed record DiceNeeds(ImmutableArray<string> Names);
 public union DiceParse(DiceNode, DiceNeeds, Error<string>);
 
 /// <summary>
-/// Reads a roll formula in Foundry VTT's dice notation into a <see cref="DiceNode"/> tree.
+/// Reads a roll formula into a <see cref="DiceNode"/> tree.
 /// </summary>
 /// <remarks>
 /// A name that is not a dice term or a function is a value, asked of the lookup. A number is used as
@@ -109,7 +109,7 @@ public sealed class DiceParser
 		return Accept('+') ? ParseUnary() : ParseFlavored();
 	}
 
-	/// <summary>A term, with Foundry's <c>[flavor]</c> after it if there is one.</summary>
+	/// <summary>A term, with a <c>[label]</c> after it if there is one.</summary>
 	private DiceNode ParseFlavored()
 	{
 		var term = ParsePrimary();

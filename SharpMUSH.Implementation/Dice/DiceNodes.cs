@@ -21,7 +21,7 @@ public sealed record FunctionNode(string Name, ImmutableArray<DiceNode> Argument
 /// <summary>A named value; <paramref name="Value"/> is its number or its parsed formula.</summary>
 public sealed record VariableNode(string Name, DiceNode Value) : DiceNode;
 
-/// <summary>Foundry's flavor text, <c>5[fire]</c>, on a term that is not dice.</summary>
+/// <summary>A label, <c>5[fire]</c>, on a term that is not dice.</summary>
 public sealed record FlavorNode(DiceNode Inner, string Flavor) : DiceNode;
 
 public enum DieKind

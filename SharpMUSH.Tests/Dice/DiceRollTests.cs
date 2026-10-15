@@ -323,6 +323,30 @@ public class DiceRollTests
 		await Assert.That(Error(formula)).IsEqualTo(ErrorMessages.Returns.NumberOutOfRange);
 	}
 
+	/// <summary>The examples in the roll help topics, with the faces they show.</summary>
+	[Test]
+	[Arguments("1d20+3", new[] { 14 }, "1d20[14] + 3 = 17")]
+	[Arguments("4dF+2", new[] { 3, 2, 1, 3 }, "4dF[1, 0, -1, 1] + 2 = 3")]
+	[Arguments("(1d4)d6", new[] { 3, 5, 2, 6 }, "(1d4)d6[5, 2, 6] = 13")]
+	[Arguments("floor(1d6/2)", new[] { 5 }, "floor(1d6[5] / 2) = 2")]
+	[Arguments("max(1d6,1d6)", new[] { 2, 5 }, "max(1d6[2], 1d6[5]) = 5")]
+	[Arguments("4d6kh3", new[] { 5, 2, 4, 6 }, "4d6kh3[5, (2), 4, 6] = 15")]
+	[Arguments("2d20kl", new[] { 17, 8 }, "2d20kl[(17), 8] = 8")]
+	[Arguments("4d6r1kh3", new[] { 1, 5, 3, 6, 4 }, "4d6r1kh3[(1), 4, 5, (3), 6] = 15")]
+	[Arguments("3d6x", new[] { 6, 2, 4, 3 }, "3d6x[6!, 3, 2, 4] = 15")]
+	[Arguments("10d10cs>=8", new[] { 3, 9, 8, 1, 10, 4, 2, 7, 8, 5 }, "10d10cs>=8[3, 9*, 8*, 1, 10*, 4, 2, 7, 8*, 5] = 4")]
+	[Arguments("5d10cs>=8df1", new[] { 9, 1, 8, 4, 10 }, "5d10cs>=8df1[9*, 1_, 8*, 4, 10*] = 2")]
+	[Arguments("1d20ms>=15", new[] { 18 }, "1d20ms>=15[18] = 3")]
+	[Arguments("4d6min2", new[] { 1, 5, 1, 3 }, "4d6min2[2, 5, 2, 3] = 12")]
+	[Arguments("{1d20, 10}kh + 5", new[] { 7 }, "{1d20[7], 10}kh[(7), 10] + 5 = 15")]
+	[Arguments("{2d6, 1d12}kh", new[] { 3, 5, 11 }, "{2d6[3, 5], 1d12[11]}kh[(8), 11] = 11")]
+	[Arguments("2d6[fire] + 1d4[cold]", new[] { 3, 4, 2 }, "2d6[3, 4] fire + 1d4[2] cold = 9")]
+	[Arguments("2d6kh1+1", new[] { 5, 2 }, "2d6kh1[5, (2)] + 1 = 6")]
+	public async Task HelpExamplesRollAsShown(string formula, int[] faces, string text)
+	{
+		await Assert.That(Roll(formula, null, faces).Text).IsEqualTo(text);
+	}
+
 	[Test]
 	[Arguments("2d6kh3+STR", true)]
 	[Arguments("{1d20, 10}kh[luck] + @skills.stealth", true)]

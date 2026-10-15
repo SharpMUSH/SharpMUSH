@@ -19,7 +19,7 @@ public enum DiceRollMode
 }
 
 /// <summary>
-/// Rolls a formula in Foundry VTT's dice notation: <c>2d6+5</c>, <c>4d6kh3</c>, <c>1dF+DEXTERITY</c>.
+/// Rolls a dice formula: <c>2d6+5</c>, <c>4d6kh3</c>, <c>1dF+DEXTERITY</c>.
 /// </summary>
 public static class DiceRoll
 {

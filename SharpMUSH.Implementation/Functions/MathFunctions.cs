@@ -1443,7 +1443,7 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Rolls a formula in Foundry VTT's dice notation (<c>4d6kh3+2</c>, <c>1dF+DEXTERITY</c>), with
+	/// Rolls a dice formula (<c>4d6kh3+2</c>, <c>1dF+DEXTERITY</c>), with
 	/// values from a JSON object or from an object's attributes, and answers the total, a one-line
 	/// account, every die as JSON, or the lowest or highest the formula can come to.
 	/// </summary>

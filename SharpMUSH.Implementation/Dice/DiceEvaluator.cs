@@ -6,7 +6,7 @@ using SharpMUSH.Library.Utilities;
 namespace SharpMUSH.Implementation.Dice;
 
 /// <summary>
-/// Rolls a parsed formula. Modifiers apply in the order they are written, as Foundry applies them,
+/// Rolls a parsed formula. Modifiers apply in the order they are written,
 /// and every die rolled counts against <see cref="DiceRoll.MaxDice"/>. The first failure stops the
 /// roll; the rest of the tree is walked without rolling anything.
 ///
@@ -145,7 +145,7 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 			{
 				"floor" => Math.Floor(first),
 				"ceil" => Math.Ceiling(first),
-				// JavaScript's Math.round, which Foundry uses: halves go up, so -2.5 is -2.
+				// Halves go up, so -2.5 is -2.
 				"round" => Math.Floor(first + 0.5m),
 				"abs" => Math.Abs(first),
 				"min" => arguments.Min(argument => argument.Value),
