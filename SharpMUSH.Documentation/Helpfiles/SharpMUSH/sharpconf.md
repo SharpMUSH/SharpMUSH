@@ -35,6 +35,7 @@ These options control some attribute behavior.
 - `room_connects=<boolean>`: Are @aconnect and @adisconnect triggered on rooms?
 - `read_remote_desc=<boolean>`: Can anyone remotely retrieve @descs?
 - `empty_attrs=<boolean>`: Can attributes be set to an empty string?
+- `gender_attr=<string>`: The attribute that holds an object's gender, which pronoun substitution reads and [@gender] sets. SEX when blank, and by default.
 - `reverse_shs=<boolean>`: Reverse the endedness of the shs password encryption? (**Warning**: Playing with this will break logins)
 
 # @config chat
