@@ -8,8 +8,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [relationships, roleplay, character, card, web]
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics, http-handler the verb routers the portal routes hang off, and finger the
-# profile fields the in-game card shows at its top.
+# plus-help carries the +help topics, http-handler the verb routers the portal routes hang off, plus-config the
+# settings, and finger the profile fields the in-game card shows at its top.
 depends:
   - package: plus-help
     version: ">=1.0"
@@ -22,6 +22,13 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/
+      branch: main
+  # The settings are registered with +config: +config relationships lists them.
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
   - package: finger
     version: ">=1.0"
@@ -54,7 +61,7 @@ objects:
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC` one routine per switch,
   # INC`STORE` the writes. FUN`TYPE` reads the type table, FUN`SIDE` and FUN`STATE` one relationship, FUN`LIST`
-  # whose relationships to show, FUN`CARD` the card, FUN`DISPLAY` shared drawing, FUN`CONFIG` the setting checks.
+  # whose relationships to show, FUN`CARD` the card, FUN`DISPLAY` shared drawing, FUN`CONFIG` and CHECK` the setting checks.
   # LINE` and SHOW` are the card's lines, WEB` the JSON the portal routes send. DATA` the settings and the types.
   - ref: relationships
     type: thing
@@ -125,26 +132,31 @@ objects:
       DATA`TYPE`COLLEAGUE`TONE: |-
         yellow
 
-      # Settings in the +config layout: the value, then what it is, its type, its default and its bounds. The code
-      # reads only the value, with v().
+      # ---- Settings: +config relationships ------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code reads the
+      # value with v(); see plus-config's README.
       DATA`CONFIG:
         value: |-
           What +rel keeps and shows.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Relationships
       DATA`CONFIG`CARD-FIELDS: |-
         FULLNAME PRONOUNS
-      DATA`CONFIG`CARD-FIELDS`DESCRIPTION: |-
-        The +finger fields shown at the top of +rel <name>, by key.
       DATA`CONFIG`CARD-FIELDS`TYPE: |-
         list
       DATA`CONFIG`CARD-FIELDS`DEFAULT: |-
         FULLNAME PRONOUNS
       DATA`CONFIG`CARD-FIELDS`CHECK: |-
-        FUN`CONFIG`CHECK`FIELDS
+        CHECK`FIELDS
+      DATA`CONFIG`CARD-FIELDS`DESCRIPTION: |-
+        The +finger fields shown at the top of +rel <name>, by key.
+      DATA`CONFIG`CARD-FIELDS`LABEL: |-
+        Card fields
+      DATA`CONFIG`CARD-FIELDS`EXAMPLE: |-
+        FULLNAME PRONOUNS AGE
       DATA`CONFIG`NOTE-LENGTH: |-
         2000
-      DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
-        The longest private note, in characters.
       DATA`CONFIG`NOTE-LENGTH`TYPE: |-
         integer
       DATA`CONFIG`NOTE-LENGTH`DEFAULT: |-
@@ -153,10 +165,14 @@ objects:
         1
       DATA`CONFIG`NOTE-LENGTH`MAX: |-
         8000
+      DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
+        The longest private note, in characters.
+      DATA`CONFIG`NOTE-LENGTH`LABEL: |-
+        Longest note
+      DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
+        4000
       DATA`CONFIG`TEXT-LENGTH: |-
         200
-      DATA`CONFIG`TEXT-LENGTH`DESCRIPTION: |-
-        The longest line about a relationship, in characters.
       DATA`CONFIG`TEXT-LENGTH`TYPE: |-
         integer
       DATA`CONFIG`TEXT-LENGTH`DEFAULT: |-
@@ -165,10 +181,14 @@ objects:
         1
       DATA`CONFIG`TEXT-LENGTH`MAX: |-
         1000
+      DATA`CONFIG`TEXT-LENGTH`DESCRIPTION: |-
+        The longest line about a relationship, in characters.
+      DATA`CONFIG`TEXT-LENGTH`LABEL: |-
+        Longest line
+      DATA`CONFIG`TEXT-LENGTH`EXAMPLE: |-
+        300
       DATA`CONFIG`WEB-REACH: |-
         1
-      DATA`CONFIG`WEB-REACH`DESCRIPTION: |-
-        How far the portal's web reaches: 1 draws a character and the people they know, 2 adds the people those know.
       DATA`CONFIG`WEB-REACH`TYPE: |-
         integer
       DATA`CONFIG`WEB-REACH`DEFAULT: |-
@@ -176,6 +196,12 @@ objects:
       DATA`CONFIG`WEB-REACH`MIN: |-
         1
       DATA`CONFIG`WEB-REACH`MAX: |-
+        2
+      DATA`CONFIG`WEB-REACH`DESCRIPTION: |-
+        How far the portal's web reaches: 1 draws a character and the people they know, 2 adds the people those know.
+      DATA`CONFIG`WEB-REACH`LABEL: |-
+        Web reach
+      DATA`CONFIG`WEB-REACH`EXAMPLE: |-
         2
 
       # Which INC` routine each switch runs. BARE is the command alone, ARG the command with a name after it.
@@ -580,10 +606,10 @@ objects:
         flags: [cmdsyntax]
 
       # ---- settings ------------------------------------------------------------------
-      # %0 a card-fields list: empty when every key is a +finger field, else why not.
-      FUN`CONFIG`CHECK`FIELDS:
+      # %0 a card-fields list, as +config stores it: why some keys are not +finger fields, or nothing.
+      CHECK`FIELDS:
         value: |-
-          if(words(setr(config_unknown,filterbool(%!/FUN`CONFIG`UNKNOWN,ucstr(%0)))),Not a +finger field: [lcstr(%q<config_unknown>)])
+          if(words(setr(check_unknown,filterbool(%!/FUN`CONFIG`UNKNOWN,ucstr(%0)))),[itemize(lcstr(%q<check_unknown>))] [if(eq(words(%q<check_unknown>),1),is not a +finger field,are not +finger fields)]. +finger/fields lists them.)
         flags: [funsyntax]
       FUN`CONFIG`UNKNOWN:
         value: |-
@@ -767,14 +793,18 @@ objects:
 
         The `relationships-scene` package adds Last scene together this way.
       HELP`REL`SETTINGS: |-
-        The settings are attributes on the Relationships object, under `` DATA`CONFIG ``:
+        `+config relationships` lists them, and `+config relationships/<setting>=<value>` changes one.
 
-        - `card-fields`: the `+finger` fields shown at the top of `+rel <name>`, by key. `FULLNAME PRONOUNS` by default.
-        - `note-length`: the longest private note, in characters. 2000 by default.
-        - `text-length`: the longest line about a relationship. 200 by default.
+        - `card-fields`: the `+finger` fields shown at the top of `+rel <name>`, by key. `FULLNAME PRONOUNS` by default; `+config/add relationships/card-fields=age` adds one.
+        - `note-length`: the longest private note, in characters, 1 to 8000. 2000 by default.
+        - `text-length`: the longest line about a relationship, 1 to 1000. 200 by default.
         - `web-reach`: how far the portal's web reaches. 1, the default, draws a character and the people they know; 2 adds the people those know.
 
-        `` &DATA`CONFIG`WEB-REACH <Relationships>=2 `` changes one.
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`RELATIONSHIPS: |-
+        {{relationships}}
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
