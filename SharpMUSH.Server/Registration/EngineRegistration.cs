@@ -175,6 +175,13 @@ internal static class EngineRegistration
 		services.AddSingleton(_ => SecretStoreOptions.FromEnvironment());
 		services.AddSingleton(SecretDefinition.SqlPassword);
 		services.AddSingleton<ISecretStore, SecretStore>();
+		// Web push: the VAPID key (a secret made on first use), the sender, and which portal tabs are in view.
+		services.Configure<Services.WebPushOptions>(configuration.GetSection(Services.WebPushOptions.Section));
+		services.AddSingleton(Services.WebPushService.VapidSecret);
+		services.AddSingleton<Services.WebPushService>();
+		services.AddSingleton<SharpMUSH.Library.Push.IWebPushService>(sp => sp.GetRequiredService<Services.WebPushService>());
+		services.AddHostedService(sp => sp.GetRequiredService<Services.WebPushService>());
+		services.AddSingleton<SharpMUSH.Library.Push.IPortalPresence, SharpMUSH.Library.Push.PortalPresence>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
@@ -375,6 +382,9 @@ internal static class EngineRegistration
 																 | System.Net.DecompressionMethods.Deflate
 																 | System.Net.DecompressionMethods.Brotli
 			});
+		// Web push: no redirects, so a push goes only to the push service host the subscription was checked against.
+		services.AddHttpClient(Services.WebPushService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 		services.AddMediator();
 
 		return services;

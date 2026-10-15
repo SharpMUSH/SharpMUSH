@@ -60,6 +60,10 @@ public static class Tables
 	public static readonly TableDef AccountPasskey = TableDef.Node("acct.passkey");
 	/// <summary>Account key → the credential-id hashes of its passkeys.</summary>
 	public static readonly TableDef AccountPasskeyByAccount = TableDef.Index("acct.passkey.acct", duplicates: true);
+	/// <summary>SHA-256 of a web push endpoint → the subscription; see <c>LightningDatabase.PushSubscriptions.cs</c>.</summary>
+	public static readonly TableDef PushSubscription = TableDef.Node("push.sub");
+	/// <summary>Account key → the endpoint hashes of its push subscriptions.</summary>
+	public static readonly TableDef PushSubscriptionByAccount = TableDef.Index("push.sub.acct", duplicates: true);
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");

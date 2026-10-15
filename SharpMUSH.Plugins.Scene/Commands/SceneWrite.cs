@@ -34,6 +34,7 @@ public static class SceneWrite
 		}
 
 		var scene = await sceneService.CreateSceneAsync(roomDbref, ownerDbref, title);
+		await SceneStatusEvent.CreatedAsync(parser, scene);
 		await notifyService.Notify(executor,
 			SceneCommandHelper.Notice($"Created scene #{scene.Id} owned by {scene.OwnerName}.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);
@@ -56,7 +57,7 @@ public static class SceneWrite
 		}
 
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(sceneService, sceneId);
-		var statusBefore = await SceneActivity.StatusBeforeAsync(sceneService, sceneId, key!);
+		var statusBefore = SceneStatusEvent.IsStatus(key!) ? await SceneStatusEvent.StatusOfAsync(sceneService, sceneId) : string.Empty;
 		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
 		{
 			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
@@ -65,6 +66,7 @@ public static class SceneWrite
 
 		SceneActivity.AfterSet(parser, key!, statusBefore, scene);
 		await SceneRoomRefresh.AfterSetAsync(parser, key!, roomBefore, scene);
+		await SceneStatusEvent.AfterSetAsync(parser, key!, statusBefore, scene);
 
 		await notifyService.Notify(executor, SceneCommandHelper.Notice($"#{scene.Id} {key} set.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);

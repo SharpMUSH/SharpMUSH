@@ -4913,6 +4913,12 @@
   <data name="NavCharScenesMore" xml:space="preserve">
     <value>Mehr anzeigen</value>
   </data>
+  <data name="NavCharScenesTimeline" xml:space="preserve">
+    <value>Zeitleiste</value>
+  </data>
+  <data name="NavCharScenesNotDated" xml:space="preserve">
+    <value>Nicht datiert</value>
+  </data>
   <data name="NavCharScenesViewAll" xml:space="preserve">
     <value>Alle ansehen</value>
   </data>
@@ -6152,5 +6158,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Ein Bild mit Inhaltswarnung bleibt aus der Bildbibliothek heraus. Entferne die Warnung, um es zu teilen.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Benachrichtigungen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Benachrichtigungen auf diesem Telefon oder Computer erhalten, wenn das Portal geschlossen ist</value>
+    <comment>MT</comment>
   </data>
 </root>

@@ -12,8 +12,10 @@ namespace SharpMUSH.Client.Models;
 /// <param name="Listed">Whether it shows on the scene's card in lists.</param>
 /// <param name="Tone">The tone its values show in (<c>warning</c>), or empty for the text's own colour.</param>
 /// <param name="Order">Its place, lowest first.</param>
+/// <param name="Hidden">Whether it is kept for code only and never shown.</param>
+/// <param name="Sort">The key of the detail that orders scenes by this one, or empty when its own value does.</param>
 public sealed record SceneDetailInfo(string Key, string Label, string Hint, IReadOnlyList<string> Choices, bool Many, bool Listed,
-	string Tone, int Order)
+	string Tone, int Order, bool Hidden = false, string Sort = "")
 {
 	/// <summary>What splits the values of a detail that takes several.</summary>
 	public const char Separator = '|';
@@ -43,14 +45,17 @@ public sealed record SceneDetailCatalogue(IReadOnlyList<SceneDetailInfo> Details
 {
 	public static readonly SceneDetailCatalogue Empty = new([], []);
 
+	/// <summary>The first detail that orders scenes by a key of its own, such as the IC date, or null when none does.</summary>
+	public SceneDetailInfo? Chronology => Details.FirstOrDefault(d => !d.Hidden && d.Sort.Length > 0);
+
 	/// <summary>
 	/// The details <paramref name="scene"/> has a value for, each with its values: the catalogue's in its order, then
-	/// any other key a player set, by name.
+	/// any other key a player set, by name. A hidden detail is never among them.
 	/// </summary>
 	public IReadOnlyList<(SceneDetailInfo Detail, IReadOnlyList<string> Values)> Of(SceneSummary scene)
 	{
 		var catalogued = Details
-			.Where(d => scene.Meta.ContainsKey(d.Key))
+			.Where(d => !d.Hidden && scene.Meta.ContainsKey(d.Key))
 			.Select(d => (Detail: d, Values: d.Values(scene.Meta[d.Key])))
 			.Where(d => d.Values.Count > 0);
 

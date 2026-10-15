@@ -12,16 +12,13 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 /// </summary>
 public static class SceneActivity
 {
-	private const string Status = "status";
-
-	/// <summary>The scene's status before a write of <paramref name="key"/>, read only when that write sets the status.</summary>
-	public static async ValueTask<string?> StatusBeforeAsync(ISceneService sceneService, string sceneId, string key)
-		=> IsStatus(key) && await sceneService.GetSceneAsync(sceneId) is Contracts.Scene scene ? scene.Status : null;
-
-	/// <summary>After a successful write of <paramref name="key"/>: counts the scene when it has just started.</summary>
-	public static void AfterSet(IMUSHCodeParser parser, string key, string? statusBefore, Contracts.Scene scene)
+	/// <summary>
+	/// After a successful write of <paramref name="key"/>, with the status <see cref="SceneStatusEvent.StatusOfAsync"/>
+	/// read before it: counts the scene when it has just started.
+	/// </summary>
+	public static void AfterSet(IMUSHCodeParser parser, string key, string statusBefore, Contracts.Scene scene)
 	{
-		if (!IsStatus(key)
+		if (!SceneStatusEvent.IsStatus(key)
 			|| !string.Equals(scene.Status, "active", StringComparison.Ordinal)
 			|| statusBefore is "active" or "paused" or "finished")
 		{
@@ -31,6 +28,4 @@ public static class SceneActivity
 		parser.ServiceProvider.GetService<IActivityLedger>()?.RecordScene(
 			DBRef.TryParse(scene.RoomDbref, out var room) && room is { } where ? where.Number : null);
 	}
-
-	private static bool IsStatus(string key) => string.Equals(key.Trim(), Status, StringComparison.OrdinalIgnoreCase);
 }

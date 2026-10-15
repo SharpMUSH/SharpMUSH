@@ -135,13 +135,15 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// scenes in one state (<see cref="MatchesState"/>), <c>search</c> those whose title, pitch or room holds
 	/// the text, <c>detail</c> and <c>value</c> those giving that detail that value (one of its values, for a
 	/// detail that takes several), and <c>offset</c> skips that many of the scenes left, for a list read a page
-	/// at a time.
+	/// at a time. <c>sort</c> names a detail to order the scenes by instead, earliest first: by the number in the key
+	/// the detail sorts by (<see cref="SceneDetail.Sort"/>), else by its own value; a scene with none comes last. A
+	/// character's timeline is its scenes sorted by <c>icdate</c>.
 	/// </summary>
 	[HttpGet]
 	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50,
 		[FromQuery] string? participant = null, [FromQuery] int offset = 0, [FromQuery] string? state = null,
 		[FromQuery] string? search = null, [FromQuery] string? detail = null, [FromQuery] string? value = null,
-		[FromServices] IServiceProvider? services = null)
+		[FromQuery] string? sort = null, [FromServices] IServiceProvider? services = null)
 	{
 		if (!IsKnownState(state))
 		{
@@ -154,18 +156,42 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		}
 
 		var given = string.IsNullOrWhiteSpace(detail) ? null : await DetailAsync(services, detail);
-		Func<Contracts.Scene, bool> match = scene => MatchesState(scene, state) && MatchesSearch(scene, search)
+		var order = string.IsNullOrWhiteSpace(sort) ? null : await DetailAsync(services, sort);
+		var hidden = await HiddenKeysAsync(services);
+		Func<Contracts.Scene, bool> match = scene => MatchesState(scene, state) && MatchesSearch(scene, search, hidden)
 			&& (given is null || SceneDetails.Values(given, scene.Meta.GetValueOrDefault(given.Key, "")).Contains(value!.Trim(), StringComparer.OrdinalIgnoreCase));
 		if (participant is not null)
 		{
 			return DBRef.TryParse(participant, out var member) && member is { } who
-				? Ok((await VisibleScenesAsync("mine", who.ToString(), count, offset, match)).Select(ToDto))
+				? Ok((await VisibleScenesAsync("mine", who.ToString(), count, offset, match, order)).Select(ToDto))
 				: BadRequest(new { error = "participant must be a dbref such as #42." });
 		}
 
 		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
-		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match)).Select(ToDto));
+		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match, order)).Select(ToDto));
 	}
+
+	/// <summary>The keys of the details kept for code only, which a search never reads.</summary>
+	private static async Task<IReadOnlySet<string>> HiddenKeysAsync(IServiceProvider? services) =>
+		services is null
+			? new HashSet<string>()
+			: (await SceneLogger.DetailsAsync(services)).Details.Where(d => d.Hidden).Select(d => d.Key).ToHashSet(StringComparer.Ordinal);
+
+	/// <summary>
+	/// <paramref name="scenes"/> in <paramref name="detail"/>'s order, earliest first: by the number in the key it sorts
+	/// by, else in its own value, then by its value as text; a scene with neither comes last. Scenes that tie keep the
+	/// order they came in.
+	/// </summary>
+	private static IEnumerable<Contracts.Scene> SortedBy(IEnumerable<Contracts.Scene> scenes, SceneDetail detail) =>
+		scenes
+			.Select(scene => (Scene: scene,
+				Number: SceneDetails.SortValue(scene.Meta.GetValueOrDefault(detail.Sort.Length > 0 ? detail.Sort : detail.Key)),
+				Text: scene.Meta.GetValueOrDefault(detail.Key, "").Trim()))
+			.OrderBy(s => s.Number is null && s.Text.Length == 0)
+			.ThenBy(s => s.Number is null)
+			.ThenBy(s => s.Number)
+			.ThenBy(s => s.Text, StringComparer.OrdinalIgnoreCase)
+			.Select(s => s.Scene);
 
 	/// <summary>
 	/// The detail <paramref name="key"/> names, as the catalogue lists it; one it does not list takes a single value, as
@@ -198,7 +224,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// The scene's title, pitch, room name or one of its details holds <paramref name="search"/>, ignoring case, so
 	/// searching for a verse finds the scenes set in it.
 	/// </summary>
-	private static bool MatchesSearch(Contracts.Scene scene, string? search)
+	private static bool MatchesSearch(Contracts.Scene scene, string? search, IReadOnlySet<string> hidden)
 	{
 		if (string.IsNullOrWhiteSpace(search)) return true;
 
@@ -206,7 +232,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		return Holds(scene.RoomName)
 			|| (scene.Meta.TryGetValue("title", out var title) && Holds(title))
 			|| (scene.Meta.TryGetValue("summary", out var pitch) && Holds(pitch))
-			|| scene.Meta.Any(m => SceneDetails.Normalize(m.Key) is string && Holds(m.Value));
+			|| scene.Meta.Any(m => SceneDetails.Normalize(m.Key) is string && !hidden.Contains(m.Key) && Holds(m.Value));
 
 		bool Holds(string? value) => value?.Contains(text, StringComparison.OrdinalIgnoreCase) == true;
 	}
@@ -257,7 +283,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	[HttpGet("details/values")]
 	public async Task<IActionResult> GetDetailValues([FromServices] IServiceProvider services)
 	{
-		var listed = (await SceneLogger.DetailsAsync(services)).Details.Where(d => d.Listed).ToList();
+		var listed = (await SceneLogger.DetailsAsync(services)).Details.Where(d => d.Listed && !d.Hidden).ToList();
 		if (listed.Count == 0) return Ok(Array.Empty<SceneDetailValuesDto>());
 
 		var counts = listed.ToDictionary(d => d.Key, _ => new Dictionary<string, (string Value, int Scenes)>(StringComparer.OrdinalIgnoreCase));
@@ -343,12 +369,21 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// once per doubling.
 	/// </summary>
 	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count, int offset,
-		Func<Contracts.Scene, bool>? match)
+		Func<Contracts.Scene, bool>? match, SceneDetail? order = null)
 	{
 		var wanted = Math.Clamp(count, 0, MaxListCount);
 		var skip = Math.Clamp(offset, 0, int.MaxValue - MaxListCount);
 		var needed = skip + wanted;
 		var seen = new Dictionary<string, bool>(StringComparer.Ordinal);
+
+		// Another order needs every scene before it can say which come first.
+		if (order is not null)
+		{
+			needed = int.MaxValue;
+			var all = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+			return SortedBy(all, order).Skip(skip).Take(wanted).ToList();
+		}
+
 		var ask = Math.Max(1, needed);
 		var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
 		var visible = await TakeVisibleAsync(scenes);
