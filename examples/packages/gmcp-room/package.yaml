@@ -1,0 +1,244 @@
+format: 1.7
+package: gmcp-room
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Sends MUD clients the GMCP Room package: Room.Info for a mapper (number, name, area, environment, coordinates and exits), Room.Players, Room.AddPlayer and Room.RemovePlayer, as each player moves, connects and disconnects."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [gmcp, mudlet, mapper, room, mud-kit]
+requires_server: ">=0.1"
+
+# +help carries the topic below, and +config the settings. Both dependencies are what make
+# {{plus-help/librarian}} and {{plus-config/registry}} legal attach targets.
+depends:
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+# The shapes are Iron Realms' (IRE), which Mudlet's mapper scripts read and TelnetNegotiationCore's
+# RoomInfo type writes:
+#
+#   Room.Info         {"num":1234,"name":"Garden","area":"Town","environment":"garden",
+#                      "coords":"3,4,0","exits":{"North":1235}}
+#   Room.Players      [{"name":"Wren","fullname":"Wren of the Marsh"}]
+#   Room.AddPlayer    {"name":"Wren","fullname":"Wren of the Marsh"}
+#   Room.RemovePlayer "Wren"
+#
+# num and each exit's room are dbref numbers, which never change while a room exists and suit a
+# mapper. exits is exitmap(): the exits the player can see, as look shows them, so this package never
+# works out exit visibility itself. coords is left out for a room without coordinates.
+#
+# Every send is oob(..., supported): a client that listed GMCP modules in Core.Supports without Room
+# is sent none of this, and a client that listed nothing (TinTin++, MUSHclient) is sent all of it.
+#
+# Two objects: the event handler carries the handlers and the FN`GMCPROOM` functions that build the
+# payloads, as room-contents and comm-feed do, and the GMCP Room thing carries the +config settings
+# and the +help topic. The functions run as the event handler, a wizard, so exitmap() may map a room
+# as the player standing in it; the GMCP Room thing holds no privilege and runs no code.
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # ── Settings ─────────────────────────────────────────────────────────
+      # %0 a setting's name: its value, from the GMCP Room thing.
+      FN`GMCPROOM`SETTING: |-
+        get({{gmcp_room}}/DATA`CONFIG`%0)
+
+      # ── Who ──────────────────────────────────────────────────────────────
+      # %0 an object: a connected player, the only thing anything is sent to.
+      FN`GMCPROOM`VIEWER: |-
+        cand(hastype(%0,player),hasflag(%0,CONNECTED))
+      # %0 a player in the room, %1 the viewer: whether the viewer sees them there. A DARK player is
+      # seen only by themself and by a viewer who may see everything.
+      FN`GMCPROOM`SEEN: |-
+        cor(not(hasflag(%0,DARK)),strmatch(num(%0),num(%1)),orflags(%1,Wr),haspower(%1,See_All))
+      # %0 a room: the connected players in it.
+      FN`GMCPROOM`PRESENT: |-
+        filterbool(me/FN`GMCPROOM`VIEWER,lplayers(%0))
+      # %0 a room, %1 a player: the connected players there who see the player, the player left out.
+      FN`GMCPROOM`WITNESSES: |-
+        filterbool(me/FN`GMCPROOM`WITNESS,u(me/FN`GMCPROOM`PRESENT,%0),,,%1)
+      # %0 a viewer, %1 a player: whether the viewer is someone else who sees the player.
+      FN`GMCPROOM`WITNESS: |-
+        cand(not(strmatch(num(%0),num(%1))),u(me/FN`GMCPROOM`SEEN,%1,%0))
+
+      # ── Values ───────────────────────────────────────────────────────────
+      # %0 an object: its dbref's number, as Room.Info and the exits carry it.
+      FN`GMCPROOM`NUM: |-
+        after(num(%0),#)
+      # %0 a room: its area. The attribute the area setting names, else the name of the room's zone,
+      # else nothing.
+      FN`GMCPROOM`AREA: |-
+        strfirstof(u(me/FN`GMCPROOM`READ,%0,u(me/FN`GMCPROOM`SETTING,AREA)),if(isdbref(zone(%0)),name(zone(%0))))
+      # %0 a room: the attribute the environment setting names, or nothing.
+      FN`GMCPROOM`ENVIRONMENT: |-
+        u(me/FN`GMCPROOM`READ,%0,u(me/FN`GMCPROOM`SETTING,ENVIRONMENT))
+      # %0 an object, %1 an attribute's name, or nothing: the attribute's value, never evaluated.
+      FN`GMCPROOM`READ: |-
+        if(strlen(%1),get(%0/%1))
+      # %0 a room: x,y,z from the attributes the coordinates setting names, a missing one as 0; empty
+      # when the room has none of them, or one is not a number.
+      FN`GMCPROOM`COORDS: |-
+        setq(gmcproom_axes,u(me/FN`GMCPROOM`SETTING,COORDINATES))[if(cand(words(setr(gmcproom_set,squish(iter(%q<gmcproom_axes>,get(%0/%i0))))),every(me/FN`GMCPROOM`ISNUM,%q<gmcproom_set>)),iter(%q<gmcproom_axes>,strfirstof(get(%0/%i0),0),,%,))]
+      FN`GMCPROOM`ISNUM: |-
+        isnum(%0)
+      # %0 a player: the name a client shows in full. The attribute the fullname setting names, else
+      # the player's name.
+      FN`GMCPROOM`FULLNAME: |-
+        strfirstof(u(me/FN`GMCPROOM`READ,%0,u(me/FN`GMCPROOM`SETTING,FULLNAME)),name(%0))
+
+      # ── Payloads ─────────────────────────────────────────────────────────
+      # Room.Info: %0 the room, %1 the viewer. exitmap() lists the exits the viewer sees there.
+      FN`GMCPROOM`INFO: |-
+        json_mod(json(object,num,json(number,u(me/FN`GMCPROOM`NUM,%0)),name,json(string,name(%0)),area,json(string,u(me/FN`GMCPROOM`AREA,%0)),environment,json(string,u(me/FN`GMCPROOM`ENVIRONMENT,%0)),exits,exitmap(%0,%1)),patch,json(object,coords,if(strlen(setr(gmcproom_coords,u(me/FN`GMCPROOM`COORDS,%0))),json(string,%q<gmcproom_coords>),null)))
+      # One player in Room.Players or Room.AddPlayer: %0 the player.
+      FN`GMCPROOM`PLAYER: |-
+        json(object,name,json(string,name(%0)),fullname,json(string,u(me/FN`GMCPROOM`FULLNAME,%0)))
+      # Room.Players: %0 the room, %1 the viewer. Everyone connected there the viewer sees, the viewer too.
+      FN`GMCPROOM`PLAYERS: |-
+        json_array(iter(filterbool(me/FN`GMCPROOM`SEEN,u(me/FN`GMCPROOM`PRESENT,%0),,,%1),u(me/FN`GMCPROOM`PLAYER,%i0),,%r),%r)
+      # Room.RemovePlayer: %0 the player, by name, as Iron Realms sends it.
+      FN`GMCPROOM`GONE: |-
+        json(string,name(%0))
+
+      # ── Sending ──────────────────────────────────────────────────────────
+      # %0 where to send (a player or one of their descriptors), %1 the viewer, %2 the room: the room as
+      # the viewer sees it. null() keeps oob()'s counts out of the handler's output.
+      FN`GMCPROOM`LOOK: |-
+        null(oob(%0,Room.Info,u(me/FN`GMCPROOM`INFO,%2,%1),supported))[null(oob(%0,Room.Players,u(me/FN`GMCPROOM`PLAYERS,%2,%1),supported))]
+      # %0 a room, %1 a player who arrived there: Room.AddPlayer to the others who see them.
+      FN`GMCPROOM`ARRIVED: |-
+        null(oob(u(me/FN`GMCPROOM`WITNESSES,%0,%1),Room.AddPlayer,u(me/FN`GMCPROOM`PLAYER,%1),supported))
+      # %0 a room, %1 a player who left it: Room.RemovePlayer to the others who saw them.
+      FN`GMCPROOM`LEFT: |-
+        null(oob(u(me/FN`GMCPROOM`WITNESSES,%0,%1),Room.RemovePlayer,u(me/FN`GMCPROOM`GONE,%1),supported))
+
+      # ── The handlers ─────────────────────────────────────────────────────
+      # Each reads the event's arguments by name (help event list). Only a connected player's move
+      # changes what a client draws: a thing moving is gmcp-items' business, and a player who is not
+      # connected is in nobody's Room.Players.
+      OBJECT`MOVE`GMCPROOM: |-
+        @assert u(me/FN`GMCPROOM`VIEWER,%<objid>); think u(me/FN`GMCPROOM`LOOK,%<objid>,%<objid>,%<destination>)[u(me/FN`GMCPROOM`LEFT,%<origin>,%<objid>)][u(me/FN`GMCPROOM`ARRIVED,%<destination>,%<objid>)]
+      # A new connection is sent the room on its own descriptor; the first one also tells the room.
+      PLAYER`CONNECT`GMCPROOM: |-
+        think u(me/FN`GMCPROOM`LOOK,%<descriptor>,%<objid>,loc(%<objid>))[if(eq(%<connections>,1),u(me/FN`GMCPROOM`ARRIVED,loc(%<objid>),%<objid>))]
+      # connections is how many the player still has: the last one closing takes them out of the room.
+      PLAYER`DISCONNECT`GMCPROOM: |-
+        @assert eq(%<connections>,0); think u(me/FN`GMCPROOM`LEFT,loc(%<objid>),%<objid>)
+
+  # ---- settings and help ----------------------------------------------------
+  # An ordinary thing: +config writes the settings here, and the librarian reads the topic. Nothing
+  # here runs code, so it needs no privilege.
+  - ref: gmcp_room
+    type: thing
+    name: GMCP Room
+    flags: [no_command]
+    attributes:
+      DATA`CONFIG:
+        value: |-
+          What the GMCP Room package tells a mapper about a room.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        GMCP Room
+      DATA`CONFIG`AREA: |-
+        AREA
+      DATA`CONFIG`AREA`TYPE: |-
+        text
+      DATA`CONFIG`AREA`DEFAULT: |-
+        AREA
+      DATA`CONFIG`AREA`PATTERN: |-
+        ^[^ ]*$
+      DATA`CONFIG`AREA`DESCRIPTION: |-
+        The room attribute naming the area a mapper groups the room in. A room without it is in its zone's area. Empty uses the zone alone.
+      DATA`CONFIG`AREA`LABEL: |-
+        Area attribute
+      DATA`CONFIG`AREA`EXAMPLE: |-
+        REGION
+      DATA`CONFIG`ENVIRONMENT: |-
+        ENVIRONMENT
+      DATA`CONFIG`ENVIRONMENT`TYPE: |-
+        text
+      DATA`CONFIG`ENVIRONMENT`DEFAULT: |-
+        ENVIRONMENT
+      DATA`CONFIG`ENVIRONMENT`PATTERN: |-
+        ^[^ ]*$
+      DATA`CONFIG`ENVIRONMENT`DESCRIPTION: |-
+        The room attribute holding its terrain, such as forest, which a mapper colours the room by. Empty sends none.
+      DATA`CONFIG`ENVIRONMENT`LABEL: |-
+        Environment attribute
+      DATA`CONFIG`ENVIRONMENT`EXAMPLE: |-
+        TERRAIN
+      DATA`CONFIG`COORDINATES: |-
+        X Y Z
+      DATA`CONFIG`COORDINATES`TYPE: |-
+        list
+      DATA`CONFIG`COORDINATES`DEFAULT: |-
+        X Y Z
+      DATA`CONFIG`COORDINATES`MIN: |-
+        2
+      DATA`CONFIG`COORDINATES`MAX: |-
+        3
+      DATA`CONFIG`COORDINATES`DESCRIPTION: |-
+        The room attributes holding its x, y and z, in that order. A room with none of them is sent no coordinates.
+      DATA`CONFIG`COORDINATES`LABEL: |-
+        Coordinate attributes
+      DATA`CONFIG`COORDINATES`EXAMPLE: |-
+        MAP`X MAP`Y MAP`Z
+      DATA`CONFIG`FULLNAME: |-
+        FULLNAME
+      DATA`CONFIG`FULLNAME`TYPE: |-
+        text
+      DATA`CONFIG`FULLNAME`DEFAULT: |-
+        FULLNAME
+      DATA`CONFIG`FULLNAME`PATTERN: |-
+        ^[^ ]*$
+      DATA`CONFIG`FULLNAME`DESCRIPTION: |-
+        The player attribute holding the name shown in full in Room.Players, such as Wren of the Marsh. A player without it is shown by name.
+      DATA`CONFIG`FULLNAME`LABEL: |-
+        Full name attribute
+      DATA`CONFIG`FULLNAME`EXAMPLE: |-
+        TITLE
+      HELP: |-
+        Room information for MUD clients over GMCP: a mapper, and who is here.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`GMCP`ROOM: |-
+        gmcp items|gmcp char|gmcp comm
+      HELP`GMCP`ROOM: |-
+        A MUD client such as **Mudlet** can draw a map and a list of who is here from the GMCP **Room** package. You do nothing: when you move, connect or someone comes and goes, your client is sent:
+
+        - **Room.Info**: the room's number, name, area, environment, coordinates and the exits you can see, each to the number of the room it leads to.
+        - **Room.Players**: everyone here, you included.
+        - **Room.AddPlayer** and **Room.RemovePlayer**: someone arrived or left.
+
+        A client that lists GMCP modules when it connects is sent these only when it listed `Room`. Mudlet does.
+
+        ## Building for a mapper
+
+        - A room's **area** is its `AREA` attribute, or else the name of its zone.
+        - Its **environment** is its `ENVIRONMENT` attribute, such as `forest`.
+        - Its **coordinates** are its `X`, `Y` and `Z` attributes. A room with none is sent none.
+        - A player's `FULLNAME` attribute is the name shown in full.
+
+        Staff can name other attributes: `+config gmcp-room`.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`GMCP-ROOM: |-
+        {{gmcp_room}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`GMCP-ROOM: |-
+        {{gmcp_room}}

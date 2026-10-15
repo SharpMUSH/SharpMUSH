@@ -120,6 +120,15 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: the MUD-kit sends MUD clients such as Mudlet the GMCP packages they draw maps,
+		// gauges, inventories and chat windows from. Each is installed on its own, so a game takes only what it uses;
+		// mud-kit installs all five. Event handlers on the configured event_handler, as room-contents and comm-feed.
+		new("gmcp-room", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-comm", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-items", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-char", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("mudlet-client", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("mud-kit", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

@@ -167,3 +167,33 @@ packages:
     package: roster-jobs
     version: 1.0.0
     description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs and plus-help)
+  - path: gmcp-room/
+    name: GMCP Room
+    package: gmcp-room
+    version: 1.0.0
+    description: Room.Info for a client's mapper (number, name, area, environment, coordinates, exits from exitmap()), Room.Players, Room.AddPlayer and Room.RemovePlayer (requires plus-help and plus-config)
+  - path: gmcp-comm/
+    name: GMCP Comm
+    package: gmcp-comm
+    version: 1.0.0
+    description: Comm.Channel.Text for each channel line and page, for a client's chat window, and Comm.Channel.List (requires plus-help and plus-config)
+  - path: gmcp-items/
+    name: GMCP Items
+    package: gmcp-items
+    version: 1.0.0
+    description: Char.Items.List when a client asks or its player arrives, and Char.Items.Add and Char.Items.Remove as things come and go (requires plus-help and plus-config)
+  - path: gmcp-char/
+    name: GMCP Char
+    package: gmcp-char
+    version: 1.0.0
+    description: Char.Name, Char.Vitals and Char.Status from the attributes its settings name, sent again on ATTRIBUTE`CHANGE; flags those attributes watched (requires plus-help and plus-config)
+  - path: mudlet-client/
+    name: Mudlet Client
+    package: mudlet-client
+    version: 1.0.0
+    description: +gui, and Client.GUI, Client.Map and Mudlet's Discord rich presence (External.Discord.Info and Status) from URLs in its settings (requires plus-help and plus-config)
+  - path: mud-kit/
+    name: MUD Kit
+    package: mud-kit
+    version: 1.0.0
+    description: Everything a MUD client reads over GMCP in one install — gmcp-room, gmcp-comm, gmcp-items, gmcp-char and mudlet-client, and a +help gmcp overview
