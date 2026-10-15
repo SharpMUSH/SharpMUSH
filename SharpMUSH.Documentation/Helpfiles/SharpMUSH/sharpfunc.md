@@ -39,6 +39,7 @@
 | [OBJ()]               | [OWNER()]             | [PFUN()]              | [POSS()]              |
 | [REGLATTR()]          | [REGREP()]            | [REGREPI()]           | [REGXATTR()]          |
 | [SET()]               | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 |
+| [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           |
 | [UARGS()]             | [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           |
 | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 | [WILDGREP()]          |
 | [WILDGREPI()]         | [XATTR()]             | [XGET()]              | [ZFUN()]              |
@@ -300,14 +301,14 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          | [LETQ()]           |
 | [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
 | [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
-| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [R()]              |
-| [RAND()]           | [RESTRICTEDEXPR()] | [S()]              | [SCAN()]           |
-| [SET()]            | [SETQ()]           | [SETQM()]          | [SETR()]           |
-| [SETRM()]          | [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     |
-| [SPEAK()]          | [STEXT()]          | [SUGGEST()]        | [TAG()]            |
-| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
-| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
-| [WIPE()]           |                    |                    |                    |
+| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      |
+| [R()]              | [RAND()]           | [RESTRICTEDEXPR()] | [S()]              |
+| [SCAN()]           | [SET()]            | [SETQ()]           | [SETQM()]          |
+| [SETR()]           | [SETRM()]          | [SLEV()]           | [SOUNDEX()]        |
+| [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          | [SUGGEST()]        |
+| [TAG()]            | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       |
+| [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         |
+| [VALID()]          | [WIPE()]           |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
