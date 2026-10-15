@@ -144,7 +144,7 @@ public class GameFeatureServiceTests
 			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here", "relationships-scene"])
 			.Because("highlights-app calls no plugin itself, but the package it shows does");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes"]);
 	}
 
 	/// <summary>

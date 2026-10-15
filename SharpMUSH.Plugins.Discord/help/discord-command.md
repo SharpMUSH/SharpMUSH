@@ -55,7 +55,7 @@
 
 The Discord plugin links channels on a Discord server to the game, through a bot the game runs itself. Each linked channel is a feed, `discord/<channel id>`: every line sent on that feed is posted in the channel under the speaker's name, and a linked member's message in the channel comes back as a line on the feed, spoken by the character they chose.
 
-`@discord` alone shows the bot's connection and the linked channels. Everything but `@discord/speak` needs the `discord.admin` permission, which the wizard role allows.
+`@discord` alone shows the bot's connection and the linked channels. Everything but `@discord/speak` needs the `discord.admin` permission. Nobody holds it until it is given, wizards included: `@role/assign <player>=discord-admin` gives the discord package's Discord Admin role, which allows it.
 
 Discord ids are numbers. To copy one, turn on Developer Mode in Discord's User Settings, under Advanced, then right-click a channel, role or server and choose Copy ID.
 
@@ -172,7 +172,7 @@ A game ban always takes the Linked role and every mapped role. With `@discord/ba
 - `description`: up to 1000 characters
 - `server`: the server's id, needed only when the bot is in more than one. A key's event stays in its server: `/end` it there before publishing the key in another
 
-Publishing the same key again updates the event; once it has ended, it makes a new one. `/start` shows the event as happening now. `/end` ends an event that started and cancels one that has not. `@discord/event` alone lists what is published. Each command returns the key at once and says how it went when Discord answers.
+Publishing the same key again updates the event while it is still to come. Once it has started or ended, publishing ends it and makes a new one: a paused scene moved to another day is a new event. `/start` shows the event as happening now. `/end` ends an event that started and cancels one that has not. `@discord/event` alone lists what is published. Each command returns the key at once and says how it went when Discord answers.
 
 ::: seealso
 - [@feed]

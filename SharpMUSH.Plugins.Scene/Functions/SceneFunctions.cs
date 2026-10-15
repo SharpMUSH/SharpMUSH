@@ -873,6 +873,7 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(service, id);
 		var statusBefore = SceneStatusEvent.IsStatus(key) ? await SceneStatusEvent.StatusOfAsync(service, id) : string.Empty;
+		var valueBefore = await SceneChangeEvent.ValueBeforeAsync(service, id, key);
 		if (await service.SetSceneMetaAsync(id, key, value) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
@@ -881,6 +882,7 @@ public static class SceneFunctions
 		SceneActivity.AfterSet(parser, key, statusBefore, scene);
 		await SceneRoomRefresh.AfterSetAsync(parser, key, roomBefore, scene);
 		await SceneStatusEvent.AfterSetAsync(parser, key, statusBefore, scene);
+		await SceneChangeEvent.AfterSetAsync(parser, key, valueBefore, scene);
 		return new CallState(scene.Id);
 	}
 

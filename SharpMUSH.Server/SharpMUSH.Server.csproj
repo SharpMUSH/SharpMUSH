@@ -419,6 +419,10 @@
       <Link>BundledPackages\discord-channels.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord-channels.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\discord-scenes\package.yaml">
+      <Link>BundledPackages\discord-scenes.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.discord-scenes.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\notifications\package.yaml">
       <Link>BundledPackages\notifications.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.notifications.package.yaml</LogicalName>
