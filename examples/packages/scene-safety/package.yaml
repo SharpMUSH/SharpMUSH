@@ -1,11 +1,11 @@
 format: 1.7
 package: scene-safety
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
-keywords: [scene, safety, lines, veils, consent]
+keywords: [scene, safety, consent, content-warning, rp]
 requires_server: ">=0.1"
 
 # The summary and the signal call the Scene plugin's scene functions and @scene/notice, so it installs only

@@ -6167,4 +6167,10 @@
     <value>Ontvang meldingen op deze telefoon of computer als het portaal gesloten is</value>
     <comment>MT</comment>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Alleen jij ziet dit.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Meldingen voor jou</value>
+  </data>
 </root>

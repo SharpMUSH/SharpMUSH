@@ -215,7 +215,7 @@ objects:
       # %<stored> a value in stored form. Writes it, tells the setter, and runs the system's ACONFIG.
       INC`STORE:
         value: |-
-          @break strmatch(setr(store_previous,get(%q<cfg_target>/%q<cfg_attr>)),%<stored>)=@pemit %#=notice(CONFIG,%q<cfg_name> is already [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%<stored>)].,warn); &%q<cfg_attr> %q<cfg_target>=%<stored>; @pemit %#=notice(CONFIG,%q<cfg_name> is now [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%<stored>)]%, was [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%q<store_previous>)].,ok); @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<cfg_entry>,field,%q<cfg_field>,action,set,value,%<stored>,previous,%q<store_previous>,by,%:}
+          @break not(comp(setr(store_previous,get(%q<cfg_target>/%q<cfg_attr>)),%<stored>))=@pemit %#=notice(CONFIG,%q<cfg_name> is already [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%<stored>)].,warn); &%q<cfg_attr> %q<cfg_target>=%<stored>; @pemit %#=notice(CONFIG,%q<cfg_name> is now [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%<stored>)]%, was [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%q<store_previous>)].,ok); @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<cfg_entry>,field,%q<cfg_field>,action,set,value,%<stored>,previous,%q<store_previous>,by,%:}
       INC`REGISTER:
         value: |-
           @include %!/INC`NEED`ADMIN; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_system>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CONFIG,+config/register <system>=<object>,warn); @assert u(%!/FUN`NAME`VALID,%q<cmd_system>)=@pemit %#=notice(CONFIG,A system's name is letters%, digits%, - and _.,warn); @assert isdbref(setr(register_object,locate(%#,%q<cmd_right_side>,*)))=@pemit %#=notice(CONFIG,There is no %q<cmd_right_side> here or by that dbref.,warn); @assert words(u(%!/FUN`SETTING`ALL,%q<register_object>))=@pemit %#=notice(CONFIG,[name(%q<register_object>)] declares no settings: give it a DATA`CONFIG`<name> with a TYPE leaf first. +help config writing,warn); @assert not(u(%!/FUN`SYSTEM`PACKAGED,%q<cmd_system>))=@pemit %#=notice(CONFIG,%q<cmd_system> is registered by its package.,warn); &SYSTEM`%q<cmd_system> %!=objid(%q<register_object>); @pemit %#=notice(CONFIG,%q<cmd_system> is [name(%q<register_object>)]'s settings. +config %q<cmd_system> lists them.,ok)
@@ -286,7 +286,7 @@ objects:
       # %0 an object, %1 a setting: 1 when its value is not its default.
       FUN`SETTING`CHANGED:
         value: |-
-          cand(hasattr(%0,DATA`CONFIG`%1`DEFAULT),not(strmatch(get(%0/DATA`CONFIG`%1),get(%0/DATA`CONFIG`%1`DEFAULT))))
+          cand(hasattr(%0,DATA`CONFIG`%1`DEFAULT),comp(get(%0/DATA`CONFIG`%1),get(%0/DATA`CONFIG`%1`DEFAULT)))
         flags: [funsyntax]
 
       # ── Values, whatever the type ───────────────────────────────────────────
