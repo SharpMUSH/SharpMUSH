@@ -323,6 +323,10 @@
       <Link>BundledPackages\chargen-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.chargen-app.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen-app\README.md">
+      <Link>BundledPackages\chargen-app.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen-app.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\messages\package.yaml">
       <Link>BundledPackages\messages.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>
