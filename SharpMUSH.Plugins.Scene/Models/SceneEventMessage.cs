@@ -8,7 +8,7 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <see cref="Content"/> + raw <see cref="Markup"/> (rendered client-side).
 /// </summary>
 /// <param name="SceneId">The scene the event belongs to (the SignalR group key).</param>
-/// <param name="EventType">Opaque event kind: "pose" | "edit" | "pose-meta" | "delete" | "move" | "meta".</param>
+/// <param name="EventType">Opaque event kind: "pose" | "edit" | "pose-meta" | "delete" | "move" | "meta" | "notice".</param>
 /// <param name="ActorName">Display name for the actor — the pose's ShowAsName (falling back to AuthorName).</param>
 /// <param name="PoseId">The affected pose id (empty for scene-level "meta" events).</param>
 /// <param name="Content">Plain text (ANSI-stripped) of the affected pose's current edit.</param>
@@ -25,6 +25,10 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// </param>
 /// <param name="Meta">The pose's metadata fields (a radio line's <c>frequency</c>, ...); null for an event with no pose.</param>
 /// <param name="Type">The pose's type key (<see cref="PoseTypes"/>); <c>ic</c> for an event with no pose.</param>
+/// <param name="Recipient">
+/// The one member a "notice" is for, as a dbref (<c>#12</c>); the bridge sends it to that member's connections
+/// on the scene and nobody else. Null for every other event, which goes to the whole scene.
+/// </param>
 public record SceneEventMessage(
 	string SceneId,
 	string EventType,
@@ -38,4 +42,5 @@ public record SceneEventMessage(
 	long Timestamp,
 	string? ActorObjId,
 	string Type = PoseTypes.InCharacter,
-	IReadOnlyDictionary<string, string>? Meta = null);
+	IReadOnlyDictionary<string, string>? Meta = null,
+	string? Recipient = null);

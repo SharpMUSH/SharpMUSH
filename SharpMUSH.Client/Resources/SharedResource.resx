@@ -3201,6 +3201,12 @@
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
     <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
   </data>
+  <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
+    <value>Only you see this.</value>
+  </data>
+  <data name="RolSceneNotices" xml:space="preserve">
+    <value>Notices for you</value>
+  </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>Waiting for activity…</value>
   </data>
