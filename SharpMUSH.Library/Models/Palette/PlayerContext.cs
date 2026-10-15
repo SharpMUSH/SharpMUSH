@@ -43,6 +43,9 @@ public static class ContextWeights
 	public const int MaxValueLength = 256;
 	public const int MaxInfoLength = 512;
 
+	/// <summary>How many characters' stacks the server keeps; past it, the one pushed to least recently goes.</summary>
+	public const int MaxCharacters = 10_000;
+
 	/// <summary>The weight of a context pushed at <paramref name="pushedAt"/>, read at <paramref name="now"/>.</summary>
 	public static double At(DateTimeOffset pushedAt, DateTimeOffset now)
 		=> Math.Pow(0.5, Math.Max(0, (now - pushedAt).TotalSeconds) / HalfLife.TotalSeconds);

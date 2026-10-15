@@ -102,4 +102,55 @@ public class ContextStackTests
 
 		await Assert.That(stack.Read(Player with { CreationMilliseconds = 1_800_000_000_000 })).IsEmpty();
 	}
+
+	[Test]
+	public async ValueTask APush_IsCutToTheLimits_WhoeverPushesIt()
+	{
+		var clock = new ManualClock();
+		var stack = new ContextStack(clock);
+		var values = Enumerable.Range(0, ContextWeights.MaxValues + 4)
+			.ToDictionary(i => $"k{i}{new string('k', ContextWeights.MaxNameLength)}", _ => new string('v', ContextWeights.MaxValueLength * 2));
+		stack.Push(Player, new string('n', ContextWeights.MaxNameLength * 2), values, TimeSpan.FromDays(3),
+			new string('i', ContextWeights.MaxInfoLength * 2));
+
+		var context = stack.Read(Player).Single().Context;
+		await Assert.That(context.Name.Length).IsEqualTo(ContextWeights.MaxNameLength);
+		await Assert.That(context.Values.Count).IsEqualTo(ContextWeights.MaxValues);
+		await Assert.That(context.Values.Keys.All(key => key.Length == ContextWeights.MaxNameLength)).IsTrue();
+		await Assert.That(context.Values.Values.All(value => value.Length == ContextWeights.MaxValueLength)).IsTrue();
+		await Assert.That(context.Info!.Length).IsEqualTo(ContextWeights.MaxInfoLength);
+		await Assert.That(context.Lifetime).IsEqualTo(ContextWeights.MaxLifetime);
+	}
+
+	[Test]
+	public async ValueTask PastTheCharacterLimit_TheStackPushedToLeastRecentlyGoes()
+	{
+		var clock = new ManualClock();
+		var stack = new ContextStack(clock, maxCharacters: 2);
+		var first = new DBRef(5001, 1_700_000_000_000);
+		var second = new DBRef(5002, 1_700_000_000_000);
+		var third = new DBRef(5003, 1_700_000_000_000);
+		stack.Push(first, "combat");
+		clock.Now += TimeSpan.FromSeconds(1);
+		stack.Push(second, "combat");
+		clock.Now += TimeSpan.FromSeconds(1);
+		stack.Push(first, "scene_here");
+		clock.Now += TimeSpan.FromSeconds(1);
+		stack.Push(third, "combat");
+
+		await Assert.That(stack.Read(second)).IsEmpty();
+		await Assert.That(stack.Read(first).Count).IsEqualTo(2);
+		await Assert.That(stack.Read(third).Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async ValueTask AStackEmptiedByADrop_TakesANewPush()
+	{
+		var stack = new ContextStack(new ManualClock());
+		stack.Push(Player, "combat");
+		stack.Drop(Player, "combat");
+		stack.Push(Player, "my_turn");
+
+		await Assert.That(stack.Read(Player).Select(context => context.Name)).IsEquivalentTo(new[] { "my_turn" });
+	}
 }
