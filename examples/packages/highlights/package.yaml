@@ -56,6 +56,8 @@ objects:
         flags: [no_command]
       DATA`CONFIG: |-
         Favourite poses and the highlights they make.
+      DATA`CONFIG`LABEL: |-
+        Highlights
       DATA`CONFIG`WINDOW: |-
         2419200
       DATA`CONFIG`WINDOW`DESCRIPTION: |-
@@ -66,6 +68,10 @@ objects:
         2419200
       DATA`CONFIG`WINDOW`MIN: |-
         0
+      DATA`CONFIG`WINDOW`LABEL: |-
+        Window
+      DATA`CONFIG`WINDOW`EXAMPLE: |-
+        2w
       DATA`CONFIG`PAGE-SIZE: |-
         10
       DATA`CONFIG`PAGE-SIZE`DESCRIPTION: |-
@@ -78,6 +84,10 @@ objects:
         1
       DATA`CONFIG`PAGE-SIZE`MAX: |-
         50
+      DATA`CONFIG`PAGE-SIZE`LABEL: |-
+        Poses per page
+      DATA`CONFIG`PAGE-SIZE`EXAMPLE: |-
+        20
       DATA`CONFIG`OWN-POSES: |-
         0
       DATA`CONFIG`OWN-POSES`DESCRIPTION: |-
@@ -86,6 +96,10 @@ objects:
         boolean
       DATA`CONFIG`OWN-POSES`DEFAULT: |-
         0
+      DATA`CONFIG`OWN-POSES`LABEL: |-
+        Own poses
+      DATA`CONFIG`OWN-POSES`EXAMPLE: |-
+        yes
       POSE:
         value: |-
           The favourited poses, one branch per pose.
