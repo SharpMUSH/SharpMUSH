@@ -1,11 +1,12 @@
-format: 1
+format: "1.10"
 package: profile-handler
-version: 1.0.4
+version: 1.0.5
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [http, api, profile, portal]
+category: Web portal
 requires_server: ">=0.1"
 
 # Requires the verb routers — its GET`* routes are backtick children of the GET

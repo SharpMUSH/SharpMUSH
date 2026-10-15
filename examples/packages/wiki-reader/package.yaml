@@ -1,10 +1,11 @@
-format: 1
+format: "1.10"
 package: wiki-reader
-version: 1.6.2
+version: 1.6.3
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
 keywords: [wiki, help, navigation, ui]
+category: Community
 requires_server: ">=0.1"
 
 depends:

@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: chargen
-version: 2.0.1
+version: 2.0.2
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [chargen, applications, approval, review, waitlist]
+category: Characters
 requires_server: ">=0.1"
 
 # plus-help carries the +help topics, plus-config the settings, and http-handler owns the GET/POST verb
