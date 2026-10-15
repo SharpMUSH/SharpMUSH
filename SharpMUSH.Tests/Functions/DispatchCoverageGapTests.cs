@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -87,6 +88,26 @@ public class DispatchCoverageGapTests : ServerTestBase
 
 		var result = await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
 			.FunctionParse(MString.Plain("locale()"));
+
+		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>clientzone()</c> reads the zone the connection's client reported, nothing when it reported none. Each case
+	/// uses a fresh handle.
+	/// </summary>
+	[Test]
+	[Arguments(null, "")]
+	[Arguments("Europe/Paris", "Europe/Paris")]
+	public async Task ClientZoneIsWhatTheClientReported(string? reported, string expected)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ClientZone");
+		if (reported is not null)
+			ConnectionService.Update(player.Handle, ConnectionTimeZone.Key, reported);
+
+		var result = await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+			.FunctionParse(MString.Plain("clientzone(me)"));
 
 		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(expected);
 	}

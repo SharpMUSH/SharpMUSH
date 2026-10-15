@@ -62,6 +62,45 @@ public static class WebSocketControlFrame
 		}
 	}
 
+	/// <summary>The longest time zone name a frame may report.</summary>
+	public const int MaxTimeZoneLength = 64;
+
+	/// <summary>
+	/// A browser terminal's environment, <c>{"type":"environ","vars":{"TZ":"Europe/Paris"}}</c>: what a telnet client
+	/// sends with NEW-ENVIRON. Only <c>TZ</c>, the browser's time zone, is read; a frame without one is not one.
+	/// </summary>
+	public static bool TryParseTimeZone(string message, out string zone)
+	{
+		zone = string.Empty;
+
+		var trimmed = message.AsSpan().TrimStart();
+		if (trimmed.Length == 0 || trimmed[0] != '{')
+			return false;
+
+		try
+		{
+			using var doc = JsonDocument.Parse(message);
+			var root = doc.RootElement;
+			if (root.ValueKind != JsonValueKind.Object
+				|| !root.TryGetProperty("type", out var typeEl)
+				|| typeEl.ValueKind != JsonValueKind.String
+				|| typeEl.GetString() != "environ"
+				|| !root.TryGetProperty("vars", out var varsEl)
+				|| varsEl.ValueKind != JsonValueKind.Object
+				|| !varsEl.TryGetProperty("TZ", out var zoneEl)
+				|| zoneEl.ValueKind != JsonValueKind.String
+				|| zoneEl.GetString()?.Trim() is not { Length: > 0 and <= MaxTimeZoneLength } name)
+				return false;
+
+			zone = name;
+			return true;
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
+
 	public static bool TryParseNaws(string message, out int cols, out int rows)
 	{
 		cols = 0;

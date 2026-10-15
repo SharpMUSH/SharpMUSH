@@ -719,6 +719,11 @@ public static class SocketOptions
 		{
 			Row("Client", connection.Metadata.TryGetValue(ConnectionClient.VersionKey, out var version) ? $"{client} {version}" : client);
 		}
+		// Not a PennMUSH row either: the time zone the client reported, shown only once it did.
+		if (connection.Metadata.TryGetValue(ConnectionTimeZone.Key, out var zone))
+		{
+			Row("Time Zone", zone);
+		}
 		Row("Stripaccents", YesNo(connection.Metadata.GetValueOrDefault(StripAccentsKey) == "1"));
 		// The engine does not see what the client negotiated, so an unpinned charset is only "auto".
 		Row("Charset", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.CharsetKey) ?? "auto");

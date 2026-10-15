@@ -118,6 +118,9 @@ public static class CacheKeys
 	/// <summary>The object's ^-listen attributes, with their patterns compiled.</summary>
 	public static string Listens(DBRef dbref) => $"listens:#{dbref.Number}";
 
+	/// <summary>The object's command palette entries, read from its <c>PALETTE`</c> attributes.</summary>
+	public static string Palette(DBRef dbref) => $"palette:#{dbref.Number}";
+
 	/// <summary>
 	/// Tag on the attribute reads that consult exactly one object — <see cref="Attribute"/> and
 	/// <see cref="LazyAttribute"/>. Per object, for the same reason <see cref="ContentsTag"/> is per
@@ -142,7 +145,7 @@ public static class CacheKeys
 	/// </summary>
 	public static string[] AttributesTouchedBy(DBRef dbref, string[] attribute)
 	{
-		var keys = new string[(attribute.Length * 6) + 2];
+		var keys = new string[(attribute.Length * 6) + 3];
 		var next = 0;
 
 		for (var length = 1; length <= attribute.Length; length++)
@@ -158,9 +161,10 @@ public static class CacheKeys
 
 		// The $-command and ^-listen sets are derived from the object's attributes, so any attribute
 		// write can change them — the attribute written is not necessarily the one carrying a pattern,
-		// since a flag change alone can add or remove one.
+		// since a flag change alone can add or remove one. The palette entries are read the same way.
 		keys[next++] = Commands(dbref);
-		keys[next] = Listens(dbref);
+		keys[next++] = Listens(dbref);
+		keys[next] = Palette(dbref);
 
 		// A player's aliases load with its node, which the provider rewrites in the same transaction as
 		// the ALIAS attribute (Services.PlayerAliases).
