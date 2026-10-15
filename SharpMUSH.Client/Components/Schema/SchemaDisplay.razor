@@ -5,8 +5,8 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-@* One display element of a Portal Schema Document — markdown, image, table, keyvalue, timeline, divider,
-   button — drawn from the data payload. Shared by SchemaViewRenderer and SchemaFormRenderer so a form can
+@* One display element of a Portal Schema Document — markdown, image, table, keyvalue, timeline, graph,
+   divider, button — drawn from the data payload. Shared by SchemaViewRenderer and SchemaFormRenderer so a form can
    show the same tables and timelines a view does. It sends no requests: a button or a timeline action
    asks the renderer hosting it to dispatch, after confirming when the schema asks it to. *@
 
@@ -45,7 +45,7 @@
             {
                 <div class="schema-kv-row">
                     <dt class="schema-label">@key</dt>
-                    <dd class="schema-value">@SchemaViewRenderer.ValueToString(Lookup(key))</dd>
+                    <dd class="schema-value">@RenderKeyValue(Lookup(key))</dd>
                 </div>
             }
         </dl>
@@ -53,6 +53,10 @@
 
     case "timeline":
         @RenderTimeline()
+        break;
+
+    case "graph":
+        <SchemaGraph Element="Element" Value="@(Element.SrcField is null ? null : Lookup(Element.SrcField))" />
         break;
 
     case "button":
@@ -69,7 +73,7 @@
 @code {
     /// <summary>The element kinds this component draws; anything else is the hosting renderer's (fields).</summary>
     public static readonly IReadOnlySet<string> Kinds =
-        new HashSet<string>(["divider", "markdown", "image", "table", "keyvalue", "timeline", "button"], StringComparer.OrdinalIgnoreCase);
+        new HashSet<string>(["divider", "markdown", "image", "table", "keyvalue", "timeline", "graph", "button"], StringComparer.OrdinalIgnoreCase);
 
     [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
 
@@ -126,7 +130,21 @@
         => Data?.Fields is not null && Data.Fields.TryGetValue(key, out var v) && v.Visible ? v.Value : null;
 
     private bool IsKeyVisible(string key)
-        => !string.IsNullOrEmpty(SchemaViewRenderer.ValueToString(Lookup(key)));
+        => !string.IsNullOrEmpty(SchemaRendering.ReadKeyValue(Lookup(key)).Text);
+
+    // A keyvalue's value: its text, as a link when it came as { text, link } with a link the portal may follow.
+    private static RenderFragment RenderKeyValue(JsonElement? value) => __builder =>
+    {
+        var (text, href) = SchemaRendering.ReadKeyValue(value);
+        @if (href is not null)
+        {
+            <a class="schema-link" href="@href">@text</a>
+        }
+        else
+        {
+            @text
+        }
+    };
 
     private IReadOnlyList<JsonElement> Rows()
         => Element.RowsField is not null && Lookup(Element.RowsField) is { ValueKind: JsonValueKind.Array } rows

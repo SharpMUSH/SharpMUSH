@@ -131,10 +131,10 @@ public class GameFeatureServiceTests
 
 		// The Discord plugin is not loaded here either; the discord packages are someone else's test.
 		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-here", "scene-availability"])
+			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here", "relationships-scene"])
 			.Because("highlights-app calls no plugin itself, but the package it shows does");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene"]);
 	}
 
 	/// <summary>

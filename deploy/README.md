@@ -589,6 +589,10 @@ sharpmush_storage_bytes{kind="world_disk_free"} < ignoring(kind) sharpmush_stora
 sharpmush_storage_bytes{kind="leftover_worlds"} > 0                    # a .previous or .precompact world to clean up
 ```
 
+Each attribute index (`@attribute/index`) is also reported on its own, as
+`sharpmush_storage_attribute_index_bytes{index="<attribute>"}`, and in `@storage`'s "Attribute indexes"
+section with its rows and pages and whether it is still building.
+
 A database import (PennMUSH, RhostMUSH or TinyMUX) is checked the same way before it starts. It
 is refused with `507 Insufficient Storage` when the map or the disk clearly cannot hold three times
 the size of the uploaded files. Nothing is written in that case.
