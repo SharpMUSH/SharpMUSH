@@ -15,7 +15,7 @@
 
 Returns the commands `<player>`'s context stack puts first, in the order the command palette shows them: urgent ones, then by how recently their contexts were pushed. It offers only entries `<player>` could use, by the rules in [palette entries]. Pins and staples are left out.
 
-`<count>` is how many, 5 by default and at most 20. `<osep>` goes between them, ` · ` by default.
+`<count>` is how many, 5 by default and at most 20. `<osep>` goes between them, by default a middle dot (`chr(183)`) with a space either side.
 
 Without an attribute, it returns the entries whose every `<slot>` was filled from a context, each as a command link (see [cmdlink()]) with the context's info, or the line, as its hover text. Code that may not make links gets the labels alone.
 
@@ -36,8 +36,8 @@ Code may ask for the player whose command it is running (`%#`), or a player its 
 
 ```sharp
 > @context/push me=scene_here,[json(object,scene,12)],,Scene 12 is running in this room.
-> think context(me)
-Join the scene here · Scenes here
+> think context(me,5,%b|%b)
+Join the scene here | Scenes here
 > &FN`ITEM me=%<label>: %<line> (%<contexts>)
 > think context(me,5,%r,me/FN`ITEM)
 Join the scene here: +join 12 (scene_here)

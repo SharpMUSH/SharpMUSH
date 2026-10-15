@@ -32,7 +32,7 @@
   ]
 }
 -->
-# Palette entries
+# Palette Entries
 
 The portal's command palette (Ctrl+K) runs game commands as well as going to pages. A command gets there through a palette entry: an attribute `PALETTE`<name>` on the object that holds the command, whose value is a JSON object saying what the row is called and what line it sends.
 

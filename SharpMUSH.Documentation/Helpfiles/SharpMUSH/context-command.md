@@ -36,24 +36,15 @@ Code may use the stack of the player whose command it is running (`%#`), or of a
 > @context/push me=scene_here,[json(object,scene,12)],,Scene 12 is running in this room. Join with +join 12.
 > @context/push me=combat,[json(object,encounter,7,round,3)],10m
 > @context me
-╭──────────────────────┤ Context of God, newest first ├──────────────────────╮
-│ Context            Weight  Values                 Info                     │
-│ ────────────────────────────────────────────────────────────────────────── │
-│ combat               1.00  encounter=7 · round=3                           │
-│ scene_here           1.00  scene=12               Scene 12 is running in   │
-│                                                   this room. Join with     │
-│                                                   +join 12.                │
-│ #15:1792044786423    0.97                                                  │
-╰────────────────────────────────────────────────────────────────────────────╯
 > @context/drop me=combat
 ```
 
-Output: the listing is a table of the stack, newest first. The last row was pushed by typing a `$`-command on an object that belongs to no package.
+Output: `@context me` draws a table of the stack, newest first: `combat` (weight 1.00, `encounter=7` and `round=3`), `scene_here` (weight 1.00, `scene=12` and its info), and `#15:1792044786423` (weight 0.97, pushed by typing a `$`-command on an object that belongs to no package).
 
-A package usually pushes from its own commands and events. This one pushes `scene_here` when a player enters a room with a scene and drops it when they enter one without:
+A package usually pushes from its own commands and events. This event handler attribute pushes `scene_here` when a player enters a room with a scene running, and drops it when they enter one without:
 
 ```sharp
-&OBJECT`MOVE`SCENE #9=@assert hastype(%0,PLAYER); @assert not(strmatch(setr(scene,scenewhere(%1)),#-1*))={@context/drop %0=scene_here}; @context/push %0=scene_here,[json(object,scene,%q<scene>)]
+&OBJECT`MOVE`SCENE #9=@assert hastype(%<objid>,PLAYER); @assert not(strmatch(setr(scene,scenewhere(%<destination>)),#-1*))={@context/drop %<objid>=scene_here}; @context/push %<objid>=scene_here,[json(object,scene,%q<scene>)],,Scene %q<scene>[if(strlen(setr(title,scene(%q<scene>,title))),: %q<title>)] is running here.
 ```
 
 Errors: `#-1 NO SUCH PLAYER`, `#-1 PERMISSION DENIED`, `#-1 INVALID CONTEXT NAME`, `#-1 CONTEXT VALUES MUST BE A JSON OBJECT OF TEXT`, `#-1 INVALID CONTEXT LIFETIME`, `#-1 CONTEXT INFO TOO LONG` (over 512 characters).
