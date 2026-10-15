@@ -266,7 +266,6 @@ public record SharpMUSHOptions
 			SocketFile: "netmush.sock",
 			SqlHost: null,
 			SqlPlatform: null,
-			SqlPassword: null,
 			SqlDatabase: null,
 			SqlUsername: null,
 			SslIpAddr: null,

@@ -71,9 +71,6 @@ public record NetOptions(
 	[property: SharpConfig(Name = "sql_username", Category = "Net", Description = "SQL database username", Group = "Database", Order = 4)]
 	string? SqlUsername,
 
-	[property: SharpConfig(Name = "sql_password", Category = "Net", Description = "SQL database password", Group = "Database", Order = 5)]
-	string? SqlPassword,
-
 	[property: SharpConfig(Name = "json_unsafe_unescape", Category = "Net", Description = "Allow unsafe JSON unescaping", Group = "Advanced", Order = 1)]
 	bool JsonUnsafeUnescape,
 

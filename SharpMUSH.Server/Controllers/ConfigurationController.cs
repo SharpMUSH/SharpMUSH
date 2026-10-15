@@ -286,9 +286,15 @@ public class ConfigurationController(
 	{
 		try
 		{
-			var importedOptions = await mushCnf.ApplyAsync(await mushCnf.ReadAsync(configContent));
+			var import = await mushCnf.ReadAsync(configContent);
+			var applied = await mushCnf.ApplyAsync(import, PortalSecretAuthor.Of(User));
 			await audit.RecordPortalAsync(User, AuditActions.ConfigImport, null, "mush.cnf");
-			return Ok(OptionHelper.OptionsToConfigurationResponse(importedOptions));
+			foreach (var secret in applied.StoredSecrets)
+			{
+				await audit.RecordPortalAsync(User, AuditActions.SecretSet, AuditTargets.Of(AuditTargetKinds.Secret, secret), "mush.cnf");
+			}
+
+			return Ok(OptionHelper.OptionsToConfigurationResponse(applied.Options));
 		}
 		catch (Exception ex)
 		{
