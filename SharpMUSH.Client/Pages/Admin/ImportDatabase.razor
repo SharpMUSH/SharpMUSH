@@ -8,6 +8,7 @@
 @inject ILogger<ImportDatabase> Logger
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 <PageTitle>@Loc["ImportPennMUSHDatabase"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
@@ -40,7 +41,7 @@
         <KitCard Class="dbimport-dropzone">
             <div class="dbimport-body">
                 <MudFileUpload T="IBrowserFile"
-                               Accept=".db,.txt"
+                               Accept=".db,.flat,.txt"
                                FilesChanged="OnFileSelected"
                                MaximumFileCount="1"
                                MaxFileSize="104857600" />
@@ -61,6 +62,16 @@
                         <span class="dbimport-file-name">@_selectedFile.Name</span>
                         <span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                     </div>
+
+                    @* Told from the file's first lines unless chosen: a TinyMUX flatfile starts +X, and a
+                       PennMUSH outdb and a RhostMUSH flatfile both start +V, with what follows telling them apart. *@
+                    <SectionLabel Class="dbimport-label">@Loc["AdmImportFormat"]</SectionLabel>
+                    <MudRadioGroup T="string" Class="dbimport-format" @bind-Value="_format">
+                        <MudRadio T="string" Value="@("auto")">@Loc["AdmImportFormatAuto"]</MudRadio>
+                        <MudRadio T="string" Value="@("pennmush")">PennMUSH</MudRadio>
+                        <MudRadio T="string" Value="@("rhostmush")">RhostMUSH</MudRadio>
+                        <MudRadio T="string" Value="@("tinymux")">TinyMUX</MudRadio>
+                    </MudRadioGroup>
 
                     @* The source game's mush.cnf goes in first: it names the master room, the player start,
                        the ancestors and the handlers the database's objects are, and those decide how the
@@ -97,18 +108,39 @@
                         </div>
                     }
 
-                    <SectionLabel Class="dbimport-label">@Loc["ChatDatabaseOptional"]</SectionLabel>
-                    <MudFileUpload T="IBrowserFile"
-                                   FilesChanged="OnChatFileSelected"
-                                   MaximumFileCount="1"
-                                   MaxFileSize="104857600" />
-                    @if (_selectedChatFile != null)
+                    @* RhostMUSH has no chat database: its channels are softcode on its objects. *@
+                    @if (TakesChat)
                     {
-                        <div class="dbimport-file-row">
-                            <MudIcon Icon="@Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
-                            <span class="dbimport-file-name">@_selectedChatFile.Name</span>
-                            <span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
-                        </div>
+                        <SectionLabel Class="dbimport-label">@Loc["ChatDatabaseOptional"]</SectionLabel>
+                        <MudFileUpload T="IBrowserFile"
+                                       FilesChanged="OnChatFileSelected"
+                                       MaximumFileCount="1"
+                                       MaxFileSize="104857600" />
+                        @if (_selectedChatFile != null)
+                        {
+                            <div class="dbimport-file-row">
+                                <MudIcon Icon="@Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
+                                <span class="dbimport-file-name">@_selectedChatFile.Name</span>
+                                <span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+                            </div>
+                        }
+                    }
+
+                    @* RhostMUSH's wmail/unload writes the mail and, beside it, which folder each message is in. *@
+                    @if (TakesMailFolders)
+                    {
+                        <SectionLabel Class="dbimport-label">@Loc["AdmImportMailFoldersOptional"]</SectionLabel>
+                        <MudFileUpload T="IBrowserFile"
+                                       FilesChanged="OnMailFolderFileSelected"
+                                       MaximumFileCount="1"
+                                       MaxFileSize="104857600" />
+                        @if (_selectedMailFolderFile != null)
+                        {
+                            <div class="dbimport-file-row">
+                                <MudIcon Icon="@Icons.Material.Filled.Folder" Class="dbimport-file-icon" />
+                                <span class="dbimport-file-name">@_selectedMailFolderFile.Name</span>
+                            </div>
+                        }
                     }
 
                     <div class="dbimport-actions">
@@ -257,6 +289,26 @@
                             </div>
                         }
 
+                        @if (_result.SoftcodeRewrites.Any())
+                        {
+                            <div class="dbimport-tile dbimport-tile-wide">
+                                <SectionLabel Class="dbimport-label dbimport-label-warning">@Loc["AdmImportRewrites", _result.SoftcodeRewrites.Count]</SectionLabel>
+                                <MudText Typo="Typo.body2">@Loc["AdmImportRewritesLead"]</MudText>
+                                <div class="dbimport-rewrites">
+                                    @foreach (var rewrite in _result.SoftcodeRewrites)
+                                    {
+                                        <details class="dbimport-rewrite">
+                                            <summary class="dbimport-rewrite-note">@rewrite</summary>
+                                            <div class="dbimport-rewrite-label">@Loc["AdmImportRewriteBefore"]</div>
+                                            <pre class="dbimport-rewrite-code">@rewrite.Before</pre>
+                                            <div class="dbimport-rewrite-label">@Loc["AdmImportRewriteAfter"]</div>
+                                            <pre class="dbimport-rewrite-code">@rewrite.After</pre>
+                                        </details>
+                                    }
+                                </div>
+                            </div>
+                        }
+
                         @if (_result.Warnings.Any())
                         {
                             <div class="dbimport-tile dbimport-tile-wide">
@@ -275,6 +327,7 @@
 
                     <div class="dbimport-actions dbimport-actions-start">
                         <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Primary="true" OnClick="Reset">@Loc["ImportAnotherDatabase"]</CapsuleButton>
+                        <CapsuleButton Icon="@Icons.Material.Filled.Download" OnClick="DownloadLog">@Loc["AdmImportDownloadLog"]</CapsuleButton>
                     </div>
                 </div>
             </ChildContent>
@@ -293,12 +346,24 @@
     private IBrowserFile? _selectedFile;
     private IBrowserFile? _selectedMailFile;
     private IBrowserFile? _selectedChatFile;
+    private IBrowserFile? _selectedMailFolderFile;
+
+    /// <summary>The database's format as the form sends it: auto, pennmush, rhostmush or tinymux.</summary>
+    private string _format = "auto";
+
+    /// <summary>A chat database (PennMUSH's chatdb, TinyMUX's comsys.db) goes with every format but RhostMUSH.</summary>
+    private bool TakesChat => _format != "rhostmush";
+
+    /// <summary>A mail folder file is RhostMUSH's alone; told from the file, it may still be one.</summary>
+    private bool TakesMailFolders => _format is "auto" or "rhostmush";
+
     private bool _isUploading;
     private bool _isConverting;
     private bool _isUpdatingProgress;
     private string? _sessionId;
     private ConversionProgress? _progress;
     private ConversionResult? _result;
+    private DateTimeOffset _finished;
     private System.Threading.Timer? _progressTimer;
     private string? _error;
 
@@ -321,12 +386,16 @@
 
     private void OnChatFileSelected(IBrowserFile? file) => _selectedChatFile = file;
 
+    private void OnMailFolderFileSelected(IBrowserFile? file) => _selectedMailFolderFile = file;
+
     private void ClearSelection()
     {
         _selectedFile = null;
         _selectedConfigFile = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
+        _selectedMailFolderFile = null;
+        _format = "auto";
     }
 
     private async Task StartConversion()
@@ -345,10 +414,15 @@
             // and puts the game's own configuration back if the conversion fails or is cancelled.
             await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
             await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
-            await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
+            // A side file chosen before the format was changed to one that has no such file is not sent.
+            var chatFile = TakesChat ? _selectedChatFile : null;
+            var folderFile = TakesMailFolders ? _selectedMailFolderFile : null;
+            await using var chatStream = chatFile?.OpenReadStream(maxAllowedSize: 104857600);
             await using var configStream = _selectedConfigFile?.OpenReadStream(MaxConfigFileSize);
+            await using var folderStream = folderFile?.OpenReadStream(maxAllowedSize: 104857600);
             var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
-                _selectedMailFile?.Name, chatStream, _selectedChatFile?.Name, configStream, _selectedConfigFile?.Name);
+                _selectedMailFile?.Name, chatStream, chatFile?.Name, configStream, _selectedConfigFile?.Name,
+                folderStream, folderFile?.Name, _format);
 
             switch (upload)
             {
@@ -434,6 +508,7 @@
                 {
                     case ConversionResult result:
                         _result = result;
+                        _finished = DateTimeOffset.UtcNow;
                         _pollError = null;
                         _isConverting = false;
                         _progressTimer?.Dispose();
@@ -487,6 +562,8 @@
         _configImportedFrom = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
+        _selectedMailFolderFile = null;
+        _format = "auto";
         _sessionId = null;
         _progress = null;
         _result = null;
@@ -495,6 +572,25 @@
         _error = null;
         _pollError = null;
         _progressTimer?.Dispose();
+    }
+
+    /// <summary>The whole report as a text file, rewritten softcode before and after included, to read or send in for help.</summary>
+    private async Task DownloadLog()
+    {
+        if (_result is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", ImportLog.FileName(_finished), "text/plain",
+                ImportLog.Write(_result, _finished));
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "The import log could not be downloaded");
+        }
     }
 
     private string FormatTimeSpan(TimeSpan ts)

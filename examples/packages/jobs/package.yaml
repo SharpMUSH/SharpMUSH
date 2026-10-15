@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.7.0
+version: 1.7.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -12,13 +12,13 @@ requires_server: ">=0.1"
 # http-handler owns the GET/POST verb routers the portal routes hang off.
 depends:
   - package: plus-help
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
   - package: http-handler
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/

@@ -228,7 +228,7 @@ class SharpMush:
                             "ASPNETCORE_URLS": f"http://127.0.0.1:{server_port}",
                             "PENNMUSH_DATABASE_PATH": str(flatfile),
                             "PENNMUSH_CONVERSION_STOP_ON_FAILURE": "true"})
-        wait_for(lambda: log_contains(server.log, "PennMUSH database conversion completed successfully"),
+        wait_for(lambda: log_contains(server.log, "Database conversion completed successfully"),
                  "the PennMUSH import to complete (see logs/server.out)", 180, [server])
         sock = self._run("socketserver", [self.dotnet, "run", "--no-build", "--no-launch-profile"], self.repo / "SharpMUSH.SocketServer",
                          {"NATS_URL": nats_url, "Rendering__SocketPath": str(render_sock),

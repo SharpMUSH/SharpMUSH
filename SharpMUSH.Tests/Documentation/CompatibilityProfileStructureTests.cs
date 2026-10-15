@@ -44,7 +44,7 @@ public class CompatibilityProfileStructureTests
 		["Logical functions: `mux_logic`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
 		["Justification: `mux_justify`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
 		["Text order: `mux_collation`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
-		["TinyMUX's `list()`: `mux_list`"] = "a TinyMUX setting, off by default; off, SharpMUSH answers as PennMUSH",
+		["RhostMUSH list() loop: `rhost_list`"] = "a RhostMUSH option; off, list() is PennMUSH's",
 		["Innermost loop tokens"] = "describes a setting for TinyMUX code; off, the default, matches PennMUSH",
 		["RhostMUSH edit() modes: `rhost_edit`"] = "a RhostMUSH option; off, edit() is PennMUSH's",
 		["RhostMUSH lattr() arguments: `rhost_lattr`"] = "a RhostMUSH option; off, lattr() is PennMUSH's",

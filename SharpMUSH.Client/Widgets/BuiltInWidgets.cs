@@ -1,5 +1,6 @@
 using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Models.Widgets;
+using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Client.Widgets;
@@ -72,14 +73,15 @@ public static class BuiltInWidgets
 			typeof(SpacerWidget), typeof(SpacerConfig)),
 
 		new("Stats", "LayWidgetGameStats", WidgetSize.Large, MainOnly, typeof(StatsWidget)),
-		new("ActiveScene", "LayWidgetActiveScene", WidgetSize.Medium, Content, typeof(ActiveSceneWidget)),
+		new("ActiveScene", "LayWidgetActiveScene", WidgetSize.Medium, Content, typeof(ActiveSceneWidget),
+			Feature: GameFeatures.Scenes),
 
 		// A character's last scenes and who they share the most scenes with (README §6.3). The character
 		// comes from the profile page context, or from the config when placed elsewhere.
 		new("RecentScenes", "LayWidgetRecentScenes", WidgetSize.Medium, Content,
-			typeof(RecentScenesWidget), typeof(CharacterTargetConfig)),
+			typeof(RecentScenesWidget), typeof(CharacterTargetConfig), Feature: GameFeatures.Scenes),
 		new("OftenPlaysWith", "LayWidgetOftenPlaysWith", WidgetSize.Medium, Content,
-			typeof(OftenPlaysWithWidget), typeof(CharacterTargetConfig)),
+			typeof(OftenPlaysWithWidget), typeof(CharacterTargetConfig), Feature: GameFeatures.Scenes),
 		new("RecentWikiActivity", "LayWidgetRecentWikiActivity", WidgetSize.Medium, Content,
 			typeof(RecentWikiActivityWidget)),
 		new("OnlineCharacters", "LayWidgetOnlineCharacters", WidgetSize.Medium, Content,

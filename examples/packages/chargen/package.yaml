@@ -1,6 +1,6 @@
 format: 1
 package: chargen
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Example Dynamic Application (Area 21) — a character-application form served as a Portal Schema Document over the HTTP verb routers."
 license: MIT
@@ -12,7 +12,7 @@ requires_server: ">=0.1"
 # GET/POST verbs that http-handler provides.
 depends:
   - package: http-handler
-    version: ">=1.0 <2.0"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: http-handler/

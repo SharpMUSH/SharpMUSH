@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.CodeAnalysis.Catalog;
 using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Middleware;
@@ -171,6 +172,13 @@ internal static class EngineRegistration
 		services.AddSingleton(_ => SecretStoreOptions.FromEnvironment());
 		services.AddSingleton(SecretDefinition.SqlPassword);
 		services.AddSingleton<ISecretStore, SecretStore>();
+		// Web push: the VAPID key (a secret made on first use), the sender, and which portal tabs are in view.
+		services.Configure<Services.WebPushOptions>(configuration.GetSection(Services.WebPushOptions.Section));
+		services.AddSingleton(Services.WebPushService.VapidSecret);
+		services.AddSingleton<Services.WebPushService>();
+		services.AddSingleton<SharpMUSH.Library.Push.IWebPushService>(sp => sp.GetRequiredService<Services.WebPushService>());
+		services.AddHostedService(sp => sp.GetRequiredService<Services.WebPushService>());
+		services.AddSingleton<SharpMUSH.Library.Push.IPortalPresence, SharpMUSH.Library.Push.PortalPresence>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
@@ -197,6 +205,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IPackageDeclarationService, PackageDeclarationService>();
 		services.AddSingleton<IPackageSettingService, PackageSettingService>();
 		services.AddSingleton<IPackageWikiService, PackageWikiService>();
+		services.AddSingleton(EngineVersion.FromAssemblyVersion(Implementation.Generated.VersionInfo.SharpMUSHVersion));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
@@ -370,6 +379,9 @@ internal static class EngineRegistration
 																 | System.Net.DecompressionMethods.Deflate
 																 | System.Net.DecompressionMethods.Brotli
 			});
+		// Web push: no redirects, so a push goes only to the push service host the subscription was checked against.
+		services.AddHttpClient(Services.WebPushService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 		services.AddMediator();
 
 		return services;

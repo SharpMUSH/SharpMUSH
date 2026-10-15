@@ -341,7 +341,7 @@ public partial class Functions
 
 		if (TimeZoneInfo.TryFindSystemTimeZoneById(arg0, out var timeZone))
 		{
-			return DateTimeOffset.Now.ToOffset(timeZone.BaseUtcOffset).ToString(PennTimeFormat, CultureInfo.InvariantCulture);
+			return TimeZoneInfo.ConvertTime(DateTimeOffset.Now, timeZone).ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -359,7 +359,7 @@ public partial class Functions
 				var attrValue = tz.Last().Value.ToPlainText();
 
 				return TimeZoneInfo.TryFindSystemTimeZoneById(attrValue, out var dbTimeZone)
-					? DateTimeOffset.Now.ToOffset(dbTimeZone.BaseUtcOffset).ToString(PennTimeFormat, CultureInfo.InvariantCulture)
+					? TimeZoneInfo.ConvertTime(DateTimeOffset.Now, dbTimeZone).ToString(PennTimeFormat, CultureInfo.InvariantCulture)
 					: DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 			});
 	}

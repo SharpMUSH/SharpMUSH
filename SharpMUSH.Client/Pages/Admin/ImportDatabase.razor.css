@@ -47,6 +47,38 @@
 	color: var(--warn);
 }
 
+/* A rewritten attribute's line names an object, an attribute and softcode, so it reads as code. */
+.dbimport-rewrites {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+.dbimport-rewrite-note {
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+.dbimport-rewrite-label {
+	font-size: 12px;
+	margin: 8px 0 2px 16px;
+	opacity: 0.75;
+}
+
+.dbimport-rewrite-code {
+	background: var(--surface-2);
+	border-radius: 4px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	margin: 0 0 0 16px;
+	padding: 6px 8px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
 /* Said in place of the file row while no mush.cnf is chosen: what leaving it out means. */
 .dbimport-config-hint {
 	font-size: 13px;

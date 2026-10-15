@@ -42,11 +42,18 @@ public partial class PackageInstallService(
 	IPackageDeclarationService declarations,
 	IPackageSettingService settings,
 	IPackageWikiService wiki,
-	Lazy<IRuntimeRegistrationService> registrations) : IPackageInstallService
+	Lazy<IRuntimeRegistrationService> registrations,
+	EngineVersion engine,
+	Lazy<IPluginManager> plugins) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
 	// ── Shared helpers ───────────────────────────────────────────────────────
+
+	/// <summary>Which of the plugins <paramref name="manifest"/> names in <c>plugins:</c> are running now.</summary>
+	private IReadOnlySet<string> RunningPlugins(PackageManifest manifest)
+		=> manifest.RequiredPlugins.Where(id => plugins.Value.Registration(id) is not null)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>Opens the undo log one package operation writes through; see <see cref="PackageWriteTransaction"/>.</summary>
 	private PackageWriteTransaction BeginWrites(SharpPlayer packageManager) =>

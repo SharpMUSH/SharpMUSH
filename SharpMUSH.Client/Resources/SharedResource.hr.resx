@@ -3916,6 +3916,10 @@
     <value>Započnite čitanjem wikija, pregledavanjem likova ili uključivanjem u scenu.</value>
     <comment>MT</comment>
   </data>
+  <data name="WidQuickstartIntroNoScenes" xml:space="preserve">
+    <value>Započnite čitanjem wikija ili pregledavanjem likova.</value>
+    <comment>MT</comment>
+  </data>
   <data name="WidReadTheWiki" xml:space="preserve">
     <value>Pročitajte wiki</value>
     <comment>MT</comment>
@@ -6148,5 +6152,13 @@
   </data>
   <data name="NavGalleryShareWarned" xml:space="preserve">
     <value>Slika s upozorenjem o sadržaju ostaje izvan knjižnice slika. Uklonite upozorenje da biste je podijelili.</value>
+  </data>
+  <data name="NavNotifications" xml:space="preserve">
+    <value>Obavijesti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsNotificationsDescription" xml:space="preserve">
+    <value>Primajte obavijesti na ovom telefonu ili računalu kada je portal zatvoren</value>
+    <comment>MT</comment>
   </data>
 </root>
