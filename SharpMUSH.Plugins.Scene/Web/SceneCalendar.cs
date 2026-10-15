@@ -38,10 +38,9 @@ public static class SceneCalendar
 		Line(feed, $"REFRESH-INTERVAL;VALUE=DURATION:{Duration(RefreshInterval)}");
 		Line(feed, $"X-PUBLISHED-TTL:{Duration(RefreshInterval)}");
 
-		foreach (var scene in scenes)
+		foreach (var scene in scenes.Where(scene => scene.ScheduledFor is not null))
 		{
-			if (scene.ScheduledFor is not { } start) continue;
-			var begins = DateTimeOffset.FromUnixTimeMilliseconds(start);
+			var begins = DateTimeOffset.FromUnixTimeMilliseconds(scene.ScheduledFor.GetValueOrDefault());
 			var link = new Uri(portal, $"scenes/{Uri.EscapeDataString(scene.Id)}");
 
 			Line(feed, "BEGIN:VEVENT");
@@ -95,6 +94,7 @@ public static class SceneCalendar
 	{
 		var octets = 0;
 		var limit = 75;
+		var at = 0;
 		foreach (var rune in line.EnumerateRunes())
 		{
 			var size = rune.Utf8SequenceLength;
@@ -104,7 +104,8 @@ public static class SceneCalendar
 				octets = 0;
 				limit = 74;
 			}
-			feed.Append(rune.ToString());
+			feed.Append(line.AsSpan(at, rune.Utf16SequenceLength));
+			at += rune.Utf16SequenceLength;
 			octets += size;
 		}
 		feed.Append("\r\n");

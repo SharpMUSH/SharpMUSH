@@ -354,11 +354,9 @@ else
             }
             _composeWatch = watch;
         }
-        catch (JSException)
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
         {
-        }
-        catch (JSDisconnectedException)
-        {
+            // Without the watch the compose sheet stays where the page puts it; the keyboard dock is optional.
         }
     }
 
@@ -369,11 +367,9 @@ else
             await watch.InvokeVoidAsync("dispose");
             await watch.DisposeAsync();
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
         {
-        }
-        catch (JSException)
-        {
+            // The page or the circuit is already gone, and the watch with it.
         }
     }
 
