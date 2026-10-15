@@ -33,18 +33,6 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 			return new Refused("The character you speak as there is gone. Choose another with @discord/speak.");
 		}
 
-		var name = character.Object().Name;
-		if (await services.GetRequiredService<IAccountService>().GetAccountForCharacterAsync(dbref, cancellationToken)
-			is not { } account || account.Id != speech.AccountId)
-		{
-			return new Refused($"{name} is no longer on your game account. Choose another character with @discord/speak.");
-		}
-
-		if (!account.IsActive)
-		{
-			return new Refused("Your game account is not active.");
-		}
-
 		var feeds = services.GetRequiredService<IFeedService>();
 		if (await feeds.GetKindAsync(DiscordChannelLink.FeedKind) is not SharpFeedKind kind
 			|| await Mediator.Send(new GetObjectNodeQuery(kind.Owner), cancellationToken) is not AnySharpObject bridge)
@@ -83,11 +71,26 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 		}
 	}
 
-	/// <summary>On the game's queue: the checks <c>@feed/send</c> makes, then the line.</summary>
+	/// <summary>
+	/// On the game's queue: that the character is still on the speaker's active account, the checks <c>@feed/send</c>
+	/// makes, then the line. The account is checked here rather than before queueing, since a line can wait behind others
+	/// while the character moves to another account or the account is disabled.
+	/// </summary>
 	private async Task<SpeechOutcome> SendAsync(DiscordSpeech speech, SharpFeedKind kind, AnySharpObject bridge,
 		AnySharpObject character)
 	{
 		var name = character.Object().Name;
+		if (await services.GetRequiredService<IAccountService>().GetAccountForCharacterAsync(character.Object().DBRef,
+			ExecutionBudget.CurrentToken) is not { } account || account.Id != speech.AccountId)
+		{
+			return new Refused($"{name} is no longer on your game account. Choose another character with @discord/speak.");
+		}
+
+		if (!account.IsActive)
+		{
+			return new Refused("Your game account is not active.");
+		}
+
 		if (await character.HasFlag("GAGGED"))
 		{
 			return new Refused($"{name} is gagged.");
