@@ -215,8 +215,21 @@ public partial class TelnetServer
 		private async ValueTask OnGmcpNegotiatedAsync(bool agreed)
 		{
 			await AnnounceTelnetIfNegotiatedAsync();
-			await held.PublishAsync(
-				() => server._publishEndpoint.Publish(new GMCPNegotiatedMessage(handle, agreed), ct));
+			await held.PublishAsync(() =>
+			{
+				// Kept here as well: the renderer sends Client.Media only to a client that agreed and listed it.
+				server._connectionService.UpdateCapabilities(handle, current => current with
+				{
+					GmcpModules = agreed ? current.GmcpModules ?? string.Empty : null
+				});
+				return server._publishEndpoint.Publish(new GMCPNegotiatedMessage(handle, agreed), ct);
+			});
+
+			// Where the client fetches the game's sounds from, before any is played.
+			if (agreed && ClientMediaFrames.Default(server._settings?.MediaBaseUrl) is { } media)
+			{
+				await _telnet!.SendGMCPCommand(media.Package, media.Json);
+			}
 
 			// The session forgets the client's module list when GMCP is withdrawn, without reporting it as a
 			// change; the main process is told here instead, so the list it keeps does not outlive GMCP.
@@ -226,8 +239,16 @@ public partial class TelnetServer
 			}
 		}
 
-		private ValueTask OnGmcpSupportsChangedAsync(IReadOnlyDictionary<string, int> modules) =>
-			PublishGmcpSupportsAsync([.. modules.Select(module => new GmcpModule(module.Key, module.Value).ToString())]);
+		private async ValueTask OnGmcpSupportsChangedAsync(IReadOnlyDictionary<string, int> modules)
+		{
+			IReadOnlyList<string> listed = [.. modules.Select(module => new GmcpModule(module.Key, module.Value).ToString())];
+			await held.PublishAsync(() =>
+			{
+				server._connectionService.UpdateCapabilities(handle, current => current with { GmcpModules = GmcpSupports.Format(listed) });
+				return Task.CompletedTask;
+			});
+			await PublishGmcpSupportsAsync(listed);
+		}
 
 		// The whole list each time, so the main process only ever replaces what it holds.
 		private async ValueTask PublishGmcpSupportsAsync(IReadOnlyList<string> modules)

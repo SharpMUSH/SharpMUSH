@@ -51,18 +51,22 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 
 	public async ValueTask<RenderedOutput> RenderAsync(string markup,
 		ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default) =>
-		new(await SendAsync(new RenderRequest(markup, null,
+		await SendAsync(new RenderRequest(markup, null,
 			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences,
 				connection.Handle, connection.SessionId, _mssp?.Website,
 				// Only a connection that is not sent UTF-8 uses them.
-				connection.Capabilities.Utf8 ? null : _settings?.AsciiTranslations), prompt), ct), false);
+				connection.Capabilities.Utf8 ? null : _settings?.AsciiTranslations), prompt), ct);
 
-	public ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
+	public async ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
 		CancellationToken ct = default) =>
-		SendAsync(new RenderRequest(null, rawOutput, new RenderContext("telnet", capabilities, null,
-			AsciiTranslations: capabilities.Utf8 ? null : _settings?.AsciiTranslations)), ct);
+		(await SendAsync(new RenderRequest(null, rawOutput, new RenderContext("telnet", capabilities, null,
+			AsciiTranslations: capabilities.Utf8 ? null : _settings?.AsciiTranslations)), ct)).Data;
 
-	private async ValueTask<byte[]> SendAsync(RenderRequest payload, CancellationToken ct)
+	/// <summary>
+	/// The worker's answer: the bytes to write, already transformed, and the GMCP messages to send before them,
+	/// which a worker from before them never sends.
+	/// </summary>
+	private async ValueTask<RenderedOutput> SendAsync(RenderRequest payload, CancellationToken ct)
 	{
 		using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct, _stopping);
 		await _concurrency.WaitAsync(lifetime.Token);
@@ -79,7 +83,10 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 					response.EnsureSuccessStatusCode();
 					var bytes = await response.Content.ReadAsByteArrayAsync(attempt.Token);
 					if (recovering) _logger.LogInformation("Rendering worker recovered; resuming pending output");
-					return bytes;
+					var gmcp = response.Headers.TryGetValues(ClientMediaFrames.Header, out var values)
+						? ClientMediaFrames.Decode(values.FirstOrDefault())
+						: null;
+					return new RenderedOutput(bytes, ApplyOutputTransform: false, gmcp);
 				}
 				catch (HttpRequestException ex) when (ex.StatusCode is null or HttpStatusCode.ServiceUnavailable or HttpStatusCode.BadGateway)
 				{

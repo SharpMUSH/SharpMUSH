@@ -9,7 +9,11 @@ namespace SharpMUSH.SocketServer.Services;
 /// <see cref="Data"/> (true for terminal output; false for the WebSocket markup envelope, which is JSON
 /// the browser renders itself).
 /// </param>
-public readonly record struct RenderedOutput(byte[] Data, bool ApplyOutputTransform);
+/// <param name="Gmcp">
+/// GMCP messages to send before <see cref="Data"/>: the <c>Client.Media</c> messages the text's sounds become for a
+/// client that listed that module (<see cref="ClientMediaFrames"/>). Null for none.
+/// </param>
+public readonly record struct RenderedOutput(byte[] Data, bool ApplyOutputTransform, IReadOnlyList<GmcpFrame>? Gmcp = null);
 
 /// <summary>
 /// Turns serialized markup (an <c>MString</c> as JSON, carried by

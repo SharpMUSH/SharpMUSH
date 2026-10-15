@@ -182,6 +182,8 @@ Plays a sound effect. *<file>* is a file the client resolves against the game's 
 
 MXP gets `<SOUND>`, Pueblo `<img xch_sound>`, the web portal an `<audio>` element the page decides whether to play, and a plain telnet client nothing at all.
 
+A client such as Mudlet that lists Client.Media in GMCP Core.Supports is sent GMCP Client.Media.Play before the line, with *<repeats>* as its loops. A full address is fetched from where it says; a file name is fetched from the game's `media_base_url` (see [@config net]).
+
 ### Example
 ```sharp
 > @pemit %#=[sound(door.wav,80)]The door creaks open.
@@ -199,6 +201,8 @@ MXP gets `<SOUND>`, Pueblo `<img xch_sound>`, the web portal an `<audio>` elemen
 
 As [SOUND()], for background music: one piece plays at a time, and MXP has a channel of its own for it. `music(theme.mid,,-1)` plays until something stops it.
 
+Mudlet is sent Client.Media.Play as music under the key `music`, so a new piece replaces the one playing.
+
 ::: seealso
 - [SOUND()]
 - [STOPSOUND()]
@@ -209,6 +213,8 @@ As [SOUND()], for background music: one piece plays at a time, and MXP has a cha
 `stopsound([<channel>])`
 
 Silences what is playing. *<channel>* is `effects` or `music`; with none, both stop.
+
+Mudlet is sent Client.Media.Stop for sounds, for music, or with nothing named, for everything.
 
 ::: seealso
 - [SOUND()]

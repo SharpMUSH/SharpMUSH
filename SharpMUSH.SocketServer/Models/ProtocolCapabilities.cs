@@ -70,6 +70,10 @@ public static class OutputFormatNegotiation
 /// <param name="Pins">What the player set with <c>SOCKSET</c>; null for nothing.</param>
 /// <param name="CellWidth">The terminal's character cell width in pixels, or zero when it never said.</param>
 /// <param name="CellHeight">The terminal's character cell height in pixels, or zero when it never said.</param>
+/// <param name="GmcpModules">
+/// The GMCP modules the client listed in Core.Supports, as <see cref="GmcpSupports.Format"/> keeps them: empty
+/// while GMCP is agreed and nothing is listed, null while it is not agreed.
+/// </param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -86,7 +90,8 @@ public record ProtocolCapabilities(
 	TerminalProbeResult? Probe = null,
 	TerminalPins? Pins = null,
 	int CellWidth = 0,
-	int CellHeight = 0
+	int CellHeight = 0,
+	string? GmcpModules = null
 )
 {
 	/// <summary>
