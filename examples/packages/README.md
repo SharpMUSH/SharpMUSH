@@ -20,13 +20,12 @@ which games can add as a remote in the admin panel.
 
 ## Example packages
 
+The small learning examples (`hello-world`, `starter-area`, `coast-guide`, `bbs-lite`) are in the
+SharpMUSH.Guide repository, under `Examples/Packages/`.
+
 | Package | Demonstrates |
 |---|---|
-| [`hello-world/`](hello-world/) | The minimal manifest: one object, one command attribute |
-| [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, a convention prefix, and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
-| [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
-| [`coast-guide/`](coast-guide/) | A content pack (format 1.4): wiki pages and nothing else — bodies in files and inline, a category pinned to the wiki home, a page that requires a permission the package declares |
-| [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
+| [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, attribute trees (``CMD`WHO``, ``FUN`WHERE`<SWITCH>``), and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 | [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
@@ -56,7 +55,8 @@ which games can add as a remote in the admin panel.
 | [`notifications/`](notifications/) + [`notifications-app/`](notifications-app/) | The rules behind push notifications: subscriptions to the ``PAGE`MESSAGE`` and ``MAIL`RECEIVED`` events on the event handler call `@push` when the player wants that kind, the same settings are a `+notify` command and a portal form, and other packages add a kind and send it with ``@trigger/args`` on ``API`SEND`` |
 | [`roster/`](roster/) | A character roster: `+roster` lists the characters that can be played, staff add and remove them and give them to accounts with `account()`, `accountchars()` and `@account/link`, and the `player`link`/`player`unlink` events keep it right when an account is changed some other way. It defines no way to apply; a game adds one by setting a ``DATA`ROUTE`<SWITCH>`` on the Roster (requires plus-help) |
 | [`roster-jobs/`](roster-jobs/) | `+roster/apply` through the job queue: an application is a job in a Roster bucket, and approving it gives the character to the applicant's account (requires roster, jobs and plus-help) |
-| [`scene-availability/`](scene-availability/) | When characters are free: `+avail/busy` and `+avail/free` keep dates, ranges and repeating patterns (weekly, every 2 weeks, the 2nd Tuesday, until a date, with dates skipped) in the player's own zone, `+avail/find` lists the times a group is all free, and a ``FILTER`CARD`` on the Scene Logger shows who of a scheduled scene's cast is free at its time (requires scene and time) |
+| [`availability/`](availability/) | When characters are free: `+avail/busy` and `+avail/free` keep dates, ranges and repeating patterns (weekly, every 2 weeks, the 2nd Tuesday, until a date, with dates skipped) in the player's own zone, on a store of its own rather than on the characters so notes stay private, and `+avail/find` lists the times a group is all free; another package adds a switch with a ``DATA`ROUTE`` leaf and a footer line with ``FILTER`AVAIL`FIND`` (requires time, plus-help and plus-config) |
+| [`scene-availability/`](scene-availability/) | A bridge: `+avail/scene` finds a time a scene's cast is all free, `+avail/find` offers to book the first time as a scene, and a ``FILTER`CARD`` on the Scene Logger shows who of a scheduled scene's cast is free at its time (requires availability and scene) |
 | [`gmcp-room/`](gmcp-room/) + [`gmcp-comm/`](gmcp-comm/) + [`gmcp-items/`](gmcp-items/) + [`gmcp-char/`](gmcp-char/) | The MUD-kit: each sends MUD clients one GMCP package family in the Iron Realms shapes Mudlet reads, from engine events on the event handler (``OBJECT`MOVE``, ``PLAYER`CONNECT``, ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``SOCKET`GMCP``), every send through `oob(..., supported)`; gmcp-char watches the attributes it reports with `@attribute/watch` and answers on ``WATCH`<attribute>`GMCPCHAR``, so nothing polls (requires plus-help and plus-config) |
 | [`mudlet-client/`](mudlet-client/) | Mudlet's own packages: Client.GUI and Client.Map answering ``SOCKET`GMCP``'s Core.Hello, External.Discord.Info and Status, a `+gui on/off` command, and every URL a `+config` setting (requires plus-help and plus-config) |
 | [`mud-kit/`](mud-kit/) | A meta package: depends on the five above and adds a `+help gmcp` overview, so one install sets a game up for Mudlet |
@@ -818,7 +818,8 @@ upgrades never re-ask configure questions you've already answered.
 - Write MUSHcode substitutions bare: `%0`, `%q<name>` — brackets are for
   function calls only.
 - Prefer `firstof()` over nested `if()` chains for priority fallbacks.
-- Pick a `convention_prefix` and use it on attribute names; it is advisory.
+- Name attributes as trees, ``<kind>`<section>`<Name>``: ``CMD`BBPOST``,
+  ``FUN`DISPLAY`LIST``, ``DATA`CONFIG`<NAME>``.
 - Keep function objects `no_command` and put `$command` patterns on a separate
   global object — see `who-where/` for the shape.
 - Never hardcode a dbref. Use `{{?configure}}` for game-specific objects and

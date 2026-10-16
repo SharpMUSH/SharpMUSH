@@ -1,6 +1,6 @@
 format: "1.10"
 package: messages
-version: 1.1.2
+version: 1.2.0
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT
@@ -30,7 +30,7 @@ objects:
       # for both. A terminal that cannot show the picture gets LOGO in the logo's green instead, read with v() so
       # its spacing reaches the screen as written.
       CONNECT: |-
-        [flex(,item(figure(/assets/logo.png,The SharpMUSH logo,ansi(#00f5b7,v(LOGO))),33),item(u(FUN`MENU),,40))]
+        flex(,item(figure(/assets/logo.png,The SharpMUSH logo,ansi(#00f5b7,v(LOGO))),33),item(u(FUN`CONNECT`MENU),,40))
       LOGO: |2-
                   ==         ==
                  ====       ====
@@ -51,27 +51,33 @@ objects:
              =      ==     ==      =
                      =     =
 
-      FUN`MENU: |-
-        [@@(The text beside the logo. A way in that the game has turned off is left out.)]Welcome to [ansi(h,mudname())]!%r[if(strmatch(config(player_creation),Yes),%r[u(FUN`SECTION,New here?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,register),<name> \[email\] <password>,u(FUN`COMMAND,make),<character> <password>)])][if(strmatch(config(guests),Yes),%r[u(FUN`SECTION,Just looking?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,connect),guest)])]%r[u(FUN`SECTION,Have an account?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,login),<name-or-email> <password>,u(FUN`COMMAND,play),<character>,u(FUN`COMMAND,claim),<character> <password>)]%r[u(FUN`SECTION,Playing a character?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,connect),<character> <password>)]%r[u(FUN`SECTION,Any time)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,WHO),who is online,u(FUN`COMMAND,QUIT),leave the game)]
-      FUN`SECTION: |-
-        [@@(%0 heading: a light rule with the heading at its left)][rule(ansi(h,%0),,json(object,border,json(string,single),title,json(string,left)))]
-      FUN`LIST: |-
-        [@@(The options of a list of commands: the arguments after two spaces)][json(object,sep,json(string,%b%b))]
-      FUN`COMMAND: |-
-        [@@(%0 command: padded to the longest, so every list's arguments start in the same column)][ljust(%0,8)]
-      FUN`ONLINE: |-
-        [@@(How many players are connected, in a sentence)][setq(n,words(lwho()))][if(eq(%qn,1),You are the only one connected.,%qn players are connected.)]
+      # The text beside the logo. A way in that the game has turned off is left out.
+      FUN`CONNECT`MENU: |-
+        Welcome to [tone(strong,mudname())]!%r[if(strmatch(config(player_creation),Yes),%r[u(FUN`LAYOUT`SECTION,New here?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,register),<name> \[email\] <password>,u(FUN`LAYOUT`COMMAND,make),<character> <password>)])][if(strmatch(config(guests),Yes),%r[u(FUN`LAYOUT`SECTION,Just looking?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),guest)])]%r[u(FUN`LAYOUT`SECTION,Have an account?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,login),<name-or-email> <password>,u(FUN`LAYOUT`COMMAND,play),<character>,u(FUN`LAYOUT`COMMAND,claim),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Playing a character?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Any time)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,WHO),who is online,u(FUN`LAYOUT`COMMAND,QUIT),leave the game)]
+      # %0 heading: a light rule with the heading at its left.
+      FUN`LAYOUT`SECTION: |-
+        rule(tone(strong,%0),,json(object,border,json(string,single),title,json(string,left)))
+      # The options of a list of commands: the arguments after two spaces.
+      FUN`LAYOUT`LIST: |-
+        json(object,sep,json(string,%b%b))
+      # %0 command: padded to the longest, so every list's arguments start in the same column. The lists are
+      # separate fields(), one under each section's rule, so they cannot line up by themselves.
+      FUN`LAYOUT`COMMAND: |-
+        ljust(%0,8)
+      # How many players are connected, in a sentence.
+      FUN`DISPLAY`ONLINECOUNT: |-
+        if(eq(setr(online_count,words(lwho())),1),You are the only one connected.,%q<online_count> players are connected.)
       MOTD: |-
-        %r[u(FUN`SECTION,Welcome to [mudname()])]%rHello, [name(%#)]. [u(FUN`ONLINE)]%rType [cmdlink(help,help,Read the help)] for the commands, or [cmdlink(WHO,WHO,See who is online)] to see who is here.
+        %r[u(FUN`LAYOUT`SECTION,Welcome to [mudname()])]%rHello, [name(%#)]. [u(FUN`DISPLAY`ONLINECOUNT)]%rType [cmdlink(help,help,Read the help)] for the commands, or [cmdlink(WHO,WHO,See who is online)] to see who is here.
       WIZMOTD: |-
         %r[notice(STAFF,Nothing new for staff. Leave a note here with @wizmotd <message>.,muted)]
       GUEST: |-
         %r[notice(GUEST,You are playing [name(%#)]\, a temporary guest character.)]%rType [cmdlink(help,help,Read the help)] for the commands.[if(strmatch(config(player_creation),Yes),%bTo keep a character\, QUIT and register an account.)]
       NEWUSER: |-
-        %r[u(FUN`SECTION,Your account is ready)]%r[fields(u(FUN`LIST),make <character> <password>,create your first character,claim <character> <password>,add a character you already have,play <character>,enter the game as one of them)]
+        %r[u(FUN`LAYOUT`SECTION,Your account is ready)]%r[fields(u(FUN`LAYOUT`LIST),make <character> <password>,create your first character,claim <character> <password>,add a character you already have,play <character>,enter the game as one of them)]
       REGISTER: |-
         %r[notice(,[mudname()] is not taking new accounts.,warn)][if(strmatch(config(guests),Yes),%rYou can still look around: connect guest.)]
       DOWN: |-
         %r[notice(,[mudname()] is closed to logins for now. Please try again later.,warn)]
       QUIT: |-
-        %rGoodbye from [ansi(h,mudname())]. Come back soon!
+        %rGoodbye from [tone(strong,mudname())]. Come back soon!

@@ -46,7 +46,7 @@ public class ScenePictureCaptureIntegrationTests
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"+scene/create {name} scene"));
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("+scene/start"));
-		var sceneId = await Eval($"get({player}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({player})");
 		return (handle, sceneId);
 	}
 

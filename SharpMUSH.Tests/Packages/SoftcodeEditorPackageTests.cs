@@ -94,8 +94,13 @@ public class SoftcodeEditorPackageTests
 		{
 			await Open(player, "@editor me/EDITFUNCTION=function");
 			await Send(player, "add(1,2)");
+			var heard = Factory.Notifications.CountForHandle(player.Handle);
 			await Send(player, ".sq");
 
+			// The save sets the syntax flags quietly: the player hears that it saved, not each flag being set or reset.
+			var told = Factory.Notifications.ForHandle(player.Handle).Skip(heard).ToList();
+			await Assert.That(told).Contains(line => line.Contains("EDITFUNCTION saved.")).Because(string.Join(" | ", told));
+			await Assert.That(told).DoesNotContain(line => line.Contains("syntax")).Because(string.Join(" | ", told));
 			var saved = await Attribute(player.DbRef, "EDITFUNCTION");
 			await Assert.That(saved?.Value.ToPlainText()).IsEqualTo("add(1,2)");
 			await Assert.That(Flags(saved)).Contains("funsyntax").And.DoesNotContain("cmdsyntax");

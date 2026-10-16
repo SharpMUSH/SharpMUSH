@@ -1,6 +1,6 @@
 format: "1.10"
 package: plus-config
-version: 1.0.2
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -35,8 +35,9 @@ objects:
   # that declares a TYPE, and only a value that passed that type's checks; the value is stored as data
   # and never evaluated.
   #
-  # Trees: SYSTEM` the registry, CMD` the command, INC`COMMAND` the shared parse and dispatch, INC` one
-  # routine per form, FUN`SYSTEM` and FUN`SETTING` the reads, FUN`TYPE`<TYPE>` one branch per type
+  # Trees: SYSTEM` the registry, CMD` the command, INC`COMMAND` the shared parse and dispatch, INC`NEED`
+  # the guards, INC`CMD` one routine per form (named by DATA`ROUTE or FUN`COMMAND`ROUTE), INC`TABLE` the
+  # table steps, INC`DO` the shared writes, FUN`SYSTEM` and FUN`SETTING` the reads, FUN`TYPE`<TYPE>` one branch per type
   # (PROBLEM, STORE, SHOW, ALLOWED), FUN`VALUE` the type-independent steps, FUN`SCREEN` and
   # FUN`DISPLAY` the output.
   - ref: registry
@@ -60,7 +61,7 @@ objects:
         value: |-
           Constants.
         flags: [no_command]
-      # Which INC` routine each switch runs. A bare +config picks its own: see FUN`COMMAND`ROUTE.
+      # Which INC`CMD` routine each switch runs. A bare +config picks its own: see FUN`COMMAND`ROUTE.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
       DATA`ROUTE`ADD: |-
@@ -89,7 +90,7 @@ objects:
         flags: [no_command]
       INC:
         value: |-
-          Command steps. COMMAND the parse and dispatch, NEED the shared guards, then one routine per form.
+          Command steps. COMMAND the parse and dispatch, NEED the shared guards, CMD one routine per form, TABLE the table steps, DO the shared writes.
         flags: [no_command]
 
       # ── The command ─────────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ objects:
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(CONFIG,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(CONFIG,+config has no /%q<cmd_switch> switch. +help config lists them.,warn); @include %!/INC`%q<cmd_route>
+          think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(CONFIG,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(CONFIG,+config has no /%q<cmd_switch> switch. +help config lists them.,warn); @include %!/INC`CMD`%q<cmd_route>
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument,
       # cmd_has_equals, cmd_left_side and cmd_right_side around the first =, and from the left side's
       # /-separated parts (lower case) cmd_system, cmd_setting, and for a table cmd_entry and cmd_field;
@@ -137,7 +138,13 @@ objects:
       # The setting named, found in the system. Sets system_object and setting_type.
       INC`NEED`SETTING:
         value: |-
-          @include %!/INC`NEED`SYSTEM; @assert strlen(%q<cmd_setting>)=@pemit %#=notice(CONFIG,Name a setting: +config %q<cmd_system>/<setting>. +config %q<cmd_system> lists them.,warn); @assert u(%!/FUN`SETTING`EXISTS,%q<system_object>,%q<cmd_setting>)=@pemit %#=notice(CONFIG,%q<cmd_system> has no setting called %q<cmd_setting>. +config %q<cmd_system> lists them.,warn); think setq(setting_type,u(%!/FUN`SETTING`TYPE,%q<system_object>,%q<cmd_setting>),cfg_meta,%q<cmd_setting>,cfg_target,%q<system_object>,cfg_attr,DATA`CONFIG`%q<cmd_setting>,cfg_name,%q<cmd_system>/%q<cmd_setting>,cfg_entry,,cfg_field,); @assert cor(strmatch(%q<setting_type>,TABLE),not(strlen(%q<cmd_entry>)))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> is one setting%, not a table: +config %q<cmd_system>/%q<cmd_setting> shows it.,warn)
+          @include %!/INC`NEED`SYSTEM; @assert strlen(%q<cmd_setting>)=@pemit %#=notice(CONFIG,Name a setting: +config %q<cmd_system>/<setting>. +config %q<cmd_system> lists them.,warn); @assert u(%!/FUN`SETTING`EXISTS,%q<system_object>,%q<cmd_setting>)=@pemit %#=notice(CONFIG,%q<cmd_system> has no setting called %q<cmd_setting>. +config %q<cmd_system> lists them.,warn); think setqm(setting_type,u(%!/FUN`SETTING`TYPE,%q<system_object>,%q<cmd_setting>),
+          config_meta,%q<cmd_setting>,
+          config_target,%q<system_object>,
+          config_attribute,DATA`CONFIG`%q<cmd_setting>,
+          config_name,%q<cmd_system>/%q<cmd_setting>,
+          config_entry,,
+          config_field,); @assert cor(strmatch(%q<setting_type>,TABLE),not(strlen(%q<cmd_entry>)))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> is one setting%, not a table: +config %q<cmd_system>/%q<cmd_setting> shows it.,warn)
       # The setting named is a table whose store the registry may write. Sets table_store and table_path.
       INC`NEED`TABLE:
         value: |-
@@ -149,7 +156,12 @@ objects:
       # The field named, in the entry named: the value is then addressed like any setting's.
       INC`NEED`FIELD:
         value: |-
-          @include %!/INC`NEED`ENTRY; @assert member(setr(table_fields,u(%!/FUN`TABLE`FIELDS,%q<system_object>,%q<cmd_setting>)),%q<cmd_field>)=@pemit %#=notice(CONFIG,[if(strlen(%q<cmd_field>),An entry of %q<cmd_system>/%q<cmd_setting> has no field called %q<cmd_field>.,Name a field: +config %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>/<field>=<value>.)] Its fields are [itemize(%q<table_fields>)].,warn); think setq(cfg_meta,%q<cmd_setting>`FIELD`%q<cmd_field>,cfg_target,%q<table_store>,cfg_attr,u(%!/FUN`TABLE`ATTRIBUTE,%q<system_object>,%q<cmd_setting>,%q<table_key>,%q<cmd_field>),cfg_name,%q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>/%q<cmd_field>,cfg_entry,%q<cmd_entry>,cfg_field,%q<cmd_field>)
+          @include %!/INC`NEED`ENTRY; @assert member(setr(table_fields,u(%!/FUN`TABLE`FIELDS,%q<system_object>,%q<cmd_setting>)),%q<cmd_field>)=@pemit %#=notice(CONFIG,[if(strlen(%q<cmd_field>),An entry of %q<cmd_system>/%q<cmd_setting> has no field called %q<cmd_field>.,Name a field: +config %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>/<field>=<value>.)] Its fields are [itemize(%q<table_fields>)].,warn); think setqm(config_meta,%q<cmd_setting>`FIELD`%q<cmd_field>,
+          config_target,%q<table_store>,
+          config_attribute,u(%!/FUN`TABLE`ATTRIBUTE,%q<system_object>,%q<cmd_setting>,%q<table_key>,%q<cmd_field>),
+          config_name,%q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>/%q<cmd_field>,
+          config_entry,%q<cmd_entry>,
+          config_field,%q<cmd_field>)
       # The setter may change the setting named.
       INC`NEED`PERMISSION:
         value: |-
@@ -164,20 +176,20 @@ objects:
           @assert permission(%#,v(DATA`PERMISSION))=@pemit %#=notice(CONFIG,Registering systems needs the [v(DATA`PERMISSION)] permission.,error)
 
       # ── Routines ────────────────────────────────────────────────────────────
-      INC`INDEX:
+      INC`CMD`INDEX:
         value: |-
           @assert words(setr(index_systems,u(%!/FUN`SYSTEM`ALL)))=@pemit %#=notice(CONFIG,No system has registered settings yet.,warn); @pemit %#=u(%!/FUN`SCREEN`INDEX,%q<index_systems>)
-      INC`SYSTEM:
+      INC`CMD`SYSTEM:
         value: |-
           @include %!/INC`NEED`SYSTEM; @assert words(setr(system_settings,u(%!/FUN`SETTING`ALL,%q<system_object>)))=@pemit %#=notice(CONFIG,%q<cmd_system> declares no settings.,warn); @pemit %#=u(%!/FUN`SCREEN`SYSTEM,%q<cmd_system>,%q<system_object>,%q<system_settings>)
-      INC`SETTING:
+      INC`CMD`SETTING:
         value: |-
-          @include %!/INC`NEED`SETTING; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`TABLE}; @pemit %#=u(%!/FUN`SCREEN`SETTING,%q<cmd_system>,%q<system_object>,%q<cmd_setting>)
-      INC`SET:
+          @include %!/INC`NEED`SETTING; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`CMD`TABLE}; @pemit %#=u(%!/FUN`SCREEN`SETTING,%q<cmd_system>,%q<system_object>,%q<cmd_setting>)
+      INC`CMD`SET:
         value: |-
-          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`NEED`FIELD; @include/args %!/INC`WRITE=value,%q<cmd_right_side>}; @include/args %!/INC`WRITE=value,%q<cmd_right_side>
+          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`NEED`FIELD; @include/args %!/INC`DO`WRITE=value,%q<cmd_right_side>}; @include/args %!/INC`DO`WRITE=value,%q<cmd_right_side>
       # A table, or one of its entries.
-      INC`TABLE:
+      INC`CMD`TABLE:
         value: |-
           @include %!/INC`NEED`TABLE; @break strlen(%q<cmd_entry>)={@include %!/INC`NEED`ENTRY; @pemit %#=u(%!/FUN`SCREEN`ENTRY,%q<cmd_system>,%q<system_object>,%q<cmd_setting>,%q<cmd_entry>)}; @pemit %#=u(%!/FUN`SCREEN`TABLE,%q<cmd_system>,%q<system_object>,%q<cmd_setting>)
       # /add on a table: a new entry, its fields at their defaults, and its own value from after the = when
@@ -185,42 +197,62 @@ objects:
       INC`TABLE`ADD:
         value: |-
           @include %!/INC`NEED`TABLE; @assert not(u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,FIXED))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> has a fixed set of entries.,warn); @assert strlen(%q<cmd_entry>)=@pemit %#=notice(CONFIG,+config/add %q<cmd_system>/%q<cmd_setting>/<entry>[if(strlen(u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,ENTRY)),=<[lcstr(u(%!/FUN`TABLE`LABEL,%q<system_object>,%q<cmd_setting>,u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,ENTRY)))]>)],warn); @assert not(strlen(%q<cmd_field>))=@pemit %#=notice(CONFIG,+config/add adds a whole entry: +config/add %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>.,warn); @break strlen(setr(add_problem,u(%!/FUN`TABLE`KEYPROBLEM,%q<system_object>,%q<cmd_setting>,%q<cmd_entry>)))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting>: %q<add_problem>,warn); @include/args %!/INC`TABLE`CREATE=key,ucstr(%q<cmd_entry>)
-      # %<key> a new entry's name, already checked. Checks the entry's own value, then writes the entry.
+      # %<key> a new entry's name, already checked. Checks the entry's own value, writes the entry, says so,
+      # and tells the system.
       INC`TABLE`CREATE:
         value: |-
-          @assert not(hasattr(%q<table_store>,%q<table_path>`%<key>))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> already has %q<cmd_entry>.,warn); think setq(add_field,u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,ENTRY),add_meta,%q<cmd_setting>`FIELD`[u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,ENTRY)],cfg_entry,%q<cmd_entry>,cfg_field,%q<add_field>); @assert cor(not(strlen(%q<add_field>)),%q<cmd_has_equals>)=@pemit %#=notice(CONFIG,+config/add %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>=<[lcstr(u(%!/FUN`TABLE`LABEL,%q<system_object>,%q<cmd_setting>,%q<add_field>))]>,warn); @assert cor(strlen(%q<add_field>),not(%q<cmd_has_equals>))=@pemit %#=notice(CONFIG,An entry of %q<cmd_system>/%q<cmd_setting> takes no value: set its fields with +config %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>/<field>=<value>.,warn); @break cand(strlen(%q<add_field>),strlen(setr(add_problem,u(%!/FUN`VALUE`PROBLEM,%q<system_object>,%q<add_meta>,%q<cmd_right_side>))))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>: %q<add_problem>,warn); &%q<table_path>`%<key> %q<table_store>=[firstof(if(strlen(%q<add_field>),u(%!/FUN`VALUE`STORE,%q<system_object>,%q<add_meta>,%q<cmd_right_side>)),lcstr(%<key>))]; @dolist/inline u(%!/FUN`TABLE`FIELDS,%q<system_object>,%q<cmd_setting>)={@if cand(not(strmatch(##,%q<add_field>)),hasattr(%q<system_object>,DATA`CONFIG`%q<cmd_setting>`FIELD`##`DEFAULT))={&%q<table_path>`%<key>`## %q<table_store>=[u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>`FIELD`##,DEFAULT)]}}; @pemit %#=notice(CONFIG,Added %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>. +config %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry> shows it.,ok); @include/args %!/INC`TABLE`TELL=action,add,value,get(%q<table_store>/%q<table_path>`%<key>),previous,
+          @include %!/INC`TABLE`CREATE`CHECK; @include %!/INC`TABLE`CREATE`STORE; @pemit %#=notice(CONFIG,Added %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>. +config %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry> shows it.,ok); @include/args %!/INC`TABLE`TELL=action,add,value,get(%q<table_store>/%q<table_path>`%<key>),previous,
+        flags: [cmdsyntax]
+      # %<key> as CREATE's. The entry is new, the value after the = is there exactly when the table names
+      # an ENTRY field, and that value passes the field's checks. Sets add_field (the ENTRY field) and
+      # add_meta (its declaration) for STORE.
+      INC`TABLE`CREATE`CHECK:
+        value: |-
+          @assert not(hasattr(%q<table_store>,%q<table_path>`%<key>))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> already has %q<cmd_entry>.,warn); think setqm(add_field,u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,ENTRY),
+          add_meta,%q<cmd_setting>`FIELD`%q<add_field>,
+          config_entry,%q<cmd_entry>,
+          config_field,%q<add_field>); @assert cor(not(strlen(%q<add_field>)),%q<cmd_has_equals>)=@pemit %#=notice(CONFIG,+config/add %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>=<[lcstr(u(%!/FUN`TABLE`LABEL,%q<system_object>,%q<cmd_setting>,%q<add_field>))]>,warn); @assert cor(strlen(%q<add_field>),not(%q<cmd_has_equals>))=@pemit %#=notice(CONFIG,An entry of %q<cmd_system>/%q<cmd_setting> takes no value: set its fields with +config %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>/<field>=<value>.,warn); @break cand(strlen(%q<add_field>),strlen(setr(add_problem,uargs(%!/FUN`VALUE`PROBLEM,object,%q<system_object>,meta,%q<add_meta>,value,%q<cmd_right_side>,setting,%q<cmd_setting>,entry,%q<config_entry>,field,%q<config_field>))))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>: %q<add_problem>,warn)
+        flags: [cmdsyntax]
+      # %<key> as CREATE's: the entry with its own value, or its name when it has none, and every other
+      # field at its default.
+      INC`TABLE`CREATE`STORE:
+        value: |-
+          &%q<table_path>`%<key> %q<table_store>=firstof(if(strlen(%q<add_field>),u(%!/FUN`VALUE`STORE,%q<system_object>,%q<add_meta>,%q<cmd_right_side>)),lcstr(%<key>)); @dolist/inline u(%!/FUN`TABLE`FIELDS,%q<system_object>,%q<cmd_setting>)={@if cand(not(strmatch(##,%q<add_field>)),hasattr(%q<system_object>,DATA`CONFIG`%q<cmd_setting>`FIELD`##`DEFAULT))={&%q<table_path>`%<key>`## %q<table_store>=u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>`FIELD`##,DEFAULT)}}
+        flags: [cmdsyntax]
       # /remove on a table: the entry and every field it has.
       INC`TABLE`REMOVE:
         value: |-
-          @include %!/INC`NEED`ENTRY; @assert not(u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,FIXED))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> has a fixed set of entries.,warn); think setq(remove_previous,get(%q<table_store>/%q<table_path>`%q<table_key>),cfg_entry,%q<cmd_entry>,cfg_field,); @wipe %q<table_store>/%q<table_path>`%q<table_key>; @pemit %#=notice(CONFIG,Removed %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>.,ok); @include/args %!/INC`TABLE`TELL=action,remove,value,,previous,%q<remove_previous>
+          @include %!/INC`NEED`ENTRY; @assert not(u(%!/FUN`SETTING`META,%q<system_object>,%q<cmd_setting>,FIXED))=@pemit %#=notice(CONFIG,%q<cmd_system>/%q<cmd_setting> has a fixed set of entries.,warn); think setqm(remove_previous,get(%q<table_store>/%q<table_path>`%q<table_key>),
+          config_entry,%q<cmd_entry>,
+          config_field,); @wipe %q<table_store>/%q<table_path>`%q<table_key>; @pemit %#=notice(CONFIG,Removed %q<cmd_system>/%q<cmd_setting>/%q<cmd_entry>.,ok); @include/args %!/INC`TABLE`TELL=action,remove,value,,previous,%q<remove_previous>
       # Triggers the system's ACONFIG for an entry added or removed.
       INC`TABLE`TELL:
         value: |-
           @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<cmd_entry>,field,,action,%<action>,value,%<value>,previous,%<previous>,by,%:}
       # /add: the items after the ones already there; ones already there are not added twice.
-      INC`ADD:
+      INC`CMD`ADD:
         value: |-
-          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`TABLE`ADD}; @include %!/INC`NEED`LIST; @include/args %!/INC`WRITE=value,u(%!/FUN`TYPE`LIST`WITH,%q<system_object>,%q<cmd_setting>,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
+          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`TABLE`ADD}; @include %!/INC`NEED`LIST; @include/args %!/INC`DO`WRITE=value,u(%!/FUN`TYPE`LIST`WITH,%q<system_object>,%q<cmd_setting>,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
       # /remove: every item named, in any case.
-      INC`REMOVE:
+      INC`CMD`REMOVE:
         value: |-
-          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`TABLE`REMOVE}; @include %!/INC`NEED`LIST; @include/args %!/INC`WRITE=value,u(%!/FUN`TYPE`LIST`WITHOUT,%q<system_object>,%q<cmd_setting>,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
+          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @break strmatch(%q<setting_type>,TABLE)={@include %!/INC`TABLE`REMOVE}; @include %!/INC`NEED`LIST; @include/args %!/INC`DO`WRITE=value,u(%!/FUN`TYPE`LIST`WITHOUT,%q<system_object>,%q<cmd_setting>,u(%!/FUN`VALUE`GET,%q<system_object>,%q<cmd_setting>),%q<cmd_right_side>)
       # The default is the system's own and already stored form, so it is written as it is.
-      INC`RESET:
+      INC`CMD`RESET:
         value: |-
-          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @if strmatch(%q<setting_type>,TABLE)={@include %!/INC`NEED`FIELD}; @assert hasattr(%q<system_object>,DATA`CONFIG`%q<cfg_meta>`DEFAULT)=@pemit %#=notice(CONFIG,%q<cfg_name> has no default to go back to.,warn); @include/args %!/INC`STORE=stored,u(%!/FUN`SETTING`META,%q<system_object>,%q<cfg_meta>,DEFAULT)
+          @include %!/INC`NEED`SETTING; @include %!/INC`NEED`PERMISSION; @if strmatch(%q<setting_type>,TABLE)={@include %!/INC`NEED`FIELD}; @assert hasattr(%q<system_object>,DATA`CONFIG`%q<config_meta>`DEFAULT)=@pemit %#=notice(CONFIG,%q<config_name> has no default to go back to.,warn); @include/args %!/INC`DO`STORE=stored,u(%!/FUN`SETTING`META,%q<system_object>,%q<config_meta>,DEFAULT)
       # %<value> a value as typed: checked, then stored in the setting's own form.
-      INC`WRITE:
+      INC`DO`WRITE:
         value: |-
-          @break strlen(setr(write_problem,u(%!/FUN`VALUE`PROBLEM,%q<system_object>,%q<cfg_meta>,%<value>)))=@pemit %#=notice(CONFIG,%q<cfg_name>: %q<write_problem>,warn); @include/args %!/INC`STORE=stored,u(%!/FUN`VALUE`STORE,%q<system_object>,%q<cfg_meta>,%<value>)
+          @break strlen(setr(write_problem,uargs(%!/FUN`VALUE`PROBLEM,object,%q<system_object>,meta,%q<config_meta>,value,%<value>,setting,%q<cmd_setting>,entry,%q<config_entry>,field,%q<config_field>)))=@pemit %#=notice(CONFIG,%q<config_name>: %q<write_problem>,warn); @include/args %!/INC`DO`STORE=stored,u(%!/FUN`VALUE`STORE,%q<system_object>,%q<config_meta>,%<value>)
       # %<stored> a value in stored form. Writes it, tells the setter, and runs the system's ACONFIG.
-      INC`STORE:
+      INC`DO`STORE:
         value: |-
-          @break not(comp(setr(store_previous,get(%q<cfg_target>/%q<cfg_attr>)),%<stored>))=@pemit %#=notice(CONFIG,%q<cfg_name> is already [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%<stored>)].,warn); &%q<cfg_attr> %q<cfg_target>=%<stored>; @pemit %#=notice(CONFIG,%q<cfg_name> is now [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%<stored>)]%, was [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<cfg_meta>,%q<store_previous>)].,ok); @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<cfg_entry>,field,%q<cfg_field>,action,set,value,%<stored>,previous,%q<store_previous>,by,%:}
-      INC`REGISTER:
+          @break not(comp(setr(store_previous,get(%q<config_target>/%q<config_attribute>)),%<stored>))=@pemit %#=notice(CONFIG,%q<config_name> is already [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<config_meta>,%<stored>)].,warn); &%q<config_attribute> %q<config_target>=%<stored>; @pemit %#=notice(CONFIG,%q<config_name> is now [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<config_meta>,%<stored>)]%, was [u(%!/FUN`VALUE`SHOW,%q<system_object>,%q<config_meta>,%q<store_previous>)].,ok); @if hasattr(%q<system_object>,ACONFIG)={@trigger/args %q<system_object>/ACONFIG=setting,%q<cmd_setting>,entry,%q<config_entry>,field,%q<config_field>,action,set,value,%<stored>,previous,%q<store_previous>,by,%:}
+      INC`CMD`REGISTER:
         value: |-
           @include %!/INC`NEED`ADMIN; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_system>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CONFIG,+config/register <system>=<object>,warn); @assert u(%!/FUN`NAME`VALID,%q<cmd_system>)=@pemit %#=notice(CONFIG,A system's name is letters%, digits%, - and _.,warn); @assert isdbref(setr(register_object,locate(%#,%q<cmd_right_side>,*)))=@pemit %#=notice(CONFIG,There is no %q<cmd_right_side> here or by that dbref.,warn); @assert words(u(%!/FUN`SETTING`ALL,%q<register_object>))=@pemit %#=notice(CONFIG,[name(%q<register_object>)] declares no settings: give it a DATA`CONFIG`<name> with a TYPE leaf first. +help config writing,warn); @assert not(u(%!/FUN`SYSTEM`PACKAGED,%q<cmd_system>))=@pemit %#=notice(CONFIG,%q<cmd_system> is registered by its package.,warn); &SYSTEM`%q<cmd_system> %!=objid(%q<register_object>); @pemit %#=notice(CONFIG,%q<cmd_system> is [name(%q<register_object>)]'s settings. +config %q<cmd_system> lists them.,ok)
-      INC`UNREGISTER:
+      INC`CMD`UNREGISTER:
         value: |-
           @include %!/INC`NEED`ADMIN; @assert strlen(%q<cmd_system>)=@pemit %#=notice(CONFIG,+config/unregister <system>,warn); @assert cand(u(%!/FUN`NAME`VALID,%q<cmd_system>),hasattr(%!,SYSTEM`%q<cmd_system>))=@pemit %#=notice(CONFIG,No system is called %q<cmd_system>.,warn); @assert not(u(%!/FUN`SYSTEM`PACKAGED,%q<cmd_system>))=@pemit %#=notice(CONFIG,%q<cmd_system> is registered by its package%, and leaves when the package is uninstalled.,warn); &SYSTEM`%q<cmd_system> %!; @pemit %#=notice(CONFIG,%q<cmd_system> is no longer registered. Its settings stay on its object.,ok)
 
@@ -297,15 +329,18 @@ objects:
         value: |-
           get(%0/DATA`CONFIG`%1)
         flags: [funsyntax]
-      # Why the value will not do, or nothing: the type's checks, then the system's own CHECK.
+      # Why the value will not do, or nothing: the type's checks, then the system's own CHECK. Named:
+      # object, meta (the setting, or <table>`FIELD`<field>), value as typed, and for the CHECK the
+      # setting, entry and field it is told of.
       FUN`VALUE`PROBLEM:
         value: |-
-          if(u(%!/FUN`TYPE`KNOWN,%0,%1),firstof(u(%!/FUN`TYPE`[u(%!/FUN`SETTING`TYPE,%0,%1)]`PROBLEM,%0,%1,%2),u(%!/FUN`VALUE`CHECKED,%0,%1,u(%!/FUN`VALUE`STORE,%0,%1,%2))),Its type is [lcstr(u(%!/FUN`SETTING`TYPE,%0,%1))]%, which +config does not know.)
+          if(u(%!/FUN`TYPE`KNOWN,%<object>,%<meta>),firstof(u(%!/FUN`TYPE`[u(%!/FUN`SETTING`TYPE,%<object>,%<meta>)]`PROBLEM,%<object>,%<meta>,%<value>),uargs(%!/FUN`VALUE`CHECKED,object,%<object>,meta,%<meta>,value,u(%!/FUN`VALUE`STORE,%<object>,%<meta>,%<value>),setting,%<setting>,entry,%<entry>,field,%<field>)),Its type is [lcstr(u(%!/FUN`SETTING`TYPE,%<object>,%<meta>))]%, which +config does not know.)
         flags: [funsyntax]
-      # %2 a value as stored: what the system's CHECK attribute, on its own object, says of it.
+      # Named as PROBLEM, with value as stored: what the system's CHECK attribute, on its own object, says
+      # of it.
       FUN`VALUE`CHECKED:
         value: |-
-          if(strlen(setr(value_check,u(%!/FUN`SETTING`META,%0,%1,CHECK))),u(%0/%q<value_check>,%2,%q<cmd_setting>,%q<cfg_entry>,%q<cfg_field>))
+          if(strlen(setr(value_check,u(%!/FUN`SETTING`META,%<object>,%<meta>,CHECK))),u(%<object>/%q<value_check>,%<value>,%<setting>,%<entry>,%<field>))
         flags: [funsyntax]
       FUN`VALUE`STORE:
         value: |-
@@ -340,7 +375,8 @@ objects:
         %2
       FUN`TYPE`TEXT`ALLOWED:
         value: |-
-          Text[setq(text_min,u(%!/FUN`SETTING`META,%0,%1,MIN),text_max,u(%!/FUN`SETTING`META,%0,%1,MAX))][if(cor(strlen(%q<text_min>),strlen(%q<text_max>)),%,[u(%!/FUN`DISPLAY`RANGE,,%q<text_min>,%q<text_max>)] [if(cand(xor(strlen(%q<text_min>),strlen(%q<text_max>)),eq(firstof(%q<text_max>,%q<text_min>),1)),character,characters)])][if(strlen(setr(text_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, matching %q<text_pattern>)]
+          Text[setqm(text_min,u(%!/FUN`SETTING`META,%0,%1,MIN),
+          text_max,u(%!/FUN`SETTING`META,%0,%1,MAX))][if(cor(strlen(%q<text_min>),strlen(%q<text_max>)),%,[u(%!/FUN`DISPLAY`RANGE,,%q<text_min>,%q<text_max>)] [if(cand(xor(strlen(%q<text_min>),strlen(%q<text_max>)),eq(firstof(%q<text_max>,%q<text_min>),1)),character,characters)])][if(strlen(setr(text_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, matching %q<text_pattern>)]
         flags: [funsyntax]
 
       # integer: a whole number from MIN to MAX.
@@ -468,7 +504,8 @@ objects:
         flags: [funsyntax]
       FUN`TYPE`LIST`ALLOWED:
         value: |-
-          if(strlen(trim(setr(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1)))),Items separated by %q<list_delim>,Words)[if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),%, from [itemize(%q<list_choices>,%q<list_delim>)])][if(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, each matching %q<list_pattern>)][setq(list_min,u(%!/FUN`SETTING`META,%0,%1,MIN),list_max,u(%!/FUN`SETTING`META,%0,%1,MAX))][if(cor(strlen(%q<list_min>),strlen(%q<list_max>)),%,[u(%!/FUN`DISPLAY`RANGE,,%q<list_min>,%q<list_max>)] [if(cand(xor(strlen(%q<list_min>),strlen(%q<list_max>)),eq(firstof(%q<list_max>,%q<list_min>),1)),item,items)])]
+          if(strlen(trim(setr(list_delim,u(%!/FUN`TYPE`LIST`DELIMITER,%0,%1)))),Items separated by %q<list_delim>,Words)[if(strlen(setr(list_choices,u(%!/FUN`SETTING`META,%0,%1,CHOICES))),%, from [itemize(%q<list_choices>,%q<list_delim>)])][if(strlen(setr(list_pattern,u(%!/FUN`SETTING`META,%0,%1,PATTERN))),%, each matching %q<list_pattern>)][setqm(list_min,u(%!/FUN`SETTING`META,%0,%1,MIN),
+          list_max,u(%!/FUN`SETTING`META,%0,%1,MAX))][if(cor(strlen(%q<list_min>),strlen(%q<list_max>)),%,[u(%!/FUN`DISPLAY`RANGE,,%q<list_min>,%q<list_max>)] [if(cand(xor(strlen(%q<list_min>),strlen(%q<list_max>)),eq(firstof(%q<list_max>,%q<list_min>),1)),item,items)])]
         flags: [funsyntax]
 
       # pattern: a regular expression the game can read.
@@ -563,7 +600,7 @@ objects:
       # %2 an entry, %3 a field: the attribute holding it. The ENTRY field is the entry's own attribute.
       FUN`TABLE`ATTRIBUTE:
         value: |-
-          [u(%!/FUN`TABLE`PATH,%0,%1)]`[ucstr(%2)][if(comp(lcstr(%3),lcstr(u(%!/FUN`SETTING`META,%0,%1,ENTRY))),`[ucstr(%3)])]
+          u(%!/FUN`TABLE`PATH,%0,%1)`[ucstr(%2)][if(comp(lcstr(%3),lcstr(u(%!/FUN`SETTING`META,%0,%1,ENTRY))),`[ucstr(%3)])]
         flags: [funsyntax]
       # %2 a store, %3 an entry, %4 a field: its value as stored.
       FUN`TABLE`VALUE:
@@ -640,7 +677,7 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`SYSTEMFOOTER:
         value: |-
-          [if(words(iter(%2,if(u(%!/FUN`SETTING`CHANGED,%1,%i0),%i0),%b,%b)),* changed from its default.%b%b)]+config %0/<setting>=<value> changes one.
+          if(words(iter(%2,if(u(%!/FUN`SETTING`CHANGED,%1,%i0),%i0),%b,%b)),* changed from its default.%b%b)+config %0/<setting>=<value> changes one.
         flags: [funsyntax]
       # %0 the system, %1 its object, %2 the setting.
       FUN`SCREEN`SETTING:
@@ -649,11 +686,11 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`SETTINGLABELS:
         value: |-
-          [if(hasattr(%0,DATA`CONFIG`%1`LABEL),Name%*<|>)]Value%*<|>Default%*<|>Allowed[if(hasattr(%0,DATA`CONFIG`%1`EXAMPLE),%*<|>Example)]%*<|>What it does%*<|>Changed by
+          if(hasattr(%0,DATA`CONFIG`%1`LABEL),Name%*<|>)Value%*<|>Default%*<|>Allowed[if(hasattr(%0,DATA`CONFIG`%1`EXAMPLE),%*<|>Example)]%*<|>What it does%*<|>Changed by
         flags: [funsyntax]
       FUN`SCREEN`SETTINGVALUES:
         value: |-
-          [if(hasattr(%1,DATA`CONFIG`%2`LABEL),[u(%!/FUN`SETTING`META,%1,%2,LABEL)]%*<|>)][u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`VALUE`GET,%1,%2))]%*<|>[if(hasattr(%1,DATA`CONFIG`%2`DEFAULT),u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`SETTING`META,%1,%2,DEFAULT)),tone(muted,none))]%*<|>[u(%!/FUN`VALUE`ALLOWED,%1,%2)][if(hasattr(%1,DATA`CONFIG`%2`EXAMPLE),%*<|>+config %0/%2=[u(%!/FUN`SETTING`META,%1,%2,EXAMPLE)])]%*<|>[firstof(u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION),tone(muted,not described))]%*<|>The [u(%!/FUN`SETTING`PERMISSION,%1,%2)] permission
+          if(hasattr(%1,DATA`CONFIG`%2`LABEL),u(%!/FUN`SETTING`META,%1,%2,LABEL)%*<|>)[u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`VALUE`GET,%1,%2))]%*<|>[if(hasattr(%1,DATA`CONFIG`%2`DEFAULT),u(%!/FUN`VALUE`SHOW,%1,%2,u(%!/FUN`SETTING`META,%1,%2,DEFAULT)),tone(muted,none))]%*<|>[u(%!/FUN`VALUE`ALLOWED,%1,%2)][if(hasattr(%1,DATA`CONFIG`%2`EXAMPLE),%*<|>+config %0/%2=[u(%!/FUN`SETTING`META,%1,%2,EXAMPLE)])]%*<|>[firstof(u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION),tone(muted,not described))]%*<|>The [u(%!/FUN`SETTING`PERMISSION,%1,%2)] permission
         flags: [funsyntax]
       FUN`SCREEN`SETTINGFOOTER:
         value: |-
@@ -663,7 +700,8 @@ objects:
       # %0 the system, %1 its object, %2 the table.
       FUN`SCREEN`TABLE:
         value: |-
-          setq(screen_store,u(%!/FUN`TABLE`STORE,%1,%2),screen_keys,u(%!/FUN`TABLE`KEYS,%1,%2))[box([u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SETTING`META,%1,%2,LABEL),u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION))]%r%r[if(words(%q<screen_keys>),datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r2,%r1,%r12),[tone(strong,Entry)]%r[iter(%q<screen_keys>,%i0,%b,%r)],[tone(strong,Fields)]%r[iter(%q<screen_keys>,u(%!/FUN`TABLE`SUMMARY,%1,%2,%q<screen_store>,%i0),%b,%r)]),tone(muted,No entries yet.))][u(%!/FUN`DISPLAY`FOOTER,u(%!/FUN`SCREEN`TABLEFOOTER,%0,%1,%2))],%0/%2)]
+          setqm(screen_store,u(%!/FUN`TABLE`STORE,%1,%2),
+          screen_keys,u(%!/FUN`TABLE`KEYS,%1,%2))[box([u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SETTING`META,%1,%2,LABEL),u(%!/FUN`SETTING`META,%1,%2,DESCRIPTION))]%r%r[if(words(%q<screen_keys>),datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r2,%r1,%r12),[tone(strong,Entry)]%r[iter(%q<screen_keys>,%i0,%b,%r)],[tone(strong,Fields)]%r[iter(%q<screen_keys>,u(%!/FUN`TABLE`SUMMARY,%1,%2,%q<screen_store>,%i0),%b,%r)]),tone(muted,No entries yet.))][u(%!/FUN`DISPLAY`FOOTER,u(%!/FUN`SCREEN`TABLEFOOTER,%0,%1,%2))],%0/%2)]
         flags: [funsyntax]
       FUN`SCREEN`TABLEFOOTER:
         value: |-
@@ -672,7 +710,8 @@ objects:
       # %0 the system, %1 its object, %2 the table, %3 the entry.
       FUN`SCREEN`ENTRY:
         value: |-
-          setq(screen_store,u(%!/FUN`TABLE`STORE,%1,%2),screen_fields,u(%!/FUN`TABLE`FIELDS,%1,%2))[box(datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r1%r3%r2,%r%r%r1,%r%r%r12),[tone(strong,Field)]%r[iter(%q<screen_fields>,%i0,%b,%r)],[tone(strong,Value)]%r[iter(%q<screen_fields>,u(%!/FUN`VALUE`SHOW,%1,%2`FIELD`%i0,u(%!/FUN`TABLE`VALUE,%1,%2,%q<screen_store>,%3,%i0)),%b,%r)],[tone(strong,Allowed)]%r[iter(%q<screen_fields>,u(%!/FUN`VALUE`ALLOWED,%1,%2`FIELD`%i0),%b,%r)],[tone(strong,What it does)]%r[iter(%q<screen_fields>,u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SETTING`META,%1,%2`FIELD`%i0,LABEL),u(%!/FUN`SETTING`META,%1,%2`FIELD`%i0,DESCRIPTION)),%b,%r)])[u(%!/FUN`DISPLAY`FOOTER,+config %0/%2/%3/<field>=<value> changes a field%, /reset sets it to a new entry's.)],%0/%2/%3)]
+          setqm(screen_store,u(%!/FUN`TABLE`STORE,%1,%2),
+          screen_fields,u(%!/FUN`TABLE`FIELDS,%1,%2))[box(datacolumns(u(%!/FUN`DISPLAY`OPTIONS,1,1%r1%r3%r2,%r%r%r1,%r%r%r12),[tone(strong,Field)]%r[iter(%q<screen_fields>,%i0,%b,%r)],[tone(strong,Value)]%r[iter(%q<screen_fields>,u(%!/FUN`VALUE`SHOW,%1,%2`FIELD`%i0,u(%!/FUN`TABLE`VALUE,%1,%2,%q<screen_store>,%3,%i0)),%b,%r)],[tone(strong,Allowed)]%r[iter(%q<screen_fields>,u(%!/FUN`VALUE`ALLOWED,%1,%2`FIELD`%i0),%b,%r)],[tone(strong,What it does)]%r[iter(%q<screen_fields>,u(%!/FUN`DISPLAY`DESCRIBED,u(%!/FUN`SETTING`META,%1,%2`FIELD`%i0,LABEL),u(%!/FUN`SETTING`META,%1,%2`FIELD`%i0,DESCRIPTION)),%b,%r)])[u(%!/FUN`DISPLAY`FOOTER,+config %0/%2/%3/<field>=<value> changes a field%, /reset sets it to a new entry's.)],%0/%2/%3)]
         flags: [funsyntax]
 
       # ── Lifecycle ───────────────────────────────────────────────────────────

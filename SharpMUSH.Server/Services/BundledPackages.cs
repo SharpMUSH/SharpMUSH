@@ -162,7 +162,10 @@ public static class BundledPackages
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: it builds on scene and time, which a game chooses first.
+		// Available, not installed: +avail builds on time, which a game chooses first. availability keeps when
+		// characters are free and knows nothing of scenes; scene-availability is the bridge that adds +avail/scene
+		// and the scene card's free list where both it and scene are installed.
+		new("availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the MUD-kit sends MUD clients such as Mudlet the GMCP packages they draw maps,
 		// gauges, inventories and chat windows from. Each is installed on its own, so a game takes only what it uses;

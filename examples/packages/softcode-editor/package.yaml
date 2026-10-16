@@ -1,6 +1,6 @@
 format: "1.10"
 package: softcode-editor
-version: 1.0.2
+version: 1.1.0
 authors: [SharpMUSH]
 description: "@editor — an @input-driven line editor for function and command softcode."
 license: MIT
@@ -35,69 +35,72 @@ objects:
       # @editor <object>/<attribute>[=function|command]: checks the target, then opens the editor.
       CMD`EDITOR:
         value: |-
-          $(?is)^@editor +(?<spec>[^=]+?)(?\:=(?<mode>function|command))? *$: @assert strmatch(%<spec>,*/*)=@pemit/port %j=notice(EDITOR,Usage: @editor <object>/<attribute>%[=function|command%],warn); think setqm(obj,locate(%#,trim(before(%<spec>,/)),*),attr,ucstr(trim(after(%<spec>,/)))); @assert cand(isdbref(%q<obj>),valid(attrname,%q<attr>))=@pemit/port %j=notice(EDITOR,I cannot find that object or attribute name.,warn); @assert controls(%#,%q<obj>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); think setq(mode,firstof(lcstr(%<mode>),u(%!/FUN`MODEOF,%q<obj>/%q<attr>))); @assert member(function command,%q<mode>)=@pemit/port %j=notice(EDITOR,Use =function or =command for a new or unflagged attribute.,warn); @include %!/INC`OPEN
+          $(?is)^@editor +(?<spec>[^=]+?)(?\:=(?<mode>function|command))? *$: @assert strmatch(%<spec>,*/*)=@pemit/port %j=notice(EDITOR,Usage: @editor <object>/<attribute>%[=function|command%],warn); think setqm(editor_object,locate(%#,trim(before(%<spec>,/)),*),
+          editor_attribute,ucstr(trim(after(%<spec>,/)))); @assert cand(isdbref(%q<editor_object>),valid(attrname,%q<editor_attribute>))=@pemit/port %j=notice(EDITOR,I cannot find that object or attribute name.,warn); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); think setq(mode,firstof(lcstr(%<mode>),u(%!/FUN`TARGET`MODE,%q<editor_object>/%q<editor_attribute>))); @assert member(function command,%q<mode>)=@pemit/port %j=notice(EDITOR,Use =function or =command for a new or unflagged attribute.,warn); @include %!/INC`SESSION`OPEN
         flags: [regexp, cmdsyntax]
       # The syntax an existing attribute %0 (<object>/<attribute>) is flagged with, or nothing.
-      FUN`MODEOF:
+      FUN`TARGET`MODE:
         value: |-
           switch(1,hasflag(%0,cmdsyntax),command,hasflag(%0,funsyntax),function)
         flags: [funsyntax]
 
-      # Starts this connection's branch for %q<attr> on %q<obj> in %q<mode>, then the session.
-      INC`OPEN: |-
-        @include %!/INC`SWEEP; &DATA`%j`OBJECT %!=objid(%q<obj>); &DATA`%j`ATTRIBUTE %!=%q<attr>; &DATA`%j`MODE %!=%q<mode>; &DATA`%j`DRAFT %!=get(%q<obj>/%q<attr>); &DATA`%j`UNDO %!; &DATA`%j`UNDOAPPENDED %!; @include %!/INC`BASELINE; @pemit/port %j=u(%!/FUN`LIST); @include %!/INPUT`START
+      # Starts this connection's branch for %q<editor_attribute> on %q<editor_object> in %q<mode>, then the session.
+      INC`SESSION`OPEN: |-
+        @include %!/INC`SESSION`SWEEP; &DATA`%j`OBJECT %!=objid(%q<editor_object>); &DATA`%j`ATTRIBUTE %!=%q<editor_attribute>; &DATA`%j`MODE %!=%q<mode>; &DATA`%j`DRAFT %!=get(%q<editor_object>/%q<editor_attribute>); &DATA`%j`UNDO %!; &DATA`%j`UNDOAPPENDED %!; @include %!/INC`SESSION`BASELINE; @pemit/port %j=u(%!/FUN`DISPLAY`LIST); @include %!/INPUT`START
       # Disconnecting ends a session without running anything, so a branch can outlive its
       # connection. Each open drops the branches of connections that are gone.
-      INC`SWEEP: |-
+      INC`SESSION`SWEEP: |-
         @dolist/inline setdiff(lattr(%!/DATA`*),iter(lports(),DATA`%i0))={@wipe %!/##`**; @wipe %!/##}
       # Records the stored attribute as it is now, for the conflict check, and counts no lines as
       # added since. Runs on open and after each save.
-      INC`BASELINE: |-
-        think setq(stored,hasattr(%q<obj>,%q<attr>)); &DATA`%j`NEW %!=not(%q<stored>); &DATA`%j`ORIGINAL %!=if(%q<stored>,get(%q<obj>/%q<attr>)); &DATA`%j`ORIGINALCMD %!=cand(%q<stored>,hasflag(%q<obj>/%q<attr>,cmdsyntax)); &DATA`%j`ORIGINALFUN %!=cand(%q<stored>,hasflag(%q<obj>/%q<attr>,funsyntax)); &DATA`%j`APPENDED %!=0
+      INC`SESSION`BASELINE: |-
+        think setq(stored,hasattr(%q<editor_object>,%q<editor_attribute>)); &DATA`%j`NEW %!=not(%q<stored>); &DATA`%j`ORIGINAL %!=if(%q<stored>,get(%q<editor_object>/%q<editor_attribute>)); &DATA`%j`ORIGINALCMD %!=cand(%q<stored>,hasflag(%q<editor_object>/%q<editor_attribute>,cmdsyntax)); &DATA`%j`ORIGINALFUN %!=cand(%q<stored>,hasflag(%q<editor_object>/%q<editor_attribute>,funsyntax)); &DATA`%j`APPENDED %!=0
 
       # The session. .sq, .q and .q! end it (INPUT`EXIT); every other key keeps it open, and any
       # line that is not a key is code.
       INPUT`START: |-
-        @input/start/regex u(%!/FUN`PROMPT)=^\\.(sq|q!?)$,INPUT`EXIT,^\\.s$,INPUT`SAVE,^\\.c$,INPUT`CHECK,^\\.l$,INPUT`LIST,^\\.u$,INPUT`UNDO,^\\.h$,INPUT`HELP,^\\.(\\..*)$,INPUT`DOT,*,INPUT`LINE,3600
-      FUN`PROMPT:
+        @input/start/regex u(%!/FUN`DISPLAY`PROMPT)=^\\.(sq|q!?)$,INPUT`EXIT,^\\.s$,INPUT`SAVE,^\\.c$,INPUT`CHECK,^\\.l$,INPUT`LIST,^\\.u$,INPUT`UNDO,^\\.h$,INPUT`HELP,^\\.(\\..*)$,INPUT`DOT,*,INPUT`LINE,3600
+      FUN`DISPLAY`PROMPT:
         value: |-
           get(%!/DATA`%j`ATTRIBUTE)> .h help · .sq save and quit
         flags: [funsyntax]
       # A line of code, %0 exactly as typed.
       INPUT`LINE: |-
-        @include/args %!/INC`APPEND=line,%0
+        @include/args %!/INC`DRAFT`APPEND=line,%0
       # A line starting .., which is code starting with one dot (%1).
       INPUT`DOT: |-
-        @include/args %!/INC`APPEND=line,%1
+        @include/args %!/INC`DRAFT`APPEND=line,%1
       # Adds %<line> to the draft, keeping the draft before it for .u.
-      INC`APPEND: |-
-        think setqm(draft,get(%!/DATA`%j`DRAFT),appended,get(%!/DATA`%j`APPENDED)); &DATA`%j`UNDO %!=%q<draft>; &DATA`%j`UNDOAPPENDED %!=%q<appended>; &DATA`%j`DRAFT %!=%q<draft>[if(cor(strlen(%q<draft>),%q<appended>),%r)]%<line>; &DATA`%j`APPENDED %!=inc(%q<appended>); @input/prompt u(%!/FUN`PROMPT)
+      INC`DRAFT`APPEND: |-
+        think setqm(draft,get(%!/DATA`%j`DRAFT),
+        appended,get(%!/DATA`%j`APPENDED)); &DATA`%j`UNDO %!=%q<draft>; &DATA`%j`UNDOAPPENDED %!=%q<appended>; &DATA`%j`DRAFT %!=%q<draft>[if(cor(strlen(%q<draft>),%q<appended>),%r)]%<line>; &DATA`%j`APPENDED %!=inc(%q<appended>); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       INPUT`LIST: |-
-        @pemit/port %j=u(%!/FUN`LIST); @input/prompt u(%!/FUN`PROMPT)
+        @pemit/port %j=u(%!/FUN`DISPLAY`LIST); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       INPUT`HELP: |-
-        @pemit/port %j=.s save · .sq save and quit · .q quit · .q! quit and discard · .c check · .l list · .u undo · .h help · a line starting .. adds one starting .; @input/prompt u(%!/FUN`PROMPT)
+        @pemit/port %j=.s save · .sq save and quit · .q quit · .q! quit and discard · .c check · .l list · .u undo · .h help · a line starting .. adds one starting .; @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       # Swaps the draft with the one before the last line, so a second .u puts the line back.
       INPUT`UNDO: |-
-        @assert hasattr(%!,DATA`%j`UNDO)=@pemit/port %j=notice(EDITOR,Nothing to undo.,warn); think setqm(draft,get(%!/DATA`%j`DRAFT),appended,get(%!/DATA`%j`APPENDED)); &DATA`%j`DRAFT %!=get(%!/DATA`%j`UNDO); &DATA`%j`APPENDED %!=get(%!/DATA`%j`UNDOAPPENDED); &DATA`%j`UNDO %!=%q<draft>; &DATA`%j`UNDOAPPENDED %!=%q<appended>; @pemit/port %j=notice(EDITOR,Undone.,ok); @input/prompt u(%!/FUN`PROMPT)
+        @assert hasattr(%!,DATA`%j`UNDO)=@pemit/port %j=notice(EDITOR,Nothing to undo.,warn); think setqm(draft,get(%!/DATA`%j`DRAFT),
+        appended,get(%!/DATA`%j`APPENDED)); &DATA`%j`DRAFT %!=get(%!/DATA`%j`UNDO); &DATA`%j`APPENDED %!=get(%!/DATA`%j`UNDOAPPENDED); &DATA`%j`UNDO %!=%q<draft>; &DATA`%j`UNDOAPPENDED %!=%q<appended>; @pemit/port %j=notice(EDITOR,Undone.,ok); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       INPUT`CHECK: |-
-        think setq(diagnostics,u(%!/FUN`DIAGNOSE)); @pemit/port %j=if(json_query(%q<diagnostics>,size),u(%!/FUN`ERRORS,%q<diagnostics>),notice(EDITOR,Syntax OK.,ok)); @input/prompt u(%!/FUN`PROMPT)
+        think setq(diagnostics,u(%!/FUN`DRAFT`DIAGNOSE)); @pemit/port %j=if(json_query(%q<diagnostics>,size),u(%!/FUN`DISPLAY`ERRORS,%q<diagnostics>),notice(EDITOR,Syntax OK.,ok)); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       INPUT`SAVE: |-
-        @include/nobreak %!/INC`SAVE; @input/prompt u(%!/FUN`PROMPT)
+        @include/nobreak %!/INC`SAVE`DRAFT; @input/prompt u(%!/FUN`DISPLAY`PROMPT)
 
       # The session has ended: .sq, .q or .q! (%1), or the hour ran out. Running out of time is
       # not a way out, so the editor opens again with the draft as it was.
       INPUT`EXIT: |-
-        @break strmatch(r(reason,args),timeout)={@include %!/INPUT`START}; @break strmatch(%1,q!)={@include %!/INC`CLOSE}; @break strmatch(%1,q)={@include %!/INC`EXIT`QUIT}; @include %!/INC`EXIT`SAVE
+        @break strmatch(r(reason,args),timeout)={@include %!/INPUT`START}; @break strmatch(%1,q!)={@include %!/INC`SESSION`CLOSE}; @break strmatch(%1,q)={@include %!/INC`EXIT`QUIT}; @include %!/INC`EXIT`SAVE
       # .q leaves only when nothing is unsaved; .q! discards it.
       INC`EXIT`QUIT: |-
-        @assert u(%!/FUN`UNSAVED)={@include %!/INC`CLOSE}; @pemit/port %j=notice(EDITOR,There are unsaved changes. .sq saves and quits%, .q! discards them.,warn); @include %!/INPUT`START
+        @assert u(%!/FUN`DRAFT`UNSAVED)={@include %!/INC`SESSION`CLOSE}; @pemit/port %j=notice(EDITOR,There are unsaved changes. .sq saves and quits%, .q! discards them.,warn); @include %!/INPUT`START
       # .sq leaves only when the save worked; otherwise the editor opens again with the draft.
       INC`EXIT`SAVE: |-
-        think setq(saved,0); @include/nobreak %!/INC`SAVE; @assert %q<saved>={@include %!/INPUT`START}; @include %!/INC`CLOSE
-      INC`CLOSE: |-
+        think setq(saved,0); @include/nobreak %!/INC`SAVE`DRAFT; @assert %q<saved>={@include %!/INPUT`START}; @include %!/INC`SESSION`CLOSE
+      INC`SESSION`CLOSE: |-
         @pemit/port %j=notice(EDITOR,Editor closed.,info); @wipe %!/DATA`%j`**; @wipe %!/DATA`%j
       # 1 when the draft differs from what was stored at open or the last save.
-      FUN`UNSAVED:
+      FUN`DRAFT`UNSAVED:
         value: |-
           cor(get(%!/DATA`%j`APPENDED),comp(get(%!/DATA`%j`DRAFT),get(%!/DATA`%j`ORIGINAL)))
         flags: [funsyntax]
@@ -105,34 +108,38 @@ objects:
       # Checks the draft's syntax, that the player still controls the object, and that nobody
       # changed the attribute or its syntax flag since the editor opened it or last saved it. Then
       # saves it as the player and sets %q<saved> to 1.
-      INC`SAVE: |-
-        think setq(diagnostics,u(%!/FUN`DIAGNOSE)); @assert not(json_query(%q<diagnostics>,size))=@pemit/port %j=u(%!/FUN`ERRORS,%q<diagnostics>)%r[notice(EDITOR,Not saved.,warn)]; think setqm(obj,get(%!/DATA`%j`OBJECT),attr,get(%!/DATA`%j`ATTRIBUTE)); @assert controls(%#,%q<obj>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); @assert u(%!/FUN`UNCHANGED,%q<obj>,%q<attr>)=@pemit/port %j=notice(EDITOR,%q<attr> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`STORE; @assert not(comp(get(%q<obj>/%q<attr>),%q<draft>))=@pemit/port %j=notice(EDITOR,%q<attr> could not be saved.,error); @include %!/INC`BASELINE; think setq(saved,1); @pemit/port %j=notice(EDITOR,%q<attr> saved.,ok)
+      INC`SAVE`DRAFT:
+        value: |-
+          think setq(diagnostics,u(%!/FUN`DRAFT`DIAGNOSE)); @assert not(json_query(%q<diagnostics>,size))=@pemit/port %j=u(%!/FUN`DISPLAY`ERRORS,%q<diagnostics>)%r[notice(EDITOR,Not saved.,warn)]; think setqm(editor_object,get(%!/DATA`%j`OBJECT),
+          editor_attribute,get(%!/DATA`%j`ATTRIBUTE)); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); @assert u(%!/FUN`TARGET`UNCHANGED,%q<editor_object>,%q<editor_attribute>)=@pemit/port %j=notice(EDITOR,%q<editor_attribute> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`SAVE`STORE; @assert not(comp(get(%q<editor_object>/%q<editor_attribute>),%q<draft>))=@pemit/port %j=notice(EDITOR,%q<editor_attribute> could not be saved.,error); @include %!/INC`SESSION`BASELINE; think setq(saved,1); @pemit/port %j=notice(EDITOR,%q<editor_attribute> saved.,ok)
         flags: [cmdsyntax]
       # Writes the draft and its syntax flag as the player, so the attribute is theirs and their own
       # permissions decide whether it may be set.
-      INC`STORE: |-
-        think setqm(draft,get(%!/DATA`%j`DRAFT),syntax,switch(get(%!/DATA`%j`MODE),command,cmdsyntax,funsyntax),other,switch(get(%!/DATA`%j`MODE),command,funsyntax,cmdsyntax)); @force/inline %#={&%q<attr> %q<obj>=[escape(%q<draft>)]; @set %q<obj>/%q<attr>=%q<syntax>}; @force/inline %#=@set %q<obj>/%q<attr>=!%q<other>
-      # 1 when attribute %1 on %0 is as INC`BASELINE recorded it.
-      FUN`UNCHANGED:
+      INC`SAVE`STORE: |-
+        think setqm(draft,get(%!/DATA`%j`DRAFT),
+        syntax,switch(get(%!/DATA`%j`MODE),command,cmdsyntax,funsyntax),
+        other_syntax_flag,switch(get(%!/DATA`%j`MODE),command,funsyntax,cmdsyntax)); @force/inline %#={&%q<editor_attribute> %q<editor_object>=[escape(%q<draft>)]; @set %q<editor_object>/%q<editor_attribute>=%q<syntax>}; @force/inline %#=@set %q<editor_object>/%q<editor_attribute>=!%q<other_syntax_flag>
+      # 1 when attribute %1 on %0 is as INC`SESSION`BASELINE recorded it.
+      FUN`TARGET`UNCHANGED:
         value: |-
           if(get(%!/DATA`%j`NEW),not(hasattr(%0,%1)),cand(hasattr(%0,%1),not(comp(get(%0/%1),get(%!/DATA`%j`ORIGINAL))),eq(hasflag(%0/%1,cmdsyntax),get(%!/DATA`%j`ORIGINALCMD)),eq(hasflag(%0/%1,funsyntax),get(%!/DATA`%j`ORIGINALFUN))))
         flags: [funsyntax]
 
-      FUN`DIAGNOSE:
+      FUN`DRAFT`DIAGNOSE:
         value: |-
           syntaxdiagnostics(%!/DATA`%j`DRAFT,get(%!/DATA`%j`MODE))
         flags: [funsyntax]
       # One line per diagnostic in the JSON array %0.
-      FUN`ERRORS:
+      FUN`DISPLAY`ERRORS:
         value: |-
-          json_map(%!/FUN`ERROR,%0,%r)
+          json_map(%!/FUN`DISPLAY`ERROR,%0,%r)
         flags: [funsyntax]
-      FUN`ERROR:
+      FUN`DISPLAY`ERROR:
         value: |-
           notice(EDITOR,Line [json_query(%1,get,line)]%, column [json_query(%1,get,column)]: [json_query(%1,get,message)],warn)
         flags: [funsyntax]
       # The draft with line numbers.
-      FUN`LIST:
+      FUN`DISPLAY`LIST:
         value: |-
           if(cor(strlen(get(%!/DATA`%j`DRAFT)),get(%!/DATA`%j`APPENDED)),iter(get(%!/DATA`%j`DRAFT),rjust(inum(0),3): %i0,%r,%r),notice(EDITOR,The draft is empty.,info))
         flags: [funsyntax]

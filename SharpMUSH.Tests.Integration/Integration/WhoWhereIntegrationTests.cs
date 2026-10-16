@@ -119,10 +119,10 @@ public class WhoWhereIntegrationTests
 			var players = $"#{cy.DbRef.Number} #{ann.DbRef.Number} #{bo.DbRef.Number}";
 
 			// The grouping: each room once, its players by name; then the rooms by name.
-			var groups = $"u({Functions}/WW_FN_GROUPS,{players})";
+			var groups = $"u({Functions}/FUN`ROOM`GROUPS,{players})";
 			await Assert.That(await God($"think {groups}"))
 				.IsEqualTo($"{{\"{parlour}\":[\"#{ann.DbRef.Number}\",\"#{cy.DbRef.Number}\"],\"{attic}\":[\"#{bo.DbRef.Number}\"]}}");
-			await Assert.That(await God($"think [u({Functions}/WW_FN_ROOMS,{groups})]|[u({Functions}/WW_FN_IN,{parlour})]"))
+			await Assert.That(await God($"think [u({Functions}/FUN`ROOM`LIST,{groups})]|[u({Functions}/FUN`ROOM`PLAYERS,{parlour})]"))
 				.IsEqualTo($"{attic} {parlour}|#{ann.DbRef.Number} #{cy.DbRef.Number}");
 
 			// +where: a line per location with its count, rooms by name, and the players under it by name.
@@ -257,11 +257,11 @@ public class WhoWhereIntegrationTests
 			await Assert.That(Order(grouped, "Unfindable", hidden.Name)).IsTrue();
 
 			// +where locates players as the function object does, so the room stays hidden from God too.
-			await Assert.That(await God($"think u({Functions}/WW_FN_GROUPS,#{hidden.DbRef.Number})"))
+			await Assert.That(await God($"think u({Functions}/FUN`ROOM`GROUPS,#{hidden.DbRef.Number})"))
 				.IsEqualTo($"{{\"#-1\":[\"#{hidden.DbRef.Number}\"]}}");
 			// Unfindable comes last and is not counted as a location.
 			var both = $"#{hidden.DbRef.Number} #{reader.DbRef.Number}";
-			await Assert.That(await God($"think [setr(0,u({Functions}/WW_FN_ROOMS,u({Functions}/WW_FN_GROUPS,{both})))]|[u({Functions}/WW_FN_IN,#-1)]|[u({Functions}/WW_FN_WHERE_COUNT,{both},%q0)]"))
+			await Assert.That(await God($"think [setr(0,u({Functions}/FUN`ROOM`LIST,u({Functions}/FUN`ROOM`GROUPS,{both})))]|[u({Functions}/FUN`ROOM`PLAYERS,#-1)]|[u({Functions}/FUN`WHERE`COUNT,{both},%q0)]"))
 				.IsEqualTo($"{hall} #-1|#{hidden.DbRef.Number}|2 connected in 1 location");
 		}
 		finally
@@ -290,8 +290,8 @@ public class WhoWhereIntegrationTests
 			}
 
 			var list = string.Join(' ', players.Select(p => $"#{p.DbRef.Number}"));
-			var groups = $"u({Functions}/WW_FN_GROUPS,{list})";
-			await Assert.That(await God($"think [words(setr(0,u({Functions}/WW_FN_ROOMS,{groups})))]|[iter(%q0,words(u({Functions}/WW_FN_IN,%i0)))]"))
+			var groups = $"u({Functions}/FUN`ROOM`GROUPS,{list})";
+			await Assert.That(await God($"think [words(setr(0,u({Functions}/FUN`ROOM`LIST,{groups})))]|[iter(%q0,words(u({Functions}/FUN`ROOM`PLAYERS,%i0)))]"))
 				.IsEqualTo($"20|{string.Join(' ', Enumerable.Repeat("10", 20))}");
 
 			var grouped = await As(players[0], "+where");
@@ -324,7 +324,7 @@ public class WhoWhereIntegrationTests
 			}
 
 			var list = string.Join(' ', players.Select(p => $"#{p.DbRef.Number}"));
-			foreach (var screen in new[] { "WW_FN_WHERE", "WW_FN_WHERE_ROOM", "WW_FN_WHERE_NAME", "WW_FN_WHO" })
+			foreach (var screen in new[] { "FUN`WHERE", "FUN`WHERE`ROOM", "FUN`WHERE`NAME", "FUN`WHO" })
 			{
 				// %? is the calls made so far, then the depth; the few around the screen count too.
 				var calls = await God($"think [setq(0,u({Functions}/{screen},{list}))][first(%?)]");
@@ -333,8 +333,8 @@ public class WhoWhereIntegrationTests
 			}
 
 			// Small parts, so every screen is built across several runs and the rows meet at part boundaries.
-			await God($"&WW_PART_PLAYERS {Functions}=40");
-			await God($"&WW_PART_ROOMS {Functions}=40");
+			await God($"&DATA`PART`PLAYERS {Functions}=40");
+			await God($"&DATA`PART`ROOMS {Functions}=40");
 			foreach (var command in new[] { "+where", "+where/room", "+where/name", "+who", "+who/idle", "+who WcP" })
 			{
 				var screen = await As(players[0], command);

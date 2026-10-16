@@ -1,6 +1,6 @@
 format: "1.10"
 package: summary
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
@@ -51,6 +51,8 @@ objects:
         value: |-
           How long a +summary may be.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Summary
       DATA`CONFIG`MAX-LENGTH: |-
         200
       DATA`CONFIG`MAX-LENGTH`TYPE: |-
@@ -63,6 +65,10 @@ objects:
         2000
       DATA`CONFIG`MAX-LENGTH`DESCRIPTION: |-
         The longest summary, in characters. A longer one is refused, not cut.
+      DATA`CONFIG`MAX-LENGTH`LABEL: |-
+        Longest summary
+      DATA`CONFIG`MAX-LENGTH`EXAMPLE: |-
+        300
 
       # ---- command --------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.

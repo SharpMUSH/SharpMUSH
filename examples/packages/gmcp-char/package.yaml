@@ -1,6 +1,6 @@
 format: "1.10"
 package: gmcp-char
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Char package: Char.Name, Char.Vitals for a client's gauges and Char.Status, from the attributes its settings name, each sent again the moment one of them changes."
 license: MIT
@@ -43,7 +43,7 @@ depends:
 #     says it is not in the table, so an entry the game already has keeps its flags;
 #   - watches it with @attribute/watch <attribute> when it is not watched, which is the default
 #     pattern WATCH`<attribute> WATCH`<attribute>`*;
-#   - copies its handler, FN`GMCPCHAR`HANDLER, to WATCH`<attribute>`GMCPCHAR on the event handler.
+#   - copies its handler, TEMPLATE`GMCPCHAR`WATCH, to WATCH`<attribute>`GMCPCHAR on the event handler.
 #
 # An attribute already watched with some other pattern belongs to another package or to staff: it is
 # left as it is, gets no handler, and is listed in the GMCP Char object's DATA`FOREIGN.
@@ -68,64 +68,66 @@ objects:
     target: "{{$event_handler}}"
     attributes:
       # ── Settings ─────────────────────────────────────────────────────────
-      FN`GMCPCHAR`SETTING: |-
+      FUN`GMCPCHAR`SETTING: |-
         get({{gmcp_char}}/DATA`CONFIG`%0)
 
       # ── Who ──────────────────────────────────────────────────────────────
       # %0 an object: a connected player, the only thing anything is sent to.
-      FN`GMCPCHAR`VIEWER: |-
+      FUN`GMCPCHAR`VIEWER: |-
         cand(hastype(%0,player),hasflag(%0,CONNECTED))
 
       # ── Values ───────────────────────────────────────────────────────────
       # %0 a player: the name a client shows in full. The attribute the fullname setting names, else
       # the player's name.
-      FN`GMCPCHAR`FULLNAME: |-
-        strfirstof(if(strlen(setr(gmcpchar_attr,u(me/FN`GMCPCHAR`SETTING,FULLNAME))),get(%0/%q<gmcpchar_attr>)),name(%0))
-      # %0 a value: as JSON, a number when it is one.
-      FN`GMCPCHAR`VALUE: |-
-        if(isnum(%0),%0,json(string,%0))
+      FUN`GMCPCHAR`FULLNAME: |-
+        strfirstof(if(strlen(setr(gmcpchar_attr,u(me/FUN`GMCPCHAR`SETTING,FULLNAME))),get(%0/%q<gmcpchar_attr>)),name(%0))
+      # %0 a value: as JSON, a number when it is one. json(number) writes it as JSON does: 007 as 7,
+      # +40 as 40, .5 as 0.5, each of which isnum() takes but JSON refuses as written. A number
+      # json(number) cannot read (1e5) goes as written, which JSON takes.
+      FUN`GMCPCHAR`VALUE: |-
+        if(isnum(%0),if(isnum(setr(gmcpchar_number,json(number,%0))),%q<gmcpchar_number>,%0),json(string,%0))
       # fold() step: %0 the object so far, %1 <player>|<attribute>. Adds the attribute under its last
       # name in lower case (STATS`HP is hp), when the player has it.
-      FN`GMCPCHAR`FIELD: |-
-        if(hasattr(setr(gmcpchar_who,before(%1,|)),setr(gmcpchar_attr,after(%1,|))),json_mod(%0,set,$.[lcstr(last(%q<gmcpchar_attr>,`))],u(me/FN`GMCPCHAR`VALUE,get(%q<gmcpchar_who>/%q<gmcpchar_attr>))),%0)
+      FUN`GMCPCHAR`FIELD: |-
+        if(hasattr(setr(gmcpchar_who,before(%1,|)),setr(gmcpchar_attr,after(%1,|))),json_mod(%0,set,$.[lcstr(last(%q<gmcpchar_attr>,`))],u(me/FUN`GMCPCHAR`VALUE,get(%q<gmcpchar_who>/%q<gmcpchar_attr>))),%0)
       # %0 a player, %1 attributes, %2 the object to start from: the attributes added to it.
-      FN`GMCPCHAR`FIELDS: |-
-        fold(me/FN`GMCPCHAR`FIELD,iter(%1,%0|%i0),%2)
+      FUN`GMCPCHAR`FIELDS: |-
+        fold(me/FUN`GMCPCHAR`FIELD,iter(%1,%0|%i0),%2)
 
       # ── Payloads ─────────────────────────────────────────────────────────
       # Char.Name: %0 the player.
-      FN`GMCPCHAR`NAME: |-
-        json(object,name,json(string,name(%0)),fullname,json(string,u(me/FN`GMCPCHAR`FULLNAME,%0)))
+      FUN`GMCPCHAR`NAME: |-
+        json(object,name,json(string,name(%0)),fullname,json(string,u(me/FUN`GMCPCHAR`FULLNAME,%0)))
       # Char.Vitals: %0 the player.
-      FN`GMCPCHAR`VITALS: |-
-        u(me/FN`GMCPCHAR`FIELDS,%0,u(me/FN`GMCPCHAR`SETTING,VITALS),json(object))
+      FUN`GMCPCHAR`VITALS: |-
+        u(me/FUN`GMCPCHAR`FIELDS,%0,u(me/FUN`GMCPCHAR`SETTING,VITALS),json(object))
       # Char.Status: %0 the player. Their names first, then the status attributes.
-      FN`GMCPCHAR`STATUS: |-
-        u(me/FN`GMCPCHAR`FIELDS,%0,u(me/FN`GMCPCHAR`SETTING,STATUS),u(me/FN`GMCPCHAR`NAME,%0))
+      FUN`GMCPCHAR`STATUS: |-
+        u(me/FUN`GMCPCHAR`FIELDS,%0,u(me/FUN`GMCPCHAR`SETTING,STATUS),u(me/FUN`GMCPCHAR`NAME,%0))
 
       # ── Sending ──────────────────────────────────────────────────────────
       # %0 where to send (a player or a descriptor), %1 the player, %2 which: any of name, vitals and
       # status.
-      FN`GMCPCHAR`SEND: |-
-        if(member(%2,name),null(oob(%0,Char.Name,u(me/FN`GMCPCHAR`NAME,%1),supported)))[if(member(%2,vitals),null(oob(%0,Char.Vitals,u(me/FN`GMCPCHAR`VITALS,%1),supported)))][if(member(%2,status),null(oob(%0,Char.Status,u(me/FN`GMCPCHAR`STATUS,%1),supported)))]
-      # %0 an attribute: which packages it is in, as FN`GMCPCHAR`SEND takes them.
-      FN`GMCPCHAR`CHANGED: |-
-        trim(if(match(u(me/FN`GMCPCHAR`SETTING,VITALS),%0),vitals) [if(match(u(me/FN`GMCPCHAR`SETTING,STATUS),%0),status)])
+      FUN`GMCPCHAR`SEND: |-
+        if(member(%2,name),null(oob(%0,Char.Name,u(me/FUN`GMCPCHAR`NAME,%1),supported)))[if(member(%2,vitals),null(oob(%0,Char.Vitals,u(me/FUN`GMCPCHAR`VITALS,%1),supported)))][if(member(%2,status),null(oob(%0,Char.Status,u(me/FUN`GMCPCHAR`STATUS,%1),supported)))]
+      # %0 an attribute: which packages it is in, as FUN`GMCPCHAR`SEND takes them.
+      FUN`GMCPCHAR`CHANGED: |-
+        trim(if(match(u(me/FUN`GMCPCHAR`SETTING,VITALS),%0),vitals) [if(match(u(me/FUN`GMCPCHAR`SETTING,STATUS),%0),status)])
 
       # ── The handlers ─────────────────────────────────────────────────────
       # What the GMCP Char object copies to WATCH`<attribute>`GMCPCHAR for each attribute it watches. A
       # watch handler gets %0 the object, %1 the attribute's full name in upper case. A thing's stats have
-      # no client to go to. If the package has been uninstalled (FN`GMCPCHAR`SEND is gone), it removes
+      # no client to go to. If the package has been uninstalled (FUN`GMCPCHAR`SEND is gone), it removes
       # itself, and stops the watch when it is the default pattern and nothing else is left under
       # WATCH`<attribute>.
-      FN`GMCPCHAR`HANDLER: |-
-        @assert hasattr(me,FN`GMCPCHAR`SEND)={@wipe me/WATCH`%1`GMCPCHAR; @assert not(comp(attrwatch(%1),WATCH`%1 WATCH`%1`*)); @assert not(words(iter(lattr(me/WATCH`%1) [lattr(me/WATCH`%1`*)],if(strlen(get(me/%i0)),%i0)))); @attribute/watch %1=}; @assert u(me/FN`GMCPCHAR`VIEWER,%0); @assert strlen(setr(gmcpchar_which,u(me/FN`GMCPCHAR`CHANGED,%1))); think u(me/FN`GMCPCHAR`SEND,%0,%0,%q<gmcpchar_which>)
+      TEMPLATE`GMCPCHAR`WATCH: |-
+        @assert hasattr(me,FUN`GMCPCHAR`SEND)={@wipe me/WATCH`%1`GMCPCHAR; @assert not(comp(attrwatch(%1),WATCH`%1 WATCH`%1`*)); @assert not(words(iter(lattr(me/WATCH`%1) [lattr(me/WATCH`%1`*)],if(strlen(get(me/%i0)),%i0)))); @attribute/watch %1=}; @assert u(me/FUN`GMCPCHAR`VIEWER,%0); @assert strlen(setr(gmcpchar_which,u(me/FUN`GMCPCHAR`CHANGED,%1))); think u(me/FUN`GMCPCHAR`SEND,%0,%0,%q<gmcpchar_which>)
       # A new connection is sent all three on its own descriptor.
       PLAYER`CONNECT`GMCPCHAR: |-
-        think u(me/FN`GMCPCHAR`SEND,%<descriptor>,%<objid>,name vitals status)
+        think u(me/FUN`GMCPCHAR`SEND,%<descriptor>,%<objid>,name vitals status)
       # A new name is a new Char.Name, and Char.Status carries it too.
       OBJECT`RENAME`GMCPCHAR: |-
-        @assert u(me/FN`GMCPCHAR`VIEWER,%<objid>); think u(me/FN`GMCPCHAR`SEND,%<objid>,%<objid>,name status)
+        @assert u(me/FUN`GMCPCHAR`VIEWER,%<objid>); think u(me/FUN`GMCPCHAR`SEND,%<objid>,%<objid>,name status)
 
   # ---- settings, and the watching -------------------------------------------
   # WIZARD for @attribute and for the handlers on the event handler. AINSTALL and AUPDATE watch the
@@ -185,43 +187,43 @@ objects:
       # ── Watching ──────────────────────────────────────────────────────────
       # DATA`WATCHING: the attributes this package has a WATCH`<attribute>`GMCPCHAR handler for.
       # DATA`FOREIGN: those it left alone because they are watched with another pattern.
-      FUN`HANDLER: |-
+      FUN`WATCH`EVENTHANDLER: |-
         config(event_handler)
       # The vitals and status attributes, together, upper case.
-      FUN`ATTRIBUTES: |-
+      FUN`WATCH`ATTRIBUTES: |-
         ucstr(setunion(v(DATA`CONFIG`VITALS),v(DATA`CONFIG`STATUS)))
       # %0 an attribute: the pattern @attribute/watch gives it by default.
-      FUN`DEFAULT: |-
+      FUN`WATCH`DEFAULTPATTERN: |-
         WATCH`%0 WATCH`%0`*
       # %0 an attribute: 1 when it is watched with the default pattern.
-      FUN`DEFAULTWATCH: |-
-        not(comp(attrwatch(%0),u(%!/FUN`DEFAULT,%0)))
+      FUN`WATCH`ISDEFAULT: |-
+        not(comp(attrwatch(%0),u(%!/FUN`WATCH`DEFAULTPATTERN,%0)))
       # %0 an attribute: 1 when it is watched with a pattern of someone else's.
-      FUN`FOREIGNWATCH: |-
-        cand(strlen(setr(gmcpchar_watch,attrwatch(%0))),not(strmatch(%q<gmcpchar_watch>,#-1*)),not(u(%!/FUN`DEFAULTWATCH,%0)))
+      FUN`WATCH`ISFOREIGN: |-
+        cand(strlen(setr(gmcpchar_watch,attrwatch(%0))),not(strmatch(%q<gmcpchar_watch>,#-1*)),not(u(%!/FUN`WATCH`ISDEFAULT,%0)))
       # %0 an attribute: 1 when the event handler has its WATCH`<attribute>`GMCPCHAR.
-      FUN`HANDLED: |-
-        hasattr(u(%!/FUN`HANDLER),WATCH`%0`GMCPCHAR)
+      FUN`WATCH`HANDLED: |-
+        hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%0`GMCPCHAR)
       # %0 an attribute: the event handler's attributes with a value that its default pattern runs.
-      FUN`LEFT: |-
-        iter(lattr(setr(gmcpchar_eh,u(%!/FUN`HANDLER))/WATCH`%0) [lattr(%q<gmcpchar_eh>/WATCH`%0`*)],if(strlen(get(%q<gmcpchar_eh>/%i0)),%i0))
-      INC`WATCH: |-
-        @dolist/inline setdiff(v(DATA`WATCHING),u(%!/FUN`ATTRIBUTES))=@include/args %!/INC`UNWATCH=attribute,##; @dolist/inline u(%!/FUN`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##,by,%<by>; &DATA`WATCHING %!=filterbool(%!/FUN`HANDLED,u(%!/FUN`ATTRIBUTES)); &DATA`FOREIGN %!=filterbool(%!/FUN`FOREIGNWATCH,u(%!/FUN`ATTRIBUTES))
+      FUN`WATCH`REMAINING: |-
+        iter(lattr(setr(gmcpchar_event_handler,u(%!/FUN`WATCH`EVENTHANDLER))/WATCH`%0) [lattr(%q<gmcpchar_event_handler>/WATCH`%0`*)],if(strlen(get(%q<gmcpchar_event_handler>/%i0)),%i0))
+      INC`WATCH`ALL: |-
+        @dolist/inline setdiff(v(DATA`WATCHING),u(%!/FUN`WATCH`ATTRIBUTES))=@include/args %!/INC`WATCH`REMOVE=attribute,##; @dolist/inline u(%!/FUN`WATCH`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##,by,%<by>; &DATA`WATCHING %!=filterbool(%!/FUN`WATCH`HANDLED,u(%!/FUN`WATCH`ATTRIBUTES)); &DATA`FOREIGN %!=filterbool(%!/FUN`WATCH`ISFOREIGN,u(%!/FUN`WATCH`ATTRIBUTES))
       # %<attribute> one attribute: in the table, watched, and handled, unless someone else watches it.
       # %<by> whoever changed the setting, told when it is left alone; empty at install.
       INC`WATCH`ATTRIBUTE: |-
-        @if strmatch(attrwatch(%<attribute>),#-1*)={@attribute/access %<attribute>=none}; @if not(strlen(attrwatch(%<attribute>)))={@attribute/watch %<attribute>}; @if u(%!/FUN`DEFAULTWATCH,%<attribute>)={@cpattr [u(%!/FUN`HANDLER)]/FN`GMCPCHAR`HANDLER=[u(%!/FUN`HANDLER)]/WATCH`%<attribute>`GMCPCHAR}, {@if hasattr(u(%!/FUN`HANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe [u(%!/FUN`HANDLER)]/WATCH`%<attribute>`GMCPCHAR}; @pemit strfirstof(%<by>,%#)=GMCP Char: %<attribute> is already watched with [attrwatch(%<attribute>)], so it is left as it is and its changes are not sent.}
+        @if strmatch(attrwatch(%<attribute>),#-1*)={@attribute/access %<attribute>=none}; @if not(strlen(attrwatch(%<attribute>)))={@attribute/watch %<attribute>}; @if u(%!/FUN`WATCH`ISDEFAULT,%<attribute>)={@cpattr u(%!/FUN`WATCH`EVENTHANDLER)/TEMPLATE`GMCPCHAR`WATCH=u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}, {@if hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}; @pemit strfirstof(%<by>,%#)=notice(GMCP,%<attribute> is already watched with [attrwatch(%<attribute>)]%, so it is left as it is and its changes are not sent.,warn)}
       # %<attribute> one attribute no longer named: its handler goes (and the empty WATCH`<attribute> left
       # above it), and its watch too if it is the default one and nothing else is left that it runs.
-      INC`UNWATCH: |-
-        @if hasattr(u(%!/FUN`HANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe [u(%!/FUN`HANDLER)]/WATCH`%<attribute>`GMCPCHAR}; @if cand(hasattr(u(%!/FUN`HANDLER),WATCH`%<attribute>),not(hasattrval(u(%!/FUN`HANDLER),WATCH`%<attribute>)),not(words(lattr([u(%!/FUN`HANDLER)]/WATCH`%<attribute>`*))))={@wipe [u(%!/FUN`HANDLER)]/WATCH`%<attribute>}; @if cand(u(%!/FUN`DEFAULTWATCH,%<attribute>),not(words(u(%!/FUN`LEFT,%<attribute>))))={@attribute/watch %<attribute>=}
+      INC`WATCH`REMOVE: |-
+        @if hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}; @if cand(hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>),not(hasattrval(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>)),not(words(lattr(u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`*))))={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>}; @if cand(u(%!/FUN`WATCH`ISDEFAULT,%<attribute>),not(words(u(%!/FUN`WATCH`REMAINING,%<attribute>))))={@attribute/watch %<attribute>=}
       AINSTALL: |-
-        @include %!/INC`WATCH
+        @include %!/INC`WATCH`ALL
       AUPDATE: |-
-        @include %!/INC`WATCH
+        @include %!/INC`WATCH`ALL
       # +config triggers this after a change, with %<setting>.
       ACONFIG: |-
-        @assert match(vitals status,%<setting>); @include %!/INC`WATCH
+        @assert match(vitals status,%<setting>); @include %!/INC`WATCH`ALL
 
   - ref: gmcp_char_help
     type: thing

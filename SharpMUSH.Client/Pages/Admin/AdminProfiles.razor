@@ -13,7 +13,7 @@
             @((MarkupString)Loc["AdmProfilesSubtitle",
                 "<code>http_handler</code>",
                 "<code>GET`CHARACTERS</code> / <code>GET`PROFILE</code>",
-                "<code>&amp;FN`CHARVIS …</code>"].Value)
+                "<code>&amp;FUN`PROFILE`CHARACTERVISIBLE …</code>"].Value)
         </DescriptionContent>
         <Actions>
             @* The reset rewrites the handler's wizard softcode; the server takes packages.admin for it,
@@ -80,7 +80,7 @@
                             <p class="adm-profiles-caption">
                                 @((MarkupString)Loc["AdmProfilesResetCaption",
                                     "<code>GET`*</code>",
-                                    "<code>FN`*</code>"].Value)
+                                    "<code>FUN`PROFILE`*</code>"].Value)
                             </p>
                         </Authorized>
                         <NotAuthorized>

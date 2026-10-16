@@ -132,7 +132,7 @@ public class AdminProfilesResetGateTests : TrackingBunitContext
 	{
 		_api.Reset = () => new HttpResponseMessage(HttpStatusCode.OK)
 		{
-			Content = JsonContent.Create(new { written = 1, failed = new[] { "FN`FIELD", "GET`PROFILE" } })
+			Content = JsonContent.Create(new { written = 1, failed = new[] { "FUN`PROFILE`FIELD", "GET`PROFILE" } })
 		};
 		var snackbar = Substitute.For<ISnackbar>();
 		Services.AddSingleton(snackbar);
@@ -142,7 +142,7 @@ public class AdminProfilesResetGateTests : TrackingBunitContext
 		await cut.FindAll("button").First(b => b.TextContent.Contains("ResetToDefaults")).ClickAsync();
 
 		cut.WaitForAssertion(() => snackbar.Received().Add(
-			Arg.Is<string>(m => m.Contains("AdmProfilesResetFailedError") && m.Contains("FN`FIELD") && m.Contains("GET`PROFILE")),
+			Arg.Is<string>(m => m.Contains("AdmProfilesResetFailedError") && m.Contains("FUN`PROFILE`FIELD") && m.Contains("GET`PROFILE")),
 			Severity.Error, Arg.Any<Action<SnackbarOptions>>(), Arg.Any<string>()), TimeSpan.FromSeconds(5));
 		await Assert.That(snackbar.ReceivedCalls()
 			.Any(c => c.GetArguments().Any(a => a is string m && m.Contains("AdmProfilesResetComplete")))).IsFalse();

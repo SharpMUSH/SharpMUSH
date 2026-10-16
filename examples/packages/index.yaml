@@ -4,55 +4,37 @@ packages:
   - path: softcode-editor/
     name: Softcode Editor
     package: softcode-editor
-    version: 1.0.2
+    version: 1.1.0
     description: "@editor — an @input-driven line editor for function and command softcode"
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph
     version: 0.3.0
     description: Room topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place
-  - path: hello-world/
-    package: hello-world
-    version: 1.0.1
-    description: Minimal example — one object, one command
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.7.2
+    version: 1.8.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
-  - path: bbs-lite/
-    name: BBS Lite
-    package: bbs-lite
-    version: 0.9.2-beta
-    description: Tiny bulletin board — dependencies, configure, cross-package refs
-  - path: starter-area/
-    package: starter-area
-    version: 1.0.0
-    description: Two rooms and linked exits
-  - path: coast-guide/
-    name: Coast Guide
-    package: coast-guide
-    version: 1.0.0
-    description: Content pack (format 1.4) — wiki pages only, one of them pinned to the wiki home
   - path: http-handler/
     package: http-handler
-    version: 1.0.3
+    version: 1.0.4
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.0.5
+    version: 1.1.0
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
-    version: 1.1.1
+    version: 1.2.0
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: comm-feed/
     package: comm-feed
-    version: 1.2.1
+    version: 1.3.0
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.0.2
+    version: 2.1.0
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires plus-help, plus-config, http-handler)
   - path: chargen-app/
     package: chargen-app
@@ -60,17 +42,17 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
-    version: 1.12.0
+    version: 1.13.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.5.2
+    version: 1.6.0
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: plus-config/
     name: "+config"
     package: plus-config
-    version: 1.0.2
+    version: 1.1.0
     description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
   - path: hello-ui/
     name: Hello UI
@@ -80,12 +62,12 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.6.3
+    version: 1.7.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.10.1
+    version: 1.11.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -95,17 +77,17 @@ packages:
   - path: messages/
     name: Messages
     package: messages
-    version: 1.1.2
+    version: 1.2.0
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
   - path: radio/
     name: Radio
     package: radio
-    version: 1.2.4
+    version: 1.3.0
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-scene/
     name: Radio in scenes
     package: radio-scene
-    version: 1.3.1
+    version: 1.4.0
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
   - path: scene-help/
     name: Scene help
@@ -120,22 +102,22 @@ packages:
   - path: scene-here/
     name: Scene here
     package: scene-here
-    version: 1.0.1
+    version: 1.0.2
     description: Pushes the scene_here context as players move, so the command palette offers the scene in their room (requires scene and the event handler)
   - path: scene-verse/
     name: Verse and canon in scenes
     package: scene-verse
-    version: 1.1.1
+    version: 1.1.2
     description: Verse, canon and content warnings on scenes, a content warning told to whoever joins, and +scene/verses (requires scene)
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.0.3
+    version: 1.0.4
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.0.1
+    version: 1.1.0
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
   - path: highlights-app/
     name: Highlights in the portal
@@ -145,62 +127,62 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.3.1
-    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help and http-handler)
+    version: 1.4.0
+    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help, http-handler and plus-config)
   - path: bboards-app/
     name: BBoards in the portal
     package: bboards-app
-    version: 1.0.3
+    version: 1.0.4
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
   - path: status/
     name: Status
     package: status
-    version: 1.1.1
+    version: 1.1.2
     description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
   - path: watch/
     name: Watch
     package: watch
-    version: 1.0.1
+    version: 1.1.0
     description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: finger/
     name: Finger
     package: finger
-    version: 1.1.2
-    description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits one attribute at a time
+    version: 1.2.0
+    description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits with +config
   - path: summary/
     name: Summary
     package: summary
-    version: 1.0.1
+    version: 1.0.2
     description: +summary — a line summing up your last pose, told to your room only and never recorded by a scene (requires plus-config)
   - path: time/
     name: Time
     package: time
-    version: 1.2.2
+    version: 1.3.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: info/
     name: Info Files
     package: info
-    version: 1.0.1
+    version: 1.0.2
     description: +info, +pinfo and +journal — public and private files on a character, and a journal shared entry by entry
   - path: health/
     name: Health
     package: health
-    version: 1.0.2
+    version: 1.0.3
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
   - path: health-jobs/
     name: Health Staff Load
     package: health-jobs
-    version: 1.0.1
+    version: 1.0.2
     description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
   - path: relationships/
     name: Relationships
     package: relationships
-    version: 1.0.1
+    version: 1.1.0
     description: +rel — typed relationships both players confirm, a card for any character with your private note, and the routes the portal draws the web and the name card from
   - path: relationships-scene/
     name: Relationships Scene
     package: relationships-scene
-    version: 1.0.1
+    version: 1.0.2
     description: Adds Last scene together to the +rel card and the portal's name card (requires relationships and scene)
   - path: relationships-app/
     name: Relationships web
@@ -215,7 +197,7 @@ packages:
   - path: timeline/
     name: Timeline
     package: timeline
-    version: 1.0.1
+    version: 1.0.2
     description: IC dates on scenes and a timeline per character — a scene is dated in the IC calendar when it starts, +scene/date dates a flashback, +timeline lists a character's scenes in IC order
   - path: discord/
     name: Discord
@@ -225,17 +207,17 @@ packages:
   - path: discord-channels/
     name: Discord Channels
     package: discord-channels
-    version: 1.0.0
+    version: 1.1.0
     description: Joins a game channel to a linked Discord channel both ways (+discord/channel)
   - path: discord-scenes/
     name: Discord Scenes
     package: discord-scenes
-    version: 1.0.0
+    version: 1.1.0
     description: Scheduled scenes in the Discord server's Events tab, kept in step as they are moved, started, finished or cancelled (requires the Scene and Discord plugins)
   - path: notifications/
     name: Notifications
     package: notifications
-    version: 1.0.1
+    version: 1.1.0
     description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
   - path: notifications-app/
     name: Notifications in the portal
@@ -245,42 +227,47 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.3
-    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
+    version: 1.1.0
+    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help and plus-config)
   - path: roster-jobs/
     name: Roster applications in jobs
     package: roster-jobs
-    version: 1.0.1
-    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs and plus-help)
+    version: 1.1.0
+    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs, plus-help and plus-config)
+  - path: availability/
+    name: Availability
+    package: availability
+    version: 1.0.0
+    description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability
-    version: 1.0.2
-    description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group or a scene's cast are all free
+    version: 2.0.0
+    description: A bridge for +avail in scenes — +avail/scene finds a time a scene's cast is all free, and a scheduled scene's card shows who is free at its time
   - path: gmcp-room/
     name: GMCP Room
     package: gmcp-room
-    version: 1.0.0
+    version: 1.1.0
     description: Room.Info for a client's mapper (number, name, area, environment, coordinates, exits from exitmap()), Room.Players, Room.AddPlayer and Room.RemovePlayer (requires plus-help and plus-config)
   - path: gmcp-comm/
     name: GMCP Comm
     package: gmcp-comm
-    version: 1.0.0
+    version: 1.1.0
     description: Comm.Channel.Text for each channel line and page, for a client's chat window, and Comm.Channel.List (requires plus-help and plus-config)
   - path: gmcp-items/
     name: GMCP Items
     package: gmcp-items
-    version: 1.0.0
+    version: 1.1.0
     description: Char.Items.List when a client asks or its player arrives, and Char.Items.Add and Char.Items.Remove as things come and go (requires plus-help and plus-config)
   - path: gmcp-char/
     name: GMCP Char
     package: gmcp-char
-    version: 1.1.0
+    version: 1.2.0
     description: Char.Name, Char.Vitals and Char.Status from the attributes its settings name, sent again whenever one changes; watches those attributes with @attribute/watch (requires plus-help and plus-config)
   - path: mudlet-client/
     name: Mudlet Client
     package: mudlet-client
-    version: 1.0.0
+    version: 1.0.1
     description: +gui, and Client.GUI, Client.Map and Mudlet's Discord rich presence (External.Discord.Info and Status) from URLs in its settings (requires plus-help and plus-config)
   - path: mud-kit/
     name: MUD Kit
@@ -290,5 +277,5 @@ packages:
   - path: alts/
     name: Alts
     package: alts
-    version: 1.0.1
+    version: 1.0.2
     description: +alts — the characters on your account, private until you make the list public, with any one kept off it (requires plus-help)

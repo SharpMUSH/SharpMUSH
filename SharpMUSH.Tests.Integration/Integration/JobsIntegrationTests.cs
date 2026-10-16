@@ -914,4 +914,88 @@ public class JobsIntegrationTests
 			await UninstallAsync();
 		}
 	}
+
+	[Test]
+	public async Task SearchFindsOnlyTheJobsThatMentionTheText()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsSrch");
+			var staff = await Player("JobsSrchS", "job-admin");
+			await As(player, "+request Need a room=Somewhere quiet.");
+			await As(player, "+request Fix the light=The lamp in the hall is out.");
+			await As(player, "+request Paint=The walls are grey.");
+
+			await Assert.That(await As(staff, "+jobs/search lamp")).Contains("Fix the light")
+				.And.DoesNotContain("Need a room").And.DoesNotContain("Paint")
+				.Because("only the job whose text mentions it matches");
+			await Assert.That(await As(staff, "+jobs/search room")).Contains("Need a room").And.DoesNotContain("Fix the light")
+				.Because("a title that mentions the text matches too");
+
+			await Assert.That(await As(staff, "+job/merge 3=1")).Contains("Job 3 is merged into job 1.");
+			await Assert.That(await As(staff, "+job 1")).Contains("Somewhere quiet.").And.Contains("The walls are grey.")
+				.Because("the merged job's messages follow the job's own");
+			await Assert.That(await God("think [job(3,state)]")).IsEqualTo("#-1 NO SUCH JOB");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task TheSettingsAreChangedWithConfig()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsCfg");
+			var staff = await Player("JobsCfgS", "job-admin");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			await Assert.That(await As(staff, "+config jobs/default-bucket=Nowhere")).Contains("There is no bucket called Nowhere.");
+			await Assert.That(await As(staff, "+config jobs/default-bucket=Bugs")).Contains("jobs/default-bucket is now Bugs, was Requests.");
+			await Assert.That(await As(player, "+request Broken door=It sticks.")).Contains("Filed job 1 in Bugs: Broken door.");
+			await Assert.That(await As(staff, "+bucket/disable Bugs")).Contains("Point +config jobs/default-bucket elsewhere first.");
+			await As(staff, "+bucket/rename Bugs=Faults");
+			await Assert.That(await As(player, "+request Leaky tap=It drips.")).Contains("Filed job 2 in Faults: Leaky tap.")
+				.Because("renaming the default bucket keeps +request filing there");
+			await Assert.That(await As(staff, "+config jobs/move-batch=0")).DoesNotContain("is now");
+			await Assert.That(await As(staff, "+config jobs/typo-bucket=Plots")).Contains("jobs/typo-bucket is now Plots");
+			await Assert.That(await As(player, "+typo Wrong word=In the hall.")).Contains("Filed job 3 in Plots");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task StaffHearWhatWaitsAtLoginAndPlayersGetRepliesByMail()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsLog");
+			var staff = await Player("JobsLogS", "job-admin");
+			await As(player, "+request Need a lamp=Please.");
+
+			var before = Notifications.CountFor(staff.DbRef);
+			await God($"@trigger/args #9/PLAYER`CONNECT`JOBS=objid,{await Objid(staff)},connections,1,descriptor,{staff.Handle}");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef).Skip(before))).Contains("1 need staff").And.Contains("+jobs lists them.")
+				.Because("the event handler's player`connect tells staff what waits");
+
+			await Assert.That(await As(player, "think [mail()]")).IsEqualTo("0");
+			await As(staff, "+job/reply 1=Which room?");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(await As(player, "think [mail()]")).IsEqualTo("1").Because("a staff reply is mailed to the filer");
+			await Assert.That(await As(player, "think [mail(1)]")).Contains("Which room?");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
 }

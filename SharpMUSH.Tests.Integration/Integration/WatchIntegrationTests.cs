@@ -139,7 +139,40 @@ public class WatchIntegrationTests
 			await Assert.That(await As(ann, "+watch something")).Contains("+watch/add <name> watches someone.");
 
 			await Assert.That(await As(ann, "+help watch")).Contains("+watch/watchers");
-			await Assert.That(await As(ann, "+help watch staff")).Contains("DATA`WATCH`QUIET");
+			await Assert.That(await As(ann, "+help watch staff")).Contains("+config watch");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task SettingsAreChangedThroughPlusConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var staff = await Player("WsStaff");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+			var ann = await Player("WsAnn");
+			var bo = await Player("WsBo");
+
+			await Assert.That(await As(staff, "+config watch")).Contains("max").And.Contains("quiet");
+			await Assert.That(await As(staff, "+config watch/quiet=10m")).Contains("watch/quiet is now 10m, was 5m.");
+			await As(staff, "+config/reset watch/quiet");
+
+			// The most a player may watch is read from the setting.
+			await Assert.That(await As(staff, "+config watch/max=1")).Contains("watch/max is now 1, was 100.");
+			try
+			{
+				await Assert.That(await As(staff, $"+watch/add {ann.Name}")).Contains($"You watch {ann.Name} now");
+				await Assert.That(await As(staff, $"+watch/add {bo.Name}")).Contains("You watch 1 people");
+			}
+			finally
+			{
+				await As(staff, "+config/reset watch/max");
+			}
 		}
 		finally
 		{
@@ -164,13 +197,15 @@ public class WatchIntegrationTests
 			// +friend is the same command, the way Volund's FRIEND global spells it.
 			await Assert.That(await As(cy, $"+friend/add {ann.Name}")).Contains($"You watch {ann.Name} now");
 			await Assert.That(await As(bo, "+watch")).Contains("Watched and on").And.Contains(ann.Name).And.Contains("WaAnnRoom");
+			// Nobody has a +who status, so there is no Status column of dashes.
+			await Assert.That(await As(bo, "+watch")).DoesNotContain("Status");
 
 			// +watch shows the status +who shows, whichever package gives it.
 			var whoWhere = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("who-where"))
 				.First(o => o.Ref == "ww_functions").Objid;
 			var status = TestIsolationHelpers.GenerateUniqueName("WaStatus");
 			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}=if(strmatch(%1,#{ann.DbRef.Number}),{status},%0)");
-			await Assert.That(Unwrapped(await As(bo, "+watch"))).Contains(status);
+			await Assert.That(Unwrapped(await As(bo, "+watch"))).Contains(status).And.Contains("Status");
 			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}");
 			await Assert.That(await As(bo, "+watch/list")).Contains(ann.Name).And.Contains("on now");
 			var watchers = await As(ann, "+watch/watchers");
@@ -188,7 +223,7 @@ public class WatchIntegrationTests
 			await Assert.That(Heard(bo, $"{ann.Name} has disconnected.")).Count().IsEqualTo(1);
 			await Assert.That(await As(bo, "+watch/list")).Contains("ago");
 
-			// A connect within DATA`WATCH`QUIET seconds of the last one announced is not announced, nor its leaving.
+			// A connect within the quiet setting's seconds of the last one announced is not announced, nor its leaving.
 			ann = await Connect(ann);
 			await Disconnect(ann);
 			await Assert.That(Heard(bo, $"{ann.Name} has connected.")).Count().IsEqualTo(1);

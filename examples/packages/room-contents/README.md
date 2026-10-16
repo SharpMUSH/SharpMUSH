@@ -45,8 +45,8 @@ harness are in
 looking:
 
 - a **DARK** occupant or exit is omitted unless the viewer is Wizard/Royalty,
-  holds `See_All`, or is the occupant itself (`` FN`WHOVIS ``,
-  `` FN`EXITVIS ``) — the handler runs as a wizard object and `lcon()` shows
+  holds `See_All`, or is the occupant itself (`` FUN`ROOMCONTENTS`WHOVISIBLE ``,
+  `` FUN`ROOMCONTENTS`EXITVISIBLE ``) — the handler runs as a wizard object and `lcon()` shows
   it everything, so the filtering is the package's job;
 - an exit's `state` is `locked` when its Basic lock fails **for that viewer**;
   only then does the row carry the exit's `@fail` as `hint`, and only when it
@@ -64,28 +64,28 @@ can ignore a repeat.
 
 ## Cost
 
-One event does the viewer-independent work **once** — `` FN`PREPARE `` builds
+One event does the viewer-independent work **once** — `` FUN`ROOMCONTENTS`PREPARE `` builds
 every occupant's base row, every exit's base row and destination preview, and
 the room's own info into q-registers — and then, per connected viewer, only
 what differs by viewer. With K occupants, M exits and N viewers that is
 O(K+M) evaluations of descriptions and images plus O(N·(K+M)) cheap patches
 (one `elock()` per exit per viewer is the largest of them).
 
-`` FN`DESC `` is the expensive helper: it evaluates a room's `DESCRIBE`, once
+`` FUN`ROOMCONTENTS`DESCRIPTION `` is the expensive helper: it evaluates a room's `DESCRIBE`, once
 for the room and once per exit destination, every event. On a big hub, blank
-it — `` &FN`DESC #9= `` — and the page falls back to its own text; blank
-`` FN`DEST `` too to drop the destination previews entirely.
+it — `` &FUN`ROOMCONTENTS`DESCRIPTION #9= `` — and the page falls back to its own text; blank
+`` FUN`ROOMCONTENTS`DESTINATION `` too to drop the destination previews entirely.
 
 ## Descriptions and the enactor
 
-`` FN`DESC `` evaluates the description as the room (the executor `look`
+`` FUN`ROOMCONTENTS`DESCRIPTION `` evaluates the description as the room (the executor `look`
 gives it) with the **event's enactor** as `%#`/`%N`, once per event. That is
 the mover for `goto` and connect, but the wizard for `@tel`, and the result is
 pushed to every viewer that gets it — so a description that branches on who
 is looking (`hasflag(%#,WIZARD)`, `%N`) shows one branch to everyone. The
 handler limits `room.info` to the enactor when the enactor is in the room,
 which covers the common case; destination previews go to everyone. A game
-whose descriptions branch on the viewer blanks `` FN`DESC ``.
+whose descriptions branch on the viewer blanks `` FUN`ROOMCONTENTS`DESCRIPTION ``.
 
 ## Pictures
 
@@ -117,19 +117,19 @@ merge keeps a local edit across upgrades.
 
 | Attribute | Decides |
 |---|---|
-| `` FN`WHOVIS `` (`%0` occupant, `%1` viewer) | who is listed in `who` for a viewer |
-| `` FN`VIEWER `` (`%0` occupant) | who receives pushes |
-| `` FN`EXITVIS `` (`%0` exit, `%1` viewer) | which exits a viewer sees |
-| `` FN`ONLINE `` (`%0` player) | who counts toward a destination's `here` (default: connected and not DARK) |
-| `` FN`STATUS `` (`%0` idle seconds) | `active` / `idle` / `away` thresholds |
-| `` FN`AREA `` (`%0` room) | the `area` name: zone, else parent, else omitted |
-| `` FN`COLOR `` (`%0` player) | the row's `color`, validated |
-| `` FN`DESC `` (`%0` room) | the description text pushed (blank it to push none) |
-| `` FN`EXITHINT `` (`%0` exit) | the hint on a locked exit (default: its `@fail`, plain text) |
-| `` FN`SCENE `` (`%0` room, `%1` viewer) | the `scene` block, or null |
-| `` FN`WHOBASE `` / `` FN`EXITBASE `` / `` FN`EXITDEST `` / `` FN`INFOBASE `` | the viewer-independent parts, built once per event by `` FN`PREPARE `` |
-| `` FN`WHOROW `` / `` FN`EXITROW `` (`%0` row subject, `%1` viewer) | one row each: the base plus what differs by viewer |
-| `` FN`PAYLOAD`CONTENTS `` / `` FN`PAYLOAD`EXITS `` / `` FN`PAYLOAD`INFO `` (`%0` room, `%1` viewer) | one payload each |
+| `` FUN`ROOMCONTENTS`WHOVISIBLE `` (`%0` occupant, `%1` viewer) | who is listed in `who` for a viewer |
+| `` FUN`ROOMCONTENTS`VIEWER `` (`%0` occupant) | who receives pushes |
+| `` FUN`ROOMCONTENTS`EXITVISIBLE `` (`%0` exit, `%1` viewer) | which exits a viewer sees |
+| `` FUN`ROOMCONTENTS`ONLINE `` (`%0` player) | who counts toward a destination's `here` (default: connected and not DARK) |
+| `` FUN`ROOMCONTENTS`STATUS `` (`%0` idle seconds) | `active` / `idle` / `away` thresholds |
+| `` FUN`ROOMCONTENTS`AREA `` (`%0` room) | the `area` name: zone, else parent, else omitted |
+| `` FUN`ROOMCONTENTS`COLOR `` (`%0` player) | the row's `color`, validated |
+| `` FUN`ROOMCONTENTS`DESCRIPTION `` (`%0` room) | the description text pushed (blank it to push none) |
+| `` FUN`ROOMCONTENTS`EXITHINT `` (`%0` exit) | the hint on a locked exit (default: its `@fail`, plain text) |
+| `` FUN`ROOMCONTENTS`SCENE `` (`%0` room, `%1` viewer) | the `scene` block, or null |
+| `` FUN`ROOMCONTENTS`WHOBASE `` / `` FUN`ROOMCONTENTS`EXITBASE `` / `` FUN`ROOMCONTENTS`EXITDESTINATION `` / `` FUN`ROOMCONTENTS`INFOBASE `` | the viewer-independent parts, built once per event by `` FUN`ROOMCONTENTS`PREPARE `` |
+| `` FUN`ROOMCONTENTS`WHOROW `` / `` FUN`ROOMCONTENTS`EXITROW `` (`%0` row subject, `%1` viewer) | one row each: the base plus what differs by viewer |
+| `` FUN`ROOMCONTENTS`PAYLOAD`CONTENTS `` / `` FUN`ROOMCONTENTS`PAYLOAD`EXITS `` / `` FUN`ROOMCONTENTS`PAYLOAD`INFO `` (`%0` room, `%1` viewer) | one payload each |
 
 Two per-exit attributes are read as data: `CONFIRM` (a confirmation the client
 shows before traversing, e.g. `&CONFIRM out=This leaves the scene.`) and the

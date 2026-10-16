@@ -195,7 +195,7 @@ public class SceneApprovalIntegrationTests
 		// ---- 3. An approved character may own a scene -------------------------------------------
 		var createOut = await RunAs(approvedHandle, $"+scene/create Approval Test {Tag}");
 		Log($"[CREATE approved] {createOut}");
-		var sceneId = await Eval($"get({approved}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({approved})");
 		await Assert.That(sceneId).IsNotEmpty().Because("an approved character may create and own a scene");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 		await God1($"@scene/set {sceneId}/public=1");

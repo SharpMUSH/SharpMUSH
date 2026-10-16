@@ -228,15 +228,15 @@ new state:
   includes a `spell_list` field. The portal just renders what you send.
 - **Computed defaults:** compute them in softcode and return them in `fields`.
 - **Per-viewer visibility:** in `view` data, mark each value `{ "value": …, "visible": 0/1 }`
-  (exactly as `FN`FIELD` does for profiles). Hidden values are not rendered.
+  (exactly as `FUN`PROFILE`FIELD` does for profiles). Hidden values are not rendered.
 
-## Building the JSON: the `FN`*` helper idiom
+## Building the JSON: the `FUN`*` helper idiom
 
 Don't hand-write one enormous `json()` call. Define small helper attributes that each emit
-one element, then compose them — the profile handler does this with `FN`FIELD`:
+one element, then compose them — the profile handler does this with `FUN`PROFILE`FIELD`:
 
 ```
-FN`FIELD: json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))
+FUN`PROFILE`FIELD: json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))
 ```
 
 > ### ⚠️ The `≥10-argument` ordering footgun
@@ -244,7 +244,7 @@ FN`FIELD: json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean
 > in numeric order. The engine does this for you (`ParserState.ArgumentsOrdered` sorts
 > `%0,%1,…,%10,%11` numerically, not lexically — without it `%10` would sort before `%2`
 > and scramble your key/value pairs). You don't have to do anything special, **but** the
-> safest habit is to keep each `json()` call small by composing `FN`*` helpers (one
+> safest habit is to keep each `json()` call small by composing `FUN`*` helpers (one
 > element per helper) rather than writing a single 30-argument object. This also keeps
 > schemas readable and diff-friendly.
 

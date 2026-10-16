@@ -1,11 +1,12 @@
-format: 1.7
+format: "1.10"
 package: discord-scenes
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Scheduled scenes in the Discord server's Events tab: a scene with a time still to come is published as a Discord event, moved when it is rescheduled, shown as happening when it starts, and ended when it finishes or is cancelled."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, scene, events, schedule]
+category: Community
 requires_server: ">=0.1"
 
 # The Scene plugin keeps the scenes and raises SCENE`STATUS and SCENE`CHANGE; the Discord plugin runs
@@ -45,10 +46,10 @@ objects:
   # because a wizard may give itself a role below its own: AINSTALL gives it the discord package's Discord Admin
   # role, since @discord/event needs discord.admin and wizards do not hold it.
   #
-  # Each scene is the Discord event scene-<id>. TRIG`SYNC looks at the scene as it is now and does what that
+  # Each scene is the Discord event scene-<id>. TRIG`EVENT`SYNC looks at the scene as it is now and does what that
   # calls for, so the order the events arrive in does not matter, and running it twice changes nothing.
   #
-  # Trees: TRIG` the routine the events trigger, FUN`SCENE` reads a scene, FUN`EVENT` builds what Discord
+  # Trees: TRIG`EVENT` the routine the events trigger, FUN`SCENE` reads a scene, FUN`EVENT` builds what Discord
   # gets. DATA`CONFIG` the settings.
   - ref: publisher
     type: thing
@@ -62,8 +63,12 @@ objects:
         Settings.
       DATA`CONFIG: |-
         Scheduled scenes as Discord events.
+      DATA`CONFIG`LABEL: |-
+        Discord Scenes
       DATA`CONFIG`PUBLISH: |-
         1
+      DATA`CONFIG`PUBLISH`LABEL: |-
+        Publish scheduled scenes
       DATA`CONFIG`PUBLISH`DESCRIPTION: |-
         Publish scheduled scenes in the Discord server's Events tab.
       DATA`CONFIG`PUBLISH`TYPE: |-
@@ -72,6 +77,8 @@ objects:
         1
       DATA`CONFIG`PRIVATE: |-
         0
+      DATA`CONFIG`PRIVATE`LABEL: |-
+        Members-only scenes
       DATA`CONFIG`PRIVATE`DESCRIPTION: |-
         Publish members-only scenes too. Everyone in the Discord server sees their titles and times.
       DATA`CONFIG`PRIVATE`TYPE: |-
@@ -80,6 +87,8 @@ objects:
         0
       DATA`CONFIG`LENGTH: |-
         10800
+      DATA`CONFIG`LENGTH`LABEL: |-
+        Event length
       DATA`CONFIG`LENGTH`DESCRIPTION: |-
         How long a scene's Discord event lasts from its start. Discord needs an end; a scene that runs longer is ended when it finishes.
       DATA`CONFIG`LENGTH`TYPE: |-
@@ -100,9 +109,9 @@ objects:
       # Those two run with PUBLISH off too, so an event already published never outlives its scene. The rest do not:
       # - active: the event shows as happening (status only; a running scene's event is not published again).
       # - waiting with a time still to come, public or PRIVATE on: published, or updated.
-      TRIG`SYNC:
+      TRIG`EVENT`SYNC:
         value: |-
-          think u(%!/FUN`SCENE`READ,%0); @switch/first 1=cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>)),{@discord/event/end scene-%0},cand(%q<scene_waiting>,not(%q<scene_listed>),match(status scheduledfor public,%1),comp(%q<scene_status>,new)),{@discord/event/end scene-%0},not(v(DATA`CONFIG`PUBLISH)),{@@ Publishing is off: take events down, put none up.},cand(strmatch(%1,status),strmatch(%q<scene_status>,active)),{@discord/event/start scene-%0},%q<scene_listed>,{@discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)}
+          think u(%!/FUN`SCENE`READ,%0); @break cand(strmatch(%1,status),match(finished cancelled,%q<scene_status>))=@discord/event/end scene-%0; @break cand(%q<scene_waiting>,not(%q<scene_listed>),match(status scheduledfor public,%1),comp(%q<scene_status>,new))=@discord/event/end scene-%0; @assert v(DATA`CONFIG`PUBLISH); @break cand(strmatch(%1,status),strmatch(%q<scene_status>,active))=@discord/event/start scene-%0; @assert %q<scene_listed>; @discord/event scene-%0=u(%!/FUN`EVENT`JSON,%0)
         flags: [cmdsyntax]
       # %0 a scene. Sets scene_status, scene_at (its time in milliseconds, or empty), scene_waiting (not yet
       # started, or paused) and scene_listed (waiting, with a time still to come, and public or PRIVATE on).
@@ -111,7 +120,7 @@ objects:
           setqm(scene_status,scene(%0,status),
           scene_at,scene(%0,scheduledfor),
           scene_waiting,not(match(active finished cancelled,%q<scene_status>)),
-          scene_listed,cand(%q<scene_waiting>,isint(%q<scene_at>),gt(%q<scene_at>,mul(secs(),1000)),or(scene(%0,public),v(DATA`CONFIG`PRIVATE))))
+          scene_listed,cand(%q<scene_waiting>,isint(%q<scene_at>),gt(%q<scene_at>,mul(secs(),1000)),cor(scene(%0,public),v(DATA`CONFIG`PRIVATE))))
         flags: [funsyntax]
 
       # %0 a scene, %1 a key: its text, or nothing when the scene has none (scene() reads an unset key as an error).
@@ -130,7 +139,13 @@ objects:
       # %0 a scene: its page on the game's website when mud_url is set, else the game's name and the scene's room.
       FUN`EVENT`LOCATION:
         value: |-
-          if(strlen(config(mud_url)),[u({{scene/logger}}/FUN`NO_TRAILING_SLASH,config(mud_url))]/scenes/%0,[mudname()]: [firstof(scene(%0,roomname),the game)])
+          if(strlen(config(mud_url)),u(%!/FUN`EVENT`SITE,config(mud_url))/scenes/%0,mudname(): [firstof(scene(%0,roomname),the game)])
+        flags: [funsyntax]
+      # %0 the game's web address: without a trailing slash, which mud_url is written with or without, so joining
+      # /scenes/<id> to it gives one slash.
+      FUN`EVENT`SITE:
+        value: |-
+          if(strmatch(right(%0,1),/),left(%0,dec(strlen(%0))),%0)
         flags: [funsyntax]
 
   # The Scene plugin raises SCENE`STATUS when a scene is made or its status changes, and SCENE`CHANGE when one of
@@ -140,9 +155,9 @@ objects:
     target: "{{$event_handler}}"
     attributes:
       SCENE`STATUS`DISCORDSCENES: |-
-        @trigger {{publisher}}/TRIG`SYNC=%<scene>,status
+        @trigger {{publisher}}/TRIG`EVENT`SYNC=%<scene>,status
       SCENE`CHANGE`DISCORDSCENES: |-
-        @assert match(scheduledfor title summary public room,%<key>); @trigger {{publisher}}/TRIG`SYNC=%<scene>,%<key>
+        @assert match(scheduledfor title summary public room,%<key>); @trigger {{publisher}}/TRIG`EVENT`SYNC=%<scene>,%<key>
 
   - ref: help
     type: thing
