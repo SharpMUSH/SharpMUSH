@@ -302,7 +302,7 @@ public class SceneVerbSurfaceIntegrationTests
 		var logger = await LoggerAsync();
 		foreach (var configured in new[] { "https://example.test", "https://example.test/" })
 		{
-			var joined = await Eval($"u({logger}/FUN`NO_TRAILING_SLASH,{configured})/scenes/{sceneId}");
+			var joined = await Eval($"u({logger}/FUN`URL`NOTRAILINGSLASH,{configured})/scenes/{sceneId}");
 
 			await Assert.That(joined).IsEqualTo($"https://example.test/scenes/{sceneId}")
 				.Because($"'{configured}' must reach the scene's page without a doubled or missing slash");
@@ -321,7 +321,7 @@ public class SceneVerbSurfaceIntegrationTests
 		var logger = await LoggerAsync();
 		const string url = "https://example.test/scenes/7";
 
-		var text = await FunctionParser.EvaluateAsync(MarkupText.Plain($"u({logger}/FUN`URL_TEXT,{url})"));
+		var text = await FunctionParser.EvaluateAsync(MarkupText.Plain($"u({logger}/FUN`URL`TEXT,{url})"));
 
 		await Assert.That(text.ToPlainText()).IsEqualTo(url)
 			.Because("a client that cannot render an anchor reads the address alone");
@@ -771,7 +771,7 @@ public class SceneVerbSurfaceIntegrationTests
 		await RunAs(ownerHandle, $"+scene/pause {sceneId}");
 
 		var refused = await RunAs(ownerHandle, $"+scene/cancel {sceneId}");
-		await Assert.That(refused.Any(m => m.Contains("only a wizard can cancel it", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(refused.Any(m => m.Contains("only a wizard or someone holding the scene.manage permission can cancel it", StringComparison.Ordinal))).IsTrue();
 		await Assert.That(await Eval($"scene({sceneId},status)")).IsEqualTo("paused");
 
 		await RunAs(wizardHandle, $"+scene/cancel {sceneId}");

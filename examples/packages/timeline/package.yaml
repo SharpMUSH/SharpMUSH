@@ -23,7 +23,7 @@ depends:
       path: examples/packages/plus-help/
       branch: main
   - package: scene
-    version: ">=1.6"
+    version: ">=1.13"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
@@ -97,12 +97,12 @@ objects:
       # The scene in %q<scene> exists and the player may see it.
       INC`DATE`SCENE:
         value: |-
-          @assert not(strmatch(%q<scene>,#-1*))=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NO_FOCUS),warn); @assert not(strmatch(scene(%q<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene>,warn)
+          @assert not(strmatch(%q<scene>,#-1*))=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene>,warn)
         flags: [cmdsyntax]
       # Only an approved player who owns the scene, or staff, dates it: the rule +scene/set keeps.
       INC`DATE`OWNER:
         value: |-
-          @assert u({{scene/logger}}/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_APPROVAL),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NOT_OWNER),error)
+          @assert u({{scene/logger}}/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`APPROVAL),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`NOTOWNER),error)
         flags: [cmdsyntax]
       INC`DATE`SET:
         value: |-
@@ -194,7 +194,7 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`TABLE:
         value: |-
-          datacolumns(u({{scene/logger}}/FUN`TABLE`OPTS,1,|12,1|1|2,|1),[tone(strong,IC date)]%r[iter(%0,firstof(scene(%i0,icdate),tone(muted,not dated)),,%r)],[tone(strong,Scene)]%r[iter(%0,u({{scene/logger}}/FUN`LIST_LINK,%i0),,%r)],[tone(strong,Where)]%r[iter(%0,firstof(scene(%i0,roomname),-),,%r)])
+          datacolumns(u({{scene/logger}}/FUN`TABLE`OPTS,1,|12,1|1|2,|1),[tone(strong,IC date)]%r[iter(%0,firstof(scene(%i0,icdate),tone(muted,not dated)),,%r)],[tone(strong,Scene)]%r[iter(%0,u({{scene/logger}}/FUN`LIST`LINK,%i0),,%r)],[tone(strong,Where)]%r[iter(%0,firstof(scene(%i0,roomname),-),,%r)])
         flags: [funsyntax]
       FUN`SCREEN`FOOTER:
         value: |-

@@ -332,6 +332,52 @@ public class SceneWebComposeIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// Staff change a scene and a pose that are not theirs once the game allows them <c>scene.manage</c>, which
+	/// the scene package defines. Until then the title and the pose are refused, as for any other player.
+	/// </summary>
+	[Test]
+	public async Task SceneManage_LetsStaffChangeAnyScene()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Moro{Tag}");
+		var (helper, helperHandle) = await CreatePlayerAsync($"Nell{Tag}");
+		await RunAs(ownerHandle, $"+scene/create Moro Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await RunAs(ownerHandle, "+scene/start");
+		await RunAs(ownerHandle, $"+scene/emit {sceneId}=The lamps gutter {Tag}.");
+		var poseId = await Eval($"last(sceneposes({sceneId}))");
+		await Assert.That(poseId).DoesNotStartWith("#-1");
+		var title = TestIsolationHelpers.GenerateUniqueName("Retitled");
+		var text = TestIsolationHelpers.GenerateUniqueName("Rewritten");
+
+		var titleRefused = await RunAs(helperHandle, $"+scene/title {sceneId}={title}");
+		await Assert.That(titleRefused.Any(m => m.Contains("not yours to change", StringComparison.Ordinal)))
+			.IsTrue().Because($"saw instead: [{string.Join(" // ", titleRefused)}]");
+		var poseRefused = await RunAs(helperHandle, $"+scene/rewrite {poseId}={text}");
+		await Assert.That(poseRefused.Any(m => m.Contains("That pose is not yours", StringComparison.Ordinal)))
+			.IsTrue().Because($"saw instead: [{string.Join(" // ", poseRefused)}]");
+
+		try
+		{
+			await God1($"@permission/allow {helper}=scene.manage");
+
+			var retitled = await RunAs(helperHandle, $"+scene/title {sceneId}={title}");
+			await Assert.That(retitled.Any(m => m.Contains($"is now titled: {title}", StringComparison.Ordinal)))
+				.IsTrue().Because($"saw instead: [{string.Join(" // ", retitled)}]");
+			await Assert.That(await Eval($"scene({sceneId},title)")).IsEqualTo(title);
+
+			var rewritten = await RunAs(helperHandle, $"+scene/rewrite {poseId}={text}");
+			await Assert.That(rewritten.Any(m => m.Contains($"Pose {poseId} rewritten.", StringComparison.Ordinal)))
+				.IsTrue().Because($"saw instead: [{string.Join(" // ", rewritten)}]");
+			await Assert.That(await Eval($"scenepose({sceneId},{poseId},content)")).Contains(text);
+		}
+		finally
+		{
+			await God1($"@permission/clear {helper}=scene.manage");
+		}
+	}
+
 	/// <summary>A pose still puts a poser who was NOT in the cast into it.</summary>
 	[Test]
 	public async Task WebCompose_StillAddsANewPoserToTheCast()

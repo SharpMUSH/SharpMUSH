@@ -23,7 +23,7 @@ depends:
       path: examples/packages/discord/
       branch: main
   - package: scene
-    version: ">=1.8 <2.0"
+    version: ">=1.13 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
@@ -131,7 +131,7 @@ objects:
       # %0 a scene: its page on the game's website when mud_url is set, else the game's name and the scene's room.
       FUN`EVENT`LOCATION:
         value: |-
-          if(strlen(config(mud_url)),[u({{scene/logger}}/FUN`NO_TRAILING_SLASH,config(mud_url))]/scenes/%0,[mudname()]: [firstof(scene(%0,roomname),the game)])
+          if(strlen(config(mud_url)),[u({{scene/logger}}/FUN`URL`NOTRAILINGSLASH,config(mud_url))]/scenes/%0,[mudname()]: [firstof(scene(%0,roomname),the game)])
         flags: [funsyntax]
 
   # The Scene plugin raises SCENE`STATUS when a scene is made or its status changes, and SCENE`CHANGE when one of

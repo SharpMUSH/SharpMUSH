@@ -42,7 +42,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
-    version: 1.12.0
+    version: 1.13.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -102,7 +102,7 @@ packages:
   - path: scene-here/
     name: Scene here
     package: scene-here
-    version: 1.0.1
+    version: 1.0.2
     description: Pushes the scene_here context as players move, so the command palette offers the scene in their room (requires scene and the event handler)
   - path: scene-verse/
     name: Verse and canon in scenes
@@ -112,12 +112,12 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.0.3
+    version: 1.0.4
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.0.1
+    version: 1.1.0
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
   - path: highlights-app/
     name: Highlights in the portal

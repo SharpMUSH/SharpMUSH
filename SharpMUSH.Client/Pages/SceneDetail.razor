@@ -520,7 +520,7 @@
 
     /// <summary>
     /// The new time as epoch seconds, read in the browser's own time zone, or null when none was chosen.
-    /// FUN`SCHED_WHEN takes a bare number as epoch seconds, so no date format crosses the wire.
+    /// FUN`SCHEDULE`WHEN takes a bare number as epoch seconds, so no date format crosses the wire.
     /// </summary>
     private long? ResumeAt() => _resumeDate is { } date
         ? new DateTimeOffset(DateTime.SpecifyKind(date.Date + (_resumeTime ?? TimeSpan.Zero), DateTimeKind.Local)).ToUnixTimeSeconds()
