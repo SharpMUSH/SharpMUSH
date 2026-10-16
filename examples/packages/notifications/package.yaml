@@ -1,6 +1,6 @@
 format: "1.10"
 package: notifications
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
 license: MIT
@@ -30,9 +30,10 @@ objects:
   # the wizard role holds; only an object that controls this one can @trigger its API`SEND, so no player can
   # send a notification through it.
   #
-  # Trees: CMD` the +notify command, INC` its steps, API` what the event handler and other packages trigger,
-  # FUN` the reads, WEB` the portal page's JSON, DATA` the kinds, the defaults and each player's choices, one
-  # leaf each.
+  # Trees: CMD` the +notify command, INC`CMD` its steps, API` what the event handler and other packages trigger,
+  # INC`WEB`SAVE what the save route runs, FUN`SETTING` the settings, FUN`PREFERENCE` a player's choices,
+  # FUN`DISPLAY` what +notify shows, WEB`FORM` the portal page's JSON, DATA` the kinds and the defaults, one leaf
+  # each. Each player's choices are on the player: NOTIFY`<kind or PREVIEW>, 1 or 0, unset meaning the default.
   - ref: notifier
     type: thing
     name: Notifications
@@ -41,7 +42,7 @@ objects:
     attributes:
       DATA:
         value: |-
-          Kinds, defaults and each player's choices. One leaf each.
+          Kinds and defaults. One leaf each.
         flags: [no_command]
       # What can notify a player, one branch per kind: its description, and DEFAULT, 1 when it notifies until
       # the player turns it off. Another package adds a kind with DATA`KIND`<NAME> and DATA`KIND`<NAME>`DEFAULT
@@ -62,10 +63,7 @@ objects:
         Show the message, not only who sent it
       DATA`PREVIEW`DEFAULT: |-
         0
-      # Each player's choices: DATA`PREF`<player key>`<kind or PREVIEW>, 1 or 0. Unset means the default.
-      DATA`PREF: |-
-        Each player's choices. One branch per player key.
-      # The portal page: a form with one switch per kind, filled in by WEB`SCHEMA.
+      # The portal page: a form with one switch per kind, filled in by WEB`FORM`SCHEMA.
       DATA`WEB`SCHEMA: |-
         {"kind":"form","schema_version":1,"title":"What notifies you","pages":[{"key":"main","title":"What notifies you","order":1,"sections":[{"name":"Notify me about","order":1,"elements":[]},{"name":"On the lock screen","order":2,"elements":[{"kind":"field","key":"preview","label":"","type":"boolean","default":false,"help":"Off: a notification says only who it is from. On: it shows the message too, where anyone holding your phone can read it."}]}]}],"actions":{"submit":{"transport":"http","method":"POST","route":"/http/notifications/save","payload":"fields","on_success":{"toast":"Saved."},"on_error":{"bind_field_errors":true}}}}
 
@@ -73,35 +71,33 @@ objects:
       # +notify lists the settings; +notify <setting>=on|off changes one. %1 is what follows, as typed.
       CMD`NOTIFY:
         value: |-
-          $(?is)^\+notify(?\: +(.*))?$:@assert hastype(%#,player)=@pemit %#=notice(NOTIFY,Only players get notifications.,warn); @break strlen(%1)={@include/args %!/INC`SET=argument,%1}; @pemit %#=u(%!/FUN`SHOW,%#)
+          $(?is)^\+notify(?\: +(.*))?$:@assert hastype(%#,player)=@pemit %#=notice(NOTIFY,Only players get notifications.,warn); @break strlen(%1)={@include/args %!/INC`CMD`SET=argument,%1}; @pemit %#=u(%!/FUN`DISPLAY`SETTINGS,%#)
         flags: [regexp]
       # +notify <setting>=on|off.
-      INC`SET:
+      INC`CMD`SET:
         value: |-
-          think setq(setting,ucstr(trim(before(%<argument>,=))))[setq(choice,lcstr(trim(after(%<argument>,=))))]; @assert pos(=,%<argument>)=@pemit %#=notice(NOTIFY,+notify <setting>=on or off. +notify lists the settings.,warn); @assert member(u(%!/FUN`SETTINGS),%q<setting>)=@pemit %#=notice(NOTIFY,There is no setting called '[lcstr(%q<setting>)]'. +notify lists them.,warn); @assert match(on off,%q<choice>)=@pemit %#=notice(NOTIFY,Say on or off: +notify [lcstr(%q<setting>)]=on,warn); &DATA`PREF`[u(%!/FUN`KEY,%#)]`%q<setting> %!=t(match(on,%q<choice>)); @pemit %#=notice(NOTIFY,[lcstr(%q<setting>)] is %q<choice>: [u(%!/FUN`LABEL,%q<setting>)].,ok)
+          think setqm(notify_setting,ucstr(trim(before(%<argument>,=))),
+          notify_choice,lcstr(trim(after(%<argument>,=)))); @assert pos(=,%<argument>)=@pemit %#=notice(NOTIFY,+notify <setting>=on or off. +notify lists the settings.,warn); @assert member(u(%!/FUN`SETTING`LIST),%q<notify_setting>)=@pemit %#=notice(NOTIFY,There is no setting called '[lcstr(%q<notify_setting>)]'. +notify lists them.,warn); @assert match(on off,%q<notify_choice>)=@pemit %#=notice(NOTIFY,Say on or off: +notify [lcstr(%q<notify_setting>)]=on,warn); &NOTIFY`%q<notify_setting> %#=t(match(on,%q<notify_choice>)); @pemit %#=notice(NOTIFY,[lcstr(%q<notify_setting>)] is %q<notify_choice>: [u(%!/FUN`SETTING`LABEL,%q<notify_setting>)].,ok)
 
       # ---- reads ----------------------------------------------------------------
-      # %0 a player: the key their choices are kept under.
-      FUN`KEY: |-
-        edit(objid(%0),#,,:,_)
       # Every kind, by name.
-      FUN`KINDS: |-
+      FUN`SETTING`KINDS: |-
         iter(lattr(%!/DATA`KIND`*),after(%i0,DATA`KIND`))
       # Every setting: the kinds, then PREVIEW.
-      FUN`SETTINGS: |-
-        u(%!/FUN`KINDS) PREVIEW
+      FUN`SETTING`LIST: |-
+        u(%!/FUN`SETTING`KINDS) PREVIEW
       # %0 a setting: the DATA` branch that describes it.
-      FUN`BRANCH: |-
+      FUN`SETTING`BRANCH: |-
         if(strmatch(%0,PREVIEW),PREVIEW,KIND`%0)
       # %0 a setting: what it covers.
-      FUN`LABEL: |-
-        get(%!/DATA`[u(%!/FUN`BRANCH,%0)])
+      FUN`SETTING`LABEL: |-
+        get(%!/DATA`[u(%!/FUN`SETTING`BRANCH,%0)])
       # %0 a player, %1 a setting: 1 when it is on for them.
-      FUN`WANTS: |-
-        default(%!/DATA`PREF`[u(%!/FUN`KEY,%0)]`%1,get(%!/DATA`[u(%!/FUN`BRANCH,%1)]`DEFAULT))
+      FUN`PREFERENCE`WANTS: |-
+        default(%0/NOTIFY`%1,get(%!/DATA`[u(%!/FUN`SETTING`BRANCH,%1)]`DEFAULT))
       # %0 a player: their settings, as +notify shows them.
-      FUN`SHOW: |-
-        box(datacolumns(,Setting|[iter(u(%!/FUN`SETTINGS),lcstr(%i0),,|)],On|[iter(u(%!/FUN`SETTINGS),if(u(%!/FUN`WANTS,%0,%i0),tone(success,on),off),,|)],What it covers|[iter(u(%!/FUN`SETTINGS),u(%!/FUN`LABEL,%i0),,|)])%r[rule()]%r+notify <setting>=on or off changes one. Turn notifications on for a phone or browser in the portal: Settings%, Notifications.,Notifications)
+      FUN`DISPLAY`SETTINGS: |-
+        box(datacolumns(,Setting|[iter(u(%!/FUN`SETTING`LIST),lcstr(%i0),,|)],On|[iter(u(%!/FUN`SETTING`LIST),if(u(%!/FUN`PREFERENCE`WANTS,%0,%i0),tone(success,on),tone(muted,off)),,|)],What it covers|[iter(u(%!/FUN`SETTING`LIST),u(%!/FUN`SETTING`LABEL,%i0),,|)])%r[rule()]%r[tone(muted,+notify <setting>=on or off changes one. Turn notifications on for a phone or browser in the portal: Settings%, Notifications.)],Notifications)
 
       # ---- sending --------------------------------------------------------------
       # Sends a notification of kind %<kind> to player %<to>, when they want that kind: %<title> always, %<text>
@@ -110,23 +106,23 @@ objects:
       # @trigger/args by an object that controls this one, such as the event handler. @push itself leaves a
       # player who is at the game alone.
       API`SEND: |-
-        @assert u(%!/FUN`WANTS,%<to>,%<kind>); think setq(notify_text,if(u(%!/FUN`WANTS,%<to>,PREVIEW),%<text>)); @break %<urgent>={@push/urgent %<to>=%<title>,%q<notify_text>,%<path>,%<topic>}; @push %<to>=%<title>,%q<notify_text>,%<path>,%<topic>
+        @assert u(%!/FUN`PREFERENCE`WANTS,%<to>,%<kind>); think setq(notify_text,if(u(%!/FUN`PREFERENCE`WANTS,%<to>,PREVIEW),%<text>)); @break %<urgent>={@push/urgent %<to>=%<title>,%q<notify_text>,%<path>,%<topic>}; @push %<to>=%<title>,%q<notify_text>,%<path>,%<topic>
 
       # Keeps the portal page's switches for player %q<notify_viewer>: %q<notify_choices> is <setting>:<1 or 0>
-      # for each one sent. The save route forces this object to run it, so the writes' reports go to this
-      # object rather than into the route's reply.
-      INC`SAVE: |-
-        think setq(notify_key,u(me/FUN`KEY,%q<notify_viewer>)); @dolist/inline %q<notify_choices>={&DATA`PREF`%q<notify_key>`[before(##,:)] me=after(##,:)}
+      # for each one sent. The save route forces this object to run it, so the writes' reports go to this object
+      # rather than into the route's reply. A @trigger from the route would put "Notifications - Triggered." there.
+      INC`WEB`SAVE: |-
+        @dolist/inline %q<notify_choices>={&NOTIFY`[before(##,:)] %q<notify_viewer>=after(##,:)}
 
       # ---- the portal page ------------------------------------------------------
       # %0 the viewer: the form, one switch per kind, each set as the viewer has it.
-      WEB`SCHEMA: |-
-        json_fill(v(DATA`WEB`SCHEMA),/pages/0/sections/0/elements,json_array(iter(u(%!/FUN`KINDS),u(%!/WEB`FIELD,%i0,%0),,|),|),/pages/0/sections/1/elements/0/label,v(DATA`PREVIEW),/pages/0/sections/1/elements/0/default,u(%!/FUN`WANTS,%0,PREVIEW))
+      WEB`FORM`SCHEMA: |-
+        json_fill(v(DATA`WEB`SCHEMA),/pages/0/sections/0/elements,json_array(iter(u(%!/FUN`SETTING`KINDS),u(%!/WEB`FORM`FIELD,%i0,%0),,|),|),/pages/0/sections/1/elements/0/label,v(DATA`PREVIEW),/pages/0/sections/1/elements/0/default,u(%!/FUN`PREFERENCE`WANTS,%0,PREVIEW))
       # %0 a kind, %1 the viewer: its switch.
-      WEB`FIELD: |-
-        json(object,kind,json(string,field),key,json(string,lcstr(%0)),label,json(string,u(%!/FUN`LABEL,%0)),type,json(string,boolean),default,json(boolean,u(%!/FUN`WANTS,%1,%0)))
+      WEB`FORM`FIELD: |-
+        json(object,kind,json(string,field),key,json(string,lcstr(%0)),label,json(string,u(%!/FUN`SETTING`LABEL,%0)),type,json(string,boolean),default,json(boolean,u(%!/FUN`PREFERENCE`WANTS,%1,%0)))
       # The answer when the viewer is no character.
-      WEB`NOVIEWER: |-
+      WEB`FORM`NOVIEWER: |-
         json(object,ok,json(boolean,false),errors,json(object,_global,json(string,Choose a character first.)))
 
   # The help, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are evaluated,
@@ -153,7 +149,7 @@ objects:
 
         The portal's Notifications page sets the same things with switches.
       HELP`NOTIFY`STAFF: |-
-        The Notifications object in the master room keeps what can notify a player, as `` DATA`KIND`<NAME> `` with its description and `` DATA`KIND`<NAME>`DEFAULT ``, 1 when it is on until a player turns it off. `` DATA`PREVIEW`DEFAULT `` is whether a new player sees message text: 0.
+        The Notifications object in the master room keeps what can notify a player, as `` DATA`KIND`<NAME> `` with its description and `` DATA`KIND`<NAME>`DEFAULT ``, 1 when it is on until a player turns it off. `` DATA`PREVIEW`DEFAULT `` is whether a new player sees message text: 0. Each player's choices are on the player, as `` NOTIFY`<NAME> `` and `` NOTIFY`PREVIEW ``: 1 or 0, unset meaning the default.
 
         ## Adding a kind
 
@@ -185,6 +181,7 @@ objects:
     target: "{{$http_handler}}"
     attributes:
       GET`NOTIFICATIONS`SCHEMA: |-
-        @respond/type application/json; think u({{notifier}}/WEB`SCHEMA,%<viewer>)
+        @respond/type application/json; think u({{notifier}}/WEB`FORM`SCHEMA,%<viewer>)
       POST`NOTIFICATIONS`SAVE: |-
-        @respond/type application/json; @assert isdbref(%<viewer>)={think u({{notifier}}/WEB`NOVIEWER)}; think setq(notify_viewer,%<viewer>)[setq(notify_choices,iter(u({{notifier}}/FUN`SETTINGS),if(json_query(%<body>,exists,lcstr(%i0)),%i0:[t(match(1 true,json_query(%<body>,extract,$.[lcstr(%i0)])))])))]; @force {{notifier}}=@include me/INC`SAVE; think json(object,ok,json(boolean,true),message,json(string,Saved.))
+        @respond/type application/json; @assert isdbref(%<viewer>)={think u({{notifier}}/WEB`FORM`NOVIEWER)}; think setqm(notify_viewer,%<viewer>,
+          notify_choices,iter(u({{notifier}}/FUN`SETTING`LIST),if(json_query(%<body>,exists,lcstr(%i0)),%i0:[t(match(1 true,json_query(%<body>,extract,$.[lcstr(%i0)])))]))); @force {{notifier}}=@include me/INC`WEB`SAVE; think json(object,ok,json(boolean,true),message,json(string,Saved.))
