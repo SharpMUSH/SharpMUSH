@@ -65,7 +65,7 @@ In-place action lists (those run by @include, @trigger, @force, @switch/inplace,
 ## Include switches
 
 @include takes the following switches to alter its behaviour:
-- /args: The arguments are `<name>,<value>` pairs, read in the included actions as %`\<name\>` (see [uargs()]). The including environment's own arguments stay available.
+- /args: The arguments are `<name>,<value>` pairs, read in the included actions as %`\<name\>` (see [uargs()]). Each supplied value also replaces its numbered slot, starting at %0. Untouched inherited slots stay available, including with /chain. This replaces the previous names-only overlay. hasarg(name,supplied) reports only this include's supplied keys; hasarg(name) also sees inherited keys.
 - /chain: Include several attributes in sequence, as a pipeline. See [@include attribute pipelines].
 - /nobreak: Prevents an @break/@assert in the included attribute from breaking the including action list.
 - /localize: Saves all q-registers before including the attribute, and restores them after including the attribute.

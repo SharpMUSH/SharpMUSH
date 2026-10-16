@@ -301,6 +301,7 @@ public class EventService(
 			Enactor = run.Enactor,
 			Arguments = new Dictionary<string, CallState>(arguments, StringComparer.OrdinalIgnoreCase),
 			EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
+			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 			CurrentEvaluation = new DBAttribute(run.Handler, hearer.Attribute),
 			AttributeChangeDepth = run.AttributeChangeDepth
 		};

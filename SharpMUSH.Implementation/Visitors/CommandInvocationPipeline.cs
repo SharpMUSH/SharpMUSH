@@ -702,6 +702,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				Context = bodyState.Context with
 				{
 					EnvironmentRegisters = arguments,
+					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					// No %c/%u yet: CommandListParse starts them, and treats the body as a queue entry's own
 					// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182). Its %>
 					// and %| start as copies of the matching list's, as a queued body's do.

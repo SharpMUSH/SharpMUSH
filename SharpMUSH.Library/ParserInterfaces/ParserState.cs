@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -431,6 +431,9 @@ public sealed record EvaluationContext
 	/// <summary>The environment registers.</summary>
 	public required Dictionary<string, CallState> EnvironmentRegisters { get; init; }
 
+	/// <summary>Caller-supplied keys for this attribute invocation; null outside an invocation.</summary>
+	public ImmutableHashSet<string>? SuppliedArgumentKeys { get; init; }
+
 	/// <summary>The telnet handle running the command.</summary>
 	public long? Handle { get; init; }
 
@@ -528,6 +531,13 @@ public partial record ParserState
 	{
 		get => Context.EnvironmentRegisters;
 		init => Context = Context with { EnvironmentRegisters = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.SuppliedArgumentKeys"/>
+	public ImmutableHashSet<string>? SuppliedArgumentKeys
+	{
+		get => Context.SuppliedArgumentKeys;
+		init => Context = Context with { SuppliedArgumentKeys = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.Handle"/>

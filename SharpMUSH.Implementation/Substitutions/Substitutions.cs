@@ -92,12 +92,10 @@ public static partial class Substitutions
 			// the rest outright — "only check numeric args, ignore named ones". Named registers
 			// share this dictionary with %0-%N: a regexp $-command's capture groups land here
 			// (PatternArguments.cs:19-20), as do a mapsql callback's column names, so counting
-			// entries over-reported both. A key counts as a position when int.TryParse accepts it,
-			// which is the same test ParserState.ArgumentsOrdered applies; Penn's sscanf("%d") also
-			// takes a leading-integer prefix, which nothing here produces. Negative indices are
-			// ignored, as they are in Penn, where the running maximum starts at zero.
+			// entries over-reported both. Only ASCII decimal digits name numbered slots; signed
+			// names are ordinary named arguments and must not inflate the positional count.
 			"+" => (parser.CurrentState.EnvironmentRegisters.Keys
-				.Select(key => int.TryParse(key, out var index) ? index : -1)
+				.Select(key => key.Length > 0 && key.All(char.IsAsciiDigit) && int.TryParse(key, out var index) ? index : -1)
 				.DefaultIfEmpty(-1)
 				.Max() + 1).ToString(),
 			// PennMUSH emits "% " (percent then space) literally "for more natural typing"

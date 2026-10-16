@@ -355,6 +355,7 @@ public class ConnectionAnnounceService(
 				Caller = playerRef,
 				Arguments = argsDict,
 				EnvironmentRegisters = new(argsDict),
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(argsDict),
 				CurrentEvaluation = new DBAttribute(ownerRef, attrName)
 			};
 

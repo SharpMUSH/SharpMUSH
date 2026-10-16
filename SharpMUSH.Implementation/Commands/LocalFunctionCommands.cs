@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -33,7 +34,7 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionMessage", executor, message);
 			return new CallState(message);
 		}
-		if (switches.Length > 2 || operation is not (null or "ALIAS" or "DELETE" or "ENABLE" or "DISABLE" or "PRESERVE" or "RESTORE"))
+		if (switches.Length > 2 || operation is not (null or "ALIAS" or "DELETE" or "ENABLE" or "DISABLE" or "PRESERVE" or "RESTORE" or "ARGS"))
 			return await Report(ErrorMessages.Returns.InvalidArgument);
 		if (operation == "RESTORE" && (name.Length == 0 || name == "*"))
 		{
@@ -48,12 +49,27 @@ public partial class Commands
 				return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, "LOCAL"));
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionHeader", executor);
 			foreach (var entry in entries)
+			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
 					entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
+				if (entry.ArgumentNames.Length > 0)
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor, string.Join(" ", entry.ArgumentNames));
+			}
 			return CallState.Empty;
 		}
 		if (name.Length > 64 || !name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
 			return await Report(ErrorMessages.Returns.InvalidArgument);
+		if (operation == "ARGS")
+		{
+			if (ArgHelpers.ArgumentNames(aliasTarget) is not string[] names)
+				return await Report(ErrorMessages.Returns.BadArgumentName);
+			if (!TryLocalRegistry(() => registry.SetArgumentNames(name, names, owner), out var found) || !found)
+				return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionArgumentNamesFormat), executor,
+				name, names.Length == 0 ? "-" : string.Join(" ", names));
+			return CallState.Empty;
+		}
+
 		if (operation is not null)
 		{
 			var supported = TryLocalRegistry(() => operation switch
@@ -76,6 +92,9 @@ public partial class Commands
 			if (!TryLocalRegistry(() => registry.Get(name, owner), out var entry) || entry is null) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
 				entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
+			var signature = entry.AliasOf is { } target ? registry.Get(target, owner)?.ArgumentNames ?? [] : entry.ArgumentNames;
+			if (signature.Length > 0)
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor, string.Join(" ", signature));
 			return CallState.Empty;
 		}
 		if (IsReservedLocalFunctionName(name))

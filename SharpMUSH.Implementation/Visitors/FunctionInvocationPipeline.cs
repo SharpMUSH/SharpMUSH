@@ -475,7 +475,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// The arguments pushed for this call become %0, %1, … inside the attribute, and with
 			// @function/args also %<name> for each name in order.
 			var values = invokedParser.CurrentState.Arguments.Values.ToArray();
-			var args = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+			var args = new AttributeArgumentEnvironment();
 			foreach (var (value, i) in values.Select((value, i) => (value, i)))
 			{
 				args[i.ToString()] = value;

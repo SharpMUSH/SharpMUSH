@@ -33,6 +33,53 @@ public class LocalFunctionTests
 	}
 
 	[Test]
+	[Arguments("who count", "Bob,0", "Bob|0||2")]
+	[Arguments("key...|value...", "A,B,C", "||A|3")]
+	[Arguments("...", "who,Bob,count,", "Bob|||4")]
+	public async Task LocalSignaturesUseGlobalGrammar(string signature, string arguments, string expected)
+	{
+		var name = "localgrammar" + Guid.NewGuid().ToString("N");
+		await Cmd($"&{name} me=%<who>|%<count>|%<key1>|%+");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Cmd($"@function/local/args {name}={signature}");
+		try { await Assert.That(await Eval($"localfun({name},{arguments})")).IsEqualTo(expected); }
+		finally { await Cmd($"@function/local/delete {name}"); }
+	}
+
+	[Test]
+	public async Task LocalSignatureUpdatesFollowAliasesAndRejectInvalidNames()
+	{
+		var name = "localupdate" + Guid.NewGuid().ToString("N");
+		var alias = name + "alias";
+		await Cmd($"&{name} me=%<who>|%<new>|%0");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Cmd($"@function/local/args {name}=who");
+		await Cmd($"@function/local/alias {alias}={name}");
+		try
+		{
+			await Assert.That(await Eval($"localfun({alias},Bob)")).IsEqualTo("Bob||Bob");
+			await Cmd($"@function/local/args {name}=0");
+			await Assert.That(await Eval($"localfun({alias},Bob)")).IsEqualTo("Bob||Bob");
+			await Cmd($"@function/local/args {name}=new");
+			await Assert.That(await Eval($"localfun({alias},Bob)")).IsEqualTo("|Bob|Bob");
+			await Cmd($"@function/local/args {name}=");
+			await Assert.That(await Eval($"localfun({alias},Bob)")).IsEqualTo("||Bob");
+		}
+		finally { await Cmd($"@function/local/delete {name}"); }
+	}
+
+	[Test]
+	public async Task LocalSignaturesRetainNumberedAliases()
+	{
+		var name = "localsig" + Guid.NewGuid().ToString("N");
+		await Cmd($"&{name} me=%<who>|%0|%<item1>|%1|%<itemcount>|%+");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Cmd($"@function/local/args {name}=who item...");
+		try { await Assert.That(await Eval($"localfun({name},Bob,A,B)")).IsEqualTo("Bob|Bob|A|A|2|3"); }
+		finally { await Cmd($"@function/local/delete {name}"); }
+	}
+
+	[Test]
 	public async Task NewAliasRejectsATargetClaimedByALiveBuiltinClone()
 	{
 		var name = "claimedTarget" + Guid.NewGuid().ToString("N");
@@ -61,6 +108,7 @@ public class LocalFunctionTests
 	[Arguments("@function/local/preserve unavailable")]
 	[Arguments("@function/local/restore unavailable")]
 	[Arguments("@function/local/alias unavailable=target")]
+	[Arguments("@function/local/args unavailable=who")]
 	public async Task LegacyScopedManagementReturnsNormalUnavailable(string command)
 	{
 		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();

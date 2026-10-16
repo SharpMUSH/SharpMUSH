@@ -10,6 +10,18 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task QueuedPresenceIsImmutableAndDoesNotForceValues()
+	{
+		var environment = new Dictionary<string, CallState> { ["who"] = new CallState(MarkupText.Empty, 0, null, () => throw new InvalidOperationException("Presence forced an argument")) };
+		var state = ParserState.RootFor(new DBRef(7)) with { EnvironmentRegisters = environment, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(environment) };
+		var queued = state.SnapshotForQueuedAction();
+		environment.Clear();
+		await Assert.That(queued.SuppliedArgumentKeys!.Contains("WHO")).IsTrue();
+		await Assert.That(queued.ForFunction("hasarg", []).SuppliedArgumentKeys!.Contains("who")).IsTrue();
+		await Assert.That(queued.EnvironmentRegisters.ContainsKey("who")).IsTrue();
+	}
+
+	[Test]
 	public async ValueTask AFunctionFrameSharesItsCallersContext()
 	{
 		var root = ParserState.RootFor(new DBRef(7));

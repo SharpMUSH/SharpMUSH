@@ -145,16 +145,22 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public bool SetArgumentNames(string name, string[] names)
+	public bool SetArgumentNames(string name, string[] names) => SetArgumentNames(name, names, null);
+
+	public bool SetArgumentNames(string name, string[] names, DBRef? owner)
 	{
 		lock (_mutations)
 		{
-			if (!_functions.TryGetValue(Key(name, null), out var entry))
+			if (!_functions.TryGetValue(Key(name, owner), out var entry))
 			{
 				return false;
 			}
 
-			_functions[Key(entry.Name, null)] = entry with { ArgumentNames = names };
+			// A signature belongs to the concrete definition. Storing it on an alias would report
+			// success but have no effect, since Resolve reads the target's signature.
+			if (entry.AliasOf is { } target && (!_functions.TryGetValue(Key(target, owner), out entry) || entry.AliasOf is not null))
+				return false;
+			_functions[Key(entry.Name, owner)] = entry with { ArgumentNames = names.ToArray() };
 			return true;
 		}
 	}

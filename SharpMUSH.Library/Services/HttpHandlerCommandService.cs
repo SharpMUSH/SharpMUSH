@@ -155,10 +155,12 @@ public class HttpHandlerCommandService(
 				// Build a fresh parser state — there is no ambient parser on the HTTP request path.
 				// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
 				var request = RequestHeaders(headers);
+				var arguments = RequestArguments(path, body, request, viewer);
 				var evalParser = parser.Push(ParserState.RootFor(handlerRef.Value) with
 				{
 					Registers = new([options.CurrentValue.Compatibility.HttpQRegisters ? RequestRegisters(request) : []]),
-					EnvironmentRegisters = RequestArguments(path, body, request, viewer),
+					EnvironmentRegisters = arguments,
+					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					ExecutionBudget = budget,
 					HttpResponse = context
 				});

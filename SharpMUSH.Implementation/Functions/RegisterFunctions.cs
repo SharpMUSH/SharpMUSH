@@ -9,6 +9,20 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	[SharpFunction(Name = "hasarg", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["name", "scope"])]
+	public ValueTask<CallState> HasArgument(IMUSHCodeParser parser, SharpFunctionAttribute _)
+	{
+		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var scope = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText() ?? "visible";
+		if (!scope.Equals("visible", StringComparison.OrdinalIgnoreCase) && !scope.Equals("supplied", StringComparison.OrdinalIgnoreCase))
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
+		var keys = parser.CurrentState.SuppliedArgumentKeys;
+		var present = keys is not null && (scope.Equals("supplied", StringComparison.OrdinalIgnoreCase)
+			? keys.Contains(name)
+			: parser.CurrentState.EnvironmentRegisters.Keys.Any(key => key.Equals(name, StringComparison.OrdinalIgnoreCase)));
+		return ValueTask.FromResult(new CallState(present ? "1" : "0"));
+	}
+
 	/// <summary>The register stores r() reads from; each is matched by unambiguous prefix.</summary>
 	private static readonly string[] RegisterTypes = ["qregisters", "args", "iter", "switch", "regexp"];
 
