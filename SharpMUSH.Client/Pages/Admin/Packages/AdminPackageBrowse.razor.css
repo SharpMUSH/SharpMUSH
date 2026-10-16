@@ -21,7 +21,7 @@
 .pkg-card-body { padding: 14px 16px 16px; }
 .pkg-card-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 0.75rem; }
 .pkg-card-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.pkg-card-note { font-size: 12px; color: var(--text-faint); margin-top: 0.5rem; }
+.pkg-card-note { font-size: 12px; color: var(--text-faint); margin-top: 0.5rem; overflow-wrap: anywhere; }
 .pkg-toolbar ::deep .pkg-btn-primary,
 .pkg-card-body ::deep .pkg-btn-primary {
     background: var(--accent);
@@ -36,4 +36,12 @@
     .pkg-card-body ::deep .pkg-version-select {
         max-width: 100%;
     }
+}
+
+.pkg-installed-marker {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+    font-size: 13px;
 }

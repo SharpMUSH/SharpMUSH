@@ -8848,4 +8848,13 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="PkgBrowseInstalled" xml:space="preserve">
+    <value>Installed v{0}</value>
+  </data>
+  <data name="PkgBrowseInstalledOrigin" xml:space="preserve">
+    <value>Installed from {0} (path: {1}).</value>
+  </data>
+  <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
+    <value>Installed status is unavailable. Refresh to try again. {0}</value>
+  </data>
 </root>
