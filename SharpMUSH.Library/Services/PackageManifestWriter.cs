@@ -560,7 +560,7 @@ public static class PackageManifestWriter
 	/// </summary>
 	private static string Scalar(string value) => NeedsQuoting(value) ? Quoted(value) : value;
 
-	private static string Quoted(string value) => $"'{value.Replace("'", "''")}'";
+	private static string Quoted(string value) => NeedsEscaping(value) ? DoubleQuoted(value) : $"'{value.Replace("'", "''")}'";
 
 	/// <summary>
 	/// A double-quoted YAML scalar. The only quoting that survives a line break, which is why it
@@ -578,6 +578,8 @@ public static class PackageManifestWriter
 				case '\n': quoted.Append("\\n"); break;
 				case '\r': quoted.Append("\\r"); break;
 				case '\t': quoted.Append("\\t"); break;
+				case '\u2028': quoted.Append("\\u2028"); break;
+				case '\u2029': quoted.Append("\\u2029"); break;
 				default:
 					if (char.IsControl(character))
 					{
@@ -611,11 +613,15 @@ public static class PackageManifestWriter
 		"true", "false", "yes", "no", "on", "off", "y", "n", "null", "~"
 	};
 
+	private static bool NeedsEscaping(string value)
+		=> value.Any(character => char.IsControl(character) || character is '\u2028' or '\u2029');
+
 	private static bool NeedsQuoting(string value)
 		=> value.Length == 0
 			|| char.IsWhiteSpace(value[0])
 			|| char.IsWhiteSpace(value[^1])
 			|| value.AsSpan().ContainsAny(Hazards)
+			|| NeedsEscaping(value)
 			|| LeadingIndicators.Contains(value[0])
 			// A leading digit covers every number, version and date shape in one rule. It is broader
 			// than YAML strictly needs and deliberately so: the alternative is re-deciding, per field,
