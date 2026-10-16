@@ -46,6 +46,18 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	[Arguments("$")]
+	[Arguments("^")]
+	public async Task MatchedExplicitArgumentsOverrideNamedRegexCapturesIgnoringCase(string prefix)
+	{
+		var thing = await NewThing("MatchedCaseAliases");
+		await Run($"&RUN {thing}={prefix}greet (?<target>.*):&OUT {thing}=%<target>|%<TARGET>|%0|%1|[hasarg(target,supplied)]|[hasarg(0,supplied)]|[hasarg(1,supplied)]");
+		await Run($"@set {thing}/RUN=regexp");
+		await Run($"@trigger/inline/match/args {thing}/RUN=greet world,TARGET,Bob");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("Bob|Bob|Bob|world|1|1|1");
+	}
+
+	[Test]
 	public async Task TriggerWithoutMatchRunsOnlyTheActionHalf()
 	{
 		var thing = await NewThing("TriggerActionHalf");
