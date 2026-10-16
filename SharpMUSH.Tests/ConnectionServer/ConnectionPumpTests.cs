@@ -1,3 +1,7 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.SocketServer.ProtocolHandlers;
@@ -151,6 +155,84 @@ public class ConnectionPumpTests
 		// Drop now DETACHES rather than disconnecting immediately.
 		await conn.DidNotReceive().DisconnectAsync(42);
 		await Assert.That(tracker.IsDetached(42)).IsTrue();
+	}
+
+	[Test]
+	[Arguments("{\"type\":\"environ\",\"vars\":{}}")]
+	[Arguments("{\"type\":\"environ\",\"vars\":{\"TZ\":5}}")]
+	[Arguments("{\"type\":\"environ\",\"vars\":{\"TZ\":\"\"}}")]
+	[Arguments("{\"type\":\"environ\",\"vars\":")]
+	[Arguments("{\"type\":\"environ\"} trailing")]
+	public async Task Malformed_environment_control_never_becomes_a_command(string frame)
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var pump = MakePump(bus, Substitute.For<IConnectionServerService>(), Substitute.For<IDescriptorGeneratorService>());
+		await pump.RunAsync(new FakeTransport("{\"type\":\"hello\"}", frame), 42, CancellationToken.None);
+
+		await bus.DidNotReceive().Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
+		await bus.DidNotReceive().Publish(Arg.Any<ClientTimeZoneMessage>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task Environment_control_updates_metadata_without_admitting_a_command()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var pump = MakePump(bus, Substitute.For<IConnectionServerService>(), Substitute.For<IDescriptorGeneratorService>());
+		await pump.RunAsync(new FakeTransport("{\"type\":\"hello\"}",
+			"{\"type\":\"environ\",\"vars\":{\"TZ\":\"America/Chicago\"}}"), 42, CancellationToken.None);
+
+		await bus.Received(1).Publish(Arg.Is<ClientTimeZoneMessage>(m => m.Handle == 42 && m.Zone == "America/Chicago"), Arg.Any<CancellationToken>());
+		await bus.DidNotReceive().Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task Fragmented_environment_and_adjacent_commands_keep_their_message_boundaries()
+	{
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+		using var listener = new TcpListener(IPAddress.Loopback, 0);
+		listener.Start();
+		using var client = new TcpClient();
+		var accept = listener.AcceptTcpClientAsync(timeout.Token);
+		await client.ConnectAsync((IPEndPoint)listener.LocalEndpoint, timeout.Token);
+		using var server = await accept;
+		using var browserSocket = WebSocket.CreateFromStream(client.GetStream(), false, null, Timeout.InfiniteTimeSpan);
+		using var gatewaySocket = WebSocket.CreateFromStream(server.GetStream(), true, null, Timeout.InfiniteTimeSpan);
+		var bus = Substitute.For<IMessageBus>();
+		var pump = MakePump(bus, Substitute.For<IConnectionServerService>(), Substitute.For<IDescriptorGeneratorService>());
+		var running = pump.RunAsync(new WebSocketTransport(gatewaySocket, "127.0.0.1", "localhost"), 42, timeout.Token);
+
+		await browserSocket.SendAsync(Encoding.UTF8.GetBytes("{\"type\":\"hello\"}"), WebSocketMessageType.Text, true, timeout.Token);
+		await browserSocket.SendAsync(Encoding.UTF8.GetBytes("{\"type\":\"envi"), WebSocketMessageType.Text, false, timeout.Token);
+		await browserSocket.SendAsync(Encoding.UTF8.GetBytes("ron\",\"vars\":{\"TZ\":\"America/Chicago\"}}"), WebSocketMessageType.Text, true, timeout.Token);
+		await browserSocket.SendAsync(Encoding.UTF8.GetBytes("say {\"type\":\"environ\"}"), WebSocketMessageType.Text, true, timeout.Token);
+		await browserSocket.SendAsync(Encoding.UTF8.GetBytes("{\"type\":\"chat\",\"text\":\"hello\"}"), WebSocketMessageType.Text, true, timeout.Token);
+		await browserSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, timeout.Token);
+		await running.WaitAsync(timeout.Token);
+
+		await bus.Received(1).Publish(Arg.Is<ClientTimeZoneMessage>(m => m.Zone == "America/Chicago"), Arg.Any<CancellationToken>());
+		await bus.Received(2).Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
+		await bus.Received(1).Publish(Arg.Is<WebSocketInputMessage>(m => m.Input == "say {\"type\":\"environ\"}"), Arg.Any<CancellationToken>());
+		await bus.Received(1).Publish(Arg.Is<WebSocketInputMessage>(m => m.Input == "{\"type\":\"chat\",\"text\":\"hello\"}"), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task Environment_frames_after_resume_update_the_original_handle_without_commands()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, bus);
+		var resume = new ResumeTokenService();
+		var registry = new SessionSinkRegistry();
+		var pump = MakePump(bus, conn, Substitute.For<IDescriptorGeneratorService>(), resume: resume, registry: registry);
+		await pump.RunAsync(new FakeTransport("{\"type\":\"hello\"}"), 42, CancellationToken.None);
+		var token = await resume.MintAsync(42, registry.Get(42)!.SessionId);
+		var reconnect = new FakeTransport($"{{\"type\":\"resume\",\"token\":\"{token}\",\"lastSeq\":0}}",
+			"{\"type\":\"environ\",\"vars\":{\"TZ\":\"America/Chicago\"}}", "{\"type\":\"environ\",\"vars\":{}}");
+
+		await pump.RunAsync(reconnect, 99, CancellationToken.None);
+
+		await Assert.That(reconnect.Sent.Any(b => Encoding.UTF8.GetString(b).Contains("reattached"))).IsTrue();
+		await bus.Received(1).Publish(Arg.Is<ClientTimeZoneMessage>(m => m.Handle == 42 && m.Zone == "America/Chicago"), Arg.Any<CancellationToken>());
+		await bus.DidNotReceive().Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
