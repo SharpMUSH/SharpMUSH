@@ -207,7 +207,7 @@ public class DiscordPackagesIntegrationTests
 			await God($"@hook/override @discord={hook},CALL");
 
 			var at = DateTimeOffset.UtcNow.AddDays(2).ToUnixTimeSeconds();
-			var scheduled = await AsStaff($"+scene/schedule {title}={at}");
+			var scheduled = await AsStaff($"+scene/schedule {at}/{title}=A pitch");
 			var id = scheduled.Split("Scheduled scene ")[1].Split(' ')[0];
 
 			await Assert.That(await Think($"u({publisher}/FUN`SCENE`READ,{id})%q<scene_status> %q<scene_waiting> %q<scene_listed>"))
@@ -234,7 +234,7 @@ public class DiscordPackagesIntegrationTests
 			// Publishing off: nothing goes up. Taking events down still runs.
 			await God($"&DATA`CONFIG`PUBLISH {publisher}=0");
 			await God($"&LOG {hook}");
-			var second = await AsStaff($"+scene/schedule {title}x={at}");
+			var second = await AsStaff($"+scene/schedule {at}/{title}x=A pitch");
 			var secondId = second.Split("Scheduled scene ")[1].Split(' ')[0];
 			await SettleAsync();
 			await Assert.That(await Think($"get({hook}/LOG)")).DoesNotContain($"/event scene-{secondId}=");

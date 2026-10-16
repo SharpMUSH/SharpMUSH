@@ -366,8 +366,11 @@ public class SceneAvailabilityIntegrationTests
 			await EntryAsync(bobKey, 1, "free", ("REPEAT", "weekly"), ("DAYS", "mon"), ("DATE", "2098-12-29"),
 				("TIME", "17:00"), ("MINUTES", "300"), ("ZONE", "UTC"));
 
-			await As(ann, "+scene/schedule Harbour market=4071319200");
+			await As(ann, "+scene/schedule 4071319200/Harbour market=A pitch");
 			var scene = await Think($"last(setinter(scenelist(scheduled),scenelist(#{ann.DbRef.Number})))");
+			await As(ann, $"+scene/invite {scene}=#{bob.DbRef.Number}");
+			var pendingCard = await As(ann, $"+scene {scene}");
+			await Assert.That(pendingCard).DoesNotContain(await Think($"name(#{bob.DbRef.Number})"));
 			await As(bob, $"+scene/join {scene}");
 			await As(cleo, $"+scene/join {scene}");
 
@@ -384,7 +387,7 @@ public class SceneAvailabilityIntegrationTests
 			await Assert.That(await As(ann, "+avail/scene 999999")).Contains("No such scene: 999999");
 			await Assert.That(await As(ann, $"+avail/scene {scene}=1h")).Contains($"Free times for scene {scene}");
 			// Ann and Cleo are free now (Ann's entries start in 2098), so the bridge offers to book the first time.
-			await Assert.That(await As(ann, $"+avail/find {cleoName}=1h")).Contains("Book the first: +scene/schedule <title>=");
+			await Assert.That(await As(ann, $"+avail/find {cleoName}=1h")).Contains("Book the first: +scene/schedule ");
 			await Assert.That(await As(ann, "+help avail scene")).Contains("+avail/scene <id>");
 
 			var staff = await Player("AvSceneCfg");

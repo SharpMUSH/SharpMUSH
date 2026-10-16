@@ -1,6 +1,6 @@
 format: "1.10"
 package: scene
-version: 1.13.0
+version: 1.14.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -555,11 +555,8 @@ objects:
       #
       # So these take the id explicitly and record regardless of location. Four consequences,
       # each deliberate:
-      #   * a poser who is not in the cast is added to it -- a recorded pose whose author is missing
-      #     from the info card's cast would leave that card lying about who was in the scene. Guarded on
-      #     them having no role YET, because @scene/member sets the role outright: writing it on
-      #     every pose demoted an owner to participant in their own scene, and every ownership verb
-      #     (+scene/public, /finish, /pitch) is gated on FUN`OWNS, so it locked them out of it;
+      #   * the atomic scenejoin operation accepts a new poser under the joining policy and cap,
+      #     preserving existing owner, GM and participant roles. A refused join stops the pose;
       #   * the poser is FOCUSED on the scene they just posed into. Posing is the act that says "I am
       #     in this one" -- and without it a pose composed on a scene's page landed there while the
       #     character's focus stayed wherever it had been, so the very next line they typed in a
@@ -605,7 +602,7 @@ objects:
       INC`WEB`CHECK: |-
         @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %<scene>,warn); @assert strmatch(scene(%<scene>,status),active)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTRUNNING),warn)
       INC`WEB`ENTER: |-
-        @if not(match(owner participant,scenemember(%<scene>,%#,role)))={@scene/member %<scene>/participant=%#}; @scene/focus %#=%<scene>; @context/push %#=scene_focus,[json(object,scene,%<scene>)]; think setq(scene_id,%<scene>)[setq(room_id,scene(%<scene>,room))][setq(poser_name,u(%!/FUN`POSER,%<scene>,%#))]
+        @assert not(strmatch(setr(join_result,scenejoin(%<scene>,%#)),#-1*))=@pemit %#=notice(SCENE,%q<join_result>,warn); @scene/focus %#=%<scene>; @context/push %#=scene_focus,[json(object,scene,%<scene>)]; think setq(scene_id,%<scene>)[setq(room_id,scene(%<scene>,room))][setq(poser_name,u(%!/FUN`POSER,%<scene>,%#))]
       CMD`WEB`EMIT:
         value: |-
           $(?is)^\+scene/em(?\:i(?\:t)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,emit,,%2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,EMIT,self,,words,%2,line,%2,heard,%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
@@ -613,7 +610,7 @@ objects:
 
       CMD`WEB`POSE:
         value: |-
-          $(?is)^\+scene/po(?\:s(?\:e)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%2,line,%q<poser_name> %2,heard,%q<poser_name> %2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/pos(?\:e)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%2,line,%q<poser_name> %2,heard,%q<poser_name> %2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       CMD`WEB`SAY:
@@ -652,7 +649,7 @@ objects:
       # body. The scene a player is in is scenefocus(); nothing is stored on the player.
       CMD`CREATE:
         value: |-
-          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert setr(scene_id,scenecreate(%L,%#,%1)); @scene/member %q<scene_id>/owner=%#; @scene/focus %#=%q<scene_id>; @context/push %#=scene_focus,[json(object,scene,%q<scene_id>)]; @scene/set %q<scene_id>/status=get(%!/DATA`CONFIG`DEFAULT-STATUS); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Scene %q<scene_id> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)
+          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert strlen(setr(create_title,trim(before(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`CREATE),warn); @assert not(strmatch(setr(scene_id,scenecreate(%L,%#,%q<create_title>,after(%1,chr(61)))),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @scene/focus %#=%q<scene_id>; @context/push %#=scene_focus,[json(object,scene,%q<scene_id>)]; @scene/set %q<scene_id>/status=get(%!/DATA`CONFIG`DEFAULT-STATUS); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Scene %q<scene_id> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)
         flags: [REGEXP]
 
       # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
@@ -711,13 +708,28 @@ objects:
         flags: [REGEXP]
 
       # ---- membership / RSVP / focus --------------------------------------------
-      # An owner who joins their own scene again (the portal's Join, after focusing elsewhere) stays its
-      # owner: @scene/member sets the role outright, so it is skipped for them. @scene/member and @scene/focus
-      # refuse a missing scene but tell the Logger, not the player, so each verb that names a scene checks it
-      # exists first; scene() also hides a private scene from a non-member, so it cannot be joined by its id.
+      # scenejoin preserves existing owner/GM/participant roles and checks admission atomically.
+      # A pending invitation permits accepting a private scene before scene() permits reading it:
+      # join/activate therefore ask scenejoin first, and read access follows successful membership.
+      # Joining controls are scene metadata, independent of pose tags and public visibility.
+      FUN`PARTICIPATION`TAGS: |-
+        %[[firstof(scene(%0,joinpolicy),open)]%][if(gt(firstof(scene(%0,playercap),0),0),%b%[cap [scene(%0,playercap)]%])]
+      CMD`POLICY:
+        value: |-
+          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.,ok)
+        flags: [REGEXP]
+      CMD`LIMIT:
+        value: |-
+          $(?is)^\+scene/lim(?\:i(?\:t)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert cand(isint(%2),gte(%2,0),lte(%2,10000))=@pemit %#=notice(SCENE,Use +scene/limit [<id>=]0-10000. Zero clears the cap.,warn); @assert cor(gt(%2,0),not(strmatch(scene(%q<scene_id>,joinpolicy),limited)))=@pemit %#=notice(SCENE,Change limited policy before clearing its cap.,warn); @assert not(strmatch(setr(limit_result,sceneset(%q<scene_id>,playercap,%2)),#-1*))=@pemit %#=notice(SCENE,The cap cannot be below the number of participating players.,warn); @pemit %#=notice(SCENE,Player cap set to %2.,ok)
+        flags: [REGEXP]
+      CMD`INVITE:
+        value: |-
+          $(?is)^\+scene/inv(?\:i(?\:t(?\:e)?)?)? (\d+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(invitee,pmatch(%2)))=@pemit %#=notice(SCENE,No such player.,warn); @assert u(%!/FUN`IS`APPROVED,%q<invitee>)=@pemit %#=notice(SCENE,That player is not approved to participate in scenes.,warn); @assert not(match(owner gm participant,scenemember(%1,%q<invitee>,role)))=@pemit %#=notice(SCENE,That player already participates.,warn); @assert not(strmatch(setr(invite_result,sceneinvite(%1,%q<invitee>)),#-1*))=@pemit %#=notice(SCENE,%q<invite_result>,warn); @pemit %#=notice(SCENE,Invitation saved for %2. They may +scene/join %1 if a seat is available.,ok)
+        flags: [REGEXP]
+
       CMD`JOIN:
         value: |-
-          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @if not(strmatch(scenemember(%1,%#,role),owner))={@scene/member %1/participant=%#}; @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
+          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
         flags: [REGEXP]
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
@@ -731,7 +743,7 @@ objects:
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
         value: |-
-          $(?is)^\+scene/(?\:ta(?\:g)?|rs(?\:v(?\:p)?)?) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(match(owner participant,scenemember(%1,%#,role)))=@pemit %#=notice(SCENE,You are already in scene %1.,warn); @scene/member %1/attending=%#; @pemit %#=notice(SCENE,RSVP'd to scene %1.,ok)
+          $(?is)^\+scene/(?\:ta(?\:g)?|rs(?\:v(?\:p)?)?) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(match(owner gm participant invited,scenemember(%1,%#,role)))=@pemit %#=notice(SCENE,You are already in scene %1 or have an invitation. Use +scene/join %1.,warn); @scene/member %1/attending=%#; @pemit %#=notice(SCENE,RSVP'd to scene %1.,ok)
         flags: [REGEXP]
 
       CMD`UNTAG:
@@ -903,7 +915,7 @@ objects:
       INC`DISPLAY`POT: |-
         @pemit %#=box(u(%!/FUN`POT`TABLE,%<scene>,iter(sort(iter(scenemembers(%<scene>),u(%!/FUN`POT`KEY,%<scene>,%iL))),after(%i0,~)))%r[rule()]%r[words(scenemembers(%<scene>))] in scene [chr(183)] oldest pose is up next,Pose Tracker [chr(183)] Scene %<scene>,,u(%!/FUN`FRAME))
       CMD`POT: |-
-        $+pot: @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.,warn); @include/args %!/INC`DISPLAY`POT=scene,%q<scene_id>
+        $+pot: @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,You are not focused on a scene. Use +scene/join <id> or +scene/create <title>[=<pitch>].,warn); @include/args %!/INC`DISPLAY`POT=scene,%q<scene_id>
 
       # ---- scene browser: tables of scenes ---------------------------------------
       # Volund-style listing: bare `+scene` = active scenes, `+scene/old` = finished, `+scene/mine` =
@@ -918,7 +930,7 @@ objects:
       # A scene's title in a table is a link to its card: a client that can click a command runs +scene <id>,
       # and every other client sees the title. cmdlink() needs Send_OOB, which this WIZARD object has.
       FUN`LIST`LINK: |-
-        cmdlink(edit(u(%!/FUN`LIST`TITLE,%0),%r,%b),+scene %0,+scene %0)
+        cmdlink(edit(u(%!/FUN`LIST`TITLE,%0),%r,%b),+scene %0,+scene %0) [u(%!/FUN`PARTICIPATION`TAGS,%0)]
       FUN`LIST`TABLE: |-
         datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[tone(strong,ID)]%r[iter(%0,%i0,,%r)],tone(strong,Title)%r[iter(%0,u(%!/FUN`FILTER,LIST`TITLE,u(%!/FUN`LIST`LINK,%i0)[u(%!/FUN`DETAIL`TAGS,%i0)],%i0),,%r)],tone(strong,Where)%r[iter(%0,u(%!/FUN`SCENE`FIELD,%i0,roomname,-),,%r)],>[tone(strong,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],tone(strong,Status)%r[iter(%0,scene(%i0,status),,%r)])
       # Rows a page holds: what fits the reader's screen under the title, headings, rule and footer.
@@ -939,11 +951,11 @@ objects:
       # +scene/old/2 canon=*Fate*. Bare +scene takes none, since +scene <id> is the scene's card.
       CMD`BROWSE:
         value: |-
-          $(?is)^\+scene(?\:/li(?\:s(?\:t)?)?)?(?\:/(\d+))?$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,,pattern,
+          $(?is)^\+scene(?\:/lis(?\:t)?)?(?\:/(\d+))?$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,,pattern,
         flags: [REGEXP]
       CMD`BROWSE`MATCH:
         value: |-
-          $(?is)^\+scene/li(?\:s(?\:t)?)?(?\:/(\d+))? +([^=]+)=(.*)$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,%2,pattern,%3
+          $(?is)^\+scene/lis(?\:t)?(?\:/(\d+))? +([^=]+)=(.*)$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,%2,pattern,%3
         flags: [REGEXP]
       CMD`OLD:
         value: |-
@@ -967,7 +979,7 @@ objects:
         setq(when_text,edit(trim(lcstr(%0)),+,,%b,))[cond(not(strlen(%q<when_text>)),#-1,cand(isint(left(%q<when_text>,dec(strlen(%q<when_text>)))),match(h d w,right(%q<when_text>,1))),mul(add(secs(),mul(left(%q<when_text>,dec(strlen(%q<when_text>))),switch(right(%q<when_text>,1),h,3600,w,604800,86400))),1000),isint(trim(%0)),mul(trim(%0),1000),isint(setr(when_secs,if(strlen(%1),convtime(trim(%0),%1),convtime(trim(%0))))),mul(%q<when_secs>,1000),#-1)]
       CMD`SCHEDULE:
         value: |-
-          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),strlen(setr(schedule_title,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,after(%1,chr(61)),u(%!/FUN`ZONE,%#))))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADTIME),warn); @assert gt(%q<schedule_at>,mul(secs(),1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @assert setr(scene_id,scenecreate(,%#,%q<schedule_title>)); @scene/member %q<scene_id>/owner=%#; @scene/set %q<scene_id>/status=scheduled; @scene/set %q<scene_id>/scheduledfor=%q<schedule_at>; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`AT,%q<schedule_at>,u(%!/FUN`ZONE,%#))].,ok)
+          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),pos(/,before(%1,chr(61))),strlen(setr(schedule_title,trim(after(before(%1,chr(61)),/)))),strlen(trim(setr(schedule_pitch,after(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,before(%1,/),u(%!/FUN`ZONE,%#))))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADTIME),warn); @assert gt(%q<schedule_at>,mul(secs(),1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @assert not(strmatch(setr(scene_id,scenecreate(,%#,%q<schedule_title>,%q<schedule_pitch>,%q<schedule_at>)),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`AT,%q<schedule_at>,u(%!/FUN`ZONE,%#))].,ok)
         flags: [REGEXP]
       CMD`RESCHEDULE:
         value: |-
@@ -1037,7 +1049,7 @@ objects:
         flags: [REGEXP]
       CMD`ACTIVATE:
         value: |-
-          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @if not(match(owner participant,scenemember(%1,%#,role)))={@scene/member %1/participant=%#}; @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
+          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
         flags: [REGEXP]
 
       # ---- summary + info card --------------------------------------------------
@@ -1096,7 +1108,7 @@ objects:
         setq(info_when,scene(%0,scheduledfor))[setq(info_url,u(%!/FUN`URL,%0))][lfields(,Status%*<|>Owner%*<|>Where%*<|>Created%*<|>Scheduled%*<|>Watchers[if(strlen(%q<info_url>),%*<|>URL)],scene(%0,status)%*<|>[unmark(scene(%0,ownername))]%*<|>[unmark(u(%!/FUN`SCENE`FIELD,%0,roomname,No room yet))]%*<|>[u(%!/FUN`WHEN,scene(%0,startedat),%1)][if(not(strlen(%q<info_when>)),%b[chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)])]%*<|>[if(strlen(%q<info_when>),[u(%!/FUN`WHEN,%q<info_when>,%1)] [chr(40)][u(%!/FUN`ZONE`LABEL,%1)][chr(41)],-)]%*<|>[switch(scene(%0,public),1,Anyone,Members only)][if(strlen(%q<info_url>),%*<|>%q<info_url>)],%*<|>)]
       # The card's body goes through the CARD filters before it is boxed.
       INC`DISPLAY`INFO: |-
-        @pemit %#=box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>,u(%!/FUN`ZONE,%#))%r[rule(Pitch)]%r[u(%!/FUN`SCENE`FIELD,%<scene>,summary,-)]%r[if(words(setr(info_details,scene(%<scene>,details))),rule(Details)%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<info_details>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],%<scene>),Scene %<scene>: [u(%!/FUN`LIST`TITLE,%<scene>)],,u(%!/FUN`FRAME))
+        @pemit %#=box(u(%!/FUN`FILTER,CARD,u(%!/FUN`INFO`FIELDS,%<scene>,u(%!/FUN`ZONE,%#))%r[u(%!/FUN`PARTICIPATION`TAGS,%<scene>)]%r[rule(Pitch)]%r[u(%!/FUN`SCENE`FIELD,%<scene>,summary,-)]%r[if(words(setr(info_details,scene(%<scene>,details))),rule(Details)%r[u(%!/FUN`DETAIL`TABLE,%<scene>,%q<info_details>)]%r)][rule(Players)]%r[u(%!/FUN`CAST`TABLE,%<scene>,scenemembers(%<scene>))],%<scene>),Scene %<scene>: [u(%!/FUN`LIST`TITLE,%<scene>)],,u(%!/FUN`FRAME))
       # +scene/title [<id>=]<text> and +scene/pitch [<id>=]<text>: the focused scene, or the one named.
       # The id is digits, so a title or pitch that merely has an = in it is not taken for one.
       CMD`TITLE:
@@ -1122,7 +1134,7 @@ objects:
       # (FUN`FIND), so a player need not look up its number first.
       CMD`SHOW:
         value: |-
-          $(?is)^\+(?\:scene|scene/i(?\:n(?\:f(?\:o)?)?)?|event) (.+)$: think setq(found_scenes,u(%!/FUN`FIND,%1)); @assert words(%q<found_scenes>)=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert eq(words(%q<found_scenes>),1)=@pemit %#=notice(SCENE,More than one scene is called that: [itemize(%q<found_scenes>)]. Give its number.,warn); @assert not(strmatch(scene(setr(scene_id,%q<found_scenes>),status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @include/args %!/INC`DISPLAY`INFO=scene,%q<scene_id>
+          $(?is)^\+(?\:scene|scene/inf(?\:o)?|event) (.+)$: think setq(found_scenes,u(%!/FUN`FIND,%1)); @assert words(%q<found_scenes>)=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert eq(words(%q<found_scenes>),1)=@pemit %#=notice(SCENE,More than one scene is called that: [itemize(%q<found_scenes>)]. Give its number.,warn); @assert not(strmatch(scene(setr(scene_id,%q<found_scenes>),status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @include/args %!/INC`DISPLAY`INFO=scene,%q<scene_id>
         flags: [REGEXP]
       # The scene %0 names: its number, or the scenes whose title is %0, or else starts with it, among the
       # recent and scheduled scenes the reader can see. Several ids when it names more than one.
@@ -1152,7 +1164,7 @@ objects:
       # line runs, so it cannot rely on matching last). Otherwise it answers with the switch's usage
       # line, or the switches the prefix could mean.
       DATA`SWITCHES: |-
-        activate as cancel create deactivate delete detail details edit emit finish help hide info join leave list log mark mine move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
+        activate as cancel create deactivate delete detail details edit emit finish help hide info join leave limit list log mark mine policy invite move narrate old ooc pause pitch pose private public recall redo reschedule rewrite rsvp say schedule semipose set show start tag title type types undo unmark unrsvp unschedule untag upcoming
       DATA`USAGE`ACTIVATE: |-
         +scene/activate <id>
       DATA`USAGE`AS: |-
@@ -1160,7 +1172,7 @@ objects:
       DATA`USAGE`CANCEL: |-
         +scene/cancel <id>
       DATA`USAGE`CREATE: |-
-        +scene/create <title>
+        +scene/create <title>[=<pitch>]
       DATA`USAGE`DEACTIVATE: |-
         +scene/deactivate
       DATA`USAGE`DELETE: |-
@@ -1181,6 +1193,12 @@ objects:
         +scene/hide <type>, or +scene/hide on its own to see what you hide
       DATA`USAGE`INFO: |-
         +scene/info <id or title>
+      DATA`USAGE`POLICY: |-
+        +scene/policy [<id>=]open|invite-only|limited
+      DATA`USAGE`LIMIT: |-
+        +scene/limit [<id>=]<0-10000> (zero clears the cap unless policy is limited)
+      DATA`USAGE`INVITE: |-
+        +scene/invite <id>=<player>
       DATA`USAGE`JOIN: |-
         +scene/join <id>
       DATA`USAGE`LEAVE: |-
@@ -1224,7 +1242,7 @@ objects:
       DATA`USAGE`SAY: |-
         +scene/say <id>=<text>
       DATA`USAGE`SCHEDULE: |-
-        +scene/schedule <title>=<when>, where <when> is a date and time such as 2026-12-31 20:00, or a time from now such as +3d
+        +scene/schedule <when>/<title>=<pitch>, where <when> is a date and time such as 2026-12-31 20:00, or a time from now such as +3d
       DATA`USAGE`SEMIPOSE: |-
         +scene/semipose <id>=<text>
       DATA`USAGE`SET: |-
@@ -1334,7 +1352,7 @@ objects:
 
         ## Running one
 
-        - `+scene/create <title>` — start one here and focus it
+        - `+scene/create <title>[=<pitch>]` — start one here and focus it
         - `+scene/title \[<id>=\]<text>` — rename it
         - `+scene/pitch \[<id>=\]<text>` — say what it is about, so people can decide to come
         - `+scene/set \[<id>/\]<detail>=<value>` — a detail, such as its verse or a content warning;
@@ -1347,6 +1365,18 @@ objects:
           `@role/allow helper=scene.close`
 
         Wizards, and anyone holding the `scene.manage` permission, can do all of these on any scene.
+      HELP`SCENE`POLICY: |-
+        Use `+scene/policy [<id>=]open|invite-only|limited` to set joining policy. Open permits anyone approved;
+        invite-only requires `+scene/invite <id>=<player>` from the owner or a scene manager. Limited requires a positive cap.
+        `+scene/limit [<id>=]<0-10000>` sets a numeric player cap under any policy; zero removes it unless policy is limited.
+        Owner, GM and participant memberships consume seats. Observers and pending invitations do not.
+        An invitation alone grants no membership or access to a private scene; joining accepts it and consumes it only if a seat is available.
+        Rejoining preserves your role and seat. Lowering a cap below current participation is refused.
+        Cards and lists label the policy and cap independently of pose tags and public/private visibility.
+      HELP`SCENE`LIMIT: |-
+        See `help scene policy` for joining policy, invitations and player caps.
+      HELP`SCENE`INVITE: |-
+        See `help scene policy` for joining policy, invitations and player caps.
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.
@@ -1415,8 +1445,8 @@ objects:
       HELP`SCENE`SCHEDULE: |-
         A scene can be announced before it happens, so people can plan around it.
 
-        - `+scene/schedule <title>=<when>` — announce one. `<when>` is a date and time, such as
-          `+scene/schedule Market day=2026-12-31 20:00`, or a time from now: `+3d`, `+12h` or `+1w`
+        - `+scene/schedule <when>/<title>=<pitch>` — announce one. `<when>` is a date and time, such as
+          `+scene/schedule 2026-12-31 20:00/Market day=An evening of trading and intrigue`, or a time from now: `+3d`, `+12h` or `+1w`
         - `+scene/upcoming` \(or `+scenes`, `+events`\) — what is scheduled in the next 30 days \(or as many
           as `+config scene` sets\), by day, and how many have RSVP'd
         - `+scene/upcoming <days>` \(or `+scenes <days>`\) — look further ahead; `all` for everything
@@ -1556,4 +1586,4 @@ objects:
         `+pot` — "pose tracker" — shows who is in your focused scene, how long since each of them
         last posed, so a table can tell whose turn it is.
 
-        It needs a focused scene: `+scene/join <id>` or `+scene/create <title>` first.
+        It needs a focused scene: `+scene/join <id>` or `+scene/create <title>[=<pitch>]` first.

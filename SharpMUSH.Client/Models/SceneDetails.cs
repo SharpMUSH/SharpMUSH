@@ -21,10 +21,10 @@ public sealed record SceneDetailInfo(string Key, string Label, string Hint, IRea
 	public const char Separator = '|';
 
 	/// <summary>
-	/// The scene fields kept in <c>Meta</c> that are not details: the title, the pitch and the picture have places
-	/// of their own on the page.
+	/// The scene fields kept in <c>Meta</c> that are not details: the title, pitch, picture, joining policy and player cap
+	/// have places of their own on the page.
 	/// </summary>
-	public static readonly IReadOnlySet<string> NotDetails = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "title", "summary", "image" };
+	public static readonly IReadOnlySet<string> NotDetails = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "title", "summary", "image", "joinpolicy", "playercap" };
 
 	/// <summary>A key a player set that the catalogue does not list: named by its key.</summary>
 	public static SceneDetailInfo Unlisted(string key) =>
