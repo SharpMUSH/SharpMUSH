@@ -17,7 +17,7 @@ public class AdminRemoteBackupsTests : TrackingBunitContext
 {
 	private sealed class Wire(RemoteBackupStatus status) : HttpMessageHandler
 	{
-		public List<string> Calls = [];
+		public readonly List<string> Calls = [];
 		public RemoteBackupConfigure? Configured;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{

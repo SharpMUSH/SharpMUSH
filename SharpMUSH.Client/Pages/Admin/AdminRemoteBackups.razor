@@ -93,7 +93,11 @@
                 await InvokeAsync(StateHasChanged);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (closed.IsCancellationRequested)
+        {
+            // Closing this page owns cancellation of its refresh loop.
+            return;
+        }
     }
     private async Task SaveAsync()
     {

@@ -286,8 +286,8 @@ public class RemoteBackupLifecycleTests
 		host.Data.FailNextReadySave = !failRead;
 		host.Data.FailReadAfterCopy = failRead;
 		host.Data.FailAfterReadySave = committedBeforeFailure;
-		try { await host.Coordinator.TickAsync(default); }
-		catch (IOException) { }
+		await Assert.That(async () => await host.Coordinator.TickAsync(default)).Throws<IOException>()
+			.WithMessageContaining("Synthetic");
 		var claim = await host.Coordinator.ClaimAsync("worker");
 		await host.Coordinator.TickAsync(default);
 		var recovered = (await host.Coordinator.ClaimAsync("worker")).Expect<RemoteBackupClaim>();
@@ -337,8 +337,8 @@ public class RemoteBackupLifecycleTests
 		var queued = (await host.Coordinator.QueueAsync("manual")).Expect<RemoteBackupRun>();
 		host.Data.FailNextPreparingSave = true;
 		host.Data.FailAfterPreparingSave = committedBeforeFailure;
-		try { await host.Coordinator.TickAsync(default); }
-		catch (IOException) { }
+		await Assert.That(async () => await host.Coordinator.TickAsync(default)).Throws<IOException>()
+			.WithMessageContaining("Synthetic");
 		await host.Coordinator.TickAsync(default);
 		var status = (await host.Coordinator.StatusAsync()).Runs.Single();
 		await Assert.That(status.Id).IsEqualTo(queued.Id);
