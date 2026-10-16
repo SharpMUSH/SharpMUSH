@@ -20,4 +20,4 @@ NuGet 4.5.0 nuspec pins `0ad3558f2b69d1455948ac0c1e8359b3c734c700`. Its CharsetP
 
 ## Delivery status
 
-Implementation and local-package verification are complete; production release integration remains blocked on a reviewed TNC package. See `docs/testing/charset-compatibility.md` for exact source/version, commands, acceptance evidence and the required post-release checks. No merge or publication was performed.
+Implementation and public-package integration are complete. The user separately approved the dependency merge and patch release; the production pin is now TNC 4.5.1. Both public package nuspecs identify reviewed merge `43e5d98059022769caee45e9b26108122026e913`. Normal solution restore, build and all four focused test classes passed without a local feed or version override. See `docs/testing/charset-compatibility.md` for provenance, commands and results. SharpMUSH remains unmerged and undeployed.

@@ -1,14 +1,15 @@
 # Charset compatibility evidence and release boundary
 
-**Draft dependency boundary:** the committed production pin remains TelnetNegotiationCore 4.5.0.
-This branch's integration tests require the dependency fix below. It is not ready to merge or deploy
-until a reviewed package containing that fix is released, pinned, restored normally, and verified.
-No unpublished package version or local feed is committed as a production dependency.
+The production dependency pin is TelnetNegotiationCore 4.5.1. The dependency fix was reviewed in
+[PR #159](https://github.com/HarryCordewener/TelnetNegotiationCore/pull/159) and merged at
+[`43e5d98059022769caee45e9b26108122026e913`](https://github.com/HarryCordewener/TelnetNegotiationCore/commit/43e5d98059022769caee45e9b26108122026e913).
+The implementation reviewed there is `0bf24f58fc1c6d7ac48c34a65a9f03baec8f4537`.
+The prior released 4.5.0 package's nuspec pins `0ad3558f2b69d1455948ac0c1e8359b3c734c700`.
 
-Dependency source: [TelnetNegotiationCore 0bf24f58fc1c6d7ac48c34a65a9f03baec8f4537](https://github.com/HarryCordewener/TelnetNegotiationCore/commit/0bf24f58fc1c6d7ac48c34a65a9f03baec8f4537),
-[dependency draft PR #159](https://github.com/HarryCordewener/TelnetNegotiationCore/pull/159),
-branch `codex/charset-offer-validation`, based on main `84e6958834cc73c8d60e0259f28906429ecab76b`.
-The released 4.5.0 package's nuspec pins `0ad3558f2b69d1455948ac0c1e8359b3c734c700`.
+Both packages are publicly available from nuget.org. Their public nuspecs report version 4.5.1
+and RepositoryCommit `43e5d98059022769caee45e9b26108122026e913`; restored cache metadata identifies
+`https://api.nuget.org/v3/index.json` as the source. Normal solution restore resolves both 4.5.1
+packages across all 23 dependent projects, including SharpMUSH.LanguageServer.
 
 ## Reproduction
 
@@ -47,9 +48,11 @@ SharpMUSH narrows the public allowed set and explicitly uses the UTF-8 byte-arra
 
 ## Validation
 
-SharpMUSH built with SDK 11.0.100-rc.2.26504.105, zero warnings/errors, against local-only packages
-`TelnetNegotiationCore` and `TelnetNegotiationCore.Gmcp` version `4.5.1-charset.2` from the dependency
-commit above. The resulting test executable's deps.json identifies those exact package versions.
+The initial implementation passed against local packages `4.5.1-charset.2`. Final production-pin
+validation uses SDK 11.0.100-rc.2.26504.105 and the public 4.5.1 packages, with no version override
+or local feed. Normal solution restore and the focused test build completed without errors; the
+build reported zero warnings. The resulting runtime deps.json identifies both packages as 4.5.1.
+The focused classes were rerun against those public packages:
 
 - `TelnetServerNegotiationTests`: 47 passed.
 - `OutputTransformServiceTests`: 6 passed.
@@ -63,31 +66,22 @@ The full SharpMUSH engine suite and real-client/network deployment were not run 
 protocol lane. Pipe tests exercise the real connection handler, interpreter and writes; they replace
 only external connection registration and message publication with captured test boundaries.
 
-## Reproduce the local integration
+## Reproduce public-package integration
 
 Choose a short disk-backed scratch directory, set TMPDIR/TMP/TEMP to it, and use the repository SDK.
-Check out the exact dependency commit above in a separate checkout. These packages stay local:
+Normal restore uses the committed 4.5.1 pin; no package-version override or local feed is required.
 
 ```bash
 export TMPDIR="$CHARSET_SCRATCH" TMP="$CHARSET_SCRATCH" TEMP="$CHARSET_SCRATCH"
-# In the dependency checkout:
-dotnet build TelnetNegotiationCore/TelnetNegotiationCore.csproj -c Release \
-  -p:Version=4.5.1-charset.2 -p:GeneratePackageOnBuild=false -m:2 -nr:false
-dotnet pack TelnetNegotiationCore/TelnetNegotiationCore.csproj -c Release --no-build \
-  -p:Version=4.5.1-charset.2 -o "$CHARSET_SCRATCH/feed" -m:2 -nr:false
-dotnet pack TelnetNegotiationCore.Gmcp/TelnetNegotiationCore.Gmcp.csproj -c Release --no-build \
-  -p:Version=4.5.1-charset.2 -o "$CHARSET_SCRATCH/feed" -m:2 -nr:false
-# In SharpMUSH; command-line override only:
-dotnet build SharpMUSH.Tests -m:2 -nr:false \
-  -p:TelnetNegotiationCoreVersion=4.5.1-charset.2 \
-  -p:RestoreAdditionalProjectSources="$CHARSET_SCRATCH/feed"
+dotnet restore SharpMUSH.sln -m:2 -nr:false
+dotnet build SharpMUSH.Tests --no-restore -m:2 -nr:false
 dotnet run --no-build --project SharpMUSH.Tests -- \
   --treenode-filter '/*/*/TelnetServerNegotiationTests/*'
 ```
 
-Run each renderer class above separately with the same filter form. The local feed does not make
-normal CI green: released 4.5.0 still fails the acceptance and incoming-GMCP regressions. TNC's PR
-workflow publishes no preview packages; release requires an explicit workflow dispatch or tag.
-After the reviewed release, change only TelnetNegotiationCoreVersion in Directory.Build.props to
-the actual published version, restore/build without the local override, rerun these classes and CI,
-and only then remove draft status. Publishing the dependency is a separate approval boundary.
+Run each renderer class above separately with the same filter form. The repository does not track
+NuGet packages.lock.json files; restored project.assets.json and runtime deps.json identify the
+actual resolved versions, including the language server's transitive dependency.
+
+The user separately approved the dependency merge and patch release. This SharpMUSH branch remains
+unmerged; deploying or merging it is outside this integration step.
