@@ -79,7 +79,8 @@ public partial class Commands
 				$"{attribute}`DISPLAY", new Dictionary<string, CallState> { ["0"] = new(answer.GetRawText()) }, evalParent: false);
 			if (await AttributeService.GetAttributeAsync(executor, target, attribute, IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] declaration)
 				return ApplicationDraftService.Failure("The draft declaration is not readable.");
-			var fields = JsonDocument.Parse(declaration.Last().Value.ToPlainText()).RootElement.Clone();
+			using var declarationDocument = JsonDocument.Parse(declaration.Last().Value.ToPlainText());
+			var fields = declarationDocument.RootElement.Clone();
 			if (System.Text.Encoding.UTF8.GetByteCount(raw) > ApplicationDraftService.MaximumPayloadBytes) return ApplicationDraftService.Failure("Draft fields exceed 64 KiB.");
 			using var payload = JsonDocument.Parse(raw);
 			return await service.RunAsync(new($"{target.Object().DBRef}/{attribute.ToUpperInvariant()}", actor.ToString(), instance), action, fields, payload.RootElement,
@@ -90,14 +91,26 @@ public partial class Commands
 				if (await AttributeService.GetAttributeAsync(executor, target, $"{attribute}`{suffix}", IAttributeService.AttributeMode.Execute, parent: false) is not SharpAttribute[] callback)
 					return ApplicationDraftService.Failure($"The application {suffix.ToLowerInvariant()} callback is unavailable.");
 				state.AddRegister("APPDRAFT_RESULT", MarkupText.Plain("{\"ok\":false,\"errors\":{\"_global\":\"The callback did not answer.\"}}"));
+				var inputs = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
+				{
+					["draft_actor"] = new(actor.ToString()),
+					["draft_fields"] = new(JsonSerializer.Serialize(values)),
+					["draft_action"] = new(action)
+				};
 				var environment = state.EnvironmentRegisters.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
-				environment["draft_actor"] = new(actor.ToString());
-				environment["draft_fields"] = new(JsonSerializer.Serialize(values));
-				environment["draft_action"] = new(action);
-				await parser.With(s => s with { EnvironmentRegisters = environment }, p => p.CommandListParse(callback.Last().Value));
-				return state.Registers.TryPeek(out var registers) && registers.TryGetValue("APPDRAFT_RESULT", out var answer)
-					? JsonDocument.Parse(answer.ToPlainText()).RootElement.Clone()
-					: ApplicationDraftService.Failure("The callback did not answer.");
+				foreach (var (name, value) in inputs) environment[name] = value;
+				var attributeBody = callback.Last();
+				await parser.With(s => s.ForAttributeArguments(inputs) with
+				{
+					EnvironmentRegisters = environment,
+					CurrentEvaluation = new DBAttribute(target.Object().DBRef, attributeBody.LongName)
+				}, p => p.CommandListParse(attributeBody.Value));
+				if (state.Registers.TryPeek(out var registers) && registers.TryGetValue("APPDRAFT_RESULT", out var answer))
+				{
+					using var response = JsonDocument.Parse(answer.ToPlainText());
+					return response.RootElement.Clone();
+				}
+				return ApplicationDraftService.Failure("The callback did not answer.");
 			}
 		}
 	}

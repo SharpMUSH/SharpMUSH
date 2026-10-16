@@ -138,3 +138,26 @@ The disposal proof uses bUnit's `DisposeComponentsAsync`, which invokes componen
 | `dotnet run --no-build --project SharpMUSH.Tests.Integration -- --treenode-filter '/*/*/JobsIntegrationTests/DraftAdapterSharesReviewAndFileAcrossTerminalAndPortal'` | 1 passed, 0 failed; 1 min 07.763 s |
 
 All changed C# projects received two whitespace-format passes and their final builds ran the formatting gate. The known full-suite results remain historical; this follow-up reran only the affected checks above.
+
+## Applications / arguments intersection correction
+
+Approved dependency: argument head `a5fa4ea8463aa6e958b27dc868e3321481f58c94` was merged into application head `d4ac28b99adc050aaacfebc70a5b1620461319da` as merge commit `68ec3ded12e841de2269c7119bcaea590ce94ca4`. PR #1962 is intended to stack on #1961; the controller owns that base change. The dependency supplies the atomic `ForAttributeArguments` API. No queue or storage implementation was edited by the callback correction.
+
+The merged baseline built successfully, then all four new real-parser cases failed: root and actual `@include/args` nested callers, each through review and filing. Root callbacks reported no draft-input presence; nested callbacks reported draft inputs visible but not supplied, leaked parent supplied presence, and retained the PARENT evaluation identity. These tests run the real command, transient draft service, attribute callbacks, hasarg implementation and attribute substitution against the fixture world.
+
+VALIDATE and FILE now enter `ForAttributeArguments` with exactly `draft_actor`, `draft_fields` and `draft_action`. The existing inherited environment remains a separate visible overlay; no numbered aliases are invented, and inherited values do not enter the supplied set. CurrentEvaluation names the actual callback target and attribute. The existing `parser.With` boundary restores the caller frame while retaining intentional q-register result sharing and inline trusted HTTP context. Declaration and reply JsonDocuments are also disposed after cloning their values.
+
+The regression checks both callbacks where applicable: all three inputs visible and supplied, unrelated parent values visible but not supplied, inherited numeric values preserved without supplied aliases, literal input values, actual callback identity, matching parent observations before/after, and restored outer Arguments/environment/presence/evaluation after return. Permission reads and actor/instance authorization remain unchanged. Existing Jobs proof is retained as the successful real terminal/HTTP workflow check.
+
+Commands used the same pinned SDK first on PATH, short disk-backed `/temp/codex/apps` environment and rootless Podman settings as above. Both changed C# projects received two whitespace-format passes and final builds ran the formatting gate.
+
+| Command | Result |
+| --- | --- |
+| `dotnet build SharpMUSH.Tests -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ApplicationDraft*/*'` | 12 passed, 0 failed; 16.634 s (new frame cases plus existing composition/publication tests) |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/CallbackPresenceBoundaryTests/*'` | 12 passed, 0 failed; 17.455 s |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/NamedArgumentCommandTests/*'` | 51 passed, 0 failed; 17.101 s |
+| `dotnet build SharpMUSH.Tests.Integration -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests.Integration -- --treenode-filter '/*/*/JobsIntegrationTests/DraftAdapterSharesReviewAndFileAcrossTerminalAndPortal'` | 1 passed, 0 failed; 54.944 s |
+
+This is the bounded intersection correction only. The controller owns the final all-six-lane combined checks; no full feature restart or broad suite rerun is claimed here.
