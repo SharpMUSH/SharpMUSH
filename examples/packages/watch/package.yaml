@@ -1,6 +1,6 @@
 format: "1.10"
 package: watch
-version: 1.0.2
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -15,6 +15,13 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
+      branch: main
+  # The settings below are registered with +config: +config watch lists them.
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
   # FUN`DISPLAY`ONLINE reads the +who status through who-where's FUN`FILTER`APPLY, new in 1.8.
   - package: who-where
@@ -34,8 +41,9 @@ objects:
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`WATCH` one routine per
   # switch, INC`CONNECT` the login step. FUN`WATCH` the reads, FUN`PLAYER` finding a player and their key,
-  # FUN`DISPLAY` and FUN`PAGE` for screens. DATA` the settings, one leaf each. Every record is kept on the
-  # Watch Store, never on a player, so nobody can rewrite someone else's watch list.
+  # FUN`DISPLAY` and FUN`PAGE` for screens. DATA`CONFIG` the +config settings, DATA`ROUTE` the
+  # switches. Every record is kept on the Watch Store, never on a player, so nobody can rewrite someone
+  # else's watch list.
   - ref: watch
     type: thing
     name: Watch
@@ -43,13 +51,43 @@ objects:
     flags: [WIZARD]
     attributes:
       DATA: |-
-        Settings. One leaf per setting.
-      # How many people one player may watch, and how many seconds pass before a player's connect is
-      # announced again, so a connection that drops and comes back does not announce itself every time.
-      DATA`WATCH`MAX: |-
+        Settings and the switch table.
+      # The settings +config shows and changes (plus-config). Code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG:
+        value: |-
+          How many people one player may watch, and how long before a connect is announced again.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Watch
+      DATA`CONFIG`MAX: |-
         100
-      DATA`WATCH`QUIET: |-
+      DATA`CONFIG`MAX`TYPE: |-
+        integer
+      DATA`CONFIG`MAX`DEFAULT: |-
+        100
+      DATA`CONFIG`MAX`MIN: |-
+        1
+      DATA`CONFIG`MAX`DESCRIPTION: |-
+        How many people one player may watch.
+      DATA`CONFIG`MAX`LABEL: |-
+        Most watched
+      DATA`CONFIG`MAX`EXAMPLE: |-
+        50
+      # A connection that drops and comes back within this time does not announce itself again.
+      DATA`CONFIG`QUIET: |-
         300
+      DATA`CONFIG`QUIET`TYPE: |-
+        duration
+      DATA`CONFIG`QUIET`DEFAULT: |-
+        300
+      DATA`CONFIG`QUIET`MIN: |-
+        0
+      DATA`CONFIG`QUIET`DESCRIPTION: |-
+        How long after a player's connect is announced before another one is.
+      DATA`CONFIG`QUIET`LABEL: |-
+        Quiet time
+      DATA`CONFIG`QUIET`EXAMPLE: |-
+        10m
       # Which INC` routine each command runs: DATA`ROUTE`WATCH`<switch>. BARE is the command alone, ARG the
       # command with something after it and no switch. +friend uses the same table.
       DATA`ROUTE: |-
@@ -224,7 +262,7 @@ objects:
       # +watch/add <player>
       INC`WATCH`ADD:
         value: |-
-          @include %!/INC`WATCH`NEED`TARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`WATCH`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`WATCH`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>); @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
+          @include %!/INC`WATCH`NEED`TARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`CONFIG`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>); @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
         flags: [cmdsyntax]
       # +watch/del <player>
       INC`WATCH`DEL:
@@ -236,10 +274,28 @@ objects:
         value: |-
           think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert words(%q<watch_list>)=@pemit %#=notice(WATCH,You watch nobody. +%q<cmd_word>/add <name> watches someone.); think setq(watch_online,u(%!/FUN`WATCH`ONLINE,%q<watch_list>)); @assert words(%q<watch_online>)=@pemit %#=notice(WATCH,Nobody you watch is on. +%q<cmd_word>/list shows them all.); @include/args %!/INC`PAGE`CHECK=list,%q<watch_online>; @pemit %#=u(%!/FUN`DISPLAY`ONLINE,u(%!/FUN`PAGE`ITEMS,%q<watch_online>))%r[u(%!/FUN`PAGE`FOOTER,%q<watch_online>,+%q<cmd_word>,words(%q<watch_online>) of [words(%q<watch_list>)] on · +%q<cmd_word>/list shows them all)]
         flags: [cmdsyntax]
-      # %0 players: name, idle, where they are when the reader may locate them, and the status +who shows for them.
+      # %0 players: name, idle, where they are when the reader may locate them, and the status +who shows for
+      # them. The Status column is left out when nobody shown has a status, as +who leaves it out; without
+      # every cell empty, the statuses joined by %r are longer than their separators.
       FUN`DISPLAY`ONLINE:
         value: |-
-          rule(Watched and on)%r[datacolumns(u(%!/FUN`DISPLAY`TABLE`OPTIONS,1%r2%r3,1%r2%r3%r2,%r%r%r1,%r%r%r20),tone(strong,Name)%r[iter(%0,name(%i0),,%r)],>[tone(strong,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)],tone(strong,Where)%r[iter(%0,if(findable(%#,%i0),name(room(%i0)),-),,%r)],tone(strong,Status)%r[iter(%0,firstof(u({{who-where/ww_functions}}/FUN`FILTER`APPLY,WHO`STATUS,,%i0),-),,%r)])]
+          setq(watch_statuses,iter(%0,u(%!/FUN`WATCH`STATUS,%i0),,%r))[rule(Watched and on)]%r[if(eq(strlen(%q<watch_statuses>),mul(dec(words(%0)),strlen(%r))),u(%!/FUN`DISPLAY`ONLINE`PLAIN,%0),u(%!/FUN`DISPLAY`ONLINE`STATUS,%0))]
+        flags: [funsyntax]
+      # %0 players: the table without a Status column.
+      FUN`DISPLAY`ONLINE`PLAIN:
+        value: |-
+          datacolumns(u(%!/FUN`DISPLAY`TABLE`OPTIONS,1%r2%r3,1%r2%r3,,),tone(strong,Name)%r[iter(%0,name(%i0),,%r)],>[tone(strong,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)],tone(strong,Where)%r[iter(%0,if(findable(%#,%i0),name(room(%i0)),-),,%r)])
+        flags: [funsyntax]
+      # %0 players: the table with a Status column, - for a player without one.
+      FUN`DISPLAY`ONLINE`STATUS:
+        value: |-
+          datacolumns(u(%!/FUN`DISPLAY`TABLE`OPTIONS,1%r2%r3,1%r2%r3%r2,%r%r%r1,%r%r%r20),tone(strong,Name)%r[iter(%0,name(%i0),,%r)],>[tone(strong,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)],tone(strong,Where)%r[iter(%0,if(findable(%#,%i0),name(room(%i0)),-),,%r)],tone(strong,Status)%r[iter(%0,firstof(u(%!/FUN`WATCH`STATUS,%i0),-),,%r)])
+        flags: [funsyntax]
+      # %0 a player: the status +who shows for them, from every FILTER`WHO`STATUS`<NAME> another package
+      # attached to who-where (who-where's FUN`FILTER`APPLY), or nothing.
+      FUN`WATCH`STATUS:
+        value: |-
+          u({{who-where/ww_functions}}/FUN`FILTER`APPLY,WHO`STATUS,,%0)
         flags: [funsyntax]
       # +watch/list[/<page>]: everyone the player watches, on or not.
       INC`WATCH`LIST:
@@ -285,11 +341,11 @@ objects:
         flags: [cmdsyntax]
       # Tells %<target>'s watchers that they connected or left (%<event>, connected or disconnected). A
       # connect is announced unless the player is hidden from watchers, DARK, or connected hidden, or had a
-      # connect announced in the last DATA`WATCH`QUIET seconds, and counts as announced only once someone hears
+      # connect announced in the last DATA`CONFIG`QUIET seconds, and counts as announced only once someone hears
       # it. A disconnect is announced only when its connect was and the player has not since hidden or gone DARK.
       INC`WATCH`ANNOUNCE:
         value: |-
-          think setq(watch_key,u(%!/FUN`PLAYER`KEY,%<target>)); @break strmatch(%<event>,disconnected)={@include/args %!/INC`WATCH`ANNOUNCE`OFF=target,%<target>,key,%q<watch_key>}; @break get({{store}}/WATCH`%q<watch_key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); @assert gte(sub(secs(),default({{store}}/WATCH`%q<watch_key>`SAID,0)),get(%!/DATA`WATCH`QUIET)); think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%q<watch_key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); &WATCH`%q<watch_key>`SAID {{store}}=secs(); &WATCH`%q<watch_key>`ANNOUNCED {{store}}=1; @pemit/list %q<watch_hearers>=notice(WATCH,name(%<target>) has connected.)
+          think setq(watch_key,u(%!/FUN`PLAYER`KEY,%<target>)); @break strmatch(%<event>,disconnected)={@include/args %!/INC`WATCH`ANNOUNCE`OFF=target,%<target>,key,%q<watch_key>}; @break get({{store}}/WATCH`%q<watch_key>`HIDE); @break cor(hasflag(%<target>,dark),hidden(%<target>)); @assert gte(sub(secs(),default({{store}}/WATCH`%q<watch_key>`SAID,0)),get(%!/DATA`CONFIG`QUIET)); think setq(watch_hearers,filterbool(%!/FUN`WATCH`HEARS,u(%!/FUN`WATCH`CONNECTED,get({{store}}/WATCH`%q<watch_key>`BY)),,,%<target>)); @assert words(%q<watch_hearers>); &WATCH`%q<watch_key>`SAID {{store}}=secs(); &WATCH`%q<watch_key>`ANNOUNCED {{store}}=1; @pemit/list %q<watch_hearers>=notice(WATCH,name(%<target>) has connected.)
         flags: [cmdsyntax]
       INC`WATCH`ANNOUNCE`OFF:
         value: |-
@@ -367,13 +423,19 @@ objects:
         - Someone your page lock keeps out is never told when you connect. See `help @lock/page`.
         - Nobody hears of you while you are DARK or connected hidden, and someone who cannot locate you sees no room for you in `+watch`.
       HELP`WATCH`STAFF: |-
-        Each setting is an attribute on the Watch object in the master room:
+        Staff who can change the game's configuration \(the `config.admin` permission\) change these with `+config watch`; `+config watch/<setting>=<value>` changes one:
 
-        - `` DATA`WATCH`MAX ``: how many people one player may watch. 100.
-        - `` DATA`WATCH`QUIET ``: seconds before a player's connect is announced again, so a dropped connection does not announce itself each time. 300.
+        - `max`: how many people one player may watch. 100.
+        - `quiet`: how long before a player's connect is announced again, so a dropped connection does not announce itself each time. 5 minutes.
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
     attributes:
       SRC`WATCH: |-
         {{watch_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`WATCH: |-
+        {{watch}}
