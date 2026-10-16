@@ -49,21 +49,36 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null || (!string.IsNullOrEmpty(sessionId) && get.Metadata.GetValueOrDefault("SessionId") != sessionId)) return;
 
+		// A character binding may change while a private send holds its gate. The close still
+		// belongs to this transport, so retry on its new binding rather than losing the close.
+		// A replacement socket (or a changed SessionId) must never be removed by that retry.
+		var transportMetadata = get.Metadata;
+		var transportSession = string.IsNullOrEmpty(sessionId) ? get.Metadata.GetValueOrDefault("SessionId") : sessionId;
 		int? remainingConnections;
-		await get.Binding.PublicationGate.WaitAsync();
-		try
+		while (true)
 		{
-			lock (_bindingLock)
+			var binding = get.Binding;
+			await binding.PublicationGate.WaitAsync();
+			try
 			{
-				if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
-				Reindex(handle, get.Ref, null);
+				lock (_bindingLock)
+				{
+					var current = Get(handle);
+					if (current is null || !ReferenceEquals(current.Metadata, transportMetadata)
+						|| current.Metadata.GetValueOrDefault("SessionId") != transportSession) return;
+					get = current;
+					if (!ReferenceEquals(current.Binding, binding)) continue;
+					if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, current))) continue;
+					Reindex(handle, current.Ref, null);
 
-				remainingConnections = get.Ref is { } playerRef
-					? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count
-					: null;
+					remainingConnections = current.Ref is { } playerRef
+						? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count
+						: null;
+					break;
+				}
 			}
+			finally { binding.PublicationGate.Release(); }
 		}
-		finally { get.Binding.PublicationGate.Release(); }
 
 		foreach (var handler in _handlers)
 		{

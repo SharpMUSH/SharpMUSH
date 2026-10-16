@@ -82,3 +82,20 @@ All commands below used the repository-pinned SDK first on PATH, `TMPDIR=TMP=TEM
 | `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/InputSession*/*'` | 192 passed, 0 failed; 22.410 s |
 
 Only affected suites were rerun for this review round. Earlier whole-project results above remain historical evidence, not a claim of a new complete aggregate run. The limits above are unchanged.
+
+## Review round 2 correction
+
+The new publication fence exposed a close-versus-binding race: an admitted private send held the binding gate, Bind queued before Disconnect, and Bind replaced the record before Disconnect's old-record removal. The transport remained logged in. The regression blocks the real notifier's bus send, queues Bind then Disconnect against that same transport, and verifies removal after release. A second case replaces the socket while both operations wait and verifies that the new SessionId survives. Both also reject any later private send from the original binding.
+
+Disconnect now captures the transport metadata identity and SessionId, then re-reads the record after acquiring each binding gate. If the same transport changed bindings, it releases the old gate and retries against the current one. Removal and player-index counts still occur together under the existing binding lock, after confirming the held gate belongs to the current binding. A changed SessionId or replacement metadata identity ends the stale close without touching the replacement transport. Publication retirement ordering is retained.
+
+Using the same pinned SDK, disk-backed environment and build caps as round 1, the direct regression was verified against the previous implementation (two cases: the same-transport close failed, replacement-transport safety passed), then the fixed implementation was rebuilt. Only nearby lifecycle/publication suites were rerun:
+
+| Command | Result |
+| --- | --- |
+| `dotnet build SharpMUSH.Tests -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ApplicationDraftPublicationTests/*'` | 7 passed, 0 failed; 237 ms |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ConnectionService*/*'` | 60 passed, 0 failed; 2.269 s |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ConnectionIncarnationTests/*'` | 14 passed, 0 failed; 741 ms |
+
+Both changed C# projects received two whitespace-format passes; the final build ran the formatting gate. Final test binaries and reusable build outputs were retained. No widget, Jobs, permission or workflow behavior changed in this round.

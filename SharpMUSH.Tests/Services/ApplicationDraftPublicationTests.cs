@@ -86,6 +86,46 @@ public class ApplicationDraftPublicationTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DisconnectAfterQueuedBindClosesOnlyTheOriginalTransport(bool replaceTransport)
+	{
+		var connections = await Connections();
+		await connections.Bind(1, new DBRef(2, 2));
+		var original = connections.Get(1)!;
+		var started = new TaskCompletionSource();
+		var release = new TaskCompletionSource();
+		var bus = Substitute.For<IMessageBus>();
+		bus.HandlePublish(Arg.Any<MarkupOutputMessage>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+		{
+			started.TrySetResult();
+			await release.Task;
+		});
+		var notify = new NotifyService(bus, connections, new LocalizationService());
+		var publishing = notify.NotifyToBinding(original, "original", "private draft").AsTask();
+		await started.Task;
+		var binding = connections.Bind(1, new DBRef(3, 3)).AsTask();
+		var closing = connections.Disconnect(1, "original").AsTask();
+		try
+		{
+			await Assert.That(binding.IsCompleted).IsFalse();
+			await Assert.That(closing.IsCompleted).IsFalse();
+			if (replaceTransport)
+				await connections.Register(1, "127.0.0.1", "localhost", "test", _ => ValueTask.CompletedTask,
+					_ => ValueTask.CompletedTask, () => Encoding.UTF8,
+					new ConcurrentDictionary<string, string>(new Dictionary<string, string> { ["SessionId"] = "replacement", ["ConnectionStartTime"] = "200" }));
+		}
+		finally { release.TrySetResult(); }
+		await Task.WhenAll(publishing, binding, closing);
+		if (replaceTransport)
+			await Assert.That(connections.Get(1)!.Metadata["SessionId"]).IsEqualTo("replacement");
+		else await Assert.That(connections.Get(1) is null).IsTrue().Because("a close must remove the same transport even when its character binding changed while waiting");
+		await Assert.That(await connections.Get(new DBRef(3, 3)).CountAsync()).IsEqualTo(0);
+		await notify.NotifyToBinding(original, "original", "retired private draft");
+		await bus.Received(1).HandlePublish(Arg.Any<MarkupOutputMessage>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async Task NormalOutputCarriesTheCapturedIncarnationAndSkipsRetiredOrMissingTransports()
 	{
 		var connections = await Connections();
