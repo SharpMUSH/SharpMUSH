@@ -193,10 +193,10 @@ public class HighlightsIntegrationTests
 				.Because("a window of 0 reaches every favourite");
 
 			await God($"&DATA`CONFIG`PAGE-SIZE {store}=2");
-			await Assert.That(await As(first, "+scene/highlights")).Contains("+scene/highlights 2 shows more.");
-			await Assert.That(await As(first, "+scene/highlights 2")).Contains("page 2").And.DoesNotContain("shows more");
-			await Assert.That(await As(first, "+scene/highlights 3")).Contains("There is no page 3 of highlights.");
-			await Assert.That(await As(first, "+scene/highlights 0")).Contains("Which page?");
+			await Assert.That(await As(first, "+scene/highlights")).Contains("+scene/highlights/2 shows more.");
+			await Assert.That(await As(first, "+scene/highlights/2")).Contains("page 2").And.DoesNotContain("shows more");
+			await Assert.That(await As(first, "+scene/highlights/3")).Contains("There is no page 3 of highlights.");
+			await Assert.That(await As(first, "+scene/highlights/0")).Contains("Which page?");
 
 			await As(first, $"+scene/hide ic");
 			await Assert.That(await Eval($"u({logger}/FUN`HIGHLIGHT`PAGE,{await ObjidAsync(first)},{liked} {newer} {older},1)")).IsEmpty()
@@ -247,6 +247,50 @@ public class HighlightsIntegrationTests
 			var mine = (await PosesFor(await ObjidAsync(member)))[0];
 			await Assert.That(mine.GetProperty("actions")[0].GetProperty("label").GetString()).IsEqualTo("Take back");
 			await Assert.That(mine.GetProperty("tag").GetString()).IsEqualTo("Your favourite");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// The portal's Favourite button posts to the act route, and the route answers with the result in its body:
+	/// ok and the page's poses again, or the refusal.
+	/// </summary>
+	[Test]
+	public async Task The_favourite_button_answers_in_the_response()
+	{
+		var room = await RoomAsync("ActRoom");
+		var writer = await PlayerAsync("ActWriter", room);
+		var reader = await PlayerAsync("ActReader", room);
+		try
+		{
+			var store = await InstallAsync();
+			var scene = await SceneAsync(writer);
+			var pose = await PoseAsync(writer, scene);
+			var readerObjid = await ObjidAsync(reader);
+			var dispatcher = WebAppFactoryArg.Services.GetRequiredService<IHttpHandlerCommandDispatcher>();
+
+			async Task<JsonElement> Act(object body)
+			{
+				var response = (await dispatcher.DispatchAsync("POST", "/highlights/act", JsonSerializer.Serialize(body), [],
+					IHttpHandlerCommandDispatcher.UnknownAddress, DBRef.Parse(readerObjid))).Expect<HttpHandlerResult>();
+				await Assert.That(response.Status).IsEqualTo(200).Because(response.Body);
+				await WebAppFactoryArg.QueueBarrierAsync();
+				await Assert.That(response.Body).IsNotEmpty().Because("the route's body is what the portal reads");
+				return JsonDocument.Parse(response.Body).RootElement.Clone();
+			}
+
+			var added = await Act(new { pose, favourite = true, at = "/apps/highlights" });
+			await Assert.That(added.GetProperty("ok").GetBoolean()).IsTrue().Because(added.ToString());
+			await Assert.That(added.GetProperty("message").GetString()).IsEqualTo($"Pose {pose} is one of your favourites now.");
+			await Assert.That(await Eval($"get({store}/POSE`{pose}`BY)")).IsEqualTo(readerObjid);
+
+			var again = await Act(new { pose, favourite = true, at = "/apps/highlights" });
+			await Assert.That(again.GetProperty("ok").GetBoolean()).IsFalse();
+			await Assert.That(again.GetProperty("errors").GetProperty("_global").GetString())
+				.IsEqualTo($"Pose {pose} is already one of your favourites.");
 		}
 		finally
 		{
