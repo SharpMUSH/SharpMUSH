@@ -349,3 +349,26 @@ The current allowlist, each entry verified against its component's own `Navigate
 Allowlisted redirects are measured at their destination and reported under "Routes that
 redirected", and their failure lines say so inline — so an alias and its target do not read as
 two independent defects.
+
+## Table layout regression
+
+`npm test` in this directory runs the standalone Chromium table regression, without
+a running game. It checks the rendered radio table against the portal CSS, including
+whole headers beside a growing About column and prose wrapping at narrow widths.
+The fixture preserves the HTML emitted by MarkupString 2.21.0 at 78 columns; its
+small stylesheet includes the relevant `LayoutCss.Fixed` rules from that version.
+Update both when the renderer changes its table markup or CSS.
+
+Use disk-backed temporary storage for Chromium, for example:
+
+```bash
+mkdir -p /temp/codex/table-layout
+TMPDIR=/temp/codex/table-layout TMP=/temp/codex/table-layout TEMP=/temp/codex/table-layout npm test
+```
+
+CI generates the current `MarkupStylesheet` through `tools/ClientData` and passes
+its path as `MARKUP_LAYOUT_CSS`; the browser gate therefore tests the actual pinned
+renderer stylesheet. Renderer-version and ClientData changes trigger this workflow.
+A renderer version change also fails the fixture-version check until the radio
+HTML is regenerated and its version marker updated. Local standalone runs use
+the documented stylesheet subset unless `MARKUP_LAYOUT_CSS` is supplied.
