@@ -35,6 +35,10 @@ public class AttributeService(
 	private readonly AttributeWriter _writer = new(mediator, ps, notifyService, validateService, configuration, serviceProvider);
 
 	/// <inheritdoc/>
+	public ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+		string attribute, StoredMarkup value, SharpPlayer? creator = null)
+		=> _writer.SetStoredAttributeAsync(executor, obj, attribute, value, creator);
+
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
 		=> _writer.SetAttributeAsync(executor, obj, attribute, value);

@@ -9,6 +9,14 @@ namespace SharpMUSH.Library.Services;
 /// <summary>Metadata for a newly created custom semaphore, before publishing waiting work or credits.</summary>
 public static class SemaphoreAttributes
 {
+	public const string UnsafeMarkupMessage = "Stored semaphore markup cannot be changed safely; replace the attribute explicitly.";
+
+	public static void RequireCanRewrite(SharpAttribute? attribute)
+	{
+		if (attribute?.StoredValue is { CanRewrite: false })
+			throw new InvalidOperationException(UnsafeMarkupMessage);
+	}
+
 	public static IReadOnlyList<string> RequiredFlagNames { get; } = Array.AsReadOnly<string>(["no_inherit", "no_clone", "locked"]);
 	public static ValueTask InitializeAsync(IMediator mediator, DBRef target, string[] path)
 		=> InitializeAsync(mediator, target, path, null);

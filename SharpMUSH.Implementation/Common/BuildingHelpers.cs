@@ -1123,7 +1123,9 @@ public static class BuildingHelpers
 			// AL_CREATOR(ptr) is passed through unchanged in atr_cpy (attrib.c:1706) — a cloned
 			// attribute keeps its original creator, not the cloner.
 			var creator = await attr.Owner.WithCancellation(CancellationToken.None) ?? owner;
-			var setResult = await attributeService.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
+			var setResult = attr.StoredValue is { } stored
+				? await attributeService.SetStoredAttributeAsync(executor, clonedObj, longName, stored, creator)
+				: await attributeService.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
 
 			// A failed set means the branch was NOT actually copied. Treating it as skipped keeps the
 			// invariant this whole loop depends on: a LongName only avoids the skip set if it genuinely

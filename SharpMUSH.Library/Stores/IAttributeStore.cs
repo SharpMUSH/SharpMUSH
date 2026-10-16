@@ -162,6 +162,10 @@ public interface IAttributeStore
 	ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
 		IReadOnlySet<string> watched, CancellationToken cancellationToken = default);
 
+	/// <summary>Writes original inspected serialization, preserving opaque/future data without a decode/encode cycle.</summary>
+	ValueTask<AttributeWriteOutcome> SetStoredAttributeAsync(DBRef dbref, string[] attribute, StoredMarkup value,
+		SharpPlayer owner, IReadOnlySet<string> watched, CancellationToken cancellationToken = default);
+
 	/// <summary>Changes only the existing leaf attribute owner, preserving all values and flags.</summary>
 	ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default);
 

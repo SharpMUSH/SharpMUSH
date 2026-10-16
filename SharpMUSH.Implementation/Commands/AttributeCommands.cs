@@ -251,7 +251,9 @@ public partial class Commands
 				continue;
 			}
 
-			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
+			var setResult = sourceLeaf.StoredValue is { } stored
+				? await AttributeService.SetStoredAttributeAsync(executor, destObject, targetAttrName, stored)
+				: await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult is Error<string> error)
 			{
@@ -580,6 +582,14 @@ public partial class Commands
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+
+		// Preflight the entire wildcard match before evaluating replacements or writing any leaf.
+		if (attrList.Any(attribute => attribute.StoredValue is { CanRewrite: false }))
+		{
+			const string message = "Stored markup cannot be edited safely; replace the attribute explicitly.";
+			await NotifyService.Notify(executor, message, executor);
+			return new CallState("#-1 " + message);
 		}
 
 		var hadErrors = false;

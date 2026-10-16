@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using DotNext.Threading;
@@ -49,9 +50,13 @@ public partial class LightningDatabase
 		{
 			var walk = ReadPathPrefixes(tx, n, attribute);
 			// All-or-nothing: a partially resolving path is not a hit (IAttributeStore.GetAttributeAsync).
-			return walk.Count != attribute.Length
-				? []
-				: walk.Select(e => HydrateAttribute(tx, n, e.LongName, e.Meta, ReadAttributeValue(tx, n, e.LongName))).ToList();
+			if (walk.Count != attribute.Length) return new List<SharpAttribute>();
+			try { return walk.Select(e => HydrateAttribute(tx, n, e.LongName, e.Meta, ReadAttributeValue(tx, n, e.LongName))).ToList(); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute path on {Object}", n);
+				return [];
+			}
 		});
 
 		foreach (var attr in path)
@@ -127,7 +132,14 @@ public partial class LightningDatabase
 
 			var value = Store.Read(tx => tx.TryGet(Tables.AttrVal, key, out var body) ? body : null);
 			ReadStats.ValueRead(value?.Length ?? 0);
-			yield return HydrateAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(meta), value);
+			SharpAttribute hydrated;
+			try { hydrated = HydrateAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(meta), value); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute {Object}/{Attribute}", n, longName);
+				continue;
+			}
+			yield return hydrated;
 		}
 	}
 
@@ -143,7 +155,14 @@ public partial class LightningDatabase
 				continue;
 			}
 
-			yield return HydrateLazyAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(value));
+			LazySharpAttribute hydrated;
+			try { hydrated = HydrateLazyAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(value)); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute metadata {Object}/{Attribute}", n, longName);
+				continue;
+			}
+			yield return hydrated;
 		}
 	}
 
@@ -183,12 +202,22 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
 		bool checkParent, InheritanceWalk walk, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
+		AttributeWithInheritance? resolved;
+		try
+		{
+			resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
 			? BuildInheritanceHit(tx, hit,
 				(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName)),
 				static a => a.Flags,
 				static (attrs, source, kind, flags) => new AttributeWithInheritance(attrs, source, kind, flags))
 			: null);
+
+		}
+		catch (System.Text.Json.JsonException ex)
+		{
+			_logger.LogWarning(ex, "Skipping malformed inherited attribute {Object}/{Attribute}", dbref, string.Join('`', attribute));
+			resolved = null;
+		}
 
 		if (resolved is not null)
 		{
@@ -342,6 +371,14 @@ public partial class LightningDatabase
 	/// </summary>
 	public async ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
 		IReadOnlySet<string> watched, CancellationToken cancellationToken = default)
+		=> await SetAttributeCoreAsync(dbref, attribute, value, owner, watched, null, cancellationToken);
+
+	public ValueTask<AttributeWriteOutcome> SetStoredAttributeAsync(DBRef dbref, string[] attribute, StoredMarkup value,
+		SharpPlayer owner, IReadOnlySet<string> watched, CancellationToken cancellationToken = default)
+		=> SetAttributeCoreAsync(dbref, attribute, value.Value, owner, watched, value.Serialized, cancellationToken);
+
+	private async ValueTask<AttributeWriteOutcome> SetAttributeCoreAsync(DBRef dbref, string[] attribute, MString value,
+		SharpPlayer owner, IReadOnlySet<string> watched, string? serialized, CancellationToken cancellationToken)
 	{
 		if (attribute.Length == 0)
 		{
@@ -350,6 +387,7 @@ public partial class LightningDatabase
 
 		var n = (long)dbref.Number;
 		var write = PreparedAttributeWrite.From(new AttributeWrite(attribute, value, owner, []));
+		if (serialized is not null) write = write with { Value = Keys.Str(serialized) };
 
 		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
@@ -826,7 +864,12 @@ public partial class LightningDatabase
 				break;
 			}
 
-			resolved.Add((longName, Codec.Deserialize<AttrMetaRecord>(bytes)));
+			try { resolved.Add((longName, Codec.Deserialize<AttrMetaRecord>(bytes))); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute metadata {Object}/{Attribute}", dbref, longName);
+				return [];
+			}
 		}
 
 		return resolved;
@@ -845,7 +888,9 @@ public partial class LightningDatabase
 	/// <inheritdoc cref="HydrateAttribute(ITx, long, string, AttrMetaRecord, byte[])"/>
 	private SharpAttribute HydrateAttribute(DefinitionMap<AttributeFlagRecord> flagDefinitions, long dbref, string longName,
 		AttrMetaRecord meta, byte[]? value)
-		=> new(
+	{
+		var stored = value is null ? null : StoredMarkup.Read(Keys.ReadStr(value));
+		return new(
 			AttributeIdOf(dbref, longName),
 			AttributeKeyOf(dbref, longName),
 			LeafNameOf(longName),
@@ -857,8 +902,11 @@ public partial class LightningDatabase
 			new AsyncLazy<SharpPlayer?>(_ => Task.FromResult(LoadAttributeOwner(meta.Owner))),
 			new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult(LoadAttributeEntry(meta.Entry))))
 		{
-			Value = DeserializeValue(value)
+			Value = stored?.Value ?? MarkupText.Empty,
+			StoredValue = stored
 		};
+
+	}
 
 	/// <inheritdoc cref="HydrateAttribute"/>
 	internal LazySharpAttribute HydrateLazyAttribute(ITx tx, long dbref, string longName, AttrMetaRecord meta)
@@ -881,8 +929,18 @@ public partial class LightningDatabase
 			// The whole point of the lazy shape: the attr.val row stays unread until someone asks.
 			// Resettable, so a content scan can drop a body once it has been tested
 			// (LazySharpAttributeExtensions.ReadValueOnceAsync) instead of keeping every one it read.
-			Value: new AsyncLazy<MString>(_ => Task.FromResult(
-				Store.Read(readTx => DeserializeValue(ReadAttributeValue(readTx, dbref, longName)))), resettable: true));
+			Value: new AsyncLazy<MString>(_ => Task.FromResult(ReadAttributeDisplayValue(dbref, longName)), resettable: true));
+
+	private MString ReadAttributeDisplayValue(long dbref, string longName)
+	{
+		var value = Store.Read(tx => ReadAttributeValue(tx, dbref, longName));
+		try { return value is null ? MarkupText.Empty : StoredMarkup.Read(Keys.ReadStr(value)).Value; }
+		catch (System.Text.Json.JsonException ex)
+		{
+			_logger.LogWarning(ex, "Skipping malformed attribute display value {Object}/{Attribute}", dbref, longName);
+			return MarkupText.Empty;
+		}
+	}
 
 	private byte[]? ReadAttributeValue(ITx tx, long dbref, string longName)
 	{
@@ -892,7 +950,15 @@ public partial class LightningDatabase
 	}
 
 	private static MString DeserializeValue(byte[]? value)
-		=> value is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(Keys.ReadStr(value));
+	{
+		try { return value is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(Keys.ReadStr(value)); }
+		catch (System.Text.Json.JsonException)
+		{
+			// Index/watch display projections must not abort their caller for one bad value.
+			// Eager row readers report its object/attribute identity when excluding the row.
+			return MarkupText.Empty;
+		}
+	}
 
 	/// <summary>Resolves stored flag names through <see cref="Tables.AttrFlag"/>; a name whose definition
 	/// has since been deleted is dropped rather than surfaced as null, matching <c>ReadObjectFlags</c>.</summary>
@@ -971,7 +1037,14 @@ public partial class LightningDatabase
 			var (page, resume) = Store.Read(tx =>
 			{
 				var (rows, next) = ReadDirectChildPage(tx, parentPrefix, from, ChildPageSize);
-				return (rows.Select(row => hydrate(tx, row.LongName, row.Meta)).ToList(), next);
+				var hydrated = new List<T>();
+				foreach (var row in rows)
+				{
+					try { hydrated.Add(hydrate(tx, row.LongName, row.Meta)); }
+					catch (System.Text.Json.JsonException ex)
+					{ _logger.LogWarning(ex, "Skipping malformed attribute {Attribute}", row.LongName); }
+				}
+				return (hydrated, next);
 			});
 
 			foreach (var item in page)
@@ -1015,7 +1088,9 @@ public partial class LightningDatabase
 					return (rows, key);
 				}
 
-				rows.Add((Keys.ParseAttr(key).LongName, Codec.Deserialize<AttrMetaRecord>(value)));
+				try { rows.Add((Keys.ParseAttr(key).LongName, Codec.Deserialize<AttrMetaRecord>(value))); }
+				catch (System.Text.Json.JsonException ex)
+				{ _logger.LogWarning(ex, "Skipping malformed attribute metadata {Attribute}", Keys.ParseAttr(key).LongName); }
 			}
 
 			if (skipTo is null)

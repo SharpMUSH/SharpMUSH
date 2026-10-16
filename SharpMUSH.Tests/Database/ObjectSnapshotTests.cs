@@ -39,6 +39,34 @@ public class ObjectSnapshotTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task FutureWireSnapshotCaptureAndRestorePreserveOriginalBytes(bool damaged)
+	{
+		var raw = "{\"v\":999,\"t\":\"future snapshot\",\"extra\":42}";
+		if (damaged)
+		{
+			var source = MarkupText.Wrap(new UnknownMarkup("future-layer", "{\"k\":\"future-layer\"}"), MarkupText.Plain("long run"));
+			var document = System.Text.Json.Nodes.JsonNode.Parse(MarkupTextSerializer.Serialize(source))!;
+			document["t"] = "x";
+			raw = document.ToJsonString();
+		}
+		var (actor, target, player) = await Setup();
+		var stored = StoredMarkup.Inspect(raw);
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], stored.Value, player, StoredValue: stored));
+		var service = Get<IObjectSnapshotService>();
+		var saved = await service.CaptureAsync(actor, target, "future wire");
+		await Assert.That(saved.Attributes.Single(a => a.Name == "DESC").Markup).IsEqualTo(raw);
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("replacement"), player));
+		var selection = new SnapshotSelection(["DESC"]);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
+		await Assert.That(result.Completed).IsTrue();
+		var restored = await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync();
+		await Assert.That(restored.StoredValue!.Serialized).IsEqualTo(raw);
+	}
+
+	[Test]
 	[Arguments("DESC")]
 	[Arguments("desc")]
 	public async Task CapturePreviewRestorePreservesValuesAndClearsPendingMarker(string selectedName)

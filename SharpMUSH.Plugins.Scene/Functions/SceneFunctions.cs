@@ -976,9 +976,12 @@ public static class SceneFunctions
 		var content = MarkupTextSerializer.Serialize(args["2"].Message);
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		return await service.EditPoseAsync(poseId, editor, content) is ScenePose pose
-			? await PublishedAsync(parser, "edit", pose)
-			: new CallState(SceneNotFound);
+		return await service.EditPoseAsync(poseId, editor, content) switch
+		{
+			ScenePose pose => await PublishedAsync(parser, "edit", pose),
+			Error<string> error => new CallState("#-1 " + error.Value),
+			_ => new CallState(SceneNotFound)
+		};
 	}
 
 	/// <summary>

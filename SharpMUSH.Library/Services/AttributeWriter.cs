@@ -59,6 +59,11 @@ internal sealed class AttributeWriter(
 		SharpPlayer creator)
 		=> Succeeded(await SetAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy: true));
 
+	public async ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+		string attribute, StoredMarkup value, SharpPlayer? creator = null)
+		=> Succeeded(await SetAttributeAsync(executor, obj, attribute, value.Value,
+			creator ?? await executor.Object().Owner.WithCancellation(CancellationToken.None), creator is not null, value));
+
 	private static Result<Success> Succeeded(Result<WrittenAttribute> result) => result switch
 	{
 		WrittenAttribute => new Success(),
@@ -79,14 +84,14 @@ internal sealed class AttributeWriter(
 		string attribute,
 		MString value,
 		SharpPlayer creator,
-		bool isAttributeCopy)
+		bool isAttributeCopy, StoredMarkup? storedValue = null)
 	{
 		if (isAttributeCopy || !PlayerAliases.Applies(obj, attribute))
 		{
-			return await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: false);
+			return await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: false, storedValue);
 		}
 
-		var result = await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: true);
+		var result = await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: true, storedValue);
 		await ReportPlayerAliasAsync(executor, Succeeded(result), value.ToPlainText().Length > 0
 			? nameof(ErrorMessages.Notifications.PlayerAliasSet)
 			: nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
@@ -120,7 +125,7 @@ internal sealed class AttributeWriter(
 		MString value,
 		SharpPlayer creator,
 		bool isAttributeCopy,
-		bool isPlayerAlias)
+		bool isPlayerAlias, StoredMarkup? storedValue = null)
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
@@ -157,7 +162,7 @@ internal sealed class AttributeWriter(
 		var existing = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
 			.ToListAsync();
 
-		var write = new AttributeWrite(executor, obj, attrPath, existing, creator, isAttributeCopy);
+		var write = new AttributeWrite(executor, obj, attrPath, existing, creator, isAttributeCopy, storedValue);
 
 		return await PlanWriteAsync(write) switch
 		{
@@ -173,7 +178,8 @@ internal sealed class AttributeWriter(
 		string[] AttrPath,
 		List<SharpAttribute> Existing,
 		SharpPlayer Creator,
-		bool IsAttributeCopy);
+		bool IsAttributeCopy,
+		StoredMarkup? StoredValue);
 
 	/// <summary>
 	/// What the write gates learned: the level the path stops existing at (every level from there down
@@ -347,8 +353,10 @@ internal sealed class AttributeWriter(
 
 	private async ValueTask<Result<WrittenAttribute>> StoreAsync(AttributeWrite write, WritePlan plan, MString value)
 	{
+		if (write.StoredValue is { } original && value.ToPlainText() != original.Value.ToPlainText())
+			return new Error<string>("Stored markup cannot be normalized safely; replace the attribute explicitly.");
 		await mediator.Send(new SetAttributeCommand(write.Obj.Object().DBRef, write.AttrPath, value, write.Creator,
-			write.Executor.Object().DBRef));
+			write.Executor.Object().DBRef, write.StoredValue));
 		await WarnSyntaxErrorsAsync(write, value);
 		return new WrittenAttribute(IsQuiet(write, plan));
 	}

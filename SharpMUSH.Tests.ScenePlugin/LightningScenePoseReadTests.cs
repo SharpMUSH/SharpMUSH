@@ -54,6 +54,41 @@ public class LightningScenePoseReadTests
 		var other => throw new InvalidOperationException($"Expected a {typeof(T).Name}, but the result was {other}.")
 	};
 
+	[Test]
+	public async Task MalformedSerializedPoseDoesNotSaveFallbackBackIntoHistory()
+	{
+		const string malformed = "{ damaged JSON";
+		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
+		var pose = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "ic", "pose", [], "original"));
+		var log = _db.OpenTable("scene.log", duplicates: false);
+		await _db.WriteAsync(tx =>
+		{
+			var key = Keys.Composite(pose.Id, "", 1u);
+			tx.TryGet(log, key, out var bytes);
+			var record = System.Text.Json.Nodes.JsonNode.Parse(bytes)!;
+			record["Markup"] = malformed;
+			tx.Put(log, key, Keys.Str(record.ToJsonString()));
+			return 0;
+		});
+		await Assert.That(await _scenes.EditPoseAsync(pose.Id, "#1", pose.Content) is Error<string>).IsTrue();
+		var history = Expect<IReadOnlyList<ScenePoseEdit>>(await _scenes.GetPoseEditsAsync(pose.Id));
+		await Assert.That(history.Count).IsEqualTo(1);
+		await Assert.That(history.Single().Markup).IsEqualTo(malformed);
+	}
+
+	[Test]
+	public async Task FutureWirePoseEditIsRefusedWithoutTruncatingHistory()
+	{
+		const string raw = "{\"v\":999,\"t\":\"future text\",\"extra\":42}";
+		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
+		var pose = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "ic", "pose", [], raw));
+		var result = await _scenes.EditPoseAsync(pose.Id, "#1", "replacement");
+		await Assert.That(result is Error<string>).IsTrue();
+		var after = Expect<ScenePose>(await _scenes.GetPoseAsync(pose.Id));
+		await Assert.That(after.Markup).IsEqualTo(raw);
+		await Assert.That(after.EditCount).IsEqualTo(pose.EditCount);
+	}
+
 	private async Task<string> NewPlayer(string name) => $"#{(await _db.CreatePlayerAsync(name, "pw", new DBRef(0), new DBRef(0), 0)).Number}";
 
 	private async Task<string> Pose(string sceneId, string author, string content)

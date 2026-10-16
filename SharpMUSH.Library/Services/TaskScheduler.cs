@@ -627,9 +627,14 @@ public partial class TaskScheduler(
 	{
 		var semaphore = SchedulerKeys.SemaphoreTarget(entry.Group);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
-		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
-			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
-			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		async ValueTask<SharpAttribute?> Read()
+		{
+			var value = await mediator.CreateStream(
+				new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+				.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+			SemaphoreAttributes.RequireCanRewrite(value);
+			return value;
+		}
 		var attribute = await Read();
 		if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var original)) return;
 		var expected = original > 0 ? original - 1 : 0;
@@ -680,9 +685,14 @@ public partial class TaskScheduler(
 	{
 		var semaphore = SchedulerKeys.SemaphoreTarget(entry.Group);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
-		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
-			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
-			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		async ValueTask<SharpAttribute?> Read()
+		{
+			var value = await mediator.CreateStream(
+				new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+				.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+			SemaphoreAttributes.RequireCanRewrite(value);
+			return value;
+		}
 		var attribute = await Read();
 		var original = 0;
 		var accounted = attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out original);
@@ -1113,6 +1123,11 @@ public partial class TaskScheduler(
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+				if (attribute?.StoredValue is { CanRewrite: false })
+				{
+					Release(admission.Pid!.Value, QueueOutcome.InvalidTarget);
+					return Reject(QueueRejectionReason.InvalidTarget);
+				}
 				counterCreated = attribute is null;
 				if (attribute is null || attribute.Value.Length == 0) currentCount = 0;
 				else if (!int.TryParse(attribute.Value.ToPlainText(), out currentCount) || currentCount == int.MaxValue)
@@ -1163,6 +1178,7 @@ public partial class TaskScheduler(
 				{
 					var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
 						.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+					SemaphoreAttributes.RequireCanRewrite(attribute);
 					if (counterCreated && attribute is null) return;
 					if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var persisted))
 						throw new InvalidOperationException("Semaphore changed before admission repair; restore its original counter or remove the newly created attribute before retrying.");

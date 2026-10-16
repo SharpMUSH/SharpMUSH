@@ -153,6 +153,7 @@ public class SemaphoreCommandTests
 	[Arguments(0, "none")]
 	[Arguments(0, "flag")]
 	[Arguments(0, "child")]
+	[Arguments(0, "markup")]
 	[Arguments(1, "none")]
 	[Arguments(2, "none")]
 	[Arguments(3, "none")]
@@ -188,6 +189,11 @@ public class SemaphoreCommandTests
 			}
 			else if (concurrentEdit == "child")
 				await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["CUSTOM_COUNTER", "CHILD"], MarkupText.Plain("preserve"), player));
+			else if (concurrentEdit == "markup")
+			{
+				var unsafeValue = StoredMarkup.Inspect("{\"v\":999,\"t\":\"-1\",\"counterMetadata\":42}");
+				await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, path, unsafeValue.Value, player, StoredValue: unsafeValue));
+			}
 			return false; // The count committed, but no creation identity or flag was captured yet.
 		}
 		var flagCalls = 0;
@@ -232,6 +238,11 @@ public class SemaphoreCommandTests
 				var current = await Mediator.CreateStream(new GetAttributeQuery(target, path)).LastAsync();
 				await Assert.That(current.Value.ToPlainText()).IsEqualTo("-1");
 				if (concurrentEdit == "flag") await Assert.That(current.Flags.Any(x => x.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase))).IsTrue();
+				else if (concurrentEdit == "markup")
+				{
+					await Assert.That(current.StoredValue!.CanRewrite).IsFalse();
+					await Assert.That(current.StoredValue.Serialized).IsEqualTo("{\"v\":999,\"t\":\"-1\",\"counterMetadata\":42}");
+				}
 				else await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["CUSTOM_COUNTER", "CHILD"])).LastAsync()).Value.ToPlainText()).IsEqualTo("preserve");
 			}
 		}
