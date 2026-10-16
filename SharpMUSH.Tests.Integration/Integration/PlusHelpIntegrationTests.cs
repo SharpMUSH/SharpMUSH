@@ -517,6 +517,89 @@ public class PlusHelpIntegrationTests
 			.Because("deleting the override hands the front page back to the package");
 	}
 
+	[Test]
+	public async Task TheIndex_IsACompactGrid_AndSourcesKeepsUnevaluatedDescriptions()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var reader = await ReaderAsync();
+		var source = (await God1($"@create Compact Help {Tag}")).Message.ToPlainText().Trim();
+		const string description = "Compact source description [add(40,2)] | literal data";
+		await God1($"&HELP {source}={description}");
+		await God1($"&HELP`EXAMPLE {source}=A compact example.");
+		await RunAs(await StaffAsync(), $"+help/source compact-{Tag}={source}");
+		try
+		{
+			var front = await ShownAsync(reader, "+help");
+			await Assert.That(front.ToPlainText()).DoesNotContain("Compact source description");
+			await Assert.That(front.Render(MarkupFormat.Html)).Contains("ms-grid");
+			await Assert.That(front.Render(MarkupFormat.Mxp)).Contains($"HREF=\"+help/list compact-{Tag}\"");
+			var details = await ShownAsync(reader, "+help/sources");
+			await Assert.That(details.ToPlainText()).Contains(description);
+			await Assert.That(details.Render(MarkupFormat.Pueblo)).Contains($"XCH_CMD=\"+help/list compact-{Tag}\"");
+			await Assert.That(details.ToPlainText()).Contains("Topics");
+			await Assert.That(Joined(await RunAs(reader, $"+help/list compact-{Tag}"))).Contains("A compact example.");
+		}
+		finally
+		{
+			await RunAs(await StaffAsync(), $"+help/unsource compact-{Tag}");
+			await God1($"@destroy {source}");
+		}
+	}
+
+	[Test]
+	public async Task SourceNavigation_ReflowsForTheRecipient_AndKeepsEmptyRegistrationsInDetails()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var reader = await ReaderAsync();
+		var staff = await StaffAsync();
+		var source = (await God1($"@create Flow Help {Tag}")).Message.ToPlainText().Trim();
+		var names = Enumerable.Range(0, 12).Select(i => $"flow-{Tag}-{i:D2}")
+			.Append($"flow-{Tag}-a-longer-source-name").ToArray();
+		await God1($"&HELP {source}=Flow description.");
+		await God1($"&HELP`ENTRY {source}=Flow topic.");
+		foreach (var name in names)
+		{
+			await RunAs(staff, $"+help/source {name}={source}");
+		}
+		try
+		{
+			var heights = new List<int>();
+			foreach (var width in new[] { 48, 132 })
+			{
+				await RunAs(reader, $"SCREENWIDTH {width}");
+				var shown = await ShownAsync(reader, "+help");
+				var grid = shown.ToPlainText().Split("Available help", StringSplitOptions.None)[1]
+					.Split("+help <topic>", StringSplitOptions.None)[0];
+				var rows = grid.Split('\n');
+				await Assert.That(rows.Where(row => row.Length > width)).IsEmpty();
+				heights.Add(rows.Length);
+				foreach (var name in names)
+				{
+					await Assert.That(grid).Contains(name);
+					await Assert.That(shown.Render(MarkupFormat.Html)).Contains($"+help/list {name}");
+				}
+			}
+			await Assert.That(heights[0]).IsGreaterThan(heights[1]);
+			await God1($"&HELP`ENTRY {source}=");
+			var empty = Joined(await RunAs(reader, "+help"));
+			await Assert.That(empty).DoesNotContain(names[0]);
+			var details = Joined(await RunAs(reader, "+help/sources"));
+			await Assert.That(details).Contains(names[0]).And.Contains("Flow description.");
+			// @destroy schedules recycling; point one registration at a missing object directly.
+			await God1($"&SRC`{names[0].ToUpperInvariant()} {await LibrarianAsync()}=#999999999");
+			await Assert.That(Joined(await RunAs(reader, "+help/sources"))).Contains("object is missing");
+		}
+		finally
+		{
+			await RunAs(reader, "SCREENWIDTH 78");
+			foreach (var name in names)
+			{
+				await RunAs(staff, $"+help/unsource {name}");
+			}
+			await God1($"@destroy {source}");
+		}
+	}
+
 	// ── Writing ─────────────────────────────────────────────────────────────
 
 	[Test]
