@@ -89,3 +89,27 @@ Follow-up validation uses the pinned SDK on PATH, `TMPDIR=TMP=TEMP=/temp/codex/a
 - `HelpHeightTests`: 1/1; `HelpNavigationTests`: 4/4; `RegistryContractAuditTests`: 4/4.
 - `JsonMapNestedHelpExamplePreservesRawValues`: 1/1 against the actual shipped definitions; nested arrays, object strings and null remain intact.
 - `git diff --check`: passed. No C# source changed in this follow-up.
+
+## List transformation signatures
+
+Focused follow-up at `14fd9ab7aaf5baaaf13e2d2bcefe9641a55d0e4b` plus these metadata corrections. The regenerated census keeps every entry `pending-behavioral-review`; these three entries now link the focused consumer/parser evidence below. This does not complete their permission, error, resource-limit or callback-identity review, and #1797 remains open. The original census counts above describe the original baseline; this regeneration reconciles 663 functions, 224 commands, 644 switches, 28 function aliases, 11 command aliases, 52 event schemas and 248 callback candidates without frozen test totals.
+
+| Function | Observed incorrect Monaco signature before correction | Correct ordered labels |
+| --- | --- | --- |
+| `sortkey` | `sortkey(list, attribute, [delimiter], [arg4], [arg5])` | `attribute, list, sort-type, delimiter, osep` |
+| `index` | `index(list, element, delimiter, arg4)` | `list, delimiter, first, length` |
+| `munge` | `munge(attribute, list1, list2, [list3], [delimiter])` | `attribute, list1, list2, delimiter, osep` |
+
+The actual implementation reads these corrected argument positions; the shipped `sharpfunc.md` entries for `index` and `sortkey`, and `munge-function.md`, already document that order. Help therefore needs no rewrite. Only registration labels change. Evaluation, arity, callback arguments and runtime behavior are preserved. The set-function overloads are outside this correction slice.
+
+`ListSignaturesDescribeActualCallShapes` checks the analysis catalog through its real analyzer and generated portal definitions. The actual registered Monaco provider is exercised with the regenerated census metadata in `monaco-signatures.test.mjs`; this avoids a second hand-maintained list-signature fixture. Literal expected labels and active parameter positions protect the author-visible result. `ListFunctionUnitTests` covers full calls with input and output separators, including a multi-character `index` delimiter; the `munge` callback reads its supplied delimiter as `sort`'s third argument.
+
+Validation uses SDK `11.0.100-rc.2.26504.105`, `-m:2 -nr:false`, `TMPDIR=TMP=TEMP=/temp/codex/list-contract-metadata`, and rootless Podman for parser fixtures:
+
+- RED: the three new analyzer signature cases fail with the old labels; the three new actual Monaco provider cases fail with the same wrong call shapes. Five existing provider cases pass.
+- Parser characterization before the metadata correction: `ListFunctionUnitTests` passed 407/407, including all three new full call-shape cases.
+- GREEN: `dotnet build tools/ContractAudit -m:2 -nr:false` passed with zero warnings/errors; two exporter runs were byte-identical (`cmp` exit 0).
+- GREEN: complete client suite `node --test tools/client-tests/*.test.mjs` passed 93/93, including the three new actual-provider regressions.
+- GREEN: `dotnet build SharpMUSH.Tests -m:2 -nr:false` passed with zero warnings/errors; `RegistryContractAuditTests` passed 7/7 against the corrected generated catalog and portal definitions.
+- GREEN: corrected `ListFunctionUnitTests` passed 407/407; changed C# formatted twice to convergence and `git diff --check` passed.
+- Full engine suite, live LSP/browser interaction and production validation were not run for this metadata slice. CI and independent review remain required before merge; no merge or deployment was performed.

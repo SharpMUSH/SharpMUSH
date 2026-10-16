@@ -62,6 +62,7 @@ public partial class Commands
 	private async ValueTask StorageCapacityAsync(AnySharpObject executor)
 	{
 		var report = StorageCapacity.Measure();
+		var reusableBytes = report.FileBytes < 0 || report.LiveBytes < 0 ? -1 : report.FreeBytes;
 		var feeds = await Mediator.Send(new GetFeedUsageQuery(), ExecutionBudget.CurrentToken);
 		var feedBytes = feeds.Sum(kind => kind.StoredBytes);
 
@@ -71,10 +72,10 @@ public partial class Commands
 				.. Meters(
 				("Map", report.FileBytes, report.MapSizeBytes,
 					$"{DescribeKnownBytes(report.FileBytes)} of {DescribeKnownBytes(report.MapSizeBytes)} limit"),
-				("File", report.LiveBytes, report.FileBytes,
-					$"{DescribeKnownBytes(report.LiveBytes)} live, {DescribeKnownBytes(report.FreeBytes)} reusable"),
 				("Feeds", feedBytes, report.LiveBytes, $"{DescribeBytes(feedBytes)} of the live data")),
 				.. Facts(
+				("File size", DescribeKnownBytes(report.FileBytes)),
+				("Inside file", $"{DescribeKnownBytes(report.LiveBytes)} live, {DescribeKnownBytes(reusableBytes)} reusable"),
 				("Path", report.WorldPath),
 				("On disk", DescribeKnownBytes(report.AllocatedBytes)),
 				("Disk free", DescribeKnownBytes(report.WorldDiskFreeBytes)))]),

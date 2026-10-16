@@ -555,7 +555,12 @@ reports each of them:
 | **Allocated on disk** | What the filesystem actually holds for it, which is what `du` shows. It can be less than the length, because the file is sparse. | `kind="allocated"` |
 | **Live data** | Pages holding records now. The rest of the file is **free pages**, which later writes reuse. | `kind="live"`, `kind="free_pages"` |
 
-Two rules follow from this:
+`@storage` shows the **Map** bar as logical file length against the map limit. **File size**
+and **Inside file** are byte figures, without a bar: live data filling the current file means no
+reusable pages, not that the database has reached its capacity. **On disk** remains the physical
+allocation, which may be smaller for a sparse file.
+
+Three rules follow from this:
 
 - **Deleting records never shrinks the file.** LMDB puts the freed pages on its free list and the
   next writes reuse them, so the file stops growing but stays the same size. The only way to give the

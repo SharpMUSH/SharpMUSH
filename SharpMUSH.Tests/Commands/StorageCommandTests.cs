@@ -1,5 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -12,6 +16,7 @@ namespace SharpMUSH.Tests.Commands;
 /// promises — the capacity figures, the history counts with their policy, and a purge that under the
 /// default policy keeps everything.
 /// </summary>
+[NotInParallel]
 public class StorageCommandTests : ServerTestBase
 {
 	[ClassDataSource<StorageInventoryServerFactory>(Shared = SharedType.PerTestSession)]
@@ -51,7 +56,10 @@ public class StorageCommandTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task AMortalCannotRunIt()
+	[Arguments("@storage")]
+	[Arguments("@storage/history")]
+	[Arguments("@storage/purge")]
+	public async Task AMortalCannotRunIt(string command)
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services,
@@ -59,7 +67,7 @@ public class StorageCommandTests : ServerTestBase
 			ConnectionService,
 			"StorageMortal");
 
-		var answer = await CmdAs(mortal.DbRef, mortal.Handle, "@storage/purge");
+		var answer = await CmdAs(mortal.DbRef, mortal.Handle, command);
 
 		await Assert.That(answer).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
@@ -71,9 +79,78 @@ public class StorageCommandTests : ServerTestBase
 
 		var report = string.Join("\n", heard);
 		await Assert.That(report).Contains("limit").And.Contains("live,").And.Contains("reusable");
+		await Assert.That(report).Contains("File size:").And.Contains("Inside file:");
+		await Assert.That(report).DoesNotContain("File:");
 		await Assert.That(report).Contains("On disk:").And.Contains("Disk free:");
 		await Assert.That(report).Contains("Only a compacted copy shrinks it.");
 		await Assert.That(report).Contains("at the peak").And.Contains("Next run:");
+	}
+
+	private async Task<MString> CapacityReportAsync(long fileBytes, long liveBytes, long allocatedBytes,
+		long mapBytes = 64L << 30)
+	{
+		var capacity = Substitute.For<IStorageCapacityService>();
+		capacity.Measure().Returns(new StorageCapacityReport
+		{
+			WorldPath = "/data/world",
+			MapSizeBytes = mapBytes,
+			PageSize = 4096,
+			FileBytes = fileBytes,
+			AllocatedBytes = allocatedBytes,
+			FilePages = Math.Max(0, fileBytes) / 4096,
+			UsedPages = liveBytes / 4096,
+			WorldDiskFreeBytes = 100L << 30,
+			Backup = new BackupCapacity("", 0, 0, 0, 0, 0, -1, false),
+			Leftovers = []
+		});
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+			WebAppFactoryArg.Services, capacity);
+		var parser = WebAppFactoryArg.CommandParserWith(commands.Get(), WebAppFactoryArg.ExecutorDBRef, 1);
+		var before = Notifications.RawCountFor(WebAppFactoryArg.ExecutorDBRef);
+		await parser.CommandParse(1, ConnectionService, MarkupText.Plain("@storage"));
+		return MarkupText.Join(MarkupText.Plain("\n"), Notifications.RawFor(WebAppFactoryArg.ExecutorDBRef)
+			.Skip(before).Select(message => message switch
+			{
+				MString markup => markup,
+				string text => MarkupText.Plain(text),
+			}));
+	}
+
+	private static string HtmlField(MString report, string label)
+		=> Regex.Match(report.Render(MarkupFormat.Html), $"<dt>{label}:</dt><dd[^>]*>(.*?)</dd>",
+			RegexOptions.Singleline).Groups[1].Value;
+
+	[Test]
+	[Arguments(16384L, 16384L, 16384L, "16.0 KB", "16.0 KB live, 0 B reusable", "16.0 KB")]
+	[Arguments(32L << 30, 24L << 30, 32L << 30, "32.0 GB", "24.0 GB live, 8.0 GB reusable", "32.0 GB")]
+	[Arguments(32L << 30, 1L << 20, 1L << 20, "32.0 GB", "1.0 MB live, 32.0 GB reusable", "1.0 MB")]
+	[Arguments(0L, 0L, 0L, "0 B", "0 B live, 0 B reusable", "0 B")]
+	[Arguments(-1L, 0L, -1L, "unknown", "0 B live, unknown reusable", "unknown")]
+	[Arguments(16384L, -4096L, 16384L, "16.0 KB", "unknown live, unknown reusable", "16.0 KB")]
+	public async Task FileFacts_HaveNoPackingGauge(long fileBytes, long liveBytes, long allocatedBytes,
+		string fileSize, string insideFile, string allocated)
+	{
+		var shown = await CapacityReportAsync(fileBytes, liveBytes, allocatedBytes);
+		var text = shown.ToPlainText();
+		await Assert.That(text).Contains("File size:").And.Contains("Inside file:");
+		await Assert.That(HtmlField(shown, "File size")).Contains(fileSize).And.DoesNotContain("ms-gauge");
+		await Assert.That(HtmlField(shown, "Inside file")).Contains(insideFile).And.DoesNotContain("ms-gauge");
+		await Assert.That(HtmlField(shown, "On disk")).Contains(allocated);
+		await Assert.That(text).DoesNotContain("NaN").And.DoesNotContain("Infinity");
+		if (fileBytes < 0)
+		{
+			await Assert.That(HtmlField(shown, "Map")).Contains("unknown").And.DoesNotContain("ms-gauge");
+		}
+	}
+
+	[Test]
+	public async Task ANearlyFullMap_StillShowsItsActualCapacityGauge()
+	{
+		var shown = await CapacityReportAsync(99L << 20, 99L << 20, 99L << 20, 100L << 20);
+		await Assert.That(HtmlField(shown, "Map")).Contains("<meter min=\"0\" max=\"104857600\" value=\"103809024\"")
+			.And.Contains(">99%</span>").And.Contains("99.0 MB of 100.0 MB limit");
+		await Assert.That(HtmlField(shown, "File size")).Contains("99.0 MB").And.DoesNotContain("ms-gauge");
+		await Assert.That(shown.ToPlainText()).Contains("99%").And.Contains("99.0 MB live, 0 B reusable");
 	}
 
 	[Test]
