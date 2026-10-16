@@ -5,11 +5,13 @@
   "lookup": "@function",
   "aliases": [],
   "sections": [
+    {"id": "switches", "heading": "Switches, aliases and clones", "lookup": "@function switches", "aliases": ["@function/disable", "@function/enable", "@function/delete", "@function/alias", "@function/clone"]},
     {
       "id": "definition-permissions",
       "heading": "Definition permissions",
       "lookup": "@function definition permissions"
     },
+    {"id": "definition-example", "heading": "Definition example", "lookup": "@function definition example"},
     {
       "id": "startup-loading",
       "heading": "Startup loading",
@@ -48,6 +50,21 @@ When used without any arguments, this command lists all global user-defined func
 
 When used with a function name, it displays some information about how that function is parsed, and how many arguments it takes.
 
+Otherwise, this command defines a global function with the name `<function name>`, which evaluates to `<attribute>` on `<object>`.
+
+- [@function switches]: disabling, enabling, deleting, aliasing and cloning functions
+- [@function definition permissions]: who may define one, arguments, and restrictions
+- [@function definition example]: a u() function made global
+- [@function startup loading]: loading functions when the game starts
+- [@function named arguments]: naming the arguments with `/args`
+- [@function replacing built-in functions]: overriding a built-in function
+
+## Switches, aliases and clones
+
+`@function/<switch> <function name>`<br>
+`@function/alias <function name>=<alias>`<br>
+`@function/clone <function name>=<clone>`
+
 `<switch>` can be one of:
 - /disable, to disable a function.
 - /enable, to re-enable it.
@@ -55,8 +72,6 @@ When used with a function name, it displays some information about how that func
 - /restrict, to change the restriction flags on an existing function.
 
 `@function/alias` creates an alias for the built-in function `<function name>` so that it can also be called as `<alias>`. `@function/clone` creates a new copy of `<function name>` named `<clone>`, which works the same initially but can be restricted separately. You cannot alias or clone @functions, or alias cloned functions.
-
-Otherwise, this command defines a global function with the name `<function name>`, which evaluates to `<attribute>` on `<object>`.
 
 ## Definition permissions
 
@@ -70,7 +85,8 @@ An optional fifth argument will set restriction flags.
 
 The `/preserve` switch, for MUX compability, does the same thing as the 'localize' restriction - treats the attribute that's evaluated as if it were called with ulocal() instead of u().
 
-### Example
+## Definition example
+
 ```sharp
 > &WORD_CONCAT #10=%0 %1
 > say u(#10/word_concat, foo, bar)

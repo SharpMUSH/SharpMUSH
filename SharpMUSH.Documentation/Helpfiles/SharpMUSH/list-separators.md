@@ -15,6 +15,7 @@
       "heading": "Writing a separator",
       "lookup": "list separators writing"
     },
+    {"id": "keeping", "heading": "Where the mark is kept", "lookup": "list separators keeping"},
     {
       "id": "nesting",
       "heading": "Lists inside lists",
@@ -68,6 +69,8 @@ A marked delimiter is strict:
 - It splits only on marked text. Given a list with no marks, it returns one item.
 - It keeps empty items, even when the separator is a space. `%*<%b>` does not collapse runs the way a plain space does.
 - Two marked stretches side by side are one, so `%*<|>%*<|>` is the same string as `%*<||>`. Split on `%*<|>`, each gives an empty item between the two.
+
+## Where the mark is kept
 
 An output separator that is marked keeps the result a list of its own:
 

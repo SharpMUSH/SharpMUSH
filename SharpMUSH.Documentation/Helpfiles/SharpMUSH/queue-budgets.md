@@ -21,6 +21,11 @@
       "lookup": "queue budgets admission rejection"
     },
     {
+      "id": "semaphore-repair",
+      "heading": "Semaphore repair",
+      "lookup": "queue budgets semaphore repair"
+    },
+    {
       "id": "diagnostics",
       "heading": "Diagnostics",
       "lookup": "queue budgets diagnostics"
@@ -79,6 +84,8 @@ Draining removes only work still waiting on the semaphore. A timeout that has
 already made a command runnable keeps its reservation until the consumer
 finishes it. Partial drains subtract only removed waiters and preserve unused
 notification credits; a full drain also clears unused notification credits.
+
+## Semaphore repair
 
 If a failed semaphore submission cannot restore its counter, the cancelled PID
 keeps its queue slot as a repair record. The next semaphore operation (including

@@ -4,7 +4,10 @@
   "id": "ascii-command",
   "lookup": "@ascii",
   "aliases": ["ascii translations", "ascii_translations"],
-  "sections": []
+  "sections": [
+    {"id": "setting", "heading": "Setting and removing stand-ins", "lookup": "@ascii setting", "aliases": ["@ascii/remove"]},
+    {"id": "example", "heading": "Example", "lookup": "@ascii example"}
+  ]
 }
 -->
 # @ascii
@@ -17,13 +20,22 @@ A client that is not sent UTF-8 gets each character it cannot show as the neares
 
 `@ascii` with no argument lists the table: each character, its code point, and the text sent for it.
 
+The table is kept with the game's configuration and is the same one the web portal's ASCII Translations page edits. Using `@ascii` needs the config.admin permission.
+
+- [@ascii setting]: setting a character's text, and removing it again
+- [@ascii example]: a middle dot sent as a dash
+
+## Setting and removing stand-ins
+
+`@ascii <character>=<text>`<br>
+`@ascii/remove <character>`
+
 `@ascii <character>=<text>` sets the text sent for `<character>`, which is one character outside ASCII. The table holds each character once, so setting it again replaces its text. `<text>` is plain ASCII and is evaluated, so write a space as `%b`; it may be longer than the character, and an empty `<text>` leaves the character out. A box or a table is laid out after the stand-ins are applied, so it stays lined up; text you padded yourself may not.
 
 `@ascii/remove <character>` takes a character out of the table, so it gets the built-in stand-in again.
 
-The table is kept with the game's configuration and is the same one the web portal's ASCII Translations page edits. Using `@ascii` needs the config.admin permission.
+## Example
 
-Example:
 ```
 > @ascii <a middle dot>=%b-%b
 ```

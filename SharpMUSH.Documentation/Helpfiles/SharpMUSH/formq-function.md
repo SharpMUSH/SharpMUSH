@@ -1,38 +1,16 @@
-# formdecode()
-`formdecode(<string>[, <paramname>[, <osep>]])`
-
-formdecode() is intended for use with the HTTP Handler. See [http] for more.
-
-formdecode() converts form-encoded data, such as HTTP GET paths (after the ?) or the contents of POST with form-urlencoded data. It searches for the parameter named *<paramname>* and returns with its decoded value.
-
-If *<paramname>* is not given, formdecode() returns a list of parameter names.
-
-If there are multiple values, they will be separated by *<osep>* (default %b)
-
-formdecode() requires libcurl (`@http`) to be enabled.
-
-### Examples
-
-```sharp
-> &FORMDATA me=name=Joe&hobby=o%2F%60%20singing%20o%2F%60&like=potato&like=cheese
-> say formdecode(v(formdata),name)
-You say, "Joe"
-
-> say formdecode(v(formdata),hobby)
-You say, "o/\` singing o/\`"
-
-> say formdecode(v(formdata),like,^)
-You say, "potato^cheese"
-
-> say formdecode(v(formdata),,,)
-You say, "name,hobby,like,like"
-```
-
-::: seealso
-- [FORMQ()]
-:::
-
+<!-- help-article
+{
+  "corpus": "help",
+  "id": "formq-function",
+  "lookup": "formq()",
+  "aliases": [],
+  "sections": [
+    {"id": "examples", "heading": "Examples", "lookup": "formq() examples"}
+  ]
+}
+-->
 # formq()
+
 `formq(<string>[, <prefix>])`
 
 formq() decodes form-encoded data (an HTTP query string or a form-urlencoded body) and sets one **Q-register per parameter**, so HTTP handler softcode can read named parameters directly instead of calling [FORMDECODE()] per field. This is a SharpMUSH extension; there is no PennMUSH equivalent.
@@ -43,7 +21,7 @@ Array parameters collapse into one %r-separated register, whichever way the clie
 
 formq() returns the space-separated list of normalized parameter names (without the prefix), mirroring %`\<headers\>`.
 
-### Examples
+## Examples
 
 ```sharp
 > think [setq(n,formq(name=Joe+Smith&like=a&like=b))]%q<n> / %q<form.name> / %q<form.like>
@@ -60,4 +38,3 @@ The default HTTP verb handlers (see [http examples]) call formq() on the query s
 - [FORMDECODE()]
 - [setq()]
 :::
-

@@ -12,6 +12,11 @@
       "aliases": [
         "@LOCK-COMPLEX"
       ]
+    },
+    {
+      "id": "grouping-lock-keys",
+      "heading": "Grouping lock keys",
+      "lookup": "lock keys grouping"
     }
   ],
   "redirects": {
@@ -62,6 +67,8 @@ locks the exit "OOC Room" so that only those with their STATUS attribute set to 
 ```
 
 only allows those with their @sex set to Male who are carrying a "Bathroom Key" object to pass.
+
+## Grouping lock keys
 
 You can group together different sets of keys by enclosing each group in parenthesis "()". For instance,
 

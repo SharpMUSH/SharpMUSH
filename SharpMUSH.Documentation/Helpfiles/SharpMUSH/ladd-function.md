@@ -18,7 +18,10 @@
     "lmax",
     "lmin"
   ],
-  "sections": []
+  "sections": [
+    {"id": "items", "heading": "Reading the items", "lookup": "ladd items"},
+    {"id": "examples", "heading": "Examples", "lookup": "ladd examples"}
+  ]
 }
 -->
 # ladd()
@@ -40,9 +43,25 @@ These do arithmetic on a whole list of numbers at once, the way lmath() does, an
 - lavg() returns the average of the numbers.
 - lmax() and lmin() return the largest and the smallest number.
 
+ladd(), lsub(), lmul(), ldiv(), lavg(), lmax() and lmin() come from RhostMUSH and take the same arguments.
+
+- [ladd items]: how items count as numbers, delimiters, and an empty list
+- [ladd examples]: each function on a short list
+
+::: seealso
+- [LMATH()]
+- [ADD()]
+- [FDIV()]
+- [MEAN()]
+- [land()]
+:::
+
+## Reading the items
+
 Each item counts as the number it starts with, so `1.5x` counts as 1.5 and an item that does not start with a number counts as 0. The items are separated by `<delimiter>`, or by spaces if it is not given or is empty. With another delimiter an empty item is kept, and counts as 0. An empty list gives 0.
 
-Examples:
+## Examples
+
 ```sharp
 > think ladd(1 2 3 4)
 10
@@ -59,13 +78,3 @@ Examples:
 > think lmin(1 10 2 -4 6)
 -4
 ```
-
-ladd(), lsub(), lmul(), ldiv(), lavg(), lmax() and lmin() come from RhostMUSH and take the same arguments.
-
-::: seealso
-- [LMATH()]
-- [ADD()]
-- [FDIV()]
-- [MEAN()]
-- [land()]
-:::

@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "types-and-names",
+      "heading": "Types, names, zones and parents",
+      "lookup": "@search types and names"
+    },
+    {
       "id": "flags-and-powers",
       "heading": "Flags and powers",
       "lookup": "@search flags and powers"
@@ -45,6 +50,8 @@ Output: the dbrefs found, as `lsearch()` returns them.
 If a `<player>` argument is supplied, only objects owned by that player will be listed, or all objects if "all" is used. Mortals attempting to match other players (aside from ZMPs whose @lock/zone they pass) or "all" will only get objects which they can examine.
 
 `<class>` and `<restriction>` arguments can be given to filter the match results. Possible `<class>`es include TYPE, NAME, ZONE, PARENT, EXITS, THINGS (or OBJECTS), ROOMS, PLAYERS, FLAGS, LFLAGS, POWERS, ELOCK, COMMAND, LISTEN, EVAL, EPLAYER, EROOM, EEXIT, and ETHING (or EOBJECT).
+
+## Types, names, zones and parents
 
 If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EXIT, PLAYER, GARBAGE. This shows all objects of the specified type.
 

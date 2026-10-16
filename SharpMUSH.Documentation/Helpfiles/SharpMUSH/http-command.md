@@ -29,6 +29,11 @@
       "id": "examples",
       "heading": "Examples",
       "lookup": "@http examples"
+    },
+    {
+      "id": "login-examples",
+      "heading": "Login examples",
+      "lookup": "@http login examples"
     }
   ]
 }
@@ -47,6 +52,7 @@ Restricted to objects set Wizard or with the Can_HTTP @Power.
 - [@http secrets]: sending a password or token kept with @secret
 - [@http qregisters]: the q-registers a PennMUSH import reads
 - [@http examples]: requests and what they sent
+- [@http login examples]: logging in with Basic and a secret
 
 Incoming requests, which softcode answers, are described in [http].
 
@@ -105,6 +111,24 @@ Headers typed as JSON, in their extra braces:
 ```
 Output: `200 MyMUSH`
 
+Reading a header of the reply:
+```sharp
+> &SHOW me=think [json_query(json_query(%<headers>,get,content-type),unescape)]
+> @http me/SHOW=https://postman-echo.com/get
+```
+Output: `application/json; charset=utf-8`
+
+Checking whether the reply was cut short:
+```sharp
+> &SHOW me=think [if(%<http-overflow>,Reply too long.,Reply complete.)]
+> @http me/SHOW=https://postman-echo.com/get
+```
+Output: `Reply complete.`
+
+## Login examples
+
+postman-echo.com answers with the request it received, so these show what @http sent.
+
 Logging in with HTTP Basic:
 ```sharp
 > &SHOW me=think %<status> %0
@@ -120,20 +144,6 @@ Logging in with a stored secret, as a wizard:
 > @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,json(object,secret,"http.postman.login",scheme,"Basic"))
 ```
 Output: `200 {"authenticated":true}`
-
-Reading a header of the reply:
-```sharp
-> &SHOW me=think [json_query(json_query(%<headers>,get,content-type),unescape)]
-> @http me/SHOW=https://postman-echo.com/get
-```
-Output: `application/json; charset=utf-8`
-
-Checking whether the reply was cut short:
-```sharp
-> &SHOW me=think [if(%<http-overflow>,Reply too long.,Reply complete.)]
-> @http me/SHOW=https://postman-echo.com/get
-```
-Output: `Reply complete.`
 
 ::: seealso
 - [URLENCODE()]

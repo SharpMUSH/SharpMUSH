@@ -6,7 +6,10 @@
   "aliases": [
     "columns"
   ],
-  "sections": []
+  "sections": [
+    {"id": "arguments", "heading": "Optional arguments", "lookup": "columns arguments"},
+    {"id": "examples", "heading": "Examples", "lookup": "columns examples"}
+  ]
 }
 -->
 # columns()
@@ -14,6 +17,15 @@
 `columns(<text>, <width>, <columns>[, <justification>[, <crop>[, <cut>[, <left>[, <between>[, <right>[, <order>[, <delimiter>[, <filler>[, <fill rows>]]]]]]]]]])`
 
 columns() sets the words of `<text>` out in `<columns>` columns, each `<width>` characters wide. By default the words run down the first column, then down the next, and the first columns take one more word each when the words do not fill the last row. A word wider than `<width>` is cut into pieces that each take a cell of their own. Color in `<text>` is dropped.
+
+`<width>` must be at least 1, or columns() returns `#-1 WIDTH MUST BE >= 1`. A width or column count too large for the output limit returns `#-1 WIDTH ARGUMENT OUT OF BOUNDS` or `#-1 COLUMNS ARGUMENT OUT OF BOUNDS`, and an unknown justification returns `#-1 INVALID JUSTIFICATION SPECIFIED`.
+
+columns() comes from RhostMUSH and takes the same arguments.
+
+- [columns arguments]: justification, cropping, borders, order, delimiter and filler
+- [columns examples]: columns down and across, with borders and fill
+
+## Optional arguments
 
 The optional arguments, in order:
 
@@ -28,9 +40,8 @@ The optional arguments, in order:
 
 An empty item between two delimiters is a blank cell, but RhostMUSH, and so columns(), runs it on into the cell after it, making that cell twice as wide.
 
-`<width>` must be at least 1, or columns() returns `#-1 WIDTH MUST BE >= 1`. A width or column count too large for the output limit returns `#-1 WIDTH ARGUMENT OUT OF BOUNDS` or `#-1 COLUMNS ARGUMENT OUT OF BOUNDS`, and an unknown justification returns `#-1 INVALID JUSTIFICATION SPECIFIED`.
+## Examples
 
-Examples:
 ```sharp
 > think columns(this is a test of columns, 10, 3)
 this      a         of
@@ -47,8 +58,6 @@ test      of        columns
 > think columns(ab cd@e, 6, 2, J, , , , |, , 1, @)
 ab  cd|e
 ```
-
-columns() comes from RhostMUSH and takes the same arguments.
 
 ::: seealso
 - [ALIGN()]

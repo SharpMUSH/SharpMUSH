@@ -5,6 +5,7 @@
   "lookup": "@hook",
   "aliases": [],
   "sections": [
+    {"id": "override-extend", "heading": "Overriding and extending", "lookup": "@hook override and extend"},
     {
       "id": "evaluation",
       "heading": "Hook evaluation",
@@ -34,7 +35,8 @@
       "id": "registers",
       "heading": "Argument registers",
       "lookup": "@hook registers"
-    }
+    },
+    {"id": "more-registers", "heading": "Right-side and switch registers", "lookup": "@hook more registers"}
   ],
   "redirects": {
     "@hook2": "@hook evaluation",
@@ -54,10 +56,15 @@
 @hook makes the command parser evaluate given attributes at certain points in command evaluation. The possible points, indicated by the proper switch:
 
 - @hook/ignore: The attribute is evaluated before the built-in command is run. If it returns a false value, the command is skipped (the input is still matched against softcoded commands)
-- @hook/override: The object/attribute is matched for a $-command, and if it matches, it is run instead of the built-in command, but with the precedence of the built-in command (thus overriding not only the built-in command but any local $-commands that might match). If the match fails, normal built-in command processing continues. Note that all locks and flags on the object (HALT, etc.) still apply.
-- @hook/override/inline: Same as `@hook/override`, but the resulting matches are run immediately - not queued for later execution!
 - @hook/before: The attribute is evaluated before the built-in command is run.
 - @hook/after: The attribute is evaluated after the built-in command is run.
+
+The `/override` and `/extend` switches run a $-command in place of the built-in command; see [@hook override and extend].
+
+## Overriding and extending
+
+- @hook/override: The object/attribute is matched for a $-command, and if it matches, it is run instead of the built-in command, but with the precedence of the built-in command (thus overriding not only the built-in command but any local $-commands that might match). If the match fails, normal built-in command processing continues. Note that all locks and flags on the object (HALT, etc.) still apply.
+- @hook/override/inline: Same as `@hook/override`, but the resulting matches are run immediately - not queued for later execution!
 - @hook/extend: If an invalid switch is given to the command, attempt to run a matching $-command in `<object>[/<attribute>]` instead of giving an error. Allows extending built-in commands in softcode without having to rewrite the core functionality.
 - @hook/extend/inline: As above, but the $-command won't be queued.
 
@@ -163,6 +170,11 @@ The following named arguments may be available (via %`\<name\>` or `r(<name>,arg
 | LS | If the command doesn't have multiple left-side args, LS is set to the entire left-side arg (before the = for EQSPLIT commands) |
 | LSAC | For commands with multiple left-side-args, the number of left-side args given |
 | LSAx | The xth left-side-arg, where x is between 1 and LSAC |
+
+## Right-side and switch registers
+
+| Register | Description |
+| --- | --- |
 | **Available for EQSPLIT commands:** | |
 | EQUALS | If the = was given, this is set to "=" |
 | RS | For commands without multiple right-side args, this is the entire right-side arg (after the =) |

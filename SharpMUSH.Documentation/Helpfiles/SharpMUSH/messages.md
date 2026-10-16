@@ -11,6 +11,11 @@
       "id": "messages-object",
       "heading": "The Messages object",
       "lookup": "messages object"
+    },
+    {
+      "id": "package-layout",
+      "heading": "How the package lays out its messages",
+      "lookup": "messages package layout"
     }
   ]
 }
@@ -39,6 +44,8 @@ The `messages_object` configuration option names an object whose attributes hold
 The bundled `messages` package creates a thing named Messages with the shipped messages, and sets `messages_object` to it. The setup wizard offers it, and it can be installed later from the Packages page. Uninstalling it puts `messages_object` back as it was, unless it has been changed since. The Messages page switches between the stored texts and the object, which sets the same option, as does `@config/set messages_object=<object>`.
 
 The object's attributes are evaluated with the object as executor. `%#` is the player who will see the message (the object itself at the login screen, where there is none), and `%0` is the connection's descriptor.
+
+## How the package lays out its messages
 
 The package's messages are built with the layout functions (see [LAYOUT FUNCTIONS]), so each reader gets them at their own width:
 

@@ -19,6 +19,11 @@
       "id": "testing-a-condition",
       "heading": "Testing a condition",
       "lookup": "boolean values testing a condition"
+    },
+    {
+      "id": "value-as-text",
+      "heading": "Using a condition as text",
+      "lookup": "boolean values as text"
     }
   ],
   "redirects": {
@@ -76,6 +81,8 @@ yes
 ```
 
 A position, count or lookup is a condition already: match() and member() give 0 when nothing matches, and pos() gives #-1, which is false.
+
+## Using a condition as text
 
 t() is needed where the value is used as text rather than tested. filter() keeps only results that are exactly 1, switch() and @switch compare text, and add() counts numbers:
 

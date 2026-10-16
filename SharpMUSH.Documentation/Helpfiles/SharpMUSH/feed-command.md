@@ -9,7 +9,13 @@
       "id": "feed-kinds",
       "heading": "Kinds",
       "lookup": "@feed kinds",
-      "aliases": ["@feed/list", "@feed/info", "@feed/define", "@feed/undefine", "@feed/describe"]
+      "aliases": ["@feed/define", "@feed/undefine", "@feed/describe"]
+    },
+    {
+      "id": "feed-listing",
+      "heading": "Listing kinds and feeds",
+      "lookup": "@feed listing",
+      "aliases": ["@feed/list", "@feed/info"]
     },
     {
       "id": "feed-members",
@@ -30,9 +36,19 @@
       "aliases": ["@feed/send"]
     },
     {
+      "id": "feed-delivery",
+      "heading": "What happens to a line",
+      "lookup": "@feed delivery"
+    },
+    {
       "id": "feed-tie-ins",
       "heading": "Tie-in attributes",
       "lookup": "@feed tie-ins"
+    },
+    {
+      "id": "feed-tie-in-arguments",
+      "heading": "Tie-in arguments",
+      "lookup": "@feed tie-in arguments"
     },
     {
       "id": "feed-taps",
@@ -68,11 +84,14 @@ A feed is a stream of messages that a game's own systems are built on: a radio, 
 
 A feed belongs to a **kind**, such as `radio`, and is named `<kind>/<key>`: `radio/101.5`. Defining a kind, and its settings, locks and taps, needs the `feed.admin` permission, which the wizard role allows. Everything about one feed needs control of the kind's owner object, or `feed.admin`.
 
-- [@feed kinds]: defining a kind, its owner, and listing kinds and feeds
+- [@feed kinds]: defining a kind, and its owner
+- [@feed listing]: listing kinds and feeds
 - [@feed members]: who a feed's lines go to, gags and read marks
 - [@feed rename]: moving a feed to a new key
-- [@feed sending]: sending a line, its style, and what happens to it
+- [@feed sending]: sending a line, and its style
+- [@feed delivery]: what happens to a line
 - [@feed tie-ins]: the ROUTE, DELIVER and FORMAT attributes
+- [@feed tie-in arguments]: what each tie-in and tap receives
 - [@feed taps]: other systems that hear every line of a kind
 - [@feed settings]: limits on lines, and purging them
 - [@feed locks]: who may be joined and who may speak
@@ -82,8 +101,6 @@ The read functions, such as `feedsof()`, are in [feed functions].
 
 ## Kinds
 
-- `@feed[/list]`
-- `@feed[/info] <kind>[/<key>]`
 - `@feed/define <kind>=<owner>`
 - `@feed/undefine <kind>`
 - `@feed/describe <kind>=<description>`
@@ -96,7 +113,10 @@ When the owner object is destroyed, its kinds go to the player who owned it, who
 
 `@feed/describe` sets the description `@feed/list` shows. `@feed/undefine` removes a kind with all of its feeds, their members and lines, and its taps.
 
-### Listing kinds and feeds
+## Listing kinds and feeds
+
+- `@feed[/list]`
+- `@feed[/info] <kind>[/<key>]`
 
 `@feed/list` lists the kinds you run, with their owners, how many feeds, lines and taps each has, what its lines take on disk, and their descriptions. `@feed/info <kind>` shows a kind's settings, locks, taps and the same totals; `@feed/info <kind>/<key>` shows one feed's lines, members, settings and locks.
 
@@ -144,7 +164,7 @@ A line has a style: `say`, `pose`, `semipose`, `emit` or `announce`. A leading `
 
 `/as` gives the line a name to appear under, such as a persona or a callsign, separated from the message by `/`: `@feed/send/as radio/101.5=Ghost/Anyone out there?`. It is stored with the line, so recall shows it as it was; the default line uses it in place of the speaker's name. With both, the objids come first: `=<objids>/<name>/<message>`.
 
-### What happens to a line
+## What happens to a line
 
 1. It is refused if it is longer than the feed's `max_length`.
 2. It is stored, unless the feed is not `logged`, dropping the feed's oldest lines past its limits.
@@ -162,7 +182,9 @@ These attributes on the kind's owner decide where a line goes and how it reads. 
 - `FEED`<KIND>`DELIVER` is run as an action list, in place, once per line, and does the delivery itself (`@pemit`, `@message`, anything).
 - `FEED`<KIND>`FORMAT`, when there is no DELIVER, is evaluated for each recipient who can hear the speaker, and is the line that recipient sees; an empty result sends them nothing.
 
-Each reads what it needs by name (see [named arguments]). A name means the same thing in every tie-in and tap:
+## Tie-in arguments
+
+Each tie-in reads what it needs by name (see [named arguments]). A name means the same thing in every tie-in and tap:
 
 | Name | Value | ROUTE | DELIVER | FORMAT | tap |
 | --- | --- | --- | --- | --- | --- |
@@ -188,7 +210,7 @@ The positions are there for code written before the names; new code is easier to
 
 A tap is another system that hears every line of a kind, such as a scene recorder or a staff log. `@feed/tap radio=Logger/LOG`RADIO` adds one; `*` in place of the kind hears every kind. You must control the tap's object. `@feed/untap` removes one.
 
-For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets the names in the table under [@feed tie-ins]. A tap whose object or attribute is gone is skipped.
+For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets the names in the table under [@feed tie-in arguments]. A tap whose object or attribute is gone is skipped.
 
 ## Settings
 

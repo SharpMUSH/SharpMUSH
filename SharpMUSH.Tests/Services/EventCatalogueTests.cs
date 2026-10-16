@@ -59,7 +59,8 @@ public partial class EventCatalogueTests
 	[Test]
 	public async Task HelpListsEveryRaisedEventWithItsArguments()
 	{
-		var help = File.ReadAllText(HelpFile("sharpevents.md"))
+		var help = string.Concat(new[] { "sharpevents.md", "player-events.md", "socket-events.md" }
+				.Select(name => File.ReadAllText(HelpFile(name))))
 			.Replace("\\`", "`");
 		var missing = EventCatalogue.All
 			.Where(definition => !help.Contains(HelpSignature(definition), StringComparison.Ordinal))

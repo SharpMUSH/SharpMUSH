@@ -6,12 +6,14 @@
   "aliases": [],
   "sections": [
     {"id": "start", "heading": "Starting a session", "lookup": "@input start", "aliases": ["@input/start"]},
+    {"id": "patterns", "heading": "Patterns and captures", "lookup": "@input patterns", "aliases": ["@input/wild", "@input/regex"]},
     {"id": "typed-text", "heading": "Typed text", "lookup": "@input typed text"},
     {"id": "prompts", "heading": "Prompting, replacing and cancelling", "lookup": "@input prompts", "aliases": ["@input/prompt", "@input/cancel"]},
     {"id": "timeout", "heading": "Timeout", "lookup": "@input timeout"},
     {"id": "rescue", "heading": "Rescuing a stuck player", "lookup": "@input rescue", "aliases": ["@input/rescue"]},
     {"id": "limits", "heading": "Checks and limits", "lookup": "@input limits"},
-    {"id": "example", "heading": "Example", "lookup": "@input example"}
+    {"id": "example", "heading": "Example", "lookup": "@input example"},
+    {"id": "evaluating", "heading": "Evaluating typed text", "lookup": "@input evaluating"}
   ]
 }
 -->
@@ -22,21 +24,25 @@
 `@input/cancel`<br>
 `@input/rescue <player>`
 
-Starts a guided input session on the current Telnet or WebSocket connection, shows the player `<prompt>`, and sends each line they type to an attribute picked by pattern. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. Omitting `/start` also starts a session.
+Starts a guided input session on the current Telnet or WebSocket connection, shows the player `<prompt>`, and sends each line they type to an attribute picked by pattern.
 
-**Warning:** while a session is open, every line the player sends goes to your attributes, and nothing they type runs as a command. That is the point of `@input`: a player can write plain text without setting off other commands. The exit pattern is the player's way out, so name it in the first prompt and in every later one, and pick one nobody types as ordinary text (`.done` rather than `done`). Do not rely on the timeout to end a session. It is a safety net for a player who walked away: it fires a fixed time after the start, whether or not the player is still typing. The built-in `@input/cancel` escape ends the session without running anything, so whatever the exit attribute saves is never saved.
+**Warning:** while a session is open, every line the player sends goes to your attributes, and nothing they type runs as a command, so a player can write plain text without setting off other commands. The exit pattern is the player's way out: name it in the first prompt and in every later one, and pick one nobody types as ordinary text (`.done` rather than `done`). Do not rely on the timeout to end a session: it fires a fixed time after the start, even while the player is typing. The built-in `@input/cancel` escape ends the session without running anything, so whatever the exit attribute saves is never saved.
 
-- [@input start]: patterns, what they capture, and why a start is refused
+- [@input start]: pattern and attribute pairs, and refusals
+- [@input patterns]: how patterns match, and what they capture
 - [@input typed text]: what an attribute receives, and as whom it runs
-- [@input prompts]: prompting again, replacing a session, and cancelling it
+- [@input prompts]: prompting again, replacing and cancelling
 - [@input timeout]: what happens when the time runs out
 - [@input rescue]: ending a stuck player's session, for staff
-- [@input limits]: the checks on every line, and how many sessions there may be
-- [@input example]: a notepad, and evaluating typed text on purpose
+- [@input limits]: the checks on every line, and session limits
+- [@input example]: a notepad that takes a note of many lines
+- [@input evaluating]: evaluating typed text on purpose
 
 ## Starting a session
 
 `@input/start[/wild|/regex] <prompt>=<exit pattern>,<exit attribute>[,<pattern>,<attribute>...][,<timeout-seconds>]`
+
+The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. Omitting `/start` also starts a session.
 
 After the prompt come pattern and attribute pairs, up to ten, then an optional timeout. Each attribute is `<attribute>` on the executor or `<object>/<attribute>`; the executor must control that object and have read and execute access to the attribute, which must be stored directly on it. Patterns are tried in order and the first match runs its attribute:
 
@@ -45,9 +51,11 @@ After the prompt come pattern and attribute pairs, up to ten, then an optional t
 - A pattern of `*` takes any line no other pattern matched.
 - A line nothing matches runs nothing. The player is told the exit pattern, and the session stays open.
 
-Patterns match the whole line, with spaces around it trimmed and case ignored. With `/wild` they are wildcard patterns and with `/regex` regular expressions, and what they capture is passed as in a `$`-command: wildcards from `%0`; for a regular expression, the whole match in `%0` and its groups from `%1`. An exact pattern or `*` passes the line in `%0` exactly as typed. The named argument `reason`, read with `r(reason,args)`, is `exit` for the exit pattern, `input` for any other, and `timeout` when the time ran out. Like a regular expression's named group it lasts only for that run, so nothing has to clear it; it replaces a group named `reason`.
-
 The command is refused with `#-1 INPUT NEEDS AN EXIT PATTERN AND ATTRIBUTE` without a first pair, `#-1 INPUT PATTERNS AND ATTRIBUTES COME IN PAIRS` when a pattern has no attribute, and `#-1 INVALID INPUT PATTERN` for a pattern that does not compile. `@input/cancel` cannot be the exit pattern (`#-1 INPUT EXIT PATTERN CANNOT BE @INPUT/CANCEL`), since that line always leaves without running anything.
+
+## Patterns and captures
+
+Patterns match the whole line, with spaces around it trimmed and case ignored. With `/wild` they are wildcard patterns and with `/regex` regular expressions, and what they capture is passed as in a `$`-command: wildcards from `%0`; for a regular expression, the whole match in `%0` and its groups from `%1`. An exact pattern or `*` passes the line in `%0` exactly as typed. The named argument `reason`, read with `r(reason,args)`, is `exit` for the exit pattern, `input` for any other, and `timeout` when the time ran out. Like a regular expression's named group it lasts only for that run, so nothing has to clear it; it replaces a group named `reason`.
 
 ## Typed text
 
@@ -64,7 +72,7 @@ From an attribute, use `@input/prompt` to send another prompt to this connection
 
 ## Timeout
 
-Timeout defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends and the exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`. Sending the cancel escape after expiry does not suppress an already pending timeout run. Starting another session is refused while the expired generation still owes its timeout run; the exit attribute itself may start the next session. An attribute is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without running anything. A halted executor, an unhandled failure, or an exhausted execution budget also ends capture.
+The timeout is a safety net for a player who walked away. It defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends and the exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`. Sending the cancel escape after expiry does not suppress an already pending timeout run. Starting another session is refused while the expired generation still owes its timeout run; the exit attribute itself may start the next session. An attribute is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without running anything. A halted executor, an unhandled failure, or an exhausted execution budget also ends capture.
 
 ## Rescuing a stuck player
 
@@ -90,6 +98,8 @@ This example is a notepad with a `+note` command that takes a note of any number
 ```
 
 Output: a player carrying the notepad types `+note`, then `Hello [there]`, `oops`, `.undo`, `look` and `.done`. `` get(Notepad/DATA`NOTE) `` returns the two lines `Hello [there]` and `look`; none was evaluated or run. The player sees `Note saved.` and is back at ordinary commands.
+
+## Evaluating typed text
 
 Typed text is never evaluated: storing it, or substituting `%0` or a register holding it, keeps it exactly as typed. To evaluate it on purpose, do it once, as the player who typed it, with `objevals()`; never as the object, which may belong to someone with far more power. Do it in the exit attribute, over the whole text, or in the `*` attribute, a line at a time, to show the player each result as they type. `objeval()` will not do: it evaluates its expression once, which only substitutes the register and gives the typed text back as it was. In the notepad, this exit attribute evaluates the note as the player before saving it:
 

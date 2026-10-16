@@ -134,11 +134,11 @@ a `?` in the query.<br>
 **A choice.**
 
 **PennMUSH** takes one argument. A second one is joined to the first, commas and all, with a
-warning that this is deprecated: `strlen(a%tb,0)` warns, then answers 5.<br>
-**SharpMUSH** takes an optional second argument. A false value counts control characters such as
-`%t` and `%r` as zero, as `displaywidth()` does, so `strlen(a%tb,0)` is 2. Omitted or true, each
+deprecation warning: `strlen(a%tb,0)` warns, then answers 5.<br>
+**SharpMUSH** takes an optional second argument. A false value counts control characters
+(`%t`, `%r`) as zero, as `displaywidth()` does, so `strlen(a%tb,0)` is 2. Omitted or true, each
 control character counts as one, as in PennMUSH. (#1256)<br>
-**Why.** A tab or a newline takes up no columns, and code that pads a table needs that width.<br>
+**Why.** A tab or newline takes no columns, and padding a table needs that width.<br>
 **Workaround.** Omit the argument for PennMUSH behaviour. A PennMUSH-era call that relied on an
 unescaped comma being kept needs it escaped: `strlen(a\,0)`.
 
@@ -153,8 +153,8 @@ unescaped comma being kept needs it escaped: `strlen(a\,0)`.
 
 For Latin-1 text the two servers count alike. Beyond it, PennMUSH counts the bytes of the UTF-8
 encoding and SharpMUSH counts display columns: a wide CJK character is two and a combining mark is
-none. `[chr(28450)][chr(23383)]` is two wide CJK characters (the word "kanji"); PennMUSH would answer
-`6` for those two characters:
+none. `[chr(28450)][chr(23383)]` is two wide CJK characters (the word "kanji"), for which PennMUSH would
+answer `6`:
 
 ```sharp
 > think strlen([chr(28450)][chr(23383)])
@@ -196,15 +196,7 @@ are `and()`, `or()`, `xor()`, `cand()`, `cor()` and `mul()` with one argument. `
 `lnum()` with no argument are errors. `wrap()` takes at most four arguments, and its third must be
 a number. A set function's fourth argument is its sort type and its fifth the output separator,
 so `setunion(B a c,b, ,|,a)` joins the result with `a`: `Baaabac`.<br>
-**SharpMUSH** answers them as TinyMUX does. `switch(<string>,<default>)` is the default, a
-one-argument `add()` or `and()` is that argument tested or returned, `itext()` is the innermost
-loop's element, and `lnum()` is empty. `wrap(<text>,<width>,<justify>,<left>,<right>,<hanging>,<osep>,<first width>)`
-is TinyMUX's `wrap()` whenever it has more than four arguments or its third starts with a letter:
-it pads every line to its width, justified `left`, `right` or `center`. `setunion()`, `setinter()`,
-`setdiff()` and `setsymdiff()` take TinyMUX's order, the output separator and then the sort type,
-when the fourth argument is text that names no sort type and the fifth names one. A four-argument
-call stays PennMUSH's, where any fourth argument is the sort type, so TinyMUX's
-`setunion(<list1>,<list2>,<delimiter>,<osep>)` is written `setunion(<list1>,<list2>,<delimiter>,,<osep>)`.<br>
+**SharpMUSH** answers them as TinyMUX does; [tinymux forms] says how it reads each one.<br>
 **Why.** TinyMUX code that uses these forms runs. All but the set functions' order are errors in
 PennMUSH, so no working PennMUSH code changes; a set function changes only when its fourth argument
 names no sort type and its fifth names one, which PennMUSH would use as the separator.<br>

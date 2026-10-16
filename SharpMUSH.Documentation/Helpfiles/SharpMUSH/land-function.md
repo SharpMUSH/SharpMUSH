@@ -14,7 +14,9 @@
     "lnor",
     "lxnor"
   ],
-  "sections": []
+  "sections": [
+    {"id": "examples", "heading": "Examples", "lookup": "land examples"}
+  ]
 }
 -->
 # land()
@@ -33,7 +35,21 @@ These combine a whole list of true and false values at once. Each item counts as
 
 Because they work along the list, lxor(), lnor() and lxnor() return a list of one number as it is: `lxor(5)` is 5. The items are separated by `<delimiter>`, or by spaces if it is not given or is empty. An empty list gives 0.
 
-Examples:
+land(), lor(), lxor(), lnor() and lxnor() come from RhostMUSH and take the same arguments.
+
+- [land examples]: each function on a short list
+
+::: seealso
+- [AND()]
+- [OR()]
+- [XOR()]
+- [NOR()]
+- [LMATH()]
+- [ladd()]
+:::
+
+## Examples
+
 ```sharp
 > think land(1 1 0)
 0
@@ -46,14 +62,3 @@ Examples:
 > think lxnor(1 0 1)
 0
 ```
-
-land(), lor(), lxor(), lnor() and lxnor() come from RhostMUSH and take the same arguments.
-
-::: seealso
-- [AND()]
-- [OR()]
-- [XOR()]
-- [NOR()]
-- [LMATH()]
-- [ladd()]
-:::

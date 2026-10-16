@@ -93,59 +93,48 @@ once per run.
 **PennMUSH** applies the `restrict_command` lines of `mush.cnf` at startup and restart (`game.c:757`,
 `bsd.c:1284`). `@config/set restrict_command=<command> <restriction>` applies one more while the game
 runs (`cmds.c:334-335`, `conf.c:866-896`). Each one replaces the command's restriction
-(`command.c:1752-1760`). There is no list to take a line back out of, so nothing returns a command to the
-restriction it was made with.<br>
+(`command.c:1752-1760`). There is no list to take a line out of, so nothing restores a command's original
+restriction.<br>
 **SharpMUSH** keeps the lines as one setting, `command_restrictions`. `@config/set restrict_command`
 adds a line to it, or replaces the line for that command, and applies it at once, as PennMUSH does. The
 setting is applied at startup, before `@STARTUP` runs, as PennMUSH does, and again whenever it is changed
-from the portal or `@config/set`, in both directions: a command the change no
-longer restricts goes back to the restriction it was made with, and is enabled again if the
-configuration had disabled it with `nobody`. Every command the old or the new setting names starts
-again from the restriction it was made with, so a live `@command/restrict` on one of those commands
-is lost. Commands the setting does not name, and changes to other options, leave live restrictions
+from the portal or `@config/set`, in both directions: every command the old or the new setting names
+starts again from the restriction it was made with, so a command the change no longer restricts goes
+back to it, and is enabled again if the configuration had disabled it with `nobody`, and a live
+`@command/restrict` on one of those commands is lost. Commands the setting does not name, and changes to other options, leave live restrictions
 alone. (#1250) `@config/set restrict_command` with words that are neither restriction words nor a
 valid lock says `Couldn't set that option.`; PennMUSH says `Option set.` and leaves the command
 unlocked.<br>
 **Why.** The configuration can be changed while the game is running; a restriction that waits for a
 restart looks as if it had been ignored. A mistyped restriction is refused rather than leaving the command
 open to everyone.<br>
-**Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` that should
-still apply to a command it names, or put the restriction in `command_restrictions` itself.<br>
+**Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` still wanted on
+a command it names, or put it in the setting itself.<br>
 **Example.** The parity case `choice.restrictions-reapply` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## A new game restricts no commands
 
 **A choice.**
 
-**PennMUSH** ships `restrict.cnf` and includes it from `mush.cnf`, so a stock game already applies 21
+**PennMUSH** ships `restrict.cnf` and includes it from `mush.cnf`, so a stock game applies 21
 `restrict_command` lines at startup (`game/restrictcnf.dst`): a guest cannot `@create`, `@dig`,
 `@open`, `@set`, `@link` or `@lock`, a FIXED player's `home` is refused with `You can't do that IC!`,
-and `@destroy` is `noplayer` with its own message, so a player who types `@destroy <thing>` is
+and `@destroy` is `noplayer` with its own message, so a player's `@destroy <thing>` is
 answered `Use @recycle instead` and the thing is not destroyed (`game/restrictcnf.dst:86`, sent by
 `command.c:2336-2339`).<br>
 **SharpMUSH** ships `command_restrictions` empty. Every command in a new game is open to whatever its
 own permission check allows: a player's `@destroy <thing>` destroys the thing, and a guest can
-`@create`. An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines,
-as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
-and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so
-an imported `restrict_function lstats noguest` answers a guest's `lstats()` with
-`#-1 PERMISSION DENIED` as PennMUSH does. Only the `restrict_function` words that say who may call
-a function are applied (`nobody`, `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`). A
-word that changes how it runs (`nosidefx`, `logargs`, `noparse` and the like), or a `!` word that
-clears one of a built-in's own restrictions, is kept but has no effect, and the import names it. A line that cannot be carried (an include that cannot be read, a restriction with no value,
-a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through
-the portal, which is not followed because it would name a file on the server.<br>
+`@create`. An imported game keeps its own: reading a PennMUSH `mush.cnf` carries its `restrict_command`
+and `restrict_function` lines into `command_restrictions` and `function_restrictions`, which are
+applied at startup (see [restrict imported]).<br>
 **Why.** Those lines are one site's policy, not the engine's behaviour; `restrict.cnf` is a file the
-administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` away from
-ordinary players on a fresh install is the game's decision to make, and SharpMUSH does not make it for
+administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` from
+ordinary players on a fresh install is the game's decision, and SharpMUSH does not make it for
 a world nobody has configured yet.<br>
 **Workaround.** Put the lines back, in the words PennMUSH writes them:
 `@config/set restrict_command=@destroy noplayer " Use @recycle instead`, one per command, or set
-`command_restrictions` from the portal's configuration page. `noguest`, `nofixed`, `noplayer`,
-`nobody`, a flag or power name, a lock and the `" <message>` suffix all mean there what they mean in
-`restrict.cnf`, and the restriction applies at once and lasts across restarts. The same goes for
-`function_restrictions` from the portal, with `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`,
-`god` and `nobody`.<br>
+`command_restrictions` (or `function_restrictions`) from the portal's configuration page. Each word
+means there what it means in `restrict.cnf`, and the restriction applies at once and lasts across restarts.<br>
 **Example.** The parity case `obj.create` in `tools/parity/scenarios/10-player-commands.scn` runs it on both servers.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`

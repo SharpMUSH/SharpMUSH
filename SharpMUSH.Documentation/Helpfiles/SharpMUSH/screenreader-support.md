@@ -11,6 +11,11 @@
       "lookup": "screenreader support layouts"
     },
     {
+      "id": "fields-instead-of-padding",
+      "heading": "Fields instead of padding",
+      "lookup": "screenreader support fields"
+    },
+    {
       "id": "pictures-and-drawings",
       "heading": "Pictures and drawings",
       "lookup": "screenreader support pictures"
@@ -35,15 +40,26 @@ A screen reader reads the game out loud, line by line. Text drawn with character
 Most of it comes from saying what a thing is, rather than drawing it:
 
 - [screenreader support layouts]: boxes, tables and fields with the layout functions.
+- [screenreader support fields]: a box of fields instead of padded text.
 - [screenreader support pictures]: pictures, logos and maps.
 - [screenreader support colour]: meaning that colour alone carries.
 - [screenreader support terminfo]: telling a screen reader's connection apart, for what nothing else covers.
+
+::: seealso
+- [screenreader]
+- [LAYOUT FUNCTIONS]
+- [FIGURE()]
+- [NOTICE()]
+- [TERMINFO()]
+:::
 
 ## Use the layout functions
 
 [BOX()], [FIELDS()], [DATATABLE()], [BULLETS()], [TREE()], [RULE()] and the other [LAYOUT FUNCTIONS] describe a layout once, and each client is sent it in its own form. A MU\* client that says it is a screen reader gets the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation. The web portal sends its screen reader a real table, list or heading, and its Screen reader mode reads each field and list item as a phrase of its own.
 
 The same layout built from [ALIGN()], [LJUST()] and [REPEAT()] is only spaces and characters. Nothing can tell a reader which part is a label and which a border.
+
+## Fields instead of padding
 
 Instead of this:
 
@@ -114,11 +130,3 @@ The pier is north of you. The gate is west.
 ```
 
 Give the screen reader the same things, in words: the same exits, the same people, the same choices. Leave out only what draws.
-
-::: seealso
-- [screenreader]
-- [LAYOUT FUNCTIONS]
-- [FIGURE()]
-- [NOTICE()]
-- [TERMINFO()]
-:::

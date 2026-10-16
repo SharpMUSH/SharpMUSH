@@ -38,12 +38,6 @@ Each block of space-separated `<codes>` can be one or more old-style ANSI codes,
 
 For example, "ansi(+orange/#0000ff,Test)" would color "Test" in orange, on a blue background. In the event that your client does not support those colors, SharpMUSH will downgrade the color to the closest fit that your client can understand.
 
-Codes are parsed from left to right so, with later codes overriding earlier ones. So, for example:
-```sharp
-ansi(y /+green B <#ffffff>, test)
-would show white text on an ANSI-blue background.
-```
-
 ::: seealso
 - [ANSI]
 - [COLOR]
@@ -75,6 +69,12 @@ Old-style valid color codes are:
 For example, "ansi(fc, Test)" would hilight "Test" in flashing cyan. Default foreground and background use the client's default color for fore and back.
 
 ## Color examples
+
+Codes are parsed from left to right so, with later codes overriding earlier ones. So, for example:
+```sharp
+ansi(y /+green B <#ffffff>, test)
+would show white text on an ANSI-blue background.
+```
 
 Bright yellow text on a blue background:<br>
 ```sharp

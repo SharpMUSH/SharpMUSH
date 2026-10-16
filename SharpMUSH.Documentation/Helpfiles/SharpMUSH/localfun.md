@@ -5,11 +5,13 @@
   "lookup": "localfun",
   "aliases": [],
   "sections": [
+    {"id": "example", "heading": "Example and evaluation", "lookup": "localfun example"},
     {
       "id": "function-local",
       "heading": "@function/local",
       "lookup": "@function/local"
     },
+    {"id": "ownership", "heading": "Ownership changes", "lookup": "localfun ownership"},
     {
       "id": "startup",
       "heading": "Local Function Startup",
@@ -34,6 +36,13 @@ deletion does not remove that reservation; compiled names stay reserved for the
 library's lifetime. A live built-in clone also takes precedence over an existing
 local name, including calls through a local alias. Argument bounds default to zero
 through 32.
+
+- [localfun example]: registering and calling a local function, and how it runs
+- [@function/local]: listing, deleting, disabling, aliasing and restoring entries
+- [localfun ownership]: what happens when ownership changes or an object is deleted
+- [local function startup]: registering local functions again after a restart
+
+## Example and evaluation
 
 For example, when entered as separate client commands:
 
@@ -71,6 +80,8 @@ called through its alias. Aliases cannot point to other aliases or global
 functions. Replacing a concrete entry with an alias is rejected while other
 aliases depend on that entry. Local cloning, restriction overlays and built-in
 replacement are not supported.
+
+## Ownership changes
 
 Ownership changes and deletion remove affected local registrations and aliases.
 Each call also checks the backing object's full identity and current owner, so

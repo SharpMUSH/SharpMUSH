@@ -15,6 +15,7 @@
         "BRACKETS"
       ]
     },
+    {"id": "bracket-pitfalls", "heading": "Bracket pitfalls", "lookup": "functions bracket pitfalls"},
     {
       "id": "built-in-and-user-functions",
       "heading": "Built-in and user functions",
@@ -68,6 +69,8 @@ Total: 3
 > think iter(1 2,%i0: [add(%i0,1)])
 1: 2 2: 3
 ```
+
+## Bracket pitfalls
 
 Brackets around a whole attribute, a whole evaluated argument or a %-substitution change nothing, and each pair is one more step to evaluate, so leave them out there: `if(%0,u(me/YES),u(me/NO))`, not `[if(%0,[u(me/YES)],[u(me/NO)])]`.
 

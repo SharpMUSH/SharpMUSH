@@ -19,6 +19,11 @@
       "id": "display",
       "heading": "Display formatting",
       "lookup": "attribute flags display"
+    },
+    {
+      "id": "layout",
+      "heading": "How formatted values are laid out",
+      "lookup": "attribute flags layout"
     }
   ],
   "redirects": {
@@ -83,6 +88,8 @@ If both are set, `cmdsyntax` takes priority, since a command list may itself con
 `cmdsyntax` is **not** related to `no_command` despite the similar name. `no_command` controls whether an attribute is checked for `$`-command and `^`-listen pattern matching -- a behavioral restriction. `cmdsyntax`/`funsyntax` only control how the stored text is laid out when displayed; they never change whether or how the attribute runs. An attribute can be `no_command` and `cmdsyntax` at once, or either alone, with no interaction between them.
 
 Formatting never rewrites the stored attribute; `@decompile` and the raw value returned by `get()`/`v()` are unaffected regardless of these flags.
+
+## How formatted values are laid out
 
 A value that already fits your screen width is shown on one line. When a call does not fit, it is split with one argument per line -- and so is every call and bracket group nested inside it, however short, so that a split call reads as a tree rather than as a wrapped first line above a dense remainder. A call with no arguments, such as `rand()`, is never split: there is nothing to put on the next line. A `[` that sits directly in front of a call stays with it, so you will see `[u(` at the end of a line rather than a `[` on a line of its own.
 

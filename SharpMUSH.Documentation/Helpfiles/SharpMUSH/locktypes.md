@@ -13,6 +13,11 @@
       "id": "additional-lock-types",
       "heading": "Additional lock types",
       "lookup": "locktypes additional lock types"
+    },
+    {
+      "id": "control-lock-types",
+      "heading": "Control, filter and ownership lock types",
+      "lookup": "locktypes control"
     }
   ],
   "redirects": {
@@ -58,6 +63,11 @@ More standard lock types:
 - [@lock/pay] - Who can give pennies to/buy from this object
 - [@lock/receive] - What things can be given to this object
 - [@lock/follow] - Who can follow this object
+
+## Control, filter and ownership lock types
+
+Further standard lock types:
+
 - [@lock/examine] - Who can examine this object if it's VISUAL
 - [@lock/chzone] - Who can @chzone to this object if it's a ZMO
 - [@lock/forward] - Who can @forwardlist a message to this object 

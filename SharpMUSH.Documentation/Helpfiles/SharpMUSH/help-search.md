@@ -9,6 +9,11 @@
   ],
   "sections": [
     {
+      "id": "patterns",
+      "heading": "Name patterns and text search",
+      "lookup": "help search patterns"
+    },
+    {
       "id": "content-search",
       "heading": "Content search",
       "lookup": "help search content search",
@@ -37,6 +42,19 @@ help `<textname>` is how to see a help file.
   > help @search
 ```
 
+- [help search patterns]: finding entries by a name pattern, or by text they contain
+
+help/query is a more advanced and complex way to search our helpfiles, see [help search content search] for more.
+
+To add more categories and commands (like 'news'), read "game/txt/README"
+
+
+::: seealso
+- [TEXTFILE()]: `textfile()` reads an entry, `textentries()` lists matching topic names, and `textsearch()` searches entry content.
+:::
+
+## Name patterns and text search
+
 help `<namepattern>` is a good way to read long helpfilenames or find a pattern you're looking for. If `<namepattern>` matches multiple entries, it will show you their names.
 ```sharp
   > help @tri*2
@@ -48,15 +66,6 @@ If you want to find helpfiles that _contain_ a pattern, use "help/search". For e
   > help/search @trigger
   > help/search @switch
 ```
-
-help/query is a more advanced and complex way to search our helpfiles, see [help search content search] for more.
-
-To add more categories and commands (like 'news'), read "game/txt/README"
-
-
-::: seealso
-- [TEXTFILE()]: `textfile()` reads an entry, `textentries()` lists matching topic names, and `textsearch()` searches entry content.
-:::
 
 ## Content search
 

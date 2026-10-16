@@ -8,6 +8,16 @@
   ],
   "sections": [
     {
+      "id": "names",
+      "heading": "Name and value categories",
+      "lookup": "valid names"
+    },
+    {
+      "id": "other-categories",
+      "heading": "Other categories",
+      "lookup": "valid other categories"
+    },
+    {
       "id": "validation-types",
       "heading": "Validation types",
       "lookup": "valid validation types"
@@ -24,7 +34,18 @@
 
 The valid() function checks to see if `<string>` can be used as a valid `<category>`, and returns 1 if so, 0 if not, and #-1 if an invalid category is used. For some categories, a `<target>` can be given to make the check more specific.
 
-The categories are:<br>
+- [valid names]: object, attribute, player, command, function, flag and register names
+- [valid other categories]: colors, channels, timezones, locks, roles, permissions and rolls
+
+::: seealso
+- [colors()]
+- [ansi()]
+- [@role]
+- [@permission]
+:::
+
+## Name and value categories
+
 name        Test for a valid object name.<br>
 attrname    Test for a valid attribute name.<br>
 attrvalue   Test if `<string>` is a valid value for the attribute `<target>`. Meaningful for standard attributes with @attrib/enum or /limit.<br>
@@ -33,7 +54,12 @@ password    Test for a valid password.<br>
 command     Test for a valid command name for @command/add.<br>
 function    Test for a valid function name for @function.<br>
 flag        Test for a valid flag/power name for @flag/add and @power/add<br>
-qreg        Test for a valid name for a q-register.<br>
+qreg        Test for a valid name for a q-register.
+
+Note that, for "playername", valid() returns 0 if the name is valid but currently in use by a player other than `<target>`.
+
+## Other categories
+
 colorname   Test for a valid color name for ansi()/colors().<br>
 ansicodes   Test for a valid color code sequence for ansi(`<string>`, ...).<br>
 channel     Test for a valid channel name. If `<target>` is given, check to see if channel `<target>` could be renamed to `<string>`.<br>
@@ -45,16 +71,7 @@ rolecategory Test for a valid role or permission category name for @role/categor
 permission  Test for a valid custom permission name for @permission/define, such as `scene.close`. It does not say whether the name is taken.<br>
 roll        Test whether roll() can read `<string>` as a dice formula, whatever its names turn out to hold.
 
-Note that, for "playername", valid() returns 0 if the name is valid but currently in use by a player other than `<target>`.
-
 For "ansicodes", when not using new-style color names or hex codes, valid() always returns 1, and invalid codes are simply ignored, the same as when used in the ansi() function.
-
-::: seealso
-- [colors()]
-- [ansi()]
-- [@role]
-- [@permission]
-:::
 
 ## Validation types
 

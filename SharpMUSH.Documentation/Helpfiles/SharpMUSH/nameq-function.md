@@ -8,6 +8,16 @@
   ],
   "sections": [
     {
+      "id": "setting-labels",
+      "heading": "Setting a label",
+      "lookup": "nameq setting labels"
+    },
+    {
+      "id": "examples",
+      "heading": "Examples",
+      "lookup": "nameq examples"
+    },
+    {
       "id": "listing-registers",
       "heading": "Listing registers",
       "lookup": "nameq listing registers"
@@ -26,13 +36,28 @@ A register can carry a label, a second name set by setq()'s third argument or by
 
 With one argument, nameq() returns the label of `<register>`, or nothing when it has none. Given a label, it returns that label.
 
-With two arguments, it gives `<register>` the label `<label>`, replacing any label it had. An empty `<label>` removes the register's label. A one-character label does nothing, a label that is a number or holds a `>` is `#-1 INVALID LABEL`, and a label another register already has is `#-1 LABEL [<label>] ALREADY IN USE`. nameq() never changes a register's value.
-
 With three arguments the second is ignored; leave it empty. With a number other than 0 as the third argument, nameq() returns the name of the register `<label>` belongs to. Given a register name instead, it returns the label.
 
 Output: a label, a register name, or nothing.
 
+- [nameq setting labels]: giving a register a label, and the errors
+- [nameq examples]: reading, setting and refusing labels
+- [nameq listing registers]: finding registers by label, name or value
+
 nameq() comes from RhostMUSH. RhostMUSH's `nameq()` with an empty first argument returns how many registers it has; here registers are named freely, so that is an error.
+
+::: seealso
+- [setq()]
+- [setqm()]
+- [r()]
+- [registers]
+:::
+
+## Setting a label
+
+With two arguments, it gives `<register>` the label `<label>`, replacing any label it had. An empty `<label>` removes the register's label. A one-character label does nothing, a label that is a number or holds a `>` is `#-1 INVALID LABEL`, and a label another register already has is `#-1 LABEL [<label>] ALREADY IN USE`. nameq() never changes a register's value.
+
+## Examples
 
 ```sharp
 > think [setq(0, 42, total)][nameq(0)] [nameq(total)] [nameq(total, , 1)]
@@ -42,13 +67,6 @@ total total 0
 > think [setq(0, a, total)][nameq(1, total)]
 #-1 LABEL [total] ALREADY IN USE
 ```
-
-::: seealso
-- [setq()]
-- [setqm()]
-- [r()]
-- [registers]
-:::
 
 ## Listing registers
 

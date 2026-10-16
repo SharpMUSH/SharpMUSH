@@ -7,7 +7,10 @@
     "gmcpsupports",
     "GMCP_SUPPORTS"
   ],
-  "sections": []
+  "sections": [
+    {"id": "connections", "heading": "Which connection", "lookup": "gmcpsupports() connections"},
+    {"id": "examples", "heading": "Examples", "lookup": "gmcpsupports() examples"}
+  ]
 }
 -->
 # gmcpsupports()
@@ -20,11 +23,17 @@ With one argument, gmcpsupports() returns that list as the client sent it: each 
 
 With a `<package>`, it returns 1 when the client listed the package or a module it belongs to, and 0 otherwise. `Room` covers `Room.Info` and `Room.Players`, but `Room.Info` does not cover `Room`. Names match without regard to case.
 
+- [gmcpsupports() connections]: which connection is read, and who may read it
+- [gmcpsupports() examples]: what Mudlet sends, and sending only to clients that asked
+
+## Which connection
+
 A descriptor number reads that connection. A player name or dbref reads the player's least idle connection, the one they typed into most recently, as terminfo() and idle() do.
 
 You may read your own connections. Reading anyone else's needs a wizard or the Send_OOB power, as [oob()] does. Otherwise asking about a descriptor that is not yours, or one that does not exist, returns `#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED`.
 
-Examples:
+## Examples
+
 ```sharp
 > think gmcpsupports(me)
 Char 1 Char.Skills 1 Char.Items 1 Room 1 IRE.Rift 1 IRE.Composer 1 External.Discord 1 Client.Media 1

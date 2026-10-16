@@ -11,9 +11,19 @@
       "lookup": "roles combine"
     },
     {
+      "id": "roles-umbrellas",
+      "heading": "Umbrella permissions and taking one away",
+      "lookup": "roles umbrellas"
+    },
+    {
       "id": "roles-defaults",
       "heading": "Roles a new game starts with",
       "lookup": "roles defaults"
+    },
+    {
+      "id": "roles-approved",
+      "heading": "The approved, helper and moderator roles",
+      "lookup": "roles approved"
     },
     {
       "id": "roles-flags",
@@ -24,6 +34,11 @@
       "id": "roles-wizard-split",
       "heading": "What a wizard's work is split into",
       "lookup": "roles wizard"
+    },
+    {
+      "id": "roles-wizard-only",
+      "heading": "What still needs game.wizard",
+      "lookup": "roles wizard only"
     },
     {
       "id": "roles-packages",
@@ -59,6 +74,8 @@ For each permission, the first of these that applies decides:
 
 Priority does not decide any of this, and it does not decide control. It only orders roles for management: you can manage only roles, objects and accounts below your own highest role.
 
+## Umbrella permissions and taking one away
+
 Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.drafts`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
 
 To take a permission away from one object, use an override (`@permission/deny`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
@@ -77,6 +94,8 @@ To take a permission away from one object, use an override (`@permission/deny`).
 | 10 | player | `media.upload`, `softcode.use`, `snapshots.capture`, `snapshots.restore`, `jobs.manage.own`, `queue.inspect.own`, `queue.control.own` |
 | 0 | guest | `game.guest` |
 | 0 | everyone | `wiki.read` |
+
+## The approved, helper and moderator roles
 
 `approved` marks a character that has met the game's own bar for full participation. Nothing in the engine assigns it; a game assigns it when its own bar is met (a finished chargen, a staff review), with `@role/assign <player>=approved`. Writing and editing the wiki comes with it: by default a player who is not approved reads the wiki but cannot change any page, their own character's biography and gallery included, unless another role or an override (see [@permission]) allows it. Staff get the same through `wiki.admin` (royalty, moderator) or every permission (wizard).
 
@@ -106,6 +125,8 @@ Being a wizard (`game.wizard`) is split into groups, so a custom role can hand o
 | `softcode.sidefx` | side-effect functions, when the `sidefx_flag` option asks for the SIDEFX flag; see [SIDEFX] |
 | `wiki.admin` | wiki requirements (setting them, and skipping them), protecting and publishing pages; see [wiki permissions] |
 | `server.operate` | @shutdown, @dump, @dbck, @purge, @readcache, @backup, @storage, @log, @slave, @kick, @uptime details |
+
+## What still needs game.wizard
 
 Everything else a wizard does still needs `game.wizard`: wizard attributes, overrides in `examine` and `@destroy`, the preserve switches, @chownall and @chzoneall, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
 

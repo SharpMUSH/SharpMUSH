@@ -23,6 +23,11 @@
       "lookup": "named arguments rest"
     },
     {
+      "id": "defaults-and-caller-names",
+      "heading": "Defaults, caller names and errors",
+      "lookup": "named arguments rest defaults"
+    },
+    {
       "id": "naming-a-commands-arguments",
       "heading": "Naming a command's arguments",
       "lookup": "named arguments commands"
@@ -31,6 +36,11 @@
       "id": "arguments-the-game-names",
       "heading": "Arguments the game names",
       "lookup": "named arguments engine"
+    },
+    {
+      "id": "formats-and-queries",
+      "heading": "Arguments formats and queries name",
+      "lookup": "named arguments engine formats"
     }
   ]
 }
@@ -116,6 +126,10 @@ think labels(Name,Bob,Rank,Captain)
 ```
 Output: `Name: Bob | Rank: Captain`
 
+## Defaults, caller names and errors
+
+A `default` after the groups takes the argument left over:
+
 ```sharp
 &FN`PICK me=[firstof(trim(iter(lnum(1,%<casecount>),if(strmatch(%<value>,%<case##>),%<result##>))),%<default>)]
 @function pick=me,FN`PICK
@@ -165,6 +179,9 @@ A hook can't refuse its command, so when a command named with `...` is given an 
 - The http_handler: %`\<path\>`, %`\<body\>`, %`\<viewer\>`, %`\<headers\>` and %`\<hdr.<name>\>` for each header (see [http requests]).
 - @chatformat and MOGRIFY\`FORMAT: %`\<type\>`, %`\<channel\>`, %`\<message\>`, %`\<name\>`, %`\<title\>`, %`\<default\>`, %`\<says\>`, %`\<options\>` (see [@chatformat], [mogrifier]).
 - The other MOGRIFY\` attributes: the same names, and %`\<value\>` for the part being rewritten (see [mogrifier]).
+
+## Arguments formats and queries name
+
 - @pageformat and @outpageformat: %`\<message\>`, %`\<type\>`, %`\<alias\>`, %`\<recipients\>`, %`\<default\>` (see [@pageformat]).
 - @speechmod: %`\<message\>`, %`\<type\>` (see [@speechmod]).
 - @mailfilter: %`\<sender\>`, %`\<subject\>`, %`\<body\>`, %`\<flags\>` (see [@mailfilter]).

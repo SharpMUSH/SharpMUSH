@@ -6,7 +6,10 @@
   "aliases": [
     "context"
   ],
-  "sections": []
+  "sections": [
+    {"id": "attribute", "heading": "Formatting with an attribute", "lookup": "context() attribute"},
+    {"id": "examples", "heading": "Examples and errors", "lookup": "context() examples"}
+  ]
 }
 -->
 # context()
@@ -18,6 +21,11 @@ Returns the commands `<player>`'s context stack puts first, in the order the com
 `<count>` is how many, 5 by default and at most 20. `<osep>` goes between them, by default a middle dot (`chr(183)`) with a space either side.
 
 Without an attribute, it returns the entries whose every `<slot>` was filled from a context, each as a command link (see [cmdlink()]) with the context's info, or the line, as its hover text. Code that may not make links gets the labels alone.
+
+- [context() attribute]: passing each entry to an attribute, and its named arguments
+- [context() examples]: whose stack code may read, examples, and errors
+
+## Formatting with an attribute
 
 With `<object>/<attribute>`, every entry is passed to that attribute, complete or not, and the results are joined with `<osep>`. The attribute gets these named arguments (see [named arguments]):
 
@@ -31,6 +39,8 @@ With `<object>/<attribute>`, every entry is passed to that attribute, complete o
 | `%<id>` | The entry, as `<objid>/<name>` |
 | `%<system>` | The system it belongs to |
 | `%<info>` | The newest raising context's info, else the entry's own, else empty |
+
+## Examples and errors
 
 Code may ask for the player whose command it is running (`%#`), or a player its object controls.
 

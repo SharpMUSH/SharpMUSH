@@ -74,24 +74,6 @@ This is the index to the MUSH online help files.
 - [attributes]
 :::
 
-# Clients
-  Clients are special software programs that you can use to connect to MUSHes. They are usually much nicer to use than raw telnet and give you many additional features, such as larger text buffers (so you can type more), backscroll, history of previous commands, macros, and so on.
-
-  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of SharpMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
-
-  | OPERATING SYSTEM | CLIENT      | WEB SITE                              |
-  |------------------|-------------|---------------------------------------|
-  | UNIX             | Tinyfugue   | http://tinyfugue.sourceforge.net      |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  | WINDOWS          | MUSHClient  | http://www.mushclient.com             |
-  |                  | MuckClient  | http://www.xcalibur.co.uk/MuckClient/ |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  |                  | BeipMU      | http://www.beipmu.com (Recommended)   |
-  | MAC OS X         | Savitar     | http://www.heynow.com/Savitar/        |
-  |                  | Atlantis    | http://www.riverdark.net/atlantis/    |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  |                  | Unix clients will also run on OS X. |               |
-
 # Control
   Controlling an object basically means that you have the power to change the object's characteristics such as flags and attributes. It may also mean that you have the ability to destroy it.
 
@@ -677,47 +659,6 @@ This is the index to the MUSH online help files.
 
   For more information, see the following help topics:<br>
     `@warnings`        `@wcheck`         NO_WARN         WARNINGS LIST
-
-# Wildcards
-# *
-# ?
-# **
-  SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
-
-```sharp
-    > &cmd.wave me=$wave *: pose waves.
-```
-
-  The "*" wildcard will match anything, allowing you to type "wave foo", "wave bar", etc. You can use the %0-%9 substitutions to get the values which matched the first ten wildcards in the command:
-
-```sharp
-    > &cmd.wave me=$wave *: pose waves to %0.
-    > wave to Muse
-    Mike waves to Muse.
-```
-
-  A backslash (\) can be used to escape * and ? if you want to match a literal asterisk or question mark. (Note that you will often have to use \\ so that the softcode parser doesn't evaluate it away!)
-
-```sharp
-  > think strmatch(foobar, ?*?)
-  1
-  > think strmatch(foobar, \\?*\\?)
-  0
-  > think strmatch(?foobar?, \\?*\\?)
-  1
-```
-
-  The "**" wildcard is also available for matching attribute names - see HELP attribute trees browsing for more information.
-
-  It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See [regexp] for details.
-
-
-::: seealso
-- [$-commands]
-- [regexp]
-- [STACK]
-- [registers]
-:::
 
 # Zone Master Rooms
 # ZMRs

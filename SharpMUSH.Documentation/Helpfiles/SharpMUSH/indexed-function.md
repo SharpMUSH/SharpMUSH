@@ -7,6 +7,7 @@
     "indexed"
   ],
   "sections": [
+    {"id": "indexed-examples", "heading": "Examples", "lookup": "indexed examples"},
     {
       "id": "indexed-operations",
       "heading": "Operations",
@@ -31,7 +32,12 @@ The answer comes in the index's order: by value, lowest first, and objects with 
 
 While the index is still being built, indexed() returns `#-1 INDEX BUILDING`; it never falls back to a slow search. An attribute with no index returns `#-1 ATTRIBUTE NOT INDEXED`.
 
-Examples:
+- [indexed examples]: equal values, counts and prefixes
+- [indexed operations]: every operation, and numeric and split indexes
+- [indexed visibility]: which matches you see, and what `count` counts
+
+## Examples
+
 ```sharp
 > &STATUS #20=approved
 > &STATUS #21=Approved
