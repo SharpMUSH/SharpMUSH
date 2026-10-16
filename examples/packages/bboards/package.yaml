@@ -1,6 +1,6 @@
 format: "1.10"
 package: bboards
-version: 1.3.3
+version: 1.4.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -979,7 +979,7 @@ objects:
       FUN`DISPLAY`OPTIONS`POSTS: |-
         json(object,delim,json(string,%r),rule,json(string,),grow,json(string,%r%r1),nowrap,json(string,1%r2%r4%r5%r6),min,json(string,1%r5%r12),priority,json(string,1%r1%r1%r2%r3%r2))
       FUN`DISPLAY`OPTIONS`TREE: |-
-        json(object,delim,json(string,%r),rule,json(string,),grow,json(string,1),nowrap,json(string,if(%0,2%r3,2)))
+        json(object,delim,json(string,%r),rule,json(string,),grow,json(string,%r1),nowrap,json(string,if(%0,1%r3%r4,1%r3)))
       # The inner rules (Posts, comments): light lines, - without UTF-8.
       FUN`DISPLAY`THINRULE: |-
         json(object,border,json(string,single))
@@ -1131,10 +1131,10 @@ objects:
       # The number path of the level above board %0, empty for the top.
       FUN`PATH`OFPARENT: |-
         setq(path_parent_board,u(%!/FUN`STORE`PARENT,%0))[if(u(%!/FUN`IS`TOP,%q<path_parent_board>),,u(%!/FUN`PATH`OFBOARD,%q<path_parent_board>))]
-      # The text of post %0, or its comment %1 when given, at width %2 (empty for the reader's): the
+      # The text of post %0, or its comment %1 when given, at the reader's width: the
       # stored text as it was saved, Markdown laid out, never evaluated again.
       FUN`DISPLAY`BODY: |-
-        setq(body_comment_prefix,if(strlen(%1),C`%1`))[switch(get(%0/%q<body_comment_prefix>FORMAT),mush,get(%0/%q<body_comment_prefix>TEXT),if(strlen(%2),rendermarkdown(u(%!/FUN`DISPLAY`MARKDOWN,get(%0/%q<body_comment_prefix>TEXT)),max(10,%2)),rendermarkdown(u(%!/FUN`DISPLAY`MARKDOWN,get(%0/%q<body_comment_prefix>TEXT)))))]
+        setq(body_comment_prefix,if(strlen(%1),C`%1`))[switch(get(%0/%q<body_comment_prefix>FORMAT),mush,get(%0/%q<body_comment_prefix>TEXT),rendermarkdown(u(%!/FUN`DISPLAY`MARKDOWN,get(%0/%q<body_comment_prefix>TEXT))))]
       # Stored Markdown %0 made ready to render: each line break kept as one, as typed, and a bare [text]
       # left as text rather than a help link, while [text](url) stays a link.
       FUN`DISPLAY`MARKDOWN: |-
@@ -1152,7 +1152,7 @@ objects:
       # up to %<mark>: the head line and the text, two spaces in when it is a reply, with a * when %<marked> is 1.
       FUN`DISPLAY`COMMENT: |-
         setqm(comment_is_new,cand(gt(%<comment>,%<mark>),not(strmatch(get(%<post>/C`%<comment>`BY),objid(%<viewer>)))),
-        comment_block,u(%!/FUN`DISPLAY`COMMENTHEAD,%<post>,%<comment>,%<root>,%q<comment_is_new>)[if(not(strlen(get(%<post>/C`%<comment>`REMOVED))),%r[u(%!/FUN`DISPLAY`BODY,%<post>,%<comment>,if(cor(%<marked>,not(strmatch(%<comment>,%<root>))),sub(width(%<viewer>),2)))])])[if(cor(%<marked>,not(strmatch(%<comment>,%<root>))),flex(json(object,gap,0),item(if(%<marked>,tone(info,*)),2),item(%q<comment_block>)),%q<comment_block>)]
+        comment_block,u(%!/FUN`DISPLAY`COMMENTHEAD,%<post>,%<comment>,%<root>,%q<comment_is_new>)[if(not(strlen(get(%<post>/C`%<comment>`REMOVED))),%r[u(%!/FUN`DISPLAY`BODY,%<post>,%<comment>)])])[if(cor(%<marked>,not(strmatch(%<comment>,%<root>))),flex(json(object,gap,0),item(if(%<marked>,tone(info,*)),2),item(%q<comment_block>)),%q<comment_block>)]
       # Post %0's comments in the order a thread shows them: each conversation's top comment, then the
       # replies under it in the order written. Commenting keeps that order on the post (THREAD, and each
       # comment's ROOT and each conversation's END), so reading it costs nothing however long the thread
@@ -1704,11 +1704,11 @@ objects:
       # The most viewer %1 may do on board %0, for +bbread/all.
       FUN`PERMISSION`MOST: |-
         cond(u(%!/FUN`PERMISSION`CAN,%0,moderate,%1),moderate,cand(u(%!/FUN`PERMISSION`CAN,%0,post,%1),u(%!/FUN`PERMISSION`CAN,%0,comment,%1)),post%, comment,u(%!/FUN`PERMISSION`CAN,%0,post,%1),post,u(%!/FUN`PERMISSION`CAN,%0,comment,%1),comment,read)
-      # Board %<board>'s row in a tree for %<viewer>: number path %<path>, then what's new and when (%<mode>
+      # Board %<board>'s row in a tree for %<viewer>: its number path %<path> and its name, each a column, then what's new and when (%<mode>
       # list; %<new> the new items when the caller has counted them) or what the viewer may do (%<mode> all).
       # Columns are split by ^^^, never shown: SHOW`TREE hands each column to datacolumns().
       FUN`DISPLAY`TREEROW: |-
-        u(%!/FUN`DISPLAY`LINK,ljust(%<path>,4)%b[u(%!/FUN`DISPLAY`BOARDNAME,%<board>)],+bbread %<path>)^^^[switch(%<mode>,all,u(%!/FUN`PERMISSION`MOST,%<board>,%<viewer>)[if(u(%!/FUN`READING`HASLEFT,%<board>,%<viewer>),%b%b%(left%))]^^^,setq(tree_row_new_count,if(strlen(%<new>),%<new>,u(%!/FUN`READING`NEWBELOW,%<board>,%<viewer>)))[if(%q<tree_row_new_count>,tone(info,%q<tree_row_new_count>))]^^^[u(%!/FUN`DISPLAY`TIME,get(%<board>/ACTIVE))])]
+        u(%!/FUN`DISPLAY`LINK,%<path>,+bbread %<path>)^^^[u(%!/FUN`DISPLAY`LINK,u(%!/FUN`DISPLAY`BOARDNAME,%<board>),+bbread %<path>)]^^^[switch(%<mode>,all,u(%!/FUN`PERMISSION`MOST,%<board>,%<viewer>)[if(u(%!/FUN`READING`HASLEFT,%<board>,%<viewer>),%b%b%(left%))]^^^,setq(tree_row_new_count,if(strlen(%<new>),%<new>,u(%!/FUN`READING`NEWBELOW,%<board>,%<viewer>)))[if(%q<tree_row_new_count>,tone(info,%q<tree_row_new_count>))]^^^[u(%!/FUN`DISPLAY`TIME,get(%<board>/ACTIVE))])]
       # The rows of the board tree below level %0 (the store or a board, number path %2) for viewer %1;
       # %4 is all or list. Rows are joined by line breaks, columns by ^^^. A row's guide is the guide of
       # the board it is in, then its own branch; the boards inside it carry | below while more follow it.
@@ -1766,31 +1766,32 @@ objects:
       # %q<tree_has_hidden> to 1 when some are hidden.
       FUN`DISPLAY`TREEROWS`BOARD: |-
         setqm(tree_row_text,uargs(%!/FUN`DISPLAY`TREEROW,board,first(%0,~),viewer,%2,path,last(%0,~),mode,%3,new,extract(%q<tree_new_totals>,%1,1)),
-        tree_hidden_count,if(eq(%q<tree_row_depth>,%q<tree_depth_cap>),words(squish(iter(%q<tree_all_rows>,if(strmatch(last(%i0,~),last(%0,~)/*),x))))))[if(%q<tree_hidden_count>,setq(tree_has_hidden,1)[before(%q<tree_row_text>,^^^)] %(+[u(%!/FUN`DISPLAY`PLURAL,%q<tree_hidden_count>,board)] below%)^^^[after(%q<tree_row_text>,^^^)],%q<tree_row_text>)]
+        tree_hidden_count,if(eq(%q<tree_row_depth>,%q<tree_depth_cap>),words(squish(iter(%q<tree_all_rows>,if(strmatch(last(%i0,~),last(%0,~)/*),x))))))[if(%q<tree_hidden_count>,setq(tree_has_hidden,1)[before(%q<tree_row_text>,^^^)]^^^[before(after(%q<tree_row_text>,^^^),^^^)] %(+[u(%!/FUN`DISPLAY`PLURAL,%q<tree_hidden_count>,board)] below%)^^^[after(after(%q<tree_row_text>,^^^),^^^)],%q<tree_row_text>)]
       # At the top of level %0, before a top board: its category's head row when the category changes
       # here, and in %q<tree_is_last_sibling> whether the board is the last of its category.
       FUN`DISPLAY`TREEROWS`CATEGORY: |-
         setqm(tree_category_index,inc(%q<tree_category_index>),
         tree_category_current,extract(%q<tree_top_categories>,%q<tree_category_index>,1),
-        tree_is_last_sibling,cor(eq(%q<tree_category_index>,words(%q<tree_top_boards>)),not(strmatch(%q<tree_category_current>,extract(%q<tree_top_categories>,inc(%q<tree_category_index>),1)))))[if(not(strmatch(%q<tree_category_current>,%q<tree_last_category>)),tone(strong,u(%!/FUN`STORE`CATEGORYNAME,%0,%q<tree_category_current>))^^^^^^%r)][setq(tree_last_category,%q<tree_category_current>)]
+        tree_is_last_sibling,cor(eq(%q<tree_category_index>,words(%q<tree_top_boards>)),not(strmatch(%q<tree_category_current>,extract(%q<tree_top_categories>,inc(%q<tree_category_index>),1)))))[if(not(strmatch(%q<tree_category_current>,%q<tree_last_category>)),^^^[tone(strong,u(%!/FUN`STORE`CATEGORYNAME,%0,%q<tree_category_current>))]^^^^^^%r)][setq(tree_last_category,%q<tree_category_current>)]
       # How many levels of boards a tree shows below where it starts.
       FUN`DISPLAY`TREEDEPTH: |-
         4
       # The tree from level %0 (number path %2) for viewer %1; %3 is all or list.
       FUN`SCREEN`TREE: |-
-        u(%!/FUN`SCREEN`TREE`ROWS,%0,%1,%2,%3)[u(%!/FUN`SCREEN`TREE`COLUMNS)][setq(tree_footer,switch(%3,all,u(%!/FUN`DISPLAY`PLURAL,%q<tree_row_count>,board)%, [words(squish(iter(%q<tree_second_column>,if(strmatch(%i0,*%(left%)),x),%r,%b)))] left,u(%!/FUN`DISPLAY`PLURAL,%q<tree_row_count>,board)%, %q<tree_new_total> new))][rule(switch(%3,all,Every board you may read,if(u(%!/FUN`IS`TOP,%0),Board tree,Board tree: %2 [u(%!/FUN`DISPLAY`BOARDNAME,%0)])))]%r[if(%q<tree_row_count>,switch(%3,all,datacolumns(u(%!/FUN`DISPLAY`OPTIONS`TREE,0),Board%r%q<tree_names_column>,You may%r%q<tree_second_column>),datacolumns(u(%!/FUN`DISPLAY`OPTIONS`TREE,1),Board%r%q<tree_names_column>,>New%r%q<tree_second_column>,Last%r%q<tree_last_column>)),No boards.)]%r[rule(%q<tree_footer>)]%r[u(%!/FUN`SCREEN`TREE`HINTS,%3)]
+        u(%!/FUN`SCREEN`TREE`ROWS,%0,%1,%2,%3)[u(%!/FUN`SCREEN`TREE`COLUMNS)][setq(tree_footer,switch(%3,all,u(%!/FUN`DISPLAY`PLURAL,%q<tree_row_count>,board)%, [words(squish(iter(%q<tree_second_column>,if(strmatch(%i0,*%(left%)),x),%r,%b)))] left,u(%!/FUN`DISPLAY`PLURAL,%q<tree_row_count>,board)%, %q<tree_new_total> new))][rule(switch(%3,all,Every board you may read,if(u(%!/FUN`IS`TOP,%0),Board tree,Board tree: %2 [u(%!/FUN`DISPLAY`BOARDNAME,%0)])))]%r[if(%q<tree_row_count>,switch(%3,all,datacolumns(u(%!/FUN`DISPLAY`OPTIONS`TREE,0),#%r%q<tree_path_column>,Board%r%q<tree_names_column>,You may%r%q<tree_second_column>),datacolumns(u(%!/FUN`DISPLAY`OPTIONS`TREE,1),#%r%q<tree_path_column>,Board%r%q<tree_names_column>,>New%r%q<tree_second_column>,Last%r%q<tree_last_column>)),No boards.)]%r[rule(%q<tree_footer>)]%r[u(%!/FUN`SCREEN`TREE`HINTS,%3)]
       # The tree's rows from level %0 (number path %2) for viewer %1, %3 all or list, in %q<tree_rows>: below a
       # board, the board's own row heads them and its new items join %q<tree_new_total>.
       FUN`SCREEN`TREE`ROWS: |-
         setq(tree_rows,u(%!/FUN`DISPLAY`TREEROWS,%0,%1,%2,,%3))[if(not(u(%!/FUN`IS`TOP,%0)),setqm(tree_new_total,add(u(%!/FUN`READING`NEWONBOARD,%0,%1),%q<tree_new_total>),
         tree_rows,uargs(%!/FUN`DISPLAY`TREEROW,board,%0,viewer,%1,path,%2,mode,%3,new,%q<tree_new_total>)[if(strlen(%q<tree_rows>),%r%q<tree_rows>)]))]
-      # %q<tree_rows> cut into columns for datacolumns(): %q<tree_names_column>, %q<tree_second_column> and %q<tree_last_column>, and
+      # %q<tree_rows> cut into columns for datacolumns(): %q<tree_path_column> (with the guides), %q<tree_names_column>, %q<tree_second_column> and %q<tree_last_column>, and
       # %q<tree_row_count> (the board rows, not the category heads).
       FUN`SCREEN`TREE`COLUMNS: |-
-        setqm(tree_row_count,words(squish(iter(%q<tree_rows>,if(gt(strlen(after(%i0,^^^)),3),x),%r,%b))),
-        tree_names_column,iter(%q<tree_rows>,before(%i0,^^^),%r,%r),
-        tree_second_column,iter(%q<tree_rows>,before(after(%i0,^^^),^^^),%r,%r),
-        tree_last_column,iter(%q<tree_rows>,after(after(%i0,^^^),^^^),%r,%r))
+        setqm(tree_row_count,words(squish(iter(%q<tree_rows>,if(strlen(before(%i0,^^^)),x),%r,%b))),
+        tree_path_column,iter(%q<tree_rows>,before(%i0,^^^),%r,%r),
+        tree_names_column,iter(%q<tree_rows>,before(after(%i0,^^^),^^^),%r,%r),
+        tree_second_column,iter(%q<tree_rows>,before(after(after(%i0,^^^),^^^),^^^),%r,%r),
+        tree_last_column,iter(%q<tree_rows>,after(after(after(%i0,^^^),^^^),^^^),%r,%r))
       # The commands under a tree, %0 all or list, and how to see the boards a deep tree leaves out.
       FUN`SCREEN`TREE`HINTS: |-
         switch(%0,all,+bbjoin <board> follows one again.%b·%b+bbleave <board> stops following.,+bbread <#> opens one.)[if(%q<tree_has_hidden>,%r+bb[if(strmatch(%0,all),read/all,list)] <#> shows the boards below one.)]
