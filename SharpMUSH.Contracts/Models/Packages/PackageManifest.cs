@@ -147,6 +147,7 @@ public sealed record PackageBinaryFile(string FileName, string Sha256);
 /// <param name="OobPackage">OOB package whose latest payload is the widget's data (e.g. <c>weather.now</c>), or null.</param>
 /// <param name="Permission">Permission scope the viewer must hold, besides <paramref name="MinimumRole"/> (may be a configure ref), or null.</param>
 /// <param name="NavUrl">Relative route returning the page app's own sidebar entries for the viewer, or null.</param>
+/// <param name="ConfigurationTile">Optional private configuration discovery metadata (format 1.11).</param>
 public sealed record PackageApplicationSpec(
 	string Slug,
 	string DisplayName,
@@ -184,7 +185,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 10);
+	public static PackageFormatVersion Supported { get; } = new(1, 11);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

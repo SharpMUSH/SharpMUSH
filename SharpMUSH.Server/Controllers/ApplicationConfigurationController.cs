@@ -5,6 +5,7 @@ using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -44,13 +45,6 @@ public sealed class ApplicationConfigurationController(
 			.OrderBy(tile => tile.Title, StringComparer.OrdinalIgnoreCase).ToList());
 	}
 
-	private async Task<bool> MayViewAsync(string permission)
-	{
-		try { return (await authorization.AuthorizeAsync(User, permission)).Succeeded; }
-		catch (InvalidOperationException exception)
-		{
-			logger.LogWarning(exception, "An application configuration tile names an unavailable authorization policy.");
-			return false;
-		}
-	}
+	private async Task<bool> MayViewAsync(string permission) =>
+		(await authorization.AuthorizeAsync(User, null, [new PermissionRequirement(permission)])).Succeeded;
 }

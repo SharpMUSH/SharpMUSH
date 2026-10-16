@@ -170,7 +170,7 @@ public partial class PackageManifestService : IPackageManifestService
 		var objects = kind == PackageKind.Softcode
 			? contentPack ? [] : ReadObjects(doc, issues)
 			: ReadNoObjects(doc, kind, issues);
-		var application = ReadApplication(doc, name, kind, issues);
+		var application = ReadApplication(doc, name, kind, format, issues);
 		var binary = ReadBinaries(doc, kind, issues);
 		var declarations = ReadDeclarations(doc, kind, issues);
 		ValidateDeclarations(declarations, issues);
@@ -251,6 +251,9 @@ public partial class PackageManifestService : IPackageManifestService
 
 	/// <summary>The first format in which <c>category:</c> means something; below it the key is ignored.</summary>
 	public static PackageFormatVersion CategoryFormat { get; } = new(1, 10);
+
+	/// <summary>The first format that supports application configuration discovery tiles.</summary>
+	public static PackageFormatVersion ConfigurationTileFormat { get; } = new(1, 11);
 
 	/// <summary>
 	/// Reads <c>category:</c> (format 1.10): the one group the package is listed under where packages are offered
@@ -1012,7 +1015,7 @@ public partial class PackageManifestService : IPackageManifestService
 	/// zone enums here.
 	/// </summary>
 	private static PackageApplicationSpec? ReadApplication(
-		Dictionary<string, object?> doc, string? packageName, PackageKind kind, List<PackageManifestIssue> issues)
+		Dictionary<string, object?> doc, string? packageName, PackageKind kind, PackageFormatVersion format, List<PackageManifestIssue> issues)
 	{
 		var present = doc.TryGetValue("application", out var node) && node is not null;
 
@@ -1109,7 +1112,10 @@ public partial class PackageManifestService : IPackageManifestService
 		SharpMUSH.Library.Models.Portal.Applications.ApplicationConfigurationTile? configurationTile = null;
 		if (app.TryGetValue("configuration_tile", out var tileNode) && tileNode is not null)
 		{
-			if (tileNode is not Dictionary<object, object> rawTile)
+			if (format.Major == ConfigurationTileFormat.Major && format.Minor < ConfigurationTileFormat.Minor)
+				issues.Add(PackageManifestIssue.Warning("application.configuration_tile",
+					$"'configuration_tile' needs format {ConfigurationTileFormat} or later and is ignored; set format: {ConfigurationTileFormat}."));
+			else if (tileNode is not Dictionary<object, object> rawTile)
 				issues.Add(PackageManifestIssue.Error("application.configuration_tile", "Configuration tile must be a mapping."));
 			else
 			{

@@ -1,6 +1,6 @@
 # Application configuration tiles
 
-The configuration home (`/admin/config`) lists application configuration beneath the core server groups. The private catalog (`GET /api/application-configuration`) requires `config.admin`; each tile also requires its own registered permission policy, checked on the server. An unavailable policy hides the tile. The linked screen must enforce its own permission, just as Discord's existing `/admin/discord` screen enforces `discord.admin`.
+The configuration home (`/admin/config`) lists application configuration beneath the core server groups. The private catalog (`GET /api/application-configuration`) requires `config.admin`; each tile also requires its own permission scope, checked against current server grants through the standard authorization handler. Built-in and application-defined scopes use the same grant evaluation; token claims alone do not grant access. The linked screen must enforce its own permission, just as Discord's existing `/admin/discord` screen enforces `discord.admin`.
 
 ## Compiled plugins
 
@@ -22,6 +22,7 @@ This uses the existing load-once portal contribution lifecycle. Only plugins loa
 Declare the optional `configuration_tile` mapping inside an application's `application` block:
 
 ```yaml
+format: 1.11
 application:
   slug: example
   display_name: Example
@@ -35,7 +36,7 @@ application:
     permission: config.admin
 ```
 
-Install and upgrade apply the declaration with the application registration; uninstall removes it. Omit the mapping to contribute no tile. Tile fields are literal discovery metadata; choose an existing server permission policy that also protects the settings handlers.
+Install and upgrade apply the declaration with the application registration; uninstall removes it. Omit the mapping to contribute no tile. This mapping requires manifest format 1.11; earlier formats warn and ignore it, matching the format contract for newly introduced fields. Tile fields are literal discovery metadata; choose a permission scope that also protects the settings handlers.
 
 ## Softcode and manually registered applications
 

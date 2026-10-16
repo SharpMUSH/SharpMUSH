@@ -690,6 +690,7 @@ public class PackageInstallServiceTests
 
 		var appPackage = Parse(
 			"""
+			format: 1.11
 			package: appdep-app
 			version: 1.0.0
 			kind: application
