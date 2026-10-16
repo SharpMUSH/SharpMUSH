@@ -164,7 +164,7 @@ Output: `Crew: Bob, Captain`
 
 A call that leaves a pair unfinished returns `#-1 NAMED ARGUMENTS COME IN PAIRS`. A pair whose name is empty, a number, or one of the function's own names returns `#-1 ARGUMENT NAME INVALID`.
 
-`@function/args` refuses a list with `#-1 ARGUMENT NAME INVALID` when a name is repeated or a number, when more than one name takes the rest, or when a name follows `items...` (there is never anything left over for it).
+`@function/args` returns `#-1 ARGUMENT NAME INVALID` for repeated/numeric names, multiple rest groups, names after `items...`, or collisions with generated slots (`key1`, `keycount`). Rest prefixes must also produce distinct slots.
 
 ## Naming a command's arguments
 

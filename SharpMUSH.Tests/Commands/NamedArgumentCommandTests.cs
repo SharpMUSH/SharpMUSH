@@ -293,6 +293,9 @@ public class NamedArgumentCommandTests
 	[Arguments("key...|value...|arg...")]
 	[Arguments("expression case...|result... default")]
 	[Arguments("obj ...")]
+	[Arguments("key01 key...|value...")]
+	[Arguments("key...|key0...")]
+	[Arguments("key...|keycount...")]
 	[Arguments("... default")]
 	[Arguments("")]
 	public async Task ArgumentNamesTakeTheShapesBuiltInsDeclare(string names)
@@ -310,11 +313,23 @@ public class NamedArgumentCommandTests
 	[Arguments("key|value...")]
 	[Arguments("key...|...")]
 	[Arguments("case...|result... case")]
+	[Arguments("key...|value... keycount")]
+	[Arguments("keycount key...|value...")]
+	[Arguments("KEYCOUNT key...|value...")]
+	[Arguments("itemscount items...")]
+	[Arguments("key1 key...|value...")]
+	[Arguments("key...|value... value12")]
+	[Arguments("key...|key1...")]
+	[Arguments("key...|key12...")]
 	public async Task ArgumentNamesRefuseAMisplacedOrRepeatedName(string names)
 		=> await Assert.That(ArgHelpers.ArgumentNames(names) is Error<string>).IsTrue();
 
 	[Test]
-	public async Task FunctionArgsKeepsNoNamesItRefused()
+	[Arguments("items... last")]
+	[Arguments("key...|value... keycount")]
+	[Arguments("keycount key...|value...")]
+	[Arguments("key1 key...|value...")]
+	public async Task FunctionArgsKeepsNoNamesItRefused(string names)
 	{
 		var thing = await NewThing("FnRestBad");
 		var name = $"nb{Guid.NewGuid():N}"[..20];
@@ -322,7 +337,7 @@ public class NamedArgumentCommandTests
 		await Run($"@function {name}={thing},FN");
 		try
 		{
-			await Run($"@function/args {name}=items... last");
+			await Run($"@function/args {name}={names}");
 			await Assert.That(WebAppFactoryArg.Services.GetRequiredService<IUserDefinedFunctionService>().Get(name)?.ArgumentNames)
 				.IsEquivalentTo(Array.Empty<string>());
 		}
