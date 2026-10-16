@@ -345,7 +345,8 @@ public class ConnectionAnnounceService(
 			}
 
 			// %0 is reserved (PennMUSH leaves it unset for ACONNECT/ADISCONNECT), %1 is the connection count.
-			var argsDict = new Dictionary<string, CallState> { ["0"] = new(string.Empty), ["1"] = new(countArg) };
+			var argsDict = new AttributeArgumentEnvironment { ["0"] = new(string.Empty), ["1"] = new(countArg) };
+			argsDict.GeneratedKeys.Add("0");
 
 			var ownerRef = owner.Object().DBRef;
 			var playerRef = player.Object().DBRef;

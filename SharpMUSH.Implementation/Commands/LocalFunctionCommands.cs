@@ -52,8 +52,9 @@ public partial class Commands
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
 					entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
-				if (entry.ArgumentNames.Length > 0)
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor, string.Join(" ", entry.ArgumentNames));
+				var signature = entry.AliasOf is { } target ? registry.Get(target, owner)?.ArgumentNames ?? [] : entry.ArgumentNames;
+				if (signature.Length > 0)
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor, string.Join(" ", signature));
 			}
 			return CallState.Empty;
 		}
