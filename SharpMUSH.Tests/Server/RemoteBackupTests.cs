@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Server.Services;
@@ -33,4 +34,14 @@ public class RemoteBackupTests
 	[Test]
 	public async Task CompleteSnapshotSucceeds()
 		=> await Assert.That(RemoteBackupCoordinator.IsSuccessful(new(Guid.NewGuid(), "nonce", 0, new string('a', 64), null))).IsTrue();
+	[Test]
+	public async Task WikiStorageAndBackupMetadataShareTheConfiguredRootResolver()
+	{
+		var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+		{
+			["Wiki:AssetRoot"] = "data/custom-wiki-assets"
+		}).Build();
+		await Assert.That(FileSystemWikiAssetService.ResolveRoot(config)).IsEqualTo(Path.GetFullPath("data/custom-wiki-assets"));
+	}
+
 }

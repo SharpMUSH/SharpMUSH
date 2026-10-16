@@ -64,8 +64,10 @@ public class RemoteBackupLifecycleTests
 		public readonly SecretStore Secrets;
 		public readonly IDataProtectionProvider Protection = new EphemeralDataProtectionProvider();
 		public RemoteBackupCoordinator Coordinator;
-		public Host()
+		public RemoteBackupSourcePaths Sources;
+		public Host(RemoteBackupSourcePaths? sources = null)
 		{
+			Sources = sources ?? new(Path.Join(Root, "plugins"), false, Path.Join(Root, "keys"));
 			Backups.IsSupported.Returns(true);
 			Backups.Root.Returns(Root);
 			Backups.CreateRemoteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(call =>
@@ -80,7 +82,7 @@ public class RemoteBackupLifecycleTests
 			Secrets = new(new SecretStoreTests.InMemoryWorld(), Protection,
 				[RemoteBackupCoordinator.Password, RemoteBackupCoordinator.AccountId, RemoteBackupCoordinator.AccountKey],
 				new SecretStoreOptions(Path.Join(Root, "secrets"), _ => null), Time, NullLogger<SecretStore>.Instance);
-			Coordinator = new(Data, Secrets, Protection, Backups, Time);
+			Coordinator = new(Data, Secrets, Protection, Backups, Time, Sources);
 		}
 		public async Task EnableAsync(string repository = "b2:bucket:path", string password = "test-password")
 			=> await Assert.That(await Coordinator.ConfigureAsync(new(new(true, 24, repository), password, "account", "key"), new("account", "Admin")) is Success).IsTrue();
@@ -215,7 +217,7 @@ public class RemoteBackupLifecycleTests
 		var persisted = JsonSerializer.Deserialize<RemoteBackupData>(host.Data.Serialized!)!;
 		persisted.Jobs.Single().Run = persisted.Jobs.Single().Run with { State = "preparing" };
 		await host.Data.SetExpandedServerDataAsync(persisted);
-		host.Coordinator = new(host.Data, host.Secrets, host.Protection, host.Backups, host.Time);
+		host.Coordinator = new(host.Data, host.Secrets, host.Protection, host.Backups, host.Time, host.Sources);
 		await host.Coordinator.RecoverAsync();
 		await Assert.That((await host.Coordinator.StatusAsync()).Runs.Single().ErrorCode).IsEqualTo("local-copy-interrupted");
 		await Assert.That((await host.Coordinator.StatusAsync()).LastSuccessAt).IsNull();
@@ -349,6 +351,32 @@ public class RemoteBackupLifecycleTests
 			await Assert.That(await host.Coordinator.QueueAsync("manual") is RemoteBackupRun).IsTrue();
 		}
 		else await host.Backups.Received(1).CreateRemoteAsync(queued.Id, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task ConfiguredSourcePathsArePinnedAndSerializedInTheScopedClaim()
+	{
+		var paths = new RemoteBackupSourcePaths("/server/custom/plugins", true, "/server/custom/key-ring", "/server/custom/wiki-assets", true);
+		using var host = new Host(paths);
+		await host.EnableAsync();
+		await host.Coordinator.QueueAsync("manual");
+		// A restarted host with changed paths must not silently move an already queued job's sources.
+		host.Coordinator = new(host.Data, host.Secrets, host.Protection, host.Backups, host.Time,
+			new("/server/new/plugins", true, "/server/new/key-ring", "/server/new/wiki-assets", true));
+		await host.Coordinator.TickAsync(default);
+		var claim = (await host.Coordinator.ClaimAsync("worker")).Expect<RemoteBackupClaim>();
+		await Assert.That(claim.PluginsPath).IsEqualTo(paths.PluginsPath);
+		await Assert.That(claim.KeyRingPath).IsEqualTo(paths.KeyRingPath);
+		await Assert.That(claim.PluginsRequired).IsTrue();
+		await Assert.That(claim.WikiPath).IsEqualTo(paths.WikiPath);
+		await Assert.That(claim.WikiRequired).IsTrue();
+		await Assert.That(claim.CopyPath.StartsWith(host.Root + ".remote-jobs/", StringComparison.Ordinal)).IsTrue();
+		using var wire = JsonDocument.Parse(JsonSerializer.Serialize(claim, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+		await Assert.That(wire.RootElement.GetProperty("pluginsPath").GetString()).IsEqualTo(paths.PluginsPath);
+		await Assert.That(wire.RootElement.GetProperty("keyRingPath").GetString()).IsEqualTo(paths.KeyRingPath);
+		await Assert.That(wire.RootElement.GetProperty("pluginsRequired").GetBoolean()).IsTrue();
+		await Assert.That(wire.RootElement.GetProperty("wikiPath").GetString()).IsEqualTo(paths.WikiPath);
+		await Assert.That(wire.RootElement.GetProperty("wikiRequired").GetBoolean()).IsTrue();
 	}
 
 }

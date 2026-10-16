@@ -10,7 +10,7 @@ import time
 import threading
 import urllib.error
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 HEX = re.compile(r'^[a-f0-9]{64}$')
 STATE = Path(os.environ.get('BACKUP_AGENT_STATE', '/agent-state'))
@@ -26,21 +26,74 @@ def snapshot_id(line):
     except (ValueError, AttributeError):
         return None
 
+SOURCE_FAILURES = {
+    -100: 'copy-root-unmapped', -101: 'plugin-root-unmapped',
+    -102: 'configured-plugin-directory-missing', -103: 'key-ring-root-unmapped',
+    -104: 'backup-source-path-escape', -105: 'local-copy-missing',
+    -106: 'wiki-root-unmapped', -107: 'configured-wiki-directory-missing',
+    -3: 'required-key-ring-missing'
+}
+
+class SourceError(ValueError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(SOURCE_FAILURES[code])
+
+def absolute_root(value, code):
+    if not isinstance(value, str) or not value.startswith('/') or value.startswith('//') or any(ord(c) < 32 for c in value) or any(part in ('.', '..') for part in value.split('/')):
+        raise SourceError(code)
+    path = PurePosixPath(value)
+    if str(path) == '/':
+        raise SourceError(code)
+    return path
+
+def root_mapping(role):
+    defaults = {
+        'COPY': ('/app/data/backup.remote-jobs', '/data/backup.remote-jobs', -100),
+        'PLUGIN': ('/app/data/lightning.plugins', '/data/lightning.plugins', -101),
+        'KEYS': ('/app/data/lightning.dataprotection-keys', str(KEYS_DIRECTORY), -103),
+        'WIKI': ('/app/data/wiki-assets', '/data/wiki-assets', -106)
+    }
+    source, mount, code = defaults[role]
+    server = absolute_root(os.environ.get('BACKUP_AGENT_' + role + '_SOURCE_ROOT', source), code)
+    worker = Path(absolute_root(os.environ.get('BACKUP_AGENT_' + role + '_MOUNT_ROOT', mount), code))
+    return server, worker, code
+
+def safe_mounted_path(root, *relative):
+    candidate = root
+    if root.is_symlink():
+        raise SourceError(-104)
+    for part in relative:
+        candidate = candidate / part
+        if candidate.is_symlink():
+            raise SourceError(-104)
+    if not candidate.resolve().is_relative_to(root.resolve()):
+        raise SourceError(-104)
+    return candidate
+
+def mapped_directory(path, role):
+    server, worker, code = root_mapping(role)
+    if absolute_root(path, -104) != server:
+        raise SourceError(code)
+    return safe_mounted_path(worker)
+
 def copy_path(path, job_id):
     identifier = job_id.replace('-', '')
-    prefix = '/app/data/backup.remote-jobs/' + identifier + '/'
-    if not re.fullmatch(r'[a-f0-9]{32}', identifier) or not path.startswith(prefix):
-        raise ValueError('invalid-copy-path')
-    suffix = path[len(prefix):]
+    server, worker, code = root_mapping('COPY')
+    actual = absolute_root(path, -104)
+    prefix = str(server) + '/' + identifier + '/'
+    if not re.fullmatch(r'[a-f0-9]{32}', identifier) or not str(actual).startswith(prefix):
+        raise SourceError(code)
+    suffix = str(actual)[len(prefix):]
     if not re.fullmatch(r'[a-zA-Z0-9_.-]+', suffix) or suffix.startswith('.'):
-        raise ValueError('invalid-copy-path')
-    return '/data/backup.remote-jobs/' + identifier + '/' + suffix
+        raise SourceError(-104)
+    return str(safe_mounted_path(worker, identifier, suffix))
 
 def receipt_for(job, code, snapshot):
     success = code == 0 and snapshot is not None and HEX.fullmatch(snapshot)
     return dict(id=job['id'], nonce=job['nonce'], exitCode=code,
                 snapshotId=snapshot if success else None,
-                errorCode=None if success else 'required-key-ring-missing' if code == -3 else 'partial-backup' if code == 3 else 'restic-failed')
+                errorCode=None if success else SOURCE_FAILURES.get(code, 'partial-backup' if code == 3 else 'restic-failed'))
 
 def environment(job):
     # Inherited RESTIC_* variables can execute helper commands or select another repository.
@@ -55,23 +108,41 @@ def environment(job):
     return env
 
 def run_restic(job):
-    source = copy_path(job['copyPath'], job['id'])
-    if not Path(source, 'data.mdb').is_file():
-        return receipt_for(job, -1, None)
-    tag = 'sharpmush-job:' + job['id']
-    env = environment(job)
-    deadline = datetime.datetime.fromisoformat(job['deadline'].replace('Z', '+00:00'))
-    remaining = max(1, min(6600, (deadline - datetime.datetime.now(datetime.timezone.utc)).total_seconds() - 30))
     if job.get('reconcileOnly'):
         # The inherited process lock proves no previous Restic child is still reading.
         # An existing snapshot cannot prove exit zero (partial snapshots exist).
         return receipt_for(job, -2, None)
-    if not KEYS_DIRECTORY.is_dir():
-        return receipt_for(job, -3, None)
-    sources = [source, str(KEYS_DIRECTORY)]
-    for fixed in ('/data/wiki-assets', '/data/lightning.plugins'):
-        if Path(fixed).exists():
-            sources.append(fixed)
+    try:
+        source = copy_path(job['copyPath'], job['id'])
+        world = Path(source, 'data.mdb')
+        if world.is_symlink():
+            raise SourceError(-104)
+        if not world.is_file():
+            raise SourceError(-105)
+        keys = mapped_directory(job.get('keyRingPath', '/app/data/lightning.dataprotection-keys'), 'KEYS')
+        if not keys.is_dir():
+            raise SourceError(-3)
+        plugins = mapped_directory(job.get('pluginsPath', '/app/data/lightning.plugins'), 'PLUGIN')
+        sources = [source, str(keys)]
+        if plugins.exists():
+            if not plugins.is_dir():
+                raise SourceError(-102)
+            sources.append(str(plugins))
+        elif job.get('pluginsRequired'):
+            raise SourceError(-102)
+        wiki = mapped_directory(job.get('wikiPath', '/app/data/wiki-assets'), 'WIKI')
+        if wiki.exists():
+            if not wiki.is_dir():
+                raise SourceError(-107)
+            sources.append(str(wiki))
+        elif job.get('wikiRequired'):
+            raise SourceError(-107)
+    except SourceError as error:
+        return receipt_for(job, error.code, None)
+    tag = 'sharpmush-job:' + job['id']
+    env = environment(job)
+    deadline = datetime.datetime.fromisoformat(job['deadline'].replace('Z', '+00:00'))
+    remaining = max(1, min(6600, (deadline - datetime.datetime.now(datetime.timezone.utc)).total_seconds() - 30))
     argv = ['restic', 'backup', '--json', '--tag', 'sharpmush', '--tag', tag, '--host', 'sharpmush', '--'] + sources
     # Stream stdout to bound memory even for a large world. Never log filenames or credentials.
     with subprocess.Popen(argv, env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, pass_fds=(LOCK_FD,) if LOCK_FD is not None else ()) as process:
@@ -137,6 +208,7 @@ def main():
             try:
                 request('heartbeat', {})
             except Exception:
+                # Retry next tick; the server exposes stale heartbeat age. Exception text may contain credentials.
                 pass
     threading.Thread(target=heartbeat, daemon=True).start()
     while True:

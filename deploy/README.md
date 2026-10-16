@@ -834,4 +834,46 @@ The worker interprets [Restic JSON summaries and exit codes](https://restic.read
 
 An interrupted preparation directory belongs to the failed job ID under `data/backup.remote-jobs/`. It can consume a full world copy beyond local retention. Before removing such a directory, verify the job never received a worker claim and the old server copy process has stopped; remove only that job directory. Never infer process completion from lease expiry alone.
 
-Managed uploads require `/data/lightning.dataprotection-keys` to exist as a directory; a missing key ring fails with `required-key-ring-missing` before Restic starts, because world ciphertext without its keys cannot be restored. Wiki assets and plugin directories remain optional. Transient preparation-result persistence failures retry the existing completed copy on a later coordinator tick without invoking the provider again.
+Managed uploads require the configured Data Protection key ring (mapped by default to `/data/lightning.dataprotection-keys`) to exist as a directory; a missing key ring fails with `required-key-ring-missing` before Restic starts, because world ciphertext without its keys cannot be restored. Absent default wiki/plugin directories remain optional; configured or previously present directories are required. Transient preparation-result persistence failures retry the existing completed copy on a later coordinator tick without invoking the provider again.
+
+#### Configured paths and read-only worker mappings
+
+Managed jobs carry the server's actual installed-plugin, wiki-asset and Data Protection paths, pinned in the
+encrypted job profile. The hot-copy path comes from the configured `SHARPMUSH_BACKUP_PATH` plus
+`.remote-jobs/<job-id>/<completed-copy>`. Changing those paths on the server does not grant the
+worker access to another directory: declare exact source-to-mount mappings in deployment configuration.
+The website cannot change these mappings or supply arbitrary filesystem sources.
+
+| Purpose | Server source-root variable | Read-only worker mount-root variable | Defaults |
+|---|---|---|---|
+| Completed world copies | `BACKUP_AGENT_COPY_SOURCE_ROOT` | `BACKUP_AGENT_COPY_MOUNT_ROOT` | `/app/data/backup.remote-jobs` → `/data/backup.remote-jobs` |
+| Installed plugins | `BACKUP_AGENT_PLUGIN_SOURCE_ROOT` | `BACKUP_AGENT_PLUGIN_MOUNT_ROOT` | `/app/data/lightning.plugins` → `/data/lightning.plugins` |
+| Data Protection keys | `BACKUP_AGENT_KEYS_SOURCE_ROOT` | `BACKUP_AGENT_KEYS_MOUNT_ROOT` | `/app/data/lightning.dataprotection-keys` → `/data/lightning.dataprotection-keys` |
+| Wiki assets (`Wiki:AssetRoot`) | `BACKUP_AGENT_WIKI_SOURCE_ROOT` | `BACKUP_AGENT_WIKI_MOUNT_ROOT` | `/app/data/wiki-assets` → `/data/wiki-assets` |
+
+For example, with `SHARPMUSH_BACKUP_PATH=/app/data/snapshots`, set the copy source root to
+`/app/data/snapshots.remote-jobs` and its mount root to `/data/snapshots.remote-jobs`. The existing
+read-only `app-data:/data:ro` mount already covers that directory. A plugin override at
+`/app/data/managed-plugins` similarly maps to `/data/managed-plugins`; the worker includes that
+actual directory rather than the default plugin folder.
+
+For sources on separate volumes, append
+[`docker-compose.remote-backups.paths.example.yml`](docker-compose.remote-backups.paths.example.yml)
+after the base stack and managed-backup overlay. It declares server mounts at `/srv/backups`,
+`/srv/plugins`, `/srv/wiki-assets` and `/srv/key-ring`, and mounts the same volumes read-only in the worker under
+`/readonly`. Prepare the existing data and normal server write permissions before adopting those
+paths; this example performs no migration. Preserve the existing key ring when moving it.
+
+Mappings require exact server roots, absolute paths without traversal, and worker roots inside
+explicitly declared read-only mounts. A world source additionally requires the current job ID and
+one completed-copy directory; symlink escapes are rejected. Drain pending jobs or keep their old
+mapped roots mounted when changing deployment paths, because jobs retain their pinned source paths.
+
+`copy-root-unmapped`, `plugin-root-unmapped`, `wiki-root-unmapped` or `key-ring-root-unmapped` means the server path and
+its deployment mapping differ: correct the matching source root and read-only mount root before
+requesting another job. `configured-plugin-directory-missing` and `configured-wiki-directory-missing`
+mean an explicitly configured directory, or one present when the job was queued, is absent from the worker mount.
+Fix the mount or restore that directory; the worker never silently skips it. An absent default
+plugin/wiki directory that was absent at queue time remains optional. Missing keys
+remain a hard failure. `backup-source-path-escape` rejects traversal or symlink mappings;
+`local-copy-missing` means the completed copy's `data.mdb` is unavailable in the declared mount.

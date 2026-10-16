@@ -22,7 +22,7 @@ public class RemoteBackupAgentAuthenticationTests
 		try
 		{
 			var data = Substitute.For<IExpandedObjectDataService>();
-			var coordinator = new RemoteBackupCoordinator(data, Substitute.For<ISecretStore>(), new EphemeralDataProtectionProvider(), Substitute.For<IWorldBackupService>(), TimeProvider.System);
+			var coordinator = new RemoteBackupCoordinator(data, Substitute.For<ISecretStore>(), new EphemeralDataProtectionProvider(), Substitute.For<IWorldBackupService>(), TimeProvider.System, new("/app/data/lightning.plugins", false, "/app/data/lightning.dataprotection-keys"));
 			var controller = new RemoteBackupAgentController(coordinator)
 			{
 				ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }

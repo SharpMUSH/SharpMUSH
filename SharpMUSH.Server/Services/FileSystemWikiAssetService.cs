@@ -24,8 +24,12 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 	[GeneratedRegex("[^a-zA-Z0-9._-]")]
 	private static partial Regex DisallowedFileNameChars();
 
+	/// <summary>The authoritative asset directory shared by storage and managed backup source metadata.</summary>
+	public static string ResolveRoot(IConfiguration configuration) =>
+		Path.GetFullPath(configuration["Wiki:AssetRoot"] ?? Path.Combine(AppContext.BaseDirectory, "wiki-assets"));
+
 	public FileSystemWikiAssetService(IConfiguration configuration)
-		: this(configuration["Wiki:AssetRoot"] ?? Path.Combine(AppContext.BaseDirectory, "wiki-assets"))
+		: this(ResolveRoot(configuration))
 	{
 	}
 

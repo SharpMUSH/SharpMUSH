@@ -1,4 +1,12 @@
+import datetime
+import json
+import os
+import subprocess
+import tempfile
 import unittest
+import unittest.mock as mock
+from pathlib import Path
+
 import agent
 
 class WorkerTests(unittest.TestCase):
@@ -13,13 +21,6 @@ class WorkerTests(unittest.TestCase):
     def test_copy_must_belong_to_job(self):
         with self.assertRaises(ValueError): agent.copy_path('/app/data/backup.remote-jobs/' + 'b'*32 + '/20261016', 'a'*32)
 
-from unittest import mock
-import datetime
-import os
-import json
-import subprocess
-import tempfile
-from pathlib import Path
 
 class ProcessTests(unittest.TestCase):
     def job(self):
@@ -65,6 +66,47 @@ class ProcessTests(unittest.TestCase):
         self.assertEqual(receipt['exitCode'], -2)
         self.assertIsNone(receipt['snapshotId'])
 
+    def test_custom_copy_mapping_and_unmapped_escape_rejection(self):
+        job = self.job()
+        with tempfile.TemporaryDirectory(prefix='mapped-copy-') as directory, mock.patch.dict(os.environ, {
+                'BACKUP_AGENT_COPY_SOURCE_ROOT': '/server/custom/hot.remote-jobs',
+                'BACKUP_AGENT_COPY_MOUNT_ROOT': directory}):
+            mapped = agent.copy_path('/server/custom/hot.remote-jobs/' + job['id'] + '/20261016', job['id'])
+            self.assertEqual(mapped, str(Path(directory, job['id'], '20261016')))
+            with self.assertRaises(ValueError): agent.copy_path('/server/unmapped/' + job['id'] + '/20261016', job['id'])
+            with self.assertRaises(ValueError): agent.copy_path('/server/custom/hot.remote-jobs/' + job['id'] + '/../lightning', job['id'])
+            Path(directory, job['id']).mkdir()
+            Path(directory, job['id'], '20261016').symlink_to(Path(directory).parent)
+            with self.assertRaises(ValueError): agent.copy_path('/server/custom/hot.remote-jobs/' + job['id'] + '/20261016', job['id'])
+
+    def test_unmapped_and_missing_configured_plugin_paths_fail_before_restic(self):
+        for path, required, expected in [('/server/custom/plugins', True, -101), ('/app/data/lightning.plugins', True, -102)]:
+            job = dict(self.job(), pluginsPath=path, pluginsRequired=required)
+            with mock.patch('agent.subprocess.Popen') as popen, mock.patch('agent.Path.is_file', return_value=True), mock.patch('agent.Path.is_dir', return_value=True), mock.patch('agent.Path.exists', return_value=False):
+                receipt = agent.run_restic(job)
+            popen.assert_not_called()
+            self.assertEqual(receipt['exitCode'], expected)
+
+    def test_unmapped_key_ring_and_symlinked_plugin_mount_are_rejected(self):
+        job = dict(self.job(), keyRingPath='/server/unmapped/keys')
+        with mock.patch('agent.subprocess.Popen') as popen, mock.patch('agent.Path.is_file', return_value=True):
+            receipt = agent.run_restic(job)
+        popen.assert_not_called()
+        self.assertEqual(receipt['exitCode'], -103)
+        with tempfile.TemporaryDirectory(prefix='plugin-escape-') as directory:
+            mount = Path(directory, 'plugins')
+            mount.symlink_to(Path(directory).parent)
+            with mock.patch.dict(os.environ, {'BACKUP_AGENT_PLUGIN_MOUNT_ROOT': str(mount)}):
+                with self.assertRaises(ValueError): agent.mapped_directory('/app/data/lightning.plugins', 'PLUGIN')
+
+    def test_unmapped_and_missing_configured_wiki_paths_fail_before_restic(self):
+        for path, expected in [('/server/custom/wiki', -106), ('/app/data/wiki-assets', -107)]:
+            job = dict(self.job(), wikiPath=path, wikiRequired=True)
+            with mock.patch('agent.subprocess.Popen') as popen, mock.patch('agent.Path.is_file', return_value=True), mock.patch('agent.Path.is_dir', return_value=True), mock.patch('agent.Path.exists', return_value=False):
+                receipt = agent.run_restic(job)
+            popen.assert_not_called()
+            self.assertEqual(receipt['exitCode'], expected)
+
     def test_receipt_file_contains_no_repository_credentials(self):
         with tempfile.TemporaryDirectory(prefix='worker-receipt-') as directory, mock.patch.object(agent, 'STATE', Path(directory)):
             agent.save_receipt(agent.receipt_for(self.job(), 0, 'c'*64))
@@ -79,18 +121,30 @@ class ResticIntegrationTests(unittest.TestCase):
         binary = Path(os.environ['RESTIC_INTEGRATION_BINARY']).resolve()
         with tempfile.TemporaryDirectory(prefix='restic-integration-') as temporary:
             root = Path(temporary)
-            source = root / 'copy'
-            source.mkdir()
+            source = root / 'copies' / ('a'*32) / '20261016'
+            source.mkdir(parents=True)
             (source / 'data.mdb').write_text('consistent completed fixture')
             keys = root / 'keys'
             keys.mkdir()
             (keys / 'key-fixture.xml').write_text('synthetic-test-key')
+            plugins = root / 'installed-plugins'
+            plugins.mkdir()
+            (plugins / 'fixture.dll').write_text('synthetic-plugin-package')
+            wiki = root / 'wiki-assets'
+            wiki.mkdir()
+            (wiki / 'fixture.bin').write_text('synthetic-wiki-asset')
             job = ProcessTests().job()
+            job.update(copyPath='/server/custom/copies/' + 'a'*32 + '/20261016', pluginsPath='/server/custom/plugins', pluginsRequired=True, keyRingPath='/server/custom/keys', wikiPath='/server/custom/wiki-assets', wikiRequired=True)
             job['repository'] = str(root / 'repo')  # Test-only local backend; admin validation rejects this.
             environment = agent.environment(job)
             environment['RESTIC_CACHE_DIR'] = str(root / 'cache')
             subprocess.run([str(binary), 'init'], env=environment, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
-            with mock.patch('agent.copy_path', return_value=str(source)), mock.patch.object(agent, 'KEYS_DIRECTORY', keys), mock.patch.object(agent, 'STATE', root), mock.patch.dict(os.environ, {'PATH': str(binary.parent) + ':' + os.environ['PATH']}):
+            with mock.patch.object(agent, 'STATE', root), mock.patch.dict(os.environ, {
+                    'PATH': str(binary.parent) + ':' + os.environ['PATH'],
+                    'BACKUP_AGENT_COPY_SOURCE_ROOT': '/server/custom/copies', 'BACKUP_AGENT_COPY_MOUNT_ROOT': str(root / 'copies'),
+                    'BACKUP_AGENT_PLUGIN_SOURCE_ROOT': '/server/custom/plugins', 'BACKUP_AGENT_PLUGIN_MOUNT_ROOT': str(plugins),
+                    'BACKUP_AGENT_KEYS_SOURCE_ROOT': '/server/custom/keys', 'BACKUP_AGENT_KEYS_MOUNT_ROOT': str(keys),
+                    'BACKUP_AGENT_WIKI_SOURCE_ROOT': '/server/custom/wiki-assets', 'BACKUP_AGENT_WIKI_MOUNT_ROOT': str(wiki)}):
                 receipt = agent.run_restic(job)
                 self.assertEqual(receipt['exitCode'], 0)
                 self.assertRegex(receipt['snapshotId'], r'^[a-f0-9]{64}$')
@@ -98,6 +152,10 @@ class ResticIntegrationTests(unittest.TestCase):
                 self.assertEqual(json.loads(snapshots.stdout)[0]['id'], receipt['snapshotId'])
                 restored_key = subprocess.run([str(binary), 'dump', receipt['snapshotId'], str(keys / 'key-fixture.xml')], env=environment, stdout=subprocess.PIPE, check=True)
                 self.assertEqual(restored_key.stdout, b'synthetic-test-key')
+                restored_plugin = subprocess.run([str(binary), 'dump', receipt['snapshotId'], str(plugins / 'fixture.dll')], env=environment, stdout=subprocess.PIPE, check=True)
+                self.assertEqual(restored_plugin.stdout, b'synthetic-plugin-package')
+                restored_wiki = subprocess.run([str(binary), 'dump', receipt['snapshotId'], str(wiki / 'fixture.bin')], env=environment, stdout=subprocess.PIPE, check=True)
+                self.assertEqual(restored_wiki.stdout, b'synthetic-wiki-asset')
                 wrong = agent.run_restic(dict(job, password='incorrect-test-password'))
                 self.assertEqual(wrong['exitCode'], 12)
                 self.assertIsNone(wrong['snapshotId'])

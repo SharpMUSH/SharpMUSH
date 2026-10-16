@@ -9,5 +9,8 @@ public sealed record RemoteBackupRun(Guid Id, string Reason, string State, DateT
 public sealed record RemoteBackupStatus(RemoteBackupSettings Settings, bool PasswordSet, bool AccountIdSet,
  bool AccountKeySet, DateTimeOffset? AgentSeenAt, DateTimeOffset? LastSuccessAt, IReadOnlyList<RemoteBackupRun> Runs);
 public sealed record RemoteBackupClaim(Guid Id, string Nonce, string Repository, string Password,
- string? AccountId, string? AccountKey, string CopyPath, DateTimeOffset Deadline, bool ReconcileOnly = false);
+ string? AccountId, string? AccountKey, string CopyPath, DateTimeOffset Deadline, bool ReconcileOnly = false,
+ string PluginsPath = "/app/data/lightning.plugins", bool PluginsRequired = false,
+ string KeyRingPath = "/app/data/lightning.dataprotection-keys",
+ string WikiPath = "/app/data/wiki-assets", bool WikiRequired = false);
 public sealed record RemoteBackupReceipt(Guid Id, [property: Required, StringLength(64)] string Nonce, int ExitCode, [property: StringLength(64)] string? SnapshotId, [property: StringLength(128)] string? ErrorCode);

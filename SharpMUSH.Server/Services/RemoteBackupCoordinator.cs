@@ -34,7 +34,8 @@ public sealed partial class RemoteBackupCoordinator(
 	ISecretStore secrets,
 	IDataProtectionProvider protection,
 	IWorldBackupService backups,
-	TimeProvider time)
+	TimeProvider time,
+	RemoteBackupSourcePaths sourcePaths)
 {
 	public static readonly SecretDefinition Password = new("backup.restic.password", "Remote backup repository encryption password.", "server.admin");
 	public static readonly SecretDefinition AccountId = new("backup.restic.account.id", "Remote backup storage account identifier.", "server.admin");
@@ -67,6 +68,14 @@ public sealed partial class RemoteBackupCoordinator(
 
 	public static string FailureCode(int exitCode) => exitCode switch
 	{
+		-106 => "wiki-root-unmapped",
+		-107 => "configured-wiki-directory-missing",
+		-100 => "copy-root-unmapped",
+		-101 => "plugin-root-unmapped",
+		-102 => "configured-plugin-directory-missing",
+		-103 => "key-ring-root-unmapped",
+		-104 => "backup-source-path-escape",
+		-105 => "local-copy-missing",
 		-3 => "required-key-ring-missing",
 		-2 => "worker-interrupted-result-unknown",
 		-1 => "worker-failed-or-timed-out",
@@ -166,7 +175,12 @@ public sealed partial class RemoteBackupCoordinator(
 		if (accountId is Error<string> || accountKey is Error<string>)
 			return new Error<string>("A storage credential is unreadable on this server.");
 		var profile = new RemoteBackupClaim(Guid.Empty, "", state.Settings.Repository, password,
-			accountId switch { string value => value, _ => null }, accountKey switch { string value => value, _ => null }, "", default);
+			accountId switch { string value => value, _ => null }, accountKey switch { string value => value, _ => null }, "", default,
+			PluginsPath: sourcePaths.PluginsPath,
+			PluginsRequired: sourcePaths.PluginsExplicitlyConfigured || Directory.Exists(sourcePaths.PluginsPath),
+			KeyRingPath: sourcePaths.KeyRingPath,
+			WikiPath: sourcePaths.WikiPath,
+			WikiRequired: sourcePaths.WikiExplicitlyConfigured || Directory.Exists(sourcePaths.WikiPath));
 		var job = new RemoteBackupJob
 		{
 			Run = new(Guid.NewGuid(), reason, "queued", time.GetUtcNow()),
