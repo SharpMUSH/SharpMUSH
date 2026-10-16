@@ -10,7 +10,8 @@ category: Staff
 requires_server: ">=0.1"
 
 # Neither package knows about the other. Jobs keeps the jobs; health draws the numbers. This one reads the
-# jobs and adds a section to the +health summary and a +health/staff view.
+# jobs through jobs' API (jobs() and job(), 1.11 for the turned field) and adds a section to the +health
+# summary and a +health/staff view.
 depends:
   - package: health
     version: ">=1.0"
@@ -19,32 +20,34 @@ depends:
       path: examples/packages/health/
       branch: main
   - package: jobs
-    version: ">=1.7"
+    version: ">=1.11"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/jobs/
       branch: main
 
 objects:
-  # The reader. WIZARD because it reads every job, in every bucket, on the jobs store.
+  # The reader. WIZARD, and holds game.see_all (granted at install) so jobs() and job() answer it for every job,
+  # in every bucket.
   #
-  # A job waits on staff while its state is new or staff, and has waited since its TURN`AT. Its handlers are
-  # people (objids) or every holder of a role (role:<slug>), as jobs keeps them.
+  # Jobs are named by number. A job waits on staff while its state is new or staff, and has waited since the
+  # turn last passed (job(<#>,turned)). Its handlers are people (objids) or every holder of a role
+  # (role:<slug>), as job(<#>,handlers) gives them.
   - ref: staffload
     type: thing
     name: Health Staff Load
     location: "{{health/health}}"
     flags: [WIZARD]
     attributes:
-      # Every open job on the store.
+      # Every open job.
       FUN`JOBS`OPEN:
         value: |-
-          squish(iter(lcon({{jobs/store}}),if(cand(not(hasflag(%i0,GOING)),comp(get(%i0/JOB`STATE),closed)),%i0)))
+          jobs(,open)
         flags: [funsyntax]
       # %0 jobs: the ones waiting on staff.
       FUN`JOBS`WAITING:
         value: |-
-          squish(iter(%0,if(match(new staff,get(%i0/JOB`STATE)),%i0)))
+          squish(iter(%0,if(match(new staff,job(%i0,state)),%i0)))
         flags: [funsyntax]
       # %0 jobs: the one that has waited longest, or nothing.
       FUN`JOBS`OLDEST:
@@ -53,17 +56,17 @@ objects:
         flags: [funsyntax]
       FUN`JOBS`TURNKEY:
         value: |-
-          firstof(get(%0/JOB`TURN`AT),0)
+          firstof(job(%0,turned),0)
         flags: [funsyntax]
       # %0 a job: its handlers, or none when it has nobody.
       FUN`JOBS`HANDLERS:
         value: |-
-          firstof(u({{jobs/jobs}}/FUN`HLIST,%0,HANDLER),none)
+          firstof(job(%0,handlers),none)
         flags: [funsyntax]
       # %0 a job: how long it has waited, and its number.
       FUN`DISPLAY`WAITED:
         value: |-
-          if(strlen(%0),[trim(etime(sub(secs(),firstof(get(%0/JOB`TURN`AT),secs())),6))] [tone(muted,job [get(%0/JOB`NUM)])],tone(muted,-))
+          if(strlen(%0),trim(etime(sub(secs(),firstof(job(%0,turned),secs())),6)) [tone(muted,job %0)],tone(muted,-))
         flags: [funsyntax]
       # %0 a handler as jobs keeps it: a name, +<role> for a role, or Nobody.
       FUN`DISPLAY`HANDLER:
@@ -75,7 +78,7 @@ objects:
       FUN`SUMMARY:
         value: |-
           setqm(open,u(%!/FUN`JOBS`OPEN),
-          waiting,u(%!/FUN`JOBS`WAITING,%q<open>))%0%r[rule(Staff load)]%r[fields(,Open jobs,words(%q<open>),Waiting on staff,words(%q<waiting>),Oldest waiting,u(%!/FUN`DISPLAY`WAITED,u(%!/FUN`JOBS`OLDEST,%q<waiting>)),Unhandled,words(squish(iter(%q<open>,if(not(strlen(u({{jobs/jobs}}/FUN`HLIST,%i0,HANDLER))),%i0)))))]
+          waiting,u(%!/FUN`JOBS`WAITING,%q<open>))%0%r[rule(Staff load)]%r[fields(,Open jobs,words(%q<open>),Waiting on staff,words(%q<waiting>),Oldest waiting,u(%!/FUN`DISPLAY`WAITED,u(%!/FUN`JOBS`OLDEST,%q<waiting>)),Unhandled,words(squish(iter(%q<open>,if(not(strlen(job(%i0,handlers))),%i0)))))]
         flags: [funsyntax]
 
       # +health/staff: a row per handler, most waiting first, then Nobody for the jobs no one handles.
@@ -84,13 +87,13 @@ objects:
           setqm(open,u(%!/FUN`JOBS`OPEN),
           pairs,iter(%q<open>,iter(u(%!/FUN`JOBS`HANDLERS,%i0),%i0~%i1)),
           handlers,setunion(iter(%q<pairs>,before(%i0,~)),),
-          rows,iter(%q<handlers>,u(%!/FUN`SCREEN`ROW,%i0),,^))[box(if(words(%q<open>),ldatatable(json(object,nowrap,json(string,2|3|4),priority,json(string,1|1|1|2),grow,json(string,1)),Staff|>Open|>Waiting|Oldest waiting,revwords(sortby(%!/FUN`SCREEN`ORDER,%q<rows>,^),^),^),tone(muted,No job is open.))%r[rule()]%rA job with several handlers counts for each. Waiting: new\, or waiting on staff.,Staff load)]
+          rows,iter(%q<handlers>,uargs(%!/FUN`SCREEN`ROW,handler,%i0,pairs,%q<pairs>),,^))[box(if(words(%q<open>),ldatatable(json(object,nowrap,json(string,2|3|4),priority,json(string,1|1|1|2),grow,json(string,1)),Staff|>Open|>Waiting|Oldest waiting,revwords(sortby(%!/FUN`SCREEN`ORDER,%q<rows>,^),^),^),tone(muted,No job is open.))%r[rule()]%rA job with several handlers counts for each. Waiting: new\, or waiting on staff.,Staff load)]
         flags: [funsyntax]
-      # %0 a handler: Staff|Open|Waiting|Oldest waiting, from the open jobs in %q<pairs>.
+      # %<handler> and %<pairs>, the open jobs as <handler>~<job>: Staff|Open|Waiting|Oldest waiting.
       FUN`SCREEN`ROW:
         value: |-
-          setqm(row_jobs,squish(iter(%q<pairs>,if(strmatch(before(%i0,~),%0),after(%i0,~)))),
-          row_waiting,u(%!/FUN`JOBS`WAITING,%q<row_jobs>))[u(%!/FUN`DISPLAY`HANDLER,%0)]|[words(%q<row_jobs>)]|[words(%q<row_waiting>)]|[u(%!/FUN`DISPLAY`WAITED,u(%!/FUN`JOBS`OLDEST,%q<row_waiting>))]
+          setqm(row_jobs,squish(iter(%<pairs>,if(strmatch(before(%i0,~),%<handler>),after(%i0,~)))),
+          row_waiting,u(%!/FUN`JOBS`WAITING,%q<row_jobs>))[u(%!/FUN`DISPLAY`HANDLER,%<handler>)]|[words(%q<row_jobs>)]|[words(%q<row_waiting>)]|[u(%!/FUN`DISPLAY`WAITED,u(%!/FUN`JOBS`OLDEST,%q<row_waiting>))]
         flags: [funsyntax]
       # sortby(): 1 when row %0 goes after row %1, by waiting then open, so revwords() puts the busiest first.
       FUN`SCREEN`ORDER:
@@ -98,6 +101,11 @@ objects:
           setqm(order_a,extract(%0,3,1,|) [extract(%0,2,1,|)],
           order_b,extract(%1,3,1,|) [extract(%1,2,1,|)])[if(eq(first(%q<order_a>),first(%q<order_b>)),comp(rest(%q<order_a>),rest(%q<order_b>),n),comp(first(%q<order_a>),first(%q<order_b>),n))]
         flags: [funsyntax]
+      # WIZARD alone does not give game.see_all, which jobs() and job() ask for: grant it when installed or updated.
+      AINSTALL: |-
+        @permission/allow %!=game.see_all
+      AUPDATE: |-
+        @permission/allow %!=game.see_all
 
   # Attached to the Health object: the summary's section, and the /staff view. Both hand the work to the reader
   # above with u(), so it runs there, where this package's refs live.
