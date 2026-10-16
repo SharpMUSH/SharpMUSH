@@ -113,7 +113,7 @@ public class LightningSceneListTests
 		var scene = await _scenes.CreateSceneAsync("#0", "#1");
 		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
 		await Assert.That(await _scenes.JoinSceneAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
-		await _scenes.AddMemberAsync(scene.Id, "#20", "invited");
+		await _scenes.InvitePlayerAsync(scene.Id, "#20");
 		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#20")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("participant");
 		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
 		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#1")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("owner");
@@ -155,6 +155,49 @@ public class LightningSceneListTests
 		var listed = ((IEnumerable<SceneController.SceneDto>)response.Value!).ToList();
 		await Assert.That(listed.Select(s => s.Id)).Contains(scene.Id);
 		await Assert.That(listed.Single(s => s.Id == scene.Id).Meta["summary"]).IsEqualTo("A complete pitch");
+	}
+
+	[Test]
+	public async Task PendingInvitationIsNotMembershipOrAPrivateApiVisibilityGrant()
+	{
+		var guest = $"#{(await _db.CreatePlayerAsync("Invitee", "pw", new DBRef(0), new DBRef(0), 0)).Number}";
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await _scenes.SetSceneMetaAsync(scene.Id, "public", "0");
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
+		await _scenes.InvitePlayerAsync(scene.Id, guest);
+		var controller = new SceneController(_scenes)
+		{
+			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor(guest) } }
+		};
+		await Assert.That(await controller.GetScene(scene.Id)).IsTypeOf<NotFoundResult>();
+		await Assert.That(await _scenes.GetMemberAsync(scene.Id, guest) is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That((await _scenes.GetMembersAsync(scene.Id)).Expect<IReadOnlyList<SharpMUSH.Plugins.Scene.Models.SceneMember>>().Count).IsEqualTo(1);
+		await Assert.That((await _scenes.ListScenesAsync("mine", guest)).Count).IsEqualTo(0);
+		var ownerController = new SceneController(_scenes)
+		{
+			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor("#1") } }
+		};
+		var partners = (OkObjectResult)await ownerController.GetPartners("#1");
+		await Assert.That(((IEnumerable<SceneController.ScenePartnerDto>)partners.Value!).Count()).IsEqualTo(0);
+		await _scenes.JoinSceneAsync(scene.Id, guest);
+		await Assert.That(await controller.GetScene(scene.Id)).IsTypeOf<OkObjectResult>();
+	}
+
+	[Test]
+	public async Task ARefusedJoinKeepsItsPendingInvitationButAcceptanceConsumesIt()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
+		await _scenes.SetSceneMetaAsync(scene.Id, "playercap", "1");
+		await _scenes.InvitePlayerAsync(scene.Id, "#20");
+		await Assert.That(await _scenes.JoinSceneAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await _scenes.SetSceneMetaAsync(scene.Id, "playercap", "2");
+		await Assert.That(await _scenes.JoinSceneAsync(scene.Id, "#21") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#20")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("participant");
+		await _scenes.RemoveMemberAsync(scene.Id, "#20");
+		await Assert.That(await _scenes.JoinSceneAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
 	}
 
 }

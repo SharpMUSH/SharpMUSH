@@ -246,7 +246,8 @@ manages edges, and snapshots names. No new `ISharpDatabase` methods.
 
 Joining policy (`joinpolicy`: open/invite-only/limited) and player cap (`playercap`: 0-10000, zero unlimited)
 are validated scene fields. The store serializes admission with cap edits and membership grants; owner, GM and
-participant memberships consume seats. Pending invitations and observers do not. Limited requires a positive
+participant memberships consume seats. Pending invitations and observers do not. Invitations are a private set on the stored scene, outside
+membership indexes and visibility grants; an atomic successful join consumes one. Limited requires a positive
 cap, and a cap cannot be lowered below existing participation. Player commands use `scenejoin()` to accept
 invitations and enforce admission atomically. Visibility remains controlled separately by public/private.
 

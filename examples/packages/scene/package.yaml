@@ -610,7 +610,7 @@ objects:
 
       CMD`WEB`POSE:
         value: |-
-          $(?is)^\+scene/po(?\:s(?\:e)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%2,line,%q<poser_name> %2,heard,%q<poser_name> %2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/pos(?\:e)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%2,line,%q<poser_name> %2,heard,%q<poser_name> %2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       CMD`WEB`SAY:
@@ -708,29 +708,28 @@ objects:
         flags: [REGEXP]
 
       # ---- membership / RSVP / focus --------------------------------------------
-      # An owner who joins their own scene again (the portal's Join, after focusing elsewhere) stays its
-      # owner: @scene/member sets the role outright, so it is skipped for them. @scene/member and @scene/focus
-      # refuse a missing scene but tell the Logger, not the player, so each verb that names a scene checks it
-      # exists first; scene() also hides a private scene from a non-member, so it cannot be joined by its id.
+      # scenejoin preserves existing owner/GM/participant roles and checks admission atomically.
+      # A pending invitation permits accepting a private scene before scene() permits reading it:
+      # join/activate therefore ask scenejoin first, and read access follows successful membership.
       # Joining controls are scene metadata, independent of pose tags and public visibility.
       FUN`PARTICIPATION`TAGS: |-
         %[[firstof(scene(%0,joinpolicy),open)]%][if(gt(firstof(scene(%0,playercap),0),0),%b%[cap [scene(%0,playercap)]%])]
       CMD`POLICY:
         value: |-
-          $(?is)^\+scene/policy (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.,ok)
+          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.,ok)
         flags: [REGEXP]
       CMD`LIMIT:
         value: |-
-          $(?is)^\+scene/limit (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert cand(isint(%2),gte(%2,0),lte(%2,10000))=@pemit %#=notice(SCENE,Use +scene/limit [<id>=]0-10000. Zero clears the cap.,warn); @assert cor(gt(%2,0),not(strmatch(scene(%q<scene_id>,joinpolicy),limited)))=@pemit %#=notice(SCENE,Change limited policy before clearing its cap.,warn); @assert not(strmatch(setr(limit_result,sceneset(%q<scene_id>,playercap,%2)),#-1*))=@pemit %#=notice(SCENE,The cap cannot be below the number of participating players.,warn); @pemit %#=notice(SCENE,Player cap set to %2.,ok)
+          $(?is)^\+scene/lim(?\:i(?\:t)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert cand(isint(%2),gte(%2,0),lte(%2,10000))=@pemit %#=notice(SCENE,Use +scene/limit [<id>=]0-10000. Zero clears the cap.,warn); @assert cor(gt(%2,0),not(strmatch(scene(%q<scene_id>,joinpolicy),limited)))=@pemit %#=notice(SCENE,Change limited policy before clearing its cap.,warn); @assert not(strmatch(setr(limit_result,sceneset(%q<scene_id>,playercap,%2)),#-1*))=@pemit %#=notice(SCENE,The cap cannot be below the number of participating players.,warn); @pemit %#=notice(SCENE,Player cap set to %2.,ok)
         flags: [REGEXP]
       CMD`INVITE:
         value: |-
-          $(?is)^\+scene/invite (\d+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(invitee,pmatch(%2)))=@pemit %#=notice(SCENE,No such player.,warn); @assert u(%!/FUN`IS`APPROVED,%q<invitee>)=@pemit %#=notice(SCENE,That player is not approved to participate in scenes.,warn); @assert not(match(owner gm participant,scenemember(%1,%q<invitee>,role)))=@pemit %#=notice(SCENE,That player already participates.,warn); @scene/member %1/invited=%q<invitee>; @pemit %#=notice(SCENE,Invitation saved for %2. They may +scene/join %1 if a seat is available.,ok)
+          $(?is)^\+scene/inv(?\:i(?\:t(?\:e)?)?)? (\d+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(invitee,pmatch(%2)))=@pemit %#=notice(SCENE,No such player.,warn); @assert u(%!/FUN`IS`APPROVED,%q<invitee>)=@pemit %#=notice(SCENE,That player is not approved to participate in scenes.,warn); @assert not(match(owner gm participant,scenemember(%1,%q<invitee>,role)))=@pemit %#=notice(SCENE,That player already participates.,warn); @assert not(strmatch(setr(invite_result,sceneinvite(%1,%q<invitee>)),#-1*))=@pemit %#=notice(SCENE,%q<invite_result>,warn); @pemit %#=notice(SCENE,Invitation saved for %2. They may +scene/join %1 if a seat is available.,ok)
         flags: [REGEXP]
 
       CMD`JOIN:
         value: |-
-          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,%q<join_result>,warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
+          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
         flags: [REGEXP]
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
@@ -952,11 +951,11 @@ objects:
       # +scene/old/2 canon=*Fate*. Bare +scene takes none, since +scene <id> is the scene's card.
       CMD`BROWSE:
         value: |-
-          $(?is)^\+scene(?\:/li(?\:s(?\:t)?)?)?(?\:/(\d+))?$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,,pattern,
+          $(?is)^\+scene(?\:/lis(?\:t)?)?(?\:/(\d+))?$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,,pattern,
         flags: [REGEXP]
       CMD`BROWSE`MATCH:
         value: |-
-          $(?is)^\+scene/li(?\:s(?\:t)?)?(?\:/(\d+))? +([^=]+)=(.*)$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,%2,pattern,%3
+          $(?is)^\+scene/lis(?\:t)?(?\:/(\d+))? +([^=]+)=(.*)$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,%2,pattern,%3
         flags: [REGEXP]
       CMD`OLD:
         value: |-
@@ -1050,7 +1049,7 @@ objects:
         flags: [REGEXP]
       CMD`ACTIVATE:
         value: |-
-          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,%q<join_result>,warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
+          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
         flags: [REGEXP]
 
       # ---- summary + info card --------------------------------------------------
@@ -1135,7 +1134,7 @@ objects:
       # (FUN`FIND), so a player need not look up its number first.
       CMD`SHOW:
         value: |-
-          $(?is)^\+(?\:scene|scene/i(?\:n(?\:f(?\:o)?)?)?|event) (.+)$: think setq(found_scenes,u(%!/FUN`FIND,%1)); @assert words(%q<found_scenes>)=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert eq(words(%q<found_scenes>),1)=@pemit %#=notice(SCENE,More than one scene is called that: [itemize(%q<found_scenes>)]. Give its number.,warn); @assert not(strmatch(scene(setr(scene_id,%q<found_scenes>),status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @include/args %!/INC`DISPLAY`INFO=scene,%q<scene_id>
+          $(?is)^\+(?\:scene|scene/inf(?\:o)?|event) (.+)$: think setq(found_scenes,u(%!/FUN`FIND,%1)); @assert words(%q<found_scenes>)=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert eq(words(%q<found_scenes>),1)=@pemit %#=notice(SCENE,More than one scene is called that: [itemize(%q<found_scenes>)]. Give its number.,warn); @assert not(strmatch(scene(setr(scene_id,%q<found_scenes>),status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @include/args %!/INC`DISPLAY`INFO=scene,%q<scene_id>
         flags: [REGEXP]
       # The scene %0 names: its number, or the scenes whose title is %0, or else starts with it, among the
       # recent and scheduled scenes the reader can see. Several ids when it names more than one.
@@ -1371,6 +1370,7 @@ objects:
         invite-only requires `+scene/invite <id>=<player>` from the owner or a scene manager. Limited requires a positive cap.
         `+scene/limit [<id>=]<0-10000>` sets a numeric player cap under any policy; zero removes it unless policy is limited.
         Owner, GM and participant memberships consume seats. Observers and pending invitations do not.
+        An invitation alone grants no membership or access to a private scene; joining accepts it and consumes it only if a seat is available.
         Rejoining preserves your role and seat. Lowering a cap below current participation is refused.
         Cards and lists label the policy and cap independently of pose tags and public/private visibility.
       HELP`SCENE`LIMIT: |-

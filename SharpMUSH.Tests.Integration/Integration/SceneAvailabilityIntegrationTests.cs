@@ -368,6 +368,9 @@ public class SceneAvailabilityIntegrationTests
 
 			await As(ann, "+scene/schedule 4071319200/Harbour market=A pitch");
 			var scene = await Think($"last(setinter(scenelist(scheduled),scenelist(#{ann.DbRef.Number})))");
+			await As(ann, $"+scene/invite {scene}=#{bob.DbRef.Number}");
+			var pendingCard = await As(ann, $"+scene {scene}");
+			await Assert.That(pendingCard).DoesNotContain(await Think($"name(#{bob.DbRef.Number})"));
 			await As(bob, $"+scene/join {scene}");
 			await As(cleo, $"+scene/join {scene}");
 

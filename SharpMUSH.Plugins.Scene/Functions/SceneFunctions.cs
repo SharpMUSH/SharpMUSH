@@ -862,6 +862,25 @@ public static class SceneFunctions
 		return new CallState(scene.Id);
 	}
 
+	/// <summary>Saves a pending invitation without adding the player to the scene; wizard-only package primitive.</summary>
+	[SharpFunction(Name = "sceneinvite", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
+		ParameterNames = ["id", "player"])]
+	public static async ValueTask<CallState> SceneInvite(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		if (!SideEffectsEnabled(parser)) return new CallState(ErrorMessages.Returns.NoSideFx);
+		var args = parser.CurrentState.Arguments;
+		var id = args["0"].Message.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
+		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		return await service.InvitePlayerAsync(id, player) switch
+		{
+			None => new CallState(id),
+			Error<string> error => new CallState($"#-1 {error.Value}"),
+			_ => new CallState(SceneNotFound)
+		};
+	}
+
 	/// <summary>Accepts a player under the scene joining policy; returns the scene id or an error.</summary>
 	[SharpFunction(Name = "scenejoin", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,

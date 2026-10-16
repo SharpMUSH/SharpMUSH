@@ -344,4 +344,48 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await RunAs(handle, $"+scene/{verb}")).Contains($"+scene/{verb} ");
 	}
 
+	[Test]
+	public async Task PendingInvitationsDoNotGrantPrivateReadsAndAcceptanceStillRequiresASeat()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"InviteOwner{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"InviteGuest{Tag}");
+		var id = await CreateSceneAsync(owner, $"Private invitation {Tag}");
+		await RunAs(owner, "+scene/policy invite-only");
+		await RunAs(owner, "+scene/limit 1");
+		await RunAs(owner, $"+scene/invite {id}={Num(guest)}");
+		await Assert.That(await Eval($"member(scenemembers({id}),{Num(guest)})")).IsEqualTo("0");
+		await Assert.That(await RunAs(guestHandle, $"think member(scenelist(mine),{id})")).IsEqualTo("0");
+		await RunAs(owner, "+scene/private");
+		await Assert.That(await RunAs(guestHandle, $"think scene({id},status)")).StartsWith("#-1");
+		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("player cap");
+		await RunAs(owner, "+scene/limit 2");
+		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("Joined");
+		await Assert.That(await RunAs(guestHandle, $"think scene({id},status)")).IsEqualTo("active");
+		await RunAs(guestHandle, "+scene/leave");
+		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).DoesNotContain("Joined");
+	}
+
+	[Test]
+	public async Task ParticipationVerbsUseUniquePrefixesAndAmbiguitiesDoNotMutate()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"PrefixOwner{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"PrefixGuest{Tag}");
+		var id = await CreateSceneAsync(owner, $"Prefix scene {Tag}");
+		await Assert.That(await RunAs(owner, "+scene/lim 2")).Contains("Player cap set to 2");
+		await Assert.That(await RunAs(owner, "+scene/pol invite-only")).Contains("Joining policy set to invite-only");
+		await Assert.That(await RunAs(owner, $"+scene/inv {id}={Num(guest)}")).Contains("Invitation saved");
+		await Assert.That(await RunAs(owner, $"+scene/inf {id}")).Contains($"Scene {id}:");
+		await Assert.That(await RunAs(owner, "+scene/lis")).Contains("Scenes: active");
+		var poses = await Eval($"words(sceneposes({id}))");
+		foreach (var abbreviated in new[] { $"po {id}=Never posed", "li 999", $"i {id}", $"in {id}" })
+			await Assert.That(await RunAs(owner, $"+scene/{abbreviated}")).Contains("could be");
+		await Assert.That(await Eval($"words(sceneposes({id}))")).IsEqualTo(poses);
+		await Assert.That(await Eval($"scene({id},playercap)")).IsEqualTo("2");
+		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("Joined");
+		await Assert.That(await RunAs(guestHandle, $"+scene/pos {id}=A real pose")).DoesNotContain("could be");
+		await Assert.That(await Eval($"words(sceneposes({id}))")).IsEqualTo((int.Parse(poses) + 1).ToString());
+	}
+
 }

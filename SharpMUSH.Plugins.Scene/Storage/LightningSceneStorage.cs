@@ -144,6 +144,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 		public string StarterName { get; set; } = "";
 		public long? RoomDbref { get; set; }
 		public string RoomName { get; set; } = "";
+		/// <summary>Pending offers are not membership edges or visibility grants. Older scene JSON defaults to none.</summary>
+		public HashSet<long> PendingInvitations { get; init; } = [];
 		public Dictionary<string, string> Meta { get; init; } = [];
 	}
 
@@ -782,6 +784,19 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 	private static int PlayerCap(SceneRecord scene) =>
 		int.TryParse(scene.Meta.GetValueOrDefault("playercap"), out var cap) ? cap : 0;
 
+	public Task<FoundResult<OkNone>> InvitePlayerAsync(string sceneId, string playerDbref)
+		=> _accessor.WriteAsync<FoundResult<OkNone>>(tx =>
+		{
+			var id = BareId(sceneId);
+			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player) return new NotFound();
+			if (tx.TryGet(_participants, Keys.Composite(id, player), out var bytes)
+				&& OccupiesSeat(Decode<SceneMemberRecord>(bytes).Role))
+				return new Error<string>("That player already participates.");
+			scene.PendingInvitations.Add(player);
+			tx.Put(_scenes, Keys.Str(id), Encode(scene));
+			return new OkNone();
+		}).AsTask();
+
 	public Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref)
 		=> _accessor.WriteAsync<FoundResult<SceneMember>>(tx =>
 		{
@@ -790,7 +805,9 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			var key = Keys.Composite(id, player);
 			var previous = tx.TryGet(_participants, key, out var bytes) ? Decode<SceneMemberRecord>(bytes) : null;
 			if (previous is not null && OccupiesSeat(previous.Role)) return ProjectMember(tx, previous);
-			if (scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only" && !string.Equals(previous?.Role, "invited", StringComparison.OrdinalIgnoreCase)
+			var invited = scene.PendingInvitations.Contains(player);
+			if (!scene.IsPublic && previous is null && !invited && scene.OwnerDbref != player) return new NotFound();
+			if (scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only" && !invited
 				&& scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
 			var cap = PlayerCap(scene);
 			if (cap > 0 && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap)
@@ -800,6 +817,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 				SceneId = id, MemberDbref = player, MemberName = ObjectName(tx, player) ?? "", GrantedAt = UtcMillis()
 			};
 			member.Role = scene.OwnerDbref == player ? "owner" : "participant";
+			if (scene.PendingInvitations.Remove(player)) tx.Put(_scenes, Keys.Str(id), Encode(scene));
 			tx.Put(_participants, key, Encode(member));
 			AddIndex(tx, MemberIndexKey(player), id);
 			return ProjectMember(tx, member);
