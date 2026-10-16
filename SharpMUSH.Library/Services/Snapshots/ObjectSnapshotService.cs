@@ -182,7 +182,7 @@ public sealed partial class ObjectSnapshotService(
 			var path = await reads.Path(attribute.LongName, ct);
 			if (!await permissions.CanViewAttribute(executor, obj, path)) continue;
 			if (captured.Count == MaxAttributes) throw Error("limit", "Snapshot exceeds 1024 attributes.");
-			var markup = MarkupTextSerializer.Serialize(attribute.Value);
+			var markup = attribute.StoredValue?.Serialized ?? MarkupTextSerializer.Serialize(attribute.Value);
 			capturedBytes += Encoding.UTF8.GetByteCount(markup);
 			if (capturedBytes > MaxBytes) throw Error("limit", "Snapshot exceeds 2 MiB.");
 			var owner = await attribute.Owner.WithCancellation(ct);
@@ -285,7 +285,11 @@ public sealed partial class ObjectSnapshotService(
 			var chain = await reads.Path(name, ct);
 			if (!await permissions.CanSet(executor, obj, chain)) throw Error("denied", "An attribute is protected: " + name);
 			if (snapshot.Attributes.FirstOrDefault(a => a.Name == name) is { } savedAttribute)
-				_ = MarkupTextSerializer.Deserialize(savedAttribute.Markup);
+			{
+				// Inspect distinguishes damaged/unsupported display projections from valid rewriteable
+				// content. A snapshot copies either case verbatim; only malformed structure is refused.
+				_ = StoredMarkup.Inspect(savedAttribute.Markup);
+			}
 		}
 		if (selection.Flags)
 			foreach (var flag in snapshot.Flags)
@@ -338,7 +342,9 @@ public sealed partial class ObjectSnapshotService(
 		public async Task<SharpAttribute[]> Path(string name, CancellationToken ct)
 		{
 			if (paths.TryGetValue(name, out var cached)) return cached;
-			var path = await attributes.GetAttributeAsync(target, name.Split('`'), ct).ToArrayAsync(ct);
+			SharpAttribute[] path;
+			try { path = await attributes.GetAttributeAsync(target, name.Split('`'), ct).ToArrayAsync(ct); }
+			catch (InvalidDataException) { throw Error("corrupt", "Attribute access metadata is unreadable: " + name); }
 			return paths[name] = path.Select(attribute => attribute with { Value = MarkupText.Empty }).ToArray();
 		}
 	}
@@ -389,7 +395,10 @@ public sealed partial class ObjectSnapshotService(
 			var saved = snapshot.Attributes.Single(a => a.Name == name);
 			mutations.Add(async () =>
 			{
-				var result = await attributeService.SetAttributeAsync(executor, obj, name, MarkupTextSerializer.Deserialize(saved.Markup));
+				var stored = StoredMarkup.Inspect(saved.Markup);
+				var result = stored.CanRewrite
+					? await attributeService.SetAttributeAsync(executor, obj, name, stored.Value)
+					: await attributeService.SetStoredAttributeAsync(executor, obj, name, stored);
 				if (result is Error<string> writeError) throw Error("write-failed", writeError.Value);
 			});
 			mutations.Add(async () =>

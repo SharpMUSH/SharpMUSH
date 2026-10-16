@@ -16,6 +16,7 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// <c>use_ancestor</c> never reaches ANCESTOR_* (<c>src/utils.c:891-910</c>).
 /// </summary>
 public class GetCommandAttributesQueryHandler(
+	IAttributeStore attributes,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IQueryHandler<GetCommandAttributesQuery, CommandAttributeCache[]>
 {
@@ -26,7 +27,7 @@ public class GetCommandAttributesQueryHandler(
 		var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var noCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		await CommandAttributeScanner.ScanAttributes(sharpObj.Object().AllAttributes.Value, commandAttributes, seenNames,
+		await CommandAttributeScanner.ScanAttributes(attributes.GetDiscoveryAttributesAsync(sharpObj.Object().DBRef, cancellationToken), commandAttributes, seenNames,
 			noCommandPrefixes, isLocal: true, cancellationToken);
 
 		// Walk parent chain for inherited commands, capped at Limit.MaxParents with a cycle guard -
@@ -42,7 +43,7 @@ public class GetCommandAttributesQueryHandler(
 			var parentObj = parent.Object();
 			if (!visited.Add(parentObj.DBRef.Number)) break;
 
-			await CommandAttributeScanner.ScanAttributes(parentObj.AllAttributes.Value, commandAttributes, seenNames,
+			await CommandAttributeScanner.ScanAttributes(attributes.GetDiscoveryAttributesAsync(parentObj.DBRef, cancellationToken), commandAttributes, seenNames,
 				noCommandPrefixes, isLocal: false, cancellationToken);
 
 			current = parentObj;

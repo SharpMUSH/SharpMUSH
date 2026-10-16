@@ -599,8 +599,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			return ProjectPose(tx, pose);
 		}).AsTask();
 
-	public Task<Found<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content)
-		=> _accessor.WriteAsync<Found<ScenePose>>(tx =>
+	public Task<FoundResult<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content)
+		=> _accessor.WriteAsync<FoundResult<ScenePose>>(tx =>
 		{
 			if (ReadPose(tx, BareId(poseId)) is not { } found)
 			{
@@ -608,6 +608,10 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			}
 
 			var pose = found.Pose;
+			var current = CurrentEdit(tx, pose.Id, pose.CurrentEditSeq).Current;
+			if (current is not null && !ScenePoseContent.CanEdit(current.Markup))
+				return new Error<string>("Stored markup cannot be edited safely; original pose and history were preserved.");
+
 			var now = UtcMillis();
 			var editor = DbrefNumber(editorDbref);
 

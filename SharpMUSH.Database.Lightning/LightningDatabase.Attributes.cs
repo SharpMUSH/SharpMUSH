@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using DotNext.Threading;
@@ -36,6 +37,14 @@ public partial class LightningDatabase
 {
 	private const string BranchFlag = "branch";
 
+	private static AttrMetaRecord ReadAttributeMetadata(ReadOnlySpan<byte> bytes)
+	{
+		var metadata = Codec.Deserialize<AttrMetaRecord>(bytes);
+		if (metadata is null || metadata.Flags is null || metadata.Flags.Any(flag => flag is null))
+			throw new System.Text.Json.JsonException("Missing attribute metadata or flag name.");
+		return metadata;
+	}
+
 	#region Attribute reads
 
 	public IAsyncEnumerable<SharpAttribute> GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
@@ -49,9 +58,8 @@ public partial class LightningDatabase
 		{
 			var walk = ReadPathPrefixes(tx, n, attribute);
 			// All-or-nothing: a partially resolving path is not a hit (IAttributeStore.GetAttributeAsync).
-			return walk.Count != attribute.Length
-				? []
-				: walk.Select(e => HydrateAttribute(tx, n, e.LongName, e.Meta, ReadAttributeValue(tx, n, e.LongName))).ToList();
+			if (walk.Count != attribute.Length) return new List<SharpAttribute>();
+			return walk.Select(e => HydrateAttribute(tx, n, e.LongName, e.Meta, ReadAttributeValue(tx, n, e.LongName))).ToList();
 		});
 
 		foreach (var attr in path)
@@ -118,6 +126,7 @@ public partial class LightningDatabase
 		[EnumeratorCancellation] CancellationToken ct)
 	{
 		var n = (long)dbref.Number;
+		var unreadableTrees = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		await foreach (var (key, meta) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
 			if (MatchingRow(key, filter, ct) is not { } longName)
@@ -125,9 +134,20 @@ public partial class LightningDatabase
 				continue;
 			}
 
+			if (unreadableTrees.Any(root => longName.StartsWith(root + "`", StringComparison.OrdinalIgnoreCase))) continue;
 			var value = Store.Read(tx => tx.TryGet(Tables.AttrVal, key, out var body) ? body : null);
 			ReadStats.ValueRead(value?.Length ?? 0);
-			yield return HydrateAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(meta), value);
+			SharpAttribute hydrated;
+			try { hydrated = HydrateAttribute(AttributeFlagDefinitions(), n, longName, ReadAttributeMetadata(meta), value); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute {Object}/{Attribute}", n, longName);
+				unreadableTrees.Add(longName);
+				continue;
+			}
+			// A copy must not recreate a missing protected branch from a readable descendant.
+			if (hydrated.IsUnreadable) unreadableTrees.Add(longName);
+			else yield return hydrated;
 		}
 	}
 
@@ -136,6 +156,7 @@ public partial class LightningDatabase
 		[EnumeratorCancellation] CancellationToken ct)
 	{
 		var n = (long)dbref.Number;
+		var unreadableTrees = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrMeta, Keys.AttrPrefix(n, literalPrefix), ct: ct))
 		{
 			if (MatchingRow(key, filter, ct) is not { } longName)
@@ -143,7 +164,16 @@ public partial class LightningDatabase
 				continue;
 			}
 
-			yield return HydrateLazyAttribute(AttributeFlagDefinitions(), n, longName, Codec.Deserialize<AttrMetaRecord>(value));
+			if (unreadableTrees.Any(root => longName.StartsWith(root + "`", StringComparison.OrdinalIgnoreCase))) continue;
+			LazySharpAttribute hydrated;
+			try { hydrated = HydrateLazyAttribute(AttributeFlagDefinitions(), n, longName, ReadAttributeMetadata(value)); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute metadata {Object}/{Attribute}", n, longName);
+				unreadableTrees.Add(longName);
+				continue;
+			}
+			yield return hydrated;
 		}
 	}
 
@@ -183,12 +213,22 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
 		bool checkParent, InheritanceWalk walk, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
+		AttributeWithInheritance? resolved;
+		try
+		{
+			resolved = Store.Read(tx => ResolveInheritance(tx, (long)dbref.Number, attribute, checkParent, walk) is { } hit
 			? BuildInheritanceHit(tx, hit,
 				(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName)),
 				static a => a.Flags,
 				static (attrs, source, kind, flags) => new AttributeWithInheritance(attrs, source, kind, flags))
 			: null);
+
+		}
+		catch (System.Text.Json.JsonException ex)
+		{
+			_logger.LogWarning(ex, "Skipping malformed inherited attribute {Object}/{Attribute}", dbref, string.Join('`', attribute));
+			resolved = null;
+		}
 
 		if (resolved is not null)
 		{
@@ -313,7 +353,7 @@ public partial class LightningDatabase
 		return await Store.WriteAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.AttrMeta, key, out var bytes)) return false;
-			var metadata = Codec.Deserialize<AttrMetaRecord>(bytes);
+			var metadata = ReadAttributeMetadata(bytes);
 			tx.Put(Tables.AttrMeta, key, Codec.Serialize(metadata with { Owner = (long)owner.Object.Key }));
 			return true;
 		}, cancellationToken);
@@ -342,6 +382,14 @@ public partial class LightningDatabase
 	/// </summary>
 	public async ValueTask<AttributeWriteOutcome> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
 		IReadOnlySet<string> watched, CancellationToken cancellationToken = default)
+		=> await SetAttributeCoreAsync(dbref, attribute, value, owner, watched, null, cancellationToken);
+
+	public ValueTask<AttributeWriteOutcome> SetStoredAttributeAsync(DBRef dbref, string[] attribute, StoredMarkup value,
+		SharpPlayer owner, IReadOnlySet<string> watched, CancellationToken cancellationToken = default)
+		=> SetAttributeCoreAsync(dbref, attribute, value.Value, owner, watched, value.Serialized, cancellationToken);
+
+	private async ValueTask<AttributeWriteOutcome> SetAttributeCoreAsync(DBRef dbref, string[] attribute, MString value,
+		SharpPlayer owner, IReadOnlySet<string> watched, string? serialized, CancellationToken cancellationToken)
 	{
 		if (attribute.Length == 0)
 		{
@@ -349,7 +397,7 @@ public partial class LightningDatabase
 		}
 
 		var n = (long)dbref.Number;
-		var write = PreparedAttributeWrite.From(new AttributeWrite(attribute, value, owner, []));
+		var write = PreparedAttributeWrite.From(new AttributeWrite(attribute, value, owner, []), serialized);
 
 		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
@@ -406,9 +454,11 @@ public partial class LightningDatabase
 	/// </summary>
 	private readonly record struct PreparedAttributeWrite(string[] Path, byte[] Value, long Owner, string[] Flags, MString Source)
 	{
-		public static PreparedAttributeWrite From(AttributeWrite write) => new(
+		public static PreparedAttributeWrite From(AttributeWrite write) => From(write, null);
+
+		public static PreparedAttributeWrite From(AttributeWrite write, string? serialized) => new(
 			[.. write.Path.Select(segment => segment.ToUpperInvariant())],
-			Keys.Str(MarkupTextSerializer.Serialize(write.Value)),
+			Keys.Str(serialized ?? MarkupTextSerializer.Serialize(write.Value)),
 			write.Owner.Object.Key,
 			[.. write.Flags.Select(flag => flag.Name)],
 			write.Value);
@@ -435,7 +485,10 @@ public partial class LightningDatabase
 			longName = level == 0 ? path[0] : $"{longName}`{path[level]}";
 			var key = Keys.Attr(n, longName);
 			var isLeaf = level == path.Length - 1;
-			var existing = tx.TryGet(Tables.AttrMeta, key, out var bytes) ? Codec.Deserialize<AttrMetaRecord>(bytes) : null;
+			AttrMetaRecord? existing;
+			try { existing = tx.TryGet(Tables.AttrMeta, key, out var bytes) ? ReadAttributeMetadata(bytes) : null; }
+			catch (System.Text.Json.JsonException ex)
+			{ throw new InvalidDataException($"Cannot write unreadable attribute metadata {n}/{longName}.", ex); }
 			var entry = ReadAttributeEntryRecord(tx, longName);
 
 			// The entry's defaults are a new node's flags; an existing node keeps its own.
@@ -500,10 +553,23 @@ public partial class LightningDatabase
 
 		await Store.WriteAsync(tx =>
 		{
-			var owned = tx.Range(Tables.AttrMeta, [])
-				.Select(entry => (entry.Key, Meta: Codec.Deserialize<AttrMetaRecord>(entry.Value)))
-				.Where(entry => entry.Meta.Owner == oldDbref)
-				.ToList();
+			var owned = new List<(byte[] Key, AttrMetaRecord Meta)>();
+			foreach (var entry in tx.Range(Tables.AttrMeta, []))
+			{
+				try
+				{
+					var meta = ReadAttributeMetadata(entry.Value);
+					if (meta.Owner == oldDbref) owned.Add((entry.Key, meta));
+				}
+				catch (System.Text.Json.JsonException ex)
+				{
+					// Ownership cannot be established from this row. Preserve it exactly rather than
+					// inventing an owner or preventing probate of every unrelated healthy attribute.
+					var (dbref, name) = Keys.ParseAttr(entry.Key);
+					_logger.LogWarning(ex, "Skipping unreadable attribute ownership metadata {Object}/{Attribute} during probate from {OldOwner} to {NewOwner}; stored bytes retained",
+						dbref, name, oldDbref, newDbref);
+				}
+			}
 
 			foreach (var (key, meta) in owned)
 			{
@@ -826,7 +892,12 @@ public partial class LightningDatabase
 				break;
 			}
 
-			resolved.Add((longName, Codec.Deserialize<AttrMetaRecord>(bytes)));
+			try { resolved.Add((longName, ReadAttributeMetadata(bytes))); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Unreadable attribute access metadata {Object}/{Attribute}", dbref, longName);
+				throw new InvalidDataException($"Cannot authorize unreadable attribute metadata {dbref}/{longName}.", ex);
+			}
 		}
 
 		return resolved;
@@ -845,7 +916,17 @@ public partial class LightningDatabase
 	/// <inheritdoc cref="HydrateAttribute(ITx, long, string, AttrMetaRecord, byte[])"/>
 	private SharpAttribute HydrateAttribute(DefinitionMap<AttributeFlagRecord> flagDefinitions, long dbref, string longName,
 		AttrMetaRecord meta, byte[]? value)
-		=> new(
+	{
+		StoredMarkup? stored = null;
+		var unreadable = false;
+		try { stored = value is null ? null : StoredMarkup.Read(Keys.ReadStr(value)); }
+		catch (System.Text.Json.JsonException ex)
+		{
+			// Exact paths retain this row's real flags/owner for authorization. Display scans skip it.
+			_logger.LogWarning(ex, "Unreadable attribute value {Object}/{Attribute}; retaining access metadata", dbref, longName);
+			unreadable = true;
+		}
+		return new(
 			AttributeIdOf(dbref, longName),
 			AttributeKeyOf(dbref, longName),
 			LeafNameOf(longName),
@@ -857,8 +938,12 @@ public partial class LightningDatabase
 			new AsyncLazy<SharpPlayer?>(_ => Task.FromResult(LoadAttributeOwner(meta.Owner))),
 			new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult(LoadAttributeEntry(meta.Entry))))
 		{
-			Value = DeserializeValue(value)
+			Value = stored?.Value ?? MarkupText.Empty,
+			StoredValue = stored,
+			IsUnreadable = unreadable
 		};
+
+	}
 
 	/// <inheritdoc cref="HydrateAttribute"/>
 	internal LazySharpAttribute HydrateLazyAttribute(ITx tx, long dbref, string longName, AttrMetaRecord meta)
@@ -881,8 +966,18 @@ public partial class LightningDatabase
 			// The whole point of the lazy shape: the attr.val row stays unread until someone asks.
 			// Resettable, so a content scan can drop a body once it has been tested
 			// (LazySharpAttributeExtensions.ReadValueOnceAsync) instead of keeping every one it read.
-			Value: new AsyncLazy<MString>(_ => Task.FromResult(
-				Store.Read(readTx => DeserializeValue(ReadAttributeValue(readTx, dbref, longName)))), resettable: true));
+			Value: new AsyncLazy<MString>(_ => Task.FromResult(ReadAttributeDisplayValue(dbref, longName)), resettable: true));
+
+	private MString ReadAttributeDisplayValue(long dbref, string longName)
+	{
+		var value = Store.Read(tx => ReadAttributeValue(tx, dbref, longName));
+		try { return value is null ? MarkupText.Empty : StoredMarkup.Read(Keys.ReadStr(value)).Value; }
+		catch (System.Text.Json.JsonException ex)
+		{
+			_logger.LogWarning(ex, "Skipping malformed attribute display value {Object}/{Attribute}", dbref, longName);
+			return MarkupText.Empty;
+		}
+	}
 
 	private byte[]? ReadAttributeValue(ITx tx, long dbref, string longName)
 	{
@@ -892,7 +987,15 @@ public partial class LightningDatabase
 	}
 
 	private static MString DeserializeValue(byte[]? value)
-		=> value is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(Keys.ReadStr(value));
+	{
+		try { return value is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(Keys.ReadStr(value)); }
+		catch (System.Text.Json.JsonException)
+		{
+			// Index/watch display projections must not abort their caller for one bad value.
+			// Eager row readers report its object/attribute identity when excluding the row.
+			return MarkupText.Empty;
+		}
+	}
 
 	/// <summary>Resolves stored flag names through <see cref="Tables.AttrFlag"/>; a name whose definition
 	/// has since been deleted is dropped rather than surfaced as null, matching <c>ReadObjectFlags</c>.</summary>
@@ -971,7 +1074,18 @@ public partial class LightningDatabase
 			var (page, resume) = Store.Read(tx =>
 			{
 				var (rows, next) = ReadDirectChildPage(tx, parentPrefix, from, ChildPageSize);
-				return (rows.Select(row => hydrate(tx, row.LongName, row.Meta)).ToList(), next);
+				var hydrated = new List<T>();
+				foreach (var row in rows)
+				{
+					try
+					{
+						var item = hydrate(tx, row.LongName, row.Meta);
+						if (item is not SharpAttribute { IsUnreadable: true }) hydrated.Add(item);
+					}
+					catch (System.Text.Json.JsonException ex)
+					{ _logger.LogWarning(ex, "Skipping malformed attribute {Attribute}", row.LongName); }
+				}
+				return (hydrated, next);
 			});
 
 			foreach (var item in page)
@@ -1015,7 +1129,9 @@ public partial class LightningDatabase
 					return (rows, key);
 				}
 
-				rows.Add((Keys.ParseAttr(key).LongName, Codec.Deserialize<AttrMetaRecord>(value)));
+				try { rows.Add((Keys.ParseAttr(key).LongName, ReadAttributeMetadata(value))); }
+				catch (System.Text.Json.JsonException ex)
+				{ _logger.LogWarning(ex, "Skipping malformed attribute metadata {Attribute}", Keys.ParseAttr(key).LongName); }
 			}
 
 			if (skipTo is null)
@@ -1027,20 +1143,68 @@ public partial class LightningDatabase
 		}
 	}
 
+	public IAsyncEnumerable<SharpAttribute> GetDiscoveryAttributesAsync(DBRef dbref, CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<SharpAttribute>(ct => DiscoveryAttributesCoreAsync((long)dbref.Number, ct));
+
+	private IAsyncEnumerable<SharpAttribute> DiscoveryAttributesCoreAsync(long dbref, CancellationToken ct)
+		=> Store.RangeMapAsync<SharpAttribute>(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>
+		{
+			var name = Keys.ParseAttr(key).LongName;
+			try
+			{
+				var meta = ReadAttributeMetadata(value);
+				// Unreadable bodies retain the actual flags and name, rather than disappearing from
+				// the scanner's cross-object mask/seen sets. No body is needed to establish existence.
+				return HydrateAttribute(tx, dbref, name, meta, ReadAttributeValue(tx, dbref, name));
+			}
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Unreadable discovery metadata {Object}/{Attribute}; masking inherited subtree", dbref, name);
+				return new SharpAttribute(AttributeIdOf(dbref, name), AttributeKeyOf(dbref, name), LeafNameOf(name), [], null, name,
+					new(_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
+					new(_ => Task.FromResult<SharpPlayer?>(null)), new(_ => Task.FromResult<SharpAttributeEntry?>(null)))
+				{ IsUnreadable = true, IsMetadataUnreadable = true };
+			}
+		}, ct: ct);
+
 	/// <summary>Every attribute of an object, in preorder — which is simply key order.</summary>
 	/// <remarks>Hydrated inside each page's own transaction, as <see cref="ScanAttributesCoreAsync"/> is.</remarks>
 	internal IAsyncEnumerable<SharpAttribute> AllAttributesCoreAsync(long dbref, CancellationToken ct)
-		=> Store.RangeMapAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>
+	{
+		var unreadableTrees = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		return Store.RangeMapAsync<SharpAttribute>(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>
 		{
-			var longName = Keys.ParseAttr(key).LongName;
-			return HydrateAttribute(tx, dbref, longName, Codec.Deserialize<AttrMetaRecord>(value), ReadAttributeValue(tx, dbref, longName));
+			var name = Keys.ParseAttr(key).LongName;
+			if (unreadableTrees.Any(root => name.StartsWith(root + "`", StringComparison.OrdinalIgnoreCase))) return null;
+			try
+			{
+				var attribute = HydrateAttribute(tx, dbref, name, ReadAttributeMetadata(value), ReadAttributeValue(tx, dbref, name));
+				if (!attribute.IsUnreadable) return attribute;
+			}
+			catch (System.Text.Json.JsonException ex)
+			{ _logger.LogWarning(ex, "Skipping malformed attribute metadata {Object}/{Attribute}", dbref, name); }
+			unreadableTrees.Add(name);
+			return null;
 		}, ct: ct);
+	}
 
 	/// <inheritdoc cref="AllAttributesCoreAsync"/>
 	internal IAsyncEnumerable<LazySharpAttribute> AllLazyAttributesCoreAsync(long dbref, CancellationToken ct)
-		=> Store.RangeMapAsync(Tables.AttrMeta, Keys.AttrPrefix(dbref),
-			(tx, key, value) => HydrateLazyAttribute(tx, dbref, Keys.ParseAttr(key).LongName, Codec.Deserialize<AttrMetaRecord>(value)),
-			ct: ct);
+	{
+		var unreadableTrees = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		return Store.RangeMapAsync<LazySharpAttribute>(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>
+		{
+			var name = Keys.ParseAttr(key).LongName;
+			if (unreadableTrees.Any(root => name.StartsWith(root + "`", StringComparison.OrdinalIgnoreCase))) return null;
+			try { return HydrateLazyAttribute(tx, dbref, name, ReadAttributeMetadata(value)); }
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Skipping malformed attribute metadata {Object}/{Attribute}", dbref, name);
+				unreadableTrees.Add(name);
+				return null;
+			}
+		}, ct: ct);
+	}
 
 	private static bool HasChildren(ITx tx, long dbref, string longName)
 		=> tx.Range(Tables.AttrMeta, Keys.Attr(dbref, longName + "`")).Any();
@@ -1065,7 +1229,7 @@ public partial class LightningDatabase
 			return;
 		}
 
-		var parent = Codec.Deserialize<AttrMetaRecord>(bytes);
+		var parent = ReadAttributeMetadata(bytes);
 		var flags = new List<string>(parent.Flags);
 		if (RemoveFlag(flags, BranchFlag))
 		{
@@ -1095,7 +1259,7 @@ public partial class LightningDatabase
 		{
 			if (tx.TryGet(Tables.AttrMeta, Keys.Attr(dbref, longName), out var bytes))
 			{
-				ApplyFlagChange(tx, dbref, longName, Codec.Deserialize<AttrMetaRecord>(bytes), mutate);
+				ApplyFlagChange(tx, dbref, longName, ReadAttributeMetadata(bytes), mutate);
 			}
 		}, ct);
 

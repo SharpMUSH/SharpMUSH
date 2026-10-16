@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Commands.Database;
 /// <see cref="CacheKeys.AttributeWriteTags"/>. A write that changes a watched attribute (<c>@attribute/watch</c>) publishes
 /// <see cref="Notifications.AttributeChangedNotification"/>, naming <c>Enactor</c> (null: God) as its cause.
 /// </remarks>
-public record SetAttributeCommand(DBRef DBRef, string[] Attribute, MString Value, SharpPlayer Owner, DBRef? Enactor = null)
+public record SetAttributeCommand(DBRef DBRef, string[] Attribute, MString Value, SharpPlayer Owner, DBRef? Enactor = null, StoredMarkup? StoredValue = null)
 	: ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => Definitions.CacheKeys.AttributesTouchedBy(DBRef, Attribute);

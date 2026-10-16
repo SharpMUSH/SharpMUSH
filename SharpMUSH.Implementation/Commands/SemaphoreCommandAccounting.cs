@@ -27,6 +27,8 @@ public partial class Commands
 		var token = ExecutionBudget.CurrentToken;
 		var fullTarget = target.Object().DBRef;
 		var original = await Mediator.CreateStream(new GetAttributeQuery(fullTarget, path), token).LastOrDefaultAsync(token);
+		if (original is { IsUnreadable: true } || original?.StoredValue is { CanRewrite: false })
+			return new Error<string>(SemaphoreAttributes.UnsafeMarkupMessage);
 		var oldCount = 0;
 		var originalValue = original?.Value.ToPlainText();
 		if (!string.IsNullOrEmpty(originalValue) && !int.TryParse(originalValue, out oldCount))
@@ -41,6 +43,7 @@ public partial class Commands
 		var observedFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		async ValueTask ValidateCreated(SharpAttribute attribute)
 		{
+			SemaphoreAttributes.RequireCanRewrite(attribute);
 			var currentToken = ExecutionBudget.CurrentToken;
 			var owner = attribute.Owner is null ? null : await attribute.Owner.WithCancellation(currentToken);
 			var flags = attribute.Flags.Select(flag => flag.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -81,6 +84,7 @@ public partial class Commands
 				if (original is null) return false;
 				throw new InvalidOperationException("Semaphore disappeared during command reconciliation.");
 			}
+			SemaphoreAttributes.RequireCanRewrite(current);
 			if (!int.TryParse(current.Value.ToPlainText().Length == 0 ? "0" : current.Value.ToPlainText(), out var value))
 				throw new InvalidOperationException("Semaphore count changed during command reconciliation.");
 			if (value == expected)

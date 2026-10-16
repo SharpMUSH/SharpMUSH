@@ -15,6 +15,6 @@ public class GetListenAttributeSnapshotQueryHandler(IObjectStore objects, IAttri
 		cancellationToken.ThrowIfCancellationRequested();
 		if (await objects.GetObjectNodeAsync(request.Object, cancellationToken) is not AnySharpObject)
 			return [];
-		return await attributes.GetAttributesAsync(request.Object, "**", cancellationToken).ToArrayAsync(cancellationToken);
+		return await attributes.GetDiscoveryAttributesAsync(request.Object, cancellationToken).ToArrayAsync(cancellationToken);
 	}
 }

@@ -14,6 +14,17 @@ public record SharpAttribute(
 	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
 	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry)
 {
+	[JsonIgnore]
+	public StoredMarkup? StoredValue { get; init; }
+
+	/// <summary>The metadata exists, but its stored body cannot be decoded. Never treat this as an absent attribute.</summary>
+	[JsonIgnore]
+	public bool IsUnreadable { get; init; }
+
+	/// <summary>Discovery-only marker: the row exists but its access metadata is unavailable; mask its entire subtree.</summary>
+	[JsonIgnore]
+	public bool IsMetadataUnreadable { get; init; }
+
 	public MString Value { get; set; } = MarkupText.Empty;
 }
 

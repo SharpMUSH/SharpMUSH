@@ -37,6 +37,10 @@ public interface IAttributeService
 
 	ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
 
+	/// <summary>Copies persisted markup through the normal permission and value gates, without reserialization.</summary>
+	ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
+		StoredMarkup value, SharpPlayer? creator = null);
+
 	/// <summary>
 	/// As the four-argument <see cref="SetAttributeAsync(AnySharpObject, AnySharpObject, string, MString)"/>,
 	/// also answering what the <c>"- Set."</c> report's QUIET gate needs to know about the attribute just
