@@ -1,6 +1,6 @@
 format: "1.10"
 package: relationships
-version: 1.0.2
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -32,7 +32,7 @@ depends:
       path: examples/packages/plus-config/
       branch: main
   - package: finger
-    version: ">=1.0"
+    version: ">=1.2"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/finger/
@@ -60,10 +60,11 @@ objects:
   # flag is hidden: only the two of them, and staff with softcode.relationships.see, see it. RELASK`<key> marks
   # someone who asked, so +rel can list them; RELNOTE`<key> is a private note about anyone, never visual.
   #
-  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC` one routine per switch,
-  # INC`STORE` the writes. FUN`TYPE` reads the type table, FUN`SIDE` and FUN`STATE` one relationship, FUN`LIST`
-  # whose relationships to show, FUN`CARD` the card, FUN`DISPLAY` shared drawing, FUN`CONFIG` and CHECK` the setting checks.
-  # LINE` and SHOW` are the card's lines, WEB` the JSON the portal routes send. DATA` the settings and the types.
+  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`CMD` one routine per switch,
+  # INC`STORE` the writes. FUN`TYPE` reads the type table, FUN`RELATION` one relationship, FUN`LIST` whose
+  # relationships to show, FUN`CARD` the card, FUN`DISPLAY` shared drawing, FUN`FIND` lookups, FUN`CONFIG` the
+  # setting checks. LINE` and SHOW` are the card's lines, WEB` the JSON the portal routes send (WEB`GRAPH` the web,
+  # WEB`CARD` the name card). DATA` the settings and the types.
   - ref: relationships
     type: thing
     name: Relationships
@@ -72,10 +73,13 @@ objects:
     attributes:
       DATA: |-
         Settings and the type table. One leaf per setting or type.
-      # The types, one leaf each: DATA`TYPE`<KEY>=<label>. `PAIR is the key the other side takes (the same key when
-      # there is none), `TONE the colour the portal's web draws it in, a tone() name.
-      DATA`TYPE: |-
-        The relationship types: DATA`TYPE`<KEY>=<label>, with `PAIR and `TONE under it.
+      # The types, the +config table relationships/types: DATA`TYPE`<KEY>=<label>. `PAIR is the key the other side
+      # takes (the same key when there is none), `TONE the colour the portal's web draws it in, a tone() name.
+      # no_command, as +config asks of a table's branch, so nothing kept there runs as a command.
+      DATA`TYPE:
+        value: |-
+          The relationship types: DATA`TYPE`<KEY>=<label>, with `PAIR and `TONE under it.
+        flags: [no_command]
       DATA`TYPE`FRIEND: |-
         Friend
       DATA`TYPE`FRIEND`TONE: |-
@@ -149,7 +153,7 @@ objects:
       DATA`CONFIG`CARD-FIELDS`DEFAULT: |-
         FULLNAME PRONOUNS
       DATA`CONFIG`CARD-FIELDS`CHECK: |-
-        CHECK`FIELDS
+        FUN`CONFIG`CHECK`FIELDS
       DATA`CONFIG`CARD-FIELDS`DESCRIPTION: |-
         The +finger fields shown at the top of +rel <name>, by key.
       DATA`CONFIG`CARD-FIELDS`LABEL: |-
@@ -204,32 +208,83 @@ objects:
         Web reach
       DATA`CONFIG`WEB-REACH`EXAMPLE: |-
         2
+      # The types, a +config table: entries on this object under DATA`TYPE`, each holding its label, with PAIR and
+      # TONE beneath.
+      DATA`CONFIG`TYPES`TYPE: |-
+        table
+      DATA`CONFIG`TYPES`LABEL: |-
+        Types
+      DATA`CONFIG`TYPES`DESCRIPTION: |-
+        The relationship types +rel/set takes.
+      DATA`CONFIG`TYPES`PATH: |-
+        DATA`TYPE
+      DATA`CONFIG`TYPES`ENTRY: |-
+        label
+      DATA`CONFIG`TYPES`FIELDS: |-
+        label pair tone
+      DATA`CONFIG`TYPES`KEYPATTERN: |-
+        ^[A-Za-z0-9_]{1,20}$
+      DATA`CONFIG`TYPES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`TYPES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`TYPES`FIELD`LABEL`MAX: |-
+        40
+      DATA`CONFIG`TYPES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`TYPES`FIELD`LABEL`DESCRIPTION: |-
+        What +rel calls it.
+      DATA`CONFIG`TYPES`FIELD`PAIR`TYPE: |-
+        text
+      DATA`CONFIG`TYPES`FIELD`PAIR`DEFAULT: |-
 
-      # Which INC` routine each switch runs. BARE is the command alone, ARG the command with a name after it.
+      DATA`CONFIG`TYPES`FIELD`PAIR`MAX: |-
+        20
+      DATA`CONFIG`TYPES`FIELD`PAIR`CHECK: |-
+        FUN`CONFIG`CHECK`PAIR
+      DATA`CONFIG`TYPES`FIELD`PAIR`LABEL: |-
+        Other side
+      DATA`CONFIG`TYPES`FIELD`PAIR`DESCRIPTION: |-
+        The type the other side takes, such as child for parent. Empty when both take this one.
+      DATA`CONFIG`TYPES`FIELD`TONE`TYPE: |-
+        text
+      DATA`CONFIG`TYPES`FIELD`TONE`DEFAULT: |-
+
+      DATA`CONFIG`TYPES`FIELD`TONE`MAX: |-
+        20
+      DATA`CONFIG`TYPES`FIELD`TONE`PATTERN: |-
+        ^[a-z]*$
+      DATA`CONFIG`TYPES`FIELD`TONE`LABEL: |-
+        Colour
+      DATA`CONFIG`TYPES`FIELD`TONE`DESCRIPTION: |-
+        The tone() name it is drawn in, such as green or warning. Empty draws it plain.
+
+      # Which INC` routine each switch runs, under INC`CMD`. BARE is the command alone, ARG the command with a name
+      # after it.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
       DATA`ROUTE`BARE: |-
-        LIST
+        CMD`LIST
       DATA`ROUTE`ARG: |-
-        CARD
+        CMD`CARD
       DATA`ROUTE`SET: |-
-        SET
+        CMD`SET
       DATA`ROUTE`CONFIRM: |-
-        CONFIRM
+        CMD`CONFIRM
       DATA`ROUTE`DECLINE: |-
-        DECLINE
+        CMD`DECLINE
       DATA`ROUTE`END: |-
-        END
+        CMD`END
       DATA`ROUTE`TEXT: |-
-        TEXT
+        CMD`TEXT
       DATA`ROUTE`HIDE: |-
-        HIDE
+        CMD`HIDE
       DATA`ROUTE`UNHIDE: |-
-        UNHIDE
+        CMD`UNHIDE
       DATA`ROUTE`NOTE: |-
-        NOTE
+        CMD`NOTE
       DATA`ROUTE`TYPES: |-
-        TYPES
+        CMD`TYPES
 
       # ---- the card's lines ------------------------------------------------------
       # One leaf per line: LINE`<order>`<KEY>=<label>. SHOW`<KEY> works the value out, with %<target> the character
@@ -274,18 +329,20 @@ objects:
           viewer_objid,objid(%#),
           viewer_key,u(%!/FUN`KEY`OF,objid(%#)))
         flags: [funsyntax]
-      # Sets other (the objid of the player %q<cmd_name> names), other_name and other_key, or stops with why not.
+      # Sets rel_other (the objid of the player %q<cmd_name> names), rel_other_name and rel_other_key, or stops with
+      # why not.
       INC`COMMAND`PLAYER:
         value: |-
-          @assert strlen(%q<cmd_name>)=@pemit %#=notice(REL,Who? +rel/%q<cmd_switch> <name>[if(%q<cmd_has_equals>,=<text>)],warn); think setq(other,u(%!/FUN`PLAYER,%q<cmd_name>)); @assert strlen(%q<other>)=@pemit %#=notice(REL,There is no player called '%q<cmd_name>'.,warn); think setqm(other_name,name(%q<other>),other_key,u(%!/FUN`KEY`OF,%q<other>))
+          @assert strlen(%q<cmd_name>)=@pemit %#=notice(REL,Who? +rel/%q<cmd_switch> <name>[if(%q<cmd_has_equals>,=<text>)],warn); think setq(rel_other,u(%!/FUN`FIND`PLAYER,%q<cmd_name>)); @assert strlen(%q<rel_other>)=@pemit %#=notice(REL,There is no player called '%q<cmd_name>'.,warn); think setqm(rel_other_name,name(%q<rel_other>),
+          rel_other_key,u(%!/FUN`KEY`OF,%q<rel_other>))
         flags: [cmdsyntax]
-      # As INC`COMMAND`PLAYER, for someone other than the player typing. Also sets mine (their side, the key of
-      # what the other is to them), theirs (the other's side) and state (FUN`STATE).
+      # As INC`COMMAND`PLAYER, for someone other than the player typing. Also sets rel_mine_type (their side, the
+      # key of what the other is to them), rel_their_type (the other's side) and rel_state (FUN`RELATION`STATE).
       INC`COMMAND`OTHER:
         value: |-
-          @include %!/INC`COMMAND`PLAYER; @assert comp(%q<other>,%q<viewer_objid>)=@pemit %#=notice(REL,That is you.,warn); think setqm(mine,u(%!/FUN`SIDE,%q<viewer_objid>,%q<other>),
-          theirs,u(%!/FUN`SIDE,%q<other>,%q<viewer_objid>),
-          state,u(%!/FUN`STATE,%q<viewer_objid>,%q<other>))
+          @include %!/INC`COMMAND`PLAYER; @assert comp(%q<rel_other>,%q<viewer_objid>)=@pemit %#=notice(REL,That is you.,warn); think setqm(rel_mine_type,u(%!/FUN`RELATION`SIDE,%q<viewer_objid>,%q<rel_other>),
+          rel_their_type,u(%!/FUN`RELATION`SIDE,%q<rel_other>,%q<viewer_objid>),
+          rel_state,u(%!/FUN`RELATION`STATE,%q<viewer_objid>,%q<rel_other>))
         flags: [cmdsyntax]
 
       # ---- the type table -------------------------------------------------------
@@ -322,28 +379,28 @@ objects:
 
       # ---- one relationship -------------------------------------------------------
       # %0 a player, %1 another: the key %0 keeps for %1, what %1 is to %0. Read with get(): a player can write it.
-      FUN`SIDE:
+      FUN`RELATION`SIDE:
         value: |-
           ucstr(get(%0/RELATION`[u(%!/FUN`KEY`OF,%1)]))
         flags: [funsyntax]
       # %0 a player, %1 another, seen from %0: confirmed (both sides, each the other's pair), crossed (both sides,
       # not a pair), asked (only %0's), asking (only %1's), or empty.
-      FUN`STATE:
+      FUN`RELATION`STATE:
         value: |-
-          uargs(%!/FUN`STATE`FROM,mine,u(%!/FUN`SIDE,%0,%1),theirs,u(%!/FUN`SIDE,%1,%0))
+          uargs(%!/FUN`RELATION`STATE`FROM,mine,u(%!/FUN`RELATION`SIDE,%0,%1),theirs,u(%!/FUN`RELATION`SIDE,%1,%0))
         flags: [funsyntax]
-      FUN`STATE`FROM:
+      FUN`RELATION`STATE`FROM:
         value: |-
           cond(cand(strlen(%<mine>),strlen(%<theirs>)),if(strmatch(%<theirs>,u(%!/FUN`TYPE`PAIR,%<mine>)),confirmed,crossed),strlen(%<mine>),asked,strlen(%<theirs>),asking)
         flags: [funsyntax]
       # %0 a reader, %1 and %2 the two players: 1 when the reader may see their relationship: one of the two, staff
       # with softcode.relationships.see, or anyone, a visitor to the portal too, when neither side is hidden.
-      FUN`VISIBLE:
+      FUN`RELATION`VISIBLE:
         value: |-
-          cor(ncor(u(%!/FUN`HIDDEN,%1,%2),u(%!/FUN`HIDDEN,%2,%1)),not(comp(%0,%1)),not(comp(%0,%2)),permission(%0,softcode.relationships.see))
+          cor(ncor(u(%!/FUN`RELATION`HIDDEN,%1,%2),u(%!/FUN`RELATION`HIDDEN,%2,%1)),not(comp(%0,%1)),not(comp(%0,%2)),permission(%0,softcode.relationships.see))
         flags: [funsyntax]
       # %0 a player, %1 another: 1 when %0 hid their side.
-      FUN`HIDDEN:
+      FUN`RELATION`HIDDEN:
         value: |-
           not(cand(hasflag(%0/RELATION`[u(%!/FUN`KEY`OF,%1)],visual),hasflag(%0/RELATION,visual)))
         flags: [funsyntax]
@@ -371,7 +428,7 @@ objects:
       # %0 a character, %1 a player, %2 states: 1 when %1's relationship with %0 is in one of them.
       FUN`LIST`IN`STATE:
         value: |-
-          member(%2,u(%!/FUN`STATE,%1,%0))
+          member(%2,u(%!/FUN`RELATION`STATE,%1,%0))
         flags: [funsyntax]
       # %0 a reader, %1 a player: the confirmed relationships of %1 the reader may see, by name.
       FUN`LIST`SHOWN:
@@ -380,7 +437,7 @@ objects:
         flags: [funsyntax]
       FUN`LIST`SEES:
         value: |-
-          u(%!/FUN`VISIBLE,%1,%2,%0)
+          u(%!/FUN`RELATION`VISIBLE,%1,%2,%0)
         flags: [funsyntax]
       FUN`LIST`BYNAME:
         value: |-
@@ -399,12 +456,12 @@ objects:
           #[edit(%0,_,:)]
         flags: [funsyntax]
       # %0 typed text: the objid of the player it names, or nothing.
-      FUN`PLAYER:
+      FUN`FIND`PLAYER:
         value: |-
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
       # %0 a player: their picture, when its IMAGE attribute is visual (as the profile shows it), else empty.
-      FUN`PICTURE:
+      FUN`DISPLAY`PICTURE:
         value: |-
           if(hasflag(%0/IMAGE,visual),get(%0/IMAGE))
         flags: [funsyntax]
@@ -427,7 +484,7 @@ objects:
       # %0 a player, %1 another: the type %0 keeps for %1, coloured as the web draws it.
       FUN`DISPLAY`TYPE:
         value: |-
-          if(strlen(setr(display_tone,u(%!/FUN`TYPE`TONE,u(%!/FUN`SIDE,%0,%1)))),tone(%q<display_tone>,u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%0,%1))),u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%0,%1)))
+          if(strlen(setr(display_tone,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%0,%1)))),tone(%q<display_tone>,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%0,%1))),u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%0,%1)))
         flags: [funsyntax]
       FUN`TYPE`TONE:
         value: |-
@@ -437,12 +494,12 @@ objects:
       # beside one %0 hid.
       FUN`DISPLAY`TABLE:
         value: |-
-          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r1%r3%r2,%r%r1%r),[tone(strong,Name)]%r[iter(%1,name(%i0),,%r)],[tone(strong,Relationship)]%r[iter(%1,u(%!/FUN`DISPLAY`TYPE,%0,%i0)[if(cor(u(%!/FUN`HIDDEN,%0,%i0),u(%!/FUN`HIDDEN,%i0,%0)),%b[tone(muted,\(hidden\))])],,%r)],[tone(strong,About)]%r[iter(%1,firstof(get(%0/RELATION`[u(%!/FUN`KEY`OF,%i0)]`TEXT),-),,%r)],[tone(strong,Since)]%r[iter(%1,u(%!/FUN`DISPLAY`DATE,max(get(%0/RELATION`[u(%!/FUN`KEY`OF,%i0)]`SINCE),get(%i0/RELATION`[u(%!/FUN`KEY`OF,%0)]`SINCE))),,%r)])
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r1%r3%r2,%r%r1%r),tone(strong,Name)%r[iter(%1,name(%i0),,%r)],tone(strong,Relationship)%r[iter(%1,u(%!/FUN`DISPLAY`TYPE,%0,%i0)[if(cor(u(%!/FUN`RELATION`HIDDEN,%0,%i0),u(%!/FUN`RELATION`HIDDEN,%i0,%0)),%b[tone(muted,\(hidden\))])],,%r)],tone(strong,About)%r[iter(%1,firstof(get(%0/RELATION`[u(%!/FUN`KEY`OF,%i0)]`TEXT),-),,%r)],tone(strong,Since)%r[iter(%1,u(%!/FUN`DISPLAY`DATE,max(get(%0/RELATION`[u(%!/FUN`KEY`OF,%i0)]`SINCE),get(%i0/RELATION`[u(%!/FUN`KEY`OF,%0)]`SINCE))),,%r)])
         flags: [funsyntax]
 
       # ---- +rel -----------------------------------------------------------------
       # +rel: your relationships, then the ones waiting on someone.
-      INC`LIST:
+      INC`CMD`LIST:
         value: |-
           think u(%!/FUN`LIST`PREPARE,%q<viewer_objid>); @pemit %#=box(u(%!/FUN`LIST`DRAW),Your relationships,,u(%!/FUN`DISPLAY`FRAME))
         flags: [cmdsyntax]
@@ -461,18 +518,18 @@ objects:
       # %0 someone who asked the player: what they ask, and links to answer.
       FUN`LIST`ASKING:
         value: |-
-          name(%0): [u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,u(%!/FUN`SIDE,%0,%q<viewer_objid>)))] · [cmdlink(+rel/confirm [name(%0)],+rel/confirm [name(%0)],Confirm)] · [cmdlink(+rel/decline [name(%0)],+rel/decline [name(%0)],Decline)]
+          name(%0): [u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,u(%!/FUN`RELATION`SIDE,%0,%q<viewer_objid>)))] · [cmdlink(+rel/confirm [name(%0)],+rel/confirm [name(%0)],Confirm)] · [cmdlink(+rel/decline [name(%0)],+rel/decline [name(%0)],Decline)]
         flags: [funsyntax]
       # %0 someone the player asked.
       FUN`LIST`ASKED:
         value: |-
-          name(%0): [u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%q<viewer_objid>,%0))]
+          name(%0): [u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%q<viewer_objid>,%0))]
         flags: [funsyntax]
 
       # ---- +rel <name>: the card ------------------------------------------------------
-      INC`CARD:
+      INC`CMD`CARD:
         value: |-
-          @include %!/INC`COMMAND`PLAYER; think u(%!/FUN`CARD`PREPARE,%q<other>,%q<viewer_objid>); @pemit %#=box(u(%!/FUN`CARD`DRAW),name(%q<other>),,u(%!/FUN`DISPLAY`FRAME))
+          @include %!/INC`COMMAND`PLAYER; think u(%!/FUN`CARD`PREPARE,%q<rel_other>,%q<viewer_objid>); @pemit %#=box(u(%!/FUN`CARD`DRAW),name(%q<rel_other>),,u(%!/FUN`DISPLAY`FRAME))
         flags: [cmdsyntax]
       # %0 the character, %1 the reader. Sets card_target, card_viewer, card_fields (the finger keys with a value
       # the reader may read), card_lines (the LINE` attributes with a value) and card_shown (their relationships
@@ -488,7 +545,7 @@ objects:
       # %0 a finger key: its label on the Finger object.
       FUN`CARD`FIELD`LABEL:
         value: |-
-          get({{finger/finger}}/[first(lattr({{finger/finger}}/FIELD`*`*`%0))])
+          u({{finger/finger}}/FUN`FIELD`LABEL,%0)
         flags: [funsyntax]
       # %0 a finger key: what the reader may read in it, as +finger shows it.
       FUN`CARD`FIELD`VALUE:
@@ -497,7 +554,7 @@ objects:
         flags: [funsyntax]
       FUN`CARD`FIELD`SHOWN:
         value: |-
-          cand(lattr({{finger/finger}}/FIELD`*`*`%0),strlen(u(%!/FUN`CARD`FIELD`VALUE,%0)))
+          cand(u({{finger/finger}}/FUN`FIELD`KEYED,%0),strlen(u(%!/FUN`CARD`FIELD`VALUE,%0)))
         flags: [funsyntax]
       # %0 a LINE` attribute: its value for the card's reader.
       FUN`CARD`LINE`VALUE:
@@ -512,16 +569,17 @@ objects:
       # reader's own card or there is none.
       FUN`CARD`WITH:
         value: |-
-          if(cand(strlen(%0),comp(%0,%1)),uargs(%!/FUN`CARD`WITH`STATE,state,u(%!/FUN`STATE,%0,%1),mine,u(%!/FUN`SIDE,%0,%1),theirs,u(%!/FUN`SIDE,%1,%0)))
+          if(cand(strlen(%0),comp(%0,%1)),uargs(%!/FUN`CARD`WITH`STATE,state,u(%!/FUN`RELATION`STATE,%0,%1),mine,u(%!/FUN`RELATION`SIDE,%0,%1),theirs,u(%!/FUN`RELATION`SIDE,%1,%0)))
         flags: [funsyntax]
       FUN`CARD`WITH`STATE:
         value: |-
           switch(%<state>,confirmed,u(%!/FUN`TYPE`LABEL,%<mine>),asked,You asked: [u(%!/FUN`TYPE`LABEL,%<mine>)],asking,Asks you: [u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%<theirs>))],crossed,You asked: [u(%!/FUN`TYPE`LABEL,%<mine>)] · Asks you: [u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%<theirs>))])
         flags: [funsyntax]
-      # The prepared card: the finger fields and the lines, then the character's relationships, then a footer.
+      # The prepared card: the finger fields and the lines, then the character's relationships, then a footer. The
+      # fields are split on a marked delimiter, and unmark() takes one a player stored out of each value.
       FUN`CARD`DRAW:
         value: |-
-          if(words(%q<card_fields> %q<card_lines>),lfields(json(object,cols,1),[iter(%q<card_fields>,u(%!/FUN`CARD`FIELD`LABEL,%i0),,chr(30))][if(cand(words(%q<card_fields>),words(%q<card_lines>)),chr(30))][iter(%q<card_lines>,get(%!/%i0),,chr(30))],[iter(%q<card_fields>,u(%!/FUN`CARD`FIELD`VALUE,%i0),,chr(30))][if(cand(words(%q<card_fields>),words(%q<card_lines>)),chr(30))][iter(%q<card_lines>,u(%!/FUN`CARD`LINE`VALUE,%i0),,chr(30))],chr(30))%r)[rule(Relationships)]%r[if(words(%q<card_shown>),u(%!/FUN`DISPLAY`TABLE,%q<card_target>,%q<card_shown>,%q<card_viewer>),tone(muted,None shown.))]%r[rule()]%r[tone(muted,u(%!/FUN`CARD`FOOTER))]
+          if(words(%q<card_fields> %q<card_lines>),lfields(json(object,cols,1),iter(%q<card_fields>,u(%!/FUN`CARD`FIELD`LABEL,%i0),,%*<|>)[if(cand(words(%q<card_fields>),words(%q<card_lines>)),%*<|>)][iter(%q<card_lines>,get(%!/%i0),,%*<|>)],iter(%q<card_fields>,unmark(u(%!/FUN`CARD`FIELD`VALUE,%i0)),,%*<|>)[if(cand(words(%q<card_fields>),words(%q<card_lines>)),%*<|>)][iter(%q<card_lines>,unmark(u(%!/FUN`CARD`LINE`VALUE,%i0)),,%*<|>)],%*<|>)%r)[rule(Relationships)]%r[if(words(%q<card_shown>),u(%!/FUN`DISPLAY`TABLE,%q<card_target>,%q<card_shown>,%q<card_viewer>),tone(muted,None shown.))]%r[rule()]%r[tone(muted,u(%!/FUN`CARD`FOOTER))]
         flags: [funsyntax]
       FUN`CARD`FOOTER:
         value: |-
@@ -530,91 +588,96 @@ objects:
 
       # ---- +rel/set, +rel/confirm -------------------------------------------------------
       # +rel/set <name>=<type>
-      INC`SET:
+      INC`CMD`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/set <name>=<type> says what someone is to you. +rel/types lists the types.,warn); @include %!/INC`COMMAND`OTHER; @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(REL,Which type? +rel/types lists them. +rel/end %q<other_name> ends one.,warn); think setq(set_key,u(%!/FUN`TYPE`FIND,%q<cmd_right_side>)); @assert strlen(%q<set_key>)=@pemit %#=notice(REL,There is no type called '%q<cmd_right_side>'. +rel/types lists them.,warn); @assert comp(%q<set_key>,%q<mine>)=@pemit %#=notice(REL,%q<other_name> is already your [u(%!/FUN`TYPE`LABEL,%q<set_key>)].,warn); @include/args %!/INC`STORE`SIDE=key,%q<set_key>
+          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/set <name>=<type> says what someone is to you. +rel/types lists the types.,warn); @include %!/INC`COMMAND`OTHER; @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(REL,Which type? +rel/types lists them. +rel/end %q<rel_other_name> ends one.,warn); think setq(set_key,u(%!/FUN`TYPE`FIND,%q<cmd_right_side>)); @assert strlen(%q<set_key>)=@pemit %#=notice(REL,There is no type called '%q<cmd_right_side>'. +rel/types lists them.,warn); @assert comp(%q<set_key>,%q<rel_mine_type>)=@pemit %#=notice(REL,%q<rel_other_name> is already your [u(%!/FUN`TYPE`LABEL,%q<set_key>)].,warn); @include/args %!/INC`STORE`SIDE=key,%q<set_key>
         flags: [cmdsyntax]
       # +rel/confirm <name>: takes the pair of what they asked.
-      INC`CONFIRM:
+      INC`CMD`CONFIRM:
         value: |-
-          @include %!/INC`COMMAND`OTHER; @assert strlen(%q<theirs>)=@pemit %#=notice(REL,%q<other_name> has not asked you anything.,warn); @assert comp(%q<state>,confirmed)=@pemit %#=notice(REL,You and %q<other_name> have confirmed it already.,warn); @include/args %!/INC`STORE`SIDE=key,u(%!/FUN`TYPE`PAIR,%q<theirs>)
+          @include %!/INC`COMMAND`OTHER; @assert strlen(%q<rel_their_type>)=@pemit %#=notice(REL,%q<rel_other_name> has not asked you anything.,warn); @assert comp(%q<rel_state>,confirmed)=@pemit %#=notice(REL,You and %q<rel_other_name> have confirmed it already.,warn); @include/args %!/INC`STORE`SIDE=key,u(%!/FUN`TYPE`PAIR,%q<rel_their_type>)
         flags: [cmdsyntax]
-      # %<key> the type. Writes the player's side for %q<other>; a new branch is visual, one already there keeps its
+      # %<key> the type. Writes the player's side for %q<rel_other>; a new branch is visual, one already there keeps its
       # flags, so a relationship the player hid stays hidden. Then confirms it or asks the other player.
       INC`STORE`SIDE:
         value: |-
           think setqm(store_root_new,not(hasattr(%#,RELATION)),
-          store_branch_new,not(hasattr(%#,RELATION`%q<other_key>))); &RELATION`%q<other_key> %#=%<key>; &RELATION`%q<other_key>`SINCE %#=secs(); @if %q<store_root_new>={@set %#/RELATION=visual; @set %#/RELATION=no_command}; @if %q<store_branch_new>={@set %#/RELATION`%q<other_key>=visual}; @set %#/RELATION`%q<other_key>`SINCE=visual; @if strmatch(u(%!/FUN`STATE,%q<viewer_objid>,%q<other>),confirmed)={@include %!/INC`STORE`CONFIRMED},{@include %!/INC`STORE`ASKED}
+          store_branch_new,not(hasattr(%#,RELATION`%q<rel_other_key>))); &RELATION`%q<rel_other_key> %#=%<key>; &RELATION`%q<rel_other_key>`SINCE %#=secs(); @if %q<store_root_new>={@set %#/RELATION=visual; @set %#/RELATION=no_command}; @if %q<store_branch_new>={@set %#/RELATION`%q<rel_other_key>=visual}; @set %#/RELATION`%q<rel_other_key>`SINCE=visual; @if strmatch(u(%!/FUN`RELATION`STATE,%q<viewer_objid>,%q<rel_other>),confirmed)={@include %!/INC`STORE`CONFIRMED},{@include %!/INC`STORE`ASKED}
         flags: [cmdsyntax]
       INC`STORE`CONFIRMED:
         value: |-
-          &RELASK`%q<other_key> %#; &RELASK`%q<viewer_key> %q<other>; @pemit %#=notice(REL,%q<other_name> is your [u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%q<viewer_objid>,%q<other>))] now.,ok); @pemit %q<other>=notice(REL,[name(%#)] confirmed it. [name(%#)] is your [u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%q<other>,%q<viewer_objid>))].,ok)
+          &RELASK`%q<rel_other_key> %#; &RELASK`%q<viewer_key> %q<rel_other>; @pemit %#=notice(REL,%q<rel_other_name> is your [u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%q<viewer_objid>,%q<rel_other>))] now.,ok); @pemit %q<rel_other>=notice(REL,name(%#) confirmed it. [name(%#)] is your [u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%q<rel_other>,%q<viewer_objid>))].,ok)
         flags: [cmdsyntax]
       INC`STORE`ASKED:
         value: |-
-          &RELASK`%q<viewer_key> %q<other>=1; @set %q<other>/RELASK=no_command; @pemit %#=notice(REL,You asked %q<other_name>. They show as your [u(%!/FUN`TYPE`LABEL,%<key>)] once they confirm it.,ok); @pemit %q<other>=notice(REL,[name(%#)] asked to be your [u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%<key>))]. [cmdlink(+rel/confirm [name(%#)],+rel/confirm [name(%#)],Confirm)] · [cmdlink(+rel/decline [name(%#)],+rel/decline [name(%#)],Decline)])
+          &RELASK`%q<viewer_key> %q<rel_other>=1; @set %q<rel_other>/RELASK=no_command; @pemit %#=notice(REL,You asked %q<rel_other_name>. They show as your [u(%!/FUN`TYPE`LABEL,%<key>)] once they confirm it.,ok); @pemit %q<rel_other>=notice(REL,name(%#) asked to be your [u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%<key>))]. [cmdlink(+rel/confirm [name(%#)],+rel/confirm [name(%#)],Confirm)] · [cmdlink(+rel/decline [name(%#)],+rel/decline [name(%#)],Decline)])
         flags: [cmdsyntax]
 
       # ---- +rel/decline, +rel/end ---------------------------------------------------------
       # +rel/decline <name>: clears what they asked.
-      INC`DECLINE:
+      INC`CMD`DECLINE:
         value: |-
-          @include %!/INC`COMMAND`OTHER; @assert member(asking crossed,%q<state>)=@pemit %#=notice(REL,%q<other_name> is not asking you anything.,warn); @wipe %q<other>/RELATION`%q<viewer_key>; &RELASK`%q<other_key> %#; @pemit %#=notice(REL,You declined what %q<other_name> asked.,ok); @pemit %q<other>=notice(REL,[name(%#)] declined what you asked.)
+          @include %!/INC`COMMAND`OTHER; @assert member(asking crossed,%q<rel_state>)=@pemit %#=notice(REL,%q<rel_other_name> is not asking you anything.,warn); @wipe %q<rel_other>/RELATION`%q<viewer_key>; &RELASK`%q<rel_other_key> %#; @pemit %#=notice(REL,You declined what %q<rel_other_name> asked.,ok); @pemit %q<rel_other>=notice(REL,name(%#) declined what you asked.)
         flags: [cmdsyntax]
       # +rel/end <name>: clears both sides, whatever state they are in.
-      INC`END:
+      INC`CMD`END:
         value: |-
-          @include %!/INC`COMMAND`OTHER; @assert strlen(%q<state>)=@pemit %#=notice(REL,There is nothing between you and %q<other_name>.,warn); @wipe %#/RELATION`%q<other_key>; @wipe %q<other>/RELATION`%q<viewer_key>; &RELASK`%q<other_key> %#; &RELASK`%q<viewer_key> %q<other>; @pemit %#=notice(REL,You and %q<other_name> have no relationship now.,ok); @pemit %q<other>=notice(REL,[name(%#)] ended your relationship.)
+          @include %!/INC`COMMAND`OTHER; @assert strlen(%q<rel_state>)=@pemit %#=notice(REL,There is nothing between you and %q<rel_other_name>.,warn); @wipe %#/RELATION`%q<rel_other_key>; @wipe %q<rel_other>/RELATION`%q<viewer_key>; &RELASK`%q<rel_other_key> %#; &RELASK`%q<viewer_key> %q<rel_other>; @pemit %#=notice(REL,You and %q<rel_other_name> have no relationship now.,ok); @pemit %q<rel_other>=notice(REL,name(%#) ended your relationship.)
         flags: [cmdsyntax]
 
       # ---- +rel/text, +rel/hide, +rel/unhide ----------------------------------------------
-      # Stops unless the player keeps a side for %q<other>.
+      # Stops unless the player keeps a side for %q<rel_other>.
       INC`COMMAND`MINE:
         value: |-
-          @assert strlen(%q<mine>)=@pemit %#=notice(REL,You keep nothing for %q<other_name>. +rel/set %q<other_name>=<type> first.,warn)
+          @assert strlen(%q<rel_mine_type>)=@pemit %#=notice(REL,You keep nothing for %q<rel_other_name>. +rel/set %q<rel_other_name>=<type> first.,warn)
         flags: [cmdsyntax]
       # +rel/text <name>=<text>. Nothing after the = clears it. Kept as typed.
-      INC`TEXT:
+      INC`CMD`TEXT:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/text <name>=<text> says a line about it.,warn); @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`TEXT-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`TEXT-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={&RELATION`%q<other_key>`TEXT %#=%q<cmd_right_side>; @set %#/RELATION`%q<other_key>`TEXT=visual; @pemit %#=notice(REL,About %q<other_name>: %q<cmd_right_side>,ok)}; &RELATION`%q<other_key>`TEXT %#; @pemit %#=notice(REL,The line about %q<other_name> is cleared.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/text <name>=<text> says a line about it.,warn); @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`TEXT-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`TEXT-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={&RELATION`%q<rel_other_key>`TEXT %#=%q<cmd_right_side>; @set %#/RELATION`%q<rel_other_key>`TEXT=visual; @pemit %#=notice(REL,About %q<rel_other_name>: %q<cmd_right_side>,ok)}; &RELATION`%q<rel_other_key>`TEXT %#; @pemit %#=notice(REL,The line about %q<rel_other_name> is cleared.,ok)
         flags: [cmdsyntax]
       # +rel/hide <name>
-      INC`HIDE:
+      INC`CMD`HIDE:
         value: |-
-          @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert not(u(%!/FUN`HIDDEN,%#,%q<other>))=@pemit %#=notice(REL,Your side for %q<other_name> is hidden already.,warn); @set %#/RELATION`%q<other_key>=!visual; @pemit %#=notice(REL,Only you and %q<other_name> and staff see it now.,ok)
+          @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert not(u(%!/FUN`RELATION`HIDDEN,%#,%q<rel_other>))=@pemit %#=notice(REL,Your side for %q<rel_other_name> is hidden already.,warn); @set %#/RELATION`%q<rel_other_key>=!visual; @pemit %#=notice(REL,Only you and %q<rel_other_name> and staff see it now.,ok)
         flags: [cmdsyntax]
       # +rel/unhide <name>
-      INC`UNHIDE:
+      INC`CMD`UNHIDE:
         value: |-
-          @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert u(%!/FUN`HIDDEN,%#,%q<other>)=@pemit %#=notice(REL,Your side for %q<other_name> is not hidden.,warn); @set %#/RELATION=visual; @set %#/RELATION`%q<other_key>=visual; @pemit %#=notice(REL,[if(u(%!/FUN`HIDDEN,%q<other>,%q<viewer_objid>),%q<other_name> still hides their side.,Everyone sees it again.)],ok)
+          @include %!/INC`COMMAND`OTHER; @include %!/INC`COMMAND`MINE; @assert u(%!/FUN`RELATION`HIDDEN,%#,%q<rel_other>)=@pemit %#=notice(REL,Your side for %q<rel_other_name> is not hidden.,warn); @set %#/RELATION=visual; @set %#/RELATION`%q<rel_other_key>=visual; @pemit %#=notice(REL,if(u(%!/FUN`RELATION`HIDDEN,%q<rel_other>,%q<viewer_objid>),%q<rel_other_name> still hides their side.,Everyone sees it again.),ok)
         flags: [cmdsyntax]
 
       # ---- +rel/note ----------------------------------------------------------------
       # +rel/note <name>=<text>: a private note about anyone, never visual. Nothing after the = clears it.
-      INC`NOTE:
+      INC`CMD`NOTE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/note <name>=<text> keeps a note only you see.,warn); @include %!/INC`COMMAND`OTHER; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`STORE`NOTE}; @assert hasattr(%#,RELNOTE`%q<other_key>)=@pemit %#=notice(REL,You have no note about %q<other_name>.,warn); &RELNOTE`%q<other_key> %#; @pemit %#=notice(REL,Your note about %q<other_name> is cleared.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/note <name>=<text> keeps a note only you see.,warn); @include %!/INC`COMMAND`OTHER; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`STORE`NOTE}; @assert hasattr(%#,RELNOTE`%q<rel_other_key>)=@pemit %#=notice(REL,You have no note about %q<rel_other_name>.,warn); &RELNOTE`%q<rel_other_key> %#; @pemit %#=notice(REL,Your note about %q<rel_other_name> is cleared.,ok)
         flags: [cmdsyntax]
       INC`STORE`NOTE:
         value: |-
-          &RELNOTE`%q<other_key> %#=%q<cmd_right_side>; @set %#/RELNOTE=!visual; @set %#/RELNOTE=no_command; @set %#/RELNOTE`%q<other_key>=!visual; @pemit %#=notice(REL,Your note about %q<other_name>: %q<cmd_right_side>,ok)
+          &RELNOTE`%q<rel_other_key> %#=%q<cmd_right_side>; @set %#/RELNOTE=!visual; @set %#/RELNOTE=no_command; @set %#/RELNOTE`%q<rel_other_key>=!visual; @pemit %#=notice(REL,Your note about %q<rel_other_name>: %q<cmd_right_side>,ok)
         flags: [cmdsyntax]
 
       # ---- +rel/types ---------------------------------------------------------------
-      INC`TYPES:
+      INC`CMD`TYPES:
         value: |-
-          @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r1,%r%r),[tone(strong,Type)]%r[iter(u(%!/FUN`TYPE`KEYS),if(strlen(setr(types_tone,u(%!/FUN`TYPE`TONE,%i0))),tone(%q<types_tone>,u(%!/FUN`TYPE`LABEL,%i0)),u(%!/FUN`TYPE`LABEL,%i0)),,%r)],[tone(strong,Key)]%r[iter(u(%!/FUN`TYPE`KEYS),lcstr(%i0),,%r)],[tone(strong,The other side)]%r[iter(u(%!/FUN`TYPE`KEYS),u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%i0)),,%r)])%r[rule()]%r[tone(muted,+rel/set <name>=<type> · a type is named by its key or its label)],Relationship types,,u(%!/FUN`DISPLAY`FRAME))
+          @pemit %#=box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r1,%r%r),tone(strong,Type)%r[iter(u(%!/FUN`TYPE`KEYS),if(strlen(setr(types_tone,u(%!/FUN`TYPE`TONE,%i0))),tone(%q<types_tone>,u(%!/FUN`TYPE`LABEL,%i0)),u(%!/FUN`TYPE`LABEL,%i0)),,%r)],tone(strong,Key)%r[iter(u(%!/FUN`TYPE`KEYS),lcstr(%i0),,%r)],tone(strong,The other side)%r[iter(u(%!/FUN`TYPE`KEYS),u(%!/FUN`TYPE`LABEL,u(%!/FUN`TYPE`PAIR,%i0)),,%r)])%r[rule()]%r[tone(muted,+rel/set <name>=<type> · a type is named by its key or its label)],Relationship types,,u(%!/FUN`DISPLAY`FRAME))
         flags: [cmdsyntax]
 
       # ---- settings ------------------------------------------------------------------
       # %0 a card-fields list, as +config stores it: why some keys are not +finger fields, or nothing.
-      CHECK`FIELDS:
+      FUN`CONFIG`CHECK`FIELDS:
         value: |-
-          if(words(setr(check_unknown,filterbool(%!/FUN`CONFIG`UNKNOWN,ucstr(%0)))),[itemize(lcstr(%q<check_unknown>))] [if(eq(words(%q<check_unknown>),1),is not a +finger field,are not +finger fields)]. +finger/fields lists them.)
+          if(words(setr(check_unknown,filterbool(%!/FUN`CONFIG`UNKNOWN,ucstr(%0)))),itemize(lcstr(%q<check_unknown>)) [if(eq(words(%q<check_unknown>),1),is not a +finger field,are not +finger fields)]. +finger/fields lists them.)
         flags: [funsyntax]
       FUN`CONFIG`UNKNOWN:
         value: |-
-          not(lattr({{finger/finger}}/FIELD`*`*`%0))
+          not(u({{finger/finger}}/FUN`FIELD`KEYED,%0))
+        flags: [funsyntax]
+      # %0 a type's pair, as +config stores it: why it is not a type, or nothing. Empty is fine.
+      FUN`CONFIG`CHECK`PAIR:
+        value: |-
+          if(cand(strlen(%0),not(hasattr(%!,DATA`TYPE`%0))),There is no type called %0. +rel/types lists them.)
         flags: [funsyntax]
 
       # ---- portal routes ---------------------------------------------------------------
@@ -622,11 +685,11 @@ objects:
       # a visitor, %<target> the objid the page asks about. Every value is read with get(), never evaluated.
       #
       # The web: a graph of the character and the relationships the viewer may see, and the same as a table.
-      WEB`WEB`SCHEMA:
+      WEB`GRAPH`SCHEMA:
         value: |-
           json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,main),order,json(number,1),sections,json(array,json(object,name,json(string,Relationships),order,json(number,1),elements,json(array,json(object,kind,json(string,graph),src_field,json(string,web),link,json(string,/character/\{label\}),empty,json(string,No relationships yet.)),json(object,kind,json(string,table),rows_field,json(string,list),empty,json(string,),columns,json(array,json(object,key,json(string,name),label,json(string,Name),link,json(string,/character/\{name\})),json(object,key,json(string,type),label,json(string,Relationship),type,json(string,chip),color_key,json(string,color)),json(object,key,json(string,text),label,json(string,About)),json(object,key,json(string,since),label,json(string,Since))))))))))
         flags: [funsyntax]
-      WEB`WEB`DATA:
+      WEB`GRAPH`DATA:
         value: |-
           u(%!/FUN`WEB`PREPARE,%<viewer>,%<target>)[json(object,fields,json(object,web,json(object,value,u(%!/FUN`WEB`GRAPH),visible,json(boolean,true)),list,json(object,value,json_array(iter(%q<web_first>,u(%!/FUN`WEB`ROW,%i0),,chr(30)),chr(30)),visible,json(boolean,true))))]
         flags: [funsyntax]
@@ -645,7 +708,7 @@ objects:
         flags: [funsyntax]
       FUN`WEB`NODE:
         value: |-
-          json(object,id,json(string,%0),label,json(string,name(%0)),image,json(string,u(%!/FUN`PICTURE,%0)),focus,json(boolean,not(comp(%0,%q<web_target>))))
+          json(object,id,json(string,%0),label,json(string,name(%0)),image,json(string,u(%!/FUN`DISPLAY`PICTURE,%0)),focus,json(boolean,not(comp(%0,%q<web_target>))))
         flags: [funsyntax]
       # %0 a character on the web: an edge to each one on the web it knows and sorts after, so each pair is drawn
       # once, joined by chr(30). Empty when there are none.
@@ -661,12 +724,12 @@ objects:
       # Child) it points from %1 to %0, so it reads "%1 is %0's Parent".
       FUN`WEB`EDGE:
         value: |-
-          json(object,from,json(string,%1),to,json(string,%0),label,json(string,u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%0,%1))),tone,json(string,u(%!/FUN`TYPE`TONE,u(%!/FUN`SIDE,%0,%1))),directed,json(boolean,not(u(%!/FUN`TYPE`MUTUAL,u(%!/FUN`SIDE,%0,%1)))))
+          json(object,from,json(string,%1),to,json(string,%0),label,json(string,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%0,%1))),tone,json(string,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%0,%1))),directed,json(boolean,not(u(%!/FUN`TYPE`MUTUAL,u(%!/FUN`RELATION`SIDE,%0,%1)))))
         flags: [funsyntax]
       # %0 a character %q<web_target> knows: one row of the table, from %q<web_target>'s side.
       FUN`WEB`ROW:
         value: |-
-          json(object,name,json(string,name(%0)),type,json(string,u(%!/FUN`TYPE`LABEL,u(%!/FUN`SIDE,%q<web_target>,%0))),color,json(string,u(%!/FUN`WEB`COLOR,u(%!/FUN`TYPE`TONE,u(%!/FUN`SIDE,%q<web_target>,%0)))),text,json(string,get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`TEXT)),since,json(string,u(%!/FUN`DISPLAY`DATE,max(get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`SINCE),get(%0/RELATION`[u(%!/FUN`KEY`OF,%q<web_target>)]`SINCE)))))
+          json(object,name,json(string,name(%0)),type,json(string,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%q<web_target>,%0))),color,json(string,u(%!/FUN`WEB`COLOR,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%q<web_target>,%0)))),text,json(string,get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`TEXT)),since,json(string,u(%!/FUN`DISPLAY`DATE,max(get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`SINCE),get(%0/RELATION`[u(%!/FUN`KEY`OF,%q<web_target>)]`SINCE)))))
         flags: [funsyntax]
       # %0 a tone: the chip colour a table cell takes for it.
       FUN`WEB`COLOR:
@@ -681,7 +744,8 @@ objects:
         flags: [funsyntax]
       WEB`CARD`DATA:
         value: |-
-          setqm(card_target,%<target>,card_viewer,%<viewer>)[json(object,fields,fold(%!/FUN`WEB`CARD`LINE,sort(lattr(%!/LINE`*`*)),lit({})))]
+          setqm(card_target,%<target>,
+          card_viewer,%<viewer>)[json(object,fields,fold(%!/FUN`WEB`CARD`LINE,sort(lattr(%!/LINE`*`*)),lit({})))]
         flags: [funsyntax]
       # %0 the fields so far, %1 a LINE` attribute: the fields with this line's added, by its label. A line with a
       # LINK`<KEY> beside it is {text, link}, which the portal draws as a link.
@@ -715,16 +779,16 @@ objects:
           @trigger %!/STARTUP
         flags: [cmdsyntax]
 
-  # The routes, on the HTTP handler: GET /http/relationships/web/schema and /web/data, /card/schema and
+  # The routes, on the HTTP handler: GET /http/relationships/web/schema and /web/data (WEB`GRAPH`), /card/schema and
   # /card/data, each with ?objid=<character>. %<viewer> is the character the portal signed in as. They only
   # read, so they are evaluated in place with uargs().
   - ref: routes
     target: "{{$http_handler}}"
     attributes:
       GET`RELATIONSHIPS`WEB`SCHEMA: |-
-        @respond/type application/json; think u({{relationships}}/WEB`WEB`SCHEMA)
+        @respond/type application/json; think u({{relationships}}/WEB`GRAPH`SCHEMA)
       GET`RELATIONSHIPS`WEB`DATA: |-
-        think setq(rel_target,u({{relationships}}/FUN`WEB`TARGET,%q<form.objid>)); @assert strlen(%q<rel_target>)={@respond 404 NO SUCH CHARACTER}; @respond/type application/json; think uargs({{relationships}}/WEB`WEB`DATA,viewer,%<viewer>,target,%q<rel_target>)
+        think setq(rel_target,u({{relationships}}/FUN`WEB`TARGET,%q<form.objid>)); @assert strlen(%q<rel_target>)={@respond 404 NO SUCH CHARACTER}; @respond/type application/json; think uargs({{relationships}}/WEB`GRAPH`DATA,viewer,%<viewer>,target,%q<rel_target>)
       GET`RELATIONSHIPS`CARD`SCHEMA: |-
         @respond/type application/json; think u({{relationships}}/WEB`CARD`SCHEMA)
       GET`RELATIONSHIPS`CARD`DATA: |-
@@ -771,18 +835,18 @@ objects:
 
         A player keeps their side of each relationship on themselves: `` RELATION`<key> `` holds the type's key, what that character is to them, with `` RELATION`<key>`TEXT `` and `` RELATION`<key>`SINCE `` under it. `<key>` is the other character's objid with the `#` dropped and the `:` written as `_`, so `#20:1792045608032` is `20_1792045608032`. A side without the `visual` flag is hidden. `` RELNOTE`<key> `` holds a private note.
       HELP`REL`TYPES: |-
-        The types are attributes on the Relationships object in the master room, one each, named `` DATA`TYPE`<KEY> `` with the label as the value. Under each:
+        The types are a `+config` table, `relationships/types`. Each has a label and two fields:
 
-        - `` DATA`TYPE`<KEY>`PAIR ``: the key the other side takes. Parent's is `CHILD`. Without one, both sides take the same key.
-        - `` DATA`TYPE`<KEY>`TONE ``: the colour the type is drawn in, a `tone\(\)` name such as `green` or `warning`.
+        - `pair`: the type the other side takes. Parent's is `child`. Empty when both sides take the same type.
+        - `tone`: the colour the type is drawn in, a `tone\(\)` name such as `green` or `warning`.
 
-        To add a Cousin type:
+        - `+config relationships/types` lists them, and `+config relationships/types/<type>` shows one.
+        - `+config/add relationships/types/cousin=Cousin` adds a Cousin type.
+        - `+config relationships/types/cousin/tone=purple` changes one field.
+        - `+config/remove relationships/types/cousin` takes it away.
 
-        `` &DATA`TYPE`COUSIN <Relationships>=Cousin ``
+        Taking a type away leaves the relationships that use it, shown by their key. The types are kept on the Relationships object in the master room, as `` DATA`TYPE`<KEY> `` with `` `PAIR `` and `` `TONE `` under it.
 
-        `` &DATA`TYPE`COUSIN`TONE <Relationships>=purple ``
-
-        Taking a type away leaves the relationships that use it, shown by their key.
       HELP`REL`CARD: |-
         A card's lines are attributes on the Relationships object, one each, named `` LINE`<order>`<KEY> `` with the label as the value, and worked out by `` SHOW`<KEY> `` with `%%<target>` the character and `%%<viewer>` the reader. An empty result leaves the line out. `` LINK`<KEY> ``, worked out the same way, makes the line a link in the portal.
 
@@ -800,6 +864,7 @@ objects:
         - `note-length`: the longest private note, in characters, 1 to 8000. 2000 by default.
         - `text-length`: the longest line about a relationship, 1 to 1000. 200 by default.
         - `web-reach`: how far the portal's web reaches. 1, the default, draws a character and the people they know; 2 adds the people those know.
+        - `types`: the relationship types, a table. `+help rel types` explains it.
 
   - ref: config_registration
     target: "{{plus-config/registry}}"

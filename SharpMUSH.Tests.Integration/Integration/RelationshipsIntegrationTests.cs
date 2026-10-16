@@ -220,12 +220,45 @@ public class RelationshipsIntegrationTests
 			await As(bo, $"+rel/confirm {ann.Name}");
 			var annObjid = await God($"think objid(#{ann.DbRef.Number})");
 
-			var web = await God($"think uargs({Relationships}/WEB`WEB`DATA,viewer,,target,{annObjid})");
+			var web = await God($"think uargs({Relationships}/WEB`GRAPH`DATA,viewer,,target,{annObjid})");
 			await Assert.That(web).Contains("\"label\":\"Sibling\"").And.Contains($"\"label\":\"{bo.Name}\"").And.Contains("\"focus\":true");
 
 			await As(bo, $"+rel/hide {ann.Name}");
-			var hidden = await God($"think uargs({Relationships}/WEB`WEB`DATA,viewer,,target,{annObjid})");
+			var hidden = await God($"think uargs({Relationships}/WEB`GRAPH`DATA,viewer,,target,{annObjid})");
 			await Assert.That(hidden).DoesNotContain(bo.Name).And.Contains("\"edges\":[]");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task StaffKeepTheTypesWithConfigAndTheCardShowsFingerFields()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("TyAnn");
+			var bo = await Player("TyBo");
+			var staff = await Player("TyStaff");
+			var name = TestIsolationHelpers.GenerateUniqueName("TyName");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			// The types are a +config table on the Relationships object, under DATA`TYPE`.
+			await As(staff, "+config/add relationships/types/cousin=Cousin");
+			await Assert.That(await God($"think get({Relationships}/DATA`TYPE`COUSIN)")).IsEqualTo("Cousin");
+			await As(staff, "+config relationships/types/cousin/tone=purple");
+			await Assert.That(await God($"think get({Relationships}/DATA`TYPE`COUSIN`TONE)")).IsEqualTo("purple");
+			await Assert.That(await As(staff, "+config relationships/types/cousin/pair=nephew")).Contains("There is no type called nephew.");
+			await Assert.That(await As(ann, "+rel/types")).Contains("Cousin");
+			await Assert.That(await As(ann, $"+rel/set {bo.Name}=cousin")).Contains($"You asked {bo.Name}. They show as your Cousin once they confirm it.");
+			await As(staff, "+config/remove relationships/types/cousin");
+			await Assert.That(await God($"think hasattr({Relationships},DATA`TYPE`COUSIN)")).IsEqualTo("0");
+
+			// The card's top lines are finger fields, read through finger's own functions.
+			await As(ann, $"+finger/set full name={name}");
+			await Assert.That(await As(bo, $"+rel {ann.Name}")).Contains($"Full Name: {name}");
 		}
 		finally
 		{
