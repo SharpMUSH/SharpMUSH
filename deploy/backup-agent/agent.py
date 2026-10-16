@@ -215,8 +215,16 @@ def main():
         try:
             pending = STATE / 'receipt.json'
             if pending.exists():
-                request('receipt', json.loads(pending.read_text()))
-                pending.unlink()
+                try:
+                    request('receipt', json.loads(pending.read_text()))
+                except urllib.error.HTTPError as rejected:
+                    if rejected.code != 409:
+                        raise
+                    # Preserve the rejected evidence without wedging every subsequent job.
+                    pending.replace(STATE / ('receipt.rejected-' + uuid.uuid4().hex + '.json'))
+                    print('backup-agent receipt-rejected', flush=True)
+                else:
+                    pending.unlink()
             job = request('claim', {})
             if job:
                 try:

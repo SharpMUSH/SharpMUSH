@@ -7,7 +7,11 @@ public sealed class RemoteBackupScheduleService(RemoteBackupCoordinator coordina
 {
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		await coordinator.RecoverAsync();
+		try { await coordinator.RecoverAsync(); }
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			logger.LogError("Remote backup recovery failed ({Type})", ex.GetType().Name);
+		}
 		using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
 		while (await timer.WaitForNextTickAsync(stoppingToken))
 		{

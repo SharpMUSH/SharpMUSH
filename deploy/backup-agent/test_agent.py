@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 import unittest.mock as mock
+import urllib.error
 from pathlib import Path
 
 import agent
@@ -20,6 +21,42 @@ class WorkerTests(unittest.TestCase):
         with self.assertRaises(ValueError): agent.copy_path('/app/data/lightning/data.mdb', 'a'*32)
     def test_copy_must_belong_to_job(self):
         with self.assertRaises(ValueError): agent.copy_path('/app/data/backup.remote-jobs/' + 'b'*32 + '/20261016', 'a'*32)
+
+
+class ReceiptRetryTests(unittest.TestCase):
+    def test_rejected_receipt_is_quarantined_and_does_not_block_claim(self):
+        self.check_receipt_retry(409, True)
+
+    def test_transient_failure_retains_receipt_and_does_not_claim(self):
+        self.check_receipt_retry(503, False)
+
+    def test_accepted_receipt_is_removed_and_next_job_can_be_claimed(self):
+        self.check_receipt_retry(None, True)
+
+    def check_receipt_retry(self, status, should_claim):
+        with tempfile.TemporaryDirectory(prefix='worker-retry-') as directory:
+            root = Path(directory)
+            receipt = {'id': 'a'*32, 'nonce': 'n'*64, 'exitCode': 0, 'snapshotId': 'b'*64}
+            pending = root / 'receipt.json'
+            pending.write_text(json.dumps(receipt))
+            def request(route, body):
+                if route == 'receipt' and status:
+                    raise urllib.error.HTTPError('https://synthetic/receipt', status, 'synthetic', {}, None)
+                return None
+            previous_umask = os.umask(0o077)
+            try:
+                with mock.patch.object(agent, 'STATE', root), mock.patch.object(agent, 'LOCK_FD', None), mock.patch.object(agent, 'WORKER_ID', ''), mock.patch('agent.request', side_effect=request) as calls, mock.patch('agent.threading.Thread'), mock.patch('agent.time.sleep', side_effect=KeyboardInterrupt):
+                    with self.assertRaises(KeyboardInterrupt):
+                        agent.main()
+            finally:
+                os.umask(previous_umask)
+            claimed = any(call.args[0] == 'claim' for call in calls.call_args_list)
+            self.assertEqual(claimed, should_claim)
+            self.assertEqual(pending.exists(), status == 503)
+            rejected = list(root.glob('receipt.rejected*.json'))
+            self.assertEqual(len(rejected), 1 if status == 409 else 0)
+            if rejected:
+                self.assertEqual(json.loads(rejected[0].read_text()), receipt)
 
 
 class ProcessTests(unittest.TestCase):

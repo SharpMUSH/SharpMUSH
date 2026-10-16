@@ -12,6 +12,10 @@
     {
         <MudAlert Severity="Severity.Error">@_error</MudAlert>
     }
+    @if (_statusError is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_statusError</MudAlert>
+    }
     @if (_status is { } status)
     {
         <MudAlert Severity="@(AgentHealthy(status) ? Severity.Info : Severity.Warning)">
@@ -57,7 +61,7 @@
 
 @code {
     private RemoteBackupStatus? _status;
-    private string? _error;
+    private string? _error, _statusError;
     private bool _enabled, _busy, _clearAccountId, _clearAccountKey;
     private int _hours = 24;
     private string _repository = "", _password = "", _accountId = "", _accountKey = "";
@@ -75,9 +79,10 @@
         {
             case RemoteBackupStatus status:
                 _status = status;
+                _statusError = null;
                 if (settings) { _enabled = status.Settings.Enabled; _hours = status.Settings.IntervalHours; _repository = status.Settings.Repository; }
                 break;
-            case ApiFailure failure: _error = failure.Message; break;
+            case ApiFailure failure: _statusError = failure.Message; break;
         }
     }
     private async Task RefreshAsync()
