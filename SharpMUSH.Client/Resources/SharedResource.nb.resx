@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maksimalt antall spillere</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Andre innloggingsmetoder</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Fortsett med {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Start innloggingen på nytt</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Velg et brukernavn for den nye kontoen din. E-postadressen hos leverandøren brukes ikke til å finne eller slå sammen kontoer.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Bekreft en innloggingsmetode for kontoen for å fortsette. Denne bekreftelsen gjelder én handling.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Bekreft kontopassord</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Bekreft med en tilgangsnøkkel</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Forespørselen om tilgangsnøkkel ble avbrutt. Prøv igjen når du er klar.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Kunne ikke bekrefte kontoens innloggingsmetode. Prøv igjen.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Innloggingsmetoder</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Administrer metodene som gir tilgang til kontoen din. Eksisterende karakterpassord fungerer fortsatt. Hvis du fjerner eller endrer en metode, logges andre økter ut.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Angi et kontopassord ved hjelp av passordet til en karakter du eier, før du legger til andre innloggingsmetoder. Kontoinnlogging med karakterpassord forblir aktivert.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Karakterpassord</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Bekreft nytt passord</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Angi kontopassord</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Koble til {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Fjern kobling</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Fjern kontopassord</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Deaktiver kontoinnlogging med karakterpassord</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Aktiver kontoinnlogging med karakterpassord</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Endre e-postadresse</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Angi eller endre kontopassord</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Karakterinnlogging i en selvstendig klient</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Klientinnlogging for {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Bekreft kontoen din, og generer deretter en engangsinnlogging for en selvstendig MU*-klient. Hver innlogging utløper etter to minutter.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Generer engangsinnlogging</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Utløper om {0} sekunder</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Bruk en selvstendig klient med TLS. Ukryptert telnet avslører denne innloggingen for alle som kan overvåke forbindelsen.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Ubrukte innlogginger</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Angi et uavhengig karakterpassord</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Dette passordet logger direkte inn på denne karakteren. Det endrer ikke kontopassordet ditt.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Angi karakterpassord</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Karakterpassordet er endret. Ubrukte engangsinnlogginger for denne karakteren er tilbakekalt.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Tilgang til utklippstavlen mislyktes. Merk og kopier kommandoen som vises.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Opprett uten å velge karakterpassord; bruk engangsinnlogginger i klienten eller angi et passord senere.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Lukk</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopier</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Tilbakekall</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Koble fra eksisterende klienter som spiller denne karakteren, etter at passordet er endret.</value>
+  </data>
 </root>

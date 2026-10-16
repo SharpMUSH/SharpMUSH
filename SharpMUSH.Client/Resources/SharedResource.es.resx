@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Límite de jugadores</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Otros métodos de inicio de sesión</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuar con {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Reiniciar el inicio de sesión</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Elige un nombre de usuario para tu nueva cuenta. El correo de tu proveedor no se utiliza para buscar ni fusionar cuentas.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Verifica un método de inicio de sesión de la cuenta para continuar. Esta confirmación sirve para una sola acción.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Verificar la contraseña de la cuenta</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Verificar con una clave de acceso</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Se canceló la solicitud de la clave de acceso. Vuelve a intentarlo cuando estés listo.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>No se pudo verificar el método de acceso a la cuenta. Inténtalo de nuevo.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Métodos de inicio de sesión</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Gestiona los métodos de acceso a tu cuenta. Las contraseñas de personaje existentes siguen funcionando. Al eliminar o cambiar un método, se cierran las demás sesiones.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Establece una contraseña de cuenta mediante la contraseña de un personaje que te pertenezca antes de añadir otros métodos de acceso. El acceso a la cuenta con contraseña de personaje permanece habilitado.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Contraseña del personaje</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Confirmar la nueva contraseña</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Establecer la contraseña de la cuenta</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Vincular {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Desvincular</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Eliminar la contraseña de la cuenta</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Deshabilitar el acceso a la cuenta con contraseña de personaje</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Habilitar el acceso a la cuenta con contraseña de personaje</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Cambiar el correo electrónico</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Establecer o cambiar la contraseña de la cuenta</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Acceso al personaje desde un cliente independiente</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Acceso desde cliente para {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Verifica tu cuenta y genera un acceso de un solo uso para un cliente MU* independiente. Cada acceso caduca a los dos minutos.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Generar acceso de un solo uso</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Caduca en {0} segundos</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Utiliza un cliente independiente con TLS. Telnet sin cifrar expone este acceso a cualquiera que pueda observar la conexión.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Accesos pendientes</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Establecer una contraseña independiente para el personaje</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Esta contraseña permite acceder directamente a este personaje. No cambia la contraseña de tu cuenta.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Establecer la contraseña del personaje</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Se cambió la contraseña del personaje. Se revocaron los accesos de un solo uso pendientes para este personaje.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>No se pudo acceder al portapapeles. Selecciona y copia el comando que se muestra.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Crear sin elegir una contraseña de personaje; utiliza accesos de un solo uso desde el cliente o establece una contraseña más adelante.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Copiar</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Revocar</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Desconectar los clientes que estén jugando con este personaje tras cambiar la contraseña.</value>
+  </data>
 </root>

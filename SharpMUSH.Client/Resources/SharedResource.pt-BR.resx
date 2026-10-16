@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Limite de jogadores</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Outros métodos de login</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuar com {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Reiniciar o login</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Escolha um nome de usuário para sua nova conta. O e-mail do provedor não é usado para localizar nem mesclar contas.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Verifique um método de login da conta para continuar. Esta confirmação vale para uma única ação.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Verificar a senha da conta</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Verificar com uma chave de acesso</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>A solicitação da chave de acesso foi cancelada. Tente novamente quando estiver pronto.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Não foi possível verificar o método de login da conta. Tente novamente.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Métodos de login</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Gerencie os métodos de acesso à sua conta. As senhas de personagem existentes continuam funcionando. Remover ou alterar um método encerra as outras sessões.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Defina uma senha da conta usando a senha de um personagem seu antes de adicionar outros métodos de login. O login na conta com senha de personagem continua habilitado.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Senha do personagem</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Confirmar nova senha</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Definir senha da conta</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Vincular {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Desvincular</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Remover senha da conta</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Desabilitar login na conta com senha de personagem</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Habilitar login na conta com senha de personagem</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Alterar e-mail</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Definir ou alterar senha da conta</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Login de personagem em cliente independente</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Login em cliente para {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Verifique sua conta e gere um acesso de uso único para um cliente MU* independente. Cada acesso expira após dois minutos.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Gerar acesso de uso único</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Expira em {0} segundos</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Use um cliente independente com TLS. O telnet sem criptografia expõe este acesso a qualquer pessoa que possa observar a conexão.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Acessos não utilizados</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Definir uma senha independente para o personagem</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Esta senha permite entrar diretamente neste personagem. Ela não altera a senha da sua conta.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Definir senha do personagem</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>A senha do personagem foi alterada. Os acessos de uso único não utilizados para este personagem foram revogados.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Falha ao acessar a área de transferência. Selecione e copie o comando exibido.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Criar sem escolher uma senha de personagem; use acessos de uso único no cliente ou defina uma senha depois.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Fechar</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Copiar</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Revogar</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Desconectar os clientes que estão jogando com este personagem após alterar a senha.</value>
+  </data>
 </root>

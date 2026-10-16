@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Limit graczy</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Inne metody logowania</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Kontynuuj przez {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Rozpocznij logowanie ponownie</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Wybierz nazwę użytkownika dla nowego konta. Adres e-mail od dostawcy nie służy do wyszukiwania ani łączenia kont.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Aby kontynuować, potwierdź metodę logowania do konta. To potwierdzenie jest ważne dla jednej czynności.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Potwierdź hasło konta</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Potwierdź kluczem dostępu</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Żądanie klucza dostępu zostało anulowane. Spróbuj ponownie, gdy będziesz gotów.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Nie udało się potwierdzić metody logowania do konta. Spróbuj ponownie.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Metody logowania</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Zarządzaj metodami dostępu do konta. Dotychczasowe hasła postaci nadal działają. Usunięcie lub zmiana metody wylogowuje pozostałe sesje.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Przed dodaniem innych metod logowania ustaw hasło konta za pomocą hasła własnej postaci. Logowanie do konta hasłem postaci pozostaje włączone.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Hasło postaci</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Potwierdź nowe hasło</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Ustaw hasło konta</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Połącz {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Odłącz</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Usuń hasło konta</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Wyłącz logowanie do konta hasłem postaci</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Włącz logowanie do konta hasłem postaci</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Zmień adres e-mail</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Ustaw lub zmień hasło konta</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Logowanie postaci przez samodzielnego klienta</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Logowanie przez klienta dla {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Potwierdź swoje konto, a następnie wygeneruj jednorazowy dostęp dla samodzielnego klienta MU*. Każdy dostęp wygasa po dwóch minutach.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Wygeneruj jednorazowy dostęp</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Wygasa za {0} sekund</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Używaj samodzielnego klienta z TLS. Nieszyfrowany telnet ujawnia ten dostęp każdemu, kto może obserwować połączenie.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Niewykorzystane dostępy</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Ustaw niezależne hasło postaci</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>To hasło umożliwia bezpośrednie logowanie do tej postaci. Nie zmienia hasła konta.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Ustaw hasło postaci</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Hasło postaci zostało zmienione. Niewykorzystane jednorazowe dostępy do tej postaci zostały unieważnione.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Dostęp do schowka nie powiódł się. Zaznacz i skopiuj wyświetlone polecenie.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Utwórz bez wybranego hasła postaci; korzystaj z jednorazowego dostępu przez klienta lub ustaw hasło później.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Zamknij</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopiuj</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Unieważnij</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Po zmianie hasła rozłącz istniejących klientów grających tą postacią.</value>
+  </data>
 </root>

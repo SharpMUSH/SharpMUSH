@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maximale Spielerzahl</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Weitere Anmeldemethoden</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Mit {0} fortfahren</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Anmeldung neu beginnen</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Wähle einen Benutzernamen für dein neues Konto. Die E-Mail-Adresse deines Anbieters wird nicht zum Suchen oder Zusammenführen von Konten verwendet.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Bestätige eine Anmeldemethode deines Kontos, um fortzufahren. Diese Bestätigung gilt für eine Aktion.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Kontopasswort bestätigen</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Mit einem Passkey bestätigen</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Die Passkey-Abfrage wurde abgebrochen. Versuche es erneut, wenn du bereit bist.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Die Anmeldemethode des Kontos konnte nicht bestätigt werden. Versuche es erneut.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Anmeldemethoden</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Verwalte die Anmeldemethoden deines Kontos. Bestehende Charakterpasswörter funktionieren weiterhin. Beim Entfernen oder Ändern einer Methode werden andere Sitzungen abgemeldet.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Lege mithilfe des Passworts eines eigenen Charakters ein Kontopasswort fest, bevor du weitere Anmeldemethoden hinzufügst. Die Kontoanmeldung mit Charakterpasswort bleibt aktiviert.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Charakterpasswort</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Neues Passwort bestätigen</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Kontopasswort festlegen</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>{0} verknüpfen</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Verknüpfung aufheben</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Kontopasswort entfernen</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Kontoanmeldung mit Charakterpasswort deaktivieren</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Kontoanmeldung mit Charakterpasswort aktivieren</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>E-Mail-Adresse ändern</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Kontopasswort festlegen oder ändern</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Charakteranmeldung im eigenständigen Client</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Client-Anmeldung für {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Bestätige dein Konto und erstelle dann eine einmalige Anmeldung für einen eigenständigen MU*-Client. Jede Anmeldung läuft nach zwei Minuten ab.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Einmalige Anmeldung erstellen</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Läuft in {0} Sekunden ab</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Verwende einen eigenständigen Client mit TLS. Unverschlüsseltes Telnet legt diese Anmeldung gegenüber allen offen, die die Verbindung beobachten können.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Noch ungenutzte Anmeldungen</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Eigenständiges Charakterpasswort festlegen</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Dieses Passwort meldet dich direkt bei diesem Charakter an. Es ändert dein Kontopasswort nicht.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Charakterpasswort festlegen</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Charakterpasswort geändert. Noch ungenutzte Einmalanmeldungen für diesen Charakter wurden widerrufen.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Zugriff auf die Zwischenablage fehlgeschlagen. Markiere und kopiere den angezeigten Befehl.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Ohne selbst gewähltes Charakterpasswort erstellen; verwende einmalige Client-Anmeldungen oder lege später ein Passwort fest.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopieren</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Widerrufen</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Bestehende Clients, die diesen Charakter spielen, nach der Passwortänderung trennen.</value>
+  </data>
 </root>

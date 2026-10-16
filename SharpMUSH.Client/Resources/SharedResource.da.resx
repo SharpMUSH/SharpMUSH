@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maksimalt antal spillere</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Andre loginmetoder</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Fortsæt med {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Start login forfra</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Vælg et brugernavn til din nye konto. Din udbyders e-mail bruges ikke til at finde eller sammenlægge konti.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Bekræft en loginmetode til kontoen for at fortsætte. Denne bekræftelse gælder for én handling.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Bekræft kontoens adgangskode</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Bekræft med en adgangsnøgle</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Anmodningen om adgangsnøglen blev annulleret. Prøv igen, når du er klar.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Kontoens loginmetode kunne ikke bekræftes. Prøv igen.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Loginmetoder</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Administrer metoderne til at åbne din konto. Eksisterende adgangskoder til figurer virker fortsat. Hvis du fjerner eller ændrer en metode, logges andre sessioner ud.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Opret en adgangskode til kontoen ved hjælp af adgangskoden til en figur, du ejer, før du tilføjer andre loginmetoder. Kontologin med figurens adgangskode forbliver aktiveret.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Figurens adgangskode</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Bekræft ny adgangskode</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Angiv kontoens adgangskode</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Tilknyt {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Fjern tilknytning</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Fjern kontoens adgangskode</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Deaktiver kontologin med figurens adgangskode</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Aktiver kontologin med figurens adgangskode</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Skift e-mail</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Angiv eller skift kontoens adgangskode</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Figurlogin i en selvstændig klient</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Klientlogin for {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Bekræft din konto, og opret derefter et engangslogin til en selvstændig MU*-klient. Hvert login udløber efter to minutter.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Opret engangslogin</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Udløber om {0} sekunder</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Brug en selvstændig klient med TLS. Ukrypteret telnet afslører dette login for alle, der kan overvåge forbindelsen.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Ubrugte logins</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Angiv en særskilt adgangskode til figuren</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Denne adgangskode logger direkte ind på denne figur. Den ændrer ikke din kontos adgangskode.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Angiv figurens adgangskode</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Figurens adgangskode er ændret. Ubrugte engangslogins til denne figur er tilbagekaldt.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Adgang til udklipsholderen mislykkedes. Markér og kopiér den viste kommando.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Opret uden at vælge en adgangskode til figuren; brug engangslogins i klienten, eller angiv en adgangskode senere.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Luk</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopiér</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Tilbagekald</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Afbryd eksisterende klienter, der spiller denne figur, efter ændring af adgangskoden.</value>
+  </data>
 </root>

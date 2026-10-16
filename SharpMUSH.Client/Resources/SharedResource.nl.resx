@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maximumaantal spelers</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Andere aanmeldmethoden</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Doorgaan met {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Aanmelden opnieuw starten</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Kies een gebruikersnaam voor je nieuwe account. Het e-mailadres van je aanbieder wordt niet gebruikt om accounts te zoeken of samen te voegen.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Bevestig een aanmeldmethode van je account om door te gaan. Deze bevestiging geldt voor één handeling.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Accountwachtwoord bevestigen</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Bevestigen met een toegangssleutel</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Het verzoek om een toegangssleutel is geannuleerd. Probeer het opnieuw wanneer je klaar bent.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>De aanmeldmethode van het account kon niet worden bevestigd. Probeer het opnieuw.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Aanmeldmethoden</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Beheer de methoden waarmee je toegang krijgt tot je account. Bestaande personagewachtwoorden blijven werken. Als je een methode verwijdert of wijzigt, worden andere sessies afgemeld.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Stel een accountwachtwoord in met het wachtwoord van een eigen personage voordat je andere aanmeldmethoden toevoegt. Aanmelden bij het account met een personagewachtwoord blijft ingeschakeld.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Personagewachtwoord</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Nieuw wachtwoord bevestigen</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Accountwachtwoord instellen</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>{0} koppelen</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Ontkoppelen</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Accountwachtwoord verwijderen</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Aanmelden bij account met personagewachtwoord uitschakelen</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Aanmelden bij account met personagewachtwoord inschakelen</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>E-mailadres wijzigen</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Accountwachtwoord instellen of wijzigen</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Aanmelden als personage via een zelfstandige client</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Aanmelden via client voor {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Bevestig je account en maak daarna een eenmalige aanmelding voor een zelfstandige MU*-client. Elke aanmelding verloopt na twee minuten.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Eenmalige aanmelding maken</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Verloopt over {0} seconden</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Gebruik een zelfstandige client met TLS. Onversleutelde telnet maakt deze aanmelding zichtbaar voor iedereen die de verbinding kan volgen.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Ongebruikte aanmeldingen</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Een onafhankelijk personagewachtwoord instellen</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Met dit wachtwoord meld je je rechtstreeks aan als dit personage. Het wijzigt je accountwachtwoord niet.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Personagewachtwoord instellen</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Het personagewachtwoord is gewijzigd. Ongebruikte eenmalige aanmeldingen voor dit personage zijn ingetrokken.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Toegang tot het klembord is mislukt. Selecteer en kopieer de weergegeven opdracht.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Aanmaken zonder gekozen personagewachtwoord; gebruik eenmalige clientaanmeldingen of stel later een wachtwoord in.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Sluiten</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopiëren</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Intrekken</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Verbreek na het wijzigen van het wachtwoord de verbinding met bestaande clients die dit personage spelen.</value>
+  </data>
 </root>

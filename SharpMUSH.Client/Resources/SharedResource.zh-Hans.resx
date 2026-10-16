@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>玩家人数上限</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>其他登录方式</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>使用 {0} 继续</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>重新开始登录</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>为新账号选择用户名。我们不会使用提供商的邮箱地址查找或合并账号。</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>请验证账号的一种登录方式以继续。此次确认仅对一个操作有效。</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>验证账号密码</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>使用通行密钥验证</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>通行密钥请求已取消。准备好后请重试。</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>无法验证账号的登录方式。请重试。</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>登录方式</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>管理账号的登录方式。现有的角色密码仍可使用。移除或更改登录方式会使其他会话退出登录。</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>添加其他登录方式前，请使用属于你的角色的密码设置账号密码。使用角色密码登录账号的功能将保持启用。</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>角色密码</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>确认新密码</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>设置账号密码</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>关联 {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>解除关联</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>移除账号密码</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>禁用使用角色密码登录账号</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>启用使用角色密码登录账号</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>更改邮箱</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>设置或更改账号密码</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>独立客户端角色登录</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>{0} 的客户端登录</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>验证账号后，为独立 MU* 客户端生成一次性登录凭证。每个凭证会在两分钟后过期。</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>生成一次性登录凭证</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>将在 {0} 秒后过期</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>请使用支持 TLS 的独立客户端。未加密的 telnet 会将此登录凭证暴露给任何能监听连接的人。</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>尚未使用的登录凭证</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>设置独立的角色密码</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>此密码用于直接登录该角色，不会更改账号密码。</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>设置角色密码</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>角色密码已更改。该角色尚未使用的一次性登录凭证已撤销。</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>无法访问剪贴板。请选择并复制显示的命令。</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>创建时不选择角色密码；可使用客户端的一次性登录凭证，或稍后设置密码。</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>撤销</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>更改密码后，断开正在扮演该角色的现有客户端连接。</value>
+  </data>
 </root>

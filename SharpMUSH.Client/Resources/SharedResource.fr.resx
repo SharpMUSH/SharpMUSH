@@ -5614,4 +5614,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Nombre maximal de joueurs</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Autres méthodes de connexion</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuer avec {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Recommencer la connexion</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Choisissez un nom d’utilisateur pour votre nouveau compte. L’adresse e-mail de votre fournisseur ne sert pas à rechercher ou à fusionner des comptes.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Vérifiez une méthode de connexion du compte pour continuer. Cette confirmation est valable pour une seule action.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Vérifier le mot de passe du compte</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Vérifier avec une clé d’accès</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>La demande de clé d’accès a été annulée. Réessayez lorsque vous le souhaitez.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>La méthode de connexion du compte n’a pas pu être vérifiée. Réessayez.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Méthodes de connexion</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Gérez les méthodes d’accès à votre compte. Les mots de passe des personnages existants restent valables. Supprimer ou modifier une méthode déconnecte les autres sessions.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Définissez un mot de passe de compte à l’aide du mot de passe d’un personnage qui vous appartient avant d’ajouter d’autres méthodes de connexion. La connexion au compte par mot de passe de personnage reste activée.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Mot de passe du personnage</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Confirmer le nouveau mot de passe</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Définir le mot de passe du compte</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Associer {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Dissocier</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Supprimer le mot de passe du compte</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Désactiver la connexion au compte par mot de passe de personnage</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Activer la connexion au compte par mot de passe de personnage</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Modifier l’adresse e-mail</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Définir ou modifier le mot de passe du compte</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Connexion au personnage depuis un client autonome</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Connexion depuis un client pour {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Vérifiez votre compte, puis générez un accès à usage unique pour un client MU* autonome. Chaque accès expire au bout de deux minutes.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Générer un accès à usage unique</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Expire dans {0} secondes</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Utilisez un client autonome avec TLS. Telnet non chiffré expose cet accès à toute personne pouvant observer la connexion.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Accès non utilisés</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Définir un mot de passe indépendant pour le personnage</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Ce mot de passe permet de se connecter directement à ce personnage. Il ne modifie pas le mot de passe de votre compte.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Définir le mot de passe du personnage</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Le mot de passe du personnage a été modifié. Les accès à usage unique non utilisés pour ce personnage ont été révoqués.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>L’accès au presse-papiers a échoué. Sélectionnez et copiez la commande affichée.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Créer sans choisir de mot de passe pour le personnage ; utilisez des accès à usage unique depuis un client ou définissez un mot de passe plus tard.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Révoquer</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Déconnecter les clients qui jouent actuellement ce personnage après la modification du mot de passe.</value>
+  </data>
 </root>

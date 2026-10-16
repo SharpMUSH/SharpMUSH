@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maximalt antal spelare</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Andra inloggningsmetoder</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Fortsätt med {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Börja om inloggningen</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Välj ett användarnamn för ditt nya konto. E-postadressen hos din leverantör används inte för att hitta eller slå ihop konton.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Bekräfta en inloggningsmetod för kontot för att fortsätta. Bekräftelsen gäller för en åtgärd.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Bekräfta kontolösenord</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Bekräfta med en åtkomstnyckel</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Begäran om åtkomstnyckel avbröts. Försök igen när du är redo.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Kontots inloggningsmetod kunde inte bekräftas. Försök igen.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Inloggningsmetoder</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Hantera metoderna som ger åtkomst till ditt konto. Befintliga karaktärslösenord fortsätter att fungera. Om du tar bort eller ändrar en metod loggas andra sessioner ut.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Ange ett kontolösenord med hjälp av lösenordet till en karaktär du äger innan du lägger till andra inloggningsmetoder. Kontoinloggning med karaktärslösenord förblir aktiverad.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Karaktärslösenord</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Bekräfta nytt lösenord</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Ange kontolösenord</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Länka {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Ta bort länk</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Ta bort kontolösenord</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Inaktivera kontoinloggning med karaktärslösenord</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Aktivera kontoinloggning med karaktärslösenord</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Ändra e-postadress</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Ange eller ändra kontolösenord</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Karaktärsinloggning i en fristående klient</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Klientinloggning för {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Bekräfta ditt konto och skapa sedan en engångsinloggning för en fristående MU*-klient. Varje inloggning löper ut efter två minuter.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Skapa engångsinloggning</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Löper ut om {0} sekunder</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Använd en fristående klient med TLS. Okrypterad telnet avslöjar denna inloggning för alla som kan övervaka anslutningen.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Oanvända inloggningar</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Ange ett separat karaktärslösenord</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Detta lösenord loggar in direkt på den här karaktären. Det ändrar inte ditt kontolösenord.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Ange karaktärslösenord</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Karaktärslösenordet har ändrats. Oanvända engångsinloggningar för den här karaktären har återkallats.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Åtkomst till urklipp misslyckades. Markera och kopiera kommandot som visas.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Skapa utan valt karaktärslösenord; använd engångsinloggningar i klienten eller ange ett lösenord senare.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Stäng</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopiera</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Återkalla</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Koppla från befintliga klienter som spelar den här karaktären efter att lösenordet ändrats.</value>
+  </data>
 </root>

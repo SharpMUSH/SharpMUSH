@@ -6320,4 +6320,121 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Максимальное число игроков</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Другие способы входа</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Продолжить через {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Начать вход заново</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Выберите имя пользователя для новой учётной записи. Адрес электронной почты от провайдера не используется для поиска или объединения учётных записей.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Для продолжения подтвердите способ входа в учётную запись. Подтверждение действительно для одного действия.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Подтвердить пароль учётной записи</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Подтвердить ключом доступа</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Запрос ключа доступа отменён. Повторите попытку, когда будете готовы.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Не удалось подтвердить способ входа в учётную запись. Повторите попытку.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Способы входа</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Управляйте способами доступа к учётной записи. Существующие пароли персонажей продолжат работать. Удаление или изменение способа входа завершает другие сеансы.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Прежде чем добавлять другие способы входа, задайте пароль учётной записи с помощью пароля своего персонажа. Вход в учётную запись по паролю персонажа останется включённым.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Пароль персонажа</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Подтвердить новый пароль</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Задать пароль учётной записи</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Привязать {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Отвязать</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Удалить пароль учётной записи</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Отключить вход в учётную запись по паролю персонажа</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Включить вход в учётную запись по паролю персонажа</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Изменить адрес электронной почты</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Задать или изменить пароль учётной записи</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Вход персонажем через отдельный клиент</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Вход через клиент для {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Подтвердите учётную запись, затем создайте одноразовый доступ для отдельного MU*-клиента. Каждый доступ истекает через две минуты.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Создать одноразовый доступ</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Истекает через {0} секунд</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Используйте отдельный клиент с TLS. Незашифрованный telnet раскрывает этот доступ любому, кто может наблюдать за соединением.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Неиспользованные доступы</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Задать отдельный пароль персонажа</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Этот пароль позволяет войти напрямую этим персонажем. Он не меняет пароль учётной записи.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Задать пароль персонажа</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Пароль персонажа изменён. Неиспользованные одноразовые доступы для этого персонажа отозваны.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Не удалось получить доступ к буферу обмена. Выделите и скопируйте показанную команду.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Создать без выбора пароля персонажа; используйте одноразовые доступы через клиент или задайте пароль позже.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Копировать</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Отозвать</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>После изменения пароля отключить существующие клиенты, играющие этим персонажем.</value>
+  </data>
 </root>
