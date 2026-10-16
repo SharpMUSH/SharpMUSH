@@ -234,6 +234,32 @@
     "file": "ansi-function.md"
   },
   {
+    "id": "application-drafts",
+    "lookup": "@appdraft",
+    "title": "@appdraft",
+    "aliases": [
+      "appfields()",
+      "appfields",
+      "application drafts",
+      "@appdraft/show"
+    ],
+    "sections": [
+      {
+        "id": "callbacks",
+        "lookup": "@appdraft callbacks",
+        "heading": "Callbacks and ownership",
+        "aliases": []
+      },
+      {
+        "id": "lifetime",
+        "lookup": "@appdraft lifetime",
+        "heading": "Lifetime and retries",
+        "aliases": []
+      }
+    ],
+    "file": "application-drafts.md"
+  },
+  {
     "id": "ascii-command",
     "lookup": "@ascii",
     "title": "@ascii",
