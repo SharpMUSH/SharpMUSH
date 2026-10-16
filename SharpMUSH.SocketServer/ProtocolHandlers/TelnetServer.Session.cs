@@ -40,7 +40,7 @@ public partial class TelnetServer
 			var terminalTypeProtocol = new TerminalTypeProtocol().OnTerminalTypes(OnTerminalTypesAsync);
 			// Sends through the interpreter, which exists by the time a client can have said anything to answer.
 			var gmcp = new GmcpServerSession((package, data) =>
-				_telnet?.SendGMCPCommand(package, data) ?? ValueTask.CompletedTask)
+				_telnet?.SendGMCPCommand(Encoding.UTF8.GetBytes(package), Encoding.UTF8.GetBytes(data)) ?? ValueTask.CompletedTask)
 			{
 				OnSupportsChangedAsync = OnGmcpSupportsChangedAsync
 			};
@@ -86,9 +86,11 @@ public partial class TelnetServer
 				// BSD telnet (environ export TZ) or PuTTY sends. IPADDRESS is not read: any client can send one, and
 				// believing it would let a client choose the address sitelock and bans see.
 				.AddPlugin<NewEnvironProtocol>().OnEnvironmentVariables(OnEnvironmentVariablesAsync)
-				.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
-				// What the client agreed to read: output is written in it, each character it lacks replaced.
-				.OnCharsetChange(OnCharsetChangeAsync)
+				.AddPlugin(new CharsetProtocol
+				{
+					AllowedEncodings = () => Encoding.GetEncodings().Where(encoding => encoding.CodePage is 65001 or 28591 or 20127),
+					CharsetOrder = [Encoding.UTF8, Encoding.Latin1, Encoding.ASCII]
+				}.OnCharsetChange(OnCharsetChangeAsync))
 				.AddPlugin<MCCPProtocol>()
 				// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 				// terminfo() reports as the client. Without it every connection is "unknown".
@@ -228,7 +230,7 @@ public partial class TelnetServer
 			// Where the client fetches the game's sounds from, before any is played.
 			if (agreed && ClientMediaFrames.Default(server._settings?.MediaBaseUrl) is { } media)
 			{
-				await _telnet!.SendGMCPCommand(media.Package, media.Json);
+				await _telnet!.SendGMCPCommand(Encoding.UTF8.GetBytes(media.Package), Encoding.UTF8.GetBytes(media.Json));
 			}
 
 			// The session forgets the client's module list when GMCP is withdrawn, without reporting it as a
@@ -379,7 +381,7 @@ public partial class TelnetServer
 				closer.Close,
 				async (module, message) =>
 				{
-					await telnet.SendGMCPCommand(module, message);
+					await telnet.SendGMCPCommand(Encoding.UTF8.GetBytes(module), Encoding.UTF8.GetBytes(message));
 				},
 				isSecure: isSecure, cancellationToken: ct);
 		}
