@@ -1049,7 +1049,7 @@ public partial class TaskScheduler(
 		{
 			if (executor is not null && await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken) is None) return null;
 			if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject obj) return null;
-			var parserState = await function();
+			var parserState = (await function()).SnapshotForQueuedAction();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var actor = await parserState.KnownExecutorObject(mediator);
 			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);

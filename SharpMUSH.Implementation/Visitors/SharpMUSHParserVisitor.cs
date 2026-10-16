@@ -963,6 +963,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	private bool BreakTriggered()
 		=> parser.CurrentState.ExecutionStack.TryPeek(out var result) && result.CommandListBreak;
 
+	private bool CommandListMustStop()
+		=> BreakTriggered() || parser.CurrentState.LimitExceeded?.IsExceeded == true;
+
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] ICommandListContext context)
 	{
 		// Claim the one-shot before the children run, so only THIS list — the outermost of the parse
@@ -977,7 +980,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 		var result = parser.CurrentState.ParseMode != ParseMode.NoParse && HasPipe(context)
 			? await VisitPipedCommandList(context)
-			: await VisitChildrenOrBreak(context, BreakTriggered);
+			: await VisitChildrenOrBreak(context, CommandListMustStop);
 
 		if (BreakTriggered())
 		{
@@ -1036,7 +1039,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 		for (var i = 0; i < context.ChildCount; i++)
 		{
-			if (BreakTriggered()) break;
+			if (CommandListMustStop()) break;
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var child = context.GetChild(i);
 			if (child is null) continue;

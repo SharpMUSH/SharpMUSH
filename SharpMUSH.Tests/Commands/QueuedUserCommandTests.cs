@@ -132,6 +132,15 @@ public class QueuedUserCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task OrdinaryMatchedTriggerQueuesTheComputedBodyAndExplicitAliases()
+	{
+		await Run($"&BODY {_commands}=$^greet (?<target>.*)$:@pemit %#={_token} %<target>|[hasarg(target,supplied)]|%0");
+		await Run($"@set {_commands}/BODY=regexp");
+		await RunQueued($"@trigger/match/args {_commands}/BODY=greet world,TARGET,Bob;@pemit me={_token} after");
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} after", $"{_token} Bob|1|Bob"], CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task OrdinaryTriggerCanBeHaltedByItsParentTail()
 	{
 		await Run($"&BODY {_commands}=@pemit %#={_token} body");

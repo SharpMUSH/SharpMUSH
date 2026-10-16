@@ -777,11 +777,11 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objectArg = parser.CurrentState.Arguments["0"];
 		var text = parser.CurrentState.Arguments["1"];
-		var result = await EvaluateAsAsync(parser, executor, objectArg, text.Message ?? MString.Empty);
+		var result = await EvaluateAsAsync(parser, executor, objectArg, text.Message ?? MString.Empty, rawArgument: false);
 		return result with { HadErrors = text.HadErrors || result.HadErrors };
 	}
 
-	private async ValueTask<CallState> EvaluateAsAsync(IMUSHCodeParser parser, AnySharpObject executor, CallState objectArg, MString expression)
+	private async ValueTask<CallState> EvaluateAsAsync(IMUSHCodeParser parser, AnySharpObject executor, CallState objectArg, MString expression, bool rawArgument = true)
 	{
 		var sideFxEnabled = Configuration.CurrentValue.Function.FunctionSideEffects;
 
@@ -795,7 +795,9 @@ public partial class Functions
 
 		// The caller inside is whoever ran objeval(), as process_expression(..., obj, executor, ...) passes it.
 		var result = await parser.With(state => state with { Executor = evaluator.Object().DBRef, Caller = executor.Object().DBRef },
-			async newParser => await ParseRawArgument(newParser, expression)) ?? CallState.Empty;
+			async newParser => rawArgument
+				? await ParseRawArgument(newParser, expression)
+				: await newParser.FunctionParse(expression)) ?? CallState.Empty;
 		return result with { HadErrors = objectArg.HadErrors || result.HadErrors };
 
 		async ValueTask<bool> MayEvaluateAs(AnySharpObject target) =>
