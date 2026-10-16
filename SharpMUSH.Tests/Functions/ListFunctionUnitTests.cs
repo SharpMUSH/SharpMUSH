@@ -738,9 +738,10 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("munge(test/SORT_MUNGE,b a c,2 1 3)", "1 2 3")]
+	[Arguments("munge(test/SORT_MUNGE,b|a|c,2|1|3,|,;)", "1;2;3")]
 	public async Task Munge(string function, string expected)
 	{
-		var objNum = await CreateObjectWithAttribute("munge_obj", "SORT_MUNGE", "sort(%0,%1)");
+		var objNum = await CreateObjectWithAttribute("munge_obj", "SORT_MUNGE", "sort(%0,,%1)");
 		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(functionWithDbRef));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
@@ -782,6 +783,7 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("index(a b c d,%b,2,2)", "b c")]
+	[Arguments("index(alpha::beta::gamma,::,2,2)", "beta::gamma")]
 	public async Task Index(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
@@ -928,6 +930,7 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("sortkey(test/KEY_SORTKEY,abc ab a)", "a ab abc")]
+	[Arguments("sortkey(test/KEY_SORTKEY,ab|a|abc,n,|,;)", "a;ab;abc")]
 	[Arguments("sortkey(test/KEY_SORTKEY,ab abc a,n)", "a ab abc")]
 	// A leading - reverses the order, and items whose keys tie keep their order.
 	[Arguments("sortkey(test/KEY_SORTKEY,ab a abc cd,-n)", "abc ab cd a")]
