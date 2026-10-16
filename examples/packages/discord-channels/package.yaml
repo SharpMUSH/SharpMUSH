@@ -1,11 +1,12 @@
-format: 1.2
+format: "1.10"
 package: discord-channels
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Joins a game channel to a linked Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel links one, +discord/channels lists them."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, chat, channels, bridge, feed]
+category: Community
 requires_server: ">=0.1"
 
 # Neither side knows about the other. The discord package's feed kind carries a Discord channel's lines (the
@@ -34,74 +35,89 @@ objects:
   # The links and the commands. WIZARD because it emits onto channels it is not on, and its tap and the event
   # send on Discord feeds owned by the Discord Bridge.
   #
-  #   LINK`<discord channel id>   the game channel's name
-  #   BY`<discord channel id>     the objid of whoever linked it, who may remove it once the channel is gone
+  # Trees: CMD` the commands, INC`CMD` their steps, FUN`LINK` the reads about a link, FUN`DISPLAY` what players
+  # see, TAP`DISCORD the tap, and DATA`LINK` the links:
+  #
+  #   DATA`LINK`<discord channel id>      the game channel's name
+  #   DATA`LINK`<discord channel id>`BY   the objid of whoever linked it, who may remove it once the channel is gone
   - ref: links
     type: thing
     name: Discord Channels
     flags: [WIZARD]
     location: "{{$master_room}}"
     attributes:
-      CMD`LIST: |-
-        $+discord/channels:@pemit %#=u(me/FUN`LIST)
-      CMD`LINK: |-
-        $+discord/channel *=*:@include me/INC`LINK=%0,%1,0
-      CMD`LINK`CONFIRM: |-
-        $+discord/channel/confirm *=*:@include me/INC`LINK=%0,%1,1
-      CMD`REMOVE: |-
-        $+discord/channel/remove *:@include me/INC`REMOVE=%0
+      DATA:
+        value: |-
+          The links. One branch per linked Discord channel.
+        flags: [no_command]
+      DATA`LINK: |-
+        One branch per linked Discord channel, by its id: the game channel's name, and BY, who linked it.
 
-      # %0 the game channel as typed, %1 the Discord channel id, %2 1 when the player confirmed that a channel
-      # with a see or join lock goes to Discord.
-      INC`LINK: |-
-        @assert not(strmatch(setr(chan,cinfo(%0,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %0.,warn); @assert u(me/FUN`MAYLINK,%#,%q<chan>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<chan> to Discord.,warn); @assert cand(regmatch(%1,^\\d+$),gte(strlen(%1),17),lte(strlen(%1),20))=@pemit %#=notice(DISCORD,%1 is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(LINK`%1)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(LINK`%1)].,warn); @assert not(strlen(u(me/FUN`LINKOF,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> already goes to Discord channel [u(me/FUN`LINKOF,%q<chan>)]. +discord/channel/remove %q<chan> first.,warn); @assert cor(%2,not(u(me/FUN`PRIVATE,%q<chan>)))=@pemit %#=notice(DISCORD,%q<chan> is for staff only or has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<chan>=%1 links it anyway.,warn); &LINK`%1 me=%q<chan>; &BY`%1 me=objid(%#); @pemit %#=notice(DISCORD,%q<chan> goes to Discord channel %1%, and what is posted there comes back. If @discord does not list that channel%, link it with @discord/link.,ok)
-      # %0 the game channel as typed, or the name it had when it was linked.
-      INC`REMOVE: |-
-        @assert strlen(setr(id,u(me/FUN`LINKOF,firstof(cinfo(%0,name),%0))))=@pemit %#=notice(DISCORD,%0 does not go to Discord.,warn); @assert u(me/FUN`MAYREMOVE,%#,%q<id>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin unlink [v(LINK`%q<id>)].,warn); @pemit %#=notice(DISCORD,[v(LINK`%q<id>)] no longer goes to Discord channel %q<id>.,ok); &LINK`%q<id> me; &BY`%q<id> me
+      CMD`LIST: |-
+        $+discord/channels:@pemit %#=u(me/FUN`DISPLAY`LIST)
+      CMD`LINK: |-
+        $+discord/channel *=*:@include/args me/INC`CMD`LINK=channel,%0,discord_channel_id,%1,confirmed,0
+      CMD`LINK`CONFIRM: |-
+        $+discord/channel/confirm *=*:@include/args me/INC`CMD`LINK=channel,%0,discord_channel_id,%1,confirmed,1
+      CMD`REMOVE: |-
+        $+discord/channel/remove *:@include/args me/INC`CMD`REMOVE=channel,%0
+
+      # %<channel> the game channel as typed, %<discord_channel_id> the Discord channel's id, %<confirmed> 1 when
+      # the player confirmed that a channel with a see or join lock goes to Discord.
+      INC`CMD`LINK: |-
+        @assert not(strmatch(setr(game_channel,cinfo(%<channel>,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %<channel>.,warn); @assert u(me/FUN`LINK`MAYLINK,%#,%q<game_channel>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<game_channel> to Discord.,warn); @assert cand(regmatch(%<discord_channel_id>,^\\d+$),gte(strlen(%<discord_channel_id>),17),lte(strlen(%<discord_channel_id>),20))=@pemit %#=notice(DISCORD,%<discord_channel_id> is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(DATA`LINK`%<discord_channel_id>)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(DATA`LINK`%<discord_channel_id>)].,warn); @assert not(strlen(u(me/FUN`LINK`OF,%q<game_channel>)))=@pemit %#=notice(DISCORD,%q<game_channel> already goes to Discord channel [u(me/FUN`LINK`OF,%q<game_channel>)]. +discord/channel/remove %q<game_channel> first.,warn); @assert cor(%<confirmed>,not(u(me/FUN`LINK`PRIVATE,%q<game_channel>)))=@pemit %#=notice(DISCORD,%q<game_channel> is for staff only or has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<game_channel>=%<discord_channel_id> links it anyway.,warn); &DATA`LINK`%<discord_channel_id> me=%q<game_channel>; &DATA`LINK`%<discord_channel_id>`BY me=objid(%#); @pemit %#=notice(DISCORD,%q<game_channel> goes to Discord channel %<discord_channel_id>%, and what is posted there comes back. If @discord does not list that channel%, link it with @discord/link.,ok)
+      # %<channel> the game channel as typed, or the name it had when it was linked. @wipe takes the link's BY with it.
+      INC`CMD`REMOVE: |-
+        @assert strlen(setr(discord_channel_id,u(me/FUN`LINK`OF,firstof(cinfo(%<channel>,name),%<channel>))))=@pemit %#=notice(DISCORD,%<channel> does not go to Discord.,warn); @assert u(me/FUN`LINK`MAYREMOVE,%#,%q<discord_channel_id>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin unlink [v(DATA`LINK`%q<discord_channel_id>)].,warn); @pemit %#=notice(DISCORD,[v(DATA`LINK`%q<discord_channel_id>)] no longer goes to Discord channel %q<discord_channel_id>.,ok); @wipe me/DATA`LINK`%q<discord_channel_id>
 
       # %0 a player, %1 a game channel: whether they may link it.
-      FUN`MAYLINK: |-
+      FUN`LINK`MAYLINK: |-
         cor(permission(%0,chat.admin),not(comp(objid(cowner(%1)),objid(%0))))
       # %0 a player, %1 a Discord channel id: whether they may remove its link. Once the game channel is renamed
       # or gone, cowner() has nothing to answer, so whoever linked it may.
-      FUN`MAYREMOVE: |-
-        cor(u(me/FUN`MAYLINK,%0,v(LINK`%1)),cand(strmatch(cinfo(v(LINK`%1),name),#-*),not(comp(v(BY`%1),objid(%0)))))
+      FUN`LINK`MAYREMOVE: |-
+        cor(u(me/FUN`LINK`MAYLINK,%0,v(DATA`LINK`%1)),cand(strmatch(cinfo(v(DATA`LINK`%1),name),#-*),not(comp(v(DATA`LINK`%1`BY),objid(%0)))))
       # %0 a game channel: whether not everyone reads it, because it is an Admin or Wizard channel or has a see or
       # join lock.
-      FUN`PRIVATE: |-
+      FUN`LINK`PRIVATE: |-
         cor(strlen(clock(%0/see)),strlen(clock(%0/join)),match(clflags(%0),Admin),match(clflags(%0),Wizard))
       # %0 a game channel: the Discord channel id it goes to, or nothing.
-      FUN`LINKOF: |-
-        first(iter(lattr(me/LINK`*),if(not(comp(lcstr(v(%i0)),lcstr(%0))),last(%i0,`))))
+      FUN`LINK`OF: |-
+        first(iter(lattr(me/DATA`LINK`*),if(not(comp(lcstr(v(%i0)),lcstr(%0))),last(%i0,`))))
       # %0 a style, %1 the speaker's name, %2 the text: the line as the game channel shows it.
-      FUN`LINE: |-
+      FUN`DISPLAY`LINE: |-
         switch(%0,pose,%1 %2,semipose,%1%2,emit,%2,%1 says%, "%2")
-      FUN`LIST: |-
-        if(words(lattr(me/LINK`*)),box(datacolumns(json(object,delim,json(string,%r),grow,json(string,1)),[tone(strong,Game channel)]%r[iter(lattr(me/LINK`*),u(me/FUN`CHANNELNAME,v(%i0)),,%r)],[tone(strong,Discord channel)]%r[iter(lattr(me/LINK`*),last(%i0,`),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
+      # The linked channels, as +discord/channels shows them.
+      FUN`DISPLAY`LIST: |-
+        if(words(lattr(me/DATA`LINK`*)),box(datacolumns(json(object,delim,json(string,%r),grow,json(string,1)),tone(strong,Game channel)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`CHANNELNAME,v(%i0)),,%r)],tone(strong,Discord channel)%r[iter(lattr(me/DATA`LINK`*),last(%i0,`),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
       # %0 a linked channel's name: the name, or a note that no channel has it any more.
-      FUN`CHANNELNAME: |-
+      FUN`DISPLAY`CHANNELNAME: |-
         if(strmatch(cinfo(%0,name),#-*),%0 [tone(error,no such channel)],%0)
 
       # A tap on the discord kind. It hears every line sent on a Discord feed, after it is delivered, with the
       # speaker as enactor (help @feed taps), and passes on the lines Discord members posted.
-      TAP: |-
-        @assert cand(strmatch(%<origin>,discord/*),strlen(setr(chan,v(LINK`[after(%<feed>,/)])))); @cemit %q<chan>=u(me/FUN`LINE,%<style>,firstof(%<name>,name(%<speaker>)),%<text>)
+      TAP`DISCORD: |-
+        @assert cand(strmatch(%<origin>,discord/*),strlen(setr(game_channel,v(DATA`LINK`[after(%<feed>,/)])))); @cemit %q<game_channel>=u(me/FUN`DISPLAY`LINE,%<style>,firstof(%<name>,name(%<speaker>)),%<text>)
 
-      # Taps are stored, so this only puts the tap back after the discord kind was undefined and defined again.
+      # Taps are stored, so this only puts the tap back after the discord kind was undefined and defined again, or
+      # adds TAP`DISCORD after an update from 1.0, whose tap was on TAP.
       STARTUP: |-
-        @feed/tap discord={{links}}/TAP
+        @feed/tap discord={{links}}/TAP`DISCORD
       AINSTALL: |-
+        @trigger {{links}}/STARTUP
+      AUPDATE: |-
         @trigger {{links}}/STARTUP
 
   # A game channel's lines to its Discord channel. The event runs as the event handler with the speaker as
   # enactor, so @feed/send sends as the speaker, who must pass the Discord feed's send lock (help @feed
   # sending). A connect or disconnect line stays in the game, and so does a line this package emitted. An
-  # emit names no speaker in the game, so in Discord it goes under the channel's name.
+  # emit names no speaker in the game, so in Discord it goes under the channel's name. Each style is its own
+  # @feed/send switch, and a command's switch is not evaluated, so the @switch names each one.
   - ref: event
     target: "{{$event_handler}}"
     attributes:
       CHANNEL`MESSAGE`DISCORDCHANNELS: |-
-        @assert cand(comp(%<style>,presence),comp(objid(%#),objid({{links}})),strlen(setr(id,u({{links}}/FUN`LINKOF,%<channel>)))); @switch %<style>=emit,{@feed/send/emit/as discord/%q<id>=%<channel>/%<message>},pose,{@feed/send/pose discord/%q<id>=%<message>},semipose,{@feed/send/semipose discord/%q<id>=%<message>},{@feed/send/say discord/%q<id>=%<message>}
+        @assert cand(comp(%<style>,presence),comp(objid(%#),objid({{links}})),strlen(setr(discord_channel_id,u({{links}}/FUN`LINK`OF,%<channel>)))); @switch %<style>=emit,{@feed/send/emit/as discord/%q<discord_channel_id>=%<channel>/%<message>},pose,{@feed/send/pose discord/%q<discord_channel_id>=%<message>},semipose,{@feed/send/semipose discord/%q<discord_channel_id>=%<message>},{@feed/send/say discord/%q<discord_channel_id>=%<message>}
 
   - ref: help
     type: thing

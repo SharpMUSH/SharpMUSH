@@ -45,7 +45,7 @@ public class AccountSocketArgSplitTests
 	public async ValueTask Register_TwoTokens_CreatesAccount()
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("regtwo");
-		var handle = await RegisterConnectionAsync(4001L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));
 
@@ -62,7 +62,7 @@ public class AccountSocketArgSplitTests
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("regthree");
 		var email = $"{username}@example.test";
-		var handle = await RegisterConnectionAsync(4002L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} {email} some-password-1"));
 
@@ -77,7 +77,7 @@ public class AccountSocketArgSplitTests
 	[Test, NotInParallel([nameof(AccountSocketArgSplitTests), "ConfigMutation"])]
 	public async ValueTask Register_OneToken_ShowsUsageError()
 	{
-		var handle = await RegisterConnectionAsync(4003L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register soloname"));
 
@@ -95,10 +95,10 @@ public class AccountSocketArgSplitTests
 	public async ValueTask Login_AfterRegister_Succeeds()
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("loginok");
-		var registerHandle = await RegisterConnectionAsync(4004L);
+		var registerHandle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 		await Parser.CommandParse(registerHandle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));
 
-		var loginHandle = await RegisterConnectionAsync(4005L);
+		var loginHandle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 		await Parser.CommandParse(loginHandle, ConnectionService, MarkupText.Plain($"login {username} some-password-1"));
 
 		var state = ConnectionService.Get(loginHandle)?.State;

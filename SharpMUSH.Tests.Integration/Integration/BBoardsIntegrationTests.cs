@@ -175,6 +175,110 @@ public partial class BBoardsIntegrationTests
 		}
 	}
 
+	/// <summary>A removed comment without replies is gone: the comments after it move up one.</summary>
+	[Test]
+	public async Task ARemovedCommentIsGoneAndTheNextMovesUp()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbRmAdm", "bboard-admin");
+			var mira = await Player("BbRmMira");
+			var board = await Board(admin, "BbRemove");
+
+			var post = await Post(mira, board, "Gone", "A post with two comments.");
+			await As(mira, $"+bbcomment {post}=Alpha comment.");
+			await As(mira, $"+bbcomment {post}=Beta comment.");
+
+			await Assert.That(await As(mira, $"+bbremove {post}/1")).Contains("[2] is now [1].");
+			var read = await As(mira, $"+bbread {post}");
+			await Assert.That(read).DoesNotContain("Alpha comment.").And.Contains("Beta comment.");
+			await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Beta comment.")
+				.Because("the comment after the removed one is number 1 now");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// The game-wide settings (board defaults, ceilings, thread page size) are +config settings; a board's
+	/// own +bbconfig still overrides the defaults.
+	/// </summary>
+	[Test]
+	public async Task SettingsAreChangedThroughPlusConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbCfgAdm", "bboard-admin");
+			var board = await Board(admin, "BbCfg");
+
+			await God("+config bboards/default-pins=4");
+			await God("+config bboards/max-pins=6");
+			await God("+config bboards/thread-page=5");
+			await Assert.That(await As(admin, $"+bbinfo {board}")).Contains("0/4").Because("a board that sets no pins takes the default");
+			await Assert.That(await As(admin, $"+bbconfig {board}/pins=8")).Contains("Pins are 0 to 6.");
+			await As(admin, $"+bbconfig {board}/pins=2");
+			await Assert.That(await As(admin, $"+bbinfo {board}")).Contains("0/2").Because("a board's own setting wins");
+			await Assert.That(await As(admin, "+bbconfig default/pins=3")).Contains("+config bboards/default-pins");
+
+			var post = await Post(admin, board, "Paged", "Body.");
+			for (var i = 1; i <= 7; i++)
+			{
+				await As(admin, $"+bbcomment {post}=Setting comment {i}.");
+			}
+
+			await Assert.That(await As(admin, $"+bbread {post}")).Contains("page 1 of 2");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// Removing a post, tossing a draft and clearing a board take the readers' leaves for them away, not
+	/// leave them behind empty.
+	/// </summary>
+	[Test]
+	public async Task RemovedPostsDraftsAndBoardsLeaveNoEmptyReadingLeaves()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbLfAdm", "bboard-admin");
+			var mira = await Player("BbLfMira");
+			var board = await Board(admin, "BbLeaves");
+			var post = await Post(admin, board, "Followed", "Follow me.");
+
+			await Assert.That(await As(mira, $"+bbfollow {post}")).Contains("Following");
+			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`P**))]")).IsNotEqualTo("0");
+			await As(admin, $"+bbremove {post}");
+			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`P**)]")).IsEmpty()
+				.Because("a removed post's reading leaves are wiped, not emptied");
+
+			await As(mira, $"+bbpost {board}/A draft");
+			await As(mira, "+bbwrite A line.");
+			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**))]")).IsNotEqualTo("0");
+			await As(mira, "+bbtoss");
+			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**)]")).IsEmpty()
+				.Because("a tossed draft is wiped, not emptied");
+
+			var group = await Board(admin, "BbLeavesGone");
+			await As(mira, $"+bbleave {group}");
+			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`B**))]")).IsNotEqualTo("0");
+			await As(admin, $"+bbcleargroup {group}");
+			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`B**)]")).IsEmpty()
+				.Because("a cleared board's reading leaves are wiped, not emptied");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	/// <summary>
 	/// A board's ON` hooks are a contract with the game's own code: each argument comes by name and by
 	/// place, so a hook written either way hears the same thing.

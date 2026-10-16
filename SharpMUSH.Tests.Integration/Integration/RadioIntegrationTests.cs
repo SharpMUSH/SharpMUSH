@@ -72,7 +72,8 @@ public class RadioIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
-		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
+		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>()
+			.Because($"{package} must install from the catalogue: {System.Text.Json.JsonSerializer.Serialize((applied.Result as ObjectResult)?.Value)}");
 		// AINSTALL is queued after the apply: it defines the feed kind and adds +radio.
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
@@ -166,7 +167,7 @@ public class RadioIntegrationTests
 			await Assert.That(await Paint("success")).Contains("tone-success").And.Contains("Police");
 			await Assert.That(await Paint("hg")).DoesNotContain("tone-").And.Contains("Police");
 			await Assert.That(await Paint("")).IsEqualTo("Police");
-			await Assert.That(await God($"think [get({radio}/DATA`COLOR)]")).IsEqualTo("info");
+			await Assert.That(await God($"think [get({radio}/DATA`CONFIG`COLOR)]")).IsEqualTo("info");
 
 			var admin = await Player("RadColA", "radio-admin");
 			var ann = await Player("RadColAnn");
@@ -175,6 +176,93 @@ public class RadioIntegrationTests
 			await Assert.That(await As(ann, "+radio/color Tower=success")).Contains("You see Tower like this now.");
 			await Assert.That(await As(ann, "+radio/color Tower=hg")).Contains("You see Tower like this now.");
 			await Assert.That(await As(ann, "+radio/color Tower=")).Contains("You see Tower like this now.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>A word that is neither a theme colour nor ansi() codes is refused, not stored.</summary>
+	[Test]
+	public async Task AColourThatIsNoColourIsRefused()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("RadSpkA", "radio-admin");
+			var ann = await Player("RadSpkAnn");
+			await As(admin, "+radio/create Beacon");
+			await As(ann, "+radio/join Beacon");
+
+			await Assert.That(await As(ann, "+radio/color Beacon=sparkly")).Contains("'sparkly' is not a colour.");
+			await Assert.That(await As(ann, "+radio/color Beacon=hz")).Contains("'hz' is not a colour.");
+			await Assert.That(await As(ann, "+radio/color Beacon=+red")).Contains("You see Beacon like this now.");
+			await Assert.That(await As(ann, "+radio/color Beacon=#ff8800")).Contains("You see Beacon like this now.");
+			await Assert.That(await As(ann, "+radio/color Beacon=warning")).Contains("You see Beacon like this now.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// The radio's settings are +config's: +config radio lists them, a change is what +radio reads, and a colour
+	/// is checked the way +radio/color checks one.
+	/// </summary>
+	[Test]
+	public async Task TheRadiosSettingsAreChangedThroughConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var staff = await Player("RadCfg");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+
+			await Assert.That(await As(staff, "+config radio")).Contains("recall-max").And.Contains("title-length").And.DoesNotContain("no such system");
+			await Assert.That(await As(staff, "+config radio/color=sparkly")).Contains("'sparkly' is not a colour.");
+			await As(staff, "+config radio/title-length=5");
+			await As(staff, "+config radio/recall=1");
+
+			var admin = await Player("RadCfgA", "radio-admin");
+			await As(admin, "+radio/create Relay");
+			await As(admin, "+radio/join Relay");
+			await Assert.That(await As(admin, "+radio/title Relay=Lieutenant")).Contains("A title is up to 5 characters.");
+			var first = TestIsolationHelpers.GenerateUniqueName("RadCfgOne");
+			var second = TestIsolationHelpers.GenerateUniqueName("RadCfgTwo");
+			await As(admin, $"+radio Relay={first}");
+			await As(admin, $"+radio Relay={second}");
+			await Assert.That(await As(admin, "+radio/recall Relay")).Contains(second).And.DoesNotContain(first)
+				.Because("recall is 1 line when no number is given");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>A long recall comes a screen at a time, the newest lines first; a page number goes only with a paged screen.</summary>
+	[Test]
+	public async Task ALongRecallIsPaged()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("RadPgA", "radio-admin");
+			await As(admin, "+radio/create Echo");
+			await As(admin, "+radio/join Echo");
+			var marker = TestIsolationHelpers.GenerateUniqueName("RadPg");
+			for (var i = 1; i <= 40; i++) await As(admin, $"+radio Echo={marker}-{i:00}");
+
+			var newest = await As(admin, "+radio/recall Echo=40");
+			await Assert.That(newest).Contains($"{marker}-40").And.DoesNotContain($"{marker}-01")
+				.And.Contains("page 1 of 2").And.Contains("+radio/recall/2 Echo=40 for the lines before");
+			var older = await As(admin, "+radio/recall/2 Echo=40");
+			await Assert.That(older).Contains($"{marker}-01").And.DoesNotContain($"{marker}-40").And.Contains("page 2 of 2");
+			await Assert.That(await As(admin, "+radio/recall/3 Echo=40")).Contains("There are 2 pages - you asked for page 3.");
+			await Assert.That(await As(admin, "+radio/recall/0 Echo")).Contains("+radio/recall <frequency>=<lines> shows what was said last");
+			await Assert.That(await As(admin, "+radio/join/2 Echo")).Contains("+radio/join takes no page number.");
 		}
 		finally
 		{
@@ -282,6 +370,50 @@ public class RadioIntegrationTests
 			var unlogged = TestIsolationHelpers.GenerateUniqueName("RadUnlogged");
 			await As(ann, $"+radio Ship={unlogged}");
 			await Assert.That(await God($"think [words(sceneposes({scene}))]")).IsEqualTo(poses.Length.ToString());
+		}
+		finally
+		{
+			await Installer.UninstallAsync("radio-scene", force: true, CancellationToken.None);
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// +scene/pause leaves the player's focus on the scene, so a tap that only asks for a focus would keep writing
+	/// radio lines into it. A paused scene records nothing, radio included, until +scene/start resumes it.
+	/// </summary>
+	[Test]
+	public async Task WithRadioScene_APausedSceneLogsNoRadioUntilItResumes()
+	{
+		try
+		{
+			await InstallAsync();
+			await InstallAsync("radio-scene");
+			var admin = await Player("RadA", "radio-admin");
+			var logger = await Player("RadPauser", "approved");
+			var ann = await Player("RadAnn");
+
+			await As(admin, "+radio/create Harbour");
+			await As(logger, "+radio/join Harbour");
+			await As(ann, "+radio/join Harbour");
+			await As(logger, $"+scene/create {TestIsolationHelpers.GenerateUniqueName("RadPaused")}");
+			var scene = await God($"think [scenefocus(#{logger.DbRef.Number})]");
+			await As(logger, "+radio/log Harbour");
+
+			await Assert.That(await As(logger, "+scene/pause")).Contains("paused");
+			await Assert.That(await God($"think [scenefocus(#{logger.DbRef.Number})]")).IsEqualTo(scene)
+				.Because("pausing keeps the player's focus on the scene");
+			var before = await God($"think [words(sceneposes({scene}))]");
+			var whilePaused = TestIsolationHelpers.GenerateUniqueName("RadWhilePaused");
+			await As(ann, $"+radio Harbour={whilePaused}");
+			await Assert.That(await God($"think [words(sceneposes({scene}))]")).IsEqualTo(before)
+				.Because("a paused scene records nothing");
+
+			await As(logger, $"+scene/start {scene}");
+			var resumed = TestIsolationHelpers.GenerateUniqueName("RadResumed");
+			await As(ann, $"+radio Harbour={resumed}");
+			var last = await God($"think [last(sceneposes({scene}))]");
+			await Assert.That(await God($"think [scenepose({scene},{last},content)]")).Contains(resumed);
 		}
 		finally
 		{

@@ -1,6 +1,6 @@
 format: "1.10"
 package: roster-jobs
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Roster applications through the job queue: +roster/apply files a job in a Roster bucket, and approving the job gives the character to the applicant's account."
 license: MIT
@@ -19,7 +19,7 @@ depends:
       path: examples/packages/roster/
       branch: main
   - package: jobs
-    version: ">=1.7 <2.0"
+    version: ">=1.11 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/jobs/
@@ -29,6 +29,12 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
 
 # Who decides applications is who works the Roster bucket, as with every bucket: softcode.jobs.roster, or
@@ -66,13 +72,36 @@ objects:
     attributes:
       APP: |-
         Open roster applications, one branch per job number.
-      # How many open applications one account may have at once.
-      DATA`MAX`OPEN: |-
+      # The setting +config shows and changes (plus-config), read with get({{applications}}/DATA`CONFIG`MAX-OPEN).
+      DATA`CONFIG: |-
+        How many roster applications an account may have open at once.
+      DATA`CONFIG`LABEL: |-
+        Roster applications
+      DATA`CONFIG`MAX-OPEN: |-
         3
-      # +roster/apply <name>=<why>, run by the Roster with @trigger/inline/spoof and its command registers: cmd_left_side the name,
-      # cmd_right_side the reasons, %# the applicant.
-      INC`APPLY: |-
-        @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(ROSTER,+roster/apply <name>=<why you want to play them>,warn); @assert strlen(setr(roster_char,u({{roster/roster}}/FUN`CHARACTER,%q<cmd_left_side>)))=@pemit %#=notice(ROSTER,There is no character called '%q<cmd_left_side>'.,warn); @assert u({{roster/roster}}/FUN`ENTRY`HAS,%q<roster_char>)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is not on the roster.,warn); @assert strmatch(setr(roster_state,u({{roster/roster}}/FUN`ENTRY`STATE,%q<roster_char>)),available)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is %q<roster_state>%, not available.,warn); @assert strlen(setr(apply_account,account(%#)))=@pemit %#=notice(ROSTER,Apply from a character on your account: the character you are given is linked to it.,warn); @assert not(words(u({{applications}}/FUN`OPEN`FOR,%q<apply_account>,%q<roster_char>)))=@pemit %#=notice(ROSTER,Your account already has an application open for [name(%q<roster_char>)]: job [first(u({{applications}}/FUN`OPEN`FOR,%q<apply_account>,%q<roster_char>))].,warn); @assert lt(words(u({{applications}}/FUN`OPEN`FOR,%q<apply_account>)),get({{applications}}/DATA`MAX`OPEN))=@pemit %#=notice(ROSTER,Your account has [get({{applications}}/DATA`MAX`OPEN)] applications open%, the most it may. Wait for one to be decided.,warn); @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`FILE=player,%#,bucket,name({{bucket}}),title,Roster: [name(%q<roster_char>)],text,%q<cmd_right_side>; @assert strlen(%q<job>)=@pemit %#=notice(ROSTER,Your application could not be filed. Tell staff.,error); &APP`%q<job> {{applications}}=%q<roster_char>; &APP`%q<job>`ACCOUNT {{applications}}=%q<apply_account>; &APP`%q<job>`APPLICANT {{applications}}=%:; @pemit %#=notice(ROSTER,Your application for [name(%q<roster_char>)] is job %q<job>. +job %q<job> follows it.,ok)
+      DATA`CONFIG`MAX-OPEN`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-OPEN`DEFAULT: |-
+        3
+      DATA`CONFIG`MAX-OPEN`MIN: |-
+        1
+      DATA`CONFIG`MAX-OPEN`LABEL: |-
+        Open applications per account
+      DATA`CONFIG`MAX-OPEN`DESCRIPTION: |-
+        How many roster applications one account may have open at once.
+      DATA`CONFIG`MAX-OPEN`EXAMPLE: |-
+        1
+      # +roster/apply <name>=<why>, run by the Roster with @trigger/inline/spoof and its command registers:
+      # cmd_left_side the name, cmd_right_side the reasons, %# the applicant.
+      INC`CMD`APPLY: |-
+        @include {{applications}}/INC`APPLY`CHECK; @include {{applications}}/INC`APPLY`FILE
+      # Stops an application that cannot be made; else leaves the character in roster_char and the applicant's
+      # account in apply_account.
+      INC`APPLY`CHECK: |-
+        @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(ROSTER,+roster/apply <name>=<why you want to play them>,warn); @assert strlen(setr(roster_char,u({{roster/roster}}/FUN`ENTRY`CHARACTER,%q<cmd_left_side>)))=@pemit %#=notice(ROSTER,There is no character called '%q<cmd_left_side>'.,warn); @assert u({{roster/roster}}/FUN`ENTRY`HAS,%q<roster_char>)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is not on the roster.,warn); @assert strmatch(setr(roster_state,u({{roster/roster}}/FUN`ENTRY`STATE,%q<roster_char>)),available)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is %q<roster_state>%, not available.,warn); @assert strlen(setr(apply_account,account(%#)))=@pemit %#=notice(ROSTER,Apply from a character on your account: the character you are given is linked to it.,warn); @assert not(words(u({{applications}}/FUN`OPEN`FOR,%q<apply_account>,%q<roster_char>)))=@pemit %#=notice(ROSTER,Your account already has an application open for [name(%q<roster_char>)]: job [first(u({{applications}}/FUN`OPEN`FOR,%q<apply_account>,%q<roster_char>))].,warn); @assert lt(words(u({{applications}}/FUN`OPEN`FOR,%q<apply_account>)),get({{applications}}/DATA`CONFIG`MAX-OPEN))=@pemit %#=notice(ROSTER,Your account has [get({{applications}}/DATA`CONFIG`MAX-OPEN)] applications open%, the most it may. Wait for one to be decided.,warn)
+      # Files the application for roster_char as a job in the Roster bucket, and records it under the job's number.
+      INC`APPLY`FILE: |-
+        @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`FILE=player,%#,bucket,name({{bucket}}),title,Roster: [name(%q<roster_char>)],text,%q<cmd_right_side>; @assert strlen(%q<job>)=@pemit %#=notice(ROSTER,Your application could not be filed. Tell staff.,error); &APP`%q<job> {{applications}}=%q<roster_char>; &APP`%q<job>`ACCOUNT {{applications}}=%q<apply_account>; &APP`%q<job>`APPLICANT {{applications}}=%:; @pemit %#=notice(ROSTER,Your application for [name(%q<roster_char>)] is job %q<job>. +job %q<job> follows it.,ok)
       # %0 an account id, %1 a character when given: the open applications' job numbers, for that account, and
       # for that character when given.
       FUN`OPEN`FOR: |-
@@ -87,12 +116,13 @@ objects:
       # Closes every open application for %<character>, as %<actor>: approved for %<account>, which now holds it,
       # and denied with %<text> as the reason for every other account.
       INC`CLOSE`OTHERS: |-
-        @dolist/inline u({{applications}}/FUN`OPEN`CHARACTER,%<character>)={think setq(apply_holder,cand(strlen(%<account>),strmatch(get({{applications}}/APP`##`ACCOUNT),%<account>))); @wipe {{applications}}/APP`##; @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`CLOSE=job,##,actor,%<actor>,outcome,if(%q<apply_holder>,approved,denied),text,if(%q<apply_holder>,[name(%<character>)] is yours now.,%<text>)}
+        @dolist/inline u({{applications}}/FUN`OPEN`CHARACTER,%<character>)={think setq(apply_holder,cand(strlen(%<account>),strmatch(get({{applications}}/APP`##`ACCOUNT),%<account>))); @wipe {{applications}}/APP`##; @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`CLOSE=job,##,actor,%<actor>,outcome,if(%q<apply_holder>,approved,denied),text,if(%q<apply_holder>,name(%<character>) is yours now.,%<text>)}
       # A job in the Roster bucket was approved, as the bucket: give the character to the applicant's account.
       # When the roster refuses (the character went to someone else, or the account holds its limit), the job
       # says why and so does the approver's screen.
-      INC`APPROVE: |-
-        @assert hasattr({{applications}},APP`%<job>); think setqm(apply_char,get({{applications}}/APP`%<job>),apply_applicant,get({{applications}}/APP`%<job>`APPLICANT)); @wipe {{applications}}/APP`%<job>; @trigger/inline/nobreak/args {{roster/roster}}/INC`API`ASSIGN=character,%q<apply_char>,to,%q<apply_applicant>,actor,%<actor>,reason,Approved in job %<job>.; @break strlen(%q<roster_error>)={@trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`NOTE=job,%<job>,actor,%<actor>,text,The roster did not give the character over: %q<roster_error>; @pemit %<actor>=notice(ROSTER,Job %<job> is approved%, but [name(%q<apply_char>)] was not given over: %q<roster_error>,error)}
+      INC`HOOK`APPROVE: |-
+        @assert hasattr({{applications}},APP`%<job>); think setqm(apply_char,get({{applications}}/APP`%<job>),
+        apply_applicant,get({{applications}}/APP`%<job>`APPLICANT)); @wipe {{applications}}/APP`%<job>; @trigger/inline/nobreak/args {{roster/roster}}/INC`API`ASSIGN=character,%q<apply_char>,to,%q<apply_applicant>,actor,%<actor>,reason,Approved in job %<job>.; @break strlen(%q<roster_error>)={@trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`NOTE=job,%<job>,actor,%<actor>,text,The roster did not give the character over: %q<roster_error>; @pemit %<actor>=notice(ROSTER,Job %<job> is approved%, but [name(%q<apply_char>)] was not given over: %q<roster_error>,error)}
 
   # The bucket. Its work lock says who decides applications. Its file lock is #FALSE: applications come only
   # through +roster/apply, which files with the jobs API. WIZARD because its approve hook gives the character
@@ -114,7 +144,7 @@ objects:
       TURNAROUND: |-
         7
       ON`APPROVE: |-
-        @trigger/inline/nobreak/args {{applications}}/INC`APPROVE=job,%<job>,actor,%<actor>
+        @trigger/inline/nobreak/args {{applications}}/INC`HOOK`APPROVE=job,%<job>,actor,%<actor>
       ON`DENY: |-
         @wipe {{applications}}/APP`%<job>
       ON`CANCEL: |-
@@ -130,13 +160,13 @@ objects:
     target: "{{roster/roster}}"
     attributes:
       DATA`ROUTE`APPLY: |-
-        {{applications}}/INC`APPLY
-      DATA`HOW`TO`GET`JOBS: |-
+        {{applications}}/INC`CMD`APPLY
+      DATA`HOWTOGET`JOBS: |-
         Apply with +roster/apply <name>=<why you want to play them>. Staff decide in the job queue.
       ON`ASSIGN`JOBS: |-
-        @trigger/inline/nobreak/args {{applications}}/INC`CLOSE`OTHERS=character,%<character>,account,%<account>,actor,firstof(%<actor>,%!),text,[name(%<character>)] has been given to another player.
+        @trigger/inline/nobreak/args {{applications}}/INC`CLOSE`OTHERS=character,%<character>,account,%<account>,actor,firstof(%<actor>,%!),text,name(%<character>) has been given to another player.
       ON`REMOVE`JOBS: |-
-        @trigger/inline/nobreak/args {{applications}}/INC`CLOSE`OTHERS=character,%<character>,actor,firstof(%<actor>,%!),text,[name(%<character>)] is no longer on the roster.
+        @trigger/inline/nobreak/args {{applications}}/INC`CLOSE`OTHERS=character,%<character>,actor,firstof(%<actor>,%!),text,name(%<character>) is no longer on the roster.
 
   - ref: roster_jobs_help
     type: thing
@@ -161,10 +191,16 @@ objects:
 
         Nobody can file in the Roster bucket with `+request`: applications come only from `+roster/apply`.
 
-        `` DATA`MAX`OPEN `` on the Roster Applications object \(inside the Roster\) is how many applications one account may have open. 3 by default.
+        `+config roster-jobs/max-open` is how many applications one account may have open. 3 by default.
 
   - ref: help_registration
     target: "{{plus-help/librarian}}"
     attributes:
       SRC`ROSTER-JOBS: |-
         {{roster_jobs_help}}
+
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`ROSTER-JOBS: |-
+        {{applications}}

@@ -1,6 +1,6 @@
 format: "1.10"
 package: relationships-scene
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Adds Last scene together to the +rel card and the portal's name card: the latest scene you and that character both belong to, linked to its log."
 license: MIT
@@ -40,7 +40,7 @@ objects:
       LINE`030`SCENE: |-
         Last scene together
       SHOW`SCENE: |-
-        if(strlen(setr(shared_scene,u(%!/FUN`SCENE`SHARED,%<viewer>,%<target>))),[firstof(scene(%q<shared_scene>,title),Scene %q<shared_scene>)] · [u(%!/FUN`SCENE`WHEN,%q<shared_scene>)])
+        if(strlen(setr(shared_scene,u(%!/FUN`SCENE`SHARED,%<viewer>,%<target>))),firstof(scene(%q<shared_scene>,title),Scene %q<shared_scene>) · [u(%!/FUN`SCENE`WHEN,%q<shared_scene>)])
       LINK`SCENE: |-
         if(strlen(setr(shared_scene,u(%!/FUN`SCENE`SHARED,%<viewer>,%<target>))),/scenes/%q<shared_scene>)
       # %0 the reader, %1 the character: the id of the latest scene both belong to, or empty. Nothing for the

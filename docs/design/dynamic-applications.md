@@ -278,13 +278,13 @@ round-trips:
 
 Schemas are emitted with nested `json(object,...)`/`json(array,...)`, exactly as the
 profile schema does (`examples/packages/profile-handler/package.yaml:27-51` — note the
-reusable `FN`FIELD` helper attribute and `GET`PROFILE`SCHEMA` body).
+reusable `FUN`PROFILE`FIELD` helper attribute and `GET`PROFILE`SCHEMA` body).
 
 > **`ArgumentsOrdered` numeric-ordering requirement.** Any `json()` call with **ten or
 > more arguments** must keep numeric argument order — `%10` must not sort before `%2`.
 > Field-heavy schemas hit this constantly. The engine handles it via
-> `ParserState.ArgumentsOrdered`, but authors should still prefer small reusable `FN`*`
-> helper attributes (one element each, à la `FN`FIELD`) over hand-writing one giant
+> `ParserState.ArgumentsOrdered`, but authors should still prefer small reusable `FUN`*`
+> helper attributes (one element each, à la `FUN`PROFILE`FIELD`) over hand-writing one giant
 > `json()` expression. This keeps schemas readable and sidesteps argument-count footguns.
 
 ## Application registry (server, DB-backed)

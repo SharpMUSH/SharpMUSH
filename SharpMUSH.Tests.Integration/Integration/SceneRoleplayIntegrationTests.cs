@@ -275,12 +275,9 @@ public class SceneRoleplayIntegrationTests
 		var createMsgs = await RunAndCollectAs(aliceHandle, $"+scene/create {sceneTitle}");
 		Log($"[CREATE] {string.Join(" | ", createMsgs)}");
 
-		// The verb stamps the new scene id onto Alice's MY.SID attribute. Read it directly
-		// (a plain attribute read — no scene-visibility gate), since the scene…() read functions
-		// are visibility-gated and the new scene is private (so even God, who is not a member,
-		// gets #-1 PERMISSION until we make it public below).
-		var sceneId = await Eval($"get({alice}/MY.SID)");
-		Log($"[CREATE] scene id (Alice MY.SID): {sceneId}");
+		// The verb focuses Alice on the new scene, so scenefocus() names it.
+		var sceneId = await Eval($"scenefocus({alice})");
+		Log($"[CREATE] scene id (Alice's focus): {sceneId}");
 		await Assert.That(sceneId).DoesNotStartWith("#-1")
 			.Because("+scene/create should create a scene and stamp its id on the creator");
 		await Assert.That(sceneId).IsNotEmpty()
@@ -535,7 +532,7 @@ public class SceneRoleplayIntegrationTests
 
 		await RunAndCollectAs(patHandle, $"+scene/create PotTest_{Tag}");
 		await RunAndCollectAs(patHandle, "+scene/start");
-		var sceneId = await Eval($"get({pat}/MY.SID)");   // CMD`CREATE records the id in MY.SID
+		var sceneId = await Eval($"scenefocus({pat})");   // CMD`CREATE focuses the creator on it
 		await Assert.That(sceneId).IsNotEmpty().Because("+scene/create should have recorded the scene id");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 
@@ -660,7 +657,7 @@ public class SceneRoleplayIntegrationTests
 		await God1($"@tel {una}={room}");
 
 		await RunAndCollectAs(unaHandle, $"+scene/create PauseTest_{Tag}");
-		var sceneId = await Eval($"get({una}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({una})");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active");
 
 		// Paused by id with a new time (epoch seconds, as the portal sends it).
@@ -723,7 +720,7 @@ public class SceneRoleplayIntegrationTests
 		await God1($"@tel {vic}={room}");
 
 		await RunAndCollectAs(vicHandle, $"+scene/create AliasTest_{Tag}");
-		var sceneId = await Eval($"get({vic}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({vic})");
 
 		await RunAndCollectAs(vicHandle, $"+scene/title Renamed_{Tag}");
 		await Assert.That(await Eval($"scene({sceneId}, title)")).IsEqualTo($"Renamed_{Tag}");
@@ -799,7 +796,7 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(table.Where(l => l.StartsWith('|'))).IsEmpty().Because("no side border is copied with a row");
 
 		int Row(string title) => table.FindIndex(l => l.Contains(title));
-		var day = await Eval($"u({loggerDbref}/FUN`SCHED_DAY,{morning})");
+		var day = await Eval($"u({loggerDbref}/FUN`SCHEDULE`DAY,{morning})");
 		await Assert.That(day).IsEqualTo(await Eval($"timefmt($a $b,{At(3, 9)})") + " " + DateTime.Today.AddDays(3).Day
 			+ (DateTime.Today.AddDays(3).Year == DateTime.Today.Year ? "" : " " + DateTime.Today.AddDays(3).Year));
 		var heading = table.FindIndex(l => l.Contains("Day") && l.Contains("Time") && l.Contains("Title") && l.Contains("RSVP"));
@@ -876,7 +873,7 @@ public class SceneRoleplayIntegrationTests
 
 		await RunAndCollectAs(tomHandle, $"+scene/create PartTest_{Tag}");
 		await RunAndCollectAs(tomHandle, "+scene/start");
-		var sceneId = await Eval($"get({tom}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({tom})");
 		await Assert.That(sceneId).IsNotEmpty();
 		var contexts = WebAppFactoryArg.Services.GetRequiredService<IContextStack>();
 		bool Focused() => contexts.Read(DBRef.Parse(tom)).Any(weighted => weighted.Context.Name == "scene_focus");
@@ -973,7 +970,7 @@ public class SceneRoleplayIntegrationTests
 		// +scene/create must work globally (logger $-commands live in #2) even though Zed isn't there.
 		await RunAndCollectAs(zedHandle, $"+scene/create CapTest_{Tag}");
 		await RunAndCollectAs(zedHandle, "+scene/start");
-		var sceneId = await Eval($"get({zed}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({zed})");
 		await Assert.That(sceneId).IsNotEmpty()
 			.Because("+scene/create should work for a remote player when the logger is global in #2");
 
@@ -1006,7 +1003,7 @@ public class SceneRoleplayIntegrationTests
 
 		await RunAndCollectAs(adaHandle, $"+scene/create FormTest_{Tag}");
 		await RunAndCollectAs(adaHandle, "+scene/start");
-		var sceneId = await Eval($"get({ada}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({ada})");
 
 		await RunAndCollectAs(adaHandle, "pose waves.");          // "pose " form
 		await RunAndCollectAs(adaHandle, ":nods.");               // ':' pose shortcut
@@ -1131,7 +1128,7 @@ public class SceneRoleplayIntegrationTests
 
 		await RunAndCollectAs(janeHandle, $"+scene/create YouSayTest_{Tag}");
 		await RunAndCollectAs(janeHandle, "+scene/start");
-		var sceneId = await Eval($"get({jane}/MY.SID)");
+		var sceneId = await Eval($"scenefocus({jane})");
 
 		foreach (var (command, text) in new[] { ("say hello there", "hello there"), ("\"quoted shortcut", "quoted shortcut") })
 		{
@@ -1171,7 +1168,8 @@ public class SceneRoleplayIntegrationTests
 
 		await RunAndCollectAs(hugoHandle, $"+scene/create FmtTest_{Tag}");
 		await RunAndCollectAs(hugoHandle, "+scene/start");
-		await RunAndCollectAs(irisHandle, $"+scene/join [get({hugo}/MY.SID)]");
+		var hugoScene = await Eval($"scenefocus({hugo})");
+		await RunAndCollectAs(irisHandle, $"+scene/join {hugoScene}");
 
 		// Hugo sets a custom FORMAT`SAY. %0 = message, %1 = recipient dbref, %# = speaker.
 		await God1($"&FORMAT`SAY {hugo}=CUSTOMFMT[name(%#)]: %0");
@@ -1213,9 +1211,9 @@ public class SceneRoleplayIntegrationTests
 
 		// Two scenes back-to-back → consecutive numeric ids.
 		await RunAndCollectAs(beaHandle, $"+scene/create SeqA_{Tag}");
-		var idA = await Eval($"get({bea}/MY.SID)");
+		var idA = await Eval($"scenefocus({bea})");
 		await RunAndCollectAs(beaHandle, $"+scene/create SeqB_{Tag}");
-		var idB = await Eval($"get({bea}/MY.SID)");
+		var idB = await Eval($"scenefocus({bea})");
 		// the 1-based counter is the trailing numeric segment in all cases.
 		static int IdSeq(string id) => int.Parse(id.Split(':')[^1]);
 		await Assert.That(int.TryParse(idA.Split(':')[^1], out _)).IsTrue()

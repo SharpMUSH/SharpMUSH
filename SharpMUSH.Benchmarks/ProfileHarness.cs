@@ -197,13 +197,13 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	/// </summary>
 	private static readonly Dictionary<string, string> RadioLine = new()
 	{
-		["FUN`KEY"] = "[edit(objid(%0),#,,:,_)]",
-		["FUN`NAME"] = "[get(me/F`%0`NAME)]",
-		["FUN`LINE"] = "if(cor(not(strlen(%<id>)),comp(%q<line_id>,%<frequency>/%<id>)),setqm(line_id,%<frequency>/%<id>,line_title,get(me/P`[u(me/FUN`KEY,%<speaker>)]`TITLE`%<frequency>),line_speaker,if(strlen(%q<line_title>),%q<line_title>%b)%<name>,line_frequency,get(me/F`%<frequency>`NAME),line_painted_colour,#-1))[setq(line_colour,firstof(get(me/P`[edit(objid(%<reader>),#,,:,_)]`COLOR`%<frequency>),get(me/DATA`COLOR)))][if(comp(%q<line_painted_colour>,%q<line_colour>),setqm(line_painted_colour,%q<line_colour>,line_painted,u(me/FUN`PAINT,%q<line_colour>,%q<line_frequency>)))]<%q<line_painted>> [switch(%<style>,pose,%q<line_speaker> %<text>,semipose,%q<line_speaker>%<text>,emit,%<text>,announce,%<text>,%q<line_speaker> says\\, \"%<text>\")]",
-		["FUN`PAINT"] = "[if(strmatch(setr(_p,tone(%0,%1)),#-*),ansi(%0,%1),%q<_p>)]",
+		["FUN`KEY"] = "edit(objid(%0),#,,:,_)",
+		["FUN`NAME"] = "get(me/DATA`FREQUENCY`%0`NAME)",
+		["FUN`LINE"] = "if(cor(not(strlen(%<id>)),comp(%q<line_id>,%<frequency>/%<id>)),setqm(line_id,%<frequency>/%<id>,line_title,get(me/DATA`PLAYER`[u(me/FUN`KEY,%<speaker>)]`TITLE`%<frequency>),line_speaker,if(strlen(%q<line_title>),%q<line_title>%b)%<name>,line_frequency,get(me/DATA`FREQUENCY`%<frequency>`NAME),line_painted_colour,#-1))[setq(line_colour,firstof(get(me/DATA`PLAYER`[edit(objid(%<reader>),#,,:,_)]`COLOR`%<frequency>),get(me/DATA`CONFIG`COLOR)))][if(comp(%q<line_painted_colour>,%q<line_colour>),setqm(line_painted_colour,%q<line_colour>,line_painted,u(me/FUN`PAINT,%q<line_colour>,%q<line_frequency>)))]<%q<line_painted>> [switch(%<style>,pose,%q<line_speaker> %<text>,semipose,%q<line_speaker>%<text>,emit,%<text>,announce,%<text>,%q<line_speaker> says\\, \"%<text>\")]",
+		["FUN`PAINT"] = "if(strmatch(setr(paint_toned,tone(%0,%1)),#-*),ansi(%0,%1),%q<paint_toned>)",
 		["FEED`RADIO`FORMAT"] = "uargs(me/FUN`LINE,id,%<id>,frequency,%<key>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,%<recipient>)",
-		["DATA`COLOR"] = "info",
-		["F`1`NAME"] = "Ops",
+		["DATA`CONFIG`COLOR"] = "info",
+		["DATA`FREQUENCY`1`NAME"] = "Ops",
 	};
 
 	/// <summary>

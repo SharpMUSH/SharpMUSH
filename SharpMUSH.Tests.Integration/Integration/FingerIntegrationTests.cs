@@ -16,7 +16,7 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// The bundled finger package, installed from the catalogue and driven with typed commands: +finger and
-/// +oocfinger drawn from the FIELD` list on the Finger object, values kept in each player's PROFILE`&lt;key&gt;,
+/// +oocfinger drawn from the FIELD` table (+config finger/fields) on the Finger object, values kept in each player's PROFILE`&lt;key&gt;,
 /// hidden per field with the visual flag. Each test installs the package and removes it again. Not in
 /// parallel: +finger is global.
 /// </summary>
@@ -197,23 +197,34 @@ public class FingerIntegrationTests
 	}
 
 	[Test]
-	public async Task AGameAddsAFieldWithOneAttribute()
+	public async Task StaffAddAFieldWithConfig()
 	{
 		try
 		{
 			await InstallAsync();
 			var ann = await Player("AdAnn");
 			var bo = await Player("AdBo");
+			var staff = await Player("AdStaff");
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
 
-			await God($"&FIELD`IC`035`HEIGHT {Finger}=Height");
+			// The fields are a +config table: a new one is +finger's, and its order puts it after Age.
+			await As(staff, "+config/add finger/fields/height=Height");
+			await Assert.That(await God($"think get({Finger}/FIELD`HEIGHT`VIEW)")).IsEqualTo("IC");
+			await As(staff, "+config finger/fields/height/order=35");
+			await Assert.That(await God($"think iter(u({Finger}/FUN`FIELD`IN,IC),last(%i0,`))"))
+				.IsEqualTo("FULLNAME ALIAS AGE HEIGHT SPECIES OCCUPATION QUOTE");
 			await Assert.That(await As(ann, "+finger/set height=Tall")).Contains("Your Height: Tall");
 			await Assert.That(await As(bo, $"+finger {ann.Name}")).Contains("Height: Tall");
 
 			// A worked-out field is a SHOW`<key> beside it, evaluated with the player and the reader.
-			await God($"&FIELD`OOC`035`READER {Finger}=Read by");
+			await As(staff, "+config/add finger/fields/reader=Read by");
+			await As(staff, "+config finger/fields/reader/view=ooc");
 			await God($"&SHOW`READER {Finger}=name(%<viewer>)");
 			await Assert.That(await As(bo, $"+oocfinger {ann.Name}")).Contains($"Read by: {bo.Name}");
 			await Assert.That(await As(ann, "+finger/set reader=x")).Contains("Read by is worked out by the game");
+
+			await As(staff, "+config/remove finger/fields/height");
+			await Assert.That(await As(ann, "+finger/set height=Short")).Contains("There is no field called 'height'.");
 		}
 		finally
 		{

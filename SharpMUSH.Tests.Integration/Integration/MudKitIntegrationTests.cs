@@ -575,6 +575,39 @@ public class MudKitIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// A stat isnum() accepts but JSON does not write that way (<c>007</c>, <c>+40</c>, <c>.5</c>) still makes a
+	/// valid Char.Vitals, as the number it is. Written raw, it made the whole object unreadable.
+	/// </summary>
+	[Test]
+	public async Task GmcpChar_AStatWrittenOddlyIsStillANumber()
+	{
+		try
+		{
+			await ApplyAsync("gmcp-char");
+			var room = await Dig("GvOddRoom");
+			var player = await ClientAsync("GvOdd", room, "Char 1");
+			await God($"&HP {player.Number}=007");
+			await God($"&MAXHP {player.Number}=+40");
+			await God($"&MP {player.Number}=.5");
+
+			var vitals = await Think($"u(#9/FUN`GMCPCHAR`VITALS,{player.Number})");
+			var parsed = JsonNode.Parse(vitals)!.AsObject();
+			await Assert.That(parsed["hp"]!.GetValue<decimal>()).IsEqualTo(7m).Because(vitals);
+			await Assert.That(parsed["maxhp"]!.GetValue<decimal>()).IsEqualTo(40m).Because(vitals);
+			await Assert.That(parsed["mp"]!.GetValue<decimal>()).IsEqualTo(0.5m).Because(vitals);
+		}
+		finally
+		{
+			await UninstallAsync("gmcp-char");
+			foreach (var attribute in new[] { "HP", "MAXHP", "MP", "MAXMP" })
+			{
+				await God($"@wipe #9/WATCH`{attribute}`GMCPCHAR");
+				await God($"@attribute/delete {attribute}");
+			}
+		}
+	}
+
 	#endregion
 
 	#region mudlet-client
@@ -663,6 +696,7 @@ public class MudKitIntegrationTests
 				.And.Contains("It is offered to you when you connect.");
 			var drawn = await As(sighted, "+gui");
 			await Assert.That(drawn).Contains("Mudlet interface").And.Contains("when you connect")
+				.And.Contains("Package: https://example.org/ui.mpackage")
 				.And.DoesNotContain("The game's interface for Mudlet is version");
 			await Assert.That(await As(sighted, "+gui maybe")).Contains("+gui on offers you");
 		}

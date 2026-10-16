@@ -465,7 +465,7 @@ sub-navigation, the plain header, and cards.
 
 ### 7.1 Room payloads, OOB v2 (board `12`)
 The `room-contents` package pushes these (`examples/packages/room-contents`, `` ROOM`CONTENTS ``, the
-`` FN`WHOVIS `` / `` FN`WHOROW `` / `` FN`EXITROW `` seams) with `oob(<targets>, <package>, <json>)`.
+`` FUN`ROOMCONTENTS`WHOVISIBLE `` / `` FUN`ROOMCONTENTS`WHOROW `` / `` FUN`ROOMCONTENTS`EXITROW `` seams) with `oob(<targets>, <package>, <json>)`.
 - Every payload carries `"v": 2` and is **additive**: `OobEntryParser` reads only `dbref`, `name` and
   `cmd` today and ignores the rest, so v2 doesn't break the current page.
 - Send whole lists, not diffs.
@@ -518,7 +518,7 @@ The `room-contents` package pushes these (`examples/packages/room-contents`, `` 
 - A locked exit keeps its `cmd` and has no `dest`: locks are dynamic, so the client may still send the
   command, and the player then reads the exit's `@fail` message. A locked door does not describe what is
   behind it.
-- `desc.format` is `text`: the handler sends the evaluated `DESCRIBE` (`` FN`DESC ``), not Markdown.
+- `desc.format` is `text`: the handler sends the evaluated `DESCRIBE` (`` FUN`ROOMCONTENTS`DESCRIPTION ``), not Markdown.
 - `scene.id` is a string, matching `SceneEventMessage.SceneId`. Board `12` shows a number; the string is
   correct.
 - `scene.cast` supplies the sidebar's participant count, because `SceneSummary` has none.

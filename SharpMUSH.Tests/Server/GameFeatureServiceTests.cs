@@ -141,10 +141,10 @@ public class GameFeatureServiceTests
 
 		// The Discord plugin is not loaded here either; the discord packages are someone else's test.
 		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here", "relationships-scene"])
-			.Because("highlights-app calls no plugin itself, but the package it shows does");
+			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here", "relationships-scene"])
+			.Because("highlights-app and the scene bridges call no plugin themselves, but the packages they join do");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes", "scene-availability"]);
 	}
 
 	/// <summary>
@@ -156,11 +156,12 @@ public class GameFeatureServiceTests
 	{
 		var game = new Game();
 
-		var result = await game.Features(scenePlugin: false).ApplyPackagesAsync(["scene-verse"], CancellationToken.None);
+		var result = await game.Features(scenePlugin: false).ApplyPackagesAsync(["scene-help"], CancellationToken.None);
 
-		await Assert.That(result is Error<string> { Value: var message } && message.Contains("scene plugin")).IsTrue();
-		await Assert.That(game.Installed).IsEquivalentTo(["plus-help", "plus-config"])
-			.Because("+help and +config need no plugin; scene and scene-verse both call the Scene plugin");
+		await Assert.That(result is Error<string> { Value: var message } && message.Contains("scene-help needs the scene plugin")).IsTrue()
+			.Because("a bridge names no plugin itself; it needs the ones of the packages it joins");
+		await Assert.That(game.Installed).IsEquivalentTo(["plus-help"])
+			.Because("+help needs no plugin; scene, and the bridge joining it to +help, need the Scene plugin");
 	}
 
 	/// <summary>The offer is every bundled package, with what it attaches to and needs, from its manifest.</summary>
@@ -171,7 +172,9 @@ public class GameFeatureServiceTests
 
 		await Assert.That(packages.Select(p => p.Id)).IsEquivalentTo(BundledPackages.All.Select(p => p.PackageId));
 		var scene = packages.Single(p => p.Id == "scene");
-		await Assert.That(scene.DependsOn).IsEquivalentTo(["plus-help", "plus-config"]);
+		await Assert.That(scene.DependsOn).IsEmpty()
+			.Because("scene-help and scene-config join it to +help and +config");
+		await Assert.That(packages.Single(p => p.Id == "scene-help").DependsOn).IsEquivalentTo(["scene", "plus-help"]);
 		await Assert.That(scene.Description).IsNotEmpty();
 		await Assert.That(packages.Single(p => p.Id == "profile-handler").Requires).IsEqualTo(HandlerKinds.Http);
 		await Assert.That(packages.Single(p => p.Id == "room-contents").Requires).IsEqualTo(HandlerKinds.Event);
@@ -201,10 +204,10 @@ public class GameFeatureServiceTests
 	{
 		var game = new Game();
 
-		var result = await game.Features().ApplyPackagesAsync(["scene"], CancellationToken.None);
+		var result = await game.Features().ApplyPackagesAsync(["scene-help"], CancellationToken.None);
 
 		await Assert.That(result is Success).IsTrue();
-		await Assert.That(game.Calls).IsEquivalentTo(["+plus-help", "+plus-config", "+scene"],
+		await Assert.That(game.Calls).IsEquivalentTo(["+plus-help", "+scene", "+scene-help"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 

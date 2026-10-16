@@ -16,7 +16,8 @@ namespace SharpMUSH.Tests.Integration.Packages;
 /// and the +scene/* player verbs. Its AINSTALL (once) and STARTUP (every boot)
 /// (re-)establish OVERRIDE hooks on POSE/SAY/SEMIPOSE pointing at this object. A
 /// second, deliberately unflagged "Scene Help" thing carries the package's +help
-/// topics, which the librarian could not evaluate on a privileged object.
+/// topics, which the librarian could not evaluate on a privileged object. The scene-help
+/// and scene-config bridges register those topics and settings with +help and +config.
 ///
 /// These assertions are read-only against the singleton package, so they run safely
 /// alongside the other tests.
@@ -34,7 +35,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("scene is not installed.");
-		await Assert.That(package.Version).IsEqualTo("1.11.3");
+		await Assert.That(package.Version).IsEqualTo("1.13.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
@@ -52,7 +53,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		await Assert.That(attrs).Contains("CMD`SHOW");
 		await Assert.That(attrs).Contains("FUN`OWNS");
 		await Assert.That(attrs).Contains("FUN`IS`APPROVED");
-		await Assert.That(attrs).Contains("DATA`DENY_APPROVAL");
+		await Assert.That(attrs).Contains("DATA`DENY`APPROVAL");
 		await Assert.That(attrs).Contains("AINSTALL");
 		await Assert.That(attrs).Contains("STARTUP");
 
@@ -63,6 +64,27 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 			.GetObjectNodeAsync(loggerDbref);
 		// WIZARD is the wizard role, held through the object's grants rather than a stored flag.
 		await Assert.That(await node.Expect<AnySharpObject>().IsWizard()).IsTrue();
+	}
+
+	/// <summary>
+	/// Scene depends on no package. Its help topics and settings are its own data; the bridges, installed at first
+	/// boot beside it, are what point +help and +config at them.
+	/// </summary>
+	[Test]
+	public async Task ScenePackage_NeedsNoOtherPackage_AndTheBridgesRegisterIt()
+	{
+		await Assert.That(await Registry.GetPackageDependenciesAsync("scene")).IsEmpty();
+		await Assert.That((await Registry.GetManagedAttributesAsync("scene"))
+				.Where(m => m.Attribute.StartsWith("SRC`", StringComparison.Ordinal) || m.Attribute.StartsWith("SYSTEM`", StringComparison.Ordinal)))
+			.IsEmpty();
+
+		var help = (await Registry.GetManagedAttributesAsync("scene-help")).Select(m => m.Attribute).ToList();
+		await Assert.That(help).Contains("SRC`SCENE");
+		await Assert.That(help).Contains("FILTER`HELP`PLUSHELP");
+		await Assert.That((await Registry.GetManagedAttributesAsync("scene-config")).Select(m => m.Attribute))
+			.Contains("SYSTEM`SCENE");
+		await Assert.That((await Registry.GetPackageDependenciesAsync("scene-help")).Select(d => d.DependsOnId))
+			.IsEquivalentTo(["scene", "plus-help"]);
 	}
 
 	[Test]

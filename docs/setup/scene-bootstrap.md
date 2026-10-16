@@ -76,8 +76,9 @@ There is no `SceneOptions` config category. Every setting is policy, kept on the
   `scheduled` stages a scene that only logs after `+scene/start`.
 - `open-details`: whether an owner may set scene details the game does not list. `yes` by default.
 - `recall-rounds`: how many rounds of poses a bare `+scene/recall` shows. `2` by default.
+- `schedule-days`: how many days ahead a bare `+scene/upcoming` looks. `30` by default.
 
-The refusal strings (``DATA`DENY_APPROVAL``, ``DATA`DENY_NO_FOCUS``, ``DATA`DENY_NOT_OWNER`` and the
+The refusal strings (``DATA`DENY`APPROVAL``, ``DATA`DENY`NOFOCUS``, ``DATA`DENY`NOTOWNER`` and the
 rest) stay plain ``DATA`` attributes on the Scene Logger.
 
 ## Player commands
@@ -85,7 +86,8 @@ rest) stay plain ``DATA`` attributes on the Scene Logger.
 The package follows **[Volund's SceneSys](https://github.com/volundmush/mushcode)** command
 surface — a unified `+scene/<switch>` verb plus a standalone `+pot`. Default permission:
 anyone may create/schedule (and becomes owner); owner-only for lifecycle/management; authors
-(and wizards) edit poses. Every switch takes a unique prefix (`+scene/lis` is `+scene/list`), and a
+edit poses. Wizards, and anyone allowed the package's `scene.manage` permission, may do both on
+any scene; `scene.close` lets staff finish one. Every switch takes a unique prefix (`+scene/lis` is `+scene/list`), and a
 line no verb matches answers with the switch's usage line instead of `Huh?`.
 
 | Command | Does |
@@ -107,7 +109,7 @@ line no verb matches answers with the switch's usage line instead of `Huh?`.
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |
 | `+scene/schedule <title>=<when>` | schedule a roomless future scene; `<when>` is a date `convtime()` reads (`2026-12-31 20:00`), `+<n>h`/`+<n>d`/`+<n>w` from now, or epoch seconds, and must be to come |
-| `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming [<days>\|all]` (`+scenes`, `+events`) | manage / list scheduled, grouped by day, 30 days ahead unless told (``DATA`SCHEDULE_DAYS``); rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
+| `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming [<days>\|all]` (`+scenes`, `+events`) | manage / list scheduled, grouped by day, 30 days ahead unless told (``DATA`CONFIG`SCHEDULE-DAYS``); rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
 | `+pot` | pose tracker (turn order for the focused scene, idle time and the length of each last pose) |
 
 **Reads are functions, writes are commands.** Reads use the `scene…()` functions

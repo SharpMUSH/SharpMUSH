@@ -1,6 +1,6 @@
 format: "1.10"
 package: gmcp-items
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Char.Items package: what a player carries and what lies in their room, as Char.Items.List when asked or on arrival, and Char.Items.Add and Char.Items.Remove as things come and go."
 license: MIT
@@ -43,61 +43,61 @@ objects:
     target: "{{$event_handler}}"
     attributes:
       # ── Settings ─────────────────────────────────────────────────────────
-      FN`GMCPITEMS`SETTING: |-
+      FUN`GMCPITEMS`SETTING: |-
         get({{gmcp_items}}/DATA`CONFIG`%0)
 
       # ── Who and what ─────────────────────────────────────────────────────
       # %0 an object: a connected player, the only thing anything is sent to.
-      FN`GMCPITEMS`VIEWER: |-
+      FUN`GMCPITEMS`VIEWER: |-
         cand(hastype(%0,player),hasflag(%0,CONNECTED))
       # %0 a thing, %1 the viewer: whether the viewer sees it lying in a room.
-      FN`GMCPITEMS`SEEN: |-
+      FUN`GMCPITEMS`SEEN: |-
         cor(not(hasflag(%0,DARK)),orflags(%1,Wr),haspower(%1,See_All))
       # %0 a viewer, %1 a thing: the same, with the viewer first, for filterbool().
-      FN`GMCPITEMS`WITNESS: |-
-        u(me/FN`GMCPITEMS`SEEN,%1,%0)
+      FUN`GMCPITEMS`WITNESS: |-
+        u(me/FUN`GMCPITEMS`SEEN,%1,%0)
       # %0 a location word (inv or room), %1 the viewer: the things there they see.
-      FN`GMCPITEMS`THINGS: |-
-        if(strmatch(%0,inv),lthings(%1),filterbool(me/FN`GMCPITEMS`SEEN,lthings(loc(%1)),,,%1))
+      FUN`GMCPITEMS`THINGS: |-
+        if(strmatch(%0,inv),lthings(%1),filterbool(me/FUN`GMCPITEMS`SEEN,lthings(loc(%1)),,,%1))
       # %0 a location word: whether the room setting lets it be sent.
-      FN`GMCPITEMS`SENDS: |-
-        cor(strmatch(%0,inv),u(me/FN`GMCPITEMS`SETTING,ROOM))
+      FUN`GMCPITEMS`SENDS: |-
+        cor(strmatch(%0,inv),u(me/FUN`GMCPITEMS`SETTING,ROOM))
 
       # ── Payloads ─────────────────────────────────────────────────────────
       # One item: %0 a thing.
-      FN`GMCPITEMS`ITEM: |-
+      FUN`GMCPITEMS`ITEM: |-
         json(object,id,json(string,after(num(%0),#)),name,json(string,name(%0)))
       # Char.Items.List: %0 the location word, %1 the viewer.
-      FN`GMCPITEMS`LIST: |-
-        json(object,location,json(string,%0),items,json_array(iter(u(me/FN`GMCPITEMS`THINGS,%0,%1),u(me/FN`GMCPITEMS`ITEM,%i0),,%r),%r))
+      FUN`GMCPITEMS`LIST: |-
+        json(object,location,json(string,%0),items,json_array(iter(u(me/FUN`GMCPITEMS`THINGS,%0,%1),u(me/FUN`GMCPITEMS`ITEM,%i0),,%r),%r))
       # Char.Items.Add or Remove: %0 the location word, %1 the thing.
-      FN`GMCPITEMS`CHANGE: |-
-        json(object,location,json(string,%0),item,u(me/FN`GMCPITEMS`ITEM,%1))
+      FUN`GMCPITEMS`CHANGE: |-
+        json(object,location,json(string,%0),item,u(me/FUN`GMCPITEMS`ITEM,%1))
 
       # ── Sending ──────────────────────────────────────────────────────────
       # %0 where to send (a player or a descriptor), %1 the viewer, %2 the location word: the list.
-      FN`GMCPITEMS`SENDLIST: |-
-        if(u(me/FN`GMCPITEMS`SENDS,%2),null(oob(%0,Char.Items.List,u(me/FN`GMCPITEMS`LIST,%2,%1),supported)))
+      FUN`GMCPITEMS`SENDLIST: |-
+        if(u(me/FUN`GMCPITEMS`SENDS,%2),null(oob(%0,Char.Items.List,u(me/FUN`GMCPITEMS`LIST,%2,%1),supported)))
       # %0 Add or Remove, %1 a container the thing left or reached, %2 the thing. A player holding it is
       # sent an inv change; the connected players in a room who see it, a room change.
-      FN`GMCPITEMS`MOVED: |-
-        switch(type(%1),PLAYER,u(me/FN`GMCPITEMS`TELL,%0,inv,%1,%2),ROOM,if(u(me/FN`GMCPITEMS`SENDS,room),u(me/FN`GMCPITEMS`TELL,%0,room,filterbool(me/FN`GMCPITEMS`WITNESS,filterbool(me/FN`GMCPITEMS`VIEWER,lplayers(%1)),,,%2),%2)))
+      FUN`GMCPITEMS`MOVED: |-
+        switch(type(%1),PLAYER,u(me/FUN`GMCPITEMS`TELL,%0,inv,%1,%2),ROOM,if(u(me/FUN`GMCPITEMS`SENDS,room),u(me/FUN`GMCPITEMS`TELL,%0,room,filterbool(me/FUN`GMCPITEMS`WITNESS,filterbool(me/FUN`GMCPITEMS`VIEWER,lplayers(%1)),,,%2),%2)))
       # %0 Add or Remove, %1 the location word, %2 the players, %3 the thing.
-      FN`GMCPITEMS`TELL: |-
-        null(oob(%2,Char.Items.%0,u(me/FN`GMCPITEMS`CHANGE,%1,%3),supported))
+      FUN`GMCPITEMS`TELL: |-
+        null(oob(%2,Char.Items.%0,u(me/FUN`GMCPITEMS`CHANGE,%1,%3),supported))
 
       # ── The handlers ─────────────────────────────────────────────────────
       # A connected player who moved is sent the things in their new room. A thing that moved is taken
       # out of where it was and added where it went.
       OBJECT`MOVE`GMCPITEMS: |-
-        think switch(type(%<objid>),PLAYER,if(u(me/FN`GMCPITEMS`VIEWER,%<objid>),u(me/FN`GMCPITEMS`SENDLIST,%<objid>,%<objid>,room)),THING,u(me/FN`GMCPITEMS`MOVED,Remove,%<origin>,%<objid>)[u(me/FN`GMCPITEMS`MOVED,Add,%<destination>,%<objid>)])
+        think switch(type(%<objid>),PLAYER,if(u(me/FUN`GMCPITEMS`VIEWER,%<objid>),u(me/FUN`GMCPITEMS`SENDLIST,%<objid>,%<objid>,room)),THING,u(me/FUN`GMCPITEMS`MOVED,Remove,%<origin>,%<objid>)[u(me/FUN`GMCPITEMS`MOVED,Add,%<destination>,%<objid>)])
       # A new connection is sent both lists on its own descriptor.
       PLAYER`CONNECT`GMCPITEMS: |-
-        think u(me/FN`GMCPITEMS`SENDLIST,%<descriptor>,%<objid>,inv)[u(me/FN`GMCPITEMS`SENDLIST,%<descriptor>,%<objid>,room)]
+        think u(me/FUN`GMCPITEMS`SENDLIST,%<descriptor>,%<objid>,inv)[u(me/FUN`GMCPITEMS`SENDLIST,%<descriptor>,%<objid>,room)]
       # The client asks: Char.Items.Inv or Char.Items.Room, from a logged-in connection. The answer goes
       # to the descriptor that asked.
       SOCKET`GMCP`GMCPITEMS: |-
-        @assert cand(strlen(%<player>),match(Char.Items.Inv Char.Items.Room,%<package>)); think u(me/FN`GMCPITEMS`SENDLIST,%<descriptor>,%<player>,switch(%<package>,Char.Items.Inv,inv,room))
+        @assert cand(strlen(%<player>),match(Char.Items.Inv Char.Items.Room,%<package>)); think u(me/FUN`GMCPITEMS`SENDLIST,%<descriptor>,%<player>,switch(%<package>,Char.Items.Inv,inv,room))
 
   # ---- settings and help ----------------------------------------------------
   - ref: gmcp_items

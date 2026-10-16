@@ -1,6 +1,6 @@
 format: "1.10"
 package: gmcp-comm
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Comm package: each channel line and page as Comm.Channel.Text, for a client's chat window, and the channels a player is on as Comm.Channel.List."
 license: MIT
@@ -46,64 +46,64 @@ objects:
     target: "{{$event_handler}}"
     attributes:
       # ── Settings ─────────────────────────────────────────────────────────
-      FN`GMCPCOMM`SETTING: |-
+      FUN`GMCPCOMM`SETTING: |-
         get({{gmcp_comm}}/DATA`CONFIG`%0)
 
       # ── Who ──────────────────────────────────────────────────────────────
       # %0 an object: a connected player, the only thing anything is sent to.
-      FN`GMCPCOMM`VIEWER: |-
+      FUN`GMCPCOMM`VIEWER: |-
         cand(hastype(%0,player),hasflag(%0,CONNECTED))
       # %0 a viewer: whether their client says it is a screen reader.
-      FN`GMCPCOMM`READER: |-
+      FUN`GMCPCOMM`SCREENREADER: |-
         member(terminfo(%0),screenreader)
 
       # ── Lines ────────────────────────────────────────────────────────────
       # A channel line as the terminal shows it, from named arguments: channel, style, name, message.
       # An @cemit and a connect or disconnect line name nobody.
-      FN`GMCPCOMM`CHANNELLINE: |-
+      FUN`GMCPCOMM`CHANNELLINE: |-
         <%<channel>> [switch(%<style>,pose,%<name> %<message>,semipose,%<name>%<message>,emit,%<message>,presence,%<message>,%<name> says%, "%<message>")]
       # A page as a recipient's terminal shows it, from named arguments: style, name, message.
-      FN`GMCPCOMM`PAGEIN: |-
+      FUN`GMCPCOMM`PAGEIN: |-
         switch(%<style>,pose,From afar%, %<name> %<message>,semipose,From afar%, %<name>%<message>,%<name> pages: %<message>)
       # A page as the pager's terminal shows it, from named arguments: style, name (the pager's own),
       # message, to (the names it reached).
-      FN`GMCPCOMM`PAGEOUT: |-
+      FUN`GMCPCOMM`PAGEOUT: |-
         switch(%<style>,pose,Long distance to %<to>: %<name> %<message>,semipose,Long distance to %<to>: %<name>%<message>,You paged %<to> with '%<message>')
       # %0 a list of players: their names, as a page lists them.
-      FN`GMCPCOMM`NAMES: |-
+      FUN`GMCPCOMM`NAMES: |-
         itemize(iter(%0,name(%i0),,|),|)
       # %0 a line, %1 the viewer: the line in ANSI colour, or plain for a screen reader.
-      FN`GMCPCOMM`SHOWN: |-
-        if(u(me/FN`GMCPCOMM`READER,%1),stripansi(%0),render(%0,ansi))
+      FUN`GMCPCOMM`SHOWN: |-
+        if(u(me/FUN`GMCPCOMM`SCREENREADER,%1),stripansi(%0),render(%0,ansi))
 
       # ── Payloads ─────────────────────────────────────────────────────────
       # Comm.Channel.Text, from named arguments: channel, talker, line and viewer.
-      FN`GMCPCOMM`TEXT: |-
-        json(object,channel,json(string,%<channel>),talker,json(string,stripansi(%<talker>)),text,json(string,u(me/FN`GMCPCOMM`SHOWN,%<line>,%<viewer>)))
+      FUN`GMCPCOMM`TEXT: |-
+        json(object,channel,json(string,%<channel>),talker,json(string,stripansi(%<talker>)),text,json(string,u(me/FUN`GMCPCOMM`SHOWN,%<line>,%<viewer>)))
       # One Comm.Channel.List entry: %0 a channel's name.
-      FN`GMCPCOMM`CHANNEL: |-
+      FUN`GMCPCOMM`CHANNEL: |-
         json(object,name,json(string,%0),caption,json(string,%0),command,json(string,+[lcstr(%0)]))
       # Comm.Channel.List: %0 the player. channels() with on lists the ones they are on.
-      FN`GMCPCOMM`LIST: |-
-        json_array(iter(channels(%0,on),u(me/FN`GMCPCOMM`CHANNEL,%i0),,%r),%r)
+      FUN`GMCPCOMM`LIST: |-
+        json_array(iter(channels(%0,on),u(me/FUN`GMCPCOMM`CHANNEL,%i0),,%r),%r)
 
       # ── Sending ──────────────────────────────────────────────────────────
       # %0 the players, %1 the channel, %2 the talker, %3 the line: Comm.Channel.Text to each, built for
       # each so a screen reader's copy is plain.
-      FN`GMCPCOMM`SEND: |-
-        null(iter(filterbool(me/FN`GMCPCOMM`VIEWER,%0),oob(%i0,Comm.Channel.Text,uargs(me/FN`GMCPCOMM`TEXT,channel,%1,talker,%2,line,%3,viewer,%i0),supported)))
+      FUN`GMCPCOMM`SEND: |-
+        null(iter(filterbool(me/FUN`GMCPCOMM`VIEWER,%0),oob(%i0,Comm.Channel.Text,uargs(me/FUN`GMCPCOMM`TEXT,channel,%1,talker,%2,line,%3,viewer,%i0),supported)))
 
       # ── The handlers ─────────────────────────────────────────────────────
       # recipients are the members the line was delivered to.
       CHANNEL`MESSAGE`GMCPCOMM: |-
-        think u(me/FN`GMCPCOMM`SEND,%<recipients>,%<channel>,%<name>,uargs(me/FN`GMCPCOMM`CHANNELLINE,channel,%<channel>,style,%<style>,name,%<name>,message,%<message>))
+        think u(me/FUN`GMCPCOMM`SEND,%<recipients>,%<channel>,%<name>,uargs(me/FUN`GMCPCOMM`CHANNELLINE,channel,%<channel>,style,%<style>,name,%<name>,message,%<message>))
       # recipients are those the page reached; the pager is sent their own copy, as their terminal shows
       # it. setdiff() keeps a self-page to the recipient's copy.
       PAGE`MESSAGE`GMCPCOMM: |-
-        @assert u(me/FN`GMCPCOMM`SETTING,PAGES); think u(me/FN`GMCPCOMM`SEND,%<recipients>,u(me/FN`GMCPCOMM`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FN`GMCPCOMM`PAGEIN,style,%<style>,name,%<name>,message,%<message>))[u(me/FN`GMCPCOMM`SEND,setdiff(num(%<speaker>),iter(%<recipients>,num(%i0))),u(me/FN`GMCPCOMM`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FN`GMCPCOMM`PAGEOUT,style,%<style>,name,name(%<speaker>),message,%<message>,to,u(me/FN`GMCPCOMM`NAMES,%<recipients>)))]
+        @assert u(me/FUN`GMCPCOMM`SETTING,PAGES); think u(me/FUN`GMCPCOMM`SEND,%<recipients>,u(me/FUN`GMCPCOMM`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FUN`GMCPCOMM`PAGEIN,style,%<style>,name,%<name>,message,%<message>))[u(me/FUN`GMCPCOMM`SEND,setdiff(num(%<speaker>),iter(%<recipients>,num(%i0))),u(me/FUN`GMCPCOMM`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FUN`GMCPCOMM`PAGEOUT,style,%<style>,name,name(%<speaker>),message,%<message>,to,u(me/FUN`GMCPCOMM`NAMES,%<recipients>)))]
       # objid is the player; cause is connect, resume, join, leave, status, rename or delete.
       PLAYER`CHANNELS`GMCPCOMM: |-
-        @assert u(me/FN`GMCPCOMM`VIEWER,%<objid>); think null(oob(%<objid>,Comm.Channel.List,u(me/FN`GMCPCOMM`LIST,%<objid>),supported))
+        @assert u(me/FUN`GMCPCOMM`VIEWER,%<objid>); think null(oob(%<objid>,Comm.Channel.List,u(me/FUN`GMCPCOMM`LIST,%<objid>),supported))
 
   # ---- settings and help ----------------------------------------------------
   - ref: gmcp_comm

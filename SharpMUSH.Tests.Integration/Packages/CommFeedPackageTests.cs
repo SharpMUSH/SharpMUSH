@@ -278,7 +278,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// A logged page's recalled <c>text</c> goes through the installed <c>FN`COMM`TEXT</c> as the push's
+	/// A logged page's recalled <c>text</c> goes through the installed <c>FUN`COMM`TEXT</c> as the push's
 	/// does, with the pager as enactor, so a game that redefined it gets the same page text pulled as pushed.
 	/// Like <see cref="ChannelLine_RecallComposesTextThroughTheInstalledFnCommText"/>, the redefinition
 	/// answers differently only for this test's marker.
@@ -291,12 +291,12 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var recipient = await ViewerAsync("CommPageTextPaged");
 		var marker = TestIsolationHelpers.GenerateUniqueName("pagecustom");
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
-		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FN`COMM`TEXT)")))!
+		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FUN`COMM`TEXT)")))!
 			.Message.ToPlainText();
 		using var pageLog = TestOptionsOverride.Scope(options => options with { Chat = options.Chat with { PageLog = true } });
 
 		// The redefinition reads its arguments by position and by name: both paths pass both.
-		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2:%<style>:%<name>:%<message>,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
+		await God($"&FUN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2:%<style>:%<name>:%<message>,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
 		try
 		{
 			await using var watch = await OobWatch.OpenAsync(factory);
@@ -316,7 +316,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		}
 		finally
 		{
-			await God($"&FN`COMM`TEXT #{handler}={original}");
+			await God($"&FUN`COMM`TEXT #{handler}={original}");
 		}
 	}
 
@@ -335,7 +335,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// Recall composes a line's <c>text</c> through the installed <c>FN`COMM`TEXT</c>, as the push does, with
+	/// Recall composes a line's <c>text</c> through the installed <c>FUN`COMM`TEXT</c>, as the push does, with
 	/// the same executor (the handler), enactor (the speaker) and arguments — so a game that redefined it
 	/// gets the same text pulled as pushed.
 	/// </summary>
@@ -351,10 +351,10 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var channel = await ChannelAsync("CommText", speaker, member);
 		var marker = TestIsolationHelpers.GenerateUniqueName("custom");
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
-		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FN`COMM`TEXT)")))!
+		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FUN`COMM`TEXT)")))!
 			.Message.ToPlainText();
 
-		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
+		await God($"&FUN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
 		try
 		{
 			await using var watch = await OobWatch.OpenAsync(factory);
@@ -371,7 +371,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		}
 		finally
 		{
-			await God($"&FN`COMM`TEXT #{handler}={original}");
+			await God($"&FUN`COMM`TEXT #{handler}={original}");
 		}
 	}
 
@@ -750,7 +750,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
 		var gone = UniqueChannel("CommGone");
 		var row = (await factory.FunctionParser.EvaluateAsync(
-			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]"))).ToPlainText();
+			MarkupText.Plain($"[u(#{handler}/FUN`COMM`CHANNELROW,{gone},#1)]"))).ToPlainText();
 
 		await Assert.That(row).IsEqualTo(string.Empty);
 	}
@@ -767,7 +767,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var longer = await ChannelAsync("CommAbbrev");
 		var gone = longer[..^2];
 		var row = (await factory.FunctionParser.EvaluateAsync(
-			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]"))).ToPlainText();
+			MarkupText.Plain($"[u(#{handler}/FUN`COMM`CHANNELROW,{gone},#1)]"))).ToPlainText();
 
 		await Assert.That(row).IsEqualTo(string.Empty);
 	}

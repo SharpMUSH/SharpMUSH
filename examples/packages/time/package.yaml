@@ -1,12 +1,12 @@
 format: "1.10"
 package: time
-version: 1.2.2
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [time, timezone, clock, calendar, ic]
-category: Scenes
+category: Community
 requires_server: ">=0.1"
 
 depends:
@@ -104,7 +104,7 @@ objects:
       # %0 an instant and %1 a zone: the time there and the zone's name, the way every screen shows a time.
       FUN`DISPLAY`AT:
         value: |-
-          [u({{clock}}/FUN`OOC`SHOW,%0,%1)] [tone(muted,· [u({{clock}}/FUN`ZONE`LABEL,%1,%0)])]
+          u({{clock}}/FUN`OOC`SHOW,%0,%1) [tone(muted,· [u({{clock}}/FUN`ZONE`LABEL,%1,%0)])]
         flags: [funsyntax]
       # %0 an instant: how far it is from now, as in 3h 20m or 2d ago.
       FUN`DISPLAY`FROMNOW:
@@ -119,7 +119,7 @@ objects:
       # %0 seconds: so many hours, 5 hours or 5.5 hours.
       FUN`DISPLAY`HOURS:
         value: |-
-          [fdiv(abs(%0),3600)] hour[if(neq(abs(%0),3600),s)]
+          fdiv(abs(%0),3600) hour[if(neq(abs(%0),3600),s)]
         flags: [funsyntax]
       # Every screen is a box() with no sides, corners or tees, as +finger's and +help's are, so a time copied
       # from a terminal carries no |.
@@ -211,11 +211,11 @@ objects:
         value: |-
           case(1,not(u(%!/FUN`READ`CLOCKOK)),'[firstof(%q<read_clock>,%q<cmd_argument>)]' is not a time. Write 20:00%, 8pm or 8:30 am.,gt(words(%q<read_zone_typed>),1),Give one time zone after the time%, such as America/New_York.,cand(strlen(%q<read_zone_typed>),not(strlen(%q<read_zone>))),There is no time zone called '%q<read_zone_typed>'. +help timezone says how they are named.,not(isnum(%q<read_instant>)),'%q<read_date>' is not a date. Write it as 2026-10-20.,comp(timefmt($H:$M,%q<read_instant>,%q<read_zone>),[rjust(%q<read_hour24>,2,0)]:%q<read_minute>),There is no [rjust(%q<read_hour24>,2,0)]:%q<read_minute> on %q<read_date> in %q<read_zone>: the clocks go forward past it.)
         flags: [funsyntax]
-      # The moment FUN`READ`TIME read, in its zone, the game's, the reader's, how far off it is, and a Discord
-      # timestamp, which Discord shows to each reader in their own time.
+      # The moment FUN`READ`TIME read, in its zone, the game's, the reader's, how far off it is, and, when the Clock's
+      # DATA`CONFIG`DISCORD-LINE is on, a Discord timestamp, which Discord shows to each reader in their own time.
       FUN`SCREEN`CONVERT:
         value: |-
-          box(lfields(,%q<read_zone>[if(comp(%q<read_zone>,%q<game_zone>),%*<|>Game time)][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),%*<|>Your time)]%*<|>When%*<|>Discord,[u({{clock}}/FUN`OOC`SHOW,%q<read_instant>,%q<read_zone>)] [tone(muted,· UTC[timefmt($Z,%q<read_instant>,%q<read_zone>)])][if(comp(%q<read_zone>,%q<game_zone>),%*<|>[u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<game_zone>)])][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),%*<|>[u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<viewer_zone>)])]%*<|>[u(%!/FUN`DISPLAY`FROMNOW,%q<read_instant>)]%*<|><t:%q<read_instant>:F>,%*<|>)%r[rule()]%r[tone(muted,Paste the Discord line into Discord: each reader sees it in their own time.)],[timefmt($H:$M,%q<read_instant>,%q<read_zone>)] on [timefmt($a $d $b,%q<read_instant>,%q<read_zone>)],,u(%!/FUN`DISPLAY`FRAME))
+          setq(convert_discord,get({{clock}}/DATA`CONFIG`DISCORD-LINE))[box(lfields(,%q<read_zone>[if(comp(%q<read_zone>,%q<game_zone>),%*<|>Game time)][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),%*<|>Your time)]%*<|>When[if(%q<convert_discord>,%*<|>Discord)],[u({{clock}}/FUN`OOC`SHOW,%q<read_instant>,%q<read_zone>)] [tone(muted,· UTC[timefmt($Z,%q<read_instant>,%q<read_zone>)])][if(comp(%q<read_zone>,%q<game_zone>),%*<|>[u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<game_zone>)])][if(cand(strlen(%q<viewer_zone>),comp(%q<read_zone>,%q<viewer_zone>)),%*<|>[u(%!/FUN`DISPLAY`AT,%q<read_instant>,%q<viewer_zone>)])]%*<|>[u(%!/FUN`DISPLAY`FROMNOW,%q<read_instant>)][if(%q<convert_discord>,%*<|><t:%q<read_instant>:F>)],%*<|>)[if(%q<convert_discord>,%r[rule()]%r[tone(muted,Paste the Discord line into Discord: each reader sees it in their own time.)])],[timefmt($H:$M,%q<read_instant>,%q<read_zone>)] on [timefmt($a $d $b,%q<read_instant>,%q<read_zone>)],,u(%!/FUN`DISPLAY`FRAME))]
         flags: [funsyntax]
 
       # ---- +timezone --------------------------------------------------------------
@@ -333,19 +333,26 @@ objects:
       # service can place.
       FUN`ADDRESS`PUBLIC:
         value: |-
-          not(cor(not(cor(strmatch(%0,*.*.*.*),strmatch(%0,*:*))),strmatch(%0,#-*),strmatch(%0,127.*),strmatch(%0,10.*),strmatch(%0,192.168.*),strmatch(%0,169.254.*),strmatch(%0,0.*),cand(strmatch(%0,172.*.*.*),gte(elements(%0,2,.),16),lte(elements(%0,2,.),31)),strmatch(%0,::1),strmatch(%0,fc*:*),strmatch(%0,fd*:*),strmatch(%0,fe80:*)))
+          cand(cor(strmatch(%0,*.*.*.*),strmatch(%0,*:*)),ncor(strmatch(%0,#-*),strmatch(%0,127.*),strmatch(%0,10.*),strmatch(%0,192.168.*),strmatch(%0,169.254.*),strmatch(%0,0.*),cand(strmatch(%0,172.*.*.*),gte(elements(%0,2,.),16),lte(elements(%0,2,.),31)),strmatch(%0,::1),strmatch(%0,fc*:*),strmatch(%0,fd*:*),strmatch(%0,fe80:*)))
+        flags: [funsyntax]
+      # %0 a player: the attribute the zone service's reply to them runs, LOOKUP`<key>, keyed by objid as
+      # 12_1790888816538 (an objid cannot be part of an attribute name).
+      FUN`LOOKUP`ATTR:
+        value: |-
+          LOOKUP`[edit(after(objid(%0),#),:,_)]
         flags: [funsyntax]
       # %<player> and %<mode> (login or detect): sends the player's address to the zone service. The reply runs
-      # LOOKUP`<number>, written here for this player, which hands it to INC`ZONE`REPLY and is then cleared.
+      # LOOKUP`<key>, written here for this player, which hands it to INC`ZONE`REPLY and is then cleared.
       INC`ZONE`LOOKUP:
         value: |-
-          @assert u(%!/FUN`LOOKUP`OK,%<player>); think setqm(lookup_attr,LOOKUP`[after(num(%<player>),#)],lookup_url,edit(get({{clock}}/DATA`CONFIG`IP-SERVICE),<ip>,urlencode(ipaddr(%<player>)))); @assert strmatch(%q<lookup_url>,https://*); &%q<lookup_attr> %!=@include/args %!/INC`ZONE`REPLY=player,%<player>,mode,%<mode>; @http %!/%q<lookup_attr>=%q<lookup_url>
+          @assert u(%!/FUN`LOOKUP`OK,%<player>); think setqm(lookup_attr,u(%!/FUN`LOOKUP`ATTR,%<player>),
+          lookup_url,edit(get({{clock}}/DATA`CONFIG`IP-SERVICE),<ip>,urlencode(ipaddr(%<player>)))); @assert strmatch(%q<lookup_url>,https://*); &%q<lookup_attr> %!=@include/args %!/INC`ZONE`REPLY=player,%<player>,mode,%<mode>; @http %!/%q<lookup_attr>=%q<lookup_url>
         flags: [cmdsyntax]
       # The zone service's reply: %0 the body, %<status>, with %<player> and %<mode>. A zone the server knows, at
       # the reply's DATA`CONFIG`IP-FIELD, is settled as a login's (INC`ZONE`SETTLE) or taken for +timezone/detect.
       INC`ZONE`REPLY:
         value: |-
-          &LOOKUP`[after(num(%<player>),#)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%0,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
+          &[u(%!/FUN`LOOKUP`ATTR,%<player>)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%0,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -554,6 +561,18 @@ objects:
         Zone in the reply
       DATA`CONFIG`IP-FIELD`EXAMPLE: |-
         timezone.id
+      DATA`CONFIG`DISCORD-LINE: |-
+        1
+      DATA`CONFIG`DISCORD-LINE`TYPE: |-
+        boolean
+      DATA`CONFIG`DISCORD-LINE`DEFAULT: |-
+        1
+      DATA`CONFIG`DISCORD-LINE`DESCRIPTION: |-
+        Whether +time <time> shows a Discord timestamp for the time it converts, to paste into Discord.
+      DATA`CONFIG`DISCORD-LINE`LABEL: |-
+        Discord timestamp
+      DATA`CONFIG`DISCORD-LINE`EXAMPLE: |-
+        no
       DATA`CONFIG`MATCH-ZONES: |-
         Pacific/Honolulu America/Anchorage America/Los_Angeles America/Vancouver America/Phoenix America/Denver America/Mexico_City America/Chicago America/Bogota America/New_York America/Toronto America/Halifax America/St_Johns America/Sao_Paulo America/Argentina/Buenos_Aires Atlantic/Azores UTC Europe/London Europe/Dublin Europe/Lisbon Africa/Lagos Europe/Paris Europe/Berlin Europe/Madrid Europe/Rome Europe/Amsterdam Europe/Stockholm Europe/Warsaw Africa/Johannesburg Africa/Cairo Europe/Athens Europe/Helsinki Europe/Istanbul Europe/Moscow Asia/Tehran Asia/Dubai Asia/Karachi Asia/Kolkata Asia/Kathmandu Asia/Dhaka Asia/Bangkok Asia/Jakarta Asia/Singapore Asia/Shanghai Asia/Manila Australia/Perth Asia/Seoul Asia/Tokyo Australia/Darwin Australia/Adelaide Australia/Brisbane Australia/Sydney Pacific/Auckland
       DATA`CONFIG`MATCH-ZONES`TYPE: |-
@@ -660,7 +679,7 @@ objects:
       # capitals (est5edt).
       FUN`ZONE`FIND:
         value: |-
-          if(cand(strlen(%0),not(strmatch(%0,* *))),first(filterbool(%!/FUN`ZONE`VALID,[if(not(strmatch(%0,*/*)),get(%!/ALIAS`%0))] %0 [u(%!/FUN`ZONE`TITLE,%0)] [ucstr(first(%0,/))][if(strmatch(%0,*/*),/[u(%!/FUN`ZONE`TITLE,rest(%0,/))])] [ucstr(%0)])))
+          if(cand(strlen(%0),not(strmatch(%0,* *))),first(filterbool(%!/FUN`ZONE`VALID,if(not(strmatch(%0,*/*)),get(%!/ALIAS`%0)) %0 [u(%!/FUN`ZONE`TITLE,%0)] [ucstr(first(%0,/))][if(strmatch(%0,*/*),/[u(%!/FUN`ZONE`TITLE,rest(%0,/))])] [ucstr(%0)])))
         flags: [funsyntax]
       # %0 a zone name: each part between / and _ capitalised.
       FUN`ZONE`TITLE:
@@ -757,7 +776,7 @@ objects:
         - `+time <time> <zone>` reads it in another zone: `+time 8pm pacific`.
         - `+time <date> <time> \[<zone>\]` reads it on another day, the date written year first: `+time 2026-10-20 8pm`.
 
-        A converted time also shows how long until it, or how long ago it was, and a Discord timestamp such as `<t:1792540800:F>`. Paste that into Discord and each reader sees the time in their own zone.
+        A converted time also shows how long until it, or how long ago it was, and a Discord timestamp such as `<t:1792540800:F>`, unless the game turns that line off. Paste that into Discord and each reader sees the time in their own zone.
 
         For example, from a player whose zone is America/New_York:
 
@@ -775,6 +794,7 @@ objects:
         - `detect-ip`: what to do for a player who set no zone and whose client reports none. `off`, the default, does nothing. `set` and `offer` ask the zone service where the player connects from, at login, and then work as for `detect`. Anything but `off` sends those players' addresses to that service, so say so in your game's privacy policy. A guess from an address is often wrong behind a VPN, a proxy or a mobile network, so `offer` suits it better than `set`.
         - `ip-service`: the zone service, an https address with `<ip>` where the address goes. `https://ipinfo.io/<ip>/json` by default, which needs no account but limits how many lookups it answers. `https://ipwho.is/<ip>` is another. A private address, such as a player on the same network as the game, is never sent.
         - `ip-field`: where the zone is in the service's reply, as a JSON path. `timezone` by default, for ipinfo.io; `timezone.id` for ipwho.is.
+        - `discord-line`: whether `+time <time>` shows a Discord timestamp for the time it converts. `yes` by default; `no` leaves the line out, for a game that does not use Discord.
         - `match-zones`: the zones `+timezone/match` offers, in the order it lists them. Each must be a zone the server knows. About fifty by default, at least one for each offset most players live in.
 
         Short names a player may give `+timezone` or `+time` are attributes on the Clock object, inside the Time object in the master room: `` ALIAS`<name> ``, one each, its value the zone. A short name wins over a zone of the same name.

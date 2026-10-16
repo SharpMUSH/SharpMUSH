@@ -205,10 +205,10 @@ public class RoomContentsEventTests
 		var godNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var godRoom = (await godNode.Expect<SharpPlayer>().Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
 
-		// Use a fresh handle (9001) so there is no "already logged in" rejection.
+		// Use a fresh handle so there is no "already logged in" rejection.
 		// The connect command works with an unregistered handle (connectionData may be null;
 		// the command falls back to "unknown" for ipAddress in that case).
-		var connectHandle = 9001L;
+		var connectHandle = TestIsolationHelpers.GenerateUniqueHandle();
 		await ConnectionService.Register(
 			connectHandle,
 			"127.0.0.1", "localhost", "test",
@@ -247,7 +247,7 @@ public class RoomContentsEventTests
 		var godRoom = (await godNode.Expect<SharpPlayer>().Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
 
 		// Register a fresh handle and bind it to God (#1) so we have a LoggedIn connection.
-		var disconnectHandle = 9002L;
+		var disconnectHandle = TestIsolationHelpers.GenerateUniqueHandle();
 		await ConnectionService.Register(
 			disconnectHandle,
 			"127.0.0.1", "localhost", "test",

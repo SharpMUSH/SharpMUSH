@@ -1,6 +1,6 @@
 format: "1.10"
 package: status
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -59,7 +59,8 @@ objects:
   # exactly as typed and nothing a player wrote is ever evaluated.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`STATUS` one routine per
-  # switch, FUN`STATUS` the reads, FUN`DISPLAY` and FUN`PAGE` for screens. DATA` the settings, one leaf each.
+  # switch, FUN`STATUS` the reads, FUN`PLAYER` finding a player and their key, FUN`DISPLAY` and FUN`PAGE` for
+  # screens. DATA` the settings, one leaf each.
   # The statuses a player may choose and every player's status are kept on the Status Store, never on a player,
   # so nobody can rewrite someone else's status.
   - ref: status
@@ -249,7 +250,7 @@ objects:
           cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
           page_size,u(%!/FUN`PAGE`SIZE),
           viewer_objid,objid(%#),
-          viewer_key,u(%!/FUN`KEY,%#))
+          viewer_key,u(%!/FUN`PLAYER`KEY,%#))
         flags: [funsyntax]
       # 1 when the player running the command may moderate statuses.
       FUN`IS`MODERATOR:
@@ -266,12 +267,12 @@ objects:
       # ---- shared reads ---------------------------------------------------------
       # %0 an object: the key its status is filed under. An objid cannot be part of an attribute name,
       # so #12:1790888816538 is filed as 12_1790888816538.
-      FUN`KEY:
+      FUN`PLAYER`KEY:
         value: |-
           edit(objid(%0),#,,:,_)
         flags: [funsyntax]
       # %0 typed text: the objid of the player it names, or nothing.
-      FUN`PLAYER:
+      FUN`PLAYER`MATCH:
         value: |-
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
@@ -292,7 +293,7 @@ objects:
         flags: [funsyntax]
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width, %3 each column's least width.
-      FUN`DISPLAY`TABLEOPTIONS:
+      FUN`DISPLAY`TABLE`OPTIONS:
         value: |-
           json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
         flags: [funsyntax]
@@ -355,24 +356,24 @@ objects:
           setq(status_lasts,default({{store}}/STATUS`%0`LASTS,0))[if(gt(%q<status_lasts>,0),It lasts [u(%!/FUN`DISPLAY`LASTS,%q<status_lasts>)][if(get({{store}}/STATUS`%0`LOGOFF),%bor until you log off)].,if(get({{store}}/STATUS`%0`LOGOFF),It lasts until you log off.,It lasts until you change it.))]
         flags: [funsyntax]
       # %0 a status: how long it lasts, in a few words for a table.
-      FUN`STATUS`LASTSSHORT:
+      FUN`STATUS`LASTS`SHORT:
         value: |-
-          setq(status_lasts,default({{store}}/STATUS`%0`LASTS,0))[if(gt(%q<status_lasts>,0),[u(%!/FUN`DISPLAY`DURATION,%q<status_lasts>)][if(get({{store}}/STATUS`%0`LOGOFF),%bor logoff)],if(get({{store}}/STATUS`%0`LOGOFF),until logoff,until changed))]
+          setq(status_lasts,default({{store}}/STATUS`%0`LASTS,0))[if(gt(%q<status_lasts>,0),u(%!/FUN`DISPLAY`DURATION,%q<status_lasts>)[if(get({{store}}/STATUS`%0`LOGOFF),%bor logoff)],if(get({{store}}/STATUS`%0`LOGOFF),until logoff,until changed))]
         flags: [funsyntax]
       # %0 a player with a status: its tag, and its line after a colon.
       FUN`STATUS`TEXT:
         value: |-
-          setq(status_text_key,u(%!/FUN`KEY,%0))[setq(status_text_name,get({{store}}/PLAYER`%q<status_text_key>`NAME))][setq(status_text_line,get({{store}}/PLAYER`%q<status_text_key>`LINE))][firstof(get({{store}}/STATUS`%q<status_text_name>`TAG),%q<status_text_name>)][if(strlen(%q<status_text_line>),: %q<status_text_line>)]
+          setq(status_text_key,u(%!/FUN`PLAYER`KEY,%0))[setq(status_text_name,get({{store}}/PLAYER`%q<status_text_key>`NAME))][setq(status_text_line,get({{store}}/PLAYER`%q<status_text_key>`LINE))][firstof(get({{store}}/STATUS`%q<status_text_name>`TAG),%q<status_text_name>)][if(strlen(%q<status_text_line>),: %q<status_text_line>)]
         flags: [funsyntax]
       # %0 a player: 1 when they have a status.
       FUN`STATUS`HAS:
         value: |-
-          u(%!/FUN`STATUS`ACTIVE,u(%!/FUN`KEY,%0))
+          u(%!/FUN`STATUS`ACTIVE,u(%!/FUN`PLAYER`KEY,%0))
         flags: [funsyntax]
       # %0 a player: where their status says to find them. "here" is wherever they are standing now.
       FUN`STATUS`PLACE:
         value: |-
-          setq(status_place,get({{store}}/PLAYER`[u(%!/FUN`KEY,%0)]`PLACE))[if(strmatch(%q<status_place>,here),name(room(%0)),%q<status_place>)]
+          setq(status_place,get({{store}}/PLAYER`[u(%!/FUN`PLAYER`KEY,%0)]`PLACE))[if(strmatch(%q<status_place>,here),name(room(%0)),%q<status_place>)]
         flags: [funsyntax]
       # %0 the keys of the statuses that have not run out, %1 a status or nothing for any: the connected players
       # the reader can see among them, least idle first.
@@ -381,7 +382,7 @@ objects:
           sort(setinter(iter(%0,if(cor(not(strlen(%1)),not(comp(get({{store}}/PLAYER`%i0`NAME),%1))),num(get({{store}}/PLAYER`%i0)))),lwho(%#)),idle)
         flags: [funsyntax]
       # Stops a command whose player has no status, and sets status_name to the one they have.
-      INC`STATUS`NEEDACTIVE:
+      INC`STATUS`NEED`ACTIVE:
         value: |-
           @assert u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)=@pemit %#=notice(STATUS,Choose a status first: +status <name>. +status lists them.,warn); think setq(status_name,get({{store}}/PLAYER`%q<viewer_key>`NAME))
         flags: [cmdsyntax]
@@ -404,41 +405,41 @@ objects:
       # The statuses a player may choose, as a table.
       FUN`STATUS`CHOICES:
         value: |-
-          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),[tone(strong,Name)]%r[iter(%q<status_names>,lcstr(%i0),,%r)],[tone(strong,Means)]%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],[tone(strong,Lasts)]%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTSSHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)][if(u(%!/FUN`IS`ADMIN),%r[tone(muted,Staff: +config status/statuses changes them. +help status staff has the rest.)])]
+          setq(status_names,u(%!/FUN`STATUS`NAMES))[rule(Statuses)]%r[datacolumns(u(%!/FUN`DISPLAY`TABLE`OPTIONS,1%r3,1%r2%r2,%r1%r,%r20%r),tone(strong,Name)%r[iter(%q<status_names>,lcstr(%i0),,%r)],tone(strong,Means)%r[iter(%q<status_names>,get({{store}}/STATUS`%i0),,%r)],tone(strong,Lasts)%r[iter(%q<status_names>,u(%!/FUN`STATUS`LASTS`SHORT,%i0),,%r)])]%r[rule(+status <name>=<line> sets one)][if(u(%!/FUN`IS`ADMIN),%r[tone(muted,Staff: +config status/statuses changes them. +help status staff has the rest.)])]
         flags: [funsyntax]
       # +status <name>[=<line>]
       INC`STATUS`SET:
         value: |-
-          think setq(status_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_line,if(%q<cmd_has_equals>,%q<cmd_right_side>)); @assert lte(strlen(%q<status_line>),get(%!/DATA`CONFIG`LINE-LENGTH))=@pemit %#=notice(STATUS,Keep it to [get(%!/DATA`CONFIG`LINE-LENGTH)] characters. +status/note takes the rest.,warn); @include %!/INC`STATUS`TOUCH; &PLAYER`%q<viewer_key>`LINE {{store}}=%q<status_line>; @pemit %#=notice(STATUS,Your status: [u(%!/FUN`STATUS`TEXT,%#)],ok)%r[tone(muted,[u(%!/FUN`STATUS`LASTS,%q<status_name>)] +status/note adds an OOC note%, +status/place where to find you%, and +status/off ends it.)]
+          think setq(status_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @assert strlen(setr(status_name,u(%!/FUN`STATUS`FIND,%q<status_typed>)))=@pemit %#=notice(STATUS,There is no status '%q<status_typed>'. +status lists them.,warn); think setq(status_line,if(%q<cmd_has_equals>,%q<cmd_right_side>)); @assert lte(strlen(%q<status_line>),get(%!/DATA`CONFIG`LINE-LENGTH))=@pemit %#=notice(STATUS,Keep it to [get(%!/DATA`CONFIG`LINE-LENGTH)] characters. +status/note takes the rest.,warn); @include %!/INC`STATUS`TOUCH; &PLAYER`%q<viewer_key>`LINE {{store}}=%q<status_line>; @pemit %#=notice(STATUS,Your status: [u(%!/FUN`STATUS`TEXT,%#)],ok)%r[tone(muted,u(%!/FUN`STATUS`LASTS,%q<status_name>) +status/note adds an OOC note%, +status/place where to find you%, and +status/off ends it.)]
         flags: [cmdsyntax]
       # +status/note [<text>]
       INC`STATUS`NOTE:
         value: |-
-          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(STATUS,Keep the note to [get(%!/DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`NOTE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Your note: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`NOTE {{store}}; @pemit %#=notice(STATUS,Your note is cleared.,ok)
+          @include %!/INC`STATUS`NEED`ACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(STATUS,Keep the note to [get(%!/DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`NOTE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Your note: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`NOTE {{store}}; @pemit %#=notice(STATUS,Your note is cleared.,ok)
         flags: [cmdsyntax]
       # +status/place [<text>|here]
       INC`STATUS`PLACE:
         value: |-
-          @include %!/INC`STATUS`NEEDACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`PLACE-LENGTH))=@pemit %#=notice(STATUS,Keep the place to [get(%!/DATA`CONFIG`PLACE-LENGTH)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strmatch(%q<cmd_argument>,here)={&PLAYER`%q<viewer_key>`PLACE {{store}}=here; @pemit %#=notice(STATUS,Others see where you are standing%, wherever you go.,ok)}; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`PLACE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Where to find you: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`PLACE {{store}}; @pemit %#=notice(STATUS,Your place is cleared.,ok)
+          @include %!/INC`STATUS`NEED`ACTIVE; @assert lte(strlen(%q<cmd_argument>),get(%!/DATA`CONFIG`PLACE-LENGTH))=@pemit %#=notice(STATUS,Keep the place to [get(%!/DATA`CONFIG`PLACE-LENGTH)] characters.,warn); @include %!/INC`STATUS`TOUCH; @break strmatch(%q<cmd_argument>,here)={&PLAYER`%q<viewer_key>`PLACE {{store}}=here; @pemit %#=notice(STATUS,Others see where you are standing%, wherever you go.,ok)}; @break strlen(%q<cmd_argument>)={&PLAYER`%q<viewer_key>`PLACE {{store}}=%q<cmd_argument>; @pemit %#=notice(STATUS,Where to find you: %q<cmd_argument>,ok)}; &PLAYER`%q<viewer_key>`PLACE {{store}}; @pemit %#=notice(STATUS,Your place is cleared.,ok)
         flags: [cmdsyntax]
       # +status/off [<player>]: your own status, or anyone's for a moderator.
       INC`STATUS`OFF:
         value: |-
-          @break strlen(%q<cmd_argument>)={@include %!/INC`STATUS`OFFOTHER}; @assert hasattr({{store}},PLAYER`%q<viewer_key>)=@pemit %#=notice(STATUS,You have no status.,warn); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>; @pemit %#=notice(STATUS,Your status is cleared.,ok)
+          @break strlen(%q<cmd_argument>)={@include %!/INC`STATUS`OFF`OTHER}; @assert hasattr({{store}},PLAYER`%q<viewer_key>)=@pemit %#=notice(STATUS,You have no status.,warn); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>; @pemit %#=notice(STATUS,Your status is cleared.,ok)
         flags: [cmdsyntax]
-      INC`STATUS`OFFOTHER:
+      INC`STATUS`OFF`OTHER:
         value: |-
-          @assert u(%!/FUN`IS`MODERATOR)=@pemit %#=notice(STATUS,Only a status moderator can clear someone else's status.,error); @assert strlen(setr(status_target,u(%!/FUN`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(STATUS,There is no player called '%q<cmd_argument>'.,warn); think setq(status_target_key,u(%!/FUN`KEY,%q<status_target>)); @assert hasattr({{store}},PLAYER`%q<status_target_key>)=@pemit %#=notice(STATUS,[name(%q<status_target>)] has no status.,warn); @include/args %!/INC`STATUS`CLEAR=key,%q<status_target_key>; @pemit %#=notice(STATUS,[name(%q<status_target>)]'s status is cleared.,ok); @pemit %q<status_target>=notice(STATUS,[name(%#)] cleared your status.)
+          @assert u(%!/FUN`IS`MODERATOR)=@pemit %#=notice(STATUS,Only a status moderator can clear someone else's status.,error); @assert strlen(setr(status_target,u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>)))=@pemit %#=notice(STATUS,There is no player called '%q<cmd_argument>'.,warn); think setq(status_target_key,u(%!/FUN`PLAYER`KEY,%q<status_target>)); @assert hasattr({{store}},PLAYER`%q<status_target_key>)=@pemit %#=notice(STATUS,name(%q<status_target>) has no status.,warn); @include/args %!/INC`STATUS`CLEAR=key,%q<status_target_key>; @pemit %#=notice(STATUS,name(%q<status_target>)'s status is cleared.,ok); @pemit %q<status_target>=notice(STATUS,name(%#) cleared your status.)
         flags: [cmdsyntax]
       # +status/show [<player>]
       INC`STATUS`SHOW:
         value: |-
-          think setq(status_target,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<status_target>)=@pemit %#=notice(STATUS,There is no player called '%q<cmd_argument>'.,warn); @assert cand(u(%!/FUN`STATUS`HAS,%q<status_target>),member(lwho(%#),num(%q<status_target>)))=@pemit %#=notice(STATUS,if(strmatch(%q<status_target>,%q<viewer_objid>),You have no status.,[name(%q<status_target>)] has no status.)); @pemit %#=u(%!/FUN`STATUS`CARD,%q<status_target>)
+          think setq(status_target,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<status_target>)=@pemit %#=notice(STATUS,There is no player called '%q<cmd_argument>'.,warn); @assert cand(u(%!/FUN`STATUS`HAS,%q<status_target>),member(lwho(%#),num(%q<status_target>)))=@pemit %#=notice(STATUS,if(strmatch(%q<status_target>,%q<viewer_objid>),You have no status.,name(%q<status_target>) has no status.)); @pemit %#=u(%!/FUN`STATUS`CARD,%q<status_target>)
         flags: [cmdsyntax]
       # %0 a player with a status: it as labelled values.
       FUN`STATUS`CARD:
         value: |-
-          setq(status_card_key,u(%!/FUN`KEY,%0))[rule(name(%0))]%r[fields(,Status,u(%!/FUN`STATUS`TEXT,%0),Note,firstof(get({{store}}/PLAYER`%q<status_card_key>`NOTE),-),Where,firstof(u(%!/FUN`STATUS`PLACE,%0),-),Since,[u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/PLAYER`%q<status_card_key>`SET)))] ago,Idle,u(%!/FUN`DISPLAY`DURATION,idle(%0)))]%r[rule()]
+          setq(status_card_key,u(%!/FUN`PLAYER`KEY,%0))[rule(name(%0))]%r[fields(,Status,u(%!/FUN`STATUS`TEXT,%0),Note,firstof(get({{store}}/PLAYER`%q<status_card_key>`NOTE),-),Where,firstof(u(%!/FUN`STATUS`PLACE,%0),-),Since,u(%!/FUN`DISPLAY`DURATION,sub(secs(),get({{store}}/PLAYER`%q<status_card_key>`SET))) ago,Idle,u(%!/FUN`DISPLAY`DURATION,idle(%0)))]%r[rule()]
         flags: [funsyntax]
       # +status/list[/<page>] [<status>]: who has a status, or that one. Statuses that ran out are cleared as the
       # list is drawn.
@@ -449,7 +450,7 @@ objects:
       # %0 players, %1 the heading: the table of their statuses.
       FUN`STATUS`TABLE:
         value: |-
-          rule(%1)%r[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r4,1%r1%r2%r3,%r1,%r20%r10),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],[tone(strong,Status)]%r[iter(%0,u(%!/FUN`STATUS`TEXT,%i0),,%r)],[tone(strong,Where)]%r[iter(%0,firstof(u(%!/FUN`STATUS`PLACE,%i0),-),,%r)],>[tone(strong,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)])]
+          rule(%1)%r[datacolumns(u(%!/FUN`DISPLAY`TABLE`OPTIONS,1%r4,1%r1%r2%r3,%r1,%r20%r10),tone(strong,Name)%r[iter(%0,name(%i0),,%r)],tone(strong,Status)%r[iter(%0,u(%!/FUN`STATUS`TEXT,%i0),,%r)],tone(strong,Where)%r[iter(%0,firstof(u(%!/FUN`STATUS`PLACE,%i0),-),,%r)],>[tone(strong,Idle)]%r[iter(%0,u(%!/FUN`DISPLAY`DURATION,idle(%i0)),,%r)])]
         flags: [funsyntax]
       # Clears every status that has run out, or whose player is gone, and sets status_live to the keys of the rest.
       INC`STATUS`SWEEP:
@@ -467,7 +468,8 @@ objects:
       # away is cleared from everyone who has it, and whoever removed it is told how many.
       ACONFIG:
         value: |-
-          @assert cand(strmatch(%<setting>,statuses),strmatch(%<action>,remove)); think setq(status_removed,lcstr(%<entry>),status_remover,%<by>); think setq(status_holders,filterbool(%!/FUN`STATUS`HOLDS,iter(lattr({{store}}/PLAYER`*),after(%i0,`)),,,ucstr(%q<status_removed>))); @assert words(%q<status_holders>); @dolist/inline %q<status_holders>={@include/args %!/INC`STATUS`CLEAR=key,##}; @pemit %q<status_remover>=notice(STATUS,Cleared %q<status_removed> from [words(%q<status_holders>)] player[if(neq(words(%q<status_holders>),1),s)].,ok)
+          @assert cand(strmatch(%<setting>,statuses),strmatch(%<action>,remove)); think setqm(status_removed,lcstr(%<entry>),
+          status_remover,%<by>); think setq(status_holders,filterbool(%!/FUN`STATUS`HOLDS,iter(lattr({{store}}/PLAYER`*),after(%i0,`)),,,ucstr(%q<status_removed>))); @assert words(%q<status_holders>); @dolist/inline %q<status_holders>={@include/args %!/INC`STATUS`CLEAR=key,##}; @pemit %q<status_remover>=notice(STATUS,Cleared %q<status_removed> from [words(%q<status_holders>)] player[if(neq(words(%q<status_holders>),1),s)].,ok)
         flags: [cmdsyntax]
       # %0 a key, %1 a status: 1 when that player's status is it.
       FUN`STATUS`HOLDS:
@@ -480,7 +482,7 @@ objects:
       # connections they have left. A status whose LOGOFF is set ends with the last connection.
       ADISCONNECT:
         value: |-
-          @assert cand(eq(%1,0),hastype(%#,player)); think setq(viewer_key,u(%!/FUN`KEY,%#)); @assert hasattr({{store}},PLAYER`%q<viewer_key>); @assert cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),get({{store}}/STATUS`[get({{store}}/PLAYER`%q<viewer_key>`NAME)]`LOGOFF)); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>
+          @assert cand(eq(%1,0),hastype(%#,player)); think setq(viewer_key,u(%!/FUN`PLAYER`KEY,%#)); @assert hasattr({{store}},PLAYER`%q<viewer_key>); @assert cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),get({{store}}/STATUS`[get({{store}}/PLAYER`%q<viewer_key>`NAME)]`LOGOFF)); @include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>
         flags: [cmdsyntax]
       # ---- lifecycle ------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.

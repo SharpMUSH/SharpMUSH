@@ -11,12 +11,12 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>
 /// A recalled channel line's or logged page's <c>text</c>, composed the way the <c>comm-feed</c> package
-/// composes the pushed <c>comm.message</c> for the same line: through <c>FN`COMM`TEXT</c> on the configured
+/// composes the pushed <c>comm.message</c> for the same line: through <c>FUN`COMM`TEXT</c> on the configured
 /// event handler. A page's push runs <c>PAGE`MESSAGE</c> the same way, with the pager as enactor.
 /// </summary>
 /// <remarks>
 /// <para>The push runs <c>CHANNEL`MESSAGE</c> on the handler with the speaker as enactor
-/// (<c>EventService</c>), which calls <c>u(me/FN`COMM`TEXT,style,name,message)</c>. So here too the
+/// (<c>EventService</c>), which calls <c>u(me/FUN`COMM`TEXT,style,name,message)</c>. So here too the
 /// executor and caller are the handler, the enactor is the speaker (God when the speaker is gone, as the
 /// event falls back to), and the arguments are the style, the name as the line names it (empty for an
 /// <c>@cemit</c>) and the message. A game that redefined the attribute gets the same text pulled as pushed.</para>
@@ -31,7 +31,7 @@ public sealed class CommTextComposer(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<CommTextComposer> logger)
 {
-	public const string Attribute = "FN`COMM`TEXT";
+	public const string Attribute = "FUN`COMM`TEXT";
 
 	/// <summary>The handler object, if the game has one carrying <see cref="Attribute"/>.</summary>
 	public async ValueTask<AnySharpObject?> HandlerAsync(CancellationToken ct)
@@ -95,7 +95,7 @@ public sealed class CommTextComposer(
 		return Default(style, name, message);
 	}
 
-	/// <summary>The bundled <c>FN`COMM`TEXT</c>: <c>switch(%0,pose,%1 %2,semipose,%1%2,%2)</c>.</summary>
+	/// <summary>The bundled <c>FUN`COMM`TEXT</c>: <c>switch(%0,pose,%1 %2,semipose,%1%2,%2)</c>.</summary>
 	public static string Default(string style, string name, string message) => style switch
 	{
 		"pose" => $"{name} {message}",
