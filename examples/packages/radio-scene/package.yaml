@@ -1,6 +1,6 @@
 format: "1.10"
 package: radio-scene
-version: 1.3.1
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
 license: MIT
@@ -16,7 +16,7 @@ plugins: [scene]
 # package keeps scenes and their poses. This one listens to the radio's feed and writes into scenes.
 depends:
   - package: radio
-    version: ">=1.2"
+    version: ">=1.3"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/radio/
@@ -32,8 +32,8 @@ objects:
   # The logger: a tap on the radio feed kind, and the /log and /stoplog switches of +radio. WIZARD because
   # it reads the WIZARD radio's attributes and adds poses to other people's scenes.
   #
-  #   P`<key>`LOG`<id>   a player logs frequency <id> into the scene they are in; <key> is the radio's
-  #                      FUN`KEY for them, so it matches the radio's own settings
+  #   DATA`PLAYER`<key>`LOG`<id>   a player logs frequency <id> into the scene they are in; <key> is the
+  #                                radio's FUN`KEY for them, so it matches the radio's own settings
   - ref: radiolog
     type: thing
     name: Radio Scene Log
@@ -46,19 +46,28 @@ objects:
       # many people in it are logging. It is recorded as the radio type, with the frequency's name in the
       # pose's frequency field, which the portal shows in the message's header.
       TAP`LOG: |-
-        think [setq(_f,after(%<feed>,/))][setq(_d,)][setq(_p,)][iter(%<recipients>,if(cand(hasattr({{radiolog}},P`[u({{radio/radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>={@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],radio,emit,,[uargs({{radio/radio}}/FUN`LINE,frequency,%q<_f>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,after(##,~))]; @scene/setpose [last(sceneposes(before(##,~)))]/frequency=[u({{radio/radio}}/FUN`NAME,%q<_f>)]}
+        think setqm(tap_frequency,after(%<feed>,/),
+        tap_scenes,,
+        tap_pairs,)[iter(%<recipients>,if(u({{radiolog}}/FUN`LOGS`INTO,%i0),setqm(tap_scenes,%q<tap_scenes> %q<tap_scene>,
+        tap_pairs,%q<tap_pairs> %q<tap_scene>~%i0)))]; @dolist/inline %q<tap_pairs>={@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],radio,emit,,[uargs({{radio/radio}}/FUN`LINE,frequency,%q<tap_frequency>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,after(##,~))]; @scene/setpose [last(sceneposes(before(##,~)))]/frequency=[u({{radio/radio}}/FUN`NAME,%q<tap_frequency>)]}
+      # %0 a listener: 1 when they log %q<tap_frequency>, their scene (left in %q<tap_scene>) is new or active, and no
+      # one before them put the line into it. A paused scene records nothing until +scene/start resumes it,
+      # though the player's focus stays on it.
+      FUN`LOGS`INTO: |-
+        cand(hasattr({{radiolog}},DATA`PLAYER`[u({{radio/radio}}/FUN`KEY,%0)]`LOG`%q<tap_frequency>),not(strmatch(setr(tap_scene,scenefocus(%0)),#-*)),not(match(paused finished cancelled,scene(%q<tap_scene>,status))),not(member(%q<tap_scenes>,%q<tap_scene>)))
 
-      # +radio includes these with its registers: %q<lhs> the frequency as typed, %q<me> the player's key and
-      # %q<ext> this object. The radio is the executor while they run, so they name it %! and this object
-      # %q<ext>: a {{ref}} is looked up on the executor, and the radio holds none of this package's.
+      # +radio includes these with its registers: %q<cmd_left> the frequency as typed, %q<viewer_key> the player's
+      # key and %q<extension_object> this object; INC`NEED`JOINED sets %q<frequency_id>. The radio is the executor
+      # while they run, so they name it %! and this object %q<extension_object>: a {{ref}} is looked up on the
+      # executor, and the radio holds none of this package's.
       # /log <frequency> starts logging it into the player's scene; /log alone lists what they log.
       INC`LOG: |-
-        @assert strlen(%q<lhs>)=@include %q<ext>/INC`LOGGED; @include %!/INC`NEED`JOINED; @assert not(strmatch(scenefocus(%#),#-*))=@pemit %#=[notice(RADIO,Join a scene first: what you hear is logged into the scene you are in.,warn)]; &P`%q<me>`LOG`%q<id> %q<ext>=1; @pemit %#=[notice(RADIO,What you hear on [u(%!/FUN`NAME,%q<id>)] goes into your scene until +radio/stoplog.,ok)]
+        @assert strlen(%q<cmd_left>)=@include %q<extension_object>/INC`LOGGED; @include %!/INC`NEED`JOINED; @assert not(strmatch(scenefocus(%#),#-*))=@pemit %#=notice(RADIO,Join a scene first: what you hear is logged into the scene you are in.,warn); &DATA`PLAYER`%q<viewer_key>`LOG`%q<frequency_id> %q<extension_object>=1; @pemit %#=notice(RADIO,What you hear on [u(%!/FUN`NAME,%q<frequency_id>)] goes into your scene until +radio/stoplog.,ok)
       INC`STOPLOG: |-
-        @include %!/INC`NEED`JOINED; @assert hasattr(%q<ext>,P`%q<me>`LOG`%q<id>)=@pemit %#=[notice(RADIO,You are not logging [u(%!/FUN`NAME,%q<id>)].,warn)]; &P`%q<me>`LOG`%q<id> %q<ext>; @pemit %#=[notice(RADIO,[u(%!/FUN`NAME,%q<id>)] is no longer logged into your scene.,ok)]
+        @include %!/INC`NEED`JOINED; @assert hasattr(%q<extension_object>,DATA`PLAYER`%q<viewer_key>`LOG`%q<frequency_id>)=@pemit %#=notice(RADIO,You are not logging [u(%!/FUN`NAME,%q<frequency_id>)].,warn); &DATA`PLAYER`%q<viewer_key>`LOG`%q<frequency_id> %q<extension_object>; @pemit %#=notice(RADIO,[u(%!/FUN`NAME,%q<frequency_id>)] is no longer logged into your scene.,ok)
       # The frequencies the player logs that still exist.
       INC`LOGGED: |-
-        think [setq(lg,squish(iter(lattr(%q<ext>/P`%q<me>`LOG`*),if(hasattr(%!,F`[last(%i0,`)]`NAME),last(%i0,`)))))]; @assert words(%q<lg>)=@pemit %#=[notice(RADIO,You log no frequency into your scene. +radio/log <frequency> starts.)]; @pemit %#=[notice(RADIO,Logged into your scene: [itemize(iter(%q<lg>,u(%!/FUN`NAME,%i0),,|),|)].)]
+        think setq(logged_ids,squish(iter(lattr(%q<extension_object>/DATA`PLAYER`%q<viewer_key>`LOG`*),if(hasattr(%!,DATA`FREQUENCY`[last(%i0,`)]`NAME),last(%i0,`))))); @assert words(%q<logged_ids>)=@pemit %#=notice(RADIO,You log no frequency into your scene. +radio/log <frequency> starts.); @pemit %#=notice(RADIO,Logged into your scene: [itemize(iter(%q<logged_ids>,u(%!/FUN`NAME,%i0),,|),|)].)
 
       # Taps are stored, so this only puts the tap back after the radio kind was undefined and defined again.
       STARTUP: |-
@@ -76,7 +85,7 @@ objects:
       TYPE`RADIO: |-
         {"label":"Radio","presentation":"message","tone":"info","icon":"radio","order":40}
       TYPE`RADIO`FORMAT: |-
-        [tone(info,<RADIO[if(strlen(%3),%b[chr(183)] %3)]> %2)]
+        tone(info,<RADIO[if(strlen(%3),%b[chr(183)] %3)]> %2)
 
   # +radio/log and /stoplog: the radio runs INC`LOG and INC`STOPLOG on the logger. Uninstalling this
   # package takes them away again.
@@ -102,7 +111,7 @@ objects:
         - `+radio/log <frequency>` puts everything you hear on that frequency into your scene, until `+radio/stoplog <frequency>`.
         - `+radio/log` lists the frequencies you log.
 
-        You must be tuned in to the frequency and in a scene. A line goes into a scene once, however many people in it are logging, and it reads the way the first of them heard it. Logging lasts until you stop it: when you move to another scene, what you hear goes there instead.
+        You must be tuned in to the frequency and in a scene. While your scene is paused nothing is logged into it, radio included, until `+scene/start` resumes it. A line goes into a scene once, however many people in it are logging, and it reads the way the first of them heard it. Logging lasts until you stop it: when you move to another scene, what you hear goes there instead.
 
   - ref: scene_help_radio
     target: "{{scene/scene_help}}"

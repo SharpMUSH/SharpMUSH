@@ -82,12 +82,12 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.2.5
+    version: 1.3.0
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-scene/
     name: Radio in scenes
     package: radio-scene
-    version: 1.3.1
+    version: 1.4.0
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
   - path: scene-help/
     name: Scene help
@@ -152,12 +152,12 @@ packages:
   - path: summary/
     name: Summary
     package: summary
-    version: 1.0.1
+    version: 1.0.2
     description: +summary — a line summing up your last pose, told to your room only and never recorded by a scene (requires plus-config)
   - path: time/
     name: Time
     package: time
-    version: 1.2.2
+    version: 1.3.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: info/
     name: Info Files
@@ -234,11 +234,16 @@ packages:
     package: roster-jobs
     version: 1.1.0
     description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs, plus-help and plus-config)
+  - path: availability/
+    name: Availability
+    package: availability
+    version: 1.0.0
+    description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability
-    version: 1.0.3
-    description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group or a scene's cast are all free
+    version: 2.0.0
+    description: A bridge for +avail in scenes — +avail/scene finds a time a scene's cast is all free, and a scheduled scene's card shows who is free at its time
   - path: gmcp-room/
     name: GMCP Room
     package: gmcp-room
