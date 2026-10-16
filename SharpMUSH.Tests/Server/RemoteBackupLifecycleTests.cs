@@ -25,9 +25,11 @@ public class RemoteBackupLifecycleTests
 		public bool FailAfterReadySave;
 		public bool FailReadAfterCopy;
 		public bool FailNextRead;
+		public TaskCompletionSource? ReadObserved;
 		public ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class
 		{
 			if (FailNextRead) { FailNextRead = false; throw new IOException("Synthetic transient completion-read failure"); }
+			ReadObserved?.TrySetResult();
 			return ValueTask.FromResult(Serialized is null ? null : JsonSerializer.Deserialize<T>(Serialized));
 		}
 		public ValueTask SetExpandedServerDataAsync<T>(T value, bool ignoreNull = false) where T : class
@@ -91,6 +93,22 @@ public class RemoteBackupLifecycleTests
 			if (Directory.Exists(Root)) Directory.Delete(Root, true);
 			if (Directory.Exists(Root + ".remote-jobs")) Directory.Delete(Root + ".remote-jobs", true);
 		}
+	}
+
+	[Test]
+	public async Task StartupRecoveryFailureDoesNotStopSubsequentTicks()
+	{
+		using var host = new Host();
+		host.Data.FailNextRead = true;
+		host.Data.ReadObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var service = new RemoteBackupScheduleService(host.Coordinator, NullLogger<RemoteBackupScheduleService>.Instance);
+		await service.StartAsync(default);
+		try
+		{
+			await host.Data.ReadObserved.Task.WaitAsync(TimeSpan.FromSeconds(20));
+			await Assert.That(service.ExecuteTask!.IsFaulted).IsFalse();
+		}
+		finally { await service.StopAsync(default); }
 	}
 
 	[Test]

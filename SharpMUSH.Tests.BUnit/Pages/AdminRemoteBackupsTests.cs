@@ -19,9 +19,18 @@ public class AdminRemoteBackupsTests : TrackingBunitContext
 	{
 		public readonly List<string> Calls = [];
 		public RemoteBackupConfigure? Configured;
+		public bool FailNextStatus;
+		public bool FailRun;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
 			Calls.Add(request.Method + " " + request.RequestUri!.AbsolutePath);
+			if (request.Method == HttpMethod.Get && FailNextStatus)
+			{
+				FailNextStatus = false;
+				return new(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("status-unavailable") };
+			}
+			if (request.Method == HttpMethod.Post && FailRun)
+				return new(HttpStatusCode.BadRequest) { Content = new StringContent("run-rejected") };
 			if (request.Method == HttpMethod.Put) Configured = await request.Content!.ReadFromJsonAsync<RemoteBackupConfigure>(ct);
 			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(status) };
 		}
@@ -37,6 +46,32 @@ public class AdminRemoteBackupsTests : TrackingBunitContext
 		Services.AddSingleton<RemoteBackupsService>();
 		AddAuthorization().SetAuthorized("administrator");
 		return wire;
+	}
+
+	[Test]
+	public async Task SuccessfulStatusPollClearsItsEarlierError()
+	{
+		var wire = Setup(new(new(true, 24, "b2:bucket:path"), true, true, true, DateTimeOffset.UtcNow, null, []));
+		wire.FailNextStatus = true;
+		var page = Render<AdminRemoteBackups>();
+		page.WaitForAssertion(() => { if (!page.Markup.Contains("status-unavailable")) throw new Exception("Initial status error missing"); });
+		page.WaitForAssertion(() =>
+		{
+			if (!page.Markup.Contains("AdmRemoteBackupAgentSeen") || page.Markup.Contains("status-unavailable"))
+				throw new Exception("Recovered status kept its old error");
+		}, TimeSpan.FromSeconds(15));
+		await Assert.That(wire.Calls.Count(call => call.StartsWith("GET", StringComparison.Ordinal))).IsGreaterThanOrEqualTo(2);
+	}
+
+	[Test]
+	public async Task SuccessfulStatusReadDoesNotHideRejectedRun()
+	{
+		var wire = Setup(new(new(true, 24, "b2:bucket:path"), true, true, true, DateTimeOffset.UtcNow, null, []));
+		wire.FailRun = true;
+		var page = Render<AdminRemoteBackups>();
+		page.WaitForAssertion(() => { if (!page.Markup.Contains("AdmRemoteBackupAgentSeen")) throw new Exception("Status missing"); });
+		await page.FindAll("button").Single(button => button.TextContent.Contains("AdmRemoteBackupNow")).ClickAsync();
+		await Assert.That(page.Markup).Contains("run-rejected");
 	}
 
 	[Test]
