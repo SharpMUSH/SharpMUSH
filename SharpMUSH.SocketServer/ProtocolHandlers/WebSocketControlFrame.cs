@@ -85,7 +85,10 @@ public static class WebSocketControlFrame
 					return true;
 			}
 		}
-		catch (JsonException) { }
+		catch (JsonException)
+		{
+			return false;
+		}
 		return false;
 	}
 
