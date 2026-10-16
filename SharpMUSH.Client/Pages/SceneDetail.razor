@@ -263,6 +263,13 @@
                         @* A scene that has not started has no start, length or activity to tell: when it is due and
                            who hosts it are what a reader comes for. *@
                         <dl class="scene-detail-facts">
+                            <dt>@Loc["RolSceneJoinPolicy"]</dt>
+                            <dd>@scene.Meta.GetValueOrDefault("joinpolicy", "open")</dd>
+                            @if (scene.Meta.TryGetValue("playercap", out var cap) && int.TryParse(cap, out var seats) && seats > 0)
+                            {
+                                <dt>@Loc["RolScenePlayerCap"]</dt>
+                                <dd>@seats</dd>
+                            }
                             @* The scene's own details first, its verse and canon, as the owner set them with +scene/set. *@
                             @foreach (var (detail, values) in SceneDetails.Catalogue.Of(scene))
                             {

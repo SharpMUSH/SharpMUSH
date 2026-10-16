@@ -29,6 +29,11 @@
                                 {
                                     <Pill Tag="true" Class="schedule-paused">@Loc["RolPausedBadge"]</Pill>
                                 }
+                                <Pill Tag="true">@scene.Meta.GetValueOrDefault("joinpolicy", "open")</Pill>
+                                @if (scene.Meta.TryGetValue("playercap", out var cap) && int.TryParse(cap, out var seats) && seats > 0)
+                                {
+                                    <Pill Tag="true">@Loc["RolScenePlayerCap"]: @seats</Pill>
+                                }
                                 @if (!scene.IsPublic)
                                 {
                                     <Pill Tag="true" Class="schedule-private">@Loc["NavScenePrivate"]</Pill>

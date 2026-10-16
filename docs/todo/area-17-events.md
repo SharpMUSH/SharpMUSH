@@ -14,7 +14,7 @@
 - [ ] No temp room created until scene actually starts (organizer triggers)
 
 ### Commands
-- [ ] `+scene/schedule <title>=<time>/<desc>` — create with state "scheduled"
+- [ ] `+scene/schedule <when>/<title>=<pitch>` — create with state "scheduled"
 - [ ] `+scene/rsvp <scene#>` — add to rsvp_list as "attending"
 - [ ] `+scene/rsvp/interested <scene#>` — add as "interested"
 - [ ] `+scene/rsvp/cancel <scene#>` — remove from rsvp_list

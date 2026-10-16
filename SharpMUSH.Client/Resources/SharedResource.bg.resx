@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} записи в палитрата бяха пропуснати заради ограниченията.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Правила за присъединяване</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Максимален брой играчи</value>
+  </data>
 </root>

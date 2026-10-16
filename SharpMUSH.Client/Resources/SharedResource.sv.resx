@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} palettposter utelämnades eftersom gränsen nåddes.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Regler för deltagande</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Maximalt antal spelare</value>
+  </data>
 </root>

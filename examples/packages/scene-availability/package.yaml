@@ -81,7 +81,7 @@ objects:
       # +avail/find's footer (FUN`SCREEN`FIND`FOOT): %0 the footer so far, %1 the runs, start:end. Adds the line
       # that books the first time as a scene, written in seconds, which +scene/schedule reads.
       FILTER`AVAIL`FIND`SCENE: |-
-        %0[if(words(%1),%r[tone(muted,Book the first: +scene/schedule <title>=[first(first(%1),:)])])]
+        %0[if(words(%1),%r[tone(muted,Book the first: +scene/schedule [first(first(%1),:)]/<title>=<pitch>)])]
 
   # A scheduled scene's card shows who of its cast is free at its time (+help scene filters).
   - ref: scene_card
