@@ -1354,9 +1354,8 @@ objects:
       FUN`API`JOBENTRIES: |-
         setq(api_job,u({{jobs}}/FUN`JOB`FIND,%0))[if(not(cand(strlen(%q<api_job>),u({{jobs}}/FUN`CALLER`OK,%q<api_job>,%@))),#-1 NO SUCH JOB,squish(iter(lnum(1,firstof(get(%q<api_job>/JOB`ENTRIES),0)),if(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%q<api_job>,entry,%i0,staff,u({{jobs}}/FUN`CAN`WORK,get(%q<api_job>/JOB`BUCKET),firstof(%1,%@))),%i0))))]
       # @trigger/inline/nobreak/args Jobs/INC`API`FILE=player,<player>,bucket,<bucket>,title,<title>,text,<text>
-      # files a job for a player and leaves its number in %q<job_number>, and in %q<job> for code written
-      # before (both empty when it was refused). format,softcode shows the text as typed. Needs a privileged
-      # executor (a wizard object), since it writes the job store.
+      # files a job for a player and leaves its number in %q<job> (empty when it was refused). format,softcode
+      # shows the text as typed. Needs a privileged executor (a wizard object), since it writes the job store.
       INC`API`FILE: |-
         think setqm(job,,
         job_number,,
@@ -2553,13 +2552,13 @@ objects:
 
         ## Filing from other code
 
-        From a wizard object, such as a chargen's submit command, run the API in place with the job's parts as named arguments. It leaves the new number in `%%q<job_number>`, empty when the job was refused:
+        From a wizard object, such as a chargen's submit command, run the API in place with the job's parts as named arguments. It leaves the new number in `%%q<job>`, empty when the job was refused:
 
         ```
-        @trigger/inline/nobreak/args Jobs/INC`API`FILE=player,%%#,bucket,Applications,title,Application for %%n,text,\[v\(sheet\)\]; @pemit %%#=Filed as job %%q<job_number>.
+        @trigger/inline/nobreak/args Jobs/INC`API`FILE=player,%%#,bucket,Applications,title,Application for %%n,text,\[v\(sheet\)\]; @pemit %%#=Filed as job %%q<job>.
         ```
 
-        Text with commas in it arrives whole. Add `format,softcode` to show the text as typed. A refusal stops only the API, never the code that called it. Code written for `%%q<job>` still reads the number there.
+        Text with commas in it arrives whole. Add `format,softcode` to show the text as typed. A refusal stops only the API, never the code that called it.
 
         - `` INC`API`REPLY `` and `` INC`API`NOTE `` take `job`, `actor` and `text` \(and `format`\): a public reply, or a staff note.
         - `` INC`API`CLOSE `` takes `job`, `actor`, `outcome` \(approved, denied, completed or canceled\) and, when there is one, the closing `text`.
