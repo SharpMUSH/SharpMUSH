@@ -52,6 +52,10 @@
 			<Link>Documentation\Repository\deploy\connection-updates.md</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<Content Include="..\tools\RhostExport\README.md">
+			<Link>Documentation\Repository\tools\RhostExport\README.md</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		<Content Include="..\tools\parity\README.md">
 			<Link>Documentation\Repository\tools\parity\README.md</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -84,6 +88,7 @@
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
     <!-- The softcode editor's data generator, so its output is checked without a portal build -->
     <ProjectReference Include="..\tools\ClientData\ClientData.csproj" />
+    <ProjectReference Include="..\tools\RhostExport\RhostExport.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -99,6 +104,9 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<Content Include="Integration\TestData\*.txt">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Services\TestData\RhostNative\**\*">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<Content Include="Services\TestData\*.outdb;Services\TestData\*.maildb;Services\TestData\*.chatdb;Services\TestData\*.flat;Services\TestData\*.mail;Services\TestData\*.folder;Services\TestData\*.comsys">

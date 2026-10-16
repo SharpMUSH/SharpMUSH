@@ -1,0 +1,58 @@
+{
+  "revision": "bfd2894c7239d02b8bec15c36939706be371715c",
+  "architecture": "x86_64",
+  "system": "Linux-7.2.9-1-cachyos-x86_64-with-glibc2.44",
+  "sample_sha256": "9345b3fa00018461497fa510efb37e4a04e8ef75c6d0322a0d5f53549a4a0e9e",
+  "seed_sha256": "d6c97e9ebf6cce2f3e9e2971e18cc2c551844270b1f8ee0c2f792c436c941d1a",
+  "converter_build_repair": "QDBM only: add #include \"externs.h\" after debug.h in udb_ocache.c; pinned source omits rhost_time declaration.",
+  "backends": {
+    "legacy": {
+      "custom_defs": "# Custom Definitions\nCUSTDEFS = -DBROKEN_ERRNO_SYS -DNEED_SCANDIR -DBROKEN_PROXY -DBIT64 -DC_SUB -DTINY_SUB -DLBUF16 -DQDBM -DEMPIRE_DOORS -DMUSH_DOORS -DSBUF64 $(DR_DEF) -DCRYPT_GLIB2 -DPCRE_SYSLIB -DMUXCRYPT -DSECURE_SIDEEFFECT -DOLD_SETQ -DBANGS -DMARKER_FLAGS -DZENTY_ANSI -DEXPANDED_QREGS -DREALITY_LEVELS -DATTR_HACK -DPROG_LIKEMUX -DPLUSHELP -DUSECRYPT -DSOFTCOM -DMUX_INCDEC -DTINY_U -DUSE_SIDEEFFECT -Wall -DHAS_OPENSSL\n# Custom Libraries\nCUSTMORELIBS = -lm -lnsl -lresolv -lcrypt $(EXTLIBS) -lcrypto -lssl -lpcre\n# Main @door engine\nDR_DEF = -DENABLE_DOORS -DEXAMPLE_DOOR_CODE\n# Mush @door\nDRMUSHSRC = door_mush.c\nDRMUSHOBJ = door_mush.o\n# Empire @door\nDREMPIRESRC = empire.c\nDREMPIREOBJ = empire.o\nDREMPIREHDR = empire.h\nDR_HDR = $(DREMPIREHDR)\n# DB used for Mush Engine\nCUSTLIBS = -L../src/qdbm/ -lqdbm\n",
+      "converter_sha256": "85496a680e1d78d76823977610c4cd9875988cc5a678f6792a6b787274a0452b",
+      "export_sha256": "4211aecda80beb5ae968a238cfab41862966cdb7d58cd38e229fc535be08b4d7",
+      "native": {
+        "netrhost.db": {
+          "bytes": 802,
+          "sha256": "46e6f764fda1434b7fc805983ed96ca8b2f8462666a78f57ae7eac696f3fa2f1",
+          "gzip_bytes": 315
+        },
+        "netrhost.gdbm.db": {
+          "bytes": 3117,
+          "sha256": "e0898397941cae9c27b03d286e9e9e1932f96d0b88e32f299cf3c95a937242f9",
+          "gzip_bytes": 927
+        },
+        "netrhost.gdbm.dir": {
+          "bytes": 181,
+          "sha256": "1c059575065ddfedb76e2ed636fc3a9df3b29773fcf3197f284c5bc736d9ab85",
+          "gzip_bytes": 119
+        },
+        "netrhost.gdbm.pag": {
+          "bytes": 8464,
+          "sha256": "311cdc17739aee171ebef00041eb72d8b70bca7246090a91b291aff031d1de1b",
+          "gzip_bytes": 310
+        }
+      }
+    },
+    "mdbx": {
+      "custom_defs": "# Custom Definitions\nCUSTDEFS = -DBROKEN_ERRNO_SYS -DNEED_SCANDIR -DBROKEN_PROXY -DBIT64 -DC_SUB -DTINY_SUB -DLBUF16 -DMDBX -DEMPIRE_DOORS -DMUSH_DOORS -DSBUF64 $(DR_DEF) -DCRYPT_GLIB2 -DPCRE_SYSLIB -DMUXCRYPT -DSECURE_SIDEEFFECT -DOLD_SETQ -DBANGS -DMARKER_FLAGS -DZENTY_ANSI -DEXPANDED_QREGS -DREALITY_LEVELS -DATTR_HACK -DPROG_LIKEMUX -DPLUSHELP -DUSECRYPT -DSOFTCOM -DMUX_INCDEC -DTINY_U -DUSE_SIDEEFFECT -Wall -DHAS_OPENSSL\n# Custom Libraries\nCUSTMORELIBS = -lm -lnsl -lresolv -lcrypt $(EXTLIBS) -lcrypto -lssl -lpcre\n# Main @door engine\nDR_DEF = -DENABLE_DOORS -DEXAMPLE_DOOR_CODE\n# Mush @door\nDRMUSHSRC = door_mush.c\nDRMUSHOBJ = door_mush.o\n# Empire @door\nDREMPIRESRC = empire.c\nDREMPIREOBJ = empire.o\nDREMPIREHDR = empire.h\nDR_HDR = $(DREMPIREHDR)\n# DB used for Mush Engine\nCUSTLIBS = -L../src/mdbx/ -lmdbx\n",
+      "converter_sha256": "bb248eb69b346643a30cc8772271dd0be53181adec8df227d5fec1bf2161ea33",
+      "export_sha256": "4211aecda80beb5ae968a238cfab41862966cdb7d58cd38e229fc535be08b4d7",
+      "native": {
+        "netrhost.db": {
+          "bytes": 802,
+          "sha256": "46e6f764fda1434b7fc805983ed96ca8b2f8462666a78f57ae7eac696f3fa2f1",
+          "gzip_bytes": 315
+        },
+        "netrhost.gdbm.mdbx": {
+          "bytes": 1048576,
+          "sha256": "2bcbf5e1fa40c917fd5e3ca24f04a1b0cd8c3486b2b18dcd3c6c07845ec99367",
+          "gzip_bytes": 2467
+        }
+      }
+    }
+  },
+  "toolchain": {
+    "clang": "23.1.1",
+    "GNU_make": "4.4.1"
+  }
+}

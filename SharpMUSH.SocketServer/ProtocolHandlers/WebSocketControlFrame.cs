@@ -1,10 +1,11 @@
+using System.Text;
 using System.Text.Json;
 
 namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
 /// Discriminates browser-sent JSON control frames from ordinary command text on the WebSocket.
-/// Plain text and any JSON that is not a recognized control frame are treated as commands.
+/// Environment frames are reserved even when invalid; other unrecognized JSON is ordinary command text.
 /// </summary>
 public static class WebSocketControlFrame
 {
@@ -60,6 +61,35 @@ public static class WebSocketControlFrame
 		{
 			return false;
 		}
+	}
+
+	/// <summary>
+	/// Reserves environment frames even when their payload is invalid. Read the discriminator before
+	/// validating the rest so a truncated control frame cannot fall through to MUSH command parsing.
+	/// JSON with another type, and commands containing JSON, remain ordinary game input.
+	/// </summary>
+	public static bool IsEnvironmentFrame(string message)
+	{
+		var trimmed = message.AsSpan().TrimStart();
+		if (trimmed.Length == 0 || trimmed[0] != '{') return false;
+
+		var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(message));
+		try
+		{
+			if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return false;
+			while (reader.Read())
+			{
+				if (reader.CurrentDepth == 1 && reader.TokenType == JsonTokenType.PropertyName
+					&& reader.ValueTextEquals("type") && reader.Read()
+					&& reader.TokenType == JsonTokenType.String && reader.ValueTextEquals("environ"))
+					return true;
+			}
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+		return false;
 	}
 
 	/// <summary>The longest time zone name a frame may report.</summary>

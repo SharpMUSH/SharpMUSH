@@ -184,6 +184,15 @@ public class SharedResourceLocalizationTests
 	}
 
 	[Test]
+	[Arguments("PkgBrowseInstalled")]
+	[Arguments("PkgBrowseInstalledOrigin")]
+	[Arguments("PkgBrowseInstalledUnavailable")]
+	public async Task Package_browse_installation_status_has_localized_copy(string key)
+	{
+		await Assert.That(PortalLocalizer.Create()[key].ResourceNotFound).IsFalse();
+	}
+
+	[Test]
 	public async Task Every_displayed_enum_member_has_a_label_in_the_resx()
 	{
 		var loc = PortalLocalizer.Create();

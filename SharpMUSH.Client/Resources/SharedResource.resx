@@ -8877,4 +8877,13 @@
   <data name="AdmRemoteBackupCopyRetention" xml:space="preserve"><value>Unknown uploads retain their local copy. Interrupted preparation may leave a job directory under backup.remote-jobs on the server; inspect the failed job before removing its directory.</value></data>
   <data name="AdmRemoteBackupClearAccountId" xml:space="preserve"><value>Clear the stored storage account ID when saving</value></data>
   <data name="AdmRemoteBackupClearAccountKey" xml:space="preserve"><value>Clear the stored storage account key when saving</value></data>
+  <data name="PkgBrowseInstalled" xml:space="preserve">
+    <value>Installed v{0}</value>
+  </data>
+  <data name="PkgBrowseInstalledOrigin" xml:space="preserve">
+    <value>Installed from {0} (path: {1}).</value>
+  </data>
+  <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
+    <value>Installed status is unavailable. Refresh to try again. {0}</value>
+  </data>
 </root>

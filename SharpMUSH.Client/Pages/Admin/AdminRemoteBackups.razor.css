@@ -1,0 +1,24 @@
+.remote-backups-page {
+    min-width: 0;
+}
+
+.remote-backups-page ::deep .remote-backups-actions {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.remote-backups-page ::deep .remote-backups-snapshot {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
+@container page (max-width: 48rem) {
+    .remote-backups-page ::deep .remote-backups-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .remote-backups-page ::deep .remote-backups-actions .mud-button-root {
+        width: 100%;
+    }
+}

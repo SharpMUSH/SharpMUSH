@@ -57,6 +57,6 @@ public partial class Functions
 			Restrictions = EvaluationRestrictions.Current,
 			OutputLimit = parent.OutputLimit
 		};
-		return await parser.FromState(state).FunctionParse(args["1"].Message) ?? CallState.Empty;
+		return await ParseRawArgument(parser.FromState(state), args["1"].Message) ?? CallState.Empty;
 	}
 }

@@ -75,6 +75,9 @@ public class RemoteEnactorLocateIsolationTests
 	{
 		var before = NotificationCount();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		// Ordinary @trigger returns after admission; INNER's output belongs to the child entry.
+		await WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>()
+			.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 		return NotifyService.ReceivedCalls()
 			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Skip(before)

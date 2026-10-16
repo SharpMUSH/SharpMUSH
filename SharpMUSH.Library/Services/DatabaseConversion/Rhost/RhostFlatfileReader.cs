@@ -24,6 +24,8 @@ public static class RhostFlatfileReader
 	/// <summary>The text encoding the flatfile is read in.</summary>
 	public static readonly Encoding FileEncoding = new UTF8Encoding(false);
 
+	internal static readonly Encoding StrictFileEncoding = new UTF8Encoding(false, true);
+
 	/// <summary>The bits of <c>+V</c> that are the format version.</summary>
 	public const int VersionMask = 0xff;
 
@@ -64,6 +66,14 @@ public static class RhostFlatfileReader
 		return await ReadAsync(stream, cancellationToken);
 	}
 
+	/// <summary>Reads an exported v7 flatfile and rejects ambiguous or inconsistent records.</summary>
+	public static async Task<RhostFlatfile> ReadFileStrictAsync(string path, CancellationToken cancellationToken = default)
+		=> ReadStrict(await File.ReadAllTextAsync(path, StrictFileEncoding, cancellationToken), cancellationToken);
+
+	/// <summary>Reads an exported v7 flatfile with structural and reference validation.</summary>
+	public static RhostFlatfile ReadStrict(string text, CancellationToken cancellationToken = default)
+		=> ReadCore(text, cancellationToken, true);
+
 	/// <summary>Reads a flatfile from <paramref name="stream"/>.</summary>
 	public static async Task<RhostFlatfile> ReadAsync(Stream stream, CancellationToken cancellationToken = default)
 	{
@@ -75,6 +85,9 @@ public static class RhostFlatfileReader
 	/// <summary>Reads a flatfile held in memory.</summary>
 	/// <exception cref="FormatException">The text is not a flatfile this reader can take.</exception>
 	public static RhostFlatfile Read(string text, CancellationToken cancellationToken = default)
+		=> ReadCore(text, cancellationToken, false);
+
+	private static RhostFlatfile ReadCore(string text, CancellationToken cancellationToken, bool strict)
 	{
 		var firstBreak = text.IndexOf('\n');
 		if (firstBreak > 0 && text[firstBreak - 1] == '\r')
@@ -88,10 +101,17 @@ public static class RhostFlatfileReader
 		var top = 0;
 		var next = 0;
 		var attributes = new Dictionary<int, RhostAttributeDefinition>();
+		var headers = new HashSet<char>();
 
 		while (lines.Peek() is { } line && line.StartsWith('+'))
 		{
 			lines.Next();
+			cancellationToken.ThrowIfCancellationRequested();
+			if (strict && (line.Length < 2 || !"VSNA".Contains(line[1])
+				|| (line[1] != 'A' && !headers.Add(line[1]))))
+			{
+				throw lines.Error("unknown or duplicate header");
+			}
 			switch (line.Length > 1 ? line[1] : ' ')
 			{
 				case 'V':
@@ -112,10 +132,22 @@ public static class RhostFlatfileReader
 						throw lines.Error($"the +A{number} header has no flags:name line");
 					}
 
+					if (strict && attributes.ContainsKey(number))
+					{
+						throw lines.Error($"duplicate attribute definition +A{number}");
+					}
+
 					attributes[number] = new RhostAttributeDefinition(number, definition[(colon + 1)..],
 						UnsignedNumber(definition[..colon], lines, $"the flags of +A{number}"));
 					break;
 			}
+		}
+
+		if (strict && (!headers.SetEquals(['V', 'S', 'N']) || (version & VersionMask) != 7
+			|| (version & ~(VersionMask | ZoneFlag | LinkFlag | AttributesExternalFlag | NameInAttributeFlag
+				| LockInAttributeFlag | ParentFlag | MoneyInAttributeFlag | ExtendedFlagsFlag)) != 0))
+		{
+			throw lines.Error("strict export requires the +V, +S and +N headers and supported v7 flags");
 		}
 
 		if (version < 0)
@@ -135,7 +167,16 @@ public static class RhostFlatfileReader
 			cancellationToken.ThrowIfCancellationRequested();
 			if (line == EndOfDump)
 			{
-				return new RhostFlatfile(version, top, next, attributes, objects);
+				var result = new RhostFlatfile(version, top, next, attributes, objects);
+				if (strict)
+				{
+					while (lines.Next() is { } trailing)
+					{
+						if (!string.IsNullOrWhiteSpace(trailing)) throw lines.Error("data follows the end of dump");
+					}
+					ValidateStrict(result, cancellationToken);
+				}
+				return result;
 			}
 
 			if (!line.StartsWith('!'))
@@ -143,13 +184,13 @@ public static class RhostFlatfileReader
 				throw lines.Error($"expected an object (!<number>) or {EndOfDump}, found \"{Shorten(line)}\"");
 			}
 
-			objects.Add(ReadObject(Number(line[1..], lines, "an object number"), version, lines));
+			objects.Add(ReadObject(Number(line[1..], lines, "an object number"), version, lines, strict));
 		}
 
 		throw new FormatException($"The RhostMUSH flatfile ends without {EndOfDump}: it was cut short.");
 	}
 
-	private static RhostFlatfileObject ReadObject(int dbref, int version, LineCursor lines)
+	private static RhostFlatfileObject ReadObject(int dbref, int version, LineCursor lines, bool strict)
 	{
 		var name = (version & NameInAttributeFlag) != 0 ? null : Field(lines, dbref, "name");
 		var location = Ref(lines, dbref, "location");
@@ -202,6 +243,10 @@ public static class RhostFlatfileReader
 			var key = line[1..];
 			var value = lines.Next() ?? throw lines.Error($"the file ends inside #{dbref}'s attribute {key}");
 			var (attributeOwner, attributeFlags, text) = SplitPrefix(value);
+			if (strict && value.StartsWith('\x01') && attributeOwner is null)
+			{
+				throw lines.Error($"malformed attribute owner/flags prefix in #{dbref}");
+			}
 			attributes.Add(int.TryParse(key, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
 				? new RhostFlatfileAttribute(number, string.Empty, attributeOwner, attributeFlags, text)
 				: new RhostFlatfileAttribute(-1, key, attributeOwner, attributeFlags, text));
@@ -228,6 +273,64 @@ public static class RhostFlatfileReader
 			Zones = zones,
 			Attributes = attributes
 		};
+	}
+
+	private static void ValidateStrict(RhostFlatfile flat, CancellationToken cancellationToken)
+	{
+		if (flat.DatabaseTop < 0 || flat.NextAttribute < 256)
+			throw new FormatException("RhostMUSH export has an invalid database top or next attribute number.");
+		var objects = new Dictionary<int, RhostFlatfileObject>();
+		foreach (var obj in flat.Objects)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (obj.DBRef < 0 || obj.DBRef >= flat.DatabaseTop || !objects.TryAdd(obj.DBRef, obj)
+				|| !Enum.IsDefined(obj.Type))
+				throw new FormatException($"RhostMUSH export has an invalid or duplicate object #{obj.DBRef}.");
+		}
+		var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var attr in flat.UserAttributes.Values)
+		{
+			if (attr.Number < 256 || attr.Number >= flat.NextAttribute || string.IsNullOrWhiteSpace(attr.Name)
+				|| !names.Add(attr.Name))
+				throw new FormatException($"RhostMUSH export has an invalid or duplicate attribute definition +A{attr.Number}.");
+		}
+		foreach (var obj in flat.Objects)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			// V_LINK separates the home/dropto from the exits field used by older dumps.
+			var hasHome = obj.Type is RhostObjectType.Room or RhostObjectType.Thing or RhostObjectType.Player or RhostObjectType.Zone;
+			Reference(obj.Location, obj.Type == RhostObjectType.Exit, "location");
+			Reference(obj.Exits, !flat.Has(LinkFlag) && hasHome, "exits/home");
+			Reference(obj.Link, hasHome, "link/home");
+			foreach (var value in new[] { obj.Contents, obj.Next, obj.Parent, obj.ZoneField }.Concat(obj.Zones))
+				Reference(value, false, "reference");
+			Owner(obj.Owner, obj.Type == RhostObjectType.Garbage);
+			var attributes = new HashSet<int>();
+			foreach (var attr in obj.Attributes)
+			{
+				if (attr.Number <= 0 || !attributes.Add(attr.Number)
+					|| (attr.Number >= 256 && !flat.UserAttributes.ContainsKey(attr.Number)))
+					throw new FormatException($"RhostMUSH export has an invalid or duplicate attribute on #{obj.DBRef}.");
+				if (attr.Owner is { } owner) Owner(owner, true);
+			}
+			if (flat.Has(NameInAttributeFlag) && !attributes.Contains(NameAttribute))
+				throw new FormatException($"RhostMUSH export is missing #{obj.DBRef}'s name attribute.");
+
+			void Reference(int value, bool home, string field)
+			{
+				if (value == -1 || (home && value == -3)) return;
+				if (value < 0 || !objects.ContainsKey(value))
+					throw new FormatException($"RhostMUSH export has invalid {field} {value} on #{obj.DBRef}.");
+			}
+			void Owner(int value, bool nothing)
+			{
+				// atr_decode treats NOTHING as the object's default attribute owner.
+				if (nothing && value == -1) return;
+				// Rhost's Immortals may assign non-player ownership, including self-owned things.
+				if (!objects.TryGetValue(value, out var owner) || owner.Type == RhostObjectType.Garbage)
+					throw new FormatException($"RhostMUSH export has invalid owner {value} on #{obj.DBRef}.");
+			}
+		}
 	}
 
 	/// <summary>

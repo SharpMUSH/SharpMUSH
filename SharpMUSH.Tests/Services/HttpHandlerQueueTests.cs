@@ -29,6 +29,26 @@ public class HttpHandlerQueueTests
 		=> (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	[Test]
+	public async Task AQueuedHttpHandlerOwnsItsFreshResponseContext()
+	{
+		var handler = await Evaluate($"create(HttpOwnResponse{Guid.NewGuid():N})");
+		await Evaluate($"attrib_set({handler}/GET,lit(@respond/type application/handler;@respond 201 Created;think own response))");
+		var dispatcher = WebAppFactoryArg.Services.GetRequiredService<IHttpHandlerCommandDispatcher>();
+		Task<Found<HttpHandlerResult>> request;
+		using (TestOptionsOverride.Scope(o => o with
+		{
+			Database = o.Database with { HttpHandler = (uint)DBRef.Parse(handler).Number, HttpRequestsPerSecond = 30 }
+		}))
+		{
+			request = dispatcher.DispatchAsync("GET", "/owned-response", "", []).AsTask();
+		}
+		var result = (await request.WaitAsync(TimeSpan.FromSeconds(10))).Expect<HttpHandlerResult>();
+		await Assert.That(result.Status).IsEqualTo(201);
+		await Assert.That(result.ContentType).IsEqualTo("application/handler");
+		await Assert.That(result.Body.TrimEnd()).IsEqualTo("own response");
+	}
+
+	[Test]
 	public async Task AHandlerRequestWaitsForTheQueueEntryAlreadyRunningAndSeesItsWrites()
 	{
 		var handler = await Evaluate($"create(HttpQueueHandler{Guid.NewGuid():N})");

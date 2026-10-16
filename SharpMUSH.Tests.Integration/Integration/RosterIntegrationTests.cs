@@ -28,20 +28,29 @@ public class RosterIntegrationTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	// Ordinary triggers may enqueue more triggers; command completion includes those descendants.
+	private ValueTask SettleCommandsAsync() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
+		.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAccountService Accounts => WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		await SettleCommandsAsync();
+		return result.Message.ToPlainText()?.Trim() ?? string.Empty;
+	}
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
 	{
+		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
@@ -62,7 +71,7 @@ public class RosterIntegrationTests
 		var account = (await Accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName(prefix), null,
 			"Roster-Passw0rd!long")).Expect<SharpAccount>();
 		foreach (var character in characters) await Accounts.LinkCharacterAsync(account.Id!, character.DbRef);
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 		return account;
 	}
 
@@ -90,7 +99,7 @@ public class RosterIntegrationTests
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
 		// AINSTALL is queued after the apply: it adds the commands.
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 	}
 
 	private async Task InstallRosterAsync()
@@ -226,7 +235,7 @@ public class RosterIntegrationTests
 			await Assert.That(await State(character)).IsEqualTo("held").Because("the player`link event reaches the roster");
 
 			await Accounts.UnlinkCharacterAsync(account.Id!, character.DbRef);
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(await State(character)).IsEqualTo("available");
 
 			var history = await As(staff, $"+roster/history {character.Name}");

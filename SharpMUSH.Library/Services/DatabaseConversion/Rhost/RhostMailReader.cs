@@ -44,6 +44,132 @@ public static class RhostMailReader
 		return Read(mail, folders);
 	}
 
+	/// <summary>Reads portable mail companions, rejecting incomplete or ambiguous message records.</summary>
+	public static async Task<RhostMail> ReadFilesStrictAsync(string mailPath, string? folderPath, CancellationToken cancellationToken = default)
+	{
+		var mail = await File.ReadAllTextAsync(mailPath, RhostFlatfileReader.StrictFileEncoding, cancellationToken);
+		var folders = folderPath is null ? null
+			: await File.ReadAllTextAsync(folderPath, RhostFlatfileReader.StrictFileEncoding, cancellationToken);
+		cancellationToken.ThrowIfCancellationRequested();
+		return ReadStrict(mail, folders);
+	}
+
+	/// <summary>Reads portable mail companions with strict record and message validation.</summary>
+	public static RhostMail ReadStrict(string mailText, string? folderText)
+	{
+		var records = StrictRecords(mailText, "mail");
+		var bodies = new Dictionary<(int, int), int>();
+		foreach (var (key, body) in records.Where(r => r.Key[0] == 'E'))
+			if (!bodies.TryAdd(PositivePair(key), RhostFlatfileReader.StrictFileEncoding.GetByteCount(body)))
+				throw Invalid($"duplicate body key {key}");
+		var headers = new HashSet<(int, int)>();
+		foreach (var (key, data) in records)
+		{
+			if (key[0] is < 'A' or > 'P') throw Invalid($"unknown mail record {key}");
+			if ("CDEI".Contains(key[0])) PositivePair(key);
+			else if ("ABFGHJNO".Contains(key[0])) PlayerKey(key);
+			else if ((key[0] is 'M' or 'P') ? key.Length != 1 : key.Length < 2)
+				throw Invalid($"malformed mail record key {key}");
+			if (key[0] != 'C') continue; // Other records are source indexes and settings, not message headers.
+			if (!headers.Add(PositivePair(key))) throw Invalid($"duplicate message key {key}");
+			var fields = data.Split('/', 5);
+			if (fields.Length != 5
+				|| !int.TryParse(fields[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var from) || from < 0
+				|| !long.TryParse(fields[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var sent)
+				|| sent < DateTimeOffset.MinValue.ToUnixTimeSeconds() || sent > DateTimeOffset.MaxValue.ToUnixTimeSeconds()
+				|| !short.TryParse(fields[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var messageKey)
+				|| (messageKey & 0x7fff) == 0
+				|| !short.TryParse(fields[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var size)
+				|| fields[4].Length < 3 || !"NUOSM".Contains(char.ToUpperInvariant(fields[4][0]))
+				|| !"NROFA".Contains(char.ToUpperInvariant(fields[4][1]))
+				|| !"NROFA".Contains(char.ToUpperInvariant(fields[4][2])))
+				throw Invalid($"malformed message header {key}");
+			// Rhost stores the BCC/to-all marker in the high bit of a signed 16-bit body key.
+			var bodyKey = messageKey & 0x7fff;
+			if (!bodies.TryGetValue((from, bodyKey), out var bodySize)) throw Invalid($"message {key} has no body E{from}/{bodyKey}");
+			// strlen(msg) is also stored as a signed short; count raw UTF-8 bytes before newline normalization.
+			if (unchecked((short)bodySize) != size) throw Invalid($"message {key}'s body byte length disagrees with its header");
+		}
+		if (folderText is not null)
+		{
+			var placement = new HashSet<(int, int)>();
+			foreach (var (key, data) in StrictRecords(folderText, "folder"))
+			{
+				if (key[0] is < 'A' or > 'D') throw Invalid($"unknown folder record {key}");
+				if (key[0] != 'B')
+				{
+					PlayerKey(key);
+					continue;
+				}
+				var slash = key.IndexOf('/');
+				if (slash < 2 || slash == key.Length - 1
+					|| !int.TryParse(key.AsSpan(1, slash - 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var player) || player < 0)
+					throw Invalid($"malformed folder key {key}");
+				var members = data.Split('/');
+				if (!int.TryParse(members[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
+					|| count < 0 || count != members.Length - 1)
+					throw Invalid($"malformed folder membership {key}");
+				foreach (var member in members.Skip(1))
+				{
+					if (!int.TryParse(member, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index) || index <= 0
+						|| !headers.Contains((player, index)) || !placement.Add((player, index)))
+						throw Invalid($"invalid or duplicate folder message in {key}");
+				}
+			}
+		}
+		var result = Read(mailText, folderText);
+		if (records.Any(r => r.Key[0] is >= 'F' and <= 'P'))
+			result = result with { Notes = [.. result.Notes, "RhostMUSH mail settings, aliases and unfinished drafts are not imported."] };
+		return result;
+
+		static void PlayerKey(string key)
+		{
+			if (!int.TryParse(key.AsSpan(1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var player) || player < 0)
+				throw Invalid($"malformed player key {key}");
+		}
+
+		static (int, int) PositivePair(string key)
+		{
+			var pair = Pair(key, "mail");
+			if (pair.Item1 < 0 || pair.Item2 <= 0) throw Invalid($"invalid message key {key}");
+			return pair;
+		}
+	}
+
+	private static List<(string Key, string Data)> StrictRecords(string text, string which)
+	{
+		var normalized = text.Replace("\x01\r\n", "\x01\n");
+		if (normalized.Length > 0 && !normalized.EndsWith("\x01\n", StringComparison.Ordinal))
+			throw Invalid($"{which} dump ends inside a record");
+		var keys = new HashSet<string>(StringComparer.Ordinal);
+		var records = Records(text, which, true).ToList();
+		foreach (var (key, _) in records)
+		{
+			var slash = key.IndexOf('/');
+			if (slash == 0) throw Invalid($"malformed {which} record key {key}");
+			var canonical = key;
+			// K/L name aliases literally; numeric-looking names such as 01 and 1 are distinct.
+			var numeric = (which == "folder" ? "ABCD" : "ABCDEFGHIJNO").Contains(key[0]);
+			if (numeric && int.TryParse(key.AsSpan(1, slash < 0 ? key.Length - 1 : slash - 1), NumberStyles.Integer,
+				CultureInfo.InvariantCulture, out var first))
+			{
+				canonical = key[0] + first.ToString(CultureInfo.InvariantCulture);
+				if (slash >= 0)
+				{
+					var suffix = key[(slash + 1)..];
+					if (which == "folder") suffix = suffix.ToUpperInvariant();
+					if (which == "mail" && int.TryParse(suffix, NumberStyles.Integer, CultureInfo.InvariantCulture, out var second))
+						suffix = second.ToString(CultureInfo.InvariantCulture);
+					canonical += "/" + suffix;
+				}
+			}
+			if (!keys.Add(canonical)) throw Invalid($"duplicate {which} record {key}");
+		}
+		return records;
+	}
+
+	private static FormatException Invalid(string message) => new($"RhostMUSH mail dump: {message}.");
+
 	/// <summary>Reads the dumps held in memory.</summary>
 	/// <exception cref="FormatException">The mail dump's records do not read.</exception>
 	public static RhostMail Read(string mailText, string? folderText)
@@ -89,6 +215,8 @@ public static class RhostMailReader
 				continue;
 			}
 
+			// The signed short's high bit is recipient routing metadata, not part of the body key.
+			messageKey &= 0x7fff;
 			var status = fields[4][..3];
 			var subject = fields[4][3..];
 			if (!bodies.TryGetValue((from, messageKey), out var body))
@@ -212,9 +340,10 @@ public static class RhostMailReader
 	}
 
 	/// <summary>The dump's records as key and data pairs.</summary>
-	private static IEnumerable<(string Key, string Data)> Records(string text, string which)
+	private static IEnumerable<(string Key, string Data)> Records(string text, string which, bool preserveBodyLineEndings = false)
 	{
-		var records = text.Replace("\r\n", "\n").Split("\x01\n");
+		var records = (preserveBodyLineEndings ? text.Replace("\x01\r\n", "\x01\n") : text.Replace("\r\n", "\n"))
+			.Split("\x01\n");
 		var count = records.Length - (records[^1].Trim().Length == 0 ? 1 : 0);
 		if (count % 2 != 0)
 		{

@@ -806,7 +806,9 @@ public partial record ParserState
 				? owned.Clone()
 				: new Dictionary<string, MString>(frame, frame.Comparer))),
 			SwitchStack = new(SwitchStack.Reverse().Select(frame => frame.Clone())),
-			EnvironmentRegisters = new(EnvironmentRegisters, EnvironmentRegisters.Comparer),
+			EnvironmentRegisters = SnapshotArguments(EnvironmentRegisters),
+			// A live request response (and its trusted request metadata) belongs only to that entry.
+			HttpResponse = null,
 			ExecutionStack = [],
 			CallDepth = new(),
 			FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
@@ -818,12 +820,24 @@ public partial record ParserState
 			QueuedOutput = PipedOutput,
 			QueuedPrinted = PrintedOutput
 		},
+		Arguments = SnapshotArguments(Arguments),
+		CallerArguments = CallerArguments is null ? null : SnapshotArguments(CallerArguments),
+		Function = null,
+		ParserFunctionDepth = 0,
+		Command = null,
+		CommandInvoker = NoCommand,
+		Switches = [],
 		CommandHistory = null,
 		BreakPropagation = null,
 		CommandModifierDepth = 0,
 		InplaceDepth = 0,
 		ExecutionBudget = null
 	};
+
+	// Queued arguments are values, not deferred evaluations of the submitting parser. AsValue keeps
+	// failure metadata without retaining its parser, parse tree, or mutable argument arrays.
+	private static Dictionary<string, CallState> SnapshotArguments(Dictionary<string, CallState> arguments)
+		=> arguments.ToDictionary(pair => pair.Key, pair => pair.Value.AsValue(pair.Value.Message, 0), arguments.Comparer);
 
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

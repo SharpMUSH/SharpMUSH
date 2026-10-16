@@ -193,7 +193,7 @@ public partial class Commands
 					Executor = targetRef,
 					Enactor = triggererRef,
 					Caller = triggererRef
-				}).WithQueuedOutput();
+				}).SnapshotForQueuedAction();
 
 				try
 				{

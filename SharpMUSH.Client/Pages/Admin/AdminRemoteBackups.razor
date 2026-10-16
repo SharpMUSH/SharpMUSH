@@ -6,7 +6,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["AdmRemoteBackupTitle"]</PageTitle>
-<div class="page-stack page-stack--padded">
+<div class="page-stack page-stack--padded remote-backups-page">
     <PlainPageHeader Kicker="@Loc["AdmBreadcrumb"]" Title="@Loc["AdmRemoteBackupTitle"]" Description="@Loc["AdmRemoteBackupDescription"]" />
     @if (_error is not null)
     {
@@ -30,7 +30,7 @@
                 <MudCheckBox T="bool" @bind-Value="_clearAccountId" Label="@Loc["AdmRemoteBackupClearAccountId"]" />
                 <MudTextField T="string" @bind-Value="_accountKey" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountKey"]" HelperText="@(status.AccountKeySet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
                 <MudCheckBox T="bool" @bind-Value="_clearAccountKey" Label="@Loc["AdmRemoteBackupClearAccountKey"]" />
-                <MudStack Row="true">
+                <MudStack Row="true" Class="remote-backups-actions">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_busy">@Loc["AdmRemoteBackupSave"]</MudButton>
                     <MudButton Variant="Variant.Outlined" OnClick="RunAsync" Disabled="@(_busy || !status.Settings.Enabled || status.Runs.Any(run => run.State is "queued" or "preparing" or "ready" or "running" or "unknown"))">@Loc["AdmRemoteBackupNow"]</MudButton>
                 </MudStack>
@@ -47,8 +47,8 @@
                 <MudTh>@Loc["AdmRemoteBackupTime"]</MudTh><MudTh>@Loc["AdmRemoteBackupReason"]</MudTh><MudTh>@Loc["AdmRemoteBackupState"]</MudTh><MudTh>@Loc["AdmRemoteBackupSnapshot"]</MudTh><MudTh>@Loc["AdmRemoteBackupError"]</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd>@context.QueuedAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'")</MudTd>
-                <MudTd>@context.Reason</MudTd><MudTd>@context.State</MudTd><MudTd>@context.SnapshotId</MudTd><MudTd>@context.ErrorCode @context.ExitCode</MudTd>
+                <MudTd DataLabel="@Loc["AdmRemoteBackupTime"]">@context.QueuedAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'")</MudTd>
+                <MudTd DataLabel="@Loc["AdmRemoteBackupReason"]">@context.Reason</MudTd><MudTd DataLabel="@Loc["AdmRemoteBackupState"]">@context.State</MudTd><MudTd DataLabel="@Loc["AdmRemoteBackupSnapshot"]" Class="remote-backups-snapshot">@context.SnapshotId</MudTd><MudTd DataLabel="@Loc["AdmRemoteBackupError"]">@context.ErrorCode @context.ExitCode</MudTd>
             </RowTemplate>
             <NoRecordsContent><MudText>@Loc["AdmRemoteBackupNoRuns"]</MudText></NoRecordsContent>
         </MudTable>
