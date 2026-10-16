@@ -1,8 +1,8 @@
 format: "1.10"
 package: finger
-version: 1.1.3
+version: 1.2.0
 authors: [SharpMUSH]
-description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits one attribute at a time."
+description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [finger, profile, character, ooc]
@@ -42,42 +42,92 @@ objects:
   # +finger and +oocfinger are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
   # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # The fields are the FIELD` tree: FIELD`<view>`<order>`<KEY>, its value the label. <view> is IC (+finger) or
-  # OOC (+oocfinger), <order> sorts them, and a player's value is their PROFILE`<KEY> attribute, which the
-  # portal's profile reads too. A field with a SHOW`<KEY> beside it is worked out by the game instead.
+  # The fields are the FIELD` tree, the +config table finger/fields: FIELD`<KEY>, its value the label, with
+  # `VIEW (IC for +finger, OOC for +oocfinger) and `ORDER (sorts them) under it. A player's value is their
+  # PROFILE`<KEY> attribute, which the portal's profile reads too. A field with a SHOW`<KEY> beside it is worked
+  # out by the game instead.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC` one routine per switch.
-  # FUN`FIELD` reads the field list, FUN`CARD` draws a profile, FUN`FIELDS` the field list. DATA`CONFIG` the settings +config finger shows, DATA`ROUTE` the switches.
+  # Trees: CMD` the hooked commands, INC`COMMAND` the shared parse and dispatch, INC`CMD` one routine per switch,
+  # INC`NEED` the shared checks, INC`DO` the writes. FUN`FIELD` reads the field list, FUN`CARD` draws a profile,
+  # FUN`FIELDS` the field list, FUN`FIND` lookups, FUN`CONFIG` the setting checks. DATA`CONFIG` the settings
+  # +config finger shows, DATA`ROUTE` the switches.
   - ref: finger
     type: thing
     name: Finger
     location: "{{$master_room}}"
     flags: [WIZARD]
     attributes:
-      FIELD: |-
-        The fields, one leaf each: FIELD`<IC or OOC>`<order>`<KEY>=<label>.
-      FIELD`IC`010`FULLNAME: |-
+      # no_command, as +config asks of a table's branch, so nothing kept there runs as a command.
+      FIELD:
+        value: |-
+          The fields, one leaf each: FIELD`<KEY>=<label>, with `VIEW (IC or OOC) and `ORDER under it.
+        flags: [no_command]
+      FIELD`FULLNAME: |-
         Full Name
-      FIELD`IC`020`ALIAS: |-
+      FIELD`FULLNAME`VIEW: |-
+        IC
+      FIELD`FULLNAME`ORDER: |-
+        10
+      FIELD`ALIAS: |-
         Alias
-      FIELD`IC`030`AGE: |-
+      FIELD`ALIAS`VIEW: |-
+        IC
+      FIELD`ALIAS`ORDER: |-
+        20
+      FIELD`AGE: |-
         Age
-      FIELD`IC`040`SPECIES: |-
+      FIELD`AGE`VIEW: |-
+        IC
+      FIELD`AGE`ORDER: |-
+        30
+      FIELD`SPECIES: |-
         Species
-      FIELD`IC`050`OCCUPATION: |-
+      FIELD`SPECIES`VIEW: |-
+        IC
+      FIELD`SPECIES`ORDER: |-
+        40
+      FIELD`OCCUPATION: |-
         Occupation
-      FIELD`IC`060`QUOTE: |-
+      FIELD`OCCUPATION`VIEW: |-
+        IC
+      FIELD`OCCUPATION`ORDER: |-
+        50
+      FIELD`QUOTE: |-
         Quote
-      FIELD`OOC`010`PRONOUNS: |-
+      FIELD`QUOTE`VIEW: |-
+        IC
+      FIELD`QUOTE`ORDER: |-
+        60
+      FIELD`PRONOUNS: |-
         Pronouns
-      FIELD`OOC`020`TIMEZONE: |-
+      FIELD`PRONOUNS`VIEW: |-
+        OOC
+      FIELD`PRONOUNS`ORDER: |-
+        10
+      FIELD`TIMEZONE: |-
         Time zone
-      FIELD`OOC`030`LASTON: |-
+      FIELD`TIMEZONE`VIEW: |-
+        OOC
+      FIELD`TIMEZONE`ORDER: |-
+        20
+      FIELD`LASTON: |-
         Last on
-      FIELD`OOC`040`PLAYTIMES: |-
+      FIELD`LASTON`VIEW: |-
+        OOC
+      FIELD`LASTON`ORDER: |-
+        30
+      FIELD`PLAYTIMES: |-
         Usually on
-      FIELD`OOC`050`RPPREFS: |-
+      FIELD`PLAYTIMES`VIEW: |-
+        OOC
+      FIELD`PLAYTIMES`ORDER: |-
+        40
+      FIELD`RPPREFS: |-
         RP preferences
+      FIELD`RPPREFS`VIEW: |-
+        OOC
+      FIELD`RPPREFS`ORDER: |-
+        50
       # Fields the game works out, one per key: %<target> the player, %<viewer> who is reading. Empty hides the
       # field from everyone but the player and staff.
       SHOW: |-
@@ -105,7 +155,7 @@ objects:
       DATA`CONFIG`SECTIONS`DEFAULT: |-
         QUOTE RPPREFS
       DATA`CONFIG`SECTIONS`CHECK: |-
-        CHECK`FIELDS
+        FUN`CONFIG`CHECK`FIELDS
       DATA`CONFIG`SECTIONS`DESCRIPTION: |-
         Fields shown under the rest, each below a line with its label: for text longer than a line.
       DATA`CONFIG`SECTIONS`LABEL: |-
@@ -119,7 +169,7 @@ objects:
       DATA`CONFIG`LOCKED`DEFAULT: |-
 
       DATA`CONFIG`LOCKED`CHECK: |-
-        CHECK`FIELDS
+        FUN`CONFIG`CHECK`FIELDS
       DATA`CONFIG`LOCKED`DESCRIPTION: |-
         Fields only staff set.
       DATA`CONFIG`LOCKED`LABEL: |-
@@ -158,26 +208,75 @@ objects:
         Longest value
       DATA`CONFIG`LENGTH`EXAMPLE: |-
         2000
+      # The fields, a +config table: entries on this object under FIELD`, each holding its label, with VIEW and
+      # ORDER beneath.
+      DATA`CONFIG`FIELDS`TYPE: |-
+        table
+      DATA`CONFIG`FIELDS`LABEL: |-
+        Fields
+      DATA`CONFIG`FIELDS`DESCRIPTION: |-
+        The fields +finger and +oocfinger show, and +finger/set takes.
+      DATA`CONFIG`FIELDS`PATH: |-
+        FIELD
+      DATA`CONFIG`FIELDS`ENTRY: |-
+        label
+      DATA`CONFIG`FIELDS`FIELDS: |-
+        label view order
+      DATA`CONFIG`FIELDS`KEYPATTERN: |-
+        ^[A-Za-z0-9_]{1,30}$
+      DATA`CONFIG`FIELDS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`FIELDS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`FIELDS`FIELD`LABEL`MAX: |-
+        40
+      DATA`CONFIG`FIELDS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`FIELDS`FIELD`LABEL`DESCRIPTION: |-
+        What the profile calls it.
+      DATA`CONFIG`FIELDS`FIELD`VIEW`TYPE: |-
+        choice
+      DATA`CONFIG`FIELDS`FIELD`VIEW`CHOICES: |-
+        IC OOC
+      DATA`CONFIG`FIELDS`FIELD`VIEW`DEFAULT: |-
+        IC
+      DATA`CONFIG`FIELDS`FIELD`VIEW`LABEL: |-
+        Shown by
+      DATA`CONFIG`FIELDS`FIELD`VIEW`DESCRIPTION: |-
+        IC for +finger, OOC for +oocfinger.
+      DATA`CONFIG`FIELDS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`FIELDS`FIELD`ORDER`DEFAULT: |-
+        100
+      DATA`CONFIG`FIELDS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`FIELDS`FIELD`ORDER`MAX: |-
+        9999
+      DATA`CONFIG`FIELDS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`FIELDS`FIELD`ORDER`DESCRIPTION: |-
+        Sorts the fields of a view, lowest first. The shipped ones count in tens, so a new one fits between two.
       # %0 a list of field keys, as +config stores it: why some are not fields, or nothing.
-      CHECK`FIELDS:
+      FUN`CONFIG`CHECK`FIELDS:
         value: |-
-          setq(check_unknown,squish(trim(iter(%0,if(u(%!/FUN`FIELD`KEYED,%i0),,%i0),%b,%b))))[if(words(%q<check_unknown>),[itemize(%q<check_unknown>)] [if(eq(words(%q<check_unknown>),1),is not a field,are not fields)]. +finger/fields lists them.)]
+          setq(check_unknown,squish(trim(iter(%0,if(u(%!/FUN`FIELD`KEYED,%i0),,%i0),%b,%b))))[if(words(%q<check_unknown>),itemize(%q<check_unknown>) [if(eq(words(%q<check_unknown>),1),is not a field,are not fields)]. +finger/fields lists them.)]
         flags: [funsyntax]
-      # Which INC` routine each switch runs. BARE is the command alone, ARG the command with something after it.
+      # Which INC` routine each switch runs, under INC`CMD`. BARE is the command alone, ARG the command with
+      # something after it.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
       DATA`ROUTE`BARE: |-
-        SHOW
+        CMD`SHOW
       DATA`ROUTE`ARG: |-
-        SHOW
+        CMD`SHOW
       DATA`ROUTE`SET: |-
-        SET
+        CMD`SET
       DATA`ROUTE`FIELDS: |-
-        FIELDS
+        CMD`FIELDS
       DATA`ROUTE`HIDE: |-
-        HIDE
+        CMD`HIDE
       DATA`ROUTE`UNHIDE: |-
-        UNHIDE
+        CMD`UNHIDE
 
       # ---- commands -------------------------------------------------------------
       # Each command word: %1 the switches and %2 what follows, exactly as typed.
@@ -216,12 +315,27 @@ objects:
       # %0 a view, IC or OOC: its fields, as FIELD` attribute names, in order.
       FUN`FIELD`IN:
         value: |-
-          sort(lattr(%!/FIELD`%0`*`*))
+          sortkey(%!/FUN`FIELD`ORDER,filterbool(%!/FUN`FIELD`IN`VIEW,lattr(%!/FIELD`*),,,%0),n)
+        flags: [funsyntax]
+      # %0 a field, %1 a view: 1 when the field is in it. A field with no VIEW is +finger's.
+      FUN`FIELD`IN`VIEW:
+        value: |-
+          strmatch(u(%!/FUN`FIELD`VIEW,%0),%1)
+        flags: [funsyntax]
+      # %0 a field: its view, IC or OOC.
+      FUN`FIELD`VIEW:
+        value: |-
+          ucstr(firstof(get(%!/%0`VIEW),IC))
+        flags: [funsyntax]
+      # %0 a field: the number it sorts by.
+      FUN`FIELD`ORDER:
+        value: |-
+          firstof(get(%!/%0`ORDER),0)
         flags: [funsyntax]
       # Every field, +finger's then +oocfinger's.
       FUN`FIELD`ALL:
         value: |-
-          [u(%!/FUN`FIELD`IN,IC)] [u(%!/FUN`FIELD`IN,OOC)]
+          u(%!/FUN`FIELD`IN,IC) [u(%!/FUN`FIELD`IN,OOC)]
         flags: [funsyntax]
       # %0 typed text: the field it names, by key or by label, spaces and case ignored. Empty when none does.
       FUN`FIELD`FIND:
@@ -233,10 +347,15 @@ objects:
         value: |-
           cor(not(comp(lcstr(last(%0,`)),%1)),not(comp(lcstr(edit(get(%!/%0),%b,)),%1)))
         flags: [funsyntax]
-      # %0 a key: 1 when it is a field's.
+      # %0 a key: 1 when it is a field's. Other packages read it, as relationships' card does.
       FUN`FIELD`KEYED:
         value: |-
-          cand(regmatch(%0,^%[A-Za-z0-9_-%]+$),words(lattr(%!/FIELD`*`*`%0)))
+          cand(regmatch(%0,^%[A-Za-z0-9_-%]+$),hasattr(%!,FIELD`%0))
+        flags: [funsyntax]
+      # %0 a key: its field's label. Other packages read it, as relationships' card does.
+      FUN`FIELD`LABEL:
+        value: |-
+          if(u(%!/FUN`FIELD`KEYED,%0),get(%!/FIELD`%0))
         flags: [funsyntax]
       # %0 a key: 1 when the game works the field out.
       FUN`FIELD`WORKEDOUT:
@@ -262,7 +381,7 @@ objects:
 
       # ---- shared reads ---------------------------------------------------------
       # %0 typed text: the objid of the player it names, or nothing.
-      FUN`PLAYER:
+      FUN`FIND`PLAYER:
         value: |-
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
@@ -275,7 +394,7 @@ objects:
       # ago they left; else nothing.
       FUN`DISPLAY`LASTON:
         value: |-
-          if(member(lwho(%1),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),[u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>))] ago))
+          if(member(lwho(%1),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>)) ago))
         flags: [funsyntax]
       # Every screen is a box() with no sides, corners or tees, as +help's and +scene's are, so a quote copied
       # from a terminal carries no |.
@@ -292,9 +411,9 @@ objects:
 
       # ---- +finger and +oocfinger -------------------------------------------------
       # +finger [<player>], +oocfinger [<player>]
-      INC`SHOW:
+      INC`CMD`SHOW:
         value: |-
-          think setq(card_target,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<card_target>)=@pemit %#=notice(FINGER,There is no player called '%q<cmd_argument>'.,warn); think u(%!/FUN`CARD`PREPARE,%q<card_target>,%#,%q<cmd_view>); @assert words(%q<card_rows>)=@pemit %#=notice(FINGER,[name(%q<card_target>)] has nothing on their +%q<cmd_word>. [u(%!/FUN`CARD`OTHER)] shows the rest.); @pemit %#=u(%!/FUN`CARD`DRAW)
+          think setq(card_target,if(strlen(%q<cmd_argument>),u(%!/FUN`FIND`PLAYER,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<card_target>)=@pemit %#=notice(FINGER,There is no player called '%q<cmd_argument>'.,warn); think u(%!/FUN`CARD`PREPARE,%q<card_target>,%#,%q<cmd_view>); @assert words(%q<card_rows>)=@pemit %#=notice(FINGER,name(%q<card_target>) has nothing on their +%q<cmd_word>. [u(%!/FUN`CARD`OTHER)] shows the rest.); @pemit %#=u(%!/FUN`CARD`DRAW)
         flags: [cmdsyntax]
       # %0 the player, %1 the reader, %2 the view. Sets card_target, card_viewer, card_view, card_full (the
       # reader is the player or staff, and sees every field, set or not), card_rows (the fields to show) and
@@ -335,7 +454,7 @@ objects:
       # The prepared profile: the fields side by side, each section under its own line, and a footer.
       FUN`CARD`DRAW:
         value: |-
-          box([if(words(%q<card_inline>),lfields(json(object,cols,firstof(get(%!/DATA`CONFIG`COLUMNS),1)),iter(%q<card_inline>,get(%!/%i0),,%*<|>),iter(%q<card_inline>,unmark(u(%!/FUN`CARD`SHOW,%i0)),,%*<|>),%*<|>))][iter(%q<card_sections>,[if(cor(words(%q<card_inline>),gt(inum(0),1)),%r)][rule(get(%!/%i0))]%r[u(%!/FUN`CARD`SHOW,%i0)],,)]%r[rule()]%r[tone(muted,u(%!/FUN`CARD`FOOTER))],u(%!/FUN`CARD`TITLE),,u(%!/FUN`DISPLAY`FRAME))
+          box(if(words(%q<card_inline>),lfields(json(object,cols,firstof(get(%!/DATA`CONFIG`COLUMNS),1)),iter(%q<card_inline>,get(%!/%i0),,%*<|>),iter(%q<card_inline>,unmark(u(%!/FUN`CARD`SHOW,%i0)),,%*<|>),%*<|>))[iter(%q<card_sections>,if(cor(words(%q<card_inline>),gt(inum(0),1)),%r)[rule(get(%!/%i0))]%r[u(%!/FUN`CARD`SHOW,%i0)],,)]%r[rule()]%r[tone(muted,u(%!/FUN`CARD`FOOTER))],u(%!/FUN`CARD`TITLE),,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
       FUN`CARD`TITLE:
         value: |-
@@ -344,7 +463,7 @@ objects:
       # The command for the other view of the same player.
       FUN`CARD`OTHER:
         value: |-
-          [if(strmatch(%q<card_view>,IC),+oocfinger,+finger)] [name(%q<card_target>)]
+          if(strmatch(%q<card_view>,IC),+oocfinger,+finger) [name(%q<card_target>)]
         flags: [funsyntax]
       FUN`CARD`FOOTER:
         value: |-
@@ -352,14 +471,14 @@ objects:
         flags: [funsyntax]
 
       # ---- +finger/fields ---------------------------------------------------------
-      INC`FIELDS:
+      INC`CMD`FIELDS:
         value: |-
-          @pemit %#=box([u(%!/FUN`FIELDS`TABLE,u(%!/FUN`FIELD`ALL))]%r[rule()]%r[tone(muted,+finger/set <field>=<text> sets one · +finger/set <field>= clears it · +finger/hide <field> keeps it to you and staff)],Finger fields,,u(%!/FUN`DISPLAY`FRAME))
+          @pemit %#=box(u(%!/FUN`FIELDS`TABLE,u(%!/FUN`FIELD`ALL))%r[rule()]%r[tone(muted,+finger/set <field>=<text> sets one · +finger/set <field>= clears it · +finger/hide <field> keeps it to you and staff)],Finger fields,,u(%!/FUN`DISPLAY`FRAME))
         flags: [cmdsyntax]
       # %0 fields: label, key, command, and what the player running it has in each.
       FUN`FIELDS`TABLE:
         value: |-
-          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r3%r4%r2,%r%r%r1),[tone(strong,Field)]%r[iter(%0,get(%!/%i0),,%r)],[tone(strong,Key)]%r[iter(%0,lcstr(last(%i0,`)),,%r)],[tone(strong,Shown by)]%r[iter(%0,if(strmatch(extract(%i0,2,1,`),IC),+finger,+oocfinger),,%r)],[tone(strong,Yours)]%r[iter(%0,u(%!/FUN`FIELDS`YOURS,last(%i0,`)),,%r)])
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r3%r4%r2,%r%r%r1),tone(strong,Field)%r[iter(%0,get(%!/%i0),,%r)],tone(strong,Key)%r[iter(%0,lcstr(last(%i0,`)),,%r)],tone(strong,Shown by)%r[iter(%0,if(strmatch(u(%!/FUN`FIELD`VIEW,%i0),IC),+finger,+oocfinger),,%r)],tone(strong,Yours)%r[iter(%0,u(%!/FUN`FIELDS`YOURS,last(%i0,`)),,%r)])
         flags: [funsyntax]
       # %0 a key: whether the player running the command set it.
       FUN`FIELDS`YOURS:
@@ -370,43 +489,45 @@ objects:
       # ---- setting a field --------------------------------------------------------
       # Sets set_target (a player), set_field (a FIELD` attribute) and set_key from %q<cmd_left_side>, which is
       # <field> or, for staff, <player>/<field>.
-      INC`NEEDFIELD:
+      INC`NEED`FIELD:
         value: |-
-          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(FINGER,Which field? +%q<cmd_word>/%q<cmd_switch> <field>[if(strmatch(%q<cmd_switch>,set),=<text>)],warn); think u(%!/FUN`SET`PARSE,%q<cmd_left_side>); @assert strlen(%q<set_target>)=@pemit %#=notice(FINGER,There is no player called '[before(%q<cmd_left_side>,/)]'.,warn); @assert cor(%q<viewer_is_editor>,not(comp(%q<set_target>,%q<viewer_objid>)))=@pemit %#=notice(FINGER,Only staff change someone else's fields.,error); think setq(set_field,u(%!/FUN`FIELD`FIND,%q<set_typed>)); @assert strlen(%q<set_field>)=@pemit %#=notice(FINGER,There is no field called '%q<set_typed>'. +finger/fields lists them.,warn); think setqm(set_key,last(%q<set_field>,`),set_label,get(%!/%q<set_field>),set_whose,if(comp(%q<set_target>,%q<viewer_objid>),[name(%q<set_target>)]'s,your)); @assert not(u(%!/FUN`FIELD`WORKEDOUT,%q<set_key>))=@pemit %#=notice(FINGER,%q<set_label> is worked out by the game: nobody sets it.,warn)
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(FINGER,Which field? +%q<cmd_word>/%q<cmd_switch> <field>[if(strmatch(%q<cmd_switch>,set),=<text>)],warn); think u(%!/FUN`SET`PARSE,%q<cmd_left_side>); @assert strlen(%q<set_target>)=@pemit %#=notice(FINGER,There is no player called '[before(%q<cmd_left_side>,/)]'.,warn); @assert cor(%q<viewer_is_editor>,not(comp(%q<set_target>,%q<viewer_objid>)))=@pemit %#=notice(FINGER,Only staff change someone else's fields.,error); think setq(set_field,u(%!/FUN`FIELD`FIND,%q<set_typed>)); @assert strlen(%q<set_field>)=@pemit %#=notice(FINGER,There is no field called '%q<set_typed>'. +finger/fields lists them.,warn); think setqm(set_key,last(%q<set_field>,`),
+          set_label,get(%!/%q<set_field>),
+          set_whose,if(comp(%q<set_target>,%q<viewer_objid>),name(%q<set_target>)'s,your)); @assert not(u(%!/FUN`FIELD`WORKEDOUT,%q<set_key>))=@pemit %#=notice(FINGER,%q<set_label> is worked out by the game: nobody sets it.,warn)
         flags: [cmdsyntax]
       # %0 <field> or <player>/<field>: sets set_target (the player, empty when no player has that name) and
       # set_typed (the field as typed).
       FUN`SET`PARSE:
         value: |-
           setqm(set_by_name,strmatch(%0,*/*),
-          set_target,if(%q<set_by_name>,u(%!/FUN`PLAYER,before(%0,/)),%q<viewer_objid>),
+          set_target,if(%q<set_by_name>,u(%!/FUN`FIND`PLAYER,before(%0,/)),%q<viewer_objid>),
           set_typed,if(%q<set_by_name>,after(%0,/),%0))
         flags: [funsyntax]
       # +finger/set [<player>/]<field>=<text>. Nothing after the = clears it.
-      INC`SET:
+      INC`CMD`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(FINGER,+%q<cmd_word>/set <field>=<text> sets a field. +finger/fields lists them.,warn); @include %!/INC`NEEDFIELD; @assert cor(%q<viewer_is_editor>,not(u(%!/FUN`FIELD`LOCKED,%q<set_key>)))=@pemit %#=notice(FINGER,Only staff set %q<set_label>.,error); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CONFIG`LENGTH))=@pemit %#=notice(FINGER,Keep %q<set_label> to [get(%!/DATA`CONFIG`LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`SET`STORE}; @assert hasattr(%q<set_target>,PROFILE`%q<set_key>)=@pemit %#=notice(FINGER,[capstr(%q<set_whose>)] %q<set_label> is not set.,warn); &PROFILE`%q<set_key> %q<set_target>; @pemit %#=notice(FINGER,[capstr(%q<set_whose>)] %q<set_label> is cleared.,ok); @include %!/INC`SET`TELL
+          @assert %q<cmd_has_equals>=@pemit %#=notice(FINGER,+%q<cmd_word>/set <field>=<text> sets a field. +finger/fields lists them.,warn); @include %!/INC`NEED`FIELD; @assert cor(%q<viewer_is_editor>,not(u(%!/FUN`FIELD`LOCKED,%q<set_key>)))=@pemit %#=notice(FINGER,Only staff set %q<set_label>.,error); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CONFIG`LENGTH))=@pemit %#=notice(FINGER,Keep %q<set_label> to [get(%!/DATA`CONFIG`LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`DO`STORE}; @assert hasattr(%q<set_target>,PROFILE`%q<set_key>)=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not set.,warn); &PROFILE`%q<set_key> %q<set_target>; @pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is cleared.,ok); @include %!/INC`DO`TELL
         flags: [cmdsyntax]
       # Stores %q<cmd_right_side>. A new value is readable by everyone, its PROFILE root too; one already set keeps
       # its flags, so a field the player hid stays hidden.
-      INC`SET`STORE:
+      INC`DO`STORE:
         value: |-
-          think setq(set_new,not(hasattr(%q<set_target>,PROFILE`%q<set_key>))); &PROFILE`%q<set_key> %q<set_target>=%q<cmd_right_side>; @if %q<set_new>={@set %q<set_target>/PROFILE`%q<set_key>=visual; @set %q<set_target>/PROFILE=visual}; @pemit %#=notice(FINGER,[capstr(%q<set_whose>)] %q<set_label>: %q<cmd_right_side>,ok); @include %!/INC`SET`TELL
+          think setq(set_new,not(hasattr(%q<set_target>,PROFILE`%q<set_key>))); &PROFILE`%q<set_key> %q<set_target>=%q<cmd_right_side>; @if %q<set_new>={@set %q<set_target>/PROFILE`%q<set_key>=visual; @set %q<set_target>/PROFILE=visual}; @pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label>: %q<cmd_right_side>,ok); @include %!/INC`DO`TELL
         flags: [cmdsyntax]
       # Tells a player when staff changed one of their fields.
-      INC`SET`TELL:
+      INC`DO`TELL:
         value: |-
-          @break not(comp(%q<set_target>,%q<viewer_objid>)); @pemit %q<set_target>=notice(FINGER,[name(%#)] changed your %q<set_label>.)
+          @break not(comp(%q<set_target>,%q<viewer_objid>)); @pemit %q<set_target>=notice(FINGER,name(%#) changed your %q<set_label>.)
         flags: [cmdsyntax]
       # +finger/hide <field>
-      INC`HIDE:
+      INC`CMD`HIDE:
         value: |-
-          @include %!/INC`NEEDFIELD; @assert hasattr(%q<set_target>,PROFILE`%q<set_key>)=@pemit %#=notice(FINGER,[capstr(%q<set_whose>)] %q<set_label> is not set.,warn); @assert not(u(%!/FUN`FIELD`HIDDEN,%q<set_target>,%q<set_key>))=@pemit %#=notice(FINGER,[capstr(%q<set_whose>)] %q<set_label> is already hidden.,warn); @set %q<set_target>/PROFILE`%q<set_key>=!visual; @pemit %#=notice(FINGER,Only [if(comp(%q<set_target>,%q<viewer_objid>),name(%q<set_target>),you)] and staff see %q<set_whose> %q<set_label> now.,ok)
+          @include %!/INC`NEED`FIELD; @assert hasattr(%q<set_target>,PROFILE`%q<set_key>)=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not set.,warn); @assert not(u(%!/FUN`FIELD`HIDDEN,%q<set_target>,%q<set_key>))=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is already hidden.,warn); @set %q<set_target>/PROFILE`%q<set_key>=!visual; @pemit %#=notice(FINGER,Only [if(comp(%q<set_target>,%q<viewer_objid>),name(%q<set_target>),you)] and staff see %q<set_whose> %q<set_label> now.,ok)
         flags: [cmdsyntax]
       # +finger/unhide <field>
-      INC`UNHIDE:
+      INC`CMD`UNHIDE:
         value: |-
-          @include %!/INC`NEEDFIELD; @assert u(%!/FUN`FIELD`HIDDEN,%q<set_target>,%q<set_key>)=@pemit %#=notice(FINGER,[capstr(%q<set_whose>)] %q<set_label> is not hidden.,warn); @set %q<set_target>/PROFILE`%q<set_key>=visual; @set %q<set_target>/PROFILE=visual; @pemit %#=notice(FINGER,Everyone sees %q<set_whose> %q<set_label> again.,ok)
+          @include %!/INC`NEED`FIELD; @assert u(%!/FUN`FIELD`HIDDEN,%q<set_target>,%q<set_key>)=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not hidden.,warn); @set %q<set_target>/PROFILE`%q<set_key>=visual; @set %q<set_target>/PROFILE=visual; @pemit %#=notice(FINGER,Everyone sees %q<set_whose> %q<set_label> again.,ok)
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -419,10 +540,26 @@ objects:
         value: |-
           @trigger %!/STARTUP
         flags: [cmdsyntax]
+      # Before 1.2 a field was FIELD`<view>`<order>`<KEY>. Any a game added that way moves to FIELD`<KEY> with VIEW
+      # and ORDER, and the old IC and OOC branches go.
       AUPDATE:
         value: |-
-          @trigger %!/STARTUP
+          @include %!/INC`DO`MIGRATE; @trigger %!/STARTUP
         flags: [cmdsyntax]
+      INC`DO`MIGRATE:
+        value: |-
+          @dolist/inline lattr(%!/FIELD`*`*`*)={&FIELD`[last(##,`)] %!=get(%!/##); &FIELD`[last(##,`)]`VIEW %!=ucstr(extract(##,2,1,`)); &FIELD`[last(##,`)]`ORDER %!=u(%!/FUN`FIELD`OLDORDER,extract(##,3,1,`))}; @dolist/inline filterbool(%!/FUN`FIELD`OLDBRANCH,IC OOC)={@wipe %!/FIELD`##}
+        flags: [cmdsyntax]
+      # %0 an old field's order, such as 035: the number, 35.
+      FUN`FIELD`OLDORDER:
+        value: |-
+          if(isint(%0),add(%0,0),0)
+        flags: [funsyntax]
+      # %0 IC or OOC: 1 when FIELD`%0 is an old view branch, not a field of that name.
+      FUN`FIELD`OLDBRANCH:
+        value: |-
+          cand(cor(hasattr(%!,FIELD`%0),words(lattr(%!/FIELD`%0`*))),not(hasattr(%!,FIELD`%0`VIEW)))
+        flags: [funsyntax]
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
   # are evaluated, so brackets, parentheses and percent signs are escaped.
@@ -463,23 +600,28 @@ objects:
 
         A player's value is their `` PROFILE`<KEY> `` attribute, so the portal's profile page and other code read the same text.
       HELP`FINGER`FIELDS: |-
-        The fields are attributes on the Finger object in the master room, one each, named `` FIELD`<view>`<order>`<KEY> `` with the label as the value:
+        The fields are a `+config` table, `finger/fields`. Each has a key, a label and two fields:
 
-        - `<view>` is `IC` for `+finger` or `OOC` for `+oocfinger`.
-        - `<order>` sorts them. The shipped fields count in tens, so a new one fits between two.
-        - `<KEY>` names the player's attribute, `` PROFILE`<KEY> ``, and is what `+finger/set` takes.
+        - `view`: `IC` for `+finger` or `OOC` for `+oocfinger`.
+        - `order`: sorts the fields of a view, lowest first. The shipped fields count in tens, so a new one fits between two.
 
-        To add a Height field to `+finger`, after Age:
+        The key names the player's attribute, `` PROFILE`<KEY> ``, and is what `+finger/set` takes, with the label.
 
-        `` &FIELD`IC`035`HEIGHT <Finger>=Height ``
+        - `+config finger/fields` lists them, and `+config finger/fields/<key>` shows one.
+        - `+config/add finger/fields/height=Height` adds a Height field, to `+finger` by default.
+        - `+config finger/fields/height/order=35` puts it after Age.
+        - `+config finger/fields/height/view=OOC` moves it to `+oocfinger`.
+        - `+config/remove finger/fields/species` takes Species away. Players' values stay on them.
 
-        To take Species away, clear its attribute: `` &FIELD`IC`040`SPECIES <Finger> ``. Players' values stay on them.
+        The fields are kept on the Finger object in the master room, as `` FIELD`<KEY> `` with `` `VIEW `` and `` `ORDER `` under it.
 
         ## Worked-out fields
 
         A field with a `` SHOW`<KEY> `` attribute beside it is worked out instead of set. It is evaluated with `%%<target>` the player and `%%<viewer>` the reader, and an empty result hides it from everyone but the player and staff. For example, the month the character was made:
 
-        `` &FIELD`OOC`015`SINCE <Finger>=Playing since ``
+        `` +config/add finger/fields/since=Playing since ``
+
+        `` +config finger/fields/since/view=OOC ``
 
         `` &SHOW`SINCE <Finger>=timefmt\($B $Y,csecs\(%%<target>\)\) ``
 
@@ -491,6 +633,7 @@ objects:
         - `locked`: field keys only staff set. None by default; `+config/add finger/locked=occupation` adds one.
         - `columns`: how many columns the other fields are dealt into, 1 to 4. 2 by default.
         - `length`: the longest value, in characters. 1000 by default.
+        - `fields`: the fields, a table, above.
 
   - ref: config_registration
     target: "{{plus-config/registry}}"
