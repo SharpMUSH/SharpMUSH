@@ -25,6 +25,7 @@ namespace SharpMUSH.Database.Lightning;
 public sealed class LightningWorldBackupService : IWorldBackupService
 {
 	private readonly WorldBackupWriter _writer;
+	private readonly Func<Guid, WorldBackupWriter> _remoteWriter;
 
 	/// <summary>
 	/// The copies taken before a portal package operation: the same copy routine, into
@@ -52,6 +53,13 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 			? () => database.Store.Usage().CopyBytes(compact)
 			: null;
 		_writer = new WorldBackupWriter(options, copy, logger) { EstimateCopyBytes = estimate };
+		_remoteWriter = id => new WorldBackupWriter(options with
+		{
+			Root = Path.Join(Path.GetFullPath(options.Root) + ".remote-jobs", id.ToString("N")),
+			Keep = 1,
+			Interval = TimeSpan.Zero
+		}, copy, logger)
+		{ EstimateCopyBytes = estimate };
 		_packageOperationWriter = options.PackageOperationKeep > 0
 			? new WorldBackupWriter(options with
 			{
@@ -75,6 +83,9 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 
 	public ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
 		=> _writer.CreateAsync(ct);
+
+	public ValueTask<Result<WorldBackup>> CreateRemoteAsync(Guid jobId, CancellationToken ct = default)
+		=> _remoteWriter(jobId).CreateAsync(ct);
 
 	public IReadOnlyList<WorldBackup> List() => _writer.List();
 

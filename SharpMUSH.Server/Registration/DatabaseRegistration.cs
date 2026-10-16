@@ -91,6 +91,17 @@ internal static class DatabaseRegistration
 		var pluginDirectories = PluginDirectories.ForWorld(lightningPath,
 			Environment.GetEnvironmentVariable(PluginDirectories.PathVariable));
 		services.AddSingleton(pluginDirectories);
+		services.AddSingleton(sp =>
+		{
+			var world = sp.GetRequiredService<LightningWorldPath>().Value;
+			var installed = sp.GetRequiredService<PluginDirectories>().Installed;
+			var config = sp.GetRequiredService<IConfiguration>();
+			return new RemoteBackupSourcePaths(installed,
+				Environment.GetEnvironmentVariable(PluginDirectories.PathVariable) is { Length: > 0 }
+				|| !string.Equals(installed, PluginDirectories.ForWorld(world, null).Installed, StringComparison.Ordinal),
+				DataProtectionRegistration.KeyRingPath(world), FileSystemWikiAssetService.ResolveRoot(config),
+				config["Wiki:AssetRoot"] is { Length: > 0 });
+		});
 		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
 		// plugins might extend is registered. The catalog runs the single McMaster DLL-load pass, applies
 		// every IServiceRegistrar straight into this IServiceCollection, and stashes the migration/flag/

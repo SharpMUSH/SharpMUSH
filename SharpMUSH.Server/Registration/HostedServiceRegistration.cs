@@ -96,6 +96,11 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.FeedUpkeepService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
+		services.AddSingleton<Services.RemoteBackupCoordinator>();
+		services.AddSingleton(Services.RemoteBackupCoordinator.Password);
+		services.AddSingleton(Services.RemoteBackupCoordinator.AccountId);
+		services.AddSingleton(Services.RemoteBackupCoordinator.AccountKey);
+		services.AddHostedService<Services.RemoteBackupScheduleService>();
 		services.AddHostedService<Services.InactivityCheckService>();
 		services.AddHostedService<Services.SignalEventsService>();
 		services.AddHostedService<Services.RecurringJobRunner>();
