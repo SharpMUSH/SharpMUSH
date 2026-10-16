@@ -1,0 +1,40 @@
+name: Portal layout
+
+on:
+  pull_request:
+    paths:
+      - 'SharpMUSH.Client/wwwroot/css/**'
+      - 'SharpMUSH.Client/Components/GlobalTerminal.razor*'
+      - 'tools/responsive-sweep/**'
+      - '.github/workflows/portal-layout.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'SharpMUSH.Client/wwwroot/css/**'
+      - 'SharpMUSH.Client/Components/GlobalTerminal.razor*'
+      - 'tools/responsive-sweep/**'
+      - '.github/workflows/portal-layout.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  table-layout:
+    runs-on: ubuntu-latest
+    env:
+      TMPDIR: ${{ runner.temp }}
+      TMP: ${{ runner.temp }}
+      TEMP: ${{ runner.temp }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tools/responsive-sweep/package-lock.json
+      - run: npm ci
+        working-directory: tools/responsive-sweep
+      - run: npx playwright-core install --with-deps chromium
+        working-directory: tools/responsive-sweep
+      - run: npm test
+        working-directory: tools/responsive-sweep
