@@ -231,34 +231,4 @@ public class FingerIntegrationTests
 			await UninstallAsync();
 		}
 	}
-
-	[Test]
-	public async Task AnUpgradeMovesFieldsKeptTheOldWay()
-	{
-		try
-		{
-			await InstallAsync();
-			var ann = await Player("MgAnn");
-
-			// Before 1.2 a field was FIELD`<view>`<order>`<KEY>; AUPDATE moves any a game added that way.
-			await God($"&FIELD`IC`035`HEIGHT {Finger}=Height");
-			await God($"&FIELD`OOC`015`SINCE {Finger}=Playing since");
-			await God($"@trigger {Finger}/AUPDATE");
-			await WebAppFactoryArg.QueueBarrierAsync();
-
-			await Assert.That(await God($"think get({Finger}/FIELD`HEIGHT)|[get({Finger}/FIELD`HEIGHT`VIEW)]|[get({Finger}/FIELD`HEIGHT`ORDER)]"))
-				.IsEqualTo("Height|IC|35");
-			await Assert.That(await God($"think get({Finger}/FIELD`SINCE`VIEW)|[get({Finger}/FIELD`SINCE`ORDER)]")).IsEqualTo("OOC|15");
-			await Assert.That(await God($"think words(lattr({Finger}/FIELD`IC`*)) [words(lattr({Finger}/FIELD`OOC`*))] [hasattr({Finger},FIELD`IC)] [hasattr({Finger},FIELD`OOC)]"))
-				.IsEqualTo("0 0 0 0").Because("the old view branches go once their fields have moved");
-			await Assert.That(await God($"think get({Finger}/FIELD`FULLNAME)")).IsEqualTo("Full Name");
-
-			await Assert.That(await As(ann, "+finger/set height=Tall")).Contains("Your Height: Tall");
-			await Assert.That(await As(ann, "+oocfinger/set since=2020")).Contains("Your Playing since: 2020");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
-	}
 }

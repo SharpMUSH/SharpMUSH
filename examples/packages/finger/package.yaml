@@ -540,26 +540,10 @@ objects:
         value: |-
           @trigger %!/STARTUP
         flags: [cmdsyntax]
-      # Before 1.2 a field was FIELD`<view>`<order>`<KEY>. Any a game added that way moves to FIELD`<KEY> with VIEW
-      # and ORDER, and the old IC and OOC branches go.
       AUPDATE:
         value: |-
-          @include %!/INC`DO`MIGRATE; @trigger %!/STARTUP
+          @trigger %!/STARTUP
         flags: [cmdsyntax]
-      INC`DO`MIGRATE:
-        value: |-
-          @dolist/inline lattr(%!/FIELD`*`*`*)={&FIELD`[last(##,`)] %!=get(%!/##); &FIELD`[last(##,`)]`VIEW %!=ucstr(extract(##,2,1,`)); &FIELD`[last(##,`)]`ORDER %!=u(%!/FUN`FIELD`OLDORDER,extract(##,3,1,`))}; @dolist/inline filterbool(%!/FUN`FIELD`OLDBRANCH,IC OOC)={@wipe %!/FIELD`##}
-        flags: [cmdsyntax]
-      # %0 an old field's order, such as 035: the number, 35.
-      FUN`FIELD`OLDORDER:
-        value: |-
-          if(isint(%0),add(%0,0),0)
-        flags: [funsyntax]
-      # %0 IC or OOC: 1 when FIELD`%0 is an old view branch, not a field of that name.
-      FUN`FIELD`OLDBRANCH:
-        value: |-
-          cand(cor(hasattr(%!,FIELD`%0),words(lattr(%!/FIELD`%0`*))),not(hasattr(%!,FIELD`%0`VIEW)))
-        flags: [funsyntax]
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
   # are evaluated, so brackets, parentheses and percent signs are escaped.
