@@ -772,3 +772,64 @@ See [Connections during deployment](connection-updates.md) for lifecycle notices
 ## Editor and MCP analysis
 
 Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compose overlay, secure desktop editor configuration, curl smoke requests and troubleshooting. An entry in `.env` is not automatically forwarded to the server.
+
+### Manage remote backups in the website
+
+The optional `docker-compose.remote-backups.yml` overlay replaces the legacy cron entrypoint on
+**the existing `backup` service** with a narrowly scoped SharpMUSH worker. Do not run a second
+legacy cron container against the same configuration. The default stacks retain their existing
+`.env`/`BACKUP_CRON` behavior until you choose this overlay; they do not report remote results.
+
+1. Initialize the repository using the existing Restic instructions above and save the password
+   separately. Managed jobs never initialize repositories, prune snapshots or restore data.
+2. Add `SHARPMUSH_BACKUP_AGENT_TOKEN` to `deploy/.env`, generated with `openssl rand -hex 32`.
+   This deployment token permits only claiming backup jobs and posting receipts; keep it private.
+3. Include `-f docker-compose.remote-backups.yml` after your base production compose file and any
+   other overlays, with `--profile backup up -d --build`. This requires a deployment/restart.
+4. Open **Administration → Remote backups** (`/admin/backups`, `server.admin` permission).
+   Enter the repository, encryption password and storage account credentials from the old `.env`
+   configuration, choose the interval in hours (1–8760), and enable managed scheduling. Those
+   repository settings are now managed in the website; the worker ignores inherited legacy
+   `RESTIC_*`, `B2_*` and cron settings. Its subprocess environment is explicitly constructed.
+
+Supported repositories are `b2:bucket:path`, `s3:https://host/bucket`, and
+`rest:https://host/repository`. Put storage credentials into the separate account fields; userinfo,
+queries, fragments, HTTP, local paths, SFTP and helper commands are rejected. The account fields
+mean B2 account ID/key, AWS access key ID/secret, or REST username/password. Blank credential
+fields preserve the existing secret. To switch to an anonymous backend, explicitly select the account ID/key clear checkboxes and save; queued jobs keep their pinned credentials. Environment/file overrides must be removed by the operator before the website can clear them. Configured secrets use the server's encrypted secret store;
+ordinary status reads return only whether they are configured. Keep the Data Protection key ring
+with your disaster recovery materials. A queued job pins an encrypted credential/configuration
+snapshot, so changing a repository affects only later jobs.
+
+**Back up now** queues a fresh provider-safe hot copy. That copy lives under
+`data/backup.remote-jobs/<job-id>/`, outside ordinary local backup retention. The worker snapshots
+only that completed world plus the fixed wiki assets, Data Protection keys and installed plugins;
+it never reads live LMDB. The worker mount stays read-only. A job succeeds only after Restic exits
+zero and emits a full snapshot ID. Exit 3 is a partial backup and is shown as failed. Each run records
+whether it was manual or scheduled. A successful local copy alone never advances remote success.
+
+The page refreshes history and agent health every ten seconds. A missing agent is visible after
+two minutes. A running job whose two-hour lease expires becomes **unknown** and keeps its local
+copy, blocking another job until the owning worker reconciles it. Worker state must persist in the
+`backup-agent-state` volume. An interrupted worker without a durable exit receipt reports an
+**unconfirmed** result, even if a tagged Restic snapshot exists, because partial snapshots also
+exist. It never reruns that upload automatically. The worker's inherited process lock prevents a
+restarted agent from reconciling or deleting a copy while an old Restic child still reads it.
+Definite exit receipts permit staging cleanup; lost worker state requires operator investigation
+rather than automatically deleting a potentially active copy. Failed/interrupted preparation may
+leave a job directory for operator inspection. History retains the latest 50 runs, plus unresolved abandoned jobs. The last-success timestamp persists independently of history retention.
+
+No raw Restic logs are sent to the portal. Results include stable error codes and the process exit
+code; inspect repository access and storage credentials on authentication or connectivity failures.
+The agent token is accepted only on `/api/backup-agent/claim`, `/heartbeat` and `/receipt`, not on admin routes.
+The shipped overlay uses the private compose network; use HTTPS for an agent hosted elsewhere.
+
+If the worker-state volume or its identity is lost, investigate the old process and remote repository,
+then use **Abandon unknown job and retain its copy** on the website. This audited admin action
+unblocks scheduling without deleting the uncertain copy. A late authenticated receipt still records
+its actual outcome and safely cleans its owned copy; abandoned unresolved jobs are retained beyond
+the ordinary 50-run display history so late receipts remain valid.
+
+The worker interprets [Restic JSON summaries and exit codes](https://restic.readthedocs.io/en/stable/075_scripting.html). Known failure codes distinguish missing repositories (10), repository locks (11), rejected passwords (12), partial source reads (3), cancellation (130), and worker timeout/interruption.
+
+An interrupted preparation directory belongs to the failed job ID under `data/backup.remote-jobs/`. It can consume a full world copy beyond local retention. Before removing such a directory, verify the job never received a worker claim and the old server copy process has stopped; remove only that job directory. Never infer process completion from lease expiry alone.

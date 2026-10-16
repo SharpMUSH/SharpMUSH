@@ -1,0 +1,135 @@
+@page "/admin/backups"
+@attribute [Authorize(Policy = "server.admin")]
+@implements IDisposable
+@using SharpMUSH.Client.Services
+@inject RemoteBackupsService Backups
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmRemoteBackupTitle"]</PageTitle>
+<div class="page-stack page-stack--padded">
+    <PlainPageHeader Kicker="@Loc["AdmBreadcrumb"]" Title="@Loc["AdmRemoteBackupTitle"]" Description="@Loc["AdmRemoteBackupDescription"]" />
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+    @if (_status is { } status)
+    {
+        <MudAlert Severity="@(AgentHealthy(status) ? Severity.Info : Severity.Warning)">
+            @Loc[AgentHealthy(status) ? "AdmRemoteBackupAgentSeen" : "AdmRemoteBackupAgentMissing"]
+            @status.AgentSeenAt?.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+        </MudAlert>
+        <MudText>@Loc["AdmRemoteBackupLastSuccess"]: @(status.LastSuccessAt?.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'") ?? Loc["AdmRemoteBackupNever"].Value)</MudText>
+        <MudText Typo="Typo.caption">@Loc["AdmRemoteBackupCopyRetention"]</MudText>
+        <MudPaper Class="pa-4">
+            <MudStack Spacing="3">
+                <MudSwitch T="bool" @bind-Value="_enabled" Label="@Loc["AdmRemoteBackupEnabled"]" />
+                <MudTextField T="string" @bind-Value="_repository" Label="@Loc["AdmRemoteBackupRepository"]" HelperText="@Loc["AdmRemoteBackupRepositoryHelp"]" />
+                <MudNumericField T="int" @bind-Value="_hours" Min="1" Max="8760" Label="@Loc["AdmRemoteBackupHours"]" />
+                <MudTextField T="string" @bind-Value="_password" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupPassword"]" HelperText="@(status.PasswordSet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
+                <MudTextField T="string" @bind-Value="_accountId" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountId"]" HelperText="@(status.AccountIdSet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
+                <MudCheckBox T="bool" @bind-Value="_clearAccountId" Label="@Loc["AdmRemoteBackupClearAccountId"]" />
+                <MudTextField T="string" @bind-Value="_accountKey" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountKey"]" HelperText="@(status.AccountKeySet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
+                <MudCheckBox T="bool" @bind-Value="_clearAccountKey" Label="@Loc["AdmRemoteBackupClearAccountKey"]" />
+                <MudStack Row="true">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_busy">@Loc["AdmRemoteBackupSave"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" OnClick="RunAsync" Disabled="@(_busy || !status.Settings.Enabled || status.Runs.Any(run => run.State is "queued" or "preparing" or "ready" or "running" or "unknown"))">@Loc["AdmRemoteBackupNow"]</MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+        @foreach (var unknown in status.Runs.Where(run => run.State == "unknown"))
+        {
+            <MudAlert Severity="Severity.Warning">@Loc["AdmRemoteBackupAbandonWarning"]</MudAlert>
+            <MudButton Color="Color.Warning" Variant="Variant.Outlined" Disabled="_busy" OnClick="@(() => AbandonAsync(unknown.Id))">@Loc["AdmRemoteBackupAbandon"]</MudButton>
+        }
+        <MudText Typo="Typo.h6">@Loc["AdmRemoteBackupHistory"]</MudText>
+        <MudTable Items="status.Runs" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>@Loc["AdmRemoteBackupTime"]</MudTh><MudTh>@Loc["AdmRemoteBackupReason"]</MudTh><MudTh>@Loc["AdmRemoteBackupState"]</MudTh><MudTh>@Loc["AdmRemoteBackupSnapshot"]</MudTh><MudTh>@Loc["AdmRemoteBackupError"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.QueuedAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'")</MudTd>
+                <MudTd>@context.Reason</MudTd><MudTd>@context.State</MudTd><MudTd>@context.SnapshotId</MudTd><MudTd>@context.ErrorCode @context.ExitCode</MudTd>
+            </RowTemplate>
+            <NoRecordsContent><MudText>@Loc["AdmRemoteBackupNoRuns"]</MudText></NoRecordsContent>
+        </MudTable>
+    }
+</div>
+
+@code {
+    private RemoteBackupStatus? _status;
+    private string? _error;
+    private bool _enabled, _busy, _clearAccountId, _clearAccountKey;
+    private int _hours = 24;
+    private string _repository = "", _password = "", _accountId = "", _accountKey = "";
+    private readonly CancellationTokenSource _closed = new();
+    public static bool AgentHealthy(RemoteBackupStatus status) => status.AgentSeenAt is { } seen && DateTimeOffset.UtcNow - seen < TimeSpan.FromMinutes(2);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReadAsync(true);
+        _ = RefreshAsync();
+    }
+    private async Task ReadAsync(bool settings = false)
+    {
+        switch (await Backups.StatusAsync())
+        {
+            case RemoteBackupStatus status:
+                _status = status;
+                if (settings) { _enabled = status.Settings.Enabled; _hours = status.Settings.IntervalHours; _repository = status.Settings.Repository; }
+                break;
+            case ApiFailure failure: _error = failure.Message; break;
+        }
+    }
+    private async Task RefreshAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        var closed = _closed.Token;
+        try
+        {
+            while (await timer.WaitForNextTickAsync(closed))
+            {
+                await ReadAsync();
+                if (closed.IsCancellationRequested) break;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+    private async Task SaveAsync()
+    {
+        _busy = true; _error = null;
+        try
+        {
+            switch (await Backups.ConfigureAsync(new(new(_enabled, _hours, _repository), _password, _accountId, _accountKey, _clearAccountId, _clearAccountKey)))
+            {
+                case RemoteBackupStatus status: _status = status; _password = _accountId = _accountKey = ""; _clearAccountId = _clearAccountKey = false; break;
+                case ApiFailure failure: _error = failure.Message; break;
+            }
+        }
+        finally { _busy = false; }
+    }
+    private async Task RunAsync()
+    {
+        _busy = true; _error = null;
+        try
+        {
+            if (await Backups.RunAsync() is ApiFailure failure) _error = failure.Message;
+            await ReadAsync();
+        }
+        finally { _busy = false; }
+    }
+    private async Task AbandonAsync(Guid id)
+    {
+        _busy = true; _error = null;
+        try
+        {
+            switch (await Backups.AbandonAsync(id))
+            {
+                case RemoteBackupStatus status: _status = status; break;
+                case ApiFailure failure: _error = failure.Message; break;
+            }
+        }
+        finally { _busy = false; }
+    }
+    public void Dispose() { _closed.Cancel(); _closed.Dispose(); }
+}
