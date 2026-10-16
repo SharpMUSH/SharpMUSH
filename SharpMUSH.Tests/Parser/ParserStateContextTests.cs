@@ -10,6 +10,21 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task AttributeInvocationBinderReplacesParentPresenceAndExcludesGeneratedKeys()
+	{
+		var parentArguments = new Dictionary<string, CallState> { ["parent"] = new("old") };
+		var parent = ParserState.RootFor(new DBRef(7)) with { SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parentArguments) };
+		var arguments = new AttributeArgumentEnvironment { ["0"] = new(""), ["itemscount"] = new("1") };
+		arguments.GeneratedKeys.Add("itemscount");
+		var invocation = parent.ForAttributeArguments(arguments);
+		await Assert.That(invocation.SuppliedArgumentKeys!.Contains("0")).IsTrue();
+		await Assert.That(invocation.SuppliedArgumentKeys.Contains("itemscount")).IsFalse();
+		await Assert.That(invocation.SuppliedArgumentKeys.Contains("parent")).IsFalse();
+		await Assert.That(invocation.EnvironmentRegisters.ContainsKey("itemscount")).IsTrue();
+		await Assert.That(parent.ForAttributeArguments([]).SuppliedArgumentKeys!.Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task QueuedPresenceIsImmutableAndDoesNotForceValues()
 	{
 		var environment = new Dictionary<string, CallState> { ["who"] = new CallState(MarkupText.Empty, 0, null, () => throw new InvalidOperationException("Presence forced an argument")) };

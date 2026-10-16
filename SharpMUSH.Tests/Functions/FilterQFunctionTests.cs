@@ -35,6 +35,31 @@ public class FilterQFunctionTests
 	}
 
 	[Test]
+	[Arguments("filter", "x")]
+	[Arguments("filter", "")]
+	[Arguments("filterbool", "x")]
+	[Arguments("filterbool", "")]
+	[Arguments("map", "x")]
+	[Arguments("map", "")]
+	public async Task SharedListCallbacksKeepSuppliedSideInputs(string function, string side)
+	{
+		var target = await CreateObjectWithAttribute("ListPresence", "PRED", "hasarg(1,supplied)");
+		var expected = function == "map" ? "1 1" : "a b";
+		await Check($"{function}(#{target}/PRED,a b,,,{side})", expected);
+		await Check($@"{function}(#lambda/hasarg\(1\,supplied\),a b,,,{side})", expected);
+	}
+
+	[Test]
+	[Arguments("x")]
+	[Arguments("")]
+	public async Task RealAndAnonymousCallbacksAgreeOnSuppliedSideInputs(string side)
+	{
+		var target = await CreateObjectWithAttribute("FilterPresence", "PRED", "hasarg(1,supplied)");
+		await Check($"[filterq(r,#{target}/PRED,a b,,,{side})]:%q<r>", "a b:");
+		await Check($@"[filterq(r,#lambda/hasarg\(1\,supplied\),a b,,,{side})]:%q<r>", "a b:");
+	}
+
+	[Test]
 	[Arguments(@"#lambda/strmatch\(\%0\,\%1\)")]
 	[Arguments("#apply2/strmatch")]
 	public async Task AnonymousAndRealPredicatesAgree(string callback)

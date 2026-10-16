@@ -27,3 +27,30 @@ Allocation audit: each attribute invocation captures one immutable case-insensit
 Ruling: positive /match acceptance exposed an existing broken matcher. TriggerAsync now uses CommandAttributeScanner.Compile / ListenAttributeSearch.Compile and PatternArguments.Capture, strips the command/listen prefix before running actions, and excludes the match string itself from numbered arguments. With /match/args, supplied aliases overlay captures while untouched captures remain. Admission remains inline for the queue lane to change; retain the action body, capture environment, and immutable supplied set at its queue boundary.
 
 Validation also reproduces and protects #apply padding: fabricated visible slots are excluded from supplied keys by intersecting the actual input set with the callback's visible numbered slots. Queued presence is exercised by resuming a real hasarg query from SnapshotForQueuedAction after the parent argument dictionary is cleared.
+
+## Independent review round 1: callback provenance
+
+Two runtime regressions confirmed the review: real list callbacks omitted explicit side inputs from their Arguments dictionary, and direct callbacks kept null or unrelated parent supplied keys. `ParserState.ForAttributeArguments(Dictionary<string, CallState>)` now binds Arguments, EnvironmentRegisters and an immutable supplied-key snapshot together. Generated signature keys remain excluded. List callbacks pass their complete actual item/position/side-input dictionary to the fetched evaluator. Admission timing, values, identities and counters are unchanged.
+
+Production environment-replacement audit:
+
+| Boundary | Presence policy |
+| --- | --- |
+| AttributeEvaluator direct calls | Shared invocation binder; lambdas already capture actual keys; apply intersects actual inputs with visible slots to exclude padding. |
+| ListFunctions fetched callbacks | Complete item/position/side-input Arguments; fetched evaluator captures those actual keys. |
+| StringFunctions/AttributeFunctions fetched wrappers | Complete explicit Arguments already reach the updated evaluator; the direct default-attribute path already captures its actual keys. |
+| MessageHelpers pinned/unpinned formats | Pinned uses the shared binder; unpinned uses AttributeEvaluator. |
+| ControlFlowCommands map/include | Both map modes use the shared binder. Includes retain their separate pre-overlay supplied set. |
+| DatabaseCommands SQL / HttpCommands response | Each callback uses the shared binder, including named row/response inputs. |
+| DidItService queued actions | Bind invocation first, then clone that Context for independent counters; zero-input actions get an empty set. |
+| MovementCommands follower work | New ordinary commands have no attribute invocation; explicitly clear supplied metadata along with empty environment. |
+| CommandInvocationPipeline / QueuedCommandMatch / Trigger | Existing explicit actual-key capture remains; immutable snapshots retain it. |
+| Listen-pattern handler / ListenerRoutingService | Handler already captures actual inputs; routing's INPREFIX environment reaches AttributeEvaluator before executing attribute code. |
+| EventService / FeedService / ConnectionAnnounceService / InputSessionService / HttpHandlerCommandService | Existing explicit fresh actual-key capture remains. |
+| ParserState Empty/Fresh / queued snapshots | New roots have null metadata; snapshots retain the immutable set; changing the environment property alone is not an invocation boundary. |
+| RestrictedFunctions / PortalCommandService | Standalone expression evaluation, not attribute invocations: fresh root keeps null metadata despite explicit expression inputs. |
+| RecurringJobService | Empty-input attribute invocation already installs a fresh empty supplied set. |
+
+Coverage: CallbackPresenceBoundaryTests exercises top-level and unrelated-parent contexts, pinned/unpinned formats, both map modes through the actual queue, and queued DidIt actions with inputs or zero inputs. FilterQFunctionTests covers real/lambda filterq/filter/filterbool/map presence parity with nonempty and explicitly empty side inputs. HttpCommandTests executes presence queries in prepared response callback states; DatabaseCommandTests executes real queued SQL row callbacks with an explicitly empty named column. ParserStateContextTests protects generated-key exclusions and fresh empty invocation metadata. Focused build/test commands and final results are retained in work/scratch/verification-report.md; no unrelated broad suite is repeated.
+
+Round-1 validation: `dotnet build SharpMUSH.Tests -m:2 -nr:false -p:SkipFormatVerification=true` passed with zero warnings/errors. After two formatting passes, `dotnet format whitespace --folder . --exclude '**/bin/**' '**/obj/**' --verify-no-changes` passed. Run each suite with `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/<class>/*'`: CallbackPresenceBoundaryTests 12/12, FilterQFunctionTests 14/14, HttpCommandTests 65/65, ParserStateContextTests 6/6, NamedArgumentCommandTests 49/49, MessageFormatResultTests 16/16, DidItServiceTests 14/14. The SQL filter `/*/*/DatabaseCommandTests/SqlQueuedRowCallbacksStartTheirOwnPresence` passed 2/2. Total: 178 focused passing cases. Red runs recorded 9 direct-boundary failures, 2 list side-input failures, 2 HTTP callback failures and 2 SQL callback failures before their corresponding fixes. Generated-key exclusions, zero-input markers and admission timing remain covered.

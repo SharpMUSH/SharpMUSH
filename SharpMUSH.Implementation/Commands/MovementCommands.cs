@@ -291,6 +291,7 @@ public partial class Commands
 					{
 						Handle = null,
 						EnvironmentRegisters = new Dictionary<string, CallState>(),
+						SuppliedArgumentKeys = null,
 						Registers = new([[]]),
 						IterationRegisters = [],
 						RegexRegisters = [],

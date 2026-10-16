@@ -1734,7 +1734,7 @@ public partial class Functions
 
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				Arguments = arguments,
+				Arguments = registers,
 				EnvironmentRegisters = registers
 			});
 			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));

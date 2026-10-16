@@ -194,14 +194,14 @@ public partial class Commands
 	{
 		var registers = new ConcurrentStack<Dictionary<string, MString>>();
 		registers.Push([]);
-		return state with
+		var arguments = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(element),
+			["1"] = new CallState((position + 1).ToString())
+		};
+		return state.ForAttributeArguments(arguments) with
 		{
 			Registers = registers,
-			EnvironmentRegisters = new Dictionary<string, CallState>
-			{
-				["0"] = new CallState(element),
-				["1"] = new CallState((position + 1).ToString())
-			},
 			Executor = target.Object().DBRef,
 			Caller = state.Executor
 		};

@@ -154,10 +154,8 @@ public partial class Commands
 							["headers"] = new CallState(responseHeaders)
 						};
 
-						return parser.CurrentState with
+						return parser.CurrentState.ForAttributeArguments(contentDict) with
 						{
-							Arguments = contentDict,
-							EnvironmentRegisters = contentDict,
 							QueuedOutput = queuedOutput,
 							QueuedPrinted = queuedPrinted
 						};

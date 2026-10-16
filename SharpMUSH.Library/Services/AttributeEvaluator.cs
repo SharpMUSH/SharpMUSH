@@ -64,7 +64,7 @@ internal sealed class AttributeEvaluator(
 		{
 			SharpAttribute[] chain => await RunAsOwnerAsync(parser,
 				new AttributeFunction(obj, chain.Last().LongName.ToUpper(), chain.Last().Value),
-				s => s with { Arguments = args, EnvironmentRegisters = args, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(args) }),
+				s => s.ForAttributeArguments(args)),
 			None => CallState.Empty,
 			Error<string> error => new CallState(error.Value)
 		};

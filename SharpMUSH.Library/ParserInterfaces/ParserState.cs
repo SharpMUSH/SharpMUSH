@@ -540,6 +540,15 @@ public partial record ParserState
 		init => Context = Context with { SuppliedArgumentKeys = value };
 	}
 
+	/// <summary>Starts a new attribute invocation with its actual inputs, replacing inherited presence.
+	/// Signature-generated keys remain visible but are excluded from the immutable supplied set.</summary>
+	public ParserState ForAttributeArguments(Dictionary<string, CallState> arguments) => this with
+	{
+		Arguments = arguments,
+		EnvironmentRegisters = arguments,
+		SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
+	};
+
 	/// <inheritdoc cref="EvaluationContext.Handle"/>
 	public long? Handle
 	{
