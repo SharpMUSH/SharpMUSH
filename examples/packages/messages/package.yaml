@@ -1,6 +1,6 @@
 format: "1.10"
 package: messages
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT
@@ -50,6 +50,19 @@ objects:
             ==     ===     ===     ==
              =      ==     ==      =
                      =     =
+
+      # Keep the pre-1.2 helper names callable: an upgrade preserves locally edited messages when the
+      # administrator keeps them, and those messages may still call these names.
+      FUN`MENU: |-
+        u(FUN`CONNECT`MENU)
+      FUN`SECTION: |-
+        u(FUN`LAYOUT`SECTION,%0)
+      FUN`LIST: |-
+        u(FUN`LAYOUT`LIST)
+      FUN`COMMAND: |-
+        u(FUN`LAYOUT`COMMAND,%0)
+      FUN`ONLINE: |-
+        u(FUN`DISPLAY`ONLINECOUNT)
 
       # The text beside the logo. A way in that the game has turned off is left out.
       FUN`CONNECT`MENU: |-
