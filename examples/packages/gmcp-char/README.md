@@ -55,8 +55,8 @@ because the `+help` librarian cannot read a privileged object's topics.
 ## Events
 
 On the configured event handler: `` PLAYER`CONNECT`GMCPCHAR `` and `` OBJECT`RENAME`GMCPCHAR ``, and one
-`` WATCH`<attribute>`GMCPCHAR `` for each attribute it watches, copied from `` FN`GMCPCHAR`HANDLER ``. The
-payloads are `` FN`GMCPCHAR`* `` on the event handler.
+`` WATCH`<attribute>`GMCPCHAR `` for each attribute it watches, copied from `` TEMPLATE`GMCPCHAR`WATCH ``. The
+payloads are `` FUN`GMCPCHAR`* `` on the event handler.
 
 ## Settings: `+config gmcp-char`
 

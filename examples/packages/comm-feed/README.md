@@ -33,7 +33,7 @@ a terminal still see those lines as before, on every channel without the
 There are no unread counts in the payloads: the engine does not know what a
 player has read. The portal works them out from its own read markers.
 
-It manages only these attributes (and its ``FN`COMM`*`` helpers) on the
+It manages only these attributes (and its ``FUN`COMM`*`` helpers) on the
 configured `event_handler` object (`{{$event_handler}}`, `#9` by default). It
 never creates or destroys the object, and uninstalling leaves the object's
 other softcode untouched.
@@ -45,12 +45,12 @@ The payload shapes, the event arguments and the tests are in
 
 | Attribute | Decides |
 |---|---|
-| ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to (default: a connected player) |
-| ``FN`COMM`RECIPIENTS`` (`%0` objids) | who a `comm.message` or `comm.who` goes to — it can narrow the engine's list, never widen it |
-| ``FN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | the `text` of a line |
-| ``FN`COMM`CHANNELROW`` / ``FN`COMM`CHANNELS`` | the `comm.channels` rows and payload |
-| ``FN`COMM`MESSAGE`` | the `comm.message` payload |
-| ``FN`COMM`WHO`` | the `comm.who` payload |
+| ``FUN`COMM`VIEWER`` (`%0` objid) | who is pushed to (default: a connected player) |
+| ``FUN`COMM`RECIPIENTS`` (`%0` objids) | who a `comm.message` or `comm.who` goes to — it can narrow the engine's list, never widen it |
+| ``FUN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | the `text` of a line |
+| ``FUN`COMM`CHANNELROW`` / ``FUN`COMM`CHANNELS`` | the `comm.channels` rows and payload |
+| ``FUN`COMM`MESSAGE`` | the `comm.message` payload |
+| ``FUN`COMM`WHO`` | the `comm.who` payload |
 
 Each handler is the attribute below its event (``PAGE`MESSAGE`COMMFEED``), so
 another package can hear the same event with an attribute of its own beside it

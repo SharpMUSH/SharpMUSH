@@ -35,16 +35,16 @@ public class RoomContentsPackageTests(ServerWebAppFactory factory)
 			.ToList();
 
 		await Assert.That(managed).Contains("ROOM`CONTENTS`ROOMCONTENTS");
-		await Assert.That(managed).Contains("FN`WHOROW");
-		await Assert.That(managed).Contains("FN`EXITROW");
-		await Assert.That(managed).Contains("FN`WHOVIS");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`WHOROW");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`EXITROW");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`WHOVISIBLE");
 		// 2.0 (OOB v2): the per-viewer payload builders and the seams they compose.
-		await Assert.That(managed).Contains("FN`PAYLOAD`CONTENTS");
-		await Assert.That(managed).Contains("FN`PAYLOAD`EXITS");
-		await Assert.That(managed).Contains("FN`PAYLOAD`INFO");
-		await Assert.That(managed).Contains("FN`IMAGE");
-		await Assert.That(managed).Contains("FN`EXITVIS");
-		await Assert.That(managed).Contains("FN`STATUS");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`PAYLOAD`CONTENTS");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`PAYLOAD`EXITS");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`PAYLOAD`INFO");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`IMAGE");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`EXITVISIBLE");
+		await Assert.That(managed).Contains("FUN`ROOMCONTENTS`STATUS");
 	}
 
 	/// <summary>

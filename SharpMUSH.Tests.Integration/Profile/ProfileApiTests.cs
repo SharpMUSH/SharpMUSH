@@ -65,14 +65,14 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(god.ValueKind).IsEqualTo(JsonValueKind.Object);
 		await Assert.That(god.GetProperty("objid").GetString()).IsEqualTo(objid);
 		await Assert.That(god.GetProperty("created").ValueKind).IsEqualTo(JsonValueKind.Number);
-		// FN`CHARCAT default categorization: God carries the WIZARD flag in the seed.
+		// FUN`PROFILE`CHARACTERCATEGORY default categorization: God carries the WIZARD flag in the seed.
 		await Assert.That(god.GetProperty("category").GetString()).IsEqualTo("Wizard");
 	}
 
 	/// <summary>
-	/// Covers the default FN`CHARCAT / FN`CHARVIS policy beyond the Wizard branch: a ROYALTY
+	/// Covers the default FUN`PROFILE`CHARACTERCATEGORY / FUN`PROFILE`CHARACTERVISIBLE policy beyond the Wizard branch: a ROYALTY
 	/// player categorizes as Royalty, a flagless player has a blank category, and a Guest-powered
-	/// player is filtered out of the directory entirely (MUSH-side, via filter(me/FN`CHARVIS,…)).
+	/// player is filtered out of the directory entirely (MUSH-side, via filter(me/FUN`PROFILE`CHARACTERVISIBLE,…)).
 	/// </summary>
 	[Test]
 	public async Task Characters_CategorizesByFlags_AndHidesGuests()
@@ -145,9 +145,9 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 					.Message.ToPlainText().Replace("\n", "\\n");
 
 			var players = await Probe("lsearch(all,type,player)");
-			var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");
+			var visible = await Probe("filter(#8/FUN`PROFILE`CHARACTERVISIBLE,lsearch(all,type,player))");
 			var rows = await Probe(
-				"iter(filter(#8/FN`CHARVIS,lsearch(all,type,player)),u(#8/FN`CHARROW,%i0),,%r)");
+				"iter(filter(#8/FUN`PROFILE`CHARACTERVISIBLE,lsearch(all,type,player)),u(#8/FUN`PROFILE`CHARACTERROW,%i0),,%r)");
 			var unseen = await Probe(
 				"objeval(#8,iter(lsearch(all,type,player),switch(name(##),#-1*,##,)))");
 			var unseenNames = await Probe(
@@ -173,7 +173,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 
 	/// <summary>
 	/// #7 Package Manager is seeded as a real PLAYER (it owns softcode-package objects), so a
-	/// type-based roster picks it up even though nobody plays it. FN`CHARVIS excludes it by the
+	/// type-based roster picks it up even though nobody plays it. FUN`PROFILE`CHARACTERVISIBLE excludes it by the
 	/// {{$package_manager}} config ref rather than a literal #7 — the seed numbering is
 	/// config-driven and has moved before (#3 → #7).
 	/// </summary>
@@ -194,7 +194,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// The package_manager ref is written into FN`CHARVIS as an objid when the package installs. If
+	/// The package_manager ref is written into FUN`PROFILE`CHARACTERVISIBLE as an objid when the package installs. If
 	/// that objid stops resolving (the object was recreated, or the world replaced under the
 	/// installed package), the predicate must still answer quietly. It used to locate the ref with
 	/// num(), which notifies "I can't see that here." on a miss, once per player, and everything
@@ -209,17 +209,17 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		var verb = staleRef.StartsWith("#7:") ? "STALEPMSEEDED" : "STALEPMMISSING";
 		var manifest = SharpMUSH.Server.Services.BundledPackages.ManifestYaml("profile-handler");
 		var charvis = System.Text.RegularExpressions.Regex
-			.Match(manifest, @"FN`CHARVIS: \|-\r?\n\s+(?<body>.+)").Groups["body"].Value.Trim();
+			.Match(manifest, @"FUN`PROFILE`CHARACTERVISIBLE: \|-\r?\n\s+(?<body>.+)").Groups["body"].Value.Trim();
 		await Assert.That(charvis).Contains("{{$package_manager}}");
 
 		var mediator = factory.Services.GetRequiredService<IMediator>();
 		var attributes = factory.Services.GetRequiredService<IAttributeService>();
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Expect<AnySharpObject>();
 		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Expect<AnySharpObject>();
-		(await attributes.SetAttributeAsync(god, handler, $"FN`{verb}",
+		(await attributes.SetAttributeAsync(god, handler, $"FUN`TEST`{verb}",
 			MarkupText.Plain(charvis.Replace("{{$package_manager}}", staleRef)))).Expect<Success>();
 		(await attributes.SetAttributeAsync(god, handler, verb, MarkupText.Plain(
-			$"@respond/type application/json; think json_array(iter(filter(me/FN`{verb},lsearch(all,type,player)),u(me/FN`CHARROW,%i0),,%r),%r)"))).Expect<Success>();
+			$"@respond/type application/json; think json_array(iter(filter(me/FUN`TEST`{verb},lsearch(all,type,player)),u(me/FUN`PROFILE`CHARACTERROW,%i0),,%r),%r)"))).Expect<Success>();
 
 		var http = factory.CreateHttpClient();
 		using var request = new HttpRequestMessage(new HttpMethod(verb), "http/characters");

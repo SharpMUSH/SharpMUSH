@@ -1,6 +1,6 @@
 format: "1.10"
 package: http-handler
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
 license: MIT
@@ -10,7 +10,7 @@ category: Web portal
 requires_server: ">=0.1"
 
 # Attach mode (decision 20.3): manages the verb-router attributes on the
-# existing http_handler object ({{$http_handler}}, #4 by default). The base of
+# existing http_handler object ({{$http_handler}}, #8 by default). The base of
 # the HTTP API — feature packages (e.g. profile-handler) depend on this and add
 # their own routes as backtick children of these verbs.
 objects:

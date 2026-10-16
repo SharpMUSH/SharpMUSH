@@ -11,7 +11,7 @@ Its routes are backtick children of `http-handler`'s `GET` verb:
 - `GET /http/profile?objid=#1:123` → `` GET`PROFILE `` — one character's public profile
 - `GET /http/profile/schema` → `` GET`PROFILE`SCHEMA `` — the portal's field schema
 
-Plus redefinable helpers (`` FN`CHARCAT `` categorization, `` FN`CHARVIS ``
+Plus redefinable helpers (`` FUN`PROFILE`CHARACTERCATEGORY `` categorization, `` FUN`PROFILE`CHARACTERVISIBLE ``
 visibility, …). Because it depends on `http-handler`, the package manager
 installs the verbs first and blocks uninstalling `http-handler` while this is
 present. Disable the directory/profile API independently by uninstalling just
@@ -30,7 +30,7 @@ evaluated, from the seeded image attributes (`help IMAGE`) and the opt-in
 | `banner` | `` IMAGE`BANNER `` | the portal draws its hue gradient |
 | `color` | `` PROFILE`COLOR `` | the portal's default name colour |
 
-Only a `visual` image attribute is published (`` FN`PICTURE ``): the routes are
+Only a `visual` image attribute is published (`` FUN`PROFILE`PICTURE ``): the routes are
 unauthenticated and the handler is a wizard, so an `IMAGE` its owner made
 private — set before the seeded flags existed, or with `@set me/IMAGE=!visual`
 — reads as blank, and so does a visual `` IMAGE`BANNER `` under that private

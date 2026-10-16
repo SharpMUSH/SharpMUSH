@@ -1,6 +1,6 @@
 format: "1.10"
 package: mudlet-client
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Offers Mudlet the game's own interface and map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
 license: MIT
@@ -169,19 +169,19 @@ objects:
       CMD`GUI`SWITCH: |-
         $+gui *:@assert match(on off,%0)=@pemit %#=notice(GUI,+gui on offers you the game's interface when you connect%, +gui off stops it.,warn); @include %!/INC`GUI`[ucstr(%0)]
       INC`GUI`ON: |-
-        @assert strlen(v(DATA`CONFIG`GUI-URL))=@pemit %#=notice(GUI,This game has no interface package for Mudlet.,warn); &DATA`GUI-OFF`[u(%!/FUN`KEY,%#)] %!; @pemit %#=notice(GUI,u(%!/FUN`TEXT`ON,u(%!/FUN`SEND`GUI,%#)),ok)
+        @assert strlen(v(DATA`CONFIG`GUI-URL))=@pemit %#=notice(GUI,This game has no interface package for Mudlet.,warn); &DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%#)] %!; @pemit %#=notice(GUI,u(%!/FUN`TEXT`ON,u(%!/FUN`SEND`GUI,%#)),ok)
       INC`GUI`OFF: |-
-        &DATA`GUI-OFF`[u(%!/FUN`KEY,%#)] %!=1; @pemit %#=notice(GUI,Your client will not be offered the game's interface when you connect. +gui on offers it again.,ok)
+        &DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%#)] %!=1; @pemit %#=notice(GUI,Your client will not be offered the game's interface when you connect. +gui on offers it again.,ok)
 
       # ── Reads ────────────────────────────────────────────────────────────
       # %0 a player: the key their choice is kept under, their objid as an attribute name (#12:345 is 12-345).
-      FUN`KEY: |-
+      FUN`DATA`KEY: |-
         edit(objid(%0),#,,:,-)
       # %0 a player: whether they want Client.GUI, and there is one to offer.
       FUN`GUI`WANTED: |-
-        cand(strlen(v(DATA`CONFIG`GUI-URL)),not(hasattr(%!,DATA`GUI-OFF`[u(%!/FUN`KEY,%0)])))
+        cand(strlen(v(DATA`CONFIG`GUI-URL)),not(hasattr(%!,DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%0)])))
       # %0 a player: whether their client says it is a screen reader.
-      FUN`READER: |-
+      FUN`CLIENT`SCREENREADER: |-
         member(terminfo(%0),screenreader)
 
       # ── Payloads ─────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ objects:
         Your client will be offered the game's interface when you connect.[if(%0,%bIt was offered just now.,%bNone of your connections takes GMCP now%, so it will be offered next time.)]
       # +gui: %0 the player. A screen reader is told in two sentences; anyone else sees the fields.
       FUN`DISPLAY`STATUS: |-
-        if(strlen(v(DATA`CONFIG`GUI-URL)),if(u(%!/FUN`READER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))
+        if(strlen(v(DATA`CONFIG`GUI-URL)),if(u(%!/FUN`CLIENT`SCREENREADER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))
       FUN`DISPLAY`PLAIN: |-
         The game's interface for Mudlet is version [v(DATA`CONFIG`GUI-VERSION)], at [v(DATA`CONFIG`GUI-URL)]. [if(u(%!/FUN`GUI`WANTED,%0),It is offered to you when you connect. +gui off stops that.,You turned it off. +gui on offers it again.)]
       FUN`DISPLAY`BOX: |-

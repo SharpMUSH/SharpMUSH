@@ -23,7 +23,7 @@ Every send is `oob(..., supported)`. Mudlet lists `Char.Items`.
 ## Events
 
 On the configured event handler: `` OBJECT`MOVE`GMCPITEMS `` (a player moved, or a thing moved between a player and a room),
-`` PLAYER`CONNECT`GMCPITEMS `` and `` SOCKET`GMCP`GMCPITEMS ``. The payloads are `` FN`GMCPITEMS`* `` on the event handler.
+`` PLAYER`CONNECT`GMCPITEMS `` and `` SOCKET`GMCP`GMCPITEMS ``. The payloads are `` FUN`GMCPITEMS`* `` on the event handler.
 
 ## Settings: `+config gmcp-items`
 

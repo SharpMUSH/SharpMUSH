@@ -165,7 +165,7 @@ public class PackageInstallServiceTests
 	/// <summary>
 	/// With <c>package_manager</c> unset, <c>{{$package_manager}}</c> names the same player the installer
 	/// writes as: the seeded Package Manager, #7. It resolved to #3, the Ancestor Room, so profile-handler's
-	/// <c>FN`CHARVIS</c> stopped filtering the real Package Manager out of the character directory.
+	/// <c>FUN`PROFILE`CHARACTERVISIBLE</c> stopped filtering the real Package Manager out of the character directory.
 	/// </summary>
 	[Test]
 	public async Task AnUnsetPackageManager_ResolvesThePackageManagerRefToTheSeededPlayer()

@@ -40,14 +40,14 @@ namespace SharpMUSH.Server.Controllers;
 ///
 /// <para>Each line is shaped as the <c>comm-feed</c> package shapes its <c>comm.message</c> push, and
 /// carries the same id, so the portal keeps one copy of a line it both pulled and was pushed. Its
-/// <c>text</c> goes through the game's installed <c>FN`COMM`TEXT</c> as the push's does
+/// <c>text</c> goes through the game's installed <c>FUN`COMM`TEXT</c> as the push's does
 /// (<see cref="CommTextComposer"/>), so a game that redefined it gets the same text both ways.</para>
 ///
 /// <para>The conversation endpoints read the page log (<c>page_log</c>, a SharpMUSH extension, on by
 /// default): the character's own copies only. Each route reads the session's character's log and takes no
 /// one else's name, so nobody, staff included, can read another character's pages here. With the option
 /// off they answer with nothing and <c>logging: false</c>, so the portal can say why there is no
-/// history. A page's <c>text</c> is composed through <c>FN`COMM`TEXT</c> as a channel line's is.</para>
+/// history. A page's <c>text</c> is composed through <c>FUN`COMM`TEXT</c> as a channel line's is.</para>
 /// </summary>
 [ApiController]
 [Route("api/comm")]

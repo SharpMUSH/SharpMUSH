@@ -31,7 +31,7 @@ All on the configured event handler (`{{$event_handler}}`, `#9` by default), one
 - `` PLAYER`CONNECT`GMCPROOM ``: Info and Players on the new descriptor; AddPlayer to the room on the first connection.
 - `` PLAYER`DISCONNECT`GMCPROOM ``: RemovePlayer to the room when the last connection closes.
 
-The payloads are built by `` FN`GMCPROOM`* `` on the event handler, which runs as a wizard so `exitmap()` may map the
+The payloads are built by `` FUN`GMCPROOM`* `` on the event handler, which runs as a wizard so `exitmap()` may map the
 room as the player standing in it.
 
 ## Settings: `+config gmcp-room`
