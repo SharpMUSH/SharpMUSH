@@ -203,6 +203,42 @@ public partial class BBoardsIntegrationTests
 	}
 
 	/// <summary>
+	/// The game-wide settings (board defaults, ceilings, thread page size) are +config settings; a board's
+	/// own +bbconfig still overrides the defaults.
+	/// </summary>
+	[Test]
+	public async Task SettingsAreChangedThroughPlusConfig()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbCfgAdm", "bboard-admin");
+			var board = await Board(admin, "BbCfg");
+
+			await God("+config bboards/default-pins=4");
+			await God("+config bboards/max-pins=6");
+			await God("+config bboards/thread-page=5");
+			await Assert.That(await As(admin, $"+bbinfo {board}")).Contains("0/4").Because("a board that sets no pins takes the default");
+			await Assert.That(await As(admin, $"+bbconfig {board}/pins=8")).Contains("Pins are 0 to 6.");
+			await As(admin, $"+bbconfig {board}/pins=2");
+			await Assert.That(await As(admin, $"+bbinfo {board}")).Contains("0/2").Because("a board's own setting wins");
+			await Assert.That(await As(admin, "+bbconfig default/pins=3")).Contains("+config bboards/default-pins");
+
+			var post = await Post(admin, board, "Paged", "Body.");
+			for (var i = 1; i <= 7; i++)
+			{
+				await As(admin, $"+bbcomment {post}=Setting comment {i}.");
+			}
+
+			await Assert.That(await As(admin, $"+bbread {post}")).Contains("page 1 of 2");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
 	/// Removing a post, tossing a draft and clearing a board take the readers' leaves for them away, not
 	/// leave them behind empty.
 	/// </summary>

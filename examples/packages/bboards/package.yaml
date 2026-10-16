@@ -10,7 +10,8 @@ category: Community
 requires_server: ">=0.1"
 
 # plus-help carries the +help topics;
-# http-handler owns the GET/POST verb routers the portal routes hang off.
+# http-handler owns the GET/POST verb routers the portal routes hang off;
+# plus-config shows and changes the settings.
 depends:
   - package: plus-help
     version: ">=1.0"
@@ -23,6 +24,13 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/
+      branch: main
+  # The settings below are registered with +config: +config bboards lists them.
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
       branch: main
 
 # Two permissions. Who may read, post, comment on or moderate one board is that board's lock, so a
@@ -88,7 +96,140 @@ objects:
     attributes:
       # Configuration, one leaf per setting.
       DATA: |-
-        Package settings. One leaf per setting.
+        Package settings and tables. One leaf per setting.
+      # The settings +config shows and changes (plus-config). Code reads each with
+      # get({{bboards}}/DATA`CONFIG`<NAME>). A board's own +bbconfig <board>/<option> overrides the
+      # DEFAULT- ones (FUN`STORE`SETTING).
+      DATA`CONFIG:
+        value: |-
+          Board defaults and limits, and how often old posts are cleared.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        BBoards
+      DATA`CONFIG`CLEANUP-EVERY: |-
+        86400
+      DATA`CONFIG`CLEANUP-EVERY`TYPE: |-
+        duration
+      DATA`CONFIG`CLEANUP-EVERY`DEFAULT: |-
+        86400
+      DATA`CONFIG`CLEANUP-EVERY`MIN: |-
+        3600
+      DATA`CONFIG`CLEANUP-EVERY`DESCRIPTION: |-
+        How often the pass that removes timed-out posts and leftovers runs.
+      DATA`CONFIG`CLEANUP-EVERY`LABEL: |-
+        Cleanup interval
+      DATA`CONFIG`CLEANUP-EVERY`EXAMPLE: |-
+        12h
+      DATA`CONFIG`THREAD-PAGE: |-
+        10
+      DATA`CONFIG`THREAD-PAGE`TYPE: |-
+        integer
+      DATA`CONFIG`THREAD-PAGE`DEFAULT: |-
+        10
+      DATA`CONFIG`THREAD-PAGE`MIN: |-
+        1
+      DATA`CONFIG`THREAD-PAGE`MAX: |-
+        100
+      DATA`CONFIG`THREAD-PAGE`DESCRIPTION: |-
+        How many comments one page of a thread shows in +bbread.
+      DATA`CONFIG`THREAD-PAGE`LABEL: |-
+        Comments per page
+      DATA`CONFIG`THREAD-PAGE`EXAMPLE: |-
+        20
+      DATA`CONFIG`TITLE-LENGTH: |-
+        120
+      DATA`CONFIG`TITLE-LENGTH`TYPE: |-
+        integer
+      DATA`CONFIG`TITLE-LENGTH`DEFAULT: |-
+        120
+      DATA`CONFIG`TITLE-LENGTH`MIN: |-
+        10
+      DATA`CONFIG`TITLE-LENGTH`MAX: |-
+        250
+      DATA`CONFIG`TITLE-LENGTH`DESCRIPTION: |-
+        The longest a post title may be, in characters.
+      DATA`CONFIG`TITLE-LENGTH`LABEL: |-
+        Title length
+      DATA`CONFIG`TITLE-LENGTH`EXAMPLE: |-
+        80
+      DATA`CONFIG`MAX-PINS: |-
+        10
+      DATA`CONFIG`MAX-PINS`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-PINS`DEFAULT: |-
+        10
+      DATA`CONFIG`MAX-PINS`MIN: |-
+        0
+      DATA`CONFIG`MAX-PINS`MAX: |-
+        50
+      DATA`CONFIG`MAX-PINS`DESCRIPTION: |-
+        The most pinned posts a board may be set to hold.
+      DATA`CONFIG`MAX-PINS`LABEL: |-
+        Pin ceiling
+      DATA`CONFIG`MAX-PINS`EXAMPLE: |-
+        15
+      DATA`CONFIG`MAX-COMMENTS: |-
+        200
+      DATA`CONFIG`MAX-COMMENTS`TYPE: |-
+        integer
+      DATA`CONFIG`MAX-COMMENTS`DEFAULT: |-
+        200
+      DATA`CONFIG`MAX-COMMENTS`MIN: |-
+        1
+      DATA`CONFIG`MAX-COMMENTS`MAX: |-
+        200
+      DATA`CONFIG`MAX-COMMENTS`DESCRIPTION: |-
+        The most comments a board may allow on one post. At most 200, so a post object stays under 2048 attributes.
+      DATA`CONFIG`MAX-COMMENTS`LABEL: |-
+        Comment ceiling
+      DATA`CONFIG`MAX-COMMENTS`EXAMPLE: |-
+        100
+      DATA`CONFIG`DEFAULT-TIMEOUT: |-
+        0
+      DATA`CONFIG`DEFAULT-TIMEOUT`TYPE: |-
+        integer
+      DATA`CONFIG`DEFAULT-TIMEOUT`DEFAULT: |-
+        0
+      DATA`CONFIG`DEFAULT-TIMEOUT`MIN: |-
+        0
+      DATA`CONFIG`DEFAULT-TIMEOUT`DESCRIPTION: |-
+        Days a post lasts after its last activity, on a board that sets none. 0 is never.
+      DATA`CONFIG`DEFAULT-TIMEOUT`LABEL: |-
+        Default timeout
+      DATA`CONFIG`DEFAULT-TIMEOUT`EXAMPLE: |-
+        30
+      DATA`CONFIG`DEFAULT-PINS: |-
+        5
+      DATA`CONFIG`DEFAULT-PINS`TYPE: |-
+        integer
+      DATA`CONFIG`DEFAULT-PINS`DEFAULT: |-
+        5
+      DATA`CONFIG`DEFAULT-PINS`MIN: |-
+        0
+      DATA`CONFIG`DEFAULT-PINS`MAX: |-
+        50
+      DATA`CONFIG`DEFAULT-PINS`DESCRIPTION: |-
+        The most pinned posts on a board that sets none. Never above the pin ceiling.
+      DATA`CONFIG`DEFAULT-PINS`LABEL: |-
+        Default pins
+      DATA`CONFIG`DEFAULT-PINS`EXAMPLE: |-
+        3
+      DATA`CONFIG`DEFAULT-COMMENTS: |-
+        150
+      DATA`CONFIG`DEFAULT-COMMENTS`TYPE: |-
+        integer
+      DATA`CONFIG`DEFAULT-COMMENTS`DEFAULT: |-
+        150
+      DATA`CONFIG`DEFAULT-COMMENTS`MIN: |-
+        1
+      DATA`CONFIG`DEFAULT-COMMENTS`MAX: |-
+        200
+      DATA`CONFIG`DEFAULT-COMMENTS`DESCRIPTION: |-
+        The most comments on one post, on a board that sets none. Never above the comment ceiling.
+      DATA`CONFIG`DEFAULT-COMMENTS`LABEL: |-
+        Default comments
+      DATA`CONFIG`DEFAULT-COMMENTS`EXAMPLE: |-
+        100
       # Every +bb<word> command STARTUP adds, then hooks to CMD`BB. +bb on its own is +bbread.
       DATA`WORDS: |-
         read list next new scan post write proof toss comment reply edit remove catchup leave join notify follow unfollow search options reader newgroup cleargroup config order category parent lock writelock info pin unpin close open move timeout
@@ -651,7 +792,7 @@ objects:
       # %q<pin_limit>, %q<pin_old_place> (0 when not pinned yet) and %q<pin_place> (the place asked for).
       FUN`PIN`PLACE: |-
         setqm(pin_current_list,u(%!/FUN`STORE`PINS,%q<path_current>),
-        pin_limit,min(10,get(%q<path_current>/CFG`PINS)),
+        pin_limit,u({{bboards}}/FUN`STORE`SETTING,%q<path_current>,PINS),
         pin_old_place,match(%q<pin_current_list>,%q<path_post>),
         pin_place,if(%q<cmd_has_equals>,%q<cmd_right_side>,inc(words(remove(%q<pin_current_list>,%q<path_post>)))))
       # A new pin needs room under the board's pin limit, and the place must be a number from 1. Reads
@@ -677,7 +818,7 @@ objects:
       INC`PIN`LIST: |-
         think setqm(pin_list_board,%q<path_current>,
         board_post_list,u({{bboards}}/FUN`STORE`PINS,%q<pin_list_board>),
-        pin_list_board_count,words(u({{bboards}}/FUN`STORE`BOARDS,%q<pin_list_board>)));@pemit %q<message_target>=rule(%q<path_label> pinned)%r[if(words(%q<board_post_list>),bullets(iter(%q<board_post_list>,%q<path_label>/[add(%q<pin_list_board_count>,inum(0))][space(2)][get(%i0/TITLE)],%b,%r),%r,json(object,style,json(string,number))),No pinned posts.)]%r[rule(words(%q<board_post_list>) of [u({{bboards}}/FUN`DISPLAY`PLURAL,min(10,get(%q<pin_list_board>/CFG`PINS)),pin)])]%r+bbpin <post>=<place> reorders.%b%b+bbunpin <post> unpins.
+        pin_list_board_count,words(u({{bboards}}/FUN`STORE`BOARDS,%q<pin_list_board>)));@pemit %q<message_target>=rule(%q<path_label> pinned)%r[if(words(%q<board_post_list>),bullets(iter(%q<board_post_list>,%q<path_label>/[add(%q<pin_list_board_count>,inum(0))][space(2)][get(%i0/TITLE)],%b,%r),%r,json(object,style,json(string,number))),No pinned posts.)]%r[rule(words(%q<board_post_list>) of [u({{bboards}}/FUN`DISPLAY`PLURAL,u({{bboards}}/FUN`STORE`SETTING,%q<pin_list_board>,PINS),pin)])]%r+bbpin <post>=<place> reorders.%b·%b+bbunpin <post> unpins.
       # +bbunpin <post>: back in date order.
       INC`CMD`UNPIN: |-
         @include/args {{bboards}}/INC`NEED`MODERATEDPOST=path,%q<cmd_argument>;@assert member(get(%q<path_current>/PINS),%q<path_post>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_label> is not pinned.);&PINS %q<path_current>=remove(get(%q<path_current>/PINS),%q<path_post>);&RENUM %q<path_current>=get({{store}}/SEQ);think setq(unpin_timeout_days,u({{bboards}}/FUN`STORE`TIMEOUTDAYS,%q<path_post>));@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Unpinned "[get(%q<path_post>/TITLE)]". It is back in date order as [u({{bboards}}/FUN`PATH`OFPOST,%q<path_post>)][if(gt(%q<unpin_timeout_days>,0),%, and times out %q<unpin_timeout_days> days after its last activity)].);@trigger/args %q<path_current>/ON`PIN=0,%q<path_post>,1,%q<viewer_objid>,2,0,post,%q<path_post>,actor,%q<viewer_objid>,pinned,0
@@ -722,7 +863,7 @@ objects:
       # The reader's prompt: where you are, then the keys that matter there, each key coloured apart
       # from what it does. q is on every prompt but the writing one, where every line is text.
       FUN`DISPLAY`READERPROMPT: |-
-        setq(reader_where_place,get(%q<reader_holder>/BBOARD`HERE))[tone(muted,bb:)] [tone(secondary,u(%!/FUN`DISPLAY`READERWHERE))]%b%b[cond(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE)),Every line is text: [u(%!/FUN`DISPLAY`READERKEY,.,posts)] · [u(%!/FUN`DISPLAY`READERKEY,.toss,drops)],u(%!/FUN`IS`POST,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,j k,next/prev comment) · [u(%!/FUN`DISPLAY`READERKEY,c,comment)] · [u(%!/FUN`DISPLAY`READERKEY,r,reply)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`IS`BOARD,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,<#>,open) · [u(%!/FUN`DISPLAY`READERKEY,j k,next/prev page)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`DISPLAY`READERKEY,Enter,next new) · [u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)])]
+        setq(reader_where_place,get(%q<reader_holder>/BBOARD`HERE))[tone(muted,bb:)] [tone(secondary,u(%!/FUN`DISPLAY`READERWHERE))]%b·%b[cond(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE)),Every line is text: [u(%!/FUN`DISPLAY`READERKEY,.,posts)] · [u(%!/FUN`DISPLAY`READERKEY,.toss,drops)],u(%!/FUN`IS`POST,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,j k,next/prev comment) · [u(%!/FUN`DISPLAY`READERKEY,c,comment)] · [u(%!/FUN`DISPLAY`READERKEY,r,reply)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`IS`BOARD,%q<reader_where_place>),u(%!/FUN`DISPLAY`READERKEY,<#>,open) · [u(%!/FUN`DISPLAY`READERKEY,j k,next/prev page)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`DISPLAY`READERKEY,Enter,next new) · [u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)])]
       # Reader keys for the prompt: keys %0 (one or more, spaced), coloured, then what they do, %1.
       # Each key is a link that types it, so a click works as typing does; Enter sends n, which does
       # the same, and <#> stands for a number, so it is not a link.
@@ -895,10 +1036,15 @@ objects:
       FUN`SCREEN`INDEX: |-
         setqm(board_visible_boards,u(%!/FUN`STORE`VISIBLEBOARDS,{{store}},%0,0),
         board_index_table,if(words(%q<board_visible_boards>),u(%!/FUN`DISPLAY`BOARDTABLE,{{store}},%0,,%q<board_visible_boards>),You follow no boards.),
-        board_index_footer,u(%!/FUN`DISPLAY`PLURAL,words(%q<board_visible_boards>),board)%, [firstof(%q<board_table_new_total>,0)] new)[rule(Boards)]%r%q<board_index_table>%r[rule(%q<board_index_footer>)]%r+bbread <#> opens one.%b%b[u(%!/FUN`DISPLAY`LINK,+bbnext,+bbnext)] reads what's new.%b%b[u(%!/FUN`DISPLAY`LINK,+bbread/all,+bbread/all)] lists all.
+        board_index_footer,u(%!/FUN`DISPLAY`PLURAL,words(%q<board_visible_boards>),board)%, [firstof(%q<board_table_new_total>,0)] new)[rule(Boards)]%r%q<board_index_table>%r[rule(%q<board_index_footer>)]%r+bbread <#> opens one.%b·%b[u(%!/FUN`DISPLAY`LINK,+bbnext,+bbnext)] reads what's new.%b·%b[u(%!/FUN`DISPLAY`LINK,+bbread/all,+bbread/all)] lists all.
+      # %0 a board, or nothing for the defaults; %1 TIMEOUT, PINS or COMMENTS: the board's own setting,
+      # else the +config default (DATA`CONFIG`DEFAULT-<option>), with pins and comments kept under their
+      # ceilings (DATA`CONFIG`MAX-PINS, MAX-COMMENTS).
+      FUN`STORE`SETTING: |-
+        setq(setting_value,if(hasattrp(%0,CFG`%1),get(%0/CFG`%1),get({{bboards}}/DATA`CONFIG`DEFAULT-%1)))[if(hasattr({{bboards}},DATA`CONFIG`MAX-%1),min(get({{bboards}}/DATA`CONFIG`MAX-%1),%q<setting_value>),%q<setting_value>)]
       # Days post %0 lasts after its last activity: its own TIMEOUT, else its board's. 0 is never.
       FUN`STORE`TIMEOUTDAYS: |-
-        setq(timeout_own_setting,get(%0/TIMEOUT))[if(strlen(%q<timeout_own_setting>),%q<timeout_own_setting>,firstof(get(u(%!/FUN`STORE`PARENT,%0)/CFG`TIMEOUT),0))]
+        setq(timeout_own_setting,get(%0/TIMEOUT))[if(strlen(%q<timeout_own_setting>),%q<timeout_own_setting>,firstof(u({{bboards}}/FUN`STORE`SETTING,u(%!/FUN`STORE`PARENT,%0),TIMEOUT),0))]
       # When post %0 times out, in seconds, or empty when it never does. Pinned posts never do.
       FUN`STORE`TIMEOUTAT: |-
         setq(post_timeout_days,u(%!/FUN`STORE`TIMEOUTDAYS,%0))[if(cand(gt(%q<post_timeout_days>,0),not(member(get(u(%!/FUN`STORE`PARENT,%0)/PINS),%0))),add(get(%0/ACTIVE),mul(%q<post_timeout_days>,86400)))]
@@ -973,15 +1119,15 @@ objects:
         squish(if(words(%q<board_visible_boards>),u(%!/FUN`DISPLAY`PLURAL,words(%q<board_visible_boards>),board)%,) [u(%!/FUN`DISPLAY`PLURAL,%q<board_post_count>,post)][if(%q<unread_count>,%, %q<unread_count> unread)][if(%q<board_new_comments>,%, [u(%!/FUN`DISPLAY`PLURAL,%q<board_new_comments>,new comment)])][if(gt(%q<page_count>,1),%, page %q<screen_page_number> of %q<page_count>)])
       # What the table's marks mean, for the marks it shows, on a line of its own.
       FUN`SCREEN`BOARD`LEGEND: |-
-        setq(board_legend,trim(if(member(%q<board_post_marks>,U),U unread|)[if(%q<board_new_comments>,+n new comments|)][if(member(%q<board_post_marks>,P),P pinned|)][if(member(%q<board_post_marks>,T),T times out soon|)],|,r))[if(strlen(%q<board_legend>),%r[edit(%q<board_legend>,|,%b%b)])]
+        setq(board_legend,trim(if(member(%q<board_post_marks>,U),U unread|)[if(%q<board_new_comments>,+n new comments|)][if(member(%q<board_post_marks>,P),P pinned|)][if(member(%q<board_post_marks>,T),T times out soon|)],|,r))[if(strlen(%q<board_legend>),%r[edit(%q<board_legend>,|,%b·%b)])]
       # Links to the older and newer pages of the board at number path %0, on a line of its own, when it
       # has more than one.
       FUN`SCREEN`BOARD`PAGER: |-
-        if(gt(%q<page_count>,1),%r[trim(if(gt(%q<screen_page_number>,1),u(%!/FUN`DISPLAY`LINK,+bbread/[dec(%q<screen_page_number>)] %0,+bbread/[dec(%q<screen_page_number>)] %0) for older.%b%b)[if(lt(%q<screen_page_number>,%q<page_count>),u(%!/FUN`DISPLAY`LINK,+bbread/[inc(%q<screen_page_number>)] %0,+bbread/[inc(%q<screen_page_number>)] %0) for newer.)])])
+        if(gt(%q<page_count>,1),%r[trim(if(gt(%q<screen_page_number>,1),u(%!/FUN`DISPLAY`LINK,+bbread/[dec(%q<screen_page_number>)] %0,+bbread/[dec(%q<screen_page_number>)] %0) for older.%b·%b)[if(lt(%q<screen_page_number>,%q<page_count>),u(%!/FUN`DISPLAY`LINK,+bbread/[inc(%q<screen_page_number>)] %0,+bbread/[inc(%q<screen_page_number>)] %0) for newer.)])])
       # The commands under board %0 (number path %2) for viewer %1: read one, post, go up. A long path
       # puts each on a line of its own.
       FUN`SCREEN`BOARD`HINTS: |-
-        setq(board_hint_separator,if(gt(strlen(%2),12),%r,%b%b))[if(%q<board_post_count>,+bbread %2/<#> reads one.%q<board_hint_separator>)][if(u(%!/FUN`PERMISSION`CAN,%0,post,%1),+bbpost %2/<title>=<text> posts here.%q<board_hint_separator>)][u(%!/FUN`DISPLAY`LINK,+bbread ..,+bbread [u(%!/FUN`PATH`OFPARENT,%0)])] goes up.
+        setq(board_hint_separator,if(gt(strlen(%2),12),%r,%b·%b))[if(%q<board_post_count>,+bbread %2/<#> reads one.%q<board_hint_separator>)][if(u(%!/FUN`PERMISSION`CAN,%0,post,%1),+bbpost %2/<title>=<text> posts here.%q<board_hint_separator>)][u(%!/FUN`DISPLAY`LINK,+bbread ..,+bbread [u(%!/FUN`PATH`OFPARENT,%0)])] goes up.
       # The number path of the level above board %0, empty for the top.
       FUN`PATH`OFPARENT: |-
         setq(path_parent_board,u(%!/FUN`STORE`PARENT,%0))[if(u(%!/FUN`IS`TOP,%q<path_parent_board>),,u(%!/FUN`PATH`OFBOARD,%q<path_parent_board>))]
@@ -1001,7 +1147,7 @@ objects:
       FUN`DISPLAY`COMMENTHEAD: |-
         setqm(comment_number,match(%q<thread_comment_keys>,%1),
         comment_reply_key,get(%0/C`%1`RE),
-        comment_reply_number,if(cand(strlen(%q<comment_reply_key>),not(strmatch(%q<comment_reply_key>,%2))),match(%q<thread_comment_keys>,%q<comment_reply_key>)))[if(strlen(get(%0/C`%1`REMOVED)),tone(muted,%[%q<comment_number>%] [u(%!/FUN`DISPLAY`REMOVEDBY,get(%0/C`%1`REMOVED))]),tone(if(%3,info,muted),%[%q<comment_number>%]) [ansi(hu,u(%!/FUN`DISPLAY`AUTHOR,%0,%1,%q<viewer_objid>))][tone(if(%3,info,muted),%, [u(%!/FUN`DISPLAY`TIMESTAMP,get(%0/C`%1))][if(strlen(%q<comment_reply_number>),%, re %[%q<comment_reply_number>%])][if(get(%0/C`%1`EDITED),%, edited)])][if(%3,%b%b[tone(info,%(new%))])])]
+        comment_reply_number,if(cand(strlen(%q<comment_reply_key>),not(strmatch(%q<comment_reply_key>,%2))),match(%q<thread_comment_keys>,%q<comment_reply_key>)))[if(strlen(get(%0/C`%1`REMOVED)),tone(muted,%[%q<comment_number>%] [u(%!/FUN`DISPLAY`REMOVEDBY,get(%0/C`%1`REMOVED))]),tone(if(%3,info,muted),%[%q<comment_number>%]) [tone(strong,u(%!/FUN`DISPLAY`AUTHOR,%0,%1,%q<viewer_objid>))][tone(if(%3,info,muted),%, [u(%!/FUN`DISPLAY`TIMESTAMP,get(%0/C`%1))][if(strlen(%q<comment_reply_number>),%, re %[%q<comment_reply_number>%])][if(get(%0/C`%1`EDITED),%, edited)])][if(%3,%b%b[tone(info,%(new%))])])]
       # Comment %<comment> on post %<post>, whose conversation starts at %<root>, as %<viewer> who has read
       # up to %<mark>: the head line and the text, two spaces in when it is a reply, with a * when %<marked> is 1.
       FUN`DISPLAY`COMMENT: |-
@@ -1023,7 +1169,7 @@ objects:
         setq(conversation_slice,match(%q<thread_order>,%0))[extract(%q<thread_order>,%q<conversation_slice>,inc(sub(max(%q<conversation_slice>,match(%q<thread_order>,firstof(get(%q<thread_post>/C`%0`END),%0))),%q<conversation_slice>)))]
       # Comments on one page of a thread.
       FUN`THREAD`PAGESIZE: |-
-        10
+        get({{bboards}}/DATA`CONFIG`THREAD-PAGE)
       # A one-line quote of comment %1 on post %0, heading a conversation that started on an earlier page,
       # cut to fit a 78-column line.
       FUN`DISPLAY`QUOTE: |-
@@ -1064,12 +1210,12 @@ objects:
       # The commands under post %0 (number path %2) for viewer %1: the next page, comment and reply, or
       # back to the board when it takes no comments from them.
       FUN`SCREEN`THREAD`HINTS: |-
-        if(lt(%q<thread_page_number>,%q<thread_page_count>),More: [u(%!/FUN`DISPLAY`LINK,+bbread/[inc(%q<thread_page_number>)] %2,+bbread/[inc(%q<thread_page_number>)] %2)] %(page [inc(%q<thread_page_number>)] of %q<thread_page_count>%)[if(gt(words(get(%0/THREAD)),0),%b%b+bbread %2/<#> shows one conversation.)]%r)[setq(thread_board_path,before(%2,/[last(%2,/)]))][if(cand(not(get(%0/CLOSED)),u(%!/FUN`PERMISSION`CAN,u(%!/FUN`STORE`PARENT,%0),comment,%1)),+bbcomment %2=<text> comments.[if(words(%q<thread_comment_keys>),%b%b+bbreply %2/<#>=<text> answers one.)],u(%!/FUN`DISPLAY`LINK,+bbread %q<thread_board_path>,+bbread %q<thread_board_path>) lists the posts.)]
+        if(lt(%q<thread_page_number>,%q<thread_page_count>),More: [u(%!/FUN`DISPLAY`LINK,+bbread/[inc(%q<thread_page_number>)] %2,+bbread/[inc(%q<thread_page_number>)] %2)] %(page [inc(%q<thread_page_number>)] of %q<thread_page_count>%)[if(gt(words(get(%0/THREAD)),0),%b·%b+bbread %2/<#> shows one conversation.)]%r)[setq(thread_board_path,before(%2,/[last(%2,/)]))][if(cand(not(get(%0/CLOSED)),u(%!/FUN`PERMISSION`CAN,u(%!/FUN`STORE`PARENT,%0),comment,%1)),+bbcomment %2=<text> comments.[if(words(%q<thread_comment_keys>),%b·%b+bbreply %2/<#>=<text> answers one.)],u(%!/FUN`DISPLAY`LINK,+bbread %q<thread_board_path>,+bbread %q<thread_board_path>) lists the posts.)]
       # Comment %3 on post %0 (number path %2) and the rest of its conversation, as viewer %1, with %3
       # marked. The way to read one conversation of a long thread on its own.
       FUN`SCREEN`CONVERSATION: |-
         setq(thread_mark,u(%!/FUN`READING`THREADMARK,%0,%1,u(%!/FUN`READING`BOARDMARK,u(%!/FUN`STORE`PARENT,%0),%1)))[u(%!/FUN`THREAD`ORDER,%0)][setqm(conversation_root,u(%!/FUN`THREAD`ROOTOF,%3),
-        conversation_keys,u(%!/FUN`THREAD`CONVERSATION,%q<conversation_root>))][rule(%2/[match(%q<thread_comment_keys>,%3)]%b%bon: [get(%0/TITLE)])]%r[iter(%q<conversation_keys>,uargs(%!/FUN`DISPLAY`COMMENT,post,%0,comment,%i0,root,%q<conversation_root>,viewer,%1,mark,%q<thread_mark>,marked,strmatch(%i0,%3)),%b,%r%r)]%r[rule(conversation %[[match(%q<thread_comment_keys>,%q<conversation_root>)]%]%, [u(%!/FUN`DISPLAY`PLURAL,words(%q<conversation_keys>),comment)])]%r[if(cand(not(get(%0/CLOSED)),u(%!/FUN`PERMISSION`CAN,u(%!/FUN`STORE`PARENT,%0),comment,%1)),+bbreply %2/[match(%q<thread_comment_keys>,%3)]=<text> answers it.%b%b)][u(%!/FUN`DISPLAY`LINK,+bbread %2,+bbread %2)] for the whole thread.
+        conversation_keys,u(%!/FUN`THREAD`CONVERSATION,%q<conversation_root>))][rule(%2/[match(%q<thread_comment_keys>,%3)]%b%bon: [get(%0/TITLE)])]%r[iter(%q<conversation_keys>,uargs(%!/FUN`DISPLAY`COMMENT,post,%0,comment,%i0,root,%q<conversation_root>,viewer,%1,mark,%q<thread_mark>,marked,strmatch(%i0,%3)),%b,%r%r)]%r[rule(conversation %[[match(%q<thread_comment_keys>,%q<conversation_root>)]%]%, [u(%!/FUN`DISPLAY`PLURAL,words(%q<conversation_keys>),comment)])]%r[if(cand(not(get(%0/CLOSED)),u(%!/FUN`PERMISSION`CAN,u(%!/FUN`STORE`PARENT,%0),comment,%1)),+bbreply %2/[match(%q<thread_comment_keys>,%3)]=<text> answers it.%b·%b)][u(%!/FUN`DISPLAY`LINK,+bbread %2,+bbread %2)] for the whole thread.
       INC`NEED`ADMIN: |-
         @assert u({{bboards}}/FUN`PERMISSION`ISADMIN,%q<viewer_objid>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`ERROR,Only board admins may do that.)
       # What is wrong with %1 as the name of a board at level %0 (%2: a board to leave out of the check
@@ -1124,12 +1270,12 @@ objects:
         if(gt(%0,0),u(%!/FUN`DISPLAY`PLURAL,%0,day),never)
       # Board %0's settings and locks.
       FUN`SCREEN`INFO: |-
-        rule(u(%!/FUN`PATH`OFBOARD,%0) [u(%!/FUN`DISPLAY`BOARDNAME,%0)])%r[fields(,Description,firstof(get(%0/DESCRIBE),%(none%)),Lists,u(%!/FUN`DISPLAY`PLURAL,words(get(%0/ORDER)),board)%, [u(%!/FUN`DISPLAY`PLURAL,words(lcon(%0)),post)],Color,firstof(get(%0/COLOR),%(none%)),Read,u(%!/FUN`DISPLAY`LOCK,%0,read),Post,u(%!/FUN`DISPLAY`LOCK,%0,post),Comment,u(%!/FUN`DISPLAY`LOCK,%0,comment),Moderate,u(%!/FUN`DISPLAY`LOCK,%0,moderate),Timeout,u(%!/FUN`DISPLAY`DAYS,get(%0/CFG`TIMEOUT)),Pins,words(u(%!/FUN`STORE`PINS,%0))/[min(10,get(%0/CFG`PINS))],Comments,at most [min(200,get(%0/CFG`COMMENTS))] a post,Anonymous,firstof(get(%0/CFG`ANONYMOUS),no))]%r[rule()]
+        rule(u(%!/FUN`PATH`OFBOARD,%0) [u(%!/FUN`DISPLAY`BOARDNAME,%0)])%r[fields(,Description,firstof(get(%0/DESCRIBE),%(none%)),Lists,u(%!/FUN`DISPLAY`PLURAL,words(get(%0/ORDER)),board)%, [u(%!/FUN`DISPLAY`PLURAL,words(lcon(%0)),post)],Color,firstof(get(%0/COLOR),%(none%)),Read,u(%!/FUN`DISPLAY`LOCK,%0,read),Post,u(%!/FUN`DISPLAY`LOCK,%0,post),Comment,u(%!/FUN`DISPLAY`LOCK,%0,comment),Moderate,u(%!/FUN`DISPLAY`LOCK,%0,moderate),Timeout,u(%!/FUN`DISPLAY`DAYS,u({{bboards}}/FUN`STORE`SETTING,%0,TIMEOUT)),Pins,words(u(%!/FUN`STORE`PINS,%0))/[u({{bboards}}/FUN`STORE`SETTING,%0,PINS)],Comments,at most [u({{bboards}}/FUN`STORE`SETTING,%0,COMMENTS)] a post,Anonymous,firstof(get(%0/CFG`ANONYMOUS),no))]%r[rule()]
       # +bbinfo <board>: its settings and locks.
       INC`CMD`INFO: |-
         @include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>;@pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`INFO,%q<path_current>)
       FUN`SCREEN`DEFAULTS: |-
-        rule(BBoard defaults)%r[fields(,Timeout,u(%!/FUN`DISPLAY`DAYS,get({{board_proto}}/CFG`TIMEOUT)),Pins,min(10,get({{board_proto}}/CFG`PINS)),Comments,at most [min(200,get({{board_proto}}/CFG`COMMENTS))] a post)]%r[rule()]%r+bbconfig default/<option>=<value> changes one.%b%b+bbconfig all shows every board.
+        rule(BBoard defaults)%r[fields(,Timeout,u(%!/FUN`DISPLAY`DAYS,u({{bboards}}/FUN`STORE`SETTING,,TIMEOUT)),Pins,u({{bboards}}/FUN`STORE`SETTING,,PINS),Comments,at most [u({{bboards}}/FUN`STORE`SETTING,,COMMENTS)] a post)]%r[rule()]%r+config bboards changes them.%b·%b+bbconfig all shows every board.
       # Lock text %0 cut to 16 characters with .. when longer.
       FUN`DISPLAY`SHORTLOCK: |-
         if(gt(strlen(%0),16),left(%0,14)..,%0)
@@ -1145,7 +1291,7 @@ objects:
       # then every board's settings and locks, in one walk down the tree. Like +bblist, it goes
       # FUN`DISPLAY`TREEDEPTH levels down; the deepest rows say how many boards are below them.
       FUN`SCREEN`CONFIGALL: |-
-        u(%!/FUN`SCREEN`CONFIGALL`WALK,%0,%1,%2)[u(%!/FUN`SCREEN`CONFIGALL`COLUMNS)][rule(if(%q<config_is_subtree>,BBoard settings: %2 [name(%1)],BBoard settings))]%rDefaults: timeout [u(%!/FUN`DISPLAY`DAYS,get({{board_proto}}/CFG`TIMEOUT))]%, [min(10,get({{board_proto}}/CFG`PINS))] pins%, at most [min(200,get({{board_proto}}/CFG`COMMENTS))] comments a post%r%r[u(%!/FUN`SCREEN`CONFIGALL`TABLES)]%r[rule(u(%!/FUN`DISPLAY`PLURAL,words(%q<config_boards>),board))]%r^ 5 from board 5%b%b%b= read same as read lock%b%b%b.. cut short%, +bbinfo shows it%r+bbconfig <board>/<option>=<value> changes one.%b%b+bblock <board>/<lock>=<lock>[if(%q<config_has_hidden>,%r+bbconfig all <#> shows the boards below one.)]
+        u(%!/FUN`SCREEN`CONFIGALL`WALK,%0,%1,%2)[u(%!/FUN`SCREEN`CONFIGALL`COLUMNS)][rule(if(%q<config_is_subtree>,BBoard settings: %2 [name(%1)],BBoard settings))]%rDefaults: timeout [u(%!/FUN`DISPLAY`DAYS,u({{bboards}}/FUN`STORE`SETTING,,TIMEOUT))]%, [u({{bboards}}/FUN`STORE`SETTING,,PINS)] pins%, at most [u({{bboards}}/FUN`STORE`SETTING,,COMMENTS)] comments a post%r%r[u(%!/FUN`SCREEN`CONFIGALL`TABLES)]%r[rule(u(%!/FUN`DISPLAY`PLURAL,words(%q<config_boards>),board))]%r^ 5 from board 5%b·%b= read same as read lock%b·%b.. cut short%, +bbinfo shows it%r+bbconfig <board>/<option>=<value> changes one.%b·%b+bblock <board>/<lock>=<lock>[if(%q<config_has_hidden>,%r+bbconfig all <#> shows the boards below one.)]
       # Fills both tables' columns, a heading then one cell a line for each board in %q<config_boards>: %q<config_column_number>
       # to %q<config_column_anonymous> and %q<config_lock_column_number> to %q<config_lock_column_moderate>. Sets %q<config_has_hidden>. Returns nothing.
       FUN`SCREEN`CONFIGALL`COLUMNS: |-
@@ -1187,8 +1333,8 @@ objects:
         setqm(config_column_number,%q<config_column_number>%r%q<config_row_number>,
         config_column_board,%q<config_column_board>%r[space(mul(2,dec(%q<config_row_depth>)))][name(%q<config_row_board>)][if(%q<config_hidden_count>,%b%(+%q<config_hidden_count> below%))],
         config_column_color,%q<config_column_color>%r[get(%q<config_row_board>/COLOR)],
-        config_column_timeout,%q<config_column_timeout>%r[if(gt(get(%q<config_row_board>/CFG`TIMEOUT),0),get(%q<config_row_board>/CFG`TIMEOUT),none)],
-        config_column_pins,%q<config_column_pins>%r[words(u(%!/FUN`STORE`PINS,%q<config_row_board>))]/[min(10,get(%q<config_row_board>/CFG`PINS))],
+        config_column_timeout,%q<config_column_timeout>%r[if(gt(setr(config_row_timeout,u({{bboards}}/FUN`STORE`SETTING,%q<config_row_board>,TIMEOUT)),0),%q<config_row_timeout>,none)],
+        config_column_pins,%q<config_column_pins>%r[words(u(%!/FUN`STORE`PINS,%q<config_row_board>))]/[u({{bboards}}/FUN`STORE`SETTING,%q<config_row_board>,PINS)],
         config_column_anonymous,%q<config_column_anonymous>%r[get(%q<config_row_board>/CFG`ANONYMOUS)])
       # Adds board %q<config_row_board>'s lock cells (number %q<config_row_number>, at depth %q<config_row_depth>) to
       # %q<config_lock_column_number> to %q<config_lock_column_moderate>, through FUN`DISPLAY`LOCKCELL. Returns nothing.
@@ -1208,7 +1354,7 @@ objects:
       # +bbconfig all, all <board> and <board> without an =: shows that screen and stops +bbconfig.
       INC`SETTINGS`SCREENS: |-
         @assert not(strmatch(%q<cmd_argument>,all))=@pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`CONFIGALL,%q<viewer_objid>);@assert not(strmatch(%q<cmd_argument>,all *))={@include/args {{bboards}}/INC`NEED`BOARD=path,rest(%q<cmd_argument>);@pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`CONFIGALL,%q<viewer_objid>,%q<path_current>,%q<path_label>)};@assert %q<cmd_has_equals>={@include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>; @pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`INFO,%q<path_current>)}
-      # Stops +bbconfig unless %q<config_option> is one it knows; for default/<option> it runs INC`CONFIG`DEFAULT and stops.
+      # Stops +bbconfig unless %q<config_option> is one it knows; for default/<option> it runs INC`CONFIG`DEFAULT, which points at +config, and stops.
       INC`SETTINGS`OPTION: |-
         @assert match(description color timeout pins comments anonymous name,%q<config_option>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbconfig knows description%, color%, timeout%, pins%, comments%, anonymous and name.);@assert not(strmatch(%q<config_board_path>,default))={@include {{bboards}}/INC`CONFIG`DEFAULT}
       # Finds board %q<config_board_path> and checks %q<config_value> for it. Sets %q<config_board>, %q<config_board_label>
@@ -1218,7 +1364,7 @@ objects:
         config_board_label,%q<path_label> [name(%q<path_current>)]);@assert not(strlen(setr(config_error,u({{bboards}}/FUN`CHECK`CONFIG,%q<config_option>,%q<config_value>,%q<config_board>))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<config_error>)
       # What is wrong with %1 as option %0 of board %2, or nothing.
       FUN`CHECK`CONFIG: |-
-        switch(%0,description,if(strmatch(%1,*%r*),A description is one line.,if(gt(strlen(%1),200),A description is at most 200 characters.)),color,if(cand(strlen(%1),not(valid(ansicodes,%1))),"%1" is not a colour. Try hr%, +orange or /#ff8000.),timeout,if(not(cand(isint(%1),gte(%1,0))),A timeout is a number of days%, 0 for never.),pins,if(not(cand(isint(%1),gte(%1,0),lte(%1,10))),Pins are 0 to 10.),comments,if(not(cand(isint(%1),gt(%1,0),lte(%1,200))),Comments are 1 to 200 a post.),anonymous,if(gt(strlen(%1),40),An anonymous name is at most 40 characters.),name,u(%!/FUN`CHECK`BOARDNAME,u(%!/FUN`STORE`PARENT,%2),%1,%2))
+        switch(%0,description,if(strmatch(%1,*%r*),A description is one line.,if(gt(strlen(%1),200),A description is at most 200 characters.)),color,if(cand(strlen(%1),not(valid(ansicodes,%1))),"%1" is not a colour. Try hr%, +orange or /#ff8000.),timeout,if(not(cand(isint(%1),gte(%1,0))),A timeout is a number of days%, 0 for never.),pins,if(not(cand(isint(%1),gte(%1,0),lte(%1,get({{bboards}}/DATA`CONFIG`MAX-PINS)))),Pins are 0 to [get({{bboards}}/DATA`CONFIG`MAX-PINS)].),comments,if(not(cand(isint(%1),gt(%1,0),lte(%1,get({{bboards}}/DATA`CONFIG`MAX-COMMENTS)))),Comments are 1 to [get({{bboards}}/DATA`CONFIG`MAX-COMMENTS)] a post.),anonymous,if(gt(strlen(%1),40),An anonymous name is at most 40 characters.),name,u(%!/FUN`CHECK`BOARDNAME,u(%!/FUN`STORE`PARENT,%2),%1,%2))
       INC`CONFIG`DESCRIPTION: |-
         &DESCRIBE %q<config_board>=%q<config_value>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Set.)
       INC`CONFIG`COLOR: |-
@@ -1233,8 +1379,9 @@ objects:
         &CFG`ANONYMOUS %q<config_board>=%q<config_value>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,if(strlen(%q<config_value>),Posts on %q<path_label> show as %q<config_value>. Moderators still see who.,Posts on %q<path_label> show their authors again.))
       INC`CONFIG`NAME: |-
         @name %q<config_board>=%q<config_value>;&RENUM [u({{bboards}}/FUN`STORE`PARENT,%q<config_board>)]=get({{store}}/SEQ);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,%q<config_board_label> is now called %q<config_value>.)
+      # +bbconfig default/<option>=<value>: the defaults are +config settings, so it says where they are.
       INC`CONFIG`DEFAULT: |-
-        @assert match(timeout pins comments,%q<config_option>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are timeout%, pins and comments.);@assert not(strlen(setr(config_error,u({{bboards}}/FUN`CHECK`CONFIG,%q<config_option>,%q<config_value>,))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<config_error>);&CFG`[ucstr(%q<config_option>)] {{board_proto}}=%q<config_value>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,The default %q<config_option> is now %q<config_value>. Boards that set their own keep it.)
+        @assert match(timeout pins comments,%q<config_option>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are timeout%, pins and comments.);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are +config settings: +config bboards/default-%q<config_option>=<value>.)
       # The boards at level %0 shown in the same category as board %1, in display order.
       FUN`STORE`CATEGORYPEERS: |-
         setq(category_current,u(%!/FUN`STORE`CATEGORYOF,%0,%1))[squish(iter(u(%!/FUN`STORE`BOARDS,%0),if(strmatch(u(%!/FUN`STORE`CATEGORYOF,%0,%i0),%q<category_current>),%i0)))]
@@ -1335,10 +1482,10 @@ objects:
       # +bbwritelock <board>=<lock>: Myrddin's name for the post lock.
       INC`CMD`WRITELOCK: |-
         @include {{bboards}}/INC`NEED`ADMIN;think setq(lock_kind,post);@include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_left_side>;@include {{bboards}}/INC`DO`LOCK
-      # Every DATA`TICK seconds while %0 is the current DATA`TICK`ID: one queue entry per post, removing the
+      # Every DATA`CONFIG`CLEANUP-EVERY seconds while %0 is the current DATA`TICK`ID: one queue entry per post, removing the
       # posts past their timeout and the orphans a post that stopped halfway left in BBoards.
       INC`TICK`PASS: |-
-        @assert strmatch(%0,get({{bboards}}/DATA`TICK`ID));@dolist lsearch(all,parent,{{post_proto}})=@trigger {{bboards}}/INC`TICK`POST=##;@wait get({{bboards}}/DATA`TICK)=@trigger {{bboards}}/INC`TICK`PASS=%0
+        @assert strmatch(%0,get({{bboards}}/DATA`TICK`ID));@dolist lsearch(all,parent,{{post_proto}})=@trigger {{bboards}}/INC`TICK`POST=##;@wait get({{bboards}}/DATA`CONFIG`CLEANUP-EVERY)=@trigger {{bboards}}/INC`TICK`PASS=%0
       # One post %0 for the daily pass.
       INC`TICK`POST: |-
         think setqm(tick_post,objid(%0),
@@ -1368,7 +1515,7 @@ objects:
       # its first comment when that is not among them. Sets %q<thread_last_seen> to what this marks read: the
       # last comment shown when more are new, else the post's LAST.
       FUN`SCREEN`NEXT: |-
-        u(%!/FUN`SCREEN`NEXT`PICK,%0,%1,%3)[rule(%2%b%b[squish(if(%q<unread_count>,new post[if(words(%q<new_items_shown>),%,)]) [if(words(%q<next_new_comments>),u(%!/FUN`DISPLAY`PLURAL,words(%q<next_new_comments>),new comment))])])]%r[if(%q<unread_count>,u(%!/FUN`DISPLAY`POSTHEAD,%0,%1)%r%r[if(strlen(get(%0/REMOVED)),tone(muted,%(This post was [u(%!/FUN`DISPLAY`REMOVEDBY,get(%0/REMOVED))].%)),u(%!/FUN`DISPLAY`BODY,%0))],tone(strong,get(%0/TITLE)))][if(words(%q<new_items_shown>),%r[u(%!/FUN`SCREEN`NEXT`COMMENTS,%0,%1)],%r)]%r[rule(cond(%q<next_more_here>,%q<next_more_here> more new here,%q<next_left_elsewhere>,%q<next_left_elsewhere> more new,nothing more new))]%r[if(cor(%q<next_more_here>,%q<next_left_elsewhere>),u(%!/FUN`DISPLAY`LINK,+bbnext,+bbnext) for the next.%b%b)][u(%!/FUN`DISPLAY`LINK,+bbread %2,+bbread %2)] for the whole thread.
+        u(%!/FUN`SCREEN`NEXT`PICK,%0,%1,%3)[rule(%2%b%b[squish(if(%q<unread_count>,new post[if(words(%q<new_items_shown>),%,)]) [if(words(%q<next_new_comments>),u(%!/FUN`DISPLAY`PLURAL,words(%q<next_new_comments>),new comment))])])]%r[if(%q<unread_count>,u(%!/FUN`DISPLAY`POSTHEAD,%0,%1)%r%r[if(strlen(get(%0/REMOVED)),tone(muted,%(This post was [u(%!/FUN`DISPLAY`REMOVEDBY,get(%0/REMOVED))].%)),u(%!/FUN`DISPLAY`BODY,%0))],tone(strong,get(%0/TITLE)))][if(words(%q<new_items_shown>),%r[u(%!/FUN`SCREEN`NEXT`COMMENTS,%0,%1)],%r)]%r[rule(cond(%q<next_more_here>,%q<next_more_here> more new here,%q<next_left_elsewhere>,%q<next_left_elsewhere> more new,nothing more new))]%r[if(cor(%q<next_more_here>,%q<next_left_elsewhere>),u(%!/FUN`DISPLAY`LINK,+bbnext,+bbnext) for the next.%b·%b)][u(%!/FUN`DISPLAY`LINK,+bbread %2,+bbread %2)] for the whole thread.
       # What +bbnext shows viewer %1 of post %0, with %2 new items in all. Sets %q<thread_mark> (what they have
       # read up to), %q<unread_count> (1 when the post is unread), the FUN`THREAD`ORDER registers, %q<next_new_comments> (the
       # new comments not theirs), %q<new_items_shown> (the ones shown) in %q<next_sorted_comments> thread order, %q<next_more_here> (new
@@ -1646,7 +1793,7 @@ objects:
         tree_last_column,iter(%q<tree_rows>,after(after(%i0,^^^),^^^),%r,%r))
       # The commands under a tree, %0 all or list, and how to see the boards a deep tree leaves out.
       FUN`SCREEN`TREE`HINTS: |-
-        switch(%0,all,+bbjoin <board> follows one again.%b%b+bbleave <board> stops following.,+bbread <#> opens one.)[if(%q<tree_has_hidden>,%r+bb[if(strmatch(%0,all),read/all,list)] <#> shows the boards below one.)]
+        switch(%0,all,+bbjoin <board> follows one again.%b·%b+bbleave <board> stops following.,+bbread <#> opens one.)[if(%q<tree_has_hidden>,%r+bb[if(strmatch(%0,all),read/all,list)] <#> shows the boards below one.)]
       # +bblist [<board>]: the tree of boards you follow, from the top or from a board.
       INC`CMD`LIST: |-
         @assert not(strlen(%q<cmd_argument>))={@include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>; @pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`TREE,%q<path_current>,%q<viewer_objid>,%q<path_label>,list)};@pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`TREE,{{store}},%q<viewer_objid>,,list)
@@ -1708,7 +1855,7 @@ objects:
         setq(crumb_ancestors,revwords(u({{bboards}}/FUN`STORE`ANCESTRY,if(u({{bboards}}/FUN`IS`POST,%0),u({{bboards}}/FUN`STORE`PARENT,%0),%0))))\[All boards\]\(/apps/boards\)[iter(%q<crumb_ancestors>,%b/ \[[last(u({{bboards}}/FUN`PATH`OFBOARD,%i0),/)] [name(%i0)]\]\([u({{bboards}}/WEB`ADDRESS`OFPATH,u({{bboards}}/FUN`PATH`OFBOARD,%i0))]\),%b,)]
       # Links to pages 1 to %1 of address %0, page %2 shown, as Markdown: Older and Newer at the ends.
       WEB`ELEMENT`PAGES: |-
-        if(gt(%1,1),if(gt(%2,1),\[Newer\]\(%0?page=[dec(%2)]\)%b%b)Page %2 of %1[if(lt(%2,%1),%b%b\[Older\]\(%0?page=[inc(%2)]\))])
+        if(gt(%1,1),if(gt(%2,1),\[Newer\]\(%0?page=[dec(%2)]\)%b·%b)Page %2 of %1[if(lt(%2,%1),%b·%b\[Older\]\(%0?page=[inc(%2)]\))])
       # The page %<viewer> asked for at address %<at>: page %<page>, %<edit> 1 to edit, and %<board> the
       # board a new post goes on.
       WEB`SCHEMA: |-
@@ -1779,7 +1926,7 @@ objects:
       WEB`SCHEMA`BOARD`INTRO: |-
         setqm(board_is_left,u({{bboards}}/FUN`READING`HASLEFT,%1,%0),
         board_page,min(max(1,firstof(%3,1)),u({{bboards}}/WEB`PAGING`BOARDPAGES,%1)),
-        board_intro_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1)%b%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2)])[if(strlen(get(%1/DESCRIBE)),%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,get(%1/DESCRIBE))])])
+        board_intro_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1)%b·%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2)])[if(strlen(get(%1/DESCRIBE)),%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,get(%1/DESCRIBE))])])
       # Board %1 for viewer %0: its buttons and its boards. Reads %q<board_is_left>; sets
       # %q<board_buttons_section>, %q<board_children_section> and %q<board_posts_table> (the posts table).
       WEB`SCHEMA`BOARD`BUTTONS: |-
@@ -1853,7 +2000,7 @@ objects:
       WEB`SCHEMA`THREAD`HEAD: |-
         setqm(thread_page_number,min(max(1,firstof(%3,1)),u({{bboards}}/WEB`PAGING`THREADPAGES,%1)),
         thread_comment_count,words(u({{bboards}}/FUN`STORE`COMMENTKEYS,%1)),
-        thread_header_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1)%b%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2)])%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`POSTHEAD,%1,%0))]%r[if(strlen(get(%1/REMOVED)),u({{bboards}}/WEB`ELEMENT`MARKDOWN,*This post was [u({{bboards}}/FUN`DISPLAY`REMOVEDBY,get(%1/REMOVED))].*),u({{bboards}}/WEB`ELEMENT`BODY,%1,))])
+        thread_header_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1)%b·%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2)])%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`POSTHEAD,%1,%0))]%r[if(strlen(get(%1/REMOVED)),u({{bboards}}/WEB`ELEMENT`MARKDOWN,*This post was [u({{bboards}}/FUN`DISPLAY`REMOVEDBY,get(%1/REMOVED))].*),u({{bboards}}/WEB`ELEMENT`BODY,%1,))])
       # Post %1 (number path %2): its conversations timeline and the pages under it. Reads
       # %q<thread_comment_count> and %q<thread_page_number>; sets %q<thread_comments_section>.
       WEB`SCHEMA`THREAD`COMMENTS: |-
@@ -1891,7 +2038,7 @@ objects:
       # Comment %3 on post %1 (post path %2) for viewer %0: the whole conversation, and a box answering it.
       WEB`SCHEMA`CONVERSATION: |-
         u({{bboards}}/FUN`THREAD`ORDER,%1)[setqm(comment_number,match(%q<thread_comment_keys>,%3),
-        conv_header_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1) / \[[last(%2,/)] [get(%1/TITLE)]\]\([u({{bboards}}/WEB`ADDRESS`OFPATH,%2)]\)%b%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2/%q<comment_number>)]),
+        conv_header_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1) / \[[last(%2,/)] [get(%1/TITLE)]\]\([u({{bboards}}/WEB`ADDRESS`OFPATH,%2)]\)%b·%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2/%q<comment_number>)]),
         conv_timeline_section,u({{bboards}}/WEB`ELEMENT`SECTION,Conversation,2,json(object,kind,json(string,timeline),rows_field,json(string,comments),empty,json(string,))))][u({{bboards}}/WEB`ELEMENT`DOCUMENT,form,Comment %q<comment_number> on [get(%1/TITLE)],squish(u({{bboards}}/WEB`ELEMENT`SECTION,,1,%q<conv_header_section>)%r%q<conv_timeline_section>%r[u({{bboards}}/WEB`ELEMENT`COMMENTBOX,%1,%0,%3,Reply to comment %q<comment_number>)]%r[u({{bboards}}/WEB`ELEMENT`SECTION,,10,u({{bboards}}/WEB`ELEMENT`HIDDEN,at,%2/%q<comment_number>))],%r),u({{bboards}}/WEB`ELEMENT`ACTIONS))]
       WEB`DATA`CONVERSATION: |-
         setq(thread_read_mark,u({{bboards}}/FUN`READING`THREADMARK,%1,%0,u({{bboards}}/FUN`READING`BOARDMARK,u({{bboards}}/FUN`STORE`PARENT,%1),%0)))[u({{bboards}}/FUN`THREAD`ORDER,%1)][setq(conversation_root,u({{bboards}}/FUN`THREAD`ROOTOF,%3))][json(object,fields,json(object,comments,u({{bboards}}/WEB`JSON`DATUM,u({{bboards}}/WEB`JSON`ARRAY,iter(u({{bboards}}/FUN`THREAD`CONVERSATION,%q<conversation_root>),uargs({{bboards}}/WEB`TIMELINE`COMMENT,post,%1,comment,%i0,root,%q<conversation_root>,viewer,%0,path,%2,mark,%q<thread_read_mark>,hidden,0),%b,%r)))))]
@@ -2115,7 +2262,7 @@ objects:
         split_title,trim(extract(%0,inc(%q<split_board_words>),%q<split_path_words>,/)))],u(%!/FUN`PATH`RESOLVE,extract(%0,1,dec(%q<split_path_words>),/),%1)[setq(split_error,if(strlen(%q<path_error>),%q<path_error>,Posts go on a board%, not on a post or the top level.))])])]
       # What is wrong with title %0, or nothing.
       FUN`CHECK`TITLE: |-
-        cond(not(strlen(trim(%0))),Give the post a title.,gt(strlen(%0),120),Titles are at most 120 characters%; that one is [strlen(%0)].,strmatch(%0,*%r*),Titles are one line.,)
+        cond(not(strlen(trim(%0))),Give the post a title.,gt(strlen(%0),setr(title_length_limit,get({{bboards}}/DATA`CONFIG`TITLE-LENGTH))),Titles are at most %q<title_length_limit> characters%; that one is [strlen(%0)].,strmatch(%0,*%r*),Titles are one line.,)
       # The format a post or comment is written in: the switch given, else the reader's default, else md.
       FUN`POST`FORMAT: |-
         firstof(%q<cmd_format_switch>,get(%q<reader_holder>/BBOARD`FORMAT),md)
@@ -2188,7 +2335,7 @@ objects:
       INC`CMD`PROOF: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);think setqm(draft_board,get(%q<reader_holder>/BBOARD`DRAFT),
         draft_format,get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),
-        draft_rendered_text,u({{bboards}}/FUN`POST`TEXT,get(%q<reader_holder>/BBOARD`DRAFT`TEXT),%q<draft_format>));@pemit %q<message_target>=rule(Draft: [if(u({{bboards}}/FUN`IS`BOARD,%q<draft_board>),u({{bboards}}/FUN`PATH`OFBOARD,%q<draft_board>) [name(%q<draft_board>)],no board)] [get(%q<reader_holder>/BBOARD`DRAFT`TITLE)])%r[if(strlen(%q<draft_rendered_text>),if(strmatch(%q<draft_format>,mush),%q<draft_rendered_text>,rendermarkdown(u({{bboards}}/FUN`DISPLAY`MARKDOWN,%q<draft_rendered_text>))),%(empty%))]%r[rule(draft%, [u({{bboards}}/FUN`DISPLAY`PLURAL,if(strlen(%q<draft_rendered_text>),words(%q<draft_rendered_text>,%r),0),line)]%, [switch(%q<draft_format>,mush,SharpMUSH text,Markdown)])]%r[u({{bboards}}/FUN`DISPLAY`LINK,+bbpost,+bbpost)] posts it.%b%b[u({{bboards}}/FUN`DISPLAY`LINK,+bbtoss,+bbtoss)] drops it.
+        draft_rendered_text,u({{bboards}}/FUN`POST`TEXT,get(%q<reader_holder>/BBOARD`DRAFT`TEXT),%q<draft_format>));@pemit %q<message_target>=rule(Draft: [if(u({{bboards}}/FUN`IS`BOARD,%q<draft_board>),u({{bboards}}/FUN`PATH`OFBOARD,%q<draft_board>) [name(%q<draft_board>)],no board)] [get(%q<reader_holder>/BBOARD`DRAFT`TITLE)])%r[if(strlen(%q<draft_rendered_text>),if(strmatch(%q<draft_format>,mush),%q<draft_rendered_text>,rendermarkdown(u({{bboards}}/FUN`DISPLAY`MARKDOWN,%q<draft_rendered_text>))),%(empty%))]%r[rule(draft%, [u({{bboards}}/FUN`DISPLAY`PLURAL,if(strlen(%q<draft_rendered_text>),words(%q<draft_rendered_text>,%r),0),line)]%, [switch(%q<draft_format>,mush,SharpMUSH text,Markdown)])]%r[u({{bboards}}/FUN`DISPLAY`LINK,+bbpost,+bbpost)] posts it.%b·%b[u({{bboards}}/FUN`DISPLAY`LINK,+bbtoss,+bbtoss)] drops it.
       # +bbtoss: drops the draft.
       INC`CMD`TOSS: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);@include {{bboards}}/INC`DO`TOSS;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft dropped.)
@@ -2224,7 +2371,7 @@ objects:
       # The reader may comment on board %q<path_current>, post %q<path_post> is under its comment limit, and comment
       # %q<path_comment_key>, when one is answered, is not removed.
       INC`NEED`COMMENTABLE`ALLOWED: |-
-        @assert u({{bboards}}/FUN`PERMISSION`CAN,%q<path_current>,comment,%q<viewer_objid>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`ERROR,You may read [u({{bboards}}/FUN`PATH`OFBOARD,%q<path_current>)] [name(%q<path_current>)] but not comment there.);@assert lt(words(u({{bboards}}/FUN`STORE`COMMENTKEYS,%q<path_post>)),min(200,get(%q<path_current>/CFG`COMMENTS)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That post has reached its limit of [min(200,get(%q<path_current>/CFG`COMMENTS))] comments.);@assert cor(not(strlen(%q<path_comment_key>)),not(strlen(get(%q<path_post>/C`%q<path_comment_key>`REMOVED))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That comment was removed. Answer the post instead: +bbcomment [u({{bboards}}/FUN`PATH`OFPOST,%q<path_post>)]=<text>.)
+        @assert u({{bboards}}/FUN`PERMISSION`CAN,%q<path_current>,comment,%q<viewer_objid>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`ERROR,You may read [u({{bboards}}/FUN`PATH`OFBOARD,%q<path_current>)] [name(%q<path_current>)] but not comment there.);@assert lt(words(u({{bboards}}/FUN`STORE`COMMENTKEYS,%q<path_post>)),u({{bboards}}/FUN`STORE`SETTING,%q<path_current>,COMMENTS))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That post has reached its limit of [u({{bboards}}/FUN`STORE`SETTING,%q<path_current>,COMMENTS)] comments.);@assert cor(not(strlen(%q<path_comment_key>)),not(strlen(get(%q<path_post>/C`%q<path_comment_key>`REMOVED))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That comment was removed. Answer the post instead: +bbcomment [u({{bboards}}/FUN`PATH`OFPOST,%q<path_post>)]=<text>.)
       # Stops a change by number once when board %<board>'s numbers moved since the reader last saw
       # them, naming what %q<path_label> holds now. Seeing them now lets the same command through next time.
       # A short form (%<short_form> 1) names what the reader read last, so it never stops.
@@ -2285,7 +2432,7 @@ objects:
       CAT: |-
         Category names, one leaf per key; CATS lists the keys in order.
 
-  # The parent of every board, so a setting a board leaves unset comes from these defaults.
+  # The parent of every board.
   - ref: board_proto
     type: thing
     name: BBoard
@@ -2293,16 +2440,7 @@ objects:
     flags: [NO_COMMAND]
     attributes:
       CFG: |-
-        Board settings. A board's own copy of a leaf overrides the default here.
-      # Days a post lasts after its last activity; 0 is never.
-      CFG`TIMEOUT: |-
-        0
-      # Most pinned posts on one board, at most 10.
-      CFG`PINS: |-
-        5
-      # Most comments on one post, at most 200, so a post object stays under 2048 attributes.
-      CFG`COMMENTS: |-
-        150
+        Board settings. A board's own leaf overrides the +config default (FUN`STORE`SETTING).
 
   # The parent of every post. Marks an object as a post; holds nothing else.
   - ref: post_proto
@@ -2464,7 +2602,8 @@ objects:
         - `+bbcategory/rename <name>=<new name>`, `+bbcategory/order <name>=<number>` and `+bbcategory/delete <name>` change a category at the top. For one inside a board, write `<board>/<name>`.
         - `+bbinfo <board>`: a board's settings and locks.
         - `+bbconfig`: the defaults. `+bbconfig all`: every board's settings and locks. `+bbconfig all <board>` starts from one board.
-        - `+bbconfig <board>/<option>=<value>`: set `description`, `color`, `timeout` (days, 0 for never), `pins` (0 to 10), `comments` (1 to 200), `anonymous` (a name shown in place of the poster's) or `name`. `+bbconfig default/<option>=<value>` changes the default.
+        - `+bbconfig <board>/<option>=<value>`: set `description`, `color`, `timeout` (days, 0 for never), `pins` (0 to `max-pins`), `comments` (1 to `max-comments`), `anonymous` (a name shown in place of the poster's) or `name`.
+        - `+config bboards`: the game-wide settings, for staff who change the game's configuration. `+config bboards/<setting>=<value>` changes one: `default-timeout`, `default-pins` and `default-comments` for boards that set none, `max-pins` and `max-comments` (the most `pins` and `comments` may be set to; 10 and 200 to start), `title-length` (120), `thread-page` (comments on a page of `+bbread`, 10) and `cleanup-every` (how often timed-out posts are removed, a day).
 
         ## Locks
 
@@ -2478,6 +2617,12 @@ objects:
         A board with no lock of a kind takes it from the board it is in. An empty lock clears it: `+bblock 5/post=`. For example, `+bblock 5/post=role^approved` lets only approved players post on board 5.
 
   # ---- +help registration -------------------------------------------------------------
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`BBOARDS: |-
+        {{bboards}}
+
   - ref: help_registration
     target: "{{plus-help/librarian}}"
     attributes:
