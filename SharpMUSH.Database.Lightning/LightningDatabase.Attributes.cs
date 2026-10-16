@@ -553,10 +553,23 @@ public partial class LightningDatabase
 
 		await Store.WriteAsync(tx =>
 		{
-			var owned = tx.Range(Tables.AttrMeta, [])
-				.Select(entry => (entry.Key, Meta: ReadAttributeMetadata(entry.Value)))
-				.Where(entry => entry.Meta.Owner == oldDbref)
-				.ToList();
+			var owned = new List<(byte[] Key, AttrMetaRecord Meta)>();
+			foreach (var entry in tx.Range(Tables.AttrMeta, []))
+			{
+				try
+				{
+					var meta = ReadAttributeMetadata(entry.Value);
+					if (meta.Owner == oldDbref) owned.Add((entry.Key, meta));
+				}
+				catch (System.Text.Json.JsonException ex)
+				{
+					// Ownership cannot be established from this row. Preserve it exactly rather than
+					// inventing an owner or preventing probate of every unrelated healthy attribute.
+					var (dbref, name) = Keys.ParseAttr(entry.Key);
+					_logger.LogWarning(ex, "Skipping unreadable attribute ownership metadata {Object}/{Attribute} during probate from {OldOwner} to {NewOwner}; stored bytes retained",
+						dbref, name, oldDbref, newDbref);
+				}
+			}
 
 			foreach (var (key, meta) in owned)
 			{

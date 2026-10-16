@@ -132,7 +132,7 @@ A temporary controlled reproduction added 512 GOING + GOING_TWICE objects to the
 
 The fixture had a separate demonstrable isolation defect: its global purge and OBJECT`DESTROY hook used the entire session's database. `[NotInParallel]` prevented concurrent test bodies but could not make existing unrelated objects or world configuration belong to this test. The fixture now uses the established `UsesOwnWorld` factory mechanism, with one class-wide keyed serialization boundary for every destruction/event test. The four global serialization annotations are removed. A second isolated control world supplies a GOING-only sentinel; two actual purges in the destruction world must neither advance nor free it, and cleanup removes it explicitly. No global shared-world sentinel is introduced.
 
-The two-pass test retains its actual first-pass advance and second-pass deletion assertions. It now verifies the @destroy result and GOING-only precondition, checks both purge `HadErrors` results, and includes returned text, target GOING/GOING_TWICE state and both world flag counts in failure diagnostics. The original full-suite failure's exact cause remains unknown; isolation removes a known cross-suite coupling rather than asserting a speculative root cause. The coordinator will verify the combined implementation with its final integration full-suite run.
+The two-pass test retains its actual first-pass advance and second-pass deletion assertions. It now verifies the @destroy result and GOING-only precondition, checks both purge `HadErrors` results, and includes returned text, target GOING/GOING_TWICE state and both world flag counts in failure diagnostics. At that investigation checkpoint, the original full-suite failure's exact cause remained unknown; isolation removed a known cross-suite coupling rather than asserting a speculative root cause. The subsequent probate reproduction below identifies a concrete corruption-triggered purge abort path.
 
 Final bounded verification (pinned SDK first on PATH; TMPDIR/TMP/TEMP `/temp/codex/markup`; rootless Podman socket and Ryuk disabled):
 
@@ -142,3 +142,25 @@ Final bounded verification (pinned SDK first on PATH; TMPDIR/TMP/TEMP `/temp/cod
 - Local ignored evidence: `work/review-followups/purge-backlog-control.log`, `purge-isolated-build.log` and `purge-isolated-class.log`.
 
 No full-suite rerun was undertaken for this bounded fixture correction; the coordinator owns final combined integration. No production API, plugin contract or purge semantics changed.
+
+
+## Confirmed malformed-metadata probate abort
+
+Fix range starts at `f22b8eff50f548f30f6ce1a15e886a10a34d7a71`. Further source tracing found that `ReassignAttributeOwnerAsync` decoded every metadata row before filtering by owner. Purge of a GOING_TWICE player reaches that full-table scan through `ClearPlayerAsync` and `ReassignAttributeOwnerCommand`. The stored-markup command regressions deliberately retain malformed metadata on unrelated objects in the shared session. Such a row can therefore abort probate before purge reaches a later object's first- or second-pass work. The 512-thing control did not exercise this player-only probate path.
+
+A private-world real-command regression reproduced the abort **3/3 before the production fix**: unrelated metadata containing invalid JSON, JSON null, or `Flags:null`; one GOING_TWICE player with a healthy attribute on another object; and a later GOING thing. `@purge` returned `HadErrors=True` with `JsonException` (invalid literal or missing metadata/flag name). The later thing remained GOING=true/GOING_TWICE=false. Failure times were 409ms, 59ms and 53ms, without budget exhaustion. This is a confirmed causal path consistent with both original full-suite assertion failures; their discarded original command results prevent claiming a separately recorded exact original exception.
+
+The provider now validates each row independently inside the same write transaction, materializes only valid rows whose owner matches, and transfers those rows normally. Unreadable metadata is skipped with an object/attribute/old-owner/new-owner diagnostic and retained byte-for-byte. It never fabricates ownership from a partially readable or unknown metadata record. If an unreadable row actually refers to the deleted player, that unknown ownership remains a data-repair concern; probate does not silently assign it to somebody else. Stored markup values are never deserialized or rewritten for this operation.
+
+The regression requires actual player deletion, healthy attribute owner transfer to God, continued purge advancement of the later object, and exact preservation of both malformed metadata and its value bytes. Cleanup removes the injected bad metadata so the test does not contaminate later cases. Existing own-world fixture isolation remains useful and unchanged.
+
+Verification (pinned SDK first on PATH; TMPDIR/TMP/TEMP `/temp/codex/markup`; rootless Podman socket and Ryuk disabled):
+
+- Before production edit: `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ObjectDestructionTests/Purge_ProbatesHealthyAttributesDespiteUnrelatedMalformedMetadata' --output detailed`: **3 failed/3**, returned exceptions and state recorded above (16.524s process).
+- Two whitespace passes per changed project converged; `git diff --check` passed.
+- `dotnet build SharpMUSH.Tests -m:2 -nr:false`: passed, zero warnings/errors, normal formatting gate (32.52s).
+- `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ObjectDestructionTests/*' --output detailed`: **22 passed**, zero failures/skips (18.363s).
+- `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/PlayerDestructionTests/*' --output detailed`: **11 passed**, zero failures/skips (16.838s).
+- Ignored evidence is retained in `work/review-followups/probate-{red,green-build,green,player-regression}.log`.
+
+The coordinator owns the final combined full-suite run. This fix changes only the Lightning ownership-transfer scan's malformed-row isolation; no public API or plugin contract changes. Existing explicit replacement/repair permission checks remain unchanged.

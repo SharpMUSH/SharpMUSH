@@ -427,6 +427,51 @@ public class ObjectDestructionTests
 		}
 	}
 
+	[Test]
+	[Arguments("not JSON")]
+	[Arguments("null")]
+	[Arguments("{\"Flags\":null}")]
+	public async Task Purge_ProbatesHealthyAttributesDespiteUnrelatedMalformedMetadata(string malformed)
+	{
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "CorruptProbate");
+		var player = (await Mediator.Send(new GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		var suffix = Guid.NewGuid().ToString("N").ToUpperInvariant();
+		var healthy = "PROBATE_HEALTHY_" + suffix;
+		var broken = "PROBATE_BROKEN_" + suffix;
+		var room = new DBRef(0);
+		await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(room, [healthy], MarkupText.Plain("transfer me"), player));
+		await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(room, [broken], MarkupText.Plain("preserve bytes"), god));
+		var database = (SharpMUSH.Database.Lightning.LightningDatabase)WebAppFactoryArg.Services.GetRequiredService<IAttributeStore>();
+		var key = SharpMUSH.Library.Plugins.Storage.Lightning.Keys.Attr(0, broken);
+		var raw = SharpMUSH.Library.Plugins.Storage.Lightning.Keys.Str(malformed);
+		var value = database.Store.Read(tx => tx.Range(SharpMUSH.Database.Lightning.Store.Tables.AttrVal, key).First().Value);
+		await database.Store.WriteAsync(tx => tx.Put(SharpMUSH.Database.Lightning.Store.Tables.AttrMeta, key, raw));
+		try
+		{
+			await RunAsync($"@nuke {playerRef}");
+			var goingTwice = (await Mediator.Send(new GetObjectFlagQuery("GOING_TWICE")))!;
+			await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetObjectFlagCommand(player, goingTwice));
+			var target = await CreateThingAsync("AfterCorruptProbate");
+			await RunAsync($"@destroy {target}");
+
+			var result = await RunAsync("@purge");
+
+			await Assert.That(result.HadErrors).IsFalse().Because(await PurgeStateAsync(target, result));
+			await Assert.That((await Mediator.Send(new GetObjectNodeQuery(playerRef))).IsNone).IsTrue();
+			var advanced = (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>();
+			await Assert.That(await advanced.HasFlag("GOING_TWICE")).IsTrue();
+			var transferred = await Mediator.CreateStream(new GetAttributeQuery(room, [healthy])).LastAsync();
+			await Assert.That((await transferred.Owner.WithCancellation(default))!.Object.DBRef.Number).IsEqualTo(1);
+			await Assert.That(database.Store.Read(tx => tx.Range(SharpMUSH.Database.Lightning.Store.Tables.AttrMeta, key).First().Value).SequenceEqual(raw)).IsTrue();
+			await Assert.That(database.Store.Read(tx => tx.Range(SharpMUSH.Database.Lightning.Store.Tables.AttrVal, key).First().Value).SequenceEqual(value)).IsTrue();
+		}
+		finally
+		{
+			await database.Store.WriteAsync(tx => tx.Delete(SharpMUSH.Database.Lightning.Store.Tables.AttrMeta, key));
+		}
+	}
+
 	private async Task<string> PurgeStateAsync(DBRef target, CallState result)
 	{
 		var doomed = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { HasFlag = "GOING" })).CountAsync();
