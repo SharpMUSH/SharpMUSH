@@ -42,7 +42,7 @@ file sealed class RosterUnreachableHandler : HttpMessageHandler
 /// <summary>
 /// Verifies the directory widget's category grouping comes entirely from the data: named
 /// categories alphabetical, blanks pooled untitled at the bottom, no invented labels.
-/// (Who is listed at all is MUSH-side policy — FN`CHARVIS — so the widget does no filtering.)
+/// (Who is listed at all is MUSH-side policy — FUN`PROFILE`CHARACTERVISIBLE — so the widget does no filtering.)
 /// </summary>
 public class CharacterDirectoryWidgetTests : TrackingBunitContext
 {

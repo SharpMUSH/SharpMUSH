@@ -464,7 +464,7 @@ public class OobEntryParserTests
 
 	/// <summary>
 	/// The colour lands in a CSS custom property, so only <c>#rrggbb</c> is kept — the same rule
-	/// <c>FN`COLOR</c> applies in the softcode, repeated here because a game can replace that helper.
+	/// <c>FUN`ROOMCONTENTS`COLOR</c> applies in the softcode, repeated here because a game can replace that helper.
 	/// </summary>
 	[Test]
 	[Arguments("red")]

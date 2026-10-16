@@ -107,25 +107,25 @@ same in-game.
 
 `me` is the event handler. The manifest
 (`examples/packages/comm-feed/package.yaml`) is the source of truth and
-comments every attribute; every helper is under ``FN`COMM`` so it cannot
-collide with `room-contents`' ``FN`*``.
+comments every attribute; every helper is under ``FUN`COMM`` so it cannot
+collide with `room-contents`' ``FUN`ROOMCONTENTS`*``.
 
 ```mushcode
-&CHANNEL`MESSAGE`COMMFEED #9=think null(if(strmatch(%<style>,presence),,oob(u(me/FN`COMM`RECIPIENTS,%<recipients>),comm.message,uargs(me/FN`COMM`MESSAGE,kind,channel,channel,%<channel>,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,id,%<id>))))
-&PAGE`MESSAGE`COMMFEED #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
-&PLAYER`CHANNELS`COMMFEED #9=think null(if(u(me/FN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FN`COMM`CHANNELS,%<objid>))))
-&CHANNEL`WHO`COMMFEED #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
+&CHANNEL`MESSAGE`COMMFEED #9=think null(if(strmatch(%<style>,presence),,oob(u(me/FUN`COMM`RECIPIENTS,%<recipients>),comm.message,uargs(me/FUN`COMM`MESSAGE,kind,channel,channel,%<channel>,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,id,%<id>))))
+&PAGE`MESSAGE`COMMFEED #9=think null(oob(u(me/FUN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FUN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
+&PLAYER`CHANNELS`COMMFEED #9=think null(if(u(me/FUN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FUN`COMM`CHANNELS,%<objid>))))
+&CHANNEL`WHO`COMMFEED #9=think null(oob(u(me/FUN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FUN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
 ```
 
 | Attribute | Decides |
 |---|---|
-| ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to: a CONNECTED player |
-| ``FN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` or `comm.who` goes to: ``filter(me/FN`COMM`VIEWER,%0)`` |
-| ``FN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
-| ``FN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
-| ``FN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
-| ``FN`COMM`MESSAGE`` (named: `%<kind>`, `%<channel>`, `%<speaker>`, `%<name>`, `%<style>`, `%<message>`, `%<time>`, `%<to>` page recipients, `%<id>` line id) | the whole `comm.message` payload |
-| ``FN`COMM`WHO`` (named: `%<channel>`, `%<member>` objid, `%<name>` member name, `%<change>` on/off) | the whole `comm.who` payload |
+| ``FUN`COMM`VIEWER`` (`%0` objid) | who is pushed to: a CONNECTED player |
+| ``FUN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` or `comm.who` goes to: ``filter(me/FUN`COMM`VIEWER,%0)`` |
+| ``FUN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
+| ``FUN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
+| ``FUN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
+| ``FUN`COMM`MESSAGE`` (named: `%<kind>`, `%<channel>`, `%<speaker>`, `%<name>`, `%<style>`, `%<message>`, `%<time>`, `%<to>` page recipients, `%<id>` line id) | the whole `comm.message` payload |
+| ``FUN`COMM`WHO`` (named: `%<channel>`, `%<member>` objid, `%<name>` member name, `%<change>` on/off) | the whole `comm.who` payload |
 
 The idioms are the ones `room-contents` uses (see its handler document):
 `think null(...)` to swallow `oob()`'s count, `json_array()` with `%r` as the
@@ -301,7 +301,7 @@ of a missing `v` and of any malformed member):
   character may not see answers 404, as a missing one does, and one they are
   not on and could not join answers 403. A line only See_All members were sent
   stays hidden from everyone else. Its `text` goes through the installed
-  ``FN`COMM`TEXT`` on the handler, with the handler as executor, the speaker as
+  ``FUN`COMM`TEXT`` on the handler, with the handler as executor, the speaker as
   enactor and the same arguments as the push, so a game that redefines it gets
   the same text pulled as pushed. The bundled default is used only when the
   attribute is absent. A logged page's `text` is composed the same way, with
@@ -329,7 +329,7 @@ to one and to several, a page lock and a HAVEN refusing it, a group page some
 recipients refuse, joining, gagging and leaving, a rename and a deletion, and
 connecting. It also checks that a pushed line's or page's `id` is the one the
 recall endpoints return, and that recalled text goes through the installed
-``FN`COMM`TEXT``.
+``FUN`COMM`TEXT``.
 
 `SharpMUSH.Tests/Services/ChannelBroadcastServiceTests.cs` checks the
 ``CHANNEL`MESSAGE`` arguments and that an undelivered line raises nothing;

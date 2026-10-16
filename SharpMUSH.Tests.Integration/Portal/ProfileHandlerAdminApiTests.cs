@@ -21,7 +21,7 @@ namespace SharpMUSH.Tests.Integration.Portal;
 /// route, so it only ever showed its load error.
 ///
 /// The handler is the shared <c>http_handler</c> every HTTP test uses, so the reset cases damage
-/// only <c>FN`FIELD</c> — a helper the shipped profile schema does not call — and run one at a time.
+/// only <c>FUN`PROFILE`FIELD</c> — a helper the shipped profile schema does not call — and run one at a time.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
@@ -33,7 +33,7 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 
 	private record ResetResult(int Written, List<string> Failed);
 
-	private const string Damaged = "FN`FIELD";
+	private const string Damaged = "FUN`PROFILE`FIELD";
 
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
 

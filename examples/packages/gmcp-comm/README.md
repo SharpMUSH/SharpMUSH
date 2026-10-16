@@ -32,7 +32,7 @@ portal's Play sidebar, is a different package with its own shapes.
 
 On the configured event handler: `` CHANNEL`MESSAGE`GMCPCOMM ``, `` PAGE`MESSAGE`GMCPCOMM `` and
 `` PLAYER`CHANNELS`GMCPCOMM `` (which fires on connect and on every change to a player's channel list).
-The payloads are `` FN`GMCPCOMM`* `` on the event handler.
+The payloads are `` FUN`GMCPCOMM`* `` on the event handler.
 
 ## Settings: `+config gmcp-comm`
 

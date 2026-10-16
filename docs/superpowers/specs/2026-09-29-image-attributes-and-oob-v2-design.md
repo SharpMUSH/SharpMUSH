@@ -42,7 +42,7 @@ Payloads are as `docs/design/d1/README.md` §7.1 (`room.info`, `room.contents`, 
 carrying `"v": 2`). Decisions the README left open:
 
 - **Per-viewer fan-out.** The handler iterates the connected players in the room and calls `oob()`
-  once per viewer. `FN`WHOROW` and `FN`EXITROW` receive the viewer as `%1`, so `state: locked`
+  once per viewer. `FUN`ROOMCONTENTS`WHOROW` and `FUN`ROOMCONTENTS`EXITROW` receive the viewer as `%1`, so `state: locked`
   comes from `elock()` against the viewer, dark exits are omitted per viewer, and the viewer's own
   row carries `"you": true`.
 - **`room.info` triggers.** Sent on `move-in` and `connect`: to the mover alone when the enactor
@@ -50,19 +50,19 @@ carrying `"v": 2`). Decisions the README left open:
   mover for `goto`/connect, the teleporter for `@tel`), otherwise to every connected occupant. The
   engine has no attribute-change event, so a name, image or description edit does not re-push. The
   `query.*` mechanism cannot re-request it: the terminal evaluates a query as the player, so
-  `u(#9/FN`PAYLOAD`INFO,…)` runs with `me` = the player. If a re-request is wanted, a global
-  `@function roominfo=#9,FN`PAYLOAD`INFO` registered from a `STARTUP` attribute the package owns
+  `u(#9/FUN`ROOMCONTENTS`PAYLOAD`INFO,…)` runs with `me` = the player. If a re-request is wanted, a global
+  `@function roominfo=#9,FUN`ROOMCONTENTS`PAYLOAD`INFO` registered from a `STARTUP` attribute the package owns
   is the route (it also evaluates as #9 with the player as enactor). A `ROOM`INFO` engine event is
   deferred and does not change the payload shape.
 - **Per-event cost.** Viewer-independent rows (destination previews, images, area, description)
   are built once per event into registers; per-viewer work is only visibility, lock state, hint,
   `you`, actions and scene. Order of growth is O(K+M) + O(N·(K+M)) for N viewers, K occupants and
-  M exits. A very busy hub can blank `FN`DESC` / `FN`DEST` to skip the description evaluations.
+  M exits. A very busy hub can blank `FUN`ROOMCONTENTS`DESCRIPTION` / `FUN`ROOMCONTENTS`DESTINATION` to skip the description evaluations.
 - **Privacy.** DARK occupants are omitted for a viewer who cannot see them (self always visible);
   a locked exit carries no `dest`; `PROFILE`COLOR` is accepted only as `#rrggbb`; a malformed
   `IMAGE`FOCAL` is dropped rather than breaking the payload.
 - **`scene`** comes from `scenewhere(%0)`; `cast` from `scenemembers()`.
-- **`status` and `idle`** come from `idle()` seconds and an `FN`STATUS` helper that maps seconds
+- **`status` and `idle`** come from `idle()` seconds and an `FUN`ROOMCONTENTS`STATUS` helper that maps seconds
   to a word (`active`, `idle`, `away`), redefinable per game.
 - **Images** are `IMAGE`/`IMAGE`ALT`/`IMAGE`FOCAL` from §1, as `{ "url", "alt", "focal" }`
   objects; a row without `IMAGE` carries no `image` key.

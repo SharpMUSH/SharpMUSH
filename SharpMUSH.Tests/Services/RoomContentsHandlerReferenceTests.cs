@@ -386,12 +386,12 @@ public class RoomContentsHandlerReferenceTests
 
 	/// <summary>
 	/// Runs the package's payload helper for <paramref name="viewer"/> on <paramref name="handler"/>
-	/// and parses what it built: FN`PREPARE first, then <c>u(me/&lt;helper&gt;,%0,&lt;viewer&gt;)</c>,
+	/// and parses what it built: FUN`ROOMCONTENTS`PREPARE first, then <c>u(me/&lt;helper&gt;,%0,&lt;viewer&gt;)</c>,
 	/// which is exactly what the shipped ROOM`CONTENTS hands to oob().
 	/// </summary>
 	private async Task<JsonDocument> Payload(string handler, string helper, string room, string viewer)
 	{
-		await Cmd($"&FN`T`PAYLOAD {handler}=[null(u(me/FN`PREPARE,%0))][u(me/{helper},%0,%1)]");
+		await Cmd($"&FN`T`PAYLOAD {handler}=[null(u(me/FUN`ROOMCONTENTS`PREPARE,%0))][u(me/{helper},%0,%1)]");
 		var payload = await Eval($"u({handler}/FN`T`PAYLOAD,{room},{viewer})");
 		await Assert.That(payload).DoesNotContain("#-1").Because($"{helper} for {viewer} produced an error: {payload}");
 		return JsonDocument.Parse(payload);
@@ -412,8 +412,8 @@ public class RoomContentsHandlerReferenceTests
 			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			using var forMortal = await Payload(handler, "FN`PAYLOAD`CONTENTS", f.Room, f.Mortal);
-			using var forWizard = await Payload(handler, "FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
+			using var forMortal = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`CONTENTS", f.Room, f.Mortal);
+			using var forWizard = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`CONTENTS", f.Room, f.Wizard);
 
 			foreach (var doc in new[] { forMortal, forWizard })
 			{
@@ -423,7 +423,7 @@ public class RoomContentsHandlerReferenceTests
 			var mortalSees = RowsByDbref(forMortal, "who");
 			var wizardSees = RowsByDbref(forWizard, "who");
 
-			// Connected players and things are listed; the asleep player is not (FN`WHOVIS: players
+			// Connected players and things are listed; the asleep player is not (FUN`ROOMCONTENTS`WHOVISIBLE: players
 			// only while CONNECTED — 1.0's isplayer() did not exist and let every disconnected player
 			// through). lcon() includes exits on this engine; none may leak into who.
 			foreach (var rows in new[] { mortalSees, wizardSees })
@@ -435,7 +435,7 @@ public class RoomContentsHandlerReferenceTests
 				await Assert.That(rows.Keys).DoesNotContain(f.North);
 			}
 
-			// DARK occupants: lcon() runs as #9 and sees them, so FN`WHOVIS must drop them for a viewer
+			// DARK occupants: lcon() runs as #9 and sees them, so FUN`ROOMCONTENTS`WHOVISIBLE must drop them for a viewer
 			// who may not — the DARK wizard and the DARK crate are absent for the mortal, present for
 			// the wizard.
 			await Assert.That(mortalSees.Keys).DoesNotContain(f.Wizard);
@@ -504,8 +504,8 @@ public class RoomContentsHandlerReferenceTests
 			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			using var forMortal = await Payload(handler, "FN`PAYLOAD`EXITS", f.Room, f.Mortal);
-			using var forWizard = await Payload(handler, "FN`PAYLOAD`EXITS", f.Room, f.Wizard);
+			using var forMortal = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`EXITS", f.Room, f.Mortal);
+			using var forWizard = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`EXITS", f.Room, f.Wizard);
 
 			await Assert.That(forMortal.RootElement.GetProperty("v").GetInt32()).IsEqualTo(2);
 			var mortalSees = RowsByDbref(forMortal, "exits");
@@ -563,7 +563,7 @@ public class RoomContentsHandlerReferenceTests
 			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			using var info = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
+			using var info = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Mortal);
 			var root = info.RootElement;
 
 			await Assert.That(root.GetProperty("v").GetInt32()).IsEqualTo(2);
@@ -586,13 +586,13 @@ public class RoomContentsHandlerReferenceTests
 			await Assert.That(root.TryGetProperty("area", out _)).IsFalse();
 			await Assert.That(root.TryGetProperty("scene", out _)).IsFalse();
 
-			// Once the room has a parent, FN`AREA names it.
+			// Once the room has a parent, FUN`ROOMCONTENTS`AREA names it.
 			await Cmd($"@parent {f.Room}={f.Dest}");
-			using var withArea = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
+			using var withArea = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Mortal);
 			await Assert.That(withArea.RootElement.GetProperty("area").GetString()).IsEqualTo($"RcDest{token}");
 
 			// A room with no picture carries no image key.
-			using var plain = await Payload(handler, "FN`PAYLOAD`INFO", f.Dest, f.Mortal);
+			using var plain = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Dest, f.Mortal);
 			await Assert.That(plain.RootElement.TryGetProperty("image", out _)).IsFalse();
 		}
 		finally
@@ -619,19 +619,19 @@ public class RoomContentsHandlerReferenceTests
 			f = await BuildFixture(token);
 
 			await Cmd($"&IMAGE`BANNER {f.Room}=/assets/rooms/{token}-wide.jpg");
-			using var both = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
+			using var both = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Mortal);
 			var image = both.RootElement.GetProperty("image");
 			await Assert.That(image.GetProperty("url").GetString()).IsEqualTo($"/assets/rooms/{token}-wide.jpg");
 			await Assert.That(image.GetProperty("alt").GetString()).IsEqualTo("The quay at dusk");
 
 			// A room with a banner and no IMAGE still gets a banner.
 			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-dest-wide.jpg");
-			using var bannerOnly = await Payload(handler, "FN`PAYLOAD`INFO", f.Dest, f.Mortal);
+			using var bannerOnly = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Dest, f.Mortal);
 			await Assert.That(bannerOnly.RootElement.GetProperty("image").GetProperty("url").GetString())
 				.IsEqualTo($"/assets/rooms/{token}-dest-wide.jpg");
 
 			// The exit's destination preview is a thumbnail: IMAGE only, so the banner-only room has none.
-			using var exits = await Payload(handler, "FN`PAYLOAD`EXITS", f.Room, f.Wizard);
+			using var exits = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`EXITS", f.Room, f.Wizard);
 			var north = RowsByDbref(exits, "exits")[f.North];
 			await Assert.That(north.GetProperty("dest").TryGetProperty("image", out _)).IsFalse();
 		}
@@ -666,18 +666,18 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-private.jpg");
 			await Cmd($"@set {f.Dest}/IMAGE`BANNER=!visual");
 
-			using var contents = await Payload(handler, "FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
+			using var contents = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`CONTENTS", f.Room, f.Wizard);
 			var rows = RowsByDbref(contents, "who");
 			await Assert.That(rows[f.Mortal].TryGetProperty("image", out _)).IsFalse()
 				.Because("a private IMAGE must not reach anyone's room.contents");
 			await Assert.That(rows[f.Bundle].GetProperty("image").GetProperty("url").GetString())
 				.IsEqualTo($"/assets/obj/{token}.jpg");
 
-			using var info = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal);
+			using var info = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Mortal);
 			await Assert.That(info.RootElement.TryGetProperty("image", out _)).IsFalse()
 				.Because("a visual IMAGE`BANNER under a private IMAGE must not be published");
 
-			using var dest = await Payload(handler, "FN`PAYLOAD`INFO", f.Dest, f.Mortal);
+			using var dest = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Dest, f.Mortal);
 			await Assert.That(dest.RootElement.TryGetProperty("image", out _)).IsFalse()
 				.Because("a private IMAGE`BANNER must not be published either");
 		}
@@ -712,7 +712,7 @@ public class RoomContentsHandlerReferenceTests
 			await Cmd("@function scenewhere=#9,FN`T`NOTFOUND");
 			await Cmd("@function scene=#9,FN`T`NOTFOUND");
 
-			using var none = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard);
+			using var none = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Wizard);
 			await Assert.That(none.RootElement.TryGetProperty("scene", out _)).IsFalse()
 				.Because("a Wizard viewer of a scene-less room must not get a phantom #-1 NOT FOUND scene");
 
@@ -731,7 +731,7 @@ public class RoomContentsHandlerReferenceTests
 
 			foreach (var viewer in new[] { f.Wizard, f.Mortal })
 			{
-				using var doc = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, viewer);
+				using var doc = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, viewer);
 				var scene = doc.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("id").GetString()).IsEqualTo("42");
 				await Assert.That(scene.GetProperty("title").GetString()).IsEqualTo("Salt Market at Dusk");
@@ -740,7 +740,7 @@ public class RoomContentsHandlerReferenceTests
 
 			// The viewer's own place in the scene: what the Play page needs to know whether a pose made
 			// in the room is recorded there.
-			using (var member = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Mortal))
+			using (var member = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Mortal))
 			{
 				var scene = member.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("role").GetString()).IsEqualTo("participant");
@@ -748,7 +748,7 @@ public class RoomContentsHandlerReferenceTests
 				await Assert.That(scene.GetProperty("elsewhere").GetBoolean()).IsFalse();
 			}
 
-			using (var watcher = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
+			using (var watcher = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Wizard))
 			{
 				var scene = watcher.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("role").ValueKind).IsEqualTo(JsonValueKind.Null);
@@ -758,13 +758,13 @@ public class RoomContentsHandlerReferenceTests
 
 			// A focus on a scene the causer may not see is still a focus elsewhere; only NOT FOUND is none.
 			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,#-1 PERMISSION)");
-			using (var hidden = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
+			using (var hidden = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Wizard))
 			{
 				await Assert.That(hidden.RootElement.GetProperty("scene").GetProperty("elsewhere").GetBoolean()).IsTrue();
 			}
 
 			await Cmd($"&FN`T`SCENEFOCUS #9=if(strmatch(num(%0),num({f.Mortal})),42,#-1 NOT FOUND)");
-			using (var unfocused = await Payload(handler, "FN`PAYLOAD`INFO", f.Room, f.Wizard))
+			using (var unfocused = await Payload(handler, "FUN`ROOMCONTENTS`PAYLOAD`INFO", f.Room, f.Wizard))
 			{
 				var scene = unfocused.RootElement.GetProperty("scene");
 				await Assert.That(scene.GetProperty("focus").GetBoolean()).IsFalse();
@@ -790,7 +790,7 @@ public class RoomContentsHandlerReferenceTests
 
 	/// <summary>
 	/// The viewer-independent work — occupant base rows, exit base rows and destination previews,
-	/// the room's own info — is computed once per event by FN`PREPARE into q-registers the
+	/// the room's own info — is computed once per event by FUN`ROOMCONTENTS`PREPARE into q-registers the
 	/// per-viewer helpers read, so a room with N viewers evaluates each description and image once,
 	/// not N times. u() shares the caller's registers on this engine, which is what makes that work.
 	/// </summary>
@@ -805,11 +805,11 @@ public class RoomContentsHandlerReferenceTests
 			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			await Cmd($"&FN`T`PREPARED {handler}=[null(u(me/FN`PREPARE,%0))][r(w{f.Mortal[1..]})]%r[r(x{f.North[1..]})]%r[r(d{f.North[1..]})]%r[r(info{f.Room[1..]})]");
+			await Cmd($"&FN`T`PREPARED {handler}=[null(u(me/FUN`ROOMCONTENTS`PREPARE,%0))][r(occupant_row_{f.Mortal[1..]})]%r[r(exit_row_{f.North[1..]})]%r[r(exit_preview_{f.North[1..]})]%r[r(room_info_{f.Room[1..]})]");
 			var recorded = await Eval($"u({handler}/FN`T`PREPARED,{f.Room})");
 			var parts = recorded.Split('\n');
 			await Assert.That(parts.Length).IsEqualTo(4).Because($"recorded: {recorded}");
-			await Assert.That(parts[0]).IsNotEmpty().Because($"the mortal's base row must be in w{f.Mortal[1..]}; recorded: {recorded}");
+			await Assert.That(parts[0]).IsNotEmpty().Because($"the mortal's base row must be in occupant_row_{f.Mortal[1..]}; recorded: {recorded}");
 
 			using var who = JsonDocument.Parse(parts[0]);
 			await Assert.That(who.RootElement.GetProperty("dbref").GetString()).IsEqualTo(f.Mortal);
@@ -909,7 +909,7 @@ public class RoomContentsHandlerReferenceTests
 			await Assert.That(await Eval($"get({handler}/{payload})")).IsEqualTo(string.Empty);
 
 			// A room nobody connected is in: the handler finds no viewer and builds nothing. The record also
-			// carries the info<n> register FN`PREPARE fills, so preparing the room's rows anyway shows.
+			// carries the info<n> register FUN`ROOMCONTENTS`PREPARE fills, so preparing the room's rows anyway shows.
 			await Cmd($"&ROOM`CONTENTS`ROOMCONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body[..^1]},[r(info[rest(num(%0),#)])])");
 			var emptyRoom = $"LAST_PAYLOAD`{f.Dest[1..]}";
 			await Cmd($"&{emptyRoom} {handler}=unset");
