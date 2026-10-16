@@ -33,7 +33,7 @@ Wizard-only. Reports where the world's disk goes, and what the version histories
 - **Feeds**: what feed lines, channel recall among them, take of the live data. A table below gives each feed kind's feeds, lines and size.
 - **Next run**: the free space the next `@backup` checks for, against what the backup disk has.
 
-**File size** is the logical length of the file. **Inside file** reports its live and reusable bytes as figures, without a capacity bar: a file with no reusable pages can still grow within its map limit. **On disk** is what the filesystem has physically allocated, which can be smaller for a sparse file.
+**File size** is the logical file length. **Inside file** shows live and reusable bytes; no reusable pages does not mean the map is full. **On disk** shows physical allocation, which may be smaller for sparse files.
 
 The other figures show the free disk beside the world, the backup copies kept, and the size of the next copy and of the backup directory at the height of a run. Earlier worlds still on disk, such as the `.previous` world a promoted import replaced, are listed until you delete them. Notes at the bottom say when the next backup will not fit, when backups share the world's disk, and how many readers a dead process left behind have been cleaned up since startup.
 
