@@ -64,7 +64,7 @@ public class RemoteBackupLifecycleTests
 		public readonly SecretStore Secrets;
 		public readonly IDataProtectionProvider Protection = new EphemeralDataProtectionProvider();
 		public RemoteBackupCoordinator Coordinator;
-		public RemoteBackupSourcePaths Sources;
+		public readonly RemoteBackupSourcePaths Sources;
 		public Host(RemoteBackupSourcePaths? sources = null)
 		{
 			Sources = sources ?? new(Path.Join(Root, "plugins"), false, Path.Join(Root, "keys"));
