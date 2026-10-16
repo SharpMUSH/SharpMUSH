@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} Paletteneinträge wurden ausgelassen, weil das Limit erreicht war.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Teilnahmeregeln</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Maximale Spielerzahl</value>
+  </data>
 </root>

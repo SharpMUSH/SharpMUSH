@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} stavki palete izostavljeno je jer su prešle ograničenja.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Pravila pridruživanja</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Najveći broj igrača</value>
+  </data>
 </root>
