@@ -30,6 +30,10 @@ public class TimeIntegrationTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	// Ordinary triggers may enqueue more triggers; command completion includes those descendants.
+	private ValueTask SettleCommandsAsync() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
+		.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
@@ -37,17 +41,22 @@ public class TimeIntegrationTests
 	private string Time { get; set; } = string.Empty;
 	private string Clock { get; set; } = string.Empty;
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		await SettleCommandsAsync();
+		return result.Message.ToPlainText()?.Trim() ?? string.Empty;
+	}
 
 	private Task<string> Think(string expression) => God($"think {expression}");
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
 	{
+		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
@@ -76,7 +85,7 @@ public class TimeIntegrationTests
 			new ApplyRequest(BundledPackages.RemoteName, "time", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("time must install from the catalogue");
 		// AINSTALL is queued after the apply: it adds the commands.
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("time");
 		Time = objects.First(o => o.Ref == "time").Objid;
 		Clock = objects.First(o => o.Ref == "clock").Objid;
@@ -257,9 +266,10 @@ public class TimeIntegrationTests
 	/// <summary>What <paramref name="player"/> was told while God ran <paramref name="command"/> and the queue drained.</summary>
 	private async Task<string> Told(TestIsolationHelpers.TestPlayer player, string command)
 	{
+		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
 		await God(command);
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
@@ -372,6 +382,10 @@ public class TimeIntegrationTests
 	{
 		using var response = new DeferredZoneResponse();
 		using var client = new HttpClient(response);
+		using var reply = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+		{
+			Content = new StringContent("{\"timezone\":{\"id\":\"Asia/Tokyo\"}}")
+		};
 		try
 		{
 			await InstallAsync();
@@ -384,20 +398,20 @@ public class TimeIntegrationTests
 			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, clients);
 			var parser = WebAppFactoryArg.CommandParserWith(
 				((ILibraryProvider<SharpMUSH.Library.Definitions.CommandDefinition>)commands).Get(), DBRef.Parse(Time), 1);
+			await SettleCommandsAsync();
 			var before = Notifications.CountFor(player.DbRef);
 
 			// Run the installed producer and its generated LOOKUP attribute through the real HTTP admission.
-			// Only the transport is held back: the JSON does not exist when the callback text is written.
+			// Only the transport is held back: the JSON is unavailable to the callback when its text is written.
 			await parser.CommandListParse(MarkupText.Plain($"@include/args {Time}/INC`ZONE`LOOKUP=player,{player.DbRef},mode,login"));
 			await Assert.That((await response.Requested.Task.WaitAsync(TimeSpan.FromSeconds(10))).AbsoluteUri)
 				.IsEqualTo("https://ipinfo.io/81.2.69.142/json");
-			await Assert.That(await Think($"hasattr({player.DbRef},TZ)")).IsEqualTo("0");
-			using var reply = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-			{
-				Content = new StringContent("{\"timezone\":{\"id\":\"Asia/Tokyo\"}}")
-			};
+			// Inspect while the HTTP entry is deliberately held; draining here would wait for its reply.
+			var beforeReply = await WebAppFactoryArg.FunctionParser.EvaluateAsync(
+				MarkupText.Plain($"hasattr({player.DbRef},TZ)"));
+			await Assert.That(beforeReply.ToPlainText().Trim()).IsEqualTo("0");
 			response.Response.TrySetResult(reply);
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(await Think($"get({player.DbRef}/TZ)")).IsEqualTo("Asia/Tokyo");
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef).Skip(before)))
 				.Contains("guessed from where you connect.");
@@ -407,7 +421,7 @@ public class TimeIntegrationTests
 		{
 			using var cleanupReply = new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable);
 			response.Response.TrySetResult(cleanupReply);
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await UninstallAsync();
 		}
 	}
