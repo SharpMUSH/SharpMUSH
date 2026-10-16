@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using TUnit.Assertions.Enums;
@@ -74,6 +75,55 @@ public class QueuedUserCommandTests : ServerTestBase
 	private List<string> Heard() => Notifications.For(_actor.DbRef)
 		.Where(message => message.Contains(_token, StringComparison.Ordinal))
 		.ToList();
+
+	[Test]
+	public async Task ReservationCapturesRegistersArgumentsAndIndependentCounters()
+	{
+		var args = new Dictionary<string, CallState> { ["0"] = new("before") };
+		var state = WebAppFactoryArg.CommandParserFor(_actor.DbRef, _actor.Handle).CurrentState.ForAttributeArguments(args);
+		state.AddRegister("X", MString.Plain("before"));
+		using var reservation = await Scheduler.ReserveCommandList(
+			MString.Plain($"@pemit me={_token} %0|%qX|[add(1,2)]"), state);
+		await Assert.That(reservation.Admission.Accepted).IsTrue();
+		args["0"] = new("after");
+		state.AddRegister("X", MString.Plain("after"));
+		state.LimitExceeded!.IsExceeded = true;
+		await reservation.PublishAsync();
+		await Scheduler.SettleForTestsAsync();
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} before|before|3"]);
+	}
+
+	[Test]
+	public async Task OrdinaryTriggerCapturesRegistersBeforeParentMutatesThem()
+	{
+		await Run($"&BODY {_commands}=@pemit %#={_token} %0|%qX|[hasarg(0,supplied)];think setq(X,child)");
+		await RunQueued($"think setq(X,before);@trigger {_commands}/BODY=%qX;think setq(X,after);@pemit me={_token} parent=%qX");
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} parent=after", $"{_token} before|before|1"], CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task OrdinaryTriggerQueuesAfterParentTailExactlyOnce()
+	{
+		await Run($"&BODY {_commands}=@pemit %#={_token} body=%0");
+		await RunQueued($"@trig {_commands}/BODY=value;@pemit me={_token} after");
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} after", $"{_token} body=value"], CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task OrdinaryTriggerCanBeHaltedByItsParentTail()
+	{
+		await Run($"&BODY {_commands}=@pemit %#={_token} body");
+		await RunQueued($"@trigger {_commands}/BODY;@halt {_commands};@pemit me={_token} after");
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} after"]);
+	}
+
+	[Test]
+	public async Task InlineTriggerStillRunsBeforeParentTail()
+	{
+		await Run($"&BODY {_commands}=@pemit %#={_token} body");
+		await RunQueued($"@trigger/inline {_commands}/BODY;@pemit me={_token} after");
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} body", $"{_token} after"], CollectionOrdering.Matching);
+	}
 
 	[Test]
 	public async Task SoftcodeMatchRunsAfterTheListThatMatchedIt()

@@ -157,6 +157,17 @@ public class InvocationMetricsTests
 	}
 
 	[Test]
+	[Arguments("localize", "{0}", "LOCALIZE")]
+	[Arguments("uldefault", "#1/NOSUCHMETRICS,{0}", "ULDEFAULT")]
+	[Arguments("udefault", "#1/NOSUCHMETRICS,{0}", "UDEFAULT")]
+	public async Task RawArgumentEvaluationIsExcludedFromOwnTime(string function, string arguments, string label)
+	{
+		var measured = await MeasureFunction($"[{function}({string.Format(arguments, Repeated("[add(1,1)]"))})]");
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == label).Ms).IsLessThan(LeftOut);
+	}
+
+	[Test]
 	public async Task ACommandsTimeLeavesOutWhatItRuns()
 	{
 		var measured = await MeasureCommand(

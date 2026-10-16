@@ -10,6 +10,17 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task QueuedArgumentsAreDetachedFromCallerMutation()
+	{
+		var arguments = new Dictionary<string, CallState> { ["0"] = new("before") };
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(arguments) with { CallerArguments = arguments };
+		var queued = state.SnapshotForQueuedAction();
+		arguments["0"] = new("after");
+		await Assert.That(queued.Arguments["0"].Message.ToPlainText()).IsEqualTo("before");
+		await Assert.That(queued.CallerArguments!["0"].Message.ToPlainText()).IsEqualTo("before");
+	}
+
+	[Test]
 	public async Task AttributeInvocationBinderReplacesParentPresenceAndExcludesGeneratedKeys()
 	{
 		var parentArguments = new Dictionary<string, CallState> { ["parent"] = new("old") };
