@@ -8,13 +8,19 @@ using SharpMUSH.Server.Hubs;
 namespace SharpMUSH.Server.Authentication;
 
 /// <summary>Rechecks persisted roles for every HTTP or SignalR policy gate; token grants are UI hints.</summary>
-public sealed class PermissionAuthorizationHandler(IAdministrativeCapabilityService capabilities)
+public sealed class PermissionAuthorizationHandler(IAdministrativeCapabilityService capabilities, DelegatedPermissions delegated)
 	: AuthorizationHandler<PermissionRequirement>
 {
 	protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
 	{
 		var accountId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
 		if (context.User.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(accountId)) return;
+		// An app holds what the character it acts as holds, and of that only what its scopes cover.
+		if (OAuthBearerAuthenticationHandler.App(context.User) is { } app)
+		{
+			if ((await delegated.GrantedAsync(accountId, app)).Contains(requirement.Scope)) context.Succeed(requirement);
+			return;
+		}
 		DBRef? active = null;
 		// Portal HTTP authority is account-wide even while a character is selected.
 		// Only a game hub invocation uses the active-character authority boundary.

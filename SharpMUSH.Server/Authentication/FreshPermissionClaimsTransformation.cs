@@ -19,6 +19,7 @@ namespace SharpMUSH.Server.Authentication;
 /// </remarks>
 public sealed class FreshPermissionClaimsTransformation(
 	IAdministrativeCapabilityService capabilities,
+	DelegatedPermissions delegated,
 	IHttpContextAccessor httpContextAccessor) : IClaimsTransformation
 {
 	private static readonly object ItemsKey = new();
@@ -28,7 +29,10 @@ public sealed class FreshPermissionClaimsTransformation(
 		if (principal.Identity?.IsAuthenticated != true) return principal;
 		var id = principal.FindFirstValue(ClaimTypes.NameIdentifier);
 		if (id is null) return principal;
-		var scopes = await GrantedScopesAsync(id);
+		// An app's token carries the character's permissions that its scopes cover, never the whole account's.
+		var scopes = OAuthBearerAuthenticationHandler.App(principal) is { } app
+			? await delegated.GrantedAsync(id, app)
+			: await GrantedScopesAsync(id);
 		// Clone so authentication schemes sharing an identity cannot observe mutable claims.
 		var current = new ClaimsPrincipal(principal.Identities.Select(identity => new ClaimsIdentity(identity)));
 		foreach (var identity in current.Identities)

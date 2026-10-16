@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -32,6 +33,7 @@ public sealed class BanEnforcementService(
 	IMessageBus messageBus,
 	HubConnectionRegistry registry,
 	IAccountStore database,
+	IOAuthService oauth,
 	ILogger<BanEnforcementService> logger) : IBanEnforcer
 {
 	/// <summary>The sentinel IP/host value connections use when no real origin is known.</summary>
@@ -57,6 +59,7 @@ public sealed class BanEnforcementService(
 	public async ValueTask EnforceAccountBanAsync(string accountId, CancellationToken ct = default)
 	{
 		await RunGuardedAsync("revoke sessions", accountId, () => sessionStore.RevokeAllForAccountAsync(accountId, ct));
+		await RunGuardedAsync("revoke app grants", accountId, async () => await oauth.RevokeAccountAsync(accountId, ct));
 		await RunGuardedAsync("invalidate claims cache", accountId,
 			() => claimsInvalidator.InvalidateAsync(accountId, ct).AsTask());
 		await RunGuardedAsync("abort SignalR connections", accountId, () =>

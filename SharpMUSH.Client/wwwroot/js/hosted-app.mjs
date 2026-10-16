@@ -27,6 +27,10 @@ const validRooms = rooms => Array.isArray(rooms) && rooms.length >= 1 && rooms.l
 const validCoordinates = names => names === undefined
     || (Array.isArray(names) && names.length === 3 && names.every(name => typeof name === 'string' && /^[A-Za-z0-9_`-]{1,64}$/.test(name)));
 
+// One line the player could type, as api/commands takes it: at most 8192 characters, no line break.
+const validCommand = command => typeof command === 'string' && command.trim().length > 0 && command.length <= 8192
+    && !/[\r\n]/.test(command);
+
 // A room document is a plain object of at most 4 MiB as JSON.
 const maxDocumentLength = 4 * 1024 * 1024;
 function validDocument(document) {
@@ -35,7 +39,8 @@ function validDocument(document) {
 }
 
 // The requests a package may make, each checked here before it reaches the authenticated API. Reads name rooms;
-// a plan names a document and changes nothing; an apply is confirmed by the player in the host before anything changes.
+// a plan names a document and changes nothing; an apply is confirmed by the player in the host before anything changes;
+// a command runs as the character with the package's own token, which the player allows in the host and the frame never sees.
 function bridgeCall(data) {
     switch (data.type) {
         case 'topology':
@@ -46,6 +51,7 @@ function bridgeCall(data) {
                 ? { method: ['ReadTopology', data.rooms, coordinates], reply: 'topology-result' }
                 : { method: ['ReadRoomDocument', data.rooms, coordinates], reply: 'document-result' };
         }
+        case 'command': return validCommand(data.command) ? { method: ['RunCommand', data.command], reply: 'command-result' } : null;
         case 'plan': return validDocument(data.document) ? { method: ['PlanRoomDocument', data.document], reply: 'plan-result' } : null;
         case 'apply': return validDocument(data.document) ? { method: ['ApplyRoomDocument', data.document], reply: 'apply-result' } : null;
         default: return null;

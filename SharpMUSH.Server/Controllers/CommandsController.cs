@@ -32,10 +32,14 @@ namespace SharpMUSH.Server.Controllers;
 /// the character or, for an object the character controls, as that object — how the editor runs an
 /// attribute's unsaved text the way <c>u()</c> would run it once saved. Running code as an object needs
 /// what writing that code onto the object needs, so control is the test.
+///
+/// An app the player allowed (<c>api/oauth</c>) may call both with its access token when it holds the <c>commands</c>
+/// scope. It acts as the character the player allowed it, with that character's own permissions, and a command
+/// restricted with <c>noapp</c> refuses it.
 /// </summary>
 [ApiController]
 [Route("api/commands")]
-[Authorize]
+[Authorize(Policy = DelegatedPolicies.Commands)]
 public class CommandsController(
 	IPortalCommandService commands,
 	IVisibleWorldProjection projection,
@@ -71,7 +75,7 @@ public class CommandsController(
 			return Problem($"This session now acts as {character.Object.Name}, not {expected}; the command was not run.",
 				statusCode: StatusCodes.Status409Conflict);
 
-		return Answer(await commands.RunAsync(actor.AccountId, character, request, ct));
+		return Answer(await commands.RunAsync(actor.AccountId, character, OAuthBearerAuthenticationHandler.App(User), request, ct));
 	}
 
 	[HttpPost("eval")]
@@ -106,7 +110,7 @@ public class CommandsController(
 			self = target.Object().DBRef;
 		}
 
-		return Answer(await commands.EvaluateAsync(actor.AccountId, character, self, request, ct));
+		return Answer(await commands.EvaluateAsync(actor.AccountId, character, OAuthBearerAuthenticationHandler.App(User), self, request, ct));
 	}
 
 	private ActionResult<PortalCommandResponse> Answer(PortalCommandOutcome outcome) => outcome switch

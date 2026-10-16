@@ -56,6 +56,7 @@ public static class AuditTargetKinds
 	public const string Secret = "secret";
 	public const string Feed = "feed";
 	public const string Package = "package";
+	public const string App = "app";
 }
 
 /// <summary>
@@ -160,6 +161,12 @@ public static class AuditActions
 	public const string SecretClear = "secret.clear";
 	public const string SecretHosts = "secret.hosts";
 
+	/// <summary>An app registered for OAuth, changed, or given a new secret.</summary>
+	public const string AppSave = "app.save";
+
+	/// <summary>A registered app removed, with every grant players gave it.</summary>
+	public const string AppDelete = "app.delete";
+
 	/// <summary>A line taken out of a feed's recall, such as one whose Discord message a moderator deleted.</summary>
 	public const string FeedLineDelete = "feed.line.delete";
 
@@ -172,6 +179,6 @@ public static class AuditActions
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
 		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
-		FeedLineDelete
+		AppSave, AppDelete, FeedLineDelete
 	];
 }

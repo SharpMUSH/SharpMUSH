@@ -44,10 +44,14 @@ public sealed class ObjectGrants
 	private static readonly IPermissionResolver Resolver = new PermissionResolver();
 	private readonly IReadOnlySet<string> _shown;
 
-	private ObjectGrants(IReadOnlyList<HeldRole> roles, PermissionContext context)
+	private readonly IReadOnlyDictionary<string, string> _customCategories;
+
+	private ObjectGrants(IReadOnlyList<HeldRole> roles, PermissionContext context,
+		IReadOnlyDictionary<string, string>? customCategories = null)
 	{
 		Roles = roles;
 		Context = context;
+		_customCategories = customCategories ?? new Dictionary<string, string>();
 		Granted = Resolver.Resolve(context);
 		// What a role or override allows by name: the owner's blanket grant and administrator roles left out.
 		var named = context with
@@ -57,6 +61,26 @@ public sealed class ObjectGrants
 		};
 		_shown = Resolver.Resolve(named);
 	}
+
+	private ObjectGrants(ObjectGrants capped, IReadOnlySet<string> granted, IReadOnlySet<string> shown)
+	{
+		Roles = capped.Roles;
+		Context = capped.Context with { IsOwner = false };
+		_customCategories = capped._customCategories;
+		Granted = granted;
+		_shown = shown;
+	}
+
+	/// <summary>
+	/// These grants as an app holding <paramref name="scopes"/> sees them while it acts as the object: only the
+	/// permissions the scopes cover (<see cref="OAuth.DelegatedScopes.Covers"/>), and not the owner unless they cover
+	/// every group.
+	/// </summary>
+	public ObjectGrants Within(IReadOnlyCollection<string> scopes)
+		=> IsOwner && OAuth.DelegatedScopes.HasEveryGroup(scopes)
+			? this
+			: new ObjectGrants(this, OAuth.DelegatedScopes.Cap(Granted, scopes, _customCategories),
+				OAuth.DelegatedScopes.Cap(_shown, scopes, _customCategories));
 
 	/// <summary>Grants nothing: an object whose grants could not be read.</summary>
 	public static readonly ObjectGrants None = new([], PermissionContext.None);
@@ -115,6 +139,7 @@ public sealed class ObjectGrants
 		IEnumerable<string> objectRoles, IReadOnlyDictionary<string, PermissionState> objectOverrides, AccountGrants? account,
 		IEnumerable<CustomPermission> custom)
 	{
+		var defined = custom.DistinctBy(p => p.Scope, StringComparer.OrdinalIgnoreCase).ToArray();
 		var bySlug = roles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
 		var held = new List<HeldRole>();
 
@@ -137,8 +162,9 @@ public sealed class ObjectGrants
 			owner)
 		{
 			ObjectOverrides = objectOverrides,
-			CustomScopes = custom.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase)
+			CustomScopes = defined.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		};
-		return new ObjectGrants(held, context);
+		return new ObjectGrants(held, context,
+			defined.ToDictionary(p => p.Scope, p => p.Category, StringComparer.OrdinalIgnoreCase));
 	}
 }

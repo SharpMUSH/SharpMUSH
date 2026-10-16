@@ -83,9 +83,9 @@ public class PortalCommandPendingLimitTests
 		var player = Player(41);
 
 		var waiting = Enumerable.Range(0, Limit)
-			.Select(_ => service.RunAsync("account-a", player, new PortalCommandRequest("think")).AsTask())
+			.Select(_ => service.RunAsync("account-a", player, null, new PortalCommandRequest("think")).AsTask())
 			.ToList();
-		var refused = await service.RunAsync("account-a", player, new PortalCommandRequest("think"));
+		var refused = await service.RunAsync("account-a", player, null, new PortalCommandRequest("think"));
 
 		await Assert.That(refused is TooManyCommands { Limit: Limit }).IsTrue();
 		await Assert.That(queue.Admitted).IsEqualTo(Limit);
@@ -100,8 +100,8 @@ public class PortalCommandPendingLimitTests
 		var service = Service(queue);
 		var player = Player(42);
 
-		for (var i = 0; i < Limit; i++) _ = service.RunAsync("account-b", player, new PortalCommandRequest("think")).AsTask();
-		_ = service.RunAsync("account-c", player, new PortalCommandRequest("think")).AsTask();
+		for (var i = 0; i < Limit; i++) _ = service.RunAsync("account-b", player, null, new PortalCommandRequest("think")).AsTask();
+		_ = service.RunAsync("account-c", player, null, new PortalCommandRequest("think")).AsTask();
 
 		await Assert.That(queue.Admitted).IsEqualTo(Limit + 1);
 	}
@@ -118,16 +118,16 @@ public class PortalCommandPendingLimitTests
 		var player = Player(43);
 		using var gaveUp = new CancellationTokenSource();
 
-		var abandoned = service.RunAsync("account-d", player, new PortalCommandRequest("think"), gaveUp.Token).AsTask();
-		var held = service.RunAsync("account-d", player, new PortalCommandRequest("think")).AsTask();
+		var abandoned = service.RunAsync("account-d", player, null, new PortalCommandRequest("think"), gaveUp.Token).AsTask();
+		var held = service.RunAsync("account-d", player, null, new PortalCommandRequest("think")).AsTask();
 		await gaveUp.CancelAsync();
 		await Assert.That(async () => await abandoned).Throws<OperationCanceledException>();
 
-		var stillFull = await service.RunAsync("account-d", player, new PortalCommandRequest("think"));
+		var stillFull = await service.RunAsync("account-d", player, null, new PortalCommandRequest("think"));
 		await Assert.That(stillFull is TooManyCommands).IsTrue();
 
 		queue.ReleaseOldest();
-		var next = service.RunAsync("account-d", player, new PortalCommandRequest("think")).AsTask();
+		var next = service.RunAsync("account-d", player, null, new PortalCommandRequest("think")).AsTask();
 
 		await Assert.That(queue.Admitted).IsEqualTo(Limit);
 		await Assert.That(next.IsCompleted).IsFalse();
@@ -148,7 +148,7 @@ public class PortalCommandPendingLimitTests
 
 		for (var i = 0; i < Limit + 2; i++)
 		{
-			var outcome = await service.RunAsync("account-e", player, new PortalCommandRequest("think"));
+			var outcome = await service.RunAsync("account-e", player, null, new PortalCommandRequest("think"));
 			await Assert.That(outcome is Error<string>).IsTrue();
 		}
 	}

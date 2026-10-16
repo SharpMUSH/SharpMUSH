@@ -8710,4 +8710,142 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} palette entries were left out, past the limits.</value>
   </data>
+  <data name="OAuthConsentTitle" xml:space="preserve">
+    <value>Allow an app</value>
+  </data>
+  <data name="OAuthConsentAsks" xml:space="preserve">
+    <value>{0} wants to act as your character</value>
+  </data>
+  <data name="OAuthConsentCharacter" xml:space="preserve">
+    <value>It would act as {0}. To allow another character, switch to it first.</value>
+  </data>
+  <data name="OAuthConsentRevoke" xml:space="preserve">
+    <value>You can take this back any time from your account page.</value>
+  </data>
+  <data name="OAuthConsentAllow" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="OAuthConsentDeny" xml:space="preserve">
+    <value>Deny</value>
+  </data>
+  <data name="OAuthConsentReturning" xml:space="preserve">
+    <value>Returning you to the app…</value>
+  </data>
+  <data name="OAuthScopeCommands" xml:space="preserve">
+    <value>Run commands</value>
+  </data>
+  <data name="OAuthScopeCommandsDetail" xml:space="preserve">
+    <value>Type commands and edit softcode as your character, with only the permissions allowed below.</value>
+  </data>
+  <data name="OAuthScopeContent" xml:space="preserve">
+    <value>Wiki and media</value>
+  </data>
+  <data name="OAuthScopeContentDetail" xml:space="preserve">
+    <value>Your character's wiki and media permissions.</value>
+  </data>
+  <data name="OAuthScopeBuild" xml:space="preserve">
+    <value>Building and code</value>
+  </data>
+  <data name="OAuthScopeBuildDetail" xml:space="preserve">
+    <value>Your character's Builder power and its application and package permissions.</value>
+  </data>
+  <data name="OAuthScopeManage" xml:space="preserve">
+    <value>Portal administration</value>
+  </data>
+  <data name="OAuthScopeManageDetail" xml:space="preserve">
+    <value>Your character's staff permissions in the portal: configuration, roles, players, jobs and the queue.</value>
+  </data>
+  <data name="OAuthScopeGame" xml:space="preserve">
+    <value>Staff powers in the game</value>
+  </data>
+  <data name="OAuthScopeGameDetail" xml:space="preserve">
+    <value>Your character's wizard, royalty and other powers, control over others' objects, and chat and server operation.</value>
+  </data>
+  <data name="OAuthScopeCategory" xml:space="preserve">
+    <value>{0} permissions</value>
+  </data>
+  <data name="OAuthAppsTitle" xml:space="preserve">
+    <value>Connected apps</value>
+  </data>
+  <data name="OAuthAppsDescription" xml:space="preserve">
+    <value>Apps you allowed to act as one of your characters.</value>
+  </data>
+  <data name="OAuthAppsAllowedOn" xml:space="preserve">
+    <value>allowed {0}</value>
+  </data>
+  <data name="OAuthAppsRevoke" xml:space="preserve">
+    <value>Revoke</value>
+  </data>
+  <data name="OAuthAdmApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="OAuthAdmAppsDescription" xml:space="preserve">
+    <value>Programs and sites that may ask players to act as their characters. Hosted packages ask in their ui.json and are not listed here.</value>
+  </data>
+  <data name="OAuthAdmSecretOnce" xml:space="preserve">
+    <value>The secret for {0}. Copy it now: it is not shown again.</value>
+  </data>
+  <data name="OAuthAdmRegister" xml:space="preserve">
+    <value>Register an app</value>
+  </data>
+  <data name="OAuthAdmChange" xml:space="preserve">
+    <value>Change {0}</value>
+  </data>
+  <data name="OAuthAdmName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="OAuthAdmHomepage" xml:space="preserve">
+    <value>Homepage</value>
+  </data>
+  <data name="OAuthAdmDescription" xml:space="preserve">
+    <value>What it does</value>
+  </data>
+  <data name="OAuthAdmRedirects" xml:space="preserve">
+    <value>Redirect addresses</value>
+  </data>
+  <data name="OAuthAdmRedirectsHelp" xml:space="preserve">
+    <value>Where the portal may send a player back with a code: https, http on localhost, or the app's own scheme.</value>
+  </data>
+  <data name="OAuthAdmScopes" xml:space="preserve">
+    <value>May ask for</value>
+  </data>
+  <data name="OAuthAdmConfidential" xml:space="preserve">
+    <value>Runs on a server it controls (gets a secret)</value>
+  </data>
+  <data name="OAuthAdmRegistered" xml:space="preserve">
+    <value>Registered apps</value>
+  </data>
+  <data name="OAuthAdmNone" xml:space="preserve">
+    <value>No apps are registered.</value>
+  </data>
+  <data name="OAuthAdmHasSecret" xml:space="preserve">
+    <value>secret</value>
+  </data>
+  <data name="OAuthAdmPublic" xml:space="preserve">
+    <value>public</value>
+  </data>
+  <data name="OAuthAdmRegisteredOn" xml:space="preserve">
+    <value>Registered {0}</value>
+  </data>
+  <data name="OAuthAdmEdit" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="OAuthAdmNewSecret" xml:space="preserve">
+    <value>New secret</value>
+  </data>
+  <data name="OAuthAdmDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="OAuthAdmDeleteTitle" xml:space="preserve">
+    <value>Delete this app?</value>
+  </data>
+  <data name="OAuthAdmDeleteBody" xml:space="preserve">
+    <value>Deleting {0} takes back every player's permission and stops every token it holds.</value>
+  </data>
+  <data name="OAuthAdmSaved" xml:space="preserve">
+    <value>Saved {0}.</value>
+  </data>
+  <data name="OAuthAdmDeleted" xml:space="preserve">
+    <value>Deleted {0}.</value>
+  </data>
 </root>

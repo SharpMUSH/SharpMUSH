@@ -49,6 +49,7 @@ builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<DiscordAccountService>();
+builder.Services.AddSingleton<ConnectedAppsService>();
 builder.Services.AddSingleton<DiscordAdminService>();
 builder.Services.AddSingleton<MailService>();
 builder.Services.AddSingleton<ICommHistory, CommHistoryService>();

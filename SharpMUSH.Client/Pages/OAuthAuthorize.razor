@@ -1,0 +1,144 @@
+@page "/oauth/authorize"
+@attribute [Authorize]
+@implements IDisposable
+@using SharpMUSH.Library.Models.Portal
+@using SharpMUSH.Library.OAuth
+@inject ConnectedAppsService Apps
+@inject IAccountAuthState AccountAuth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["OAuthConsentTitle"] — @Loc["AppTitle"]</PageTitle>
+
+@* Where an app sends a player to ask for access (RFC 6749 §4.1.1). The question is the server's: this page shows it,
+   sends the answer, and follows the server back to the app. The app never sees this page's session. *@
+<div class="oauth-page">
+    <KitCard>
+        <div class="oauth-card">
+            @switch (_view)
+            {
+                case null:
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                    break;
+                case OAuthAuthorizeView { App: { } app } view:
+                    <h1 class="oauth-title">@Loc["OAuthConsentAsks", app.Name]</h1>
+                    @if (app.Description is { } description)
+                    {
+                        <p class="oauth-description">@description</p>
+                    }
+                    @if (app.Homepage is { } homepage)
+                    {
+                        <a class="oauth-homepage" href="@homepage" target="_blank" rel="noopener noreferrer">@homepage</a>
+                    }
+                    <p class="oauth-character">@Loc["OAuthConsentCharacter", view.Character ?? ""]</p>
+                    <ul class="oauth-scopes">
+                        @foreach (var scope in OAuthScopeText.Shown(view.Scopes))
+                        {
+                            <li class="oauth-scope">
+                                <span class="oauth-scope-name">@OAuthScopeText.Name(Loc, scope, _scopes)</span>
+                                <span class="oauth-scope-detail">@OAuthScopeText.Detail(Loc, scope, _scopes)</span>
+                            </li>
+                        }
+                    </ul>
+                    <p class="oauth-note">@Loc["OAuthConsentRevoke"]</p>
+                    @if (_error is not null)
+                    {
+                        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                    }
+                    <div class="oauth-actions">
+                        <button class="oauth-allow" disabled="@_busy" @onclick="() => DecideAsync(true)">@Loc["OAuthConsentAllow"]</button>
+                        <button class="oauth-deny" disabled="@_busy" @onclick="() => DecideAsync(false)">@Loc["OAuthConsentDeny"]</button>
+                    </div>
+                    break;
+                case OAuthAuthorizeView { Message: { } message }:
+                    <MudAlert Severity="Severity.Warning">@message</MudAlert>
+                    break;
+                case OAuthAuthorizeView:
+                    <p>@Loc["OAuthConsentReturning"]</p>
+                    break;
+                case ApiFailure failure:
+                    <MudAlert Severity="Severity.Warning">@failure.Message</MudAlert>
+                    break;
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "response_type")] public string? ResponseType { get; set; }
+    [SupplyParameterFromQuery(Name = "client_id")] public string? ClientId { get; set; }
+    [SupplyParameterFromQuery(Name = "redirect_uri")] public string? RedirectUri { get; set; }
+    [SupplyParameterFromQuery(Name = "scope")] public string? Scope { get; set; }
+    [SupplyParameterFromQuery(Name = "state")] public string? State { get; set; }
+    [SupplyParameterFromQuery(Name = "code_challenge")] public string? CodeChallenge { get; set; }
+    [SupplyParameterFromQuery(Name = "code_challenge_method")] public string? CodeChallengeMethod { get; set; }
+
+    private object? _view;
+    private IReadOnlyList<OAuthScopeView> _scopes = [];
+    private string? _error;
+    private bool _busy;
+
+    private OAuthAuthorizeRequest Request => new(ResponseType, ClientId, RedirectUri, Scope, State, CodeChallenge, CodeChallengeMethod);
+
+    protected override async Task OnInitializedAsync()
+    {
+        AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        // A category's scope is described by its category; the built-in ones are described here.
+        var scopes = Apps.ScopesAsync();
+        await CheckAsync();
+        if (await scopes is List<OAuthScopeView> known) _scopes = known;
+    }
+
+    // The answer is for the character the session plays: switching characters asks again for the new one.
+    private void OnActingChanged() => _ = InvokeAsync(async () =>
+    {
+        _view = null;
+        StateHasChanged();
+        await CheckAsync();
+        StateHasChanged();
+    });
+
+    private async Task CheckAsync()
+    {
+        var result = await Apps.CheckAsync(new Uri(Nav.Uri).Query);
+        switch (result)
+        {
+            // Allowed before, with nothing new asked: no question, straight back to the app with a code.
+            case OAuthAuthorizeView { App: not null, AlreadyAllowed: true }:
+                await DecideAsync(true);
+                return;
+            case OAuthAuthorizeView { Location: { } location } leaving:
+                _view = leaving;
+                Nav.NavigateTo(location, forceLoad: true);
+                return;
+            case OAuthAuthorizeView view:
+                _view = view;
+                return;
+            case ApiFailure failure:
+                _view = failure;
+                return;
+        }
+    }
+
+    private async Task DecideAsync(bool approve)
+    {
+        _busy = true;
+        _error = null;
+        switch (await Apps.DecideAsync(Request, approve))
+        {
+            case OAuthDecisionView { Location: { } location }:
+                Nav.NavigateTo(location, forceLoad: true);
+                return;
+            case OAuthDecisionView { Message: { } message }:
+                _error = message;
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        _busy = false;
+    }
+
+    public void Dispose() => AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+}
