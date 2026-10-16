@@ -26,8 +26,12 @@
 
 ## Tasks
 
-- [ ] 1. Implement tool contracts, source/profile validation and CLI, with red/green refusal tests.
-- [ ] 2. Implement bounded process execution, private-copy export/readback/publication, with real success and deterministic failure/cancellation tests.
-- [ ] 3. Commit real native fixtures and reproducible recipe; prove neutral models and imported world equivalence using existing Rhost translator/isolated worlds.
-- [ ] 4. Correct migration docs, add exact commands/support matrix/limits and staging follow-up issue.
+- [x] 1. Implement tool contracts, source/profile validation and CLI, with red/green refusal tests.
+- [x] 2. Implement bounded process execution, private-copy export/readback/publication, with real success and deterministic failure/cancellation tests.
+- [x] 3. Commit real native fixtures and reproducible recipe; prove neutral models and imported world equivalence using existing Rhost translator/isolated worlds.
+- [x] 4. Correct migration docs, add exact commands/support matrix/limits and staging follow-up issue.
 - [ ] 5. Run affected Rhost/export/import suites, independent whole-branch review, open/attach PR and carry CI/review feedback.
+
+## Verification evidence
+
+Latest implementation `4188da03b`: test build zero warnings/errors; 507 affected Rhost tests passed with zero skips, including ten genuine native-backend cases and two persisted-body BCC regressions. Both converter profiles reproduced successfully from the pinned upstream recipe. Independent task reviews and final whole-branch review plus scoped BCC re-review passed. PR #1971 is ready; remote CI remains the final task-5 gate.
