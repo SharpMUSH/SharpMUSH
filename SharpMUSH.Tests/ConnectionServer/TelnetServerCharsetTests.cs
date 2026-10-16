@@ -18,6 +18,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task CharsetOffer_ContainsOnlyRendererEncodingsInPreferenceOrder()
 	{
 		var (toServer, fromServer, handler, _, cts) = StartServer();
+		using var serverCancellation = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
@@ -31,7 +32,6 @@ public partial class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -49,6 +49,7 @@ public partial class TelnetServerNegotiationTests
 		service.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
 			.Returns(call => { capabilities = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(capabilities); return true; });
 		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service);
+		using var serverCancellation = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
@@ -78,7 +79,6 @@ public partial class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -93,6 +93,7 @@ public partial class TelnetServerNegotiationTests
 	{
 		var service = Substitute.For<IConnectionServerService>();
 		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service);
+		using var serverCancellation = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
@@ -122,7 +123,6 @@ public partial class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -133,6 +133,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task CharsetPeerRequest_ChoosesOnlyRendererEncodings(string offered, string? expected)
 	{
 		var (toServer, fromServer, handler, _, cts) = StartServer();
+		using var serverCancellation = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
@@ -151,7 +152,6 @@ public partial class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -162,6 +162,7 @@ public partial class TelnetServerNegotiationTests
 	{
 		var service = Substitute.For<IConnectionServerService>();
 		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service);
+		using var serverCancellation = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
@@ -183,7 +184,6 @@ public partial class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 }
