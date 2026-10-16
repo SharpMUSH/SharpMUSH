@@ -50,6 +50,17 @@ public class ApplicationsGateTests
 	}
 
 	[TUnit.Core.Test]
+	public async Task PublicCatalogDoesNotReturnPrivateConfigurationTileMetadata()
+	{
+		var tile = new ApplicationConfigurationTile("private-settings", "Private settings", "Private metadata", null,
+			"/apps/example/settings", "config.admin");
+		var controller = CreateController(false, SchemaApp("example") with { ConfigurationTile = tile });
+		var result = await controller.List();
+		var apps = (IReadOnlyList<ApplicationsController.ApplicationDto>)((OkObjectResult)result.Result!).Value!;
+		await Assert.That(apps.Single().ConfigurationTile).IsNull();
+	}
+
+	[TUnit.Core.Test]
 	public async Task List_OmitsComponentApps_WhenGateOff()
 	{
 		var controller = CreateController(allowBrowserCode: false, SchemaApp("schema-one"), ComponentApp("comp-one"));
