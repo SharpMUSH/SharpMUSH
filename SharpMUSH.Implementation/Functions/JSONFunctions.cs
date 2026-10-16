@@ -99,7 +99,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute", "json", "path"])]
+	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute", "json", "osep", "arg..."])]
 	public async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -213,7 +213,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path", "value"])]
+	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "action", "path-or-patch", "json2"])]
 	public async ValueTask<CallState> json_mod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;

@@ -319,6 +319,20 @@
         return map[s] || null;
     }
 
+    // Keep variadic declaration patterns aligned with the analyzer's parameter labels.
+    function expandParameterName(names, index) {
+        for (var start = 0; start < names.length; start++) {
+            var name = names[start];
+            if (name.includes('...')) {
+                var parts = name.split('|').map(function (part) { return part.replaceAll('...', '').trim(); });
+                var offset = index - start;
+                return parts[offset % parts.length] + (Math.floor(offset / parts.length) + 1);
+            }
+            if (index === start) return name;
+        }
+        return 'arg' + (index + 1);
+    }
+
     function registerSignatureHelpProvider(data) {
         if (_sigHelpProviderDisposable) { try { _sigHelpProviderDisposable.dispose(); } catch (e) {} }
         _sigHelpProviderDisposable = monaco.languages.registerSignatureHelpProvider('mush', {
@@ -346,7 +360,7 @@
                             var label = funcName + '(';
                             for (var p = 0; p < Math.max(def.maxArgs, paramNames.length, commas + 1); p++) {
                                 if (p > 0) label += ', ';
-                                var pname = paramNames[p] || ('arg' + (p + 1));
+                                var pname = expandParameterName(paramNames, p);
                                 var pstart = label.length;
                                 var isOpt = p >= def.minArgs;
                                 if (isOpt) { label += '['; }
