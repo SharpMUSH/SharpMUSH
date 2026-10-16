@@ -11,12 +11,12 @@ game installed and what *this* game's staff wrote. The two never merge.
 
 | Command | Who | What |
 |---|---|---|
-| `+help` | all | The index: every source that has topics, and what it covers |
+| `+help` | all | The index: a compact grid of source links, without descriptions |
 | `+help <topic>` | all | A topic. `*` and `?` wildcard |
 | `+help <source>/<topic>` | all | The qualified form, for when two sources claim a name |
 | `+help/list[/<page>] [<source>]` | all | Every topic, or one source's |
 | `+help/search[/<page>] <text>` | all | Topic names and bodies containing the text |
-| `+help/sources` | all | Where the topics come from |
+| `+help/sources` | all | What each source covers, its registry object and topic count |
 | `+help/write <topic>=<text>` | staff | Write a topic belonging to no package |
 | `+help/delete <topic>` | staff | Remove one |
 | `+help/source <name>=<object>` | staff | Register a source by hand |
@@ -25,6 +25,11 @@ game installed and what *this* game's staff wrote. The two never merge.
 A long listing comes in pages, asked for as a last switch: `+help/list/2`, `+help/search/3 combat`,
 and `+help/2 <topic>` when several topics match. A topic name can be several words: `+help scene join`. `+help` itself renders the `index` topic —
 which a game replaces by writing its own, since the `game` source outranks a package's.
+
+Source links open `+help/list <source>`. Their grid follows the reader's terminal width and reflows
+in the portal. Plain terminals show the names; `+help/list <source>` remains the typed fallback.
+`+help/sources` includes registered sources with no topics or missing objects, while the front page
+only offers sources that currently have topics. Source descriptions are read as stored text.
 
 ## Contributing topics from a package
 
@@ -81,8 +86,8 @@ librarian deliberately is not — so it would enumerate your topics and then ren
 exactly this reason.
 
 **A topic name is its attribute path, with backticks read as spaces.** `` HELP`SCENE`JOIN `` is the
-topic `scene join`. The `HELP` root itself is not a topic: it is the one-line description shown in
-the index, and it has to be set or `lattr()` will not enumerate the branch.
+topic `scene join`. The `HELP` root itself is not a topic: it is the one-line description shown by
+`+help/sources`, and it has to be set or `lattr()` will not enumerate the branch.
 
 **Subtopics are free; cross-references are declared.** Because `` HELP`SCENE`JOIN `` sits under
 `` HELP`SCENE ``, `+help scene` lists `join` as a subtopic on its own — nothing declares it, and it

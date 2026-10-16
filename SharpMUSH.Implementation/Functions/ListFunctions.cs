@@ -402,7 +402,7 @@ public partial class Functions
 	public ValueTask<CallState> GrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> WildcardScan(parser, all: true, positions: false);
 
-	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "element", "delimiter"])]
+	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter", "first", "length"])]
 	public ValueTask<CallState> Index(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -686,7 +686,7 @@ public partial class Functions
 		return attrResult;
 	}
 
-	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list3", "delimiter"])]
+	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "delimiter", "osep"])]
 	public async ValueTask<CallState> Munge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -1084,7 +1084,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]
+	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "sort-type", "delimiter", "osep"])]
 	public async ValueTask<CallState> SortKey(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
