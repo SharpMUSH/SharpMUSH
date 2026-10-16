@@ -471,6 +471,10 @@
       <Link>BundledPackages\roster-jobs.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\availability\package.yaml">
+      <Link>BundledPackages\availability.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.availability.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-availability\package.yaml">
       <Link>BundledPackages\scene-availability.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-availability.package.yaml</LogicalName>

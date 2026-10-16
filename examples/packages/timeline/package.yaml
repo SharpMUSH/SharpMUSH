@@ -63,6 +63,8 @@ objects:
         Settings and the words the commands answer with.
       DATA`CONFIG: |-
         IC dates on scenes and the +timeline list.
+      DATA`CONFIG`LABEL: |-
+        Timeline
       DATA`CONFIG`STAMP: |-
         1
       DATA`CONFIG`STAMP`DESCRIPTION: |-
@@ -71,47 +73,58 @@ objects:
         boolean
       DATA`CONFIG`STAMP`DEFAULT: |-
         1
-      DATA`DENY_FORMAT: |-
+      DATA`CONFIG`STAMP`LABEL: |-
+        Date scenes when they start
+      DATA`CONFIG`STAMP`EXAMPLE: |-
+        no
+      DATA`DENY: |-
+        What the commands answer when they refuse.
+      DATA`DENY`FORMAT: |-
         Write the IC date year first, as the calendar shows it: 2026-03-14, or 2026-03-14 19:30. +scene/date now gives the IC date now.
+      DATA`USAGE: |-
+        What a command says when it is given page 0.
+      DATA`USAGE`TIMELINE: |-
+        +timeline [<name>] lists a character's finished scenes in IC order, a page at a time: +timeline/2 shows the second page.
 
       # ---- +scene/date ------------------------------------------------------------
       # +scene/date [<id>], +scene/date [<id>=]<date> and +scene/date/clear [<id>]. What follows the command is
       # used as typed and never evaluated.
       CMD`DATE:
         value: |-
-          $(?is)^\+scene/date(?\: +(.*))?$:think u(%!/FUN`COMMAND`PARSE,%1); @include %!/INC`DATE`SCENE; @break strlen(%q<date_typed>)={@include %!/INC`DATE`SET}; @pemit %#=u(%!/FUN`DATE`SHOWN,%q<scene>)
+          $(?is)^\+scene/date(?\: +(.*))?$:think u(%!/FUN`COMMAND`PARSE,%1); @include %!/INC`DATE`SCENE; @break strlen(%q<date_typed>)={@include %!/INC`DATE`SET}; @pemit %#=u(%!/FUN`DATE`SHOWN,%q<date_scene>)
         flags: [regexp, cmdsyntax]
       CMD`DATE`CLEAR:
         value: |-
-          $(?is)^\+scene/date/clear(?\: +(.*))?$:think setq(scene,firstof(trim(%1),scenefocus(%#))); @include %!/INC`DATE`SCENE; @include %!/INC`DATE`OWNER; @include %!/INC`DATE`WRITE=%q<scene>,; @pemit %#=notice(SCENE,Scene %q<scene> has no IC date now. +scene/date %q<scene>=<date> gives it one.,ok)
+          $(?is)^\+scene/date/clear(?\: +(.*))?$:think setq(date_scene,firstof(trim(%1),scenefocus(%#))); @include %!/INC`DATE`SCENE; @include %!/INC`DATE`OWNER; @include/args %!/INC`DATE`WRITE=scene,%q<date_scene>,secs,; @pemit %#=notice(SCENE,Scene %q<date_scene> has no IC date now. +scene/date %q<date_scene>=<date> gives it one.,ok)
         flags: [regexp, cmdsyntax]
-      # %0 what followed +scene/date. Sets scene (the id given before = or alone, else the focused scene) and
+      # %0 what followed +scene/date. Sets date_scene (the id given before = or alone, else the focused scene) and
       # date_typed (the date after =, or the whole text when it is not an id).
       FUN`COMMAND`PARSE:
         value: |-
           setqm(cmd_text,trim(squish(%0)),
           cmd_id,if(strmatch(%q<cmd_text>,*=*),trim(before(%q<cmd_text>,=)),if(isint(%q<cmd_text>),%q<cmd_text>)),
           date_typed,if(strmatch(%q<cmd_text>,*=*),trim(after(%q<cmd_text>,=)),if(isint(%q<cmd_text>),,%q<cmd_text>)),
-          scene,firstof(%q<cmd_id>,scenefocus(%#)))
+          date_scene,firstof(%q<cmd_id>,scenefocus(%#)))
         flags: [funsyntax]
-      # The scene in %q<scene> exists and the player may see it.
+      # The scene in %q<date_scene> exists and the player may see it.
       INC`DATE`SCENE:
         value: |-
-          @assert not(strmatch(%q<scene>,#-1*))=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NO_FOCUS),warn); @assert not(strmatch(scene(%q<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene>,warn)
+          @assert not(strmatch(%q<date_scene>,#-1*))=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NO_FOCUS),warn); @assert not(strmatch(scene(%q<date_scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<date_scene>,warn)
         flags: [cmdsyntax]
       # Only an approved player who owns the scene, or staff, dates it: the rule +scene/set keeps.
       INC`DATE`OWNER:
         value: |-
-          @assert u({{scene/logger}}/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_APPROVAL),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NOT_OWNER),error)
+          @assert u({{scene/logger}}/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_APPROVAL),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<date_scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY_NOT_OWNER),error)
         flags: [cmdsyntax]
       INC`DATE`SET:
         value: |-
-          @include %!/INC`DATE`OWNER; think u(%!/FUN`READ`DATE,%q<date_typed>); @assert strlen(%q<read_secs>)=@pemit %#=notice(SCENE,%q<read_error>,warn); @include %!/INC`DATE`WRITE=%q<scene>,%q<read_secs>; @pemit %#=notice(SCENE,Scene %q<scene> takes place on [scene(%q<scene>,icdate)].,ok)
+          @include %!/INC`DATE`OWNER; think u(%!/FUN`READ`DATE,%q<date_typed>); @assert strlen(%q<read_secs>)=@pemit %#=notice(SCENE,%q<read_error>,warn); @include/args %!/INC`DATE`WRITE=scene,%q<date_scene>,secs,%q<read_secs>; @pemit %#=notice(SCENE,Scene %q<date_scene> takes place on [scene(%q<date_scene>,icdate)].,ok)
         flags: [cmdsyntax]
-      # %0 a scene and %1 an IC moment in seconds, or nothing to clear it: both details, written together.
+      # Named arguments: scene, and secs, an IC moment in seconds, or nothing to clear it. Both details, written
+      # together.
       INC`DATE`WRITE:
         value: |-
-          @scene/set %0/icsecs=%1; @scene/set %0/icdate=if(strlen(%1),u(%!/FUN`DATE`WRITE,%1))
+          @scene/set %<scene>/icsecs=%<secs>; @scene/set %<scene>/icdate=if(strlen(%<secs>),u(%!/FUN`DATE`WRITE,%<secs>))
         flags: [cmdsyntax]
       # What +scene/date says about scene %0.
       FUN`DATE`SHOWN:
@@ -136,7 +149,7 @@ objects:
           read_year,sub(first(%q<read_day>,-),get({{time/clock}}/DATA`CONFIG`IC-YEARS)),
           read_instant,if(cand(%q<read_ok>,gte(%q<read_year>,1),lte(%q<read_year>,9999)),convtime([rjust(%q<read_year>,4,0)]-[rjust(extract(%q<read_day>,2,1,-),2,0)]-[rjust(last(%q<read_day>,-),2,0)]T[rjust(first(%q<read_clock>,:),2,0)]:[last(%q<read_clock>,:)]:00Z)),
           read_secs,case(1,%q<read_now>,u({{time/clock}}/FUN`IC`SECS),u(%!/FUN`READ`SAME,%q<read_instant>),%q<read_instant>),
-          read_error,if(not(strlen(%q<read_secs>)),if(%q<read_ok>,'%0' is not a date in the IC calendar.,get(%!/DATA`DENY_FORMAT))))
+          read_error,if(not(strlen(%q<read_secs>)),if(%q<read_ok>,'%0' is not a date in the IC calendar.,get(%!/DATA`DENY`FORMAT))))
         flags: [funsyntax]
       # %0 a moment FUN`READ`DATE read: 1 when it is the date and time typed, so a 31 April or a 25:00 that the
       # conversion rolled over to another day is refused.
@@ -150,26 +163,32 @@ objects:
       # started it: a scene with no IC date gets the IC date now. One resumed from a pause keeps its date.
       TRIG`STAMP:
         value: |-
-          @assert v(DATA`CONFIG`STAMP); @break strlen(scene(%0,icsecs)); @include %!/INC`DATE`WRITE=%0,u({{time/clock}}/FUN`IC`SECS)
+          @assert v(DATA`CONFIG`STAMP); @break strlen(scene(%0,icsecs)); @include/args %!/INC`DATE`WRITE=scene,%0,secs,u({{time/clock}}/FUN`IC`SECS)
         flags: [cmdsyntax]
 
       # ---- +timeline ------------------------------------------------------------------
       # +timeline[/<page>] [<name>]: a character's finished scenes, in IC order.
       CMD`TIMELINE:
         value: |-
-          $(?is)^\+timeline(/\S*)?(?\: +(.*))?$:think u(%!/FUN`TIMELINE`PARSE,%1,%2); @assert isint(%q<page>)=@pemit %#=notice(TIMELINE,+timeline has no %q<switch> switch. +timeline/2 shows the second page.,warn); @assert isdbref(%q<who>)=@pemit %#=notice(TIMELINE,There is no player called '%q<name>'.,warn); think setq(scenes,u(%!/FUN`TIMELINE`SCENES,%q<who>)); @assert words(%q<scenes>)=@pemit %#=notice(TIMELINE,if(strmatch(%q<who>,%#),You have no finished scenes yet.,[name(%q<who>)] has no finished scenes you can see.)); think setq(pages,ceil(fdiv(words(%q<scenes>),%q<size>))); @assert lte(%q<page>,%q<pages>)=@pemit %#=notice(TIMELINE,There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] - you asked for page %q<page>.,warn); @pemit %#=u(%!/FUN`SCREEN`TIMELINE)
+          $(?is)^\+timeline(/\S*)?(?\: +(.*))?$:think u(%!/FUN`TIMELINE`PARSE,%1,%2); @include %!/INC`TIMELINE`CHECK; think setqm(timeline_scenes,u(%!/FUN`TIMELINE`SCENES,%q<timeline_who>),
+          timeline_pages,ceil(fdiv(words(%q<timeline_scenes>),%q<timeline_size>))); @assert words(%q<timeline_scenes>)=@pemit %#=notice(TIMELINE,if(strmatch(%q<timeline_who>,%#),You have no finished scenes yet.,name(%q<timeline_who>) has no finished scenes you can see.)); @assert lte(%q<timeline_page>,%q<timeline_pages>)=@pemit %#=notice(TIMELINE,There [if(gt(%q<timeline_pages>,1),are %q<timeline_pages> pages,is one page)] - you asked for page %q<timeline_page>.,warn); @pemit %#=u(%!/FUN`SCREEN`TIMELINE)
         flags: [regexp, cmdsyntax]
-      # %0 the switch as typed (/2), %1 the name. Sets switch, page (empty for a switch that is not a page), name,
-      # who (the player's dbref, the reader's own with no name) and size, the rows that fit the reader's screen under
-      # the title, headings, rule and footer.
+      # %0 the switch as typed (/2), %1 the name. Sets timeline_switch, timeline_page (empty for a switch that is
+      # not a page), timeline_name, timeline_who (the player's dbref, the reader's own with no name) and
+      # timeline_size, the rows that fit the reader's screen under the title, headings, rule and footer.
       FUN`TIMELINE`PARSE:
         value: |-
-          setqm(switch,%0,
-          page,if(strlen(%0),if(cand(isint(after(%0,/)),gt(after(%0,/),0)),after(%0,/)),1),
-          name,trim(squish(%1)),
-          who,if(strlen(%q<name>),pmatch(%q<name>),%#),
-          size,max(5,sub(height(%#,24),8)))
+          setqm(timeline_switch,%0,
+          timeline_page,if(strlen(%0),if(cand(isint(after(%0,/)),gte(after(%0,/),0)),after(%0,/)),1),
+          timeline_name,trim(squish(%1)),
+          timeline_who,if(strlen(%q<timeline_name>),pmatch(%q<timeline_name>),%#),
+          timeline_size,max(5,sub(height(%#,24),8)))
         flags: [funsyntax]
+      # The switch is a page, page 0 answers with the usage line, and the name is a player's.
+      INC`TIMELINE`CHECK:
+        value: |-
+          @assert isint(%q<timeline_page>)=@pemit %#=notice(TIMELINE,+timeline has no %q<timeline_switch> switch. +timeline/2 shows the second page.,warn); @assert %q<timeline_page>=@pemit %#=notice(TIMELINE,get(%!/DATA`USAGE`TIMELINE),warn); @assert isdbref(%q<timeline_who>)=@pemit %#=notice(TIMELINE,There is no player called '%q<timeline_name>'.,warn)
+        flags: [cmdsyntax]
       # %0 a player: the finished scenes they were in that the reader may see, earliest IC date first, the ones
       # with no IC date last.
       FUN`TIMELINE`SCENES:
@@ -183,14 +202,15 @@ objects:
       # %0 a scene: its IC moment, or a number past any date for a scene with none.
       FUN`TIMELINE`KEY:
         value: |-
-          if(isint(setr(key,scene(%0,icsecs))),%q<key>,999999999999999)
+          if(isint(setr(timeline_key,scene(%0,icsecs))),%q<timeline_key>,999999999999999)
         flags: [funsyntax]
 
       # ---- screens ---------------------------------------------------------------------
-      # One page of %q<scenes> for %q<who>, as a table: the IC date, the scene (a link to its card) and where.
+      # One page of %q<timeline_scenes> for %q<timeline_who>, as a table: the IC date, the scene (a link to its card)
+      # and where.
       FUN`SCREEN`TIMELINE:
         value: |-
-          box(u(%!/FUN`SCREEN`TABLE,extract(%q<scenes>,add(mul(sub(%q<page>,1),%q<size>),1),%q<size>))%r[rule()]%r[u(%!/FUN`SCREEN`FOOTER)],Timeline: [name(%q<who>)],,u({{scene/logger}}/FUN`FRAME))
+          box(u(%!/FUN`SCREEN`TABLE,extract(%q<timeline_scenes>,inc(mul(dec(%q<timeline_page>),%q<timeline_size>)),%q<timeline_size>))%r[rule()]%r[u(%!/FUN`SCREEN`FOOTER)],Timeline: [name(%q<timeline_who>)],,u({{scene/logger}}/FUN`FRAME))
         flags: [funsyntax]
       FUN`SCREEN`TABLE:
         value: |-
@@ -198,7 +218,7 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`FOOTER:
         value: |-
-          tone(muted,[if(gt(%q<pages>,1),Page %q<page> of %q<pages> · [if(lt(%q<page>,%q<pages>),+timeline/[inc(%q<page>)][if(strlen(%q<name>),%b%q<name>)] for the next · )])]+scene <id> opens a scene)
+          tone(muted,[if(gt(%q<timeline_pages>,1),Page %q<timeline_page> of %q<timeline_pages> · [if(lt(%q<timeline_page>,%q<timeline_pages>),+timeline/[inc(%q<timeline_page>)][if(strlen(%q<timeline_name>),%b%q<timeline_name>)] for the next · )])]+scene <id> opens a scene)
         flags: [funsyntax]
 
   # The two details, on the Scene Logger, read by the Scene plugin (+help scene details). icdate shows on a scene's

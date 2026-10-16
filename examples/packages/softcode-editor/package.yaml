@@ -108,9 +108,10 @@ objects:
       # Checks the draft's syntax, that the player still controls the object, and that nobody
       # changed the attribute or its syntax flag since the editor opened it or last saved it. Then
       # saves it as the player and sets %q<saved> to 1.
-      INC`SAVE`DRAFT: |-
-        think setq(diagnostics,u(%!/FUN`DRAFT`DIAGNOSE)); @assert not(json_query(%q<diagnostics>,size))=@pemit/port %j=u(%!/FUN`DISPLAY`ERRORS,%q<diagnostics>)%r[notice(EDITOR,Not saved.,warn)]; think setqm(editor_object,get(%!/DATA`%j`OBJECT),
-        editor_attribute,get(%!/DATA`%j`ATTRIBUTE)); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); @assert u(%!/FUN`TARGET`UNCHANGED,%q<editor_object>,%q<editor_attribute>)=@pemit/port %j=notice(EDITOR,%q<editor_attribute> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`SAVE`STORE; @assert not(comp(get(%q<editor_object>/%q<editor_attribute>),%q<draft>))=@pemit/port %j=notice(EDITOR,%q<editor_attribute> could not be saved.,error); @include %!/INC`SESSION`BASELINE; think setq(saved,1); @pemit/port %j=notice(EDITOR,%q<editor_attribute> saved.,ok)
+      INC`SAVE`DRAFT:
+        value: |-
+          think setq(diagnostics,u(%!/FUN`DRAFT`DIAGNOSE)); @assert not(json_query(%q<diagnostics>,size))=@pemit/port %j=u(%!/FUN`DISPLAY`ERRORS,%q<diagnostics>)%r[notice(EDITOR,Not saved.,warn)]; think setqm(editor_object,get(%!/DATA`%j`OBJECT),
+          editor_attribute,get(%!/DATA`%j`ATTRIBUTE)); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); @assert u(%!/FUN`TARGET`UNCHANGED,%q<editor_object>,%q<editor_attribute>)=@pemit/port %j=notice(EDITOR,%q<editor_attribute> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`SAVE`STORE; @assert not(comp(get(%q<editor_object>/%q<editor_attribute>),%q<draft>))=@pemit/port %j=notice(EDITOR,%q<editor_attribute> could not be saved.,error); @include %!/INC`SESSION`BASELINE; think setq(saved,1); @pemit/port %j=notice(EDITOR,%q<editor_attribute> saved.,ok)
         flags: [cmdsyntax]
       # Writes the draft and its syntax flag as the player, so the attribute is theirs and their own
       # permissions decide whether it may be set.
