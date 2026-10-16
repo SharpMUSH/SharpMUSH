@@ -14,6 +14,7 @@ from pathlib import Path
 
 HEX = re.compile(r'^[a-f0-9]{64}$')
 STATE = Path(os.environ.get('BACKUP_AGENT_STATE', '/agent-state'))
+KEYS_DIRECTORY = Path('/data/lightning.dataprotection-keys')
 LOCK_FD = None
 WORKER_ID = None
 
@@ -39,7 +40,7 @@ def receipt_for(job, code, snapshot):
     success = code == 0 and snapshot is not None and HEX.fullmatch(snapshot)
     return dict(id=job['id'], nonce=job['nonce'], exitCode=code,
                 snapshotId=snapshot if success else None,
-                errorCode=None if success else 'partial-backup' if code == 3 else 'restic-failed')
+                errorCode=None if success else 'required-key-ring-missing' if code == -3 else 'partial-backup' if code == 3 else 'restic-failed')
 
 def environment(job):
     # Inherited RESTIC_* variables can execute helper commands or select another repository.
@@ -65,8 +66,10 @@ def run_restic(job):
         # The inherited process lock proves no previous Restic child is still reading.
         # An existing snapshot cannot prove exit zero (partial snapshots exist).
         return receipt_for(job, -2, None)
-    sources = [source]
-    for fixed in ('/data/wiki-assets', '/data/lightning.dataprotection-keys', '/data/lightning.plugins'):
+    if not KEYS_DIRECTORY.is_dir():
+        return receipt_for(job, -3, None)
+    sources = [source, str(KEYS_DIRECTORY)]
+    for fixed in ('/data/wiki-assets', '/data/lightning.plugins'):
         if Path(fixed).exists():
             sources.append(fixed)
     argv = ['restic', 'backup', '--json', '--tag', 'sharpmush', '--tag', tag, '--host', 'sharpmush', '--'] + sources

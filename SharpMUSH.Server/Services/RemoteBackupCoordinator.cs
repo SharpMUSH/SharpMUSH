@@ -40,6 +40,9 @@ public sealed partial class RemoteBackupCoordinator(
 	public static readonly SecretDefinition AccountId = new("backup.restic.account.id", "Remote backup storage account identifier.", "server.admin");
 	public static readonly SecretDefinition AccountKey = new("backup.restic.account.key", "Remote backup storage account key.", "server.admin");
 	private readonly SemaphoreSlim _gate = new(1, 1);
+	// Protected by _gate. A completed provider copy survives a transient final read/save failure.
+	private readonly Dictionary<Guid, Result<WorldBackup>> _prepared = [];
+	private readonly HashSet<Guid> _preparing = [];
 	private readonly IDataProtector _protector = protection.CreateProtector("SharpMUSH.RemoteBackup.Profile.v1");
 	private static readonly TimeSpan Lease = TimeSpan.FromHours(2);
 
@@ -64,6 +67,7 @@ public sealed partial class RemoteBackupCoordinator(
 
 	public static string FailureCode(int exitCode) => exitCode switch
 	{
+		-3 => "required-key-ring-missing",
 		-2 => "worker-interrupted-result-unknown",
 		-1 => "worker-failed-or-timed-out",
 		3 => "partial-backup",
@@ -184,6 +188,13 @@ public sealed partial class RemoteBackupCoordinator(
 		{
 			var state = await ReadAsync();
 			var now = time.GetUtcNow();
+			foreach (var job in state.Jobs.Where(job => job.Run.State == "preparing" && !_preparing.Contains(job.Run.Id) && !_prepared.ContainsKey(job.Run.Id)))
+			{
+				// The initial save may have committed before reporting a failure. No provider was
+				// started unless that save returned; never leave such an inactive job wedged.
+				job.Run = job.Run with { State = "failed", ErrorCode = "local-copy-interrupted", CompletedAt = now };
+				job.ProtectedProfile = "";
+			}
 			foreach (var job in state.Jobs.Where(job => job.Run.State == "running" && job.Deadline < now))
 				job.Run = job.Run with { State = "unknown", ErrorCode = "agent-lease-expired" };
 			if (state.Jobs.FirstOrDefault(job => job.Run.State == "queued") is { } queued)
@@ -191,10 +202,11 @@ public sealed partial class RemoteBackupCoordinator(
 				queued.Run = queued.Run with { State = "preparing" };
 				prepare = queued.Run.Id;
 			}
-			await data.SetExpandedServerDataAsync(state);
+			await SavePreparationResultsAsync(state);
 			var latest = state.Jobs.LastOrDefault()?.Run.QueuedAt;
 			if (state.Settings.Enabled && (latest is null || now - latest >= TimeSpan.FromHours(state.Settings.IntervalHours)))
 				await QueueLockedAsync(state, "scheduled");
+			if (prepare is { } active) _preparing.Add(active);
 		}
 		finally { _gate.Release(); }
 		if (prepare is { } id) await PrepareAsync(id, ct);
@@ -202,31 +214,49 @@ public sealed partial class RemoteBackupCoordinator(
 
 	private async Task PrepareAsync(Guid id, CancellationToken ct)
 	{
-		WorldBackup? copy = null;
+		Result<WorldBackup> result = new Error<string>("local-copy-failed");
 		try
 		{
-			if (await backups.CreateRemoteAsync(id, ct) is WorldBackup written && OwnedCopy(id, written.Path)) copy = written;
+			if (await backups.CreateRemoteAsync(id, ct) is WorldBackup written && OwnedCopy(id, written.Path)) result = written;
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			// Provider exception contents can include paths or credentials; the public result is bounded.
 		}
-		await _gate.WaitAsync(ct);
-		try
+		finally
 		{
-			var state = await ReadAsync();
-			var job = state.Jobs.Single(job => job.Run.Id == id);
-			job.CopyPath = copy?.Path;
-			job.Run = job.Run with
+			await _gate.WaitAsync(CancellationToken.None);
+			try
 			{
-				State = copy is null ? "failed" : "ready",
-				ErrorCode = copy is null ? "local-copy-failed" : null,
-				CompletedAt = copy is null ? time.GetUtcNow() : null
-			};
-			if (copy is null) job.ProtectedProfile = "";
-			await data.SetExpandedServerDataAsync(state);
+				_prepared[id] = result;
+				_preparing.Remove(id);
+			}
+			finally { _gate.Release(); }
 		}
+		await _gate.WaitAsync(ct);
+		try { await SavePreparationResultsAsync(await ReadAsync()); }
 		finally { _gate.Release(); }
+	}
+
+	/// <summary>Retry metadata only. Never repeat a provider operation or reset an already claimed job.</summary>
+	private async Task SavePreparationResultsAsync(RemoteBackupData state)
+	{
+		foreach (var job in state.Jobs.Where(job => job.Run.State == "preparing"))
+		{
+			if (!_prepared.TryGetValue(job.Run.Id, out var result)) continue;
+			if (result is WorldBackup copy)
+			{
+				job.CopyPath = copy.Path;
+				job.Run = job.Run with { State = "ready", ErrorCode = null, CompletedAt = null };
+			}
+			else
+			{
+				job.Run = job.Run with { State = "failed", ErrorCode = "local-copy-failed", CompletedAt = time.GetUtcNow() };
+				job.ProtectedProfile = "";
+			}
+		}
+		await data.SetExpandedServerDataAsync(state);
+		_prepared.Clear();
 	}
 
 	public async Task RecoverAsync()

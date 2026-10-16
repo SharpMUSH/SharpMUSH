@@ -19,8 +19,26 @@ public class RemoteBackupLifecycleTests
 	private sealed class World : IExpandedObjectDataService
 	{
 		public string? Serialized;
-		public ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class => ValueTask.FromResult(Serialized is null ? null : JsonSerializer.Deserialize<T>(Serialized));
-		public ValueTask SetExpandedServerDataAsync<T>(T value, bool ignoreNull = false) where T : class { Serialized = JsonSerializer.Serialize(value); return ValueTask.CompletedTask; }
+		public bool FailNextReadySave;
+		public bool FailAfterReadySave;
+		public bool FailReadAfterCopy;
+		public bool FailNextRead;
+		public ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class
+		{
+			if (FailNextRead) { FailNextRead = false; throw new IOException("Synthetic transient completion-read failure"); }
+			return ValueTask.FromResult(Serialized is null ? null : JsonSerializer.Deserialize<T>(Serialized));
+		}
+		public ValueTask SetExpandedServerDataAsync<T>(T value, bool ignoreNull = false) where T : class
+		{
+			if (FailNextReadySave && value is RemoteBackupData state && state.Jobs.Any(job => job.Run.State == "ready"))
+			{
+				FailNextReadySave = false;
+				if (FailAfterReadySave) Serialized = JsonSerializer.Serialize(value);
+				throw new IOException("Synthetic transient completion-save failure");
+			}
+			Serialized = JsonSerializer.Serialize(value);
+			return ValueTask.CompletedTask;
+		}
 		public ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T : class => throw new NotSupportedException();
 		public ValueTask SetExpandedDataAsync<T>(T value, SharpObject obj, bool ignoreNull = false) where T : class => throw new NotSupportedException();
 	}
@@ -47,6 +65,8 @@ public class RemoteBackupLifecycleTests
 				var path = Path.Join(Root + ".remote-jobs", call.Arg<Guid>().ToString("N"), "20261016");
 				Directory.CreateDirectory(path);
 				File.WriteAllText(Path.Join(path, "data.mdb"), "safe copy");
+				Data.FailNextRead = Data.FailReadAfterCopy;
+				Data.FailReadAfterCopy = false;
 				return ValueTask.FromResult<Result<WorldBackup>>(new WorldBackup("20261016", path, Time.Now, 9));
 			});
 			Secrets = new(new SecretStoreTests.InMemoryWorld(), Protection,
@@ -134,17 +154,19 @@ public class RemoteBackupLifecycleTests
 	}
 
 	[Test]
-	public async Task PartialExitCannotAdvanceLastSuccess()
+	[Arguments(3, "partial-backup")]
+	[Arguments(-3, "required-key-ring-missing")]
+	public async Task FailedWorkerExitCannotAdvanceLastSuccess(int exitCode, string errorCode)
 	{
 		using var host = new Host();
 		await host.EnableAsync();
 		await host.Coordinator.QueueAsync("manual");
 		await host.Coordinator.TickAsync(default);
 		var claim = (await host.Coordinator.ClaimAsync("owner")).Expect<RemoteBackupClaim>();
-		await host.Coordinator.ReceiptAsync(new(claim.Id, claim.Nonce, 3, new string('a', 64), "password=secret"));
+		await host.Coordinator.ReceiptAsync(new(claim.Id, claim.Nonce, exitCode, new string('a', 64), "password=secret"));
 		var status = await host.Coordinator.StatusAsync();
 		await Assert.That(status.LastSuccessAt).IsNull();
-		await Assert.That(status.Runs.Single().ErrorCode).IsEqualTo("partial-backup");
+		await Assert.That(status.Runs.Single().ErrorCode).IsEqualTo(errorCode);
 		await Assert.That(JsonSerializer.Serialize(status).Contains("password=secret")).IsFalse();
 	}
 
@@ -240,6 +262,59 @@ public class RemoteBackupLifecycleTests
 		await Assert.That(next.AccountId).IsNull();
 		await Assert.That(next.AccountKey).IsNull();
 		await Assert.That(next.Repository).IsEqualTo("rest:https://backup.example.com/repo");
+	}
+
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	public async Task TransientCompletionSaveFailureRecoversWithoutRestartOrDuplicateCopy(bool committedBeforeFailure, bool failRead)
+	{
+		using var host = new Host();
+		await host.EnableAsync();
+		var queued = (await host.Coordinator.QueueAsync("manual")).Expect<RemoteBackupRun>();
+		host.Data.FailNextReadySave = !failRead;
+		host.Data.FailReadAfterCopy = failRead;
+		host.Data.FailAfterReadySave = committedBeforeFailure;
+		try { await host.Coordinator.TickAsync(default); }
+		catch (IOException) { }
+		var claim = await host.Coordinator.ClaimAsync("worker");
+		await host.Coordinator.TickAsync(default);
+		var recovered = (await host.Coordinator.ClaimAsync("worker")).Expect<RemoteBackupClaim>();
+		await Assert.That(recovered.Id).IsEqualTo(queued.Id);
+		await Assert.That(recovered.ReconcileOnly).IsEqualTo(committedBeforeFailure);
+		if (claim is RemoteBackupClaim original) await Assert.That(recovered.Nonce).IsEqualTo(original.Nonce);
+		await host.Backups.Received(1).CreateRemoteAsync(queued.Id, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task ConcurrentTickDoesNotReconcileOrDuplicateALiveProviderCopy()
+	{
+		using var host = new Host();
+		await host.EnableAsync();
+		var queued = (await host.Coordinator.QueueAsync("manual")).Expect<RemoteBackupRun>();
+		var path = Path.Join(host.Root + ".remote-jobs", queued.Id.ToString("N"), "20261016");
+		Directory.CreateDirectory(path);
+		var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var completion = new TaskCompletionSource<Result<WorldBackup>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		host.Backups.CreateRemoteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			started.TrySetResult(true);
+			return new ValueTask<Result<WorldBackup>>(completion.Task);
+		});
+		var preparing = host.Coordinator.TickAsync(default);
+		string during;
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await host.Coordinator.TickAsync(default);
+			during = (await host.Coordinator.StatusAsync()).Runs.Single().State;
+		}
+		finally { completion.TrySetResult(new WorldBackup("20261016", path, host.Time.Now, 1)); }
+		await preparing;
+		await Assert.That(during).IsEqualTo("preparing");
+		await Assert.That((await host.Coordinator.StatusAsync()).Runs.Single().State).IsEqualTo("ready");
+		await host.Backups.Received(1).CreateRemoteAsync(queued.Id, Arg.Any<CancellationToken>());
 	}
 
 }
