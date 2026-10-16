@@ -55,9 +55,12 @@ Explain justification and options here.
 Put complete commands and expected output in a fenced sharp block.
 ```
 
-`corpus`, `id`, `lookup`, `aliases`, and `sections` are required. `redirects` and
-`links` are optional. `links` declares additional help targets consumed by an
+`corpus`, `id`, `lookup`, `aliases`, and `sections` are required. `redirects`,
+`links` and `listedIn` are optional. `links` declares additional help targets consumed by an
 external presentation; ordinary authored shortcut links are checked automatically.
+`listedIn`, on the article or on a section, names index topics that should list it;
+it is for plugin help, which the engine's own index pages cannot link to (see
+"Help for a plugin" in `writing-a-plugin.md`). Each name must resolve like a link.
 Unknown metadata fields are reserved for future extensions; do not rely on them.
 
 Article IDs and section IDs use lowercase letters, digits, and hyphens, beginning

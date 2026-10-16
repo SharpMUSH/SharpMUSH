@@ -131,6 +131,63 @@ public class TextFileServiceTests
 		}
 	}
 
+	/// <summary>
+	/// A running plugin's topics are listed on <c>plugin help</c> under its name, and on each index its
+	/// <c>listedIn</c> names: an article's overview, or the section the index lookup names. An index that does not
+	/// exist is skipped, and the plugin's topic is still indexed.
+	/// </summary>
+	[Test]
+	public async Task PluginHelp_IsListedOnPluginHelp_AndOnTheIndexesItNames()
+	{
+		var plugins = Path.Join(Path.GetTempPath(), $"sharpmush-plugins-{Guid.NewGuid():N}");
+		var help = Path.Join(plugins, "radio", "help");
+		Directory.CreateDirectory(help);
+		await File.WriteAllTextAsync(Path.Join(help, "radio.md"), """
+			<!-- help-article
+			{"corpus":"help","id":"radio","lookup":"@radio","aliases":[],"listedIn":["@-general","@-missing"],
+			 "sections":[{"id":"tune","heading":"Tuning","lookup":"tune()","listedIn":["string functions"]}]}
+			-->
+			# @radio
+			Tunes in.
+			## Tuning
+			Picks a station.
+			""");
+		var catalog = PluginCatalog.ForEntries(
+		[
+			new PluginBootEntry("radio", "Radio", "1.0.0", null, PluginOrigin.BuiltIn, Path.Join(plugins, "radio"), PluginBootStatus.Loaded, null),
+		]);
+		var (service, root) = BuildServiceOverTempFiles(0, 0, catalog);
+		Directory.CreateDirectory(Path.Join(root, "help"));
+		try
+		{
+			await File.WriteAllTextAsync(Path.Join(root, "help", "plugins.md"), "# plugin help\nPlugins add these.");
+			await File.WriteAllTextAsync(Path.Join(root, "help", "general.md"), "# @-general\nGeneral commands.");
+			await File.WriteAllTextAsync(Path.Join(root, "help", "functions.md"), """
+				<!-- help-article
+				{"corpus":"help","id":"functions","lookup":"function list","aliases":[],
+				 "sections":[{"id":"string","heading":"String functions","lookup":"string functions"}]}
+				-->
+				# Function list
+				Categories.
+				## String functions
+				Text.
+				""");
+			await service.ReindexAsync();
+
+			await Assert.That(await service.GetEntryAsync("help", "plugin help")).Contains("Radio: [@radio]");
+			await Assert.That(await service.GetEntryAsync("help", "@-general")).Contains("From plugins: [@radio]");
+			await Assert.That(await service.GetEntryAsync("help", "string functions")).Contains("From plugins: [tune()]");
+			await Assert.That(await service.GetEntryAsync("help", "function list")).DoesNotContain("tune()")
+				.Because("the listing goes in the section it names");
+			await Assert.That(await service.GetEntryAsync("help", "@radio")).Contains("Tunes in.");
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+			Directory.Delete(plugins, recursive: true);
+		}
+	}
+
 	/// <summary>A plugin unloaded since the start keeps its catalog entry, but not its help.</summary>
 	[Test]
 	public async Task UnloadedPluginHelp_IsNotIndexed()

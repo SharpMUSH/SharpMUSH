@@ -2080,6 +2080,7 @@ Uninstalled scene. Scene System is off. Scene System stops when the server resta
 ::: seealso
 - [@shutdown]
 - [@package]
+- [plugin help]
 :::
 # @password
 `@password <old password>=<new password>`

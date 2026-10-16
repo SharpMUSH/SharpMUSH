@@ -17,7 +17,8 @@ This is the index to the MUSH online help files.
   For a list of attributes:                       help [attributes]<br>
   To see the configuration of this MUSH:          `@config`
 
-  For this game's own commands and topics:        help [+help]
+  For this game's own commands and topics:        help [+help]<br>
+  For the help its plugins bring:                  help [plugin help]
 
   If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 

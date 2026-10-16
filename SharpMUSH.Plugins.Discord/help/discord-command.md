@@ -4,6 +4,7 @@
   "id": "discord-command",
   "lookup": "@discord",
   "aliases": ["discord"],
+  "listedIn": ["@-general"],
   "sections": [
     {
       "id": "discord-setup",

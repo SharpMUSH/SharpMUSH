@@ -12,11 +12,23 @@ public static class HelpArticleParser
 	private const string MetadataStart = "<!-- help-article";
 	private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-	public sealed record SectionMetadata(string Id, string Heading, string Lookup, string[]? Aliases = null);
+	public sealed record SectionMetadata(string Id, string Heading, string Lookup, string[]? Aliases = null,
+		string[]? ListedIn = null);
 	public sealed record ArticleMetadata(string Corpus, string Id, string Lookup, string[] Aliases,
-		SectionMetadata[] Sections, Dictionary<string, string>? Redirects = null, string[]? Links = null);
+		SectionMetadata[] Sections, Dictionary<string, string>? Redirects = null, string[]? Links = null,
+		string[]? ListedIn = null);
 	public sealed record ParsedArticle(HelpArticle Article, IReadOnlyDictionary<string, string> Redirects,
-		IReadOnlyList<string> Links, bool Declared);
+		IReadOnlyList<string> Links, bool Declared)
+	{
+		/// <summary>The index topics that list this article or one of its sections, from <c>listedIn</c>.</summary>
+		public IReadOnlyList<HelpListing> Listings { get; init; } = [];
+	}
+
+	/// <summary>
+	/// A topic, <paramref name="Lookup"/>, that asks to be listed on another, <paramref name="Index"/>. A plugin's help
+	/// uses it to appear on the engine's own lists, such as <c>@-wizard</c> or a function category.
+	/// </summary>
+	public sealed record HelpListing(string Lookup, string Index);
 
 	public static IReadOnlyList<HeadingBlock> Headings(string markdown) =>
 		Markdown.Parse(markdown).OfType<HeadingBlock>().ToList();
@@ -104,8 +116,18 @@ public static class HelpArticleParser
 				throw new InvalidDataException($"Redirect target is not canonical: {target}");
 			}
 		}
+		var listings = (metadata.ListedIn ?? []).Select(index => new HelpListing(metadata.Lookup, index))
+			.Concat(metadata.Sections.SelectMany(section => (section.ListedIn ?? []).Select(index => new HelpListing(section.Lookup, index))))
+			.ToList();
+		if (listings.FirstOrDefault(listing => lookups.Contains(listing.Index)) is { } own)
+		{
+			throw new InvalidDataException($"An article cannot list itself: {own.Index}");
+		}
 		return [new ParsedArticle(new HelpArticle(metadata.Corpus, metadata.Id, metadata.Lookup,
-			HeadingText(markdown, title), overview, metadata.Aliases, sections), redirects, metadata.Links ?? [], true)];
+			HeadingText(markdown, title), overview, metadata.Aliases, sections), redirects, metadata.Links ?? [], true)
+		{
+			Listings = listings
+		}];
 	}
 
 	private static IReadOnlyList<ParsedArticle> ParseLegacy(string markdown, string corpus, IReadOnlyList<HeadingBlock> headings)
