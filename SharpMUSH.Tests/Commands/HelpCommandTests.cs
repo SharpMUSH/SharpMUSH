@@ -121,7 +121,7 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpPriv{privilege}");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help @channel privs"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help @channel privs list"));
 
 		await NotifyService
 			.Received(1)
