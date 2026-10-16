@@ -148,4 +148,33 @@ public class StoredMarkupSafetyTests : LightningDatabaseFixture
 		var attributes = await Db.GetAttributesAsync(new DBRef(0), "SAFETY_*").ToListAsync();
 		await Assert.That(string.Join(' ', attributes.Select(a => a.Name))).IsEqualTo("SAFETY_A SAFETY_Z");
 	}
+	[Test]
+	[Arguments("null", false)]
+	[Arguments("{\"Flags\":null}", false)]
+	[Arguments("null", true)]
+	[Arguments("{\"Flags\":null}", true)]
+	public async Task NullMetadataIsIsolatedInPatternReads(string raw, bool lazy)
+	{
+		var god = (await Db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		foreach (var name in new[] { "NULL_A", "NULL_BAD", "NULL_Z" })
+			await Db.SetAttributeAsync(new DBRef(0), [name], MarkupText.Plain(name), god);
+		await Db.SetAttributeAsync(new DBRef(0), ["NULL_BAD", "CHILD"], MarkupText.Plain("private child"), god);
+		await Db.Store.WriteAsync(tx => tx.Put(Tables.AttrMeta, Keys.Attr(0, "NULL_BAD"), Keys.Str(raw)));
+		var names = lazy
+			? await Db.GetLazyAttributesAsync(new DBRef(0), "NULL_*").Select(a => a.LongName).ToArrayAsync()
+			: await Db.GetAttributesAsync(new DBRef(0), "NULL_*").Select(a => a.LongName).ToArrayAsync();
+		await Assert.That(string.Join(' ', names)).IsEqualTo("NULL_A NULL_Z");
+	}
+
+	[Test]
+	[Arguments("null")]
+	[Arguments("{\"Flags\":null}")]
+	public async Task NullMetadataFailsClosedForExactPaths(string raw)
+	{
+		var god = (await Db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		await Db.SetAttributeAsync(new DBRef(0), ["NULL_BAD", "CHILD"], MarkupText.Plain("private child"), god);
+		await Db.Store.WriteAsync(tx => tx.Put(Tables.AttrMeta, Keys.Attr(0, "NULL_BAD"), Keys.Str(raw)));
+		await Assert.That(async () => await Db.GetAttributeAsync(new DBRef(0), ["NULL_BAD", "CHILD"]).ToArrayAsync()).Throws<InvalidDataException>();
+	}
+
 }

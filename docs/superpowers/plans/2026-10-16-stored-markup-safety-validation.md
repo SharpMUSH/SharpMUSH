@@ -108,3 +108,17 @@ Final wave-2 scoped results (separate supported treenode filters):
 - `/*/*/CommandAttributeInheritanceTests/*`: 10 passed.
 
 All 54 scoped scenarios passed without skips. The original eight mask scenarios failed 8/8 on the prior commit. Unrelated broad suites were not repeated; the previous correction's raw persistence, authorization and scheduler fixes remain intact.
+
+## External review follow-up: matched subtrees and null metadata
+
+At `0540957be`, six regressions reproduced null metadata/`Flags:null` aborting eager and lazy pattern scans and escaping exact-path authorization as NullReferenceException. An actual `@clone` regression reproduced a readable child copied beneath an unreadable `no_clone` branch, recreating that branch without its restriction.
+
+Attribute readers now share metadata validation. Invalid metadata reaches existing row-isolation or exact-path refusal handling; writes also refuse it instead of treating JSON null as a missing node. Pattern scans suppress descendants after omitting a matched unreadable parent, preserving parent-before-child copy semantics. Lazy scans remain metadata-only, and unmatched rows retain the existing no-value-read behavior. Dedicated discovery markers remain separate from display/copy results.
+
+Verification with pinned SDK, PATH first, TMPDIR/TMP/TEMP `/temp/codex/markup`, rootless Podman and Ryuk disabled:
+
+- `dotnet build SharpMUSH.Tests -m:2 -nr:false`: zero warnings/errors.
+- `dotnet run --project SharpMUSH.Tests --no-build -- --treenode-filter '/*/*/StoredMarkupSafetyTests/*'`: 16 passed (six new cases failed before the fix).
+- `dotnet run --project SharpMUSH.Tests --no-build -- --treenode-filter '/*/*/StoredMarkupCommandSafetyTests/*'`: 26 passed (new clone case failed before the fix).
+- Existing `ObjectDestructionTests` full class: 18 passed before these production edits. The single CI purge failure therefore remains unexplained; no speculative purge change was made.
+- Full engine suite started with `--maximum-parallel-tests 8` to investigate that broader-suite failure. Result is pending at this checkpoint and is not claimed green.

@@ -262,4 +262,18 @@ public class StoredMarkupCommandSafetyTests
 		await Assert.That((await Attribute(clone, "COPIED")).StoredValue!.Serialized).IsEqualTo(Future);
 		await Assert.That((await Attribute(clone, "MOVED")).StoredValue!.Serialized).IsEqualTo(Future);
 	}
+	[Test]
+	public async Task CloneCannotReviveChildrenOfUnreadableNoCloneBranch()
+	{
+		var source = await Thing();
+		await Command($"&PRIVATE`CHILD {source}=private child");
+		await Command($"@set {source}/PRIVATE=no_clone");
+		await Command($"&PUBLIC {source}=public value");
+		var database = (LightningDatabase)Get<ISharpDatabase>();
+		await database.Store.WriteAsync(tx => tx.Put(Tables.AttrVal, Keys.Attr(source.Number, "PRIVATE"), Keys.Str("not JSON")));
+		var clone = DBRef.Parse((await Command($"@clone {source}")).Message.ToPlainText());
+		await Assert.That(await Get<IMediator>().CreateStream(new GetAttributeQuery(clone, ["PRIVATE", "CHILD"])).AnyAsync()).IsFalse();
+		await Assert.That((await Attribute(clone, "PUBLIC")).Value.ToPlainText()).IsEqualTo("public value");
+	}
+
 }
