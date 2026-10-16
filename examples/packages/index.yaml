@@ -85,7 +85,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.10.2
+    version: 1.11.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -175,7 +175,7 @@ packages:
   - path: health/
     name: Health
     package: health
-    version: 1.0.2
+    version: 1.0.3
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
   - path: health-jobs/
     name: Health Staff Load
@@ -235,13 +235,13 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.0.4
-    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help)
+    version: 1.1.0
+    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help and plus-config)
   - path: roster-jobs/
     name: Roster applications in jobs
     package: roster-jobs
-    version: 1.0.1
-    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs and plus-help)
+    version: 1.1.0
+    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs, plus-help and plus-config)
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability

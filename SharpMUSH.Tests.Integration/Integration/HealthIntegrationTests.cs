@@ -173,6 +173,32 @@ public class HealthIntegrationTests
 	}
 
 	[Test]
+	public async Task RoomNamesWithTheTableSeparatorsShowWhole()
+	{
+		try
+		{
+			await ApplyAsync("health");
+			var (bar, barRoom) = await Player("Bar|Grill");
+			var (up, upRoom) = await Player("Up^Down");
+			foreach (var who in new[] { bar, up })
+			{
+				await God($"@role/assign #{who.DbRef.Number}=approved");
+				await As(who, "pose looks around.");
+				await As(who, "pose sits down.");
+			}
+
+			var (staff, _) = await Player("HealthSep");
+			await God($"@role/assign #{staff.DbRef.Number}=royalty");
+			await Assert.That(await As(staff, "+health/rooms 7")).Contains(barRoom).And.Contains(upRoom)
+				.Because("a | or ^ in a room's name is part of the name, not a cell or row break");
+		}
+		finally
+		{
+			await Installer.UninstallAsync("health", force: true, CancellationToken.None);
+		}
+	}
+
+	[Test]
 	public async Task HealthJobsShowsStaffLoad()
 	{
 		try
@@ -186,12 +212,23 @@ public class HealthIntegrationTests
 
 			var (staff, _) = await Player("LoadStaff");
 			await God($"@role/assign #{staff.DbRef.Number}=royalty");
+			await God($"@role/assign #{staff.DbRef.Number}=job-admin");
 
-			await Assert.That(await As(staff, "+health")).Contains("Staff load").And.Contains("Waiting on staff");
+			var summary = await As(staff, "+health");
+			await Assert.That(summary).Contains("Staff load");
+			await Assert.That(Regex.IsMatch(summary, @"Open jobs\D+1\b")).IsTrue().Because(summary);
+			await Assert.That(Regex.IsMatch(summary, @"Waiting on staff\D+1\b")).IsTrue().Because("a new job waits on staff");
+			await Assert.That(Regex.IsMatch(summary, @"Unhandled\D+1\b")).IsTrue().Because("nobody has claimed it");
 			var load = await As(staff, "+health/staff");
-			await Assert.That(load).Contains("Staff load").And.Contains("Nobody");
-			// The oldest waiting job is named by its number, read from the job's JOB`NUM.
-			await Assert.That(Regex.IsMatch(load, @"job \d+")).IsTrue();
+			await Assert.That(load).Contains("Staff load").And.Contains("Nobody").And.Contains("job 1")
+				.Because("the oldest waiting job is named by its number");
+
+			await As(staff, "+job/claim 1");
+			await Assert.That(await As(staff, "+health/staff")).Contains(staff.Name).And.DoesNotContain("Nobody");
+			await As(staff, "+job/reply 1=Which lamp?");
+			var answered = await As(staff, "+health");
+			await Assert.That(Regex.IsMatch(answered, @"Waiting on staff\D+0\b")).IsTrue().Because("the job now waits on its player");
+			await Assert.That(Regex.IsMatch(answered, @"Open jobs\D+1\b")).IsTrue().Because(answered);
 			await Assert.That(await As(staff, "+health/bogus")).Contains("/staff");
 		}
 		finally

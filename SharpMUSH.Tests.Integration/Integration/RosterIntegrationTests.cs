@@ -183,6 +183,36 @@ public class RosterIntegrationTests
 	}
 
 	[Test]
+	public async Task IdleTakesAWholeNumberOfDays()
+	{
+		try
+		{
+			await InstallRosterAsync();
+			var staff = await Player("RosIdleStaff", "roster-admin");
+
+			await Assert.That(await As(staff, "+roster/idle 0")).Contains("+roster/idle <days>: a whole number of days.")
+				.Because("0 days is no number of days, not the setting");
+			await Assert.That(await As(staff, "+roster/idle x")).Contains("+roster/idle <days>: a whole number of days.");
+
+			var character = await Player("RosIdleChar");
+			await As(staff, $"+roster/add {character.Name}=Wardens");
+			await Assert.That(await As(staff, "+roster/all/1")).Contains(character.Name).Because("a list's page is a last switch");
+			await Assert.That(await As(staff, "+roster/all/2")).Contains("There is one page - you asked for page 2.");
+			await Assert.That(await As(staff, $"+roster/2 {character.Name}")).Contains("+roster <name> takes no page number.");
+			await Assert.That(await As(staff, $"+roster/history/1 {character.Name}")).Contains("added");
+
+			await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+			await Assert.That(await As(staff, "+config roster/idle-days=0")).DoesNotContain("is now");
+			await Assert.That(await As(staff, "+config roster/how-to-get=Page a roster admin.")).Contains("roster/how-to-get is now");
+			await Assert.That(await As(staff, "+roster")).Contains("Page a roster admin.");
+		}
+		finally
+		{
+			await UninstallAsync("roster");
+		}
+	}
+
+	[Test]
 	public async Task LinkingOutsideTheRosterKeepsItRight()
 	{
 		try
