@@ -9,8 +9,8 @@ namespace SharpMUSH.Library.Services;
 /// iteration to ITER and the work under it, not to NULL. Argument evaluation pauses the clock of the
 /// call it feeds, whether the arguments are evaluated before the call or by the call itself through
 /// their deferred evaluation (<c>iter</c>, <c>switch</c>, <c>@switch</c>'s patterns). A no-parse
-/// function that instead hands its raw argument text to <c>FunctionParse</c> (<c>uldefault</c>,
-/// <c>localize</c>) is charged for that evaluation. The inclusive time is kept too, for the queue
+/// function that hands its raw argument text to <c>FunctionParse</c> (<c>uldefault</c>,
+/// <c>localize</c>) pauses the clock around that parse in its current scope. The inclusive time is kept too, for the queue
 /// diagnostics profile, which reports it as such.
 /// </remarks>
 public sealed class InvocationClock

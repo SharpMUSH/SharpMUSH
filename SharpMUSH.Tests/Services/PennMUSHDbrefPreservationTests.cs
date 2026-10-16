@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
+using Quartz;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -297,6 +298,7 @@ public class PennMUSHDbrefPreservationTests
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
 		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
+		await world.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 		var before = await PackageObjectNumbersAsync(registry, bundled);
 		await Assert.That(before.Min()).IsLessThanOrEqualTo(14);
 
@@ -323,6 +325,8 @@ public class PennMUSHDbrefPreservationTests
 			await Assert.That((await packageObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number)
 				.IsEqualTo(packageManager.Object.Key);
 		}
+
+		await world.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 
 		// The speech hooks the scene package captures poses with point at its new logger, not at the
 		// imported object that now holds the old logger's number.
@@ -393,6 +397,7 @@ public class PennMUSHDbrefPreservationTests
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
 		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
+		await world.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 
 		using var cancellation = new CancellationTokenSource();
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath),
@@ -458,6 +463,14 @@ public class PennMUSHDbrefPreservationTests
 	private static void StoredOptionsWithScenePlugin(IServiceCollection services)
 	{
 		StoredOptions(services);
+		// Scene installation queues STARTUP through @trigger. Run the real immediate queue,
+		// with an inert timer backend so this private world never joins Quartz's global host.
+		var timers = Substitute.For<ISchedulerFactory>();
+		timers.GetScheduler().Returns(Substitute.For<IScheduler>());
+		services.AddSingleton(timers);
+		services.AddSingleton<SharpMUSH.Library.Services.TaskScheduler>();
+		services.RemoveAll<ITaskScheduler>();
+		services.AddSingleton<ITaskScheduler>(sp => sp.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>());
 		var plugins = Substitute.For<IPluginManager>();
 		plugins.Registration("scene").Returns(new PluginRegistration(false, 0, 0));
 		services.RemoveAll<IPluginManager>();

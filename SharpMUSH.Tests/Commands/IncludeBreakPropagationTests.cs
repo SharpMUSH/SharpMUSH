@@ -44,6 +44,7 @@ public class IncludeBreakPropagationTests
 		await Cmd($"&INC`GATE {obj}={guard}");
 		await Cmd($"&RUN {obj}={caller}");
 		await Cmd($"@trigger {obj}/RUN");
+		await WebAppFactoryArg.QueueBarrierAsync();
 		return (await Eval($"get({obj}/OUT`GATE)"), await Eval($"get({obj}/OUT`REACHED)"));
 	}
 
@@ -94,6 +95,7 @@ public class IncludeBreakPropagationTests
 		await Cmd($"&INC`OUTER {obj}=@include/nobreak %!/INC`INNER; &OUT`MIDDLE %!=the middle kept going");
 		await Cmd($"&RUN {obj}=@include %!/INC`OUTER; &OUT`REACHED %!=the caller kept going");
 		await Cmd($"@trigger {obj}/RUN");
+		await WebAppFactoryArg.QueueBarrierAsync();
 
 		await Assert.That(await Eval($"get({obj}/OUT`GATE)")).IsEqualTo("refused");
 		await Assert.That(await Eval($"get({obj}/OUT`MIDDLE)")).IsEqualTo("the middle kept going")
@@ -115,6 +117,7 @@ public class IncludeBreakPropagationTests
 		await Cmd($"&INC`OUTER {obj}=@include %!/INC`INNER; &OUT`MIDDLE %!=the middle kept going");
 		await Cmd($"&RUN {obj}=@include %!/INC`OUTER; &OUT`REACHED %!=the caller kept going");
 		await Cmd($"@trigger {obj}/RUN");
+		await WebAppFactoryArg.QueueBarrierAsync();
 
 		await Assert.That(await Eval($"get({obj}/OUT`GATE)")).IsEqualTo("refused");
 		await Assert.That(await Eval($"get({obj}/OUT`MIDDLE)")).IsEmpty()
@@ -133,6 +136,7 @@ public class IncludeBreakPropagationTests
 		await Cmd($"&INC`THREE {obj}=&OUT`THREE %!=three ran");
 		await Cmd($"&RUN {obj}=@include/chain %!/INC`ONE %!/INC`TWO %!/INC`THREE; &OUT`REACHED %!=the caller kept going");
 		await Cmd($"@trigger {obj}/RUN");
+		await WebAppFactoryArg.QueueBarrierAsync();
 
 		await Assert.That(await Eval($"get({obj}/OUT`ONE)")).IsEqualTo("one ran");
 		await Assert.That(await Eval($"get({obj}/OUT`GATE)")).IsEqualTo("refused");
@@ -153,6 +157,7 @@ public class IncludeBreakPropagationTests
 		await Cmd($"&INC`GATE {obj}=@assert 0={{&OUT`GATE %!=refused}}; &OUT`AFTERGATE %!=the guard kept going");
 		await Cmd($"&RUN {obj}=@include %!/INC`GATE; &OUT`REACHED %!=the caller kept going");
 		await Cmd($"@trigger {obj}/RUN");
+		await WebAppFactoryArg.QueueBarrierAsync();
 
 		await Assert.That(await Eval($"get({obj}/OUT`GATE)")).IsEqualTo("refused");
 		await Assert.That(await Eval($"get({obj}/OUT`AFTERGATE)")).IsEmpty()

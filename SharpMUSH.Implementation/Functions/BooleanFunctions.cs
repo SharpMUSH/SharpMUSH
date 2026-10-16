@@ -58,7 +58,7 @@ public partial class Functions
 		var isTrue = test ?? (value => value.Truthy(parser));
 		async ValueTask<bool> Test(CallState argument, CancellationToken _)
 		{
-			var parsed = await parser.FunctionParse(argument.Message) ?? CallState.Empty;
+			var parsed = await ParseRawArgument(parser, argument.Message) ?? CallState.Empty;
 			hadErrors |= parsed.HadErrors;
 			return truthy == isTrue(parsed.Message);
 		}

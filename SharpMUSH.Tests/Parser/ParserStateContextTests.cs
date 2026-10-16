@@ -10,6 +10,37 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task AQueuedSnapshotDetachesTheEntireLiveHttpResponseContext()
+	{
+		var response = new HttpResponseContext { ContentType = "application/parent" };
+		var state = ParserState.RootFor(new DBRef(7)) with { HttpResponse = response };
+		await Assert.That(state.SnapshotForQueuedAction().HttpResponse).IsNull();
+		await Assert.That(ReferenceEquals(state.HttpResponse, response)).IsTrue();
+	}
+
+	[Test]
+	public async Task QueuedArgumentsRetainValuesWithoutRetainingDeferredParsers()
+	{
+		var argument = new CallState(MarkupText.Plain("captured"), 5, null,
+			() => throw new InvalidOperationException("Retained the submitting parser"));
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(new() { ["0"] = argument });
+		var queued = state.SnapshotForQueuedAction();
+		await Assert.That((await queued.Arguments["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
+		await Assert.That((await queued.EnvironmentRegisters["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
+	}
+
+	[Test]
+	public async Task QueuedArgumentsAreDetachedFromCallerMutation()
+	{
+		var arguments = new Dictionary<string, CallState> { ["0"] = new("before") };
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(arguments) with { CallerArguments = arguments };
+		var queued = state.SnapshotForQueuedAction();
+		arguments["0"] = new("after");
+		await Assert.That(queued.Arguments["0"].Message.ToPlainText()).IsEqualTo("before");
+		await Assert.That(queued.CallerArguments!["0"].Message.ToPlainText()).IsEqualTo("before");
+	}
+
+	[Test]
 	public async Task AttributeInvocationBinderReplacesParentPresenceAndExcludesGeneratedKeys()
 	{
 		var parentArguments = new Dictionary<string, CallState> { ["parent"] = new("old") };

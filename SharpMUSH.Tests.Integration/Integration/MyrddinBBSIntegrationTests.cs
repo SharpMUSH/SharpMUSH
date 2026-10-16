@@ -622,6 +622,7 @@ public class MyrddinBBSIntegrationTests
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current!.Execution.CancellationToken);
 		Task<IReadOnlyList<string>>? collection = null;
+		Exception? testFailure = null;
 		try
 		{
 			var gateSource = pocketGate ? await BbsPocketAsync() : await BbsBoardAsync();
@@ -629,11 +630,14 @@ public class MyrddinBBSIntegrationTests
 			{
 				var previous = scheduler.GetQueueEntries().Select(entry => entry.Pid).ToHashSet();
 				await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@trigger {gateSource}/DO_TIMEOUTS"));
+				// The admitted trigger creates its timer only when the child entry runs.
+				await scheduler.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 				// This exact invocation creates the script's 86400-second recurrence. Pin its identity once;
 				// arbitrary long waits are never excluded by the completion polling loop.
 				var timers = scheduler.GetQueueEntries().Where(entry => !previous.Contains(entry.Pid)
 					&& entry.Source?.Matches(gateSource) == true && entry.Kind == "delay"
 					&& entry.State == QueueEntryState.Pending && entry.RemainingDelay > TimeSpan.FromHours(23)).ToArray();
+				// Own every timer before asserting the count, so even a failed assertion cleans them up.
 				foreach (var timer in timers) _dailyTimerPids.Add(timer.Pid);
 				await Assert.That(timers).HasSingleItem();
 				await WaitForBbsQueueAsync();
@@ -674,18 +678,30 @@ public class MyrddinBBSIntegrationTests
 			await Assert.That(messages.Contains(diagnostic)).IsTrue();
 			await WaitForBbsQueueAsync();
 		}
+		catch (Exception failure)
+		{
+			testFailure = failure;
+			throw;
+		}
 		finally
 		{
 			release.TrySetResult();
 			try
 			{
-				if (collection is not null) await collection.WaitAsync(TimeSpan.FromSeconds(10));
+				try
+				{
+					if (collection is not null) await collection.WaitAsync(TimeSpan.FromSeconds(10));
+				}
+				finally
+				{
+					foreach (var pid in _dailyTimerPids) await scheduler.HaltByPid(pid);
+					_dailyTimerPids.Clear();
+				}
 				await WaitForBbsQueueAsync();
 			}
-			finally
+			catch (Exception cleanupFailure) when (testFailure is not null)
 			{
-				foreach (var pid in _dailyTimerPids) await scheduler.HaltByPid(pid);
-				_dailyTimerPids.Clear();
+				TestDiagnostics.WriteLine($"BBS cleanup after {testFailure.GetType().Name}: {cleanupFailure}");
 			}
 		}
 	}
