@@ -262,3 +262,28 @@ registers the application — see `dynamic-applications-admin.md`.
 
 See also: the design spec **`../design/dynamic-applications.md`** and the live reference
 implementation **`../../examples/packages/profile-handler/package.yaml`**.
+
+## Shared presentation transitions and optional drafts
+
+`SchemaApplicationHost` owns document, data, typed draft, errors and action admission for both page applications and schema widgets. The standalone form/view components also delegate actions to this host. Schema version 1 supports `form` and `view`; unsupported replacement versions/kinds produce a visible diagnostic.
+
+An accepted response follows this order:
+
+1. On success, `reset_fields: true` removes the draft (`reset_fields: ["key"]` removes only those keys), then returned `fields` merge when reset or `merge_fields` requests it.
+2. On success **or failure**, replacement `data` is authoritative for keys it supplies, then replacement `schema` selects the resulting form/view presentation. Defaults seed missing keys only. Explicit null, false, zero and empty text suppress defaults.
+3. Failure errors bind against the resulting form. Errors for hidden, removed or read-only targets join the accessible global summary. Failure never runs success reset/merge, toast or navigation.
+4. On success an allowed redirect wins over local rendering and retires that request. Unsafe schemes are rejected.
+
+Removed field values remain local draft so Back can restore them; actions post only the current form's declared fields plus explicit button values. A read-only view posts button values only. Hidden fields remain compatible transport metadata and are untrusted like every other posted value. The server must derive identity and recheck authorization independently.
+
+Each host serializes actions and disables editing while pending. Disposal, navigation, replacement documents/data and active-character changes retire its response token. A late transport completion cannot change the current instance. A fresh host supplies an opaque `X-SharpMUSH-Form-Instance` nonce; it selects a tab within the verified actor, and grants no actor authority.
+
+Jobs 1.12 adds an optional nonmodal adapter: `+request/draft new`, `set <field>=<literal text>`, `review`, `back`, `file`, and `cancel`. Ordinary commands remain available between edits. `set` preserves brackets, substitutions and semicolons as literal data; `softcode` takes exactly `true` or `false`. Existing `+request` and modal `@input` retain their routes and cancellation behavior. The Jobs new-request portal now uses the same review/file callbacks.
+
+The internal `@appdraft[/show] <object>/<declaration>=<action>,<JSON fields>` adapter reads a JSON field array. Its fixed actions are new/set/review/back/file/cancel. Field types are text, textarea, select, boolean, number, ISO date, list and multiselect; rules currently supported by the adapter are required and max_length. No truthy string conversion occurs: boolean and numeric values must have their JSON types; text/date/select values are strings; lists contain strings. Unknown posted field names fail. Defaults apply only to absent fields. `appfields(<declaration>,<fields>)` applies the same structural validation for legacy one-shot entry points.
+
+Sibling VALIDATE and FILE command attributes receive trusted named `draft_actor`, literal JSON `draft_fields`, and allowlisted `draft_action`; they answer by setting `appdraft_result` to ordinary action-response JSON. Jobs' FORM declaration drives its portal fields, terminal review and shared required/length checks. Its callbacks check bucket visibility, filing permission and whether the bucket still takes jobs immediately before filing, then invoke the existing filing routine. Application persistence remains ordinary softcode. Each callback enters its own attribute frame: `hasarg(draft_actor,supplied)`, `hasarg(draft_fields,supplied)` and `hasarg(draft_action,supplied)` are true. Inherited caller environment values remain visible but are not supplied callback inputs; no numbered aliases are created. The current attribute identity names the callback, and the caller's argument frame and identity resume after it returns.
+
+Drafts expire after 30 idle minutes. There are at most 64 instances per actor, 4,096 globally, 64 declared fields and 64 KiB of field JSON per draft. Terminal instances retire on disconnect, logout and character rebind. Web instances are inaccessible under a different actor; client retirement and expiry discard abandoned presentation state. They do not support cross-client resume. File serializes with the instance's edits and binds its receipt to actor, instance, operation ID and field digest. Matching retries return the previous response; conflicting payloads or stale review operations fail. A failed File can return to edit, then a new review creates a fresh operation. Receipt memory is process-local: restart loses drafts/receipts, and no exactly-once promise spans process failure. If a callback starts filing but fails to answer, retry is fenced with an explicit check-the-world diagnostic.
+
+Authoring cost for this proof: add a declared scalar/list field once; the portal projects it, the terminal loops the declaration, and structural validation reads the same declaration. A required/length change is one declaration edit. Conditional review changes WEB`DRAFT`ANSWER; world checks remain ordinary VALIDATE callback edits. Terminal-only wording belongs in FORM`DISPLAY. Unsupported field/rule shapes fail explicitly rather than defining another workflow language.

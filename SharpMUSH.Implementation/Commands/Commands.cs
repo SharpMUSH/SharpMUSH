@@ -31,6 +31,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
 	private IPasswordService PasswordService { get; }
 	private IConnectionService ConnectionService { get; }
+
+	private ApplicationDraftService ApplicationDrafts { get; }
 	private IOttStore OttStore { get; }
 	private IAccountService AccountService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
@@ -136,6 +138,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IPasswordService passwordService,
 		IConnectionService connectionService,
+		ApplicationDraftService applicationDrafts,
 		IOttStore ottStore,
 		IAccountService accountService,
 		IAccountSessionStore accountSessionStore,
@@ -195,6 +198,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		Configuration = configuration;
 		PasswordService = passwordService;
 		ConnectionService = connectionService;
+		ApplicationDrafts = applicationDrafts;
 		OttStore = ottStore;
 		AccountService = accountService;
 		AccountSessionStore = accountSessionStore;

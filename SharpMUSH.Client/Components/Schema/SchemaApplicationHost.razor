@@ -1,0 +1,97 @@
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@implements IDisposable
+@inject IServiceProvider Services
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+@if (_state.Document is { } document)
+{
+    @if (!document.IsForm && _state.Form.GlobalError is { } error)
+    {
+        <div role="alert" class="my-2">@error</div>
+    }
+    @if (document.IsForm)
+    {
+        <SchemaFormRenderer Document="document" Data="_state.Data" State="_state.Form" Busy="_state.Busy" ActionHandler="Dispatch" />
+    }
+    else
+    {
+        <SchemaViewRenderer Document="document" Data="_state.Data" Busy="_state.Busy" ActionHandler="Dispatch" QuietWhenEmpty="QuietWhenEmpty" />
+    }
+}
+
+else if (_state.Form.GlobalError is { } diagnostic)
+{
+    <div role="alert">@diagnostic</div>
+}
+
+@code {
+    [Parameter] public PortalSchemaDocument? Document { get; set; }
+    [Parameter] public SchemaData? Data { get; set; }
+    [Parameter] public bool QuietWhenEmpty { get; set; }
+    private readonly SchemaApplicationState _state = new();
+    private PortalSchemaDocument? _loadedDocument;
+    private SchemaData? _loadedData;
+    private bool _disposed;
+    private AccountAuthService? _auth;
+    private string _instance = Guid.NewGuid().ToString("N");
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += Leaving;
+        _auth = Services.GetService<AccountAuthService>();
+        if (_auth is not null) _auth.ActiveCharacterChanged += CharacterChanged;
+    }
+    private void CharacterChanged()
+    {
+        _instance = Guid.NewGuid().ToString("N");
+        _state.Load(null, null);
+        _ = InvokeAsync(StateHasChanged);
+    }
+    private void Leaving(object? sender, LocationChangedEventArgs args)
+    {
+        _instance = Guid.NewGuid().ToString("N");
+        _state.Retire();
+    }
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(Document, _loadedDocument))
+        {
+            _instance = Guid.NewGuid().ToString("N");
+            _state.Load(Document, Data);
+            _loadedDocument = Document;
+            _loadedData = Data;
+        }
+        else if (!ReferenceEquals(Data, _loadedData))
+        {
+            _state.UpdateData(Data);
+            _loadedData = Data;
+        }
+    }
+
+    private async Task Dispatch(SchemaActionRequest request)
+    {
+        if (_disposed || _state.Form.Action(request.Action) is not { } action) return;
+        var token = _state.Begin();
+        if (token == Guid.Empty) return;
+        var result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, _state.Form.Payload(request.Values), _instance);
+        if (_disposed || !_state.Apply(token, action, result, Loc["WidActionFailed"])) return;
+        if (_state.Redirect is { } redirect)
+        {
+            _state.Retire();
+            Nav.NavigateTo(redirect);
+            return;
+        }
+        if (_state.Toast is { Length: > 0 } toast) Snackbar.Add(toast, Severity.Success);
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _state.Retire();
+        Nav.LocationChanged -= Leaving;
+        if (_auth is not null) _auth.ActiveCharacterChanged -= CharacterChanged;
+    }
+}

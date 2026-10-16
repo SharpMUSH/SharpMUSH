@@ -1,6 +1,6 @@
 format: "1.10"
 package: jobs
-version: 1.11.0
+version: 1.12.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -430,7 +430,7 @@ objects:
       # a bucket's full name, so "+request Help w/ exits=..." is a title in the default bucket.
       CMD`REQUEST:
         value: |-
-          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think u({{jobs}}/FUN`COMMAND`PARSE,%1,%2); @assert not(strlen(%q<cmd_switch>%q<cmd_page>))=@pemit %#=notice(JOBS,+request has no /%q<cmd_switch>%q<cmd_page> switch. Add /softcode to show your text as typed.,warn); @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(JOBS,+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,warn); think setq(file_bucket,if(strmatch(%q<cmd_left_side>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<cmd_left_side>,/),%#))); @include/args {{jobs}}/INC`FILE`CHECKED=bucket,firstof(%q<file_bucket>,u({{jobs}}/FUN`BUCKET`FIND,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))),title,if(strlen(%q<file_bucket>),trim(after(%q<cmd_left_side>,/)),%q<cmd_left_side>),text,%q<cmd_right_side>
+          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think u({{jobs}}/FUN`COMMAND`PARSE,%1,%2); @break strmatch(%q<cmd_switch>,draft)={@include {{jobs}}/INC`DRAFT}; @assert not(strlen(%q<cmd_switch>%q<cmd_page>))=@pemit %#=notice(JOBS,+request has no /%q<cmd_switch>%q<cmd_page> switch. Add /softcode to show your text as typed.,warn); @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(JOBS,+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,warn); think setq(file_bucket,if(strmatch(%q<cmd_left_side>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<cmd_left_side>,/),%#))); @include/args {{jobs}}/INC`FILE`CHECKED=bucket,firstof(%q<file_bucket>,u({{jobs}}/FUN`BUCKET`FIND,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))),title,if(strlen(%q<file_bucket>),trim(after(%q<cmd_left_side>,/)),%q<cmd_left_side>),text,%q<cmd_right_side>
         flags: [REGEXP]
       # +bug, +typo, +pitch and +apply <title>=<text>: +request into a set bucket (DATA`CONFIG`<word>-BUCKET).
       CMD`SHORTCUT:
@@ -1096,7 +1096,7 @@ objects:
       # %<bucket> (an objid, or empty when there is none), %<title> and %<text>, from +request, +bug and
       # friends, and /create; the /softcode switch is %q<text_format>, as FUN`COMMAND`PARSE left it.
       INC`FILE`CHECKED: |-
-        @assert strlen(%<bucket>)=@pemit %#=notice(JOBS,There is no such bucket. +buckets lists them.,warn); @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=notice(JOBS,You can't file in [name(%<bucket>)].,error); @assert u({{jobs}}/FUN`BUCKET`TAKING,%<bucket>)=@pemit %#=notice(JOBS,name(%<bucket>) is not taking new jobs. +buckets lists the buckets.,warn); @assert strlen(%<title>)=@pemit %#=notice(JOBS,Give it a title: +request <title>=<text>,warn); @assert lte(strlen(%<title>),80)=@pemit %#=notice(JOBS,Keep the title to 80 characters. The rest goes after the =.,warn); @assert strlen(%<text>)=@pemit %#=notice(JOBS,Say what you need after the =.,warn); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<text_format>,how,command; @pemit %#=notice(JOBS,Filed job %q<job_number> in [name(%<bucket>)]: %<title>.[if(strmatch(get(%q<job_object>/JOB`AUDIT`STATE),pending),%bIt is approved at once\, and staff look it over later.,if(strlen(setr(file_expect,u({{jobs}}/FUN`WAIT`SENTENCE,%<bucket>))),%b%q<file_expect>))] +job %q<job_number> shows it.,ok)
+        @assert strlen(%<bucket>)=@pemit %#=notice(JOBS,There is no such bucket. +buckets lists them.,warn); @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=notice(JOBS,You can't file in [name(%<bucket>)].,error); @assert u({{jobs}}/FUN`BUCKET`TAKING,%<bucket>)=@pemit %#=notice(JOBS,name(%<bucket>) is not taking new jobs. +buckets lists the buckets.,warn); @assert strmatch(json_query(setr(form_check,appfields(get({{jobs}}/FORM),json(object,bucket,json(string,%<bucket>),title,json(string,%<title>),text,json(string,%<text>)))),get,ok),true)=@pemit %#=notice(JOBS,json_query(%q<form_check>,get,errors),warn); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<text_format>,how,command; @pemit %#=notice(JOBS,Filed job %q<job_number> in [name(%<bucket>)]: %<title>.[if(strmatch(get(%q<job_object>/JOB`AUDIT`STATE),pending),%bIt is approved at once\, and staff look it over later.,if(strlen(setr(file_expect,u({{jobs}}/FUN`WAIT`SENTENCE,%<bucket>))),%b%q<file_expect>))] +job %q<job_number> shows it.,ok)
 
       # ---- writes, shared with the portal routes and the API -------------------
       # Each takes what it writes as named arguments (@include/args): text with commas in it arrives
@@ -1378,6 +1378,37 @@ objects:
         actor,objid(%<actor>),
         job_outcome,lcstr(%<outcome>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),match(approved denied completed canceled,%q<job_outcome>),not(strmatch(get(%q<job_object>/JOB`STATE),closed))); @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<job_outcome>,text,%<text>,format,firstof(%<format>,markdown)
 
+      # Optional ordinary-command draft adapter. This declaration is shared with the portal and
+      # authoritative legacy validation; adding fields needs no terminal controller or HTTP validator.
+      FORM: |-
+        [{"kind":"field","key":"bucket","label":"Bucket","type":"select","validation":{"required":true}},{"kind":"field","key":"title","label":"Title","type":"text","validation":{"required":true,"max_length":80}},{"kind":"field","key":"text","label":"What do you need?","type":"textarea","validation":{"required":true}},{"kind":"field","key":"softcode","label":"Show exactly as typed","type":"boolean","default":false}]
+      FORM`FIELD: |-
+        trim(iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),if(strmatch(u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),key),%0),json_query(get({{jobs}}/FORM),get,%i0)),%b,%r))
+      FORM`VALUE: |-
+        setq(form_raw,json_query(%0,get,%1))[if(strmatch(%q<form_raw>,"*),json_query(%q<form_raw>,unescape),%q<form_raw>)]
+      FORM`VALIDATE: |-
+        think setqm(appdraft_result,json(object,ok,json(boolean,true)),file_bucket,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/FORM`VALUE,%<draft_fields>,bucket),%<draft_actor>)); @assert cand(strlen(%q<file_bucket>),u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<draft_actor>),u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>))=think setq(appdraft_result,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick an open bucket you can file in.))
+      FORM`FILE: |-
+        @include {{jobs}}/FORM`VALIDATE; @assert strmatch(json_query(%q<appdraft_result>,get,ok),true); think setqm(actor,%<draft_actor>,actor_key,u({{jobs}}/FUN`PERSON`KEY,%<draft_actor>),text_format,if(strmatch(u({{jobs}}/FORM`VALUE,%<draft_fields>,softcode),true),softcode,markdown)); @include/args {{jobs}}/INC`DO`FILE=filer,%<draft_actor>,author,,priority,,bucket,%q<file_bucket>,title,u({{jobs}}/FORM`VALUE,%<draft_fields>,title),text,u({{jobs}}/FORM`VALUE,%<draft_fields>,text),format,%q<text_format>,how,application; think setq(appdraft_result,json(object,ok,json(boolean,true),message,json(string,Filed job %q<job_number>.),redirect,json(string,/apps/jobs/%q<job_number>)))
+      INC`DRAFT: |-
+        think setqm(draft_action,lcstr(first(%q<cmd_argument>)),draft_payload,json(object)); @if strmatch(%q<draft_action>,new)={think setq(draft_payload,json(object,bucket,json(string,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))))}; @if strmatch(%q<draft_action>,set)={think setqm(draft_field,trim(rest(%q<cmd_left_side>)),draft_payload,if(%q<cmd_has_equals>,json(object,%q<draft_field>,if(cand(match(boolean number list multiselect,u({{jobs}}/FORM`VALUE,u({{jobs}}/FORM`FIELD,%q<draft_field>),type)),isjson(%q<cmd_right_side>)),%q<cmd_right_side>,json(string,%q<cmd_right_side>))),json(null)))}; @appdraft/show {{jobs}}/FORM=%q<draft_action>,%q<draft_payload>
+      FORM`DISPLAY: |-
+        if(strmatch(json_query(%0,get,ok),true),if(strlen(u({{jobs}}/FORM`VALUE,%0,message)),u({{jobs}}/FORM`VALUE,%0,message),box(iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),label): [u({{jobs}}/FORM`VALUE,json_query(%0,get,fields),u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),key))],%b,%r)%r%r+request/draft set <field>=<literal text>%r+request/draft review | back | file | cancel)),json_query(%0,get,errors))
+      WEB`DRAFT`DATA: |-
+        json(object,fields,fold({{jobs}}/WEB`JSON`MERGE,iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),setq(form_key,u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),key))[if(json_query(%0,exists,%q<form_key>),json(object,%q<form_key>,u({{jobs}}/WEB`JSON`VALUE,json_query(%0,get,%q<form_key>),1)),json(object))],%b,%r),json(object),%r))
+      WEB`DRAFT`REVIEW: |-
+        u({{jobs}}/WEB`ELEMENT`DOCUMENT,view,Review request,u({{jobs}}/WEB`ELEMENT`SECTION,,1,iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),json_query(get({{jobs}}/FORM),get,%i0),%b,%r)%r[u({{jobs}}/WEB`ELEMENT`BUTTON,Back,json(object,op,json(string,draftback)))]%r[u({{jobs}}/WEB`ELEMENT`BUTTON,File,json(object,op,json(string,draftfile),operation_id,json(string,%0)),primary)]%r[u({{jobs}}/WEB`ELEMENT`BUTTON,Cancel,json(object,op,json(string,draftcancel)))]),json(object,act,u({{jobs}}/WEB`ACTION`KEEP)))
+      WEB`DRAFT`ANSWER: |-
+        json_mod(%0,patch,json(object,schema,if(strmatch(u({{jobs}}/FORM`VALUE,%0,phase),review),u({{jobs}}/WEB`DRAFT`REVIEW,u({{jobs}}/FORM`VALUE,%0,operation_id)),u({{jobs}}/WEB`SCHEMA`NEW,%1)),data,if(strlen(json_query(%0,get,fields)),u({{jobs}}/WEB`DRAFT`DATA,json_query(%0,get,fields)),json(null))))
+      WEB`ACT`DRAFTREVIEW: |-
+        @appdraft {{jobs}}/FORM=review,%q<web_body>; think setq(web_answer,u({{jobs}}/WEB`DRAFT`ANSWER,%q<appdraft_result>,%<viewer>))
+      WEB`ACT`DRAFTBACK: |-
+        @appdraft {{jobs}}/FORM=back,json(object); think setq(web_answer,u({{jobs}}/WEB`DRAFT`ANSWER,%q<appdraft_result>,%<viewer>))
+      WEB`ACT`DRAFTFILE: |-
+        @appdraft {{jobs}}/FORM=file,%q<web_body>; think setq(web_answer,if(strmatch(json_query(%q<appdraft_result>,get,ok),true),%q<appdraft_result>,u({{jobs}}/WEB`DRAFT`ANSWER,%q<appdraft_result>,%<viewer>)))
+      WEB`ACT`DRAFTCANCEL: |-
+        @appdraft {{jobs}}/FORM=cancel,json(object); think setq(web_answer,if(strmatch(json_query(%q<appdraft_result>,get,ok),true),u({{jobs}}/WEB`ANSWER`REDIRECT,/apps/jobs),%q<appdraft_result>))
+
       # ---- portal -----------------------------------------------------------------
       # The jobs-app package shows these at /apps/jobs. The routes on the HTTP handler (below) hand
       # over %<viewer>, the character the portal signed in as, and run WEB`DATA`ROUTE and WEB`ACT`ROUTE here with
@@ -1469,18 +1500,15 @@ objects:
       # The buckets viewer %0 works.
       WEB`BUCKET`WORKED: |-
         squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))
-      # The new-request form. Its hidden op field makes the submit a file.
+      # The new-request form. Its hidden op field sends the draft to review.
       WEB`SCHEMA`NEW: |-
-        setqm(new_op_field,json(object,kind,json(string,field),key,json(string,op),type,json(string,hidden),default,json(string,file)),
-        new_bucket_field,u({{jobs}}/WEB`SCHEMA`NEW`BUCKET,%0),
-        new_title_field,json(object,kind,json(string,field),key,json(string,title),label,json(string,Title),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,80))),
-        new_text_field,json(object,kind,json(string,field),key,json(string,text),label,json(string,What do you need?),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MARKDOWNHELP)),validation,json(object,required,json(boolean,true))),
-        new_softcode_field,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean),help,json(string,get({{jobs}}/DATA`WEB`SOFTCODEHELP))),
-        new_section,u({{jobs}}/WEB`ELEMENT`SECTION,,1,%q<new_op_field>%r%q<new_bucket_field>%r%q<new_title_field>%r%q<new_text_field>%r%q<new_softcode_field>))[u({{jobs}}/WEB`ELEMENT`DOCUMENT,form,New request,%q<new_section>,json(object,submit,u({{jobs}}/WEB`ACTION`RESET)))]
+        setqm(new_op_field,json(object,kind,json(string,field),key,json(string,op),type,json(string,hidden),default,json(string,draftreview)),
+        new_fields,iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),if(strmatch(u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),key),bucket),u({{jobs}}/WEB`SCHEMA`NEW`BUCKET,%0),json_query(get({{jobs}}/FORM),get,%i0)),%b,%r),
+        new_section,u({{jobs}}/WEB`ELEMENT`SECTION,,1,%q<new_op_field>%r%q<new_fields>))[u({{jobs}}/WEB`ELEMENT`DOCUMENT,form,New request,%q<new_section>,json(object,submit,u({{jobs}}/WEB`ACTION`KEEP)))]
       # The new-request form's bucket field for viewer %0: each bucket they may file in, with how soon it
       # usually answers, the default chosen.
       WEB`SCHEMA`NEW`BUCKET: |-
-        setq(new_bucket_options,u({{jobs}}/WEB`JSON`ARRAY,iter(u({{jobs}}/WEB`BUCKET`FILEABLE,%0),u({{jobs}}/WEB`ELEMENT`OPTION,name(%i0),name(%i0): [get(%i0/DESCRIPTION)][if(strlen(setr(new_bucket_wait,u({{jobs}}/FUN`WAIT`SHORT,%i0))),%b[chr(183)] first answer %q<new_bucket_wait>)]),%b,%r)))[json(object,kind,json(string,field),key,json(string,bucket),label,json(string,Bucket),type,json(string,select),options,%q<new_bucket_options>,default,json(string,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET)))]
+        setq(new_bucket_options,u({{jobs}}/WEB`JSON`ARRAY,iter(u({{jobs}}/WEB`BUCKET`FILEABLE,%0),u({{jobs}}/WEB`ELEMENT`OPTION,name(%i0),name(%i0): [get(%i0/DESCRIPTION)][if(strlen(setr(new_bucket_wait,u({{jobs}}/FUN`WAIT`SHORT,%i0))),%b[chr(183)] first answer %q<new_bucket_wait>)]),%b,%r)))[json_mod(u({{jobs}}/FORM`FIELD,bucket),patch,json(object,options,%q<new_bucket_options>,default,json(string,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))))]
       DATA`WEB`MARKDOWNHELP: |-
         Markdown works: **bold**, *italic*, lists and links.
       DATA`WEB`SOFTCODEHELP: |-
@@ -1588,10 +1616,10 @@ objects:
         actor_key,if(strlen(%<viewer>),u({{jobs}}/FUN`PERSON`KEY,%<viewer>)),
         web_job_number,u({{jobs}}/WEB`POSTED`FIELD,job),
         web_text,u({{jobs}}/WEB`POSTED`FIELD,text),
-        text_format,if(match(true 1 yes on,lcstr(u({{jobs}}/WEB`POSTED`FIELD,softcode))),softcode,markdown)); @assert strlen(%<viewer>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,Sign in with a character first.)); @assert match(file reply claim unclaim close reopen format status check uncheck scene audit revert bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<web_op>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,There is no [firstof(%q<web_op>,such)] action.)); @include {{jobs}}/WEB`ACT`%q<web_op>
+        text_format,if(match(true 1 yes on,lcstr(u({{jobs}}/WEB`POSTED`FIELD,softcode))),softcode,markdown)); @assert strlen(%<viewer>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,Sign in with a character first.)); @assert match(draftreview draftback draftfile draftcancel file reply claim unclaim close reopen format status check uncheck scene audit revert bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<web_op>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,There is no [firstof(%q<web_op>,such)] action.)); @include {{jobs}}/WEB`ACT`%q<web_op>
       WEB`ACT`FILE: |-
         think setqm(file_bucket,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`POSTED`FIELD,bucket),%<viewer>),
-        job_title,trim(u({{jobs}}/WEB`POSTED`FIELD,title))); @assert cand(strlen(%q<file_bucket>),u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<viewer>))=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick a bucket you can file in.)); @assert u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,name(%q<file_bucket>) is not taking new jobs.)); @assert strlen(%q<job_title>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,title,Give it a title.)); @assert lte(strlen(%q<job_title>),80)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,title,Keep the title to 80 characters.)); @assert strlen(trim(%q<web_text>))=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,text,Say what you need.)); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<file_bucket>,title,%q<job_title>,text,%q<web_text>,format,%q<text_format>,how,portal; think setq(web_answer,json(object,ok,json(boolean,true),message,json(string,Filed job %q<job_number>.),redirect,json(string,/apps/jobs/%q<job_number>)))
+        job_title,trim(u({{jobs}}/WEB`POSTED`FIELD,title))); @assert cand(strlen(%q<file_bucket>),u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<viewer>))=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick a bucket you can file in.)); @assert u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,name(%q<file_bucket>) is not taking new jobs.)); think setq(form_check,appfields(get({{jobs}}/FORM),json(object,bucket,json(string,%q<file_bucket>),title,json(string,%q<job_title>),text,json(string,%q<web_text>)))); @assert strmatch(json_query(%q<form_check>,get,ok),true)=think setq(web_answer,%q<form_check>); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<file_bucket>,title,%q<job_title>,text,%q<web_text>,format,%q<text_format>,how,portal; think setq(web_answer,json(object,ok,json(boolean,true),message,json(string,Filed job %q<job_number>.),redirect,json(string,/apps/jobs/%q<job_number>)))
       # The posted job, as INC`NEED`JOB finds one for a command.
       WEB`NEED`JOB: |-
         @assert cand(isint(%q<web_job_number>),strlen(setr(job_object,u({{jobs}}/FUN`JOB`FIND,%q<web_job_number>))),u({{jobs}}/FUN`CAN`SEE,%q<job_object>,%<viewer>))=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,There is no job %q<web_job_number>.)); think setqm(job_number,get(%q<job_object>/JOB`NUM),
@@ -2293,6 +2321,10 @@ objects:
       HELP`REQUEST: |-
         ## Filing
 
+        - `+request/draft new`: start an optional draft on this connection; ordinary chat still works.
+        - `+request/draft set <field>=<literal text>`: edit a declared field. Text stays literal; boolean, number and list fields accept JSON literals.
+        - `+request/draft review`, `back`, `file`, `cancel`: review, return to edits, file once, or discard.
+          Drafts expire after 30 idle minutes and retire on logout/disconnect; they do not survive restart.
         - `+request <title>=<text>`: files in the Requests bucket.
         - `+request <bucket>/<title>=<text>`: files in a bucket by its full name, such as `+request Applications/Ready for review=...`. The part before the `/` is a bucket only when it is a bucket's whole name, so `+request Help w/ exits=...` is just a title.
         - `+bug`, `+typo`, `+pitch` and `+apply <title>=<text>` file in Bugs, Building, Plots and Applications.

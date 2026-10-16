@@ -170,6 +170,10 @@ public class RegisterPrivacyFlag
 /// </summary>
 public class HttpResponseContext
 {
+	/// <summary>Verified request actor and untrusted tab selector; never taken from posted fields.</summary>
+	public DBRef? ApplicationViewer { get; internal init; }
+	public string? ApplicationInstance { get; internal init; }
+
 	/// <summary>
 	/// HTTP status line (e.g., "200 OK", "404 Not Found")
 	/// </summary>
