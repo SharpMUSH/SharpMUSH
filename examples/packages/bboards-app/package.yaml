@@ -1,6 +1,6 @@
 format: "1.10"
 package: bboards-app
-version: 1.0.3
+version: 1.0.4
 kind: application
 authors: [SharpMUSH]
 description: "Registers the bulletin boards (the bboards package) as a portal page at /apps/boards: every board by category, each board's posts, each post with its comments as conversations, and forms to post, comment, reply and edit."
@@ -19,8 +19,9 @@ depends:
   - package: bboards
     version: ">=1.2"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: bboards/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/bboards/
+      branch: main
 
 # Every player may open it. {path} is what follows /apps/boards/: nothing (every board), a number
 # path as +bbread takes it (5, 5/3, 5/3/2 for a comment's conversation), "unread" or "new"; the
