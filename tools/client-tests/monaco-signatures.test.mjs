@@ -6,7 +6,12 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../../SharpMUSH.Client/wwwroot/js/mush-monaco.js', import.meta.url), 'utf8');
 // RegistryContractAuditTests separately verifies these declarations reach generated portal data.
 // This test exercises the real browser consumer without needing a .NET build in the Node job.
+const census = JSON.parse(readFileSync(new URL('../../docs/audits/softcode-contracts.json', import.meta.url), 'utf8'));
+const listDefinitions = Object.fromEntries(census.entries
+    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge'].includes(entry.name))
+    .map(entry => [entry.name, { minArgs: entry.metadata.MinArgs, maxArgs: entry.metadata.MaxArgs, parameterNames: entry.metadata.ParameterNames }]));
 const definitions = { functions: {
+    ...listDefinitions,
     json_map: { minArgs: 2, maxArgs: 33, parameterNames: ['attribute', 'json', 'osep', 'arg...'] },
     switch: { minArgs: 3, maxArgs: 32, parameterNames: ['string', 'case...|result...'] },
     json_mod: { minArgs: 3, maxArgs: 4, parameterNames: ['json', 'action', 'path-or-patch', 'json2'] }
@@ -58,6 +63,21 @@ for (const [line, expected] of [
         const signature = result.value.signatures[0];
         const labels = Array.from(signature.parameters, parameter => signature.label.slice(...parameter.label));
         assert.deepEqual(labels.slice(0, expected.length), expected);
+        assert.equal(result.value.activeParameter, expected.length - 1);
+    });
+}
+
+for (const [line, expected] of [
+    ['sortkey(me/key,ab|a|abc,n,|,;', ['attribute', 'list', '[sort-type]', '[delimiter]', '[osep]']],
+    ['index(a|b|c,|,2,2', ['list', 'delimiter', 'first', 'length']],
+    ['munge(me/order,b|a|c,2|1|3,|,;', ['attribute', 'list1', 'list2', '[delimiter]', '[osep]']]
+]) {
+    test(`portal signature describes actual list call shape for ${line}`, async () => {
+        const provider = await signatureProvider();
+        const result = provider.provideSignatureHelp({ getLineContent: () => line }, { lineNumber: 1, column: line.length + 1 });
+        const signature = result.value.signatures[0];
+        const labels = Array.from(signature.parameters, parameter => signature.label.slice(...parameter.label));
+        assert.deepEqual(labels, expected);
         assert.equal(result.value.activeParameter, expected.length - 1);
     });
 }
