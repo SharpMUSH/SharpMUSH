@@ -179,6 +179,13 @@ public class DiscordPackagesIntegrationTests
 	}
 
 	/// <summary>
+	/// Waits out a scene change's chain to @discord: the event handler's attribute, the publisher's @trigger and the
+	/// hooked command are each a queue entry queued by the one before, which one barrier does not cover.
+	/// </summary>
+	private Task SettleAsync() =>
+		WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().SettleForTestsAsync(rounds: 5, timeout: TimeSpan.FromSeconds(60));
+
+	/// <summary>
 	/// What @discord/event is asked for as a scene moves through its life, and the event it is handed. @discord is a
 	/// command the test adds, hooked to a $-command that writes each call onto the hook's object.
 	/// </summary>
@@ -221,6 +228,7 @@ public class DiscordPackagesIntegrationTests
 
 			await God($"&LOG {hook}");
 			await AsStaff($"+scene/cancel {id}");
+			await SettleAsync();
 			await Assert.That(await Think($"get({hook}/LOG)")).Contains($"/event/end scene-{id}");
 
 			// Publishing off: nothing goes up. Taking events down still runs.
@@ -228,6 +236,7 @@ public class DiscordPackagesIntegrationTests
 			await God($"&LOG {hook}");
 			var second = await AsStaff($"+scene/schedule {title}x={at}");
 			var secondId = second.Split("Scheduled scene ")[1].Split(' ')[0];
+			await SettleAsync();
 			await Assert.That(await Think($"get({hook}/LOG)")).DoesNotContain($"/event scene-{secondId}=");
 			await AsStaff($"+scene/cancel {secondId}");
 		}
