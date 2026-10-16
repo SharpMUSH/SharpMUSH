@@ -18,7 +18,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.7.2
+    version: 1.8.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: bbs-lite/
     name: BBS Lite
@@ -145,12 +145,12 @@ packages:
   - path: status/
     name: Status
     package: status
-    version: 1.1.1
+    version: 1.1.2
     description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
   - path: watch/
     name: Watch
     package: watch
-    version: 1.0.1
+    version: 1.0.2
     description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: finger/
     name: Finger

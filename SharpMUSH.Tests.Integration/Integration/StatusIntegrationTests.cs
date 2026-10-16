@@ -293,14 +293,14 @@ public class StatusIntegrationTests
 			var whoWhere = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("who-where"))
 				.First(o => o.Ref == "ww_functions").Objid;
 			await As(ann, $"+status lfrp={line} {new string('x', 60)}");
-			await Assert.That(await God($"think u({whoWhere}/WW_FN_FILTER,WHO`STATUS,,#{ann.DbRef.Number})"))
+			await Assert.That(await God($"think u({whoWhere}/FUN`FILTER`APPLY,WHO`STATUS,,#{ann.DbRef.Number})"))
 				.IsEqualTo($"LFRP: {line} {new string('x', 37 - line.Length - 7)}...");
 			await As(ann, "+status rp_ok");
-			await Assert.That(await God($"think u({whoWhere}/WW_FN_FILTER,WHO`STATUS,,#{ann.DbRef.Number})")).IsEqualTo("RP OK");
+			await Assert.That(await God($"think u({whoWhere}/FUN`FILTER`APPLY,WHO`STATUS,,#{ann.DbRef.Number})")).IsEqualTo("RP OK");
 
 			// Another package's filter runs after this one, in name order, and gets its status as %0.
 			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}=if(strlen(%0),%[%0%],%0)");
-			await Assert.That(await God($"think u({whoWhere}/WW_FN_FILTER,WHO`STATUS,,#{ann.DbRef.Number})")).IsEqualTo("[RP OK]");
+			await Assert.That(await God($"think u({whoWhere}/FUN`FILTER`APPLY,WHO`STATUS,,#{ann.DbRef.Number})")).IsEqualTo("[RP OK]");
 			await God($"&FILTER`WHO`STATUS`ZZ {whoWhere}");
 
 			// A status that ran out is gone from +who.

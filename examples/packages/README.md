@@ -23,7 +23,7 @@ which games can add as a remote in the admin panel.
 | Package | Demonstrates |
 |---|---|
 | [`hello-world/`](hello-world/) | The minimal manifest: one object, one command attribute |
-| [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, a convention prefix, and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
+| [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, attribute trees (``CMD`WHO``, ``FUN`WHERE`<SWITCH>``), and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
 | [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
 | [`coast-guide/`](coast-guide/) | A content pack (format 1.4): wiki pages and nothing else — bodies in files and inline, a category pinned to the wiki home, a page that requires a permission the package declares |
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
