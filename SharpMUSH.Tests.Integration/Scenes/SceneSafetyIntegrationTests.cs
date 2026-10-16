@@ -142,6 +142,11 @@ public class SceneSafetyIntegrationTests
 			await Assert.That(await As(veiled, "+safety/veil Gore|Drowning")).Contains("Your veils: Gore · Drowning.");
 			await Assert.That(await As(lined, "+safety")).Contains("Spiders").And.DoesNotContain("Gore");
 
+			await As(owner, $"+scene/invite {scene}=#{lined.DbRef.Number}");
+			var registry = WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
+			var safety = (await registry.GetPackageObjectsAsync("scene-safety")).Single(o => o.Ref == "safety").Objid;
+			await Assert.That(await Eval($"u({safety}/FUN`SCENE`KEYS,{scene})")).IsEmpty();
+
 			await Assert.That(await As(lined, $"+scene/join {scene}"))
 				.Contains("This scene's content warnings touch your lines: Spiders and snakes.");
 			await Assert.That(await As(veiled, $"+scene/join {scene}")).Contains("They touch your veils: Gore.");

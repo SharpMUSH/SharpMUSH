@@ -36,7 +36,8 @@ public sealed record PortalApplication(
 	string? NavUrl = null,
 	string? DefinitionId = null,
 	int ConfigVersion = 1,
-	System.Text.Json.JsonElement? Config = null)
+	System.Text.Json.JsonElement? Config = null,
+	ApplicationConfigurationTile? ConfigurationTile = null)
 {
 	/// <summary>True when this app is rendered by a plugin-shipped compiled component (not the schema renderer).</summary>
 	public bool IsHosted => string.Equals(RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);

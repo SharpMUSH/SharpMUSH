@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.ScenePlugin;
 /// </summary>
 internal abstract class SceneServiceStub : ISceneService
 {
-	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "") => throw new NotSupportedException();
+	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null) => throw new NotSupportedException();
 	public virtual Task<Found<Scene>> GetSceneAsync(string sceneId) => throw new NotSupportedException();
 	public virtual Task<Found<Scene>> SetSceneMetaAsync(string sceneId, string key, string value) => throw new NotSupportedException();
 	public virtual Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null, long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) => throw new NotSupportedException();
@@ -30,6 +30,8 @@ internal abstract class SceneServiceStub : ISceneService
 	public virtual Task<FoundResult<ScenePose>> MovePoseAsync(string poseId, string afterPoseId) => throw new NotSupportedException();
 	public virtual Task<Found<ScenePose>> DeletePoseAsync(string poseId) => throw new NotSupportedException();
 	public virtual Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId) => throw new NotSupportedException();
+	public virtual Task<FoundResult<None>> InvitePlayerAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
+	public virtual Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
 	public virtual Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role) => throw new NotSupportedException();
 	public virtual Task<Found<None>> RemoveMemberAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
 	public virtual Task<Found<IReadOnlyList<SceneMember>>> GetMembersAsync(string sceneId, string? role = null) => throw new NotSupportedException();

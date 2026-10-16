@@ -1,10 +1,16 @@
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Models.Portal.Applications;
 
 namespace SharpMUSH.Client.Services;
 
 public class ConfigSchemaService(IHttpClientFactory httpClientFactory, ILogger<ConfigSchemaService> logger)
 {
 	private Task<ApiResult<ConfigurationSchema>>? _schema;
+
+	/// <summary>Fetches private tile metadata afresh so permission and application changes are reflected.</summary>
+	public Task<ApiResult<List<ApplicationConfigurationTile>>> GetApplicationConfigurationAsync() =>
+		httpClientFactory.CreateClient("api").GetApiAsync<List<ApplicationConfigurationTile>>(
+			"/api/application-configuration", "The server returned no application configuration catalog.");
 
 	/// <summary>The configuration schema the server describes its options with.</summary>
 	/// <remarks>

@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} paletitems zijn weggelaten omdat de limiet bereikt was.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Deelnameregels</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Maximumaantal spelers</value>
+  </data>
 </root>

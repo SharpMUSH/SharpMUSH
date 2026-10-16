@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>有 {0} 个命令面板条目因超出限制而未显示。</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>加入规则</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>玩家人数上限</value>
+  </data>
 </root>

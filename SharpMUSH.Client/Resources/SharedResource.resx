@@ -8920,4 +8920,12 @@
   <data name="AdmImportRhostRehearse" xml:space="preserve">
     <value>Rehearse on a disposable SharpMUSH instance and keep a backup of the destination world before importing. This import writes the configured world directly; it does not stage a separate world for transactional promotion.</value>
   </data>
+  <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
+  <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Joining policy</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Player cap</value>
+  </data>
 </root>

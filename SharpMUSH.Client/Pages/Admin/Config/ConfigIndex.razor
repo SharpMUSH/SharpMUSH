@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Models.Configuration
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Portal.Applications
 @inject IStringLocalizer<SharedResource> Loc
 @inject ConfigSchemaService SchemaService
 
@@ -61,6 +62,26 @@
                     </a>
                 }
         </div>
+        @if (_applicationError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true">@Loc["AdmConfigApplicationsLoadFailed"]: @_applicationError</MudAlert>
+        }
+        @if (_applicationTiles.Count > 0)
+        {
+            <h2>@Loc["AdmConfigApplications"]</h2>
+            <div class="config-cat-grid config-app-grid">
+                @foreach (var tile in _applicationTiles)
+                {
+                    <a class="config-cat-card" href="@tile.Route">
+                        <div class="config-cat-head">
+                            <IconTile Icon="@AppIcons.Fill(tile.Icon, Icons.Material.Filled.Apps)" />
+                            <div class="config-cat-title">@tile.Title</div>
+                        </div>
+                        <div class="config-cat-desc">@tile.Description</div>
+                    </a>
+                }
+            </div>
+        }
     </div>
 
     <aside class="config-home-aside">
@@ -77,7 +98,25 @@
     private string? _error;
     private Dictionary<string, int> _categoryCounts = new(StringComparer.OrdinalIgnoreCase);
 
-    protected override async Task OnInitializedAsync()
+    private List<ApplicationConfigurationTile> _applicationTiles = [];
+    private string? _applicationError;
+
+    protected override Task OnInitializedAsync() => Task.WhenAll(LoadSchemaAsync(), LoadApplicationsAsync());
+
+    private async Task LoadApplicationsAsync()
+    {
+        switch (await SchemaService.GetApplicationConfigurationAsync())
+        {
+            case List<ApplicationConfigurationTile> tiles:
+                _applicationTiles = tiles.Where(tile => tile.HasSafeRoute()).ToList();
+                break;
+            case ApiFailure failure:
+                _applicationError = failure.Message;
+                break;
+        }
+    }
+
+    private async Task LoadSchemaAsync()
     {
         // A failed read used to be swallowed here and every card read "0 settings": a server that did
         // not answer looked like one with nothing to configure. The cards stay usable without counts.
