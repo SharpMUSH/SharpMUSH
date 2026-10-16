@@ -10,13 +10,19 @@ Lightning already exposes `CreateStagingAsync` and `PromoteToLiveAsync`, but the
 
 `LightningStagingDatabase.PromoteToLiveAsync` currently closes staging, swaps directories, reloads definitions, then calls `RecomputeCountersAsync(ct)` before setting `IsPromoted`. Cancellation after the swap must not be reported as an ordinary pre-commit cancellation: the active world has already changed.
 
+The upload path also applies `mush.cnf` before conversion through `MushCnfImportService.ApplyAsync`. That changes live `SharpMUSHOptions`, `MushCnfObjectReferences` and singleton-backed secrets; its current restore-on-failure behavior does not make a successful preview isolated. Moving only the world converter into staging would leave this mutation path live.
+
 ## Recommended boundary
 
-Introduce an import coordinator around all production import callers. Parsing and semantic validation happen before the coordinator creates staging when possible. Conversion itself receives a dedicated world context containing a complete isolated provider/store/Mediator/service graph, including relation loaders, caches, package state and migrations. No request issued by this graph can resolve live stores or live caches.
+Introduce an import coordinator around all production import callers. Parsing and semantic validation happen before the coordinator creates staging when possible. Conversion itself receives a dedicated world context containing a complete isolated provider/store/Mediator/service graph, including relation loaders, caches, options, object references, secret overlays, package state and migrations. No request issued by this graph can resolve live stores or live caches.
 
 A provider-neutral staging session owns lifecycle and yields explicit states: preparing, converting, validating, ready, promoting, committed, aborted and failed-recovery-required. The session ID identifies retained diagnostics and owns temporary storage. Do not return `Success` merely because conversion ended without throwing; inspect converter errors and required validation results.
 
 The coordinator should expose a preview/validation result before a separate explicit promotion operation. The administrator reviews counts, warnings, rewrites and import logs. A start-up import can request promotion under its existing explicit configuration contract, but it follows the same isolated conversion and validation path.
+
+Configuration is part of the import session. Parse `mush.cnf` into session-owned options/reference values and run conversion with the isolated host's options, stores and caches. Do not call the live `ApplyAsync` during preview. Keep credential changes in a protected session-owned overlay, deferring writes to the live secret service until explicit promotion; never return secret values in preview diagnostics. Record the existing effective configuration and secret state for rollback, respecting environment/file overrides.
+
+The promotion journal must cover the world, configuration and secret commit phases together. Stage database-backed values with the staged world; install/reload effective options and apply deferred secret changes before declaring the promoted world usable. Because a singleton secret store may not share the world transaction, define durable intent, compensation and restart recovery for failures between those phases. Aborting a preview drops only its session-owned configuration and secret overlay. A live-world rollback restores its matching configuration and credential state, rather than leaving the imported values active.
 
 ## Promotion contract
 
@@ -39,9 +45,9 @@ Prefer a dedicated isolated import host for the first implementation rather than
 
 ## Implementation sequence and proof
 
-1. Add an isolated import-host factory and lifecycle coordinator without enabling live promotion. Failure-inject conversion after real writes and verify live objects, attributes, package registry, cache entries and allocator state remain unchanged. Demonstrate the same import succeeds in staging.
+1. Add an isolated import-host factory and lifecycle coordinator without enabling live promotion. Failure-inject conversion after real writes and verify live objects, attributes, package registry, cache entries, allocator state, effective options, MushCnfObjectReferences and credentials remain unchanged. Include a mush.cnf import with changed options and secrets for both successful preview and failed/cancelled conversion. Demonstrate the same import succeeds in staging.
 2. Wire portal and start-up callers through the coordinator. Preview results/logs name the staging session; failed or cancelled conversion aborts only its own directory. Cover simultaneous requests and process cleanup/restart.
-3. Harden the provider promotion primitive around its commit point and allocator/definition refresh. Test cancellation immediately before and after swap, disk-full/move/open failures, preexisting `.previous`, restart recovery and repeated promotion requests.
+3. Harden the provider promotion primitive around its commit point and allocator/definition refresh. Test cancellation immediately before and after swap, disk-full/move/open failures, preexisting `.previous`, restart recovery, deferred-secret/configuration commit failures and repeated promotion requests.
 4. Add explicit preview/promote UI/API and maintenance/session reconciliation. Assert no command observes a mixture of old/new game state; permission-filter reports and audit promotion outcomes.
 5. Rehearse representative PennMUSH, RhostMUSH and TinyMUX imports and rollback on a disposable stack. Update migration documentation only after production callers demonstrate the staging contract end to end.
 
