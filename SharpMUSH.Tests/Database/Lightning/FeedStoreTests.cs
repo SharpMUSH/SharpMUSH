@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Records;
+using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -58,6 +60,31 @@ public class FeedStoreTests
 			id == 4 ? "Ghost" : "");
 
 	private static FeedSettings Keep(int messages = 0, long bytes = 0, TimeSpan? age = null) => new(messages, bytes, 0, age, true, "say");
+
+	[Test]
+	public async Task FutureWireDisplayDoesNotChangeFeedByteAccounting()
+	{
+		const string raw = "{\"v\":999,\"t\":\"future é\",\"extra\":42}";
+		var speaker = await NewPlayer("FutureFeedSpeaker");
+		await _db.AppendFeedMessageAsync(Line(901, speaker, "original bytes differ from future display"), Keep());
+		var before = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		var key = _db.Store.Read(tx => tx.Range(Tables.FeedMessage, []).Single().Key);
+		await _db.Store.WriteAsync(tx =>
+		{
+			tx.TryGet(Tables.FeedMessage, key, out var bytes);
+			var record = Codec.Deserialize<FeedMessageRecord>(bytes);
+			tx.Put(Tables.FeedMessage, key, Codec.Serialize(record with { Text = raw }));
+		});
+		var shown = (await _db.GetFeedMessageAsync(901)).Expect<SharpFeedMessage>();
+		await Assert.That(shown.Text.ToPlainText()).IsEqualTo("future é");
+		var after = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		await Assert.That(after.Bytes).IsEqualTo(before.Bytes);
+		await Assert.That(after.StoredBytes).IsEqualTo(before.StoredBytes);
+		await _db.DeleteFeedMessageAsync(901);
+		var empty = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		await Assert.That(empty.Bytes).IsEqualTo(0);
+		await Assert.That(empty.StoredBytes).IsEqualTo(0);
+	}
 
 	[Test]
 	public async Task AKind_IsWrittenReadAndReplaced()

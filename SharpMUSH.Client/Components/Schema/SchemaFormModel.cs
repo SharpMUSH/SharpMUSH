@@ -23,7 +23,7 @@ public sealed class SchemaFormModel
 
 	public PortalSchemaDocument? Document { get; private set; }
 
-	/// <summary>The values entered, keyed by field; what an action sends.</summary>
+	/// <summary>Local draft values, including retained keys omitted from the current payload.</summary>
 	public IReadOnlyDictionary<string, object?> Values => _values;
 
 	/// <summary>The error for the form as a whole, shown above it; <c>null</c> when there is none.</summary>
@@ -60,9 +60,9 @@ public sealed class SchemaFormModel
 				continue;
 			}
 
-			if (data?.Fields is not null && data.Fields.TryGetValue(key, out var datum) && datum.Value is { } value)
+			if (data?.Fields is not null && data.Fields.TryGetValue(key, out var datum))
 			{
-				_values[key] = Seed(value);
+				_values[key] = datum.Value is { } value ? Seed(value) : null;
 			}
 			else if (field.Default is { } fallback)
 			{
@@ -77,6 +77,19 @@ public sealed class SchemaFormModel
 			.SelectMany(p => p.Sections ?? [])
 			.SelectMany(s => s.Elements ?? [])
 			.Where(e => string.Equals(e.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase) && e.Key is not null);
+
+	/// <summary>Editable controls that can visibly bind a field error.</summary>
+	public IEnumerable<SchemaElement> VisibleFields() => (HasPages ? CurrentPage.Sections ?? [] : [])
+		.SelectMany(section => section.Elements ?? [])
+		.Where(field => string.Equals(field.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase)
+			&& field.Key is not null && !string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>Returned data is authoritative for every supplied key, including explicit null.</summary>
+	public void ApplyData(SchemaData? data)
+	{
+		foreach (var (key, datum) in data?.Fields ?? new Dictionary<string, SchemaFieldValue>())
+			_values[key] = datum.Value is { } value ? Seed(value) : null;
+	}
 
 	public bool HasAction(string name) => Document?.Actions?.ContainsKey(name) == true;
 
@@ -117,7 +130,10 @@ public sealed class SchemaFormModel
 	public void SetBool(string key, bool value) => Set(key, value);
 
 	public double? GetNumber(string key)
-		=> _values.TryGetValue(key, out var v) && v is not null && double.TryParse(v.ToString(), out var d) ? d : null;
+		=> _values.TryGetValue(key, out var v) && v is not null
+			? v is JsonElement { ValueKind: JsonValueKind.Number } number && number.TryGetDouble(out var value) ? value
+				: double.TryParse(v.ToString(), out var d) ? d : null
+			: null;
 
 	public void SetNumber(string key, double? value) => Set(key, value);
 
@@ -173,7 +189,7 @@ public sealed class SchemaFormModel
 	/// <param name="noErrors">The form's error when the action failed without saying why.</param>
 	public void BindErrors(IReadOnlyDictionary<string, string>? errors, bool bindToFields, string noErrors)
 	{
-		if (errors is null)
+		if (errors is null || errors.Count == 0)
 		{
 			GlobalError = noErrors;
 			return;
@@ -181,9 +197,9 @@ public sealed class SchemaFormModel
 
 		foreach (var (key, message) in errors)
 		{
-			if (key == "_global" || !bindToFields)
+			if (key == "_global" || !bindToFields || Document?.IsForm != true || !VisibleFields().Any(f => f.Key == key))
 			{
-				GlobalError = message;
+				GlobalError = GlobalError is null ? message : $"{GlobalError}\n{message}";
 			}
 			else
 			{
@@ -198,12 +214,10 @@ public sealed class SchemaFormModel
 	/// </summary>
 	public IReadOnlyDictionary<string, object?> Payload(IReadOnlyDictionary<string, JsonElement>? overrides)
 	{
-		if (overrides is null || overrides.Count == 0)
-		{
-			return _values;
-		}
+		var active = (Document?.IsForm == true ? Fields() : []).Select(f => f.Key!).ToHashSet(StringComparer.Ordinal);
+		var payload = _values.Where(pair => active.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+		if (overrides is null) return payload;
 
-		var payload = new Dictionary<string, object?>(_values, StringComparer.Ordinal);
 		foreach (var (key, value) in overrides)
 		{
 			payload[key] = value;
@@ -215,6 +229,12 @@ public sealed class SchemaFormModel
 	/// <summary>Clears every value entered, ahead of merging an action's answer (<c>reset_fields</c>).</summary>
 	public void ResetValues() => _values.Clear();
 
+	public void ResetValues(SchemaFieldReset reset)
+	{
+		if (reset.All) _values.Clear();
+		else foreach (var key in reset.Keys ?? []) _values.Remove(key);
+	}
+
 	/// <summary>Takes the values a successful action answered with.</summary>
 	public void MergeFields(IReadOnlyDictionary<string, JsonElement> fields)
 	{
@@ -225,10 +245,14 @@ public sealed class SchemaFormModel
 	}
 
 	/// <summary>A value as the form holds it: a JSON list as its items (multiselect, list), a JSON
-	/// boolean as a bool (boolean), anything else as text.</summary>
-	private static object Seed(JsonElement value) => value.ValueKind switch
+	/// boolean as a bool; numbers, objects and mixed arrays retain their JSON types.</summary>
+	private static object? Seed(JsonElement value) => value.ValueKind switch
 	{
-		JsonValueKind.Array => value.EnumerateArray().Select(item => SchemaViewRenderer.ValueToString(item)).ToList(),
+		JsonValueKind.Array when value.EnumerateArray().All(item => item.ValueKind == JsonValueKind.String) => value.EnumerateArray().Select(item => item.GetString()!).ToList(),
+		JsonValueKind.Array => value.Clone(),
+		JsonValueKind.Number => value.Clone(),
+		JsonValueKind.Null or JsonValueKind.Undefined => null,
+		JsonValueKind.Object => value.Clone(),
 		JsonValueKind.True => true,
 		JsonValueKind.False => false,
 		_ => SchemaViewRenderer.ValueToString(value)

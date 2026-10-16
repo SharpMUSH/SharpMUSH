@@ -39,6 +39,63 @@ public class SchemaFormModelTests
 	}
 
 	[Test]
+	public async Task ErrorsForAnotherPageRemainVisibleInTheSummary()
+	{
+		var model = Loaded(Form(Page("one", 1, Field("first")), Page("two", 2, Field("later"))));
+		model.BindErrors(new Dictionary<string, string> { ["later"] = "Later page failed" }, true, "failed");
+		await Assert.That(model.GlobalError).IsEqualTo("Later page failed");
+	}
+
+	[Test]
+	public async Task WireNullDefaultIsPresentWhileOmittedDefaultStaysAbsent()
+	{
+		var document = JsonSerializer.Deserialize<PortalSchemaDocument>("""{"kind":"form","schema_version":1,"pages":[{"sections":[{"elements":[{"key":"null","default":null},{"key":"absent"}]}]}]}""", SchemaJson.Options);
+		var model = Loaded(document!);
+		await Assert.That(model.Values.ContainsKey("null")).IsTrue();
+		await Assert.That(model.Values["null"]).IsNull();
+		await Assert.That(model.Values.ContainsKey("absent")).IsFalse();
+	}
+
+	[Test]
+	public async Task ExplicitNullPrefillSuppressesDefaultAndMixedArraysStayTyped()
+	{
+		var model = Loaded(Form(Page("main", 1, Field("value", fallback: Json("\"fallback\"")), Field("items", fallback: Json("[0,false,null]")))),
+			new(new Dictionary<string, SchemaFieldValue> { ["value"] = new(null) }));
+		var payload = JsonSerializer.SerializeToElement(model.Payload(null));
+		await Assert.That(payload.GetProperty("value").ValueKind).IsEqualTo(JsonValueKind.Null);
+		await Assert.That(payload.GetProperty("items")[0].ValueKind).IsEqualTo(JsonValueKind.Number);
+		await Assert.That(payload.GetProperty("items")[1].ValueKind).IsEqualTo(JsonValueKind.False);
+		await Assert.That(payload.GetProperty("items")[2].ValueKind).IsEqualTo(JsonValueKind.Null);
+	}
+
+	[Test]
+	public async Task TypedSeeds_PreserveNullNumberFalseEmptyAndAbsence()
+	{
+		var model = Loaded(Form(Page("main", 1, Field("n", fallback: Json("0")), Field("nil", fallback: Json("null")), Field("b", fallback: Json("false")), Field("empty", fallback: Json("\"\"")), Field("absent"))));
+		var json = JsonSerializer.SerializeToElement(model.Payload(null));
+		await Assert.That(json.GetProperty("n").ValueKind).IsEqualTo(JsonValueKind.Number);
+		await Assert.That(json.GetProperty("nil").ValueKind).IsEqualTo(JsonValueKind.Null);
+		await Assert.That(json.GetProperty("b").ValueKind).IsEqualTo(JsonValueKind.False);
+		await Assert.That(json.GetProperty("empty").GetString()).IsEqualTo("");
+		await Assert.That(json.TryGetProperty("absent", out _)).IsFalse();
+	}
+
+	[Test]
+	public async Task RemovedFields_AreDraftOnlyAndUnboundErrorsRemainVisible()
+	{
+		var model = Loaded(Form(Page("main", 1, Field("old"), Field("name"), Field("secret", "hidden"))));
+		model.SetString("old", "retained");
+		model.SetString("secret", "hidden");
+		model.Load(Form(Page("main", 1, Field("name"))), null);
+		await Assert.That(model.Values["old"]).IsEqualTo("retained");
+		await Assert.That(model.Payload(null).ContainsKey("old")).IsFalse();
+		model.BindErrors(new Dictionary<string, string> { ["old"] = "old failed", ["secret"] = "secret failed", ["_global"] = "global failed" }, true, "failed");
+		await Assert.That(model.GlobalError!.Contains("old failed")).IsTrue();
+		await Assert.That(model.GlobalError.Contains("secret failed")).IsTrue();
+		await Assert.That(model.GlobalError.Contains("global failed")).IsTrue();
+	}
+
+	[Test]
 	public async Task Load_SeedsFromData_ThenDefaults_AndSkipsDisplayElements()
 	{
 		var document = Form(Page("main", 1,

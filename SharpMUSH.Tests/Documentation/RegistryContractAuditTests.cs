@@ -1,0 +1,97 @@
+using System.Text.Json;
+using SharpMUSH.CodeAnalysis.Catalog;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Generated;
+using SharpMUSH.Tools.ClientData;
+
+namespace SharpMUSH.Tests.Documentation;
+
+public class RegistryContractAuditTests
+{
+	[Test]
+	[Arguments("json_map", "attribute,json,osep,arg...")]
+	[Arguments("json_mod", "json,action,path-or-patch,json2")]
+	public async Task JsonSignaturesReachAnalysisAndPortal(string name, string expected)
+	{
+		var entry = BuiltInAnalysisCatalog.CreateSnapshot().Entries.Single(entry => entry.Kind == "function" && entry.Name == name);
+		await Assert.That(string.Join(',', entry.ParameterNames)).IsEqualTo(expected);
+		var source = name == "json_map" ? "json_map(me/callback,json(array,1),|,extra)" : "json_mod(json(object,a,1),set,$.a,2)";
+		var analyzer = AnalysisCatalogAnalyzer.Create(BuiltInAnalysisCatalog.CreateSnapshot(), SharpMUSHOptions.Default());
+		var signature = analyzer.SignatureHelp(source, 0, source.LastIndexOf(',') + 1);
+		await Assert.That(signature).IsNotNull();
+		await Assert.That(signature!.Parameters[1].Label).IsEqualTo(name == "json_map" ? "json" : "action");
+		await Assert.That(signature.Parameters[2].Label).IsEqualTo(name == "json_map" ? "osep" : "path-or-patch");
+		await Assert.That(signature.Parameters[3].Label).IsEqualTo(name == "json_map" ? "arg1" : "json2");
+		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
+		var parameters = definitions.RootElement.GetProperty("functions").GetProperty(name).GetProperty("parameterNames");
+		await Assert.That(string.Join(',', parameters.EnumerateArray().Select(value => value.GetString()))).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task PortalDeclarationsAndAliasesMatchGeneratedContracts()
+	{
+		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
+		var functions = FunctionLibrary.CreateMetadata();
+		var commands = CommandLibrary.CreateMetadata();
+		foreach (var (name, attribute) in functions)
+			await Function(name, attribute.MinArgs, attribute.MaxArgs, attribute.ParameterNames);
+		foreach (var (target, aliases) in AliasOptions.Default.FunctionAliases)
+		{
+			await Assert.That(functions.ContainsKey(target)).IsTrue();
+			var attribute = functions[target];
+			foreach (var alias in aliases)
+				await Function(alias, attribute.MinArgs, attribute.MaxArgs, attribute.ParameterNames);
+		}
+		foreach (var (name, attribute) in commands)
+			await Command(name, attribute.MinArgs, attribute.MaxArgs, attribute.ParameterNames, attribute.Switches ?? []);
+		foreach (var (target, aliases) in AliasOptions.Default.CommandAliases)
+		{
+			await Assert.That(commands.ContainsKey(target)).IsTrue();
+			var attribute = commands[target];
+			foreach (var alias in aliases)
+				await Command(alias, attribute.MinArgs, attribute.MaxArgs, attribute.ParameterNames, attribute.Switches ?? []);
+		}
+
+		async Task Function(string name, int minimum, int maximum, string[] names)
+		{
+			var entry = definitions.RootElement.GetProperty("functions").GetProperty(name);
+			await Contract(entry, minimum, maximum, names);
+		}
+
+		async Task Command(string name, int minimum, int maximum, string[] names, string[] switches)
+		{
+			var entry = definitions.RootElement.GetProperty("commands").GetProperty(name);
+			await Contract(entry, minimum, maximum, names);
+			await Assert.That(entry.GetProperty("switches").EnumerateArray().Select(value => value.GetString()!)).IsEquivalentTo(switches);
+		}
+
+		static async Task Contract(JsonElement entry, int minimum, int maximum, string[] names)
+		{
+			await Assert.That(entry.GetProperty("minArgs").GetInt32()).IsEqualTo(minimum);
+			await Assert.That(entry.GetProperty("maxArgs").GetInt32()).IsEqualTo(maximum);
+			await Assert.That(JsonSerializer.Serialize(entry.GetProperty("parameterNames").EnumerateArray().Select(value => value.GetString()))).IsEqualTo(JsonSerializer.Serialize(names));
+		}
+	}
+
+	[Test]
+	public async Task GeneratedRegistrationsMatchReflection()
+	{
+		var functions = FunctionLibrary.CreateMetadata();
+		var commands = CommandLibrary.CreateMetadata();
+		await Assert.That(functions.Keys).IsEquivalentTo(RegistryInventory.Functions.Select(entry => entry.Name));
+		await Assert.That(commands.Keys).IsEquivalentTo(RegistryInventory.Commands.Select(entry => entry.Name));
+		foreach (var entry in RegistryInventory.Functions)
+		{
+			var generated = functions[entry.Name];
+			await Assert.That(JsonSerializer.Serialize(RegistryInventory.Metadata(generated))).IsEqualTo(JsonSerializer.Serialize(RegistryInventory.Metadata(entry.Attribute)));
+			await Assert.That(generated.MinArgs >= 0 && generated.MaxArgs >= generated.MinArgs).IsTrue();
+		}
+		foreach (var entry in RegistryInventory.Commands)
+		{
+			var generated = commands[entry.Name];
+			await Assert.That(JsonSerializer.Serialize(RegistryInventory.Metadata(generated))).IsEqualTo(JsonSerializer.Serialize(RegistryInventory.Metadata(entry.Attribute)));
+			// Command bounds are advisory; legacy MaxArgs=0 declarations need their own behavioral review.
+			await Assert.That(generated.MinArgs >= 0 && generated.MaxArgs >= 0).IsTrue();
+		}
+	}
+}

@@ -2,16 +2,24 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
-@inject IServiceProvider Services
-@inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
 @* Renders a read-only Portal Schema Document (kind:"view"). Pure renderer: all values and their
    per-viewer visibility come from softcode via the data payload. See dynamic-applications.md.
    A view has no inputs, but its buttons and timeline actions still dispatch: they post their own
    values, and the answer may replace the data, the document, or move the page. *@
 
-@if (_document?.Pages is null || !HasAnythingToShow)
+@if (!ActionHandler.HasDelegate)
+{
+    @if (Document is null && !QuietWhenEmpty)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidNothingToDisplay"]</MudText>
+    }
+    else
+    {
+        <SchemaApplicationHost Document="Document" Data="Data" QuietWhenEmpty="QuietWhenEmpty" />
+    }
+}
+else if (_document?.Pages is null || !HasAnythingToShow)
 {
     @* No document, or every field was filtered out (e.g. a character with no profile data set) — show
        a placeholder instead of collapsing to nothing, so the widget/page never silently disappears,
@@ -82,92 +90,12 @@ else
     /// <summary>Draw nothing, rather than the Nothing to display line, when nothing is visible: for a part of a larger whole, such as a name card.</summary>
     [Parameter] public bool QuietWhenEmpty { get; set; }
 
-    // What is showing: the parameters, until an action answers with a replacement document or data.
-    private PortalSchemaDocument? _document;
-    private SchemaData? _data;
-    private PortalSchemaDocument? _documentParameter;
-    private SchemaData? _dataParameter;
-    private bool _busy;
-
-    protected override void OnParametersSet()
-    {
-        if (!ReferenceEquals(Document, _documentParameter))
-        {
-            _document = _documentParameter = Document;
-        }
-
-        if (!ReferenceEquals(Data, _dataParameter))
-        {
-            _data = _dataParameter = Data;
-        }
-    }
-
-    /// <summary>
-    /// Posts a button's or timeline entry's values to its action route and applies the answer: replacement
-    /// data or document, a toast, a redirect; errors surface as snackbars (a view has no fields to bind them to).
-    /// </summary>
-    private async Task DispatchAsync(SchemaActionRequest request)
-    {
-        if (_document?.Actions is not { } actions || !actions.TryGetValue(request.Action, out var action)
-            || string.IsNullOrWhiteSpace(action.Route))
-        {
-            return;
-        }
-
-        // One action at a time: a second click, or a confirmation answered while the first is in
-        // flight, is dropped rather than posted twice.
-        if (_busy)
-        {
-            return;
-        }
-
-        _busy = true;
-        var payload = (request.Values ?? new Dictionary<string, JsonElement>())
-            .ToDictionary(kv => kv.Key, kv => (object?)kv.Value, StringComparer.Ordinal);
-        SchemaActionResult result;
-        try
-        {
-            result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, payload);
-        }
-        finally
-        {
-            _busy = false;
-        }
-
-        if (!result.Ok)
-        {
-            foreach (var (key, message) in result.Errors ?? new Dictionary<string, string> { ["_global"] = Loc["WidActionFailed"] })
-            {
-                Snackbar.Add(key == "_global" ? message : $"{key}: {message}", Severity.Error);
-            }
-
-            return;
-        }
-
-        if (result.Data is not null)
-        {
-            _data = result.Data;
-        }
-
-        if (result.Schema is not null)
-        {
-            _document = result.Schema;
-        }
-
-        if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Toast) || !string.IsNullOrWhiteSpace(result.Message))
-        {
-            Snackbar.Add(action.OnSuccess?.Toast ?? result.Message!, Severity.Success);
-        }
-
-        if (!string.IsNullOrWhiteSpace(result.Redirect))
-        {
-            Nav.NavigateTo(result.Redirect!);
-        }
-        else if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Navigate))
-        {
-            Nav.NavigateTo(action.OnSuccess!.Navigate!);
-        }
-    }
+    [Parameter] public EventCallback<SchemaActionRequest> ActionHandler { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    private PortalSchemaDocument? _document => Document;
+    private SchemaData? _data => Data;
+    private bool _busy => Busy;
+    private Task DispatchAsync(SchemaActionRequest request) => ActionHandler.InvokeAsync(request);
 
     /// <summary>True if a title or any visible element exists; otherwise the view would render empty.</summary>
     private bool HasAnythingToShow =>

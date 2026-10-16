@@ -70,7 +70,7 @@ public class ListenAttributeSnapshotHandlerTests
 		var node = new TestObjectFactory().CreatePlayer(42, "Snapshot");
 		var reference = node.Object().DBRef;
 		objects.GetObjectNodeAsync(reference, cancellation.Token).Returns(new ValueTask<AnyOptionalSharpObject>(node.WithNoneOption()));
-		attributes.GetAttributesAsync(reference, "**", cancellation.Token).Returns(Partial(cancellation, cancellation.Token));
+		attributes.GetDiscoveryAttributesAsync(reference, cancellation.Token).Returns(Partial(cancellation, cancellation.Token));
 		await Assert.ThrowsAsync<OperationCanceledException>(() =>
 			new GetListenAttributeSnapshotQueryHandler(objects, attributes).Handle(new(reference), cancellation.Token).AsTask());
 	}

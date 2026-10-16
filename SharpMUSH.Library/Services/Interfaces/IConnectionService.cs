@@ -17,6 +17,12 @@ public interface IConnectionService
 		Disconnected
 	}
 
+	sealed class BindingLifetime
+	{
+		public Guid Id { get; } = Guid.NewGuid();
+		internal SemaphoreSlim PublicationGate { get; } = new(1, 1);
+	}
+
 	record ConnectionData(
 		long Handle,
 		DBRef? Ref,
@@ -27,6 +33,9 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string> Metadata
 	)
 	{
+		/// <summary>Immutable identity and publication fence for this character binding.</summary>
+		public BindingLifetime Binding { get; init; } = new();
+
 		public TimeSpan? Connected => Since("ConnectionStartTime");
 
 		public TimeSpan? Idle => Since("LastConnectionSignal");

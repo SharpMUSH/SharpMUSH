@@ -106,7 +106,7 @@ public interface ISceneService
 	/// advances the <c>current_edit</c> pointer, and truncates any redo-forward
 	/// versions. <c>NotFound</c> if the pose is missing.
 	/// </summary>
-	Task<Found<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content);
+	Task<FoundResult<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content);
 
 	/// <summary>Moves the <c>current_edit</c> pointer to the previous version. <c>Error</c> if at the oldest.</summary>
 	Task<FoundResult<ScenePose>> UndoPoseAsync(string poseId);

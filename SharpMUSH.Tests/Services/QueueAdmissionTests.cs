@@ -1317,6 +1317,43 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task FirstExistingCounterRollbackPreservesConcurrentFutureMarkup()
+	{
+		const string raw = "{\"v\":999,\"t\":\"2\",\"extra\":42}";
+		var future = StoredMarkup.Inspect(raw);
+		var attribute = new SharpAttribute("existing", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!) { Value = MarkupText.Plain("1") };
+		var mediator = TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ => new[] { attribute }.ToAsyncEnumerable());
+		var writes = 0;
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			writes++;
+			attribute = attribute with { Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value, StoredValue = null };
+			return ValueTask.FromResult(true);
+		});
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			attribute = attribute with { Value = future.Value, StoredValue = future };
+			return Task.FromException<DateTimeOffset>(new IOException("publication acknowledgement lost"));
+		});
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		await Assert.That(async () => await queue.AdmitCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, manageSemaphoreCount: true)).Throws<AggregateException>();
+		await Assert.That(attribute.StoredValue!.Serialized).IsEqualTo(raw);
+		await Assert.That(writes).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); }).Throws<InvalidOperationException>();
+		await Assert.That(attribute.StoredValue!.Serialized).IsEqualTo(raw);
+		await Assert.That(writes).IsEqualTo(1);
+		attribute = attribute with { Value = MarkupText.Plain("2"), StoredValue = null }; // Explicit compatible administrator repair.
+		using (await queue.EnterSemaphoreMutationAsync()) { }
+		await Assert.That(attribute.Value.ToPlainText()).IsEqualTo("1");
+		await Assert.That(writes).IsEqualTo(2);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments("none")]
 	[Arguments("owner")]
 	[Arguments("name")]

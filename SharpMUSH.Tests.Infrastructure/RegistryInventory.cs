@@ -67,6 +67,12 @@ public static class RegistryInventory
 	public static IReadOnlySet<string> CommandNamesWithAliases() =>
 		WithAliases(Commands.Select(c => c.Name), AliasOptions.Default.CommandAliases);
 
+	/// <summary>Public contract properties declared by the registration attribute, excluding Attribute.TypeId.</summary>
+	public static IReadOnlyDictionary<string, object?> Metadata(Attribute attribute) => attribute.GetType()
+		.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+		.OrderBy(property => property.Name, StringComparer.Ordinal)
+		.ToDictionary(property => property.Name, property => property.GetValue(attribute));
+
 	private static IReadOnlySet<string> WithAliases(IEnumerable<string> names, Dictionary<string, string[]> aliases)
 	{
 		var all = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);

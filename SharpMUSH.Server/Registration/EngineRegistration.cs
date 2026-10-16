@@ -134,6 +134,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
+		services.AddSingleton<ApplicationDraftService>();
 		// The command palette: each character's context stack in memory, what a typed line used pushed
 		// onto it, and the entries the palette offers (docs/design/command-palette.md).
 		services.AddSingleton<IContextStack, ContextStack>();

@@ -1,0 +1,91 @@
+# Public softcode contract audit (#1797)
+
+Baseline: `38bab40c33ce362fe147b9b1d209367a02193b55` (16 October 2026), plus this lane's JSON metadata/help fixes. **#1797 remains open.** Enumeration and metadata reconciliation do not establish behavioral compatibility or a completed per-entry audit.
+
+## Census and status
+
+[softcode-contracts.json](softcode-contracts.json) records every declaration in the implementation assembly, its complete declared metadata, source candidate location, implementation method, status and evidence links. Separate records enumerate each shipped alias spelling, each command/switch declaration, and every EventCatalogue event callback with declared ordered arguments, enactor and privacy policy. Every public entry remains `pending-behavioral-review`: the two JSON entries have focused signature/example evidence, not a full authority, permissions, errors, limits and compatibility review.
+
+The exporter compiles the existing [RegistryInventory](../../SharpMUSH.Tests.Infrastructure/RegistryInventory.cs) directly, rather than maintaining another reflection walker. It reconciles all reflected names and every public contract property with `FunctionLibrary.CreateMetadata()` and `CommandLibrary.CreateMetadata()` before writing anything. Source text supplies navigation and callback **candidates**, never membership of the registration census. `GeneratedRuntimeRegistrationsMatchMetadata` separately compares actual generated `Create(instance)` registrations with metadata using the real server fixture; no delegate evaluation or runtime-null stand-in is used for that check.
+
+At this baseline: 661 function declarations, 223 command declarations, 28 function alias spellings, 11 command alias spellings 643 command/switch declarations and 52 declared event callbacks. Counts are observations, never test constants. The live reconciliation compares sets/contracts rather than parameter count or fixed totals. An alias that overlaps a declared name remains represented as an alias declaration; consumers may suppress duplicate spelling entries. `SingleArgumentSwitches` stays separate from the list of public switches.
+
+Dynamic configured aliases, game-defined functions/commands, shipped or loaded plugin modules, dynamic HTTP/package callback registrations, and live analysis identity/visibility are explicitly `unknown-pending-inventory`, with null totals. Their absence from the shipped implementation census is not evidence of zero entries or reviewed safety.
+
+Regenerate from the repository root using the pinned SDK, with disk-backed TMPDIR/TMP/TEMP:
+
+```bash
+dotnet build tools/ContractAudit -m:2 -nr:false
+dotnet run --no-build --project tools/ContractAudit -- . docs/audits/softcode-contracts.json
+```
+
+Regenerate after merging sibling lanes or changing registration metadata. Review the resulting diff and rerun `RegistryContractAuditTests`. New declarations become pending automatically; completed review must be recorded separately rather than inferred from a new count.
+
+## Function consumers
+
+- Runtime: [Functions.cs](../../SharpMUSH.Implementation/Functions/Functions.cs) calls generated `FunctionLibrary.Create(this)`, adds restricted-operation identity, then expands configured aliases. [AliasOptions.cs](../../SharpMUSH.Configuration/Options/AliasOptions.cs) supplies shipped defaults; live configuration may differ.
+- Analysis: [BuiltInAnalysisLibraries.cs](../../SharpMUSH.LanguageServer/Services/BuiltInAnalysisLibraries.cs) uses generated metadata plus shipped aliases. [BuiltInAnalysisCatalog.cs](../../SharpMUSH.CodeAnalysis/Catalog/BuiltInAnalysisCatalog.cs) exports immutable snapshots; [AnalysisCatalogAnalyzer.cs](../../SharpMUSH.CodeAnalysis/Catalog/AnalysisCatalogAnalyzer.cs) rehydrates them. [SignatureHelpHandler.cs](../../SharpMUSH.LanguageServer/Handlers/SignatureHelpHandler.cs) returns analyzer signatures. [InlayHintHandler.cs](../../SharpMUSH.LanguageServer/Handlers/InlayHintHandler.cs) expands parameter labels independently. Hover and completion also consume analyzer metadata. Focused tests exercise the snapshot, analyzer signature, generated portal definitions and actual registered Monaco signature provider in Node; live LSP identity, inlay rendering and browser interaction remain pending.
+- Portal: [ClientDataGenerator.cs](../../tools/ClientData/ClientDataGenerator.cs) joins reflected metadata and indexed shipped help, expands aliases, and writes `mush-defs.json`. The client build invokes it. [mush-monaco.js](../../SharpMUSH.Client/wwwroot/js/mush-monaco.js) reads the result for completion/hover/signatures; [HelpService.cs](../../SharpMUSH.Client/Services/HelpService.cs) uses the same definitions for the drawer. Flat fallback lists contain names, not authoritative signatures. Game help uses its own `GameHelpService` boundary.
+- Documentation: [HelpExport.cs](../../SharpMUSH.Documentation/HelpExport.cs), `HelpSignature`, `HelpRegistryParityTests`, `HelpExportTests`, and `MushDefsCrossReferenceTests` check export/readability/arity/references. Those checks do not prove argument meaning, callback authority or execution order.
+
+## Command consumers
+
+[Commands.cs](../../SharpMUSH.Implementation/Commands/Commands.cs) calls `CommandLibrary.Create(this)` and adds configured aliases. The analysis and portal consumers above export command labels, flags and switches from the same declarations. Reflection/generated comparison includes single-argument switches, locks, output policy and argument labels; no assumption that labels count equals maximum arity is made.
+
+**P2 pending discrepancy:** nine legacy commands declare `MaxArgs=0` below `MinArgs`: `@EDIT`, `@MESSAGE`, `@NOTIFY`, `@PASSWORD`, `@SCAN`, `@SKIP`, `@VERB`, `GET`, `GIVE`. The dispatcher deliberately does not generally enforce command arity (see `RejectIfTooFewArguments` in Commands.cs), and many additional zero-maximum declarations advertise real arguments. Do not mechanically rewrite zeros or reject these registrations with a function-style bound check: inspect each implementation and each editor consumer's treatment first. This remains visible in per-entry metadata and is not claimed fixed by the JSON lane.
+
+## Callback entry points and remaining review
+
+Event callback entries come directly from `EventCatalogue.All`, not a source pattern; their declared schemas are inventoried while invocation behavior remains pending. The JSON `callbackCandidates` array records source invocation/declaration candidates under Implementation, Library and Server with source locations and `pending-contract-review` status. It is a navigation aid with possible false positives, not a count of distinct public callback contracts. Each registered producer remains in the primary census even if no textual candidate matched. Dynamic registrations are unknown as above. For each producer, a behavioral review must pin supplied values/keys, named and numbered frames, authority, evaluation count/laziness, error propagation, output capture and admission timing.
+
+| Surface | Owning entry points and consumers | Status / existing evidence |
+| --- | --- | --- |
+| Attribute callbacks and lambdas | [AttributeService](../../SharpMUSH.Library/Services/AttributeService.cs), AttributeFunctions, U2 variants, list map/filter/fold/chain/loop families, JSONFunctions, InformationFunctions | Pending per public producer. #1788–#1791 argument lane owns named/numbered/presence/local-signature changes; do not duplicate them here. |
+| Guided input exit/timeout | [InputSession](../../SharpMUSH.Library/Models/InputSessions/InputSession.cs), InputSessionService, InputSessionCommands, TaskScheduler | Pending lifecycle/actor/admission audit; [guided-input-ordering](../design/guided-input-ordering.md) is the existing contract. |
+| Trigger/include/wait/semaphore/loop/event | QueueCommands, ControlFlowCommands, TaskScheduler, [EventCatalogue](../../SharpMUSH.Library/Definitions/EventCatalogue.cs) | Pending per producer. #1792/#1793/#1741 queue lane owns inline/admitted behavior, snapshots, budgets and accounting. |
+| HTTP and portal commands | [PortalCommandService](../../SharpMUSH.Server/Services/PortalCommandService.cs), CommandsController, HTTP route/handler implementations | Pending route registration plus trusted-actor/capture/result contract review. Runtime configured routes are unknown; a function signature is insufficient. |
+| Package/application callbacks | Package installation lifecycle, application source registry, widget/application actions | Pending; plugin/dynamic totals unknown. #1794–#1796 application lane owns shared state and Jobs proof. |
+
+Sibling issue links are ownership/evidence entry points, not claims their tests have run at this baseline: [arguments #1788](https://github.com/SharpMUSH/SharpMUSH/issues/1788), [queue #1792](https://github.com/SharpMUSH/SharpMUSH/issues/1792), [applications #1794](https://github.com/SharpMUSH/SharpMUSH/issues/1794). Their PR evidence must be reviewed at their actual heads and the merged registration census regenerated.
+
+## JSON contracts
+
+**P1 fixed after reproduction:** `json_map` argument 2 is `osep`, followed by callback extras starting at `%3`, rather than a JSONPath. `json_mod` argument 1 is `action`, argument 2 is an action-dependent path or merge patch, and argument 3 is optional replacement JSON. Corrected declaration labels flow to generated analysis catalog and portal signatures. These are metadata/help corrections; parser execution semantics are unchanged.
+
+`json_map` supplies `%1` as raw JSON: strings retain quotes, arrays/objects retain structure and null is literal `null`. The primitive examples now show those quotes. The recursive help example selects on `%0`'s type and passes primitive `%1` through rather than re-encoding already encoded strings. The example's invocation has its missing closing parenthesis restored. Its stored attribute bodies are read directly from the shipped help and executed by the real parser test, so changing the documentation can break the regression.
+
+### Validation evidence
+
+Validation results are recorded here before handoff. Commands use `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/<class>/<method-or-*>'`; filters run separately, because pipe expressions unexpectedly select every test.
+
+- RED: `JsonSignaturesReachAnalysisAndPortal` failed for both expected contracts; actual labels were `attribute,json,path` and `json,path,value`.
+- Raw parser baseline: `JsonHelpContractExamples` passed 5/5, demonstrating quoted strings, separator/extras forwarding, merge patch and path/value calls before any metadata/help fix.
+
+- RED, immutable baseline help: the example fixture found no stored first printer definition (`get(.../pretty_json)` returned empty); executing the corrected shipped definitions succeeds. The repaired invocation and primitive handling are covered by `JsonMapNestedHelpExamplePreservesRawValues`.
+- GREEN: `dotnet build SharpMUSH.Tests -m:2 -nr:false` and `dotnet build tools/ContractAudit -m:2 -nr:false`, zero warnings/errors, pinned SDK 11.0.100-rc.2.26504.105.
+- GREEN, separate class filters: `RegistryContractAuditTests` 4/4; `JsonFunctionUnitTests` 123 passed, 2 existing OOB setup skips; `HelpRegistryParityTests` 6/6; `HelpExportTests` 1/1; `MushDefsCrossReferenceTests` 2/2; `MushCodeAnalyzerIntelligenceTests` 12/12; `RegistryCoverageInventoryTests` 1/1.
+- GREEN: exporter run twice, byte-identical outputs (`cmp` exit 0); all 884 primary declarations have source navigation; 52 event schemas and 247 callback source candidates are explicitly pending. Local Markdown evidence links resolve.
+- Formatting: changed C# formatted twice to convergence; final build ran its formatting gate; `git diff --check` passed.
+- Full engine suite is reserved for the controller's combined six-lane integration run, as explicitly directed, avoiding a duplicate expensive feed/storage run. No browser session, live LSP identity check, live game audit, merge or deployment was performed. Independent whole-branch review remains the controller's next gate.
+
+### Rulings and scope
+
+The initial attempt to apply function-style `MinArgs <= MaxArgs` to commands failed on the nine documented zero-maximum entries. Inspection of the existing per-command arity opt-in showed that a blanket command correction would change unrelated public contracts; the mechanical gate instead checks nonnegative command bounds and exact reflection/generated equality, retaining the discrepant metadata for behavioral review. This is a deliberate pending review item, not an approved new interpretation of zero.
+
+Aliases and portal definitions preserve their declared key spelling; the mechanical test compares that spelling and the exact ordered parameter array, rather than assuming every key is lower-case. It does not claim browser command-alias lookup behavior is audited. Newly merged functions/commands remain compatible with these tests because they enumerate the current registries; the checked-in baseline census is not a frozen-count CI gate.
+
+### CI and review follow-up, 16 October 2026
+
+PR1965 job117109161555 at `5b90ab1fbacfd7b1152009f963ef69dfb1e95353` failed only `EveryHelpEntryFitsOnATelnetScreen`: the nested printer entry rendered 42 rows against the 30-row limit. The full worked invocation stays with its definitions; a declared `json_map printer output` section holds the unchanged output and is linked from the definition. `JSON_MAP3` still resolves to the definition/call section.
+
+Review thread `PRRT_kwDOLef2xs6tT2mj` identified a separate portal consumer defect: declaration pattern `arg...` reached Monaco literally, followed by absolute-position names `arg5`, `arg6`. The registered-provider regression in `tools/client-tests/monaco-signatures.test.mjs` failed 3/3 for one, two and four callback extras before the fix. Monaco now expands single and paired variadic patterns with the same numbering as the analyzer. Tests invoke the actual provider returned by Monaco registration and check displayed labels and active argument; paired patterns and fixed `json_mod` labels are positive controls. The Node fixture supplies declaration metadata because its standalone CI job has no .NET build; the C# registry test independently verifies that generated portal data has those labels.
+
+Review thread `PRRT_kwDOLef2xs6tT6Sz` is a false positive. `GeneratedRegistrationsMatchReflection` compares `FunctionLibrary.CreateMetadata()` / `CommandLibrary.CreateMetadata()` (new attributes emitted by the Roslyn source generators) with `RegistryInventory` (attributes read through `MethodInfo.GetCustomAttributes` from implementation methods). These are independent sources, not identical values by construction. The comparison remains intact.
+
+Follow-up validation uses the pinned SDK on PATH, `TMPDIR=TMP=TEMP=/temp/codex/audit`, Podman socket, `-m:2 -nr:false`, and individual TUnit class filters:
+
+- `node --test tools/client-tests/*.test.mjs`: 90/90, including five real-provider signature tests.
+- `dotnet build SharpMUSH.Tests -m:2 -nr:false`: zero warnings/errors. An initial invocation used the pinned executable but an older SDK on PATH for its child formatter; the corrected invocation also verifies formatting.
+- `HelpHeightTests`: 1/1; `HelpNavigationTests`: 4/4; `RegistryContractAuditTests`: 4/4.
+- `JsonMapNestedHelpExamplePreservesRawValues`: 1/1 against the actual shipped definitions; nested arrays, object strings and null remain intact.
+- `git diff --check`: passed. No C# source changed in this follow-up.

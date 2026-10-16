@@ -11,7 +11,9 @@ public class SetAttributeCommandHandler(IAttributeStore database, IMediator medi
 	{
 		var watched = await mediator.Send(new GetWatchedAttributesQuery(), cancellationToken);
 		return await mediator.AnnounceAsync(
-			await database.SetAttributeAsync(request.DBRef, request.Attribute, request.Value, request.Owner, watched.Names, cancellationToken),
+			request.StoredValue is { } stored
+				? await database.SetStoredAttributeAsync(request.DBRef, request.Attribute, stored, request.Owner, watched.Names, cancellationToken)
+				: await database.SetAttributeAsync(request.DBRef, request.Attribute, request.Value, request.Owner, watched.Names, cancellationToken),
 			watched, request.DBRef, request.Enactor, cancellationToken);
 	}
 }

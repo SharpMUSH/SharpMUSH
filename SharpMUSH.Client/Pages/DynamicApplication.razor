@@ -83,15 +83,9 @@
             @Loc["NavApplicationSchemaLoadFailed", _app.SchemaUrl]
         </div>
     }
-    else if (_schema.IsForm)
-    {
-        @* Keyed by what was fetched, so /apps/jobs/12 → /apps/jobs/13 starts a fresh form rather than
-           carrying the values typed on the previous record. *@
-        <SchemaFormRenderer @key="_loadedFrom" Document="_schema" Data="_data" />
-    }
     else
     {
-        <SchemaViewRenderer @key="_loadedFrom" Document="_schema" Data="_data" />
+        <SchemaApplicationHost @key="_generation" Document="_schema" Data="_data" />
     }
 </div>
 </AppSectionFrame>
@@ -120,9 +114,20 @@
     private string? _loadedFrom;
     private int _generation;
 
-    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged += CharacterChanged;
+    }
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    private void CharacterChanged() => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+
+    public void Dispose()
+    {
+        ++_generation;
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged -= CharacterChanged;
+    }
 
     /// <summary>
     /// A query-only navigation (<c>/apps/jobs</c> → <c>/apps/jobs?status=open</c>) passes the page the same

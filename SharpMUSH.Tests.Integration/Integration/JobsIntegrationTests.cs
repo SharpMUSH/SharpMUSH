@@ -50,9 +50,10 @@ public class JobsIntegrationTests
 	{
 		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
+		var beforeHandle = Notifications.CountForHandle(player.Handle);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 		await SettleCommandsAsync();
-		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
+		return string.Join("\n", Notifications.For(player.DbRef).Skip(before).Concat(Notifications.ForHandle(player.Handle).Skip(beforeHandle)));
 	}
 
 	/// <summary>A connected player in a room of its own, holding <paramref name="role"/> when one is named.</summary>
@@ -97,17 +98,112 @@ public class JobsIntegrationTests
 		await Installer.UninstallAsync("jobs", force: true, CancellationToken.None);
 	}
 
-	private async Task<JsonElement> Http(string method, string path, string body, TestIsolationHelpers.TestPlayer? viewer)
+	private async Task<JsonElement> Http(string method, string path, string body, TestIsolationHelpers.TestPlayer? viewer, string? formInstance = null)
 	{
 		var dispatcher = WebAppFactoryArg.Services.GetRequiredService<IHttpHandlerCommandDispatcher>();
 		DBRef? who = viewer is null ? null : DBRef.Parse(await Objid(viewer));
-		var response = (await dispatcher.DispatchAsync(method, path, body, [], IHttpHandlerCommandDispatcher.UnknownAddress, who))
+		var response = (await dispatcher.DispatchAsync(method, path, body, formInstance is null ? [] : [("X-SharpMUSH-Form-Instance", formInstance)], IHttpHandlerCommandDispatcher.UnknownAddress, who))
 			.Expect<HttpHandlerResult>();
 		await Assert.That(response.Status).IsEqualTo(200).Because(response.Body);
 		await Assert.That(response.ContentType).StartsWith("application/json");
 		return JsonDocument.Parse(response.Body).RootElement.Clone();
 	}
 
+	[Test]
+	public async Task DraftAdapterSharesReviewAndFileAcrossTerminalAndPortal()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsDraft");
+			await Assert.That(await As(player, "+request/draft new")).Contains("Bucket");
+			await As(player, "+request/draft set title=Literal request");
+			await As(player, "+request/draft set text=[set(me,W)]%;say private");
+			await Assert.That(await As(player, "think Normal command")).Contains("Normal command");
+			var privateBefore = Notifications.CountFor(player.DbRef);
+			await Assert.That(await As(player, "+request/draft review")).Contains("Literal request").And.Contains("[set(me,W)]%;say private");
+			await Assert.That(Notifications.For(player.DbRef).Skip(privateBefore)).DoesNotContain(line => line.Contains("Literal request")).Because("draft text must go only to the editing descriptor, not every connection of this character");
+			var second = player with { Handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player.DbRef) };
+			await Assert.That(await As(second, "+request/draft file")).Contains("No active draft");
+			await Assert.That(await As(player, "+request/draft back")).Contains("Literal request");
+			await As(player, "+request/draft review");
+			await Assert.That(await As(player, "+request/draft file")).Contains("Filed job 1.");
+			await Assert.That(await As(player, "+request/draft file")).Contains("Filed job 1.");
+			await Assert.That(await God("think [job(2,state)]")).IsEqualTo("#-1 NO SUCH JOB");
+			var instance = Guid.NewGuid().ToString("N");
+			var reviewed = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Requests","title":"Web request","text":"literal [add(1,2)]","softcode":false}""", player, instance);
+			await Assert.That(reviewed.GetProperty("ok").GetBoolean()).IsTrue().Because(reviewed.GetRawText());
+			await Assert.That(reviewed.GetProperty("schema").GetProperty("kind").GetString()).IsEqualTo("view");
+			var operation = reviewed.GetProperty("operation_id").GetString();
+			var file = JsonSerializer.Serialize(new { op = "draftfile", operation_id = operation });
+			var filed = await Http("POST", "/jobs/act", file, player, instance);
+			await Assert.That(filed.GetProperty("ok").GetBoolean()).IsTrue().Because(filed.GetRawText());
+			await Assert.That((await Http("POST", "/jobs/act", file, player, instance)).GetRawText()).IsEqualTo(filed.GetRawText());
+			await Assert.That((await Http("POST", "/jobs/act", file, player, Guid.NewGuid().ToString("N"))).GetProperty("ok").GetBoolean()).IsFalse();
+			await Assert.That(await God("think [job(3,state)]")).IsEqualTo("#-1 NO SUCH JOB");
+			var staff = await Player("JobsDraftStaff", "job-admin");
+			var closing = Guid.NewGuid().ToString("N");
+			var beforeClose = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Bugs","title":"Closed later","text":"Keep this draft"}""", player, closing);
+			await Assert.That(beforeClose.GetProperty("ok").GetBoolean()).IsTrue();
+			await As(staff, "+bucket/disable Bugs");
+			var rejected = await Http("POST", "/jobs/act", JsonSerializer.Serialize(new { op = "draftfile", operation_id = beforeClose.GetProperty("operation_id").GetString() }), player, closing);
+			await Assert.That(rejected.GetProperty("ok").GetBoolean()).IsFalse();
+			await Assert.That(rejected.GetProperty("errors").TryGetProperty("bucket", out _)).IsTrue();
+			await Assert.That(rejected.GetProperty("schema").GetProperty("kind").GetString()).IsEqualTo("form");
+			await Assert.That(rejected.TryGetProperty("data", out _)).IsFalse().Because("a failed File must not overwrite the retained client draft with null prefill");
+			await As(player, "+request/draft new");
+			await As(player, "+request/draft cancel");
+			await Assert.That(await As(player, "+request/draft file")).Contains("No active draft");
+			await As(player, "+request/draft new");
+			await ConnectionService.Unbind(player.Handle);
+			await ConnectionService.Bind(player.Handle, player.DbRef);
+			await Assert.That(await As(player, "+request/draft file")).Contains("No active draft");
+			var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("jobs");
+			var jobs = objects.Single(o => o.Ref == "jobs").Objid;
+			await Assert.That(await As(player, "help @appdraft")).Contains("application adapter");
+			await Assert.That(await As(player, "help appfields()")).Contains("structural checks");
+			await Assert.That(await God($"think [get([u({jobs}/FUN`JOB`FIND,1)]/JOB`ENTRY`1`TEXT)]")).IsEqualTo("[set(me,W)]%;say private");
+			var declaration = System.Text.Json.Nodes.JsonNode.Parse(await God($"think [get({jobs}/FORM)]"))!.AsArray();
+			declaration[1]!["validation"]!["max_length"] = 6;
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"extra","label":"Extra field","type":"text","default":"added once"}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"flag","label":"Flag","type":"boolean","default":false}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"zero","label":"Zero","type":"number","default":0}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"absent","label":"Absent","type":"text"}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"nullable","label":"Nullable","type":"text"}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"empty","label":"Empty","type":"text"}"""));
+			await God($"&FORM {jobs}={declaration.ToJsonString()}");
+			var changedForm = await Http("GET", "/jobs/schema?at=new", "", player);
+			await Assert.That(Elements(changedForm).Single(e => e.TryGetProperty("key", out var k) && k.GetString() == "title").GetProperty("validation").GetProperty("max_length").GetInt32()).IsEqualTo(6);
+			await Assert.That(Elements(changedForm).Any(e => e.TryGetProperty("key", out var k) && k.GetString() == "extra")).IsTrue();
+			await Assert.That(await As(player, "+request Seven77=Text")).Contains("at most 6");
+			await Assert.That(await As(player, "+request/draft new")).Contains("Extra field").And.Contains("added once");
+			await As(player, "+request/draft set title=Seven77");
+			await As(player, "+request/draft set text=Text");
+			await Assert.That(await As(player, "+request/draft review")).Contains("at most 6");
+			var changedValidation = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Requests","title":"Seven77","text":"Text"}""", player, Guid.NewGuid().ToString("N"));
+			await Assert.That(changedValidation.GetProperty("errors").GetProperty("title").GetString()).Contains("at most 6");
+			await As(player, "+request/draft set title=Small");
+			await As(player, "+request/draft set flag=true");
+			await Assert.That(await As(player, "+request/draft review")).Contains("Flag: true");
+			var typedInstance = Guid.NewGuid().ToString("N");
+			var typedReview = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Requests","title":"Small","text":"Text","nullable":null,"empty":"","flag":false}""", player, typedInstance);
+			var typedBack = await Http("POST", "/jobs/act", """{"op":"draftback"}""", player, typedInstance);
+			foreach (var response in new[] { typedReview, typedBack })
+			{
+				var fields = response.GetProperty("data").GetProperty("fields");
+				await Assert.That(fields.GetProperty("zero").GetProperty("value").GetInt32()).IsEqualTo(0);
+				await Assert.That(fields.TryGetProperty("absent", out _)).IsFalse();
+				await Assert.That(fields.GetProperty("nullable").GetProperty("value").ValueKind).IsEqualTo(JsonValueKind.Null);
+				await Assert.That(fields.GetProperty("flag").GetProperty("value").GetBoolean()).IsFalse();
+				await Assert.That(fields.GetProperty("empty").GetProperty("value").GetString()).IsEqualTo("");
+			}
+			var zeroReview = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Requests","title":"Small","text":"Text","zero":0}""", player, typedInstance);
+			await Assert.That(zeroReview.GetProperty("data").GetProperty("fields").GetProperty("zero").GetProperty("value").GetInt32()).IsEqualTo(0);
+
+
+		}
+		finally { await UninstallAsync(); }
+	}
 	[Test]
 	public async Task AJobPassesItsTurnBetweenPlayerAndStaffAndReopensWhenThePlayerAnswers()
 	{

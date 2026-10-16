@@ -29,7 +29,7 @@ public sealed class ListenAttributeSearch
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			if (!InTree(privateRoots, attribute.LongName) && !InTree(_blocked, attribute.LongName)
-				&& attribute.Flags.Any(flag => flag.Name.Equals("NO_COMMAND", StringComparison.OrdinalIgnoreCase)))
+				&& (attribute.IsMetadataUnreadable || attribute.Flags.Any(flag => flag.Name.Equals("NO_COMMAND", StringComparison.OrdinalIgnoreCase))))
 				_blocked.Add(attribute.LongName);
 		}
 		foreach (var attribute in attributes)
@@ -84,6 +84,7 @@ public sealed class ListenAttributeSearch
 		foreach (var attribute in attributes)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			if (attribute.IsUnreadable || attribute.IsMetadataUnreadable) continue;
 			var match = CommandDiscoveryService.ListenPatternRegex().Match(attribute.Value.ToPlainText());
 			if (!match.Success) continue;
 			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);

@@ -627,9 +627,14 @@ public partial class TaskScheduler(
 	{
 		var semaphore = SchedulerKeys.SemaphoreTarget(entry.Group);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
-		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
-			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
-			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		async ValueTask<SharpAttribute?> Read()
+		{
+			var value = await mediator.CreateStream(
+				new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+				.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+			SemaphoreAttributes.RequireCanRewrite(value);
+			return value;
+		}
 		var attribute = await Read();
 		if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var original)) return;
 		var expected = original > 0 ? original - 1 : 0;
@@ -680,9 +685,14 @@ public partial class TaskScheduler(
 	{
 		var semaphore = SchedulerKeys.SemaphoreTarget(entry.Group);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
-		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
-			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
-			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		async ValueTask<SharpAttribute?> Read()
+		{
+			var value = await mediator.CreateStream(
+				new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+				.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+			SemaphoreAttributes.RequireCanRewrite(value);
+			return value;
+		}
 		var attribute = await Read();
 		var original = 0;
 		var accounted = attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out original);
@@ -1114,6 +1124,11 @@ public partial class TaskScheduler(
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+				if (attribute is { IsUnreadable: true } || attribute?.StoredValue is { CanRewrite: false })
+				{
+					Release(admission.Pid!.Value, QueueOutcome.InvalidTarget);
+					return Reject(QueueRejectionReason.InvalidTarget);
+				}
 				counterCreated = attribute is null;
 				if (attribute is null || attribute.Value.Length == 0) currentCount = 0;
 				else if (!int.TryParse(attribute.Value.ToPlainText(), out currentCount) || currentCount == int.MaxValue)
@@ -1150,7 +1165,7 @@ public partial class TaskScheduler(
 		catch (Exception admissionFailure)
 		{
 			SemaphoreRepairIdentity? createdIdentity = null;
-			async ValueTask Restore(bool retry)
+			async ValueTask Restore()
 			{
 				// A failed acknowledgement may hide a committed trigger. Remove it before
 				// restoring the counter or making its PID available for another admission.
@@ -1160,32 +1175,32 @@ public partial class TaskScheduler(
 					scheduleWriteAttempted = false;
 				}
 				if (!counterWriteAttempted) return;
-				if (retry || counterCreated)
+				// Publication awaits external work; even the first rollback must recheck current bytes.
+				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
+					.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+				SemaphoreAttributes.RequireCanRewrite(attribute);
+				if (counterCreated && attribute is null) return;
+				if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var persisted))
+					throw new InvalidOperationException("Semaphore changed before admission repair; restore its original counter or remove the newly created attribute before retrying.");
+				if (!counterCreated && persisted == currentCount) return;
+				if (persisted != checked(currentCount + 1))
+					throw new InvalidOperationException("Semaphore changed before admission repair; refusing to overwrite a later counter value.");
+				if (counterCreated)
 				{
-					var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
-						.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
-					if (counterCreated && attribute is null) return;
-					if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var persisted))
-						throw new InvalidOperationException("Semaphore changed before admission repair; restore its original counter or remove the newly created attribute before retrying.");
-					if (!counterCreated && persisted == currentCount) return;
-					if (persisted != checked(currentCount + 1))
-						throw new InvalidOperationException("Semaphore changed before admission repair; refusing to overwrite a later counter value.");
-					if (counterCreated)
-					{
-						var identity = await CaptureRepairIdentity(attribute);
-						// A read outage may prevent the first snapshot. Accept the first successful
-						// read only if it still has the exact counter and metadata we create.
-						var expectedCreation = identity.Owner == god!.Object.DBRef
-							&& identity.CommandListIndex is null
-							&& identity.Name.Equals(dbRefAttribute.Attribute[^1], StringComparison.OrdinalIgnoreCase)
-							&& identity.LongName.Equals(string.Join('`', dbRefAttribute.Attribute), StringComparison.OrdinalIgnoreCase)
-							&& identity.Flags.Split('\0', StringSplitOptions.RemoveEmptyEntries)
-								.All(flag => SemaphoreAttributes.RequiredFlagNames.Contains(flag, StringComparer.OrdinalIgnoreCase));
-						if (createdIdentity is null && expectedCreation) createdIdentity = identity;
-						else if (createdIdentity != identity)
-							throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
-					}
+					var identity = await CaptureRepairIdentity(attribute);
+					// A read outage may prevent the first snapshot. Accept the first successful
+					// read only if it still has the exact counter and metadata we create.
+					var expectedCreation = identity.Owner == god!.Object.DBRef
+						&& identity.CommandListIndex is null
+						&& identity.Name.Equals(dbRefAttribute.Attribute[^1], StringComparison.OrdinalIgnoreCase)
+						&& identity.LongName.Equals(string.Join('`', dbRefAttribute.Attribute), StringComparison.OrdinalIgnoreCase)
+						&& identity.Flags.Split('\0', StringSplitOptions.RemoveEmptyEntries)
+							.All(flag => SemaphoreAttributes.RequiredFlagNames.Contains(flag, StringComparer.OrdinalIgnoreCase));
+					if (createdIdentity is null && expectedCreation) createdIdentity = identity;
+					else if (createdIdentity != identity)
+						throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
 				}
+
 				var restored = counterCreated
 					? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute, state.Executor), ExecutionBudget.CurrentToken)
 					: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
@@ -1196,11 +1211,11 @@ public partial class TaskScheduler(
 			{
 				using var cleanup = ExecutionBudget.FromMilliseconds(1000);
 				using var cleanupScope = cleanup.Enter();
-				await Restore(retry: false);
+				await Restore();
 			}
 			catch (Exception cleanupFailure)
 			{
-				_semaphoreRepairs[admission.Pid!.Value] = () => Restore(retry: true);
+				_semaphoreRepairs[admission.Pid!.Value] = () => Restore();
 				if (_pendingEntries.TryGetValue(admission.Pid.Value, out var retained)) CancelEntry(retained);
 				logger.LogError(cleanupFailure, "Semaphore admission repair retained for PID {Pid} at {Target}/{Attribute} (original counter: {Original}); further semaphore mutations require successful repair",
 					admission.Pid, fullTarget, string.Join('`', dbRefAttribute.Attribute), counterCreated ? "absent" : currentCount.ToString());

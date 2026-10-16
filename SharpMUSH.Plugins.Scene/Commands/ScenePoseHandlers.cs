@@ -130,7 +130,7 @@ public static class ScenePoseHandlers
 		}
 
 		var result = await sceneService.EditPoseAsync(poseId, editorDbref, content);
-		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} edited.",
+		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} edited.",
 			parser, "edit");
 	}
 

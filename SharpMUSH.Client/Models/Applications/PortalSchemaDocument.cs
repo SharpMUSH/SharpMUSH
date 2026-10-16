@@ -75,7 +75,7 @@ public sealed record SchemaElement(
 	string? Label = null,
 	string? Type = null,
 	IReadOnlyList<SchemaOption>? Options = null,
-	JsonElement? Default = null,
+	[property: JsonConverter(typeof(SchemaDefaultConverter))] JsonElement? Default = null,
 	string? Help = null,
 	SchemaValidation? Validation = null,
 	[property: JsonPropertyName("visible_to")] string? VisibleTo = null,
@@ -149,7 +149,53 @@ public sealed record SchemaActionSuccess(
 	string? Navigate,
 	string? Toast,
 	[property: JsonPropertyName("merge_fields")] bool MergeFields,
-	[property: JsonPropertyName("reset_fields")] bool ResetFields = false);
+	[property: JsonPropertyName("reset_fields")] SchemaFieldReset ResetFields = default);
+
+/// <summary>Preserves explicit JSON null as a supplied default; an absent property remains absent.</summary>
+public sealed class SchemaDefaultConverter : JsonConverter<JsonElement?>
+{
+	public override bool HandleNull => true;
+	public override JsonElement? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	{
+		using var document = JsonDocument.ParseValue(ref reader);
+		return document.RootElement.Clone();
+	}
+	public override void Write(Utf8JsonWriter writer, JsonElement? value, JsonSerializerOptions options)
+	{
+		if (value is { } element) element.WriteTo(writer);
+		else writer.WriteNullValue();
+	}
+}
+
+/// <summary>Legacy boolean reset-all or an explicit list of draft keys to remove.</summary>
+[JsonConverter(typeof(SchemaFieldResetConverter))]
+public readonly record struct SchemaFieldReset(bool All, IReadOnlyList<string>? Keys = null)
+{
+	public bool Any => All || Keys?.Count > 0;
+	public static implicit operator SchemaFieldReset(bool all) => new(all);
+}
+
+public sealed class SchemaFieldResetConverter : JsonConverter<SchemaFieldReset>
+{
+	public override SchemaFieldReset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	{
+		if (reader.TokenType is JsonTokenType.True or JsonTokenType.False) return new(reader.GetBoolean());
+		if (reader.TokenType != JsonTokenType.StartArray) throw new JsonException("reset_fields must be a boolean or an array of field keys.");
+		var keys = new List<string>();
+		while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+		{
+			if (reader.TokenType != JsonTokenType.String || string.IsNullOrWhiteSpace(reader.GetString())) throw new JsonException("reset_fields keys must be nonempty strings.");
+			keys.Add(reader.GetString()!);
+		}
+		return new(false, keys);
+	}
+
+	public override void Write(Utf8JsonWriter writer, SchemaFieldReset value, JsonSerializerOptions options)
+	{
+		if (value.Keys is { } keys) JsonSerializer.Serialize(writer, keys, options);
+		else writer.WriteBooleanValue(value.All);
+	}
+}
 
 /// <summary>What to do when an action fails.</summary>
 public sealed record SchemaActionError(

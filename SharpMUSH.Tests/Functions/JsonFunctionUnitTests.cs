@@ -15,6 +15,21 @@ public class JsonFunctionUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
+	public async Task GeneratedRuntimeRegistrationsMatchMetadata()
+	{
+		var functions = SharpMUSH.Implementation.Generated.FunctionLibrary.Create((SharpMUSH.Implementation.Functions.Functions)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>());
+		var commands = SharpMUSH.Implementation.Generated.CommandLibrary.Create((SharpMUSH.Implementation.Commands.Commands)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>());
+		var functionMetadata = SharpMUSH.Implementation.Generated.FunctionLibrary.CreateMetadata();
+		var commandMetadata = SharpMUSH.Implementation.Generated.CommandLibrary.CreateMetadata();
+		await Assert.That(functions.Keys).IsEquivalentTo(functionMetadata.Keys);
+		await Assert.That(commands.Keys).IsEquivalentTo(commandMetadata.Keys);
+		foreach (var (name, definition) in functions)
+			await Assert.That(System.Text.Json.JsonSerializer.Serialize(RegistryInventory.Metadata(definition.Attribute))).IsEqualTo(System.Text.Json.JsonSerializer.Serialize(RegistryInventory.Metadata(functionMetadata[name])));
+		foreach (var (name, definition) in commands)
+			await Assert.That(System.Text.Json.JsonSerializer.Serialize(RegistryInventory.Metadata(definition.Attribute))).IsEqualTo(System.Text.Json.JsonSerializer.Serialize(RegistryInventory.Metadata(commandMetadata[name])));
+	}
+
+	[Test]
 	[Arguments("json(string,foo)", "\"foo\"")]
 	[Arguments("json(number,1.1)", "1.1")]
 	[Arguments("json(number,-1)", "-1")]
@@ -166,6 +181,41 @@ public class JsonFunctionUnitTests
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("json_map(#lambda/%%0:%%1,json(string,foo))", "string:\"foo\"")]
+	[Arguments("json_map(#lambda/%%0:%%1,json(array,json(string,foo),5),|)", "string:\"foo\"|number:5")]
+	[Arguments("json_map(#lambda/%%2:%%1:%%3:%%4,json(object,a,1,b,2),|,extra,tail)", "a:1:extra:tail|b:2:extra:tail")]
+	[Arguments("json_mod(json(object,a,1),patch,json(object,b,2))", "{\"a\":1,\"b\":2}")]
+	[Arguments("json_mod(json(object,a,1),set,$.a,json(string,new))", "{\"a\":\"new\"}")]
+	public async Task JsonHelpContractExamples(string expression, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expression));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task JsonMapNestedHelpExamplePreservesRawValues()
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "JsonPretty");
+		var help = await File.ReadAllLinesAsync(Path.Join(TestPaths.Helpfiles.FullName, "json-map-function.md"));
+		var definitions = help.Where(line => line.StartsWith("> &pretty_json", StringComparison.Ordinal)).ToArray();
+		await Assert.That(definitions.Length).IsEqualTo(2);
+		foreach (var definition in definitions)
+		{
+			var storedDefinition = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(definition[2..].Replace(" me=", $" {target}=").Replace("me/", $"{target}/")));
+			await Assert.That(storedDefinition.IsParseFailure).IsFalse();
+		}
+		var stored = await Parser.EvaluateAsync(MarkupText.Plain($"get({target}/pretty_json)"));
+		await Assert.That(stored.ToPlainText()).StartsWith("u(");
+		const string json = "json(array,5,null,json(array,json(string,nested!),999,json(object,foo,5,bar,json(string,Whee))),7)";
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"u({target}/pretty_json,{json})"));
+		using var document = System.Text.Json.JsonDocument.Parse(result.ToPlainText());
+		await Assert.That(document.RootElement[1].ValueKind).IsEqualTo(System.Text.Json.JsonValueKind.Null);
+		await Assert.That(document.RootElement[2][0].GetString()).IsEqualTo("nested!");
+		await Assert.That(document.RootElement[2][2].GetProperty("bar").GetString()).IsEqualTo("Whee");
+		await Assert.That(document.RootElement[3].GetInt32()).IsEqualTo(7);
 	}
 
 	// Penn json.type.1-6,8-9 (json_query type)
