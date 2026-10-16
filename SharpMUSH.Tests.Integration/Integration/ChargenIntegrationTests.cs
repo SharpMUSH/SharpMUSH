@@ -30,18 +30,28 @@ public class ChargenIntegrationTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	// Ordinary triggers may enqueue more triggers; command completion includes those descendants.
+	private ValueTask SettleCommandsAsync() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
+		.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		await SettleCommandsAsync();
+		return result.Message.ToPlainText()?.Trim() ?? string.Empty;
+	}
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
 	{
+		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+		await SettleCommandsAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
@@ -93,7 +103,7 @@ public class ChargenIntegrationTests
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
 		// AINSTALL is queued after the apply: it adds the commands.
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 	}
 
 	private async Task UninstallAsync()
@@ -184,7 +194,7 @@ public class ChargenIntegrationTests
 				.Because("a character cannot rewrite what it submitted");
 
 			await Assert.That(await As(reviewer, $"+app/approve {applicant.Name}=Welcome.")).Contains($"Approved {applicant.Name}.");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(await HasRole(applicant, "approved")).IsTrue();
 			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/CHARGEN_HOOK)]")).IsEqualTo($"{await Objid(reviewer)} said Welcome.")
 				.Because("ON`APPROVE runs with the character, the reviewer and the message by name");

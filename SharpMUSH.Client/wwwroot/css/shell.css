@@ -766,7 +766,11 @@ pre.ms-preformatted {
 
 /* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */
 .ms-rule:empty, .ms-divider:empty { gap: 0; }
-/* Portal-only: a cell breaks a word only when the word cannot fit, so a table sizes its columns to whole words. */
+/* The terminal uses word-break: break-word for plain output. Reset it on tables: that
+   legacy value makes intrinsic sizing treat every character as a break opportunity,
+   even with overflow-wrap: break-word. Headers then shrink below whole words while
+   a growing description keeps the spare width. Preserve emergency wrapping in cells. */
+.ms-table { word-break: normal; overflow-wrap: break-word; }
 .ms-table .ms-text { overflow-wrap: break-word; }
 
 /* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links.

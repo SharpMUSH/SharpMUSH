@@ -1355,7 +1355,9 @@ public partial class Commands
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
 		parser.CurrentState.Registers.TryPeek(out var currentRegs);
 		var clearsRegisters = switches.Contains("CLEARREGS");
-		if (switches.Contains("INLINE") && !switches.Contains("LOCALIZE") && currentRegs is not null)
+		var isInplace = switches.Contains("INPLACE");
+		var isInline = switches.Contains("INLINE") || isInplace;
+		if (isInline && !isInplace && !switches.Contains("LOCALIZE") && currentRegs is not null)
 		{
 			if (clearsRegisters) currentRegs.Clear();
 			registerStack.Push(currentRegs);
@@ -1367,26 +1369,35 @@ public partial class Commands
 				: new Dictionary<string, MString>(currentRegs));
 		}
 
-		// Note: INLINE switch executes immediately (current default behavior).
-		// Queue dispatch available via AdmitCommandListRequest if needed for future enhancements.
-
-		// Runs in place, so it is bounded by the in-place nesting depth (ParserState.MaxInplaceDepth),
-		// not by function_recursion_limit, which PennMUSH applies to functions alone.
-		var stateWithRegisters = parser.CurrentState with
+		var stateWithRegisters = parser.CurrentState.ForAttributeArguments(envRegisters) with
 		{
 			Executor = targetObject.Object().DBRef,
 			Enactor = executionEnactor,
 			Caller = parser.CurrentState.Executor,
 			Registers = registerStack,
-			EnvironmentRegisters = envRegisters,
-			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(envRegisters),
 			// A loop or switch the trigger ran inside does not bind ##, #@ or #$ written in the attribute it runs:
 			// PennMUSH queues that attribute, and splices those tokens only into the loop's own text.
 			CurrentEvaluation = new DBAttribute(targetObject.Object().DBRef, attribute.LongName)
 		};
 
-		var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
-			async p => await p.CommandListParseVisitor(action)()));
+		if (!isInline)
+		{
+			// PennMUSH queues attributes with PE_INFO_DEFAULT: only the supplied ARG/Q
+			// registers cross this boundary, not the invoking loop, switch or regexp frames.
+			stateWithRegisters = stateWithRegisters with { IterationRegisters = [], SwitchStack = [], RegexRegisters = [] };
+			var admission = await parser.With(_ => stateWithRegisters, p => p.WithAttributeDebug(attribute,
+				debug => Mediator.Send(new AdmitCommandListRequest(action, debug.CurrentState,
+					new DbRefAttribute(targetObject.Object().DBRef, attribute.LongName.Split('`')), -1), ExecutionBudget.CurrentToken)));
+			return admission.Accepted ? CallState.Empty : new CallState(admission.Error) { HadErrors = true };
+		}
+
+		// Only explicit inline execution shares the parent's entry budget and propagates its break.
+		// /inplace is the documented /inline/localize/nobreak alias.
+		var propagation = new BreakPropagation { PreserveNext = true };
+		var result = await parser.With(_ => stateWithRegisters with { BreakPropagation = propagation },
+			p => p.WithAttributeDebug(attribute, debug => debug.CommandListParse(action)));
+		if (propagation.Broke && !isInplace && !switches.Contains("NOBREAK"))
+			parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
 		return CallState.Empty with { HadErrors = result?.HadErrors == true };
 	}

@@ -1,6 +1,7 @@
 @page "/admin/packages/browse"
 @attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
 @using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Models.Packages
 @inject PackagesAdminService Packages
@@ -43,6 +44,11 @@
         <MudProgressLinear Indeterminate="true" />
     }
 
+    @if (_installedFailure is not null)
+    {
+        <MudAlert Severity="Severity.Warning" Class="pkg-installed-warning">@Loc["PkgBrowseInstalledUnavailable", _installedFailure.Message]</MudAlert>
+    }
+
     @if (_snapshot is not null)
     {
         <div class="pkg-snapshot-meta">
@@ -58,6 +64,18 @@
                     </Controls>
                     <ChildContent>
                     <div class="pkg-card-body">
+                        @if (entry.PackageId is { } id && _installed.TryGetValue(id, out var installed))
+                        {
+                            <div class="pkg-installed-marker">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" aria-hidden="true" />
+                                <span>@Loc["PkgBrowseInstalled", installed.Version]</span>
+                            </div>
+                            @if (!string.Equals(installed.SourceRepo, _snapshot.Url, StringComparison.Ordinal)
+                                || !string.Equals(installed.SourcePath ?? "", entry.Path, StringComparison.Ordinal))
+                            {
+                                <div class="pkg-card-note">@Loc["PkgBrowseInstalledOrigin", installed.SourceRepo, string.IsNullOrEmpty(installed.SourcePath) ? "/" : installed.SourcePath]</div>
+                            }
+                        }
                         <div class="pkg-card-desc">@(entry.Description ?? Loc["PkgNoDescription"])</div>
                         @if (entry.PackageId is null)
                         {
@@ -100,6 +118,8 @@
     private PackageRepoSnapshot? _snapshot;
     private readonly Dictionary<string, string> _selectedVersions = new();
     private bool _busy;
+    private IReadOnlyDictionary<string, InstalledPackageRecord> _installed = new Dictionary<string, InstalledPackageRecord>();
+    private ApiFailure? _installedFailure;
 
     private PackageReadmeDialog? _readme;
 
@@ -130,10 +150,24 @@
     {
         _busy = true;
         _snapshot = null;
+        _installed = new Dictionary<string, InstalledPackageRecord>();
+        _installedFailure = null;
         try
         {
             _remoteRecord = (_remotes ?? []).FirstOrDefault(r => r.Name == _selectedRemote);
-            switch (await Packages.BrowseAsync(_selectedRemote))
+            var browse = Packages.BrowseAsync(_selectedRemote);
+            var installed = Packages.GetInstalledAsync();
+            await Task.WhenAll(browse, installed);
+            switch (await installed)
+            {
+                case IReadOnlyList<InstalledPackageDto> packages:
+                    _installed = packages.ToDictionary(p => p.Package.Id, p => p.Package, StringComparer.Ordinal);
+                    break;
+                case ApiFailure failure:
+                    _installedFailure = failure;
+                    break;
+            }
+            switch (await browse)
             {
                 case PackageRepoSnapshot snapshot:
                     _snapshot = snapshot;

@@ -116,6 +116,26 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	public async Task SqlQueuedCallbackSnapshotsRegistersBeforeTheSubmittingListContinues()
+	{
+		var player = await CreateWizardTestPlayerAsync("SqlSnapshot");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SqlSnapshotTarget");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RUN {target}=&OUT {target}=%qX|%1"));
+		var state = ParserState.RootFor(player.DbRef);
+		var queue = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await queue.AdmitWork(async () =>
+		{
+			await Parser.FromState(state).CommandListParse(MarkupText.Plain($"think setq(X,before);@mapsql {target}/RUN=SELECT 'row' AS present;think setq(X,after)"));
+			completed.TrySetResult();
+			return CallState.Empty;
+		}, "sql snapshot", "enqueue", player.DbRef);
+		await completed.Task.WaitAsync(TimeSpan.FromSeconds(30));
+		await SqlWebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That((await SqlWebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/OUT)"))).ToPlainText()).IsEqualTo("before|row");
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task SqlQueuedRowCallbacksStartTheirOwnPresence(bool nested)

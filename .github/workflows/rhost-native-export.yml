@@ -1,0 +1,57 @@
+name: Rhost native export
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/RhostExport/**'
+      - 'tools/rhost-fixtures/**'
+      - 'SharpMUSH.Library/Services/DatabaseConversion/Rhost/**'
+      - 'SharpMUSH.Tests/Services/Rhost*'
+      - 'SharpMUSH.Tests/Services/TestData/RhostNative/**'
+      - '.github/workflows/rhost-native-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-backends:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Configure disk scratch
+        run: |
+          mkdir -p "$RUNNER_TEMP/rhost-scratch"
+          echo "TMPDIR=$RUNNER_TEMP/rhost-scratch" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP/rhost-scratch" >> "$GITHUB_ENV"
+          echo "TEMP=$RUNNER_TEMP/rhost-scratch" >> "$GITHUB_ENV"
+      - name: Install upstream build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang make libssl-dev libpcre3-dev libcrypt-dev libnsl-dev
+      - name: Build pinned upstream converters and genuine native databases
+        run: |
+          git init "$RUNNER_TEMP/rhost-upstream"
+          git -C "$RUNNER_TEMP/rhost-upstream" remote add origin https://github.com/RhostMUSH/trunk.git
+          git -C "$RUNNER_TEMP/rhost-upstream" fetch --depth 1 origin bfd2894c7239d02b8bec15c36939706be371715c
+          git -C "$RUNNER_TEMP/rhost-upstream" checkout --detach FETCH_HEAD
+          python3 tools/rhost-fixtures/reproduce-fixtures.py "$RUNNER_TEMP/rhost-upstream" "$GITHUB_WORKSPACE/SharpMUSH.Tests/Services/TestData/rhost-sample.flat" "$RUNNER_TEMP/rhost-fixtures"
+          echo "RHOST_EXPORTER_LEGACY_QDBM=$RUNNER_TEMP/rhost-fixtures/build-legacy/Server/bin/dbconvert" >> "$GITHUB_ENV"
+          echo "RHOST_PROFILE_LEGACY_QDBM=$RUNNER_TEMP/rhost-fixtures/legacy/profile.json" >> "$GITHUB_ENV"
+          echo "RHOST_EXPORTER_MDBX=$RUNNER_TEMP/rhost-fixtures/build-mdbx/Server/bin/dbconvert" >> "$GITHUB_ENV"
+          echo "RHOST_PROFILE_MDBX=$RUNNER_TEMP/rhost-fixtures/mdbx/profile.json" >> "$GITHUB_ENV"
+          echo "RHOST_FIXTURE_ROOT=$RUNNER_TEMP/rhost-fixtures" >> "$GITHUB_ENV"
+      - name: Build export tests
+        run: dotnet build SharpMUSH.Tests -m:2 -nr:false
+      - name: Verify actual native exports and imports
+        run: dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/RhostNativeExportImportTests/*'
+      - name: Verify failure handling
+        run: dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/RhostOfflineExportTests/*'
+      - name: Verify strict readers
+        run: dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/RhostStrictReaderTests/*'

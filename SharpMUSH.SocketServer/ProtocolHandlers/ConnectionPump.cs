@@ -381,7 +381,7 @@ public sealed class ConnectionPump(
 		else if (WebSocketControlFrame.TryParseTimeZone(message, out var zone))
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new ClientTimeZoneMessage(handle, zone), ct);
-		else
+		else if (!WebSocketControlFrame.IsEnvironmentFrame(message))
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new WebSocketInputMessage(handle, message, connectionService.Get(handle)?.SessionId), ct);
 	}

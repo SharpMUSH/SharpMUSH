@@ -335,6 +335,7 @@ public class RecursionAndInvocationLimitTests
 		// Should complete (not hang)
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@trigger {objDbRef}/SELFCALL_TRIG_LIM_UNIQUE"));
+		await WebAppFactoryArg.QueueBarrierAsync();
 
 		// At least one notification must have been dispatched (Huh? from unknown command, sent via NotifyLocalized).
 		// @trigger runs the attribute with the triggered object as executor.

@@ -699,11 +699,11 @@ public partial class Functions
 		var hadErrors = false;
 		for (var i = 0; i < pairCount; i++)
 		{
-			var condition = await parser.FunctionParse(args[(i * 2).ToString()].Message);
+			var condition = await ParseRawArgument(parser, args[(i * 2).ToString()].Message);
 			hadErrors |= condition?.HadErrors == true;
 			if (condition?.Message.Truthy(parser) == !negate)
 			{
-				var result = await parser.FunctionParse(args[(i * 2 + 1).ToString()].Message);
+				var result = await ParseRawArgument(parser, args[(i * 2 + 1).ToString()].Message);
 				hadErrors |= result?.HadErrors == true;
 				if (!all) return (result ?? CallState.Empty) with { HadErrors = hadErrors };
 				// Keep an empty selected result: the default runs only if no condition matched.
@@ -712,7 +712,7 @@ public partial class Functions
 		}
 		if (results.Count > 0) return new CallState(MarkupText.Concat(results)) { HadErrors = hadErrors };
 		var fallback = args.Count % 2 == 1
-			? await parser.FunctionParse(args[(args.Count - 1).ToString()].Message) ?? CallState.Empty
+			? await ParseRawArgument(parser, args[(args.Count - 1).ToString()].Message) ?? CallState.Empty
 			: CallState.Empty;
 		return fallback with { HadErrors = hadErrors || fallback.HadErrors };
 	}
@@ -1137,11 +1137,11 @@ public partial class Functions
 		{
 			if (truthy)
 			{
-				result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message);
+				result = await ParseRawArgument(parser, parser.CurrentState.Arguments["1"].Message);
 			}
 			else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
 			{
-				result = await parser.FunctionParse(arg2.Message);
+				result = await ParseRawArgument(parser, arg2.Message);
 			}
 		}
 		finally
@@ -2256,14 +2256,14 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message);
+		var delimParsed = await ParseRawArgument(parser, args[(args.Count - 1).ToString()].Message);
 		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
 		var hadErrors = delimParsed?.HadErrors == true;
 
 		var kept = new List<MString>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
-			var parsed = await parser.FunctionParse(args[i.ToString()].Message);
+			var parsed = await ParseRawArgument(parser, args[i.ToString()].Message);
 			hadErrors |= parsed?.HadErrors == true;
 			var value = parsed?.Message ?? MarkupText.Empty;
 			if (isBool ? value.Truthy(parser) : value.Length > 0) kept.Add(value);

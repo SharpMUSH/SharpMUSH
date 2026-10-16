@@ -1367,11 +1367,11 @@ public partial class TelnetServerNegotiationTests
 	private const byte ENV_VAL = 1;
 
 	/// <summary>
-	/// MNES: the server asks for the client's variables, and the name and version it gives are reported.
+	/// MNES: the server asks for the client's variables, and its name, version and time zone are reported.
 	/// IPADDRESS is sent too, and must go nowhere.
 	/// </summary>
 	[Test]
-	public async Task MnesClientName_IsPublishedAndIpAddressIgnored()
+	public async Task MnesClientNameAndTimeZone_ArePublishedAndIpAddressIgnored()
 	{
 		var (toServer, fromServer, handler, published, cts) = StartServer();
 		using var serverLifetime = cts;
@@ -1383,6 +1383,7 @@ public partial class TelnetServerNegotiationTests
 			await WriteAsync(toServer, [IAC, SB, NEW_ENVIRON, IS,
 				ENV_VAR, .. "CLIENT_NAME"u8.ToArray(), ENV_VAL, .. "Mudlet"u8.ToArray(),
 				ENV_VAR, .. "CLIENT_VERSION"u8.ToArray(), ENV_VAL, .. "4.17"u8.ToArray(),
+				ENV_VAR, .. "TZ"u8.ToArray(), ENV_VAL, .. "America/Chicago"u8.ToArray(),
 				ENV_VAR, .. "IPADDRESS"u8.ToArray(), ENV_VAL, .. "203.0.113.9"u8.ToArray(),
 				IAC, SE]);
 
@@ -1391,14 +1392,19 @@ public partial class TelnetServerNegotiationTests
 			await Assert.That(message).IsNotNull();
 			await Assert.That(message!.Name).IsEqualTo("Mudlet");
 			await Assert.That(message.Version).IsEqualTo("4.17");
+			var zone = await WaitForPublishedAsync<ClientTimeZoneMessage>(published);
+			await Assert.That(zone?.Zone).IsEqualTo("America/Chicago");
 
 			bool leaked;
+			bool gameInput;
 			lock (published)
 			{
 				leaked = published.Any(item => item.ToString()?.Contains("203.0.113.9") == true);
+				gameInput = published.OfType<TelnetInputMessage>().Any();
 			}
 
 			await Assert.That(leaked).IsFalse().Because("a client may not choose the address sitelock sees");
+			await Assert.That(gameInput).IsFalse();
 		}
 		finally
 		{

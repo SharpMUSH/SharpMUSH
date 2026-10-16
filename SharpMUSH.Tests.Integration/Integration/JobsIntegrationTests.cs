@@ -30,19 +30,29 @@ public class JobsIntegrationTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	// Ordinary triggers may enqueue more triggers; command completion includes those descendants.
+	private ValueTask SettleCommandsAsync() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
+		.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		await SettleCommandsAsync();
+		return result.Message.ToPlainText()?.Trim() ?? string.Empty;
+	}
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
 	{
+		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
 		var beforeHandle = Notifications.CountForHandle(player.Handle);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+		await SettleCommandsAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before).Concat(Notifications.ForHandle(player.Handle).Skip(beforeHandle)));
 	}
 
@@ -79,7 +89,7 @@ public class JobsIntegrationTests
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
 		// AINSTALL is queued after the apply: it adds the commands and starts the timer.
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 	}
 
 	private async Task UninstallAsync()
@@ -525,7 +535,7 @@ public class JobsIntegrationTests
 				.Contains("Bucket Bugs takes no new jobs now. Its 25 jobs are moving to Requests; it is deleted, with its role and permission, once they have all moved.")
 				.Because("25 jobs is more than one queue entry moves");
 
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(await God("think [iter(lnum(1,25),job(##,bucket))]")).IsEqualTo(string.Join(" ", Enumerable.Repeat("Requests", 25)));
 			await Assert.That(await As(admin, "+bucket Bugs")).Contains("There is no bucket called Bugs.");
 			await Assert.That(string.Join("\n", Notifications.For(admin.DbRef).Skip(before)))
@@ -631,14 +641,14 @@ public class JobsIntegrationTests
 			await God($"&ON`FILE {requests}=@pemit %1=HOOKFILE %0 [name(%1)] %2 %3");
 
 			await As(player, "+request Commas, kept=Text.");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
 				.Contains($"HOOKFILE 1 {player.Name} Commas, kept command")
 				.Because("a hook written for the positions still reads them");
 
 			await God($"&ON`FILE {requests}=@pemit %<filer>=HOOKNAMED %<job>/%0 [name(%<filer>)] %<title> %<how>");
 			await As(player, "+request Names, too=Text.");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
 				.Contains($"HOOKNAMED 2/2 {player.Name} Names, too command")
 				.Because("every hook argument also comes by name, the same value as its position");
@@ -689,7 +699,7 @@ public class JobsIntegrationTests
 			await As(player, "+request Done soon=Please.");
 			await As(staff, "+job/claim 1");
 			await As(staff, "+job/complete 1=Finished, with commas.");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
 				.Contains($"HOOKDONE 1 1 {staff.Name} {player.Name} 5=5")
 				.Because("after the bucket's first reply (2), the claim and its turn are log entries 3 and 4, the closing message 5");
@@ -907,7 +917,7 @@ public class JobsIntegrationTests
 			var filed = await As(player, "+request Building/Bench=A bench in the plaza.");
 			await Assert.That(filed).Contains("It is approved at once, and staff look it over later.")
 				.And.DoesNotContain("Building approved your job").Because("the filer is told once");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef))).Contains("AUDAPPROVE 1 Building")
 				.Because("approving at once runs the bucket's own ON`APPROVE, as the bucket");
 			await Assert.That(await God("think [job(1,outcome)] [job(1,audit)]")).IsEqualTo("approved pending");
@@ -920,7 +930,7 @@ public class JobsIntegrationTests
 
 			await Assert.That(await As(player, "+job/revert 1=No.")).Contains("Only staff");
 			await Assert.That(await As(staff, "+job/revert 1=The plaza has no room.")).Contains("Job 1 is reverted.");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef))).Contains($"AUDREVERT 1 {staff.Name} 3=3");
 			await Assert.That(await God("think [job(1,outcome)] [job(1,audit)]")).IsEqualTo("reverted reverted");
 			await Assert.That(await As(player, "+job 1")).Contains("Reverted").And.Contains("The plaza has no room.");
@@ -959,7 +969,7 @@ public class JobsIntegrationTests
 			await Assert.That(await As(player, "+job/check 1=1")).Contains("Only staff");
 			await Assert.That(await As(staff, "+job/check 1=3")).Contains("Job 1 has no step 3.");
 			await Assert.That(await As(staff, "+job/check 1=1")).Contains("Step 1 of job 1 is done: Sheet checked");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef))).Contains("CHECKED 1 1 1");
 			await Assert.That(await God("think [job(1,done)]/[job(1,steps)]")).IsEqualTo("1/2");
 			await Assert.That(await As(player, "+job 1")).Contains($"1. [x] Sheet checked \u00b7 {staff.Name}");
@@ -1079,13 +1089,13 @@ public class JobsIntegrationTests
 
 			var before = Notifications.CountFor(staff.DbRef);
 			await God($"@trigger/args #9/PLAYER`CONNECT`JOBS=objid,{await Objid(staff)},connections,1,descriptor,{staff.Handle}");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef).Skip(before))).Contains("1 need staff").And.Contains("+jobs lists them.")
 				.Because("the event handler's player`connect tells staff what waits");
 
 			await Assert.That(await As(player, "think [mail()]")).IsEqualTo("0");
 			await As(staff, "+job/reply 1=Which room?");
-			await WebAppFactoryArg.QueueBarrierAsync();
+			await SettleCommandsAsync();
 			await Assert.That(await As(player, "think [mail()]")).IsEqualTo("1").Because("a staff reply is mailed to the filer");
 			await Assert.That(await As(player, "think [mail(1)]")).Contains("Which room?");
 		}

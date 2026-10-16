@@ -8850,4 +8850,13 @@
   </data>
   <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
   <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
+  <data name="PkgBrowseInstalled" xml:space="preserve">
+    <value>Installed v{0}</value>
+  </data>
+  <data name="PkgBrowseInstalledOrigin" xml:space="preserve">
+    <value>Installed from {0} (path: {1}).</value>
+  </data>
+  <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
+    <value>Installed status is unavailable. Refresh to try again. {0}</value>
+  </data>
 </root>
