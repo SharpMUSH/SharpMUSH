@@ -164,11 +164,11 @@ public class RhostStrictReaderTests
 	}
 
 	[Test]
-	public async Task StrictMailResolvesSignedBccRoutingKeyWithoutChangingPermissiveReader()
+	public async Task BothMailReadersResolveSignedBccRoutingKeys()
 	{
 		const string mail = "C1/1\x01\n1/0/-32767/4/NNNsubject\x01\nE1/1\x01\nbody\x01\n";
 		await Assert.That(RhostMailReader.ReadStrict(mail, null).Mail.Messages.Single().Body).IsEqualTo("body");
-		await Assert.That(RhostMailReader.Read(mail, null).Mail.Messages.Single().Body).IsEqualTo("");
+		await Assert.That(RhostMailReader.Read(mail, null).Mail.Messages.Single().Body).IsEqualTo("body");
 	}
 
 	[Test]

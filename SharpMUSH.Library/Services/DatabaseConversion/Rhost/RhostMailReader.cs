@@ -117,7 +117,7 @@ public static class RhostMailReader
 				}
 			}
 		}
-		var result = ReadCore(mailText, folderText, true);
+		var result = Read(mailText, folderText);
 		if (records.Any(r => r.Key[0] is >= 'F' and <= 'P'))
 			result = result with { Notes = [.. result.Notes, "RhostMUSH mail settings, aliases and unfinished drafts are not imported."] };
 		return result;
@@ -173,9 +173,6 @@ public static class RhostMailReader
 	/// <summary>Reads the dumps held in memory.</summary>
 	/// <exception cref="FormatException">The mail dump's records do not read.</exception>
 	public static RhostMail Read(string mailText, string? folderText)
-		=> ReadCore(mailText, folderText, false);
-
-	private static RhostMail ReadCore(string mailText, string? folderText, bool normalizeRoutingKeys)
 	{
 		var notes = new List<string>();
 		var headers = new List<(int To, int Index, string Data)>();
@@ -218,7 +215,8 @@ public static class RhostMailReader
 				continue;
 			}
 
-			if (normalizeRoutingKeys) messageKey &= 0x7fff;
+			// The signed short's high bit is recipient routing metadata, not part of the body key.
+			messageKey &= 0x7fff;
 			var status = fields[4][..3];
 			var subject = fields[4][3..];
 			if (!bodies.TryGetValue((from, messageKey), out var body))
