@@ -19,6 +19,8 @@ public class RemoteBackupLifecycleTests
 	private sealed class World : IExpandedObjectDataService
 	{
 		public string? Serialized;
+		public bool FailNextPreparingSave;
+		public bool FailAfterPreparingSave;
 		public bool FailNextReadySave;
 		public bool FailAfterReadySave;
 		public bool FailReadAfterCopy;
@@ -30,6 +32,12 @@ public class RemoteBackupLifecycleTests
 		}
 		public ValueTask SetExpandedServerDataAsync<T>(T value, bool ignoreNull = false) where T : class
 		{
+			if (FailNextPreparingSave && value is RemoteBackupData preparing && preparing.Jobs.Any(job => job.Run.State == "preparing"))
+			{
+				FailNextPreparingSave = false;
+				if (FailAfterPreparingSave) Serialized = JsonSerializer.Serialize(value);
+				throw new IOException("Synthetic initial preparation-save failure");
+			}
 			if (FailNextReadySave && value is RemoteBackupData state && state.Jobs.Any(job => job.Run.State == "ready"))
 			{
 				FailNextReadySave = false;
@@ -315,6 +323,32 @@ public class RemoteBackupLifecycleTests
 		await Assert.That(during).IsEqualTo("preparing");
 		await Assert.That((await host.Coordinator.StatusAsync()).Runs.Single().State).IsEqualTo("ready");
 		await host.Backups.Received(1).CreateRemoteAsync(queued.Id, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task InitialPreparationSaveFailureDoesNotWedgeOrStartADuplicateCopy(bool committedBeforeFailure)
+	{
+		using var host = new Host();
+		await host.EnableAsync();
+		var queued = (await host.Coordinator.QueueAsync("manual")).Expect<RemoteBackupRun>();
+		host.Data.FailNextPreparingSave = true;
+		host.Data.FailAfterPreparingSave = committedBeforeFailure;
+		try { await host.Coordinator.TickAsync(default); }
+		catch (IOException) { }
+		await host.Coordinator.TickAsync(default);
+		var status = (await host.Coordinator.StatusAsync()).Runs.Single();
+		await Assert.That(status.Id).IsEqualTo(queued.Id);
+		await Assert.That(status.State).IsEqualTo(committedBeforeFailure ? "failed" : "ready");
+		if (committedBeforeFailure)
+		{
+			await Assert.That(status.ErrorCode).IsEqualTo("local-copy-interrupted");
+			await Assert.That(Directory.Exists(host.Root + ".remote-jobs")).IsFalse();
+			await host.Backups.DidNotReceive().CreateRemoteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+			await Assert.That(await host.Coordinator.QueueAsync("manual") is RemoteBackupRun).IsTrue();
+		}
+		else await host.Backups.Received(1).CreateRemoteAsync(queued.Id, Arg.Any<CancellationToken>());
 	}
 
 }
