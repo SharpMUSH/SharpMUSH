@@ -1,6 +1,6 @@
 format: "1.10"
 package: scene
-version: 1.11.3
+version: 1.12.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -13,21 +13,9 @@ requires_server: ">=0.1"
 # package does not install, and turning the plugin off uninstalls it.
 plugins: [scene]
 
-# +help carries the topics below. The dependency is what makes {{plus-help/librarian}} a legal
-# attach target, and it is what makes uninstalling scene take its help registration with it.
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
+# No other package. The +help topics and the +config settings below are this package's own data, written the way
+# plus-help and plus-config read them; the bridges scene-help and scene-config register them with those packages,
+# so a game without +help or +config still runs scenes.
 
 # Staff finish a scene that is not theirs with the scene.close permission. The package defines it;
 # a game hands it out by allowing it on a role (@role/allow helper=scene.close) or a player
@@ -70,7 +58,8 @@ objects:
     name: Scene Logger
     flags: [WIZARD]
     attributes:
-      # ---- settings: +config scene (plus-config); the verbs read each with get(%!/DATA`CONFIG`<NAME>) ----
+      # ---- settings, as +config declares them; the verbs read each with get(%!/DATA`CONFIG`<NAME>). Staff change
+      # them with +config scene when scene-config is installed, or by setting the attribute ----
       # DEFAULT-STATUS is `active` so +scene/create yields an immediately-capturing scene: pose/say/@emit are
       # recorded right after creation, with no separate +scene/start. `new` (or `scheduled`) makes creation
       # STAGE a scene that only begins logging after an explicit +scene/start. OPEN-DETAILS: see DETAIL` below.
@@ -336,6 +325,7 @@ objects:
       #   POSE`RULE    %0 the right side of the rule over a pose, plain text; %1 the scene, %2 the pose
       #   DETAIL`SHOW  %0 a scene's value for a detail, as shown everywhere it is shown; %1 the scene, %2 the detail
       #   JOIN         %0 what a player is told when they join; %1 the scene, %2 the player
+      #   HELP         %0 the body of +scene/help, the command list; scene-help adds where to read more
       FUN`FILTER: |-
         chain(u(%!/FUN`FILTERS,%0),%1,%2,%3)
       # The filters on point %0, as the chain() list: this object's FILTER`%0`<NAME> attributes.
@@ -1110,12 +1100,12 @@ objects:
       FUN`FIND`TITLE: |-
         [setq(_c,setunion(scenelist(recent),scenelist(scheduled)))][setq(_e,squish(iter(%q<_c>,if(strmatch(scene(%i0,title),%0),%i0))))][if(words(%q<_e>),%q<_e>,squish(iter(%q<_c>,if(strmatch(scene(%i0,title),%0*),%i0))))]
 
-      # +scene/help is the thing a player actually types when they are lost, and before +help
-      # existed it was a bare Huh? — issue #860 opens on exactly that transcript. It does not
-      # duplicate the topic; it hands the reader the one command that reads it.
+      # +scene/help is the thing a player actually types when they are lost; issue #860 opens on the bare Huh? it used
+      # to give. It lists every switch's usage line, which this package has whatever else is installed, through the
+      # HELP filter point, where scene-help adds the +help topic to read next.
       CMD`HELP:
         value: |-
-          $(?is)^\+scene/he(?\:l(?\:p)?)?$: @pemit %#=[notice(SCENE,Scene help lives under +help. Try: +help scene)]
+          $(?is)^\+scene/he(?\:l(?\:p)?)?$: @pemit %#=[box(u(%!/FUN`FILTER,HELP,iter(get(%!/DATA`SWITCHES),get(%!/DATA`USAGE`[ucstr(%i0)]),%b,%r)),Scene commands,,u(%!/FUN`FRAME))]
         flags: [REGEXP]
 
       # ---- switches and usage lines ---------------------------------------------------
@@ -1242,7 +1232,7 @@ objects:
       FUN`PREFIXED: |-
         [squish(iter(get(%!/DATA`SWITCHES),if(strmatch(%i0,%0*),%i0)))]
       FUN`NO`SWITCH: |-
-        [switch(1,not(strlen(%0)),+scene needs a switch after the /.,gt(words(setr(_m,u(%!/FUN`PREFIXED,%0))),1),+scene/%0 could be [itemize(iter(%q<_m>,+scene/%i0),,or)].,+scene has no /%0 switch.)] +help scene lists the commands.
+        [switch(1,not(strlen(%0)),+scene needs a switch after the /.,gt(words(setr(_m,u(%!/FUN`PREFIXED,%0))),1),+scene/%0 could be [itemize(iter(%q<_m>,+scene/%i0),,or)].,+scene has no /%0 switch.)] +scene/help lists the commands.
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
@@ -1257,7 +1247,8 @@ objects:
   # ---- help storage -------------------------------------------------------
   # An ordinary, unflagged thing holding the +help topics, deliberately NOT the Scene Logger: the
   # Logger must be WIZARD, and the librarian cannot u() a privileged object's attribute. See
-  # plus-help's README for that rule and for how an evaluated body is escaped.
+  # plus-help's README for that rule and for how an evaluated body is escaped. Nothing reads it until
+  # scene-help registers it with the librarian; packages that add scene topics attach them here.
   - ref: scene_help
     type: thing
     name: Scene Help
@@ -1506,7 +1497,7 @@ objects:
 
         Output: `\[SCENE\] Done: Added scene detail era. +scene/detail/set era/<field>=<value> changes it.`
 
-        Players may set details the game does not list unless `+config scene/open-details=no` turns it off.
+        Players may set details the game does not list unless staff turn the scene `open-details` setting off.
       HELP`SCENE`FILTERS: |-
         A package can change what `+scene` shows without editing the scene package. It adds a **filter**
         to the Scene Logger: an attribute named `` FILTER`<point>`<name> ``. Where `+scene` draws that
@@ -1519,6 +1510,7 @@ objects:
         - `` POSE`RULE `` — the right side of the line over a pose, plain text. `%%1` is the scene, `%%2` the pose
         - `` DETAIL`SHOW `` — a scene's value for a detail, wherever it is shown. `%%1` is the scene, `%%2` the detail
         - `JOIN` — what a player is told when they join. `%%1` is the scene, `%%2` the player
+        - `HELP` — the command list `+scene/help` shows
 
         A filter runs as the Scene Logger, with `%%#` the player reading. For example, to show every
         verse in capitals:
@@ -1531,19 +1523,3 @@ objects:
         last posed, so a table can tell whose turn it is.
 
         It needs a focused scene: `+scene/join <id>` or `+scene/create <title>` first.
-
-  # ---- +help registration ---------------------------------------------------
-  # Attach mode: one leaf on the librarian saying "scene's topics live on the Scene Logger". The
-  # package manager writes it at install and clears it at uninstall, so the librarian's registry
-  # cannot drift from what is actually installed — there is nothing to keep in sync by hand.
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`SCENE: |-
-        {{scene_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`SCENE: |-
-        {{logger}}

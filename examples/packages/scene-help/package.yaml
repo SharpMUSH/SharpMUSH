@@ -1,0 +1,44 @@
+format: "1.10"
+package: scene-help
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the scene topics into +help: registers the scene package's help with the +help librarian, and +scene/help points at +help scene."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [scene, help, bridge]
+category: Scenes
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. The scene package keeps its topics on its
+# own help object, and plus-help reads any object registered with its librarian. This package is only that
+# registration, and the line +scene/help adds through the scene's HELP filter point. Uninstalling it takes both
+# away; neither package changes.
+depends:
+  - package: scene
+    version: ">=1.12"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  # One leaf on the librarian: scene's topics live on the Scene Help object. Packages that add scene topics
+  # attach them to that object, so they reach +help through this registration too.
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SCENE: |-
+        {{scene/scene_help}}
+
+  # +scene/help lists the commands; this adds the topic that explains them, after the list.
+  - ref: help_pointer
+    target: "{{scene/logger}}"
+    attributes:
+      FILTER`HELP`PLUSHELP: |-
+        %0%r%r+help scene explains them.

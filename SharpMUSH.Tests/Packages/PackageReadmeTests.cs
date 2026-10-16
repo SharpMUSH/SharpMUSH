@@ -85,10 +85,10 @@ public class PackageReadmeTests
 	[Test]
 	public async Task DescribedReadme_ListsCreatedObjectsOnly()
 	{
-		var descriptor = BundledPackages.Find("scene").Expect<BundledPackages.Descriptor>();
-		var manifest = new PackageManifestService().ParseManifest(BundledPackages.ManifestYaml("scene"))
+		var descriptor = BundledPackages.Find("radio-scene").Expect<BundledPackages.Descriptor>();
+		var manifest = new PackageManifestService().ParseManifest(BundledPackages.ManifestYaml("radio-scene"))
 			.Expect<ParsedPackageManifest>().Manifest;
-		await Assert.That(manifest.Objects.Any(o => o.IsAttach)).IsTrue().Because("scene attaches its help registration");
+		await Assert.That(manifest.Objects.Any(o => o.IsAttach)).IsTrue().Because("radio-scene attaches its help to the scene package's");
 
 		var creates = BundledPackages.Readme(descriptor, manifest).Split("## Creates\n")[1].Split('\n');
 
