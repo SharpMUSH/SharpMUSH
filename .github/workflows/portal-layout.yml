@@ -21,11 +21,16 @@ permissions:
 jobs:
   table-layout:
     runs-on: ubuntu-latest
-    env:
-      TMPDIR: ${{ runner.temp }}
-      TMP: ${{ runner.temp }}
-      TEMP: ${{ runner.temp }}
     steps:
+      - name: Prepare disk-backed temporary storage
+        run: |
+          task_temp="$RUNNER_TEMP/portal-layout"
+          install -d -m 700 "$task_temp"
+          {
+            echo "TMPDIR=$task_temp"
+            echo "TMP=$task_temp"
+            echo "TEMP=$task_temp"
+          } >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
