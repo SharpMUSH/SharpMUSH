@@ -11,29 +11,11 @@ packages:
     package: builder-graph
     version: 0.3.0
     description: Room topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place
-  - path: hello-world/
-    package: hello-world
-    version: 1.0.1
-    description: Minimal example — one object, one command
   - path: who-where/
     name: Who/Where
     package: who-where
     version: 1.8.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
-  - path: bbs-lite/
-    name: BBS Lite
-    package: bbs-lite
-    version: 0.9.2-beta
-    description: Tiny bulletin board — dependencies, configure, cross-package refs
-  - path: starter-area/
-    package: starter-area
-    version: 1.0.0
-    description: Two rooms and linked exits
-  - path: coast-guide/
-    name: Coast Guide
-    package: coast-guide
-    version: 1.0.0
-    description: Content pack (format 1.4) — wiki pages only, one of them pinned to the wiki home
   - path: http-handler/
     package: http-handler
     version: 1.0.4
