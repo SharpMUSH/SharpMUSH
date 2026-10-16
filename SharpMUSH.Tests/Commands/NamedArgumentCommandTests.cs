@@ -27,12 +27,106 @@ public class NamedArgumentCommandTests
 	private Task<DBRef> NewThing(string prefix) => TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, prefix);
 
 	[Test]
-	public async Task TriggerArgsPassesNamesAndNoPositions()
+	public async Task ApplyPaddingIsVisibleButNotSupplied()
+		=> await Assert.That(await Eval(@"step(#apply3/if,1 hasarg\(2\,supplied\),2)")).IsEqualTo("0");
+
+	[Test]
+	[Arguments("$", false)]
+	[Arguments("^", false)]
+	[Arguments("$", true)]
+	[Arguments("^", true)]
+	public async Task TriggerMatchUsesSharedCommandAndListenCaptures(string prefix, bool regexp)
+	{
+		var thing = await NewThing("TriggerCapture");
+		var pattern = regexp ? "greet (?<target>.*)" : "greet *";
+		await Run($"&RUN {thing}={prefix}{pattern}:&OUT {thing}=%0|%1|%<target>|%+|[hasarg(0,supplied)]");
+		if (regexp) await Run($"@set {thing}/RUN=regexp");
+		await Run($"@trigger/inline/match {thing}/RUN=greet world");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo(regexp ? "greet world|world|world|2|1" : "world|||1|1");
+	}
+
+	[Test]
+	[Arguments("$")]
+	[Arguments("^")]
+	public async Task MatchedExplicitArgumentsOverrideNamedRegexCapturesIgnoringCase(string prefix)
+	{
+		var thing = await NewThing("MatchedCaseAliases");
+		await Run($"&RUN {thing}={prefix}greet (?<target>.*):&OUT {thing}=%<target>|%<TARGET>|%0|%1|[hasarg(target,supplied)]|[hasarg(0,supplied)]|[hasarg(1,supplied)]");
+		await Run($"@set {thing}/RUN=regexp");
+		await Run($"@trigger/inline/match/args {thing}/RUN=greet world,TARGET,Bob");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("Bob|Bob|Bob|world|1|1|1");
+	}
+
+	[Test]
+	public async Task TriggerWithoutMatchRunsOnlyTheActionHalf()
+	{
+		var thing = await NewThing("TriggerActionHalf");
+		await Run($"&RUN {thing}=$greet *:&OUT {thing}=%0|[hasarg(0,supplied)]");
+		await Run($"@trigger/inline/args {thing}/RUN=who,Bob");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("Bob|1");
+	}
+
+	[Test]
+	public async Task MatchedTriggerArgsExcludeTheMatchStringFromAliases()
+	{
+		var thing = await NewThing("MatchedAliases");
+		await Run($"&RUN {thing}=$greet *:&OUT {thing}=%<who>|%0|%1|%+|[hasarg(who,supplied)]");
+		await Run($"@trigger/inline/match/args {thing}/RUN=greet world,who,Bob,count,3");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("Bob|Bob|3|2|1");
+	}
+
+	[Test]
+	public async Task AnonymousStepArgsHaveTheSameAliasesAndShortChunk()
+	{
+		await Assert.That(await Eval(@"stepargs(#lambda/\%<a>:\%0:\%<b>:\%1:\%+,x y z,a b,%b,|)")).IsEqualTo("x:x:y:y:2|z:z:::1");
+		await Assert.That(await Eval("stepargs(#apply2/strcat,x y z,a b,%b,|)")).IsEqualTo("xy|z");
+	}
+
+	[Test]
+	public async Task SignatureCountsAreVisibleButNotSupplied()
+	{
+		var thing = await NewThing("SignaturePresence");
+		var name = "presence" + Guid.NewGuid().ToString("N");
+		await Run($"&FN {thing}=[hasarg(itemscount)]|[hasarg(itemscount,supplied)]|[hasarg(items1,supplied)]|[hasarg(0,supplied)]");
+		await Run($"@function {name}={thing},FN");
+		try
+		{
+			await Run($"@function/args {name}=who items...");
+			await Assert.That(await Eval($"{name}(Bob,A)")).IsEqualTo("1|0|1|1");
+			await Assert.That(await Eval($"{name}(Bob)")).IsEqualTo("1|0|0|1");
+		}
+		finally { await Run($"@function/delete {name}"); }
+	}
+
+	[Test]
+	[Arguments("Bob", false)]
+	[Arguments("Alice", false)]
+	[Arguments("", false)]
+	[Arguments("Bob", true)]
+	public async Task IncludeOverlaysAliasesAndTracksOnlySuppliedKeys(string value, bool chain)
+	{
+		var thing = await NewThing("PresenceInclude");
+		await Run($"&STEP {thing}=&OUT {thing}=%0|%1|%<who>|[hasarg(who,supplied)]|[hasarg(1,supplied)]|[hasarg(1)]");
+		await Run($"&RUN {thing}=@include/{(chain ? "chain/" : "")}args {thing}/STEP{(chain ? $" {thing}/STEP" : "")}=who,{value}");
+		await Run($"@trigger/inline {thing}/RUN=Alice,kept");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo($"{value}|kept|{value}|1|0|1");
+	}
+
+	[Test]
+	public async Task StepArgsRetainsPositionsAndDoesNotFabricateLastValue()
+	{
+		var thing = await NewThing("StepAliases");
+		await Run($"&FN {thing}=%<a>:%0:%<b>:%1:%+:[hasarg(b,supplied)]");
+		await Assert.That(await Eval($"stepargs({thing}/FN,x y z,a b,%b,|)")).IsEqualTo("x:x:y:y:2:1|z:z:::1:0");
+	}
+
+	[Test]
+	public async Task TriggerArgsPassesNamesAndPositions()
 	{
 		var thing = await NewThing("TrigArgs");
 		await Run($"&RUN {thing}=&OUT {thing}=%<who>/%<count>/[%0]");
 		await Run($"@trigger/inline/args {thing}/RUN=who,Bob,count,3");
-		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("Bob/3/");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("Bob/3/Bob");
 	}
 
 	[Test]
@@ -199,6 +293,9 @@ public class NamedArgumentCommandTests
 	[Arguments("key...|value...|arg...")]
 	[Arguments("expression case...|result... default")]
 	[Arguments("obj ...")]
+	[Arguments("key01 key...|value...")]
+	[Arguments("key...|key0...")]
+	[Arguments("key...|keycount...")]
 	[Arguments("... default")]
 	[Arguments("")]
 	public async Task ArgumentNamesTakeTheShapesBuiltInsDeclare(string names)
@@ -216,11 +313,23 @@ public class NamedArgumentCommandTests
 	[Arguments("key|value...")]
 	[Arguments("key...|...")]
 	[Arguments("case...|result... case")]
+	[Arguments("key...|value... keycount")]
+	[Arguments("keycount key...|value...")]
+	[Arguments("KEYCOUNT key...|value...")]
+	[Arguments("itemscount items...")]
+	[Arguments("key1 key...|value...")]
+	[Arguments("key...|value... value12")]
+	[Arguments("key...|key1...")]
+	[Arguments("key...|key12...")]
 	public async Task ArgumentNamesRefuseAMisplacedOrRepeatedName(string names)
 		=> await Assert.That(ArgHelpers.ArgumentNames(names) is Error<string>).IsTrue();
 
 	[Test]
-	public async Task FunctionArgsKeepsNoNamesItRefused()
+	[Arguments("items... last")]
+	[Arguments("key...|value... keycount")]
+	[Arguments("keycount key...|value...")]
+	[Arguments("key1 key...|value...")]
+	public async Task FunctionArgsKeepsNoNamesItRefused(string names)
 	{
 		var thing = await NewThing("FnRestBad");
 		var name = $"nb{Guid.NewGuid():N}"[..20];
@@ -228,7 +337,7 @@ public class NamedArgumentCommandTests
 		await Run($"@function {name}={thing},FN");
 		try
 		{
-			await Run($"@function/args {name}=items... last");
+			await Run($"@function/args {name}={names}");
 			await Assert.That(WebAppFactoryArg.Services.GetRequiredService<IUserDefinedFunctionService>().Get(name)?.ArgumentNames)
 				.IsEquivalentTo(Array.Empty<string>());
 		}

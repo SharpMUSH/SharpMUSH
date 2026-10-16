@@ -176,6 +176,7 @@ public class FeedService(
 				Registers = registers,
 				Arguments = arguments,
 				EnvironmentRegisters = arguments,
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 				CurrentEvaluation = new DBAttribute(ownerRef, deliver.LongName.ToUpperInvariant())
 			}, p => p.WithAttributeDebug(deliver, async debug => await debug.CommandListParseVisitor(deliver.Value)()));
 			return recipients.Select(r => r.Object().DBRef).ToList();
@@ -252,6 +253,7 @@ public class FeedService(
 				Enactor = message.Speaker,
 				Arguments = arguments,
 				EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 				CurrentEvaluation = new DBAttribute(tapObject.Object().DBRef, tap.Attribute)
 			};
 			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(chain.Last().Value.ToPlainText()), state);

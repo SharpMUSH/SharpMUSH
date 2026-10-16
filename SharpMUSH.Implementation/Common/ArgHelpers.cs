@@ -328,11 +328,19 @@ public static partial class ArgHelpers
 		if (values.Length % 2 != 0) return new Error<string>(ErrorMessages.Returns.NamedArgumentsComeInPairs);
 
 		var named = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
-		foreach (var pair in values.Chunk(2))
+		var pairs = values.Chunk(2).Select((pair, position) => (Name: pair[0].Message.ToPlainText().Trim(), Value: pair[1], Position: position)).ToArray();
+		foreach (var (rawName, value, position) in pairs)
 		{
-			var name = pair[0].Message.ToPlainText().Trim();
+			var name = rawName;
 			if (name.Length == 0) return new Error<string>(ErrorMessages.Returns.BadArgumentName);
-			named[name] = pair[1];
+			if (name.All(char.IsAsciiDigit))
+			{
+				name = name.TrimStart('0');
+				if (name.Length == 0) name = "0";
+				if (name != position.ToString()) return new Error<string>(ErrorMessages.Returns.BadArgumentName);
+			}
+			named[position.ToString()] = value;
+			named[name] = value;
 		}
 
 		return named;
@@ -379,9 +387,18 @@ public static partial class ArgHelpers
 			&& (layout.Stems is [] or [""] || layout.Stems.All(stem => stem.Length > 0))
 			&& (layout.After.Length == 0 || layout.GroupSize > 1)
 			&& stems.Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Length
-			&& stems.All(stem => !int.TryParse(stem, out _));
+			&& stems.All(stem => !int.TryParse(stem, out _))
+			&& !layout.Stems.Where(stem => stem.Length > 0).Any(stem =>
+				layout.Before.Concat(layout.After).Any(name => name.Equals($"{stem}count", StringComparison.OrdinalIgnoreCase)
+					|| IsNumberedRestName(stem, name))
+				|| layout.Stems.Any(other => IsNumberedRestName(stem, other)));
 		return valid ? names : new Error<string>(ErrorMessages.Returns.BadArgumentName);
 	}
+
+	private static bool IsNumberedRestName(string stem, string name)
+		=> name.Length > stem.Length && name.StartsWith(stem, StringComparison.OrdinalIgnoreCase)
+			&& name[stem.Length] is >= '1' and <= '9'
+			&& name.Skip(stem.Length).All(char.IsAsciiDigit);
 
 	/// <summary>
 	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order.
@@ -448,6 +465,7 @@ public static partial class ArgHelpers
 		{
 			var dealt = (remaining.Length - turn + stems.Length - 1) / stems.Length;
 			into[$"{stem}count"] = fromText(dealt.ToString());
+			if (into is AttributeArgumentEnvironment environment) environment.GeneratedKeys.Add($"{stem}count");
 		}
 
 		return new Success();

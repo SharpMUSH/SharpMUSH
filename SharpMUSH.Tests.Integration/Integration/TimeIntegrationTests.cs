@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -350,8 +351,65 @@ public class TimeIntegrationTests
 	/// </summary>
 	private async Task<string> Replies(TestIsolationHelpers.TestPlayer player, int status, string body)
 	{
-		await God($"&REPLY`TEST {Time}=@include/args {Time}/INC`ZONE`REPLY=status,{status},player,#{player.DbRef.Number},mode,login");
+		await God($"&REPLY`TEST {Time}=@include/args {Time}/INC`ZONE`REPLY=body,%0,status,{status},player,#{player.DbRef.Number},mode,login");
 		return await Told(player, $"@trigger {Time}/REPLY`TEST={{{{{body}}}}}");
+	}
+
+	private sealed class DeferredZoneResponse : HttpMessageHandler
+	{
+		public TaskCompletionSource<Uri> Requested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		public TaskCompletionSource<HttpResponseMessage> Response { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			Requested.TrySetResult(request.RequestUri!);
+			return await Response.Task.WaitAsync(cancellationToken);
+		}
+	}
+
+	[Test]
+	public async Task GeneratedHttpCallbackPreservesTheDeferredResponseBody()
+	{
+		using var response = new DeferredZoneResponse();
+		using var client = new HttpClient(response);
+		try
+		{
+			await InstallAsync();
+			var player = await Player("DeferredZone");
+			ConnectionService.Update(player.Handle, "InternetProtocolAddress", "81.2.69.142");
+			await God($"&DATA`CONFIG`DETECT-IP {Clock}=set");
+			await God($"&DATA`CONFIG`IP-FIELD {Clock}=timezone.id");
+			var clients = Substitute.For<IHttpClientFactory>();
+			clients.CreateClient(Arg.Any<string>()).Returns(client);
+			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, clients);
+			var parser = WebAppFactoryArg.CommandParserWith(
+				((ILibraryProvider<SharpMUSH.Library.Definitions.CommandDefinition>)commands).Get(), DBRef.Parse(Time), 1);
+			var before = Notifications.CountFor(player.DbRef);
+
+			// Run the installed producer and its generated LOOKUP attribute through the real HTTP admission.
+			// Only the transport is held back: the JSON does not exist when the callback text is written.
+			await parser.CommandListParse(MarkupText.Plain($"@include/args {Time}/INC`ZONE`LOOKUP=player,{player.DbRef},mode,login"));
+			await Assert.That((await response.Requested.Task.WaitAsync(TimeSpan.FromSeconds(10))).AbsoluteUri)
+				.IsEqualTo("https://ipinfo.io/81.2.69.142/json");
+			await Assert.That(await Think($"hasattr({player.DbRef},TZ)")).IsEqualTo("0");
+			using var reply = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+			{
+				Content = new StringContent("{\"timezone\":{\"id\":\"Asia/Tokyo\"}}")
+			};
+			response.Response.TrySetResult(reply);
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(await Think($"get({player.DbRef}/TZ)")).IsEqualTo("Asia/Tokyo");
+			await Assert.That(string.Join("\n", Notifications.For(player.DbRef).Skip(before)))
+				.Contains("guessed from where you connect.");
+			await Assert.That(await Think($"lattr({Time}/LOOKUP`*)")).IsEmpty();
+		}
+		finally
+		{
+			using var cleanupReply = new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable);
+			response.Response.TrySetResult(cleanupReply);
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await UninstallAsync();
+		}
 	}
 
 	[Test]

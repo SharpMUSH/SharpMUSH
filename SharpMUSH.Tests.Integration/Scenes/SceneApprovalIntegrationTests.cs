@@ -1,7 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -35,7 +33,7 @@ public class SceneApprovalIntegrationTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
@@ -58,47 +56,16 @@ public class SceneApprovalIntegrationTests
 
 	private async Task<string> EvalNum(string expression) => Num(await Eval(expression));
 
-	private static bool IsNotification(ICall call) =>
-		call.GetMethodInfo().Name is nameof(INotifyService.Notify) or nameof(INotifyService.NotifyLocalized);
-
-	private int NotificationCount() => NotifyService.ReceivedCalls().Count(IsNotification);
-
-	/// <summary>
-	/// One line of what a command said. Refusals travel by two different routes — a literal string through
-	/// <c>Notify</c>, or a resource KEY through <c>NotifyLocalized</c> (the engine's CommandLock refusal is
-	/// localized) — and a test that watches only one of them reads a real refusal as silence.
-	/// </summary>
-	private static string? ExtractMessageText(ICall call)
-	{
-		var args = call.GetArguments();
-		switch (call.GetMethodInfo().Name)
-		{
-			case nameof(INotifyService.Notify) when args.Length >= 2:
-				return args[1] switch
-				{
-					SharpMessage message => message switch
-					{
-						MString markup => markup.ToPlainText(),
-						string text => text,
-					},
-					string s => s,
-					MString m => m.ToPlainText(),
-					_ => null
-				};
-			case nameof(INotifyService.NotifyLocalized) when args.Length >= 2:
-				return args[1] as string;
-			default:
-				return null;
-		}
-	}
-
-	/// <summary>Runs a command as a connection handle and returns everything it said, joined.</summary>
+	/// <summary>Runs a command and returns only what its character was told, after queued work completes.</summary>
 	private async Task<string> RunAs(long handle, string command)
 	{
-		var before = NotificationCount();
+		var recipient = ConnectionService.Get(handle)?.Ref
+			?? throw new InvalidOperationException($"Handle {handle} is not bound to a character.");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		var before = Notifications.CountFor(recipient);
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
-		var all = NotifyService.ReceivedCalls().Where(IsNotification).ToList();
-		return string.Join("\n", all.Skip(before).Select(ExtractMessageText).OfType<string>());
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return string.Join("\n", Notifications.For(recipient).Skip(before));
 	}
 
 	/// <summary>Evaluates an expression AS a player, by making them <c>think</c> it — real mortal softcode.</summary>
@@ -146,6 +113,23 @@ public class SceneApprovalIntegrationTests
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Num).ToList();
 
 	[Test]
+	public async Task CommandCapture_ExcludesOutputAddressedToAnotherCharacter()
+	{
+		var (_, callerHandle) = await CreatePlayerAsync($"CaptureCaller_{Tag}");
+		var (recipient, _) = await CreatePlayerAsync($"CaptureRecipient_{Tag}");
+		var recipientRef = DBRef.Parse(recipient);
+		var otherRecipientOutput = $"OtherRecipient_{Tag}";
+		var before = WebAppFactoryArg.Notifications.CountFor(recipientRef);
+
+		var captured = await RunAs(callerHandle, $"@pemit/silent {recipient}={otherRecipientOutput}");
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(recipientRef).Skip(before))
+			.Contains(otherRecipientOutput);
+		await Assert.That(captured).IsEmpty()
+			.Because("output delivered to another character does not answer the caller's command");
+	}
+
+	[Test]
 	public async Task ApprovalBoundary_FullMatrix()
 	{
 		static void Log(string m) => TestDiagnostics.WriteLine(m);
@@ -189,90 +173,95 @@ public class SceneApprovalIntegrationTests
 		// no match, no "Huh?", no error, because an unmatched $-command on an absent object produces
 		// no output at all. Note where it came from and put it back at the end.
 		var loggerHome = await Eval($"loc({loggerDbref})");
-		await God1($"@tel {loggerDbref}={digOut}");
-		await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref);
-
-		// ---- 3. An approved character may own a scene -------------------------------------------
-		var createOut = await RunAs(approvedHandle, $"+scene/create Approval Test {Tag}");
-		Log($"[CREATE approved] {createOut}");
-		var sceneId = await Eval($"scenefocus({approved})");
-		await Assert.That(sceneId).IsNotEmpty().Because("an approved character may create and own a scene");
-		await Assert.That(sceneId).DoesNotStartWith("#-1");
-		await God1($"@scene/set {sceneId}/public=1");
-		await Assert.That(await EvalNum($"scene({sceneId}, owner)")).IsEqualTo(Num(approved));
-
-		// ---- 4. Every ASSOCIATING route is closed to an unapproved character ---------------------
-		// Each of these is a distinct way the package could hand out a membership edge.
-		var associatingVerbs = new (string Command, string What)[]
+		try
 		{
-			($"+scene/join {sceneId}", "join"),
-			($"+scene/tag {sceneId}", "RSVP"),
-			($"+scene/activate {sceneId}", "re-activate"),
-			("+scene/as The Interloper", "set a persona"),
-			($"+scene/create Sneaky {Tag}", "create/own"),
-			($"+scene/schedule Sneaky Later {Tag}=1893456000", "schedule/own")
-		};
+			await God1($"@tel {loggerDbref}={digOut}");
+			await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref);
 
-		foreach (var (command, what) in associatingVerbs)
-		{
-			var output = await RunAs(unapprovedHandle, command);
-			Log($"[REFUSED unapproved] {command} -> {output.Replace("\n", " | ")}");
-			await Assert.That(output).Contains(NotApproved)
-				.Because($"an unapproved character must be refused when trying to {what}");
+			// ---- 3. An approved character may own a scene -------------------------------------------
+			var createOut = await RunAs(approvedHandle, $"+scene/create Approval Test {Tag}");
+			Log($"[CREATE approved] {createOut}");
+			var sceneId = await Eval($"scenefocus({approved})");
+			await Assert.That(sceneId).IsNotEmpty().Because("an approved character may create and own a scene");
+			await Assert.That(sceneId).DoesNotStartWith("#-1");
+			await God1($"@scene/set {sceneId}/public=1");
+			await Assert.That(await EvalNum($"scene({sceneId}, owner)")).IsEqualTo(Num(approved));
+
+			// ---- 4. Every ASSOCIATING route is closed to an unapproved character ---------------------
+			// Each of these is a distinct way the package could hand out a membership edge.
+			var associatingVerbs = new (string Command, string What)[]
+			{
+				($"+scene/join {sceneId}", "join"),
+				($"+scene/tag {sceneId}", "RSVP"),
+				($"+scene/activate {sceneId}", "re-activate"),
+				("+scene/as The Interloper", "set a persona"),
+				($"+scene/create Sneaky {Tag}", "create/own"),
+				($"+scene/schedule Sneaky Later {Tag}=1893456000", "schedule/own")
+			};
+
+			foreach (var (command, what) in associatingVerbs)
+			{
+				var output = await RunAs(unapprovedHandle, command);
+				Log($"[REFUSED unapproved] {command} -> {output.Replace("\n", " | ")}");
+				await Assert.That(output).Contains(NotApproved)
+					.Because($"an unapproved character must be refused when trying to {what}");
+				await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(unapproved))
+					.Because($"the refusal of {what} must also mean nothing was written");
+			}
+
 			await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(unapproved))
-				.Because($"the refusal of {what} must also mean nothing was written");
+				.Because("no refused verb may leave a membership edge behind");
+			await Assert.That(await Eval($"scenefocus({unapproved})")).StartsWith("#-1")
+				.Because("an unapproved character is focused on nothing");
+			await Assert.That(await EvalAs(unapprovedHandle, "scenelist(mine)")).IsEmpty()
+				.Because("an unapproved character has no scenes");
+
+			// ---- 5. A GUEST is refused too, flag or no flag ------------------------------------------
+			var guestJoin = await RunAs(guestHandle, $"+scene/join {sceneId}");
+			Log($"[REFUSED guest] +scene/join -> {guestJoin.Replace("\n", " | ")}");
+			await Assert.That(guestJoin).Contains(NotApproved)
+				.Because("guests never participate in scenes");
+			await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(guest));
+
+			// ---- 6. Viewing stays OPEN to an unapproved character ------------------------------------
+			var browse = await RunAs(unapprovedHandle, "+scene");
+			Log($"[VIEW unapproved] +scene -> {browse.Replace("\n", " | ")[..Math.Min(160, browse.Replace("\n", " | ").Length)]}");
+			await Assert.That(browse).DoesNotContain(NotApproved)
+				.Because("browsing the scene list needs no approval");
+			await Assert.That(browse).Contains("Scenes:");
+
+			var upcoming = await RunAs(unapprovedHandle, "+scene/upcoming");
+			await Assert.That(upcoming).DoesNotContain(NotApproved)
+				.Because("viewing the schedule needs no approval");
+			await Assert.That(upcoming).Contains("Scheduled Scenes");
+
+			var info = await RunAs(unapprovedHandle, $"+scene {sceneId}");
+			Log($"[VIEW unapproved] +scene {sceneId} -> {info.Replace("\n", " | ")[..Math.Min(160, info.Replace("\n", " | ").Length)]}");
+			await Assert.That(info).DoesNotContain(NotApproved)
+				.Because("reading scene information needs no approval");
+			await Assert.That(info).Contains($"Scene {sceneId}");
+
+			// ---- 7. Approval is checked at POSE time, so revoking it stops capture immediately --------
+			var posesBefore = await Eval($"scene({sceneId}, posecount)");
+			await RunAs(approvedHandle, "pose tests that capture works while approved.");
+			var posesWhileApproved = await Eval($"scene({sceneId}, posecount)");
+			await Assert.That(int.Parse(posesWhileApproved)).IsGreaterThan(int.Parse(posesBefore))
+				.Because("an approved, focused character's pose is captured");
+
+			await God1($"@role/unassign {approved}=approved");
+			await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("0");
+			await RunAs(approvedHandle, "pose tests that capture stops the moment approval is revoked.");
+			var posesAfterRevoke = await Eval($"scene({sceneId}, posecount)");
+			Log($"[REVOKE] posecount before={posesBefore} approved={posesWhileApproved} after-revoke={posesAfterRevoke}");
+			await Assert.That(posesAfterRevoke).IsEqualTo(posesWhileApproved)
+				.Because("membership and focus survive revocation, so capture itself has to re-check approval");
+
 		}
-
-		await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(unapproved))
-			.Because("no refused verb may leave a membership edge behind");
-		await Assert.That(await Eval($"scenefocus({unapproved})")).StartsWith("#-1")
-			.Because("an unapproved character is focused on nothing");
-		await Assert.That(await EvalAs(unapprovedHandle, "scenelist(mine)")).IsEmpty()
-			.Because("an unapproved character has no scenes");
-
-		// ---- 5. A GUEST is refused too, flag or no flag ------------------------------------------
-		var guestJoin = await RunAs(guestHandle, $"+scene/join {sceneId}");
-		Log($"[REFUSED guest] +scene/join -> {guestJoin.Replace("\n", " | ")}");
-		await Assert.That(guestJoin).Contains(NotApproved)
-			.Because("guests never participate in scenes");
-		await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(guest));
-
-		// ---- 6. Viewing stays OPEN to an unapproved character ------------------------------------
-		var browse = await RunAs(unapprovedHandle, "+scene");
-		Log($"[VIEW unapproved] +scene -> {browse.Replace("\n", " | ")[..Math.Min(160, browse.Replace("\n", " | ").Length)]}");
-		await Assert.That(browse).DoesNotContain(NotApproved)
-			.Because("browsing the scene list needs no approval");
-		await Assert.That(browse).Contains("Scenes:");
-
-		var upcoming = await RunAs(unapprovedHandle, "+scene/upcoming");
-		await Assert.That(upcoming).DoesNotContain(NotApproved)
-			.Because("viewing the schedule needs no approval");
-		await Assert.That(upcoming).Contains("Scheduled Scenes");
-
-		var info = await RunAs(unapprovedHandle, $"+scene {sceneId}");
-		Log($"[VIEW unapproved] +scene {sceneId} -> {info.Replace("\n", " | ")[..Math.Min(160, info.Replace("\n", " | ").Length)]}");
-		await Assert.That(info).DoesNotContain(NotApproved)
-			.Because("reading scene information needs no approval");
-		await Assert.That(info).Contains($"Scene {sceneId}");
-
-		// ---- 7. Approval is checked at POSE time, so revoking it stops capture immediately --------
-		var posesBefore = await Eval($"scene({sceneId}, posecount)");
-		await RunAs(approvedHandle, "pose tests that capture works while approved.");
-		var posesWhileApproved = await Eval($"scene({sceneId}, posecount)");
-		await Assert.That(int.Parse(posesWhileApproved)).IsGreaterThan(int.Parse(posesBefore))
-			.Because("an approved, focused character's pose is captured");
-
-		await God1($"@role/unassign {approved}=approved");
-		await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("0");
-		await RunAs(approvedHandle, "pose tests that capture stops the moment approval is revoked.");
-		var posesAfterRevoke = await Eval($"scene({sceneId}, posecount)");
-		Log($"[REVOKE] posecount before={posesBefore} approved={posesWhileApproved} after-revoke={posesAfterRevoke}");
-		await Assert.That(posesAfterRevoke).IsEqualTo(posesWhileApproved)
-			.Because("membership and focus survive revocation, so capture itself has to re-check approval");
-
-		// Hand the Logger back where it was, so the suites that run after this one still have
-		// +scene/* at all.
-		await God1($"@tel {loggerDbref}={loggerHome}");
+		finally
+		{
+			await God1($"@tel {loggerDbref}={loggerHome}");
+			await WebAppFactoryArg.QueueBarrierAsync();
+		}
 	}
 
 	[Test]
@@ -305,7 +294,8 @@ public class SceneApprovalIntegrationTests
 		// message is the engine's localized PermissionDenied rather than the plugin's own SCENE: prefix —
 		// the plugin's explicit IsWizard() gate is the second line of defence behind it, not the first.
 		var refusalOutput = await RunAs(mortalHandle, "@scene/list");
-		await Assert.That(refusalOutput).Contains(nameof(ErrorMessages.Notifications.PermissionDenied))
+		await Assert.That(refusalOutput).Contains(WebAppFactoryArg.Services.GetRequiredService<ILocalizationService>()
+				.Get(nameof(ErrorMessages.Notifications.PermissionDenied)))
 			.Because("a refused command has to say so");
 	}
 

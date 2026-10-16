@@ -138,6 +138,10 @@ public interface IUserDefinedFunctionService
 	/// </summary>
 	bool SetArgumentNames(string name, string[] names) => false;
 
+	/// <summary>Owner-scoped signature update; never falls back to a global definition.</summary>
+	bool SetArgumentNames(string name, string[] names, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
+
 	/// <summary>Owner-scoped overload for local function registries.</summary>
 	bool SetRestriction(string name, string? restriction, DBRef? owner)
 		=> throw new NotSupportedException("This registry does not support owner-local functions.");

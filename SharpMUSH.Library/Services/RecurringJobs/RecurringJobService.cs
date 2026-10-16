@@ -195,6 +195,7 @@ public sealed class RecurringJobService(
 				evaluation = parser.FromState(ParserState.RootFor(active) with
 				{
 					CurrentEvaluation = new DBAttribute(target, job.Attribute),
+					SuppliedArgumentKeys = System.Collections.Immutable.ImmutableHashSet<string>.Empty.WithComparer(StringComparer.OrdinalIgnoreCase),
 					ExecutionBudget = ExecutionBudget.Current
 				}).WithAttributeDebug(attribute, child => child.CommandListParse(attribute.Value));
 			}

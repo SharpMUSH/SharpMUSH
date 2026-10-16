@@ -555,7 +555,8 @@ public sealed class InputSessionService : IInputSessionService
 			CurrentEvaluation = new DBAttribute(route.Target, route.Attribute),
 			OutputLimit = await FunctionLimits.OutputLimitForAsync(character,
 				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
-			EnvironmentRegisters = arguments
+			EnvironmentRegisters = arguments,
+			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
 		};
 
 		return await parser.FromState(state).CommandListParse(callback.Last().Value);

@@ -1200,7 +1200,8 @@ public partial class Functions
 	{
 		var names = parser.CurrentState.Arguments["2"].Message.ToPlainText()
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		if (names.Length is 0 or > 30 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length)
+		if (names.Length is 0 or > 30 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length
+			|| names.Select((name, position) => (name, position)).Any(pair => pair.name.All(char.IsAsciiDigit) && pair.name.TrimStart('0') != (pair.position == 0 ? "" : pair.position.ToString())))
 		{
 			return new CallState(ErrorMessages.Returns.BadArgumentName);
 		}
@@ -1222,10 +1223,19 @@ public partial class Functions
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
-		var runs = list.Chunk(names.Length)
-			.Select(run => run.Select((item, position) => (item, position))
-				.ToDictionary(pair => names[pair.position], pair => new CallState(pair.item), StringComparer.OrdinalIgnoreCase))
-			.ToList();
+		var runs = list.Chunk(names.Length).Select(run =>
+		{
+			var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+			foreach (var (item, position) in run.Select((item, position) => (item, position)))
+			{
+				var value = new CallState(item);
+				arguments[position.ToString()] = value;
+				var name = names[position];
+				if (name.All(char.IsAsciiDigit)) name = position.ToString();
+				arguments[name] = value;
+			}
+			return arguments;
+		}).ToList();
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -1724,7 +1734,7 @@ public partial class Functions
 
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				Arguments = arguments,
+				Arguments = registers,
 				EnvironmentRegisters = registers
 			});
 			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));

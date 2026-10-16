@@ -118,6 +118,25 @@ public class DatabaseCommandTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
+	public async Task SqlQueuedRowCallbacksStartTheirOwnPresence(bool nested)
+	{
+		var player = await CreateWizardTestPlayerAsync("SqlPresence");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SqlPresenceTarget");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RUN {target}=&OUT {target}=[hasarg(1)]|[hasarg(1,supplied)]|[hasarg(present,supplied)]|[hasarg(parent,supplied)]"));
+		var state = ParserState.RootFor(player.DbRef);
+		if (nested)
+		{
+			var parent = new Dictionary<string, CallState> { ["parent"] = new("unrelated") };
+			state = state with { EnvironmentRegisters = parent, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parent) };
+		}
+		await Parser.FromState(state).CommandListParse(MarkupText.Plain($"@mapsql {target}/RUN=SELECT '' AS present"));
+		await SqlWebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That((await SqlWebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/OUT)"))).ToPlainText()).IsEqualTo("1|1|1|0");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
 	public async Task MapSqlDoesNotReportRejectedRowsOrSkipARejectedHeader(bool columnNames)
 	{
 		// Exercise the ordinary owner ceiling; Wizards have an additional database-sized allowance.

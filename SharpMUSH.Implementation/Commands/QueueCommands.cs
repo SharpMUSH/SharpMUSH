@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Handlers.Database;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
@@ -1284,7 +1285,7 @@ public partial class Commands
 
 		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
 		// RSArgs that become %0, %1, %2, … inside the triggered attribute. With /args they are
-		// <name>,<value> pairs (after the /match string) read as %<name>, and there is no %0.
+		// <name>,<value> pairs (after the /match string), with values exposed by name and position.
 		// These go into EnvironmentRegisters, NOT the q-register stack.
 		var envRegisters = ArgHelpers.ShiftedArguments(args, 1);
 		if (switches.Contains("ARGS"))
@@ -1321,31 +1322,27 @@ public partial class Commands
 		//   /spoof: preserve the current enactor (the original player who started the chain)
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : executor.Object().DBRef;
 
-		if (switches.Contains("MATCH"))
+		// Trigger runs the action half of a command/listen attribute, even without /match.
+		var prefix = global::SharpMUSH.Library.Services.CommandDiscoveryService.CommandPatternRegex().Match(attributeText);
+		if (!prefix.Success) prefix = global::SharpMUSH.Library.Services.CommandDiscoveryService.ListenPatternRegex().Match(attributeText);
+		var actionStart = prefix.Success ? prefix.Length : 0;
+		while (prefix.Success && actionStart < attributeText.Length && attributeText[actionStart] == ' ') actionStart++;
+		var action = attribute.Value.Substring(actionStart, attribute.Value.Length - actionStart);
+
+		if (matchArg is not null)
 		{
-			var testString = matchArg!.Message.ToPlainText();
-
-			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-			bool matchFound = false;
-			foreach (var pattern in patterns)
-			{
-				var trimmedPattern = pattern.Trim();
-				if (string.IsNullOrEmpty(trimmedPattern)) continue;
-
-				var regex = SoftcodeRegex.Wildcard(trimmedPattern);
-
-				if (SoftcodeRegex.IsMatch(regex, testString))
-				{
-					matchFound = true;
-					break;
-				}
-			}
-
-			if (!matchFound)
-			{
+			var command = CommandAttributeScanner.Compile(attribute);
+			var listen = ListenAttributeSearch.Compile([attribute], ExecutionBudget.CurrentToken).FirstOrDefault();
+			var regex = command is CommandAttributeCache compiled ? compiled.CompiledRegex : listen?.CompiledRegex;
+			var isRegex = command is CommandAttributeCache commandPattern ? commandPattern.IsRegexFlag : listen?.IsRegexFlag == true;
+			if (regex is null || SoftcodeRegex.Match(regex, matchArg.Message.ToPlainText()) is not { Success: true } match)
 				return CallState.Empty;
-			}
+			var captured = PatternArguments.Capture(regex, match, isRegex, matchArg.Message);
+			// Explicit /args inputs replace the corresponding captured positions; unmatched capture
+			// keys remain available. The match string itself is never a numbered argument.
+			if (switches.Contains("ARGS"))
+				foreach (var (name, value) in envRegisters) captured[name] = value;
+			envRegisters = captured;
 		}
 
 		// Q-registers from the calling context are copied into the triggered attribute unless
@@ -1382,13 +1379,14 @@ public partial class Commands
 			Caller = parser.CurrentState.Executor,
 			Registers = registerStack,
 			EnvironmentRegisters = envRegisters,
+			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(envRegisters),
 			// A loop or switch the trigger ran inside does not bind ##, #@ or #$ written in the attribute it runs:
 			// PennMUSH queues that attribute, and splices those tokens only into the loop's own text.
 			CurrentEvaluation = new DBAttribute(targetObject.Object().DBRef, attribute.LongName)
 		};
 
 		var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
-			async p => await p.CommandListParseVisitor(attribute.Value)()));
+			async p => await p.CommandListParseVisitor(action)()));
 
 		return CallState.Empty with { HadErrors = result?.HadErrors == true };
 	}
