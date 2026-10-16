@@ -321,27 +321,29 @@ that resolves straight to your server:
 > but the shared host's address is no longer secret. If hiding the telnet IP matters to you,
 > that requires Cloudflare Spectrum (paid) or a different TCP proxy.
 
-Before continuing, persist the TLS overlay in `.env` and the systemd unit if you enabled
-4203. Follow the [complete native TLS recipe](native-client-tls.md), including certificate
-issuance, renewal and a verified external handshake. Keep the overlay selected in the
-commands below; explicit base-only `-f` arguments override `COMPOSE_FILE`.
-
-When TLS is enabled, the startup command is:
-
-```bash
-docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml up -d --build
-```
-
 ### Part C — bring it up
 
 ```bash
 cd deploy
 cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN and your domain
-docker compose -f docker-compose.cloudflare.yml run --rm backup restic init   # optional, once — backups only
-docker compose -f docker-compose.cloudflare.yml up -d --build
 ```
 
-Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.yml logs -f cloudflared`
+In `.env`, choose exactly one `COMPOSE_FILE` setting:
+
+- With native TLS: `COMPOSE_FILE=docker-compose.cloudflare.yml:docker-compose.telnet-tls.yml`.
+  Follow the [complete native TLS recipe](native-client-tls.md) first, including issuance,
+  certificate permissions, the systemd overlay and renewal hook.
+- Without native TLS: `COMPOSE_FILE=docker-compose.cloudflare.yml`.
+
+The following commands use that persisted selection. Do not add a base-only `-f` argument:
+that would override the selection and remove TLS from a TLS-enabled deployment.
+
+```bash
+docker compose run --rm backup restic init   # optional, once — backups only
+docker compose up -d --build
+```
+
+Check the tunnel is healthy with `docker compose logs -f cloudflared`
 (you want to see it register a connection to Cloudflare), then load `https://mush.example.com`.
 
 ### Ports with Cloudflare

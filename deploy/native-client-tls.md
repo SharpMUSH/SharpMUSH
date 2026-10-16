@@ -259,9 +259,31 @@ sudo env RENEWED_LINEAGE=/etc/letsencrypt/live/telnet.mush.example.com \
 sudo systemctl list-timers certbot.timer
 ```
 
-Keep public port 80 available for future standalone challenges. Monitor timer failures
-and certificate expiry; a successful renewal without a successful deploy hook leaves the
-old certificate loaded in the running socket owner.
+Keep public port 80 available for future standalone challenges. Monitor ACME renewal
+failures **and deploy-hook errors separately**: [Certbot does not directly return a failure
+status for a failed hook](https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates).
+A healthy timer or a newly renewed certificate on disk does not prove that SocketServer
+loaded it, and a failed deploy hook is not automatically retried once renewal is no longer due.
+
+Configure an external TLS monitor for the public hostname and port, including chain/hostname
+validation and an expiry alert (for example, 14 days remaining). After each renewal, compare
+the certificate actually served on 4203 with the installed one:
+
+```bash
+# Run in bash from a separate machine; pipefail also catches a failed handshake.
+set -o pipefail
+openssl s_client -connect telnet.mush.example.com:4203 \
+  -servername telnet.mush.example.com -verify_hostname telnet.mush.example.com \
+  -verify_return_error </dev/null | openssl x509 -noout -serial -dates -checkend 1209600
+# On the game host, compare serial/expiry against the externally served certificate:
+sudo openssl x509 -in /etc/sharpmush/telnet-tls/fullchain.pem -noout -serial -dates
+sudo journalctl -u certbot.service --since '7 days ago'
+```
+
+Alert on hook failures in Certbot's logs independently of the service's exit status.
+If copying or restarting failed, fix that cause and explicitly rerun the hook with
+`RENEWED_LINEAGE` as above; verify the served serial and expiry again. Waiting for the next
+scheduled renewal does not retry deployment of an already renewed certificate.
 
 ## Regression checks
 
