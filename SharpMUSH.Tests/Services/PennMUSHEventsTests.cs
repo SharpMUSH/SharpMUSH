@@ -255,7 +255,7 @@ public class PennMUSHEventsTests
 		await service.HandleAsync(SignalEventsService.UserSignal.Usr2);
 
 		await restart.Received(1).RestartAsync("SIGUSR1");
-		await backups.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
+		await backups.Received(1).RunAsync(null, Arg.Is<BackupProvenance>(provenance => provenance.Trigger == "SIGUSR2"), Arg.Any<CancellationToken>());
 		await events.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 

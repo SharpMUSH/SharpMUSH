@@ -50,6 +50,35 @@ public class BackupTests
 	}
 
 	[Test]
+	public async Task SignalFallbackPersistsSigusr2TriggerAcrossServiceRestart()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+			var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+			options.CurrentValue.Returns(SharpMUSHOptions.Default());
+			var events = Substitute.For<IEventService>();
+			var runner = new BackupRunner(backups, events, Substitute.For<IGameBroadcastService>(), options,
+				NullLogger<BackupRunner>.Instance);
+			var signals = new SignalEventsService(events, runner, Substitute.For<IServerRestart>(), NullLogger<SignalEventsService>.Instance);
+			await signals.HandleAsync(SignalEventsService.UserSignal.Usr2);
+			var restarted = new LightningWorldBackupService(db, new WorldBackupOptions { Root = root, Keep = 2 }, true,
+				NullLogger<LightningWorldBackupService>.Instance);
+			await Assert.That(restarted.List().Count).IsEqualTo(1);
+			await Assert.That(restarted.List()[0].Provenance!.Trigger).IsEqualTo("SIGUSR2");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	[Test]
 	public async Task DisablingPackageCopiesDoesNotHideHistoricalRestorePoints()
 	{
 		var path = TempPath();

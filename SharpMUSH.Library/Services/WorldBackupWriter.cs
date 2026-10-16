@@ -59,6 +59,9 @@ public sealed partial class WorldBackupWriter(
 	/// <summary>Free bytes on the filesystem holding a path, or -1 when unknown. Replaceable for tests.</summary>
 	public Func<string, long> FreeBytes { get; init; } = DiskSpace.FreeBytes;
 
+	/// <summary>Reads a symbolic link's target; hosts without link inspection use the text pointer.</summary>
+	public Func<string, string?> ReadLinkTarget { get; init; } = path => new DirectoryInfo(path).LinkTarget;
+
 	/// <summary>
 	/// What a run must find free before it starts: the copy itself and a margin — a tenth of it, and never
 	/// less than 16 MiB — for the estimate being low and for whatever else shares the disk.
@@ -299,8 +302,16 @@ public sealed partial class WorldBackupWriter(
 	{
 		try
 		{
-			var link = new DirectoryInfo(Path.Join(options.Root, LatestName));
-			if (link.LinkTarget is { } target) return Path.GetFileName(target.TrimEnd(Path.DirectorySeparatorChar));
+			if (ReadLinkTarget(Path.Join(options.Root, LatestName)) is { } target) return Path.GetFileName(target.TrimEnd(Path.DirectorySeparatorChar));
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+		{
+			// Link inspection can be unavailable on the same hosts that need the text pointer.
+			// Keep its read independent, so a failed link probe cannot hide a valid fallback.
+		}
+
+		try
+		{
 			var fallback = Path.Join(options.Root, LatestFallbackName);
 			return File.Exists(fallback) ? File.ReadAllText(fallback).Trim() : null;
 		}

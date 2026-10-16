@@ -34,6 +34,42 @@ public class WorldBackupWriterTests
 			clock);
 
 	[Test]
+	public async Task UnsupportedLinkInspectionStillReadsTextPointerAndDoesNotFailCompletedCopies()
+	{
+		var root = TempPath();
+		try
+		{
+			var writer = Writer(root, 2, new FrozenClock(Instant));
+			var first = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var second = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var link = Path.Join(root, "latest");
+			if (Directory.Exists(link)) Directory.Delete(link);
+			File.WriteAllText(Path.Join(root, "latest.txt"), second.Name);
+			var unsupported = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 2 },
+				(dir, _) =>
+				{
+					File.WriteAllText(Path.Join(dir, "world"), "x");
+					return ValueTask.CompletedTask;
+				}, NullLogger.Instance, new FrozenClock(Instant))
+			{
+				ReadLinkTarget = _ => throw new PlatformNotSupportedException("link inspection unavailable")
+			};
+			var listed = unsupported.List();
+			await Assert.That(listed[0].Name).IsEqualTo(second.Name);
+			await Assert.That(listed[0].IsLatest).IsTrue();
+			await Assert.That(listed[1].IsLatest).IsFalse();
+			var third = (await unsupported.CreateAsync()).Expect<WorldBackup>();
+			await Assert.That(Directory.Exists(third.Path)).IsTrue();
+			await Assert.That(unsupported.List().Count).IsEqualTo(2);
+			await Assert.That(Directory.Exists(first.Path)).IsFalse();
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, true);
+		}
+	}
+
+	[Test]
 	public async Task MetadataFailureDoesNotPromoteOrPruneACopy()
 	{
 		var root = TempPath();
