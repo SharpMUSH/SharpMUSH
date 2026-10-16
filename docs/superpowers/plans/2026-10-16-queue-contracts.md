@@ -128,3 +128,9 @@ The inbound HTTP request is different: `HttpHandlerCommandService` creates its n
 
 The argument prerequisite's case-insensitive `/match` overlay and Time package 1.3.1 explicit HTTP body forwarding are retained. Named and numbered aliases of real inputs remain supplied; generated helper padding remains excluded. The storage lane's `TaskScheduler` semaphore guards occupy admission/rollback/repair/release methods; this lane changes only `CaptureExecutor` and the async attribute execution state there. Those edits are separate hunks, with combined-branch verification still required.
 
+
+### Deferred package lifecycle fixture correction
+
+Final CI exposed `TheBundledPackagesMakeWayForTheSourceAndComeBackPastIt`: the isolated import world replaces its queue with an inert substitute, so Scene's ordinary `@trigger %!/STARTUP` never installs the speech hooks. Reproduced the missing `CommandHook` on the queue branch before changing the fixture (one failed test, 26.015 s). The Scene-enabled private world now uses the real immediate scheduler with a substituted Quartz timer backend, preserving isolation from Quartz's process-wide host. It drains startup before import removes the old package objects, and drains reinstallation before checking the new hook targets. Production trigger behavior and hook assertions remain intact.
+
+The complete `PennMUSHDbrefPreservationTests` class passed 31/31 in 49.048 s, with a zero-warning build. Non-Scene import tests retain the original inert queue. Final combined verification is recorded by the coordinator.
