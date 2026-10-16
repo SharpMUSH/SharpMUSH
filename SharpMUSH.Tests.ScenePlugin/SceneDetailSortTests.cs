@@ -23,6 +23,14 @@ public class SceneDetailSortTests
 	};
 
 	[Test]
+	[Arguments("joinpolicy")]
+	[Arguments("playercap")]
+	public async Task ParticipationFieldsCannotBeReconfiguredAsCustomDetails(string key)
+	{
+		await Assert.That(SceneDetails.Normalize(key) is Error<string>).IsTrue();
+	}
+
+	[Test]
 	public async Task A_detail_reads_hidden_and_the_key_it_sorts_by()
 	{
 		var shown = Detail(SceneDetails.Read("icdate", """{"label":"IC date","sort":"ICSECS"}"""));

@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} записей палитры пропущено из-за ограничений.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Правила присоединения</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Максимальное число игроков</value>
+  </data>
 </root>

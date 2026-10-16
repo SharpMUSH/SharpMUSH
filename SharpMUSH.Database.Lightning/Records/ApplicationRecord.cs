@@ -29,4 +29,5 @@ public sealed record ApplicationRecord
 	public string? DefinitionId { get; init; }
 	public int ConfigVersion { get; init; } = 1;
 	public System.Text.Json.JsonElement? Config { get; init; }
+	public SharpMUSH.Library.Models.Portal.Applications.ApplicationConfigurationTile? ConfigurationTile { get; init; }
 }

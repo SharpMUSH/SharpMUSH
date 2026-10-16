@@ -19,6 +19,8 @@ namespace SharpMUSH.Tests.BUnit.Authentication;
 internal sealed class RememberedLoginHandler : HttpMessageHandler
 {
 	public bool Remembered { get; set; } = true;
+	public string ResumedToken { get; set; } = "resumed-token";
+	public Task? ResumeGate { get; set; }
 	public int Resumes { get; private set; }
 	public string? LastResumeBody { get; private set; }
 	public AuthenticationHeaderValue? LastResumeAuthorization { get; private set; }
@@ -32,6 +34,7 @@ internal sealed class RememberedLoginHandler : HttpMessageHandler
 				LastResumeBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
 				LastResumeAuthorization = request.Headers.Authorization;
 				if (!Remembered) return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+				if (ResumeGate is { } gate) await gate.WaitAsync(cancellationToken);
 				return new HttpResponseMessage(HttpStatusCode.OK)
 				{
 					Content = JsonContent.Create(new
@@ -39,13 +42,13 @@ internal sealed class RememberedLoginHandler : HttpMessageHandler
 						accountId = "acct-1",
 						username = "headwiz",
 						characters = new[] { new { dbrefNumber = 7, creationTime = 70L, name = "Bob", flags = "PLAYER", isActing = true } },
-						accountSessionToken = "resumed-token",
+						accountSessionToken = ResumedToken,
 						mustChangePassword = false,
 						role = "Player",
 						permissions = Array.Empty<string>(),
 					})
 				};
-			case "/api/account/session" when request.Headers.Authorization?.Parameter == "resumed-token":
+			case "/api/account/session" when request.Headers.Authorization?.Parameter == ResumedToken:
 				return new HttpResponseMessage(HttpStatusCode.OK)
 				{
 					Content = JsonContent.Create(new { username = "headwiz", mustChangePassword = false, role = "Player", permissions = Array.Empty<string>() })
@@ -176,11 +179,19 @@ public class RememberedLoginTests : TrackingBunitContext
 		var refused = service.AccountSessionToken!;
 		var resumesBefore = handler.Resumes;
 
-		var renewals = await Task.WhenAll(service.RenewSessionAsync(refused), service.RenewSessionAsync(refused));
+		// A real resume replaces the rejected token. Hold its response so both callers
+		// overlap even when the HTTP and JS fakes otherwise complete synchronously.
+		var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.ResumedToken = "fresh-token";
+		handler.ResumeGate = response.Task;
+		var first = service.RenewSessionAsync(refused);
+		var second = service.RenewSessionAsync(refused);
+		response.SetResult();
+		var renewals = await Task.WhenAll(first, second);
 
 		await Assert.That(handler.Resumes - resumesBefore).IsEqualTo(1);
-		await Assert.That(renewals[0]).IsEqualTo("resumed-token");
-		await Assert.That(renewals[1]).IsEqualTo("resumed-token");
+		await Assert.That(renewals[0]).IsEqualTo("fresh-token");
+		await Assert.That(renewals[1]).IsEqualTo("fresh-token");
 		await Assert.That(handler.LastResumeBody!).Contains("\"characterKey\":7");
 		await Assert.That(handler.LastResumeBody!).Contains("\"characterCreationTime\":70");
 	}

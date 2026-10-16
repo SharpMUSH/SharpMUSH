@@ -31,7 +31,7 @@ hasn't started yet.
 
 ```
 1. Player creates scheduled scene:
-   +scene/schedule <title>=<start_time>/<description>
+   +scene/schedule <when>/<title>=<pitch>
    → Scene created with state: "scheduled", scheduled_start set
    → No temp room created YET (room created when scene actually starts)
 
@@ -124,7 +124,7 @@ This is a read of the scene collection — no separate events collection needed.
 All softcoded (or engine-supported, using same scene infrastructure):
 
 ```
-+scene/schedule <title>=<time>/<desc>    Create scheduled scene (event)
++scene/schedule <when>/<title>=<pitch>    Create scheduled scene (event)
 +scene/rsvp <scene#>                     RSVP as "attending"
 +scene/rsvp/interested <scene#>          RSVP as "interested"
 +scene/rsvp/cancel <scene#>              Cancel RSVP

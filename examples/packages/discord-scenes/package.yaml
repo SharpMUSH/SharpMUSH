@@ -182,7 +182,7 @@ objects:
 
         For example:
 
-        `+scene/schedule Harbour Night=+1d`
+        `+scene/schedule +1d/Harbour Night=An evening by the docks`
 
         Output: the scene is scheduled as usual, and Harbour Night appears in the Discord server's Events tab a day from now.
 

@@ -196,7 +196,7 @@ public class SceneApprovalIntegrationTests
 				($"+scene/activate {sceneId}", "re-activate"),
 				("+scene/as The Interloper", "set a persona"),
 				($"+scene/create Sneaky {Tag}", "create/own"),
-				($"+scene/schedule Sneaky Later {Tag}=1893456000", "schedule/own")
+				($"+scene/schedule 1893456000/Sneaky Later {Tag}=A pitch", "schedule/own")
 			};
 
 			foreach (var (command, what) in associatingVerbs)

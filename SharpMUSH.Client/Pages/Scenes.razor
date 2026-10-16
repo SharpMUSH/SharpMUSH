@@ -75,7 +75,7 @@
                     <MudTimePicker @bind-Time="_schedTime" Label="@Loc["RolPauseTime"]"
                                    Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-schedule-time" />
                 </div>
-                <MudTextField T="string" @bind-Value="_schedPitch" Label="@Loc["RolScenePitchLabel"]"
+                <MudTextField T="string" @bind-Value="_schedPitch" Immediate="true" Required="true" Label="@Loc["RolScenePitchLabel"]"
                               HelperText="@Loc["RolScenePitchHint"]" Lines="3"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="scene-schedule-pitch" />
                 <MudCheckBox T="bool" @bind-Value="_schedPublic" Dense="true"
@@ -87,7 +87,7 @@
                 }
                 <div class="scene-start-buttons">
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.EditCalendar" Class="scene-schedule-submit"
-                                   Disabled="@(string.IsNullOrWhiteSpace(_schedTitle) || _schedDate is null || _schedTime is null || _busy)"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_schedTitle) || string.IsNullOrWhiteSpace(_schedPitch) || _schedDate is null || _schedTime is null || _busy)"
                                    OnClick="ScheduleSceneAsync">@Loc["RolScheduleScene"]</CapsuleButton>
                     <CapsuleButton OnClick="CloseSchedule">@Loc["Cancel"]</CapsuleButton>
                 </div>
@@ -407,14 +407,14 @@
     private sealed record ScheduleRequest(string Title, long At, string Pitch, bool Public);
 
     /// <summary>
-    /// Runs +scene/schedule as the acting character, then the privacy, title and pitch the form asked for,
+    /// Runs +scene/schedule as the acting character, with its pitch, then the privacy and title the form asked for,
     /// each on the new scene by id. Every step names the character the form was opened as, so a tab that
     /// switches character part-way has the rest refused rather than run as someone else.
     /// </summary>
     private async Task ScheduleSceneAsync()
     {
         var title = _schedTitle.Trim();
-        if (title.Length == 0 || _acting is not { } acting || ScheduledAt() is not { } at) return;
+        if (title.Length == 0 || string.IsNullOrWhiteSpace(_schedPitch) || _acting is not { } acting || ScheduledAt() is not { } at) return;
         if (at <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
         {
             _scheduleError = Loc["RolScheduleTimePast"];
@@ -446,11 +446,11 @@
     /// <param name="before">The ids of the character's scenes just before.</param>
     private async Task<string?> CreateScheduledAsync(ScheduleRequest request, string before, string character)
     {
-        // The verb is `+scene/schedule <title>=<when>` and splits at the first =, so a title carrying one goes
+        // The verb is `+scene/schedule <when>/<title>=<pitch>` and splits at the first =, so a title carrying one goes
         // out without it and is set whole by +scene/title afterwards, which takes the scene id first.
         var scheduled = MushComposeEncoder.Encode(request.Title.Replace('=', ' ').Trim());
         var known = before.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(IsSceneId);
-        return await Commands.RunAsync($"+scene/schedule {scheduled}={request.At}",
+        return await Commands.RunAsync($"+scene/schedule {request.At}/{scheduled}={MushComposeEncoder.Encode(request.Pitch)}",
                 NewlyScheduled(known), character) switch
             {
                 PortalCommandResponse { Result: { } added } when Ids(added) is [var id] =>
@@ -475,7 +475,7 @@
         $"squish(iter(setdiff({MemberScenes},{string.Join(' ', before)}),if(and(strmatch(scene(##,status),scheduled),strmatch(scene(##,owner),%#)),##)))";
 
     /// <summary>
-    /// Sends what <c>+scene/schedule</c> does not take: privacy, the title when it held an =, and the pitch.
+    /// Sends what <c>+scene/schedule</c> does not take: privacy and the title when it held an =.
     /// Each is asked back from the scene in the same queue entry, since a verb refuses in its output.
     /// </summary>
     private async Task<string?> SceneScheduledAsync(string id, ScheduleRequest request, string character)
@@ -492,8 +492,6 @@
         var changes = new List<(string Command, string Result, string Expected)>();
         if (request.Title.Contains('='))
             changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(request.Title)}", $"scene({id},title)", request.Title));
-        if (request.Pitch.Length > 0)
-            changes.Add(($"+scene/pitch {id}={MushComposeEncoder.Encode(request.Pitch)}", $"scene({id},summary)", request.Pitch));
 
         string? note = null;
         foreach (var change in changes)

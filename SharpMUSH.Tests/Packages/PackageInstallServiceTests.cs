@@ -690,6 +690,7 @@ public class PackageInstallServiceTests
 
 		var appPackage = Parse(
 			"""
+			format: 1.11
 			package: appdep-app
 			version: 1.0.0
 			kind: application
@@ -717,6 +718,12 @@ public class PackageInstallServiceTests
 			  oob_package: appdep.now
 			  permission: "{{?staff}}"
 			  order: 50
+			  configuration_tile:
+			    id: appdep-settings
+			    title: Appdep configuration
+			    description: Settings
+			    route: /apps/appdep/settings
+			    permission: config.admin
 			""");
 
 		var answers = new Dictionary<string, string> { ["access"] = "wizard", ["staff"] = "appdep.staff" };
@@ -746,6 +753,17 @@ public class PackageInstallServiceTests
 		await Assert.That(app.Scope).IsEqualTo("play");
 		await Assert.That(app.OobPackage).IsEqualTo("appdep.now");
 		await Assert.That(app.Permission).IsEqualTo("appdep.staff");
+
+		await Assert.That(app.ConfigurationTile!.Route).IsEqualTo("/apps/appdep/settings");
+		var upgradedTile = app.ConfigurationTile with { Title = "Upgraded configuration" };
+		var upgrade = appPackage with
+		{
+			Version = new PackageVersion(1, 1, 0),
+			Application = appPackage.Application! with { ConfigurationTile = upgradedTile }
+		};
+		await Assert.That((await ApplyAsync(upgrade, answers)).Value).IsTypeOf<PackageApplyResult>();
+		await Assert.That((await Applications.GetApplicationAsync("appdep")).Expect<RegisteredApplication>()
+			.ConfigurationTile).IsEqualTo(upgradedTile);
 
 		// The dependency cannot be removed while the application depends on it.
 		var blockedUninstall = (await Installer.UninstallAsync("appdep-routes")).Expect<Error<string>>();

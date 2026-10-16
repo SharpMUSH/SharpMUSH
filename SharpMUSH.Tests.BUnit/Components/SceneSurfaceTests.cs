@@ -213,8 +213,9 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 		{
 			if (ScheduleAppears)
 			{
-				var title = command.Command["+scene/schedule ".Length..command.Command.IndexOf('=')];
+				var title = command.Command[(command.Command.IndexOf('/', "+scene/schedule ".Length) + 1)..command.Command.IndexOf('=')];
 				_scheduled["title"] = title;
+				_scheduled["summary"] = command.Command[(command.Command.IndexOf('=') + 1)..];
 				_scheduled["public"] = "1";
 				MemberScenes = $"{ScheduledId} {MemberScenes}";
 				if (ConcurrentScheduleId is { } other) MemberScenes = $"{other} {MemberScenes}";
@@ -743,7 +744,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 	/// <summary>Opens the schedule form and fills it in, picking the date and time through the pickers' bindings.</summary>
 	private static async Task FillScheduleForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, DateTime when,
-		string pitch = "", bool watchable = true)
+		string pitch = "A pitch", bool watchable = true)
 	{
 		cut.WaitForAssertion(() => cut.Find(".scene-schedule-open"), TimeSpan.FromSeconds(5));
 		await cut.Find(".scene-schedule-open").ClickAsync();
@@ -753,14 +754,24 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await cut.InvokeAsync(() => date.Instance.DateChanged.InvokeAsync(when.Date));
 		var time = cut.FindComponent<MudTimePicker>();
 		await cut.InvokeAsync(() => time.Instance.TimeChanged.InvokeAsync(when.TimeOfDay));
-		if (pitch.Length > 0) await cut.Find(".scene-schedule-pitch textarea").ChangeAsync(pitch);
+		if (pitch.Length > 0) await cut.Find(".scene-schedule-pitch textarea").InputAsync(pitch);
 		if (!watchable) await cut.Find(".scene-schedule-public input").ChangeAsync(false);
+	}
+
+	[TUnit.Core.Test]
+	public async Task Scenes_SchedulingRequiresAPitchBeforeSending()
+	{
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		await FillScheduleForm(cut, "No description", DateTime.Today.AddDays(3).AddHours(20), pitch: "");
+		await Assert.That(cut.Find(".scene-schedule-submit").HasAttribute("disabled")).IsTrue();
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/schedule ", StringComparison.Ordinal))).IsFalse();
 	}
 
 	/// <summary>
 	/// The schedule button runs <c>+scene/schedule</c> as the acting character, with the time as epoch seconds
 	/// read in the browser's zone, finds the new scene as the one id that joined the character's list, and
-	/// sets the pitch on that id. The page then shows the schedule.
+	/// includes its required pitch in creation. The page then shows the schedule.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task Scenes_ScheduleASceneForLater_GoesOutAsTheVerb_AndLandsOnTheSchedule()
@@ -775,10 +786,10 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await FillScheduleForm(cut, "Lanterns at Midnight", when, pitch: "Bring your own intrigue.");
 		await cut.Find(".scene-schedule-submit").ClickAsync();
 
-		WaitForCommand($"+scene/pitch {SceneSurfaceApiHandler.ScheduledId}=Bring your own intrigue.");
+		WaitForCommand($"+scene/schedule {at}/Lanterns at Midnight=Bring your own intrigue.");
 		var sent = _api.RequestsSent();
 		var schedule = sent.Single(r => r.Command.StartsWith("+scene/schedule ", StringComparison.Ordinal));
-		await Assert.That(schedule.Command).IsEqualTo($"+scene/schedule Lanterns at Midnight={at}");
+		await Assert.That(schedule.Command).IsEqualTo($"+scene/schedule {at}/Lanterns at Midnight=Bring your own intrigue.");
 		await Assert.That(schedule.Result).StartsWith($"{SceneSurfaceApiHandler.NewlyScheduledPrefix}1 3),");
 		await Assert.That(schedule.Character).IsEqualTo("#1:1");
 		cut.WaitForAssertion(() =>

@@ -19,7 +19,9 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 file sealed class HoldableHandler(ConfigIndexTests.Server server, Func<HttpResponseMessage> respond) : HttpMessageHandler
 {
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-		server.Hold?.Task ?? Task.FromResult(respond());
+		request.RequestUri!.AbsolutePath == "/api/application-configuration"
+			? Task.FromResult(new HttpResponseMessage(server.TileStatus) { Content = new StringContent("[{\"id\":\"discord\",\"title\":\"Discord\",\"description\":\"Bot settings\",\"icon\":\"Forum\",\"route\":\"/admin/discord\",\"permission\":\"discord.admin\"}]", Encoding.UTF8, "application/json") })
+			: server.Hold?.Task ?? Task.FromResult(respond());
 }
 
 /// <summary>
@@ -34,6 +36,7 @@ public class ConfigIndexTests : TrackingBunitContext
 	internal sealed class Server
 	{
 		public TaskCompletionSource<HttpResponseMessage>? Hold { get; set; }
+		public HttpStatusCode TileStatus { get; set; } = HttpStatusCode.OK;
 	}
 
 	private readonly Server _server = new();
@@ -66,11 +69,27 @@ public class ConfigIndexTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task FailedApplicationCatalogIsVisibleAndCoreCardsRemainUsable()
+	{
+		_server.TileStatus = HttpStatusCode.ServiceUnavailable;
+		var cut = RenderHome();
+		await Assert.That(cut.FindAll("a.config-cat-card").Count).IsEqualTo(6);
+		await Assert.That(cut.Markup).Contains("Could not load application configuration");
+	}
+
+	[Test]
+	public async Task ApplicationsLinkToTheirExistingConfigurationScreen()
+	{
+		var cut = RenderHome();
+		await Assert.That(cut.Find(".config-app-grid a[href='/admin/discord']").TextContent).Contains("Discord");
+	}
+
+	[Test]
 	public async Task CardsRenderWhileTheSchemaIsStillLoading()
 	{
 		_server.Hold = new TaskCompletionSource<HttpResponseMessage>();
 		var cut = Render<ConfigIndex>();
-		await Assert.That(cut.FindAll("a.config-cat-card").Count).IsEqualTo(6)
+		await Assert.That(cut.FindAll(".config-cat-grid:not(.config-app-grid) a.config-cat-card").Count).IsEqualTo(6)
 			.Because("the six groups need nothing from the schema; only the counts do");
 		await Assert.That(cut.FindAll(".config-cat-count").Count).IsEqualTo(0);
 		_server.Hold.SetResult(new HttpResponseMessage(HttpStatusCode.OK)

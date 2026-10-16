@@ -215,7 +215,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		(state?.Trim().ToLowerInvariant()) switch
 		{
 			"live" => scene.Status == "active",
-			"upcoming" => scene.Status is "new" or "paused",
+			"upcoming" => scene.Status is "new" or "scheduled" or "paused",
 			"finished" => scene.Status == "finished",
 			_ => true,
 		};

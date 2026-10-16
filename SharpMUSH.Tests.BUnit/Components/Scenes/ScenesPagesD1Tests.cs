@@ -372,14 +372,23 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 			 "problems":[]}
 			""";
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", room: "Lower Docks", poses: 2,
-			details: new Dictionary<string, string> { ["era"] = "1980s", ["canon"] = "Marvel|X-Men", ["verse"] = "Marvel 616" });
+			details: new Dictionary<string, string>
+			{
+				["era"] = "1980s", ["canon"] = "Marvel|X-Men", ["verse"] = "Marvel 616",
+				["joinpolicy"] = "limited", ["playercap"] = "3"
+			});
 
 		var cut = RenderDetail("S1");
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-value"), TimeSpan.FromSeconds(5));
 
 		var facts = cut.Find(".scene-detail-facts");
-		var names = facts.QuerySelectorAll("dt").Select(d => d.TextContent.Trim()).Take(3).ToList();
-		var values = facts.QuerySelectorAll(".scene-detail-value").Select(d => d.TextContent.Trim()).ToList();
+		var details = facts.QuerySelectorAll(".scene-detail-value");
+		var names = details.Select(d => d.PreviousElementSibling!.TextContent.Trim()).ToList();
+		var values = details.Select(d => d.TextContent.Trim()).ToList();
+		await Assert.That(facts.QuerySelectorAll("dt").Single(d => d.TextContent.Trim() == "Joining policy")
+			.NextElementSibling!.TextContent.Trim()).IsEqualTo("limited");
+		await Assert.That(facts.QuerySelectorAll("dt").Single(d => d.TextContent.Trim() == "Player cap")
+			.NextElementSibling!.TextContent.Trim()).IsEqualTo("3");
 		await Assert.That(names).IsEquivalentTo(new[] { "Verse", "Canon", "Era" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(values).IsEquivalentTo(new[] { "Marvel 616", "Marvel, X-Men", "1980s" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -396,13 +405,17 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 
 		var first = RenderDetail("S1");
 		first.WaitForAssertion(() => first.Find(".scene-detail-value"), TimeSpan.FromSeconds(5));
-		await Assert.That(first.Find(".scene-detail-facts dt").TextContent.Trim()).IsEqualTo("Verse");
+		await Assert.That(first.Find(".scene-detail-value").PreviousElementSibling!.TextContent.Trim()).IsEqualTo("Verse");
+		await Assert.That(first.FindAll(".scene-detail-facts dt").Single(d => d.TextContent.Trim() == "Joining policy")
+			.NextElementSibling!.TextContent.Trim()).IsEqualTo("open");
+		await Assert.That(first.FindAll(".scene-detail-facts dt").Any(d => d.TextContent.Trim() == "Player cap")).IsFalse();
 		first.Dispose();
 
 		_api.Extra["/api/scenes/details"] = Catalogue.Replace("LABEL", "Setting");
 		var second = Render<SceneDetail>(p => p.Add(c => c.Id, "S1"));
 		second.WaitForState(() => second.FindAll(".scene-detail-facts dt").Any(d => d.TextContent.Trim() == "Setting"),
 			TimeSpan.FromSeconds(5));
-		await Assert.That(second.Find(".scene-detail-facts dt").TextContent.Trim()).IsEqualTo("Setting");
+		await Assert.That(second.Find(".scene-detail-value").PreviousElementSibling!.TextContent.Trim()).IsEqualTo("Setting");
+		await Assert.That(second.Find(".scene-detail-value").TextContent.Trim()).IsEqualTo("Marvel 616");
 	}
 }
