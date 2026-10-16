@@ -1,9 +1,14 @@
 using System.Text.Json;
+using SharpMUSH.Library.OAuth;
 
 namespace SharpMUSH.Library.Applications;
 
 /// <summary>A versioned plain UI definition. Config schemas deliberately support a small documented subset.</summary>
-public sealed record UiDefinition(int Version, string Id, string Entry, int ConfigVersion, JsonElement ConfigSchema)
+/// <param name="Scopes">What the package asks each player to allow it (<see cref="DelegatedScopes"/>), or none: a package
+/// that asks for <c>commands</c> may send commands as the player once they say yes in the portal.</param>
+/// <param name="Name">What the player is shown when it asks; its id when it gives none.</param>
+public sealed record UiDefinition(int Version, string Id, string Entry, int ConfigVersion, JsonElement ConfigSchema,
+	IReadOnlyList<string>? Scopes = null, string? Name = null)
 {
 	public const string FileName = "ui.json";
 	public const int MaxConfigBytes = 32 * 1024;
@@ -31,11 +36,21 @@ public sealed record UiDefinition(int Version, string Id, string Entry, int Conf
 		if (definition.Version != 1 || definition.ConfigVersion < 1 || !IsName(definition.Id)
 			|| !IsName(definition.Entry) || !definition.Entry.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
 			throw new FormatException("ui.json requires version 1, a positive configVersion, an id and a flat HTML entry.");
+		if (definition.Scopes is { } scopes && scopes.Any(scope => !DelegatedScopes.IsToken(scope)))
+			throw new FormatException($"ui.json scopes are {string.Join(", ", DelegatedScopes.All)}, or a permission category's name in lower case.");
+		if (definition.Name is { } name && (name.Trim().Length == 0 || name.Length > 80))
+			throw new FormatException("ui.json name must be 1 to 80 characters.");
 		CheckSchema(definition.ConfigSchema, 0);
 		if (definition.ConfigSchema.GetProperty("type").GetString() != "object")
 			throw new FormatException("The root config schema must be an object.");
 		return definition;
 	}
+
+	/// <summary>The scopes the package asks players for, <see cref="DelegatedScopes.Profile"/> among them; none when it asks for none.</summary>
+	[System.Text.Json.Serialization.JsonIgnore]
+	public IReadOnlyList<string> RequestedScopes => Scopes is { Count: > 0 } scopes
+		? DelegatedScopes.Union([DelegatedScopes.Profile], scopes)
+		: [];
 
 	private static void CheckSchema(JsonElement schema, int depth)
 	{

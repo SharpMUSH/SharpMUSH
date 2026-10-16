@@ -1,11 +1,14 @@
 @using System.Net.Http.Json
 @using System.Text.Json
 @using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Portal
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IHttpClientFactory HttpClients
 @inject IJSRuntime JS
 @inject ILogger<HostedApplication> Logger
+@inject ConnectedAppsService Apps
+@inject IStringLocalizer<SharedResource> Loc
 
 @if (_error is not null)
 {
@@ -32,6 +35,25 @@ else
             <div class="d-flex gap-2 mt-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Decide(true))">Make @plan.Steps.Count @(plan.Steps.Count == 1 ? "change" : "changes")</MudButton>
                 <MudButton Variant="Variant.Text" OnClick="@(() => Decide(false))">Cancel</MudButton>
+            </div>
+        </MudPaper>
+    }
+    @if (_consent is { } consent)
+    {
+        @* The host asks, not the package: the frame cannot draw over this, answer it or see the token it leads to. *@
+        <MudPaper Outlined="true" Class="pa-4 mb-3" role="dialog" aria-labelledby="@(_frameId + "-consent")">
+            <MudText Typo="Typo.h6" id="@(_frameId + "-consent")">@Loc["OAuthConsentAsks", consent.App.Name]</MudText>
+            <MudText Typo="Typo.body2" Class="mb-2">@Loc["OAuthConsentCharacter", consent.Character]</MudText>
+            <ul class="mb-2" style="padding-inline-start:1.5rem;">
+                @foreach (var scope in OAuthScopeText.Shown(consent.Scopes))
+                {
+                    <li><strong>@OAuthScopeText.Name(Loc, scope, _scopeViews)</strong> @OAuthScopeText.Detail(Loc, scope, _scopeViews)</li>
+                }
+            </ul>
+            <MudText Typo="Typo.body2">@Loc["OAuthConsentRevoke"]</MudText>
+            <div class="d-flex gap-2 mt-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Answer(true))">@Loc["OAuthConsentAllow"]</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@(() => Answer(false))">@Loc["OAuthConsentDeny"]</MudButton>
             </div>
         </MudPaper>
     }
@@ -151,6 +173,101 @@ else
 
     private void Decide(bool confirmed) => _decision?.TrySetResult(confirmed);
 
+    private OAuthHostedConsent? _consent;
+    private IReadOnlyList<OAuthScopeView> _scopeViews = [];
+    private TaskCompletionSource<bool>? _consentAnswer;
+    private OAuthHostedToken? _token;
+    private DateTimeOffset _tokenExpires;
+
+    /// <summary>
+    /// Runs one line as the player's character, with a token the player allowed this package and that this component
+    /// keeps: the frame sends the line and gets the output, never the token. The first time, the player is asked here.
+    /// </summary>
+    [JSInvokable]
+    public async Task<HostedCommandResult> RunCommand(string command)
+    {
+        if (await TokenAsync() is not { } token) return new(null, false, _tokenError ?? "The player did not allow it.");
+        var result = await SendCommandAsync(token, command);
+        if (result is not null) return result;
+        // Revoked or expired since: one fresh token, then the answer stands.
+        _token = null;
+        return await TokenAsync() is { } fresh
+            ? await SendCommandAsync(fresh, command) ?? new(null, false, "The game refused the package's access.")
+            : new(null, false, _tokenError ?? "The player did not allow it.");
+    }
+
+    public sealed record HostedCommandResult(IReadOnlyList<string>? Output, bool Truncated, string? Error);
+
+    private string? _tokenError;
+
+    /// <summary>The package's token, asking the player first when they have not allowed what it asks for; null when refused.</summary>
+    private async Task<OAuthHostedToken?> TokenAsync()
+    {
+        if (_token is { } held && DateTimeOffset.UtcNow < _tokenExpires) return held;
+        _tokenError = null;
+        var http = HttpClients.CreateClient("api");
+        var slug = Uri.EscapeDataString(Slug);
+        using (var response = await http.PostAsync($"api/applications/{slug}/token", null, _lifetime.Token))
+        {
+            if (response.IsSuccessStatusCode) return Keep(await response.Content.ReadFromJsonAsync<OAuthHostedToken>(_lifetime.Token));
+            if (response.StatusCode != System.Net.HttpStatusCode.Forbidden
+                    || response.Content.Headers.ContentType?.MediaType != "application/json"
+                    || await response.Content.ReadFromJsonAsync<OAuthHostedConsent>(_lifetime.Token) is not { App: not null } consent)
+            {
+                _tokenError = "This package may not run commands.";
+                return null;
+            }
+
+            if (_consentAnswer is not null) return null;
+            _consent = consent;
+        }
+
+        if (_scopeViews.Count == 0 && await Apps.ScopesAsync() is List<OAuthScopeView> views) _scopeViews = views;
+
+        _consentAnswer = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await InvokeAsync(StateHasChanged);
+        bool allowed;
+        try { allowed = await _consentAnswer.Task.WaitAsync(_lifetime.Token); }
+        finally
+        {
+            _consent = null;
+            _consentAnswer = null;
+            if (!_lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged);
+        }
+
+        if (!allowed) return null;
+        using var allow = await http.PostAsync($"api/applications/{slug}/allow", null, _lifetime.Token);
+        if (allow.IsSuccessStatusCode) return Keep(await allow.Content.ReadFromJsonAsync<OAuthHostedToken>(_lifetime.Token));
+        _tokenError = "The game did not record the answer.";
+        return null;
+    }
+
+    private OAuthHostedToken? Keep(OAuthHostedToken? token)
+    {
+        _token = token;
+        // A minute early, so a slow request does not reach the server with a token that has just run out.
+        _tokenExpires = DateTimeOffset.UtcNow.AddSeconds(Math.Max(0, (token?.ExpiresIn ?? 0) - 60));
+        return token;
+    }
+
+    /// <summary>The command's answer, or null when the token was refused.</summary>
+    private async Task<HostedCommandResult?> SendCommandAsync(OAuthHostedToken token, string command)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/commands")
+        {
+            Content = JsonContent.Create(new PortalCommandRequest(command)),
+        };
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.AccessToken);
+        using var response = await HttpClients.CreateClient("api").SendAsync(request, _lifetime.Token);
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) return null;
+        if (response.IsSuccessStatusCode && await response.Content.ReadFromJsonAsync<PortalCommandResponse>(_lifetime.Token) is { } answer)
+            return new(answer.Output, answer.Truncated, null);
+        return new(null, false, await response.Content.ReadAsStringAsync(_lifetime.Token) is { Length: > 0 and <= 500 } text
+            ? text : "The game could not run the command.");
+    }
+
+    private void Answer(bool allowed) => _consentAnswer?.TrySetResult(allowed);
+
     /// <param name="Cancelled">The player turned the changes down.</param>
     public sealed record RoomImportResult(RoomPlanDto? Plan, RoomApplyDto? Applied, string? Error, bool Cancelled);
 
@@ -165,6 +282,7 @@ else
     public async ValueTask DisposeAsync()
     {
         _decision?.TrySetResult(false);
+        _consentAnswer?.TrySetResult(false);
         await _lifetime.CancelAsync();
         try
         {

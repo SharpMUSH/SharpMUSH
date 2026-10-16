@@ -58,7 +58,7 @@ public class PortalEvalControlTests
 			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Options.Create(new PortalCommandOptions()),
 			NullLogger<PortalCommandService>.Instance);
 
-		var outcome = await service.EvaluateAsync("account-e", player, thing.Object().DBRef,
+		var outcome = await service.EvaluateAsync("account-e", player, null, thing.Object().DBRef,
 			new PortalEvalRequest("[set(me,TAKEN:1)]", Object: 52));
 
 		await Assert.That(outcome is PortalCommandResponse { Result: ErrorMessages.Returns.PermissionDenied }).IsTrue();

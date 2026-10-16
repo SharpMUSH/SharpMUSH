@@ -47,7 +47,7 @@ Switches include:
 - /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
 
-`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. A `<error message>` after a `"` is shown instead of "Permission denied." to anyone the restriction refuses; a bare `"` clears it.
+`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, `noapp` (refused to an app acting for a player), each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. A `<error message>` after a `"` is shown instead of "Permission denied." to anyone the restriction refuses; a bare `"` clears it.
 
 The `/quiet` switch can be used to suppress output from @command.
 

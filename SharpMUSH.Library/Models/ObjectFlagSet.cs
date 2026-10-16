@@ -71,7 +71,8 @@ public sealed class ObjectFlagSet
 		=> Has(nameOrLetter) || (nameOrLetter.Length == 1 && Symbols.Contains(nameOrLetter));
 
 	/// <summary>PennMUSH <c>God(x)</c>.</summary>
-	public bool IsGod => Object.Number == 1;
+	public bool IsGod => Object.Number == 1
+		&& (OAuth.DelegatedApp.ActingAs(Object) is not { } app || OAuth.DelegatedScopes.HasEveryGroup(app.Scopes));
 
 	/// <summary>PennMUSH <c>Wizard(x)</c>: God, or granted <see cref="PortalPermission.GameWizard"/>.</summary>
 	public bool IsWizard => IsGod || Grants.Has(PortalPermission.GameWizard);

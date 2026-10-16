@@ -175,7 +175,10 @@ internal static class WebHostRegistration
 
 		services.AddAuthentication()
 			.AddScheme<AuthenticationSchemeOptions, MushBasicAuthenticationHandler>(
-				MushBasicAuthenticationHandler.SchemeName, _ => { });
+				MushBasicAuthenticationHandler.SchemeName, _ => { })
+			// An app's access token; only the endpoints with a DelegatedPolicies policy accept it.
+			.AddScheme<AuthenticationSchemeOptions, OAuthBearerAuthenticationHandler>(
+				OAuthBearerAuthenticationHandler.SchemeName, _ => { });
 
 		services.AddAnalysisTransportPolicy(configuration);
 
@@ -277,7 +280,9 @@ internal static class WebHostRegistration
 		// Permission-policy plumbing: resolves [Authorize(Policy = PortalPermission.X)] gates against
 		// the per-scope "perm" claims carried in the JWT.
 		services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+		services.AddSingleton<DelegatedPermissions>();
 		services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+		services.AddSingleton<IAuthorizationHandler, DelegatedScopeAuthorizationHandler>();
 		services.AddRazorPages();
 		services.AddControllers();
 

@@ -26,5 +26,11 @@ public enum CommandBehavior
 	/// The command speaks a line into the room its executor stands in (SAY, POSE, SEMIPOSE, @EMIT). When a
 	/// character runs it, the activity ledger counts a pose, before any hook can replace the command.
 	/// </summary>
-	Pose = 1 << 17
+	Pose = 1 << 17,
+
+	/// <summary>
+	/// The command refuses an app acting for a player (<c>@command/restrict &lt;command&gt;=noapp</c>): sent through
+	/// <c>api/commands</c> with an app's token, it is refused as a restricted command is.
+	/// </summary>
+	NoApp = 1 << 18
 }

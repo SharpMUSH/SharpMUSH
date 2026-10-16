@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -39,9 +40,19 @@ public static partial class HelperFunctions
 			? god
 			: throw new InvalidOperationException("God (#1) does not exist.");
 
-	/// <summary>The object's grants: its roles, overrides and the scopes they resolve to.</summary>
+	/// <summary>
+	/// The object's grants: its roles, overrides and the scopes they resolve to. While an app acts as the object
+	/// (<see cref="DelegatedApp.Current"/>), only what the app's scopes cover.
+	/// </summary>
 	public static Task<ObjectGrants> GrantsAsync(this AnySharpObject obj, CancellationToken cancellationToken)
-		=> obj.Object().Grants.WithCancellation(cancellationToken);
+		=> obj.Object().GrantsAsync(cancellationToken);
+
+	/// <inheritdoc cref="GrantsAsync(AnySharpObject, CancellationToken)"/>
+	public static async Task<ObjectGrants> GrantsAsync(this SharpObject obj, CancellationToken cancellationToken)
+	{
+		var grants = await obj.Grants.WithCancellation(cancellationToken);
+		return DelegatedApp.ActingAs(obj.DBRef) is { } app ? grants.Within(app.Scopes) : grants;
+	}
 
 	/// <summary>
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x). The WIZARD flag is the <c>wizard</c> role, so
@@ -85,8 +96,10 @@ public static partial class HelperFunctions
 			.AnyAsync(x => x.Name.Equals("MISTRUST", StringComparison.OrdinalIgnoreCase), cancellationToken);
 	}
 
+	/// <summary>Player #1, unless an app acts as it without every permission group (<see cref="DelegatedScopes.HasEveryGroup"/>).</summary>
 	public static bool IsGod(this AnySharpObject obj)
-		=> obj.Object().Key == 1;
+		=> obj.Object().Key == 1
+			&& (DelegatedApp.ActingAs(obj.Object().DBRef) is not { } app || DelegatedScopes.HasEveryGroup(app.Scopes));
 
 	public static ValueTask<bool> IsPriv(this AnySharpObject obj)
 		=> obj.IsPriv(ExecutionBudget.CurrentToken);
@@ -289,7 +302,7 @@ public static partial class HelperFunctions
 	/// </remarks>
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
 		=> GamePowers.Find(power) is { } gamePower
-			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(gamePower.Scope)
+			? (await obj.GrantsAsync(cancellationToken)).Shows(gamePower.Scope)
 			: await obj.Powers.Value.AnyAsync(x => x.AnswersTo(power), cancellationToken);
 
 	/// <summary>
@@ -298,7 +311,7 @@ public static partial class HelperFunctions
 	/// </summary>
 	public static async ValueTask<IReadOnlyList<SharpPower>> ReadPowersAsync(this SharpObject obj, CancellationToken cancellationToken)
 	{
-		var grants = await obj.Grants.WithCancellation(cancellationToken);
+		var grants = await obj.GrantsAsync(cancellationToken);
 		var stored = await obj.Powers.Value.Where(p => GamePowers.Find(p.Name) is null).ToListAsync(cancellationToken);
 		return [.. GamePowers.All.Where(p => grants.Shows(p.Scope)).Select(PowerFor), .. stored];
 	}
@@ -463,7 +476,7 @@ public static partial class HelperFunctions
 	/// </para>
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> RoleFlags.Find(flag) is { } roleFlag
-			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(roleFlag.Scope)
+			? (await obj.GrantsAsync(cancellationToken)).Shows(roleFlag.Scope)
 			: HasFlag(await obj.FlagsNowAsync(cancellationToken), flag);
 
 	/// <summary>
@@ -513,7 +526,7 @@ public static partial class HelperFunctions
 	/// of its questions answers as the per-read helper here does.
 	/// </summary>
 	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
-		=> new(obj.DBRef, await obj.FlagsNowAsync(cancellationToken), await obj.Grants.WithCancellation(cancellationToken));
+		=> new(obj.DBRef, await obj.FlagsNowAsync(cancellationToken), await obj.GrantsAsync(cancellationToken));
 
 	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
 		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);

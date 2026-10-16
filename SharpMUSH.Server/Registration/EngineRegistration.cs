@@ -199,6 +199,8 @@ internal static class EngineRegistration
 		services.AddSingleton(_ => PluginInstallOptions.FromEnvironment());
 		services.AddSingleton<IPluginPackageInstaller, PluginPackageInstaller>();
 		services.AddSingleton<SharpMUSH.Library.Applications.UiPackageStore>();
+		// The authorization server: apps staff register, players' grants, and the tokens apps act with (api/oauth).
+		services.AddSingleton<SharpMUSH.Library.OAuth.IOAuthService, SharpMUSH.Library.OAuth.OAuthService>();
 		// The Packages page's Plugins tab and @plugin: what runs, turning plugins on and off, and portal uploads.
 		services.AddSingleton<Services.PluginAdministrationService>();
 		services.AddSingleton<IPluginAdministration>(sp => sp.GetRequiredService<Services.PluginAdministrationService>());

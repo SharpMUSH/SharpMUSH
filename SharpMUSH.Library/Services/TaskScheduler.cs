@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Configuration.Options;
@@ -74,6 +75,9 @@ public partial class TaskScheduler(
 		public QueueOutcome? DeferredReleaseOutcome { get; init; }
 		public bool HaltAccountingSettled { get; init; }
 		public PendingInputCommand? PendingInput { get; init; }
+
+		/// <summary>The app whose command queued this entry, made current again when it runs.</summary>
+		public DelegatedApp? App { get; init; } = DelegatedApp.Current;
 
 		/// <summary>
 		/// The entry's enactor, who hears "CPU usage exceeded." when it runs out of time
@@ -804,6 +808,7 @@ public partial class TaskScheduler(
 					using var budget = ExecutionBudget.FromMilliseconds(milliseconds, entry.Cts.Token);
 					using var scope = budget.Enter();
 					using var observation = entry.Observation?.Enter();
+					using var sender = DelegatedApp.Begin(entry.App);
 					try
 					{
 						budget.ThrowIfExceeded();
