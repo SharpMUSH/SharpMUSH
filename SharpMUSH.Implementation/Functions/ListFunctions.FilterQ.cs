@@ -41,7 +41,7 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors, extraArguments: ExtraPredicateArguments(parser, 5));
 			return FilteredCapturingRejects(parser, registerName, sep, list, lambdaResults, errors);
 		}
 

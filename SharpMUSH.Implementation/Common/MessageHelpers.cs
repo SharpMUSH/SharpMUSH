@@ -227,18 +227,11 @@ public static class MessageHelpers
 		if (pinnedAttribute != null)
 		{
 			var result = await parser.With(
-				state => state with
+				state => state.ForAttributeArguments(processedArgs) with
 				{
 					Executor = finalObjToEvaluate.Object().DBRef,
 					Enactor = enactor.Object().DBRef,
 					Caller = state.Executor,
-					Arguments = processedArgs,
-					// %0..%9 resolve from EnvironmentRegisters (see Substitutions), not Arguments,
-					// so the per-recipient format args (message text + the ## recipient-dbref token)
-					// must be placed here too — mirroring EvaluateAttributeFunctionAsync, which sets
-					// both. Without this, an explicit <obj>/<attr> format (the pinned path) renders
-					// with empty %N, dropping the message and recipient token.
-					EnvironmentRegisters = processedArgs
 				},
 				newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
 

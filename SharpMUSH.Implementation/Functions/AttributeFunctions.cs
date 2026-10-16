@@ -1069,6 +1069,7 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.LongName),
 					Arguments = arguments,
 					EnvironmentRegisters = arguments,
+					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					Executor = asCaller ? state.Executor : actualObject.Object().DBRef,
 					Caller = state.Executor
 				}, p => p.FunctionParse(value.Value)))!;
@@ -1098,8 +1099,7 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>uargs(&lt;obj&gt;/&lt;attr&gt;, &lt;name&gt;, &lt;value&gt;, ...)</c>: <c>ufun()</c> with named arguments.
-	/// The attribute reads each with <c>%&lt;name&gt;</c> or <c>r(&lt;name&gt;,args)</c>; it gets no
-	/// <c>%0</c>-<c>%9</c> unless a name is a number. Like every argument, they end with the call.
+	/// The attribute reads each with <c>%&lt;name&gt;</c> or <c>r(&lt;name&gt;,args)</c> and its ordered numbered alias. Like every argument, they end with the call.
 	/// </summary>
 	[SharpFunction(Name = "uargs", MinArgs = 1, MaxArgs = 65, Flags = FunctionFlags.Regular | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["object/attribute", "name", "value..."])]
 	public async ValueTask<CallState> UserAttributeNamedArguments(IMUSHCodeParser parser, SharpFunctionAttribute _2)

@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -53,7 +54,11 @@ public partial class Functions
 				return new CallState(error.Value);
 		}
 
-		var arguments = Enumerable.Range(0, argumentCount).ToDictionary(i => i.ToString(), i => parser.CurrentState.Arguments[(i + 1).ToString()]);
+		var values = Enumerable.Range(0, argumentCount).Select(i => parser.CurrentState.Arguments[(i + 1).ToString()]).ToArray();
+		var arguments = new AttributeArgumentEnvironment();
+		for (var i = 0; i < values.Length; i++) arguments[i.ToString()] = values[i];
+		if (ArgHelpers.AddNamedArguments(arguments, values, entry.ArgumentNames, value => value.Message.ToPlainText(), text => new CallState(text)) is Error<string> refused)
+			return new CallState(refused.Value);
 		return await AttributeService.EvaluateAttributeFunctionResultAsync(parser, caller, target,
 			entry.Attribute, arguments, evalParent: false);
 	}

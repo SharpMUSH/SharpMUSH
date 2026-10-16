@@ -194,14 +194,14 @@ public partial class Commands
 	{
 		var registers = new ConcurrentStack<Dictionary<string, MString>>();
 		registers.Push([]);
-		return state with
+		var arguments = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(element),
+			["1"] = new CallState((position + 1).ToString())
+		};
+		return state.ForAttributeArguments(arguments) with
 		{
 			Registers = registers,
-			EnvironmentRegisters = new Dictionary<string, CallState>
-			{
-				["0"] = new CallState(element),
-				["1"] = new CallState((position + 1).ToString())
-			},
 			Executor = target.Object().DBRef,
 			Caller = state.Executor
 		};
@@ -910,12 +910,13 @@ public partial class Commands
 		// in a chain. args["0"] is the target list; args["1"], args["2"], ... map to %0, %1, ...
 		// With /args they are <name>,<value> pairs instead, added to the caller's arguments as %<name>.
 		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters, StringComparer.OrdinalIgnoreCase);
+		var suppliedArgs = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
 		if (switches.Contains("ARGS"))
 		{
 			switch (ArgHelpers.NamedArguments(args, 1))
 			{
 				case Dictionary<string, CallState> named:
-					foreach (var (name, value) in named) envArgs[name] = value;
+					foreach (var (name, value) in named) envArgs[name] = suppliedArgs[name] = value;
 					break;
 				case Error<string> refusal:
 					await NotifyService.Notify(executor, refusal.Value, executor);
@@ -928,7 +929,7 @@ public partial class Commands
 			{
 				if (args.TryGetValue(i.ToString(), out var argVal))
 				{
-					envArgs[(i - 1).ToString()] = argVal;
+					envArgs[(i - 1).ToString()] = suppliedArgs[(i - 1).ToString()] = argVal;
 				}
 			}
 		}
@@ -987,6 +988,7 @@ public partial class Commands
 					state => state with
 					{
 						EnvironmentRegisters = envArgs,
+						SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(suppliedArgs),
 						Caller = state.Executor,
 						BreakPropagation = chainPropagation,
 						CurrentEvaluation = evaluation
@@ -1096,6 +1098,7 @@ public partial class Commands
 				state => state with
 				{
 					EnvironmentRegisters = envArgs,
+					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(suppliedArgs),
 					Caller = state.Executor,
 					BreakPropagation = propagation,
 					CurrentEvaluation = evaluation

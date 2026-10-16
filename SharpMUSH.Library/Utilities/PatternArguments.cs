@@ -13,7 +13,7 @@ public static class PatternArguments
 
 	public static Dictionary<string, CallState> Capture(Regex regex, Match match, bool isRegex, MString text)
 	{
-		var arguments = new Dictionary<string, CallState>();
+		var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
 		foreach (var (index, group) in Groups(regex, match, isRegex).Index().Skip(isRegex ? 0 : 1))
 		{
 			var captured = text.Substring(group.Index, group.Length);

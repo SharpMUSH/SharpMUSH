@@ -65,6 +65,7 @@ owner's scope.
 `@function/local <name>` shows one entry. The following operations use that same
 scope:
 
+- `@function/local/args <name>=<names>` assigns the global ARGS signature grammar in this owner scope; empty names clear it. Numbered slots remain unchanged.
 - `@function/local/delete <name>` removes an entry.
 - `@function/local/disable <name>` prevents calls.
 - `@function/local/enable <name>` enables calls.
@@ -96,9 +97,18 @@ The registry is in memory. Re-register local functions from the backing object's
 command. For the example above:
 
 ```mush
-&STARTUP me=@function/local double=me,DOUBLE,1,1
+&STARTUP me=@function/local double=me,DOUBLE,1,1; @function/local/args double=value
 ```
 
 `/preserve` affects a bulk registry restore within the running process. It does
 not persist the registration across a restart. Store the startup command as
 softcode; normal startup ownership and attribute permissions still apply.
+
+Named example:
+```sharp
+&SHOW me=%<who>|%0|%<items1>|%1|%<itemscount>
+@function/local show=me,SHOW
+@function/local/args show=who items...
+think localfun(show,Bob,A,B)
+```
+Output: `Bob|Bob|A|A|2`. Generated `itemscount` is visible but not caller-supplied. Signature updates, including updates through aliases, follow the concrete definition; aliases resolve that definition, and redefinition clears its signature. Re-register signatures in STARTUP after the definition.

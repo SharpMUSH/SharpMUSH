@@ -13,6 +13,11 @@
       "lookup": "named arguments passing"
     },
     {
+      "id": "presence-and-migration",
+      "heading": "Presence and migration",
+      "lookup": "named arguments presence"
+    },
+    {
       "id": "naming-a-functions-arguments",
       "heading": "Naming a function's arguments",
       "lookup": "named arguments functions"
@@ -47,7 +52,7 @@
 -->
 # Named Arguments
 
-A named argument is an argument passed under a name instead of a position. Code reads it with %`\<name\>`, or with r(`<name>`, args), where it would read %0 with %0 or r(0, args).
+A named argument is an argument passed under a name alongside its position. Code reads it with %`\<name\>`, or with r(`<name>`, args), where it would read %0 with %0 or r(0, args).
 
 ```sharp
 &FUN`ROW me=%<name> has %<count> posts.
@@ -67,10 +72,10 @@ An unclosed %`\<` is a parse error, as an unclosed %q`\<` is.
 
 | Where | Passes |
 | --- | --- |
-| uargs(`<obj>/<attr>`, `<name>`, `<value>`, ...) | the pairs, and no %0-%9 |
-| @trigger/args `<obj>/<attr>`=`<name>`,`<value>`,... | the pairs, and no %0-%9 |
-| @include/args `<obj>/<attr>`=`<name>`,`<value>`,... | the pairs, beside the caller's own arguments |
-| stepargs(`<obj>/<attr>`, `<list>`, `<names>`) | each run's elements under `<names>` |
+| uargs(`<obj>/<attr>`, `<name>`, `<value>`, ...) | names and ordered numbered value aliases |
+| @trigger/args `<obj>/<attr>`=`<name>`,`<value>`,... | names and ordered numbered value aliases |
+| @include/args `<obj>/<attr>`=`<name>`,`<value>`,... | names and numbered aliases overlaid on the caller's arguments |
+| stepargs(`<obj>/<attr>`, `<list>`, `<names>`) | each run's elements under `<names>` and numbered slots |
 
 ```sharp
 &FUN`PAIR me=%<name>=%<count>
@@ -85,9 +90,17 @@ think get(me/LAST`GREETING)
 ```
 Output: `Welcome, Bob.`
 
+## Presence and migration
+
+Includes replace numbered slots supplied by the overlay and retain untouched inherited slots, including `/chain/args`. For example, including `who,Bob` replaces inherited %0 with Bob while retaining inherited %1. This changes the earlier names-only behavior. Repeated names retain ordered numbered values; their named value is last-wins. Numeric names must match their supplied position after leading-zero normalization.
+
+`hasarg(name)` checks visible keys, including empty values. `hasarg(name,supplied)` checks inputs supplied to this invocation. Inherited include keys and generated count keys are visible but not supplied. A nested attribute call starts its own supplied set; built-in wrappers preserve the surrounding set.
+
+With `@trigger/match/args`, the shared command/listen matcher supplies captures first, then named values overlay their numbered aliases. Untouched captures stay available. The match string itself does not occupy a numbered slot. Both captured inputs and explicit overrides are supplied to that invocation.
+
 ## Naming a function's arguments
 
-A global function made with @function gets its arguments as %0, %1 and so on. `@function/args <function>=<names>` also passes them under space-separated names, in order. Needs the config.admin permission. Redefining the function clears its names, so set them after it in the same @startup.
+A global function made with @function gets its arguments as %0, %1 and so on. `@function/args <function>=<names>` also passes them under space-separated names, in order. Needs the config.admin permission. Owner-local functions use `@function/local/args <name>=<names>` with the same signature grammar and their existing owner scope. Redefining the function clears its names, so set them after it in the same @startup.
 
 ```sharp
 &FN`GREET me=Hello, %<who>. You have %<count> new posts.

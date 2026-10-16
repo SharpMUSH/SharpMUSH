@@ -55,6 +55,7 @@ public class ExecuteListenPatternCommandHandler(
 				Caller = speakerDbRef,
 				Arguments = arguments,
 				EnvironmentRegisters = new(arguments),
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 				CurrentEvaluation = new DBAttribute(listenerDbRef, request.AttributeName),
 				Restrictions = EvaluationRestrictions.Current ?? restrictions
 			};

@@ -38,6 +38,7 @@ internal static class QueuedCommandMatch
 					RegexRegisters = [],
 					SwitchStack = [],
 					EnvironmentRegisters = arguments,
+					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					HttpResponse = null
 				}
 			},

@@ -64,7 +64,7 @@ internal sealed class AttributeEvaluator(
 		{
 			SharpAttribute[] chain => await RunAsOwnerAsync(parser,
 				new AttributeFunction(obj, chain.Last().LongName.ToUpper(), chain.Last().Value),
-				s => s with { Arguments = args, EnvironmentRegisters = args }),
+				s => s.ForAttributeArguments(args)),
 			None => CallState.Empty,
 			Error<string> error => new CallState(error.Value)
 		};
@@ -90,7 +90,7 @@ internal sealed class AttributeEvaluator(
 	}
 
 	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function)
-		=> RunAsOwnerAsync(parser, function, s => s);
+		=> RunAsOwnerAsync(parser, function, s => s with { SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(s.Arguments) });
 
 	/// <summary>
 	/// PennMUSH's <c>call_ufun</c>: the attribute runs as the object it was read from, with the current
@@ -262,7 +262,8 @@ internal sealed class AttributeEvaluator(
 					s => s with
 					{
 						Arguments = slimArgs,
-						EnvironmentRegisters = slimArgs
+						EnvironmentRegisters = slimArgs,
+						SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(args).Intersect(slimArgs.Keys)
 					},
 					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
@@ -286,6 +287,7 @@ internal sealed class AttributeEvaluator(
 			{
 				Arguments = args,
 				EnvironmentRegisters = args,
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(args),
 				CurrentEvaluation = new LambdaEvaluation(executor.Object().DBRef, attribute.ToPlainText(),
 					DBAttribute.Scope(s.CurrentEvaluation))
 			},

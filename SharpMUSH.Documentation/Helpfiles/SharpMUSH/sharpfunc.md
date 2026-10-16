@@ -14,7 +14,7 @@
 | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           | [UARGS()]             |
 | [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         |
 | [ULOCAL()]            | [V()]                 | [WILDGREP()]          | [WILDGREPI()]         |
-| [XATTR()]             | [XGET()]              | [ZFUN()]              |                       |
+| [XATTR()]             | [XGET()]              | [ZFUN()]              | [HASARG()]            |
 
 ::: seealso
 - [attributes]

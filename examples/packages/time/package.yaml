@@ -1,6 +1,6 @@
 format: "1.10"
 package: time
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -343,16 +343,17 @@ objects:
         flags: [funsyntax]
       # %<player> and %<mode> (login or detect): sends the player's address to the zone service. The reply runs
       # LOOKUP`<key>, written here for this player, which hands it to INC`ZONE`REPLY and is then cleared.
+      # Escape %0 while writing the callback: the HTTP body arrives later. Pass it by name before /args overlays positions.
       INC`ZONE`LOOKUP:
         value: |-
           @assert u(%!/FUN`LOOKUP`OK,%<player>); think setqm(lookup_attr,u(%!/FUN`LOOKUP`ATTR,%<player>),
-          lookup_url,edit(get({{clock}}/DATA`CONFIG`IP-SERVICE),<ip>,urlencode(ipaddr(%<player>)))); @assert strmatch(%q<lookup_url>,https://*); &%q<lookup_attr> %!=@include/args %!/INC`ZONE`REPLY=player,%<player>,mode,%<mode>; @http %!/%q<lookup_attr>=%q<lookup_url>
+          lookup_url,edit(get({{clock}}/DATA`CONFIG`IP-SERVICE),<ip>,urlencode(ipaddr(%<player>)))); @assert strmatch(%q<lookup_url>,https://*); &%q<lookup_attr> %!=@include/args %!/INC`ZONE`REPLY=body,\%0,player,%<player>,mode,%<mode>; @http %!/%q<lookup_attr>=%q<lookup_url>
         flags: [cmdsyntax]
-      # The zone service's reply: %0 the body, %<status>, with %<player> and %<mode>. A zone the server knows, at
+      # The zone service's reply: %<body>, %<status>, with %<player> and %<mode>. A zone the server knows, at
       # the reply's DATA`CONFIG`IP-FIELD, is settled as a login's (INC`ZONE`SETTLE) or taken for +timezone/detect.
       INC`ZONE`REPLY:
         value: |-
-          &[u(%!/FUN`LOOKUP`ATTR,%<player>)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%0,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
+          &[u(%!/FUN`LOOKUP`ATTR,%<player>)] %!; think setq(zone_found,if(eq(%<status>,200),u({{clock}}/FUN`ZONE`CHECK,json_query(%<body>,extract,$.[get({{clock}}/DATA`CONFIG`IP-FIELD)])))); @assert strmatch(%<mode>,detect)=@include/args %!/INC`ZONE`SETTLE=player,%<player>,zone,%q<zone_found>,from,ip,login,1; @assert strlen(%q<zone_found>)=@pemit %<player>=notice(TIME,Your client has not reported a time zone%, and where you connect from did not give one. +timezone/match <your time> finds yours from the time where you are%, such as +timezone/match 8:15pm.,warn); @include/args %!/INC`ZONE`TAKE=player,%<player>,zone,%q<zone_found>,from,ip
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------

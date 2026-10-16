@@ -24,6 +24,16 @@ public class HttpCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HttpResponseCallbackStartsItsOwnPresence(bool nested)
+	{
+		var run = await RunHttpAsync("HttpPresence", [], ["https://example.invalid/get"], nestedPresence: nested);
+		var result = await Parser.FromState(run.Callback!).FunctionParse(MarkupText.Plain("[hasarg(0)]|[hasarg(0,supplied)]|[hasarg(status,supplied)]|[hasarg(parent,supplied)]"));
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("1|1|1|0");
+	}
+
+	[Test]
 	[Arguments(QueueRejectionReason.OwnerLimit)]
 	[Arguments(QueueRejectionReason.GlobalLimit)]
 	[Arguments(QueueRejectionReason.ShuttingDown)]
@@ -185,7 +195,7 @@ public class HttpCommandTests
 	/// </summary>
 	private async Task<HttpRun> RunHttpAsync(string name, string[] switches, string[] arguments,
 		bool qRegisters = false, Dictionary<string, string>? registers = null, string reply = "ok", int? outputLimit = null,
-		bool canHttp = true, ISecretStore? secrets = null)
+		bool canHttp = true, ISecretStore? secrets = null, bool nestedPresence = false)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, name);
@@ -193,6 +203,11 @@ public class HttpCommandTests
 		var args = new Dictionary<string, CallState> { ["0"] = new(player.DbRef + "/CALLBACK") };
 		for (var i = 0; i < arguments.Length; i++) args[(i + 1).ToString()] = new CallState(arguments[i]);
 		var state = ParserState.RootFor(player.DbRef) with { Arguments = args, Switches = switches };
+		if (nestedPresence)
+		{
+			var parent = new Dictionary<string, CallState> { ["parent"] = new("unrelated") };
+			state = state with { EnvironmentRegisters = parent, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parent) };
+		}
 		if (outputLimit is { } limit) state = state with { OutputLimit = limit };
 		foreach (var (register, value) in registers ?? [])
 			state.AddRegister(register, MarkupText.Plain(value));
