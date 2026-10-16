@@ -121,4 +121,24 @@ Verification with pinned SDK, PATH first, TMPDIR/TMP/TEMP `/temp/codex/markup`, 
 - `dotnet run --project SharpMUSH.Tests --no-build -- --treenode-filter '/*/*/StoredMarkupSafetyTests/*'`: 16 passed (six new cases failed before the fix).
 - `dotnet run --project SharpMUSH.Tests --no-build -- --treenode-filter '/*/*/StoredMarkupCommandSafetyTests/*'`: 26 passed (new clone case failed before the fix).
 - Existing `ObjectDestructionTests` full class: 18 passed before these production edits. The single CI purge failure therefore remains unexplained; no speculative purge change was made.
-- Full engine suite started with `--maximum-parallel-tests 8` to investigate that broader-suite failure. Result is pending at this checkpoint and is not claimed green.
+- Full engine suite with `--maximum-parallel-tests 8`: 17,618 total, 17,570 passed, 47 skipped and one failure: `Purge_TakesTwoPasses_AdvancingThenFreeing` retained its target after the second purge (1.124s). See the bounded investigation below; this run is not claimed green.
+
+
+## Bounded purge fixture investigation and isolation
+
+Fix range starts at `510f6d637`. The CI failure at `0540957be` observed a missing first-pass GOING_TWICE flag (20ms); the subsequent complete engine run observed the target surviving the second purge (1.124s). The original 18-test class passed by itself. Both failed assertions discarded the command result and lacked the target's pre-purge flag state, so neither trace identifies the exact causal state.
+
+A temporary controlled reproduction added 512 GOING + GOING_TWICE objects to the original shared fixture, then ran the actual two-pass command test with returned results captured. Both purge commands returned `HadErrors=False`, and the target was freed correctly (test 26.807s; complete process 51.547s). The normal parser budget is 2000ms. This control does **not** support claiming accumulated doomed-object volume or budget exhaustion caused the failures; no production purge change is justified by this evidence. Temporary backlog creation and console instrumentation were removed.
+
+The fixture had a separate demonstrable isolation defect: its global purge and OBJECT`DESTROY hook used the entire session's database. `[NotInParallel]` prevented concurrent test bodies but could not make existing unrelated objects or world configuration belong to this test. The fixture now uses the established `UsesOwnWorld` factory mechanism, with one class-wide keyed serialization boundary for every destruction/event test. The four global serialization annotations are removed. A second isolated control world supplies a GOING-only sentinel; two actual purges in the destruction world must neither advance nor free it, and cleanup removes it explicitly. No global shared-world sentinel is introduced.
+
+The two-pass test retains its actual first-pass advance and second-pass deletion assertions. It now verifies the @destroy result and GOING-only precondition, checks both purge `HadErrors` results, and includes returned text, target GOING/GOING_TWICE state and both world flag counts in failure diagnostics. The original full-suite failure's exact cause remains unknown; isolation removes a known cross-suite coupling rather than asserting a speculative root cause. The coordinator will verify the combined implementation with its final integration full-suite run.
+
+Final bounded verification (pinned SDK first on PATH; TMPDIR/TMP/TEMP `/temp/codex/markup`; rootless Podman socket and Ryuk disabled):
+
+- Two whitespace formatter passes converged; `git diff --check` passed.
+- `dotnet build SharpMUSH.Tests -m:2 -nr:false`: passed with zero warnings/errors, normal formatting gate enabled (21.35s).
+- `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ObjectDestructionTests/*' --output detailed`: **19 passed, zero failed/skipped** (30.109s), including every previous destruction behavior, actual first/second purge states and the independent-world control with local deletion asserted.
+- Local ignored evidence: `work/review-followups/purge-backlog-control.log`, `purge-isolated-build.log` and `purge-isolated-class.log`.
+
+No full-suite rerun was undertaken for this bounded fixture correction; the coordinator owns final combined integration. No production API, plugin contract or purge semantics changed.

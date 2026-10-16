@@ -17,6 +17,19 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+/// <summary>A separate world for commands that purge objects or change destruction hooks.</summary>
+public class ObjectDestructionServerFactory : ServerWebAppFactory
+{
+	public const string WorldKey = nameof(ObjectDestructionServerFactory);
+	protected override bool UsesOwnWorld => true;
+}
+
+/// <summary>A second independent world used to observe the purge fixture's isolation.</summary>
+public class ObjectDestructionControlServerFactory : ServerWebAppFactory
+{
+	protected override bool UsesOwnWorld => true;
+}
+
 /// <summary>
 /// The irrevocable half of destruction: <c>@destroy</c> on an already-GOING object, and <c>@purge</c>.
 ///
@@ -30,17 +43,19 @@ namespace SharpMUSH.Tests.Commands;
 /// Test-config invariants (mushcnf.dst): probate_judge = 1, default_home = 0.
 ///
 /// <para>
-/// Caveat worth knowing before adding to this file: the <c>@purge</c> tests are globally
-/// destructive by nature. PennMUSH's purge walks the whole database, so these free every
-/// GOING_TWICE object in the shared session database, not just their own — including fixtures
-/// another test created, destroyed and has not finished asserting on. They run alone for that
-/// reason, as does the test that hooks the global OBJECT`DESTROY event.
+/// Purge walks the whole database, and OBJECT`DESTROY is a world-wide hook. This fixture owns
+/// its world and serializes every test on that world, so unrelated fixtures cannot supply doomed
+/// objects or observe its purge and event changes.
 /// </para>
 /// </summary>
+[NotInParallel(ObjectDestructionServerFactory.WorldKey)]
 public class ObjectDestructionTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ObjectDestructionServerFactory>(Shared = SharedType.PerTestSession)]
+	public required ObjectDestructionServerFactory WebAppFactoryArg { get; init; }
+
+	[ClassDataSource<ObjectDestructionControlServerFactory>(Shared = SharedType.PerTestSession)]
+	public required ObjectDestructionControlServerFactory UnrelatedWorld { get; init; }
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
@@ -224,7 +239,6 @@ public class ObjectDestructionTests
 	/// zone, enactor always #-1 — while nothing ever fired it.
 	/// </summary>
 	[Test]
-	[NotInParallel] // hooks OBJECT`DESTROY, which every test's destroy fires
 	public async Task Destroy_Twice_FiresTheObjectDestroyEvent()
 	{
 		// event_handler = 9 (the seeded Event Handler) in the test config.
@@ -355,27 +369,76 @@ public class ObjectDestructionTests
 	/// <c>@destroy</c>, which is what leaves room for <c>@undestroy</c>.
 	/// </summary>
 	[Test]
-	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_TakesTwoPasses_AdvancingThenFreeing()
 	{
 		var thing = await CreateThingAsync("PurgeTwoPass");
 
-		await RunAsync($"@destroy {thing}");
+		var destroy = await RunAsync($"@destroy {thing}");
+		await Assert.That(destroy.HadErrors).IsFalse().Because($"@destroy returned {destroy.Message.ToPlainText()}");
+		var scheduled = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		await Assert.That(await scheduled.HasFlag("GOING")).IsTrue().Because("the target must be scheduled before purge");
+		await Assert.That(await scheduled.HasFlag("GOING_TWICE")).IsFalse();
 
-		await RunAsync("@purge");
+		var first = await RunAsync("@purge");
+		var firstState = await PurgeStateAsync(thing, first);
+		await Assert.That(first.HadErrors).IsFalse().Because(firstState);
+		var firstObject = await Mediator.Send(new GetObjectNodeQuery(thing));
+		await Assert.That(firstObject.IsNone).IsFalse().Because(firstState);
+		var afterFirstPurge = firstObject.Expect<AnySharpObject>();
+		await Assert.That(await afterFirstPurge.HasFlag("GOING")).IsTrue().Because(firstState);
+		await Assert.That(await afterFirstPurge.HasFlag("GOING_TWICE")).IsTrue().Because(firstState);
 
-		var afterFirstPurge = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
-		await Assert.That(await afterFirstPurge.HasFlag("GOING_TWICE")).IsTrue();
-
-		await RunAsync("@purge");
-
+		var second = await RunAsync("@purge");
 		var afterSecondPurge = await Mediator.Send(new GetObjectNodeQuery(thing));
-		await Assert.That(afterSecondPurge.IsNone).IsTrue();
+		var secondState = await PurgeStateAsync(thing, second);
+		await Assert.That(second.HadErrors).IsFalse().Because(secondState);
+		await Assert.That(afterSecondPurge.IsNone).IsTrue().Because(secondState);
+	}
+
+	[Test]
+	public async Task Purge_DoesNotAdvanceOrFreeAnotherWorldsDoomedObject()
+	{
+		var local = await CreateThingAsync("LocalWorldDoomed");
+		await RunAsync($"@destroy {local}");
+		var otherMediator = UnrelatedWorld.Services.GetRequiredService<IMediator>();
+		var created = await UnrelatedWorld.CommandParser.CommandParse(UnrelatedWorld.ExecutorDBRef,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("OtherWorldDoomed")}"));
+		var other = DBRef.Parse(created.Message.ToPlainText()!);
+		try
+		{
+			await UnrelatedWorld.CommandParser.CommandParse(UnrelatedWorld.ExecutorDBRef, MarkupText.Plain($"@destroy {other}"));
+			var before = (await otherMediator.Send(new GetObjectNodeQuery(other))).Expect<AnySharpObject>();
+			await Assert.That(await before.HasFlag("GOING")).IsTrue();
+			await Assert.That(await before.HasFlag("GOING_TWICE")).IsFalse();
+
+			await RunAsync("@purge");
+			await RunAsync("@purge");
+
+			await Assert.That((await Mediator.Send(new GetObjectNodeQuery(local))).IsNone).IsTrue()
+				.Because("the purges must actually free their own world's doomed object");
+			var after = (await otherMediator.Send(new GetObjectNodeQuery(other))).Expect<AnySharpObject>();
+			await Assert.That(await after.HasFlag("GOING")).IsTrue();
+			await Assert.That(await after.HasFlag("GOING_TWICE")).IsFalse()
+				.Because("the destructive fixture must neither advance nor free unrelated fixtures' objects");
+		}
+		finally
+		{
+			await otherMediator.Send(new SharpMUSH.Library.Commands.Database.DeleteObjectCommand(other));
+		}
+	}
+
+	private async Task<string> PurgeStateAsync(DBRef target, CallState result)
+	{
+		var doomed = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { HasFlag = "GOING" })).CountAsync();
+		var twice = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { HasFlag = "GOING_TWICE" })).CountAsync();
+		var state = await Mediator.Send(new GetObjectNodeQuery(target)) is AnySharpObject obj
+			? $"GOING={await obj.HasFlag("GOING")}, GOING_TWICE={await obj.HasFlag("GOING_TWICE")}"
+			: "absent";
+		return $"@purge errors={result.HadErrors}, result='{result.Message.ToPlainText()}', target={target} ({state}), world GOING={doomed}, GOING_TWICE={twice}";
 	}
 
 	/// <summary>An object that was never <c>@destroy</c>ed is untouched by a purge.</summary>
 	[Test]
-	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_LeavesObjectsThatWereNeverDestroyedAlone()
 	{
 		var bystander = await CreateThingAsync("PurgeBystander");
@@ -392,7 +455,6 @@ public class ObjectDestructionTests
 	/// reason PennMUSH spreads destruction over two passes.
 	/// </summary>
 	[Test]
-	[NotInParallel] // @purge frees every GOING_TWICE object in the session
 	public async Task Purge_AfterUndestroy_SparesTheObject()
 	{
 		var thing = await CreateThingAsync("PurgeUndestroy");
