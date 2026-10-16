@@ -30,11 +30,12 @@ Wizard-only. Reports where the world's disk goes, and what the version histories
 `@storage` alone draws a panel. Its bars show:
 
 - **Map**: how far the world's file has grown against the map limit, the most it may ever grow to. The limit is a ceiling, not an allocation: it costs neither disk nor memory until it is used.
-- **File**: the live data inside the file. The rest is free space that later writes reuse.
 - **Feeds**: what feed lines, channel recall among them, take of the live data. A table below gives each feed kind's feeds, lines and size.
 - **Next run**: the free space the next `@backup` checks for, against what the backup disk has.
 
-Beside them are what the disk has allocated for the file (which can be less than its length), the free disk beside the world, the backup copies kept, and the size of the next copy and of the backup directory at the height of a run. Earlier worlds still on disk, such as the `.previous` world a promoted import replaced, are listed until you delete them. Notes at the bottom say when the next backup will not fit, when backups share the world's disk, and how many readers a dead process left behind have been cleaned up since startup.
+**File size** is the logical file length. **Inside file** shows live and reusable bytes; no reusable pages does not mean the map is full. **On disk** shows physical allocation, which may be smaller for sparse files.
+
+The other figures show the free disk beside the world, the backup copies kept, and the size of the next copy and of the backup directory at the height of a run. Earlier worlds still on disk, such as the `.previous` world a promoted import replaced, are listed until you delete them. Notes at the bottom say when the next backup will not fit, when backups share the world's disk, and how many readers a dead process left behind have been cleaned up since startup.
 
 Deleting things frees space inside the file for reuse. It never shrinks the file. The file only gets smaller when it is replaced with a compacted copy; `deploy/README.md` describes how to do that safely.
 
