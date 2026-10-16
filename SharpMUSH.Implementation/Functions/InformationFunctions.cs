@@ -1302,7 +1302,7 @@ public partial class Functions
 		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 		for (int i = 0; i < iterations; i++)
 		{
-			hadErrors |= (await parser.FunctionParse(code))?.HadErrors == true;
+			hadErrors |= (await ParseRawArgument(parser, code))?.HadErrors == true;
 		}
 		stopwatch.Stop();
 

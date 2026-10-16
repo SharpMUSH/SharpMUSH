@@ -157,6 +157,18 @@ public class InvocationMetricsTests
 	}
 
 	[Test]
+	[Arguments("cond", "1,{0}", "COND")]
+	[Arguments("cond", "0,unused,{0}", "COND")]
+	[Arguments("if", "1,{0},unused", "IF")]
+	[Arguments("if", "0,unused,{0}", "IF")]
+	[Arguments("allof", "{0},|", "ALLOF")]
+	[Arguments("allof", "1,{0}", "ALLOF")]
+	[Arguments("letq", "{0}", "LETQ")]
+	[Arguments("letq", "X,value,{0}", "LETQ")]
+	[Arguments("cand", "{0},1", "CAND")]
+	[Arguments("cor", "{0},0", "COR")]
+	[Arguments("restrictedexpr", "add,{0}", "RESTRICTEDEXPR")]
+	[Arguments("benchmark", "{0},1", "BENCHMARK")]
 	[Arguments("localize", "{0}", "LOCALIZE")]
 	[Arguments("uldefault", "#1/NOSUCHMETRICS,{0}", "ULDEFAULT")]
 	[Arguments("udefault", "#1/NOSUCHMETRICS,{0}", "UDEFAULT")]

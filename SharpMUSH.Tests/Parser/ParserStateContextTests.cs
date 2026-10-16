@@ -10,6 +10,17 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task QueuedArgumentsRetainValuesWithoutRetainingDeferredParsers()
+	{
+		var argument = new CallState(MarkupText.Plain("captured"), 5, null,
+			() => throw new InvalidOperationException("Retained the submitting parser"));
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(new() { ["0"] = argument });
+		var queued = state.SnapshotForQueuedAction();
+		await Assert.That((await queued.Arguments["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
+		await Assert.That((await queued.EnvironmentRegisters["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
+	}
+
+	[Test]
 	public async Task QueuedArgumentsAreDetachedFromCallerMutation()
 	{
 		var arguments = new Dictionary<string, CallState> { ["0"] = new("before") };

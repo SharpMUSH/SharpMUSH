@@ -370,7 +370,7 @@ public partial class Functions
 		// all register writes pass up to the caller, nothing is saved/restored).
 		if (npairs == 0)
 		{
-			return (await parser.FunctionParse(numberedArguments.Last().Value.Message))!;
+			return (await ParseRawArgument(parser, numberedArguments.Last().Value.Message))!;
 		}
 
 		// Note: MarkupString should be immutable - verify this if register behavior issues occur
@@ -387,7 +387,7 @@ public partial class Functions
 
 		if (everythingIsOkay)
 		{
-			var parsed = await parser.FunctionParse(numberedArguments.Last().Value.Message);
+			var parsed = await ParseRawArgument(parser, numberedArguments.Last().Value.Message);
 			_ = parser.CurrentState.Registers.TryPop(out _);
 			return parsed!;
 		}

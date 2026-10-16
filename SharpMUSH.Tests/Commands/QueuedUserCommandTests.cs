@@ -77,6 +77,28 @@ public class QueuedUserCommandTests : ServerTestBase
 		.ToList();
 
 	[Test]
+	public async Task TriggerStartsANewAttributeWithoutRetainingEnclosingLoopAndSwitchFrames()
+	{
+		await Run($"&BODY {_commands}=@pemit %#={_token} [slev()]|[ilev()]|[r(0,regexp)]");
+		await RunQueued($"@dolist one={{@switch ##=o*,@trigger {_commands}/BODY}}");
+		await Scheduler.SettleForTestsAsync();
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} 0|-1|"]);
+	}
+
+	[Test]
+	[Arguments("inline", false, "child")]
+	[Arguments("inline/nobreak", true, "child")]
+	[Arguments("inplace", true, "parent")]
+	[Arguments("inline/localize/nobreak", true, "parent")]
+	public async Task InlineTriggerPreservesItsBreakAndRegisterSwitches(string switches, bool tail, string register)
+	{
+		await Run($"&BODY {_commands}=think setq(X,child);@break 1");
+		await RunQueued($"think setq(X,parent);@trigger/{switches} {_commands}/BODY;@pemit me={_token} %qX");
+		string[] expected = tail ? [$"{_token} {register}"] : [];
+		await Assert.That(Heard()).IsEquivalentTo(expected);
+	}
+
+	[Test]
 	public async Task ReservationCapturesRegistersArgumentsAndIndependentCounters()
 	{
 		var args = new Dictionary<string, CallState> { ["0"] = new("before") };
