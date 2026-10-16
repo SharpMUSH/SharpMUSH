@@ -55,6 +55,9 @@ public static class Tables
 	public static readonly TableDef MailSentTo = TableDef.Index("mail.sent.to");
 	public static readonly TableDef MailAlias = TableDef.Node("malias");
 	public static readonly TableDef Account = TableDef.Node("account");
+	/// <summary>Canonical length-prefixed registration/issuer/subject SHA-256 digest to full identity record.</summary>
+	public static readonly TableDef ExternalIdentity = TableDef.Node("acct.external");
+	public static readonly TableDef ExternalIdentityByAccount = TableDef.Index("acct.external.acct", duplicates: true);
 	public static readonly TableDef AccountEmail = TableDef.Index("account.email");
 	public static readonly TableDef AccountUser = TableDef.Index("account.user");
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);

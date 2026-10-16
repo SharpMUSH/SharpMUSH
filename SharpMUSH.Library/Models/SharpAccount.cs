@@ -17,7 +17,14 @@ public class SharpAccount
 	/// <summary>Optional email address. If set, must be globally unique. Used for login and future password recovery.</summary>
 	public string? Email { get; set; }
 
-	public required string PasswordHash { get; set; }
+	/// <summary>Null when no local account password has been established.</summary>
+	public string? PasswordHash { get; set; }
+
+	/// <summary>Legacy character passwords may authenticate this account. Social provision explicitly opts out.</summary>
+	public bool AllowCharacterPasswordAccountLogin { get; set; } = true;
+
+	/// <summary>Changes whenever account credentials or character ownership change.</summary>
+	public long CredentialEpoch { get; set; }
 
 	public long CreatedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 

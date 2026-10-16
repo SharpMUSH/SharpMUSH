@@ -5,7 +5,9 @@ public sealed record AccountRecord
 {
 	public string Username { get; init; } = "";
 	public string? Email { get; init; }
-	public string PasswordHash { get; init; } = "";
+	public string? PasswordHash { get; init; }
+	public bool AllowCharacterPasswordAccountLogin { get; init; } = true;
+	public long CredentialEpoch { get; init; }
 	public long CreatedAt { get; init; }
 	public long UpdatedAt { get; init; }
 	public bool IsVerified { get; init; }

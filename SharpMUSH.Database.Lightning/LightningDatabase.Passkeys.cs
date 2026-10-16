@@ -58,6 +58,7 @@ public partial class LightningDatabase
 				return PasskeyAddOutcome.AccountFull;
 			tx.Put(Tables.AccountPasskey, key, Codec.Serialize(record));
 			tx.Put(Tables.AccountPasskeyByAccount, Keys.Str(accountKey), key);
+			AdvanceAccountCredentialEpoch(tx, accountKey);
 			return PasskeyAddOutcome.Added;
 		}, cancellationToken);
 	}
@@ -123,6 +124,7 @@ public partial class LightningDatabase
 			if (ReadOwnPasskey(tx, accountKey, key) is null) return false;
 			tx.Delete(Tables.AccountPasskey, key);
 			tx.Delete(Tables.AccountPasskeyByAccount, Keys.Str(accountKey), key);
+			AdvanceAccountCredentialEpoch(tx, accountKey);
 			return true;
 		}, cancellationToken);
 	}

@@ -195,6 +195,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IExpandedDataStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IChannelStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IAccountStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IExternalIdentityStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IServerStateStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<ISessionRecordStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IReadMarkerStore>(sp => sp.GetRequiredService<TProvider>());

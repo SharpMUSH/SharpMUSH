@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library;
 
@@ -23,6 +24,17 @@ public interface IAccountStore
 	ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default);
 
 	ValueTask UpdateAccountPasswordAsync(string accountId, string newHash, CancellationToken cancellationToken = default);
+
+	/// <summary>Explicitly changes legacy character-password authority; never changed by credential enrollment.</summary>
+	ValueTask UpdateAccountCharacterPasswordLoginAsync(string accountId, bool enabled, CancellationToken cancellationToken = default);
+
+	/// <summary>Removes a local password only if another dedicated, currently enabled account method survives.</summary>
+	ValueTask<Result<Success>> TryRemoveAccountPasswordAsync(string accountId, IReadOnlyCollection<string> enabledRegistrations,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Removes a passkey only if another dedicated, currently enabled account method survives.</summary>
+	ValueTask<Result<Success>> TryRemoveAccountPasskeyAsync(string accountId, byte[] credentialId,
+		IReadOnlyCollection<string> enabledRegistrations, CancellationToken cancellationToken = default);
 
 	ValueTask UpdateAccountMustChangePasswordAsync(string accountId, bool value, CancellationToken cancellationToken = default);
 

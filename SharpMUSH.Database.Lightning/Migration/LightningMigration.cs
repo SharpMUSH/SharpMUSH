@@ -12,6 +12,7 @@ namespace SharpMUSH.Database.Lightning;
 public partial class LightningDatabase
 {
 	internal const string InitialMigrationId = "0001_initial";
+	internal const string AccountCredentialMigrationId = "0002_account_credentials";
 
 	/// <summary>
 	/// Idempotent world setup, run under <see cref="MigrateLock"/>:
@@ -43,6 +44,8 @@ public partial class LightningDatabase
 				await RecordMigrationAsync(InitialMigrationId, cancellationToken);
 			}
 
+			await Store.WriteAsync(MigrateAccountCredentials, cancellationToken);
+
 			foreach (var source in _migrationSources)
 			{
 				foreach (var step in source.LightningSteps)
@@ -70,6 +73,25 @@ public partial class LightningDatabase
 		}
 
 		ReloadDefinitions();
+	}
+
+	private static void MigrateAccountCredentials(ITx tx)
+	{
+		var marker = Keys.Str("mig:" + AccountCredentialMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		foreach (var row in tx.Range(Tables.Account, []).ToArray())
+		{
+			var record = Codec.Deserialize<AccountRecord>(row.Value);
+			tx.Put(Tables.Account, row.Key, Codec.Serialize(record with
+			{
+				PasswordHash = string.IsNullOrEmpty(record.PasswordHash) ? null : record.PasswordHash,
+				AllowCharacterPasswordAccountLogin = true
+			}));
+		}
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = AccountCredentialMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
 	}
 
 	private async ValueTask RecordMigrationAsync(string id, CancellationToken cancellationToken)

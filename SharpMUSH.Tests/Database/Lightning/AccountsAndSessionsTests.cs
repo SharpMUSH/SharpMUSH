@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
@@ -57,6 +58,30 @@ public class AccountsAndSessionsTests
 		ExpiryUnixMs = 1_000,
 		TtlMs = 500
 	};
+
+	[Test]
+	public async Task MigrationNormalizesHistoricalEmptyAccountHashWithoutChangingLinksOrSessions()
+	{
+		var account = await _db.CreateAccountAsync("Historical", null, "");
+		await _db.LinkCharacterToAccountAsync(account.Id!, new DBRef(1));
+		await _db.UpsertSessionAsync(MakeSession("historical-session", account.Id!, "203.0.113.5"));
+		await _db.Store.WriteAsync(tx =>
+		{
+			var raw = Keys.Str(RawKey(account.Id!));
+			var record = Codec.Deserialize<AccountRecord>(
+				tx.Range(Tables.Account, []).Single(row => row.Key.SequenceEqual(raw)).Value);
+			tx.Put(Tables.Account, raw, Codec.Serialize(record with { PasswordHash = "" }));
+			tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.AccountCredentialMigrationId));
+		});
+
+		await _db.Migrate();
+		await _db.Migrate();
+
+		await Assert.That((await _db.GetAccountByIdAsync(account.Id!))!.PasswordHash).IsNull();
+		await Assert.That((await _db.GetAccountForCharacterAsync(new DBRef(1)))!.Id).IsEqualTo(account.Id);
+		await Assert.That((await _db.GetSessionAsync("historical-session"))!.AccountId).IsEqualTo(account.Id);
+		await Assert.That((await _db.GetServerStateAsync()).SetupCompleted).IsFalse();
+	}
 
 	[Test]
 	public async Task CreateAccountAsyncIsFoundByEmailCaseInsensitiveAndByUsername()

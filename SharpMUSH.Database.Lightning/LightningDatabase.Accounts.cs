@@ -30,6 +30,8 @@ public partial class LightningDatabase
 		Username = record.Username,
 		Email = record.Email,
 		PasswordHash = record.PasswordHash,
+		AllowCharacterPasswordAccountLogin = record.AllowCharacterPasswordAccountLogin,
+		CredentialEpoch = record.CredentialEpoch,
 		CreatedAt = record.CreatedAt,
 		UpdatedAt = record.UpdatedAt,
 		IsVerified = record.IsVerified,
@@ -81,7 +83,7 @@ public partial class LightningDatabase
 			{
 				Username = username,
 				Email = email,
-				PasswordHash = hashedPassword,
+				PasswordHash = string.IsNullOrEmpty(hashedPassword) ? null : hashedPassword,
 				CreatedAt = now,
 				UpdatedAt = now,
 				IsVerified = false,
@@ -105,7 +107,7 @@ public partial class LightningDatabase
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
-			var updated = record with { PasswordHash = newHash, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+			var updated = record with { PasswordHash = newHash, CredentialEpoch = checked(record.CredentialEpoch + 1), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(updated));
 		}, cancellationToken);
 	}
@@ -176,6 +178,7 @@ public partial class LightningDatabase
 
 			tx.Put(Tables.AccountChar.Forward, Keys.Str(key), Keys.Dbref(characterRef.Number));
 			tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
+			AdvanceAccountCredentialEpoch(tx, key);
 			return new Linked();
 		}, cancellationToken);
 	}
@@ -189,6 +192,7 @@ public partial class LightningDatabase
 				&& Keys.ReadStr(heldBy) == key;
 			tx.Delete(Tables.AccountChar.Forward, Keys.Str(key), Keys.Dbref(characterRef.Number));
 			tx.Delete(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
+			if (held) AdvanceAccountCredentialEpoch(tx, key);
 			return held;
 		}, cancellationToken);
 	}
