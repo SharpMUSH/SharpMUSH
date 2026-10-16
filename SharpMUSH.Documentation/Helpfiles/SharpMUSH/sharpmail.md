@@ -28,7 +28,7 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 - [MAIL-SENDING]
 - [MAIL-READING]
 - [MAIL-FOLDERS]
-- [mail-forward]
+- [@mail/fwd]
 - [MAIL-OTHER]
 - [MAIL-ADMIN]
 - [@malias]
@@ -77,53 +77,10 @@ The following switches are available:
 * `/silent` - no notification to sender that mail was sent
 * `/nosig` - no mail signature
 
-If you have an @mailsignature attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
+If you have an [@mailsignature] attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
 
 - `@mail/fwd <msg-list>=<player-list>`
 * This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded".
-
-# Other Mail Commands
-# Mail-other
-# @mail/clear
-# @mail/unclear
-# @mail/purge
-# @mail/tag
-# @mail/untag
-# @mail/unread
-# @mail/status
-
-- `@mail/clear [<msg-list> | all]`
-- `@mail/unclear [<msg-list> | all]`
-* These commands mark mail in the current folder as cleared or uncleared. Mail marked for clearing is deleted when you disconnect, or if you use @mail/purge.
-* If no msg-list is specified, all mail in your current folder is cleared.
-* If "all" is given instead of a msg-list, all mail in **all** folders is cleared/uncleared.
-
-- `@mail/purge`
-* Actually deletes all messages marked for clearing with @mail/clear. This is done automatically when you log out.
-
-- `@mail/tag [<msg-list> | all]`
-- `@mail/untag [<msg-list> | all]`
-* These commands tag or untag mail in the current folder.
-* Tagged mail can be later acted on en masse by using "tagged" as the msg-list for other commands (which does **not** untag them afterward).
-* If no msg-list is specified, all messages in the current folder are tagged/untagged.
-* If "all" is given as the msg-list, all mail in **all** folders is tagged/untagged.
-
-### Example
-```sharp
-To clear all mail from Paul and Chani:
-@mail/tag *paul
-@mail/tag *chani
-@mail/clear tagged
-@mail/untag all
-```
-
-- `@mail/unread [<msg-list> | all]`
-* Mark messages which have already been read as new/unread.
-
-- `@mail/status [<msg-list> | all]=<status>`
-* Set the status of the given messages.
-* *<status>* can be one of: tagged, untagged, cleared, uncleared, read, unread, urgent or unurgent.
-* Read marks a new message as read without reading it, urgent/unurgent toggle the urgent flag, and the others are equivalent to @mail/tag, @mail/untag, @mail/clear, @mail/unclear and @mail/unread respectively.
 
 # Mail Folders
 # Mail-folders
@@ -253,19 +210,11 @@ The /nuke switch destroys the post office, erasing all @mail everywhere. It may 
 
 Mail functions work with @mail.
 
-Available functions:
-* [folderstats]
-* [MAIL]
-* [maildstats]
-* [mailfrom]
-* [mailfstats]
-* [maillist]
-* [mailsend]
-* [mailstats]
-* [mailstatus]
-* [mailsubject]
-* [mailtime]
-* [malias]
+|                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|
+| [FOLDERSTATS()] | [MAIL()]        | [MAILDSTATS()]  | [MAILFROM()]    |
+| [MAILFSTATS()]  | [MAILLIST()]    | [MAILSEND()]    | [MAILSTATS()]   |
+| [MAILSTATUS()]  | [MAILSUBJECT()] | [MAILTIME()]    | [MALIAS()]      |
 
 # folderstats()
 
@@ -278,7 +227,7 @@ folderstats() returns the number of read, unread, and cleared messages in a spec
 
 
 ::: seealso
-- [mailstats]
+- [mailstats()]
 :::
 
 # mail()
@@ -300,8 +249,8 @@ When given numeric arguments, mail() returns the text of the corresponding messa
 
 
 ::: seealso
-- [maillist]
-- [mailfrom]
+- [maillist()]
+- [mailfrom()]
 :::
 
 # maillist()
@@ -323,7 +272,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 ::: seealso
 - [MAIL]
-- [mailfrom]
+- [mailfrom()]
 :::
 
 # mailfrom()
@@ -344,7 +293,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 ::: seealso
 - [MAIL]
-- [maillist]
+- [maillist()]
 :::
 
 # mailstats()
@@ -368,7 +317,7 @@ The mail*stats() functions return data like @mail/*stats does. You either must u
 
 
 ::: seealso
-- [folderstats]
+- [folderstats()]
 :::
 
 # mailsend()

@@ -1,40 +1,3 @@
-# Flag List
-# Flags List
-
-| Flag | Title | Flag | Title | Flag | Title |
-|------|-------|------|-------|------|-------|
-| A | Abode/Ansi | C | Chown_ok/Color | D | Dark |
-| F | Fixed/Floating | H | Haven | I | Trust |
-| J | Judge/Jump_ok | L | Link_ok | M | Monitor |
-| N | No_leave/No_tel | O | Opaque | Q | Quiet |
-| S | Sticky | U | Unfindable | V | Visual |
-| W | Wizard | X | Safe | Z | Shared/Z_tel |
-| ^ | Listen_parent | ~ | Noaccents | ? | Unregistered |
-| " | Nospoof | a | Audible | b | Debug |
-| d | Destroy_ok | e | Enter_ok | g | Gagged |
-| h | Halt | i | Orphan | j | Jury_ok |
-| k | Keepalive | l | Light | m | Mistrust/Myopic |
-| n | No_command | o | On-vacation | p | Puppet |
-| r | Royalty | s | Suspect | t | Transparent |
-| u | Uninspected | v | Verbose | w | No_warn |
-| x | Cloudy/Terse |  |  |  |  |
-
-Additional Flags:
-* Chan_usefirstmatch
-* Hear_connect
-* Heavy
-* Loud
-* No_log
-* Paranoid
-* Show_separators
-* Track_money
-* XTERM256
-* TRUECOLOR
-* MONIKER
-* open_ok
-
-Some flags may not be enabled on some MUSHes. `@flag/list` will show which are available.
-
 # ABODE
 
 **Flag: ABODE (rooms)**
@@ -75,9 +38,9 @@ Objects which are set AUDIBLE forward sound in a number of ways. Only sound pass
 
 If an AUDIBLE object has an `@forwardlist` attribute set, sound heard by the object is forwarded to the objects listed in the `@forwardlist`. See [@forwardlist] for more information.
 
-When a THING is set AUDIBLE, any sound made inside it is broadcast to other objects in its location. This is useful for coding vehicles. Only sound passing the `@filter` is broadcast, and is prefixed with the thing's `@prefix`, or "From [name(\<thing\>)], " if no `@prefix` is set.
+When a THING is set AUDIBLE, any sound made inside it is broadcast to other objects in its location. This is useful for coding vehicles. Only sound passing the `@filter` is broadcast, and is prefixed with the thing's `@prefix`, or "From `[name(<thing>)]`, " if no `@prefix` is set.
 
-Setting the AUDIBLE flag on a ROOM activates audible exits in that room. EXITs which are set AUDIBLE propagate sound from their source room to their destination, prefixed with the exit's `@prefix`, or "From [name(home(\<exit\>))], " if no `@prefix` is set.
+Setting the AUDIBLE flag on a ROOM activates audible exits in that room. EXITs which are set AUDIBLE propagate sound from their source room to their destination, prefixed with the exit's `@prefix`, or "From `[name(home(<exit>))]`, " if no `@prefix` is set.
 
 
 ::: seealso
@@ -109,7 +72,6 @@ GAME: Object Walker(#123) lost a Penny to queue loss.
 
 
 ::: seealso
-- [no_pay]
 :::
 
 # CHOWN_OK
@@ -262,7 +224,7 @@ ENTER_OK is often used in conjunction with AUDIBLE on vehicles and buildings.
 ::: seealso
 - [enter]
 - [give]
-- [@tel]
+- [@teleport]
 - [LOCKING]
 :::
 
@@ -332,7 +294,7 @@ A HAVEN player cannot be paged. They can still use channels and receive pages th
 
 ::: seealso
 - [page]
-- [channel]
+- [@channel]
 :::
 
 # INHERIT
@@ -475,7 +437,7 @@ If a PUPPET is also set LISTEN, it will respond to what it hears according to it
 - [@force]
 - [@pemit]
 - [@remit]
-- [LISTEN]
+- [@listen]
 :::
 
 # QUIET
@@ -638,8 +600,6 @@ With great power comes great responsibility!
 
 
 ::: seealso
-- [wizhelp]
-- [@admin]
 - [roles]
 :::
 

@@ -9,6 +9,11 @@
   ],
   "sections": [
     {
+      "id": "roll-formulas",
+      "heading": "Formula examples",
+      "lookup": "roll formulas"
+    },
+    {
       "id": "roll-typing",
       "heading": "Typing a formula into a call",
       "lookup": "roll typing"
@@ -36,6 +41,18 @@ Rolls the dice in `<formula>` and returns the total.
 
 Output: a number, or with `text` as the third argument, each die and the total. Each call rolls again, so the numbers in these examples are one possible result.
 
+| Topic | Covers |
+|---|---|
+| [ROLL DICE] | dice terms, arithmetic and functions |
+| [ROLL MODIFIERS] | keeping, rerolling, exploding and counting dice |
+| [ROLL POOLS] | choosing among whole formulas, and labels |
+| [ROLL DATA] | stats from an object's attributes or a JSON object |
+| [ROLL OPTIONS] | the dice as text or JSON, and the lowest and highest totals |
+| [ROLL RECORDS] | rolls the game keeps, so anyone can check them |
+| [roll formulas] | sample formulas and what each one rolls |
+
+## Formula examples
+
 | Formula | Rolls |
 |---|---|
 | `2d6+5` | two six-sided dice, plus 5 |
@@ -46,15 +63,6 @@ Output: a number, or with `text` as the third argument, each die and the total. 
 | `10d10cs>=8` | ten ten-sided dice, counting those that show 8 or more |
 | `3d6x` | three six-sided dice; each 6 adds another die |
 | `1dF+@stat.dex` | a fate die plus the value at ``STAT`DEX`` in `<data>` |
-
-| Topic | Covers |
-|---|---|
-| [ROLL DICE] | dice terms, arithmetic and functions |
-| [ROLL MODIFIERS] | keeping, rerolling, exploding and counting dice |
-| [ROLL POOLS] | choosing among whole formulas, and labels |
-| [ROLL DATA] | stats from an object's attributes or a JSON object |
-| [ROLL OPTIONS] | the dice as text or JSON, and the lowest and highest totals |
-| [ROLL RECORDS] | rolls the game keeps, so anyone can check them |
 
 ## Typing a formula into a call
 

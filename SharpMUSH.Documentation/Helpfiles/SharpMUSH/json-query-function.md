@@ -7,6 +7,7 @@
     "json_query"
   ],
   "sections": [
+    {"id": "path-actions", "heading": "Path actions", "lookup": "json_query path actions"},
     {
       "id": "types-and-array-queries",
       "heading": "Types and array queries",
@@ -32,16 +33,24 @@ This function returns information about JSON data. `<json>` should be a valid JS
 
 Action...    Returns...<br>
 type         The type of `<json>`, one of string, number, boolean, null, array or object. Default if no `<action>` is given.<br>
-size         The size of `<json>`; this is 0 for null objects, 1 for strings/numbers/booleans, the number of array elements, or the number of key/value pairs for objects.<br>
-exists       For arrays and objects, returns 1 if there is an object found by following the path specified in `<arg>`... and 0 if not. If the current arg is an integer and the current json element is an array, uses the `<arg>`th index of the array (Starting at 0) as the new current element. Otherwise, if the current json element is an object, treats the current `<arg>` as a key into the object and its value as the new current element.  Returns #-1 for other types.<br>
-get          For arrays and objects, returns the json element found by following the path laid out in `<args>`... as described above. If no such element exists, returns an empty string. Returns #-1 for other JSON types.<br>
-extract      Like get, but takes a single combined path arg as described in [JSON PATHS]. Some caveats: Returns 0 for false, 1 for true, and strings are unquoted.<br>
-unescape     Only valid for JSON strings; returns the unescaped form of `<json>`.
+size         The size of `<json>`; this is 0 for null objects, 1 for strings/numbers/booleans, the number of array elements, or the number of key/value pairs for objects.
+
+- [json_query path actions]: `exists`, `get`, `extract` and `unescape`
+- [json_query types and array queries]: examples on an array
+- [json_query object and nested queries]: examples on an object
 
 ::: seealso
 - [json()]
 - [json_map()]
 :::
+
+## Path actions
+
+Action...    Returns...<br>
+exists       For arrays and objects, returns 1 if there is an object found by following the path specified in `<arg>`... and 0 if not. If the current arg is an integer and the current json element is an array, uses the `<arg>`th index of the array (Starting at 0) as the new current element. Otherwise, if the current json element is an object, treats the current `<arg>` as a key into the object and its value as the new current element.  Returns #-1 for other types.<br>
+get          For arrays and objects, returns the json element found by following the path laid out in `<args>`... as described above. If no such element exists, returns an empty string. Returns #-1 for other JSON types.<br>
+extract      Like get, but takes a single combined path arg as described in [JSON PATHS]. Some caveats: Returns 0 for false, 1 for true, and strings are unquoted.<br>
+unescape     Only valid for JSON strings; returns the unescaped form of `<json>`.
 
 ## Types and array queries
 

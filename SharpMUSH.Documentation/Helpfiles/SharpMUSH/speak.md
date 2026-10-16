@@ -9,9 +9,19 @@
   ],
   "sections": [
     {
+      "id": "formats",
+      "heading": "Speech formats",
+      "lookup": "speak formats"
+    },
+    {
       "id": "basic-examples",
       "heading": "Basic speech examples",
       "lookup": "speak examples"
+    },
+    {
+      "id": "name-examples",
+      "heading": "Say string and name examples",
+      "lookup": "speak name examples"
     },
     {
       "id": "transforms",
@@ -57,6 +67,8 @@ This function is used to format speech-like constructs, and is capable of transf
 
 If `<speaker>` begins with &, the rest of the `<speaker>` string is treated as the speaker's name, so you can use it for NPCs or tacking on titles (such as with @chatformat). Otherwise, the name of the object `<speaker>` is used.
 
+## Speech formats
+
 When only `<speaker>` and `<string>` are given, this function formats `<string>` as if it were speech from `<speaker>`, as follows.
 
 If `<string>` is...  the resulting string is...<br>
@@ -101,6 +113,8 @@ Wizard says, "Test."
 > @emit [speak(me, Test.)]
 Wizard says, "Test."
 ```
+
+## Say string and name examples
 
 ```sharp
 > @emit [speak(me, Test., yells:)]

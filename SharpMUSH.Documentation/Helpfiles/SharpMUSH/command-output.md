@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "keeping",
+      "heading": "Keeping a value and failures",
+      "lookup": "command output keeping"
+    },
+    {
       "id": "kinds",
       "heading": "What each command leaves",
       "lookup": "command output kinds"
@@ -33,6 +38,12 @@ Dug Kitchen as #12.
 The examples run their lists with `@force/noeval me={...}`, the way to try a list at the prompt. Without `/noeval`, `@force` evaluates the list once before running it, as PennMUSH does, and every `%>` in it is read then, before any command has run, so it is empty.
 
 To use what a command shows instead, pipe it into the next command with `;|` and read `%|`: see [piping].
+
+- [command output keeping]: the `Output:` line, q-registers, and failed commands
+- [command output kinds]: which commands leave a value, nothing, or `%>` unchanged
+- [command output queue]: `%>` in queued lists, typed lines and functions
+
+## Keeping a value and failures
 
 A command that outputs something says what in its help, on a line starting `Output:`. Most commands that change something output nothing, and the next command replaces `%>`. To use a value after such a command, keep it in a q-register: `@dig Kitchen;@desc [setq(0,%>)]%q0=A small kitchen.;@link %q0=here`.
 

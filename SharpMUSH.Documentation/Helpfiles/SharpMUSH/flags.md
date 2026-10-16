@@ -9,6 +9,11 @@
       "id": "inspecting-flags",
       "heading": "Inspecting flags",
       "lookup": "flags inspecting flags"
+    },
+    {
+      "id": "object-types",
+      "heading": "Object types are not flags",
+      "lookup": "flags object types"
     }
   ],
   "redirects": {
@@ -33,6 +38,8 @@ You can see the list of flags set on an object in several ways:
 1. If you are allowed to examine the object. The flags are listed in expanded word format on the line just below the object's name, after the word "Flags:"
 2. Flag abbreviations are also visible after the object's name in the room description, if the object is not set OPAQUE and you are not set MYOPIC
 3. The `lflags()` and `flags()` function will return a list of flag names and abbreviations for an object, respectively
+
+## Object types are not flags
 
 Note: The object type (player, thing, room, exit or garbage) is not actually a flag. See [TYPES OF OBJECTS] for more information.
 

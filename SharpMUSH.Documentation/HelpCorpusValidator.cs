@@ -61,7 +61,7 @@ public static class HelpCorpusValidator
 		{
 			var links = Markdown.Parse(parsed.Article.Markdown, pipeline).Descendants<LinkInline>()
 				.Where(link => link.GetData(HelpTopicInlineParser.CommandDataKey) is true)
-				.Select(link => link.Url![5..]).Concat(parsed.Links);
+				.Select(link => link.Url![5..]).Concat(parsed.Links).Concat(parsed.Listings.Select(listing => listing.Index));
 			foreach (var target in links)
 			{
 				if (!names.TryGetValue(target, out var resolved) || resolved.Hidden)

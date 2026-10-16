@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "registers",
+      "heading": "Registers",
+      "lookup": "@chatformat registers"
+    },
+    {
       "id": "wrapping-channel-messages",
       "heading": "Wrapping channel messages",
       "lookup": "@chatformat wrapping channel messages"
@@ -28,7 +33,21 @@
 
 The chatformat attribute is evaluated when an object receives a channel message. If the attribute exists, its evaluated result is shown to the object instead of the default message. If the attribute exists but returns nothing, the object will not see anything.
 
-**Registers**
+```sharp
+@chatformat me=<%<channel>> %<name>: %<message>
+```
+Output: when Walker says Hello. on Public, you see `<Public> Walker: Hello.`
+
+::: seealso
+- [@chat]
+- [@pageformat]
+- [@message]
+- [speak()]
+- [@CHANNEL ADMIN]
+:::
+
+## Registers
+
 - **%0** or %`\<type\>`: The 'type' of the message. It is a single character that will always be set:
 - `"`, `;` or `:` for say, semipose and pose, respectively
 - `|` for an @cemit
@@ -44,19 +63,6 @@ The chatformat attribute is evaluated when an object receives a channel message.
 If the channel is NO_NAME, and the speaker either has no title or the channel is also set NO_TITLE, then %3 will be "Someone".
 
 Each value is passed by position and by the name shown (see [named arguments]), so %`\<message\>` is %2. Code written for PennMUSH reads the positions.
-
-```sharp
-@chatformat me=<%<channel>> %<name>: %<message>
-```
-Output: when Walker says Hello. on Public, you see `<Public> Walker: Hello.`
-
-::: seealso
-- [@chat]
-- [@pageformat]
-- [@message]
-- [speak()]
-- [@CHANNEL ADMIN]
-:::
 
 ## Wrapping channel messages
 

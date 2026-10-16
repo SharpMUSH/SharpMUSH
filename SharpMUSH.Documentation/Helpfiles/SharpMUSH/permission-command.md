@@ -16,6 +16,12 @@
       "lookup": "@permission define"
     },
     {
+      "id": "permission-naming",
+      "heading": "Naming and removing custom permissions",
+      "lookup": "@permission naming",
+      "aliases": ["@permission/undefine"]
+    },
+    {
       "id": "permission-categories",
       "heading": "Permission categories",
       "lookup": "@permission categories"
@@ -67,12 +73,6 @@ An override cannot touch `administrator`, and nothing overrides a role that allo
 
 A game can add permissions of its own for its softcode to check. `@permission/define bbs.moderate=Staff/Moderate any board` defines `bbs.moderate` in the `Staff` permission category; from then on it is allowed and denied like any built-in permission, with `@role/allow`, overrides and the portal's role editor. Softcode asks `permission(%#,bbs.moderate)` or locks with `PERM^bbs.moderate`, and `@command/restrict` and `@function/restrict` accept it. A package can define the permissions it checks itself (see [roles packages]); the scene package defines `scene.close`.
 
-A name is two or more parts joined by `.`, each of lowercase letters, digits and `_`, at most 64 characters; `valid(permission, <name>)` checks one. It cannot be a built-in permission, or start with `game.`, `control.` or `protect.`. Defining a name again changes its category and description; `@permission/category <permission>=<category>` changes only the category.
-
-`@permission/undefine <permission>` removes it, and every role and override that set it. It needs the right to grant the permission.
-
-A new custom permission is held only by #1 and holders of `administrator` until a role or override allows it. A holder of `game.wizard` may allow any custom permission. Defining or removing one needs the `roles.admin` permission.
-
 ### Examples
 
 ```sharp
@@ -80,6 +80,14 @@ A new custom permission is held only by #1 and holders of `administrator` until 
 > @role/allow helper=bbs.moderate
 > think permission(*Ariel,bbs.moderate)
 ```
+
+## Naming and removing custom permissions
+
+A name is two or more parts joined by `.`, each of lowercase letters, digits and `_`, at most 64 characters; `valid(permission, <name>)` checks one. It cannot be a built-in permission, or start with `game.`, `control.` or `protect.`. Defining a name again changes its category and description; `@permission/category <permission>=<category>` changes only the category.
+
+`@permission/undefine <permission>` removes it, and every role and override that set it. It needs the right to grant the permission.
+
+A new custom permission is held only by #1 and holders of `administrator` until a role or override allows it. A holder of `game.wizard` may allow any custom permission. Defining or removing one needs the `roles.admin` permission.
 
 ## Permission categories
 

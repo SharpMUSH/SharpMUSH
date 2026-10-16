@@ -6,6 +6,17 @@
   "aliases": [],
   "sections": [
     {
+      "id": "banned-names",
+      "heading": "Banned names",
+      "lookup": "@sitelock names",
+      "aliases": ["@sitelock/name"]
+    },
+    {
+      "id": "host-rules",
+      "heading": "Adding host rules",
+      "lookup": "@sitelock rules"
+    },
+    {
       "id": "allow-and-deny-options",
       "heading": "Allow and deny options",
       "lookup": "@sitelock allow and deny options"
@@ -25,23 +36,16 @@
 # @sitelock
 
 `@sitelock`<br>
-`@sitelock/name [[!]<pattern>]`<br>
-`@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
-`@sitelock[/<ban|register>][/player] <host-pattern>`<br>
-`@sitelock/check <host>`<br>
-`@sitelock/remove[/player] <string>`
+`@sitelock/check <host>`
 
 The @sitelock command adds rules to the access.cnf file, controlling a host's level of access to the MUSH, or adds banned player names to the names.cnf file. Only Wizards may use @sitelock.
 
 @sitelock without arguments lists all sites in access.cnf. Rules are processed in the order listed, and the first matching rule is applied. `@sitelock/check` tells you which rule will match for a given `<host>`.
 
-`@sitelock/name <pattern>` bans player names matching `<pattern>`, which may use the wildcards "*" and "?" and is matched without regard to case. `@sitelock/name !<pattern>` lifts that ban, and `@sitelock/name` with no argument lists the banned patterns. A banned name is refused as a player name for anyone but a wizard or the player who already has it; `valid(playername, ...)` reports it. The list is kept with the game's configuration, so it survives a restart and is the same list the web portal's banned-names page edits.
-
-`@sitelock <host-pattern>=<options>[, <name>]` controls the access options for hosts which match `<host-pattern>`, which may include wildcard characters "*" and "?". See help @sitelock allow and deny options for the list of options, and help @sitelock character-specific rules for an explanation about the name argument.
-
-For backward compatibility, `@sitelock/ban` is shorthand for setting options "!connect !create !guest", and `@sitelock/register` is shorthand for options "!create register".
-
-If the `/player` switch is given, `<host-pattern>` is treated as a player name, and sitelock rules are added for that player's LASTIP and LASTSITE, if set.
+- [@sitelock names]: banning player names
+- [@sitelock rules]: adding a rule for a host, and the ban and register shorthands
+- [@sitelock allow and deny options]: the options a rule can set
+- [@sitelock character-specific rules]: rules for one character, and removing rules
 
 ::: seealso
 - [WILDCARDS]
@@ -49,6 +53,23 @@ If the `/player` switch is given, `<host-pattern>` is treated as a player name, 
 - [IPADDR()]
 - [HOST()]
 :::
+
+## Banned names
+
+`@sitelock/name [[!]<pattern>]`
+
+`@sitelock/name <pattern>` bans player names matching `<pattern>`, which may use the wildcards "*" and "?" and is matched without regard to case. `@sitelock/name !<pattern>` lifts that ban, and `@sitelock/name` with no argument lists the banned patterns. A banned name is refused as a player name for anyone but a wizard or the player who already has it; `valid(playername, ...)` reports it. The list is kept with the game's configuration, so it survives a restart and is the same list the web portal's banned-names page edits.
+
+## Adding host rules
+
+`@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
+`@sitelock[/<ban|register>][/player] <host-pattern>`
+
+`@sitelock <host-pattern>=<options>[, <name>]` controls the access options for hosts which match `<host-pattern>`, which may include wildcard characters "*" and "?". See help @sitelock allow and deny options for the list of options, and help @sitelock character-specific rules for an explanation about the name argument.
+
+For backward compatibility, `@sitelock/ban` is shorthand for setting options "!connect !create !guest", and `@sitelock/register` is shorthand for options "!create register".
+
+If the `/player` switch is given, `<host-pattern>` is treated as a player name, and sitelock rules are added for that player's LASTIP and LASTSITE, if set.
 
 ## Allow and deny options
 
@@ -74,6 +95,8 @@ Sitelock special options:
 - regexp -- Treat the hostname pattern as a regular expression instead of a wildcard pattern.
 
 ## Character-specific rules
+
+`@sitelock/remove[/player] <string>`
 
 If you specify a character name after the options, the options are only checked if the host pattern matches, AND the character being checked for connect support matches the one you gave. Use it only with connect and !connect options, since they're the only ones where an existing character is used.
 

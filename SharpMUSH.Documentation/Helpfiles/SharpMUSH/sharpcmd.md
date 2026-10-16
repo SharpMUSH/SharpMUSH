@@ -1,30 +1,3 @@
-# Commands
-Help is available for the following MUSH commands:
-
-|            |            |            |            |            |
-|------------|------------|------------|------------|------------|
-| [ahelp]    | [anews]    | [brief]    | [DOING]    | [drop]     |
-| [enter]    | [events]   | [examine]  | [follow]   | [get]      |
-| [give]     | [go]       | [leave]    | [LOGOUT]   | [look]     |
-| [move]     | [news]     | [page]     | [pose]     | [QUIT]     |
-| [read]     | [say]      | [score]    | [teach]    | [think]    |
-| [unfollow] | [use]      | [whisper]  | [WHO]      | [with]     |
-| ["]        | [:]        | [;]        | [+]        | [&]        |
-| [~]        | [}]        |            |            |            |
-
-
-In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
-
-- [@-ATTRIBUTES]
-- [@-BUILDING]
-- [@-GENERAL]
-- [@-WIZARD]
-
-
-At the login screen, [connect] reaches a character. On a game with web-portal accounts, [register] and [login] reach your account, [make] and [play] create and connect its characters, and [claim] adds a character you already have. See [accounts].
-
-Commands that act on your connection rather than your character are listed in [socket commands].
-
 # @-attributes
 These '@' commands set standard message/action sets on objects. Each comes in 3 versions: `@<whatever>`, `@o<whatever>`, and `@a<whatever>`. Only the `@<whatever>` version is listed below, but help is available for each:
 
@@ -40,13 +13,13 @@ These '@' command set other standard attributes on objects that don't follow the
 
 |                |                |                |                |                |
 |----------------|----------------|----------------|----------------|----------------|
-| [@aahear]      | [@aclone]      | [@aconnect]    | [@adisconnect] | [@amail]       |
-| [@amhear]      | [@away]        | [@charges]     | [@chatformat]  | [@conformat]   |
-| [@cost]        | [@descformat]  | [@ealias]      | [@exitformat]  | [@filter]      |
-| [@forwardlist] | [@haven]       | [@idescformat] | [@idle]        | [@infilter]    |
-| [@inprefix]    | [@lalias]      | [@listen]      | [@nameformat]  | [@oxenter]     |
-| [@oxleave]     | [@oxmove]      | [@oxtport]     | [@pageformat]  | [@prefix]      |
-| [@runout]      | [@sex]         | [@startup]     |                |                |
+| [@aahear]      | [@aclone]      | [@aconnect]    | [@adestroy]    | [@adisconnect] |
+| [@amail]       | [@amhear]      | [@away]        | [@charges]     | [@chatformat]  |
+| [@conformat]   | [@cost]        | [@descformat]  | [@ealias]      | [@exitformat]  |
+| [@filter]      | [@forwardlist] | [@gender]      | [@haven]       | [@idescformat] |
+| [@idle]        | [@infilter]    | [@inprefix]    | [@lalias]      | [@listen]      |
+| [@nameformat]  | [@oxenter]     | [@oxleave]     | [@oxmove]      | [@oxtport]     |
+| [@pageformat]  | [@prefix]      | [@runout]      | [@sex]         | [@startup]     |
 
 
 ::: seealso
@@ -59,12 +32,12 @@ These '@' commands are building-related (they create or modify objects):
 
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|
-| [@atrchown]  | [@atrlock]   | [@chown]     | [@chzone]    | [@clone]     |
-| [@cpattr]    | [@create]    | [@destroy]   | [@dig]       | [@elock]     |
-| [@eunlock]   | [@firstexit] | [@link]      | [@lock]      | [@moniker]   |
-| [@mvattr]    | [@name]      | [@nuke]      | [@open]      | [@parent]    |
-| [@recycle]   | [@set]       | [@ulock]     | [@undestroy] | [@unlink]    |
-| [@unlock]    | [@uunlock]   | [@wipe]      |              |              |
+| [@atrchown]  | [@atrlock]   | [@attribute] | [@chown]     | [@chzone]    |
+| [@clone]     | [@cpattr]    | [@create]    | [@destroy]   | [@dig]       |
+| [@elock]     | [@eunlock]   | [@firstexit] | [@link]      | [@lock]      |
+| [@lset]      | [@moniker]   | [@mvattr]    | [@name]      | [@nuke]      |
+| [@open]      | [@parent]    | [@recycle]   | [@set]       | [@ulock]     |
+| [@undestroy] | [@unlink]    | [@unlock]    | [@uunlock]   | [@wipe]      |
 
 # @-general
 These '@' commands are general utility and programming commands:
@@ -72,34 +45,37 @@ These '@' commands are general utility and programming commands:
 |              |              |              |              |              |
 |--------------|--------------|--------------|--------------|--------------|
 | [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
-| [@chat]      | [@command]   | [@config]    | [@context]   | [@decompile] |
-| [@doing]     | [@dolist]    | [@drain]     | [@edit]      | [@emit]      |
-| [@entrances] | [@find]      | [@force]     | [@function]  | [@gedit]     |
-| [@grep]      | [@halt]      | [@if]        | [@input]     | [@job]       |
-| [@lemit]     | [@listmotd]  | [@locale]    | [@mail]      | [@map]       |
-| [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   |
-| [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  |
-| [@pemit]     | [@profile]   | [@prompt]    | [@ps]        | [@queue]     |
-| [@remit]     | [@restart]   | [@roll]      | [@scan]      | [@search]    |
-| [@select]    | [@stats]     | [@sweep]     | [@switch]    | [@teleport]  |
-| [@trigger]   | [@verb]      | [@version]   | [@wait]      | [@whereis]   |
-| [@wiki]      | [@zemit]     |              |              |              |
+| [@chat]      | [@clist]     | [@clock]     | [@command]   | [@config]    |
+| [@context]   | [@decompile] | [@doing]     | [@dolist]    | [@drain]     |
+| [@edit]      | [@emit]      | [@entrances] | [@find]      | [@force]     |
+| [@function]  | [@gedit]     | [@grep]      | [@halt]      | [@if]        |
+| [@include]   | [@input]     | [@job]       | [@lemit]     | [@list]      |
+| [@listmotd]  | [@locale]    | [@mail]      | [@malias]    | [@map]       |
+| [@message]   | [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   |
+| [@nspemit]   | [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     |
+| [@password]  | [@pemit]     | [@profile]   | [@prompt]    | [@ps]        |
+| [@queue]     | [@remit]     | [@restart]   | [@retry]     | [@roll]      |
+| [@scan]      | [@search]    | [@select]    | [@sockset]   | [@stats]     |
+| [@sweep]     | [@switch]    | [@teleport]  | [@theme]     | [@trigger]   |
+| [@verb]      | [@version]   | [@wait]      | [@warnings]  | [@wcheck]    |
+| [@whereis]   | [@wiki]      | [@zemit]     |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
 
 |                |                |                |                |                |
 |----------------|----------------|----------------|----------------|----------------|
-| [@account]     | [@allhalt]     | [@allquota]    | [@backup]      | [@boot]        |
-| [cd]           | [ch]           | [@chownall]    | [@chzoneall]   | [@comment]     |
-| [cv]           | [@dbck]        | [@disable]     | [@dump]        | [@enable]      |
-| [@feed]        | [@flag]        | [@hide]        | [@hook]        | [@http]        |
-| [@kick]        | [@log]         | [@motd]        | [@newpassword] | [@package]     |
+| [@account]     | [@allhalt]     | [@allquota]    | [@ascii]       | [@backup]      |
+| [@boot]        | [@chownall]    | [@chzoneall]   | [@comment]     | [@dbck]        |
+| [@disable]     | [@dump]        | [@enable]      | [@feed]        | [@flag]        |
+| [@hide]        | [@hook]        | [@http]        | [@kick]        | [@log]         |
+| [@logwipe]     | [@mapsql]      | [@motd]        | [@newpassword] | [@package]     |
 | [@pcreate]     | [@permission]  | [@plugin]      | [@poll]        | [@poor]        |
 | [@power]       | [@purge]       | [@push]        | [@quota]       | [@readcache]   |
-| [@reality]     | [@rejectmotd]  | [@respond]     | [@role]        | [@shutdown]    |
-| [@sitelock]    | [@snapshot]    | [@sql]         | [@squota]      | [@storage]     |
-| [@suggest]     | [@uptime]      | [@wall]        | [@wizmotd]     | [@wizwall]     |
+| [@reality]     | [@rejectmotd]  | [@respond]     | [@role]        | [@secret]      |
+| [@shutdown]    | [@sitelock]    | [@slave]       | [@snapshot]    | [@sql]         |
+| [@squota]      | [@storage]     | [@suggest]     | [@uptime]      | [@wall]        |
+| [@wizmotd]     | [@wizwall]     | [cd]           | [ch]           | [cv]           |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.
@@ -397,7 +373,6 @@ Such a failure usually occurs because `<object>` is set NO_LEAVE, or because the
 ::: seealso
 - [leave]
 - [@leave]
-- [NO_LEAVE]
 - [locktypes]
 - [action lists]
 - [verbs]
@@ -650,39 +625,6 @@ If `<message>` evaluates to something non-null, it will be shown to anyone who p
 - [@idle]
 - [@haven]
 :::
-# @backup
-`@backup`<br>
-`@backup/list`
-
-Wizard-only. Takes a copy of the world, into a timestamped directory under the game's backup
-directory, and reports the name and size of what it wrote. This is a SharpMUSH command; PennMUSH
-has no equivalent, because PennMUSH holds the database in memory and `@dump` writes it out.
-`@dump` does the same as `@backup`.
-
-Everyone sees dump_message as the copy starts and dump_complete when it is written, and the dump
-and backup events are raised (see [event dump] and [event backup]). A failed copy tells connected
-wizards and royalty instead.
-
-The game keeps running throughout. The copy is a snapshot as of the moment it starts: everything
-committed before then is in it, nothing after. It is written aside and moved into place only once
-complete, so a backup tool reading the directory never sees a half-written one.
-
-`@backup/list` reports the copies currently on disk, newest first, without taking one.
-
-LMDB copies its environment with its own routine, so a copy is a point-in-time snapshot by
-construction.
-
-Older copies are deleted as new ones arrive, keeping a configured number. How many, where they go,
-and whether one is also taken automatically on an interval are deployment settings on the server
-process, not `@config` options. See `deploy/README.md`. A scheduled copy warns everyone five minutes
-and one minute before it, with dump_warning_5min and dump_warning_1min.
-
-
-::: seealso
-- [@dump]
-- [@dbck]
-- [@shutdown]
-:::
 # @boot
 `@boot[/silent] <player>`<br>
 `@boot/port[/silent] <descriptor number>`<br>
@@ -750,37 +692,6 @@ Changes the zone of all objects owned by `<player>` to `<zone object>`. If `<zon
 - [@chzone]
 - [zones]
 :::
-# @clone
-`@clone <object>[=<new name>[, <dbref>]]`<br>
-`@clone/preserve <object>[=<new name>[, <dbref>]]`
-
-This command creates a copy of `<object>`. The clone will have the same name as the original unless a `<new name>` is given for it. You can only clone things, rooms and exits, not players. You must control `<object>`. The new object will be owned by the player who performs the @clone, not the owner of the original `<object>`.
-
-Output: the clone's dbref, as `clone()` returns it.
-
-When cloning things and exits, the clone will be placed in your current location, not the location of `<object>`. When cloning rooms, the exits and contents in the room are not cloned as well.
-
-The cloned object will have the same modification time as the original object, to make tracking revisions easier, but will have a different creation time.
-
-Normally, the Wizard and Royalty flags, @powers and @warnings are stripped from the cloned object, but Wizards may use the `/preserve` flag to prevent this.
-
-The clone will normally be created with the first available dbref, but Wizards and objects with the pick_dbref power may specify the `<dbref>` of a garbage object to use that instead.
-
-To clone a room and all its exits, use code like:
-```sharp
-> @teleport setq(0,%L)[clone(here)]
-> @dolist lexits(%q0)=@clone ##
-```
-
-Note: If @create is restricted or disabled, it will also restrict or disable this command.
-
-
-::: seealso
-- [@create]
-- [CLONE()]
-- [CREATE()]
-- [@cpattr]
-:::
 # @comment
 `@comment <object>[=<comment>]`
 
@@ -791,23 +702,6 @@ This is a wizard-only command which sets a COMMENT attribute on `<object>`. The 
 - [@@]
 - [@@()]
 :::
-# @config
-`@config`<br>
-`@config [<category>|<option>]`<br>
-`@config/set <option>=<value>`<br>
-`@config/save <option>=<value>`
-
-With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or shows the current value of the given `<option>`.
-
-Output: when exactly one option matches, its value, as `config()` returns it; otherwise nothing.
-
-The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Booleans take yes/no, true/false or 1/0; numbers may be written with a leading `#`; an object option takes -1 for none. A value that does not fit the option, or that the configuration's own checks reject, is refused and nothing changes. Options naming files (the File and Message categories), the SQL credentials, and list-valued options (banned names, sitelock rules, restrictions; see [@sitelock]) cannot be set this way.
-
-SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all (the listening addresses and ports belong to the connection server's own configuration), so setting them has no effect.
-
-Only God can see the SQL credentials (sql_username, sql_database). The SQL password is not a configuration option: it is the `sql.password` secret, which nobody can see. See [@secret].
-
-For information about parameters, see [@config parameters]
 # @conformat
 `@conformat <object>[=<format>]`
 
@@ -836,107 +730,6 @@ Show just the object names (with no ansi) in a table:
 - [@descformat]
 - [@invformat]
 - [@idescformat]
-:::
-
-# @input
-# @input/start
-# @input/prompt
-# @input/cancel
-# @input/rescue
-
-`@input/start[/wild|/regex] <prompt>=<exit pattern>,<exit attribute>[,<pattern>,<attribute>...][,<timeout-seconds>]`<br>
-`@input/prompt <prompt>`<br>
-`@input/cancel`<br>
-`@input/rescue <player>`
-
-  Starts a guided input session on the current Telnet or WebSocket connection, shows the player `<prompt>`, and sends each line they type to an attribute picked by pattern. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. Omitting `/start` also starts a session.
-
-  After the prompt come pattern and attribute pairs, up to ten, then an optional timeout. Each attribute is `<attribute>` on the executor or `<object>/<attribute>`; the executor must control that object and have read and execute access to the attribute, which must be stored directly on it. Patterns are tried in order and the first match runs its attribute:
-
-- The first pair is the exit, and it is required. A line matching it ends the session, and then its attribute runs; that is where the work is saved, or the player told goodbye. It is also what runs when the time runs out.
-- Every later pair keeps the session open.
-- A pattern of `*` takes any line no other pattern matched.
-- A line nothing matches runs nothing. The player is told the exit pattern, and the session stays open.
-
-  Patterns match the whole line, with spaces around it trimmed and case ignored. With `/wild` they are wildcard patterns and with `/regex` regular expressions, and what they capture is passed as in a `$`-command: wildcards from `%0`; for a regular expression, the whole match in `%0` and its groups from `%1`. An exact pattern or `*` passes the line in `%0` exactly as typed. The named argument `reason`, read with `r(reason,args)`, is `exit` for the exit pattern, `input` for any other, and `timeout` when the time ran out. Like a regular expression's named group it lasts only for that run, so nothing has to clear it; it replaces a group named `reason`.
-
-  The command is refused with `#-1 INPUT NEEDS AN EXIT PATTERN AND ATTRIBUTE` without a first pair, `#-1 INPUT PATTERNS AND ATTRIBUTES COME IN PAIRS` when a pattern has no attribute, and `#-1 INVALID INPUT PATTERN` for a pattern that does not compile. `@input/cancel` cannot be the exit pattern (`#-1 INPUT EXIT PATTERN CANNOT BE @INPUT/CANCEL`), since that line always leaves without running anything.
-
-  An attribute gets the line and nothing else: brackets, semicolons, percent substitutions, and newlines are literal data, not commands or expressions. Empty input and whitespace are lines too. A transport that sends a paste as separate lines sends each line, and capture continues until the exit, so later pasted lines do not become commands.
-
-  Each attribute runs as the initiating executor, with the connected character as enactor. `%@` is kept from the code that ran `@input/start`: from a $-command, that is the player who typed it. It gets fresh registers and evaluation limits on each line. A line uses the normal admitted input entry and its execution budget. Queue rejection consumes no execution capacity; it never turns captured input into ordinary commands. A timeout run also requires normal queue admission.
-
-  From an attribute, use `@input/prompt` to send another prompt to this connection, or `@input/start` to replace the session; a replacement may name different patterns. A new session invalidates queued responses to the former session. Replies waiting behind session startup, including blank replies, belong to the first session opened after they were queued. Replacing that session discards its remaining queued replies, including queued cancel messages. If that session ends before they execute, they are discarded rather than run as commands. `@input/cancel` ends capture without running anything and restores ordinary commands. Cancellation prevents attributes already running on this connection from reopening or managing capture; a later independent start is still allowed. A player can always leave by sending exactly `@input/cancel` (case-insensitive) as a complete input message. This escape is checked before queue admission, even when the queue is full. Extra spaces or appended commands make it ordinary literal session data.
-
-  Timeout defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends and the exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`. Sending the cancel escape after expiry does not suppress an already pending timeout run. Starting another session is refused while the expired generation still owes its timeout run; the exit attribute itself may start the next session. An attribute is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without running anything. A halted executor, an unhandled failure, or an exhausted execution budget also ends capture.
-
-  `@input/rescue <player>` is for staff with the `players.moderate` permission. It ends every open session on that player's connections as if its time had run out: capture stops at once, the player is told a staff member ended it, and each exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`, within about a second. Use it when a player is stuck in a session whose code has no way out. The command returns how many sessions it ended.
-
-  Every delivery rechecks the connection incarnation, full character and object identities, ownership, control, and attribute access. These checks share the line's execution budget. Prompts are bound to the original connection and are discarded if that connection is replaced before delivery. Changed ownership, deleted/recycled objects, or revoked permission end the session safely. Two connections playing the same character have independent sessions and cannot consume one another's input. There may be at most 1024 sessions globally, 64 per initiating owner, and one per connection. An input message may contain at most 65,536 UTF-16 code units; longer input is rejected while capture remains active.
-
-  **Warning:** while a session is open, every line the player sends goes to your attributes, and nothing they type runs as a command. That is the point of `@input`: a player can write plain text without setting off other commands. The exit pattern is the player's way out, so name it in the first prompt and in every later one, and pick one nobody types as ordinary text (`.done` rather than `done`). Do not rely on the timeout to end a session. It is a safety net for a player who walked away: it fires a fixed time after the start, whether or not the player is still typing. The built-in `@input/cancel` escape ends the session without running anything, so whatever the exit attribute saves is never saved.
-
-  This example is a notepad with a `+note` command that takes a note of any number of lines. A line of just `.done` ends the session and runs `` INPUT`NOTE`DONE ``, which saves the note; `.undo` runs `` INPUT`NOTE`UNDO ``, which drops the last line; any other line goes to `` INPUT`NOTE`LINE ``, which adds it. If the time runs out, `` INPUT`NOTE`DONE `` still saves what was written:
-
-```sharp
-@create Notepad
-@set Notepad=!no_command
-&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start Type your note. Send .done on a line by itself to save it.=.done,INPUT`NOTE`DONE,.undo,INPUT`NOTE`UNDO,*,INPUT`NOTE`LINE,1800
-&INPUT`NOTE`LINE Notepad=&DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, .undo to drop the last, or .done to save:
-&INPUT`NOTE`UNDO Notepad=&DATA`DRAFT me=[ldelete(v(DATA`DRAFT),words(v(DATA`DRAFT),%r),%r)]; @input/prompt Dropped. Next line, or .done to save:
-&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(r(reason,args),timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
-```
-
-  Output: a player carrying the notepad types `+note`, then `Hello [there]`, `oops`, `.undo`, `look` and `.done`. `` get(Notepad/DATA`NOTE) `` returns the two lines `Hello [there]` and `look`; none was evaluated or run. The player sees `Note saved.` and is back at ordinary commands.
-
-  Typed text is never evaluated: storing it, or substituting `%0` or a register holding it, keeps it exactly as typed. To evaluate it on purpose, do it once, as the player who typed it, with `objevals()`; never as the object, which may belong to someone with far more power. Do it in the exit attribute, over the whole text, or in the `*` attribute, a line at a time, to show the player each result as they type. `objeval()` will not do: it evaluates its expression once, which only substitutes the register and gives the typed text back as it was. In the notepad, this exit attribute evaluates the note as the player before saving it:
-
-```sharp
-&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=[objevals(%#,v(DATA`DRAFT))]; @pemit %#=Note saved.
-```
-
-  Output: a note typed as `[add(1,2)] for %n` is saved as `3 for` and the player's name. `objevals()` evaluates as the player only when the object controls them, as a wizard-owned object does; otherwise it evaluates as the object itself, so evaluate typed text only from an object that controls its players.
-
-::: seealso
-- [@prompt]
-- [@trigger]
-- [@include]
-:::
-
-# @editor
-
-`@editor <object>/<attribute>[=function|command]`
-
-  The optional bundled `softcode-editor` package registers this command with `@command` and implements
-  it entirely in softcode over [@input]. Install that package from the bundled package source first.
-  The player must control the target. Existing `FUNSYNTAX` and `CMDSYNTAX` attributes select their
-  own syntax; give `=function` or `=command` for a new or unflagged attribute.
-
-  Ordinary input appends one literal line. Nothing in a line is evaluated. A line beginning with
-  `..` inserts one leading dot, so `..s` adds the source line `.s`. The editor commands are:
-
-| Command | Action |
-|---------|--------|
-| `.s` | Check syntax and save, remaining in the editor. |
-| `.sq` | Check syntax, save, and quit. |
-| `.q` | Quit, when nothing is unsaved. |
-| `.q!` | Quit and discard unsaved changes. |
-| `.c` | Check syntax without saving. |
-| `.l` | List the buffer with line numbers. |
-| `.u` | Undo the last appended line; a second `.u` puts it back. |
-| `.h` | Show the command summary. |
-
-  A syntax error keeps the editor open and leaves the stored attribute unchanged; each error names
-  its line and column, as `.l` numbers them. A best-effort conflict check also refuses a save when
-  the attribute or its syntax flag changed after the editor opened it or last saved it. The editor
-  stays open until one of its quit commands: when [@input]'s hour runs out it opens again with the
-  draft as it was. `@input/cancel` remains the unconditional escape and saves nothing. Finish active
-  editor sessions before upgrading, rolling back or uninstalling the package.
-
-::: seealso
-- [@input]
-- [@edit]
-- [attribute flags]
 :::
 
 # @invformat
@@ -1088,41 +881,6 @@ Your exit has been created.
 - [@payment]
 - [MONEY()]
 - [buy]
-:::
-# @cpattr
-# @mvattr
-`@cpattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
-`@mvattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
-`@cpattr[/noflagcopy] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`<br>
-`@mvattr[/noflagcopy] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`
-
-@cpattr copies the `<attr>` attribute from `<obj>` to `<obj1>` (and any other objects given). By default, the new attributes will have the same name as the original, but you can specify a different name to be used on each object if you wish.
-
-@mvattr works the same, but also attempts to remove the original attribute after copying it.
-
-Attribute flags are copied as well, unless the `/noflagcopy` switch is given. This is recommended when copying from a non-standard attribute to a standard one.
-
-### Example
-```sharp
-> @cpattr box/test=box/test1, cube/random, tribble/describe
-```
-would check the object "box" for an attribute named TEST and then copy it to the attributes TEST1 on "box", RANDOM on the object named "cube", and DESCRIBE on the object named "tribble".
-```sharp
-> @cpattr box/test=cube
-```
-would copy the TEST attribute from "box" to TEST on "cube".
-
-When `<attr>` is a wildcard pattern (see [wildcards]), every attribute of `<obj>`'s own that matches it and that you can see is copied, each under its own name, so each destination names only an object. PennMUSH copies one attribute at a time; patterns are a SharpMUSH addition.
-```sharp
-> @cpattr box/CMD`**=cube
-```
-Output: one "Attribute <name> copied to 1 destination." line for each attribute under CMD on "box". Each copy on "cube" has the same name as its original.
-
-
-::: seealso
-- [attributes]
-- [NON-STANDARD ATTRIBUTES]
-- [@set]
 :::
 # @create
 `@create <name>[=<cost>[,<dbref>]]`
@@ -1344,7 +1102,7 @@ These attributes set the message shown to a player when he enters the zone `<obj
 
 Entry into a new zone is said to occur when a player goes from a room not in the zone to a room in the zone. "Room" in this context means the player's absolute room (outermost container), so entering and leaving unzoned objects within a zoned room doesn't trigger these.
 
-Zone entry is assumed to occur before room entry, so these are triggered before the room's @[oa]enter.
+Zone entry is assumed to occur before room entry, so these are triggered before the room's `@[oa]enter`.
 
 
 ::: seealso
@@ -1365,7 +1123,7 @@ These attributes set the message shown to a player when he leaves the zone `<obj
 
 Leaving a zone is said to occur when a player goes from a room in the zone to a room not in the zone. "Room" in this context means the player's absolute room (outermost container), so entering and leaving unzoned objects within a zoned room doesn't trigger these.
 
-Zone leaving is assumed to occur after room leaving, so these are triggered after the room's @[oa]leave.
+Zone leaving is assumed to occur after room leaving, so these are triggered after the room's `@[oa]leave`.
 
 
 ::: seealso
@@ -1419,100 +1177,6 @@ The same, reading the exits by name:
 - [@conformat]
 - [@nameformat]
 - [@descformat]
-:::
-# @http
-`@http <obj>/<attr>=<URL>[,<headers>]`<br>
-`@http/<verb> <obj>/<attr>=<URL>[,<data>[,<headers>]]`
-
-Sends an HTTP request to `<URL>` and, when the reply arrives, queues the action list in `<obj>/<attr>`. Without a switch the request is a GET. The other verbs are switches: /post, /put, /delete, /patch, /head, /options, /trace and /connect. Any commas in the URL or the data need to be escaped.
-
-The action list receives:
-- %0: the body of the reply.
-- %`<status>`: the HTTP status, such as 200.
-- %`<content-type>`: the reply's Content-Type header.
-- %`<headers>`: every header of the reply, as a JSON object. Each name is in lower case, and its value is a string, or a list of strings when the header came more than once. Read one with json_query().
-- %`<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
-
-These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>`, %q`<content-type>` and %q`<http-overflow>`, as PennMUSH does.
-
-`<data>` is the body of the request. It is sent as `application/x-www-form-urlencoded` unless a Content-Type header says otherwise, encoded in the charset that type names, or UTF-8 when it names none. A GET has no body, so its headers follow the URL.
-
-`<headers>` is a JSON object, best built with json(). Each member is a header name, and its value is a string, a secret (below), or a list of those to send that header once for each. They are sent as given, except:
-- Content-Type sets the type of `<data>`; on a request with no data it is not sent. It cannot be a secret.
-- User-Agent replaces SharpMUSH's own.
-- Anything that is not an object of names and values, a name with a space in it, or a Content-Length header refuses the whole command with "Headers must be a JSON object of header names and values. Aborting."
-
-A JSON object typed into the command needs an extra pair of braces around it, because the outer pair only groups the argument.
-
-To log in to the remote site, send an Authorization header. For HTTP Basic, that is `json(object,Authorization,"Basic [encode64(<user>:<password>)]")`.
-
-A password or token kept in softcode can be read by anyone who can read that attribute. Store it with @secret instead, and name it in a header as an object: `json(object,secret,"<name>",scheme,"Bearer")`. The server puts the value in as the request leaves; softcode never sees it. `scheme` is optional: without it the header is the value alone, `Basic` sends the value (`<user>:<password>`) base64-encoded after `Basic `, and any other scheme is written before the value, as `Bearer <value>`. A secret is only sent when:
-- its name starts with `http.`;
-- the URL is https;
-- the URL's host is one @secret/host named for that secret.
-
-Otherwise the whole command is refused with "A secret in the headers may not be sent to that URL. Aborting." A request carrying a secret does not follow redirects, so the secret never reaches another host; the action list gets the redirect itself. A site that echoes the request, such as postman-echo.com, sends the value back in %0, and so in reach of softcode: bind a secret only to the hosts that need it.
-
-With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: %q`<content-type>` sets the type of `<data>` when no `<headers>` are given, and %q`<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
-
-Restricted to objects set Wizard or with the Can_HTTP @Power.
-
-### Examples
-postman-echo.com answers with the request it received, so these show what @http sent.
-
-Sending JSON with a header of your own:
-```sharp
-> &SHOW me=think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]
-> @http/post me/SHOW=https://postman-echo.com/post,json(object,bar,"baz"),json(object,Content-Type,"application/json",Game,"MyMUSH")
-```
-Output: `200 baz MyMUSH`
-
-Headers typed as JSON, in their extra braces:
-```sharp
-> &SHOW me=think %<status> [json_query(%0,extract,$.headers.game)]
-> @http me/SHOW=https://postman-echo.com/get,{{"Game":"MyMUSH"}}
-```
-Output: `200 MyMUSH`
-
-Logging in with HTTP Basic:
-```sharp
-> &SHOW me=think %<status> %0
-> @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,"Basic [encode64(postman:password)]")
-```
-Output: `200 {"authenticated":true}`
-
-Logging in with a stored secret, as a wizard:
-```sharp
-> @secret http.postman.login=postman:password
-> @secret/host http.postman.login=postman-echo.com
-> &SHOW me=think %<status> %0
-> @http me/SHOW=https://postman-echo.com/basic-auth,json(object,Authorization,json(object,secret,"http.postman.login",scheme,"Basic"))
-```
-Output: `200 {"authenticated":true}`
-
-Reading a header of the reply:
-```sharp
-> &SHOW me=think [json_query(json_query(%<headers>,get,content-type),unescape)]
-> @http me/SHOW=https://postman-echo.com/get
-```
-Output: `application/json; charset=utf-8`
-
-Checking whether the reply was cut short:
-```sharp
-> &SHOW me=think [if(%<http-overflow>,Reply too long.,Reply complete.)]
-> @http me/SHOW=https://postman-echo.com/get
-```
-Output: `Reply complete.`
-
-
-::: seealso
-- [URLENCODE()]
-- [URLDECODE()]
-- [ENCODE64()]
-- [JSON()]
-- [JSON_QUERY()]
-- [@secret]
-- [named arguments]
 :::
 # @firstexit
 `@firstexit <exit1>[, ... , <exitN>]`
@@ -1627,33 +1291,6 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 - [GREP()]
 - [GREP()]
 - [WILDCARDS]
-:::
-# @halt
-# @allhalt
-`@halt[/noeval] <object>[=<action list>]`<br>
-`@halt/pid <pid>`<br>
-`@halt/all`<br>
-`@allhalt`
-
-The @halt command removes all queued actions for `<object>`. If given, `<action list>` is placed in the queue for the object instead. If no action list is specified, the object is set HALT.
-
-If `<object>` is a player, it clears the queue for the player and all of his objects. You can use "@halt me" to clear your own queue without setting yourself HALT.
-
-Only wizards and objects with the halt @power can @halt other player's objects. Note that halting an object does NOT affect any objects waiting on it as a semaphore.
-
-`@halt/pid` will cancel a single queue entry with the given pid (the number in parenthesis before it in @ps). You must control the object that queued the command or have the halt power to do this.
-
-A cancelled delayed entry remains reserved until its scheduled trigger is confirmed removed. If scheduling or cancellation reports a cleanup failure, the command stays cancelled and consumes its queue allowance; retry `@halt/pid <pid>` after the scheduler is available to finish cleanup.
-
-`@halt/all` is a synonym for @allhalt, and is a wizard-only command which halts all objects in the game in an effort to free up the queue.
-
-
-::: seealso
-- [@wait]
-- [@ps]
-- [semaphores]
-- [@drain]
-- [@notify]
 :::
 # @haven
 `@haven <player>[=<message>]`
@@ -1828,44 +1465,6 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 - [@remit]
 - [@nspemit]
 :::
-# @list
-`@list/<switch>`<br>
-`@list[/lowercase] <switch>`
-
-The @list command lists useful MUSH information.
-
-Switches include:
-- motd : Alias for @listmotd, shows current messages of the day.
-- functions : Lists all built-in functions and @functions.
-- commands : Lists all built-in commands and @commands.
-- attribs : Lists all standard attributes.
-- locks : Lists the built-in lock types.
-- flags : Alias for @flag/list, shows all flags.
-- powers : Alias for @powers/list, shows all powers.
-- allocations : Information about memory allocations. Admin-only.
-
-Each of those may be given as a switch (`@list/commands`) or as an argument (`@list commands`); the two are equivalent, and a switch wins if you give both. As an argument, "commands", "functions", "powers", "locks" and "allocations" may be abbreviated to any prefix, while "motd", "attribs" and "flags" must be spelled in full. Anything else, or nothing at all, answers "I don't understand what you want to @list."
-
-By default, information is shown in upper-case. Add the `/lowercase` switch to show output in lowercase instead.
-
-"commands" and "functions" show built-in and local commands/functions by default. The `/builtin` or `/local` switches can be given to limit this.
-
-
-::: seealso
-- [LIST()]
-- [@config]
-- [CONFIG()]
-- [FUNCTIONS()]
-- [@stats]
-- [@command]
-- [@function]
-- [@flag]
-- [@power]
-- [@attribute]
-- [@motd]
-- [@motd]
-- [locktypes]
-:::
 # @link
 `@link[/preserve] <object>=[<dbref> | here | home | variable]`
 
@@ -1915,41 +1514,7 @@ Note that, unlike most attributes, @destination cannot be abbreviated and must b
 - [@link]
 - [@open]
 - [LINK_OK]
-- [Link_Anywhere Power]
-:::
-# Locking
-# Locks
-# @lock
-`@lock[/<switch>] <object>=<key>`
-
-This command "locks" the object, specifying a key which determines who or what can do certain things with the object. There are many different types of locks, all of which are described in [locktypes] and which are designated by the switch. The "basic" lock determines, for players and things, who can pick them up. For exits, it determines who can go through the exit. All other locks can be set the same way as the basic lock.
-
-Whenever you "pass" the basic lock, you succeed in doing something with the object. This triggers the @success/@osuccess/@asuccess messages and actions. If you fail to pass the basic lock, you trigger the @failure/@ofailure/@afailure messages and actions. Other locktypes may also have such success/failure messages: see [failure] for info.
-
-Just like attributes, locks can be inherited from parents. By default, locks are set no_inherit, but this flag can be cleared using @lset. More details and a list of flags can be found in [@lset].
-
-A listing of lock types, such as pagelocks, look at [locktypes]. For the available key types, such as how to check an attribute on an object trying to pass a lock, see [lock keys].
-
-The switch may also name the lock with "lock" on the end, as RhostMUSH spells its switches: `@lock/enterlock` is `@lock/enter`, `@lock/tportlock` is `@lock/teleport` and `@lock/defaultlock` is `@lock/basic`. @unlock takes the same spellings. This works for every lock type in [locktypes]; RhostMUSH lock types that SharpMUSH does not have, such as `teloutlock` or `darklock`, are still unknown lock types. A user-defined lock whose name ends in "lock" keeps its own name. These spellings come from RhostMUSH.
-
-
-::: seealso
-- [@LOCK-SIMPLE]
-- [locktypes]
-- [lock keys]
-- [@CHANNEL CLOCK]
-- [failure]
-- [SUCCESS]
-- [ELOCK()]
-- [LOCK()]
-- [@lset]
-- [@CHANNEL CLOCK]
-- [TESTLOCK()]
-- [LLOCKS()]
-- [LOCKFLAGS()]
-- [LOCKOWNER()]
-- [clock()]
-- [LLOCKS()]
+- [@power]
 :::
 # @lset
 `@lset <object>/<lock type>=[!]<flag>`
@@ -2020,30 +1585,6 @@ Show the first letter in orange, and the rest with no color
 - [@nameaccent]
 - [MONIKER()]
 :::
-# @motd
-# @listmotd
-# @wizmotd
-# @rejectmotd
-`@motd[/<type>] <message>`<br>
-`@motd/clear[/<type>]`<br>
-`@motd/list`
-
-This command is used for manipulating the various Messages of the Day, or MotD. The first form of this command sets the `<type>` MotD to `<message>`, the second form clears the `<type>` MotD, and the third form lists the current value of each MotD. If no switch is given, `<type>` defaults to /connect.
-
-These messages are intended for temporary announcements. A /connect or /wizard MotD is shown in place of the MOTD or wizard MOTD kept on the Messages page (see [messages]) while it is set; a /down MotD is shown after the logins-disabled message. MotDs set via this command are cleared when the MUSH restarts.
-
-| Valid `<type>` | and is seen by... |
-| --- | --- |
-| /connect | all players on connect |
-| /wizard | connecting Wizards and Royalty |
-| /full | players failing to connect because all available connections are in use |
-| /down | mortals failing to connect when logins are disabled |
-
-`@motd/list` also says where the game reads its messages from: the stored texts or the Messages object.
-
-You must have the Announce @power to change the Connect MotD; only wizards and royalty can see or alter the others.
-
-For historical reasons, @listmotd, @wizmotd and @rejectmotd are aliases for `@motd/list`, `@motd/wizard` and `@motd/full`, respectively.
 # @name
 `@name <object>=<new name>`<br>
 `@name <player|exit>=<new name>[;<alias1>[;<aliasN>]]`
@@ -2204,33 +1745,6 @@ This single-step export only succeeds when the selection is **self-contained**: 
 ::: seealso
 - [@decompile]
 :::
-# @plugin
-`@plugin[/list]`<br>
-`@plugin <plugin>`<br>
-`@plugin/enable <plugin>`<br>
-`@plugin/disable <plugin>`
-
-Needs the `packages.admin` permission. A plugin is compiled C# that adds commands, functions, flags and portal pages to the server; the Scene System is one, shipped with the server. Plugins installed from a plugin package, from a remote or uploaded in the portal's Packages page, sit beside the world on the data volume, so they survive an update of the server's image.
-
-`@plugin` lists every plugin the server found: its version, whether it shipped with the server or came from a package, and its state. `@plugin <plugin>` shows one, with what it adds, which packages need it, and why it did not start if it failed.
-
-`@plugin/disable <plugin>` turns a plugin off. The packages that need it are uninstalled first, after a backup: those that name it under `plugins:` in their package.yaml, and the packages that depend on those. While a plugin is not running, a package that names it cannot be installed, and a package that shipped with the server is not reinstalled. A plugin that only adds commands and functions stops at once. Any other plugin stops at the next restart (`@shutdown/reboot`), because what it registered at start-up stays until then.
-
-`@plugin/enable <plugin>` turns it on again. It starts at the next restart, and the packages that shipped with it are reinstalled then.
-
-### Examples
-
-```sharp
-> @plugin
-> @plugin/disable scene
-Uninstalled scene. Scene System is off. Scene System stops when the server restarts.
-> @shutdown/reboot
-```
-
-::: seealso
-- [@shutdown]
-- [@package]
-:::
 # @password
 `@password <old password>=<new password>`
 
@@ -2367,42 +1881,6 @@ The @purge command should almost never need to be performed manually. If you do 
 ::: seealso
 - [@dbck]
 :::
-# @push
-`@push[/always][/urgent] <player>=<title>[,<text>[,<path>[,<topic>]]]`
-
-Sends a notification to every phone and browser where `<player>`'s account has turned notifications on, in the web portal under Settings, Notifications. It shows `<title>` with `<text>` under it, and opening it shows `<path>` in the portal, playing the character it was sent to. `<path>` is a portal page starting with `/`, such as `/mail` or `/play`; the front page when it is left out. A title is cut at 100 characters and the text at 1000.
-
-The game sends nothing by itself: a notification goes out only when code runs @push. The bundled `notifications` package sends one for a page or new @mail, as each player chooses with `+notify`.
-
-A later notification with the same `<topic>` for the same character replaces an earlier one, on the device and at the push service while it waits there, so ten pages from one person show as one notification.
-
-Nothing is sent while `<player>` is at the game: a connection of theirs sent something in the last `push_idle_seconds` (300 by default), or a portal tab of theirs is open and in view. `/always` sends anyway. `/urgent` asks the push service to wake a device that is saving power; keep it for what cannot wait.
-
-A character is sent at most `push_limit` notifications a minute (10 by default); @push drops the rest.
-
-An account may turn notifications on in at most `push_devices` browsers (10 by default); each @push sends one request per browser.
-
-The server signs every notification with a key it makes the first time it needs one, kept as the `push.vapid` secret (see [@secret]). `@secret/clear push.vapid` makes a new key the next time, after which every device has to turn notifications on again.
-
-Using @push needs the `notify.push` permission, which the `wizard` role allows.
-
-Output: one word. `sent`; `none` when the player has no device with notifications on, or no account; `attended` when the player is at the game and `/always` was not given; `limited` past `push_limit`. See [command output].
-
-### Examples
-```
-> &SEND me=@push Mira=Page from Tobin,,/play,page-tobin; think %>
-> @include me/SEND
-sent
-> &SEND me=@push Tobin=Your scene starts soon; think %>
-> @include me/SEND
-none
-```
-
-::: seealso
-- [@secret]
-- [@config limits]
-- [roles]
-:::
 # @readcache
 `@readcache`
 
@@ -2499,98 +1977,6 @@ Nesting is limited by the `max_depth` configuration option, as it is for [@@] an
 - [@@]
 - [restrictedexpr]
 :::
-# @secret
-`@secret[/list]`<br>
-`@secret <name>=<value>`<br>
-`@secret/clear <name>`<br>
-`@secret/host <name>=[<host> ...]`
-
-Manages the secrets the server keeps for itself: passwords, tokens and signing keys, such as the SQL password (`sql.password`). A stored value is encrypted with the server's key ring, which is kept outside the world, so a copy of the world alone opens no secret. Nothing shows a value again: not this command, not the web portal, and no function. Softcode cannot read a secret.
-
-With no argument, or `/list`, @secret lists every secret the server or a plugin reads, and every stored one: where its value comes from, when (UTC) and by whom it was stored, and what it is for. A secret whose stored value this server cannot decrypt shows as `unreadable: set it again`.
-
-`@secret <name>=<value>` stores `<value>` as `<name>`, replacing what was stored. The command is not evaluated, so the value is stored exactly as typed. A name is lower-case letters and digits, in parts joined by `.`.
-
-`/clear` removes the stored value.
-
-`/host` names the hosts @http may send the secret to, separated by spaces, replacing the ones named before; with none, it may be sent nowhere. `*.example.com` covers every host under example.com, but not example.com itself. Only a secret whose name starts with `http.` can be sent, and only over https; see [@http]. The hosts belong to the name, not the value: setting or clearing the value leaves them, and they hold for a value an override supplies.
-
-An operator can set a secret outside the game instead, and that overrides the stored value: an environment variable `SHARPMUSH_SECRET_<NAME>` (the name in upper case, with `.` written as `_`, so `sql.password` is `SHARPMUSH_SECRET_SQL_PASSWORD`), or a file named for the secret in `/run/secrets` (where Docker and Kubernetes put secrets; `SHARPMUSH_SECRETS_PATH` names another directory).
-
-Importing a PennMUSH `mush.cnf` in the web portal stores its `sql_password` as the `sql.password` secret, never as a configuration option.
-
-A typed value passes through your client, which may keep it in a log. Use the web portal's Secrets page, or an override, where that matters.
-
-Using @secret needs the `config.admin` permission. A plugin may name another permission that manages its own secret.
-
-Output: nothing; it tells you what it did.
-
-### Examples
-```
-> @secret http.github.token=ghp_example
-http.github.token is set. Its value is never shown again.
-> @secret/host http.github.token=api.github.com uploads.github.com
-@http may send http.github.token to: api.github.com uploads.github.com
-> @secret
-+-------------------------------< Secrets (2) >------------------------------+
-| Secret             Value       Stored                 For                  |
-| -------------------------------------------------------------------------- |
-| http.github.token  stored      2026-10-15 10:00 by    @http may send it to |
-|                                God(#1)                api.github.com       |
-|                                                       uploads.github.com.  |
-| sql.password       not set     -                      The password of      |
-|                                                       sql_username on the  |
-|                                                       SQL server.          |
-+----------------------------------------------------------------------------+
-> @secret/clear http.github.token
-http.github.token is cleared.
-```
-
-
-::: seealso
-- [@config]
-- [@sql]
-- [@http]
-:::
-# @set
-`@set <object>=[!]<flag> [[!]<flag> ...]`<br>
-`@<pre-defined attribute> <object>=<value>`<br>
-`@set <object>=<attribute>:<value>`<br>
-`@set <object>/<attribute pattern>=[!]<attrflag> [[!]<attrflag> ...]`
-
-The first form sets (or unsets) flag(s) on `<object>`. See [flags].<br>
-Ex: `@set me=VISUAL`<br>
-Flags may be specified by full name (recommended) or by flag character.<br>
-Flags are set or reset in the order supplied.
-
-The second form sets a pre-defined attribute on `<object>`<br>
-Ex: `@fail Heavy Box=You can't pick that up.`
-
-The third form sets an arbitrary attribute with `<value>` on `<object>`. You can also do this with `&<attribute> <object>=<value>`<br>
-Ex: `@set Test Object=random:This is a random attribute.`<br>
-`&random Test Object=This is a random attribute.`<br>
-An important difference between these two forms is that @set will always evaluate the `<value>` before setting it on `<object>`, while the `&<attribute>` form will not evaluate when entered directly by a player in his client (and is usually what you want).
-
-The third form keeps everything after the first colon as the value, commas included.
-
-The fourth form sets (or unsets) attribute flags on every attribute of `<object>`'s own that matches `<attribute pattern>` and that you can see. The pattern takes the wildcards `*` and `?`; `**` also matches inside attribute trees. A plain attribute name matches only that attribute. An attribute you may not change is reported and skipped, and the rest are still changed. See [attribute flags] and [wildcards].
-
-### Examples
-```sharp
-> @set me/CMD`*=no_inherit
-```
-Output: one "- no_inherit set." line for each attribute under CMD on you.
-```sharp
-> @set Test Object=list:red,green,blue
-```
-Output: Test Object/LIST - Set. The value is "red,green,blue".
-
-
-::: seealso
-- [ATTRIB_SET]
-- [ATTRIB_SET()]
-- [SET()]
-:::
 # ATTRIB_SET
 # @_
 `&<attr> <object>[=<value>]`<br>
@@ -2676,50 +2062,6 @@ Two different daemons are used:
 
 info: Resolves IP addresses into host names whenever a new connection is established.<br>
 ssl : Handles encrypted SSL connections across @shutdown/reboots.
-# @sockset
-# SOCKSET
-`SOCKSET [<option>=<value>]`<br>
-`@sockset [<descriptor>][=<option>, <value>[, ..., <optionN>, <valueN>]]`
-
-SOCKSET is a socket command which sets or queries socket-specific options. These options are usually set automatically, or negotiated by the MUSH and your client, but this command lets you override those settings.
-
-With no args, SOCKSET shows the current value of the socket options. With an `<option>=<value>` pair, it attempts to set the given option.
-
-@sockset is a similar in-game command, but can specify which descriptor to change options for, and can set multiple options at once. Only Wizards can change the options for other players' descriptors. `<descriptor>` defaults to your least-idle descriptor, when used by a player; for non-players, it has no default.
-
-Options:
-- colorstyle: See [COLORSTYLE]
-- hyperlinks, commandlinks: See [HYPERLINKS]
-- graphics: See [GRAPHICS]
-- animation: See [ANIMATION]
-- terminal: See [TERMINAL]
-- charset: See [CHARSET]
-- screenreader: on, off or auto. Same as SCREENREADER; see [screenreader client]
-- outputprefix: Same as OUTPUTPREFIX
-- outputsuffix: Same as OUTPUTSUFFIX
-- pueblo: Sets Pueblo-related options. If value has md5=...", then it will set the pueblo checksum. If empty, Pueblo mode is turned off.
-- telnet: Yes or no, to enable/disable telnet negotiation
-- width: Set your width(), same as SCREENWIDTH
-- height: Set your height(), same as SCREENHEIGHT
-- terminaltype: Your terminal type, used by terminfo()
-- prompt_newlines: Set whether a newline is shown after prompts from @prompt, same as PROMPT_NEWLINES
-- stripaccents: Send this connection plain ASCII, each other character replaced as [CHARSET] describes. Like the NOACCENTS flag, but connection-specific.
-- noquota: Input command quota is set to max every refresh. Can only be set by a logged-in Wizard.
-
-Note that changing 'telnet' or 'pueblo' may stop your client from parsing or displaying output correctly; only use if you know what you're doing!
-
-
-::: seealso
-- [socket commands]
-- [TERMINFO()]
-- [pueblo]
-- [COLORSTYLE]
-- [HYPERLINKS]
-- [GRAPHICS]
-- [TERMINAL]
-- [CHARSET]
-- [@prompt]
-:::
 # colorstyle
 `SOCKSET colorstyle=<value>`<br>
 `@SOCKSET [me|<descriptor>]=colorstyle,<value>`
@@ -2772,39 +2114,6 @@ Hyperlinks set to 'on'
 - [GRAPHICS]
 - [TERMINFO()]
 :::
-# graphics
-`SOCKSET graphics=<value>`<br>
-`@SOCKSET [me|<descriptor>]=graphics,<value>`
-
-Pictures in the game (such as those placed with figure()) are shown as their text art until you turn pictures on. They are off by default because only you can see whether your terminal shows them: a terminal reached through tmux, screen or an ssh hop, or one with images turned off in its settings, may not, even when SharpMUSH knows it can. The graphics setting says how your terminal draws a picture:
-
-- auto: the best way your terminal has. SharpMUSH picks from what your terminal can do (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. A terminal it does not know gets blocks. Also accepted as 'on'.
-- detect: like auto, and also asks your terminal what it can draw and what it is. The answer arrives with the next line you send, so send any command afterwards. Use this when your terminal does not say which it is.
-- kitty: the Kitty graphics protocol (kitty, Ghostty, Rio). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
-- iterm2: iTerm2 inline images (iTerm2, WezTerm, Konsole, mintty, Visual Studio Code, Rio, mlterm).
-- sixel: sixel graphics (foot, WezTerm, iTerm2, Konsole, Windows Terminal, mintty, Contour, mlterm, xterm started with sixel support).
-- blocks: coloured half-block characters, two pixels to a cell. Any UTF-8 terminal with colour shows these.
-- off: the text art (the default).
-
-Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A connection identified as a screen reader always receives the picture's description instead. SOCKSET shows the method in use, as "auto (<method>)" for auto, and terminfo() includes it.
-
-A picture appears in the space its text art takes, so whatever is laid out around it stays where it is. The first time a picture is shown it may appear as its text art while the game fetches it. A moving picture shows its first frame unless animation is on; see [ANIMATION].
-
-Example:
-```
-> SOCKSET graphics=auto
-Graphics set to 'auto'
-```
-
-
-::: seealso
-- [@SOCKSET]
-- [ANIMATION]
-- [TERMINAL]
-- [HYPERLINKS]
-- [TERMINFO()]
-- [FIGURE()]
-:::
 # animation
 `SOCKSET animation=<on|off>`<br>
 `@SOCKSET [me|<descriptor>]=animation,<on|off>`
@@ -2850,41 +2159,6 @@ Terminal set to 'windows-terminal'
 - [HYPERLINKS]
 - [@SOCKSET]
 :::
-# charset
-`SOCKSET charset=<utf-8|latin-1|ascii|auto>`<br>
-`@SOCKSET [me|<descriptor>]=charset,<utf-8|latin-1|ascii|auto>`
-
-SharpMUSH writes to your connection in UTF-8 when your client agrees to it during telnet negotiation, says it can in the terminal type it reports, or is a terminal SharpMUSH knows (see [TERMINAL]). A client that agrees to Latin-1 is written in Latin-1, and one that says neither is sent plain ASCII.
-
-A client that is not sent UTF-8 gets each character it cannot show as the nearest one it can, so output still reads:
-
-- a middle dot or a bullet as `*`
-- a dash as `-`
-- curly quotes as straight ones
-- an accented letter as the plain letter, such as `e` for an e with an acute accent
-- a line or corner of a box as `-`, `=`, `|` or `+` (see [LAYOUT BORDERS ASCII])
-- any other character as `?`, twice for a wide one
-
-Each of these takes as many columns as the character it replaces, so columns stay lined up. A Latin-1 client keeps the characters Latin-1 has, such as the middle dot and accented letters.
-
-'SOCKSET charset' names the character set yourself, for a client SharpMUSH guesses wrong. 'auto' goes back to what your client negotiated or reported. 'SOCKSET stripaccents=yes' sends ASCII whatever this is set to.
-
-A game can choose its own stand-ins, which come before the ones above; see [@ASCII].
-
-Example:
-```
-> SOCKSET charset=ascii
-Charset set to 'ascii'
-```
-
-
-::: seealso
-- [@SOCKSET]
-- [TERMINFO()]
-- [LAYOUT BORDERS]
-- [STRIPACCENTS()]
-- [@ASCII]
-:::
 # @speechmod
 `@speechmod <object>[=<modifier>]`
 
@@ -2919,84 +2193,6 @@ Test
 - [@chatformat]
 - [@pageformat]
 :::
-# @mapsql
-`@mapsql[/notify][/colnames][/spoof][/prepare] <obj>/<attr>=<query>[, <param1>[, <param2>[, ...]]]`
-
-This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
-
-The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
-
-For each row returned by the query, the action list in `<obj>/<attr>` is queued, with row number passed as %0 and the columns passed as %1-%9 and v(10) to v(29). Row numbers start at 1. The MUSH will also set named arguments, with arg names matching the SQL field names. These are accessible as `r(<name>, arg)`.
-
-The `/notify` switch queues `@notify me` after the admitted row callbacks. This runs as the object executing `@mapsql`. One queue slot is reserved for completion before the query starts; if that reservation fails, the query does not run. Completion still runs for an empty result or partial row admission, but a query error releases its reservation without notifying.
-
-The `/colnames` switch causes @mapsql to first queue the obj/attr with row number (%0) set to 0 and args %1 to v(29) being the column names.
-
-By default, the object using @mapsql will be the enactor (%#) for the triggered attribute. However, if you control `<object>`, the `/spoof` switch can be used to preserve the current enactor.
-
-The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
-
-### Examples
-```sharp
-> &desctable me=think align(30 20 4 10 10,%0,%1,%2,%3,%4)
-> @mapsql me/desctable=DESCRIBE table_name
-```
-
-```sharp
-> &showresult me=@pemit %#=%0. [r(name, arg)] ([r(age, arg)])
-> @mapsql me/showresult=SELECT `name`, `age` FROM `people`
-```
-
-Prepared statement example:
-```sharp
-> &showresult me=@pemit %#=%0. %1 (%2)
-> &QUERY me=SELECT `name`, `age` FROM `people` WHERE status = ?
-> @mapsql/prepare me/showresult=v(QUERY),active
-```
-
-
-::: seealso
-- [@sql]
-- [SQL()]
-- [SQLESCAPE()]
-- [MAPSQL()]
-:::
-# @sql
-`@sql[/prepare] <query>[, <param1>[, <param2>[, ...]]]`
-
-This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
-
-The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
-
-Output: the query's result, as it shows it.
-
-Generally, the sql() function is more useful for coding, as it delimits its return values, but @sql is handy for INSERT-type queries and quick checks. If you pass arbitrary data to @sql, be sure you call sqlescape() on it; see the example in help sql().
-
-The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
-
-### Example
-```sharp
-> @sql SHOW TABLES
-```
-
-Prepared statement examples:
-```sharp
-> &QUERY me=INSERT INTO users (name, email) VALUES (?, ?)
-> @sql/prepare v(QUERY),John Doe,john@example.com
-```
-
-```sharp
-> &QUERY me=UPDATE users SET status = ? WHERE id = ?
-> @sql/prepare v(QUERY),active,123
-```
-
-
-::: seealso
-- [SQL()]
-- [SQLESCAPE()]
-- [MAPSQL()]
-- [@mapsql]
-:::
 # @startup
 `@startup <object>[=<action list>]`
 
@@ -3030,50 +2226,6 @@ In its first form, display the number of objects in the game broken down by obje
 `@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.
 
 `@stats/chunks`, `/regions`, `/paging` and `/freespace` report PennMUSH's attribute-chunk allocator. SharpMUSH keeps attributes in its database provider and has no chunk allocator, so these switches say so and return `#-1 NOT SUPPORTED`. For how much disk the database itself uses, see `@storage`.
-# @storage
-`@storage`<br>
-`@storage/history`<br>
-`@storage/purge`
-
-Wizard-only. Reports where the world's disk goes, and what the version histories inside it hold. This is a SharpMUSH command; PennMUSH keeps its database in memory and has no file to report on.
-
-`@storage` alone draws a panel. Its bars show:
-
-- **Map**: how far the world's file has grown against the map limit, the most it may ever grow to. The limit is a ceiling, not an allocation: it costs neither disk nor memory until it is used.
-- **File**: the live data inside the file. The rest is free space that later writes reuse.
-- **Feeds**: what feed lines, channel recall among them, take of the live data. A table below gives each feed kind's feeds, lines and size.
-- **Next run**: the free space the next `@backup` checks for, against what the backup disk has.
-
-Beside them are what the disk has allocated for the file (which can be less than its length), the free disk beside the world, the backup copies kept, and the size of the next copy and of the backup directory at the height of a run. Earlier worlds still on disk, such as the `.previous` world a promoted import replaced, are listed until you delete them. Notes at the bottom say when the next backup will not fit, when backups share the world's disk, and how many readers a dead process left behind have been cleaned up since startup.
-
-Deleting things frees space inside the file for reuse. It never shrinks the file. The file only gets smaller when it is replaced with a compacted copy; `deploy/README.md` describes how to do that safely.
-
-`@storage/history` draws a table of the history the world keeps: each kind's records, their size, how many streams hold them, and the kind's retention policy. The kinds are:
-
-- **wiki**: every revision of every wiki page and translation.
-- **scene.edits**: every version of every scene pose.
-- **scene.deleted**: poses deleted from a scene but still stored. Deleting a pose only hides it.
-- **audit**: the log of staff actions.
-- **rolls**: rolls kept by `@roll` and roll() with `record`.
-- **activity**: poses counted per character and room per day, behind [activity()]. Each day is one stream.
-
-A *stream* is one page's text in one language, or one pose.
-
-`@storage/purge` runs a retention pass now. It removes what each kind's policy allows. A record that is purged is gone from the live world. It survives only in an archive, if one is configured, and in backups taken before the pass. The pass works in small batches and the game keeps running throughout.
-
-The policy is set on the server, not with `@config`. **The default keeps everything**, so `@storage/purge` purges nothing until a policy is configured. A policy never removes:
-
-- the version a page or pose shows now.
-- any pose version that `redo` can still reach.
-- anything on a protected wiki page.
-
-Undo stops at the oldest version that survives. A wiki rollback can only go back to a revision that survives. See `deploy/README.md` for the settings.
-
-
-::: seealso
-- [@backup]
-- [@stats]
-:::
 # @sweep
 `@sweep [connected | here | inventory | exits ]`
 
@@ -3130,35 +2282,6 @@ Removes the lock on `<object>`. It can take as many switches as @lock can.
 ::: seealso
 - [LOCKING]
 - [locktypes]
-:::
-# @account
-`@account <name>`<br>
-`@account/list [<pattern>]`<br>
-`@account/newpassword <name>=<password>`<br>
-`@account/disable <name>`<br>
-`@account/enable <name>`<br>
-`@account/close <name>`<br>
-`@account/delete <name>`<br>
-`@account/link <name>=<player>`<br>
-`@account/unlink <name>=<player>`<br>
-`@account/claim <character>=<password>`
-
-Administers the web-portal accounts that characters are linked to. Wizard-only, except `/claim`.
-
-`/claim` is for anyone playing a character that is on an account: it links `<character>` to that same account. The password is `<character>`'s own, or, for a character on another account of yours, that account's password, which moves the character over. See [accounts claiming].
-
-With no switch, shows one account's details. `/list` lists every account, or those whose username contains `<pattern>`, each with its state; a `*` after a name marks an account that must change its password at next login. `/newpassword` sets a password and requires the holder to change it at their next login. `/disable` and `/enable` suspend and restore access, and `/close` and `/delete` retire the account; the record is kept either way, so the characters linked to it are never orphaned. The account that holds God (#1) can never be disabled, closed, deleted or banned.
-
-`/link` adds a character to the account without its password: one made with [@pcreate], imported, or whose holder lost its password. A character already on another account is refused until `/unlink` takes it off that one. Only God links God, and only a wizard links a wizard. `/unlink` takes a character off the account; the character itself is kept. God (#1) is never unlinked from its account. Players link their own characters with [claim]. See [accounts staff].
-
-Accounts are a SharpMUSH concept; PennMUSH has no equivalent command.
-
-
-::: seealso
-- [@pcreate]
-- [@newpassword]
-- [register]
-- [accounts]
 :::
 # @locale
 `@locale`<br>
@@ -3238,7 +2361,6 @@ The third runs it on all objects the player owns that aren't set NO_WARN.
 ::: seealso
 - [@warnings]
 - [WARNINGS]
-- [NO_WARN]
 :::
 # @whereis
 `@whereis <player>`
@@ -3616,41 +2738,6 @@ Output: the dbref of the room you arrive in.
 - [EXITS]
 - [movement]
 :::
-# Movement
-# Move-attributes
-
-Every move (through an exit, by @teleport, by entering or leaving an object, or by going home)
-triggers the same attributes in the same order:
-
-1. `@oxmove` on the moving object, shown in the room it is leaving. `%0` is the destination, `%1` the room being left.
-2. `@leave` / `@oleave` / `@aleave` on the room or object being left. `%0` is the destination. Without an `@oleave`, onlookers see "`<Name>` has left."
-3. `@zleave` / `@ozleave` / `@azleave` on the zone being left, only when the move changes zones.
-4. `@oxleave` on the object being left, shown to everyone where the mover *arrives*. Only for non-room containers.
-5. `@oxenter` on the object being entered, shown to everyone where the mover *came from*. Only for non-room containers.
-6. `@zenter` / `@ozenter` / `@azenter` on the zone being entered, only when the move changes zones.
-7. `@enter` / `@oenter` / `@aenter` on the room or object being entered. `%0` is the room left. Without an `@oenter`, onlookers see "`<Name>` has arrived."
-8. `@move` / `@omove` / `@amove` on the moving object itself. `%0` is the destination, `%1` the room left.
-
-An object that cannot hear (one that is not a connected player, not a PUPPET, has no `@listen`,
-and is not AUDIBLE with a `@forwardlist`) triggers only the action attributes (`@aleave`,
-`@azleave`, `@azenter`, `@aenter`), never the messages. A DARK wizard triggers no `@o`-messages
-at all.
-
-A silent move (`@teleport/silent`) suppresses only the `@move`/`@omove`/`@amove` attributes, and
-for `@teleport` also the `@tport` family. It does not suppress the enter and leave attributes.
-
-After every move, the object looks at where it arrived. This look always happens, including on a
-silent move; a TERSE player sees the room's name and contents but not its description.
-
-::: seealso
-- [go]
-- [@teleport]
-- [enter]
-- [leave]
-- [HOMES]
-- [TERSE]
-- [@listen]
-:::
 # INFO
 `INFO`
 
@@ -3965,51 +3052,6 @@ Output: the output of the command run. See [command output].
 - [$-commands]
 - [evaluation order]
 :::
-# Socket Commands
-These commands can only be entered through a client, on the connection they are typed into. They act on that connection rather than on a game object, so they work whether or not you have connected to a character, and would be meaningless if run by an object or from a queued action.
-
-- IDLE
-- INFO
-- LOGOUT
-- OUTPUTPREFIX
-- OUTPUTSUFFIX
-- PROMPT_NEWLINES
-- QUIT
-- SCREENREADER
-- SCREENWIDTH
-- SCREENHEIGHT
-- SOCKSET
-- MSSP-REQUEST
-- VERSION
-
-PennMUSH handles these before it decides whether a descriptor has a player behind
-it, and SharpMUSH does the same, which is why they answer at the connect screen
-too. Because they act on the connection that typed them, a player with two
-clients open sets the screen width of one without touching the other.
-
-VERSION is a SharpMUSH addition: PennMUSH has only `@version`. It reports the
-same lines that `@version` does and is accepted at the connect screen, because
-players arriving from MUX-family servers and crawler bots type it unprefixed.
-
-LOGOUT leaves your character but keeps the connection: you return to the screen
-above and can connect again, as the same character or a different one, without
-reconnecting. QUIT closes the connection instead. Logging out clears the
-settings you made on that connection, so the next login on it starts clean.
-
-In addition, the following commands can only be used at the login screen:
-
-- cd
-- ch
-- cv
-- claim
-- connect
-- create
-- login
-- make
-- play
-- register
-
-The WHO command can also be used at the login screen. Please note that this is different to the in-game WHO command. DOING and SESSION show that same login-screen listing when you are not connected, and their own in-game output once you are.
 # MSSP-REQUEST
 `MSSP-REQUEST`
 
@@ -4071,56 +3113,4 @@ Access uses `queue.inspect.own` for work owned by your active character and
 with the broader scope. Own history also requires the source and owner identities
 to remain current and the character to control that source. The global scope can
 inspect metadata for deleted sources. Permissions are checked on every request.
-
-# @profile
-# @profile/start
-# @profile/stop
-
-`@profile/start [<seconds>]`
-
-`@profile/stop`
-
-`@profile`
-
-Starts, stops, or displays a temporary profile of function and command invocations.
-The default duration is 60 seconds; choose a whole number from 1 to 300. Starting a
-new profile replaces your account's previous profile. Recording ends automatically
-at expiry, on permission loss, or on restart. Stopped results expire after 15 minutes and may be evicted sooner when another
-profile needs capacity. There can be at most eight profiles on the server, with
-one per account.
-
-Profiling requires `diagnostics.profile` and queue inspection permission for an
-explicitly linked active character executing as itself. Owning an object does not
-give its callbacks your account permissions. Both the game commands and the portal
-at `/admin/diagnostics` use the same authorization service. The portal requires you
-to select the linked character whose authority will be used. The portal page is shown
-only to staff holding `queue.inspect`; anyone else profiles with the game commands.
-
-Rows contain source/attribute when known, invocation kind and name, count, failure
-count, total inclusive elapsed milliseconds, and longest invocation. Inclusive time
-includes nested calls and awaits: nested rows overlap and must not be summed as
-CPU usage or added to queue execution time. A source attribute is shown only when
-it belongs to the recorded executor. Unknown context stays unknown.
-
-Sampling uses the existing invocation telemetry hooks. It is bounded to 256 distinct
-keys per profile and a shared mailbox of 4,096 pending samples; excess samples may
-be omitted. Reports always describe this limit and do not expose loss counts that
-could reveal activity outside your permissions. A background collector checks
-current account and source authority before accepting each batch. Reading results
-rechecks access, so revocation also hides previously collected data. No code,
-arguments, register values, return values, or arbitrary error messages are captured.
-
-Example:
-
-```sharp
-@profile/start 30
-think add(2,3)
-@profile
-@profile/stop
-@ps/history 10
-```
-
-The profile can include the `ADD` and `THINK` invocations in their visible context.
-Commands submitted directly through the game produce queue history; inspecting or
-profiling does not change their execution order or admission limits.
 

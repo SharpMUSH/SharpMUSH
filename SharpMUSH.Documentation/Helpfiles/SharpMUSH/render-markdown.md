@@ -8,14 +8,29 @@
   ],
   "sections": [
     {
+      "id": "arguments",
+      "heading": "Arguments and errors",
+      "lookup": "rendermarkdown arguments"
+    },
+    {
       "id": "supported-markdown-features",
       "heading": "Supported Markdown Features",
       "lookup": "rendermarkdown supported markdown features"
     },
     {
+      "id": "containers",
+      "heading": "Containers and layout",
+      "lookup": "rendermarkdown containers"
+    },
+    {
       "id": "syntax-highlighting-in-code-blocks",
       "heading": "Syntax Highlighting in Code Blocks",
       "lookup": "rendermarkdown syntax highlighting in code blocks"
+    },
+    {
+      "id": "other-languages",
+      "heading": "Other languages",
+      "lookup": "rendermarkdown other languages"
     },
     {
       "id": "mush-special-character-escaping",
@@ -28,9 +43,19 @@
       "lookup": "rendermarkdown examples"
     },
     {
+      "id": "link-examples",
+      "heading": "Link examples",
+      "lookup": "rendermarkdown link examples"
+    },
+    {
       "id": "table-examples",
       "heading": "Table examples",
       "lookup": "rendermarkdown table examples"
+    },
+    {
+      "id": "wide-table-examples",
+      "heading": "Wide table examples",
+      "lookup": "rendermarkdown wide table examples"
     },
     {
       "id": "code-examples",
@@ -39,8 +64,13 @@
     },
     {
       "id": "list-examples",
-      "heading": "List and quote examples",
+      "heading": "List examples",
       "lookup": "rendermarkdown list examples"
+    },
+    {
+      "id": "quote-examples",
+      "heading": "Quote examples",
+      "lookup": "rendermarkdown quote examples"
     }
   ]
 }
@@ -51,6 +81,22 @@
 
 Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formatting. This function converts markdown syntax into formatted text with ANSI color codes and styles for display in MUSH clients. The output is a MarkupString with the ANSI styling embedded, so it can be passed on to other functions.
 
+- [rendermarkdown arguments]: the markdown and width arguments, and errors
+- [rendermarkdown supported markdown features]: what each Markdown element renders as
+- [rendermarkdown containers]: see-also footers, centred blocks and flex layouts
+- [rendermarkdown syntax highlighting in code blocks]: language tags on fenced code
+- [rendermarkdown other languages]: other language tags, and code with no tag
+- [rendermarkdown mush special character escaping]: writing `[ ]` and `( )` inside the argument
+- [rendermarkdown examples]: text formatting and headings
+- [rendermarkdown link examples]: a link, with its escaping
+- [rendermarkdown table examples]: a table
+- [rendermarkdown wide table examples]: a table wider than the width
+- [rendermarkdown code examples]: highlighted and plain code blocks
+- [rendermarkdown list examples]: ordered and unordered lists
+- [rendermarkdown quote examples]: a block quote
+
+## Arguments and errors
+
 ### Parameters
 
 - `<markdown>`: the markdown/CommonMark text to render. Supports all standard CommonMark features.
@@ -60,13 +106,6 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 
 - `#-1 INVALID WIDTH (MUST BE 10-1000)` if `<width>` is not a number in that range.
 - `#-1 ERROR RENDERING MARKDOWN: <error>` if rendering the markdown fails.
-
-### Sections
-
-- [rendermarkdown supported markdown features]: what each Markdown element renders as.
-- [rendermarkdown syntax highlighting in code blocks]: language tags on fenced code.
-- [rendermarkdown mush special character escaping]: writing `[ ]` and `( )` inside the argument.
-- [rendermarkdown examples]: one example per element.
 
 ## Supported Markdown Features
 
@@ -86,7 +125,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see [rendermarkdown syntax highlighting in code blocks]).
 - **Block Quotes**: `> Quote` rendered with 2-space indentation.
 
-### Containers and layout
+## Containers and layout
 
 - **See Also footers**: a `::: seealso` block holding a list of `[topic]` or `` `code` `` names prints as one line, `See Also: @lock, @unlock`, wrapped under the first topic. If any item says more than its name, the list prints as a list under the label.
 - **Centred blocks**: everything between `::: center` and a closing `:::` is wrapped to `<width>` and each line centred in it. The wiki and the web portal centre the same block on the page.
@@ -109,7 +148,7 @@ get(#1/ATTR)          -- object reference
 %q<myvar>             -- register read
 ```
 
-### Other languages
+## Other languages
 
 Standard programming languages are also supported, and render in a dark-background colour scheme:
 
@@ -137,7 +176,7 @@ When using markdown features with square brackets `[ ]` or parentheses `(` `)`, 
 - `%(` for `(`
 - `%)` for `)`
 
-See [rendermarkdown examples] for a link written this way.
+See [rendermarkdown link examples] for a link written this way.
 
 ## Examples
 
@@ -172,7 +211,7 @@ This is a paragraph
 
 (heading is underlined and bold with ANSI codes)
 
-### Links
+## Link examples
 
 Note the escaping:
 
@@ -190,8 +229,6 @@ Click here
 
 ## Table examples
 
-### Tables
-
 ```sharp
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |%r| Bob | 25 |)
 ```
@@ -207,7 +244,7 @@ Bob   | 25
 
 (the separators and the line under the headings are ANSI faint)
 
-### Tables wider than the width
+## Wide table examples
 
 ```sharp
 think rendermarkdown(| Topic | Summary |%r|---|---|%r| @lock | Sets a lock on an object, which decides who may pass it. |, 40)
@@ -260,7 +297,7 @@ Output:
 
 (2-space indentation, no colour)
 
-## List and quote examples
+## List examples
 
 ### Ordered lists
 
@@ -292,7 +329,7 @@ Output:
 
 (bullets styled with ANSI faint)
 
-### Block quotes
+## Quote examples
 
 ```sharp
 think rendermarkdown(> This is a quote%r> spanning multiple lines)

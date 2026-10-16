@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "switches",
+      "heading": "Switches",
+      "lookup": "@trigger switches"
+    },
+    {
       "id": "enactor-and-register-behavior",
       "heading": "Enactor and register behavior",
       "lookup": "@trigger enactor and register behavior"
@@ -32,7 +37,14 @@
 
 Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
 
-Switches:
+You must control `<object>`, or it must be Link_OK and you must have the same owner, to trigger an attribute on it.
+
+The triggered attribute is queued - the new action list is not run instantly. The action list is executed by `<object>`, not by the object using @trigger.
+
+- [@trigger switches]: named arguments, spoofing, inline runs and registers
+
+## Switches
+
 - /args: Pass named arguments instead: each `<name>, <value>` pair is read in the attribute as %`\<name\>` (see [uargs()]), and %0-%9 are empty. With `/match`, the pairs follow the match string.
 - /spoof: If you control `<object>`, enactor is preserved.
 - /inline: Run @triggered attribute immediately, rather than queueing it.
@@ -45,10 +57,6 @@ If `/inline` is given, the following switches can be used:
 `/inplace` is an alias for `/inline/localize/nobreak`.
 
 The `/match` switch is explained in [@trigger enactor and register behavior]
-
-You must control `<object>`, or it must be Link_OK and you must have the same owner, to trigger an attribute on it.
-
-The triggered attribute is queued - the new action list is not run instantly. The action list is executed by `<object>`, not by the object using @trigger.
 
 ## Enactor and register behavior
 

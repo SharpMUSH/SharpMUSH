@@ -1,4 +1,5 @@
 # help
+# &help
 This is the index to the MUSH online help files.
 
   For an explanation of the help system, type:    help [newbie]<br>
@@ -16,7 +17,8 @@ This is the index to the MUSH online help files.
   For a list of attributes:                       help [attributes]<br>
   To see the configuration of this MUSH:          `@config`
 
-  On many MUSHes, list local commands with:       `+help`
+  For this game's own commands and topics:        help [+help]<br>
+  For the help its plugins bring:                  help [plugin help]
 
   If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 
@@ -72,24 +74,6 @@ This is the index to the MUSH online help files.
 - [attributes]
 :::
 
-# Clients
-  Clients are special software programs that you can use to connect to MUSHes. They are usually much nicer to use than raw telnet and give you many additional features, such as larger text buffers (so you can type more), backscroll, history of previous commands, macros, and so on.
-
-  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of SharpMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
-
-  | OPERATING SYSTEM | CLIENT      | WEB SITE                              |
-  |------------------|-------------|---------------------------------------|
-  | UNIX             | Tinyfugue   | http://tinyfugue.sourceforge.net      |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  | WINDOWS          | MUSHClient  | http://www.mushclient.com             |
-  |                  | MuckClient  | http://www.xcalibur.co.uk/MuckClient/ |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  |                  | BeipMU      | http://www.beipmu.com (Recommended)   |
-  | MAC OS X         | Savitar     | http://www.heynow.com/Savitar/        |
-  |                  | Atlantis    | http://www.riverdark.net/atlantis/    |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  |                  | Unix clients will also run on OS X. |               |
-
 # Control
   Controlling an object basically means that you have the power to change the object's characteristics such as flags and attributes. It may also mean that you have the ability to destroy it.
 
@@ -114,8 +98,6 @@ This is the index to the MUSH online help files.
 
 ::: seealso
 - [CONTROLS()]
-- [TRUST]
-- [MISTRUST]
 - [zones]
 - [zone masters]
 :::
@@ -288,7 +270,7 @@ This is the index to the MUSH online help files.
 
 # Homes
 # Home
-  Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link` [me | `<object>`]=`<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
+  Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link [me | <object>]=<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
 
   The 'home' command outputs the dbref of the room you arrive in (see [command output]).
 
@@ -381,7 +363,7 @@ This is the index to the MUSH online help files.
 - [COSTS]
 - [@trigger]
 - [@retry]
-- [% substitution reference]
+- [substitutions]
 :::
 
 # Master Room
@@ -469,8 +451,8 @@ This is the index to the MUSH online help files.
 
   The regexp pattern '.*' is equivalent to the wildcard '*'; it matches zero or more arbitrary characters. To match one or more arbitrary characters, the regexp pattern is '.+'.
 
-  To match a string of numbers, use:       [0-9]+    or \d+<br>
-  To match a string of letters only, use:  [A-Za-z]+ or \w+
+  To match a string of numbers, use:       `[0-9]+`    or `\d+`<br>
+  To match a string of letters only, use:  `[A-Za-z]+` or `\w+`
 
   See [regexp syntax]
 
@@ -523,7 +505,6 @@ This is the index to the MUSH online help files.
 - [@remit]
 - [@oemit]
 - [NOSPOOF]
-- [PARANOID]
 :::
 
 # Stack
@@ -579,7 +560,7 @@ This is the index to the MUSH online help files.
     `@pemit`/noeval/silent me=Hi!
 
   Help on the switches available for a command is available in the help file for that command.<br>
-  (If you are looking for information on `@switch`, see [`@switch`].)
+  (If you are looking for information on `@switch`, see [@switch].)
 
 # Types of Objects
 # Types
@@ -588,7 +569,7 @@ This is the index to the MUSH online help files.
 
   There is also a 'garbage' type, used for objects which have been created and then `@destroyed`. Garbage objects cannot be used in any way, and their dbrefs will be recycled (with a new objid) when something new is created.
 
-  For more information on any of the types, see [`<type>`].
+  For more information on each type, see [players], [things], [rooms], [exits] and [garbage].
 
   The `@stats` command lists how many objects of each type currently exits in the database.
 
@@ -639,7 +620,7 @@ This is the index to the MUSH online help files.
 :::
 
 # Exits
-  Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see [`@destination`] for more information.
+  Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see [@destination] for more information.
 
   You can change the destination of an exit with the `@link` command. `home()` returns the source room of an exit, and `loc()` returns its destination.
 
@@ -676,47 +657,6 @@ This is the index to the MUSH online help files.
   For more information, see the following help topics:<br>
     `@warnings`        `@wcheck`         NO_WARN         WARNINGS LIST
 
-# Wildcards
-# *
-# ?
-# **
-  SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
-
-```sharp
-    > &cmd.wave me=$wave *: pose waves.
-```
-
-  The "*" wildcard will match anything, allowing you to type "wave foo", "wave bar", etc. You can use the %0-%9 substitutions to get the values which matched the first ten wildcards in the command:
-
-```sharp
-    > &cmd.wave me=$wave *: pose waves to %0.
-    > wave to Muse
-    Mike waves to Muse.
-```
-
-  A backslash (\) can be used to escape * and ? if you want to match a literal asterisk or question mark. (Note that you will often have to use \\ so that the softcode parser doesn't evaluate it away!)
-
-```sharp
-  > think strmatch(foobar, ?*?)
-  1
-  > think strmatch(foobar, \\?*\\?)
-  0
-  > think strmatch(?foobar?, \\?*\\?)
-  1
-```
-
-  The "**" wildcard is also available for matching attribute names - see HELP attribute trees browsing for more information.
-
-  It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See [regexp] for details.
-
-
-::: seealso
-- [$-commands]
-- [regexp]
-- [STACK]
-- [registers]
-:::
-
 # Zone Master Rooms
 # ZMRs
 
@@ -751,9 +691,6 @@ This is the index to the MUSH online help files.
   In commands that take a list of space-separated names (like page), you'll need to enclose names with spaces in "double quotes". The same is true on the login screen. For example:<br>
     page "Leeroy Jenkins"=Stop doing that.
 
-# &HELP
-This is the AHELP index.
-
 # Descriptor
 # Port
   A descriptor (also called a port or socket descriptor) is a unique (though reusable) number assigned to each connection to the MUSH. The descriptor for each connection is shown on the Wizard WHO in the 'Des' column.
@@ -764,7 +701,6 @@ This is the AHELP index.
 - [who]
 - [%]
 - [LPORTS()]
-- [LPORTS()]
 - [PLAYER()]
 - [@boot]
 - [Connection functions]
@@ -772,16 +708,8 @@ This is the AHELP index.
 
 # Unicode
 
-At the moment, SharpMUSH has very minimal support for Unicode. Almost all text is treated internally as being in the Latin-1 character set. Clients that support telnet character set negotiation can send and receive UTF-8, but only characters in the Basic Latin and Latin-1 Supplement blocks are accepted (Others are replaced with question marks).
+SharpMUSH text is Unicode: strings are UTF-16 inside the server, and network text supports UTF-8. A client that is not sent UTF-8 gets each character it cannot show as the nearest one it can; see [CHARSET] and [@ascii].
 
-A few functions support Unicode-aware text transformations:
+A column, a character and a code unit are not always the same. [STRLEN()] and [DISPLAYWIDTH()] count terminal columns, so a wide CJK character counts as two and a combining accent as none. [GRAPHEMECOUNT()] and [GRAPHEMES()] work on whole grapheme clusters, such as a letter with its accent or a joined emoji.
 
-- [STRIPACCENTS()]
-
-When the MUSH is compiled with the ICU library (See `@config` compile), additional functions support Unicode-aware text transformations:
-
-- [LCSTR()]
-- [UCSTR()]
-
-When using these functions, do not assume that they return the same number of characters as their argument.
-
+[ACCENT()] and [STRIPACCENTS()] add and remove accents, and the NOACCENTS flag strips them for older clients. See also [internationalization].

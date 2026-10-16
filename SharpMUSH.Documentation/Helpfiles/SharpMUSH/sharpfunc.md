@@ -1,49 +1,20 @@
-# Function List
-# Function Types
-  Several major variants of functions are available. The help topics are listed below, together with a quick summary of the function type and some examples of that type of function.
-
-  [Attribute functions]: attribute-related manipulations (GET, UFUN) <br>
-  [Bitwise functions]: manipulation of individual bits of numbers (SHL, BOR) <br>
-  [Boolean functions]: produce 0 or 1 (false or true) answers (OR, AND) <br>
-  [channel functions]: get information about channels (CTITLE, CWHO) <br>
-  [Communication functions]: send messages to objects (PEMIT, OEMIT) <br>
-  [Connection functions]: get information about a player's connection (CONN) <br>
-  [Dbref functions]: return dbref info related to objects (LOC, LEXITS) <br>
-  [Feed functions]: read the feeds a game's systems run (FEEDMSG, FEEDWHO) <br>
-  [HTML FUNCTIONS]: output HTML tags for Pueblo and WebSocket clients <br>
-  [Information functions]: find out something about objects (FLAGS, MONEY) <br>
-  [JSON FUNCTIONS]: create and manipulate JSON objects (JSON, JSON_MAP) <br>
-  [List functions]: manipulate lists (REVWORDS, FIRST) <br>
-  [Mail Functions]: manipulate @mail (MAIL, FOLDERSTATS) <br>
-  [Math functions]: number manipulation, generic or integers only (ADD, DIV) <br>
-  [MEDIA FUNCTIONS]: sounds, pictures and panes, written once for every client (SOUND, IMAGE) <br>
-  [Regular expression functions]: Regular expressions (REGMATCH, REGEDIT) <br>
-  [SQL functions]: access SQL databases (SQL, SQLESCAPE) <br>
-  [String functions]: string manipulation (ESCAPE, FLIP) <br>
-  [Time functions]: formatting and display of time (TIME, CONVSECS) <br>
-  [Utility functions]: general utilities (ISINT, COMP) <br>
-  [Wiki functions]: read the shared wiki (WIKI, WIKILIST) <br>
-
-  The command "@list/functions" lists all functions on the game.<br>
-  The command "@function" lists only the game's custom global functions defined via the @function command.
-
 # Attribute Functions
   These functions can access or alter information stored in attributes on objects.
 
 |                       |                       |                       |                       |
 |-----------------------|-----------------------|-----------------------|-----------------------|
-| [APOSS()]             | [ATTRIB_SET()]        | [ATTRWATCH()]         | [DEFAULT()]           |
-| [EDEFAULT()]          | [EVAL()]              | [FLAGS()]             | [GET()]               |
-| [GREP()]              | [GREPI()]             | [HASATTR()]           | [HASATTRP()]          |
-| [HASATTRVAL()]        | [HASFLAG()]           | [LATTR()]             | [LFLAGS()]            |
-| [NATTR()]             | [OBJ()]               | [OWNER()]             | [PFUN()]              |
-| [POSS()]              | [REGLATTR()]          | [REGREP()]            | [REGREPI()]           |
-| [REGXATTR()]          | [SET()]               | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] |
-| [U()]                 | [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        |
-| [U2LOCAL()]           | [UARGS()]             | [UDEFAULT()]          | [UFUN()]              |
-| [ULAMBDA()]           | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 |
-| [WILDGREP()]          | [WILDGREPI()]         | [XATTR()]             | [XGET()]              |
-| [ZFUN()]              |                       |                       |                       |
+| [APOSS()]             | [ATTRIB_SET#()]       | [ATTRIB_SET()]        | [ATTRWATCH()]         |
+| [DEFAULT()]           | [EDEFAULT()]          | [EVAL()]              | [FLAGS()]             |
+| [GET()]               | [GREP()]              | [GREPI()]             | [HASATTR()]           |
+| [HASATTRP()]          | [HASATTRVAL()]        | [HASFLAG()]           | [INDEXED()]           |
+| [LATTR()]             | [LFLAGS()]            | [NATTR()]             | [OBJ()]               |
+| [OWNER()]             | [PFUN()]              | [POSS()]              | [REGLATTR()]          |
+| [REGREP()]            | [REGREPI()]           | [REGXATTR()]          | [SET()]               |
+| [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 | [U2()]                |
+| [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           | [UARGS()]             |
+| [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         |
+| [ULOCAL()]            | [V()]                 | [WILDGREP()]          | [WILDGREPI()]         |
+| [XATTR()]             | [XGET()]              | [ZFUN()]              |                       |
 
 ::: seealso
 - [attributes]
@@ -117,9 +88,11 @@
 | [LCON()]      | [LEXITS()]    | [LOC()]       | [LOCATE()]    |
 | [LPARENT()]   | [LPLAYERS()]  | [LSEARCH()]   | [LTHINGS()]   |
 | [LVCON()]     | [LVEXITS()]   | [LVPLAYERS()] | [LVTHINGS()]  |
-| [NAMELIST()]  | [NEXT()]      | [NEXTDBREF()] | [NUM()]       |
+| [NAMELIST()]  | [NCON()]      | [NEXITS()]    | [NEXT()]      |
+| [NEXTDBREF()] | [NPLAYERS()]  | [NTHINGS()]   | [NUM()]       |
 | [OWNER()]     | [PARENT()]    | [PMATCH()]    | [RLOC()]      |
-| [RNUM()]      | [ROOM()]      | [WHERE()]     | [ZFIND()]     |
+| [RNUM()]      | [ROOM()]      | [WHERE()]     | [XCON()]      |
+| [XEXITS()]    | [XPLAYERS()]  | [XTHINGS()]   | [ZFIND()]     |
 | [ZONE()]      |               |               |               |
 
 ::: seealso
@@ -129,24 +102,24 @@
 # Information Functions
   Information functions return values related to objects or the game.
 
-|                |                |                |                |
-|----------------|----------------|----------------|----------------|
-| [ACCNAME()]    | [ACTIVITY()]   | [ALIAS()]      | [ANDFLAGS()]   |
-| [ANDLFLAGS()]  | [ANDLPOWERS()] | [CONFIG()]     | [CONTEXT()]    |
-| [CONTROLS()]   | [CSECS()]      | [CTIME()]      | [DOWNMOTD()]   |
-| [ELOCK()]      | [FINDABLE()]   | [FLAGS()]      | [FULLALIAS()]  |
-| [FULLMOTD()]   | [FULLNAME()]   | [GETPIDS()]    | [HASATTR()]    |
-| [HASATTRP()]   | [HASFLAG()]    | [HASPOWER()]   | [HASROLE()]    |
-| [HASTYPE()]    | [INAME()]      | [ISAPPROVED()] | [LFLAGS()]     |
-| [LOCK()]       | [LOCKFLAGS()]  | [LOCKOWNER()]  | [LOCKS()]      |
-| [LPIDS()]      | [LSTATS()]     | [MONEY()]      | [MONIKER()]    |
-| [MOTD()]       | [MSECS()]      | [MTIME()]      | [MUDNAME()]    |
-| [MUDURL()]     | [NAME()]       | [NATTR()]      | [NEARBY()]     |
-| [OBJID()]      | [OBJMEM()]     | [ORFLAGS()]    | [ORLFLAGS()]   |
-| [ORLPOWERS()]  | [PERMISSION()] | [PIDINFO()]    | [PLAYERMEM()]  |
-| [POLL()]       | [POWERS()]     | [QUOTA()]      | [RESTARTS()]   |
-| [ROLES()]      | [TYPE()]       | [VERSION()]    | [VISIBLE()]    |
-| [WIZMOTD()]    |                |                |                |
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACTIVITY()]     |
+| [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    | [ANDLPOWERS()]   |
+| [CONFIG()]       | [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        |
+| [CTIME()]        | [DOWNMOTD()]     | [ELOCK()]        | [FINDABLE()]     |
+| [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
+| [GETPIDS()]      | [HASATTR()]      | [HASATTRP()]     | [HASFLAG()]      |
+| [HASPOWER()]     | [HASROLE()]      | [HASTYPE()]      | [INAME()]        |
+| [ISAPPROVED()]   | [LFLAGS()]       | [LLOCKFLAGS()]   | [LOCK()]         |
+| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        |
+| [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MOTD()]         |
+| [MSECS()]        | [MTIME()]        | [MUDNAME()]      | [MUDURL()]       |
+| [NAME()]         | [NATTR()]        | [NEARBY()]       | [OBJID()]        |
+| [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    |
+| [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    | [POLL()]         |
+| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
+| [TYPE()]         | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
 
 ::: seealso
 - [Dbref functions]
@@ -166,12 +139,12 @@
 | [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         |
 | [MATCH()]       | [MATCHALL()]    | [MEMBER()]      | [MIX()]         |
 | [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] | [NSITER()]      |
-| [RANDWORD()]    | [REMOVE()]      | [REST()]        | [REVWORDS()]    |
-| [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  | [SETUNION()]    |
-| [SHUFFLE()]     | [SOME()]        | [SORT()]        | [SORTBY()]      |
-| [SORTKEY()]     | [SPLICE()]      | [STEP()]        | [STEPARGS()]    |
-| [TABLE()]       | [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     |
-| [WORDS()]       |                 |                 |                 |
+| [RANDEXTRACT()] | [RANDWORD()]    | [REMOVE()]      | [REST()]        |
+| [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  |
+| [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
+| [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
+| [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      | [WHILE()]       |
+| [WORDPOS()]     | [WORDS()]       |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -230,11 +203,11 @@
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
 | [REGEDIT()]      | [REGEDITALL()]   | [REGEDITALLI()]  | [REGEDITI()]     |
-| [REGLATTR()]     | [REGLATTRP()]    | [REGMATCH()]     | [REGMATCHI()]    |
-| [REGNATTR()]     | [REGNATTRP()]    | [REGRAB()]       | [REGRABALL()]    |
-| [REGRABALLI()]   | [REGRABI()]      | [REGREP()]       | [REGREPI()]      |
-| [REGREPLACE()]   | [REGXATTR()]     | [REGXATTRP()]    | [RESWITCH()]     |
-| [RESWITCHALL()]  | [RESWITCHALLI()] | [RESWITCHI()]    |                  |
+| [REGLATTR()]     | [REGLATTRP()]    | [REGLMATCH()]    | [REGMATCH()]     |
+| [REGMATCHI()]    | [REGNATTR()]     | [REGNATTRP()]    | [REGRAB()]       |
+| [REGRABALL()]    | [REGRABALLI()]   | [REGRABI()]      | [REGREP()]       |
+| [REGREPI()]      | [REGREPLACE()]   | [REGXATTR()]     | [REGXATTRP()]    |
+| [RESWITCH()]     | [RESWITCHALL()]  | [RESWITCHALLI()] | [RESWITCHI()]    |
 
 ::: seealso
 - [String functions]
@@ -266,14 +239,15 @@
 | [IF()]                   | [IFELSE()]               | [LCSTR()]                | [LEFT()]                 |
 | [LIT()]                  | [LJUST()]                | [LPOS()]                 | [MERGE()]                |
 | [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
-| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDERMARKDOWN()]       |
-| [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                | [RJUST()]                |
-| [SCRAMBLE()]             | [SECURE()]               | [SPACE()]                | [SPELLNUM()]             |
-| [SQUISH()]               | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
-| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         |
-| [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           |
-| [SWITCH()]               | [TR()]                   | [TRIM()]                 | [UCSTR()]                |
-| [UNMARK()]               | [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |
+| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDER()]               |
+| [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                |
+| [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               | [SHA0()]                 |
+| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
+| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
+| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
+| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
+| [TRIM()]                 | [UCSTR()]                | [UNMARK()]               | [URLDECODE()]            |
+| [URLENCODE()]            | [WRAP()]                 |                          |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -302,21 +276,23 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 |--------------------|--------------------|--------------------|--------------------|
 | [@@()]             | [ALLOF()]          | [ANSI()]           | [ATRLOCK()]        |
 | [BEEP()]           | [BENCHMARK()]      | [CHECKPASS()]      | [CLONE()]          |
-| [CMDLINK()]        | [CREATE()]         | [DIE()]            | [DIG()]            |
-| [ENDTAG()]         | [FIRSTOF()]        | [FN()]             | [FUNCTIONS()]      |
-| [HTML()]           | [IBREAK()]         | [ILEV()]           | [INUM()]           |
-| [ISDBREF()]        | [ISINT()]          | [ISNUM()]          | [ISOBJID()]        |
-| [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          | [LETQ()]           |
-| [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
-| [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
-| [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      |
-| [R()]              | [RAND()]           | [RESTRICTEDEXPR()] | [ROLL()]           |
+| [CMDLINK()]        | [COLORS()]         | [CREATE()]         | [DIE()]            |
+| [DIG()]            | [ENDTAG()]         | [FIRSTOF()]        | [FN()]             |
+| [FUNCTIONS()]      | [HTML()]           | [IBREAK()]         | [ILEV()]           |
+| [INUM()]           | [ISDBREF()]        | [ISINT()]          | [ISNUM()]          |
+| [ISOBJID()]        | [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          |
+| [LETQ()]           | [LINK()]           | [LIST()]           | [LISTQ()]          |
+| [LNUM()]           | [LOCALIZE()]       | [LSET()]           | [NAMEQ()]          |
+| [NULL()]           | [NUMVERSION()]     | [OBJEVAL()]        | [OBJEVALS()]       |
+| [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      | [R()]              |
+| [RAND()]           | [REGISTERS()]      | [RESTRICTEDEXPR()] | [ROLL()]           |
 | [ROLLINFO()]       | [S()]              | [SCAN()]           | [SET()]            |
 | [SETQ()]           | [SETQM()]          | [SETR()]           | [SETRM()]          |
 | [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          |
-| [STEXT()]          | [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        |
-| [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       |
-| [UNSETQ()]         | [UPTIME()]         | [VALID()]          | [WIPE()]           |
+| [STEXT()]          | [STOPEVENT()]      | [SUGGEST()]        | [TAG()]            |
+| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
+| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
+| [WIPE()]           |                    |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
@@ -420,7 +396,7 @@ Ariel Brand
 
   Returns the angle that has the given `<cosine>` (arc-cosine), with the angle expressed in the given `<angle type>`, or radians by default.
 
-  See 'HELP ANGLES' for more on the `<angle type>`.
+  See [angles] for more on the `<angle type>`.
 
 
 ::: seealso
@@ -592,7 +568,7 @@ You say, "r baz"
 
   Returns the angle with the given `<sine>` (arc-sine), with the angle expressed in the given `<angle type>`, or radians by default.
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 
 ::: seealso
@@ -612,7 +588,7 @@ You say, "r baz"
 
   atan2(x, y) is like atan(fdiv(x, y)), except y can be 0, and the signs of both arguments are used in determining the sign of the result. It is useful in converting between cartesian and polar coordinates.
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 
 ::: seealso
@@ -827,69 +803,6 @@ You say, "foo bar baz blech"
 say strcat(foo bar, baz blech)
 You say, "foo barbaz blech"
 ```
-# center()
-`center(<string>, <width>[, <fill>[, <rightfill>]])`
-
-  This function will center `<string>` within a field `<width>` characters wide, using the `<fill>` string for padding on the left side of the string, and `<rightfill>` for padding on the right side. `<rightfill>` defaults to the mirror-image of `<fill>` if not specified. `<fill>` defaults to a space if neither `<fill>` nor `<rightfill>` are specified.
-
-  If `<string>` divides `<width>` into uneven portions, the left side will be one character shorter than the right side.
-
-  A `<string>` longer than `<width>` is returned unaltered. With the `mux_justify` @config option on, it is cut to `<width>` characters, as TinyMUX does. See [compatibility config].
-
-  Examples:
-```sharp
-say center(X,5,-)
-You say, "--X--"
-```
-
-    > say center(X,5,-=)<br>
-    You say, "-=X=-"
-
-    > say center(.NEAT.,15,-,=)<br>
-    You say, "----.NEAT.====="
-
-    > say center(hello,16,12345)<br>
-    You say, "12345hello543215"
-
-
-::: seealso
-- [align()]
-- [LJUST()]
-- [RJUST()]
-:::
-# chain()
-`chain(<attribute list>, <base>[, <arg0>[, ... , <argN>]])`
-
-  chain() threads a value through a sequence of user-defined attributes -- the functional "pipeline", or thread-first "arrow" (as in Clojure's `->`), pattern. `<attribute list>` is a space-separated list of `[<object>/]<attribute>` names.
-
-  The `<base>` value is passed as %0 to the first attribute. The result of each attribute is then passed as %0 to the next, threading one accumulating value along the whole list. Any extra `<arg0>, <arg1>, ...` are passed unchanged as %1, %2, ... to *every* attribute, so each step can reach the same side inputs. The result of the last attribute is returned. If `<attribute list>` is empty, `<base>` is returned unchanged.
-
-  A step may call ibreak() to short-circuit the pipeline: the remaining attributes are skipped, and the value produced by that step is returned. chain() counts as an iteration level, so itext(0) and inum(0) inside a step give the running value and the step number.
-
-  Each attribute is evaluated as by ufun(). Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes.
-
-  chain() is close kin to fold(): fold() walks a list of *data*, passing each element in turn as %0; chain() walks a list of *attributes*, passing one threaded result as %0 while carrying the same optional arguments to each step.
-
-  Example -- thread a string through two steps (%0 is the running value, %1 the shared side-arg):
-```sharp
-> &WRAP me=%1%0%1
-> &SHOUT me=ucstr(%0)!
-> say chain(WRAP SHOUT, hello, *)
-You say, "*HELLO*!"
-```
-
-  WRAP wraps the base "hello" in the side-arg "*" to make "*hello*"; that result becomes %0 for SHOUT, which upper-cases it and appends "!".
-
-
-::: seealso
-- [fold()]
-- [MAP()]
-- [iter()]
-- [IBREAK()]
-- [JITER()]
-- [u()]
-- [@include attribute pipelines]
-:::
 # checkpass()
 `checkpass(<player>, <string>)`
 
@@ -1119,39 +1032,6 @@ You say, "709395750"
 - [time()]
 - [timefmt()]
 :::
-# convtime()
-# convutctime()
-`convtime(<time string>[, <timezone>[, <precision>]])`<br>
-`convutctime(<time string>[, <precision>])`
-
-  This functions converts a time string to the number of seconds since Jan 1, 1970 GMT. A time string is of the format:<br>
-      Ddd MMM DD HH:MM:SS YYYY<br>
-  where Ddd is the day of the week, MMM is the month, DD is the day of the month, HH is the hour in 24-hour time, MM is the minutes, SS is the seconds, and YYYY is the year. If you supply an incorrectly formatted string, it will return #-1.
-
-  convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too, such as America/New_York, with their summer time. If no `<timezone>` is given, the server's timezone is used.
-
-  convtime() also reads other ways of writing a date and time, such as 2026-10-30 20:00, in the same zone. A time that names its own offset, such as 2026-10-30T20:00:00Z or 2026-10-30T20:00:00+02:00, keeps it. A time the zone skips when summer time starts, such as 2027-03-14 02:30 in America/New_York, returns #-1 INVALID TIME; written in the format above, it is moved on past the gap, as PennMUSH does.
-
-  If the extended convtime() is supported (See @config compile), more formats for the date are enabled, including ones missing the day of week and year, and a 'Month Day Year' format. In this case, convtime() can also handle dates prior to 1970 (in which case a negative number will be returned).
-
-  Example:
-```sharp
-say time()
-You say, "Wed Jun 24 10:22:54 1992"
-```
-
-    > say convtime(Wed Jun 24 10:22:54 1992)<br>
-    You say, "709395774"
-
-    > say convtime(2026-10-30 20:00,America/New_York)<br>
-    You say, "1793404800"
-
-
-::: seealso
-- [CONVSECS()]
-- [time()]
-- [timezones]
-:::
 # cos()
 `cos(<angle>[, <angle type>])`
 
@@ -1167,7 +1047,7 @@ You say, "0"
     You say, "0"
 ```
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 ::: seealso
 - [ACOS()]
@@ -2553,47 +2433,6 @@ think isapproved(me)
 - [@role assigning]
 - [roles]
 :::
-# isdbref()
-# isobjid()
-`isdbref(<string>)`<br>
-`isobjid(<string>)`
-
-  isobjid() returns 1 if `<string>` is the object id of an existing object. If `<string>` is not a full objid, or is the objid of a garbage object, it returns 0.
-
-  isdbref() functions the same, but will also return 1 if `<string>` is the dbref of an existing (or garbage) object.
-
-  Examples:
-```sharp
-@stats
-100 objects = 20 rooms, 20 exits, 20 things, 20 players, 20 garbage.
-The next object to be created will be #33.
-```
-
-    > think isdbref(#33)<br>
-    1<br>
-    > think isobjid(#33:1234567890)<br>
-    0
-
-    > think csecs(#1)<br>
-    1324654503<br>
-    > think isdbref(#1)<br>
-    1<br>
-    > think isobjid(#)<br>
-    0<br>
-    > think isdbref(#1:1324654503)<br>
-    1<br>
-    > think isobjid(#1:1324654503)<br>
-    1<br>
-    > think isobjid(#1:9876543210)<br>
-    0
-
-
-::: seealso
-- [database]
-- [OBJIDS]
-- [NUM()]
-- [OBJID()]
-:::
 # isint()
 `isint(<string>)`
 
@@ -2738,38 +2577,6 @@ You say, "One|PLAYER"
 - [REST()]
 - [BEFORE()]
 - [AFTER()]
-:::
-# lattr()
-# lattrp()
-# reglattr()
-# reglattrp()
-`lattr(<object>[/<attribute pattern>][, <output separator>])`<br>
-`lattrp(<object>[/<attribute pattern>][, <output separator>])`<br>
-`lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`<br>
-`lattrp(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`<br>
-`reglattr(<object>[/<regexp>][, <output separator>])`<br>
-`reglattrp(<object>[/<regexp>][, <output separator>])`
-
-  lattr() returns a list of all the attributes on `<object>` which you can see, and which match the wildcard `<attribute pattern>`. If no `<attribute pattern>` is given, it defaults to "*". Note that this does not include branches in attribute trees; you must use the "**" wildcard to include those.
-
-  The resulting list will be separated by `<output separator>`, or a space if no separator is given.
-
-  reglattr() returns attributes whose names match the regexp `<regexp>`. The match is not case-sensitive (as attribute names are always upper-case), and the `` ` `` branch separator has no special meaning in the pattern.
-
-  lattrp() and reglattrp() also include attributes inherited from parents.
-
-  When returning large numbers of attributes, the results may be truncated due to buffer limits. In these cases, you can use nattr() and xattr() to retrieve the results in smaller pieces.
-
-  With the `rhost_lattr` option on, lattr() and lattrp() take RhostMUSH's arguments instead of an output separator: `lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`. This form comes from RhostMUSH; see [compatibility config] for what each argument does.
-
-
-::: seealso
-- [NATTR()]
-- [XATTR()]
-- [HASATTR()]
-- [examine]
-- [GREP()]
-- [WILDCARDS]
 :::
 # nattr()
 # nattrp()
@@ -2972,47 +2779,6 @@ You say, "foo   "
 - [@link]
 - [OPEN()]
 :::
-# list()
-`list(<option>[, <type>])`<br>
-`list(<list>, <eval>[, <delimiter>][, <header>][, <target>])`
-
-  This is the function-equivilent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
-
-  motd        : Returns the current @motd<br>
-  wizmotd     : Returns the current @motd/wizard. Wiz/Roy only.<br>
-  downmotd    : Returns the current @motd/down. Wiz/Roy only.<br>
-  fullmotd    : Returns the current @motd/full. Wiz/Roy only.<br>
-  functions   : Returns a list of all built-in functions and @functions.<br>
-  commands    : Returns a list of all built-in commands and @commands.<br>
-  attribs     : Returns all standard attributes.<br>
-  locks       : Returns the built-in lock types. Similar to llocks().<br>
-  flags       : Returns all flags. Similar to lflags().<br>
-  powers      : Returns all @powers.
-
-  "commands"/"functions" return both built-in and local commands/functions by default. You can specify a `<type>` of either "builtin", "local" or "all" to limit this if you wish.
-
-  With the `rhost_list` @config option on, list() is the second form instead, which comes from RhostMUSH; its first three arguments are TinyMUX's list(). `<eval>` is evaluated for each element of `<list>`, as by iter(), and each result is told to you on a line of its own rather than returned. list() itself returns nothing. `<delimiter>` separates the elements and is a space when left out. A `<header>` that is not empty is told once, before the first result. A `<target>` you control hears the header and the results instead of you; a target you do not control, or one that is not found, is ignored. An empty list tells nothing, not even the header. See [compatibility config].
-
-  Examples, with `rhost_list` on:
-
-    > think list(red blue,Color #@: ##)<br>
-    Color 1: red<br>
-    Color 2: blue<br>
-    > think list(a|b,[strlen(##)],|,Lengths:)<br>
-    Lengths:<br>
-    1<br>
-    1
-
-
-::: seealso
-- [@list]
-- [FLAGS()]
-- [LFLAGS()]
-- [CONFIG()]
-- [FUNCTIONS()]
-- [@motd]
-- [@motd]
-:::
 
 `llocks()`
 # lit()
@@ -3170,44 +2936,6 @@ Basic USER:ITSME Use
 - [LOCKFLAGS()]
 - [LLOCKFLAGS()]
 - [LOCKOWNER()]
-:::
-# lockfilter()
-`lockfilter(<key>, <dbrefs>[, <delim>])`
-
-  lockfilter() goes through `<dbrefs>` and tests them all against the lock `<key>`, returning a list of all dbrefs that pass the `<key>`.
-
-  `<key>` is evaluated from the caller's perspective.
-
-  This is equivilent to filter(#lambda/testlock(`<key>`, %%0), `<dbrefs>`) but much more efficient, as the lock `<key>` is only parsed/compiled once.
-
-  `<delim>` defaults to a space, and is the delimiter of `<dbrefs>` and the list returned by lockfilter().
-
-  Examples:
-```sharp
-Get all male players with a name starting with 'W'.
-think iter(lockfilter(NAME^W*&SEX:M*,lwho()),name(%i0))
-Walker WalkerBot Wilco
-```
-
-    List all wizroys online:<br>
-    > think iter(lockfilter(FLAG^WIZARD|FLAG^ROYALTY,lwho()),name(%i0))<br>
-    Sketch Viila Tanaku Raevnos Zebranky Cheetah Walker
-
-    List all players with an IC age > 20.<br>
-    > think lockfilter(age:>20,lwho())
-    #123 #456 #789
-    Note: You can escape the first character of `<key>` using double back slashes, for example, if you are checking for an attribute named +FOO to have the value of BAR on all connected players:<br>
-    > think map(#apply/name,lockfilter(\\+FOO:BAR,lwho()))<br>
-    Mike Walker Qon
-
-
-::: seealso
-- [LOCKING]
-- [LOCK()]
-- [ELOCK()]
-- [lock keys]
-- [FILTER()]
-- [TESTLOCK()]
 :::
 # lockflags()
 `lockflags(<object>[/<locktype>])`<br>
@@ -3466,40 +3194,6 @@ th lt(1,3,2)
 - [NMWHO()]
 - [XWHO()]
 - [LPORTS()]
-:::
-# map()
-`map([<object>/]<attribute>, <list>[, <delim>[, <osep>[, <arg1>, ... , <argN>]]])`
-
-  This function works much like ITER(). The given `<attribute>` is evaluated once for each element of `<list>`, and the results of the evaluations are returned. For each evaluation, the current list element is passed to the attribute as %0, and its position in the list as %1. Elements of `<list>` are separated by `<delim>`, or a space if none is given, and the results are returned separated by `<osep>`, if given, or the delimiter otherwise.
-
-  Any arguments after `<osep>` are passed to the attribute as %1, %2 and so on, in place of the position. Passing them comes from RhostMUSH. With the `rhost_map_args` option on, %1 is empty when there are none, as on RhostMUSH, rather than the position (see [compatibility config]).
-
-  Example:
-```sharp
-> &show_args me=<%0:%1:%2>
-> think map(show_args, a b,,, x, y)
-<a:x:y> <b:x:y>
-```
-
-  This is roughly equivilent to, though slightly more efficient than:<br>
-`iter(<list>, ulambda(<object>/<attribute>, %i0, inum(0)), <delim>, <osep>)`
-
-  Examples:
-```sharp
-&times_two me=mul(%0,2)
-```
-
-    > say map(times_two, 5 4 3 2 1)<br>
-    You say, "10 8 6 4 2"
-
-    > say map(times_two,1;2;3;4;5,;)<br>
-    You say, "2;4;6;8;10"
-
-
-::: seealso
-- [anonymous attributes]
-- [iter()]
-- [@dolist]
 :::
 # max()
 `max(<number1>[, ... , <numberN>])`
@@ -3870,7 +3564,7 @@ You say, "#1 #7 #56 #-1"
 # neq()
 `neq(<number1>, <number2>[, ... , <numberN>])`
 
-  Returns 0 if all the given `<number>`s are the same, and 1 otherwise. Basically the same as [not(eq(`<number1>`, `<number2>`[, ... , `<numberN>`]))] but more efficient.
+  Returns 0 if all the given `<number>`s are the same, and 1 otherwise. Basically the same as `[not(eq(<number1>, <number2>[, ... , <numberN>]))]` but more efficient.
 
 
 ::: seealso
@@ -4018,7 +3712,7 @@ You say, "#1 #7 #56 #-1"
 
   nmwho() returns a count of all currently connected, non-hidden players. It's exactly the same as nwho() used by a mortal, and is suitable for use on privileged global objects that always need an unprivileged count of who is online.
 
-  These functions are equivilent to words(lwho([`<viewer>`])) and words(mwho()), but are more efficient, and don't suffer from buffer constraints.
+  These functions are equivilent to `words(lwho([<viewer>]))` and `words(mwho())`, but are more efficient, and don't suffer from buffer constraints.
 
 
 ::: seealso
@@ -4069,7 +3763,7 @@ think objevals(me,v(DATA`TEXT))
 # objid()
 `objid(<object>)`
 
-  This function returns the object id of `<object>`, a value which uniquely identifies it for the life of the MUSH. The object id is the object's dbref, a colon character, and the object's creation time, in milliseconds since the epoch, equivalent to [num(`<object>`)]:[csecs(`<object>`,ms)] (PennMUSH stores seconds, so its objids end in [csecs(`<object>`)] instead; see help COMPATIBILITY IDENTITY)
+  This function returns the object id of `<object>`, a value which uniquely identifies it for the life of the MUSH. The object id is the object's dbref, a colon character, and the object's creation time, in milliseconds since the epoch, equivalent to `[num(<object>)]:[csecs(<object>,ms)]` (PennMUSH stores seconds, so its objids end in `[csecs(<object>)]` instead; see help COMPATIBILITY IDENTITY)
 
   The object id can be used nearly anywhere the dbref can, and ensures that if an object's dbref is recycled, the new object won't be mistaken for the old object.
 
@@ -5095,7 +4789,7 @@ You say, "bar baz foo gleep moof"
 
 
 ::: seealso
-- [digest().]
+- [digest()]
 :::
 # shl()
 `shl(<number>, <count>)`
@@ -5160,7 +4854,7 @@ You say, "-1"
 
   Returns the sine of `<angle>`, which should be expressed in the given angle type, or radians by default.
 
-  See 'HELP ANGLES' for more on the angle type.
+  See [angles] for more on the angle type.
 
 
 ::: seealso
@@ -5217,7 +4911,7 @@ You say, "-1"
   This function creates a list of keys by passing every element of `<list>` into the ufun given in `<attrib>`. The list is then sorted according to the sorting method in `<sort type>`, or is automatically guessed (as per [SORTING]).
 
   This is equivalent to:<br>
-    > &munge_sort me=sort(%0[, `<sort type>`])<br>
+    > &munge_sort me=sort(%0\[, `<sort type>`\])<br>
     > say munge(munge_sort, map(`<attrib>`, `<list>`), `<list>`)
 
   Only there is no risk with delimiters occurring within the list.
@@ -5233,41 +4927,6 @@ You say, "-1"
 - [anonymous attributes]
 - [SORTING]
 - [SORTBY()]
-:::
-# Sorting
-  In functions where you can specify a sorting method, you can provide one of these sort types:
-
-  Type    Sorts:<br>
-   a       Sorts lexicographically (Maybe case-sensitive).<br>
-   i       Sorts lexicographically (Always case-insensitive).<br>
-   d       Sorts dbrefs.<br>
-   n       Sorts integer numbers.<br>
-   f       Sorts decimal numbers.<br>
-   m       Sorts strings with embedded numbers and dbrefs (as names).<br>
-   name    Sorts dbrefs by their names. (Maybe case-sensitive)<br>
-   namei   Sorts dbrefs by their names. (Always case-insensitive)<br>
-   conn    Sorts dbrefs by their connection time.<br>
-   idle    Sorts dbrefs by their idle time.<br>
-   owner   Sorts dbrefs by their owner dbrefs.<br>
-   loc     Sorts dbrefs by their location dbref.<br>
-   ctime   Sorts dbrefs by their creation time.<br>
-   mtime   Sorts dbrefs by their modification time.<br>
-   lattr   Sorts attribute names.
-
-  The special sort key attr:`<aname>` or attri:`<aname>` will sort dbrefs according to their `<aname>` attributes. For example: Separating by &factions or &species attrs. attr is probably case-sensitive, and attri is case-insensitive.
-
-  Prefixing the sort type with a minus sign, -, reverses the order of the sort.
-
-  Whether or not the 'a' sort type is case-sensitive or not depends on the particular mush and its environment.
-
-
-::: seealso
-- [SORT()]
-- [SORTBY()]
-- [SORTKEY()]
-- [SETUNION()]
-- [SETINTER()]
-- [SETDIFF()]
 :::
 # soundlike()
 # soundslike()
@@ -5291,7 +4950,7 @@ think soundslike(robin,roebuck, phone)
 # space()
 `space(<number>)`
 
-  Prints `<number>` spaces. Useful for times when you want to be able to use lots of spaces to separate things. Same as [repeat(%b, `<number>`)].
+  Prints `<number>` spaces. Useful for times when you want to be able to use lots of spaces to separate things. Same as `[repeat(%b, <number>)]`.
 
   Example:
 ```sharp
@@ -5351,70 +5010,10 @@ You say, "foo moof baz"
 ::: seealso
 - [MERGE()]
 :::
-# mapsql()
-`mapsql([<object>/]<attribute>, <query>[, <osep>[, <dofieldnames>[, <param1>[, <param2>[, ...]]]]])`
-
-  Performs an SQL query if the MUSH is configured to connect to an SQL database server. This function requires a WIZARD flag or the Sql_Ok power.
-
-  `<query>` is evaluated, so it's useful to either read it from another attribute with u() or use lit() to protect commas. If you will be interpolating user-provided values into the query, be careful to escape them with sqlescape().
-
-  Each row of the result is passed to `<attribute>`, with the first nine columns available as %1-%9, and twenty more available via v(10) - v(29). %0 is set to the row number, which will start with 1. The fields will also be available as named arguments, with r(`<field name>`, args) returning the appropriate value.
-
-  If `<dofieldnames>` evaluates to a true boolean, then the first call will be with row number (%0) set to 0, and %1-%9 and v(10) - v(29) will be set to the field names.
-
-  **Prepared Statements (Parameterized Queries):** If more than 4 arguments are provided, mapsql() automatically uses prepared statements. The 5th argument onwards are treated as parameters that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe.
-
-  Example using prepared statements:
-```sharp
-  > &DisplayRow me=User %1 has email %2
-  > think mapsql(me/DisplayRow,lit(SELECT name\, email FROM users WHERE status = ?),%r,0,active)
-  ```
-
-  See [SQL Examples] for examples.
-
-
-::: seealso
-- [anonymous attributes]
-- [SQLESCAPE()]
-- [SQL()]
-- [@sql]
-- [@mapsql]
-:::
-# sql()
-`sql(<query>[, <row separator>[, <field separator>[, <register>[, <param1>[, <param2>[, ...]]]]]])`
-
-  Performs an SQL query if the MUSH is configured to connect to an SQL database server. This function requires a WIZARD flag or the Sql_Ok power.
-
-  By default, SELECT queries will return their data space-separated. Usually, it's more useful to specify a character to delimit rows returned (and sometimes another character to delimit the fields/columns returned, if they may contain spaces).
-
-  `<query>` is evaluated, so it's useful to either read it from another attribute with u() or use lit() to protect commas. If you will be interpolating user-provided values into the query, be careful to escape them with sqlescape().
-
-  A query that doesn't return any rows, such as an UPDATE or SELECT that has no matches will return a null string.
-
-  If `<register>` is specified, and `<query>` alters the database (such as an UPDATE or INSERT query), there is a side-effect: the number of affected rows is stored into the specified q-register.
-
-  **Prepared Statements (Parameterized Queries):** If more than 4 arguments are provided, sql() automatically uses prepared statements. The 5th argument onwards are treated as parameters that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe.
-
-  Example using prepared statements:
-```sharp
-  > think sql(lit(SELECT name FROM users WHERE id = ?),%r,%b,,123)
-  ```
-
-  See [SQL Examples] for more examples.
-
-
-::: seealso
-- [SQLESCAPE()]
-- [MAPSQL()]
-- [@sql]
-- [setq()]
-- [R()]
-- [@mapsql]
-:::
 # SQL Examples
 
   Example of using sqlescape() to prevent injection attacks:<br>
-    > &SEL_GETID obj=SELECT id FROM mytable WHERE name = '[sqlescape(%0)]'<br>
+    > &SEL_GETID obj=SELECT id FROM mytable WHERE name = '\[sqlescape(%0)\]'<br>
     > &DOIT obj=$do *: think setq(0,sql(u(SEL_GETID,%0),~,|)); @@ More cmds
 
   Using mapsql() to format results:<br>
@@ -5433,10 +5032,10 @@ You say, "foo moof baz"
     (2) - Advertisements (20)
 
   The same thing can be done using named arguments:<br>
-    > &each_bb me=(%0) - [r(name, args)] ([r(total, args)])
+    > &each_bb me=(%0) - \[r(name, args)\] (\[r(total, args)\])
 
   Using sql() to update fields:<br>
-    > &update me=UPDATE `foo` SET `time` = '[sqlescape(%0)]' WHERE `loc` = '[sqlescape(%1)]'<br>
+    > &update me=UPDATE `foo` SET `time` = '\[sqlescape(%0)\]' WHERE `loc` = '\[sqlescape(%1)\]'<br>
     > &foo me=$foo *: think sql(u(update, %0, %L),,0)%q0 rows updated.<br>
     > foo bar<br>
     5 rows updated.
@@ -5670,61 +5269,6 @@ My name
 - [ansi()]
 - [TAG()]
 - [RENDER()]
-:::
-
-# strdistance()
-
-`strdistance(<source>, <target>)`
-
-  Returns the minimum number of grapheme insertions, deletions, or substitutions needed to change source into target. Each edit costs one; transposing two graphemes costs two. Comparison is ordinal and case-sensitive. Markup is ignored, and Unicode normalization is not applied: composed `chr(233)` (e with an acute accent) and decomposed `e[chr(769)]` (e followed by a combining acute accent) each contain one grapheme but differ from each other. No optional flags are supported.
-
-  Identical inputs return zero. When one input is empty, the result is the other input's grapheme count. These cases remain subject to the same bounds: each input may contain at most 65,536 UTF-16 code units and 4,096 graphemes, and the product of the two grapheme counts may not exceed 4,000,000. Exceeding any bound returns `#-1 STRING DISTANCE WORK LIMIT EXCEEDED`. The work check happens before allocating comparison rows; row storage grows with the shorter input.
-
-  Use the result to offer a spelling suggestion for a help topic or keyword and let the player choose it. Do not use approximate matches to select targets for destructive commands. Existing `suggest()` keeps its case-folded, UTF-16-based ranking; this function does not change that behavior.
-
-  Examples:
-
-```sharp
-strdistance(kitten,sitting)
-strdistance(ansi(r,[chr(30028)][chr(128512)]),[chr(30028)][chr(128570)])
-strdistance(,e[chr(769)][chr(128512)])
-```
-
-  These return `3`, `1`, and `2`, respectively. `chr(30028)` is a wide CJK character, `chr(128512)` and `chr(128570)` are two different emoji (a grinning face and a grinning cat face), and `e[chr(769)]` is e with a combining acute accent.
-
-::: seealso
-- [SUGGEST()]
-- [GRAPHEMECOUNT()]
-- [GRAPHEMES()]
-:::
-
-# printf()
-`printf(<format>[, <value>...])`
-
-  Builds compact reports from a format and its values. Directives have the form `%[flags][width][.precision]type`, where type is `s` (text), `d` (signed 64-bit integer), or `f` (decimal). Each directive consumes one value. `%%` emits a literal percent and consumes none. Missing or extra values return `#-1 PRINTF ARGUMENT COUNT MISMATCH`; unsupported, incomplete, or repeated flags return `#-1 INVALID PRINTF FORMAT`.
-
-  Normal MUSH percent substitutions happen first. Use `lit()` around the format to pass its percent signs unchanged, or double each percent sign at the MUSH layer. Thus `printf(lit(%s),name)` and `printf(%%s,name)` both return `name`; `printf(%%%%)` returns one percent sign.
-
-  Width is a minimum number of display columns, with spaces on the left by default. `-` moves padding to the right. Numeric fields also accept `+` for a positive sign and `0` for zeros after the sign; `-` takes precedence over `0`. String precision is a maximum number of display columns and keeps whole grapheme clusters. Integer precision is a minimum digit count. Decimal precision is fractional digits, defaults to six, and rounds ties to even.
-
-  Numeric values use a strict invariant grammar: an optional sign, ASCII digits, and (for decimals) a decimal point. Spaces, separators, exponent notation, and Tiny math coercions are not accepted. Values outside signed 64-bit integer or .NET decimal range return the usual number error. Literal and string-value markup survives. Generated numeric text inherits the first input character's markup; markup on a directive's percent sign wraps its field. Padding is plain unless covered by that directive markup. Controls and newlines in strings are retained and use the library's display-width policy.
-
-  The format may contain at most 65,536 UTF-16 code units, 1,024 directives including percent escapes, and 128 value fields. Width and string/integer precision are at most 65,536; decimal precision is at most 28. Exceeding these bounds returns `#-1 PRINTF FIELD LIMIT EXCEEDED` before large padding is allocated. Directives cannot cut through a grapheme cluster. The shared 5,242,880 UTF-16-unit result ceiling also applies; exceeding it stops evaluation with `#-1 OUTPUT EXCEEDED MAXIMUM SIZE`.
-
-  With the `rhost_printf` option on, printf() reads RhostMUSH's fields instead of these directives: a field is `$`, its codes, then `s`, as in `printf(|$-5s|$5s|,ab,cd)`, which returns `|ab   |   cd|`. That form wants at least one value, and the fields can wrap a value over several rows. This grammar comes from RhostMUSH; see [compatibility config] for its codes.
-
-  Examples:
-```sharp
-printf(lit(%-8s %4d),Ore,12)
-printf(lit(%+08.2f),12.345)
-printf(lit(%4s|%-4s),ansi(r,chr(30028)),ansi(b,chr(128512)))
-```
-
-::: seealso
-- [DISPLAYWIDTH()]
-- [align()]
-- [TABLE()]
-- [WRAP()]
 :::
 
 # displaywidth()
@@ -5999,57 +5543,19 @@ a          b          areallylon d
 ::: seealso
 - [@teleport]
 :::
-# terminfo()
-`terminfo(<player|descriptor>)`
-
-  Returns a list with at least one element - the type of client used by the player, or "unknown" if the client being used doesn't support being asked to identify itself using RFC 1091.
-
-  Other elements in the list describe client capabilities, and currently include:<br>
-  pueblo           present if the client is in Pueblo mode.<br>
-  mxp              present if the client is in MXP mode.<br>
-  screenreader     a screen reader reads this connection: MTTS says so, or the player turned on Screen reader mode in the web portal's Terminal settings, on Play.<br>
-  telnet           present if the client understands the telnet protocol.<br>
-  gmcp             present if GMCP is negotiated via telnet; see help oob()<br>
-  ssl              present if the client is using an SSL/TLS connection.<br>
-  websocket        present if the client is connected via WebSocket.<br>
-  portal           present if the connection is a background portal (system) session.<br>
-  prompt_newlines  see [PROMPT_NEWLINES]<br>
-  stripaccents     client is receiving 7-bit ascii, no accented characters<br>
-  hyperlinks       web links are sent as clickable OSC 8 links; see [HYPERLINKS]<br>
-  commandlinks     command links are sent as clickable MSLP links; see [HYPERLINKS]<br>
-  kitty, iterm2, sixel or blocks  how pictures are drawn; see [GRAPHICS]<br>
-  animation        moving pictures play; see [ANIMATION]
-
-  One of the color styles shown in [COLORSTYLE] will also be included.
-
-  Anyone may see pueblo, mxp, screenreader, stripaccents and the color style. Softcode can use screenreader to leave out what only draws, such as a logo made of characters. A screen reader on telnet is sent no color, links or pictures, so its color style is plain; the web portal draws them itself, so it keeps its own.
-
-  Example, in the web portal with Screen reader mode on:
-```sharp
-think terminfo(me)
-SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
-```
-
-  You must have see_all, or use terminfo() on yourself, to see all information or use a `<descriptor>`. Mortals using terminfo() on another player will always receive "unknown" for the client name, and will not get telnet/gmcp/ssl/prompt_newlines in the output list.
-
-
-::: seealso
-- [PUEBLO()]
-- [WIDTH()]
-- [WIDTH()]
-- [SSL()]
-- [@SOCKSET]
-- [OOB()]
-:::
 # JSON Functions
   JSON functions are used to create and modify JSON objects.
 
-`isjson()    json()     json_array()     json_fill()     json_group_by()     json_map()     json_query()     json_mod()`
+|                   |                   |                   |                   |
+|-------------------|-------------------|-------------------|-------------------|
+| [ISJSON()]        | [JSON()]          | [JSON_ARRAY()]    | [JSON_FILL()]     |
+| [JSON_GROUP_BY()] | [JSON_MAP()]      | [JSON_MOD()]      | [JSON_QUERY()]    |
 
   oob() sends a JSON object to GMCP and WebSocket connections. gmcpsupports() says which GMCP packages a client asked for, and exitmap() builds the exits object a client's mapper reads.
 
-`exitmap()     gmcpsupports()     oob()`
-
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [EXITMAP()]      | [GMCPSUPPORTS()] | [OOB()]          |                  |
 
 ::: seealso
 - [JSON PATHS]
@@ -6066,36 +5572,6 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 
 ::: seealso
 - [OOB()]
-- [json()]
-:::
-# oob()
-# GMCP
-`oob(<players>, <package>[, <message>[, supported]])`
-
-  This function sends an out-of-band message using the General MUD Communication Protocol (GMCP - http://www.gammon.com.au/gmcp) and a WebSocket.
-
-  `<players>` is a space-separated list of player names/dbrefs to send the message to. Player names which contain spaces should be given in "quotes". A descriptor number sends to that one connection, even before anyone has logged in on it; this is how an event handler answers [event socket] socket\`gmcp.
-
-  `<package>` is the name of the package/message type.
-
-  If specified, `<message>` is a JSON-formatted message to be sent. Use the JSON() function to construct valid JSON.
-
-  With the fourth argument `supported`, a telnet client is sent the package only when it listed the package, or a module it belongs to, in GMCP Core.Supports, or listed nothing at all: Blightmud, TinTin++ and MUSHclient never send Core.Supports, so an empty list means the client never said. `Room` covers `Room.Info`. A WebSocket (portal) connection always gets the package. Any other fourth argument is an error. Without it every client that agreed to GMCP gets the package, which suits packages Mudlet uses without listing. See [gmcpsupports()].
-
-  You must be a wizard or have the Send_OOB power to send messages to anyone but yourself, or to a descriptor other than your own.
-
-  Returns the number of descriptors the message was sent to on success, or a string starting with #-1 on error.
-
-Examples:
-```sharp
-> think oob(me, Room.Info, json(object, num, json(number, 1234)), supported)
-1
-```
-
-Output: the number of your connections that took Room.Info. A Mudlet that listed `Room 1` counts; a client that listed modules without Room does not.
-
-
-::: seealso
 - [json()]
 :::
 # isjson()
@@ -6147,7 +5623,7 @@ think isjson("quoted")
   json_mod() and the extract argument for json_query() take a path string that describes what part of a JSON object or array to act on. All paths start with a $ to indicate the base JSON value, and 0 or more specifiers in the following formats:
 
   .FIELD - the name of a field in a JSON object.<br>
-  [N]    - the Nth element of a JSON array. Note that the brackets need to be escaped.
+  `[N]`    - the Nth element of a JSON array. Note that the brackets need to be escaped.
 
 
 ::: seealso
@@ -6180,45 +5656,6 @@ think testlock(\\+FOO:BAR,*Walker)
 - [ELOCK()]
 - [LOCKFILTER()]
 - [locktypes]
-:::
-# textfile()
-# textentries()
-# textsearch()
-# dynhelp()
-`textfile(<type>, <entry>)`<br>
-`textentries(<type>, <pattern>[, <osep>])`<br>
-`textsearch(<type>, <pattern>[, <osep>])`
-
-  textfile() returns the text of entries from cached text files (such as "help", "news", "events", etc.) All whitespace and newlines are included, so you may want to edit %r's and squish the result if you plan to use the text as a list of words rather than a display.
-
-  textentries() returns the topic names in `<type>` matching `<pattern>`, separated by `<osep>` (a space by default). `<pattern>` is a wildcard pattern matched against the topic name; use `*` for every topic, or textsearch() where you want matching by content instead.
-
-  Both textfile() and textentries() return #-1 NO SUCH FILE for a `<type>` that is not a text-file category, and #-1 PERMISSION DENIED for an administrator-only one (ahelp) to anyone who is not a wizard or royalty.
-
-  textsearch() returns the names of all topics whose contents matches the given `<pattern>`, the same as "help/search `<pattern>`", with topic names separated by `<osep>`.
-
-  Example:
-```sharp
-say textentries(help, ?who())
-You say, "CWHO() LWHO() MWHO() NWHO() XWHO() ZWHO()"
-```
-
-    > say textsearch(help, pronouns, |)<br>
-    You say, "1.6.0P0|GENDER|SEX"
-
-    > say textfile(help, ln\(\))<br>
-    You say, "  ln(`<number>`)
-
-      Returns the natural log of `<number>`.
-
-
-::: seealso
-- [LOG()]
-    "
-:::
-
-::: seealso
-- [WILDCARDS]
 :::
 # etime()
 `etime(<seconds>[, <width>[, <precision>]])`
@@ -6305,38 +5742,6 @@ You say, "hello"
 ::: seealso
 - [MERGE()]
 - [SPLICE()]
-:::
-# trim()
-# trimpenn()
-# trimtiny()
-`trim(<string>[, <characters to trim>[, <trim style>]])`<br>
-`trimpenn(<string>[, <characters to trim>[, <trim style>]])`<br>
-`trimtiny(<string>[, <trim style>[, <characters to trim>]])`
-
-  trim() strips leading and/or trailing occurrences of each of the `<characters to trim>` from `<string>`.
-
-  `<characters to trim>` defaults to a space.
-
-  If no `<trim style>` is specified, characters are trimmed from both the left and right sides of the string. If the 'l' trim style is specified, characters are only trimmed from the left side. If the 'r' trim style is specified, characters are only trimmed from the right side. If the 'b' trim style is specified, or a style is omitted, characters are trimmed off of both sides of the string.
-
-  Normally, the arguments for trim() are in the same order as trimpenn(). However, if the tiny_trim_fun @config option is on, the `<characters to trim>` and `<trim style>` arguments are reversed. Use trimpenn() or trimtiny() if you want to specify a particular argument sequence no matter how the option is set.
-
-  Examples:
-```sharp
-say trim(%b%bfoo bar baz%b%b%beek%b%b)
-You say, "foo bar baz   eek"
-say trim(***BLAM***,*)
-You say, "BLAM"
-say trim(-----> WOW <---,-,r)
-You say, "-----> WOW <"
-say trim(=~=~=~= Trim Test =~=~=~=,= ~)
-You say "Trim Test"
-```
-
-
-::: seealso
-- [SQUISH()]
-- [EDIT()]
 :::
 # trunc()
 # val()
@@ -6487,7 +5892,7 @@ think words(unmark(a%*<|>b), %*<|>)
 
     0-9, #, @, !, n, l, and c.
 
-  Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to [capstr(%n)]).
+  Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to `[capstr(%n)]`).
 
   v() can also return the value of stack registers. v(0) is equivilent to %0, but v() can return up to 30 registers (v(0) through v(29)). Calling v() with an integer arg that is not between 0 and 29 (inclusive) will return an out-of-range error.
 
@@ -6747,29 +6152,6 @@ think words(1 2%b%b3, %b)
 - [STRLEN()]
 - [ITEMS()]
 :::
-# wrap()
-`wrap(<string>, <width>[, <first line width>[, <line separator>]])`<br>
-`wrap(<string>, <width>, <justification>[, <left>[, <right>[, <hanging>[, <osep>[, <first width>]]]]])`
-
-  This function takes `<string>` and splits it into lines containing no more than `<width>` characters each. If `<first line width>` is given, the first line may have a different width. If `<line separator>` is given, it is inserted between each line; by default the separator is a newline (%r).
-
-  A line ends at the last space that fits, and a line break in the text always starts a new line. A word that ends exactly at the width, with more text after it, goes to the next line. A word with no space inside the width is cut one character short and given a hyphen.
-
-    > think wrap(aa abcdefghijkl bb,6,,|)<br>
-    aa|abcde-|fghij-|kl bb
-
-  The second form is TinyMUX's, used when there are more than four arguments or the third starts with a letter. Every line is padded to its width and justified by `<justification>`: `left`, `right` or `center` (only the first letter counts). `<left>` and `<right>` frame each line, lines after the first start with `<hanging>` spaces, `<osep>` goes between lines (a newline by default, `@@` for none), and `<first width>` is the first line's width. A word longer than a line is cut.
-
-    > think wrap(aaa bbb ccc,7,center,<,>,2)<br>
-    <aaa bbb><br>
-      <  ccc  >
-
-  Examples:
-```sharp
-@desc here=wrap(Wrapped paragraph, 72)
-@desc here=wrap([space(4)]Indented paragraph, 72)
-@desc here=iter(wrap(Hanging indent, 72, 76, %r), switch(#@, >1, space(4))%i0, %r, %r)
-```
 # xattr()
 # xattrp()
 # regxattr()
@@ -6987,7 +6369,8 @@ think words(1 2%b%b3, %b)
 - [@chzone]
 - [ZFUN()]
 - [ZWHO()]
-- [zemit() ZONES]
+- [zemit()]
+- [ZONES]
 :::
 # uptime()
 `UPTIME([<type>[, <precision>]])`

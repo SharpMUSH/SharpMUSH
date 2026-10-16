@@ -33,6 +33,12 @@
       "lookup": "object snapshots recovery"
     },
     {
+      "id": "keeping-current-state",
+      "heading": "Keeping the current state",
+      "lookup": "object snapshots keeping current state",
+      "aliases": ["@snapshot/resolve"]
+    },
+    {
       "id": "validation",
       "heading": "Validation",
       "lookup": "object snapshots validation"
@@ -108,7 +114,7 @@ If a restore is cancelled or fails part way, `@snapshot/list` shows the pending 
 
 If a SAFE flag or another restriction was applied in between, clear it with its usual command first. A failure to clear the pending marker after a successful restore is reported as needing recovery too.
 
-### Keeping the current state
+## Keeping the current state
 
 When the original account can no longer recover the object, for example after the object or the account changed hands, anyone who controls the object and holds `snapshots.restore` can accept it as it is with `@snapshot/resolve` and the exact pending recovery ID, or the portal's Acknowledge current state button. That clears the marker without undoing the partial changes, keeps the recovery snapshot, and records who resolved it and when.
 

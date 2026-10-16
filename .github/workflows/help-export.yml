@@ -1,0 +1,82 @@
+name: Help export
+
+# Publishes the general help as the game serves it to the help-export branch, for the documentation sites
+# (SharpMUSH.Docs and SharpMUSH.Guide) to read instead of the source folders: the engine's help files and every
+# shipped plugin's, with the plugin listings ("plugin help", and each topic's listedIn indexes) written in, and
+# articles.json, the manifest of every article. tools/HelpExport writes it; HelpExportTests proves it holds exactly
+# what the server serves.
+#
+# The branch only ever gains commits, one per change, each naming the main commit it was exported from, so a site
+# that pins one (the Docs submodule) can always fetch it again.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'SharpMUSH.Documentation/**'
+      - 'SharpMUSH.Plugins.*/help/**'
+      - 'SharpMUSH.Plugins.*/plugin.json'
+      - 'tools/HelpExport/**'
+      - '.github/workflows/help-export.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: help-export
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push the help-export branch
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Export the help
+        run: dotnet run --project tools/HelpExport -c Release -- . "$RUNNER_TEMP/help-export"
+
+      - name: Publish to the help-export branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          if git fetch --depth 1 origin help-export; then
+            git worktree add "$RUNNER_TEMP/publish" FETCH_HEAD
+            git -C "$RUNNER_TEMP/publish" switch -c help-export
+          else
+            git worktree add --orphan -b help-export "$RUNNER_TEMP/publish"
+          fi
+
+          cd "$RUNNER_TEMP/publish"
+          git rm -rq --ignore-unmatch -- help articles.json
+          cp -R "$RUNNER_TEMP/help-export/." .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The help export is unchanged."
+            exit 0
+          fi
+          cat > README.md <<EOF
+          # SharpMUSH help export
+
+          The general help as the game serves it, exported from SharpMUSH main by
+          \`.github/workflows/help-export.yml\`. Do not edit this branch: each export replaces it.
+
+          - \`help/\`: the engine's help files and every shipped plugin's, each under its own file name, with the
+            plugin listings written into the index topics they belong on.
+          - \`articles.json\`: every article in them, with its id, lookup, title, aliases, sections, the file it is
+            in, and the plugin it came from.
+
+          Exported from $GITHUB_SHA.
+          EOF
+          git add README.md
+          git commit -q -m "Help export from $GITHUB_SHA"
+          git push origin help-export

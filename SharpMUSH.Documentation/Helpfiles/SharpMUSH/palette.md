@@ -10,9 +10,19 @@
   ],
   "sections": [
     {
+      "id": "palette-rising",
+      "heading": "What the palette shows first",
+      "lookup": "palette rising"
+    },
+    {
       "id": "palette-keys",
       "heading": "Palette entry keys",
       "lookup": "palette keys"
+    },
+    {
+      "id": "palette-display-keys",
+      "heading": "Palette display keys",
+      "lookup": "palette display keys"
     },
     {
       "id": "palette-offered",
@@ -43,20 +53,24 @@ The portal's command palette (Ctrl+K) runs game commands as well as going to pag
 > &PALETTE`SCENES Scene Board={"label":"Scenes here","line":"+scenes"}
 ```
 
-With nothing typed, the palette shows, in order: lines for the `@input` session the player is in, urgent commands, the player's pins, what this page and their context put first, commands marked `always`, then the portal's pages. Typing searches all of them, and the built-in commands the player may use. Choosing a row runs its line as if the player had typed it, so every check the command makes still applies.
-
-What rises comes from the player's context stack (see [@context]). Typing `+scenes` once puts Scene Board's system on the stack, and its entries rise. Pushing `scene_here` with a `scene` value raises "Join the scene here" with the line filled in, `+join 12`. context() returns the same commands to softcode.
-
 The value is data and is never evaluated, except the `lock`. An object offers at most 32 entries and one palette at most 400; the farthest are left out first. Someone who may examine an object sees, below the empty palette, which of its entries are not valid and why.
 
 ::: seealso
+- [palette rising]
 - [palette keys]
+- [palette display keys]
 - [palette offered]
 - [palette input]
 - [palette pins]
 - [@context]
 - [context()]
 :::
+
+## What the palette shows first
+
+With nothing typed, the palette shows, in order: lines for the `@input` session the player is in, urgent commands, the player's pins, what this page and their context put first, commands marked `always`, then the portal's pages. Typing searches all of them, and the built-in commands the player may use. Choosing a row runs its line as if the player had typed it, so every check the command makes still applies.
+
+What rises comes from the player's context stack (see [@context]). Typing `+scenes` once puts Scene Board's system on the stack, and its entries rise. Pushing `scene_here` with a `scene` value raises "Join the scene here" with the line filled in, `+join 12`. context() returns the same commands to softcode.
 
 ## Palette entry keys
 
@@ -70,6 +84,11 @@ The value is data and is never evaluated, except the `lock`. An object offers at
 | `when` | Context names the entry needs, all of them. While they are on the stack it rises, and their values fill its slots of the same name. Without `when`, the entry rises with its object's own system. |
 | `urgent` | `true` lists it above the pins while its `when` contexts are on the stack. |
 | `context` | `input` (see [palette input]), or a portal page: `play`, `scene`, `wiki`, `editor`, `app:<slug>`. The entry is listed under Here on that page. |
+
+## Palette display keys
+
+| Key | Meaning |
+|---|---|
 | `info` | One line saying what the command does, shown under the row. A raising context's own info takes its place. |
 | `group` | A word shown at the end of the row. |
 | `icon` | A Material icon name, such as `Article`. |
@@ -77,7 +96,7 @@ The value is data and is never evaluated, except the `lock`. An object offers at
 | `help` | A help topic. Typing offers a "Help on" row for it. |
 | `order` | A number that sorts the object's entries; lower first. |
 
-A value that is not one of these is ignored. An entry that is not valid says why: `not a JSON object`, `no label`, `no line`, `action is neither run nor insert`.
+A value that is not one of these or of [palette keys] is ignored. An entry that is not valid says why: `not a JSON object`, `no label`, `no line`, `action is neither run nor insert`.
 
 ## Which entries a player is offered
 

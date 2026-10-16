@@ -5,6 +5,7 @@
   "lookup": "@dolist",
   "aliases": [],
   "sections": [
+    {"id": "substitutions", "heading": "Element substitutions", "lookup": "@dolist substitutions"},
     {
       "id": "notification-and-delimiters",
       "heading": "Notification and delimiters",
@@ -14,7 +15,8 @@
       "id": "iteration-examples",
       "heading": "Iteration examples",
       "lookup": "@dolist iteration examples"
-    }
+    },
+    {"id": "nested-examples", "heading": "Nested iteration examples", "lookup": "@dolist nested examples"}
   ],
   "redirects": {
     "@dolist2": "@dolist notification and delimiters",
@@ -29,6 +31,13 @@
 @dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list. A marked `<delim>`, such as `%*<|>`, splits only where it is marked: see [list separators]. The `/space` switch asks for the default, a space-separated list, and changes nothing; it comes from RhostMUSH.
 
 Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
+
+- [@dolist substitutions]: `%i0`, `inum()`, `%d0`, `##` and `#@` in the action list
+- [@dolist notification and delimiters]: `/notify`, `/inline` and the switches that go with it
+- [@dolist iteration examples]: positions and `/notify`
+- [@dolist nested examples]: one @dolist inside another, and inside iter()
+
+## Element substitutions
 
 The %i0 substitution, or the function itext(0), can be used in the `<action list>` to get the current element of the `<list>`, and the inum(0) function returns the position of the current element. ilev() returns the nesting depth of @dolists. The %iL substitution returns the itext() for the outermost @dolist, and is equivilent to itext(ilev()).
 
@@ -80,6 +89,8 @@ You say, "c is 3"
 Notified.
 You say, "Done"
 ```
+
+## Nested iteration examples
 
 ```sharp
 > @dolist a b c=@dolist 1 2 3=say %iL/%i0

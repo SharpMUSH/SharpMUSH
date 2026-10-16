@@ -14,6 +14,7 @@
     "@channel/leave"
   ],
   "sections": [
+    {"id": "listing", "heading": "Listing channels", "lookup": "@channel joining listing"},
     {
       "id": "personal-channel-settings",
       "heading": "Personal channel settings",
@@ -27,7 +28,8 @@
         "@channel/combine",
         "@channel/uncombine"
       ]
-    }
+    },
+    {"id": "undoing", "heading": "Which channels, and undoing", "lookup": "@channel joining undoing settings"}
   ],
   "redirects": {
     "@CHANNEL JOINING2": "@channel joining personal channel settings"
@@ -42,13 +44,19 @@
 - `@channel/on <channel>[=<player>]`
 - `@channel/off <channel>[=<player>]`
 
+`@channel/on` and `@channel/off` add or remove you from the given *\<channel\>*. You only hear messages for channels you're on, and most channels require you to join them before you can speak on them. /join and /leave are aliases for /on and /off.
+
+- [@channel joining listing]: `@channel/list`, `/what` and `/who`
+- [@channel joining personal channel settings]: gag, mute, hide and combine
+- [@channel joining undoing settings]: which channels, and undoing a setting
+
+## Listing channels
+
 `@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [@CHANNEL LIST] explains the output in detail. If a *\<prefix\>* is given, only channels whose names begin with *\<prefix\>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information.
 
 `@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given. Channels you may decompile also show their locks.
 
 `@channel/who` lists the members of the given channel: connected players and things. Members hiding on the channel with `@channel/hide` are omitted unless you have the `Who` power. A member's own hidden or gagging state is noted beside their name. The web portal's channel view keeps the same list beside the conversation, in place of connect and disconnect lines, which it does not show.
-
-`@channel/on` and `@channel/off` add or remove you from the given *\<channel\>*. You only hear messages for channels you're on, and most channels require you to join them before you can speak on them. /join and /leave are aliases for /on and /off.
 
 ## Personal channel settings
 
@@ -68,6 +76,8 @@ Channels without the 'quiet' priv broadcast messages when players connect or dis
 On channels with the 'hide_ok' priv, `@channel/hide` lets you hide from the @channel/who list if you pass the channel's @clock/hide.
 
 Connect and disconnect messages across all channels you have marked with `@channel/combine` will be combined into a single message with a |-separated list of all channel names. Only players can use this.
+
+## Which channels, and undoing
 
 For all four of these commands, you can specify a single channel to affect, or omit *\<channel\>* to affect every channel you are on. Naming a channel resolves against the channels you are on, so an abbreviation cannot be made ambiguous by a channel you never joined; the argument-less form reports what it did in one line and names no channel. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
 

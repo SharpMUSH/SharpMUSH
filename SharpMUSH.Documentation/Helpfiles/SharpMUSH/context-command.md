@@ -8,7 +8,12 @@
     "@context/drop",
     "context stack"
   ],
-  "sections": []
+  "sections": [
+    {"id": "push", "heading": "Pushing and dropping", "lookup": "@context push and drop"},
+    {"id": "weight", "heading": "Weight and automatic pushes", "lookup": "@context weight"},
+    {"id": "permissions", "heading": "Permissions and errors", "lookup": "@context errors"},
+    {"id": "examples", "heading": "Examples", "lookup": "@context examples"}
+  ]
 }
 -->
 # @context
@@ -19,6 +24,13 @@
 
 Every player has a context stack: the names of what they have been doing lately, newest on top. The command palette and context() put the commands of the contexts near the top first ([palette entries]).
 
+- [@context push and drop]: what `/push` and `/drop` do, and their arguments
+- [@context weight]: how contexts sink and fall off, and pushes made by typing
+- [@context errors]: whose stack code may change, and the errors
+- [@context examples]: pushing from the prompt and from an event handler
+
+## Pushing and dropping
+
 `/push` puts `<name>` on top of the stack, or moves it back to the top when it is already there, with the new values. `/drop` takes it off. With no switch, `@context` lists the stack. A push or drop prints nothing.
 
 - `<name>` is letters, digits and `_ - . : #`, at most 64 characters, and is stored in lower case. Names are shared by every package; the Guide lists the ones in use.
@@ -26,11 +38,13 @@ Every player has a context stack: the names of what they have been doing lately,
 - `<lifetime>` is how long the context lasts, such as `60s` or `10m`, at most a day. Leave it out for a context that should sink on its own.
 - `<info>` is one line telling the player why the context is there. It takes the rest of the command, commas included, and is shown under the commands it raises.
 
+## Weight and automatic pushes
+
 A context's weight halves every 15 minutes since it was last pushed. Below 0.05, about an hour, it falls off, and so does one past its lifetime. A stack holds 20; a push onto a full one drops the bottom. Stacks are kept in memory and a restart empties them.
 
 You do not have to push for a command to count. When a player types a line that runs a `$`-command, the object's system goes on their stack: the package the object belongs to, or the object's objid when it belongs to none. A line an `@input` session takes pushes the system of the object it goes to.
 
-Code may use the stack of the player whose command it is running (`%#`), or of a player its object controls.
+## Examples
 
 ```sharp
 > @context/push me=scene_here,[json(object,scene,12)],,Scene 12 is running in this room. Join with +join 12.
@@ -46,6 +60,10 @@ A package usually pushes from its own commands and events. This event handler at
 ```sharp
 &OBJECT`MOVE`SCENE #9=@assert hastype(%<objid>,PLAYER); @assert not(strmatch(setr(scene,scenewhere(%<destination>)),#-1*))={@context/drop %<objid>=scene_here}; @context/push %<objid>=scene_here,[json(object,scene,%q<scene>)],,Scene %q<scene>[if(strlen(setr(title,scene(%q<scene>,title))),: %q<title>)] is running here.
 ```
+
+## Permissions and errors
+
+Code may use the stack of the player whose command it is running (`%#`), or of a player its object controls.
 
 Errors: `#-1 NO SUCH PLAYER`, `#-1 PERMISSION DENIED`, `#-1 INVALID CONTEXT NAME`, `#-1 CONTEXT VALUES MUST BE A JSON OBJECT OF TEXT`, `#-1 INVALID CONTEXT LIFETIME`, `#-1 CONTEXT INFO TOO LONG` (over 512 characters).
 

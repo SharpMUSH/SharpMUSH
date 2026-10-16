@@ -14,6 +14,11 @@
       "lookup": "align columns"
     },
     {
+      "id": "options",
+      "heading": "Column options",
+      "lookup": "align column options"
+    },
+    {
       "id": "examples",
       "heading": "Basic examples",
       "lookup": "align examples"
@@ -49,6 +54,13 @@ Creates columns of text, each column designated by `<col>` arguments. Each `<col
 
 `<filler>` is a single character that, if given, is the character used to fill empty columns and remaining spaces. `<colsep>`, if given, is inserted between every column, on every row. `<rowsep>`, if given, is inserted between every line. By default, `<filler>` and `<colsep>` are a space, and `<rowsep>` is a newline.
 
+::: seealso
+- [CENTER()]
+- [LJUST()]
+- [RJUST()]
+- [TABLE()]
+:::
+
 ## Column specifications
 
 You can modify column behavior within align(). The basic format is:
@@ -65,7 +77,9 @@ Placing one of these characters before the width alters the spacing for this col
 - `_`: full justify.
 - `=`: paragraph justify.
 
-### Options
+## Column options
+
+These options go after the width in a column specification (see [align columns]):
 
 - `.`: repeat while another non-repeating column still has text.
 - `` ` ``: merge with the column to the left when this column runs out of text.
@@ -76,13 +90,6 @@ Placing one of these characters before the width alters the spacing for this col
 - `#`: omit the column separator after this column. Merge-left passes this option to the left column.
 
 Ansi: Place ansi characters (as defined in [ansi()]) within ()s to define a column's ansi markup.
-
-::: seealso
-- [CENTER()]
-- [LJUST()]
-- [RJUST()]
-- [TABLE()]
-:::
 
 ## Basic examples
 

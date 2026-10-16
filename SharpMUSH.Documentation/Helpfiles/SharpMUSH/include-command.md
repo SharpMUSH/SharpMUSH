@@ -5,6 +5,8 @@
   "lookup": "@include",
   "aliases": [],
   "sections": [
+    {"id": "example", "heading": "Example", "lookup": "@include example"},
+    {"id": "arguments", "heading": "Arguments and nesting", "lookup": "@include arguments and nesting"},
     {
       "id": "include-switches",
       "heading": "Include switches",
@@ -17,7 +19,8 @@
       "aliases": [
         "@include/chain"
       ]
-    }
+    },
+    {"id": "pipeline-example", "heading": "Pipeline example", "lookup": "@include pipeline example"}
   ],
   "redirects": {
     "@include2": "@include switches",
@@ -34,7 +37,14 @@
 
 Output: the output of the last command run. See [command output].
 
-### Example
+- [@include example]: shared checks, and attributes that are also $-commands
+- [@include arguments and nesting]: %0-%9 in the included actions, and the nesting limit
+- [@include switches]: `/args`, `/chain`, `/nobreak`, `/localize` and `/clearregs`
+- [@include attribute pipelines]: several attributes in sequence with `/chain`
+- [@include pipeline example]: a command validated by a three-step chain
+
+## Example
+
 ```sharp
 &CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
 &CMD1 me=$cmd *: @include me/CHECKS; @pemit %#=You passed.
@@ -45,6 +55,8 @@ When including attribute contents, @include ignores any ^...: or $...: at the st
 ```sharp
 &CHECKS me=$testchk *: @assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
 ```
+
+## Arguments and nesting
 
 The including environment (%0-%9) is available to the included actions. If arguments are provided to @include, they are substituted for the environment's %0, %1, etc. while the included action list is running. The environment is then restored after the @include.
 
@@ -80,7 +92,8 @@ Three things set a chain apart from writing several separate @includes:
 
 The /nobreak, /localize and /clearregs switches behave as they do for a single @include. /nobreak confines an @break/@assert to the link it fires in, so instead of short-circuiting, the chain simply continues to the next link. /localize and /clearregs save and restore, or clear, the q-registers around the whole chain; within the chain the links still share registers.
 
-### Example
+## Pipeline example
+
 A `+set <number>` command that validates its input through a three-step chain:
 ```sharp
 &CMD`SET obj=$+set *: @include/chain me/INC`VALIDATE me/INC`RANGE me/INC`APPLY=%0

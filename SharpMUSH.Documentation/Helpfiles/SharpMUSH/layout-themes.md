@@ -11,6 +11,21 @@
       "lookup": "layout theme kinds"
     },
     {
+      "id": "portal",
+      "heading": "The portal's themes",
+      "lookup": "layout theme portal"
+    },
+    {
+      "id": "genres",
+      "heading": "Genres",
+      "lookup": "layout theme genres"
+    },
+    {
+      "id": "one-colour",
+      "heading": "Themes from one colour",
+      "lookup": "layout theme one colour"
+    },
+    {
       "id": "colours",
       "heading": "Colours",
       "lookup": "layout theme colours",
@@ -34,9 +49,19 @@
       "lookup": "layout themes making"
     },
     {
+      "id": "swatch",
+      "heading": "Checking the contrast",
+      "lookup": "layout themes contrast"
+    },
+    {
       "id": "from-another",
       "heading": "Starting from another theme",
       "lookup": "layout themes from another theme"
+    },
+    {
+      "id": "changing-look",
+      "heading": "Changing a look",
+      "lookup": "layout themes changing a look"
     },
     {
       "id": "using",
@@ -74,13 +99,13 @@ A theme is one of these:
 
 `terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to. Hundreds of base16 schemes exist for editors and terminals.
 
-### The portal's themes
+## The portal's themes
 
 `sharpmush` is the game's own look: borders and headings in the portal's dim teal, titles, labels and bullets in its bright teal, on black. The web portal's themes have the same names here, with their colours: `phosphor`, `daylight`, `cyberpunk`, `idol`, `starship-console` and the rest [THEMES()] lists. So does each colour blindness theme, such as `deutan-dark`, whose warning, error and success colours stay apart for that reader. A theme the portal draws on a light page, such as `daylight` or `shonen`, is made for a client with a light background.
 
 The portal's genre themes share their names with the genres below, which keep their own colours and shapes.
 
-### Genres
+## Genres
 
 There is one genre for each MSSP genre: `fantasy`, `historical`, `horror`, `modern`, `mystery`, `romance`, `science-fiction` and `spiritual` (`romance` serves MSSP's Adult as well). A genre theme changes the shapes as well as the colours, down to a box's corners:
 
@@ -92,7 +117,7 @@ There is one genre for each MSSP genre: `fantasy`, `historical`, `horror`, `mode
 
 A client without Unicode gets each in ASCII.
 
-### Themes from one colour
+## Themes from one colour
 
 The other colours take their hues from the seed, by `"harmony"`:
 
@@ -171,6 +196,8 @@ The same theme for a light background. Each colour is darkened until it stands o
 
 With `"contrast":1`, every colour stands out at least 7 to 1. The quiet `muted` colour moves furthest: without it, it is `#6b615d` at 3.1 to 1.
 
+## Checking the contrast
+
 ```sharp
 > think swatch({{"seed":"#d08770","harmony":"split","contrast":1}},64)
 Role        Sample  Colour   16-colour          Contrast
@@ -215,6 +242,8 @@ From a built-in theme with one colour changed:
 "#bf616a"
 ```
 
+## Changing a look
+
 From a genre with its look changed. This keeps fantasy's colours and gauge but draws ASCII lines, a dash for each bullet and round brackets about the title:
 
 ```sharp
@@ -232,6 +261,10 @@ A gauge drawn in pieces of your own, in the reader's own sixteen colours:
 HP <===============......> 70%
 ```
 
+## Using themes
+
+Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. Each player can also pick a theme of their own for every layout they read with [@THEME]. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
+
 A theme made once can be used again without making it each time. [THEME()] writes it out, and [JSON()] puts it into the options. To keep it, store it in an attribute as [THEME()] shows:
 
 ```sharp
@@ -240,10 +273,6 @@ A theme made once can be used again without making it each time. [THEME()] write
 | Hello            |
 +==================+
 ```
-
-## Using themes
-
-Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. Each player can also pick a theme of their own for every layout they read with [@THEME]. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
 
 ::: seealso
 - [THEMES()]

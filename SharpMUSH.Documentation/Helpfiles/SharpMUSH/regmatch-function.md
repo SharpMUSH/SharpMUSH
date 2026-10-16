@@ -9,6 +9,11 @@
   ],
   "sections": [
     {
+      "id": "register-lists",
+      "heading": "Register lists",
+      "lookup": "regmatch register lists"
+    },
+    {
       "id": "capture-examples",
       "heading": "Capture examples",
       "lookup": "regmatch capture examples"
@@ -34,8 +39,6 @@
 0
 ```
 
-If `<register list>` is specified, there is a side-effect: any parenthesized substrings within the regular expression will be set into the specified local registers. The syntax for this is X:Y, where X is the number (0 is the entire matched text) or name of the substring, and Y is the q-register to save it in. If X: isn't given, the nth substring based on the register's position in the list minus one is used. The first element will have the complete matched text, the second the first substring, and so on. This is to maintain compatibility with old code; it's recommended for new uses that the X:Y syntax be used.
-
 An invalid `<regexp>` returns `#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION`. A match that exceeds its time budget returns `#-1 REGEXP TIMEOUT`. On a failed match, requested q-registers are cleared; a `-` destination discards a capture.
 
 
@@ -47,6 +50,10 @@ An invalid `<regexp>` returns `#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION`. A 
 - [STRMATCH()]
 - [regexp syntax]
 :::
+
+## Register lists
+
+If `<register list>` is specified, there is a side-effect: any parenthesized substrings within the regular expression will be set into the specified local registers. The syntax for this is X:Y, where X is the number (0 is the entire matched text) or name of the substring, and Y is the q-register to save it in. If X: isn't given, the nth substring based on the register's position in the list minus one is used. The first element will have the complete matched text, the second the first substring, and so on. This is to maintain compatibility with old code; it's recommended for new uses that the X:Y syntax be used.
 
 ## Capture examples
 

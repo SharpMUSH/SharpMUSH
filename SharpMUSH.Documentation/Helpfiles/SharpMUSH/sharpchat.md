@@ -86,11 +86,12 @@ cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respec
 
 The `@channel` command is used to add, join, list and modify channels in the chat system. It takes many different switches.
 
-Help for `@channel` is split into a number of topics. Please see [@channel \<topic\>] for more, where *\<topic\>* is one of the words below. For help on a specific switch to `@channel`, use [@channel/<switch>].
+Help for `@channel` is split into a number of topics. For help on a specific switch to `@channel`, use `help @channel/<switch>`.
 
-- **Joining** - How to find, join, and leave channels
-- **Other** - Setting channel titles, recalling previous chat messages
-- **Admin** - Adding, deleting and modifying channels
+- [@channel joining] - How to find, join, and leave channels
+- [@channel other] - Setting channel titles, recalling previous chat messages
+- [@channel admin] - Adding, deleting and modifying channels
+- [@channel clock] - Locking who may join, speak on, see or moderate a channel
 
 ::: seealso
 - [CHAT]
@@ -119,85 +120,6 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - [@CHANNEL ADMIN]
 :::
 
-# @channel admin
-# @channel/add
-# @channel/delete
-# @channel/mogrifier
-# @channel/chown
-# @channel/name
-# @channel/rename
-# @channel/describe
-# @channel/privs
-# @channel/wipe
-# @channel/decompile
-
-- `@channel/add <channel>=<privlist>`
-- `@channel/delete <channel>`
-- `@channel/mogrifier <channel>=<object>`
-- `@channel/chown <channel>=<player>`
-- `@channel/name <channel>=<newname>`
-- `@channel/rename <channel>=<newname>`
-- `@channel/describe <channel>=<description>`
-- `@channel/privs <channel>=<privlist>`
-- `@channel/wipe <channel>`
-- `@channel/decompile[/brief] <channel>`
-- `@clock/join|/speak|/see|/hide|/mod <channel>[=<lock>]`
-
-`@channel/add` creates a new channel with the privileges in *<privlist>*, the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
-
-`@channel/delete` removes a channel. Only channel admins can do this.
-
-`@channel/mogrifier` sets an object to be the channel's mogrifier. Only channel admins can do this. See [mogrifier] for details.
-
-`@channel/chown` changes the owner of a channel. Only channel admins can do this.
-
-`@channel/name` and `@channel/rename` both rename a channel. Only channel admins can do this.
-
-`@channel/describe` changes a channel's description. Only channel admins can do this.
-
-`@channel/privs` changes a channel's privileges. Only channel admins can do this. See [@CHANNEL PRIVS] for details.
-
-`@channel/wipe` removes all players from a channel. Only channel admins can do this.
-
-`@channel/decompile` prints the commands that would recreate the channel: its privileges, owner, mogrifier, locks, description, buffer size and membership. You must be able to decompile the channel. The /brief switch stops before the membership; members hiding on the channel are listed only to someone who could see them on [@channel joining].
-
-Channel locks are managed by the separate `@clock` command, not by a `@channel` switch. See [@CHANNEL CLOCK] for details.
-
-::: seealso
-- [@channel joining]
-- [@CHANNEL ADMIN]
-- [@CHANNEL CLOCK]
-:::
-
-# mogrifier
-# mogrifying
-# MOGRIFY
-
-A channel's mogrifier is an object whose MOGRIFY\`* attributes rewrite each line said on the channel. `@channel/mogrifier <channel>=<object>` sets it. A speaker who fails the object's `@lock/use` is not mogrified. Every attribute is optional, and one that is absent or evaluates to nothing leaves its part of the line as it was. They run on the mogrifier, with the speaker as %#.
-
-Each attribute gets its values by position and by the name shown (see [named arguments]), so %`\<message\>` reads the message whatever position it has in that attribute.
-
-These three decide what happens to the line. Each gets %0 or %`\<type\>` (the line's type, as in [@chatformat]), %1 or %`\<channel\>` (the channel's name), %2 or %`\<message\>`, %3 or %`\<name\>` (the speaker's name) and %4 or %`\<title\>`:
-- MOGRIFY\`BLOCK: a result that is not empty refuses the line, and the speaker is shown the result.
-- MOGRIFY\`OVERRIDE: a true result stops the members' own `@chatformat` from running.
-- MOGRIFY\`NOBUFFER: a true result keeps the line out of the channel's recall buffer.
-
-These rewrite one part of the line each, in this order: MOGRIFY\`CHANNAME (the bracketed `<Name>`), MOGRIFY\`TITLE, MOGRIFY\`PLAYERNAME, MOGRIFY\`SPEECHTEXT (the "says", for a said line only) and MOGRIFY\`MESSAGE. Each gets %0 or %`\<value\>` (its part as it stands), %1 or %`\<channel\>`, %2 or %`\<type\>`, %3 or %`\<message\>` (as the speaker sent it), %4 or %`\<title\>`, %5 or %`\<name\>`, %6 or %`\<says\>` and %7 or %`\<options\>` (as in [@chatformat]). The title, name and says hold what the parts before have made of them.
-
-MOGRIFY\`FORMAT, when it returns something, is the whole line every member is sent. It gets the values [@chatformat] gets, by the same names: %0 or %`\<type\>`, %1 or %`\<channel\>` (the bracketed name, as MOGRIFY\`CHANNAME left it), %2 or %`\<message\>`, %3 or %`\<name\>`, %4 or %`\<title\>`, %5 or %`\<default\>` (the line as it would be sent), %6 or %`\<says\>` and %7 or %`\<options\>`.
-
-```sharp
-&MOGRIFY`MESSAGE #123=[ucstr(%<value>)]
-&MOGRIFY`FORMAT #123=%<channel> %<name>: %<message>
-```
-Output: when Walker says hello on Public, whose mogrifier is #123, every member sees `<Public> Walker: HELLO`.
-
-::: seealso
-- [@CHANNEL ADMIN]
-- [@chatformat]
-- [named arguments]
-:::
-
 # @channel list
 
 The output of `@channel/list` is one header line and one row per channel:
@@ -224,85 +146,6 @@ which reads `(None)` when nothing matched.
 - [@channel joining]
 - [@CHANNEL ADMIN]
 - [@CHANNEL CLOCK]
-:::
-
-# @channel privs
-# Channel-privs
-
-`@channel/privs <channel>=<privlist>`
-
-Channel privileges say who a channel admits and how its messages are rendered. They are set with `@channel/privs`, and on a brand new channel with `@channel/add <channel>=<privlist>`.
-
-*<privlist>* is a space-separated list of privilege names, or of the single-letter abbreviations below. The list **replaces** the channel's current privileges rather than adding to them, so name every privilege the channel is to keep. Names match without regard to case; the letters do not, because `O` is Object and `o` is Open.
-
-Available privileges:
-- **player** (`P`): Players may use the channel
-- **object** (`O`): Non-players may use the channel
-- **admin** (`A`): Only royalty, wizards, and holders of the `chat_privs` power may use the channel
-- **wizard** (`W`): Only wizards may use the channel
-- **quiet** (`Q`): The channel does not show connection messages
-- **open** (`o`): You may speak on the channel even when you are not listening to it
-- **hide_ok** (`H`): You may hide yourself from the channel's who list
-- **notitles** (`T`): Channel titles are not shown in channel messages
-- **nonames** (`N`): Speakers' names are not shown in channel messages
-- **nocemit** (`C`): [@CEMIT] is prohibited on the channel
-- **interact** (`I`): Channel output is filtered through the game's interaction rules
-- **disabled** (`D`): No one can join or speak on the channel
-
-These are privileges, not locks. A privilege says which *kind* of thing the channel is open to; a lock says which particular objects get through. Joining, speaking, seeing, hiding and modifying are each governed by a lock of their own; see [@CHANNEL CLOCK].
-
-`loud` is not a channel privilege and cannot be given to a channel. It is a flag set on an object; see [FLAG LIST].
-
-**Examples**
-```sharp
-@channel/privs Public=player quiet open nocemit
-@channel/privs Admin=player admin
-@channel/privs Public=P Q o C
-```
-
-::: seealso
-- [@channel joining]
-- [@CHANNEL CLOCK]
-- [@CHANNEL CLOCK]
-- [cflags()]
-:::
-
-# @channel clock
-# @channel/clock
-# @clock
-
-`@clock/join <channel>[=<lock>]`<br>
-`@clock/speak <channel>[=<lock>]`<br>
-`@clock/see <channel>[=<lock>]`<br>
-`@clock/hide <channel>[=<lock>]`<br>
-`@clock/mod <channel>[=<lock>]`
-
-Channel locks are set with `@clock`, which is its own command; there is no `@channel/clock` switch. Each switch names the one lock it sets, and omitting *<lock>* removes that lock. With no switch at all, `@clock` sets the join lock. See [lock keys] for what may go in a *<lock>*.
-
-There are five locks:
-- **join**: Restricts who can join the channel
-- **speak**: Restricts who can speak on the channel
-- **see**: Restricts who can see the channel on `@channel/list`
-- **hide**: Restricts `@channel/hide` on a channel that is `hide_ok`
-- **mod**: Restricts who can modify the channel. Passing the mod lock lets you do anything to a channel short of deleting it
-
-A lock is evaluated against the object trying to pass it, exactly as if it had been set on that object.
-
-You may set a channel's locks if you own it, if you pass its mod lock, or if you are a wizard. A new channel starts with none of the five set, and an unset lock is one everybody passes.
-
-**Examples**
-```sharp
-@clock/join Public=flag^wizard
-@clock/speak Public=!flag^gagged
-@clock/mod Secret=#123
-@clock/speak Public=
-```
-
-::: seealso
-- [LOCKING]
-- [LOCKING]
-- [lock keys]
-- [@CHANNEL PRIVS]
 :::
 
 # MUX Comsys

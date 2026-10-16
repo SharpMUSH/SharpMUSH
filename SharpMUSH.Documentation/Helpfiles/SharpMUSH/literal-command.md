@@ -3,7 +3,7 @@
   "corpus": "help",
   "id": "literal-command",
   "lookup": "]",
-  "aliases": [],
+  "aliases": ["literal command"],
   "sections": [
     {
       "id": "literal-command-examples",

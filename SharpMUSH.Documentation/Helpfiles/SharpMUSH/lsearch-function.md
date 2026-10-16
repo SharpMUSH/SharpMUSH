@@ -18,11 +18,13 @@
       "heading": "Evaluation classes",
       "lookup": "lsearch evaluation classes"
     },
+    {"id": "index-class", "heading": "The INDEX class", "lookup": "lsearch index class"},
     {
       "id": "rhostmush-one-argument-form",
       "heading": "RhostMUSH one-argument form",
       "lookup": "lsearch rhostmush one argument form"
     },
+    {"id": "rhostmush-classes", "heading": "One-argument form classes", "lookup": "lsearch rhostmush classes"},
     {
       "id": "search-examples",
       "heading": "Search examples",
@@ -61,8 +63,6 @@ lsearch() is free unless it includes either an eval-class search or an elock sea
 
 lsearchr() is like an lsearch() run through revwords(). Results are returned from highest dbref to lowest. search() is an alias for lsearch().
 
-lsearch() also takes an INDEX class, which PennMUSH does not have: `INDEX, <attribute>:<value>` keeps the objects whose own copy of `<attribute>` the attribute's index lists under `<value>`, as indexed(`<attribute>`, =, `<value>`) finds them, and the search starts from those objects instead of every object. The attribute must have a ready index (see [@attribute index]); while it is being built lsearch() returns `#-1 INDEX BUILDING`, and without one `#-1 ATTRIBUTE NOT INDEXED`. Only objects whose copy you could read with get() are listed.
-
 search() and lsearch() also take the one-argument form RhostMUSH and TinyMUSH use, `search([<player>] <class>=<restriction>[, <low>[, <high>]])`; see [lsearch rhostmush one argument form].
 
 
@@ -74,11 +74,24 @@ search() and lsearch() also take the one-argument form RhostMUSH and TinyMUSH us
 - [LSTATS()]
 :::
 
+## The INDEX class
+
+lsearch() also takes an INDEX class, which PennMUSH does not have: `INDEX, <attribute>:<value>` keeps the objects whose own copy of `<attribute>` the attribute's index lists under `<value>`, as indexed(`<attribute>`, =, `<value>`) finds them, and the search starts from those objects instead of every object. The attribute must have a ready index (see [@attribute index]); while it is being built lsearch() returns `#-1 INDEX BUILDING`, and without one `#-1 ATTRIBUTE NOT INDEXED`. Only objects whose copy you could read with get() are listed.
+
 ## RhostMUSH one-argument form
 
 `search([<player>] <class>=<restriction>[, <low>[, <high>]])`
 
 When the first argument holds an `=`, search(), lsearch() and nsearch() read it the way RhostMUSH and TinyMUSH write a search: one class and its restriction, after an optional player whose objects to search. Without a player, the search covers every owner you may search. `<low>` and `<high>` limit the dbrefs searched, with or without their `#`. This form comes from RhostMUSH; PennMUSH treats such an argument as a player name, which cannot contain `=`.
+
+```sharp
+> think search(me th=lamp)
+#12 #40
+> think search(type=player,1,10)
+#1 #6
+```
+
+## One-argument form classes
 
 The class may be shortened to any start of its name; where two names share a start, the first in this list wins:
 
@@ -92,13 +105,6 @@ The class may be shortened to any start of its name; where two names share a sta
 | parent | children of the object `<restriction>` |
 
 A players, type=players or parent search with no player covers every owner. An unknown class or type returns `#-1 INVALID SEARCH TYPE`, and an unknown player `#-1`.
-
-```sharp
-> think search(me th=lamp)
-#12 #40
-> think search(type=player,1,10)
-#1 #6
-```
 
 ## Search examples
 

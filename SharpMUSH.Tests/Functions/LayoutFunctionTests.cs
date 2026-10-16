@@ -313,7 +313,7 @@ public class LayoutFunctionTests
 	[Test]
 	public async Task TheHelpListsEveryOptionEachFunctionTakes()
 	{
-		var help = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
+		var help = LayoutHelp();
 		var borders = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-borders.md"));
 		var borderPieces = OptionKeys(Topic(borders, "Layout Borders").SkipWhile(line => !line.StartsWith("Any part of the style", StringComparison.Ordinal)).Skip(1));
 
@@ -338,9 +338,17 @@ public class LayoutFunctionTests
 		[.. lines.TakeWhile(line => line.StartsWith("- ", StringComparison.Ordinal))
 			.SelectMany(line => System.Text.RegularExpressions.Regex.Matches(line.Split(" - ")[0], "`\"?([a-z]+)[^`]*`").Select(match => match.Groups[1].Value))];
 
-	/// <summary>The layout help's files: the functions, and the topics on layouts, borders, themes and <c>@theme</c>.</summary>
+	/// <summary>
+	/// The layout help's files: the functions, those with a topic of their own, and the topics on layouts, borders,
+	/// themes and <c>@theme</c>.
+	/// </summary>
 	private static readonly string[] LayoutHelpFiles =
-		["layout.md", "layout-functions.md", "layout-borders.md", "layout-themes.md", "theme-command.md"];
+	[
+		"layout.md", "layout-functions.md", "layout-borders.md", "layout-themes.md", "theme-command.md",
+		"box-function.md", "bullets-function.md", "datatable-function.md", "fields-function.md", "figure-function.md",
+		"flex-function.md", "gauge-function.md", "gradient-function.md", "notice-function.md", "rule-function.md",
+		"swatch-function.md", "tone-function.md", "tree-function.md"
+	];
 
 	private static string[] LayoutHelp() =>
 		[.. LayoutHelpFiles.SelectMany(file => File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, file)))];

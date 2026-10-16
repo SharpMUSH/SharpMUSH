@@ -21,6 +21,21 @@
       "id": "page-recall",
       "heading": "Page recall",
       "lookup": "page recall"
+    },
+    {
+      "id": "page-recall-names",
+      "heading": "Finding old conversations",
+      "lookup": "page recall names"
+    },
+    {
+      "id": "page-recall-display",
+      "heading": "How recall reads",
+      "lookup": "page recall display"
+    },
+    {
+      "id": "page-recall-examples",
+      "heading": "Page recall examples",
+      "lookup": "page recall examples"
     }
   ],
   "redirects": {
@@ -81,14 +96,18 @@ While it is on, each page that is delivered is kept for the player who sent it a
 
 These read your own page log, and are SharpMUSH extensions: PennMUSH keeps no page log. They work only while the `page_log` @config option is on (see [page log]).
 
-`page/recall` shows your last `<lines>` logged pages with the players in `<player-list>`, oldest first. The players are matched as `page` matches recipients: by name, alias, dbref, or the start of a connected player's name. A list of several players is the group conversation with exactly those players; a page to one of them alone is not in it. Naming the same player twice, or naming yourself among others, changes nothing; naming only yourself is your pages to yourself.
+`page/recall` shows your last `<lines>` logged pages with the players in `<player-list>`, oldest first. The players are matched as `page` matches recipients: by name, alias, dbref, or the start of a connected player's name. A list of several players is the group conversation with exactly those players; a page to one of them alone is not in it. Naming the same player twice, or naming yourself among others, changes nothing; naming only yourself is your pages to yourself. With no `<player-list>`, it shows your latest pages across all your conversations. `<lines>` is 10 unless given, and at most 500; 0 shows as many as that.
+
+## Finding old conversations
 
 Your conversations outlast the names in them, so a name that finds no player, or finds a player you have no logged conversation with, is also looked for among the people in your own conversations:
 
 - a full objid (`#<dbref>:<ctime>`, as [pageconversations()] returns) finds that person exactly, even if they were destroyed, or were an object that paged you;
 - a whole name finds the person your log knows by that name, so someone renamed is found by the name they had, as well as by their new one.
 
-A bare `#<dbref>` is only ever the object that holds that dbref now: if it was recycled to someone new, the old holder's pages are reached by their objid or their old name, never by the dbref. Only your own conversations are searched. With no `<player-list>`, it shows your latest pages across all your conversations. `<lines>` is 10 unless given, and at most 500; 0 shows as many as that.
+A bare `#<dbref>` is only ever the object that holds that dbref now: if it was recycled to someone new, the old holder's pages are reached by their objid or their old name, never by the dbref. Only your own conversations are searched.
+
+## How recall reads
 
 Each page reads as it did when it was delivered: your own pages as you saw them sending them (`You paged ...`, `Long distance to ...`), everyone else's as you received them, with the pager's page alias if the page carried one. Recall only shows: it does not run PAGEFORMAT or OUTPAGEFORMAT, and it triggers nothing. `/timestamps` puts the time each page was sent in front of it, as @channel/recall does.
 
@@ -96,7 +115,8 @@ Each page reads as it did when it was delivered: your own pages as you saw them 
 
 You can only ever read your own pages. There is no way to name someone else's log, for staff either.
 
-### Examples
+## Page recall examples
+
 ```sharp
 > page/recall Airwolf=2
 PAGE: Recall of your pages with Airwolf:
@@ -109,7 +129,6 @@ Airwolf: 2 pages, last Thu Oct 01 12:00:00 2026
 John Lennon and Ringo: 1 page, last Wed Sep 30 18:21:07 2026
 PAGE: End of list
 ```
-
 
 ::: seealso
 - [LOCKING]

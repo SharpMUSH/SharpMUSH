@@ -1,3 +1,25 @@
+<!-- help-article
+{
+  "corpus": "help",
+  "id": "localfun",
+  "lookup": "localfun",
+  "aliases": [],
+  "sections": [
+    {"id": "example", "heading": "Example and evaluation", "lookup": "localfun example"},
+    {
+      "id": "function-local",
+      "heading": "@function/local",
+      "lookup": "@function/local"
+    },
+    {"id": "ownership", "heading": "Ownership changes", "lookup": "localfun ownership"},
+    {
+      "id": "startup",
+      "heading": "Local Function Startup",
+      "lookup": "local function startup"
+    }
+  ]
+}
+-->
 # localfun
 
 `localfun(<name>[,<argument>...])` calls an owner-local function. The executing
@@ -15,6 +37,13 @@ library's lifetime. A live built-in clone also takes precedence over an existing
 local name, including calls through a local alias. Argument bounds default to zero
 through 32.
 
+- [localfun example]: registering and calling a local function, and how it runs
+- [@function/local]: listing, deleting, disabling, aliasing and restoring entries
+- [localfun ownership]: what happens when ownership changes or an object is deleted
+- [local function startup]: registering local functions again after a restart
+
+## Example and evaluation
+
 For example, when entered as separate client commands:
 
 ```mush
@@ -30,7 +59,7 @@ budgets apply. The body executes as the backing object, following ordinary
 attribute evaluation. A privileged caller has no switch for selecting another
 owner's scope.
 
-# @function/local
+## @function/local
 
 `@function/local` lists your owner's local entries, including disabled entries.
 `@function/local <name>` shows one entry. The following operations use that same
@@ -52,13 +81,15 @@ functions. Replacing a concrete entry with an alias is rejected while other
 aliases depend on that entry. Local cloning, restriction overlays and built-in
 replacement are not supported.
 
+## Ownership changes
+
 Ownership changes and deletion remove affected local registrations and aliases.
 Each call also checks the backing object's full identity and current owner, so
 recycled object numbers cannot inherit code. A calling object's new owner
 selects the new scope immediately. Definitions are never cached in the shared
 built-in function table.
 
-# Local Function Startup
+## Local Function Startup
 
 The registry is in memory. Re-register local functions from the backing object's
 `STARTUP` attribute after each engine restart, using the same `@function/local`

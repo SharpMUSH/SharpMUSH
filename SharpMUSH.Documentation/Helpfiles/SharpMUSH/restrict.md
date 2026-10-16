@@ -11,6 +11,16 @@
       "lookup": "restrict command restriction rules"
     },
     {
+      "id": "function-and-command-only",
+      "heading": "Restrictions for functions or commands only",
+      "lookup": "restrict function only"
+    },
+    {
+      "id": "imported-restrictions",
+      "heading": "Restriction settings and imported games",
+      "lookup": "restrict imported"
+    },
+    {
       "id": "function-and-command-permissions",
       "heading": "Function and command permissions",
       "lookup": "restrict function and command permissions"
@@ -52,6 +62,8 @@ For commands, `<restriction>` should be an `@lock`-style boolexp (though, for ba
     logname    When used, log cmd/fun name, and who is using it<br>
     logargs    When used, log cmd/fun name and args, and who is using it
 
+## Restrictions for functions or commands only
+
 Functions only:<br>
     noparse    Function arguments are not evaluated. Only applies to `@functions`.<br>
     localize   %q-registers are saved/restored when evaluating, as if the `@function` were wrapped in `localize()`.<br>
@@ -63,6 +75,27 @@ Commands only:<br>
      noplayer   Cannot be used by players.<br>
      noapp      Cannot be run by an app acting for a player.<br>
 Commands can also give any flag, power or type, to restrict to objects with one of those flags or powers, or of one of those types.
+
+## Restriction settings and imported games
+
+The game keeps its `restrict_command` lines in the `command_restrictions` setting and its
+`restrict_function` lines in `function_restrictions`; a new game ships both empty (see
+[compatibility commands]). In `command_restrictions`, `noguest`, `nofixed`, `noplayer`, `nobody`, a
+flag or power name, a lock and the `" <message>` suffix all mean what they mean in `restrict.cnf`.
+`function_restrictions` takes `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god` and
+`nobody`.
+
+An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines,
+as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
+and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so
+an imported `restrict_function lstats noguest` answers a guest's `lstats()` with
+`#-1 PERMISSION DENIED` as PennMUSH does. Only the `restrict_function` words that say who may call
+a function are applied (`nobody`, `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`). A
+word that changes how it runs (`nosidefx`, `logargs`, `noparse` and the like), or a `!` word that
+clears one of a built-in's own restrictions, is kept but has no effect, and the import names it.
+A line that cannot be carried (an include that cannot be read, a restriction with no value,
+a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through
+the portal, which is not followed because it would name a file on the server.
 
 ## Function and command permissions
 

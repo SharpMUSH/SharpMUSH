@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "replacements",
+      "heading": "Replacements for POSIX classes",
+      "lookup": "regexp classes replacements"
+    },
+    {
       "id": "portable-character-classes",
       "heading": "Portable character classes",
       "lookup": "regexp classes portable character classes"
@@ -20,6 +25,11 @@
 # Regular Expression Classes
 
 SharpMUSH uses .NET character classes and Unicode categories. POSIX bracket classes such as `[[:digit:]]`, `[[:alpha:]]`, and `[[:^word:]]` are not supported. Convert them when porting PennMUSH patterns; .NET can accept some of this text as a different pattern without reporting an error.
+
+- [regexp classes replacements]: ASCII and Unicode patterns for each POSIX class
+- [regexp classes portable character classes]: choosing ASCII or Unicode, with examples
+
+## Replacements for POSIX classes
 
 The following are replacement choices, not exact equivalences for every PCRE locale or option:
 

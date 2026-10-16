@@ -41,11 +41,10 @@ When used with a *<player>* argument, the most recently active connection is use
 
 HTML Functions are used to output HTML tags to HTML capable users: Pueblo and MXP clients, and the web portal. These tags will be stripped by the system for anything non-HTML related.
 
-Available functions:
-- tagwrap()
-- cmdlink()
-- wshtml()
-- html(), tag() and endtag() (see their entries)
+|                    |                    |                    |                    |
+|--------------------|--------------------|--------------------|--------------------|
+| [CMDLINK()]        | [ENDTAG()]         | [HTML()]           | [TAG()]            |
+| [TAGWRAP()]        | [WEBSOCKET_HTML()] | [WSHTML()]         |                    |
 
 Things a client may have that are not tags (a sound, a picture, a pane, a screen to clear) are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
 
@@ -97,38 +96,6 @@ In PennMUSH this outputs a closing HTML/Pueblo tag. As with [TAG()], SharpMUSH r
 - [HTML()]
 :::
 
-# tagwrap()
-
-`tagwrap(<name>[, <parameters>], <string>)`
-
-This function outputs *<string>*, wrapped in the *<name>* HTML tag with the specified *<parameters>*.
-
-The tag is markup on *<string>*, not text in it. A Pueblo client, an MXP client and the web portal receive it as a tag; every other client receives *<string>* alone. strlen() and the other string functions see only *<string>*.
-
-### Example
-```sharp
-tagwrap(a,href="https://sharpmush.com",SharpMUSH Downloads)
-```
-
-Will output (in HTML):
-```html
-<a href="https://sharpmush.com">SharpMUSH Downloads</a>
-```
-
-The tag is written as given, so it has to mean something in the reader's client. Most tags are spelled the same in Pueblo and MXP, but command links are not: use [CMDLINK()] for one.
-
-Without Send_OOB, *<name>* must be one of PennMUSH's allowed tags (A, B, I, U, FONT, PRE, IMG, TABLE and the like; anything else is `#-1 PERMISSION DENIED`), and the *<parameters>* are kept only if every one is on SharpMUSH's list of presentational attributes (href, src, color, face, size, align, width, height, title, xch_hint, class, and a few more), with any href or src naming an http, https, mailto, ftp or tel address. If any parameter fails, all of them are dropped. This is stricter than PennMUSH because the web portal renders the tag in a browser. A *<name>* that is not letters and digits is `#-1 INVALID TAG NAME` for everyone.
-
-A particularly important use of this function is `tagwrap(pre, <string>)`. Because Pueblo works like an html browser, spaces and tabs are compressed to a single space. If you have code (a +who function, for example) that relies on exact spacing, surround its output with a tagwrap(pre,...) so that Pueblo will render it as "preformatted" text.
-
-
-::: seealso
-- [CMDLINK()]
-- [TAG()]
-- [ENDTAG()]
-- [HTML()]
-:::
-
 # cmdlink()
 
 `cmdlink(<string>, <command>[, <hint>])`
@@ -155,16 +122,13 @@ Clicking a link sends *<command>* as if the reader had typed it, so it runs as w
 
 Sounds, pictures, panes and the rest are said once, and each client is told about them in the way that client has. An MXP client gets MXP's elements, a Pueblo client its `xch_` ones, the web portal an HTML element it can act on, and a plain telnet client either nothing or the words that stand in for what it cannot show.
 
-Available functions:
-- sound() and music()
-- stopsound()
-- image()
-- figure() (a picture with text art and text flowing round it; see [LAYOUT FUNCTIONS])
-- pane()
-- preformat()
-- clearscreen()
-- prefetch()
-- expirelinks()
+|                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|
+| [CLEARSCREEN()] | [EXPIRELINKS()] | [FIGURE()]      | [IMAGE()]       |
+| [MUSIC()]       | [PANE()]        | [PREFETCH()]    | [PREFORMAT()]   |
+| [SOUND()]       | [STOPSOUND()]   |                 |                 |
+
+figure() is a picture with text art and text flowing round it; it is described with the [LAYOUT FUNCTIONS].
 
 None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before, except where a function stands words in for what a client cannot show, such as a picture's description.
 
@@ -293,67 +257,4 @@ Makes links already on the player's screen stop working: those in *<group>*, or 
 
 ::: seealso
 - [CMDLINK()]
-:::
-
-# WebSockets
-
-WebSockets are a network protocol used by JavaScript-enabled web browsers to make persistent network connections, similar to the telnet connection you use to connect to SharpMUSH. With WebSockets enabled in mush.cnf, it is possible to connect from MUSH clients embedded in HTML pages using JavaScript. A WebSocket client can natively render HTML, but can also parse Pueblo links into HTML links that send a command to the MUSH when clicked. For safety, we separate plain text from the other kinds of HTML/Pueblo code that we want rendered. In order to render HTML/Pueblo, a player with the Pueblo_Send power uses special functions to embed HTML/Pueblo markup. Players without the PUEBLO_SEND power can not use these markup functions. Any HTML code strings that are not properly marked up will simply show up as unrendered plain text.
-
-See https://github.com/grapenut/websockclient for an example client.
-
-The different kinds of markup that can be sent to clients are:
-* Plain text
-* HTML tags
-* Pueblo links
-* JSON objects
-* Prompts
-
-Without using any HTML markup functions, output is rendered as normal plain text (including ANSI and xterm256 color).
-
-See [HTML FUNCTIONS] for functions used to embed HTML markup tags one at a time.<br>
-See [WSHTML()] for help embedding large segments of raw HTML markup to be sent to WebSocket clients.
-
-For clickable command links, use [CMDLINK()], e.g. `cmdlink(Who is online?,+who)`. The web portal and the example client above both follow it, and so do Pueblo and MXP clients, each in its own dialect.
-
-You can also send data encapsulated in a JSON object.
-
-See [json()] for information about formatting data into JSON object strings.<br>
-See [OOB()] for sending a JSON object to a WebSocket client as a JavaScript object, or to a telnet client over GMCP.
-
-See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
-
-
-::: seealso
-- [HTML FUNCTIONS]
-- [json()]
-- [pueblo]
-- [WSHTML()]
-- [OOB()]
-:::
-
-# wshtml()
-
-`wshtml(<html>[, <default>])`
-
-  Turns an HTML fragment into markup and returns it, for whatever emits it to deliver: text becomes the text, each element becomes a tag over what it encloses, exactly as [TAGWRAP()] builds one tag at a time. A WebSocket, Pueblo or MXP client receives the tags; an ANSI client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for everything else; everything else gets the words. Nothing is sent by the function itself, and the value stores, slices and re-evaluates like any other string.
-
-  The fragment is read the way a browser reads it: an unclosed tag closes at the end, a stray closing tag is dropped, a bare `<` is text. An element that encloses nothing is dropped, since a tag has to cover something; `<br>` is a line break.
-
-  The gate is [TAGWRAP()]'s. With the Send_OOB power (Pueblo_Send is its older name), any tag and any attribute. Without it, only the tags PennMUSH's `tagwrap()` allows (one forbidden tag refuses the whole fragment) and only attributes a browser cannot be made to run, one forbidden attribute dropping them all from that tag.
-
-  PennMUSH's `wshtml(<html>, <default>)` takes a second, plain-text string for clients without HTML, and its `wsjson()` embeds a JSON object the same way. Here `<default>` is accepted, so softcode written for PennMUSH still runs, but it is not used: the markup's own text is what a client without HTML sees. There is no `wsjson()`: JSON is data for a program rather than text with a plain reading, so it goes by [OOB()], which sends it where a connection can receive it.
-
-  For example:
-
-```sharp
-@emit [wshtml(<a href="https://sharpmush.com">SharpMUSH</a>)]
-```
-
-  A player on the web portal or a Pueblo/MXP client sees a link reading SharpMUSH; a telnet player, and any listening object, sees `SharpMUSH`.
-
-::: seealso
-- [WEBSOCKETS]
-- [pueblo]
-- [HTML FUNCTIONS]
-- [JSON FUNCTIONS]
 :::

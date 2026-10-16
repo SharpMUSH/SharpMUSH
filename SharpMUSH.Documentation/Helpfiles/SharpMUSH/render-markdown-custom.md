@@ -8,6 +8,11 @@
   ],
   "sections": [
     {
+      "id": "arguments",
+      "heading": "Arguments",
+      "lookup": "rendermarkdowncustom arguments"
+    },
+    {
       "id": "custom-template-system",
       "heading": "Custom Template System",
       "lookup": "rendermarkdowncustom custom template system"
@@ -23,6 +28,11 @@
       "lookup": "rendermarkdowncustom table templates"
     },
     {
+      "id": "table-fields",
+      "heading": "Table fields",
+      "lookup": "rendermarkdowncustom table fields"
+    },
+    {
       "id": "container-templates",
       "heading": "Container templates",
       "lookup": "rendermarkdowncustom container templates"
@@ -33,9 +43,24 @@
       "lookup": "rendermarkdowncustom inline templates"
     },
     {
+      "id": "link-templates",
+      "heading": "Link templates",
+      "lookup": "rendermarkdowncustom link templates"
+    },
+    {
       "id": "template-arguments",
       "heading": "Template arguments",
       "lookup": "rendermarkdowncustom template arguments"
+    },
+    {
+      "id": "table-cells",
+      "heading": "Table cells",
+      "lookup": "rendermarkdowncustom table cells"
+    },
+    {
+      "id": "command-links",
+      "heading": "Command links",
+      "lookup": "rendermarkdowncustom command links"
     },
     {
       "id": "example-usage",
@@ -48,6 +73,11 @@
       "lookup": "rendermarkdowncustom list examples"
     },
     {
+      "id": "combined-example",
+      "heading": "Combined example",
+      "lookup": "rendermarkdowncustom combined example"
+    },
+    {
       "id": "wiki-link-example",
       "heading": "Wiki link example",
       "lookup": "rendermarkdowncustom wiki link example"
@@ -56,6 +86,11 @@
       "id": "table-example",
       "heading": "Table example",
       "lookup": "rendermarkdowncustom table example"
+    },
+    {
+      "id": "table-example-output",
+      "heading": "Table example output",
+      "lookup": "rendermarkdowncustom table example output"
     },
     {
       "id": "notes",
@@ -71,7 +106,8 @@
 
 Renders CommonMark/Markdown text with customizable rendering controlled by attributes on the specified object. This allows you to define custom ANSI styles, colors, and formatting for each markdown element type.
 
-### Parameters
+## Arguments
+
 - `<markdown>` - The markdown/CommonMark text to render
 - `<object>` - Object reference (dbref) containing rendering template attributes
 - `<width>` - Optional. Maximum width for rendered output (default: 78). Must be between 10-1000.
@@ -118,22 +154,27 @@ Each argument is passed by position and by the name shown in the list below (see
       "rows": [["`@wiki`", "Show the **index**", "0"]]
     }
     ```
-  - `width` - the width this render was asked for. Not the same as `width(%#)`:
-    the caller may have chosen a fixed width, and a table laid out to a
-    different one disagrees with the prose around it
-  - `align` - one entry per column: the `align()` justification character,
-    `<` left, `-` centre, `>` right, and `<` for a column the table does not
-    align. Ready to concatenate with a width into an `align()`/`lalign()` spec
-  - `widths` - one integer per column, the width the default renderer would
-    use. Computed from the *rendered* cell content, which is why a template
-    cannot work it out from the raw source it is given: `**index**` is nine
-    characters of source and five on screen
-  - `head` - the header row's cells; an empty array when there is no header row
-  - `rows` - the body rows, an array of arrays. A row shorter than the table is
-    padded with empty cells, so every row has one cell per column
-  
-  There is no column count: `align` and `widths` already have exactly one entry
-  per column. Read it with `json_query(json_query(%0,get,widths),size)`.
+
+## Table fields
+
+``RENDERMARKUP`TABLE`` receives these fields in `%0`:
+
+- `width` - the width this render was asked for. Not the same as `width(%#)`:
+  the caller may have chosen a fixed width, and a table laid out to a
+  different one disagrees with the prose around it
+- `align` - one entry per column: the `align()` justification character,
+  `<` left, `-` centre, `>` right, and `<` for a column the table does not
+  align. Ready to concatenate with a width into an `align()`/`lalign()` spec
+- `widths` - one integer per column, the width the default renderer would
+  use. Computed from the *rendered* cell content, which is why a template
+  cannot work it out from the raw source it is given: `**index**` is nine
+  characters of source and five on screen
+- `head` - the header row's cells; an empty array when there is no header row
+- `rows` - the body rows, an array of arrays. A row shorter than the table is
+  padded with empty cells, so every row has one cell per column
+
+There is no column count: `align` and `widths` already have exactly one entry
+per column. Read it with `json_query(json_query(%0,get,widths),size)`.
 
 ## Container templates
 
@@ -157,6 +198,15 @@ Each argument is passed by position and by the name shown in the list below (see
 - ``RENDERMARKUP`INLINECODE`` - Inline code (`` `text` ``) rendering
   - `%0` or `%<code>` - The code text (plain text)
   
+- ``RENDERMARKUP`IMAGE`` - Image (`![alt](url)`) rendering
+  - `%0` or `%<alt>` - The alt text, plain and trimmed; empty if there is none
+  - `%1` or `%<url>` - The image URL
+  
+- ``RENDERMARKUP`TASKLIST`` - Task list marker (`- `[x]``) rendering
+  - `%0` or `%<checked>` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
+
+## Link templates
+
 - ``RENDERMARKUP`LINK`` - Link rendering. Not called for a link with no URL,
   which is not a link and renders as its own text
   - `%0` or `%<text>` - The link text as it would be shown, plain (the URL, if the link has
@@ -175,13 +225,6 @@ Each argument is passed by position and by the name shown in the list below (see
 - ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering. Not
   called for an autolink with no URL, which renders as nothing
   - `%0` or `%<url>` - The URL, which is also the text shown
-  
-- ``RENDERMARKUP`IMAGE`` - Image (`![alt](url)`) rendering
-  - `%0` or `%<alt>` - The alt text, plain and trimmed; empty if there is none
-  - `%1` or `%<url>` - The image URL
-  
-- ``RENDERMARKUP`TASKLIST`` - Task list marker (`- `[x]``) rendering
-  - `%0` or `%<checked>` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
 
 ## Template arguments
 
@@ -204,7 +247,7 @@ no display text, an autolink with no URL, a table with no rows. Setting a
 template can change how something is drawn; it cannot make something appear
 where nothing was.
 
-### Table cells
+## Table cells
 
  They are markdown *source*, not rendered text - a
 cell reading `**loud**` arrives with its asterisks. Call `rendermarkdown()` on a
@@ -223,7 +266,7 @@ example below needs a one-token `ROWJ` adapter to hand a row on to `u()`.
 Templates are evaluated with the *caller* as executor, so `me` inside one is the
 player, not the object the templates live on. Address helper attributes by dbref.
 
-### Command links
+## Command links
 
  SharpMUSH help text writes a bare `[topic]` for a
 help-topic shortcut, and the renderer turns that into a link whose `%1` is the
@@ -285,6 +328,8 @@ Output:
 ```
 (numbers in the theme's primary colour)
 
+## Combined example
+
 Complete example with multiple custom elements:
 ```sharp
 &RENDERMARKUP`H1 #123=[ansi(h,tone(primary,%0))]
@@ -337,6 +382,9 @@ rebuilds the default look with `lalign()`:
 &RENDERMARKUP`TABLE #123=[setq(wd,json_query(%0,get,widths))][setq(spec,json_map(#123/FUN`TABLE`SPEC,[json_query(%0,get,align)],%b))][setq(tw,add(lmath(add,[json_map(#123/FUN`VAL,%q<wd>,%b)]),sub(json_query(%q<wd>,size),1)))][jiter(#123/FUN`TABLE`HEAD #123/FUN`TABLE`RULE #123/FUN`TABLE`BODY,%0,%r)]
 think rendermarkdowncustom(| Command | Effect | Cost |%r|:---|:-:|--:|%r| @wiki | Show the **index** | 0 |%r| @wiki/search | Find pages | 1 |%r| @wiki/audit | Staff report |, #123, 40)
 ```
+
+## Table example output
+
 Output:
 ```markdown
 Command          Effect     Cost

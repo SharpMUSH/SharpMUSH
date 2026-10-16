@@ -21,14 +21,49 @@
       "lookup": "@attribute index"
     },
     {
+      "id": "attribute-index-building",
+      "heading": "Building and showing an index",
+      "lookup": "@attribute index building"
+    },
+    {
       "id": "attribute-watch",
       "heading": "Watched attributes",
       "lookup": "@attribute watch"
     },
     {
+      "id": "attribute-watch-arguments",
+      "heading": "What a watch handler gets",
+      "lookup": "@attribute watch arguments"
+    },
+    {
+      "id": "attribute-watch-chains",
+      "heading": "Watch chains and requirements",
+      "lookup": "@attribute watch chains"
+    },
+    {
+      "id": "attribute-watch-example",
+      "heading": "Watch example",
+      "lookup": "@attribute watch example"
+    },
+    {
+      "id": "attribute-watch-gauge",
+      "heading": "Gauge example",
+      "lookup": "@attribute watch gauge"
+    },
+    {
       "id": "attribute-packages",
       "heading": "Attribute entries from packages",
       "lookup": "@attribute packages"
+    },
+    {
+      "id": "attribute-packages-ownership",
+      "heading": "Whose entry it is, and existing copies",
+      "lookup": "@attribute packages ownership"
+    },
+    {
+      "id": "attribute-packages-index",
+      "heading": "Indexes and watches from packages",
+      "lookup": "@attribute packages index"
     }
   ],
   "redirects": {
@@ -95,6 +130,8 @@ Only Wizards can modify the attribute table.
 - `split` or `split:<delimiter>`: each word of a value (or each element, split on the one character given) is listed on its own.
 - `type:<type>`: only copies on players, rooms, things or exits.
 
+## Building and showing an index
+
 The index is built in the background, a batch of objects at a time, and goes on after a restart where it stopped. The command waits for it as long as a command may, then says how far it got, and tells you when it is ready. Until then, indexed() returns `#-1 INDEX BUILDING`. `=off` takes the index off and deletes it. Writes keep the index up to date as they happen.
 
 `@attribute <attrib>` shows an attribute's index and whether it is ready, `@attribute/decompile` writes the `@attribute/index` line that makes it again, and `@storage` shows the room each index takes. Only those with the config.admin permission can add or remove an index.
@@ -117,6 +154,8 @@ Output: LEVEL is now indexed for players, numbers in numeric order, and indexed(
 
 Without `=<pattern>`, the pattern is ``WATCH`<attrib> WATCH`<attrib>`*``: the handler's ``WATCH`<attrib>`` and every attribute one level below it. Each package can then keep a handler of its own, such as ``WATCH`HP`GAUGE``, without editing another's. `@attribute/watch <attrib>=` with nothing after the `=` stops watching it.
 
+## What a watch handler gets
+
 Each matching attribute is queued on its own, as an event's attribute is, and runs as the event handler with its permissions. It gets:
 
 - `%0` or `%<objid>`: the object the attribute is on.
@@ -127,11 +166,14 @@ Each matching attribute is queued on its own, as an event's attribute is, and ru
 
 The values keep their colour. Setting an attribute to the value it already has still runs the handlers, and a `@wipe` runs them once for each watched attribute it removes. Only the name that is watched counts: watching STATS does not watch STATS\`HP. Attributes nobody watches cost nothing, and loading a PennMUSH database runs nothing. The handlers run after the change has happened, so they cannot stop it, and stopevent() does nothing in them.
 
+## Watch chains and requirements
+
 A handler that changes a watched attribute runs the handlers again, and so does anything it queues with `@trigger`, `@wait` or `@force`. To keep a handler that changes what it heard about, or two handlers that change each other's attributes, from running for ever, a chain stops after 10: a change made by the tenth handler is still made, but runs nothing, and the server logs a warning. A change typed by a player or made by any other code starts a new chain.
 
 As with `/limit` and `/enum`, `<attrib>` must already be a standard attribute: add it with `@attribute/access` first. `@attribute <attrib>` shows the pattern, attrwatch() returns it to softcode (see [attrwatch()]), and `@attribute/decompile` writes the `@attribute/watch` line that makes it again. Only those with the config.admin permission can watch an attribute.
 
-Example:
+## Watch example
+
 ```sharp
 > @attribute/access HP=none
 > &HP me=20
@@ -141,7 +183,7 @@ Example:
 ```
 Output: after the last line you are told "HP went from 20 to 15."
 
-### Gauge example
+## Gauge example
 
 A client such as Mudlet can draw a health bar from the GMCP package Char.Vitals. Instead of checking every player's HP over and over, watch HP and MAXHP and send the bar whenever one of them changes:
 ```sharp
@@ -169,7 +211,13 @@ attributes:
 ```
 Output: once the package is installed, ``@attribute JOB`STATUS`` shows the default flag no_command and the choices new staff held closed, and ``&JOB`STATUS me=open`` is refused because open is not one of them.
 
+## Whose entry it is, and existing copies
+
 An entry the game already has is the game's: the package uses it and never changes it, and if its limit or enum differs from the manifest's, the package cannot be installed until the two agree. An entry the package created follows it: an upgrade changes only what the new version changed, so your own `@attribute/access` on it survives, and uninstalling the package deletes the entry. Values already stored on objects stay.
+
+Default flags reach new copies of the attribute only. An entry with `retroactive: true` also gives them to every copy already on an object, like `@attribute/access/retroactive` but keeping each copy's owner; the portal's review screen shows how many copies change and asks you to confirm before it applies.
+
+## Indexes and watches from packages
 
 From format 1.8 an entry can also carry an `index:`, as `@attribute/index` would make it: `index: true` for the default, or the option words, such as `index: numeric type:thing`. An older manifest's `index:` is ignored. Installing the package builds the index in the background, and the review screen says how many objects it builds over. A game entry without the same index blocks the install until you index it.
 
@@ -183,8 +231,6 @@ attributes:
     watch: true
 ```
 Output: once the package is installed, ``@attribute HP`` shows ``Watch: WATCH`HP WATCH`HP`*``, and the package's ``WATCH`HP`<name>`` attribute on the event handler runs whenever an HP changes.
-
-Default flags reach new copies of the attribute only. An entry with `retroactive: true` also gives them to every copy already on an object, like `@attribute/access/retroactive` but keeping each copy's owner; the portal's review screen shows how many copies change and asks you to confirm before it applies.
 
 ::: seealso
 - [events]

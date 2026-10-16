@@ -76,43 +76,6 @@ For example, to lock "Bob's Tools" to only people with a name beginning with Bob
 @lock/use Bob's Tools=name^bob*
 ```
 
-# @lock-bit
-# @lock-flag
-# @lock-type
-# @lock-power
-# @lock-role
-# @lock-perm
-# @lock-channel
-
-## Bit Locks
-You can test for set flags, powers, roles, permissions, or object types in a lock directly, without using an evaluation lock, with these formats:
-
-`@lock <object>=flag^<flag>`<br>
-`@lock <object>=power^<power>`<br>
-`@lock <object>=type^<type>`
-
-These locks act like the object the lock is on does a hasflag(%#, *<flag>*), or haspower(%#, *<power>*), hastype(%#, *<type>*) succeeding only if the flag/power is set, or the object is of the specified type.
-
-For example:
-```sharp
-@lock/use Admin Commands=flag^wizard|flag^royalty
-```
-
-To test for a role or a permission (see [roles]):
-
-`@lock <object>=role^<role>`<br>
-`@lock <object>=perm^<permission>`
-
-`role^<role>` passes when the object trying the lock holds the role, its own or its account's, as hasrole() reports. `perm^<permission>` passes when it holds the permission, as permission() reports.
-
-```sharp
-@lock/use Staff Board=role^moderator|perm^players.moderate
-```
-
-You can also test for channel membership with:
-
-`@lock <object>=channel^<channel>`
-
 # @lock-dbreflist
 # @lock-list
 
@@ -325,7 +288,6 @@ Controls who can forward @mail to this object via @mailforward.
 
 ::: seealso
 - [MAIL]
-- [@mailforward]
 - [@LOCK/FOLLOW]
 :::
 
@@ -415,72 +377,6 @@ Limits who can examine a VISUAL object.
 ::: seealso
 - [examine]
 - [VISUAL]
-:::
-
-# @lock/zone
-# @lock/chzone
-# @lock/chown
-# @lock/parent
-# @lock/link
-# @lock/open
-
-## Zone Lock
-Objects which pass a SHARED player's @lock/zone control all the objects the shared player owns. If the zone_control_zmp_only @config option is off, anything passing the @lock/zone of other objects will control everything @chzoned to the object.
-
-
-::: seealso
-- [@chzone]
-- [SHARED]
-- [zones]
-- [ZMR]
-:::
-
-## Chzone Lock
-If set, controls who can @chzone an object to this zone.
-
-
-::: seealso
-- [@chzone]
-- [zones]
-:::
-
-## Chown Lock
-If set, controls who can change the owner of this CHOWN_OK object via @chown.
-
-
-::: seealso
-- [CHOWN_OK]
-- [@chown]
-:::
-
-## Parent Lock
-Controls who can @parent something to this LINK_OK object.
-
-
-::: seealso
-- [@parent]
-- [LINK_OK]
-:::
-
-## Link Lock
-Controls who can @link this unlinked exit, or who can @link an exit to this LINK_OK room/thing.
-
-
-::: seealso
-- [@link]
-- [LINK_OK]
-- [LINK_ANYWHERE POWER]
-:::
-
-## Open Lock
-Controls who can @open an exit from this OPEN_OK room.
-
-
-::: seealso
-- [@open]
-- [@dig]
-- [OPEN_OK]
-- [OPEN_ANYWHERE POWER]
 :::
 
 # @lock/user

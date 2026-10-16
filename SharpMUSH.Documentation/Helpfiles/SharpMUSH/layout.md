@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "list",
+      "heading": "The functions",
+      "lookup": "layout function list"
+    },
+    {
       "id": "nesting",
       "heading": "Text and nesting",
       "lookup": "layout nesting"
@@ -26,9 +31,24 @@
       "lookup": "layout options"
     },
     {
+      "id": "option-values",
+      "heading": "Option values",
+      "lookup": "layout option values"
+    },
+    {
+      "id": "option-errors",
+      "heading": "Option errors",
+      "lookup": "layout option errors"
+    },
+    {
       "id": "examples",
       "heading": "Examples",
       "lookup": "layout examples"
+    },
+    {
+      "id": "side-by-side-examples",
+      "heading": "Side by side examples",
+      "lookup": "layout side by side examples"
     }
   ]
 }
@@ -36,6 +56,20 @@
 # Layout Functions
 
 Boxes, titled rules, columns, labelled fields, trees and pictures, described once. A telnet client gets box art, the same kind [ALIGN()], [CENTER()] and [REPEAT()] draw. The web portal draws the same layout as page structure: a bordered card, columns that wrap on a narrow screen, a definition list, a nested list, a real picture.
+
+The l-prefixed forms take their items as one list instead of an argument each, for code that only knows how many there are when it runs, such as a row per player from one [ITER()].
+
+- [layout function list]: every layout function and what it draws
+- [layout nesting]: layouts as text, and layouts inside layouts
+- [layout width]: the width a layout is drawn at
+- [layout readers]: ASCII clients and screen readers
+- [layout options]: writing a layout's options as JSON
+- [layout option values]: what each kind of option takes
+- [layout option errors]: how every function answers bad options
+- [layout examples]: a finger sheet and a stat sheet
+- [layout side by side examples]: a who list, and a picture beside a sheet
+
+## The functions
 
 | Function | Draws |
 |---|---|
@@ -55,13 +89,31 @@ Boxes, titled rules, columns, labelled fields, trees and pictures, described onc
 | [NOTICE()] | a message led by the badge of the system it comes from |
 | [THEMES()], [THEME()] and [SWATCH()] | colour themes for layouts; see [LAYOUT THEMES] |
 
-The l-prefixed forms take their items as one list instead of an argument each, for code that only knows how many there are when it runs, such as a row per player from one [ITER()].
-
 ## Text and nesting
 
 The result is text, so `strlen()`, `mid()`, `edit()` and listen patterns all work on the box art. A layout cut or edited by another function is shown as the text it now is, in the portal too.
 
 Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `box()` body becomes columns, fields or a tree inside the box, and a `rule()` becomes a divider meeting the box's sides.
+
+::: seealso
+- [BOX()]
+- [RULE()]
+- [FLEX()]
+- [FIELDS()]
+- [TREE()]
+- [FIGURE()]
+- [GAUGE()]
+- [BULLETS()]
+- [GRID()]
+- [DATATABLE()]
+- [DATACOLUMNS()]
+- [GRADIENT()]
+- [BADGE()]
+- [NOTICE()]
+- [LAYOUT BORDERS]
+- [LAYOUT THEMES]
+- [ALIGN()]
+:::
 
 ## Width
 
@@ -80,7 +132,7 @@ The layout functions take their options as one JSON object: `{"border":"double",
 
 Written straight into an argument, a JSON list needs `\[` in place of its opening bracket, since `[` starts a function call: `{{"title":\["( "," )"]}}`. The same goes for a `[` inside a string. `]` can stay as it is.
 
-### Values
+## Option values
 
 | Option | Takes |
 |---|---|
@@ -94,7 +146,7 @@ A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double
 
 Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order.
 
-### Errors
+## Option errors
 
 Every function answers bad options the same way:
 
@@ -131,6 +183,8 @@ Every function answers bad options the same way:
 +======================================================+
 ```
 
+## Side by side examples
+
 ### A who list
 
 ```sharp
@@ -154,23 +208,3 @@ Every function answers bad options the same way:
 ```
 
 In the portal the picture shows in place of the cat, with the fields beside it.
-
-::: seealso
-- [BOX()]
-- [RULE()]
-- [FLEX()]
-- [FIELDS()]
-- [TREE()]
-- [FIGURE()]
-- [GAUGE()]
-- [BULLETS()]
-- [GRID()]
-- [DATATABLE()]
-- [DATACOLUMNS()]
-- [GRADIENT()]
-- [BADGE()]
-- [NOTICE()]
-- [LAYOUT BORDERS]
-- [LAYOUT THEMES]
-- [ALIGN()]
-:::

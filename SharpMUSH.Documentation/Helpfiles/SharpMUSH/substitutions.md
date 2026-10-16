@@ -32,9 +32,16 @@
         "%?",
         "%=",
         "%+",
-        "%<",
-        "%d",
         "%j"
+      ]
+    },
+    {
+      "id": "registers-and-lists",
+      "heading": "Registers, arguments and lists",
+      "lookup": "substitutions registers",
+      "aliases": [
+        "%<",
+        "%d"
       ]
     },
     {
@@ -105,7 +112,11 @@ Other substitutions:<br>
     %*`\<text\>` = `<text>` marked as a list separator, which list functions split on only where it is marked: see [list separators]<br>
     %? = The current function invocation and depth counts<br>
     %= = The dbref/attribute currently being evaluated, or `#LAMBDA/<code>` inside a #lambda<br>
-    %+ = The number of arguments passed to the current ufun.<br>
+    %+ = The number of arguments passed to the current ufun.
+
+## Registers, arguments and lists
+
+Register, argument and list substitutions:<br>
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function<br>
     %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>    %`\<name\>` = the equivalent of r(name, args): the argument called `<name>`, from `uargs()`, a regexp `$-command` or `mapsql()`. `%<0>` is `%0`. Like `%0`, it ends with the call.<br>
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`. %iL (or %il) is the outermost one.<br>

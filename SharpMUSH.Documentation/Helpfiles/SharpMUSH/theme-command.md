@@ -43,15 +43,34 @@
       "lookup": "@theme examples"
     },
     {
+      "id": "preset-examples",
+      "heading": "Presets with changes",
+      "lookup": "@theme preset examples"
+    },
+    {
+      "id": "checking",
+      "heading": "Checking and clearing",
+      "lookup": "@theme checking"
+    },
+    {
       "id": "game-themes",
       "heading": "The game's themes",
       "lookup": "@theme/list",
       "aliases": [
-        "@theme/add",
         "@theme/remove",
         "@theme/disable",
         "@theme/enable"
       ]
+    },
+    {
+      "id": "adding",
+      "heading": "Adding a theme",
+      "lookup": "@theme/add"
+    },
+    {
+      "id": "game-themes-example",
+      "heading": "Replacing a built-in theme",
+      "lookup": "@theme/list example"
     }
   ]
 }
@@ -71,8 +90,20 @@ Output: none.
 - [@theme code]: code that picks a theme, and `@theme/refresh`
 - [@theme precedence]: how a player's theme sits with the game's and a layout's own
 - [@theme errors]: themes that do not read
-- [@theme examples]: setting, checking and clearing a theme
+- [@theme examples]: setting a built-in, made or copied theme
+- [@theme preset examples]: a preset with its own colours or look
+- [@theme checking]: checking which theme is in use, and clearing it
 - [@theme/list]: the themes the game offers, for staff
+- [@theme/add]: adding a theme to the game's list
+- [@theme/list example]: replacing a built-in theme with the game's own
+
+::: seealso
+- [@THEME/LIST]
+- [LAYOUT THEMES]
+- [THEMES()]
+- [SWATCH()]
+- [ANCESTORS]
+:::
 
 ## Light and dark
 
@@ -127,6 +158,8 @@ A scheme copied from an editor theme, as sixteen base16 colours. A theme added w
 Theme set.
 ```
 
+## Presets with changes
+
 Nord with red borders, and fantasy with plain bullets and round brackets about each title, its list typed `\[ \]`:
 
 ```sharp
@@ -135,6 +168,8 @@ Theme set.
 > @theme me={{"preset":"fantasy","look":{"bullet":"-","title":\["( "," )"\]}}}
 Theme set.
 ```
+
+## Checking and clearing
 
 Which theme is in use, worked out again. With none set on the player, a parent or the ancestor:
 
@@ -156,14 +191,6 @@ Theme cleared.
 
 Try a theme on one layout with its `"theme"` option, and check its colours with [SWATCH()], before making it yours. A wizard sets the game's own with `@config/set layout_theme=<name>`, and staff choose which themes there are with [@THEME/LIST].
 
-::: seealso
-- [@THEME/LIST]
-- [LAYOUT THEMES]
-- [THEMES()]
-- [SWATCH()]
-- [ANCESTORS]
-:::
-
 ## The game's themes
 
 - `@theme/list`
@@ -176,9 +203,7 @@ The themes a game offers: the built-in ones, less those staff disabled, and thos
 
 `/list` shows every theme, built-in and added, and whether it is offered. Anyone may use it.
 
-`/add` adds a theme under *<name>*, or replaces the one added under that name. *<theme>* is evaluated once, as you, and what it works out to is kept: JSON inside a second pair of braces, or the name of another theme. It can start from any theme with `"preset"`, a disabled one included. An added theme it starts from is copied into it, so it does not change when that one does. *<name>* is lower-case letters, digits and hyphens, up to 32 of them, and cannot be a built-in theme's name.
-
-`/remove` removes an added theme. `/disable` takes a built-in theme off the list, and `/enable` puts it back.
+`/add` adds a theme (see [@theme/add]). `/remove` removes an added theme. `/disable` takes a built-in theme off the list, and `/enable` puts it back.
 
 A player whose theme stops reading after a change, or is removed or disabled, sees the game's theme and is told why. Players see added themes and changes at once.
 
@@ -186,7 +211,13 @@ Changing the themes needs the `layout.admin` permission. The themes are kept wit
 
 Output: none.
 
-### Example
+## Adding a theme
+
+`@theme/add <name>=<theme>`
+
+`/add` adds a theme under *<name>*, or replaces the one added under that name. *<theme>* is evaluated once, as you, and what it works out to is kept: JSON inside a second pair of braces, or the name of another theme. It can start from any theme with `"preset"`, a disabled one included. An added theme it starts from is copied into it, so it does not change when that one does. *<name>* is lower-case letters, digits and hyphens, up to 32 of them, and cannot be a built-in theme's name.
+
+## Replacing a built-in theme
 
 Fantasy replaced with a version of the game's own, with red titles:
 

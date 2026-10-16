@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "managing-flags",
+      "heading": "Managing flags",
+      "lookup": "@flag managing"
+    },
+    {
       "id": "adding-flags",
       "heading": "Adding flags",
       "lookup": "@flag adding flags"
@@ -19,8 +24,22 @@
 # @flag
 
 `@flag <flag name>`<br>
-`@flag/list [<flag name pattern>]`<br>
-`@flag/add <flag name>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`<br>
+`@flag/list [<flag name pattern>]`
+
+This command manipulates the list of flags in the database. With no switches, the command displays information about the given flag, including aliases and permissions. `@flag/list` lists names of enabled flags, and may be given a wildcarded pattern to restrict which names it will show.
+
+- [@flag managing]: the God-only switches that change the flag table
+- [@flag adding flags]: adding a new flag, and its arguments
+
+::: seealso
+- [flags]
+- [@set]
+- [@power]
+- [flag permissions]
+:::
+
+## Managing flags
+
 `@flag/delete <flag name>`<br>
 `@flag/alias <flag name>=<alias>`<br>
 `@flag/letter <flag name>[=<letter>]`<br>
@@ -29,8 +48,6 @@
 `@flag/enable <flag name>`<br>
 `@flag/disable <flagname>`<br>
 `@flag/decompile [<pattern>]`
-
-This command manipulates the list of flags in the database. With no switches, the command displays information about the given flag, including aliases and permissions. `@flag/list` lists names of enabled flags, and may be given a wildcarded pattern to restrict which names it will show.
 
 All other switches to this command are restricted to God:
 - /disable disables a flag, making it invisible and unusable
@@ -42,15 +59,9 @@ All other switches to this command are restricted to God:
 - /delete deletes a flag completely, removing it from all objects in the database and then removing it permanently from the flag table. It requires the exact flag name or alias to be used. Be very very careful with this.
 - /decompile prints out a list of @flag/add commands needed to recreate the flag table on another MUSH. If `<pattern>` is given, only flags whose names match that wildcard pattern are shown.
 
-
-::: seealso
-- [flags]
-- [@set]
-- [@power]
-- [flag permissions]
-:::
-
 ## Adding flags
+
+`@flag/add <flag name>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`
 
 `@flag/add` is used to add a new flag with the given name. Arguments other than the flag name are optional:
 

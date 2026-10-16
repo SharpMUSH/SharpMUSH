@@ -6,6 +6,11 @@
   "aliases": [],
   "sections": [
     {
+      "id": "escaping",
+      "heading": "Escaping for the MUSH parser",
+      "lookup": "regexp syntax escaping"
+    },
+    {
       "id": "pattern-characters",
       "heading": "Pattern characters",
       "lookup": "regexp syntax pattern characters"
@@ -29,6 +34,11 @@
       "id": "back-references",
       "heading": "Back references",
       "lookup": "regexp syntax back references"
+    },
+    {
+      "id": "softcode-captures",
+      "heading": "Captures in softcode",
+      "lookup": "regexp syntax softcode captures"
     },
     {
       "id": "lookaround-assertions",
@@ -57,6 +67,12 @@
 
 SharpMUSH uses `System.Text.RegularExpressions`, the .NET regular expression engine. PennMUSH uses PCRE2. Common patterns work in both, but POSIX bracket classes, Python-style named groups, and some advanced PCRE constructs need changes when porting code.
 
+Command and listen attributes with the REGEXP flag use regular expressions; their CASE flag controls case sensitivity. Functions such as `regmatch()`, `regrab()`, `regedit()`, and `reswitch()` are case-sensitive by default and have variants ending in `i` for case-insensitive matching. Matching searches for a substring unless the pattern supplies anchors. See [regexp] and [regmatch()].
+
+Historical attribution: the previous version of this guide excerpted the PCRE manual by Philip Hazel <ph10@cam.ac.uk>, Copyright (c) 1997-1999 University of Cambridge, England. This reference has been rewritten for SharpMUSH's .NET engine.
+
+## Escaping for the MUSH parser
+
 The patterns in the reference below show what the regex engine receives. MUSHcode evaluates function arguments first: escape square brackets, backslashes, parentheses, braces, and commas as needed. `lit()` preserves regex backslashes and square brackets, but grouping parentheses still need protection from the default function-argument parser. In an evaluated pattern argument, use `%(`/`%)` for literal grouping parentheses (unless `paren_groups` is enabled), `\[`/`\]` for class brackets, and doubled backslashes for regex escapes. For example:
 
 ```sharp
@@ -65,10 +81,6 @@ The patterns in the reference below show what the regex engine receives. MUSHcod
 > think regmatch(foo bar,lit(\A\w+\z))
 0
 ```
-
-Command and listen attributes with the REGEXP flag use regular expressions; their CASE flag controls case sensitivity. Functions such as `regmatch()`, `regrab()`, `regedit()`, and `reswitch()` are case-sensitive by default and have variants ending in `i` for case-insensitive matching. Matching searches for a substring unless the pattern supplies anchors. See [regexp] and [regmatch()].
-
-Historical attribution: the previous version of this guide excerpted the PCRE manual by Philip Hazel <ph10@cam.ac.uk>, Copyright (c) 1997-1999 University of Cambridge, England. This reference has been rewritten for SharpMUSH's .NET engine.
 
 ## Pattern characters
 
@@ -125,6 +137,8 @@ Use `{0,n}` for an upper bound with no lower bound; `{,n}` is not a .NET quantif
 A numeric backreference such as `\1` matches the text captured by a group in the pattern. For example, `(sens|respons)e and \1ibility` matches "sense and sensibility" or "response and responsibility".
 
 Name a capture with `(?<name>pattern)` or `(?'name'pattern)`, and refer to it within the pattern with `\k<name>`. For example, `(?<word>sens|respons)e and \k<word>ibility`. PCRE's `(?P<name>pattern)` and `(?P=name)` forms are unsupported.
+
+## Captures in softcode
 
 There are two numbering rules to distinguish. Within regex patterns, .NET numbers unnamed groups before named groups. SharpMUSH's softcode capture APIs preserve PennMUSH opening-parenthesis order for ordinary groups, named or unnamed. Complex patterns, including duplicate group names or explicitly numbered groups, can fall back to .NET numbering. Prefer named references when mixing group types.
 

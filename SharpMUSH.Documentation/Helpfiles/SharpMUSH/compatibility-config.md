@@ -232,18 +232,14 @@ a A b B|-1|A B a b
 ## Innermost loop tokens
 
 The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches
-PennMUSH.
-
-With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$`
+PennMUSH. With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$`
 names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action
 they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the
 code of an attribute that the loop or switch calls, they are plain text.
 
 With it on, `##` and `#@` name the innermost `iter()` or `@dolist` that is running, and `#$` names
 the innermost switch, `case()`, `if()` or `ifelse()` whose action is running. This also applies in the code of an attribute that
-the loop or switch calls. Either way, the value is inserted as text and is never evaluated as code.
-
-To get the same result with either setting, use `%i0` or `itext(0)` for the current element,
+the loop or switch calls. Either way, the value is inserted as text and is never evaluated as code. To get the same result with either setting, use `%i0` or `itext(0)` for the current element,
 `inum(0)` for its position, and `%$0` or `stext(0)` for the current switch.
 
 ```sharp
@@ -289,20 +285,7 @@ delimiter, as PennMUSH does. With it on, they take RhostMUSH's arguments:
 
 `lattr(<object>[/<pattern>][, <target>[, <type>[, <flags>[, <regexp>[, <tree>]]]]])`
 
-- `<target>` is a player whose view to list: only the attributes they may see are named. It is used
-  only when you control that player; otherwise the list is your own view. The names are always
-  separated by a space.
-- `<type>` narrows or summarises the list by its first character: `$` keeps attributes holding a
-  $-command and `^` those holding a ^-listen pattern; `&` keeps attributes with every attribute flag
-  whose letter is in `<flags>`, and `|` those with any of them; `l` answers the number of names and
-  of pages; a number answers that page (243 names a page, as on a default RhostMUSH); `~<start>-<count>`
-  answers `<count>` names from the `<start>`th; `>` and `<` answer the alphabetically last or first
-  name. `+` lists RhostMUSH's lock attributes, which SharpMUSH does not have, so it answers nothing; see
-  llocks().
-- `<regexp>`, when nonzero, makes `<pattern>` a regular expression.
-- `<tree>`, when nonzero, makes `*` stop at a backtick, as SharpMUSH and PennMUSH match attribute
-  trees. RhostMUSH has no attribute trees, so without it `*` also matches a backtick and
-  `lattr(<object>)` names every attribute, branches' leaves included.
+What each argument does is in [rhostmush arguments lattr].
 
 ```sharp rhost_lattr
 > &RHOSTDOC_LATTR_CMD me=$rhostdoc:think hi
@@ -318,22 +301,14 @@ RHOSTDOC_LATTR_CMD RHOSTDOC_LATTR_TEXT
 ## RhostMUSH list() loop: `rhost_list`
 
 Off by default; meant for a game moved from RhostMUSH or TinyMUX, and importing a RhostMUSH or TinyMUX
-database turns it on.
-
-PennMUSH's `list()` names the game's functions, commands, flags and so on. RhostMUSH's
+database turns it on. PennMUSH's `list()` names the game's functions, commands, flags and so on. RhostMUSH's
 `list(<list>, <eval>[, <delimiter>][, <header>][, <target>])` evaluates `<eval>` for each element,
 as `iter()` does, and tells each result to the enactor on a line of its own instead of returning it.
 Its first three arguments are TinyMUX's `list()`, so this one option serves code written for either
 game. With `rhost_list` on, `list()` is RhostMUSH's and returns nothing, and `list(functions)` is an
 argument-count error.
 
-- `<delimiter>` separates the elements; it is a space when left out or empty.
-- `<header>`, when it is not empty, is evaluated once and told before the first result.
-- `<target>` sends the header and the results to another object instead of the enactor. It is used
-  only when the enactor controls it. A target the enactor does not control, or a name that matches
-  nothing, is ignored without a word, and the lines go to the enactor.
-- An empty list tells nothing, not even the header. A result that is empty is not told.
-- `ibreak()` stops the loop after the line it is in is told.
+What each further argument does is in [rhostmush arguments list].
 
 With `rhost_list` on, this tells you `Words:`, then `a:1`, then `b:2`, and `list()` itself returns
 nothing:
@@ -372,9 +347,7 @@ as on RhostMUSH.
 
 ## RhostMUSH printf() fields: `rhost_printf`
 
-Off by default; meant for a game moved from RhostMUSH.
-
-With `rhost_printf` off, printf() reads `%` directives in SharpMUSH's own grammar (see printf()).
+Off by default; meant for a game moved from RhostMUSH. With `rhost_printf` off, printf() reads `%` directives in SharpMUSH's own grammar (see printf()).
 With it on, it reads RhostMUSH's fields instead: a field is `$`, then any of the codes below, then
 `s`, and it takes the next value; `$$` is a dollar sign, and everything else is copied as it is.
 printf() then needs at least one value. A value with no field left for it is dropped, and a field
@@ -389,8 +362,7 @@ with no value left is empty.
   starts a new row at each line of the value. Further rows show the text between fields as spaces.
 - `:<character>:` pads with that character rather than a space.
 - `.` leaves out a blank last row. `!` leaves out an empty field and the text after it.
-
-The less common codes (`@ < > ' `` ` `` # / ;`) are read as on RhostMUSH as well.
+- The less common codes (`@ < > ' `` ` `` # / ;`) are read as on RhostMUSH as well.
 
 ```sharp rhost_printf
 > think printf(|$-5s|$5s|,ab,cd)

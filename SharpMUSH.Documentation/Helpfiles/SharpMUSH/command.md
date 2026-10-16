@@ -5,10 +5,15 @@
   "lookup": "@command",
   "aliases": [],
   "sections": [
+    {"id": "alias-clone", "heading": "Aliases, clones and switches", "lookup": "@command switches", "aliases": ["@command/alias", "@command/clone", "@command/delete", "@command/disable", "@command/enable", "@command/quiet"]},
+    {"id": "restrict", "heading": "Restricting a command", "lookup": "@command restrictions", "aliases": ["@command/restrict"]},
+    {"id": "args", "heading": "Naming arguments", "lookup": "@command arguments", "aliases": ["@command/args"]},
+    {"id": "permanent", "heading": "Making changes permanent", "lookup": "@command permanent changes"},
     {
       "id": "added-commands",
       "heading": "Adding commands",
-      "lookup": "@command added commands"
+      "lookup": "@command added commands",
+      "aliases": ["@command/add"]
     },
     {
       "id": "examples",
@@ -33,13 +38,21 @@
 
 @command can be used for adding new built-in commands, altering the way a built-in command works, and displaying information about how commands currently work.
 
-With no switches, @command shows all sorts of interesting information about how a command is parsed. Any player can use @command with no switch, while the switches are Wizard-only.
+With no switches, @command shows all sorts of interesting information about how a command is parsed. Any player can use @command with no switch, while the switches are Wizard-only. Everything the switches change lasts until the server restarts.
+
+- [@command switches]: `/alias`, `/clone`, `/delete`, `/disable`, `/enable` and `/quiet`
+- [@command restrictions]: who may use a command, and the refusal message
+- [@command arguments]: naming a command's arguments for its hooks
+- [@command permanent changes]: configuration options, and commands that cannot be disabled
+- [@command added commands]: new commands with `/add`, and how they parse
+- [@command examples]: an added command hooked to a $-command
+
+## Aliases, clones and switches
+
+`@command/alias <command>=<alias>`<br>
+`@command/clone <command>=<clone>`
 
 The `/alias` switch creates an alias for `<command>`, allowing players to type `<alias>` to run `<command>`. The `/clone` switch creates a separate copy of `<command>`, which works the same initially but can be restricted, @hooked, etc, separately.
-
-`@command/restrict` can be used to restrict who can use `<command>`. See [restrict] for more information.
-
-`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as %`\<name\>` as well as `LSA<n>` (see [@hook]). The last name can take the rest of the arguments, in the same shapes as `@function/args` (`parts...`, `key...|value...`, `case...|result... default`, or a bare `...` for pairs); see [named arguments commands]. With no names, the names are cleared. It needs the config.admin permission and, like the other switches, lasts until the server restarts.
 
 Switches include:
 - /add : Add a new command that does nothing, but can be @hook'd.
@@ -47,9 +60,23 @@ Switches include:
 - /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
 
+The `/quiet` switch can be used to suppress output from @command.
+
+## Restricting a command
+
+`@command/restrict <command>=<restriction> [" <error message>]`
+
+`@command/restrict` can be used to restrict who can use `<command>`. See [restrict] for more information.
+
 `<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, `noapp` (refused to an app acting for a player), each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. A `<error message>` after a `"` is shown instead of "Permission denied." to anyone the restriction refuses; a bare `"` clears it.
 
-The `/quiet` switch can be used to suppress output from @command.
+## Naming arguments
+
+`@command/args <command>=[<name> ...]`
+
+`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as %`\<name\>` as well as `LSA<n>` (see [@hook]). The last name can take the rest of the arguments, in the same shapes as `@function/args` (`parts...`, `key...|value...`, `case...|result... default`, or a bare `...` for pairs); see [named arguments commands]. With no names, the names are cleared. It needs the config.admin permission and, like the other switches, lasts until the server restarts.
+
+## Making changes permanent
 
 Everything these switches change lasts until the server restarts. A permanent alias belongs in the `command_aliases` configuration option, and a permanent restriction in `command_restrictions`. Changing `command_restrictions` takes effect at once, and puts every command it names, before or after the change, back to the restriction it was made with before applying the new setting, so a live `@command/restrict` on one of those commands lasts only until the next restart or change to `command_restrictions`. HUH_COMMAND, @CHAT and GOTO are run by the game itself and cannot be disabled, and @command is always enabled.
 

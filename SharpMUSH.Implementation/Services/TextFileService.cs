@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 
@@ -306,7 +307,7 @@ public class TextFileService : ITextFileService
 		}
 
 		var categories = (await ListCategoriesAsync())
-			.Concat(PluginDirectories().SelectMany(directory => Directory.GetDirectories(directory).Select(Path.GetFileName)).OfType<string>())
+			.Concat(LoadedPlugins().SelectMany(plugin => Directory.GetDirectories(plugin.Directory).Select(Path.GetFileName)).OfType<string>())
 			.Distinct(StringComparer.OrdinalIgnoreCase);
 		var rebuilt = new Dictionary<string, Dictionary<string, IndexEntry>>(StringComparer.OrdinalIgnoreCase);
 
@@ -338,10 +339,9 @@ public class TextFileService : ITextFileService
 	private Dictionary<string, IndexEntry>? BuildCategoryIndex(string category)
 	{
 		var categoryPath = PathInside(BaseDirectory, category);
-		var pluginPaths = PluginDirectories()
-			.Select(directory => PathInside(directory, category))
-			.OfType<string>()
-			.Where(Directory.Exists)
+		var pluginPaths = LoadedPlugins()
+			.Select(plugin => (Plugin: plugin, Path: PathInside(plugin.Directory, category)))
+			.Where(item => item.Path is not null && Directory.Exists(item.Path))
 			.ToList();
 		if ((categoryPath is null || !Directory.Exists(categoryPath)) && pluginPaths.Count == 0)
 		{
@@ -358,43 +358,87 @@ public class TextFileService : ITextFileService
 			}
 		}
 
-		foreach (var file in pluginPaths.SelectMany(path => Directory.GetFiles(path, "*.md").OrderBy(file => file, StringComparer.Ordinal)))
+		var pluginHelp = new List<HelpListings.PluginHelp>();
+		foreach (var (plugin, path) in pluginPaths)
 		{
-			IndexPluginFile(file, category, ref categoryIndex);
+			var articles = new List<HelpArticleParser.ParsedArticle>();
+			foreach (var file in Directory.GetFiles(path!, "*.md").OrderBy(file => file, StringComparer.Ordinal))
+			{
+				articles.AddRange(IndexPluginFile(file, category, ref categoryIndex));
+			}
+			pluginHelp.Add(new HelpListings.PluginHelp(plugin.Name ?? plugin.Id, articles));
 		}
+		ListPluginHelp(category, categoryIndex, pluginHelp);
 
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
 		return categoryIndex;
 	}
 
-	/// <summary>The folders of the plugins this start loaded and not unloaded since, in load order.</summary>
-	private IEnumerable<string> PluginDirectories() =>
+	/// <summary>The plugins this start loaded and not unloaded since, in load order.</summary>
+	private IEnumerable<PluginBootEntry> LoadedPlugins() =>
 		_plugins?.Entries
 			.Where(entry => entry.Status == PluginBootStatus.Loaded && Directory.Exists(entry.Directory)
-				&& _pluginManager?.Value.WasUnloaded(entry.Id) != true)
-			.Select(entry => entry.Directory) ?? [];
+				&& _pluginManager?.Value.WasUnloaded(entry.Id) != true) ?? [];
 
 	/// <summary>
 	/// Indexes a plugin's help file into a copy of the index and keeps the copy only when the whole file indexed. A
 	/// plugin file with a topic that clashes with one already indexed, even an old-style one, or a file that does not
 	/// parse, is left out whole and logged; the engine's help, and the server, carry on without it.
 	/// </summary>
-	private void IndexPluginFile(string filePath, string category, ref Dictionary<string, IndexEntry> index)
+	/// <returns>The file's articles, or none when it was left out.</returns>
+	private IReadOnlyList<HelpArticleParser.ParsedArticle> IndexPluginFile(string filePath, string category,
+		ref Dictionary<string, IndexEntry> index)
 	{
 		var attempt = new Dictionary<string, IndexEntry>(index, StringComparer.OrdinalIgnoreCase);
 		try
 		{
-			IndexMarkdownFile(filePath, category, attempt, plugin: true);
+			var parsed = IndexMarkdownFile(filePath, category, attempt, plugin: true);
 			index = attempt;
+			return parsed;
 		}
 		catch (Exception exception) when (exception is InvalidDataException or System.Text.Json.JsonException)
 		{
 			_logger.LogWarning("Plugin help {File} was not indexed: {Reason}", filePath, exception.Message);
+			return [];
+		}
+	}
+
+	/// <summary>The topic that lists the help of every running plugin, whether or not it is listed elsewhere.</summary>
+	public const string PluginHelpLookup = HelpListings.PluginHelpLookup;
+
+	/// <summary>
+	/// Appends the plugins' listings (<see cref="HelpListings"/>) to the index topics they name. A listing whose index is
+	/// not in this category is logged and left out; the topic itself stays indexed.
+	/// </summary>
+	private void ListPluginHelp(string category, Dictionary<string, IndexEntry> index, IEnumerable<HelpListings.PluginHelp> help)
+	{
+		foreach (var (target, listed, addition) in HelpListings.For(help))
+		{
+			if (!index.TryGetValue(target, out var entry) || entry.Hidden || entry.Help?.Article is not { } article)
+			{
+				_logger.LogWarning("Plugin help for {Topics} names {Index}, which is not a {Category} topic",
+					string.Join(", ", listed), target, category);
+				continue;
+			}
+			var listing = entry.Help.SectionId is { } sectionId
+				? article with
+				{
+					Sections = article.Sections.Select(section => section.Id == sectionId
+						? section with { Markdown = section.Markdown + addition }
+						: section).ToList()
+				}
+				: article with { Overview = article.Overview + addition };
+			foreach (var (lookup, existing) in index.Where(pair => pair.Value.Help?.Article?.Id == article.Id).ToList())
+			{
+				var section = listing.Sections.FirstOrDefault(section => section.Id == existing.Help!.SectionId);
+				index[lookup] = existing with { Help = listing.Entry(section) };
+			}
 		}
 	}
 
 	/// <param name="plugin">Whether the file is a plugin's, which may not repeat a lookup even in an old-style file.</param>
-	private void IndexMarkdownFile(string filePath, string category, Dictionary<string, IndexEntry> index, bool plugin = false)
+	private IReadOnlyList<HelpArticleParser.ParsedArticle> IndexMarkdownFile(string filePath, string category,
+		Dictionary<string, IndexEntry> index, bool plugin = false)
 	{
 		var parsed = HelpArticleParser.Parse(File.ReadAllText(filePath), category);
 		foreach (var source in parsed)
@@ -434,6 +478,7 @@ public class TextFileService : ITextFileService
 				Add(alias, index[target].Help!, true);
 			}
 		}
+		return parsed;
 	}
 
 	/// <summary>

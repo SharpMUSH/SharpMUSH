@@ -145,6 +145,32 @@ failing plugin is logged and skipped; it never aborts server boot.
 > The server host must carry its full dependency closure beside its binary for the plugin loader to resolve
 > shared types. If you self-host the engine to load plugins, do the same.
 
+## 5.5. Help for a plugin
+
+A plugin's help files go in a `help/` folder beside its `plugin.json`, in the same Markdown format as the
+engine's (`docs/guides/help-authoring.md`). While the plugin runs, `help` and the portal's help pages show them
+with the engine's topics. A file that does not parse, or that uses a lookup the engine or an earlier plugin
+already has, is left out whole and logged.
+
+Every topic of a running plugin is listed on `help plugin help` under the plugin's `name`. To also appear on the
+engine's own lists, name them in `listedIn`, on the article or on one section:
+
+```markdown
+<!-- help-article
+{"corpus":"help","id":"radio","lookup":"@radio","aliases":[],"listedIn":["@-general"],
+ "sections":[{"id":"tune","heading":"Tuning","lookup":"tune()","listedIn":["string functions"]}]}
+-->
+```
+
+The named topic gains a `From plugins:` line linking yours: `help @-general` lists `@radio`, and the String
+Functions list `tune()`. A name that is a section's lookup puts the line in that section. A name that is not a
+help topic is logged and skipped. `HelpArticleTests` checks every plugin in this repository against the engine's
+help, `listedIn` included.
+
+A plugin in this repository (`SharpMUSH.Plugins.*`) also reaches the documentation sites: the help export
+carries its `help/` files and its listings beside the engine's, so the Guide and the Docs show what `help`
+shows (`docs/guides/help-authoring.md`). The export refuses a plugin file the game would leave out.
+
 ## 6. Collisions and load order
 
 - A plugin command/function whose name collides with an existing engine (or earlier-loaded plugin) entry is
