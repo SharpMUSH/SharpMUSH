@@ -16,6 +16,11 @@
       "id": "nested-pretty-printer",
       "heading": "Nested pretty printer",
       "lookup": "json_map nested pretty printer"
+    },
+    {
+      "id": "pretty-printer-output",
+      "heading": "Printer output",
+      "lookup": "json_map printer output"
     }
   ],
   "redirects": {
@@ -75,8 +80,17 @@ print an object key (%4).
 > &pretty_json_sub me=repeat(%t,%3)[if(%4,[json(string,%2)]:%b)][switch(%0,object,\{%r[json_map(%=,%1,\,%r,inc(%3),1)]%r[repeat(%t,%3)]\},array,\[%r[json_map(%=,%1,\,%r,inc(%3),0)]%r[repeat(%t,%3)]\],%1)]
 ```
 
+Call the printer with nested values:
+
 ```sharp
 > think u(me/pretty_json,json(array,5,null,json(array,json(string,nested!),999,json(object,foo,5,bar,json(string,Whee))),7))
+```
+
+See [json_map printer output] for the result.
+
+## Printer output
+
+```sharp
 [
 	5,
 	null,
