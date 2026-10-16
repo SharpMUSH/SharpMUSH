@@ -226,13 +226,14 @@ objects:
       # %0 how many connections took the interface just now.
       FUN`TEXT`ON: |-
         Your client will be offered the game's interface when you connect.[if(%0,%bIt was offered just now.,%bNone of your connections takes GMCP now%, so it will be offered next time.)]
-      # +gui: %0 the player. A screen reader is told in two sentences; anyone else sees the fields.
+      # +gui: %0 the player. A screen reader is told in two sentences; anyone else sees the fields, and
+      # the package's URL on a line of its own below them, where it copies whole.
       FUN`DISPLAY`STATUS: |-
         if(strlen(v(DATA`CONFIG`GUI-URL)),if(u(%!/FUN`CLIENT`SCREENREADER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))
       FUN`DISPLAY`PLAIN: |-
         The game's interface for Mudlet is version [v(DATA`CONFIG`GUI-VERSION)], at [v(DATA`CONFIG`GUI-URL)]. [if(u(%!/FUN`GUI`WANTED,%0),It is offered to you when you connect. +gui off stops that.,You turned it off. +gui on offers it again.)]
       FUN`DISPLAY`BOX: |-
-        box(fields(,Package,v(DATA`CONFIG`GUI-URL),Version,v(DATA`CONFIG`GUI-VERSION),Offered,if(u(%!/FUN`GUI`WANTED,%0),tone(success,when you connect),tone(muted,no%, you turned it off)),Map,strfirstof(v(DATA`CONFIG`MAP-URL),tone(muted,none)))%r[rule()]%r[tone(muted,+gui on and +gui off choose whether it is offered.)],Mudlet interface)
+        box(fields(,Version,v(DATA`CONFIG`GUI-VERSION),Offered,if(u(%!/FUN`GUI`WANTED,%0),tone(success,when you connect),tone(muted,no%, you turned it off)),Map,strfirstof(v(DATA`CONFIG`MAP-URL),tone(muted,none)))%r[rule()]%r[tone(muted,+gui on and +gui off choose whether it is offered.)],Mudlet interface)%rPackage: [v(DATA`CONFIG`GUI-URL)]
 
       # ---- help -----------------------------------------------------------
       HELP: |-

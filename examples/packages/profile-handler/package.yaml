@@ -31,7 +31,7 @@ objects:
       # One player-authored profile field as the {value, visible} shape. %0 = objid, %1 = key.
       # get() and never u(): PROFILE`* holds text a player typed, and evaluating it would run
       # whatever they hid in it with this wizard handler's permissions.
-      # Unused by the shipped schema — see the opt-in block under GET`PROFILE`SCHEMA.
+      # Unused by the shipped schema — see "A richer schema" in README.md.
       FUN`PROFILE`FIELD: |-
         json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))
       # One image attribute (%1) of an object (%0), or blank unless the attribute is visual. This
@@ -48,9 +48,10 @@ objects:
       # Brackets are escaped because a bare [...] is evaluated here.
       FUN`PROFILE`COLOR: |-
         if(regmatch(setr(profile_color,get(%0/PROFILE`COLOR)),^#\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]$),%q<profile_color>)
-      # Directory category for one player (%0). Wizard > Royalty > Guest; blank otherwise.
+      # Directory category for one player (%0). Wizard > Royalty > Guest; blank otherwise. Wizard and Royalty
+      # are the roles WIZARD and ROYALTY are held as.
       FUN`PROFILE`CHARACTERCATEGORY: |-
-        firstof(if(hasflag(%0,WIZARD),Wizard),if(hasflag(%0,ROYALTY),Royalty),if(haspower(%0,Guest),Guest))
+        firstof(if(hasrole(%0,wizard),Wizard),if(hasrole(%0,royalty),Royalty),if(haspower(%0,Guest),Guest))
       # One character-directory row. %0 = player. created = unix ms, which is what the portal's
       # timestamp contract expects and what objid carries. csecs() is seconds by default, like
       # PennMUSH's, so the millisecond form has to be asked for: see 'help COMPATIBILITY IDENTITY'.
@@ -109,7 +110,7 @@ objects:
       # GET /http/profile?objid=#1:123 — one character's public profile.
       # `fields` carries only facts the engine itself knows, so a brand-new character's profile
       # renders real state instead of a table of blanks. Anything a game wants beyond that is a
-      # PROFILE`* attribute it also adds to the schema — see the opt-in block below.
+      # PROFILE`* attribute it also adds to the schema — see "A richer schema" in README.md.
       # objid is repeated inside `fields` on purpose: the envelope's copy addresses the character,
       # but the schema renderer only resolves element keys against `fields`, so a field the schema
       # declares has to live there to render at all.
@@ -133,7 +134,7 @@ objects:
       # its creation date and its objid. A schema field with no data behind it still renders —
       # as an empty row — so declaring fullname/age/concept/faction out of the box gave every
       # character, including its own owner, a profile of blank labels. Those fields are a game's
-      # choice, not the engine's: opt back into them below.
+      # choice, not the engine's: README.md, "A richer schema", shows how to opt back into them.
       GET`PROFILE`SCHEMA: |-
         @respond/type application/json; think v(DATA`PROFILE`SCHEMA)
       # The schema itself, as JSON: v() returns it without evaluating it, so a schema of any size costs
@@ -141,19 +142,3 @@ objects:
       # json_fill().
       DATA`PROFILE`SCHEMA: |-
         {"kind":"view","schema_version":1,"pages":[{"key":"profile","order":1,"sections":[{"name":"Identity","order":1,"elements":[{"kind":"field","key":"created","label":"Created","type":"text","visible_to":"public"},{"kind":"field","key":"objid","label":"Object ID","type":"text","visible_to":"public"}]}]}]}
-
-      # ── Opt-in: the richer demographic schema ────────────────────────────
-      # Demonstrating the schema system is the point of this package, so the fuller example is kept
-      # here rather than deleted. To adopt it on your game, add the fields to the data route and the
-      # matching elements to the schema (DATA`PROFILE`SCHEMA) — both, or the portal renders labels with nothing behind
-      # them, which is the defect the shipped schema above exists to avoid.
-      #
-      # Players fill these in with `&PROFILE`FULLNAME me=Gandalf the Grey` (etc.); FUN`PROFILE`FIELD reads
-      # PROFILE`<key> with get(), never u(). Set `show_when_empty: false` on an element if you would
-      # rather an unfilled field vanish than render blank.
-      #
-      #   GET`PROFILE: |-
-      #     @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>)),fullname,u(FUN`PROFILE`FIELD,%q<form.objid>,fullname),alias,u(FUN`PROFILE`FIELD,%q<form.objid>,alias),age,u(FUN`PROFILE`FIELD,%q<form.objid>,age),concept,u(FUN`PROFILE`FIELD,%q<form.objid>,concept),faction,u(FUN`PROFILE`FIELD,%q<form.objid>,faction),description,u(FUN`PROFILE`FIELD,%q<form.objid>,description)))
-      #
-      #   DATA`PROFILE`SCHEMA: |-
-      #     {"kind":"view","schema_version":1,"pages":[{"key":"profile","order":1,"sections":[{"name":"Demographics","order":1,"elements":[{"kind":"field","key":"fullname","label":"Full Name","type":"text","visible_to":"public"},{"kind":"field","key":"alias","label":"Alias","type":"text","visible_to":"public"},{"kind":"field","key":"age","label":"Age","type":"text","visible_to":"public"},{"kind":"field","key":"concept","label":"Concept","type":"text","visible_to":"public"}]},{"name":"Status","order":2,"elements":[{"kind":"field","key":"faction","label":"Faction","type":"text","visible_to":"public"}]},{"name":"Description","order":3,"elements":[{"kind":"field","key":"description","label":"Description","type":"mstring","visible_to":"public"}]}]}]}

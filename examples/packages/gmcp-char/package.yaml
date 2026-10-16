@@ -81,9 +81,11 @@ objects:
       # the player's name.
       FUN`GMCPCHAR`FULLNAME: |-
         strfirstof(if(strlen(setr(gmcpchar_attr,u(me/FUN`GMCPCHAR`SETTING,FULLNAME))),get(%0/%q<gmcpchar_attr>)),name(%0))
-      # %0 a value: as JSON, a number when it is one.
+      # %0 a value: as JSON, a number when it is one. json(number) writes it as JSON does: 007 as 7,
+      # +40 as 40, .5 as 0.5, each of which isnum() takes but JSON refuses as written. A number
+      # json(number) cannot read (1e5) goes as written, which JSON takes.
       FUN`GMCPCHAR`VALUE: |-
-        if(isnum(%0),%0,json(string,%0))
+        if(isnum(%0),if(isnum(setr(gmcpchar_number,json(number,%0))),%q<gmcpchar_number>,%0),json(string,%0))
       # fold() step: %0 the object so far, %1 <player>|<attribute>. Adds the attribute under its last
       # name in lower case (STATS`HP is hp), when the player has it.
       FUN`GMCPCHAR`FIELD: |-
@@ -210,7 +212,7 @@ objects:
       # %<attribute> one attribute: in the table, watched, and handled, unless someone else watches it.
       # %<by> whoever changed the setting, told when it is left alone; empty at install.
       INC`WATCH`ATTRIBUTE: |-
-        @if strmatch(attrwatch(%<attribute>),#-1*)={@attribute/access %<attribute>=none}; @if not(strlen(attrwatch(%<attribute>)))={@attribute/watch %<attribute>}; @if u(%!/FUN`WATCH`ISDEFAULT,%<attribute>)={@cpattr u(%!/FUN`WATCH`EVENTHANDLER)/TEMPLATE`GMCPCHAR`WATCH=u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}, {@if hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}; @pemit strfirstof(%<by>,%#)=GMCP Char: %<attribute> is already watched with [attrwatch(%<attribute>)], so it is left as it is and its changes are not sent.}
+        @if strmatch(attrwatch(%<attribute>),#-1*)={@attribute/access %<attribute>=none}; @if not(strlen(attrwatch(%<attribute>)))={@attribute/watch %<attribute>}; @if u(%!/FUN`WATCH`ISDEFAULT,%<attribute>)={@cpattr u(%!/FUN`WATCH`EVENTHANDLER)/TEMPLATE`GMCPCHAR`WATCH=u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}, {@if hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>`GMCPCHAR)={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCPCHAR}; @pemit strfirstof(%<by>,%#)=notice(GMCP,%<attribute> is already watched with [attrwatch(%<attribute>)]%, so it is left as it is and its changes are not sent.,warn)}
       # %<attribute> one attribute no longer named: its handler goes (and the empty WATCH`<attribute> left
       # above it), and its watch too if it is the default one and nothing else is left that it runs.
       INC`WATCH`REMOVE: |-
