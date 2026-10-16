@@ -8848,4 +8848,6 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
+  <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
 </root>

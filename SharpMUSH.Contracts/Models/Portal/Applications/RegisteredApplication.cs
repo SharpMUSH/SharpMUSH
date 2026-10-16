@@ -68,6 +68,7 @@ public enum ApplicationKind
 /// For Page apps: an optional relative route returning the app's own sidebar entries for the viewer
 /// (groups of labelled links with counts), drawn in its nav section in place of the single app link.
 /// </param>
+/// <param name="ConfigurationTile">Optional private admin discovery metadata; omitted from the public catalog.</param>
 public sealed record RegisteredApplication(
 	string Slug,
 	string DisplayName,
@@ -90,7 +91,8 @@ public sealed record RegisteredApplication(
 	string? NavUrl = null,
 	string? DefinitionId = null,
 	int ConfigVersion = 1,
-	System.Text.Json.JsonElement? Config = null);
+	System.Text.Json.JsonElement? Config = null,
+	ApplicationConfigurationTile? ConfigurationTile = null);
 
 /// <summary>
 /// String discriminator values for <see cref="RegisteredApplication.RenderKind"/>. Kept as constants

@@ -22,4 +22,6 @@ public interface IApplicationSource
 {
 	/// <summary>The portal applications this plugin contributes (read-only overlay; not persisted).</summary>
 	IEnumerable<RegisteredApplication> GetApplications();
+	/// <summary>Admin configuration links present only while this plugin is loaded.</summary>
+	IEnumerable<ApplicationConfigurationTile> GetConfigurationTiles() => [];
 }

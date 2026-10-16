@@ -41,7 +41,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownApplicationKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"slug", "display_name", "icon", "type", "schema_url", "data_url", "submit_route",
-		"minimum_role", "nav_placement", "zones", "order", "scope", "oob_package", "permission", "nav_url"
+		"minimum_role", "nav_placement", "zones", "order", "scope", "oob_package", "permission", "nav_url", "configuration_tile"
 	};
 
 	private static readonly IReadOnlySet<string> ReservedManifestKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -1106,6 +1106,23 @@ public partial class PackageManifestService : IPackageManifestService
 			issues.Add(PackageManifestIssue.Error("application.order", $"'{orderNode}' is not a valid order (integer)."));
 		}
 
+		SharpMUSH.Library.Models.Portal.Applications.ApplicationConfigurationTile? configurationTile = null;
+		if (app.TryGetValue("configuration_tile", out var tileNode) && tileNode is not null)
+		{
+			if (tileNode is not Dictionary<object, object> rawTile)
+				issues.Add(PackageManifestIssue.Error("application.configuration_tile", "Configuration tile must be a mapping."));
+			else
+			{
+				var fields = Normalize(rawTile);
+				string Field(string key) => fields.TryGetValue(key, out var value) && value is string text ? text : "";
+				configurationTile = new(Field("id"), Field("title"), Field("description"), Field("icon"), Field("route"), Field("permission"));
+				if (!configurationTile.HasSafeRoute() || string.IsNullOrWhiteSpace(configurationTile.Id)
+					|| string.IsNullOrWhiteSpace(configurationTile.Title) || string.IsNullOrWhiteSpace(configurationTile.Permission))
+					issues.Add(PackageManifestIssue.Error("application.configuration_tile",
+						"Configuration tile requires an id, title, permission and canonical local /admin/ or /apps/ route."));
+			}
+		}
+
 		return new PackageApplicationSpec(
 			slug ?? "",
 			displayName ?? "",
@@ -1121,7 +1138,8 @@ public partial class PackageManifestService : IPackageManifestService
 			AppString("scope"),
 			AppString("oob_package"),
 			AppString("permission"),
-			AppString("nav_url"));
+			AppString("nav_url"),
+			configurationTile);
 	}
 
 	/// <summary>True when a field carries at least one <c>{{ref}}</c> token (validated separately by <see cref="ValidateRefs"/>).</summary>

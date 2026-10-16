@@ -162,7 +162,8 @@ public sealed record PackageApplicationSpec(
 	string? Scope = null,
 	string? OobPackage = null,
 	string? Permission = null,
-	string? NavUrl = null);
+	string? NavUrl = null,
+	SharpMUSH.Library.Models.Portal.Applications.ApplicationConfigurationTile? ConfigurationTile = null);
 
 /// <summary>How an application surfaces in the portal (mirrors <c>ApplicationKind</c>).</summary>
 public enum PackageApplicationDisplay

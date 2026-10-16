@@ -37,7 +37,8 @@ public partial class LightningDatabase
 		NavUrl = application.NavUrl,
 		DefinitionId = application.DefinitionId,
 		ConfigVersion = application.ConfigVersion,
-		Config = application.Config?.Clone()
+		Config = application.Config?.Clone(),
+		ConfigurationTile = application.ConfigurationTile
 	};
 
 	private static RegisteredApplication MapApplication(ApplicationRecord r) => new(
@@ -62,7 +63,8 @@ public partial class LightningDatabase
 		r.NavUrl,
 		r.DefinitionId,
 		r.ConfigVersion,
-		r.Config?.Clone());
+		r.Config?.Clone(),
+		r.ConfigurationTile);
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 		=> await Store.WriteAsync(tx =>
