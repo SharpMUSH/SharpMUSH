@@ -27,13 +27,9 @@ else if (_schema is null)
 {
     <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WidSchemaUnavailable"]</MudText>
 }
-else if (_schema.IsForm)
-{
-    <SchemaFormRenderer Document="_schema" Data="_data" />
-}
 else
 {
-    <SchemaViewRenderer Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" />
+    <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" />
 }
 
 @code {

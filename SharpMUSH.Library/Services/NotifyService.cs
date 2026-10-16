@@ -349,6 +349,11 @@ public class NotifyService(
 	public ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
+	public ValueTask NotifyToSession(long handle, string sessionId, SharpMessage what)
+		=> connections.Get(handle) is { } connection && (connection.Metadata.GetValueOrDefault("SessionId") ?? "") == sessionId
+			? PublishMarkup(handle, Prepare(what), sessionId)
+			: ValueTask.CompletedTask;
+
 	public ValueTask PromptToSession(long handle, string sessionId, SharpMessage what, Guid? inputSession = null)
 		=> PublishMarkupPrompt(handle, Prepare(what), sessionId, inputSession?.ToString("N"));
 

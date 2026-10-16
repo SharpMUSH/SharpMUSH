@@ -364,6 +364,10 @@ public static class TestHelpers
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
 
 		notifier
+			.When(x => x.NotifyToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<SharpMessage>()))
+			.Do(call => DeliverToHandle(call.ArgAt<long>(0), PlainText(call.ArgAt<SharpMessage>(2))));
+
+		notifier
 			.When(x => x.NotifyLocalizedToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<object[]>()))
 			.Do(call => DeliverToHandle(
 				call.ArgAt<long>(0),

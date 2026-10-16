@@ -1,9 +1,6 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
-@inject SchemaAppService Schema
-@inject ISnackbar Snackbar
-@inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
 @* Renders an editable Portal Schema Document (kind:"form"). Collects field values, POSTs actions to
@@ -11,8 +8,23 @@
    softcode-driven: an action may return a replacement schema, which simply re-renders, or replacement
    data, which redraws the display elements (tables, timelines) the form shares with a view. *@
 
-@if (!_model.HasPages)
+@if (!ActionHandler.HasDelegate)
 {
+    @if (Document is null)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidFormNoPages"]</MudText>
+    }
+    else
+    {
+        <SchemaApplicationHost Document="Document" Data="Data" />
+    }
+}
+else if (!_model.HasPages)
+{
+    @if (_model.GlobalError is { } error)
+    {
+        <div role="alert">@error</div>
+    }
     <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidFormNoPages"]</MudText>
 }
 else
@@ -37,6 +49,7 @@ else
         </MudAlert>
     }
 
+    <fieldset disabled="@_busy" style="border:0;padding:0;margin:0;min-width:0">
     <MudForm @ref="_form" Class="mt-2">
         @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
         {
@@ -71,6 +84,7 @@ else
             </MudPaper>
         }
     </MudForm>
+    </fieldset>
 
     <div class="d-flex justify-space-between mt-2">
         <div>
@@ -107,29 +121,14 @@ else
     /// <summary>Optional prefill data (form editing an existing record), also what display elements read.</summary>
     [Parameter] public SchemaData? Data { get; set; }
 
-    // The data display elements read: the parameter, until an action answers with replacement data.
-    private SchemaData? _data;
-    private SchemaData? _dataParameter;
-
-    // Everything entered, the page showing and the errors bound; this component draws it and sends it.
-    private readonly SchemaFormModel _model = new();
+    [Parameter] public SchemaFormModel? State { get; set; }
+    [Parameter] public EventCallback<SchemaActionRequest> ActionHandler { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    private SchemaData? _data => Data;
+    private SchemaFormModel _model => State ?? throw new InvalidOperationException("The schema host must supply form state.");
     private MudForm? _form;
-    private bool _busy;
-
+    private bool _busy => Busy;
     private SchemaPage CurrentPage => _model.CurrentPage;
-
-    protected override void OnParametersSet()
-    {
-        if (!ReferenceEquals(Data, _dataParameter))
-        {
-            _data = _dataParameter = Data;
-        }
-
-        if (!ReferenceEquals(_model.Document, Document))
-        {
-            _model.Load(Document, _data);
-        }
-    }
 
     private Task Dispatch(string actionName) => Dispatch(actionName, null);
 
@@ -141,79 +140,10 @@ else
     /// </summary>
     private async Task Dispatch(string actionName, IReadOnlyDictionary<string, JsonElement>? values)
     {
-        // One action at a time: whatever arrives while one is in flight is dropped, not posted twice.
-        if (_busy || _model.Action(actionName) is not { } action)
-        {
-            return;
-        }
-
-        // Advisory required-field check before a final submit (softcode remains authoritative).
-        // Partial submits (buttons, "next") never block — softcode decides what is complete.
+        if (_busy || _model.Action(actionName) is null) return;
         if (actionName == "submit"
-            && !_model.ValidateRequired(field => Loc["WidFieldRequired", field.Label ?? field.Key!], Loc["WidFillRequiredFields"]))
-        {
-            StateHasChanged();
-            return;
-        }
-
-        _busy = true;
-        _model.ClearErrors();
-        StateHasChanged();
-
-        SchemaActionResult result;
-        try
-        {
-            result = await Schema.SubmitAsync(action.Route!, _model.Payload(values));
-        }
-        finally
-        {
-            _busy = false;
-        }
-
-        if (result.Ok)
-        {
-            var reset = action.OnSuccess?.ResetFields ?? false;
-            if (reset)
-            {
-                _model.ResetValues();
-            }
-
-            if (result.Fields is not null && (reset || (action.OnSuccess?.MergeFields ?? false)))
-            {
-                _model.MergeFields(result.Fields);
-            }
-
-            if (result.Data is not null)
-            {
-                _data = result.Data;
-            }
-
-            if (result.Schema is not null)
-            {
-                // Softcode-driven progression: re-render from the returned document.
-                _model.Load(result.Schema, _data);
-            }
-
-            if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Toast) || !string.IsNullOrWhiteSpace(result.Message))
-            {
-                Snackbar.Add(action.OnSuccess?.Toast ?? result.Message!, Severity.Success);
-            }
-
-            if (!string.IsNullOrWhiteSpace(result.Redirect))
-            {
-                Nav.NavigateTo(result.Redirect!);
-            }
-            else if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Navigate))
-            {
-                Nav.NavigateTo(action.OnSuccess!.Navigate!);
-            }
-        }
-        else
-        {
-            _model.BindErrors(result.Errors, action.OnError?.BindFieldErrors ?? true, Loc["WidActionFailed"]);
-        }
-
-        StateHasChanged();
+            && !_model.ValidateRequired(field => Loc["WidFieldRequired", field.Label ?? field.Key!], Loc["WidFillRequiredFields"])) return;
+        await ActionHandler.InvokeAsync(new(actionName, values));
     }
 
     private string GetString(string key) => _model.GetString(key);
@@ -227,6 +157,7 @@ else
     /// </summary>
     private Task Changed(SchemaElement field, Action store)
     {
+        if (_busy) return Task.CompletedTask;
         store();
         return string.IsNullOrWhiteSpace(field.TriggersAction) || _busy
             ? Task.CompletedTask

@@ -68,12 +68,14 @@ public class SchemaAppService(IHttpClientFactory httpClientFactory, ILogger<Sche
 	/// On transport failure, returns an envelope with <c>Ok = false</c> and a <c>_global</c> error so
 	/// the renderer can surface it the same way it surfaces softcode-reported errors.
 	/// </summary>
-	public async Task<SchemaActionResult> SubmitAsync(string route, IReadOnlyDictionary<string, object?> payload)
+	public async Task<SchemaActionResult> SubmitAsync(string route, IReadOnlyDictionary<string, object?> payload, string? formInstance = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(route, payload, SchemaJson.Options);
+			using var request = new HttpRequestMessage(HttpMethod.Post, route) { Content = JsonContent.Create(payload, options: SchemaJson.Options) };
+			if (formInstance is not null) request.Headers.Add("X-SharpMUSH-Form-Instance", formInstance);
+			using var response = await http.SendAsync(request);
 			var body = await response.Content.ReadAsStringAsync();
 
 			SchemaActionResult? result = null;
@@ -96,7 +98,7 @@ public class SchemaAppService(IHttpClientFactory httpClientFactory, ILogger<Sche
 				? new SchemaActionResult(true, null, null, null, null, null)
 				: Failure($"The action handler returned HTTP {(int)response.StatusCode}.");
 		}
-		catch (HttpRequestException ex)
+		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
 		{
 			logger.LogWarning(ex, "Action POST to {Route} failed.", route);
 			return Failure("The action could not be sent. Please try again.");

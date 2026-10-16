@@ -29,6 +29,10 @@ public interface INotifyService
 
 	ValueTask Notify(long handle, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
+	/// <summary>Normal output bound to one captured transport incarnation.</summary>
+	ValueTask NotifyToSession(long handle, string sessionId, SharpMessage what)
+		=> throw new NotSupportedException("This notifier does not support incarnation-bound output.");
+
 	ValueTask Notify(long[] handles, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);

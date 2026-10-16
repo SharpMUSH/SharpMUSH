@@ -123,7 +123,11 @@ public class HttpHandlerCommandService(
 
 		// One response context, reachable two ways during execution (Penn's `struct http_request`):
 		// on the parser state for @respond, and in the output-capture frame for emitted output.
-		var context = new HttpResponseContext();
+		var context = new HttpResponseContext
+		{
+			ApplicationViewer = viewer,
+			ApplicationInstance = headers.FirstOrDefault(h => h.Name.Equals("X-SharpMUSH-Form-Instance", StringComparison.OrdinalIgnoreCase)).Value
+		};
 		DBRef? handlerRef = null;
 
 		using (budget.Enter())
