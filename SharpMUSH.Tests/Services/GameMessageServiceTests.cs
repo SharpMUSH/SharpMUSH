@@ -25,7 +25,7 @@ namespace SharpMUSH.Tests.Services;
 /// options of its own and a Messages object of its own, so nothing here changes what the shared world's connections
 /// are shown.
 /// </summary>
-public class GameMessageServiceTests
+public partial class GameMessageServiceTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
