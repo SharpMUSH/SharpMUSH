@@ -8848,6 +8848,35 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="AdmRemoteBackupTitle" xml:space="preserve"><value>Remote backups</value></data>
+  <data name="AdmRemoteBackupDescription" xml:space="preserve"><value>Configure encrypted remote snapshots. A local hot copy is not a completed remote backup. Disable the legacy sidecar cron before enabling managed scheduling.</value></data>
+  <data name="AdmRemoteBackupAgentSeen" xml:space="preserve"><value>Backup agent last seen:</value></data>
+  <data name="AdmRemoteBackupAgentMissing" xml:space="preserve"><value>Backup agent has not checked in recently. Jobs cannot complete without it. Last seen:</value></data>
+  <data name="AdmRemoteBackupLastSuccess" xml:space="preserve"><value>Last confirmed remote success</value></data>
+  <data name="AdmRemoteBackupNever" xml:space="preserve"><value>Never</value></data>
+  <data name="AdmRemoteBackupEnabled" xml:space="preserve"><value>Enable managed scheduling (disable legacy cron first)</value></data>
+  <data name="AdmRemoteBackupRepository" xml:space="preserve"><value>Repository</value></data>
+  <data name="AdmRemoteBackupRepositoryHelp" xml:space="preserve"><value>b2:bucket:path, s3:https://host/bucket or rest:https://host/repository. Initialize the repository before use.</value></data>
+  <data name="AdmRemoteBackupHours" xml:space="preserve"><value>Schedule interval (hours)</value></data>
+  <data name="AdmRemoteBackupPassword" xml:space="preserve"><value>Repository password</value></data>
+  <data name="AdmRemoteBackupAccountId" xml:space="preserve"><value>Storage account ID / access key ID / REST username</value></data>
+  <data name="AdmRemoteBackupAccountKey" xml:space="preserve"><value>Storage account key / secret access key / REST password</value></data>
+  <data name="AdmRemoteBackupSecretKept" xml:space="preserve"><value>A value is configured. Leave blank to keep it.</value></data>
+  <data name="AdmRemoteBackupSecretMissing" xml:space="preserve"><value>No value configured.</value></data>
+  <data name="AdmRemoteBackupSave" xml:space="preserve"><value>Save configuration</value></data>
+  <data name="AdmRemoteBackupNow" xml:space="preserve"><value>Back up now</value></data>
+  <data name="AdmRemoteBackupHistory" xml:space="preserve"><value>Remote run history</value></data>
+  <data name="AdmRemoteBackupTime" xml:space="preserve"><value>Queued (UTC)</value></data>
+  <data name="AdmRemoteBackupReason" xml:space="preserve"><value>Reason</value></data>
+  <data name="AdmRemoteBackupState" xml:space="preserve"><value>State</value></data>
+  <data name="AdmRemoteBackupSnapshot" xml:space="preserve"><value>Snapshot ID</value></data>
+  <data name="AdmRemoteBackupError" xml:space="preserve"><value>Result / exit code</value></data>
+  <data name="AdmRemoteBackupNoRuns" xml:space="preserve"><value>No managed remote backups have run.</value></data>
+  <data name="AdmRemoteBackupAbandon" xml:space="preserve"><value>Abandon unknown job and retain its copy</value></data>
+  <data name="AdmRemoteBackupAbandonWarning" xml:space="preserve"><value>This worker's result is unknown. Investigate its process and remote repository first. Abandoning allows future backups and retains the old local copy; a late authenticated receipt can still report its actual result.</value></data>
+  <data name="AdmRemoteBackupCopyRetention" xml:space="preserve"><value>Unknown uploads retain their local copy. Interrupted preparation may leave a job directory under backup.remote-jobs on the server; inspect the failed job before removing its directory.</value></data>
+  <data name="AdmRemoteBackupClearAccountId" xml:space="preserve"><value>Clear the stored storage account ID when saving</value></data>
+  <data name="AdmRemoteBackupClearAccountKey" xml:space="preserve"><value>Clear the stored storage account key when saving</value></data>
   <data name="PkgBrowseInstalled" xml:space="preserve">
     <value>Installed v{0}</value>
   </data>
@@ -8856,5 +8885,13 @@
   </data>
   <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
     <value>Installed status is unavailable. Refresh to try again. {0}</value>
+  </data>
+  <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
+  <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Joining policy</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Player cap</value>
   </data>
 </root>

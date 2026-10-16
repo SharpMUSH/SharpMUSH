@@ -50,6 +50,59 @@ public class BackupTests
 	}
 
 	[Test]
+	public async Task RemoteCopiesPublishProvenanceAndHaveIndependentOwnershipAndRetention()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root, keep: 1, packageKeep: 1);
+		try
+		{
+			await db.Migrate();
+			var normal = (await backups.CreateAsync(new BackupProvenance("manual administrator request", "#1"))).Expect<WorldBackup>();
+			var package = (await backups.CreateBeforePackageOperationAsync(new BackupProvenance("pre-package", Operation: "update", Package: "example"))).Expect<WorldBackup>();
+			var job1 = Guid.NewGuid();
+			var remote1 = (await backups.CreateRemoteAsync(job1)).Expect<WorldBackup>();
+			var job2 = Guid.NewGuid();
+			var remote2 = (await backups.CreateRemoteAsync(job2)).Expect<WorldBackup>();
+			var metadata = System.Text.Json.JsonSerializer.Deserialize<WorldBackupMetadata>(
+				File.ReadAllText(Path.Join(remote1.Path, "backup.json")))!;
+			await Assert.That(metadata.Complete).IsTrue();
+			await Assert.That(metadata.Provenance.Trigger).IsEqualTo("remote backup job");
+			await Assert.That(metadata.Provenance.Operation).IsEqualTo(job1.ToString("N"));
+			await Assert.That(Path.GetDirectoryName(remote1.Path)).IsEqualTo(Path.Join(root + ".remote-jobs", job1.ToString("N")));
+			await Assert.That(Path.GetDirectoryName(remote2.Path)).IsEqualTo(Path.Join(root + ".remote-jobs", job2.ToString("N")));
+			await Assert.That(backups.List().Select(copy => copy.Name)).IsEquivalentTo([normal.Name]);
+			await Assert.That(backups.ListPackageOperationBackups().Select(copy => copy.Name)).IsEquivalentTo([package.Name]);
+			await backups.CreateAsync(new BackupProvenance("scheduled"));
+			await backups.CreateBeforePackageOperationAsync(new BackupProvenance("pre-package", Operation: "uninstall", Package: "example"));
+			await Assert.That(Directory.Exists(normal.Path)).IsFalse();
+			await Assert.That(Directory.Exists(package.Path)).IsFalse();
+			await Assert.That(Directory.Exists(remote1.Path)).IsTrue();
+			await Assert.That(Directory.Exists(remote2.Path)).IsTrue();
+			// A job's cleanup owns only its job directory, and cannot reach either retained group or another job.
+			Directory.Delete(Path.GetDirectoryName(remote1.Path)!, true);
+			var restarted = new LightningWorldBackupService(db,
+				new WorldBackupOptions { Root = root, Keep = 1, PackageOperationKeep = 1 }, true,
+				NullLogger<LightningWorldBackupService>.Instance);
+			await Assert.That(restarted.List().Count).IsEqualTo(1);
+			await Assert.That(restarted.List()[0].Provenance!.Trigger).IsEqualTo("scheduled");
+			await Assert.That(restarted.ListPackageOperationBackups().Count).IsEqualTo(1);
+			await Assert.That(restarted.ListPackageOperationBackups()[0].Provenance!.Operation).IsEqualTo("uninstall");
+			var survivor = System.Text.Json.JsonSerializer.Deserialize<WorldBackupMetadata>(
+				File.ReadAllText(Path.Join(remote2.Path, "backup.json")))!;
+			await Assert.That(survivor.Provenance.Operation).IsEqualTo(job2.ToString("N"));
+			(await restarted.CheckLatestAsync()).Expect<WorldBackupCheck>();
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+			Delete(root + ".remote-jobs");
+		}
+	}
+
+	[Test]
 	public async Task SignalFallbackPersistsSigusr2TriggerAcrossServiceRestart()
 	{
 		var path = TempPath();

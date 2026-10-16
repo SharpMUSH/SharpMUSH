@@ -112,6 +112,7 @@ public static class BuildNavCatalog
 		new("/admin/packages", Icons.Material.Filled.Inventory2, "PkgPackages", "AdmCardPackages", Group.Portal, ["packages.admin"]),
 		new("/admin/profiles", Icons.Material.Filled.Badge, "ProfileHandler", "AdmCardProfiles", Group.Portal, ["players.moderate"]),
 
+		new("/admin/backups", Icons.Material.Filled.Backup, "AdmRemoteBackupTitle", "AdmRemoteBackupDescription", Group.Server, ["server.admin"]),
 		new("/admin/server", Icons.Material.Filled.Dns, "AdmServerStatusLabel", "AdmCardServer", Group.Server, ["server.admin"]),
 		new("/admin/config", Icons.Material.Filled.Tune, "Configuration", "AdmCardConfig", Group.Server, ["config.admin"]),
 		new("/admin/import", Icons.Material.Filled.CloudUpload, "AdmImportLabel", "AdmCardImport", Group.Server, ["server.admin"]),

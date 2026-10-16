@@ -737,6 +737,10 @@ public partial class PackageInstallService
 			zones.Add(zone);
 		}
 
+		if (spec.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || string.IsNullOrWhiteSpace(tile.Id)
+			|| string.IsNullOrWhiteSpace(tile.Title) || string.IsNullOrWhiteSpace(tile.Permission)))
+			return new Error<string>("Application configuration tile is invalid.");
+
 		var application = new RegisteredApplication(
 			spec.Slug,
 			Sub(spec.DisplayName) ?? spec.Slug,
@@ -753,7 +757,8 @@ public partial class PackageInstallService
 			Scope: Sub(spec.Scope),
 			OobPackage: Sub(spec.OobPackage),
 			Permission: Sub(spec.Permission)?.Trim() is { Length: > 0 } permission ? permission : null,
-			NavUrl: Sub(spec.NavUrl));
+			NavUrl: Sub(spec.NavUrl),
+			ConfigurationTile: spec.ConfigurationTile);
 
 		return application;
 	}

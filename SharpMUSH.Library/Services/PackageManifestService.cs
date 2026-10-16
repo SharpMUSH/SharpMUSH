@@ -41,7 +41,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownApplicationKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"slug", "display_name", "icon", "type", "schema_url", "data_url", "submit_route",
-		"minimum_role", "nav_placement", "zones", "order", "scope", "oob_package", "permission", "nav_url"
+		"minimum_role", "nav_placement", "zones", "order", "scope", "oob_package", "permission", "nav_url", "configuration_tile"
 	};
 
 	private static readonly IReadOnlySet<string> ReservedManifestKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -170,7 +170,7 @@ public partial class PackageManifestService : IPackageManifestService
 		var objects = kind == PackageKind.Softcode
 			? contentPack ? [] : ReadObjects(doc, issues)
 			: ReadNoObjects(doc, kind, issues);
-		var application = ReadApplication(doc, name, kind, issues);
+		var application = ReadApplication(doc, name, kind, format, issues);
 		var binary = ReadBinaries(doc, kind, issues);
 		var declarations = ReadDeclarations(doc, kind, issues);
 		ValidateDeclarations(declarations, issues);
@@ -251,6 +251,9 @@ public partial class PackageManifestService : IPackageManifestService
 
 	/// <summary>The first format in which <c>category:</c> means something; below it the key is ignored.</summary>
 	public static PackageFormatVersion CategoryFormat { get; } = new(1, 10);
+
+	/// <summary>The first format that supports application configuration discovery tiles.</summary>
+	public static PackageFormatVersion ConfigurationTileFormat { get; } = new(1, 11);
 
 	/// <summary>
 	/// Reads <c>category:</c> (format 1.10): the one group the package is listed under where packages are offered
@@ -1012,7 +1015,7 @@ public partial class PackageManifestService : IPackageManifestService
 	/// zone enums here.
 	/// </summary>
 	private static PackageApplicationSpec? ReadApplication(
-		Dictionary<string, object?> doc, string? packageName, PackageKind kind, List<PackageManifestIssue> issues)
+		Dictionary<string, object?> doc, string? packageName, PackageKind kind, PackageFormatVersion format, List<PackageManifestIssue> issues)
 	{
 		var present = doc.TryGetValue("application", out var node) && node is not null;
 
@@ -1106,6 +1109,26 @@ public partial class PackageManifestService : IPackageManifestService
 			issues.Add(PackageManifestIssue.Error("application.order", $"'{orderNode}' is not a valid order (integer)."));
 		}
 
+		SharpMUSH.Library.Models.Portal.Applications.ApplicationConfigurationTile? configurationTile = null;
+		if (app.TryGetValue("configuration_tile", out var tileNode) && tileNode is not null)
+		{
+			if (format.Major == ConfigurationTileFormat.Major && format.Minor < ConfigurationTileFormat.Minor)
+				issues.Add(PackageManifestIssue.Warning("application.configuration_tile",
+					$"'configuration_tile' needs format {ConfigurationTileFormat} or later and is ignored; set format: {ConfigurationTileFormat}."));
+			else if (tileNode is not Dictionary<object, object> rawTile)
+				issues.Add(PackageManifestIssue.Error("application.configuration_tile", "Configuration tile must be a mapping."));
+			else
+			{
+				var fields = Normalize(rawTile);
+				string Field(string key) => fields.TryGetValue(key, out var value) && value is string text ? text : "";
+				configurationTile = new(Field("id"), Field("title"), Field("description"), Field("icon"), Field("route"), Field("permission"));
+				if (!configurationTile.HasSafeRoute() || string.IsNullOrWhiteSpace(configurationTile.Id)
+					|| string.IsNullOrWhiteSpace(configurationTile.Title) || string.IsNullOrWhiteSpace(configurationTile.Permission))
+					issues.Add(PackageManifestIssue.Error("application.configuration_tile",
+						"Configuration tile requires an id, title, permission and canonical local /admin/ or /apps/ route."));
+			}
+		}
+
 		return new PackageApplicationSpec(
 			slug ?? "",
 			displayName ?? "",
@@ -1121,7 +1144,8 @@ public partial class PackageManifestService : IPackageManifestService
 			AppString("scope"),
 			AppString("oob_package"),
 			AppString("permission"),
-			AppString("nav_url"));
+			AppString("nav_url"),
+			configurationTile);
 	}
 
 	/// <summary>True when a field carries at least one <c>{{ref}}</c> token (validated separately by <see cref="ValidateRefs"/>).</summary>

@@ -1,0 +1,35 @@
+# OPTIONAL EXAMPLE: append after the base stack and docker-compose.remote-backups.yml.
+# Prepare existing data and server write permissions on these volumes before changing paths.
+# This maps paths; it does not migrate the world, installed plugins, or existing encryption keys.
+services:
+  sharpmush-server:
+    environment:
+      SHARPMUSH_BACKUP_PATH: /srv/backups/hot
+      SHARPMUSH_PLUGINS_PATH: /srv/plugins
+      SHARPMUSH_DATAPROTECTION_PATH: /srv/key-ring
+      Wiki__AssetRoot: /srv/wiki-assets
+    volumes:
+      - remote-backup-copies:/srv/backups
+      - remote-backup-plugins:/srv/plugins
+      - remote-backup-keys:/srv/key-ring
+      - remote-backup-wiki:/srv/wiki-assets
+  backup:
+    environment:
+      BACKUP_AGENT_COPY_SOURCE_ROOT: /srv/backups/hot.remote-jobs
+      BACKUP_AGENT_COPY_MOUNT_ROOT: /readonly/backups/hot.remote-jobs
+      BACKUP_AGENT_PLUGIN_SOURCE_ROOT: /srv/plugins
+      BACKUP_AGENT_PLUGIN_MOUNT_ROOT: /readonly/plugins
+      BACKUP_AGENT_KEYS_SOURCE_ROOT: /srv/key-ring
+      BACKUP_AGENT_KEYS_MOUNT_ROOT: /readonly/key-ring
+      BACKUP_AGENT_WIKI_SOURCE_ROOT: /srv/wiki-assets
+      BACKUP_AGENT_WIKI_MOUNT_ROOT: /readonly/wiki-assets
+    volumes:
+      - remote-backup-copies:/readonly/backups:ro
+      - remote-backup-plugins:/readonly/plugins:ro
+      - remote-backup-keys:/readonly/key-ring:ro
+      - remote-backup-wiki:/readonly/wiki-assets:ro
+volumes:
+  remote-backup-copies:
+  remote-backup-plugins:
+  remote-backup-keys:
+  remote-backup-wiki:

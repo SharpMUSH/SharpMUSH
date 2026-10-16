@@ -5608,4 +5608,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} entrées de palette ont été omises, au-delà des limites.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Conditions de participation</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Nombre maximal de joueurs</value>
+  </data>
 </root>

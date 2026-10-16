@@ -49,6 +49,10 @@ public interface IWorldBackupService
 	ValueTask<Result<WorldBackup>> CreateAsync(BackupProvenance provenance, CancellationToken ct = default)
 		=> CreateAsync(ct);
 
+	/// <summary>Writes an independently retained safe copy for one remote job; the caller owns cleanup.</summary>
+	ValueTask<Result<WorldBackup>> CreateRemoteAsync(Guid jobId, CancellationToken ct = default)
+		=> ValueTask.FromResult<Result<WorldBackup>>(new Error<string>("remote backup copies are unavailable"));
+
 	/// <summary>The copies currently on disk, newest first. Empty when unsupported.</summary>
 	IReadOnlyList<WorldBackup> List();
 

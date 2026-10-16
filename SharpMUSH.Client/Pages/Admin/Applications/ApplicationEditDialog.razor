@@ -12,6 +12,10 @@
 <MudDialog>
     <DialogContent>
         <div class="application-edit-dialog">
+            @if (_configUnavailable)
+            {
+                <MudAlert Severity="Severity.Error">Application configuration could not be read. Reopen the editor before saving.</MudAlert>
+            }
             <MudGrid>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_slug" Label="@Loc["LayAppSlug"]" Required="true" Variant="Variant.Outlined"
@@ -107,7 +111,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="@(_saving || _configurationLoading || _configUnavailable)">
             @if (_saving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
@@ -127,6 +131,7 @@
     private int _configVersion = 1;
     private string _configJson = "{}";
     private bool _configUnavailable;
+    private bool _configurationLoading;
     private bool _isNew;
     private bool _saving;
     private string _slug = "";
@@ -148,11 +153,13 @@
     protected override async Task OnInitializedAsync()
     {
         _isNew = Existing is null;
-        if (Existing?.IsHosted == true)
+        if (Existing is not null)
         {
+            _configurationLoading = true;
             var configured = await Registry.GetConfiguredAsync(Existing.Slug);
             if (configured is null) _configUnavailable = true;
             else Existing = configured;
+            _configurationLoading = false;
         }
         if (Existing is not null)
         {
@@ -189,7 +196,7 @@
             return;
         }
 
-        if (_configUnavailable) { Snackbar.Add("Instance config could not be read. Reopen the editor before saving.", Severity.Error); return; }
+        if (_configurationLoading || _configUnavailable) { Snackbar.Add("Application configuration could not be read. Reopen the editor before saving.", Severity.Error); return; }
         JsonElement? config = null;
         if (_hosted)
         {
@@ -222,7 +229,8 @@
             _kind != ApplicationKind.Page || string.IsNullOrWhiteSpace(_navUrl) ? null : _navUrl.Trim(),
             _hosted ? _definitionId.Trim() : null,
             _configVersion,
-            config);
+            config,
+            Existing?.ConfigurationTile);
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;
