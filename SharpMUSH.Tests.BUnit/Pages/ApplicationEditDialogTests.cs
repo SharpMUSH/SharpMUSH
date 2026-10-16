@@ -20,9 +20,17 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 internal sealed class ApplicationPostCapture : HttpMessageHandler
 {
 	public string? Posted { get; private set; }
+	public PortalApplication? Configured { get; set; }
+	public HttpStatusCode ConfigurationStatus { get; set; } = HttpStatusCode.OK;
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
+		if (request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath.EndsWith("/configuration", StringComparison.Ordinal))
+			return new HttpResponseMessage(ConfigurationStatus)
+			{
+				Content = new StringContent(JsonSerializer.Serialize(Configured, new JsonSerializerOptions(JsonSerializerDefaults.Web)))
+			};
+
 		if (request.Method == HttpMethod.Post && request.Content is not null)
 		{
 			Posted = await request.Content.ReadAsStringAsync(ct);
@@ -60,11 +68,61 @@ public class ApplicationEditDialogTests : TrackingBunitContext
 
 	private async Task<IRenderedComponent<MudDialogProvider>> ShowAsync(PortalApplication? existing)
 	{
+		_http.Configured ??= existing;
 		var provider = Render<MudDialogProvider>();
 		var dialogs = Services.GetRequiredService<IDialogService>();
 		var parameters = new DialogParameters<ApplicationEditDialog> { { x => x.Existing, existing } };
 		await provider.InvokeAsync(() => dialogs.ShowAsync<ApplicationEditDialog>("edit", parameters));
 		return provider;
+	}
+
+	[TUnit.Core.Test]
+	[Arguments(false, false)]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task SavePreservesPrivateTileForManualAndPackageApplications(bool hosted, bool packaged)
+	{
+		var tile = new ApplicationConfigurationTile("weather-settings", "Weather settings", "Private settings", "Settings",
+			"/apps/weather/settings", "config.admin");
+		using var document = JsonDocument.Parse("{\"channel\":\"private-channel\"}");
+		var configured = Weather with
+		{
+			Kind = "Page",
+			Zones = [],
+			RenderKind = hosted ? ApplicationRenderKind.Hosted : ApplicationRenderKind.Schema,
+			OwningPackage = packaged ? "weather-app" : null,
+			DefinitionId = hosted ? "weather-definition" : null,
+			Config = hosted ? document.RootElement.Clone() : null,
+			ConfigurationTile = tile
+		};
+		_http.Configured = configured;
+		var provider = await ShowAsync(configured with { Config = null, ConfigurationTile = null });
+		await provider.FindAll("input").First(input => input.GetAttribute("value") == "Weather").ChangeAsync("Renamed weather");
+		await provider.FindAll("button").First(button => button.TextContent.Contains("Save")).ClickAsync();
+		provider.WaitForAssertion(() =>
+		{
+			if (_http.Posted is null) throw new InvalidOperationException("nothing posted yet");
+		});
+		var saved = JsonSerializer.Deserialize<PortalApplication>(_http.Posted!, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+		await Assert.That(saved.DisplayName).IsEqualTo("Renamed weather");
+		await Assert.That(saved.ConfigurationTile).IsEqualTo(tile);
+		await Assert.That(saved.OwningPackage).IsEqualTo(configured.OwningPackage);
+		if (hosted) await Assert.That(saved.Config!.Value.GetProperty("channel").GetString()).IsEqualTo("private-channel");
+	}
+
+	[TUnit.Core.Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task FailedPrivateConfigurationReadBlocksSaving(bool hosted)
+	{
+		_http.ConfigurationStatus = HttpStatusCode.ServiceUnavailable;
+		var provider = await ShowAsync(Weather with { RenderKind = hosted ? ApplicationRenderKind.Hosted : ApplicationRenderKind.Schema });
+		var save = provider.FindAll("button").First(button => button.TextContent.Contains("Save"));
+		await Assert.That(save.HasAttribute("disabled")).IsTrue();
+		await Assert.That(provider.Markup).Contains("Application configuration could not be read");
+		await save.ClickAsync();
+		await Assert.That(_http.Posted).IsNull();
 	}
 
 	[TUnit.Core.Test]

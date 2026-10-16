@@ -777,7 +777,7 @@ public class SceneVerbSurfaceIntegrationTests
 		await RunAs(wizardHandle, $"+scene/cancel {sceneId}");
 		await Assert.That(await Eval($"scene({sceneId},status)")).IsEqualTo("cancelled");
 
-		var scheduled = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule Empty {Tag}=2524608000"));
+		var scheduled = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule 2524608000/Empty {Tag}=A pitch"));
 		var emptyId = System.Text.RegularExpressions.Regex.Match(scheduled, @"Scheduled scene (\d+)").Groups[1].Value;
 		await Assert.That(emptyId).IsNotEmpty().Because($"+scene/schedule names the scene it made: {scheduled}");
 		await RunAs(ownerHandle, $"+scene/cancel {emptyId}");
@@ -800,7 +800,7 @@ public class SceneVerbSurfaceIntegrationTests
 		await God1($"&TZ {owner}=America/New_York");
 		await God1($"&TZ {odd}=Nowhere/Special");
 
-		var said = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule Zones {Tag}=2099-01-05 20:00"));
+		var said = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule 2099-01-05 20:00/Zones {Tag}=A pitch"));
 		await Assert.That(said).Contains("for Mon Jan 05 20:00:00 2099 (America/New_York).");
 		var sceneId = System.Text.RegularExpressions.Regex.Match(said, @"Scheduled scene (\d+)").Groups[1].Value;
 		await Assert.That(await Eval($"scene({sceneId},scheduledfor)")).IsEqualTo("4071344400000")

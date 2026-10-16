@@ -8,6 +8,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Discord;
+using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Secrets;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +26,7 @@ namespace SharpMUSH.Plugins.Discord;
 /// it to a server, and posts the lines of each linked channel's feed there (<c>@discord</c>).
 /// </summary>
 [SharpPlugin]
-public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointContributor
+public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointContributor, IApplicationSource
 {
 	/// <summary>Who runs the bot: its token, its setup, and later its links and mappings.</summary>
 	public const string AdminPermission = "discord.admin";
@@ -34,6 +35,14 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 		"The Discord bot's token, from the Bot page of its application in the Discord developer portal.", AdminPermission);
 
 	public override string Id => "discord";
+
+	public IEnumerable<RegisteredApplication> GetApplications() => [];
+
+	public IEnumerable<ApplicationConfigurationTile> GetConfigurationTiles() =>
+	[
+		new("discord", "Discord", "Bot connection, linked channels, roles and account settings.",
+			"Forum", "/admin/discord", AdminPermission)
+	];
 
 	public void RegisterServices(IServiceCollection services)
 	{

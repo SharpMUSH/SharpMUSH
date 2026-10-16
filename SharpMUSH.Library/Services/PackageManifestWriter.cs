@@ -380,6 +380,16 @@ public static class PackageManifestWriter
 		AppendOptional(yaml, "oob_package", application.OobPackage, "  ");
 		AppendOptional(yaml, "permission", application.Permission, "  ");
 		AppendOptional(yaml, "nav_url", application.NavUrl, "  ");
+		if (application.ConfigurationTile is { } tile)
+		{
+			yaml.AppendLine("  configuration_tile:");
+			yaml.Append("    id: ").AppendLine(Scalar(tile.Id));
+			yaml.Append("    title: ").AppendLine(Scalar(tile.Title));
+			yaml.Append("    description: ").AppendLine(Scalar(tile.Description));
+			AppendOptional(yaml, "icon", tile.Icon, "    ");
+			yaml.Append("    route: ").AppendLine(Scalar(tile.Route));
+			yaml.Append("    permission: ").AppendLine(Scalar(tile.Permission));
+		}
 
 		if (application.Zones.Count > 0)
 		{

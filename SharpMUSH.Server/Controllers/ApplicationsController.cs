@@ -59,7 +59,8 @@ public class ApplicationsController(
 		string? NavUrl = null,
 		string? DefinitionId = null,
 		int ConfigVersion = 1,
-		JsonElement? Config = null);
+		JsonElement? Config = null,
+		ApplicationConfigurationTile? ConfigurationTile = null);
 
 	// Reads are anonymous: these records are nav/widget metadata (the actual data and actions are
 	// authorized by the in-game handler), and the portal needs them to render widgets on public pages
@@ -93,12 +94,16 @@ public class ApplicationsController(
 	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
 	public async Task<IActionResult> Configuration(string slug) =>
 		await registry.GetApplicationAsync(slug) is RegisteredApplication app
-			? Ok(ToDto(app) with { Config = app.Config?.Clone() }) : NotFound();
+			? Ok(ToDto(app) with { Config = app.Config?.Clone(), ConfigurationTile = app.ConfigurationTile }) : NotFound();
 
 	[HttpPost]
 	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
 	public async Task<IActionResult> Upsert([FromBody] ApplicationDto dto)
 	{
+		if (dto.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || string.IsNullOrWhiteSpace(tile.Id)
+			|| string.IsNullOrWhiteSpace(tile.Title) || string.IsNullOrWhiteSpace(tile.Permission)))
+			return BadRequest(new { error = "Configuration tiles require an id, title, permission and canonical local /admin/ or /apps/ route." });
+
 		var hosted = string.Equals(dto.RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);
 		if (string.IsNullOrWhiteSpace(dto.Slug) || string.IsNullOrWhiteSpace(dto.DisplayName)
 			|| (!hosted && string.IsNullOrWhiteSpace(dto.SchemaUrl)))
@@ -167,7 +172,8 @@ public class ApplicationsController(
 			string.IsNullOrWhiteSpace(dto.NavUrl) ? null : dto.NavUrl.Trim(),
 			hosted ? dto.DefinitionId : null,
 			dto.ConfigVersion,
-			hosted ? dto.Config?.Clone() : null);
+			hosted ? dto.Config?.Clone() : null,
+			dto.ConfigurationTile);
 
 		await registry.UpsertApplicationAsync(application);
 		logger.LogInformation("Registered application '{Slug}' ({Kind}).", LogSanitizer.Sanitize(application.Slug), application.Kind);

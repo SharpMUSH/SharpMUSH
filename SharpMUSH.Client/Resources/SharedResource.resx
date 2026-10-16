@@ -8848,6 +8848,8 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
+  <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
   <data name="PkgBrowseInstalled" xml:space="preserve">
     <value>Installed v{0}</value>
   </data>
@@ -8856,5 +8858,11 @@
   </data>
   <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
     <value>Installed status is unavailable. Refresh to try again. {0}</value>
+  </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Joining policy</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Player cap</value>
   </data>
 </root>

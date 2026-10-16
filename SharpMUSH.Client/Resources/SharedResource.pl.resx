@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>Pominięto {0} wpisów palety z powodu limitów.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Zasady dołączania</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Limit graczy</value>
+  </data>
 </root>

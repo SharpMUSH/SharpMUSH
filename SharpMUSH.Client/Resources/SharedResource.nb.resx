@@ -6314,4 +6314,10 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} palettoppføringer ble utelatt fordi grensen var nådd.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Regler for deltakelse</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Maksimalt antall spillere</value>
+  </data>
 </root>

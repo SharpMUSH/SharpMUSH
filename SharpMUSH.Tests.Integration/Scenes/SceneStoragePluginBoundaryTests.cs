@@ -70,7 +70,7 @@ public class SceneStoragePluginBoundaryTests
 		// Invoked reflectively because the host cannot name the plugin's ISceneService / Scene model.
 		var createTask = (Task)SceneServiceType
 			.GetMethod("CreateSceneAsync")!
-			.Invoke(scenes, ["", "#1", "ALC smoke scene"])!;
+			.Invoke(scenes, ["", "#1", "ALC smoke scene", "A pitch", null])!;
 		await createTask;
 		var created = createTask.GetType().GetProperty("Result")!.GetValue(createTask)!;
 		var createdId = (string)created.GetType().GetProperty("Id")!.GetValue(created)!;
