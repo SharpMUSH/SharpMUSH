@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
+@inject IServiceProvider Services
 @inject SchemaAppService Schema
 @inject ApplicationCatalog Catalog
 @inject ApplicationRegistryClient RegistryClient
@@ -60,40 +61,68 @@ else
     private string? _oobPackage;
     private IOobChannelStore? _subscribedStore;
 
-    protected override async Task OnParametersSetAsync()
+    private long _generation;
+    private bool _disposed;
+    private AccountAuthService? _auth;
+
+    protected override void OnInitialized()
     {
+        _auth = Services.GetService<AccountAuthService>();
+        if (_auth is not null) _auth.ActiveCharacterChanged += CharacterChanged;
+    }
+
+    private void CharacterChanged()
+    {
+        ++_generation;
+        _schema = null;
+        _data = null;
+        Unsubscribe();
+        _ = InvokeAsync(async () => { await LoadAsync(); if (!_disposed) StateHasChanged(); });
+    }
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private bool Current(long generation) => !_disposed && generation == _generation;
+
+    private async Task LoadAsync()
+    {
+        var generation = ++_generation;
         _loading = true;
         _schema = null;
         _data = null;
+        FollowOobPackage(null);
 
         var (schemaUrl, dataUrl, oobPackage) = await ResolveRoutesAsync();
-        FollowOobPackage(oobPackage);
+        if (!Current(generation)) return;
         if (!string.IsNullOrWhiteSpace(schemaUrl))
         {
-            // Fill page-context tokens (e.g. {objid}) before fetching, so the right character renders.
             var objid = await ResolveObjidIfNeededAsync(schemaUrl, dataUrl);
-
+            if (!Current(generation)) return;
             var resolvedSchema = Substitute(schemaUrl!, objid);
+            PortalSchemaDocument? schema = null;
+            SchemaData? data = null;
             if (resolvedSchema is not null)
             {
-                _schema = await Schema.GetSchemaAsync(resolvedSchema) is PortalSchemaDocument schema ? schema : null;
+                schema = await Schema.GetSchemaAsync(resolvedSchema) is PortalSchemaDocument document ? document : null;
+                if (!Current(generation)) return;
             }
-
-            if (_schema is not null && _oobPackage is not null)
+            if (schema is not null && oobPackage is not null)
             {
-                _data = ReadOobData();
+                data = SchemaAppService.ParseData(PlayTerminal.OobChannels.Get(oobPackage)) is SchemaData oob ? oob : null;
             }
-            else if (_schema is not null && !string.IsNullOrWhiteSpace(dataUrl))
+            else if (schema is not null && !string.IsNullOrWhiteSpace(dataUrl))
             {
                 var resolvedData = Substitute(dataUrl!, objid);
-                // A data route needing {objid} we couldn't resolve → skip data (schema still renders).
                 if (resolvedData is not null)
                 {
-                    _data = await Schema.GetDataAsync(resolvedData) is SchemaData data ? data : null;
+                    data = await Schema.GetDataAsync(resolvedData) is SchemaData fetched ? fetched : null;
+                    if (!Current(generation)) return;
                 }
             }
+            _schema = schema;
+            _data = data;
         }
-
+        FollowOobPackage(oobPackage);
         _loading = false;
     }
 
@@ -122,8 +151,9 @@ else
             return (resolved.SchemaUrl, resolved.DataUrl, string.IsNullOrWhiteSpace(resolved.OobPackage) ? null : resolved.OobPackage);
         }
 
+        var widgetName = WidgetName;
         await Catalog.Loaded;
-        var app = Catalog.Get(WidgetName) ?? await RegistryClient.GetAsync(WidgetName);
+        var app = Catalog.Get(widgetName) ?? await RegistryClient.GetAsync(widgetName);
         return app is null
             ? (null, null, null)
             : (app.SchemaUrl, app.DataUrl, string.IsNullOrWhiteSpace(app.OobPackage) ? null : app.OobPackage);
@@ -159,8 +189,10 @@ else
             return;
         }
 
+        var generation = _generation;
         _ = InvokeAsync(() =>
         {
+            if (!Current(generation) || package != _oobPackage) return;
             // Still loading the schema: OnParametersSetAsync reads the payload once the schema is in.
             if (_schema is null)
             {
@@ -181,7 +213,13 @@ else
         }
     }
 
-    public void Dispose() => Unsubscribe();
+    public void Dispose()
+    {
+        _disposed = true;
+        ++_generation;
+        if (_auth is not null) _auth.ActiveCharacterChanged -= CharacterChanged;
+        Unsubscribe();
+    }
 
     private async Task<string?> ResolveObjidIfNeededAsync(string schemaUrl, string? dataUrl)
     {

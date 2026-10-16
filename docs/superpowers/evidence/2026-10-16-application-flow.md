@@ -57,3 +57,28 @@ Drafts and receipts are process-local, expire after 30 idle minutes, and are cap
 A nonmodal terminal edit is one ordinary input command. Transport-level newline framing is unchanged; JSON/portal values can contain multiline text, and the adapter does not infer clipboard or command boundaries. Existing optional short modal @input prompts remain available to package authors; no passthrough mode was added. The existing modal compatibility suite covers its cancellation, timeout, stale transport and callback behavior.
 
 The complete engine/integration repositories and manual browser sessions are left to aggregate CI/review; the lane runs the entire bUnit project, entire Jobs integration class and focused existing input compatibility classes. No merge or deployment was performed.
+
+## Review round 1 corrections
+
+Three review findings were reproduced and corrected in one revision:
+
+- A deliberately reserved earlier `HandlePublicationLane` slot caused the real notifier to publish private output after logout/rebind (one failing regression). `ConnectionData.Binding` now supplies an immutable binding identity and publication semaphore. `NotifyToBinding` carries the captured connection and transport SessionId through the lane wait, then checks the binding at the bus publication boundary. Bind, Unbind, BindAccount and Disconnect share that fence: retirement either wins first or waits for an already admitted publication to complete. Draft instance IDs also derive from that binding identity. `NotifyToSession` remains available. Tests cover different-actor and same-actor rebinds, and a blocked bus publication orders retirement after the admitted send.
+- Delayed widget GETs could install old private records as fresh hosts (the original delayed-schema test failed). Widget loads now use a generation across route resolution, object resolution, schema GET and data GET; actor changes reload, and disposal retires pending reads. OOB callbacks also check their captured generation. Final tests await the complete old load and cover delayed schema/data separately for configuration, cascading profile context, active actor and disposal.
+- Real Jobs review/back turned an added number default `0` into null (the regression failed at GetInt32 on Null). `WEB`DRAFT`DATA now checks JSON member presence, omits absent fields and copies raw present values. Real review and Back preserve defaulted zero, explicit null, false and empty text; a second review preserves explicitly posted zero.
+
+All commands below used the repository-pinned SDK first on PATH, `TMPDIR=TMP=TEMP=/temp/codex/apps`, and builds capped at `-m:2 -nr:false`. Runtime integration used the rootless Podman environment documented above. Each changed C# project received two whitespace-format passes; final builds ran the formatting gate.
+
+| Final command | Result |
+| --- | --- |
+| `dotnet build SharpMUSH.Tests.Integration -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests.Integration -- --treenode-filter '/*/*/JobsIntegrationTests/DraftAdapterSharesReviewAndFileAcrossTerminalAndPortal'` | 1 passed, 0 failed; 1 min 14.306 s |
+| `dotnet build SharpMUSH.Tests.BUnit -m:2 -nr:false` | 0 errors; 54 existing warnings, none in changed files |
+| `dotnet run --no-build --project SharpMUSH.Tests.BUnit -- --treenode-filter '/*/*/Schema*/*'` | 141 passed, 0 failed; 650 ms |
+| `dotnet run --no-build --project SharpMUSH.Tests.BUnit -- --treenode-filter '/*/*/ApplicationDraftServiceTests/*'` | 6 passed, 0 failed; 314 ms |
+| `dotnet build SharpMUSH.Tests -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ApplicationDraftPublicationTests/*'` | 5 passed, 0 failed; 460 ms |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ConnectionService*/*'` | 60 passed, 0 failed; 2.332 s |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/Notify*/*'` | 25 passed, 0 failed; 409 ms |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/InputSession*/*'` | 192 passed, 0 failed; 22.410 s |
+
+Only affected suites were rerun for this review round. Earlier whole-project results above remain historical evidence, not a claim of a new complete aggregate run. The limits above are unchanged.

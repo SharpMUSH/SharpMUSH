@@ -157,6 +157,10 @@ public class JobsIntegrationTests
 			declaration[1]!["validation"]!["max_length"] = 6;
 			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"extra","label":"Extra field","type":"text","default":"added once"}"""));
 			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"flag","label":"Flag","type":"boolean","default":false}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"zero","label":"Zero","type":"number","default":0}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"absent","label":"Absent","type":"text"}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"nullable","label":"Nullable","type":"text"}"""));
+			declaration.Add(System.Text.Json.Nodes.JsonNode.Parse("""{"kind":"field","key":"empty","label":"Empty","type":"text"}"""));
 			await God($"&FORM {jobs}={declaration.ToJsonString()}");
 			var changedForm = await Http("GET", "/jobs/schema?at=new", "", player);
 			await Assert.That(Elements(changedForm).Single(e => e.TryGetProperty("key", out var k) && k.GetString() == "title").GetProperty("validation").GetProperty("max_length").GetInt32()).IsEqualTo(6);
@@ -171,6 +175,21 @@ public class JobsIntegrationTests
 			await As(player, "+request/draft set title=Small");
 			await As(player, "+request/draft set flag=true");
 			await Assert.That(await As(player, "+request/draft review")).Contains("Flag: true");
+			var typedInstance = Guid.NewGuid().ToString("N");
+			var typedReview = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Requests","title":"Small","text":"Text","nullable":null,"empty":"","flag":false}""", player, typedInstance);
+			var typedBack = await Http("POST", "/jobs/act", """{"op":"draftback"}""", player, typedInstance);
+			foreach (var response in new[] { typedReview, typedBack })
+			{
+				var fields = response.GetProperty("data").GetProperty("fields");
+				await Assert.That(fields.GetProperty("zero").GetProperty("value").GetInt32()).IsEqualTo(0);
+				await Assert.That(fields.TryGetProperty("absent", out _)).IsFalse();
+				await Assert.That(fields.GetProperty("nullable").GetProperty("value").ValueKind).IsEqualTo(JsonValueKind.Null);
+				await Assert.That(fields.GetProperty("flag").GetProperty("value").GetBoolean()).IsFalse();
+				await Assert.That(fields.GetProperty("empty").GetProperty("value").GetString()).IsEqualTo("");
+			}
+			var zeroReview = await Http("POST", "/jobs/act", """{"op":"draftreview","bucket":"Requests","title":"Small","text":"Text","zero":0}""", player, typedInstance);
+			await Assert.That(zeroReview.GetProperty("data").GetProperty("fields").GetProperty("zero").GetProperty("value").GetInt32()).IsEqualTo(0);
+
 
 		}
 		finally { await UninstallAsync(); }

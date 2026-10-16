@@ -37,7 +37,7 @@ public partial class Commands
 		{
 			var message = display is not null ? await display(result) : MarkupText.Plain(result.GetRawText());
 			if (service.CanReply(terminal, terminalInstance))
-				await NotifyService.NotifyToSession(terminal.Handle, terminalSession, message);
+				await NotifyService.NotifyToBinding(terminal, terminalSession, message);
 		}
 		return new CallState(result.GetRawText());
 

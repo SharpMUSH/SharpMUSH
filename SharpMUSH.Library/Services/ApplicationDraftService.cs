@@ -44,11 +44,10 @@ public sealed class ApplicationDraftService(TimeProvider? timeProvider = null, I
 					lock (_gate)
 					{
 						if (_terminalInstances.Remove(change.Item1, out var retired)) RetireInstance(retired);
-						connections.Get(change.Item1)?.Metadata.TryRemove("ApplicationDraftInstance", out _);
 					}
 				});
 			}
-			return _terminalInstances[connection.Handle] = connection.Metadata.GetOrAdd("ApplicationDraftInstance", _ => $"terminal:{connection.Handle}:{Guid.NewGuid():N}");
+			return _terminalInstances[connection.Handle] = $"terminal:{connection.Handle}:{connection.Binding.Id:N}";
 		}
 	}
 
@@ -57,7 +56,7 @@ public sealed class ApplicationDraftService(TimeProvider? timeProvider = null, I
 		lock (_gate)
 			return _terminalInstances.GetValueOrDefault(original.Handle) == instance
 				&& connections?.Get(original.Handle) is { } current
-				&& ReferenceEquals(current.Metadata, original.Metadata) && current.Ref == original.Ref
+				&& ReferenceEquals(current.Binding, original.Binding) && ReferenceEquals(current.Metadata, original.Metadata) && current.Ref == original.Ref
 				&& current.State == IConnectionService.ConnectionState.LoggedIn;
 	}
 

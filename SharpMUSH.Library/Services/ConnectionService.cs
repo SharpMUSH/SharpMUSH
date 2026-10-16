@@ -50,15 +50,20 @@ public class ConnectionService(
 		if (get is null || (!string.IsNullOrEmpty(sessionId) && get.Metadata.GetValueOrDefault("SessionId") != sessionId)) return;
 
 		int? remainingConnections;
-		lock (_bindingLock)
+		await get.Binding.PublicationGate.WaitAsync();
+		try
 		{
-			if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
-			Reindex(handle, get.Ref, null);
+			lock (_bindingLock)
+			{
+				if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
+				Reindex(handle, get.Ref, null);
 
-			remainingConnections = get.Ref is { } playerRef
-				? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count
-				: null;
+				remainingConnections = get.Ref is { } playerRef
+					? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count
+					: null;
+			}
 		}
+		finally { get.Binding.PublicationGate.Release(); }
 
 		foreach (var handler in _handlers)
 		{
@@ -110,7 +115,7 @@ public class ConnectionService(
 		if (get is null) return;
 
 		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return;
-		if (!Replace(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn })) return;
+		if (!await ReplaceAsync(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn })) return;
 
 		if (stateStore != null)
 		{
@@ -139,7 +144,7 @@ public class ConnectionService(
 
 		// State is updated before the notification is published, so a PLAYER`DISCONNECT handler asking
 		// for the player's remaining connections does not count the one that is leaving.
-		if (!Replace(get, get with { Ref = null, State = IConnectionService.ConnectionState.Connected })) return;
+		if (!await ReplaceAsync(get, get with { Ref = null, State = IConnectionService.ConnectionState.Connected })) return;
 
 		if (stateStore != null)
 		{
@@ -190,7 +195,7 @@ public class ConnectionService(
 		if ((get.Ref is not null || (get.State == IConnectionService.ConnectionState.AccountMode &&
 			get.Metadata.GetValueOrDefault("AccountId") != accountId)) && !await RevokeResumeAsync(get)) return;
 		var oldState = get.State;
-		if (!Replace(get, get with { Ref = null, State = IConnectionService.ConnectionState.AccountMode })) return;
+		if (!await ReplaceAsync(get, get with { Ref = null, State = IConnectionService.ConnectionState.AccountMode })) return;
 		get.Metadata["AccountId"] = accountId;
 
 		if (stateStore != null)
@@ -213,14 +218,19 @@ public class ConnectionService(
 	}
 
 	/// <summary>Swaps <paramref name="current"/> for <paramref name="next"/> if it is still the stored entry.</summary>
-	private bool Replace(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next)
+	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next)
 	{
-		lock (_bindingLock)
+		await current.Binding.PublicationGate.WaitAsync();
+		try
 		{
-			if (!_sessionState.TryUpdate(current.Handle, next, current)) return false;
-			Reindex(current.Handle, current.Ref, next.Ref);
-			return true;
+			lock (_bindingLock)
+			{
+				if (!_sessionState.TryUpdate(current.Handle, next with { Binding = new() }, current)) return false;
+				Reindex(current.Handle, current.Ref, next.Ref);
+				return true;
+			}
 		}
+		finally { current.Binding.PublicationGate.Release(); }
 	}
 
 	/// <summary>Moves <paramref name="handle"/> from <paramref name="from"/>'s set to <paramref name="to"/>'s. Caller holds <see cref="_bindingLock"/>.</summary>

@@ -350,9 +350,29 @@ public class NotifyService(
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
 	public ValueTask NotifyToSession(long handle, string sessionId, SharpMessage what)
-		=> connections.Get(handle) is { } connection && (connection.Metadata.GetValueOrDefault("SessionId") ?? "") == sessionId
-			? PublishMarkup(handle, Prepare(what), sessionId)
-			: ValueTask.CompletedTask;
+		=> connections.Get(handle) is { } binding ? NotifyToBinding(binding, sessionId, what) : ValueTask.CompletedTask;
+
+	public ValueTask NotifyToBinding(IConnectionService.ConnectionData binding, string sessionId, SharpMessage what)
+	{
+		var outgoing = Prepare(what);
+		return new(Lane.PublishAsync(binding.Handle, sessionId, async token =>
+		{
+			// Wait for earlier output first, then fence the actual publication against logout/rebind.
+			// A binding transition either retires this identity first or waits until this send completes.
+			await binding.Binding.PublicationGate.WaitAsync(token);
+			try
+			{
+				if (connections.Get(binding.Handle) is not { } current
+					|| !ReferenceEquals(current.Binding, binding.Binding)
+					|| current.Ref != binding.Ref || current.State != binding.State
+					|| (current.Metadata.GetValueOrDefault("SessionId") ?? "") != sessionId) return;
+				var wrapped = ApplyOutputPrefixSuffix(binding.Handle, outgoing.Text);
+				var serialized = ReferenceEquals(wrapped, outgoing.Text) ? outgoing.Serialized : MarkupTextSerializer.Serialize(wrapped);
+				await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized) { SessionId = sessionId }, token);
+			}
+			finally { binding.Binding.PublicationGate.Release(); }
+		}, ExecutionBudget.CurrentToken));
+	}
 
 	public ValueTask PromptToSession(long handle, string sessionId, SharpMessage what, Guid? inputSession = null)
 		=> PublishMarkupPrompt(handle, Prepare(what), sessionId, inputSession?.ToString("N"));

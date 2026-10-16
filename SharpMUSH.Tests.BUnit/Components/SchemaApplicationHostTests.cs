@@ -2,13 +2,16 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Schema;
+using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -41,6 +44,96 @@ public class SchemaApplicationHostTests : BunitContext
 			 new(Kind: "button", Label: "Go", Action: "submit")])], null, null)],
 		new Dictionary<string, SchemaAction> { ["submit"] = new("http", "POST", "/http/test", "fields", null, null) });
 	private static HttpResponseMessage Reply(SchemaActionResult result) => new(HttpStatusCode.OK) { Content = JsonContent.Create(result, options: SchemaJson.Options) };
+
+	[Test]
+	[Arguments(false, "config")]
+	[Arguments(true, "config")]
+	[Arguments(false, "actor")]
+	[Arguments(true, "actor")]
+	[Arguments(false, "dispose")]
+	[Arguments(true, "dispose")]
+	public async Task WidgetRetiresSchemaAndDataReadsOnConfigurationAndActorChanges(bool delayData, string replacement)
+	{
+		var pending = new TaskCompletionSource<HttpResponseMessage>();
+		var requested = new TaskCompletionSource();
+		var admissions = 0;
+		var auth = Configure(request =>
+		{
+			var path = request.RequestUri!.AbsolutePath;
+			if (path == (delayData ? "/old-data" : "/old") && Interlocked.Increment(ref admissions) == 1)
+			{
+				requested.TrySetResult();
+				return pending.Task;
+			}
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Screen("view", path), options: SchemaJson.Options) });
+		});
+		Services.AddSingleton(new ApplicationCatalog([]))
+			.AddSingleton(Substitute.For<IPlayTerminalService>())
+			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
+		var cut = Render<SchemaWidget>(p => p.Add(x => x.Config, JsonSerializer.SerializeToElement(new { schemaUrl = "/initial" })));
+		var oldLoad = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(new Dictionary<string, object?>
+		{
+			[nameof(SchemaWidget.Config)] = JsonSerializer.SerializeToElement(new { schemaUrl = "/old", dataUrl = delayData ? "/old-data" : null })
+		})));
+		await requested.Task;
+		if (replacement == "config")
+			await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Config, JsonSerializer.SerializeToElement(new { schemaUrl = "/current" }))));
+		else if (replacement == "actor")
+			await cut.InvokeAsync(() => auth.SetActiveCharacter(new(2, 2, "Other actor", "")));
+		else cut.Dispose();
+		pending.SetResult(new(HttpStatusCode.OK)
+		{
+			Content = delayData
+			? new StringContent("{\"fields\":{\"title\":{\"value\":\"OLD PRIVATE RECORD\",\"visible\":true}}}", System.Text.Encoding.UTF8, "application/json")
+			: JsonContent.Create(Screen("view", "OLD PRIVATE RECORD"), options: SchemaJson.Options)
+		});
+		await oldLoad;
+		if (replacement == "dispose") return;
+		await Assert.That(cut.Markup).DoesNotContain("OLD PRIVATE RECORD");
+		await Assert.That(cut.FindComponent<SchemaApplicationHost>().Instance.Document!.Title).IsEqualTo(replacement == "config" ? "/current" : "/old");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task WidgetProfileContextRetiresBothReadStages(bool delayData)
+	{
+		var pending = new TaskCompletionSource<HttpResponseMessage>();
+		var requested = new TaskCompletionSource();
+		Configure(request =>
+		{
+			var path = request.RequestUri!.AbsolutePath;
+			if (path == (delayData ? "/data/Old" : "/schema/Old"))
+			{
+				requested.TrySetResult();
+				return pending.Task;
+			}
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Screen("view", path), options: SchemaJson.Options) });
+		});
+		Services.AddSingleton(new ApplicationCatalog([]))
+			.AddSingleton(Substitute.For<IPlayTerminalService>())
+			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
+		var config = JsonSerializer.SerializeToElement(new { schemaUrl = "/initial" });
+		var root = Render<CascadingValue<ProfilePageContext>>(p => p.Add(x => x.Value, new ProfilePageContext("Old", false))
+			.AddChildContent<SchemaWidget>(p => p.Add(x => x.Config, config)));
+		var cut = root.FindComponent<SchemaWidget>();
+		config = JsonSerializer.SerializeToElement(new { schemaUrl = "/schema/{character}", dataUrl = delayData ? "/data/{character}" : null });
+		var oldLoad = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(SchemaWidget.Config)] = config })));
+		await requested.Task;
+		await root.InvokeAsync(() => root.Render(p => p.Add(x => x.Value, new ProfilePageContext("Current", false))
+			.AddChildContent<SchemaWidget>(p => p.Add(x => x.Config, config))));
+		pending.SetResult(new(HttpStatusCode.OK)
+		{
+			Content = delayData
+			? new StringContent("{\"fields\":{\"title\":{\"value\":\"OLD PRIVATE RECORD\",\"visible\":true}}}", System.Text.Encoding.UTF8, "application/json")
+			: JsonContent.Create(Screen("view", "OLD PRIVATE RECORD"), options: SchemaJson.Options)
+		});
+		await oldLoad;
+		await Assert.That(root.Markup).DoesNotContain("OLD PRIVATE RECORD");
+		await Assert.That(root.FindComponent<SchemaApplicationHost>().Instance.Document!.Title).IsEqualTo("/schema/Current");
+	}
 
 	[Test]
 	public async Task HostsAndReplacementDocumentsUseDistinctFormInstances()
