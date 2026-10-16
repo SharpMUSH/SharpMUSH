@@ -1,6 +1,6 @@
 format: "1.10"
 package: alts
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -32,8 +32,9 @@ objects:
   #   about a hidden character, or about one whose account keeps its list private (or that is on no account),
   #   the answer is the same sentence, so it says nothing about how many alts there are or whether there are any.
   #
-  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC` one routine per switch,
-  # FUN` the reads, FUN`TABLE` the screens. DATA`ROUTE` which routine each switch runs.
+  # Trees: CMD` the hooked command, INC`COMMAND` the shared parse and dispatch, INC`CMD` one routine per switch,
+  # INC`NEED` the shared checks, INC`DO` the writes. FUN`KEY` the keys things are filed under, FUN`IS` the reads,
+  # FUN`FIND` lookups, FUN`DISPLAY` and FUN`TABLE` the screens. DATA`ROUTE` which routine each switch runs.
   - ref: alts
     type: thing
     name: Alts
@@ -42,19 +43,20 @@ objects:
     attributes:
       DATA: |-
         Settings. One leaf per setting.
-      # Which INC` routine each switch runs. BARE is the command alone, ARG the command with something after it.
+      # Which INC` routine each switch runs, under INC`CMD`. BARE is the command alone, ARG the command with
+      # something after it.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
       DATA`ROUTE`BARE: |-
-        MINE
+        CMD`MINE
       DATA`ROUTE`ARG: |-
-        SHOW
+        CMD`SHOW
       DATA`ROUTE`PUBLIC: |-
-        PUBLIC
+        CMD`PUBLIC
       DATA`ROUTE`HIDE: |-
-        HIDE
+        CMD`HIDE
       DATA`ROUTE`UNHIDE: |-
-        UNHIDE
+        CMD`UNHIDE
 
       # ---- commands -------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -78,24 +80,24 @@ objects:
           cmd_route,get(%!/DATA`ROUTE`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
           viewer_objid,objid(%#),
           viewer_account,account(%#),
-          viewer_key,u(%!/FUN`KEY,%q<viewer_account>),
+          viewer_key,u(%!/FUN`KEY`ACCOUNT,%q<viewer_account>),
           viewer_is_staff,permission(%#,players.view))
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
       # %0 an account id, as account() returns it: the key its settings are filed under, or nothing for no
       # account. An id cannot be part of an attribute name, so node_accounts/5 is filed as NODE_ACCOUNTS_5.
-      FUN`KEY:
+      FUN`KEY`ACCOUNT:
         value: |-
           if(strlen(%0),edit(%0,/,_,:,_))
         flags: [funsyntax]
       # %0 an objid: the key a character is filed under, #12:1790888816538 as 12_1790888816538.
-      FUN`CHARKEY:
+      FUN`KEY`CHARACTER:
         value: |-
           edit(%0,#,,:,_)
         flags: [funsyntax]
       # %0 typed text: the objid of the player it names, or nothing.
-      FUN`PLAYER:
+      FUN`FIND`PLAYER:
         value: |-
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
@@ -107,7 +109,7 @@ objects:
       # %0 an objid, %1 an account key: 1 when the account keeps that character off its public list.
       FUN`IS`HIDDEN:
         value: |-
-          cand(strlen(%1),hasattr({{store}},ACCOUNT`%1`HIDDEN`[u(%!/FUN`CHARKEY,%0)]))
+          cand(strlen(%1),hasattr({{store}},ACCOUNT`%1`HIDDEN`[u(%!/FUN`KEY`CHARACTER,%0)]))
         flags: [funsyntax]
       # %0 an objid, %1 an account key: 1 when the character is on the account's public list.
       FUN`IS`LISTED:
@@ -115,23 +117,23 @@ objects:
           not(u(%!/FUN`IS`HIDDEN,%0,%1))
         flags: [funsyntax]
       # %0 an objid, %1 the dbrefs the reader sees connected: online when they are among them.
-      FUN`ONLINE:
+      FUN`DISPLAY`ONLINE:
         value: |-
           if(member(%1,num(%0)),tone(success,online),tone(muted,-))
         flags: [funsyntax]
       # %0 an objid, %1 an account key: whether the character is on the account's public list, for its owner and
       # staff.
-      FUN`LISTED:
+      FUN`DISPLAY`LISTED:
         value: |-
           case(1,u(%!/FUN`IS`HIDDEN,%0,%1),tone(warning,hidden),u(%!/FUN`IS`PUBLIC,%1),listed,tone(muted,-))
         flags: [funsyntax]
       # The account key %<key> when it no longer holds anything: its branch is cleared.
-      INC`TIDY:
+      INC`DO`TIDY:
         value: |-
           @break hasattr({{store}},ACCOUNT`%<key>`PUBLIC); @break words(lattr({{store}}/ACCOUNT`%<key>`HIDDEN`*)); &ACCOUNT`%<key>`HIDDEN {{store}}; &ACCOUNT`%<key> {{store}}
         flags: [cmdsyntax]
       # Stops a command whose player is on no account.
-      INC`NEEDACCOUNT:
+      INC`NEED`ACCOUNT:
         value: |-
           @assert strlen(%q<viewer_key>)=@pemit %#=notice(ALTS,This character is on no account%, so it has no alts.,warn)
         flags: [cmdsyntax]
@@ -153,12 +155,12 @@ objects:
       # online and on the public list. For the account's own characters and for staff.
       FUN`TABLE`FULL:
         value: |-
-          setq(table_online,lwho(%#))[box([datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r3,1%r%r),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],[tone(strong,Online)]%r[iter(%0,u(%!/FUN`ONLINE,%i0,%q<table_online>),,%r)],[tone(strong,Public list)]%r[iter(%0,u(%!/FUN`LISTED,%i0,%1),,%r)])]%r[rule()]%r[tone(muted,%3)],%2,,u(%!/FUN`DISPLAY`FRAME))]
+          setq(table_online,lwho(%#))[box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3,1%r2%r3,1%r%r),tone(strong,Name)%r[iter(%0,name(%i0),,%r)],tone(strong,Online)%r[iter(%0,u(%!/FUN`DISPLAY`ONLINE,%i0,%q<table_online>),,%r)],tone(strong,Public list)%r[iter(%0,u(%!/FUN`DISPLAY`LISTED,%i0,%1),,%r)])%r[rule()]%r[tone(muted,%3)],%2,,u(%!/FUN`DISPLAY`FRAME))]
         flags: [funsyntax]
       # %0 characters, %1 the title, %2 the footer: the public list.
       FUN`TABLE`PUBLIC:
         value: |-
-          setq(table_online,lwho(%#))[box([datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2,1%r2,1%r),[tone(strong,Name)]%r[iter(%0,name(%i0),,%r)],[tone(strong,Online)]%r[iter(%0,u(%!/FUN`ONLINE,%i0,%q<table_online>),,%r)])]%r[rule()]%r[tone(muted,%2)],%1,,u(%!/FUN`DISPLAY`FRAME))]
+          setq(table_online,lwho(%#))[box(datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2,1%r2,1%r),tone(strong,Name)%r[iter(%0,name(%i0),,%r)],tone(strong,Online)%r[iter(%0,u(%!/FUN`DISPLAY`ONLINE,%i0,%q<table_online>),,%r)])%r[rule()]%r[tone(muted,%2)],%1,,u(%!/FUN`DISPLAY`FRAME))]
         flags: [funsyntax]
       # The footer under your own list: whether it is public, and what changes that.
       FUN`FOOTER`OWN:
@@ -168,45 +170,45 @@ objects:
 
       # ---- +alts ----------------------------------------------------------------
       # +alts: every character on your account.
-      INC`MINE:
+      INC`CMD`MINE:
         value: |-
-          @include %!/INC`NEEDACCOUNT; @pemit %#=u(%!/FUN`TABLE`FULL,accountchars(%#),%q<viewer_key>,Your alts,u(%!/FUN`FOOTER`OWN))
+          @include %!/INC`NEED`ACCOUNT; @pemit %#=u(%!/FUN`TABLE`FULL,accountchars(%#),%q<viewer_key>,Your alts,u(%!/FUN`FOOTER`OWN))
         flags: [cmdsyntax]
       # +alts <player>: your own list when they are on your account; every one of theirs for staff; else their
       # public list, when they have one and are on it.
-      INC`SHOW:
+      INC`CMD`SHOW:
         value: |-
-          @assert strlen(setr(alts_target,u(%!/FUN`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(ALTS,There is no player called '%q<cmd_argument>'.,warn); @break not(comp(%q<alts_target>,%q<viewer_objid>))={@include %!/INC`MINE}; think setq(alts_key,u(%!/FUN`KEY,account(%q<alts_target>))); @break cand(strlen(%q<alts_key>),not(comp(%q<alts_key>,%q<viewer_key>)))={@include %!/INC`MINE}; @break %q<viewer_is_staff>={@include %!/INC`SHOW`STAFF}; @assert cand(u(%!/FUN`IS`PUBLIC,%q<alts_key>),u(%!/FUN`IS`LISTED,%q<alts_target>,%q<alts_key>))=@pemit %#=notice(ALTS,[name(%q<alts_target>)]'s alts are private.); think setq(alts_list,remove(filterbool(%!/FUN`IS`LISTED,accountchars(%q<alts_target>),,,%q<alts_key>),%q<alts_target>)); @assert words(%q<alts_list>)=@pemit %#=notice(ALTS,[name(%q<alts_target>)] lists no other characters.); @pemit %#=u(%!/FUN`TABLE`PUBLIC,%q<alts_list>,Alts of [name(%q<alts_target>)],+alts lists your own)
+          @assert strlen(setr(alts_target,u(%!/FUN`FIND`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(ALTS,There is no player called '%q<cmd_argument>'.,warn); @break not(comp(%q<alts_target>,%q<viewer_objid>))={@include %!/INC`CMD`MINE}; think setq(alts_key,u(%!/FUN`KEY`ACCOUNT,account(%q<alts_target>))); @break cand(strlen(%q<alts_key>),not(comp(%q<alts_key>,%q<viewer_key>)))={@include %!/INC`CMD`MINE}; @break %q<viewer_is_staff>={@include %!/INC`CMD`SHOW`STAFF}; @assert cand(u(%!/FUN`IS`PUBLIC,%q<alts_key>),u(%!/FUN`IS`LISTED,%q<alts_target>,%q<alts_key>))=@pemit %#=notice(ALTS,name(%q<alts_target>)'s alts are private.); think setq(alts_list,remove(filterbool(%!/FUN`IS`LISTED,accountchars(%q<alts_target>),,,%q<alts_key>),%q<alts_target>)); @assert words(%q<alts_list>)=@pemit %#=notice(ALTS,name(%q<alts_target>) lists no other characters.); @pemit %#=u(%!/FUN`TABLE`PUBLIC,%q<alts_list>,Alts of [name(%q<alts_target>)],+alts lists your own)
         flags: [cmdsyntax]
       # +alts <player> for staff: every character on the account, hidden ones marked, and the account's name.
-      INC`SHOW`STAFF:
+      INC`CMD`SHOW`STAFF:
         value: |-
-          @assert strlen(%q<alts_key>)=@pemit %#=notice(ALTS,[name(%q<alts_target>)] is on no account.); @pemit %#=u(%!/FUN`TABLE`FULL,accountchars(%q<alts_target>),%q<alts_key>,Alts of [name(%q<alts_target>)],Account [account(%q<alts_target>,name)] · its list is [if(u(%!/FUN`IS`PUBLIC,%q<alts_key>),public,private)] · staff see every character)
+          @assert strlen(%q<alts_key>)=@pemit %#=notice(ALTS,name(%q<alts_target>) is on no account.); @pemit %#=u(%!/FUN`TABLE`FULL,accountchars(%q<alts_target>),%q<alts_key>,Alts of [name(%q<alts_target>)],Account [account(%q<alts_target>,name)] · its list is [if(u(%!/FUN`IS`PUBLIC,%q<alts_key>),public,private)] · staff see every character)
         flags: [cmdsyntax]
 
       # ---- +alts/public -----------------------------------------------------------
       # +alts/public [on|off]: for the whole account, from any of its characters.
-      INC`PUBLIC:
+      INC`CMD`PUBLIC:
         value: |-
-          @include %!/INC`NEEDACCOUNT; @break not(strlen(%q<cmd_argument>))={@pemit %#=notice(ALTS,Your list is [if(u(%!/FUN`IS`PUBLIC,%q<viewer_key>),public,private)]. +alts/public on lets anyone list your alts%, +alts/public off keeps them to you.)}; @assert member(on off,lcstr(%q<cmd_argument>))=@pemit %#=notice(ALTS,+alts/public on lets anyone list your alts%, +alts/public off keeps them to you.,warn); @break strmatch(%q<cmd_argument>,on)={&ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}=1; @pemit %#=notice(ALTS,Your alts are public: anyone can list them with +alts <name>. +alts/hide <name> keeps one off the list.,ok)}; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}; @pemit %#=notice(ALTS,Your alts are private: only you and staff see them.,ok); @include/args %!/INC`TIDY=key,%q<viewer_key>
+          @include %!/INC`NEED`ACCOUNT; @break not(strlen(%q<cmd_argument>))={@pemit %#=notice(ALTS,Your list is [if(u(%!/FUN`IS`PUBLIC,%q<viewer_key>),public,private)]. +alts/public on lets anyone list your alts%, +alts/public off keeps them to you.)}; @assert member(on off,lcstr(%q<cmd_argument>))=@pemit %#=notice(ALTS,+alts/public on lets anyone list your alts%, +alts/public off keeps them to you.,warn); @break strmatch(%q<cmd_argument>,on)={&ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}=1; @pemit %#=notice(ALTS,Your alts are public: anyone can list them with +alts <name>. +alts/hide <name> keeps one off the list.,ok)}; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}; @pemit %#=notice(ALTS,Your alts are private: only you and staff see them.,ok); @include/args %!/INC`DO`TIDY=key,%q<viewer_key>
         flags: [cmdsyntax]
 
       # ---- +alts/hide and +alts/unhide ---------------------------------------------
       # Sets alt_target to the character %q<cmd_argument> names, one on the player's own account, and alt_charkey
       # to its key.
-      INC`NEEDALT:
+      INC`NEED`ALT:
         value: |-
-          @include %!/INC`NEEDACCOUNT; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ALTS,Which alt? +alts/%q<cmd_switch> <name>,warn); @assert strlen(setr(alt_target,u(%!/FUN`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(ALTS,There is no player called '%q<cmd_argument>'.,warn); @assert not(comp(u(%!/FUN`KEY,account(%q<alt_target>)),%q<viewer_key>))=@pemit %#=notice(ALTS,[name(%q<alt_target>)] is not on your account.,warn); think setq(alt_charkey,u(%!/FUN`CHARKEY,%q<alt_target>))
+          @include %!/INC`NEED`ACCOUNT; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ALTS,Which alt? +alts/%q<cmd_switch> <name>,warn); @assert strlen(setr(alt_target,u(%!/FUN`FIND`PLAYER,%q<cmd_argument>)))=@pemit %#=notice(ALTS,There is no player called '%q<cmd_argument>'.,warn); @assert not(comp(u(%!/FUN`KEY`ACCOUNT,account(%q<alt_target>)),%q<viewer_key>))=@pemit %#=notice(ALTS,name(%q<alt_target>) is not on your account.,warn); think setq(alt_charkey,u(%!/FUN`KEY`CHARACTER,%q<alt_target>))
         flags: [cmdsyntax]
       # +alts/hide <alt>
-      INC`HIDE:
+      INC`CMD`HIDE:
         value: |-
-          @include %!/INC`NEEDALT; @assert u(%!/FUN`IS`LISTED,%q<alt_target>,%q<viewer_key>)=@pemit %#=notice(ALTS,[name(%q<alt_target>)] is already off your public list.,warn); &ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`HIDDEN`%q<alt_charkey> {{store}}=%q<alt_target>; @pemit %#=notice(ALTS,[name(%q<alt_target>)] is off your public list. Only you and staff see it.,ok)
+          @include %!/INC`NEED`ALT; @assert u(%!/FUN`IS`LISTED,%q<alt_target>,%q<viewer_key>)=@pemit %#=notice(ALTS,name(%q<alt_target>) is already off your public list.,warn); &ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`HIDDEN`%q<alt_charkey> {{store}}=%q<alt_target>; @pemit %#=notice(ALTS,name(%q<alt_target>) is off your public list. Only you and staff see it.,ok)
         flags: [cmdsyntax]
       # +alts/unhide <alt>
-      INC`UNHIDE:
+      INC`CMD`UNHIDE:
         value: |-
-          @include %!/INC`NEEDALT; @assert u(%!/FUN`IS`HIDDEN,%q<alt_target>,%q<viewer_key>)=@pemit %#=notice(ALTS,[name(%q<alt_target>)] is not hidden.,warn); &ACCOUNT`%q<viewer_key>`HIDDEN`%q<alt_charkey> {{store}}; @pemit %#=notice(ALTS,[name(%q<alt_target>)] is back on your public list[if(not(u(%!/FUN`IS`PUBLIC,%q<viewer_key>)),%, which is private: +alts/public on makes it public)].,ok); @include/args %!/INC`TIDY=key,%q<viewer_key>
+          @include %!/INC`NEED`ALT; @assert u(%!/FUN`IS`HIDDEN,%q<alt_target>,%q<viewer_key>)=@pemit %#=notice(ALTS,name(%q<alt_target>) is not hidden.,warn); &ACCOUNT`%q<viewer_key>`HIDDEN`%q<alt_charkey> {{store}}; @pemit %#=notice(ALTS,name(%q<alt_target>) is back on your public list[if(not(u(%!/FUN`IS`PUBLIC,%q<viewer_key>)),%, which is private: +alts/public on makes it public)].,ok); @include/args %!/INC`DO`TIDY=key,%q<viewer_key>
         flags: [cmdsyntax]
 
       # ---- PLAYER`UNLINK ----------------------------------------------------------
@@ -214,7 +216,7 @@ objects:
       # id of the account it left. The account forgets whether it hid that character.
       EVENT`UNLINK:
         value: |-
-          @assert cand(strlen(%<objid>),strlen(setr(event_key,u(%!/FUN`KEY,%<account>)))); &ACCOUNT`%q<event_key>`HIDDEN`[u(%!/FUN`CHARKEY,%<objid>)] {{store}}; @include/args %!/INC`TIDY=key,%q<event_key>
+          @assert cand(strlen(%<objid>),strlen(setr(event_key,u(%!/FUN`KEY`ACCOUNT,%<account>)))); &ACCOUNT`%q<event_key>`HIDDEN`[u(%!/FUN`KEY`CHARACTER,%<objid>)] {{store}}; @include/args %!/INC`DO`TIDY=key,%q<event_key>
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
