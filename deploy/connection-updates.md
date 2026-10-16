@@ -4,6 +4,22 @@ The stable SocketServer owns telnet and `/ws` sockets, their protocol state, and
 
 The image names predate the project names and are kept on purpose. Renaming an image changes which process an existing Compose file pulls under an unchanged tag, which is the Watchtower hazard the migration section below describes. The source project was renamed from `SharpMUSH.ConnectionServer` to `SharpMUSH.RenderingWorker` without touching any image, service or configuration key; `ConnectionServer__*` settings still configure SocketServer.
 
+## Changes to browser control frames
+
+A portal release that adds an inbound WebSocket control type also requires a SocketServer release
+that recognizes it. Publish and update the socket owner during an announced window before exposing
+the new portal sender. Engine and renderer updates alone cannot add input protocol support to the
+running socket owner. Compare the running containers' `org.opencontainers.image.revision` labels
+with the commit that added the control handler; a floating `dev` tag does not prove compatibility.
+
+For example, the browser's `{"type":"environ","vars":{"TZ":"America/Chicago"}}` timezone report
+requires the SocketServer handler added in `ca18a485d`. Older socket owners recognize only the
+previous control types and forward this JSON as a command. It can then enter softcode evaluation
+and game command dispatch, instead of remaining connection metadata. JSON escaping in the portal
+cannot repair that missing gateway handler. Updating the owner closes its
+physical sockets, so use the SocketServer update procedure below and verify a fresh browser login
+and resume: `clientzone()` should report the browser's zone without any room speech.
+
 ## What players see
 
 On graceful engine shutdown (including Watchtower's SIGTERM), the engine publishes `MainProcessShutdownMessage` before hosted services stop. The gateway sends every registered session a restart notice through its normal output delegate. After engine bootstrap and connection reconciliation finish and input consumers are registered, `MainProcessReadyMessage` produces a ready notice. The notices work on telnet and gateway WebSockets; WebSocket notices participate in existing output sequencing/replay. Ordinary engine restarts need no Watchtower hook or public maintenance endpoint.

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
@@ -112,4 +113,12 @@ public class TerminalTranscriptTests
 	[Test]
 	public async Task NawsFrame_CarriesTheGrid()
 		=> await Assert.That(TerminalInput.NawsFrame(80, 24)).IsEqualTo("{\"type\":\"naws\",\"cols\":80,\"rows\":24}");
+
+	[Test]
+	public async Task TimeZoneFrame_ReportsTheBrowserZoneAsControlJson()
+	{
+		using var frame = JsonDocument.Parse(TerminalInput.TimeZoneFrame("America/Chicago"));
+		await Assert.That(frame.RootElement.GetProperty("type").GetString()).IsEqualTo("environ");
+		await Assert.That(frame.RootElement.GetProperty("vars").GetProperty("TZ").GetString()).IsEqualTo("America/Chicago");
+	}
 }
