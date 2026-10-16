@@ -27,7 +27,7 @@ public partial class Commands
 		var token = ExecutionBudget.CurrentToken;
 		var fullTarget = target.Object().DBRef;
 		var original = await Mediator.CreateStream(new GetAttributeQuery(fullTarget, path), token).LastOrDefaultAsync(token);
-		if (original?.StoredValue is { CanRewrite: false })
+		if (original is { IsUnreadable: true } || original?.StoredValue is { CanRewrite: false })
 			return new Error<string>(SemaphoreAttributes.UnsafeMarkupMessage);
 		var oldCount = 0;
 		var originalValue = original?.Value.ToPlainText();

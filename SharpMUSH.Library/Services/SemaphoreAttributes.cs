@@ -13,7 +13,7 @@ public static class SemaphoreAttributes
 
 	public static void RequireCanRewrite(SharpAttribute? attribute)
 	{
-		if (attribute?.StoredValue is { CanRewrite: false })
+		if (attribute is { IsUnreadable: true } || attribute?.StoredValue is { CanRewrite: false })
 			throw new InvalidOperationException(UnsafeMarkupMessage);
 	}
 

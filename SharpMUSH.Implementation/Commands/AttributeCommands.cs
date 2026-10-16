@@ -585,7 +585,7 @@ public partial class Commands
 		}
 
 		// Preflight the entire wildcard match before evaluating replacements or writing any leaf.
-		if (attrList.Any(attribute => attribute.StoredValue is { CanRewrite: false }))
+		if (attrList.Any(attribute => attribute.IsUnreadable || attribute.StoredValue is { CanRewrite: false }))
 		{
 			const string message = "Stored markup cannot be edited safely; replace the attribute explicitly.";
 			await NotifyService.Notify(executor, message, executor);

@@ -119,7 +119,14 @@ internal sealed class AttributeWriter(
 		}
 	}
 
-	private async ValueTask<Result<WrittenAttribute>> WriteAttributeAsync(AnySharpObject executor,
+	private async ValueTask<Result<WrittenAttribute>> WriteAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+		string attribute, MString value, SharpPlayer creator, bool isAttributeCopy, bool isPlayerAlias, StoredMarkup? storedValue = null)
+	{
+		try { return await WriteAttributeCoreAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias, storedValue); }
+		catch (InvalidDataException) { return new Error<string>("Attribute access metadata is unreadable; write refused."); }
+	}
+
+	private async ValueTask<Result<WrittenAttribute>> WriteAttributeCoreAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value,

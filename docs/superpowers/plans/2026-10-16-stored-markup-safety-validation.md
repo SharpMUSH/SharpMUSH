@@ -14,7 +14,7 @@ Compatibility: [reader-first deployment and rollback](../../guides/stored-markup
 | Copy/move/clone | `StoredMarkupCommandSafetyTests.CopyMoveAndClonePreserveOriginalSerialization` runs actual commands, checks destination raw bytes and move source removal |
 | Atomic wildcard edit | `WildcardEditRefusesAllMatchesBeforeChangingAnyAttribute` checks every matched attribute remains unchanged and explicit replacement remains allowed |
 | Snapshot take/restore | `ObjectSnapshotTests.FutureWireSnapshotCaptureAndRestorePreserveOriginalBytes` variants cover Unsupported and structurally valid Damaged payloads, including original capture and restored serialization |
-| Per-record isolation | `MalformedAttributeDoesNotAbortItsNeighbours` variants corrupt attr.val or attr.meta, reopen the world, confirm the exact bad row is absent and surrounding enumeration survives |
+| Per-record isolation | `MalformedAttributeDoesNotAbortItsNeighbours` variants corrupt attr.val or attr.meta, reopen the world, confirm exact reads retain valid access metadata (or fail closed when metadata itself is corrupt), while surrounding display enumeration survives |
 | Startup | `MalformedStartupIsSkippedAndFollowingStartupStillRuns` exercises the same shared startup attribute primitive as boot, skips a malformed STARTUP and executes the following object's command list |
 | Feed accounting | `FeedStoreTests.FutureWireDisplayDoesNotChangeFeedByteAccounting` checks future-wire display does not change recorded byte counts and deletion subtracts the original recorded quantities |
 | Scene edit/history | `FutureWirePoseEditIsRefusedWithoutTruncatingHistory` and `MalformedSerializedPoseDoesNotSaveFallbackBackIntoHistory` preserve current raw content and edit history before refusal |
@@ -54,3 +54,31 @@ Each test class/prefix uses a separate `--treenode-filter`; pipe-combined filter
 - `/*/*/EditMessageTests/*`: 5 passed.
 - Full `SharpMUSH.Tests.ScenePlugin`: 159 passed (including the unsafe edit/history regressions).
 - `/*/*/StringFunctionUnitTests/Edit*`: 6 passed, including markup-preserving pure string edit cases.
+
+
+## Independent review correction wave 1
+
+Fix range starts at `3f290d7a51b3a48a2a4418c59c3c6be66eb870c3`.
+
+| Finding | Fix and new regression |
+| --- | --- |
+| Corrupt value hid SAFE/WIZARD/INTERNAL/LOCKED metadata | Exact provider reads retain the real attribute metadata and mark only the body unreadable. AttributeService refuses display/copy of unreadable bodies; AttributeWriter still checks all flags, including a corrupt protected ancestor. Invalid access metadata produces InvalidDataException; read/write and snapshot service boundaries map it to explicit refusals. Regression checks four protected leaf flags, a protected corrupt ancestor, authorized God replacement, and corrupt-metadata startup/write refusal. |
+| First existing-counter rollback overwrote concurrent future bytes | Every rollback, including first cleanup, freshly reads and validates the persisted value before any restoration write. Publication-failure regression installs exact future bytes while Quartz awaits, then proves no second provider write, retained queue accounting/repair barrier, and successful retry only after explicit compatible repair. |
+| Full eager/lazy readers aborted corrupt records | Full-tree RangeMap projections catch each bad row and return null, preserving cursor progress. Exact authorization metadata remains separate from display omission. Corrupt full-tree ancestors suppress their subtree conservatively; sibling command/listen definitions remain discoverable. Tests cover attr.val and attr.meta corruption, full eager/lazy metadata enumeration, and command/listen discovery beyond the corrupt row. |
+| Raw write serialized before replacing bytes | PreparedAttributeWrite now takes optional original serialization and chooses it before calling Serialize. A registered test codec successfully reads a concrete layer but throws/counts on Write; raw copy and reopen preserve exact bytes without writer calls. Snapshot capture/restore also preserves exact bytes and asserts the raw service/provider stage never invokes the writer. |
+
+Before fixes, the expanded stored-markup regression wave failed 10 of 24 scenarios (the original 14 passed), including all protected-value bypasses, full-tree/discovery aborts and readable/unwritable raw copy. Separate admission rollback and snapshot restore reproductions also failed. A follow-up warm-cache corrupt-metadata test exposed provider write decoding outside the service mapping; that boundary now returns a refusal without a partial write. No access flags are fabricated or dropped to represent absence.
+
+The snapshot authorization audit confirms ReadContext still receives the original valid flags for unreadable bodies and maps unparseable metadata to a typed corrupt-snapshot failure. Explicit replacement of a corrupt body remains possible for an actor authorized by its retained metadata.
+
+Correction-wave verification (single supported treenode filter per run):
+
+- `/*/*/StoredMarkup*/*`: 25 passed, including all new access-metadata, discovery and raw-copy cases.
+- `/*/*/ObjectSnapshotTests/*`: 30 passed, including readable-but-unwritable codec snapshot restore.
+- `/*/*/QueueAdmissionTests/*`: 167 passed, including existing-counter first rollback and all prior repair/publication scenarios.
+- `/*/*/AttributeTreeWriteGateTests/*`: 14 passed.
+- `/*/*/AttributeReadCostTests/*`: 18 passed.
+
+All 254 affected scenarios passed without skips. Earlier scene, feed, clone and pure edit suites were not repeated for this correction wave; the shared raw persistence seam is covered by the new copy/reopen and snapshot tests. The registered readable/unwritable codec exists only in the test assembly bootstrap. Runtime scratch remains disk-backed and outside the source diff.
+
+Final correction build: `dotnet build SharpMUSH.Tests --no-restore -m:2 -nr:false` passed with zero warnings/errors and the normal formatting gate enabled. Two whitespace passes converged and `git diff --check` passed. No production data or deployed services were changed.

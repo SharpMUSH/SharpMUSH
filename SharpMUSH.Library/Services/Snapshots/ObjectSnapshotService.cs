@@ -342,7 +342,9 @@ public sealed partial class ObjectSnapshotService(
 		public async Task<SharpAttribute[]> Path(string name, CancellationToken ct)
 		{
 			if (paths.TryGetValue(name, out var cached)) return cached;
-			var path = await attributes.GetAttributeAsync(target, name.Split('`'), ct).ToArrayAsync(ct);
+			SharpAttribute[] path;
+			try { path = await attributes.GetAttributeAsync(target, name.Split('`'), ct).ToArrayAsync(ct); }
+			catch (InvalidDataException) { throw Error("corrupt", "Attribute access metadata is unreadable: " + name); }
 			return paths[name] = path.Select(attribute => attribute with { Value = MarkupText.Empty }).ToArray();
 		}
 	}

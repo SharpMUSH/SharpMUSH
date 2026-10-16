@@ -39,6 +39,40 @@ public class ObjectSnapshotTests
 	}
 
 	[Test]
+	[NotInParallel]
+	public async Task ReadableUnwritableCodecSnapshotRestoresOriginalBytesWithoutSerializingCopy()
+	{
+		var (actor, target, player) = await Setup();
+		var raw = SharpMUSH.Tests.Fixtures.ReadableUnwritableCodec.Payload;
+		var database = (SharpMUSH.Database.Lightning.LightningDatabase)Get<IAttributeStore>();
+		await database.Store.WriteAsync(tx => tx.Put(SharpMUSH.Database.Lightning.Store.Tables.AttrVal,
+			SharpMUSH.Library.Plugins.Storage.Lightning.Keys.Attr(target.Number, "DESC"), System.Text.Encoding.UTF8.GetBytes(raw)));
+		var realAttributes = Get<IAttributeService>();
+		var attributes = Substitute.For<IAttributeService>();
+		var rawWrites = 0;
+		attributes.SetStoredAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<StoredMarkup>(), null)
+			.Returns(WriteOriginal);
+		async ValueTask<Result<Success>> WriteOriginal(NSubstitute.Core.CallInfo call)
+		{
+			var before = SharpMUSH.Tests.Fixtures.ReadableUnwritableCodec.Instance.Writes;
+			var result = await realAttributes.SetStoredAttributeAsync(call.ArgAt<AnySharpObject>(0), call.ArgAt<AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<StoredMarkup>(3));
+			await Assert.That(SharpMUSH.Tests.Fixtures.ReadableUnwritableCodec.Instance.Writes).IsEqualTo(before);
+			rawWrites++;
+			return result;
+		}
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IFlagAndPowerService>(), Get<IObjectNameService>(), Get<ILockService>(), Get<IMediator>());
+		var saved = await service.CaptureAsync(actor, target, "unwritable codec");
+		await Assert.That(saved.Attributes.Single(a => a.Name == "DESC").Markup).IsEqualTo(raw);
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("replacement"), player));
+		var selection = new SnapshotSelection(["DESC"]);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		await Assert.That((await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token)).Completed).IsTrue();
+		await Assert.That(rawWrites).IsEqualTo(1);
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).StoredValue!.Serialized).IsEqualTo(raw);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task FutureWireSnapshotCaptureAndRestorePreserveOriginalBytes(bool damaged)

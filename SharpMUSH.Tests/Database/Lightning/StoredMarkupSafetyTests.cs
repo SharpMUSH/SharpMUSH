@@ -29,6 +29,42 @@ public class StoredMarkupSafetyTests : LightningDatabaseFixture
 	}
 
 	[Test]
+	[NotInParallel]
+	public async Task RawCopyNeverInvokesReadableButUnwritableCodec()
+	{
+		var raw = SharpMUSH.Tests.Fixtures.ReadableUnwritableCodec.Payload;
+		var stored = StoredMarkup.Inspect(raw);
+		await Assert.That(stored.CanRewrite).IsFalse();
+		var writes = SharpMUSH.Tests.Fixtures.ReadableUnwritableCodec.Instance.Writes;
+		var god = (await Db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		await Db.SetStoredAttributeAsync(new DBRef(0), ["UNWRITABLE_COPY"], stored, god, new HashSet<string>());
+		await ReopenAsync();
+		var copy = await Db.GetAttributeAsync(new DBRef(0), ["UNWRITABLE_COPY"]).LastAsync();
+		await Assert.That(copy.StoredValue!.Serialized).IsEqualTo(raw);
+		await Assert.That(SharpMUSH.Tests.Fixtures.ReadableUnwritableCodec.Instance.Writes).IsEqualTo(writes);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task FullTreeReadersSkipBadRowsAndKeepNeighbours(bool metadata)
+	{
+		var god = (await Db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		foreach (var name in new[] { "FULL_A", "FULL_BAD", "FULL_Z" })
+			await Db.SetAttributeAsync(new DBRef(0), [name], MarkupText.Plain(name), god);
+		await Db.SetAttributeAsync(new DBRef(0), ["FULL_BAD", "CHILD"], MarkupText.Plain("good descendant under bad ancestor"), god);
+		await Db.Store.WriteAsync(tx => tx.Put(metadata ? Tables.AttrMeta : Tables.AttrVal, Keys.Attr(0, "FULL_BAD"), Keys.Str("not JSON")));
+		var room = (await Db.GetObjectNodeAsync(new DBRef(0))).Expect<SharpRoom>().Object;
+		var eager = await room.AllAttributes.Value.Where(a => a.Name.StartsWith("FULL_", StringComparison.Ordinal)).ToArrayAsync();
+		await Assert.That(string.Join(' ', eager.Select(a => a.Name))).IsEqualTo("FULL_A FULL_Z");
+		if (metadata)
+		{
+			var lazy = await room.LazyAllAttributes.Value.Where(a => a.Name.StartsWith("FULL_", StringComparison.Ordinal)).ToArrayAsync();
+			await Assert.That(string.Join(' ', lazy.Select(a => a.Name))).IsEqualTo("FULL_A FULL_Z");
+		}
+	}
+
+	[Test]
 	public async Task DisplayReadDefersCodecRewriteInspectionUntilSafetyIsRequested()
 	{
 		var raw = MarkupTextSerializer.Serialize(MarkupText.Wrap(
@@ -105,7 +141,10 @@ public class StoredMarkupSafetyTests : LightningDatabaseFixture
 			await Db.SetAttributeAsync(new DBRef(0), [name], MarkupText.Plain(name), god);
 		await Db.Store.WriteAsync(tx => tx.Put(metadata ? Tables.AttrMeta : Tables.AttrVal, Keys.Attr(0, "SAFETY_BAD"), Keys.Str("not JSON")));
 		await ReopenAsync();
-		await Assert.That(await Db.GetAttributeAsync(new DBRef(0), ["SAFETY_BAD"]).AnyAsync()).IsFalse();
+		if (metadata)
+			await Assert.That(async () => await Db.GetAttributeAsync(new DBRef(0), ["SAFETY_BAD"]).ToArrayAsync()).Throws<InvalidDataException>();
+		else
+			await Assert.That((await Db.GetAttributeAsync(new DBRef(0), ["SAFETY_BAD"]).LastAsync()).IsUnreadable).IsTrue();
 		var attributes = await Db.GetAttributesAsync(new DBRef(0), "SAFETY_*").ToListAsync();
 		await Assert.That(string.Join(' ', attributes.Select(a => a.Name))).IsEqualTo("SAFETY_A SAFETY_Z");
 	}

@@ -17,6 +17,10 @@ public record SharpAttribute(
 	[JsonIgnore]
 	public StoredMarkup? StoredValue { get; init; }
 
+	/// <summary>The metadata exists, but its stored body cannot be decoded. Never treat this as an absent attribute.</summary>
+	[JsonIgnore]
+	public bool IsUnreadable { get; init; }
+
 	public MString Value { get; set; } = MarkupText.Empty;
 }
 

@@ -112,6 +112,7 @@ public class AttributeService(
 		bool parent = true)
 		=> await ReadAttributeAsync(executor, obj, attribute, mode, parent, EagerShape) switch
 		{
+			{ Found: { } found } when found.Any(attribute => attribute.IsUnreadable) => new Error<string>("Stored attribute value is unreadable."),
 			{ Found: { } found } => found,
 			{ Error: { } error } => new Error<string>(error),
 			_ => new None()
@@ -185,7 +186,14 @@ public class AttributeService(
 	/// and gate the result on the mode's permission - re-walking the branch per
 	/// <see cref="ReadWalkApplies"/> where PennMUSH does.
 	/// </summary>
-	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(
+	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(AnySharpObject executor, AnySharpObject obj,
+		string attribute, IAttributeService.AttributeMode mode, bool parent, AttributeReadShape<T> shape) where T : class
+	{
+		try { return await ReadAttributeCoreAsync(executor, obj, attribute, mode, parent, shape); }
+		catch (InvalidDataException) { return new AttributeRead<T>(null, "Attribute access metadata is unreadable."); }
+	}
+
+	private async ValueTask<AttributeRead<T>> ReadAttributeCoreAsync<T>(
 		AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
@@ -470,6 +478,7 @@ public class AttributeService(
 				EagerShape, token) is { } literal
 				? [literal]
 				: [];
+			if (found.Any(attribute => attribute.IsUnreadable)) return new Error<string>("Stored attribute value is unreadable.");
 			return found;
 		}
 

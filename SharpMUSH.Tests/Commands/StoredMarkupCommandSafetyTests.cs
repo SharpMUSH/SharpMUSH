@@ -40,7 +40,71 @@ public class StoredMarkupCommandSafetyTests
 	}
 
 	private async Task<SharpAttribute> Attribute(DBRef target, string name)
-		=> await Get<IMediator>().CreateStream(new GetAttributeQuery(target, [name])).LastAsync();
+		=> await Get<IMediator>().CreateStream(new GetAttributeQuery(target, name.Split('`'))).LastAsync();
+
+	[Test]
+	public async Task CorruptAccessMetadataReturnsOneWriteRefusalAndNoStartupExecution()
+	{
+		var target = await Thing();
+		await Command($"&STARTUP {target}=&SHOULD_NOT_RUN me=yes");
+		var database = (LightningDatabase)Get<IAttributeStore>();
+		await database.Store.WriteAsync(tx => tx.Put(Tables.AttrMeta, Keys.Attr(target.Number, "STARTUP"), Keys.Str("not JSON")));
+		var god = (await Get<IMediator>().Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		var obj = (await Get<IMediator>().Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>();
+		await Assert.That(await Get<IAttributeService>().SetAttributeAsync(god, obj, "STARTUP", MarkupText.Plain("replacement")) is Error<string>).IsTrue();
+		await Assert.That(await StartupAttributeRunner.RunObjectAttributeAsync(Factory.CommandParser, Get<IAttributeService>(), obj, "STARTUP", god)).IsFalse();
+		await Assert.That(await Get<IMediator>().CreateStream(new GetAttributeQuery(target, ["SHOULD_NOT_RUN"])).AnyAsync()).IsFalse();
+	}
+
+	[Test]
+	[Arguments("safe", false)]
+	[Arguments("wizard", false)]
+	[Arguments("internal", false)]
+	[Arguments("locked", false)]
+	[Arguments("wizard", true)]
+	public async Task CorruptValueCannotHideProtectedMetadata(string flagName, bool ancestor)
+	{
+		var mediator = Get<IMediator>();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Get<IConnectionService>(), "CorruptProtected");
+		var actor = (await mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		var path = ancestor ? new[] { "PROTECTED", "CHILD" } : new[] { "PROTECTED" };
+		await mediator.Send(new SetAttributeCommand(owner.DbRef, path, MarkupText.Plain("original"), god));
+		var root = await mediator.CreateStream(new GetAttributeQuery(owner.DbRef, ["PROTECTED"])).LastAsync();
+		var flag = await mediator.CreateStream(new GetAttributeFlagsQuery()).FirstAsync(f => f.Name.Equals(flagName, StringComparison.OrdinalIgnoreCase));
+		await mediator.Send(new SetAttributeFlagCommand(owner.DbRef, root, flag));
+		var service = Get<IAttributeService>();
+		await Assert.That(await service.SetAttributeAsync(actor, actor, string.Join('`', path), MarkupText.Plain("replacement")) is Error<string>).IsTrue();
+		await ((LightningDatabase)Get<IAttributeStore>()).Store.WriteAsync(tx => tx.Put(Tables.AttrVal, Keys.Attr(owner.DbRef.Number, "PROTECTED"), Keys.Str("not JSON")));
+		// Expire the cached read without replacing the corrupt body or any of its metadata.
+		await mediator.Send(new SetAttributeFlagCommand(owner.DbRef, root, flag));
+		await Assert.That(await service.SetAttributeAsync(actor, actor, string.Join('`', path), MarkupText.Plain("replacement")) is Error<string>).IsTrue();
+		await Assert.That(await service.SetAttributeAsync(god, actor, string.Join('`', path), MarkupText.Plain("authorized replacement")) is Success).IsTrue();
+		await Assert.That((await Attribute(owner.DbRef, string.Join('`', path))).Value.ToPlainText()).IsEqualTo("authorized replacement");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CommandAndListenDiscoverySkipMalformedNeighbours(bool metadata)
+	{
+		var target = await Thing();
+		await Command($"&DISC_A {target}=$first:think first");
+		await Command($"&DISC_BAD {target}=broken");
+		await Command($"&DISC_BAD`HIDDEN_CMD {target}=$hidden:think hidden");
+		await Command($"&DISC_BAD`HIDDEN_LISTEN {target}=^hidden:think hidden");
+		await Command($"&DISC_Z {target}=$last:think last");
+		await Command($"&DISC_LISTEN {target}=^last:think heard");
+		var database = (LightningDatabase)Get<IAttributeStore>();
+		await database.Store.WriteAsync(tx => tx.Put(metadata ? Tables.AttrMeta : Tables.AttrVal, Keys.Attr(target.Number, "DISC_BAD"), Keys.Str("not JSON")));
+		var obj = (await Get<IMediator>().Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>();
+		var commands = await Get<IMediator>().Send(new GetCommandAttributesQuery(obj));
+		await Assert.That(commands.Any(c => c.Attribute.Name == "DISC_Z")).IsTrue();
+		await Assert.That(commands.Any(c => c.Attribute.LongName.StartsWith("DISC_BAD`", StringComparison.Ordinal))).IsFalse();
+		var listens = await Get<IMediator>().Send(new GetListenAttributesQuery(obj));
+		await Assert.That(listens.Any(c => c.Attribute.Name == "DISC_LISTEN")).IsTrue();
+		await Assert.That(listens.Any(c => c.Attribute.LongName.StartsWith("DISC_BAD`", StringComparison.Ordinal))).IsFalse();
+	}
 
 	[Test]
 	public async Task SemaphoreTimeoutRefusesUnsafeCounterAndCanRetryAfterExplicitReplacement()
