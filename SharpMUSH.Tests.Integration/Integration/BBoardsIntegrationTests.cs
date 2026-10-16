@@ -203,6 +203,47 @@ public partial class BBoardsIntegrationTests
 	}
 
 	/// <summary>
+	/// Removing a post, tossing a draft and clearing a board take the readers' leaves for them away, not
+	/// leave them behind empty.
+	/// </summary>
+	[Test]
+	public async Task RemovedPostsDraftsAndBoardsLeaveNoEmptyReadingLeaves()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbLfAdm", "bboard-admin");
+			var mira = await Player("BbLfMira");
+			var board = await Board(admin, "BbLeaves");
+			var post = await Post(admin, board, "Followed", "Follow me.");
+
+			await Assert.That(await As(mira, $"+bbfollow {post}")).Contains("Following");
+			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`P**))]")).IsNotEqualTo("0");
+			await As(admin, $"+bbremove {post}");
+			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`P**)]")).IsEmpty()
+				.Because("a removed post's reading leaves are wiped, not emptied");
+
+			await As(mira, $"+bbpost {board}/A draft");
+			await As(mira, "+bbwrite A line.");
+			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**))]")).IsNotEqualTo("0");
+			await As(mira, "+bbtoss");
+			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**)]")).IsEmpty()
+				.Because("a tossed draft is wiped, not emptied");
+
+			var group = await Board(admin, "BbLeavesGone");
+			await As(mira, $"+bbleave {group}");
+			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`B**))]")).IsNotEqualTo("0");
+			await As(admin, $"+bbcleargroup {group}");
+			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`B**)]")).IsEmpty()
+				.Because("a cleared board's reading leaves are wiped, not emptied");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
 	/// A board's ON` hooks are a contract with the game's own code: each argument comes by name and by
 	/// place, so a hook written either way hears the same thing.
 	/// </summary>

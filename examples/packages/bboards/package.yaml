@@ -604,11 +604,11 @@ objects:
         @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Removed [if(%q<item_moderator_acting>,%q<remove_author_name>'s post,your post)] %q<path_label> "%q<remove_post_title>".[u({{bboards}}/FUN`DISPLAY`RENUMBERED,%q<remove_board_path>,%q<remove_post_number>,%q<remove_total_count>)]);@trigger/args %q<path_current>/ON`REMOVE=0,%q<path_post>,1,%q<viewer_objid>,2,,3,%q<remove_post_title>,post,%q<path_post>,actor,%q<viewer_objid>,comment,,title,%q<remove_post_title>
       # Clears the text and author of post %q<path_post>, keeping its place for the comments under it.
       INC`DO`BLANKPOST: |-
-        @dolist/inline TITLE TEXT SOURCE BY NAME ANON=&## %q<path_post>=
+        @dolist/inline TITLE TEXT SOURCE BY NAME ANON=&## %q<path_post>
       # Takes post %<post> off board %<board> and destroys it; the readers' leaves for it are cleared one
       # character per queue entry.
       INC`DO`DESTROYPOST: |-
-        think setq(post_destroy_sequence,get(%<post>/SEQ));&PINS %<board>=remove(get(%<board>/PINS),%<post>);&HOT %<board>=remove(get(%<board>/HOT),%<post>);@tel %<post>={{bboards}};@nuke %<post>;@nuke %<post>;&RENUM %<board>=get({{store}}/SEQ);@dolist lsearch(all,type,player,elock,BBOARD`P%q<post_destroy_sequence>:*) {{readers}}={&BBOARD`P%q<post_destroy_sequence>`FOLLOW ##=; &BBOARD`P%q<post_destroy_sequence> ##=}
+        think setq(post_destroy_sequence,get(%<post>/SEQ));&PINS %<board>=remove(get(%<board>/PINS),%<post>);&HOT %<board>=remove(get(%<board>/HOT),%<post>);@tel %<post>={{bboards}};@nuke %<post>;@nuke %<post>;&RENUM %<board>=get({{store}}/SEQ);@dolist lsearch(all,type,player,elock,BBOARD`P%q<post_destroy_sequence>:*) {{readers}}=@wipe ##/BBOARD`P%q<post_destroy_sequence>
       # Removes comment %q<path_comment_key> on post %q<path_post>: with replies under it, it keeps its place
       # marked removed; otherwise it leaves the thread and the comments after it move up one.
       INC`REMOVE`COMMENT: |-
@@ -621,7 +621,7 @@ objects:
         remove_post_path,u(%!/FUN`PATH`OFPOST,%q<path_post>))
       # Comment %q<path_comment_key> has replies: blanks it, marks it removed by %<role>, and announces it.
       INC`REMOVECOMMENT`MARK: |-
-        @dolist/inline TEXT SOURCE BY NAME ANON=&C`%q<path_comment_key>`## %q<path_post>=;&C`%q<path_comment_key>`REMOVED %q<path_post>=%<role>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Removed [if(%q<item_moderator_acting>,%q<remove_author_display>'s,your)] comment %[%q<path_comment_number>%] on %q<remove_post_path>. The replies under it stay.);@trigger/args %q<path_current>/ON`REMOVE=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,3,get(%q<path_post>/TITLE),post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>,title,get(%q<path_post>/TITLE)
+        @dolist/inline TEXT SOURCE BY NAME ANON=&C`%q<path_comment_key>`## %q<path_post>;&C`%q<path_comment_key>`REMOVED %q<path_post>=%<role>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Removed [if(%q<item_moderator_acting>,%q<remove_author_display>'s,your)] comment %[%q<path_comment_number>%] on %q<remove_post_path>. The replies under it stay.);@trigger/args %q<path_current>/ON`REMOVE=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,3,get(%q<path_post>/TITLE),post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>,title,get(%q<path_post>/TITLE)
       # Takes comment %q<path_comment_key> out of post %q<path_post>'s thread order; when it ended its
       # conversation, the comment before it now does. Sets %q<remove_thread_root>, %q<remove_thread>, %q<remove_previous_comment>.
       INC`REMOVECOMMENT`THREAD: |-
@@ -639,7 +639,7 @@ objects:
         @include/args {{bboards}}/INC`NEED`MODERATEDPOST=path,%q<cmd_argument>;@assert not(get(%q<path_post>/CLOSED))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_label> is already closed.);&CLOSED %q<path_post>=secs();&CLOSED`BY %q<path_post>=%q<viewer_objid>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Closed %q<path_label> to comments.);@trigger/args %q<path_current>/ON`CLOSE=0,%q<path_post>,1,%q<viewer_objid>,2,1,post,%q<path_post>,actor,%q<viewer_objid>,closed,1
       # +bbopen <post>: comments again.
       INC`CMD`OPEN: |-
-        @include/args {{bboards}}/INC`NEED`MODERATEDPOST=path,%q<cmd_argument>;@assert get(%q<path_post>/CLOSED)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_label> is not closed.);&CLOSED`BY %q<path_post>=;&CLOSED %q<path_post>=;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Opened %q<path_label> to comments again.);@trigger/args %q<path_current>/ON`CLOSE=0,%q<path_post>,1,%q<viewer_objid>,2,0,post,%q<path_post>,actor,%q<viewer_objid>,closed,0
+        @include/args {{bboards}}/INC`NEED`MODERATEDPOST=path,%q<cmd_argument>;@assert get(%q<path_post>/CLOSED)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_label> is not closed.);&CLOSED`BY %q<path_post>;&CLOSED %q<path_post>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Opened %q<path_label> to comments again.);@trigger/args %q<path_current>/ON`CLOSE=0,%q<path_post>,1,%q<viewer_objid>,2,0,post,%q<path_post>,actor,%q<viewer_objid>,closed,0
       # +bbpin <post>[=<place>] pins a post, or moves a pin; +bbpin <board> lists the pins.
       INC`CMD`PIN: |-
         @include {{bboards}}/INC`PIN`FIND;think u({{bboards}}/FUN`PIN`PLACE);@include {{bboards}}/INC`PIN`CHECK;think u({{bboards}}/FUN`PIN`ORDER);@include {{bboards}}/INC`PIN`STORE;@include {{bboards}}/INC`PIN`ANNOUNCE
@@ -748,15 +748,15 @@ objects:
         @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,The reader closed after an hour without a line. +bbreader picks up where you were.)
       # q, or an hour without a line: the session has ended. On q the reader forgets where it was.
       INPUT`READER`QUIT: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_holder>=;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)
+        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_holder>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)
       # .toss while writing, or an hour without a line: the session has ended. .toss drops what was
       # written and opens the reader again; a timeout keeps it for +bbreader.
       INPUT`POSTING`TOSS: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Dropped.);@include {{bboards}}/INC`READER`START
+        think u({{bboards}}/FUN`READER`CONTEXT);@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_holder>;&BBOARD`READER`TEXT %q<reader_holder>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Dropped.);@include {{bboards}}/INC`READER`START
       # . while writing: posts what was written.
       INPUT`POSTING`POST: |-
         think u({{bboards}}/FUN`READER`CONTEXT);think setqm(reader_write_kind,get(%q<reader_holder>/BBOARD`READER`WRITE),
-        reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;think u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)[setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
+        reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`WRITE %q<reader_holder>;&BBOARD`READER`TEXT %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)[setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
       # Any other line while writing, %0 exactly as typed: added to the text.
       INPUT`POSTING`TEXT: |-
         think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`TEXT %q<reader_holder>=if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0);@include {{bboards}}/INC`READER`START
@@ -796,11 +796,11 @@ objects:
         think u({{bboards}}/FUN`COMMAND`PARSE,next,,);@include {{bboards}}/INC`CMD`NEXT
       # J and K (or jj and kk): the next or previous post on this board.
       INC`READER`KEY`SIBLING: |-
-        &BBOARD`READER`PAGE %q<reader_holder>=;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(member(J jj,%q<reader_key>),+,-));@include {{bboards}}/INC`CMD`READ
+        &BBOARD`READER`PAGE %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(member(J jj,%q<reader_key>),+,-));@include {{bboards}}/INC`CMD`READ
       # u: up one level. A comment goes up to its thread, a thread to its board, a board to the level
       # above it.
       INC`READER`KEY`UP: |-
-        &BBOARD`READER`PAGE %q<reader_holder>=;think u({{bboards}}/FUN`COMMAND`PARSE,read,,cond(cand(%q<reader_at_post>,strlen(%q<reader_comment>)),u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>),%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFBOARD,u({{bboards}}/FUN`STORE`PARENT,%q<reader_place>)),%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFPARENT,%q<reader_place>),));@include {{bboards}}/INC`CMD`READ
+        &BBOARD`READER`PAGE %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,cond(cand(%q<reader_at_post>,strlen(%q<reader_comment>)),u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>),%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFBOARD,u({{bboards}}/FUN`STORE`PARENT,%q<reader_place>)),%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFPARENT,%q<reader_place>),));@include {{bboards}}/INC`CMD`READ
       # t: the whole thread from the top.
       INC`READER`KEY`THREAD: |-
         @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,t needs a post.);think u({{bboards}}/FUN`COMMAND`PARSE,read,,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>));@include {{bboards}}/INC`CMD`READ
@@ -818,7 +818,7 @@ objects:
         @assert cor(%q<reader_at_post>,%q<reader_at_board>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,m needs a board.);think u({{bboards}}/FUN`COMMAND`PARSE,catchup,,u({{bboards}}/FUN`PATH`OFBOARD,if(%q<reader_at_post>,u({{bboards}}/FUN`STORE`PARENT,%q<reader_place>),%q<reader_place>)));@include {{bboards}}/INC`CMD`CATCHUP
       # A number opens that item here; a path opens it wherever it is.
       INC`READER`OPEN: |-
-        &BBOARD`READER`PAGE %q<reader_holder>=;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(strmatch(%q<reader_key>,*/*),%q<reader_key>,cond(%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)/%q<reader_key>,%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>)/%q<reader_key>,%q<reader_key>)));@include {{bboards}}/INC`CMD`READ
+        &BBOARD`READER`PAGE %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,read,,if(strmatch(%q<reader_key>,*/*),%q<reader_key>,cond(%q<reader_at_post>,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)/%q<reader_key>,%q<reader_at_board>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>)/%q<reader_key>,%q<reader_key>)));@include {{bboards}}/INC`CMD`READ
       # j and k: the next or previous comment in a thread, or page in a board's list.
       INC`READER`STEP: |-
         @assert not(%q<reader_at_board>)={@include {{bboards}}/INC`READER`STEP`PAGE};@assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,j and k move through a thread or a list%; open one first.);think u({{bboards}}/FUN`THREAD`ORDER,%q<reader_place>)[setq(reader_step_index,add(if(strlen(%q<reader_comment>),match(%q<thread_order>,%q<reader_comment>),0),if(not(comp(%q<reader_key>,j)),1,-1)))];@assert cand(gt(%q<reader_step_index>,0),lte(%q<reader_step_index>,words(%q<thread_order>)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(gt(%q<reader_step_index>,0),That was the last comment. Enter reads what's new.,That was the first comment. t shows the thread.));think u({{bboards}}/FUN`COMMAND`PARSE,read,,u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)/[match(%q<thread_comment_keys>,extract(%q<thread_order>,%q<reader_step_index>,1))]);@include {{bboards}}/INC`CMD`READ
@@ -829,7 +829,7 @@ objects:
         reader_step_page,if(not(comp(%q<reader_key>,j)),inc(%q<reader_step_page>),max(1,dec(min(%q<reader_step_page>,ceil(fdiv(words(u({{bboards}}/FUN`STORE`POSTS,%q<reader_place>)),u({{bboards}}/FUN`DISPLAY`PAGESIZE,%q<viewer_objid>,0))))))));&BBOARD`READER`PAGE %q<reader_holder>=%q<reader_step_page>;think u({{bboards}}/FUN`COMMAND`PARSE,read,/%q<reader_step_page>,u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_place>));@include {{bboards}}/INC`CMD`READ
       # c <text> comments on this post, r <text> answers this comment; alone, each starts writing.
       INC`READER`COMMENT: |-
-        @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Open a post first.);@assert cor(not(comp(%q<reader_key_word>,c)),strlen(%q<reader_comment>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,r answers a comment%; open one first%, or use c.);@assert strlen(%q<reader_key_rest>)={&BBOARD`READER`WRITE %q<reader_holder>=%q<reader_key_word>; &BBOARD`READER`TEXT %q<reader_holder>=; @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(not(comp(%q<reader_key_word>,r)),Writing a reply to %[[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_place>,%q<reader_comment>)]%] %([u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<reader_place>,%q<reader_comment>,%q<viewer_objid>)]%).,Writing a comment on [u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)].) Every line is text now.)%rFinish with a line of just . to post it%, or .toss to drop it.};think u({{bboards}}/FUN`COMMAND`PARSE,if(not(comp(%q<reader_key_word>,r)),reply,comment),,%q<reader_key_rest>);@include {{bboards}}/INC`CMD`COMMENT
+        @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Open a post first.);@assert cor(not(comp(%q<reader_key_word>,c)),strlen(%q<reader_comment>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,r answers a comment%; open one first%, or use c.);@assert strlen(%q<reader_key_rest>)={&BBOARD`READER`WRITE %q<reader_holder>=%q<reader_key_word>; &BBOARD`READER`TEXT %q<reader_holder>; @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(not(comp(%q<reader_key_word>,r)),Writing a reply to %[[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_place>,%q<reader_comment>)]%] %([u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<reader_place>,%q<reader_comment>,%q<viewer_objid>)]%).,Writing a comment on [u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)].) Every line is text now.)%rFinish with a line of just . to post it%, or .toss to drop it.};think u({{bboards}}/FUN`COMMAND`PARSE,if(not(comp(%q<reader_key_word>,r)),reply,comment),,%q<reader_key_rest>);@include {{bboards}}/INC`CMD`COMMENT
       # The board table: #, Board, New, Last. Names can hold |, so cells split at line breaks.
       FUN`DISPLAY`OPTIONS`BOARDS: |-
         json(object,delim,json(string,%r),rule,json(string,),grow,json(string,%r1),nowrap,json(string,1%r3%r4),min,json(string,4))
@@ -1116,7 +1116,7 @@ objects:
         &ORDER %q<group_parent>=remove(get(%q<group_parent>/ORDER),%q<path_current>);@tel %q<path_current>={{bboards}};&RENUM %q<group_parent>=get({{store}}/SEQ);@dolist %q<group_posts> %q<path_current>={@nuke ##; @nuke ##}
       # Clears every reader's marks for the removed board, kept under BBOARD`B%q<group_key>.
       INC`CLEARGROUP`READERS: |-
-        @dolist lsearch(all,type,player,elock,BBOARD`B%q<group_key>:*) {{readers}}={&BBOARD`B%q<group_key>`LEFT ##=; &BBOARD`B%q<group_key>`LISTED ##=; &BBOARD`B%q<group_key>`NOTIFY ##=; &BBOARD`B%q<group_key> ##=}
+        @dolist lsearch(all,type,player,elock,BBOARD`B%q<group_key>:*) {{readers}}=@wipe ##/BBOARD`B%q<group_key>
       # How board %0's %1 lock (read, post, comment, moderate) reads: the lock, or where it comes from.
       FUN`DISPLAY`LOCK: |-
         setq(lock_nearest_holder,u(%!/FUN`PERMISSION`NEARESTLOCK,%0,bb%1))[cond(not(strlen(%q<lock_nearest_holder>)),if(strmatch(%1,moderate),%(none%),everyone),strmatch(%q<lock_nearest_holder>,%0),lock(%0/bb%1),lock(%q<lock_nearest_holder>/bb%1)%b%b%(from [u(%!/FUN`PATH`OFBOARD,%q<lock_nearest_holder>)] [name(%q<lock_nearest_holder>)]%))]
@@ -1300,7 +1300,7 @@ objects:
         think setqm(category_key,u({{bboards}}/FUN`STORE`CATEGORYKEY,%q<level_object>,%q<category_name>),
         category_list,get(%q<level_object>/CATS));@assert strlen(%q<category_key>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no category %q<category_name> on [u({{bboards}}/FUN`DISPLAY`LEVELNAME,%q<level_object>)].);@assert cand(isint(%q<cmd_right_side>),gt(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,words(%q<category_list>)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The place is 1 to [words(%q<category_list>)].);&CATS %q<level_object>=u({{bboards}}/FUN`LIST`INSERT,remove(%q<category_list>,%q<category_key>),%q<cmd_right_side>,%q<category_key>);&RENUM %q<level_object>=get({{store}}/SEQ);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,get(%q<level_object>/CAT`%q<category_key>) is [if(eq(%q<cmd_right_side>,1),first,category %q<cmd_right_side>)]%; boards renumbered.)
       INC`CATEGORY`DELETE: |-
-        think setq(category_key,u({{bboards}}/FUN`STORE`CATEGORYKEY,%q<level_object>,%q<category_name>));@assert strlen(%q<category_key>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no category %q<category_name> on [u({{bboards}}/FUN`DISPLAY`LEVELNAME,%q<level_object>)].);@dolist/inline u({{bboards}}/FUN`STORE`BOARDS,%q<level_object>)={@if strmatch(get(##/CATEGORY),%q<category_key>)={&CATEGORY ##=}};&CATS %q<level_object>=remove(get(%q<level_object>/CATS),%q<category_key>);&CAT`%q<category_key> %q<level_object>=;&RENUM %q<level_object>=get({{store}}/SEQ);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Removed category %q<category_name>. Its boards are in no category now%; boards renumbered.)
+        think setq(category_key,u({{bboards}}/FUN`STORE`CATEGORYKEY,%q<level_object>,%q<category_name>));@assert strlen(%q<category_key>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no category %q<category_name> on [u({{bboards}}/FUN`DISPLAY`LEVELNAME,%q<level_object>)].);@dolist/inline u({{bboards}}/FUN`STORE`BOARDS,%q<level_object>)={@if strmatch(get(##/CATEGORY),%q<category_key>)={&CATEGORY ##}};&CATS %q<level_object>=remove(get(%q<level_object>/CATS),%q<category_key>);&CAT`%q<category_key> %q<level_object>;&RENUM %q<level_object>=get({{store}}/SEQ);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Removed category %q<category_name>. Its boards are in no category now%; boards renumbered.)
       # +bbparent <board>=<board>|top: moves a board, with everything in it, under another.
       INC`CMD`PARENT: |-
         @include {{bboards}}/INC`NEED`ADMIN;@include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_left_side>;think setqm(parent_moved_board,%q<path_current>,
@@ -1317,7 +1317,7 @@ objects:
       # Moves board %q<parent_moved_board> from level %q<parent_old_level> to the end of level %q<level_object>, out of
       # any category; the boards above it take its last activity, and both levels are marked for renumbering.
       INC`PARENT`MOVE: |-
-        &ORDER %q<parent_old_level>=remove(get(%q<parent_old_level>/ORDER),%q<parent_moved_board>);&UP %q<parent_moved_board>=%q<level_object>;&ORDER %q<level_object>=squish(get(%q<level_object>/ORDER) %q<parent_moved_board>);&CATEGORY %q<parent_moved_board>=;@dolist/inline u({{bboards}}/FUN`STORE`ANCESTRY,%q<level_object>)={@if gt(get(%q<parent_moved_board>/LAST),firstof(get(##/LAST),0))={&LAST ##=get(%q<parent_moved_board>/LAST)}};&RENUM %q<parent_old_level>=get({{store}}/SEQ);&RENUM %q<level_object>=get({{store}}/SEQ)
+        &ORDER %q<parent_old_level>=remove(get(%q<parent_old_level>/ORDER),%q<parent_moved_board>);&UP %q<parent_moved_board>=%q<level_object>;&ORDER %q<level_object>=squish(get(%q<level_object>/ORDER) %q<parent_moved_board>);&CATEGORY %q<parent_moved_board>;@dolist/inline u({{bboards}}/FUN`STORE`ANCESTRY,%q<level_object>)={@if gt(get(%q<parent_moved_board>/LAST),firstof(get(##/LAST),0))={&LAST ##=get(%q<parent_moved_board>/LAST)}};&RENUM %q<parent_old_level>=get({{store}}/SEQ);&RENUM %q<level_object>=get({{store}}/SEQ)
       # +bblock <board>[/read|post|comment|moderate]=<lock>; an empty lock clears it.
       INC`CMD`LOCK: |-
         @include {{bboards}}/INC`NEED`ADMIN;think setqm(lock_kind,lcstr(last(%q<cmd_left_side>,/)),
@@ -1460,7 +1460,7 @@ objects:
         descendants_stack,%q<descendants_stack> [if(%4,%q<descendants_children>,revwords(%q<descendants_children>))]),ibreak())))][squish(%q<descendants_output>)]
       # Marks boards %<boards> read for the reader. Sets %q<catchup_new_count> to how many items that was.
       INC`DO`CATCHUP: |-
-        think setq(catchup_new_count,lmath(add,0 [iter(%<boards>,u({{bboards}}/FUN`READING`NEWONBOARD,%i0,%q<viewer_objid>))]));@dolist/inline %<boards>={@include/nobreak/args {{bboards}}/INC`DO`READINGBRANCH=board,##; &BBOARD`B[get(##/KEY)] %q<reader_holder>=firstof(get(##/LAST),0); @dolist/inline u({{bboards}}/FUN`READING`POSTLEAVES,##,999999999)=&## %q<reader_holder>=}
+        think setq(catchup_new_count,lmath(add,0 [iter(%<boards>,u({{bboards}}/FUN`READING`NEWONBOARD,%i0,%q<viewer_objid>))]));@dolist/inline %<boards>={@include/nobreak/args {{bboards}}/INC`DO`READINGBRANCH=board,##; &BBOARD`B[get(##/KEY)] %q<reader_holder>=firstof(get(##/LAST),0); @dolist/inline u({{bboards}}/FUN`READING`POSTLEAVES,##,999999999)=&## %q<reader_holder>}
       # +bbcatchup <board> marks a board and the boards below it read; +bbcatchup all marks every board.
       INC`CMD`CATCHUP: |-
         @assert strlen(%q<cmd_argument>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbcatchup <board> marks a board read%, +bbcatchup all every board.);@assert not(strmatch(%q<cmd_argument>,all))={@include/args {{bboards}}/INC`DO`CATCHUP=boards,squish(iter(u({{bboards}}/FUN`STORE`VISIBLEBOARDS,{{store}},%q<viewer_objid>,1),u({{bboards}}/FUN`STORE`ALLBELOW,%i0,%q<viewer_objid>))); @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Marked every board read %(%q<catchup_new_count>%).)};@include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>;think setq(catchup_boards,u({{bboards}}/FUN`STORE`ALLBELOW,%q<path_current>,%q<viewer_objid>));@include/args {{bboards}}/INC`DO`CATCHUP=boards,%q<catchup_boards>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Marked %q<path_label> [name(%q<path_current>)][if(gt(words(%q<catchup_boards>),1),%band its boards)] read %(%q<catchup_new_count>%).)
@@ -1469,7 +1469,7 @@ objects:
         @include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>;@assert not(u({{bboards}}/FUN`READING`HASLEFT,%q<path_current>,%q<viewer_objid>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You already left %q<path_label> [name(%q<path_current>)].);@include/nobreak/args {{bboards}}/INC`DO`READINGBRANCH=board,%q<path_current>;&BBOARD`B[get(%q<path_current>/KEY)]`LEFT %q<reader_holder>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Left %q<path_label> [name(%q<path_current>)]. +bbjoin %q<path_label> brings it back.)
       # +bbjoin <board>: follows a left board again, with nothing on it read.
       INC`CMD`JOIN: |-
-        @include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>;@assert u({{bboards}}/FUN`READING`HASLEFT,%q<path_current>,%q<viewer_objid>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You already follow %q<path_label> [name(%q<path_current>)].);think setq(join_attribute,BBOARD`B[get(%q<path_current>/KEY)]);&%q<join_attribute>`LEFT %q<reader_holder>=;&%q<join_attribute> %q<reader_holder>=0;@dolist/inline u({{bboards}}/FUN`READING`POSTLEAVES,%q<path_current>,999999999)=&## %q<reader_holder>=;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Following %q<path_label> [name(%q<path_current>)] again. Everything on it counts as new.)
+        @include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>;@assert u({{bboards}}/FUN`READING`HASLEFT,%q<path_current>,%q<viewer_objid>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You already follow %q<path_label> [name(%q<path_current>)].);think setq(join_attribute,BBOARD`B[get(%q<path_current>/KEY)]);&%q<join_attribute>`LEFT %q<reader_holder>;&%q<join_attribute> %q<reader_holder>=0;@dolist/inline u({{bboards}}/FUN`READING`POSTLEAVES,%q<path_current>,999999999)=&## %q<reader_holder>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Following %q<path_label> [name(%q<path_current>)] again. Everything on it counts as new.)
       # +bbnotify <board>=on|off: new-post notices for one board. +bbnotify on|off: for every board.
       INC`CMD`NOTIFY: |-
         @assert %q<cmd_has_equals>={@include {{bboards}}/INC`NOTIFY`ALL};@assert match(on off,%q<cmd_right_side>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbnotify <board>=on or off.);@include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_left_side>;@include/nobreak/args {{bboards}}/INC`DO`READINGBRANCH=board,%q<path_current>;@include {{bboards}}/INC`NOTIFY`BOARD
@@ -1484,7 +1484,7 @@ objects:
         think setq(follow_path,if(strlen(%q<cmd_argument>),%q<cmd_argument>,if(strlen(u({{bboards}}/FUN`READING`LASTPOST)),u({{bboards}}/FUN`PATH`OFPOST,u({{bboards}}/FUN`READING`LASTPOST)))));@assert strlen(%q<follow_path>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbfollow <post> follows a post.);@include/args {{bboards}}/INC`NEED`POST=path,%q<follow_path>;think setq(follow_attribute,BBOARD`P[get(%q<path_post>/SEQ)]);@assert not(strlen(get(%q<reader_holder>/%q<follow_attribute>`FOLLOW)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You already follow %q<path_label>.);&%q<follow_attribute> %q<reader_holder>=u({{bboards}}/FUN`READING`THREADMARK,%q<path_post>,%q<viewer_objid>,u({{bboards}}/FUN`READING`BOARDMARK,%q<path_current>,%q<viewer_objid>));&%q<follow_attribute>`FOLLOW %q<reader_holder>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Following %q<path_label>. You'll hear about every comment.)
       # +bbunfollow [<post>]: stop following a post.
       INC`CMD`UNFOLLOW: |-
-        think setq(follow_path,if(strlen(%q<cmd_argument>),%q<cmd_argument>,if(strlen(u({{bboards}}/FUN`READING`LASTPOST)),u({{bboards}}/FUN`PATH`OFPOST,u({{bboards}}/FUN`READING`LASTPOST)))));@assert strlen(%q<follow_path>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbunfollow <post> stops following a post.);@include/args {{bboards}}/INC`NEED`POST=path,%q<follow_path>;think setq(follow_attribute,BBOARD`P[get(%q<path_post>/SEQ)]);@assert strlen(get(%q<reader_holder>/%q<follow_attribute>`FOLLOW))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You don't follow %q<path_label>.);&%q<follow_attribute>`FOLLOW %q<reader_holder>=;@dolist/inline if(lte(get(%q<reader_holder>/%q<follow_attribute>),u({{bboards}}/FUN`READING`BOARDMARK,%q<path_current>,%q<viewer_objid>)),%q<follow_attribute>)=&## %q<reader_holder>=;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,No longer following %q<path_label>.)
+        think setq(follow_path,if(strlen(%q<cmd_argument>),%q<cmd_argument>,if(strlen(u({{bboards}}/FUN`READING`LASTPOST)),u({{bboards}}/FUN`PATH`OFPOST,u({{bboards}}/FUN`READING`LASTPOST)))));@assert strlen(%q<follow_path>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbunfollow <post> stops following a post.);@include/args {{bboards}}/INC`NEED`POST=path,%q<follow_path>;think setq(follow_attribute,BBOARD`P[get(%q<path_post>/SEQ)]);@assert strlen(get(%q<reader_holder>/%q<follow_attribute>`FOLLOW))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You don't follow %q<path_label>.);&%q<follow_attribute>`FOLLOW %q<reader_holder>;@dolist/inline if(lte(get(%q<reader_holder>/%q<follow_attribute>),u({{bboards}}/FUN`READING`BOARDMARK,%q<path_current>,%q<viewer_objid>)),%q<follow_attribute>)=&## %q<reader_holder>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,No longer following %q<path_label>.)
       # +bboptions shows your settings; +bboptions format=md|mush and notify=on|off change them.
       INC`CMD`OPTIONS: |-
         @assert %q<cmd_has_equals>={@include {{bboards}}/INC`OPTIONS`SHOW};think setqm(option_key,lcstr(%q<cmd_left_side>),
@@ -2060,7 +2060,7 @@ objects:
       # per-post leaves for this board at or below it go, unless the post is followed.
       INC`DO`COMPACTMARK: |-
         think setqm(mark_attribute_name,BBOARD`B[get(%<board>/KEY)],
-        mark_oldest_unread,u({{bboards}}/FUN`READING`OLDESTUNREAD,%<board>,%q<viewer_objid>));&%q<mark_attribute_name> %q<reader_holder>=%q<mark_oldest_unread>;@dolist/inline u({{bboards}}/FUN`READING`POSTLEAVES,%<board>,%q<mark_oldest_unread>)=&## %q<reader_holder>=
+        mark_oldest_unread,u({{bboards}}/FUN`READING`OLDESTUNREAD,%<board>,%q<viewer_objid>));&%q<mark_attribute_name> %q<reader_holder>=%q<mark_oldest_unread>;@dolist/inline u({{bboards}}/FUN`READING`POSTLEAVES,%<board>,%q<mark_oldest_unread>)=&## %q<reader_holder>
       # The reader's BBOARD`P leaves for posts on board %0 holding %1 or less and not followed.
       FUN`READING`POSTLEAVES: |-
         setq(board_items,u(%!/FUN`STORE`POSTS,%0))[squish(iter(lattr(%q<reader_holder>/BBOARD`P*),if(cand(lte(get(%q<reader_holder>/%i0),%1),not(strlen(get(%q<reader_holder>/%i0`FOLLOW))),member(%q<board_items>,u(%!/FUN`STORE`POSTOFSEQ,after(%i0,`P)))),%i0)))]
@@ -2163,7 +2163,7 @@ objects:
         squish(iter(lwho(),if(cand(not(strmatch(objid(%i0),%1)),u(%!/FUN`PERMISSION`CANREAD,%0,%i0),not(u(%!/FUN`READING`HASLEFT,%0,%i0)),not(strmatch(get(u(%!/FUN`READING`HOLDER,%i0)/BBOARD`NOTIFY),off)),not(strmatch(get(u(%!/FUN`READING`HOLDER,%i0)/BBOARD`B[get(%0/KEY)]`NOTIFY),off))),%i0)))
       # +bbpost <board>/<title> with no text: a draft for that board.
       INC`DRAFT`START: |-
-        &BBOARD`DRAFT %q<reader_holder>=%q<split_board>;&BBOARD`DRAFT`TITLE %q<reader_holder>=%q<split_title>;&BBOARD`DRAFT`FORMAT %q<reader_holder>=u({{bboards}}/FUN`POST`FORMAT);&BBOARD`DRAFT`TEXT %q<reader_holder>=;&BBOARD`DRAFT`AT %q<reader_holder>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Drafting "%q<split_title>" for %q<split_board_label> [name(%q<split_board>)].)%r+bbwrite <text> adds to it%, +bbproof shows it%, +bbpost posts%, +bbtoss drops.
+        &BBOARD`DRAFT %q<reader_holder>=%q<split_board>;&BBOARD`DRAFT`TITLE %q<reader_holder>=%q<split_title>;&BBOARD`DRAFT`FORMAT %q<reader_holder>=u({{bboards}}/FUN`POST`FORMAT);&BBOARD`DRAFT`TEXT %q<reader_holder>;&BBOARD`DRAFT`AT %q<reader_holder>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,Drafting "%q<split_title>" for %q<split_board_label> [name(%q<split_board>)].)%r+bbwrite <text> adds to it%, +bbproof shows it%, +bbpost posts%, +bbtoss drops.
       FUN`DRAFT`EXISTS: |-
         t(strlen(get(%q<reader_holder>/BBOARD`DRAFT)))
       # +bbpost alone: posts the draft.
@@ -2193,7 +2193,7 @@ objects:
       INC`CMD`TOSS: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);@include {{bboards}}/INC`DO`TOSS;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft dropped.)
       INC`DO`TOSS: |-
-        &BBOARD`DRAFT`TITLE %q<reader_holder>=;&BBOARD`DRAFT`FORMAT %q<reader_holder>=;&BBOARD`DRAFT`TEXT %q<reader_holder>=;&BBOARD`DRAFT`AT %q<reader_holder>=;&BBOARD`DRAFT %q<reader_holder>=
+        @wipe %q<reader_holder>/BBOARD`DRAFT
       # The path and text of +bbcomment and +bbreply. A path holds a / before the =; without one, the
       # whole argument is text for the post read last (+bbcomment <text>) or, with a number before =, a
       # reply to that comment on it (+bbreply <#>=<text>). Sets %q<comment_path>, %q<comment_text>, %q<comment_path_error>.
