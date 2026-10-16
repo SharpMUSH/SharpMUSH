@@ -1,10 +1,10 @@
 # Social account login and independent character credentials
 
-Status: proposed full design for issue [#1983](https://github.com/SharpMUSH/SharpMUSH/issues/1983), awaiting owner approval. Design only; no product code, dependency installation, or scaffolding is authorized by this document. Inspected main `14fd9ab7a` on 2026-10-16; application configuration tiles (#1984) are being integrated separately. Every choice labelled **Agent call** is proposed, not owner-approved.
+Status: owner-approved full design for issue [#1983](https://github.com/SharpMUSH/SharpMUSH/issues/1983), approved for implementation on 2026-10-16. The owner additionally requires Grapevine Login as the fourth provider and preservation of all existing login methods. Migrated accounts retain their existing legacy fallback; it is never automatically disabled. Inspected main `14fd9ab7a` on 2026-10-16; application configuration tiles (#1984) are being integrated separately. Every choice labelled **Agent call** is proposed, not owner-approved.
 
 ## Intent, scope and authority
 
-The owner confirmed the first providers are Discord, Google and Microsoft, and that one SharpMUSH account represents one person. That account can own many characters and link many external identities, including several from the same provider. An identity belongs to at most one account. Linking identities grants access to the whole account; it does not establish shared ownership or merge people. Account ownership is separate from a character's in-game controls and permissions.
+The owner confirmed the first providers are Discord, Google, Microsoft and Grapevine, and that one SharpMUSH account represents one person. That account can own many characters and link many external identities, including several from the same provider. An identity belongs to at most one account. Linking identities grants access to the whole account; it does not establish shared ownership or merge people. Account ownership is separate from a character's in-game controls and permissions.
 
 Ship both native-client options: an independently managed persistent character password and an on-demand one-time character login secret. Neither requires setting an account password. Keep AccountSession as the only portal credential and preserve browser-terminal OTT and existing reconnect behavior. No ASP.NET Identity migration, new JWT bearer layer, bot integration dependency, email magic-link service, or automatic account merge is included.
 
@@ -151,6 +151,10 @@ All other exact endpoint names, type names, internal component split and UI plac
 - [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect): use stable subject/issuer and validate token; email is not the account key.
 - [Microsoft ID token claims](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference) and [Microsoft token issuer boundaries](https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens): tenant-aware issuer/subject identity and validation.
 - [Discord OAuth2](https://docs.discord.com/developers/topics/oauth2): authorization-code exchange and identify scope; this is OAuth user-identity retrieval, not assumed OIDC.
+
+## Approved Grapevine addition
+
+Grapevine uses OAuth2 authorization code with the `profile` scope, authorization endpoint `https://grapevine.haus/oauth/authorize`, token endpoint `https://grapevine.haus/oauth/token`, and authenticated user endpoint `https://grapevine.haus/users/me`. Use the returned stable `uid` under issuer namespace `https://grapevine.haus`, scoped to the configured registration; username/email are display metadata only. Follow [official Grapevine Login documentation](https://grapevine.haus/docs). Do not assume OIDC, PKCE, or unsupported client authentication; verify capabilities against official source before configuring the adapter. Add its dedicated provider tile, secret `auth.grapevine.clientsecret`, and the same readiness, generation, linking and acceptance coverage as the other providers.
 
 ## Builder check outcome
 
