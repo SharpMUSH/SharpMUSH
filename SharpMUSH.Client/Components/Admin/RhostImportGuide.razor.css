@@ -1,0 +1,51 @@
+.rhost-guide {
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.rhost-guide summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.rhost-guide summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+.rhost-guide-body {
+    overflow-wrap: anywhere;
+}
+
+.rhost-guide-body p {
+    margin: 10px 0;
+}
+
+.rhost-guide-body ol,
+.rhost-guide-body ul {
+    padding-left: 1.5rem;
+}
+
+.rhost-guide-body ol > li + li {
+    margin-top: 16px;
+}
+
+.rhost-guide-body a {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.rhost-guide-body pre {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-tile);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre;
+}

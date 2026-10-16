@@ -8894,4 +8894,67 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Player cap</value>
   </data>
+  <data name="AdmImportRhostGuideTitle" xml:space="preserve">
+    <value>RhostMUSH: prepare a portable flatfile from a native backup</value>
+  </data>
+  <data name="AdmImportRhostPortable" xml:space="preserve">
+    <value>Already have a portable RhostMUSH world.flat? Upload it below. Native backing files and raw structural checkpoints cannot be uploaded directly; convert a consistent offline backup first.</value>
+  </data>
+  <data name="AdmImportRhostBackupTitle" xml:space="preserve">
+    <value>Keep a consistent source backup</value>
+  </data>
+  <data name="AdmImportRhostBackup" xml:space="preserve">
+    <value>Stop Rhost or obtain a coordinated offline backup before copying the checkpoint and its backing files together. Keep the originals. Independently copied live files may not belong to the same checkpoint.</value>
+  </data>
+  <data name="AdmImportRhostSupported" xml:space="preserve">
+    <value>Supported: Rhost revision bfd2894c7239d02b8bec15c36939706be371715c, default upstream cache layout, Linux x64 little-endian ABI (8-byte pointers, 4-byte int, 8-byte off_t). Historical GDBM, other architectures and nondefault cache layouts are unsupported.</value>
+  </data>
+  <data name="AdmImportRhostLegacy" xml:space="preserve">
+    <value>Legacy QDBM: the structural checkpoint plus &lt;base&gt;.db, &lt;base&gt;.dir and &lt;base&gt;.pag.</value>
+  </data>
+  <data name="AdmImportRhostMdbx" xml:space="preserve">
+    <value>MDBX: the structural checkpoint plus &lt;base&gt;.mdbx.</value>
+  </data>
+  <data name="AdmImportRhostNames" xml:space="preserve">
+    <value>Put these files directly in one source directory. The checkpoint is commonly netrhost.db; the backing-store basename is commonly netrhost.gdbm. These are different names: --base netrhost.gdbm selects companions such as netrhost.gdbm.db, not the checkpoint. Decompress archived files first.</value>
+  </data>
+  <data name="AdmImportRhostBuildTitle" xml:space="preserve">
+    <value>Build and run the offline exporter</value>
+  </data>
+  <data name="AdmImportRhostBuild" xml:space="preserve">
+    <value>Get the SharpMUSH source and install the SDK pinned in global.json. From the repository root, build RhostExport and run the example below. You also need a trusted, reviewed Rhost dbconvert executable and a matching backend/ABI profile bound to that executable’s SHA256. The linked fixture recipe gives the converter/profile build instructions; a profile hash alone does not make an executable safe.</value>
+  </data>
+  <data name="AdmImportRhostToolLink" xml:space="preserve">
+    <value>RhostExport source and instructions</value>
+  </data>
+  <data name="AdmImportRhostRecipeLink" xml:space="preserve">
+    <value>Pinned converter and profile build recipe</value>
+  </data>
+  <data name="AdmImportRhostPaths" xml:space="preserve">
+    <value>Replace the example paths with your offline source, trusted converter and profile. Choose a new output directory that does not exist and does not overlap the source. The fixture recipe produces profile.json beside each generated backend; use that actual profile path for --profile.</value>
+  </data>
+  <data name="AdmImportRhostMdbxCommand" xml:space="preserve">
+    <value>For MDBX, replace --backend legacy-qdbm with --backend mdbx and replace both --exporter and --profile with the matching MDBX converter and profile. Keep --base and --checkpoint matched to your backup filenames.</value>
+  </data>
+  <data name="AdmImportRhostMailTitle" xml:space="preserve">
+    <value>Include portable mail, if available</value>
+  </data>
+  <data name="AdmImportRhostMail" xml:space="preserve">
+    <value>The converter does not read native mail or folder stores. Export text with Rhost’s wmail/unload, place the portable mail/folder companions directly in the --source directory, and append --mail and, when present, --folders to the command above (add a trailing backslash to its --output line). If native mail/folder stores are present, the tool requires their portable companions. Without supplied mail text, the manifest records the omission.</value>
+  </data>
+  <data name="AdmImportRhostUploadTitle" xml:space="preserve">
+    <value>Inspect the output and rehearse the import</value>
+  </data>
+  <data name="AdmImportRhostInspect" xml:space="preserve">
+    <value>Inspect manifest.json for source provenance, counts, warnings and omitted mail. Compare a healthy-source inventory where available; keep the original native backup.</value>
+  </data>
+  <data name="AdmImportRhostUpload" xml:space="preserve">
+    <value>Choose the generated world.flat in the database picker below. Select RhostMUSH if needed, then put mail.dump in the mail field and folders.dump in the Rhost mail-folders field. Include the source game’s mush.cnf in the recommended configuration field to preserve its object roles.</value>
+  </data>
+  <data name="AdmImportRhostCompleteness" xml:space="preserve">
+    <value>A successful export and a valid flatfile do not prove that every external attribute was retrieved. Backing-store corruption can still produce an incomplete export.</value>
+  </data>
+  <data name="AdmImportRhostRehearse" xml:space="preserve">
+    <value>Rehearse on a disposable SharpMUSH instance and keep a backup of the destination world before importing. This import writes the configured world directly; it does not stage a separate world for transactional promotion.</value>
+  </data>
 </root>

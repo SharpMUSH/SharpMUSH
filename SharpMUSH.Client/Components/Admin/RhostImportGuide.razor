@@ -1,0 +1,55 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+<KitCard>
+    <details class="rhost-guide">
+        <summary>@Loc["AdmImportRhostGuideTitle"]</summary>
+        <div class="rhost-guide-body">
+            <p>@Loc["AdmImportRhostPortable"]</p>
+            <ol>
+                <li>
+                    <strong>@Loc["AdmImportRhostBackupTitle"]</strong>
+                    <p>@Loc["AdmImportRhostBackup"]</p>
+                    <p>@Loc["AdmImportRhostSupported"]</p>
+                    <ul>
+                        <li>@Loc["AdmImportRhostLegacy"]</li>
+                        <li>@Loc["AdmImportRhostMdbx"]</li>
+                    </ul>
+                    <p>@Loc["AdmImportRhostNames"]</p>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportRhostBuildTitle"]</strong>
+                    <p>@Loc["AdmImportRhostBuild"]</p>
+                    <p>
+                        <a href="https://github.com/SharpMUSH/SharpMUSH/blob/8a7513d803ccd220389f06a858a7d9aa2a9f102f/tools/RhostExport/README.md">@Loc["AdmImportRhostToolLink"]</a>
+                        · <a href="https://github.com/SharpMUSH/SharpMUSH/blob/8a7513d803ccd220389f06a858a7d9aa2a9f102f/SharpMUSH.Tests/Services/TestData/RhostNative/README.md">@Loc["AdmImportRhostRecipeLink"]</a>
+                    </p>
+                    <pre><code>dotnet build tools/RhostExport
+
+dotnet run --no-build --project tools/RhostExport -- \
+  --source /backups/rhost-offline \
+  --base netrhost.gdbm \
+  --checkpoint netrhost.db \
+  --backend legacy-qdbm \
+  --exporter /opt/rhost-verified/legacy/dbconvert \
+  --profile /opt/rhost-verified/legacy/exporter-profile.json \
+  --output /backups/rhost-portable-new</code></pre>
+                    <p>@Loc["AdmImportRhostPaths"]</p>
+                    <p>@Loc["AdmImportRhostMdbxCommand"]</p>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportRhostMailTitle"]</strong>
+                    <p>@Loc["AdmImportRhostMail"]</p>
+                    <pre><code>  --mail /backups/rhost-offline/mail.dump \
+  --folders /backups/rhost-offline/folders.dump</code></pre>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportRhostUploadTitle"]</strong>
+                    <p>@Loc["AdmImportRhostInspect"]</p>
+                    <p>@Loc["AdmImportRhostUpload"]</p>
+                    <p>@Loc["AdmImportRhostCompleteness"]</p>
+                    <p>@Loc["AdmImportRhostRehearse"]</p>
+                </li>
+            </ol>
+        </div>
+    </details>
+</KitCard>
