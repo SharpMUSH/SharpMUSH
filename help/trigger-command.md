@@ -45,7 +45,7 @@ The triggered attribute is queued - the new action list is not run instantly. Th
 
 ## Switches
 
-- /args: Pass named arguments instead: each `<name>, <value>` pair is read in the attribute as %`\<name\>` (see [uargs()]), and %0-%9 are empty. With `/match`, the pairs follow the match string.
+- /args: Pass named arguments instead: each `<name>, <value>` pair is read in the attribute as %`\<name\>` (see [uargs()]), and also by numbered value position starting at %0. With `/match`, the pairs follow the match string.
 - /spoof: If you control `<object>`, enactor is preserved.
 - /inline: Run @triggered attribute immediately, rather than queueing it.
 - /clearregs: Clear Q-registers before @triggering.

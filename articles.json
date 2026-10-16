@@ -3246,6 +3246,16 @@
     "file": "halt-command.md"
   },
   {
+    "id": "hasarg-function",
+    "lookup": "hasarg()",
+    "title": "hasarg()",
+    "aliases": [
+      "hasarg"
+    ],
+    "sections": [],
+    "file": "hasarg.md"
+  },
+  {
     "id": "help-search",
     "lookup": "help search",
     "title": "Help Search",
@@ -5144,6 +5154,12 @@
         "id": "passing-named-arguments",
         "lookup": "named arguments passing",
         "heading": "Passing named arguments",
+        "aliases": []
+      },
+      {
+        "id": "presence-and-migration",
+        "lookup": "named arguments presence",
+        "heading": "Presence and migration",
         "aliases": []
       },
       {
