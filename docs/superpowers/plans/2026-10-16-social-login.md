@@ -20,7 +20,7 @@
 - Native limits: 5 mints/minute/account, 10/minute/IP, 10 outstanding/account; 10 failed redemptions/minute/IP; bounded memory and cleanup.
 - All game-state requests carry cache policy through Mediator; handlers use aggregate stores, never provider/cache objects.
 - Disk scratch `/temp/codex/social-account-login`; set TMPDIR/TMP/TEMP. Never production deployment.
-- Grapevine is OAuth authorization-code + `profile`, `/users/me` uid under `https://grapevine.haus`; do not assume OIDC or unsupported PKCE.
+- Grapevine is OAuth authorization-code + `profile`, `/users/me` uid under `https://grapevine.haus`; do not assume OIDC or unsupported PKCE. Its official public code exchange does not require a client secret.
 
 ## Review Focus
 
