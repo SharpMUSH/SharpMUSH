@@ -10,6 +10,15 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task AQueuedSnapshotDetachesTheEntireLiveHttpResponseContext()
+	{
+		var response = new HttpResponseContext { ContentType = "application/parent" };
+		var state = ParserState.RootFor(new DBRef(7)) with { HttpResponse = response };
+		await Assert.That(state.SnapshotForQueuedAction().HttpResponse).IsNull();
+		await Assert.That(ReferenceEquals(state.HttpResponse, response)).IsTrue();
+	}
+
+	[Test]
 	public async Task QueuedArgumentsRetainValuesWithoutRetainingDeferredParsers()
 	{
 		var argument = new CallState(MarkupText.Plain("captured"), 5, null,

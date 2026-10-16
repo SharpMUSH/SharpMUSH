@@ -75,9 +75,9 @@ dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/Queue
 
 Run each class in the final acceptance table using the same single-class filter. The original red and final local logs are retained under `work/queue`; the source-controlled tests and this record are the portable evidence. No full-suite or deployed-runtime claim is made here.
 
-## Final focused acceptance
+## Initial focused acceptance
 
-Build: `dotnet build SharpMUSH.Tests -m:2 -nr:false`, 0 warnings and 0 errors. Changed C# projects were formatted in two passes and passed the build's formatting gate. Final focused acceptance: **621 passed, 1 pre-existing skipped, zero failures**, each class run separately with the exact filter above.
+Build: `dotnet build SharpMUSH.Tests -m:2 -nr:false`, 0 warnings and 0 errors. Changed C# projects were formatted in two passes and passed the build's formatting gate. Initial lane acceptance at `8b232a185`: **621 passed, 1 pre-existing skipped, zero failures**, each class run separately with the exact filter above.
 
 | Class | Passed | Skipped |
 | --- | ---: | ---: |
@@ -113,6 +113,16 @@ The measured workload uses a fresh isolated Lightning test world and two distinc
 Every mode verified all 80 stored results and the completion count, with zero refused/cancelled entries and no remaining worker entry. Dolist's 81 completed entries include the producer; the other strategies execute one block or ten pages. Execution costs are measured by the scheduler's diagnostics, so the per-entry mean includes the producer where one exists.
 
 The witness runs on the only consumer, so its exact worker count represents waiting entries. The 1 ms peak sampler includes running and waiting entries and can miss the brief overlap between a running page and its admitted continuation (maximum two by construction). Earlier samples observed that overlap. This is one final observation per strategy, not a distribution, an SLO or a claim that paging is universally faster. Shared-host scheduling and storage noise are visible in the page maximum; prior exploratory samples had page latency of about 72–169 ms. Ordinary dolist minimizes first-turn latency here but admits the entire backlog; pages bound pending work and yield between bounded batches. Page size must be chosen for the actual row cost.
+
+## Independent review round 1: HTTP response ownership
+
+The reviewer established one additional mutable-state leak: an ordinary triggered child could change the HTTP response after its submitting handler finished. The permanent real-scheduler regression runs `@respond/type`, `/header` and status changes in the child, verifies the parent response at submission and after the queue drains, and checks that the child itself completed. It failed before the fix (`application/child` instead of `application/parent`); its inline positive control already passed. A separate snapshot regression also failed because the live context was retained.
+
+`SnapshotForQueuedAction` now clears the inherited `HttpResponse` reference. That drops the whole request-owned mutable context, including application viewer/instance metadata when composed with the applications lane. It covers independent trigger/wait/control-flow/callback snapshots rather than only the trigger call site. Inline execution still uses the active response.
+
+The inbound HTTP request is different: `HttpHandlerCommandService` creates its new response inside `ExecuteAsync`, after the socket queue entry begins, and installs it on a fresh root. The added `AQueuedHttpHandlerOwnsItsFreshResponseContext` regression exercises the real dispatcher and verifies status, content type and body. This checks the actual inbound handler path separately from outbound `@http` callback tests.
+
+`dotnet build SharpMUSH.Tests --no-restore -m:2 -nr:false` passed with zero warnings/errors after two formatting passes. Five exact-class runs passed **100/100**: `ParserStateContextTests` 9, `QueueContractRuntimeTests` 13, `HttpHandlerQueueTests` 4, `HttpCommandTests` 66 and `IncludeBreakPropagationTests` 8. The two new ownership regressions were red before the fix; the inline control stayed green. No full-suite rerun was needed for this scoped finding. Logs: `work/queue/review1-red-*` and `review1-green-*`. The source was rebuilt before testing, replacing the reviewer's temporary probe binary.
 
 ## Integration boundary
 

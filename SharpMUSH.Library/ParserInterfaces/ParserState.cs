@@ -803,6 +803,8 @@ public partial record ParserState
 				: new Dictionary<string, MString>(frame, frame.Comparer))),
 			SwitchStack = new(SwitchStack.Reverse().Select(frame => frame.Clone())),
 			EnvironmentRegisters = SnapshotArguments(EnvironmentRegisters),
+			// A live request response (and its trusted request metadata) belongs only to that entry.
+			HttpResponse = null,
 			ExecutionStack = [],
 			CallDepth = new(),
 			FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),

@@ -49,6 +49,29 @@ public class QueueContractRuntimeTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task OnlyInlineTriggersCanChangeTheActiveHttpResponse(bool inline)
+	{
+		await Cmd($"&WORK {_worker}=@respond/type application/child;@respond/header X-Child=child;@respond 201 Child;&DONE me=1");
+		var response = new HttpResponseContext { ContentType = "application/parent", StatusLine = "202 Parent" };
+		string? typeAfterSubmission = null;
+		await Queue.AdmitWork(async () =>
+		{
+			var parent = ActorParser.FromState(ActorParser.CurrentState with { HttpResponse = response });
+			await parent.CommandListParse(MString.Plain($"@trigger{(inline ? "/inline" : "")} {_worker}/WORK"));
+			typeAfterSubmission = response.ContentType;
+			return CallState.Empty;
+		}, "HTTP response ownership", "test");
+		await Queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
+		await Assert.That(await Read("DONE")).IsEqualTo("1");
+		await Assert.That(typeAfterSubmission).IsEqualTo(inline ? "application/child" : "application/parent");
+		await Assert.That(response.ContentType).IsEqualTo(inline ? "application/child" : "application/parent");
+		await Assert.That(response.StatusLine).IsEqualTo(inline ? "201 Child" : "202 Parent");
+		await Assert.That(response.Headers.Count).IsEqualTo(inline ? 1 : 0);
+	}
+
+	[Test]
 	public async Task RetriggeredEntriesGetFreshInvocationBudgetsAndDoNotRetainSwitchFrames()
 	{
 		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
