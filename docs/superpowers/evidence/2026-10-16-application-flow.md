@@ -99,3 +99,9 @@ Using the same pinned SDK, disk-backed environment and build caps as round 1, th
 | `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ConnectionIncarnationTests/*'` | 14 passed, 0 failed; 741 ms |
 
 Both changed C# projects received two whitespace-format passes; the final build ran the formatting gate. Final test binaries and reusable build outputs were retained. No widget, Jobs, permission or workflow behavior changed in this round.
+
+## CI help and dispatch follow-up
+
+The main CI suite found three help-navigation failures, an overview exceeding the 30-row terminal limit, and appfields missing from actual main-project function dispatch coverage. These are fixed without expanding runtime behavior: commands and JSON function categories link the adapter, callback/lifetime details have separately addressable topics, and two real parser-dispatch tests accept numeric zero while rejecting its string representation.
+
+Local reproduction before help changes: HelpNavigationTests 1 passed/3 failed; HelpHeightTests 1 failed. After changes: navigation 4, height 1, registry parity 6 passed; ApplicationFormFunctionTests 2 passed through the runtime parser. Pinned-SDK main test-project build: zero warnings/errors. The broader main suite and combined lane validation remain controller-owned; no KnownGaps exception was added.
