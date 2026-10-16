@@ -167,6 +167,10 @@ Functions list `tune()`. A name that is a section's lookup puts the line in that
 help topic is logged and skipped. `HelpArticleTests` checks every plugin in this repository against the engine's
 help, `listedIn` included.
 
+A plugin in this repository (`SharpMUSH.Plugins.*`) also reaches the documentation sites: the help export
+carries its `help/` files and its listings beside the engine's, so the Guide and the Docs show what `help`
+shows (`docs/guides/help-authoring.md`). The export refuses a plugin file the game would leave out.
+
 ## 6. Collisions and load order
 
 - A plugin command/function whose name collides with an existing engine (or earlier-loaded plugin) entry is

@@ -358,13 +358,15 @@ public class TextFileService : ITextFileService
 			}
 		}
 
-		var pluginHelp = new List<(PluginBootEntry Plugin, HelpArticleParser.ParsedArticle Article)>();
+		var pluginHelp = new List<HelpListings.PluginHelp>();
 		foreach (var (plugin, path) in pluginPaths)
 		{
+			var articles = new List<HelpArticleParser.ParsedArticle>();
 			foreach (var file in Directory.GetFiles(path!, "*.md").OrderBy(file => file, StringComparer.Ordinal))
 			{
-				pluginHelp.AddRange(IndexPluginFile(file, category, ref categoryIndex).Select(article => (plugin, article)));
+				articles.AddRange(IndexPluginFile(file, category, ref categoryIndex));
 			}
+			pluginHelp.Add(new HelpListings.PluginHelp(plugin.Name ?? plugin.Id, articles));
 		}
 		ListPluginHelp(category, categoryIndex, pluginHelp);
 
@@ -402,32 +404,15 @@ public class TextFileService : ITextFileService
 	}
 
 	/// <summary>The topic that lists the help of every running plugin, whether or not it is listed elsewhere.</summary>
-	public const string PluginHelpLookup = "plugin help";
+	public const string PluginHelpLookup = HelpListings.PluginHelpLookup;
 
 	/// <summary>
-	/// Lists the plugins' help on the engine's index topics, so a reader browsing <c>help</c> finds it: every plugin
-	/// topic on <see cref="PluginHelpLookup"/> under its plugin's name, and a topic that declares <c>listedIn</c> on
-	/// each index it names. A listing whose index is not in this category is logged and left out; the topic itself
-	/// stays indexed.
+	/// Appends the plugins' listings (<see cref="HelpListings"/>) to the index topics they name. A listing whose index is
+	/// not in this category is logged and left out; the topic itself stays indexed.
 	/// </summary>
-	private void ListPluginHelp(string category, Dictionary<string, IndexEntry> index,
-		IReadOnlyList<(PluginBootEntry Plugin, HelpArticleParser.ParsedArticle Article)> help)
+	private void ListPluginHelp(string category, Dictionary<string, IndexEntry> index, IEnumerable<HelpListings.PluginHelp> help)
 	{
-		var lines = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-		void Note(string target, string line) =>
-			(lines.TryGetValue(target, out var existing) ? existing : lines[target] = []).Add(line);
-
-		foreach (var plugin in help.GroupBy(item => item.Plugin))
-		{
-			Note(PluginHelpLookup, $"{plugin.Key.Name ?? plugin.Key.Id}: "
-				+ string.Join(", ", plugin.Select(item => $"[{item.Article.Article.Lookup}]")));
-		}
-		foreach (var listing in help.SelectMany(item => item.Article.Listings))
-		{
-			Note(listing.Index, $"[{listing.Lookup}]");
-		}
-
-		foreach (var (target, listed) in lines)
+		foreach (var (target, listed, addition) in HelpListings.For(help))
 		{
 			if (!index.TryGetValue(target, out var entry) || entry.Hidden || entry.Help?.Article is not { } article)
 			{
@@ -435,9 +420,6 @@ public class TextFileService : ITextFileService
 					string.Join(", ", listed), target, category);
 				continue;
 			}
-			var addition = target.Equals(PluginHelpLookup, StringComparison.OrdinalIgnoreCase)
-				? "\n\n" + string.Join("<br>\n", listed)
-				: "\n\nFrom plugins: " + string.Join(", ", listed);
 			var listing = entry.Help.SectionId is { } sectionId
 				? article with
 				{

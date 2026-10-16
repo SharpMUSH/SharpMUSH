@@ -120,11 +120,19 @@ links. HTML `rel="canonical"` uses the article URL: every section route displays
 the same complete article. Crawlers receive that complete article with the same
 stable section IDs and TOC links.
 
-There is no separate public docs build system in this repository. An external
-generator can consume `GET /api/help/articles`: its article manifest is built
-from the same indexed records. `GET /api/help/admin/articles` has the existing
-Wizard/God account-session gate. Export each article once, retaining IDs and
-section order; do not import engine help into the editable game wiki.
+The documentation sites (SharpMUSH.Docs and SharpMUSH.Guide) read the help
+export, not this folder. `tools/HelpExport` writes the general help as the game
+serves it: the engine's files and every shipped plugin's `help/` files, each
+under its own name, with the plugin listings (`plugin help` and each `listedIn`
+index) written in where the server appends them, and `articles.json`, the
+manifest of every article with the file and plugin it came from. The
+`help-export` workflow publishes it from main to the `help-export` branch, one
+commit per change. `HelpExportTests` fails when the export and the server's
+index differ in any article, so a plugin topic or a listing cannot reach the
+game without reaching the sites. A running server answers the same manifest at
+`GET /api/help/articles` (`GET /api/help/admin/articles` has the existing
+Wizard/God account-session gate). Do not import engine help into the editable
+game wiki.
 
 The PennMUSH parity harness also consumes the declared sections of compatibility
 articles when validating its known-differences allowlist. Keep those section
