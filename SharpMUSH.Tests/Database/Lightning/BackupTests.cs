@@ -50,6 +50,85 @@ public class BackupTests
 	}
 
 	[Test]
+	public async Task DisablingPackageCopiesDoesNotHideHistoricalRestorePoints()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+			var copy = (await backups.CreateBeforePackageOperationAsync(new BackupProvenance("pre-package", Operation: "update", Package: "example"))).Expect<WorldBackup>();
+			var disabled = new LightningWorldBackupService(db, new WorldBackupOptions { Root = root, PackageOperationKeep = 0 }, true,
+				NullLogger<LightningWorldBackupService>.Instance);
+			await Assert.That(disabled.ListPackageOperationBackups().Count).IsEqualTo(1);
+			(await disabled.CreateBeforePackageOperationAsync()).Expect<Error<string>>();
+			await Assert.That(Directory.Exists(copy.Path)).IsTrue();
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	[Test]
+	public async Task AnIncompleteNewestCopyIsRefusedExplicitlyInsteadOfCheckingAnOlderCopy()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+			var first = (await backups.CreateAsync()).Expect<WorldBackup>();
+			var second = (await backups.CreateAsync()).Expect<WorldBackup>();
+			File.WriteAllText(Path.Join(second.Path, "backup.json"),
+				System.Text.Json.JsonSerializer.Serialize(new WorldBackupMetadata(1, DateTimeOffset.UtcNow, new BackupProvenance("scheduled"), false)));
+			await Assert.That(backups.List()[0].IsRecoverable).IsFalse();
+			var error = (await backups.CheckLatestAsync()).Expect<Error<string>>();
+			await Assert.That(error.Value).Contains(second.Name).And.Contains("not recoverable");
+			await Assert.That(error.Value.Contains(first.Name, StringComparison.Ordinal)).IsFalse();
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	[Test]
+	public async Task ManualAndScheduledRunnerCallsPersistTheirTrigger()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await db.Migrate();
+			var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+			options.CurrentValue.Returns(SharpMUSHOptions.Default());
+			var runner = new BackupRunner(backups, Substitute.For<IEventService>(), Substitute.For<IGameBroadcastService>(), options,
+				NullLogger<BackupRunner>.Instance);
+			await runner.RunAsync(new DBRef(7));
+			await runner.RunAsync(null, new BackupProvenance("scheduled"));
+			var restarted = new LightningWorldBackupService(db, new WorldBackupOptions { Root = root, Keep = 2 }, true,
+				NullLogger<LightningWorldBackupService>.Instance);
+			await Assert.That(restarted.List()[0].Provenance!.Trigger).IsEqualTo("scheduled");
+			await Assert.That(restarted.List()[1].Provenance!.Trigger).IsEqualTo("manual administrator request");
+			await Assert.That(restarted.List()[1].Provenance!.Initiator).IsEqualTo("#7");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
+	}
+
+	[Test]
 	public async Task CreateWritesACopyThatOpensAsAnEnvironmentWithTheSameData()
 	{
 		var path = TempPath();
@@ -559,7 +638,7 @@ public class BackupTests
 
 			await Assert.That(await Eventually(() => Directory.Exists(root))).IsTrue();
 			// Scheduling is off, so it must not have taken one.
-			await backups.DidNotReceive().CreateAsync(Arg.Any<CancellationToken>());
+			await backups.DidNotReceive().CreateAsync(Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>());
 		}
 		finally
 		{
@@ -578,7 +657,7 @@ public class BackupTests
 	public async Task TheScheduleTakesACopyEveryIntervalWhetherOrNotTheLastFailed(bool succeed)
 	{
 		var backups = Substitute.For<IWorldBackupService>();
-		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(_ => new ValueTask<Result<WorldBackup>>(succeed
+		backups.CreateAsync(Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>()).Returns(_ => new ValueTask<Result<WorldBackup>>(succeed
 			? new WorldBackup("20260101-000000-000", "/backups/20260101-000000-000", DateTimeOffset.UnixEpoch, 0)
 			: new Error<string>("disk full")));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -593,7 +672,7 @@ public class BackupTests
 		await schedule.TickAsync(DateTimeOffset.UnixEpoch + interval, interval);
 		await schedule.TickAsync(DateTimeOffset.UnixEpoch + interval * 2, interval);
 
-		await backups.Received(2).CreateAsync(Arg.Any<CancellationToken>());
+		await backups.Received(2).CreateAsync(Arg.Is<BackupProvenance>(provenance => provenance.Trigger == "scheduled"), Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>

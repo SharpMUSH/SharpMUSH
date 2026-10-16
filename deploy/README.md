@@ -401,7 +401,21 @@ live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCE
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
-`@backup/list`.
+`@backup/list [page]` or `@storage/backups [page]`. Both commands show the same read-only
+inventory, ten copies per page, across ordinary world and pre-package retention groups. Each entry
+includes its UTC creation time, human-readable size and exact bytes (payload plus metadata), persisted
+trigger and initiating administrator/package operation when known, completion status, retention group,
+recovery path, and whether it is that group's `latest` pointer. The default `@storage` report links to
+this inventory without printing every copy. Setting `SHARPMUSH_BACKUP_PACKAGE_KEEP=0` disables
+new pre-package copies while leaving historical copies visible; listing neither prunes nor creates them.
+
+New copies carry `backup.json` inside their directory, written before the complete copy is promoted.
+It survives restarts and moves with the copy through retention. Legacy copies without it remain listed
+with an unknown/legacy reason and unrecorded completion; their directory timestamp is the fallback time.
+Malformed/incomplete metadata is identified as not recoverable. If it belongs to the newest copy,
+`@dbck` refuses explicitly and names that copy rather than silently checking an older one. Hidden
+`.incoming-*` staging directories are never listed as backups. Completion means the provider finished
+copying; verification is unrecorded here (`@dbck` still performs a read-through check).
 
 The portal takes one into `pre-package/<timestamp>` before every package apply, rollback or
 uninstall, and refuses the operation if that copy fails. It is the restore point for a crash part

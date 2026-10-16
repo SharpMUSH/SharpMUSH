@@ -32,6 +32,29 @@ public class PackageOperationRunnerTests
 		NullLogger<PackageOperationRunner>.Instance);
 
 	[Test]
+	public async Task BackupBeforeOperationCarriesInitiatingContext()
+	{
+		var root = Path.Join(Path.GetTempPath(), "package-provenance-" + Guid.NewGuid().ToString("N"));
+		var db = (SharpMUSH.Database.Lightning.LightningDatabase)Database;
+		var backups = new SharpMUSH.Database.Lightning.LightningWorldBackupService(db,
+			new WorldBackupOptions { Root = root, Keep = 2, PackageOperationKeep = 2 }, true,
+			NullLogger<SharpMUSH.Database.Lightning.LightningWorldBackupService>.Instance);
+		try
+		{
+			var context = new BackupProvenance("pre-package", "account-id", "rollback", "example revision 3");
+			var outcome = await Runner(backups).RunAsync("rollback", _ => Task.FromResult(true), provenance: _ => Task.FromResult(context));
+			var backup = outcome.Expect<PackageOperationRan<bool>>().Backup!;
+			await Assert.That(backup.Provenance).IsEqualTo(context);
+			await Assert.That(backups.ListPackageOperationBackups()[0].Provenance).IsEqualTo(context);
+			await Assert.That(backups.List().Count).IsEqualTo(0);
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, true);
+		}
+	}
+
+	[Test]
 	public async Task AnOperation_DoesNotRunWhileAQueueEntryIsPartWayThrough()
 	{
 		var entryStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

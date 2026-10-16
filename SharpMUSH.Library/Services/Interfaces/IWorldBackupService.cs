@@ -45,6 +45,10 @@ public interface IWorldBackupService
 	/// </summary>
 	ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default);
 
+	/// <summary>Takes a copy with the initiating operation's provenance.</summary>
+	ValueTask<Result<WorldBackup>> CreateAsync(BackupProvenance provenance, CancellationToken ct = default)
+		=> CreateAsync(ct);
+
 	/// <summary>The copies currently on disk, newest first. Empty when unsupported.</summary>
 	IReadOnlyList<WorldBackup> List();
 
@@ -68,6 +72,10 @@ public interface IWorldBackupService
 	/// package's <c>plugins/</c> directory is not in it.
 	/// </summary>
 	ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(CancellationToken ct = default);
+
+	/// <summary>Takes a pre-package copy with the operation and administrator when known.</summary>
+	ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(BackupProvenance provenance, CancellationToken ct = default)
+		=> CreateBeforePackageOperationAsync(ct);
 
 	/// <summary>The pre-package-operation copies currently on disk, newest first.</summary>
 	IReadOnlyList<WorldBackup> ListPackageOperationBackups();

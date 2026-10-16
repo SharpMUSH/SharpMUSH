@@ -40,12 +40,16 @@ public class BackupRunner(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<Result<WorldBackup>> RunAsync(DBRef? enactor, CancellationToken cancellationToken = default)
+	public ValueTask<Result<WorldBackup>> RunAsync(DBRef? enactor, CancellationToken cancellationToken = default)
+		=> RunAsync(enactor, new BackupProvenance(enactor is null ? "automatic safeguard" : "manual administrator request", enactor?.ToString()), cancellationToken);
+
+	/// <inheritdoc />
+	public async ValueTask<Result<WorldBackup>> RunAsync(DBRef? enactor, BackupProvenance provenance, CancellationToken cancellationToken = default)
 	{
 		var dump = options.CurrentValue.Dump;
 		await ShowAsync(dump.DumpMessage);
 
-		return await backups.CreateAsync(cancellationToken) switch
+		return await backups.CreateAsync(provenance, cancellationToken) switch
 		{
 			WorldBackup written => await WrittenAsync(enactor, dump.DumpComplete, written),
 			Error<string> error => await FailedAsync(enactor, error)

@@ -26,6 +26,17 @@ public class StorageCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task BackupViewsUseTheSamePaginatedInventory()
+	{
+		var storage = string.Join("\n", await HeardAfterAsync("@storage/backups"));
+		var backup = string.Join("\n", await HeardAfterAsync("@backup/list"));
+		await Assert.That(storage).IsEqualTo(backup);
+		await Assert.That(storage).Contains("Page 1/");
+		var invalid = string.Join("\n", await HeardAfterAsync("@storage/backups 0"));
+		await Assert.That(invalid).Contains("positive page number");
+	}
+
+	[Test]
 	public async Task AMortalCannotRunIt()
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -70,7 +71,10 @@ public sealed partial class WorldBackupWriter(
 
 	public TimeSpan ScheduledInterval => options.Interval;
 
-	public async ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
+	public ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
+		=> CreateAsync(new BackupProvenance("automatic safeguard"), ct);
+
+	public async ValueTask<Result<WorldBackup>> CreateAsync(BackupProvenance provenance, CancellationToken ct = default)
 	{
 		await _oneAtATime.WaitAsync(ct);
 		try
@@ -96,7 +100,10 @@ public sealed partial class WorldBackupWriter(
 
 				Directory.CreateDirectory(staging);
 				logger.LogInformation("Writing a world backup into {Path}", staging);
+				var createdAt = time.GetUtcNow();
 				await writePayload(staging, ct);
+				await File.WriteAllTextAsync(Path.Join(staging, "backup.json"),
+					JsonSerializer.Serialize(new WorldBackupMetadata(1, createdAt, provenance, true)), ct);
 
 				var final = Path.Join(options.Root, NextName());
 				Directory.Move(staging, final);
@@ -246,7 +253,7 @@ public sealed partial class WorldBackupWriter(
 		}
 	}
 
-	private static WorldBackup Describe(DirectoryInfo directory)
+	private WorldBackup Describe(DirectoryInfo directory)
 	{
 		var createdAt = DateTime.TryParseExact(directory.Name[..Math.Min(StampFormat.Length, directory.Name.Length)],
 			StampFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
@@ -256,7 +263,51 @@ public sealed partial class WorldBackupWriter(
 
 		var size = directory.EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
 
-		return new WorldBackup(directory.Name, directory.FullName, createdAt, size);
+		WorldBackupMetadata? metadata = null;
+		var status = "legacy; completion unrecorded";
+		var metadataPath = Path.Join(directory.FullName, "backup.json");
+		var metadataPresent = File.Exists(metadataPath);
+		if (metadataPresent)
+		{
+			try
+			{
+				metadata = JsonSerializer.Deserialize<WorldBackupMetadata>(File.ReadAllText(metadataPath));
+				if (metadata is not { Version: 1, Complete: true, Provenance: not null }
+					|| metadata.CreatedAt == default || string.IsNullOrWhiteSpace(metadata.Provenance.Trigger))
+				{
+					metadata = null;
+					status = "invalid metadata; not recoverable";
+				}
+				else status = "complete; verification unrecorded";
+			}
+			catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+			{
+				status = "unreadable metadata; not recoverable";
+			}
+		}
+
+		return new WorldBackup(directory.Name, directory.FullName, metadata?.CreatedAt ?? createdAt, size)
+		{
+			Provenance = metadata?.Provenance,
+			Status = status,
+			IsRecoverable = !metadataPresent || metadata is not null,
+			IsLatest = LatestTarget() == directory.Name
+		};
+	}
+
+	private string? LatestTarget()
+	{
+		try
+		{
+			var link = new DirectoryInfo(Path.Join(options.Root, LatestName));
+			if (link.LinkTarget is { } target) return Path.GetFileName(target.TrimEnd(Path.DirectorySeparatorChar));
+			var fallback = Path.Join(options.Root, LatestFallbackName);
+			return File.Exists(fallback) ? File.ReadAllText(fallback).Trim() : null;
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			return null;
+		}
 	}
 
 	/// <summary>
