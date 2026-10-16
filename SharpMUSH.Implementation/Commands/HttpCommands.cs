@@ -116,9 +116,8 @@ public partial class Commands
 				var requestBody = isGet ? null : dataArg?.Message.ToPlainText();
 				var outputLimit = parser.CurrentState.OutputLimit;
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
-				// The callback's %> and %| are the ones at admission, like any queued entry's; the state below is built later.
-				var queuedOutput = parser.CurrentState.PipedOutput;
-				var queuedPrinted = parser.CurrentState.PrintedOutput;
+				// Capture the caller before the request runs; its later mutations belong to its own entry.
+				var callbackState = parser.CurrentState.SnapshotForQueuedAction();
 
 				var admission = await Mediator.Send(new AdmitAttributeRequest(
 					async () =>
@@ -140,9 +139,9 @@ public partial class Commands
 						// PennMUSH hands these over as q-registers; a PennMUSH import keeps them with http_qregisters.
 						if (qRegisters)
 						{
-							parser.CurrentState.AddRegister("STATUS", status);
-							parser.CurrentState.AddRegister("CONTENT-TYPE", responseType);
-							parser.CurrentState.AddRegister("HTTP-OVERFLOW", overflow);
+							callbackState.AddRegister("STATUS", status);
+							callbackState.AddRegister("CONTENT-TYPE", responseType);
+							callbackState.AddRegister("HTTP-OVERFLOW", overflow);
 						}
 
 						var contentDict = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
@@ -154,11 +153,7 @@ public partial class Commands
 							["headers"] = new CallState(responseHeaders)
 						};
 
-						return parser.CurrentState.ForAttributeArguments(contentDict) with
-						{
-							QueuedOutput = queuedOutput,
-							QueuedPrinted = queuedPrinted
-						};
+						return callbackState.ForAttributeArguments(contentDict);
 					},
 					dbRefAttribute, parser.CurrentState.Executor, parser.CurrentState.Enactor), ExecutionBudget.CurrentToken);
 

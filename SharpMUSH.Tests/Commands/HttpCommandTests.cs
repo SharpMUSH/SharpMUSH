@@ -24,6 +24,22 @@ public class HttpCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
+	public async Task HttpCallbackSnapshotsCallerStateBeforeDeferredRequest()
+	{
+		ParserState? submitted = null;
+		var run = await RunHttpAsync("HttpSnapshot", [], ["https://example.invalid/get"],
+			qRegisters: true, registers: new() { ["X"] = "before" }, beforeCallback: state =>
+			{
+				submitted = state;
+				state.AddRegister("X", MarkupText.Plain("after"));
+				state.LimitExceeded!.IsExceeded = true;
+			});
+		await Assert.That(run.Callback!.Registers.First()["X"].ToPlainText()).IsEqualTo("before");
+		await Assert.That(run.Callback.LimitExceeded!.IsExceeded).IsFalse();
+		await Assert.That(submitted!.Registers.First().ContainsKey("STATUS")).IsFalse();
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task HttpResponseCallbackStartsItsOwnPresence(bool nested)
@@ -195,7 +211,7 @@ public class HttpCommandTests
 	/// </summary>
 	private async Task<HttpRun> RunHttpAsync(string name, string[] switches, string[] arguments,
 		bool qRegisters = false, Dictionary<string, string>? registers = null, string reply = "ok", int? outputLimit = null,
-		bool canHttp = true, ISecretStore? secrets = null, bool nestedPresence = false)
+		bool canHttp = true, ISecretStore? secrets = null, bool nestedPresence = false, Action<ParserState>? beforeCallback = null)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, name);
@@ -241,6 +257,7 @@ public class HttpCommandTests
 
 		async ValueTask<QueueAdmissionResult> Admit(AdmitAttributeRequest request)
 		{
+			beforeCallback?.Invoke(state);
 			callback = await request.Input();
 			return new QueueAdmissionResult(1, QueueRejectionReason.None);
 		}

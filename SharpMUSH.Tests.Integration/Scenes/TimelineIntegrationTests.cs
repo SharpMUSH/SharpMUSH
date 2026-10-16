@@ -30,6 +30,10 @@ public class TimelineIntegrationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	// Ordinary triggers may enqueue more triggers; command completion includes those descendants.
+	private ValueTask SettleCommandsAsync() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
+		.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
@@ -40,15 +44,16 @@ public class TimelineIntegrationTests
 	private async Task God(string command)
 	{
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 	}
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
 	{
+		await SettleCommandsAsync();
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
@@ -95,7 +100,7 @@ public class TimelineIntegrationTests
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
-		await WebAppFactoryArg.QueueBarrierAsync();
+		await SettleCommandsAsync();
 	}
 
 	private async Task UninstallAsync()

@@ -143,7 +143,7 @@ public partial class Functions
 		}
 
 		var result = await parser.With(state => state with { Registers = new(frames) },
-			async evaluating => await evaluating.FunctionParse(code)) ?? CallState.Empty;
+			async evaluating => await ParseRawArgument(evaluating, code)) ?? CallState.Empty;
 
 		if (outer is not null)
 		{

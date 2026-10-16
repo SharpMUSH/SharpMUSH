@@ -157,6 +157,55 @@ public class InvocationMetricsTests
 	}
 
 	[Test]
+	[Arguments("cond", "1,{0}", "COND")]
+	[Arguments("cond", "0,unused,{0}", "COND")]
+	[Arguments("if", "1,{0},unused", "IF")]
+	[Arguments("if", "0,unused,{0}", "IF")]
+	[Arguments("allof", "{0},|", "ALLOF")]
+	[Arguments("allof", "1,{0}", "ALLOF")]
+	[Arguments("letq", "{0}", "LETQ")]
+	[Arguments("letq", "X,value,{0}", "LETQ")]
+	[Arguments("cand", "{0},1", "CAND")]
+	[Arguments("cor", "{0},0", "COR")]
+	[Arguments("restrictedexpr", "add,{0}", "RESTRICTEDEXPR")]
+	[Arguments("benchmark", "{0},1", "BENCHMARK")]
+	[Arguments("objeval", "#1,{0}", "OBJEVAL")]
+	[Arguments("privatize", "0,{0}", "PRIVATIZE")]
+	[Arguments("localize", "{0}", "LOCALIZE")]
+	[Arguments("uldefault", "#1/NOSUCHMETRICS,{0}", "ULDEFAULT")]
+	[Arguments("udefault", "#1/NOSUCHMETRICS,{0}", "UDEFAULT")]
+	public async Task RawArgumentEvaluationIsExcludedFromOwnTime(string function, string arguments, string label)
+	{
+		var measured = await MeasureFunction($"[{function}({string.Format(arguments, Repeated("[add(1,1)]"))})]");
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == label).Ms).IsLessThan(LeftOut);
+	}
+
+	[Test]
+	public async Task EvaluatingAlreadyParsedTextIsStillTheFunctionsOwnWork()
+	{
+		var measured = await MeasureFunction($"objevals(#1,lit({Repeated("[add(1,1)]")}))");
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == "OBJEVALS").Ms).IsGreaterThanOrEqualTo(Calls);
+	}
+
+	[Test]
+	[Arguments("localize", "{0}", "LOCALIZE")]
+	[Arguments("uldefault", "#1/NOSUCHMETRICS,{0}", "ULDEFAULT")]
+	[Arguments("letq", "X,initial,{0}", "LETQ")]
+	[Arguments("privatize", "0,{0}", "PRIVATIZE")]
+	public async Task PausingRawArgumentTimePreservesTheLocalizedRegisterScope(string function, string arguments, string label)
+	{
+		string? output = null;
+		var code = $"setq(X,inner)[null({Repeated("[add(1,1)]")})]%qX";
+		var measured = await Measure(async () => output = (await WebAppFactoryArg.FunctionParser.FunctionParse(
+			MarkupText.Plain($"setq(X,outer)[{function}({string.Format(arguments, code)})]|%qX")))?.Message.ToPlainText());
+		await Assert.That(output).IsEqualTo("inner|outer");
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == label).Ms).IsLessThan(LeftOut);
+	}
+
+	[Test]
 	public async Task ACommandsTimeLeavesOutWhatItRuns()
 	{
 		var measured = await MeasureCommand(

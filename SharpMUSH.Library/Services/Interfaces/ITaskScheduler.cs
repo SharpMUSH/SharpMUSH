@@ -31,6 +31,8 @@ public interface ITaskScheduler
 
 	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, bool manageSemaphoreCount = false);
 
+	/// <summary>Admits deferred I/O and its attribute as one entry. Capture caller inputs before calling;
+	/// the factory builds its result later, and the scheduler gives that result independent evaluation counters.</summary>
 	ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null);
 
 	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false);

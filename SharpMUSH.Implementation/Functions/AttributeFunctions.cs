@@ -777,11 +777,11 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objectArg = parser.CurrentState.Arguments["0"];
 		var text = parser.CurrentState.Arguments["1"];
-		var result = await EvaluateAsAsync(parser, executor, objectArg, text.Message ?? MString.Empty);
+		var result = await EvaluateAsAsync(parser, executor, objectArg, text.Message ?? MString.Empty, rawArgument: false);
 		return result with { HadErrors = text.HadErrors || result.HadErrors };
 	}
 
-	private async ValueTask<CallState> EvaluateAsAsync(IMUSHCodeParser parser, AnySharpObject executor, CallState objectArg, MString expression)
+	private async ValueTask<CallState> EvaluateAsAsync(IMUSHCodeParser parser, AnySharpObject executor, CallState objectArg, MString expression, bool rawArgument = true)
 	{
 		var sideFxEnabled = Configuration.CurrentValue.Function.FunctionSideEffects;
 
@@ -795,7 +795,9 @@ public partial class Functions
 
 		// The caller inside is whoever ran objeval(), as process_expression(..., obj, executor, ...) passes it.
 		var result = await parser.With(state => state with { Executor = evaluator.Object().DBRef, Caller = executor.Object().DBRef },
-			async newParser => await newParser.FunctionParse(expression)) ?? CallState.Empty;
+			async newParser => rawArgument
+				? await ParseRawArgument(newParser, expression)
+				: await newParser.FunctionParse(expression)) ?? CallState.Empty;
 		return result with { HadErrors = objectArg.HadErrors || result.HadErrors };
 
 		async ValueTask<bool> MayEvaluateAs(AnySharpObject target) =>
@@ -1040,7 +1042,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> UserAttributeDefaultAsync(IMUSHCodeParser parser, bool asCaller)
 	{
-		var selector = await parser.FunctionParse(parser.CurrentState.Arguments["0"].Message) ?? CallState.Empty;
+		var selector = await ParseRawArgument(parser, parser.CurrentState.Arguments["0"].Message) ?? CallState.Empty;
 		var hadErrors = selector.HadErrors;
 		CallState Preserve(CallState result) => result with { HadErrors = hadErrors || result.HadErrors };
 		var objectAndAttribute = selector.Message;
@@ -1054,12 +1056,12 @@ public partial class Functions
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
 					mode: IAttributeService.AttributeMode.Execute, parent: true);
 				if (attribute is not SharpAttribute[] chain)
-					return await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message) ?? CallState.Empty;
+					return await ParseRawArgument(parser, parser.CurrentState.Arguments["1"].Message) ?? CallState.Empty;
 
 				var arguments = new Dictionary<string, CallState>();
 				foreach (var argument in parser.CurrentState.ArgumentsOrdered.Skip(2))
 				{
-					var result = await parser.FunctionParse(argument.Value.Message) ?? CallState.Empty;
+					var result = await ParseRawArgument(parser, argument.Value.Message) ?? CallState.Empty;
 					hadErrors |= result.HadErrors;
 					arguments[arguments.Count.ToString()] = result;
 				}

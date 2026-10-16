@@ -163,6 +163,10 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 
 			await AssertTheNewObjectIsLiveInTheMasterRoom(applied.CreatedObjects["wiki_global"]);
 
+			// Apply admits AINSTALL, which can itself queue additional lifecycle work.
+			await factory.Services.GetRequiredService<ITaskScheduler>()
+				.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
+
 			// AINSTALL registered wikilink(), the command link an article's [[Page]] becomes; it has to
 			// be a link in each client's own dialect.
 			var link = await factory.FunctionParser.EvaluateAsync(MarkupText.Plain("wikilink(Main,main)"));

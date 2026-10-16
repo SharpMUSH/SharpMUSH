@@ -1019,12 +1019,13 @@ public partial class TaskScheduler(
 				$"input-session:{session.Id}", EnqueueGroup, session.Executor, onReleased: () => inputSessions.Discard(session), notifyOnRejection: false);
 
 	/// <summary>
-	/// Fixes what a queued entry starts with at the moment it is queued: its executor, and the <c>%></c>
-	/// the queuing list had then, since that list keeps running and changes it.
+	/// Captures every independent entry at admission: owned arguments/registers/context and fresh
+	/// evaluation counters, plus the executor's full identity. Owner/global admission quotas remain
+	/// with the scheduler, and execution receives the scheduler's fresh time budget.
 	/// </summary>
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)
 	{
-		state = state.WithQueuedOutput();
+		state = state.SnapshotForQueuedAction();
 		if (state.Executor is not { } executor) return state;
 		return await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is AnySharpObject target
 			? state with { Executor = target.Object().DBRef }
@@ -1058,7 +1059,7 @@ public partial class TaskScheduler(
 		{
 			if (executor is not null && await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken) is None) return null;
 			if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject obj) return null;
-			var parserState = await function();
+			var parserState = (await function()).SnapshotForQueuedAction();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var actor = await parserState.KnownExecutorObject(mediator);
 			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);

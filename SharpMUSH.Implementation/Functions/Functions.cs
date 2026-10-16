@@ -13,6 +13,14 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
+	/// <summary>Evaluate an argument in this function's current (possibly localized) scope without
+	/// charging its evaluation to the function's own-time metric.</summary>
+	private static async ValueTask<CallState?> ParseRawArgument(IMUSHCodeParser parser, MString text)
+	{
+		using var paused = InvocationClock.PauseRunning();
+		return await parser.FunctionParse(text);
+	}
+
 	private IMediator Mediator { get; }
 	/// <summary>
 	/// The parent/zone cycle guard — the one thing a function needed a store for. It is the guard, not
