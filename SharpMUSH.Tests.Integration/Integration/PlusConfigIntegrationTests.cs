@@ -238,4 +238,39 @@ public class PlusConfigIntegrationTests
 			await As(staff, $"+config/unregister {system}");
 		}
 	}
+
+	/// <summary>
+	/// A new entry's own value goes through its field's CHECK like any other, and that CHECK hears which
+	/// entry and field it is checking, as +help config writing promises.
+	/// </summary>
+	[Test]
+	public async Task ANewEntrysValueIsCheckedWithItsFieldNamed()
+	{
+		var staff = await Player("CnStaff");
+		await God($"@permission/allow #{staff.DbRef.Number}=config.admin");
+		var (obj, system) = await SystemAsync(staff);
+		var store = await God($"think create({TestIsolationHelpers.GenerateUniqueName("CfgStore")})");
+		await God($"@set {store}=NO_COMMAND");
+		string[] leaves =
+		[
+			"DATA`CONFIG`RANKS`TYPE=table", $"DATA`CONFIG`RANKS`STORE={store}", "DATA`CONFIG`RANKS`PATH=RANK",
+			"DATA`CONFIG`RANKS`ENTRY=title", "DATA`CONFIG`RANKS`FIELDS=title", "DATA`CONFIG`RANKS`LABEL=Ranks",
+			"DATA`CONFIG`RANKS`FIELD`TITLE`TYPE=text", "DATA`CONFIG`RANKS`FIELD`TITLE`LABEL=Title",
+			"DATA`CONFIG`RANKS`FIELD`TITLE`CHECK=CHECK`TITLE", "CHECK`TITLE=if(strmatch(%2/%3,scout/title),,Checked %2/%3.)",
+		];
+		foreach (var leaf in leaves)
+		{
+			var (attribute, value) = (leaf[..leaf.IndexOf('=')], leaf[(leaf.IndexOf('=') + 1)..]);
+			await God($"&{attribute} {obj}={value}");
+		}
+		try
+		{
+			await Assert.That(await As(staff, $"+config/add {system}/ranks/scout=Scout")).Contains($"Added {system}/ranks/scout.");
+			await Assert.That(await God($"think get({store}/RANK`SCOUT)")).IsEqualTo("Scout");
+		}
+		finally
+		{
+			await As(staff, $"+config/unregister {system}");
+		}
+	}
 }
