@@ -135,12 +135,12 @@ public class PlusHelpIntegrationTests
 	{
 		var librarian = await LibrarianAsync();
 
-		var sceneAttached = (await Registry.GetManagedAttributesAsync("scene"))
+		var sceneAttached = (await Registry.GetManagedAttributesAsync("scene-help"))
 			.Where(m => m.Attribute.StartsWith("SRC`", StringComparison.Ordinal))
 			.ToList();
 
 		await Assert.That(sceneAttached).IsNotEmpty()
-			.Because("scene contributes topics, so it attaches SRC`SCENE to the librarian");
+			.Because("scene-help joins scene's topics to +help, so it attaches SRC`SCENE to the librarian");
 		await Assert.That(sceneAttached.Single().Objid).IsEqualTo(librarian)
 			.Because("the registration has to land on the librarian, not on scene's own object");
 
