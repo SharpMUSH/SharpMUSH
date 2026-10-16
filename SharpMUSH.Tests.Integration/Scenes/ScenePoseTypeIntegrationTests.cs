@@ -222,9 +222,9 @@ public class ScenePoseTypeIntegrationTests
 		}
 		finally
 		{
-			await God($"&TYPE`NARRATION`FORMAT {logger}=[tone(secondary,%2)]");
+			await God($"&TYPE`NARRATION`FORMAT {logger}=tone(secondary,%2)");
 		}
-		await Assert.That(await Eval($"get({logger}/TYPE`NARRATION`FORMAT)")).IsEqualTo("[tone(secondary,%2)]");
+		await Assert.That(await Eval($"get({logger}/TYPE`NARRATION`FORMAT)")).IsEqualTo("tone(secondary,%2)");
 	}
 
 	[Test]

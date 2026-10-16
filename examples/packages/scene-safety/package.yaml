@@ -1,6 +1,6 @@
 format: "1.10"
 package: scene-safety
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -311,15 +311,26 @@ objects:
         flags: [funsyntax]
       # A filter on the +scene card (scene's CARD point), run as the Scene Logger with %# the reader: %0 the card,
       # %1 the scene. The owner sees the summary under the card's own body; everyone else sees the card as it was.
+      # The filters run inside the logger's +scene and +scene/join, so their working registers stay in ulocal().
       FUN`FILTER`CARD:
         value: |-
-          %0[if(u(%!/FUN`SCENE`OWNS,%1,%#),setq(card_summary,u(%!/FUN`SCENE`SUMMARY,%1))[if(strlen(%q<card_summary>),%r%q<card_summary>)])]
+          %0[if(u(%!/FUN`SCENE`OWNS,%1,%#),ulocal(%!/FUN`CARD`SUMMARY,%1))]
+        flags: [funsyntax]
+      # %0 a scene: the owner's summary on a line of its own, or nothing.
+      FUN`CARD`SUMMARY:
+        value: |-
+          if(strlen(setr(card_summary,u(%!/FUN`SCENE`SUMMARY,%0))),%r%q<card_summary>)
         flags: [funsyntax]
       # A filter on joining (scene's JOIN point): %0 the join message, %1 the scene, %2 the player. A player whose
       # own lines or veils touch the scene's warnings is told which, and how to signal.
       FUN`FILTER`JOIN:
         value: |-
-          %0[setq(join_key,u(%!/FUN`KEY,%2))][setq(join_warnings,u(%!/FUN`SCENE`WARNINGS,%1))][setq(join_lines,u(%!/FUN`TOUCH`WARNINGS,u(%!/FUN`RECORD,%q<join_key>,LINES),%q<join_warnings>))][setq(join_veils,u(%!/FUN`TOUCH`WARNINGS,u(%!/FUN`RECORD,%q<join_key>,VEILS),%q<join_warnings>))][if(strlen(%q<join_lines>%q<join_veils>),%r[notice(SAFETY,u(%!/FUN`JOIN`TEXT,%q<join_lines>,%q<join_veils>),warn)])]
+          %0[ulocal(%!/FUN`JOIN`WARN,%1,%2)]
+        flags: [funsyntax]
+      # %0 a scene, %1 the player joining it: the warning they are told on a line of its own, or nothing.
+      FUN`JOIN`WARN:
+        value: |-
+          setq(join_key,u(%!/FUN`KEY,%1))[setq(join_warnings,u(%!/FUN`SCENE`WARNINGS,%0))][setq(join_lines,u(%!/FUN`TOUCH`WARNINGS,u(%!/FUN`RECORD,%q<join_key>,LINES),%q<join_warnings>))][setq(join_veils,u(%!/FUN`TOUCH`WARNINGS,u(%!/FUN`RECORD,%q<join_key>,VEILS),%q<join_warnings>))][if(strlen(%q<join_lines>%q<join_veils>),%r[notice(SAFETY,u(%!/FUN`JOIN`TEXT,%q<join_lines>,%q<join_veils>),warn)])]
         flags: [funsyntax]
       # %0 the warnings a joining player's lines touch, %1 those their veils touch.
       FUN`JOIN`TEXT:
@@ -364,8 +375,14 @@ objects:
       # which loses them, %<noun> line or veil.
       INC`SAFETY`ADD:
         value: |-
-          @assert words(%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,+safety/%<noun> <topic>%, or several split by |.,warn); @assert every(%!/FUN`LIST`FITS,%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,Keep each to [v(DATA`CONFIG`TOPIC-LENGTH)] characters.,warn); &RECORD`%q<viewer_key> {{store}}=u(%!/FUN`KEY`OWNER,%#); think setqm(add_kept,u(%!/FUN`LIST`ADD,u(%!/FUN`RECORD,%q<viewer_key>,%<kind>),%q<viewer_topics>),add_other,u(%!/FUN`LIST`DROP,u(%!/FUN`RECORD,%q<viewer_key>,%<other>),%q<viewer_topics>)); @include/args %!/INC`SAFETY`WRITE=kind,%<kind>,list,%q<add_kept>; @include/args %!/INC`SAFETY`WRITE=kind,%<other>,list,%q<add_other>; @pemit %#=notice(SAFETY,Your [lcstr(%<kind>)]: [u(%!/FUN`LIST`SHOW,u(%!/FUN`RECORD,%q<viewer_key>,%<kind>))]. Nobody else sees them.,ok)
+          @assert words(%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,+safety/%<noun> <topic>%, or several split by |.,warn); @assert every(%!/FUN`LIST`FITS,%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,Keep each to [v(DATA`CONFIG`TOPIC-LENGTH)] characters.,warn); &RECORD`%q<viewer_key> {{store}}=u(%!/FUN`KEY`OWNER,%#); think u(%!/FUN`ADD`LISTS,%<kind>,%<other>); @include/args %!/INC`SAFETY`WRITE=kind,%<kind>,list,%q<add_kept>; @include/args %!/INC`SAFETY`WRITE=kind,%<other>,list,%q<add_other>; @pemit %#=notice(SAFETY,Your [lcstr(%<kind>)]: [u(%!/FUN`LIST`SHOW,u(%!/FUN`RECORD,%q<viewer_key>,%<kind>))]. Nobody else sees them.,ok)
         flags: [cmdsyntax]
+      # %0 the list topics are added to, %1 the other list: sets add_kept and add_other for INC`SAFETY`ADD.
+      FUN`ADD`LISTS:
+        value: |-
+          setqm(add_kept,u(%!/FUN`LIST`ADD,u(%!/FUN`RECORD,%q<viewer_key>,%0),%q<viewer_topics>),
+          add_other,u(%!/FUN`LIST`DROP,u(%!/FUN`RECORD,%q<viewer_key>,%1),%q<viewer_topics>))
+        flags: [funsyntax]
       # Writes %<list> as the player's %<kind>, or clears it when it is empty. @if, not @break: an included @break
       # would stop the routine that included it.
       INC`SAFETY`WRITE:
@@ -383,8 +400,20 @@ objects:
       # +safety/remove <topic>[|<topic>...]: off whichever list holds it.
       INC`SAFETY`REMOVE:
         value: |-
-          @assert words(%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,+safety/remove <topic>%, or several split by |.,warn); think setqm(remove_lines,u(%!/FUN`RECORD,%q<viewer_key>,LINES),remove_veils,u(%!/FUN`RECORD,%q<viewer_key>,VEILS)); @assert words(iter(%q<viewer_topics>,if(u(%!/FUN`LIST`HAS,%q<remove_lines>|%q<remove_veils>,%i0),x),|,%b))=@pemit %#=notice(SAFETY,Not one of your lines or veils: [u(%!/FUN`LIST`SHOW,%q<viewer_topics>)]. +safety lists them.,warn); think setqm(remove_lines,u(%!/FUN`LIST`DROP,%q<remove_lines>,%q<viewer_topics>),remove_veils,u(%!/FUN`LIST`DROP,%q<remove_veils>,%q<viewer_topics>)); @include/args %!/INC`SAFETY`WRITE=kind,LINES,list,%q<remove_lines>; @include/args %!/INC`SAFETY`WRITE=kind,VEILS,list,%q<remove_veils>; @pemit %#=notice(SAFETY,Removed. +safety shows what is left.,ok)
+          @assert words(%q<viewer_topics>,|)=@pemit %#=notice(SAFETY,+safety/remove <topic>%, or several split by |.,warn); think u(%!/FUN`REMOVE`READ); @assert words(iter(%q<viewer_topics>,if(u(%!/FUN`LIST`HAS,%q<remove_lines>|%q<remove_veils>,%i0),x),|,%b))=@pemit %#=notice(SAFETY,Not one of your lines or veils: [u(%!/FUN`LIST`SHOW,%q<viewer_topics>)]. +safety lists them.,warn); think u(%!/FUN`REMOVE`DROP); @include/args %!/INC`SAFETY`WRITE=kind,LINES,list,%q<remove_lines>; @include/args %!/INC`SAFETY`WRITE=kind,VEILS,list,%q<remove_veils>; @pemit %#=notice(SAFETY,Removed. +safety shows what is left.,ok)
         flags: [cmdsyntax]
+      # Set remove_lines and remove_veils for INC`SAFETY`REMOVE: the player's lists, then those lists without the
+      # topics typed.
+      FUN`REMOVE`READ:
+        value: |-
+          setqm(remove_lines,u(%!/FUN`RECORD,%q<viewer_key>,LINES),
+          remove_veils,u(%!/FUN`RECORD,%q<viewer_key>,VEILS))
+        flags: [funsyntax]
+      FUN`REMOVE`DROP:
+        value: |-
+          setqm(remove_lines,u(%!/FUN`LIST`DROP,%q<remove_lines>,%q<viewer_topics>),
+          remove_veils,u(%!/FUN`LIST`DROP,%q<remove_veils>,%q<viewer_topics>))
+        flags: [funsyntax]
       # +safety/clear: every line and veil.
       INC`SAFETY`CLEAR:
         value: |-
@@ -409,10 +438,22 @@ objects:
           @include/args %!/INC`SAFETY`SIGNAL=kind,skip
         flags: [cmdsyntax]
       # +safety/pause [<note>] and +safety/skip [<note>]: %<kind>. Tells the focused scene's connected owners, through
-      # @scene/notice, from this object: the owner never learns who asked from the message.
+      # @scene/notice, from this object: the owner never learns who asked from the message. INC`SIGNAL`CHECK's
+      # @assert and @break stop it here.
       INC`SAFETY`SIGNAL:
         value: |-
-          think setq(signal_scene,scenefocus(%#)); @assert cand(strlen(%q<signal_scene>),not(strmatch(%q<signal_scene>,#-*)))=@pemit %#=notice(SAFETY,Focus on a scene first: +scene/join <id>.,warn); think setq(signal_owners,scenemembers(%q<signal_scene>,owner)); @assert words(%q<signal_owners>)=@pemit %#=notice(SAFETY,Scene %q<signal_scene> has no owner to tell.,warn); @break member(%q<signal_owners>,num(%#))=@pemit %#=notice(SAFETY,You run scene %q<signal_scene>%, so the call is yours. +scene/pause pauses it.,warn); @assert lte(strlen(%q<cmd_argument>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(SAFETY,if(v(DATA`CONFIG`NOTE-LENGTH),Keep the note to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,This game sends a pause or skip without a note.),warn); think setq(signal_wait,sub(add(default({{store}}/SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)],0),v(DATA`CONFIG`SIGNAL-WAIT)),secs())); @assert lte(%q<signal_wait>,0)=@pemit %#=notice(SAFETY,You signalled a moment ago. Try again in %q<signal_wait>s.,warn); think setq(signal_live,filterbool(%!/FUN`SIGNAL`CONNECTED,%q<signal_owners>)); @assert words(%q<signal_live>)=@pemit %#=notice(SAFETY,Scene %q<signal_scene>'s owner is not connected%, so nobody was told.,warn); &SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)] {{store}}=secs(); think setq(signal_text,u(%!/FUN`SIGNAL`TEXT,%<kind>,%q<signal_scene>,%q<cmd_argument>)); @dolist/inline %q<signal_live>={@scene/notice %q<signal_scene>/##=%q<signal_text>}; @pemit %#=notice(SAFETY,Scene %q<signal_scene>'s owner was asked to [if(strmatch(%<kind>,skip),skip,pause)]%, without your name.[if(eq(words(u(%!/FUN`SCENE`KEYS,%q<signal_scene>)),1),%bWith only you and them in the scene%, they will know it was you.)],ok)
+          @include %!/INC`SIGNAL`CHECK; @include/args %!/INC`SIGNAL`SEND=kind,%<kind>; @pemit %#=notice(SAFETY,Scene %q<signal_scene>'s owner was asked to [if(strmatch(%<kind>,skip),skip,pause)]%, without your name.[if(eq(words(u(%!/FUN`SCENE`KEYS,%q<signal_scene>)),1),%bWith only you and them in the scene%, they will know it was you.)],ok)
+        flags: [cmdsyntax]
+      # Whether the signal may go: a focused scene with an owner who is not the player, a note short enough, the
+      # wait since the last one over, and an owner connected. Sets signal_scene, signal_owners and signal_live.
+      INC`SIGNAL`CHECK:
+        value: |-
+          think setq(signal_scene,scenefocus(%#)); @assert cand(strlen(%q<signal_scene>),not(strmatch(%q<signal_scene>,#-*)))=@pemit %#=notice(SAFETY,Focus on a scene first: +scene/join <id>.,warn); think setq(signal_owners,scenemembers(%q<signal_scene>,owner)); @assert words(%q<signal_owners>)=@pemit %#=notice(SAFETY,Scene %q<signal_scene> has no owner to tell.,warn); @break member(%q<signal_owners>,num(%#))=@pemit %#=notice(SAFETY,You run scene %q<signal_scene>%, so the call is yours. +scene/pause pauses it.,warn); @assert lte(strlen(%q<cmd_argument>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(SAFETY,if(v(DATA`CONFIG`NOTE-LENGTH),Keep the note to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,This game sends a pause or skip without a note.),warn); think setq(signal_wait,sub(add(default({{store}}/SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)],0),v(DATA`CONFIG`SIGNAL-WAIT)),secs())); @assert lte(%q<signal_wait>,0)=@pemit %#=notice(SAFETY,You signalled a moment ago. Try again in %q<signal_wait>s.,warn); think setq(signal_live,filterbool(%!/FUN`SIGNAL`CONNECTED,%q<signal_owners>)); @assert words(%q<signal_live>)=@pemit %#=notice(SAFETY,Scene %q<signal_scene>'s owner is not connected%, so nobody was told.,warn)
+        flags: [cmdsyntax]
+      # Stamps the player's signal time and tells each connected owner of %q<signal_scene>.
+      INC`SIGNAL`SEND:
+        value: |-
+          &SIGNAL`[u(%!/FUN`SIGNAL`KEY,%#)] {{store}}=secs(); think setq(signal_text,u(%!/FUN`SIGNAL`TEXT,%<kind>,%q<signal_scene>,%q<cmd_argument>)); @dolist/inline %q<signal_live>={@scene/notice %q<signal_scene>/##=%q<signal_text>}
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
