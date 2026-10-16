@@ -26,7 +26,7 @@ public sealed class ApplicationConfigurationController(
 			.OfType<ApplicationConfigurationTile>().ToList();
 		foreach (var source in catalog.ApplicationSources)
 		{
-			try { candidates.AddRange(source.GetConfigurationTiles().ToList()); }
+			try { candidates.AddRange(source.GetConfigurationTiles().OfType<ApplicationConfigurationTile>().ToList()); }
 			catch (Exception exception)
 			{
 				logger.LogWarning(exception, "A plugin could not describe its configuration tiles.");
