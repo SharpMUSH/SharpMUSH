@@ -20,9 +20,9 @@
 -->
 # json_mod()
 
-`json_mod(<json>, <action>, <path>[, <json2>])`
+`json_mod(<json>, <action>, <path-or-patch>[, <json2>])`
 
-Return a new JSON value based on applying `<action>` to `<json>`.
+Return a new JSON value based on applying `<action>` to `<json>`. The third argument is a JSONPath for insert, replace, set, remove and sort; for patch it is the merge-patch JSON document itself. The optional fourth argument is a JSON value for insert, replace and set.
 
 insert - adds a new value `<json2>` at the given `<path>` if the data described by `<path>` doesn't exist.<br>
 replace - replaces an existing value at the given `<path>` with `<json2>`.<br>
@@ -41,7 +41,7 @@ Examples:
 
     > @set me=json:[json(object, foo, "bar", baz, 12345, fnord, json(array, 1, 2, 3))]
     > say v(json)
-    You say, "{"foo": "bar", "baz": 12345, "fnord": [1,2,3]}"
+    You say, "{"foo":"bar","baz":12345,"fnord":[1,2,3]}"
     > say json_mod(v(json), set, $.foo, false)
     You say, "{"foo":false,"baz":12345,"fnord":[1,2,3]}"
     > say json_mod(v(json), insert, $.quux, 1)

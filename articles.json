@@ -3928,6 +3928,12 @@
         "lookup": "json_map nested pretty printer",
         "heading": "Nested pretty printer",
         "aliases": []
+      },
+      {
+        "id": "pretty-printer-output",
+        "lookup": "json_map printer output",
+        "heading": "Printer output",
+        "aliases": []
       }
     ],
     "file": "json-map-function.md"
