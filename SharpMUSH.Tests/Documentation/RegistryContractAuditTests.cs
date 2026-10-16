@@ -28,6 +28,23 @@ public class RegistryContractAuditTests
 	}
 
 	[Test]
+	[Arguments("sortkey", "attribute,list,sort-type,delimiter,osep", "sortkey(me/key,ab|a|abc,n,|,;)")]
+	[Arguments("index", "list,delimiter,first,length", "index(a|b|c,|,2,2)")]
+	[Arguments("munge", "attribute,list1,list2,delimiter,osep", "munge(me/order,b|a|c,2|1|3,|,;)")]
+	public async Task ListSignaturesDescribeActualCallShapes(string name, string expected, string source)
+	{
+		var snapshot = BuiltInAnalysisCatalog.CreateSnapshot();
+		var analyzer = AnalysisCatalogAnalyzer.Create(snapshot, SharpMUSHOptions.Default());
+		var signature = analyzer.SignatureHelp(source, 0, source.LastIndexOf(',') + 1);
+		await Assert.That(signature).IsNotNull();
+		await Assert.That(string.Join(',', signature!.Parameters.Select(parameter => parameter.Label))).IsEqualTo(expected);
+		await Assert.That(signature.ActiveParameter).IsEqualTo(expected.Split(',').Length - 1);
+		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
+		var parameters = definitions.RootElement.GetProperty("functions").GetProperty(name).GetProperty("parameterNames");
+		await Assert.That(string.Join(',', parameters.EnumerateArray().Select(value => value.GetString()))).IsEqualTo(expected);
+	}
+
+	[Test]
 	public async Task PortalDeclarationsAndAliasesMatchGeneratedContracts()
 	{
 		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);

@@ -89,7 +89,7 @@ var callbacks = source.Where(line => Regex.IsMatch(line.Text,
 var output = new
 {
 	schema = 1,
-	baseRevision = "38bab40c33ce362fe147b9b1d209367a02193b55",
+	baseRevision = "14fd9ab7aaf5baaaf13e2d2bcefe9641a55d0e4b",
 	scope = "Implementation assembly + shipped default aliases. Re-run at the revision being reviewed.",
 	entries = rows,
 	callbackCandidates = callbacks,
@@ -117,7 +117,10 @@ string[] Locations(string name, string directory) => source.Where(line => line.F
 	@"\bName\s*=\s*""" + Regex.Escape(name) + @"""", RegexOptions.IgnoreCase))
 	.Select(line => $"{line.File}:{line.Line}").ToArray();
 
-string[] Evidence(string kind, string name) => name is "json_map" or "json_mod"
+string[] Evidence(string kind, string name) => name is "sortkey" or "index" or "munge"
+	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
+		"tools/client-tests/monaco-signatures.test.mjs", "docs/audits/softcode-contracts.md#list-transformation-signatures"]
+	: name is "json_map" or "json_mod"
 	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/JsonFunctionUnitTests.cs",
 		$"SharpMUSH.Documentation/Helpfiles/SharpMUSH/{name.Replace('_', '-')}-function.md", "docs/audits/softcode-contracts.md#json-contracts"]
 	: ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", $"docs/audits/softcode-contracts.md#{kind}-consumers"];
