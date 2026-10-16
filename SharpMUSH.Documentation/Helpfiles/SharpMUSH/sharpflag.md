@@ -38,9 +38,9 @@ Objects which are set AUDIBLE forward sound in a number of ways. Only sound pass
 
 If an AUDIBLE object has an `@forwardlist` attribute set, sound heard by the object is forwarded to the objects listed in the `@forwardlist`. See [@forwardlist] for more information.
 
-When a THING is set AUDIBLE, any sound made inside it is broadcast to other objects in its location. This is useful for coding vehicles. Only sound passing the `@filter` is broadcast, and is prefixed with the thing's `@prefix`, or "From [name(\<thing\>)], " if no `@prefix` is set.
+When a THING is set AUDIBLE, any sound made inside it is broadcast to other objects in its location. This is useful for coding vehicles. Only sound passing the `@filter` is broadcast, and is prefixed with the thing's `@prefix`, or "From `[name(<thing>)]`, " if no `@prefix` is set.
 
-Setting the AUDIBLE flag on a ROOM activates audible exits in that room. EXITs which are set AUDIBLE propagate sound from their source room to their destination, prefixed with the exit's `@prefix`, or "From [name(home(\<exit\>))], " if no `@prefix` is set.
+Setting the AUDIBLE flag on a ROOM activates audible exits in that room. EXITs which are set AUDIBLE propagate sound from their source room to their destination, prefixed with the exit's `@prefix`, or "From `[name(home(<exit>))]`, " if no `@prefix` is set.
 
 
 ::: seealso
@@ -72,7 +72,6 @@ GAME: Object Walker(#123) lost a Penny to queue loss.
 
 
 ::: seealso
-- [no_pay]
 :::
 
 # CHOWN_OK
@@ -225,7 +224,7 @@ ENTER_OK is often used in conjunction with AUDIBLE on vehicles and buildings.
 ::: seealso
 - [enter]
 - [give]
-- [@tel]
+- [@teleport]
 - [LOCKING]
 :::
 
@@ -295,7 +294,7 @@ A HAVEN player cannot be paged. They can still use channels and receive pages th
 
 ::: seealso
 - [page]
-- [channel]
+- [@channel]
 :::
 
 # INHERIT
@@ -438,7 +437,7 @@ If a PUPPET is also set LISTEN, it will respond to what it hears according to it
 - [@force]
 - [@pemit]
 - [@remit]
-- [LISTEN]
+- [@listen]
 :::
 
 # QUIET
@@ -601,8 +600,6 @@ With great power comes great responsibility!
 
 
 ::: seealso
-- [wizhelp]
-- [@admin]
 - [roles]
 :::
 

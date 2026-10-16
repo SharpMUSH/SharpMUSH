@@ -45,7 +45,7 @@ Events in the log tree are triggered when `@log` writes a message to a log. The 
 *<message>* is the message as logged, as plain text.
 
 - **log\`huh** (*message*)
-- Triggered when a player types a command the game does not understand (Huh?) somewhere they do not control. *<message>* is PennMUSH's huh log line: "HUH: Name(#dbref) in Room(#dbref) [Room's owner]: command". %# is the player.
+- Triggered when a player types a command the game does not understand (Huh?) somewhere they do not control. *<message>* is PennMUSH's huh log line: "HUH: Name(#dbref) in Room(#dbref) \[Room's owner\]: command". %# is the player.
 
 ### Example
 ```sharp

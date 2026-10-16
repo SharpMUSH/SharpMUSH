@@ -98,8 +98,6 @@ This is the index to the MUSH online help files.
 
 ::: seealso
 - [CONTROLS()]
-- [TRUST]
-- [MISTRUST]
 - [zones]
 - [zone masters]
 :::
@@ -272,7 +270,7 @@ This is the index to the MUSH online help files.
 
 # Homes
 # Home
-  Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link` [me | `<object>`]=`<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
+  Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link [me | <object>]=<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
 
   The 'home' command outputs the dbref of the room you arrive in (see [command output]).
 
@@ -365,7 +363,7 @@ This is the index to the MUSH online help files.
 - [COSTS]
 - [@trigger]
 - [@retry]
-- [% substitution reference]
+- [substitutions]
 :::
 
 # Master Room
@@ -453,8 +451,8 @@ This is the index to the MUSH online help files.
 
   The regexp pattern '.*' is equivalent to the wildcard '*'; it matches zero or more arbitrary characters. To match one or more arbitrary characters, the regexp pattern is '.+'.
 
-  To match a string of numbers, use:       [0-9]+    or \d+<br>
-  To match a string of letters only, use:  [A-Za-z]+ or \w+
+  To match a string of numbers, use:       `[0-9]+`    or `\d+`<br>
+  To match a string of letters only, use:  `[A-Za-z]+` or `\w+`
 
   See [regexp syntax]
 
@@ -507,7 +505,6 @@ This is the index to the MUSH online help files.
 - [@remit]
 - [@oemit]
 - [NOSPOOF]
-- [PARANOID]
 :::
 
 # Stack
@@ -563,7 +560,7 @@ This is the index to the MUSH online help files.
     `@pemit`/noeval/silent me=Hi!
 
   Help on the switches available for a command is available in the help file for that command.<br>
-  (If you are looking for information on `@switch`, see [`@switch`].)
+  (If you are looking for information on `@switch`, see [@switch].)
 
 # Types of Objects
 # Types
@@ -623,7 +620,7 @@ This is the index to the MUSH online help files.
 :::
 
 # Exits
-  Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see [`@destination`] for more information.
+  Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see [@destination] for more information.
 
   You can change the destination of an exit with the `@link` command. `home()` returns the source room of an exit, and `loc()` returns its destination.
 

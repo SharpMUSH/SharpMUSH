@@ -373,7 +373,6 @@ Such a failure usually occurs because `<object>` is set NO_LEAVE, or because the
 ::: seealso
 - [leave]
 - [@leave]
-- [NO_LEAVE]
 - [locktypes]
 - [action lists]
 - [verbs]
@@ -1103,7 +1102,7 @@ These attributes set the message shown to a player when he enters the zone `<obj
 
 Entry into a new zone is said to occur when a player goes from a room not in the zone to a room in the zone. "Room" in this context means the player's absolute room (outermost container), so entering and leaving unzoned objects within a zoned room doesn't trigger these.
 
-Zone entry is assumed to occur before room entry, so these are triggered before the room's @[oa]enter.
+Zone entry is assumed to occur before room entry, so these are triggered before the room's `@[oa]enter`.
 
 
 ::: seealso
@@ -1124,7 +1123,7 @@ These attributes set the message shown to a player when he leaves the zone `<obj
 
 Leaving a zone is said to occur when a player goes from a room in the zone to a room not in the zone. "Room" in this context means the player's absolute room (outermost container), so entering and leaving unzoned objects within a zoned room doesn't trigger these.
 
-Zone leaving is assumed to occur after room leaving, so these are triggered after the room's @[oa]leave.
+Zone leaving is assumed to occur after room leaving, so these are triggered after the room's `@[oa]leave`.
 
 
 ::: seealso
@@ -1515,7 +1514,7 @@ Note that, unlike most attributes, @destination cannot be abbreviated and must b
 - [@link]
 - [@open]
 - [LINK_OK]
-- [Link_Anywhere Power]
+- [@power]
 :::
 # @lset
 `@lset <object>/<lock type>=[!]<flag>`
@@ -2362,7 +2361,6 @@ The third runs it on all objects the player owns that aren't set NO_WARN.
 ::: seealso
 - [@warnings]
 - [WARNINGS]
-- [NO_WARN]
 :::
 # @whereis
 `@whereis <player>`

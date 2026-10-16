@@ -288,7 +288,6 @@ Controls who can forward @mail to this object via @mailforward.
 
 ::: seealso
 - [MAIL]
-- [@mailforward]
 - [@LOCK/FOLLOW]
 :::
 

@@ -77,6 +77,28 @@ public class HelpNavigationTests
 	}
 
 	/// <summary>
+	/// Every <c>[topic]</c> link in every help file, old-style aggregates included, names a topic that exists. The
+	/// integrity check covers only declared articles, so a dead link in an aggregate showed the reader
+	/// <c>No entry for</c> until the topic moved into an article of its own.
+	/// </summary>
+	[Test]
+	public async Task EveryHelpLinkResolves()
+	{
+		var help = Help();
+		var dead = help.Articles
+			.SelectMany(article => Markdown.Parse(article.Markdown, Pipeline).Descendants<LinkInline>()
+				.Where(link => link.GetData(HelpTopicInlineParser.CommandDataKey) is true)
+				.Select(link => link.Url![5..])
+				.Where(topic => help.Find(topic) is null)
+				.Select(topic => $"{article.Lookup}: [{topic}]"))
+			.Distinct()
+			.Order(StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
+		await Assert.That(string.Join("\n", dead)).IsEmpty();
+	}
+
+	/// <summary>
 	/// Every function is in a category of <c>help function list</c>, which is how PennMUSH's help
 	/// is browsed and the only list of what a game can do with, say, a dbref.
 	/// </summary>

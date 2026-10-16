@@ -3564,7 +3564,7 @@ You say, "#1 #7 #56 #-1"
 # neq()
 `neq(<number1>, <number2>[, ... , <numberN>])`
 
-  Returns 0 if all the given `<number>`s are the same, and 1 otherwise. Basically the same as [not(eq(`<number1>`, `<number2>`[, ... , `<numberN>`]))] but more efficient.
+  Returns 0 if all the given `<number>`s are the same, and 1 otherwise. Basically the same as `[not(eq(<number1>, <number2>[, ... , <numberN>]))]` but more efficient.
 
 
 ::: seealso
@@ -3712,7 +3712,7 @@ You say, "#1 #7 #56 #-1"
 
   nmwho() returns a count of all currently connected, non-hidden players. It's exactly the same as nwho() used by a mortal, and is suitable for use on privileged global objects that always need an unprivileged count of who is online.
 
-  These functions are equivilent to words(lwho([`<viewer>`])) and words(mwho()), but are more efficient, and don't suffer from buffer constraints.
+  These functions are equivilent to `words(lwho([<viewer>]))` and `words(mwho())`, but are more efficient, and don't suffer from buffer constraints.
 
 
 ::: seealso
@@ -3763,7 +3763,7 @@ think objevals(me,v(DATA`TEXT))
 # objid()
 `objid(<object>)`
 
-  This function returns the object id of `<object>`, a value which uniquely identifies it for the life of the MUSH. The object id is the object's dbref, a colon character, and the object's creation time, in milliseconds since the epoch, equivalent to [num(`<object>`)]:[csecs(`<object>`,ms)] (PennMUSH stores seconds, so its objids end in [csecs(`<object>`)] instead; see help COMPATIBILITY IDENTITY)
+  This function returns the object id of `<object>`, a value which uniquely identifies it for the life of the MUSH. The object id is the object's dbref, a colon character, and the object's creation time, in milliseconds since the epoch, equivalent to `[num(<object>)]:[csecs(<object>,ms)]` (PennMUSH stores seconds, so its objids end in `[csecs(<object>)]` instead; see help COMPATIBILITY IDENTITY)
 
   The object id can be used nearly anywhere the dbref can, and ensures that if an object's dbref is recycled, the new object won't be mistaken for the old object.
 
@@ -4789,7 +4789,7 @@ You say, "bar baz foo gleep moof"
 
 
 ::: seealso
-- [digest().]
+- [digest()]
 :::
 # shl()
 `shl(<number>, <count>)`
@@ -4911,7 +4911,7 @@ You say, "-1"
   This function creates a list of keys by passing every element of `<list>` into the ufun given in `<attrib>`. The list is then sorted according to the sorting method in `<sort type>`, or is automatically guessed (as per [SORTING]).
 
   This is equivalent to:<br>
-    > &munge_sort me=sort(%0[, `<sort type>`])<br>
+    > &munge_sort me=sort(%0\[, `<sort type>`\])<br>
     > say munge(munge_sort, map(`<attrib>`, `<list>`), `<list>`)
 
   Only there is no risk with delimiters occurring within the list.
@@ -4950,7 +4950,7 @@ think soundslike(robin,roebuck, phone)
 # space()
 `space(<number>)`
 
-  Prints `<number>` spaces. Useful for times when you want to be able to use lots of spaces to separate things. Same as [repeat(%b, `<number>`)].
+  Prints `<number>` spaces. Useful for times when you want to be able to use lots of spaces to separate things. Same as `[repeat(%b, <number>)]`.
 
   Example:
 ```sharp
@@ -5013,7 +5013,7 @@ You say, "foo moof baz"
 # SQL Examples
 
   Example of using sqlescape() to prevent injection attacks:<br>
-    > &SEL_GETID obj=SELECT id FROM mytable WHERE name = '[sqlescape(%0)]'<br>
+    > &SEL_GETID obj=SELECT id FROM mytable WHERE name = '\[sqlescape(%0)\]'<br>
     > &DOIT obj=$do *: think setq(0,sql(u(SEL_GETID,%0),~,|)); @@ More cmds
 
   Using mapsql() to format results:<br>
@@ -5032,10 +5032,10 @@ You say, "foo moof baz"
     (2) - Advertisements (20)
 
   The same thing can be done using named arguments:<br>
-    > &each_bb me=(%0) - [r(name, args)] ([r(total, args)])
+    > &each_bb me=(%0) - \[r(name, args)\] (\[r(total, args)\])
 
   Using sql() to update fields:<br>
-    > &update me=UPDATE `foo` SET `time` = '[sqlescape(%0)]' WHERE `loc` = '[sqlescape(%1)]'<br>
+    > &update me=UPDATE `foo` SET `time` = '\[sqlescape(%0)\]' WHERE `loc` = '\[sqlescape(%1)\]'<br>
     > &foo me=$foo *: think sql(u(update, %0, %L),,0)%q0 rows updated.<br>
     > foo bar<br>
     5 rows updated.
@@ -5623,7 +5623,7 @@ think isjson("quoted")
   json_mod() and the extract argument for json_query() take a path string that describes what part of a JSON object or array to act on. All paths start with a $ to indicate the base JSON value, and 0 or more specifiers in the following formats:
 
   .FIELD - the name of a field in a JSON object.<br>
-  [N]    - the Nth element of a JSON array. Note that the brackets need to be escaped.
+  `[N]`    - the Nth element of a JSON array. Note that the brackets need to be escaped.
 
 
 ::: seealso
@@ -5892,7 +5892,7 @@ think words(unmark(a%*<|>b), %*<|>)
 
     0-9, #, @, !, n, l, and c.
 
-  Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to [capstr(%n)]).
+  Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to `[capstr(%n)]`).
 
   v() can also return the value of stack registers. v(0) is equivilent to %0, but v() can return up to 30 registers (v(0) through v(29)). Calling v() with an integer arg that is not between 0 and 29 (inclusive) will return an out-of-range error.
 
@@ -6369,7 +6369,8 @@ think words(1 2%b%b3, %b)
 - [@chzone]
 - [ZFUN()]
 - [ZWHO()]
-- [zemit() ZONES]
+- [zemit()]
+- [ZONES]
 :::
 # uptime()
 `UPTIME([<type>[, <precision>]])`

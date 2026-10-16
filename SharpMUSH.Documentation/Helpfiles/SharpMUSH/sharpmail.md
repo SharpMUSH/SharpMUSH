@@ -28,7 +28,7 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 - [MAIL-SENDING]
 - [MAIL-READING]
 - [MAIL-FOLDERS]
-- [mail-forward]
+- [@mail/fwd]
 - [MAIL-OTHER]
 - [MAIL-ADMIN]
 - [@malias]
@@ -227,7 +227,7 @@ folderstats() returns the number of read, unread, and cleared messages in a spec
 
 
 ::: seealso
-- [mailstats]
+- [mailstats()]
 :::
 
 # mail()
@@ -249,8 +249,8 @@ When given numeric arguments, mail() returns the text of the corresponding messa
 
 
 ::: seealso
-- [maillist]
-- [mailfrom]
+- [maillist()]
+- [mailfrom()]
 :::
 
 # maillist()
@@ -272,7 +272,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 ::: seealso
 - [MAIL]
-- [mailfrom]
+- [mailfrom()]
 :::
 
 # mailfrom()
@@ -293,7 +293,7 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 
 ::: seealso
 - [MAIL]
-- [maillist]
+- [maillist()]
 :::
 
 # mailstats()
@@ -317,7 +317,7 @@ The mail*stats() functions return data like @mail/*stats does. You either must u
 
 
 ::: seealso
-- [folderstats]
+- [folderstats()]
 :::
 
 # mailsend()

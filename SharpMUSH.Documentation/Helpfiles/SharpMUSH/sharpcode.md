@@ -1,6 +1,6 @@
 # Contact
 # Code
-SharpMUSH is developed by a team of developers whose names are listed in [changes]. Suggestions, comments, and bug reports are welcome.
+SharpMUSH is developed by a team of developers whose names are listed in [credits]. Suggestions, comments, and bug reports are welcome.
 
 The main SharpMUSH web page is at http://sharpmush.com
 
@@ -9,7 +9,6 @@ Report bugs and make suggestions at https://github.com/SharpMUSH/SharpMUSH/issue
 The SharpMUSH Discord is at https://discord.com/invite/jYErRbqaC9
 
 For information about downloading SharpMUSH, see [download].<br>
-For information about changes in versions of the code, see [changes].<br>
 For what SharpMUSH adds to PennMUSH, see [sharpmush features].
 
 # Download
