@@ -189,6 +189,7 @@ public partial class Commands : ICommandRestrictionApplier
 		var flags = new List<string>();
 		if (behavior.HasFlag(CB.Switches)) flags.Add("Switches");
 		if (behavior.HasFlag(CB.EqSplit)) flags.Add("Eqsplit");
+		if (behavior.HasFlag(CB.NoApp)) flags.Add("NoApp");
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoFlagsFormat), executor, string.Join(", ", flags));
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLockFormat), executor,
@@ -690,7 +691,7 @@ public partial class Commands : ICommandRestrictionApplier
 	/// <c>restrict_command</c> (<c>src/command.c:1719</c>): who may use the command, given as a lock or
 	/// as Penn's restriction words — a flag or power name, <c>admin</c>, <c>player</c>/<c>thing</c>/
 	/// <c>room</c>/<c>exit</c>/<c>any</c>, <c>god</c>, <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c>,
-	/// each negated with <c>!</c> — and <c>nobody</c>, which disables it.
+	/// SharpMUSH's <c>noapp</c>, each negated with <c>!</c> — and <c>nobody</c>, which disables it.
 	/// </summary>
 	private async ValueTask<Option<CallState>> RestrictCommandAsync(AnySharpObject executor, CommandDefinition definition, string restriction)
 	{
@@ -969,7 +970,7 @@ public partial class Commands : ICommandRestrictionApplier
 	/// <summary>
 	/// Penn's old-style restriction words as a lock, the way <c>restrict_command</c> builds one: the
 	/// named flags and powers OR'ed, the allowed types OR'ed, and <c>!FLAG^FIXED</c> for
-	/// <c>nofixed</c>; <c>god</c>, <c>noguest</c> and <c>nogagged</c> become the command behaviours
+	/// <c>nofixed</c>; <c>god</c>, <c>noguest</c>, <c>nogagged</c> and <c>noapp</c> become the command behaviours
 	/// that already enforce them. A dotted word is a permission (built in or custom), checked as
 	/// <c>PERM^</c> and OR'ed with the flags and powers. NotFound when any word is not one of these, so
 	/// the text is a lock.
@@ -1038,6 +1039,9 @@ public partial class Commands : ICommandRestrictionApplier
 					break;
 				case "NOGAGGED":
 					behavior = clear ? behavior & ~CommandBehavior.NoGagged : behavior | CommandBehavior.NoGagged;
+					break;
+				case "NOAPP":
+					behavior = clear ? behavior & ~CommandBehavior.NoApp : behavior | CommandBehavior.NoApp;
 					break;
 				case "NOFIXED":
 					noFixed = !clear;

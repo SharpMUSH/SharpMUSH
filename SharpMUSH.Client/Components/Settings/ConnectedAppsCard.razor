@@ -1,0 +1,81 @@
+@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models.Portal
+@inject IStringLocalizer<SharedResource> Loc
+@inject ConnectedAppsService Apps
+
+@* Shown only once one of the account's characters has allowed an app: until then there is nothing to manage. *@
+@if (_grants is List<OAuthGrantView> { Count: 0 } or null)
+{
+    return;
+}
+<div id="apps" class="acct-anchor">
+    <KitCard Title="@Loc["OAuthAppsTitle"]" Sub="@Loc["OAuthAppsDescription"]">
+        <div class="acct-section">
+            @switch (_grants)
+            {
+                case List<OAuthGrantView> grants:
+                    <ul class="acct-passkeys">
+                        @foreach (var grant in grants)
+                        {
+                            <li class="acct-passkey">
+                                <MudIcon Icon="@Icons.Material.Outlined.Extension" Size="Size.Small" Class="acct-passkey-icon" />
+                                <div class="acct-passkey-text">
+                                    <div class="acct-passkey-name">
+                                        @grant.AppName
+                                        <span class="acct-flag">@grant.CharacterName</span>
+                                    </div>
+                                    <div class="acct-passkey-meta">
+                                        @string.Join(", ", OAuthScopeText.Shown(grant.Scopes).Select(scope => OAuthScopeText.Name(Loc, scope, _scopes)))
+                                        ·
+                                        @Loc["OAuthAppsAllowedOn", grant.CreatedAt.LocalDateTime.ToString("d")]
+                                        ·
+                                        @(grant.LastUsedAt is { } used
+                                            ? Loc["AuthPasskeyLastUsed", used.LocalDateTime.ToString("d")]
+                                            : Loc["AuthPasskeyNeverUsed"])
+                                    </div>
+                                </div>
+                                <button class="acct-btn acct-btn-outline" disabled="@_busy" @onclick="() => RevokeAsync(grant)">@Loc["OAuthAppsRevoke"]</button>
+                            </li>
+                        }
+                    </ul>
+                    break;
+                case ApiFailure failure:
+                    <MudAlert Severity="Severity.Error">@failure.Message</MudAlert>
+                    break;
+            }
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2">@_error</MudAlert>
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    private object? _grants;
+    private IReadOnlyList<OAuthScopeView> _scopes = [];
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        if (_grants is List<OAuthGrantView> { Count: > 0 } && await Apps.ScopesAsync() is List<OAuthScopeView> scopes) _scopes = scopes;
+    }
+
+    private async Task LoadAsync()
+        => _grants = await Apps.GrantsAsync() switch
+        {
+            List<OAuthGrantView> grants => grants,
+            ApiFailure failure => failure,
+        };
+
+    private async Task RevokeAsync(OAuthGrantView grant)
+    {
+        _busy = true;
+        _error = null;
+        if (await Apps.RevokeAsync(grant.Id) is ApiFailure failure) _error = failure.Message;
+        await LoadAsync();
+        _busy = false;
+    }
+}

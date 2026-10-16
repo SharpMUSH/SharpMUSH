@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -41,9 +42,10 @@ public interface IPortalCommandService
 	/// its queue entry to run, and returns the output it produced and the value of its result expression.
 	/// </summary>
 	/// <param name="account">The account the request came from, whose pending commands are bounded.</param>
+	/// <param name="app">The app that sent the command for the player, or null when the player's own portal did.</param>
 	/// <returns>The answer, a refusal when <paramref name="account"/> already has as many commands pending
 	/// as it may, or why the command did not run to completion.</returns>
-	ValueTask<PortalCommandOutcome> RunAsync(string account, SharpPlayer character, PortalCommandRequest request,
+	ValueTask<PortalCommandOutcome> RunAsync(string account, SharpPlayer character, DelegatedApp? app, PortalCommandRequest request,
 		CancellationToken ct = default);
 
 	/// <summary>
@@ -53,7 +55,8 @@ public interface IPortalCommandService
 	/// <paramref name="character"/> controls; <c>%#</c> and <c>%@</c> stay <paramref name="character"/>.
 	/// </summary>
 	/// <param name="account">The account the request came from, whose pending commands are bounded.</param>
-	ValueTask<PortalCommandOutcome> EvaluateAsync(string account, SharpPlayer character, DBRef? self,
+	/// <param name="app">The app that sent the expression for the player, or null when the player's own portal did.</param>
+	ValueTask<PortalCommandOutcome> EvaluateAsync(string account, SharpPlayer character, DelegatedApp? app, DBRef? self,
 		PortalEvalRequest request, CancellationToken ct = default);
 }
 
@@ -89,22 +92,22 @@ public sealed class PortalCommandService(
 	private readonly Dictionary<string, int> _pending = new(StringComparer.Ordinal);
 
 	/// <inheritdoc />
-	public async ValueTask<PortalCommandOutcome> RunAsync(string account, SharpPlayer character, PortalCommandRequest request,
-		CancellationToken ct = default)
+	public async ValueTask<PortalCommandOutcome> RunAsync(string account, SharpPlayer character, DelegatedApp? app,
+		PortalCommandRequest request, CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
 		return await HoldingSlotAsync(account, character.Object.DBRef,
-			queued => QueueAsync(account, character.Object.DBRef, () => ExecuteAsync(character.Object.DBRef, request), queued, ct));
+			queued => QueueAsync(account, character.Object.DBRef, () => ExecuteAsync(character.Object.DBRef, app, request), queued, ct));
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<PortalCommandOutcome> EvaluateAsync(string account, SharpPlayer character, DBRef? self,
+	public async ValueTask<PortalCommandOutcome> EvaluateAsync(string account, SharpPlayer character, DelegatedApp? app, DBRef? self,
 		PortalEvalRequest request, CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
 		var actor = character.Object.DBRef;
 		return await HoldingSlotAsync(account, actor,
-			queued => QueueAsync(account, actor, () => EvaluateCoreAsync(actor, self ?? actor, request), queued, ct));
+			queued => QueueAsync(account, actor, () => EvaluateCoreAsync(actor, self ?? actor, app, request), queued, ct));
 	}
 
 	private async ValueTask<PortalCommandOutcome> HoldingSlotAsync(string account, DBRef actor,
@@ -191,10 +194,11 @@ public sealed class PortalCommandService(
 		}
 	}
 
-	private async ValueTask<Result<PortalCommandResponse>> ExecuteAsync(DBRef actor, PortalCommandRequest request)
+	private async ValueTask<Result<PortalCommandResponse>> ExecuteAsync(DBRef actor, DelegatedApp? app, PortalCommandRequest request)
 	{
 		var transcript = new CommandTranscript(FunctionLimits.MaxOutputCodeUnits);
 		string? result = null;
+		using var sender = DelegatedApp.Begin(app);
 		try
 		{
 			using (outputCapture.BeginCapture(actor.Number, transcript))
@@ -227,9 +231,11 @@ public sealed class PortalCommandService(
 	/// first, as <paramref name="actor"/>, then the expression with them as <c>%0</c>-<c>%9</c> — what
 	/// <c>u(self/ATTR, ...)</c> typed by <paramref name="actor"/> does with the attribute's text.
 	/// </summary>
-	private async ValueTask<Result<PortalCommandResponse>> EvaluateCoreAsync(DBRef actor, DBRef self, PortalEvalRequest request)
+	private async ValueTask<Result<PortalCommandResponse>> EvaluateCoreAsync(DBRef actor, DBRef self, DelegatedApp? app,
+		PortalEvalRequest request)
 	{
 		var transcript = new CommandTranscript(FunctionLimits.MaxOutputCodeUnits);
+		using var sender = DelegatedApp.Begin(app);
 		// The caller checked control when the request arrived, but the entry runs later, after whatever was
 		// queued ahead of it: a @chown or a lost power in between must stop the code running as the object.
 		if (!self.Equals(actor) && !await StillControlsAsync(actor, self))

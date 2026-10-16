@@ -120,10 +120,10 @@ public static class PortalPermission
 	/// <param name="DescriptionKey">Resource key for the sentence explaining what granting the scope allows.</param>
 	public sealed record Definition(string Scope, string LabelKey, string GroupKey, string DescriptionKey);
 
-	private const string GroupContent = "Content";
-	private const string GroupBuild = "EnumPermGroupBuild";
-	private const string GroupManage = "EnumPermGroupManage";
-	private const string GroupGame = "EnumPermGroupGame";
+	internal const string GroupContent = "Content";
+	internal const string GroupBuild = "EnumPermGroupBuild";
+	internal const string GroupManage = "EnumPermGroupManage";
+	internal const string GroupGame = "EnumPermGroupGame";
 
 	/// <summary>Every scope, in editor display order, grouped like the nav.</summary>
 	public static readonly IReadOnlyList<Definition> All =
@@ -209,6 +209,12 @@ public static class PortalPermission
 	/// <summary>True when <paramref name="scope"/> is a known permission scope. Case-insensitive,
 	/// matching <see cref="Expand"/> and <see cref="Implications"/>.</summary>
 	public static bool IsKnown(string scope) => AllScopesSet.Contains(scope);
+
+	private static readonly IReadOnlyDictionary<string, string> GroupsByScope =
+		All.ToDictionary(d => d.Scope, d => d.GroupKey, StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>The group a built-in scope is listed under in the role editor, or null when it is not one.</summary>
+	public static string? GroupOf(string scope) => GroupsByScope.GetValueOrDefault(scope);
 
 	/// <summary>
 	/// Expands a granted scope set to include every scope implied by a coarser one (e.g.

@@ -2,6 +2,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -17,6 +18,7 @@ public static class CommandRestrictions
 	{
 		var behavior = attribute.Behavior;
 		if (behavior.HasFlag(CommandBehavior.God) && !executor.IsGod()) return false;
+		if (behavior.HasFlag(CommandBehavior.NoApp) && DelegatedApp.ActingAs(executor.Object().DBRef) is not null) return false;
 		if (behavior.HasFlag(CommandBehavior.NoGuest) && await executor.IsGuest()) return false;
 		if (!behavior.HasFlag(CommandBehavior.NoGagged)) return true;
 		AnySharpObject owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);

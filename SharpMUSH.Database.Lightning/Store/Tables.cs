@@ -77,6 +77,22 @@ public static class Tables
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);
 	/// <summary>Expiry-ordered session index: big-endian expiry millis + token → empty. The expired-session sweep reads its head.</summary>
 	public static readonly TableDef SessionExpiry = TableDef.Index("session.exp");
+	/// <summary>Client id → a registered app; see <c>LightningDatabase.OAuth.cs</c>.</summary>
+	public static readonly TableDef OAuthClient = TableDef.Node("oauth.client");
+	/// <summary>Grant id → the grant a character gave an app.</summary>
+	public static readonly TableDef OAuthGrant = TableDef.Node("oauth.grant");
+	/// <summary>Account key → the ids of the grants its characters gave.</summary>
+	public static readonly TableDef OAuthGrantByAccount = TableDef.Index("oauth.grant.acct", duplicates: true);
+	/// <summary>Character objid → the ids of the grants it gave, at most one per app.</summary>
+	public static readonly TableDef OAuthGrantByCharacter = TableDef.Index("oauth.grant.char", duplicates: true);
+	/// <summary>Client id → the ids of the grants made to it.</summary>
+	public static readonly TableDef OAuthGrantByClient = TableDef.Index("oauth.grant.client", duplicates: true);
+	/// <summary>SHA-256 of a code or token → what it was issued for.</summary>
+	public static readonly TableDef OAuthToken = TableDef.Node("oauth.token");
+	/// <summary>Grant id → the hashes of the codes and tokens issued under it.</summary>
+	public static readonly TableDef OAuthTokenByGrant = TableDef.Index("oauth.token.grant", duplicates: true);
+	/// <summary>Expiry-ordered token index: big-endian expiry millis + hash → empty. The sweep reads its head.</summary>
+	public static readonly TableDef OAuthTokenExpiry = TableDef.Index("oauth.token.exp");
 	public static readonly TableDef ReadMarker = TableDef.Node("read.marker");
 	public static readonly TableDef PageLog = TableDef.Node("page.log");
 	public static readonly TableDef PageConversation = TableDef.Node("page.conv");

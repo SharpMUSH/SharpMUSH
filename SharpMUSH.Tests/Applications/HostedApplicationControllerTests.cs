@@ -7,8 +7,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library.Applications;
 using SharpMUSH.Library.Models.Portal.Applications;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Tests.Plugins;
 using SharpMUSH.Tests.Shared;
@@ -39,7 +41,8 @@ public class HostedApplicationControllerTests
 				await Assert.That(await api.Upsert(new(slug, slug, null, "Page", "", null, null, "Player", null, [], 0,
 					RenderKind: ApplicationRenderKind.Hosted, DefinitionId: "graph-proof", Config: config.RootElement))).IsTypeOf<OkObjectResult>();
 			}
-			var host = new HostedApplicationsController(store, registry, options)
+			var host = new HostedApplicationsController(store, registry, options, Substitute.For<IOAuthService>(),
+				new BearerAccountResolver(Substitute.For<IAccountSessionStore>(), Substitute.For<IAccountService>()))
 			{ ControllerContext = new() { HttpContext = new DefaultHttpContext { User = new(new ClaimsIdentity([new Claim(ClaimTypes.Role, "Player")], "test")) } } };
 			var east = (OkObjectResult)await host.Bootstrap("east", default);
 			var west = (OkObjectResult)await host.Bootstrap("west", default);

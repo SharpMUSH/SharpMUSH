@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -56,7 +57,8 @@ public class BanEnforcementServiceTests
 		ISharpDatabase Database)
 		Build(IEnumerable<IConnectionService.ConnectionData>? liveConnections = null,
 			IReadOnlyList<SharpPlayer>? linkedCharacters = null,
-			IAccountSessionStore? sessionStore = null)
+			IAccountSessionStore? sessionStore = null,
+			IOAuthService? oauth = null)
 	{
 		var sessions = sessionStore ?? Substitute.For<IAccountSessionStore>();
 		if (sessionStore is null)
@@ -75,9 +77,20 @@ public class BanEnforcementServiceTests
 			.Returns(ValueTask.FromResult(linkedCharacters ?? (IReadOnlyList<SharpPlayer>)[]));
 
 		var svc = new BanEnforcementService(sessions, claimsInvalidator, connections, bus, registry, database,
-			NullLogger<BanEnforcementService>.Instance);
+			oauth ?? Substitute.For<IOAuthService>(), NullLogger<BanEnforcementService>.Instance);
 
 		return (svc, sessions, claimsInvalidator, connections, bus, registry, database);
+	}
+
+	[Test]
+	public async Task EnforceAccountBanAsync_TakesBackEveryAppGrant()
+	{
+		var oauth = Substitute.For<IOAuthService>();
+		var (svc, _, _, _, _, _, _) = Build(oauth: oauth);
+
+		await svc.EnforceAccountBanAsync("accounts/1");
+
+		await oauth.Received(1).RevokeAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
 
 	[Test]

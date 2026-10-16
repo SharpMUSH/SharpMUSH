@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Hubs;
 
@@ -78,7 +79,8 @@ public class AccountSessionAuthenticationHandler(
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
 		var token = ExtractToken();
-		if (string.IsNullOrWhiteSpace(token))
+		// An app's access token is OAuthBearerAuthenticationHandler's, and only where an endpoint asks for it.
+		if (string.IsNullOrWhiteSpace(token) || OAuthService.IsAccessToken(token))
 			return AuthenticateResult.NoResult();
 
 		// Same "unknown" fallback the session-minting surfaces use (AuthController.ClientIp), so a rule

@@ -61,6 +61,7 @@ Functions only:<br>
 
 Commands only:<br>
      noplayer   Cannot be used by players.<br>
+     noapp      Cannot be run by an app acting for a player.<br>
 Commands can also give any flag, power or type, to restrict to objects with one of those flags or powers, or of one of those types.
 
 ## Function and command permissions

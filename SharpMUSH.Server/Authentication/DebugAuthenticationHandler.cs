@@ -39,6 +39,9 @@ public class DebugAuthenticationHandler(
 
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
+		// A request carrying an app's token is the app's, not the debug admin's.
+		if (OAuthBearerAuthenticationHandler.AppToken(Request) is not null) return AuthenticateResult.NoResult();
+
 		if (_cachedClaims is { } cached && DateTimeOffset.UtcNow - cached.At < ClaimsCacheTtl)
 		{
 			var cachedIdentity = new ClaimsIdentity(cached.Claims, SchemeName);

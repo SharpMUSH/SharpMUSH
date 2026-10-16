@@ -4,8 +4,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using NSubstitute;
 using SharpMUSH.Client.Components.Applications;
+using SharpMUSH.Client.Resources;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -19,6 +23,8 @@ public class HostedApplicationTests : TrackingBunitContext
 		var http = Track(new HttpClient(new Handler(_requests, _responses, available)) { BaseAddress = new Uri("https://api.test/") });
 		var factory = Substitute.For<IHttpClientFactory>(); factory.CreateClient("api").Returns(http);
 		Services.AddSingleton(factory);
+		Services.AddSingleton<ConnectedAppsService>();
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		var module = JSInterop.SetupModule("./js/hosted-app.mjs");
 		module.SetupModule("mount", _ => true).Mode = JSRuntimeMode.Loose;
 	}

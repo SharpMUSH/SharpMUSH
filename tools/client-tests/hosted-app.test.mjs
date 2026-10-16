@@ -173,3 +173,17 @@ test('a plan or an apply carries only a plain JSON object to the host, which con
     assert.deepEqual(a.port.received.slice(1).map(reply => [reply.type, reply.requestId]), [['plan-result', 2], ['apply-result', 3]]);
     instance.dispose();
 });
+
+test('a command is one line the player could type, and gets its own reply type', async () => {
+    const h = harness(), a = h.frame('a'), calls = [];
+    const instance = mount('a', { instanceId: 'east', config: {}, html: '<html></html>', entryUrl: '/entry' },
+        { invokeMethodAsync: async (...args) => { calls.push(args); return { output: ['Opened.'] }; } }, h.environment);
+    h.connect(a);
+    for (const command of ['', '   ', 'look\r\n@destroy me', 'a\nb', 'x'.repeat(8193), 3, null])
+        await a.port.postMessage({ type: 'command', channel: a.sent[0].channel, requestId: 1, command });
+    assert.deepEqual(calls, []);
+    await a.port.postMessage({ type: 'command', channel: a.sent[0].channel, requestId: 4, command: '@open North=#12' });
+    assert.deepEqual(calls, [['RunCommand', '@open North=#12']]);
+    assert.deepEqual([a.port.received[1].type, a.port.received[1].requestId], ['command-result', 4]);
+    instance.dispose();
+});

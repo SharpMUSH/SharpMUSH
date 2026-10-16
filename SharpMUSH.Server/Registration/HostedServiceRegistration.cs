@@ -100,6 +100,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.SignalEventsService>();
 		services.AddHostedService<Services.RecurringJobRunner>();
 		services.AddHostedService<Services.ExpiredSessionSweepService>();
+		services.AddHostedService<Services.OAuthTokenSweepService>();
 		services.AddHostedService<Services.ActivityFlushService>();
 		services.AddHostedService<Services.BanExpiryService>();
 		// One instance: MSSPReportRequestConsumer asks it to send.

@@ -10,6 +10,8 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.OAuth;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
@@ -19,7 +21,8 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// characters list on init (<c>api/account/characters</c>). Always returns an empty list —
 /// these tests are about render-crash regressions, not characters-table content.
 /// </summary>
-file sealed class AccountPageApiHandler(object[]? characters = null, object[]? passkeys = null) : HttpMessageHandler
+file sealed class AccountPageApiHandler(object[]? characters = null, object[]? passkeys = null, OAuthGrantView[]? grants = null)
+	: HttpMessageHandler
 {
 	/// <summary>DELETE api/account/characters/{n} requests seen: the unlink itself.</summary>
 	public int Unlinks { get; private set; }
@@ -37,6 +40,8 @@ file sealed class AccountPageApiHandler(object[]? characters = null, object[]? p
 			{
 				Content = JsonContent.Create(passkeys ?? [])
 			});
+		if (request.Method == HttpMethod.Get && path == "api/oauth/grants")
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(grants ?? []) });
 		if (request.Method == HttpMethod.Delete && path.StartsWith("api/account/characters/", StringComparison.Ordinal))
 		{
 			Unlinks++;
@@ -93,7 +98,8 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []))
 			.AddSingleton<PasskeyInterop>()
-			.AddSingleton<AccountPasskeyService>();
+			.AddSingleton<AccountPasskeyService>()
+			.AddSingleton<ConnectedAppsService>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
@@ -254,6 +260,32 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find("#passkeys .acct-passkey-meta").TextContent).Contains("AuthPasskeyNeverUsed");
 		await Assert.That(cut.Find("#passkeys button[aria-label='AuthPasskeyRemove']")).IsNotNull();
 		await Assert.That(cut.FindAll("#passkeys button").Any(b => b.TextContent.Contains("AuthPasskeyAdd"))).IsTrue();
+	}
+
+	/// <summary>An account that allowed no app is not shown an empty Connected apps card.</summary>
+	[Test]
+	public async Task Render_LoggedIn_NoConnectedApps_ShowsNoCard()
+	{
+		Auth.SetAuthorized("headwiz");
+		SeedAuthState(loggedIn: true);
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#passkeys"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("#apps")).IsEmpty();
+	}
+
+	/// <summary>An allowed app is listed with what it may do in plain names, not scope ids.</summary>
+	[Test]
+	public async Task Render_LoggedIn_ConnectedApps_NamesWhatTheAppMayDo()
+	{
+		Auth.SetAuthorized("headwiz");
+		var grant = new OAuthGrantView("smg_1", "smc_1", "Grid Builder", "#42:1", "Ariel",
+			[DelegatedScopes.Profile, DelegatedScopes.Commands, DelegatedScopes.Build], DateTimeOffset.UnixEpoch, null);
+		SeedAuthState(loggedIn: true, handler: new AccountPageApiHandler(grants: [grant]));
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#apps .acct-passkey"), TimeSpan.FromSeconds(5));
+		var meta = cut.Find("#apps .acct-passkey-meta").TextContent;
+		await Assert.That(meta).Contains("OAuthScopeCommands, OAuthScopeBuild");
+		await Assert.That(meta).DoesNotContain(DelegatedScopes.Profile);
 	}
 
 	/// <summary>A browser with no passkey support says so, and offers nothing it cannot do.</summary>
