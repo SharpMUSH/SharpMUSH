@@ -97,7 +97,7 @@ public class SceneVerbRulesIntegrationTests
 		var (_, handle) = await CreatePlayerAsync($"Sched{key}{Tag}");
 		var mine = await RunAs(handle, "think words(scenelist(mine))");
 
-		var said = await RunAs(handle, $"+scene/schedule Unread {Tag}={when}");
+		var said = await RunAs(handle, $"+scene/schedule {when}/Unread {Tag}=A pitch");
 
 		await Assert.That(said).Contains("can't read that as a time").Because($"'{when}' is not a time");
 		await Assert.That(said).Contains("2026-12-31 20:00").Because("the refusal shows a time it would take");
@@ -112,19 +112,19 @@ public class SceneVerbRulesIntegrationTests
 		await PutLoggerInMasterRoomAsync();
 		var (_, handle) = await CreatePlayerAsync($"Rel{Tag}");
 
-		var said = await RunAs(handle, $"+scene/schedule Relative {Tag}=+3d");
+		var said = await RunAs(handle, $"+scene/schedule +3d/Relative {Tag}=A pitch");
 		var id = IdIn(said);
 		await Assert.That(id).IsNotEmpty().Because($"+3d is a time, as +job/due takes it: {said}");
 		var at = long.Parse(await Eval($"scene({id},scheduledfor)"));
 		var expected = NowMillis + (long)TimeSpan.FromDays(3).TotalMilliseconds;
 		await Assert.That(Math.Abs(at - expected)).IsLessThan((long)TimeSpan.FromMinutes(2).TotalMilliseconds);
 
-		var gone = await RunAs(handle, $"+scene/schedule Gone {Tag}=2020-01-01 10:00");
+		var gone = await RunAs(handle, $"+scene/schedule 2020-01-01 10:00/Gone {Tag}=A pitch");
 		await Assert.That(gone).Contains("already passed");
 		await Assert.That(gone).DoesNotContain("Scheduled scene");
 
 		var usage = await RunAs(handle, $"+scene/schedule No time {Tag}");
-		await Assert.That(usage).Contains("+scene/schedule <title>=<when>").Because("no = is a usage line, not Huh?");
+		await Assert.That(usage).Contains("+scene/schedule <when>/<title>=<pitch>").Because("no = is a usage line, not Huh?");
 	}
 
 	[Test]
@@ -169,7 +169,7 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await RunAs(handle, $"+scene/finish {id}")).Contains($"Scene {id} finished.");
 		await Assert.That(await RunAs(handle, $"+scene/finish {id}")).Contains($"Scene {id} is already finished.");
 
-		var scheduled = IdIn(await RunAs(handle, $"+scene/schedule Later {Tag}=+2d"));
+		var scheduled = IdIn(await RunAs(handle, $"+scene/schedule +2d/Later {Tag}=A pitch"));
 		await Assert.That(await RunAs(handle, $"+scene/cancel {scheduled}")).Contains($"Cancelled scene {scheduled}.");
 		await Assert.That(await RunAs(handle, $"+scene/cancel {scheduled}")).Contains($"Scene {scheduled} is already cancelled.");
 		await Assert.That(await RunAs(handle, $"+scene/start {scheduled}")).Contains("was cancelled");
@@ -295,4 +295,53 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await RunAs(handle, "+scene/join 987654321")).Contains("[SCENE] Warning: No such scene: 987654321")
 			.Because("a refusal carries the same bracketed badge as a confirmation");
 	}
+	[Test]
+	public async Task CreationAndSchedulingKeepThePitchAndRefuseMissingPitchWithoutCreating()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, handle) = await CreatePlayerAsync($"Pitch{Tag}");
+		var id = await CreateSceneAsync(handle, $"A pitch {Tag}=Bring a lantern = and courage");
+		await Assert.That(await Eval($"scene({id},summary)")).IsEqualTo("Bring a lantern = and courage");
+		var before = await RunAs(handle, "think words(scenelist(mine))");
+		var refused = await RunAs(handle, $"+scene/schedule +3d/No pitch {Tag}=   ");
+		await Assert.That(refused).Contains("<pitch>");
+		await Assert.That(await RunAs(handle, "think words(scenelist(mine))")).IsEqualTo(before);
+		var scheduled = IdIn(await RunAs(handle, $"+scene/schedule +3d/A later pitch {Tag}=A journey = together"));
+		await Assert.That(scheduled).IsNotEmpty();
+		await Assert.That(await Eval($"scene({scheduled},summary)")).IsEqualTo("A journey = together");
+	}
+
+	[Test]
+	public async Task JoiningPolicyAndCapApplyToJoinActivateAndWebPoses()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, owner) = await CreatePlayerAsync($"CapOwner{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"CapGuest{Tag}");
+		var (other, otherHandle) = await CreatePlayerAsync($"CapOther{Tag}");
+		var id = await CreateSceneAsync(owner, $"Only two {Tag}");
+		await RunAs(owner, "+scene/limit 2");
+		await RunAs(owner, "+scene/policy invite-only");
+		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("invite-only");
+		await RunAs(owner, $"+scene/invite {id}={Num(guest)}");
+		await Assert.That(await RunAs(guestHandle, $"+scene/join {id}")).Contains("Joined");
+		await RunAs(owner, "+scene/policy limited");
+		await Assert.That(await RunAs(otherHandle, $"+scene/activate {id}")).Contains("player cap");
+		await Assert.That(await RunAs(otherHandle, $"+scene/pose {id}=Uninvited words")).Contains("player cap");
+		await Assert.That(await Eval($"scenemember({id},{Num(other)},role)")).StartsWith("#-1");
+		await Assert.That(await RunAs(owner, "+scene/limit 1")).Contains("cannot be below");
+		await Assert.That(await Eval($"scene({id},playercap)")).IsEqualTo("2");
+		await Assert.That(await RunAs(owner, $"+scene {id}")).Contains("limited").And.Contains("cap 2");
+	}
+
+	[Test]
+	[Arguments("policy")]
+	[Arguments("limit")]
+	[Arguments("invite")]
+	public async Task BareParticipationCommandsShowTheirUsage(string verb)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, handle) = await CreatePlayerAsync($"Bare{verb}{Tag}");
+		await Assert.That(await RunAs(handle, $"+scene/{verb}")).Contains($"+scene/{verb} ");
+	}
+
 }

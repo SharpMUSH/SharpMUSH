@@ -216,7 +216,7 @@ take **dbrefs**, and return the new id/value inline. Reads are `Regular`.
 `scenefocus(<playerDbref>)` (the player's current scene id) · `scenetags(<id>)`
 (distinct pose tags) · `scenecast(<id>)` (distinct `ShowAsName`s).
 
-**Writes:** `scenecreate(<room>,<owner>[,<title>])` → id · `sceneset(<id>,<key>,
+**Writes:** `scenecreate(<room>,<owner>[,<title>[,<pitch>[,<scheduledfor>]]])` → id · `sceneset(<id>,<key>,
 <value>)` · `sceneaddpose(<id>,<author>,<showas>,<origin>,<source>,<tags>,
 <content>)` → poseId · `scenesetpose(<poseId>,<key>,<value>)` ·
 `sceneeditpose(<poseId>,<editor>,<content>)` · `sceneundo(<poseId>)` ·
@@ -244,13 +244,19 @@ manages edges, and snapshots names. No new `ISharpDatabase` methods.
 
 ## Lifecycle, Status & Scheduling
 
+Joining policy (`joinpolicy`: open/invite-only/limited) and player cap (`playercap`: 0-10000, zero unlimited)
+are validated scene fields. The store serializes admission with cap edits and membership grants; owner, GM and
+participant memberships consume seats. Pending invitations and observers do not. Limited requires a positive
+cap, and a cap cannot be lowered below existing participation. Player commands use `scenejoin()` to accept
+invitations and enforce admission atomically. Visibility remains controlled separately by public/private.
+
 Status is a free string; the shipped defaults are **`new` → `active` ⇄ `paused`
 → `finished`**. **Capture fires only on `active`.**
 
-- **`+scene/create [<title>]`** (softcode) — "make a scene now": `scenecreate`
+- **`+scene/create <title>[=<pitch>]`** (softcode) — "make a scene now": `scenecreate`
   bound to the current room, owner = `%#`, status `active`, focus set.
-- **`+scene/schedule <title>=<when>`** — `scenecreate` with **empty room**,
-  status `new`, `ScheduledFor=<utc-ms>`. Roomless until started.
+- **`+scene/schedule <when>/<title>=<pitch>`** — `scenecreate` with **empty room**,
+  status `scheduled`, `ScheduledFor=<utc-ms>` and required pitch in one store transaction. Roomless until started.
 - **`+scene/start [<id>]`** — explicit owner activation: set `status=active` and,
   for a roomless scheduled scene, bind the current room (`sceneset room=<here>`).
   Also resumes a `paused` scene.
@@ -349,8 +355,8 @@ Players use `+scene/*` (softcode) and pose natively; they never call `@scene`.
 Permission default: **anyone may `/create`/`/schedule` and becomes owner;
 owner-only for lifecycle/management; authors edit their own poses.**
 
-- **Lifecycle:** `/create [<title>]`, `/create/temp <title>`, `/schedule
-  <title>=<when>`, `/reschedule <id>=<when>`, `/start [<id>]`, `/pause`,
+- **Lifecycle:** `/create <title>[=<pitch>]`, `/create/temp <title>`, `/schedule
+  <when>/<title>=<pitch>`, `/reschedule <id>=<when>`, `/start [<id>]`, `/pause`,
   `/finish`, `/recycle [<id>]`.
 - **Posing helpers:** `/showas <name>` (`sceneshowas` on the member edge).
 - **Edit your own:** `/edit <poseId>=<find>^^^<replace>` (search-replace via
@@ -380,10 +386,10 @@ if they posed, the edge stays (they're credited in the record).
   scenesetfocus(%#,get(%#/SID));
   sceneaddmember(get(%#/SID),%#,owner)
 
-&do.schedule #SCENELOGGER=$+scene/schedule *=*:
-  @pemit %#=Scheduled scene [scenecreate(,%#,%0)] for %1.;
-  @@ scenecreate with empty room → roomless; then set status/when:
-  sceneset(<id>,status,new); sceneset(<id>,scheduledfor,<utc-millis of %1>)
+@@ The shipped package validates the future time, title and required pitch before this atomic write:
+scenecreate(,%#,<title>,<pitch>,<UTC milliseconds>)
+@@ Joining is an atomic policy/cap check and membership write:
+scenejoin(<id>,%#)
 
 &do.finish #SCENELOGGER=$+scene/finish:
   @assert strmatch(scene(scenefocus(%#),owner-or-WZ check),...);

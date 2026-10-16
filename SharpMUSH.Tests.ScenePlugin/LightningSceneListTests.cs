@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Plugins.Scene.Web;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
@@ -82,4 +85,76 @@ public class LightningSceneListTests
 		await Assert.That(windowed.Select(s => s.Id)).IsEquivalentTo([timed.Id]);
 		await Assert.That(unwindowed.Count).IsEqualTo(3);
 	}
+	[Test]
+	public async Task CreationKeepsPitchAndScheduleTogether()
+	{
+		var when = DateTimeOffset.UtcNow.AddDays(3).ToUnixTimeMilliseconds();
+		var scene = await _scenes.CreateSceneAsync("", "#1", "A journey", "Bring a lantern", when);
+		await Assert.That(scene.Meta["summary"]).IsEqualTo("Bring a lantern");
+		await Assert.That(scene.Status).IsEqualTo("scheduled");
+		await Assert.That(scene.ScheduledFor).IsEqualTo(when);
+		await Assert.That((await _scenes.ListScenesAsync("upcoming")).Select(s => s.Id)).Contains(scene.Id);
+	}
+
+	[Test]
+	public async Task ConcurrentJoinersCannotOverfillTheScene()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1", "One seat");
+		await _scenes.SetSceneMetaAsync(scene.Id, "playercap", "1");
+		var results = await Task.WhenAll(Enumerable.Range(20, 12)
+			.Select(n => _scenes.JoinSceneAsync(scene.Id, $"#{n}")));
+		await Assert.That(results.Count(r => r is SharpMUSH.Plugins.Scene.Models.SceneMember)).IsEqualTo(1);
+		await Assert.That((await _scenes.GetMembersAsync(scene.Id)).Expect<IReadOnlyList<SharpMUSH.Plugins.Scene.Models.SceneMember>>().Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task InviteOnlyRequiresAnInvitationAndRejoiningPreservesTheOwner()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
+		await Assert.That(await _scenes.JoinSceneAsync(scene.Id, "#20") is SharpMUSH.Library.DiscriminatedUnions.Error<string>).IsTrue();
+		await _scenes.AddMemberAsync(scene.Id, "#20", "invited");
+		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#20")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("participant");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#1")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("owner");
+	}
+
+	[Test]
+	public async Task InvalidScheduleDoesNotCreateAnyScene()
+	{
+		await Assert.That(async () => await _scenes.CreateSceneAsync("", "#1", "No pitch", " ", DateTimeOffset.UtcNow.AddDays(2).ToUnixTimeMilliseconds()))
+			.Throws<ArgumentException>();
+		await Assert.That((await _scenes.ListScenesAsync("recent")).Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task MetadataEditsCannotInvalidateTheCapOrEvictMembers()
+	{
+		var scene = await _scenes.CreateSceneAsync("#0", "#1");
+		await _scenes.AddMemberAsync(scene.Id, "#1", "owner");
+		await _scenes.AddMemberAsync(scene.Id, "#20", "gm");
+		await _scenes.AddMemberAsync(scene.Id, "#21", "observer");
+		await _scenes.SetSceneMetaAsync(scene.Id, "playercap", "2");
+		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "limited");
+		foreach (var invalid in new[] { "-1", "10001", "1.5", "no", "0", "1" })
+			await Assert.That(await _scenes.SetSceneMetaAsync(scene.Id, "playercap", invalid) is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That(await _scenes.AddMemberAsync(scene.Id, "#21", "participant") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#20")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("gm");
+		await Assert.That((await _scenes.GetSceneAsync(scene.Id)).Expect<SharpMUSH.Plugins.Scene.Models.Scene>().Meta["playercap"]).IsEqualTo("2");
+	}
+
+	[Test]
+	public async Task ApiUpcomingStateIncludesAnAtomicallyScheduledScene()
+	{
+		var scene = await _scenes.CreateSceneAsync("", "#1", "Later", "A complete pitch", DateTimeOffset.UtcNow.AddDays(2).ToUnixTimeMilliseconds());
+		var controller = new SceneController(_scenes)
+		{
+			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+		};
+		var response = (OkObjectResult)await controller.ListScenes(filter: "upcoming", state: "upcoming");
+		var listed = ((IEnumerable<SceneController.SceneDto>)response.Value!).ToList();
+		await Assert.That(listed.Select(s => s.Id)).Contains(scene.Id);
+		await Assert.That(listed.Single(s => s.Id == scene.Id).Meta["summary"]).IsEqualTo("A complete pitch");
+	}
+
 }

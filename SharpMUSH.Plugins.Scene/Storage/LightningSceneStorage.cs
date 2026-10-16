@@ -221,10 +221,12 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 	#region ISceneService — scenes
 
-	public Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
+	public Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null)
 		=> _accessor.WriteAsync(tx =>
 		{
 			var now = UtcMillis();
+			if (scheduledFor is not null && (scheduledFor <= now || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(pitch)))
+				throw new ArgumentException("A scheduled scene needs a title, pitch and future UTC millisecond time.");
 			var id = NextCounter(tx, "scene_id").ToString();
 			var owner = DbrefNumber(ownerDbref);
 			var room = DbrefNumber(roomDbref);
@@ -236,15 +238,17 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 				meta["title"] = title;
 			}
 
+			if (!string.IsNullOrWhiteSpace(pitch)) meta["summary"] = pitch;
+
 			var record = new SceneRecord
 			{
 				Id = id,
-				// A freshly created scene is "new", not "active".
-				Status = "new",
+				// Scheduling is persisted with creation; an immediate scene starts as "new".
+				Status = scheduledFor is null ? "new" : "scheduled",
 				// Public by default: a scene nobody can find is not a scene anyone can join.
 				IsPublic = true,
 				IsTempRoom = false,
-				ScheduledFor = null,
+				ScheduledFor = scheduledFor,
 				StartedAt = now,
 				LastActivityAt = now,
 				PoseCount = 0,
@@ -261,6 +265,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			tx.Put(_scenes, Keys.Str(id), Encode(record));
 			AddIndex(tx, IdxAll, id);
 			AddIndex(tx, StatusIndexKey(record.Status), id);
+			if (scheduledFor is not null) AddIndex(tx, IdxScheduled, id);
 			if (room is { } roomNumber)
 			{
 				AddIndex(tx, RoomIndexKey(roomNumber), id);
@@ -283,6 +288,12 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			}
 
 			var normalized = key.Trim().ToLowerInvariant();
+			if (normalized == "joinpolicy" && value is not ("open" or "invite-only" or "limited")) return new NotFound();
+			if (normalized == "joinpolicy" && value == "limited" && PlayerCap(scene) == 0) return new NotFound();
+			if (normalized == "playercap" && (!int.TryParse(value, out var cap) || cap < 0 || cap > 10000
+				|| (cap == 0 && scene.Meta.GetValueOrDefault("joinpolicy") == "limited")
+				|| (cap > 0 && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) > cap))) return new NotFound();
+
 			switch (normalized)
 			{
 				case "status":
@@ -765,14 +776,47 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 	#region ISceneService — membership
 
+	private static bool OccupiesSeat(string role) => role.Equals("participant", StringComparison.OrdinalIgnoreCase)
+		|| role.Equals("owner", StringComparison.OrdinalIgnoreCase) || role.Equals("gm", StringComparison.OrdinalIgnoreCase);
+
+	private static int PlayerCap(SceneRecord scene) =>
+		int.TryParse(scene.Meta.GetValueOrDefault("playercap"), out var cap) ? cap : 0;
+
+	public Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref)
+		=> _accessor.WriteAsync<FoundResult<SceneMember>>(tx =>
+		{
+			var id = BareId(sceneId);
+			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player) return new NotFound();
+			var key = Keys.Composite(id, player);
+			var previous = tx.TryGet(_participants, key, out var bytes) ? Decode<SceneMemberRecord>(bytes) : null;
+			if (previous is not null && OccupiesSeat(previous.Role)) return ProjectMember(tx, previous);
+			if (scene.Meta.GetValueOrDefault("joinpolicy", "open") == "invite-only" && !string.Equals(previous?.Role, "invited", StringComparison.OrdinalIgnoreCase)
+				&& scene.OwnerDbref != player) return new Error<string>("This scene is invite-only. Ask its owner for an invitation.");
+			var cap = PlayerCap(scene);
+			if (cap > 0 && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap)
+				return new Error<string>("This scene has reached its player cap.");
+			var member = previous ?? new SceneMemberRecord
+			{
+				SceneId = id, MemberDbref = player, MemberName = ObjectName(tx, player) ?? "", GrantedAt = UtcMillis()
+			};
+			member.Role = scene.OwnerDbref == player ? "owner" : "participant";
+			tx.Put(_participants, key, Encode(member));
+			AddIndex(tx, MemberIndexKey(player), id);
+			return ProjectMember(tx, member);
+		}).AsTask();
+
 	public Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role)
 		=> _accessor.WriteAsync<Found<SceneMember>>(tx =>
 		{
 			var id = BareId(sceneId);
-			if (ReadScene(tx, id) is null || DbrefNumber(playerDbref) is not { } player)
+			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player)
 			{
 				return new NotFound();
 			}
+
+			var cap = PlayerCap(scene);
+			if (OccupiesSeat(role) && cap > 0 && !SceneMembers(tx, id).Any(m => m.MemberDbref == player && OccupiesSeat(m.Role))
+				&& SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap) return new NotFound();
 
 			var key = Keys.Composite(id, player);
 			var name = ObjectName(tx, player) ?? "";

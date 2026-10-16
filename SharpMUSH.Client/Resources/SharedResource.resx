@@ -8848,4 +8848,10 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Joining policy</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Player cap</value>
+  </data>
 </root>

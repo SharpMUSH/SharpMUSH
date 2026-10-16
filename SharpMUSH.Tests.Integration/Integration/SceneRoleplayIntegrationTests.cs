@@ -602,7 +602,7 @@ public class SceneRoleplayIntegrationTests
 		await God1($"@tel {sam}=#0");
 
 		// Schedule with raw epoch-seconds (convtime rejects it → SCHED_WHEN falls back to the number * 1000).
-		var schedMsgs = await RunAndCollectAs(samHandle, $"+scene/schedule Gala_{Tag}=2524608000");
+		var schedMsgs = await RunAndCollectAs(samHandle, $"+scene/schedule 2524608000/Gala_{Tag}=A pitch");
 		var schedLine = schedMsgs.First(m => m.Contains("Scheduled scene"));
 		var schedId = schedLine.Split("Scheduled scene ")[1].Split(' ')[0];
 		await Assert.That(schedId).IsNotEmpty().Because("the schedule confirmation should carry the new scene id");
@@ -773,7 +773,7 @@ public class SceneRoleplayIntegrationTests
 		async Task<string> Schedule(string title, long when)
 		{
 			var past = when <= DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-			var said = await RunAndCollectHeardBy(xanHandle, xan, $"+scene/schedule {title}=" + (past ? "+1d" : when));
+			var said = await RunAndCollectHeardBy(xanHandle, xan, $"+scene/schedule {(past ? "+1d" : when)}/{title}=A pitch");
 			var id = said.First(m => m.Contains("Scheduled scene")).Split("Scheduled scene ")[1].Split(' ')[0];
 			if (past) await God1($"@scene/set {id}/scheduledfor={when * 1000}");
 			return id;

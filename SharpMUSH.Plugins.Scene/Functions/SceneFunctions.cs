@@ -113,6 +113,8 @@ public static class SceneFunctions
 		return field switch
 		{
 			"status" => new CallState(scene.Status),
+			"joinpolicy" => new CallState(scene.Meta.GetValueOrDefault("joinpolicy", "open")),
+			"playercap" => new CallState(scene.Meta.GetValueOrDefault("playercap", "0")),
 			"id" => new CallState(scene.Id),
 			"public" => new CallState(scene.IsPublic ? "1" : "0"),
 			"istemp" => new CallState(scene.IsTempRoom ? "1" : "0"),
@@ -825,12 +827,12 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;])
+	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;[, &lt;pitch&gt;[, &lt;scheduledfor&gt;]]])
 	/// Creates a scene; returns the new scene id.
 	/// </summary>
-	[SharpFunction(Name = "scenecreate", MinArgs = 2, MaxArgs = 3,
+	[SharpFunction(Name = "scenecreate", MinArgs = 2, MaxArgs = 5,
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
-		ParameterNames = ["room", "owner", "title"])]
+		ParameterNames = ["room", "owner", "title", "pitch", "scheduledfor"])]
 	public static async ValueTask<CallState> SceneCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!SideEffectsEnabled(parser))
@@ -846,9 +848,42 @@ public static class SceneFunctions
 			: string.Empty;
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var scene = await service.CreateSceneAsync(room, owner, title);
+		var pitch = args.TryGetValue("3", out var pitchArg) ? pitchArg.Message.ToPlainText() : "";
+		long? scheduled = null;
+		if (args.TryGetValue("4", out var scheduledArg))
+		{
+			if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(pitch)
+				|| !long.TryParse(scheduledArg.Message.ToPlainText(), out var when) || when <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+				return new CallState("#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.");
+			scheduled = when;
+		}
+		var scene = await service.CreateSceneAsync(room, owner, title, pitch, scheduled);
 		await SceneStatusEvent.CreatedAsync(parser, scene);
 		return new CallState(scene.Id);
+	}
+
+	/// <summary>Accepts a player under the scene joining policy; returns the scene id or an error.</summary>
+	[SharpFunction(Name = "scenejoin", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
+		ParameterNames = ["id", "player"])]
+	public static async ValueTask<CallState> SceneJoin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		if (!SideEffectsEnabled(parser)) return new CallState(ErrorMessages.Returns.NoSideFx);
+		var args = parser.CurrentState.Arguments;
+		var id = args["0"].Message.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
+		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
+		var result = await service.JoinSceneAsync(id, player);
+		if (result is SceneMember)
+		{
+			await SceneRoomRefresh.AfterMembershipAsync(parser, service, id);
+			return new CallState(id);
+		}
+		return result switch
+		{
+			Error<string> error => new CallState($"#-1 {error.Value}"),
+			_ => new CallState(SceneNotFound)
+		};
 	}
 
 	/// <summary>

@@ -33,7 +33,7 @@ public interface ISceneService
 	/// the owner). Pass an empty <paramref name="roomDbref"/> for a roomless
 	/// scheduled scene; a room is bound later via <c>SetSceneMetaAsync(id,"room",…)</c>.
 	/// </summary>
-	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "");
+	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "", string pitch = "", long? scheduledFor = null);
 
 	/// <summary>Returns a scene by id, or <c>NotFound</c>.</summary>
 	Task<Found<Contracts.Scene>> GetSceneAsync(string sceneId);
@@ -137,6 +137,9 @@ public interface ISceneService
 	/// Adds (or updates) the player's <c>member</c> edge with the free-string
 	/// <paramref name="role"/>. <c>NotFound</c> if the scene is missing.
 	/// </summary>
+	/// <summary>Atomically accepts a player under the scene joining policy and player cap.</summary>
+	Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref);
+
 	Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role);
 
 	/// <summary>Removes <b>all</b> of the player's membership to the scene. <c>NotFound</c> if the scene is missing.</summary>
