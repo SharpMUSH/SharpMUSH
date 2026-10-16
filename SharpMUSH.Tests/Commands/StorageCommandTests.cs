@@ -14,6 +14,9 @@ namespace SharpMUSH.Tests.Commands;
 /// </summary>
 public class StorageCommandTests : ServerTestBase
 {
+	[ClassDataSource<StorageInventoryServerFactory>(Shared = SharedType.PerTestSession)]
+	public required StorageInventoryServerFactory InventoryFactory { get; init; }
+
 	private async Task<IReadOnlyList<string>> HeardAfterAsync(string command)
 	{
 		// The recorder accumulates for the whole session, so read only what this command added.
@@ -28,11 +31,22 @@ public class StorageCommandTests : ServerTestBase
 	[Test]
 	public async Task BackupViewsUseTheSamePaginatedInventory()
 	{
-		var storage = string.Join("\n", await HeardAfterAsync("@storage/backups"));
-		var backup = string.Join("\n", await HeardAfterAsync("@backup/list"));
+		// Compare one stable inventory without other fixtures teleporting the shared God or taking backups.
+		async Task<string> Inventory(string command)
+		{
+			var before = InventoryFactory.Notifications.DeliveryCountFor(InventoryFactory.ExecutorDBRef);
+			await InventoryFactory.CommandParser.CommandParse(1,
+				InventoryFactory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(), MString.Plain(command));
+			return string.Join("\n", InventoryFactory.Notifications.DeliveriesFor(InventoryFactory.ExecutorDBRef)
+				.Skip(before).Select(delivery => delivery.Message));
+		}
+
+		await Inventory("@backup");
+		var storage = await Inventory("@storage/backups");
+		var backup = await Inventory("@backup/list");
 		await Assert.That(storage).IsEqualTo(backup);
-		await Assert.That(storage).Contains("Page 1/");
-		var invalid = string.Join("\n", await HeardAfterAsync("@storage/backups 0"));
+		await Assert.That(storage).Contains("Created:").And.Contains("Page 1/");
+		var invalid = await Inventory("@storage/backups 0");
 		await Assert.That(invalid).Contains("positive page number");
 	}
 
@@ -115,4 +129,10 @@ public class StorageCommandTests : ServerTestBase
 
 		await Assert.That(heard.Any(m => m.Contains("wiki: keeps everything; nothing purged."))).IsTrue();
 	}
+}
+
+/// <summary>Inventory comparisons own their world and notification recorder.</summary>
+public class StorageInventoryServerFactory : ServerWebAppFactory
+{
+	protected override bool UsesOwnWorld => true;
 }
