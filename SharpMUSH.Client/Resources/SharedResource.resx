@@ -8903,7 +8903,7 @@
     <value>Include portable mail, if available</value>
   </data>
   <data name="AdmImportRhostMail" xml:space="preserve">
-    <value>The converter does not read native mail or folder stores. Export text with Rhost’s wmail/unload and append --mail and, when present, --folders to the command above (add a trailing backslash to its --output line). If native mail/folder stores are present, the tool requires their portable companions. Without supplied mail text, the manifest records the omission.</value>
+    <value>The converter does not read native mail or folder stores. Export text with Rhost’s wmail/unload, place the portable mail/folder companions directly in the --source directory, and append --mail and, when present, --folders to the command above (add a trailing backslash to its --output line). If native mail/folder stores are present, the tool requires their portable companions. Without supplied mail text, the manifest records the omission.</value>
   </data>
   <data name="AdmImportRhostUploadTitle" xml:space="preserve">
     <value>Inspect the output and rehearse the import</value>
