@@ -392,10 +392,11 @@ public class TimeIntegrationTests
 			await Assert.That((await response.Requested.Task.WaitAsync(TimeSpan.FromSeconds(10))).AbsoluteUri)
 				.IsEqualTo("https://ipinfo.io/81.2.69.142/json");
 			await Assert.That(await Think($"hasattr({player.DbRef},TZ)")).IsEqualTo("0");
-			response.Response.TrySetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+			using var reply = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
 			{
 				Content = new StringContent("{\"timezone\":{\"id\":\"Asia/Tokyo\"}}")
-			});
+			};
+			response.Response.TrySetResult(reply);
 			await WebAppFactoryArg.QueueBarrierAsync();
 			await Assert.That(await Think($"get({player.DbRef}/TZ)")).IsEqualTo("Asia/Tokyo");
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef).Skip(before)))
@@ -404,7 +405,8 @@ public class TimeIntegrationTests
 		}
 		finally
 		{
-			response.Response.TrySetResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
+			using var cleanupReply = new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable);
+			response.Response.TrySetResult(cleanupReply);
 			await WebAppFactoryArg.QueueBarrierAsync();
 			await UninstallAsync();
 		}
