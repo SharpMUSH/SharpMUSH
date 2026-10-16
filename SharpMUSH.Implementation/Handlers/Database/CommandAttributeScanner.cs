@@ -51,14 +51,13 @@ public static class CommandAttributeScanner
 
 		// Build no_command prefixes from this object's attrs
 		var localNoCommandPrefixes = attrList
-			.Where(attr => attr.Flags.Any(flag => flag.Name == "no_command"))
+			.Where(attr => attr.IsMetadataUnreadable || attr.Flags.Any(flag => flag.Name == "no_command"))
 			.Select(attr => attr.LongName + "`")
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var attr in attrList)
 		{
 			var longName = attr.LongName;
-
 			// Skip if no_inherit (or descendant of no_inherit) and we're looking at parent attributes
 			if (!isLocal)
 			{
@@ -66,7 +65,19 @@ public static class CommandAttributeScanner
 					continue;
 				if (noInheritPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 					continue;
+			}
 
+			// Unknown access metadata must mask even when a nearer object already saw this name.
+			// It cannot be treated as private/absent, and it never supplies an executable body.
+			if (attr.IsMetadataUnreadable)
+			{
+				seenNames.Add(longName);
+				noCommandPrefixes.Add(longName + "`");
+				continue;
+			}
+
+			if (!isLocal)
+			{
 				// On a parent, atr_comm_match tests nocmd_roots and AF_NOPROG before the seen check
 				// (src/attrib.c:1960-1995), so a parent's no_command FOO masks a farther FOO`BAR even when the
 				// child has a FOO of its own.
@@ -107,6 +118,7 @@ public static class CommandAttributeScanner
 	/// </summary>
 	public static Found<CommandAttributeCache> Compile(SharpAttribute attr)
 	{
+		if (attr.IsUnreadable || attr.IsMetadataUnreadable) return new NotFound();
 		var plainValue = attr.Value.ToPlainText();
 		var match = CommandDiscoveryService.CommandPatternRegex().Match(plainValue);
 

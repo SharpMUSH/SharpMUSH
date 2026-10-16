@@ -21,6 +21,10 @@ public record SharpAttribute(
 	[JsonIgnore]
 	public bool IsUnreadable { get; init; }
 
+	/// <summary>Discovery-only marker: the row exists but its access metadata is unavailable; mask its entire subtree.</summary>
+	[JsonIgnore]
+	public bool IsMetadataUnreadable { get; init; }
+
 	public MString Value { get; set; } = MarkupText.Empty;
 }
 

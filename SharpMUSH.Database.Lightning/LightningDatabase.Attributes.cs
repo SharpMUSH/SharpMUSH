@@ -1114,6 +1114,31 @@ public partial class LightningDatabase
 		}
 	}
 
+	public IAsyncEnumerable<SharpAttribute> GetDiscoveryAttributesAsync(DBRef dbref, CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<SharpAttribute>(ct => DiscoveryAttributesCoreAsync((long)dbref.Number, ct));
+
+	private IAsyncEnumerable<SharpAttribute> DiscoveryAttributesCoreAsync(long dbref, CancellationToken ct)
+		=> Store.RangeMapAsync<SharpAttribute>(Tables.AttrMeta, Keys.AttrPrefix(dbref), (tx, key, value) =>
+		{
+			var name = Keys.ParseAttr(key).LongName;
+			try
+			{
+				var meta = Codec.Deserialize<AttrMetaRecord>(value);
+				if (meta is null || meta.Flags is null) throw new System.Text.Json.JsonException("Missing attribute metadata.");
+				// Unreadable bodies retain the actual flags and name, rather than disappearing from
+				// the scanner's cross-object mask/seen sets. No body is needed to establish existence.
+				return HydrateAttribute(tx, dbref, name, meta, ReadAttributeValue(tx, dbref, name));
+			}
+			catch (System.Text.Json.JsonException ex)
+			{
+				_logger.LogWarning(ex, "Unreadable discovery metadata {Object}/{Attribute}; masking inherited subtree", dbref, name);
+				return new SharpAttribute(AttributeIdOf(dbref, name), AttributeKeyOf(dbref, name), LeafNameOf(name), [], null, name,
+					new(_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
+					new(_ => Task.FromResult<SharpPlayer?>(null)), new(_ => Task.FromResult<SharpAttributeEntry?>(null)))
+				{ IsUnreadable = true, IsMetadataUnreadable = true };
+			}
+		}, ct: ct);
+
 	/// <summary>Every attribute of an object, in preorder — which is simply key order.</summary>
 	/// <remarks>Hydrated inside each page's own transaction, as <see cref="ScanAttributesCoreAsync"/> is.</remarks>
 	internal IAsyncEnumerable<SharpAttribute> AllAttributesCoreAsync(long dbref, CancellationToken ct)

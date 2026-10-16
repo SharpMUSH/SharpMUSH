@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
@@ -41,6 +42,67 @@ public class StoredMarkupCommandSafetyTests
 
 	private async Task<SharpAttribute> Attribute(DBRef target, string name)
 		=> await Get<IMediator>().CreateStream(new GetAttributeQuery(target, name.Split('`'))).LastAsync();
+
+	[Test]
+	[Arguments("no_command", false)]
+	[Arguments("shadow", false)]
+	[Arguments("metadata", false)]
+	[Arguments("intermediate", false)]
+	[Arguments("private_intermediate", false)]
+	[Arguments("no_command", true)]
+	[Arguments("shadow", true)]
+	[Arguments("metadata", true)]
+	[Arguments("intermediate", true)]
+	[Arguments("private_intermediate", true)]
+	public async Task CorruptDiscoveryRowsRetainInheritedMasksAndShadowing(string scenario, bool listen)
+	{
+		var child = await Thing();
+		var parent = await Thing();
+		await Command($"@parent {child}={parent}");
+		var definition = listen ? "^probe:think heard" : "$probe:think matched";
+		await Command($"&OWN {child}={definition}");
+		await Command($"&OTHER {parent}={definition}");
+		var broken = child;
+		var inherited = parent;
+		if (scenario is "intermediate" or "private_intermediate")
+		{
+			var grandparent = await Thing();
+			await Command($"@parent {parent}={grandparent}");
+			broken = parent;
+			inherited = grandparent;
+			await Command($"&BLOCK {child}=ordinary child shadow");
+		}
+		await Command($"&BLOCK {broken}=ordinary local value");
+		if (scenario == "no_command") await Command($"@set {broken}/BLOCK=NO_COMMAND");
+		var brokenName = "BLOCK";
+		if (scenario == "private_intermediate")
+		{
+			brokenName = "BLOCK`BROKEN";
+			await Command($"&{brokenName} {broken}=ordinary private descendant");
+			await Command($"@set {broken}/BLOCK=NO_INHERIT");
+		}
+		var inheritedName = scenario == "shadow" ? "BLOCK" : brokenName + "`RUN";
+		await Command($"&{inheritedName} {inherited}={definition}");
+		var metadata = scenario is "metadata" or "intermediate" or "private_intermediate";
+		await ((LightningDatabase)Get<IAttributeStore>()).Store.WriteAsync(tx => tx.Put(metadata ? Tables.AttrMeta : Tables.AttrVal,
+			Keys.Attr(broken.Number, brokenName), Keys.Str("not JSON")));
+		var mediator = Get<IMediator>();
+		if (listen)
+		{
+			var entries = await new ListenAttributeSearch().ReadPhaseAsync(mediator, child, 10, CancellationToken.None);
+			await Assert.That(entries.Any(entry => entry.Attribute.LongName == inheritedName)).IsEqualTo(scenario == "private_intermediate");
+			await Assert.That(entries.Any(entry => entry.Attribute.Name == "OWN")).IsTrue();
+			await Assert.That(entries.Any(entry => entry.Attribute.Name == "OTHER")).IsTrue();
+		}
+		else
+		{
+			var obj = (await mediator.Send(new GetObjectNodeQuery(child))).Expect<AnySharpObject>();
+			var entries = await mediator.Send(new GetCommandAttributesQuery(obj));
+			await Assert.That(entries.Any(entry => entry.Attribute.LongName == inheritedName)).IsEqualTo(scenario == "private_intermediate");
+			await Assert.That(entries.Any(entry => entry.Attribute.Name == "OWN")).IsTrue();
+			await Assert.That(entries.Any(entry => entry.Attribute.Name == "OTHER")).IsTrue();
+		}
+	}
 
 	[Test]
 	public async Task CorruptAccessMetadataReturnsOneWriteRefusalAndNoStartupExecution()
@@ -91,6 +153,7 @@ public class StoredMarkupCommandSafetyTests
 		var target = await Thing();
 		await Command($"&DISC_A {target}=$first:think first");
 		await Command($"&DISC_BAD {target}=broken");
+		await Command($"@set {target}/DISC_BAD=NO_COMMAND");
 		await Command($"&DISC_BAD`HIDDEN_CMD {target}=$hidden:think hidden");
 		await Command($"&DISC_BAD`HIDDEN_LISTEN {target}=^hidden:think hidden");
 		await Command($"&DISC_Z {target}=$last:think last");

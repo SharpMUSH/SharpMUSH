@@ -82,3 +82,29 @@ Correction-wave verification (single supported treenode filter per run):
 All 254 affected scenarios passed without skips. Earlier scene, feed, clone and pure edit suites were not repeated for this correction wave; the shared raw persistence seam is covered by the new copy/reopen and snapshot tests. The registered readable/unwritable codec exists only in the test assembly bootstrap. Runtime scratch remains disk-backed and outside the source diff.
 
 Final correction build: `dotnet build SharpMUSH.Tests --no-restore -m:2 -nr:false` passed with zero warnings/errors and the normal formatting gate enabled. Two whitespace passes converged and `git diff --check` passed. No production data or deployed services were changed.
+
+
+## Independent review correction wave 2: inherited discovery masks
+
+Fix range starts at `465f86a6edf63c11dd62ad51d11c09927f931ffd`. The original four findings remain addressed. Re-review exposed a distinct P1 inheritance regression: omitting corrupt local rows from display enumeration also erased names and NO_COMMAND masks from the scanner's state before it visited parents.
+
+The attribute aggregate now supplies `GetDiscoveryAttributesAsync` specifically for the existing command/listen Mediator query handlers. It retains existence and actual flag metadata when only the body is unusable. Malformed metadata returns a discovery-only `IsMetadataUnreadable` marker, which conservatively masks its name and subtree; it is not display/copy or authorization data. No access flags are fabricated. Display/copy streams retain their existing omission policy.
+
+Command discovery preserves `seenNames` and valid NO_COMMAND/NO_INHERIT semantics before excluding unusable bodies. A metadata-unreadable marker masks farther levels even if a nearer object already saw that name. Listen snapshot/discovery uses the same aggregate stream; ListenAttributeSearch carries equivalent shadowing and mask state across its parent walk. Both compilers explicitly refuse unreadable markers, even if a caller supplies pattern-shaped fallback text.
+
+Eight real-handler regressions failed before the fix and cover both command and listen inheritance: local NO_COMMAND with corrupt body versus a matching parent subtree; corrupt ordinary local value versus a same-name parent definition; corrupt local metadata versus a parent subtree; and corrupt metadata on an intermediate parent versus a grandparent subtree, including a nearer child's ordinary same-name shadow. Every scenario also requires valid unrelated child and parent siblings to remain discoverable. The command cases execute the actual GetCommandAttributesQueryHandler parent walk; listen cases execute ReadPhaseAsync through the actual GetListenAttributeSnapshotQueryHandler. Direct compiler regressions prove unreadable and metadata-unreadable rows cannot compile.
+
+The earlier same-object discovery regression now explicitly sets NO_COMMAND on its valid-metadata ancestor. A corrupt body alone does not erase valid metadata or invent a subtree mask; display omission and discovery policy are separate contracts.
+
+Two additional command/listen positive controls preserve known NO_INHERIT ancestor semantics: an unknown-metadata descendant inside a valid private intermediate tree does not invent a mask against a visible grandparent definition. Conservative unknown metadata applies after known inherited-private boundaries and before seen-name suppression.
+
+The normal correction-wave build (`dotnet build SharpMUSH.Tests --no-restore -m:2 -nr:false`) passed with zero warnings/errors after two whitespace-format passes. `git diff --check` passed. Earlier scoped compiler and listen snapshot runs passed 2 and 7 scenarios respectively; final inherited discovery/private-boundary results are recorded below. No deployment or production-world mutation occurred.
+
+Final wave-2 scoped results (separate supported treenode filters):
+
+- `/*/*/StoredMarkup*/*`: 35 passed, including all retained stored-markup regressions and the 10 inherited mask/private-boundary cases.
+- `/*/*/UnreadableDiscoveryCompilationTests/*`: 2 passed.
+- `/*/*/ListenAttributeSnapshot*/*`: 7 passed (identity/cancellation and listen search contracts).
+- `/*/*/CommandAttributeInheritanceTests/*`: 10 passed.
+
+All 54 scoped scenarios passed without skips. The original eight mask scenarios failed 8/8 on the prior commit. Unrelated broad suites were not repeated; the previous correction's raw persistence, authorization and scheduler fixes remain intact.

@@ -17,6 +17,14 @@ public interface IAttributeStore
 	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
 	IAsyncEnumerable<SharpAttribute> GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Complete local discovery metadata, including unusable bodies that still shadow inherited names.
+	/// Malformed metadata returns an explicit IsMetadataUnreadable/IsUnreadable marker that masks the
+	/// name and subtree. These markers are for discovery only, never display, copy or authorization.
+	/// Consumers must retain masks/shadowing before skipping unreadable bodies; never compile them.
+	/// </summary>
+	IAsyncEnumerable<SharpAttribute> GetDiscoveryAttributesAsync(DBRef dbref, CancellationToken cancellationToken = default);
+
 	// TODO: Return type for attribute pattern queries needs reconsideration.
 	// Attribute patterns return multiple attribute paths, so return type should ideally be
 	// IEnumerable<IEnumerable<SharpAttribute>> to represent full paths for each match.
