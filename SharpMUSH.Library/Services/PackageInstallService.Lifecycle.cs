@@ -158,7 +158,10 @@ public partial class PackageInstallService
 				continue;
 			}
 
-			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute)))
+			// Leaves first: clearing a branch that still has a leaf only empties it, so a branch cleared before its
+			// leaves would stay behind, empty, and conflict with the next install that attaches it.
+			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute))
+				.OrderByDescending(a => a.Attribute.Count(c => c == '`')))
 			{
 				await writes.ClearAttributeAsync(dbref, managed.Attribute.Split('`'), cancellationToken);
 			}
