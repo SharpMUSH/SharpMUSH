@@ -321,6 +321,17 @@ that resolves straight to your server:
 > but the shared host's address is no longer secret. If hiding the telnet IP matters to you,
 > that requires Cloudflare Spectrum (paid) or a different TCP proxy.
 
+Before continuing, persist the TLS overlay in `.env` and the systemd unit if you enabled
+4203. Follow the [complete native TLS recipe](native-client-tls.md), including certificate
+issuance, renewal and a verified external handshake. Keep the overlay selected in the
+commands below; explicit base-only `-f` arguments override `COMPOSE_FILE`.
+
+When TLS is enabled, the startup command is:
+
+```bash
+docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml up -d --build
+```
+
 ### Part C — bring it up
 
 ```bash

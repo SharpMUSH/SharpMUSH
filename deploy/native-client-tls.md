@@ -53,6 +53,31 @@ read Caddy's certificate storage, or use a [Cloudflare Origin CA certificate](ht
 for native clients; use a DNS-only hostname pointing at the host, with the certificate for
 that hostname, and allow inbound TCP 4203. This exposes the host IP.
 
+### Worked ACME recipe: Debian/Ubuntu with the Cloudflare tunnel
+
+For the tunnel-based stack, public HTTP port 80 is normally unused on the host.
+The following uses [Certbot standalone](https://eff-certbot.readthedocs.io/en/stable/using.html#standalone)
+with a DNS-only Telnet hostname. Replace the example hostname and email first:
+
+```bash
+sudo apt-get update
+sudo apt-get install --no-install-recommends certbot
+sudo certbot certonly --standalone --non-interactive --agree-tos \
+  --email operator@example.com --cert-name telnet.mush.example.com \
+  -d telnet.mush.example.com
+```
+
+Public TCP **80** must reach this host during issuance and every renewal; check both
+host and hosting-provider firewalls, and every published A/AAAA address. Certbot binds
+port 80 only while validating. On the Caddy-based stack, Caddy already owns that port:
+use an automated DNS challenge or an appropriate webroot instead of stopping the web
+front end for this recipe. See Certbot's [DNS plugins](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins).
+
+Install the resulting real files using the permissions above, taking them from
+`/etc/letsencrypt/live/telnet.mush.example.com/`. Then select and persist the overlay
+below **before** publishing the secure address in a directory or MSSP. A certificate
+alone does not enable SharpMUSH's listener.
+
 ## 2. Select the base and overlay
 
 From `deploy/`, copy `.env.example` to `.env` if this is a new install and configure the base
@@ -96,6 +121,24 @@ examples elsewhere in the guide. Starting with the base alone recreates SocketSe
 the TLS configuration. For persistence, set the chosen `COMPOSE_FILE` in `deploy/.env`; shell
 exports apply only to that shell. If using `sharpmush.service`, add the overlay `-f` argument
 after the base in **all three** `ExecStartPre`, `ExecStart` and `ExecStop` commands too.
+For the shipped Cloudflare unit, preserve the checkout's unit with this drop-in:
+
+```bash
+sudo install -d /etc/systemd/system/sharpmush.service.d
+sudo tee /etc/systemd/system/sharpmush.service.d/telnet-tls.conf >/dev/null <<'UNIT'
+[Service]
+ExecStartPre=
+ExecStartPre=-/usr/bin/docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml pull --quiet
+ExecStart=
+ExecStart=/usr/bin/docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml up -d --remove-orphans
+ExecStop=
+ExecStop=/usr/bin/docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml down
+UNIT
+sudo systemctl daemon-reload
+```
+
+For Caddy, replace `docker-compose.cloudflare.yml` with `docker-compose.prod.yml`
+in each command. Reloading the unit does not restart the game.
 
 ```bash
 # Announce a maintenance window first if players are already connected.
@@ -142,6 +185,11 @@ If startup fails, inspect the socket owner's logs and verify the exact paths, pe
 matching key, certificate chain and validity dates. Fix the cause before retrying. Do not
 remove the TLS overlay as a workaround while advertising 4203 as secure.
 
+Set the game's MSSP `ssl_port` to the published TLS port only after this succeeds.
+Game-directory secure Telnet entries must agree with the actual listener. Grapevine's
+web client prefers a configured secure Telnet entry; an unavailable 4203 can prevent
+play even when plaintext 4201 works. `ssl_port` advertises a port and cannot open it.
+
 ## 4. Renew and restart deliberately
 
 Arrange renewal before expiry with your CA tooling. Copy the renewed full chain and matching
@@ -164,6 +212,56 @@ certificate. Repeat the verified remote handshake and compare the served certifi
 serial/expiry with the replacement; then reconnect a native client and the web terminal.
 If renewal changes the directory or Compose settings, use `docker compose up -d connectionserver`
 to recreate it with those settings, rather than `restart`.
+
+### Certbot renewal hook for the worked recipe
+
+The distribution's `certbot.timer` renews certificates, but SharpMUSH also needs the
+renewed pair copied and its socket owner restarted. Install this root-owned hook,
+replacing the hostname, checkout path and base file for your game. It only handles
+this certificate lineage, validates the new pair before replacing either live file,
+and serializes concurrent copies. Its restart disconnects native and WebSocket clients;
+choose a renewal maintenance policy suitable for your game.
+
+```bash
+sudo install -d -m 0755 /etc/letsencrypt/renewal-hooks/deploy
+sudo tee /etc/letsencrypt/renewal-hooks/deploy/sharpmush-telnet >/dev/null <<'HOOK'
+#!/bin/sh
+set -eu
+[ "${RENEWED_LINEAGE:-}" = /etc/letsencrypt/live/telnet.mush.example.com ] || exit 0
+exec 9>/run/lock/sharpmush-telnet-tls.lock
+flock 9
+certdir=/etc/sharpmush/telnet-tls
+install -o root -g 1654 -m 0640 "$RENEWED_LINEAGE/fullchain.pem" "$certdir/fullchain.pem.new"
+install -o root -g 1654 -m 0640 "$RENEWED_LINEAGE/privkey.pem" "$certdir/privkey.pem.new"
+certkey=$(openssl x509 -in "$certdir/fullchain.pem.new" -pubkey -noout)
+privatekey=$(openssl pkey -in "$certdir/privkey.pem.new" -pubout)
+[ "$certkey" = "$privatekey" ]
+openssl x509 -in "$certdir/fullchain.pem.new" -noout -checkhost telnet.mush.example.com -checkend 86400
+mv "$certdir/fullchain.pem.new" "$certdir/fullchain.pem"
+mv "$certdir/privkey.pem.new" "$certdir/privkey.pem"
+cd /opt/SharpMUSH/deploy
+docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml restart connectionserver
+HOOK
+sudo chmod 0700 /etc/letsencrypt/renewal-hooks/deploy/sharpmush-telnet
+sudo sh -n /etc/letsencrypt/renewal-hooks/deploy/sharpmush-telnet
+sudo systemctl enable --now certbot.timer
+sudo certbot renew --cert-name telnet.mush.example.com --dry-run
+```
+
+A normal dry run tests ACME renewal without running deploy hooks. To validate the copy
+and restart path too, run the following during the announced maintenance window, then
+repeat the external TLS and web-terminal checks above. This uses the currently issued
+certificate, not the staging certificate:
+
+```bash
+sudo env RENEWED_LINEAGE=/etc/letsencrypt/live/telnet.mush.example.com \
+  /etc/letsencrypt/renewal-hooks/deploy/sharpmush-telnet
+sudo systemctl list-timers certbot.timer
+```
+
+Keep public port 80 available for future standalone challenges. Monitor timer failures
+and certificate expiry; a successful renewal without a successful deploy hook leaves the
+old certificate loaded in the running socket owner.
 
 ## Regression checks
 
