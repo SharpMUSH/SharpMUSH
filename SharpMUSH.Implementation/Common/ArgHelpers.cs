@@ -387,9 +387,18 @@ public static partial class ArgHelpers
 			&& (layout.Stems is [] or [""] || layout.Stems.All(stem => stem.Length > 0))
 			&& (layout.After.Length == 0 || layout.GroupSize > 1)
 			&& stems.Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Length
-			&& stems.All(stem => !int.TryParse(stem, out _));
+			&& stems.All(stem => !int.TryParse(stem, out _))
+			&& !layout.Stems.Where(stem => stem.Length > 0).Any(stem =>
+				layout.Before.Concat(layout.After).Any(name => name.Equals($"{stem}count", StringComparison.OrdinalIgnoreCase)
+					|| IsNumberedRestName(stem, name))
+				|| layout.Stems.Any(other => IsNumberedRestName(stem, other)));
 		return valid ? names : new Error<string>(ErrorMessages.Returns.BadArgumentName);
 	}
+
+	private static bool IsNumberedRestName(string stem, string name)
+		=> name.Length > stem.Length && name.StartsWith(stem, StringComparison.OrdinalIgnoreCase)
+			&& name[stem.Length] is >= '1' and <= '9'
+			&& name.Skip(stem.Length).All(char.IsAsciiDigit);
 
 	/// <summary>
 	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order.
