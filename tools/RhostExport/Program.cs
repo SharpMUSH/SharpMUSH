@@ -12,6 +12,8 @@ try
 	var allowed = new[] { "--source", "--base", "--checkpoint", "--backend", "--exporter", "--profile", "--output", "--mail", "--folders" };
 	for (var i = 0; i < args.Length; i += 2)
 		if (!allowed.Contains(args[i]) || !values.TryAdd(args[i], args[i + 1])) throw new ArgumentException("Unknown or duplicate option: " + args[i]);
+	foreach (var required in allowed[..7])
+		if (!values.ContainsKey(required)) throw new ArgumentException("Missing required option: " + required);
 	using var cancellation = new CancellationTokenSource();
 	Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
 	var result = await new RhostOfflineExporter().ExportAsync(new()

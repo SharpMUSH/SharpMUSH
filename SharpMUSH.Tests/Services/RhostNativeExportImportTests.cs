@@ -15,7 +15,16 @@ namespace SharpMUSH.Tests.Services;
 /// <summary>Fixtures written and exported by the pinned upstream QDBM and MDBX converters.</summary>
 public class RhostNativeExportImportTests
 {
-	private static string FixtureRoot => Path.Join(AppContext.BaseDirectory, "Services", "TestData", "RhostNative");
+	private static string FixtureRoot => Environment.GetEnvironmentVariable("RHOST_FIXTURE_ROOT") ?? Path.Join(AppContext.BaseDirectory, "Services", "TestData", "RhostNative");
+
+	[Test]
+	public async Task CanonicalComparisonDetectsChangedUserAttributeKeys()
+	{
+		var definition = new RhostAttributeDefinition(256, "TEST", 0);
+		var original = new RhostFlatfile(0, 0, 257, new Dictionary<int, RhostAttributeDefinition> { [256] = definition }, []);
+		var changed = original with { UserAttributes = new Dictionary<int, RhostAttributeDefinition> { [257] = definition } };
+		await Assert.That(CanonicalModel(changed)).IsNotEqualTo(CanonicalModel(original));
+	}
 
 	[Test]
 	[Arguments("legacy")]
@@ -182,7 +191,7 @@ public class RhostNativeExportImportTests
 			flatfile.Version,
 			flatfile.DatabaseTop,
 			flatfile.NextAttribute,
-			UserAttributes = flatfile.UserAttributes.OrderBy(x => x.Key).Select(x => x.Value),
+			UserAttributes = flatfile.UserAttributes.OrderBy(x => x.Key).Select(x => new { x.Key, x.Value }),
 			Objects = flatfile.Objects.OrderBy(x => x.DBRef).Select(x => x with
 			{
 				Attributes = x.Attributes.OrderBy(a => a.Number).ThenBy(a => a.Name, StringComparer.Ordinal).ToArray()

@@ -19,8 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
       - name: Configure disk scratch
@@ -44,6 +46,7 @@ jobs:
           echo "RHOST_PROFILE_LEGACY_QDBM=$RUNNER_TEMP/rhost-fixtures/legacy/profile.json" >> "$GITHUB_ENV"
           echo "RHOST_EXPORTER_MDBX=$RUNNER_TEMP/rhost-fixtures/build-mdbx/Server/bin/dbconvert" >> "$GITHUB_ENV"
           echo "RHOST_PROFILE_MDBX=$RUNNER_TEMP/rhost-fixtures/mdbx/profile.json" >> "$GITHUB_ENV"
+          echo "RHOST_FIXTURE_ROOT=$RUNNER_TEMP/rhost-fixtures" >> "$GITHUB_ENV"
       - name: Build export tests
         run: dotnet build SharpMUSH.Tests -m:2 -nr:false
       - name: Verify actual native exports and imports

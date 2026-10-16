@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import struct
+import re
 
 revision = 'bfd2894c7239d02b8bec15c36939706be371715c'
 source, sample, output = map(lambda p: Path(p).resolve(), sys.argv[1:])
@@ -42,13 +43,22 @@ seed = sample.read_bytes().replace(b'\\u0001', b'\x01').replace(b'first line\\r\
 seed = seed.replace(b'1000\n19\n1174405120\n', b'1000\n19\n100663296\n')
 (output / 'seed.flat').write_bytes(seed)
 manifest = {'revision': revision, 'architecture': platform.machine(), 'system': platform.platform(),
- 'toolchain': {'clang': subprocess.check_output(['clang', '--version'], text=True).splitlines()[0], 'make': subprocess.check_output(['make', '--version'], text=True).splitlines()[0]},
+ 'toolchain': {'clang': re.search(r'clang version (\S+)', subprocess.check_output(['clang', '--version'], text=True)).group(1), 'GNU_make': re.search(r'GNU Make ([^\n]+)', subprocess.check_output(['make', '--version'], text=True)).group(1)},
  'sample_sha256': sha(sample), 'seed_sha256': sha(output / 'seed.flat'),
  'converter_build_repair': 'QDBM only: add #include "externs.h" after debug.h in udb_ocache.c; pinned source omits rhost_time declaration.',
  'backends': {}}
 for backend in ('legacy', 'mdbx'):
     build = output / ('build-' + backend)
-    shutil.copytree(source / 'Server', build / 'Server', symlinks=True)
+    # Only tracked files enter a backend build: git status excludes ignored artifacts.
+    # A previously built source may contain stale objects or an executable for another backend.
+    tracked = subprocess.check_output(['git', '-C', str(source), 'ls-files', '-z', '--', 'Server'])
+    for name in tracked.decode().split('\0'):
+        if not name:
+            continue
+        original = source / name
+        destination = build / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(original, destination, follow_symlinks=False)
     server = build / 'Server'
     run(['bash', 'asksource.sh', 'default'], server / 'bin', build / 'configure.log')
     defs = server / 'src/custom.defs'
