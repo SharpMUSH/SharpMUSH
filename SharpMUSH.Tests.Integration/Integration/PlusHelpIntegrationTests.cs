@@ -340,7 +340,7 @@ public class PlusHelpIntegrationTests
 	/// <summary>
 	/// Every shipped topic must EVALUATE — a body runs through <c>u()</c>, so an unescaped
 	/// <c>[</c>, <c>(</c> or <c>)</c> ends the expression, markdown code span or not. Asserted
-	/// because <c>FUN`GET`RTEXT</c> falls back to the stored text on failure: the topic still
+	/// because <c>FUN`RECORD`TEXT</c> falls back to the stored text on failure: the topic still
 	/// renders, just without any of its evaluated content.
 	/// </summary>
 	[Test]
@@ -351,7 +351,7 @@ public class PlusHelpIntegrationTests
 
 		var report = (await God1(
 			$"think [iter(u({librarian}/FUN`GET`RECORDS),"
-			+ $"[u({librarian}/FUN`GET`RNAME,%i0)]=[if(strmatch(u([extract(%i0,2,1,:)]/[extract(%i0,3,1,:)]),#-1*),BROKEN,ok)]"
+			+ $"[u({librarian}/FUN`RECORD`NAME,%i0)]=[if(strmatch(u([extract(%i0,2,1,:)]/[extract(%i0,3,1,:)]),#-1*),BROKEN,ok)]"
 			+ ",%b,%b)]")).Message.ToPlainText();
 
 		var entries = report.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -555,6 +555,33 @@ public class PlusHelpIntegrationTests
 			.Because("a topic is evaluated for the reader, so [name(%#)] is the reader's own name");
 
 		await RunAs(await StaffAsync(), "+help/delete applying");
+	}
+
+	/// <summary>
+	/// A game topic runs as Game Help, which shares its owner with every other package object. A
+	/// royalty writer controls none of those, so a topic must not either: reading it may not change
+	/// the librarian, whose code runs for every reader.
+	/// </summary>
+	[Test]
+	public async Task AGameTopic_ControlsNothingButGameHelp()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var librarian = await LibrarianAsync();
+		var royal = await CreatePlayerAsync($"Royal{Tag}");
+		await God1($"@set {_actors[royal]}=ROYALTY");
+		var topic = $"reach{Tag}".ToLowerInvariant();
+
+		var wrote = Joined(await RunAs(royal, $@"+help/write {topic}=\[attrib_set({librarian}/REACHED{Tag},yes)\]Read me."));
+		await Assert.That(wrote).Contains($"Wrote game/{topic}");
+
+		var read = Joined(await RunAs(await ReaderAsync(), $"+help {topic}"));
+		await Assert.That(read).Contains("Read me.");
+
+		var reached = (await God1($"think [get({librarian}/REACHED{Tag})]")).Message.ToPlainText()?.Trim() ?? "";
+		await Assert.That(reached).IsEmpty()
+			.Because("a topic written by royalty must not be able to change the librarian's attributes");
+
+		await RunAs(await StaffAsync(), $"+help/delete {topic}");
 	}
 
 	/// <summary>A topic named "0" is a topic, and so is a body of "0".</summary>
