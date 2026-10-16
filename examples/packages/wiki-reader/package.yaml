@@ -10,7 +10,7 @@ requires_server: ">=0.1"
 
 depends:
   - package: plus-help
-    version: ">=1.0"
+    version: ">=1.6"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
