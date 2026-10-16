@@ -19,7 +19,7 @@ Implements the approved queue lane of [open issue consolidation](../specs/2026-1
 
 `SnapshotForQueuedAction` copies argument dictionaries as values, keeping failure metadata while dropping deferred parser closures, parse trees and mutable argument arrays. It copies the top q-register frame and required nested contexts, shares immutable supplied-key provenance/restrictions, resets per-entry invocation/depth/movement counters, break/history/command-dispatch context, and leaves the new elapsed budget to the scheduler. Limits are not removed: a failing entry stops its ordinary or piped command list; independent siblings start with fresh counters.
 
-PennMUSH reference: commit `95ad3511d`, `src/set.c` `do_trigger` clears `parent_queue` for ordinary triggers, `src/cque.c` `queue_attribute_useatr` supplies `PE_INFO_DEFAULT` with ARG/Q registers, while `src/parse.c` `pe_info_from` distinguishes cloning a deferred text context. This is why trigger scope is reset but generic queued text retains its required contexts.
+PennMUSH reference: commit `95ad3511d`, [`src/set.c`](https://github.com/pennmush/pennmush/blob/95ad3511d/src/set.c) `do_trigger` clears `parent_queue` for ordinary triggers, `src/cque.c` `queue_attribute_useatr` supplies `PE_INFO_DEFAULT` with ARG/Q registers, while `src/parse.c` `pe_info_from` distinguishes cloning a deferred text context. This is why trigger scope is reset but generic queued text retains its required contexts.
 
 ## Own-time audit
 
@@ -77,7 +77,30 @@ Run each class in the final acceptance table using the same single-class filter.
 
 ## Final focused acceptance
 
-Build: `dotnet build SharpMUSH.Tests -m:2 -nr:false`, 0 warnings and 0 errors. Focused class results are populated below after the last dependent run.
+Build: `dotnet build SharpMUSH.Tests -m:2 -nr:false`, 0 warnings and 0 errors. Changed C# projects were formatted in two passes and passed the build's formatting gate. Final focused acceptance: **621 passed, 1 pre-existing skipped, zero failures**, each class run separately with the exact filter above.
+
+| Class | Passed | Skipped |
+| --- | ---: | ---: |
+| `InvocationMetricsTests` | 29 | 0 |
+| `QueueContractRuntimeTests` | 11 | 0 |
+| `ParserStateContextTests` | 8 | 0 |
+| `QueuedUserCommandTests` | 39 | 0 |
+| `QueuedControlFlowStateTests` | 3 | 0 |
+| `IncludeBreakPropagationTests` | 8 | 0 |
+| `RecursionAndInvocationLimitTests` | 18 | 0 |
+| `GeneralCommandTests` | 71 | 1 |
+| `QueueAdmissionTests` | 166 | 0 |
+| `QueueQuotaTests` | 5 | 0 |
+| `QueuePauseTests` | 52 | 0 |
+| `QueuedHaltTests` | 7 | 0 |
+| `HttpCommandTests` | 66 | 0 |
+| `DatabaseCommandTests` | 53 | 0 |
+| `NamedArgumentCommandTests` | 51 | 0 |
+| `InplaceDepthLimitTests` | 4 | 0 |
+| `PipedOutputSubstitutionTests` | 18 | 0 |
+| `ExamplePackageTests` | 12 | 0 |
+
+The new `OrdinaryMatchedTriggerQueuesTheComputedBodyAndExplicitAliases` test verifies a real queued regexp trigger executes the stripped action body after its parent tail, with a case-insensitive explicit named override and its numbered alias. The prerequisite catalog correction is also checked on this branch. `GeneralCommandTests` retains its existing skipped command-cache investigation. The argument branch was merged after these checks; its merge had an identical Git tree before and after, so it changed ancestry only.
 
 The measured workload uses a fresh isolated Lightning test world and two distinct mortal owners on the actual single queue consumer. Each of 80 rows performs 60 `ADD` calls through `ITER`, writes a deterministic result, and increments a completion attribute. One row warms parser/storage paths first. A gate admits the producer and second actor in fixed FIFO order; latency runs from gate release through the second actor's real command. Elapsed throughput ends after the worker queue drains, before the result-verification reads. Invocation limit 25,000; queue-entry elapsed limit 30,000 ms; mortal owner capacity 100; global capacity 10,000. Linux x64, Debug build, .NET 11 RC2; other host test work was active.
 
