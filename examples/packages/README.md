@@ -20,17 +20,17 @@ which games can add as a remote in the admin panel.
 
 ## Example packages
 
+The small learning examples (`hello-world`, `starter-area`, `coast-guide`, `bbs-lite`) are in the
+SharpMUSH.Guide repository, under `Examples/Packages/`.
+
 | Package | Demonstrates |
 |---|---|
-| [`hello-world/`](hello-world/) | The minimal manifest: one object, one command attribute |
 | [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, attribute trees (``CMD`WHO``, ``FUN`WHERE`<SWITCH>``), and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
-| [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
-| [`coast-guide/`](coast-guide/) | A content pack (format 1.4): wiki pages and nothing else — bodies in files and inline, a category pinned to the wiki home, a page that requires a permission the package declares |
-| [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 | [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
 | [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
+| [`scene-help/`](scene-help/) + [`scene-config/`](scene-config/) | Bridges: `scene` keeps its `+help` topics and its settings as its own data and depends on nothing, and each bridge is the one registration that shows them to `+help` or `+config`, so a game without either still runs scenes |
 | [`scene-here/`](scene-here/) | Pushes `scene_here` onto a player's context stack as they enter a room with a scene running, so the command palette offers that scene's commands with its number filled in (requires scene and the event handler) |
 | [`scene-verse/`](scene-verse/) | Extends another package's output without editing it: scene details on the Scene Logger, and ``FILTER`<point>`<name>`` attributes that `+scene` runs with `chain()` over what it shows (requires scene) |
 | [`highlights/`](highlights/) + [`highlights-app/`](highlights-app/) | A package that keeps its own data beside another's: favourite poses in a store of its own, commands attached to the Scene Logger, a ``FILTER`POSE`RULE`` filter, settings on `+config`, and a portal page whose routes check what the viewer may read, since a route runs as a wizard (requires scene) |
@@ -764,7 +764,8 @@ network, no configured remote. Two different decisions live there:
   catalogue at any time.
 - **Installed at first boot**: a new game gets it without being asked.
   `http-handler`, `profile-handler`, `room-contents`, `comm-feed`,
-  `plus-help` and `scene` are; `wiki-reader` ships
+  `plus-help`, `plus-config`, `scene`, `scene-help`, `scene-config` and
+  `scene-here` are; `wiki-reader` ships
   available and unenabled, because it puts a `+wiki` object in the master room.
 
 Both are declared in `SharpMUSH.Server/Services/BundledPackages.cs`, and adding
@@ -816,7 +817,8 @@ upgrades never re-ask configure questions you've already answered.
 - Write MUSHcode substitutions bare: `%0`, `%q<name>` — brackets are for
   function calls only.
 - Prefer `firstof()` over nested `if()` chains for priority fallbacks.
-- Pick a `convention_prefix` and use it on attribute names; it is advisory.
+- Name attributes as trees, ``<kind>`<section>`<Name>``: ``CMD`BBPOST``,
+  ``FUN`DISPLAY`LIST``, ``DATA`CONFIG`<NAME>``.
 - Keep function objects `no_command` and put `$command` patterns on a separate
   global object — see `who-where/` for the shape.
 - Never hardcode a dbref. Use `{{?configure}}` for game-specific objects and

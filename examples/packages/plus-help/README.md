@@ -70,7 +70,7 @@ The librarian itself carries **no content** — only the registry, the commands 
 `+help`'s own topics and the game's are two more objects with `HELP` trees, registered the same way,
 so reading a topic is one code path whoever wrote it.
 
-`hello-world` is the smallest complete example; `scene` is a full one.
+`hello-world`, in the SharpMUSH.Guide repository under `Examples/Packages/`, is the smallest complete example; `scene` is a full one.
 
 ### Four things that will bite you
 

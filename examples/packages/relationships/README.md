@@ -21,7 +21,7 @@ routes the portal draws the relationship web and the name card from.
   `` `SINCE `` under it. `<key>` is the other character's objid without `#` and with `:` as `_`, since an
   attribute name holds neither. A side without the `visual` flag is hidden. ``RELNOTE`<key>`` is the note.
 - On the Relationships object: the types (``DATA`TYPE`<KEY>``, with `` `PAIR `` for the other side, Parent
-  and Child, and `` `TONE `` for its colour on the web), the card's lines (``LINE`<order>`<KEY>`` and
+  and Child, and `` `TONE `` for its colour on the web), changed with `+config relationships/types`, the card's lines (``LINE`<order>`<KEY>`` and
   ``SHOW`<KEY>``, with ``LINK`<KEY>`` for a link in the portal) and the settings (`+config relationships`).
 - Staff who hold `softcode.relationships.see` see hidden relationships.
 

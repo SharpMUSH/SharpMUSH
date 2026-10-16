@@ -98,14 +98,14 @@ public class BundledPackagesTests
 
 		await Assert.That(installed).IsEquivalentTo(new[]
 		{
-			"http-handler", "profile-handler", "room-contents", "comm-feed", "plus-help", "plus-config", "scene", "scene-here"
+			"http-handler", "profile-handler", "room-contents", "comm-feed", "plus-help", "plus-config", "scene", "scene-help", "scene-config", "scene-here"
 		});
 	}
 
 	/// <summary>
 	/// The list is walked in order by the offline catalogue and by first-boot install, so a
 	/// dependency has to precede its dependents. plus-help is the first bundled package another
-	/// bundled package depends on — scene and wiki-reader attach their <c>SRC</c> help registration
+	/// bundled package depends on — scene-help and wiki-reader attach their <c>SRC</c> help registration
 	/// to its librarian, which does not exist until plus-help is installed.
 	/// </summary>
 	[Test]
@@ -113,7 +113,10 @@ public class BundledPackagesTests
 	{
 		var order = BundledPackages.All.Select(d => d.PackageId).ToList();
 
-		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("scene"));
+		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("scene-help"));
+		await Assert.That(order.IndexOf("scene")).IsLessThan(order.IndexOf("scene-help"));
+		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("scene-config"));
+		await Assert.That(order.IndexOf("scene")).IsLessThan(order.IndexOf("scene-config"));
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("wiki-reader"));
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("plus-config"));
 		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("who-where"));

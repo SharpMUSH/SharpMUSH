@@ -26,8 +26,8 @@ package.
 (the picture `/assets/logo.png` in the web portal, and in an MXP or Pueblo client once `mud_url` is set; `LOGO` in the
 logo's green in a terminal) and the commands,
 each section a `rule()` over a `fields()` list. On a screen too narrow for both, the commands go under the logo. A
-section is left out while the option behind it (`player_creation`, `guests`) is off. `FUN`MENU`, `FUN`SECTION`,
-`FUN`LIST` and `FUN`COMMAND` build it.
+section is left out while the option behind it (`player_creation`, `guests`) is off. `FUN`CONNECT`MENU`, `FUN`LAYOUT`SECTION`,
+`FUN`LAYOUT`LIST` and `FUN`LAYOUT`COMMAND` build it.
 
 The other messages greet the player by name (`MOTD`), or use `notice()` (`WIZMOTD`, `GUEST`, `REGISTER`, `DOWN`).
 The screens shown before login (`CONNECT`, `REGISTER`) carry no command links; after login, `help` and `WHO` in

@@ -66,6 +66,8 @@ objects:
         value: |-
           +info and +pinfo files, and journals.
         flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Info files and journals
       DATA`CONFIG`NAME-LENGTH: |-
         30
       DATA`CONFIG`NAME-LENGTH`TYPE: |-
@@ -78,6 +80,8 @@ objects:
         60
       DATA`CONFIG`NAME-LENGTH`DESCRIPTION: |-
         The longest name of a file, or title of an entry, in characters.
+      DATA`CONFIG`NAME-LENGTH`LABEL: |-
+        Longest name
       DATA`CONFIG`LENGTH: |-
         8000
       DATA`CONFIG`LENGTH`TYPE: |-
@@ -90,6 +94,8 @@ objects:
         1000000
       DATA`CONFIG`LENGTH`DESCRIPTION: |-
         The longest text of a file or entry, in characters. The game's own limit on an attribute's length caps it too.
+      DATA`CONFIG`LENGTH`LABEL: |-
+        Longest text
       DATA`CONFIG`APPROVAL-LOCK: |-
         0
       DATA`CONFIG`APPROVAL-LOCK`TYPE: |-
@@ -98,6 +104,8 @@ objects:
         0
       DATA`CONFIG`APPROVAL-LOCK`DESCRIPTION: |-
         Once a character is approved, only staff add, change or delete their +info and +pinfo files.
+      DATA`CONFIG`APPROVAL-LOCK`LABEL: |-
+        Staff keep approved files
       DATA`CONFIG`MARKDOWN: |-
         1
       DATA`CONFIG`MARKDOWN`TYPE: |-
@@ -106,6 +114,8 @@ objects:
         1
       DATA`CONFIG`MARKDOWN`DESCRIPTION: |-
         Show the text of files and entries as Markdown: *emphasis*, lists, and a blank line between paragraphs.
+      DATA`CONFIG`MARKDOWN`LABEL: |-
+        Markdown
       # What a character's root attribute says when the package first writes it.
       DATA`ROOT`INFOFILE: |-
         +info files, one branch per file: NAME, TEXT, SET, BY, LOCKED, LOCKEDAT. Written by the Info Files object.
@@ -231,7 +241,7 @@ objects:
 
       # ---- shared reads ---------------------------------------------------------
       # %0 typed text: the objid of the player it names (me is the reader), or nothing.
-      FUN`PLAYER:
+      FUN`FIND`PLAYER:
         value: |-
           if(isdbref(setr(found_player,if(strmatch(%0,me),%#,pmatch(%0)))),objid(%q<found_player>))
         flags: [funsyntax]
@@ -251,12 +261,12 @@ objects:
       FUN`NAMES`PARSE:
         value: |-
           setqm(names_list,if(pos(%,,%0),iter(%0,trim(%i0),%,,|),edit(squish(trim(%0)),%b,|)),
-          names_found,setunion(squish(iter(%q<names_list>,u(%!/FUN`PLAYER,%i0),|,%b)),),
+          names_found,setunion(squish(iter(%q<names_list>,u(%!/FUN`FIND`PLAYER,%i0),|,%b)),),
           names_missing,filterbool(%!/FUN`NAMES`MISSING,%q<names_list>,|,|))
         flags: [funsyntax]
       FUN`NAMES`MISSING:
         value: |-
-          not(strlen(u(%!/FUN`PLAYER,%0)))
+          not(strlen(u(%!/FUN`FIND`PLAYER,%0)))
         flags: [funsyntax]
       # %0 objids: their names, as a sentence.
       FUN`NAMES`SAY:
@@ -264,7 +274,7 @@ objects:
           itemize(iter(%0,name(%i0),%b,|),|)
         flags: [funsyntax]
       # Tells each of %<who>, objids: %<message>.
-      INC`TELL:
+      INC`DO`TELL:
         value: |-
           @if words(%<who>)={@pemit/list iter(%<who>,num(%i0))=notice(INFO,%<message>)}
         flags: [cmdsyntax]
@@ -280,7 +290,9 @@ objects:
       # items on page %q<cmd_page>), or says how many pages there are.
       INC`PAGE`OF:
         value: |-
-          think setqm(page_size,max(5,sub(height(%#,24),10)),page_count,max(1,ceil(fdiv(words(%q<page_items>),%q<page_size>))),page_shown,extract(%q<page_items>,inc(mul(dec(%q<cmd_page>),%q<page_size>)),%q<page_size>)); @assert lte(%q<cmd_page>,%q<page_count>)=@pemit %#=notice(INFO,There [if(eq(%q<page_count>,1),is only one page,are only %q<page_count> pages)].,warn)
+          think setqm(page_size,max(5,sub(height(%#,24),10)),
+          page_count,max(1,ceil(fdiv(words(%q<page_items>),%q<page_size>))),
+          page_shown,extract(%q<page_items>,inc(mul(dec(%q<cmd_page>),%q<page_size>)),%q<page_size>)); @assert lte(%q<cmd_page>,%q<page_count>)=@pemit %#=notice(INFO,There [if(eq(%q<page_count>,1),is only one page,are only %q<page_count> pages)].,warn)
         flags: [cmdsyntax]
       # Which page this is, and the command for the next, for a footer.
       FUN`PAGE`FOOTER:
@@ -289,8 +301,8 @@ objects:
         flags: [funsyntax]
 
       # ---- display ----------------------------------------------------------------
-      # Every screen is a box() with no sides, corners or tees, as +finger's and +help's are, so text copied
-      # from a terminal carries no |.
+      # A file's or entry's card is a box() with no sides, corners or tees, as +finger's and +help's are, so text
+      # copied from a terminal carries no |. The listings take the game's own border.
       FUN`DISPLAY`FRAME:
         value: |-
           json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
@@ -317,10 +329,11 @@ objects:
         value: |-
           if(get(%!/DATA`CONFIG`MARKDOWN),rendermarkdown(edit(%0,%[,\\%[),max(10,width(%#,78))),%0)
         flags: [funsyntax]
-      # A card: %<body>, %<title> and a muted %<footer> under a line.
+      # A card: %<body>, %<title> and a muted %<footer> under a line; %<copied> 1 for text a reader copies, which
+      # is drawn without sides.
       FUN`DISPLAY`CARD:
         value: |-
-          box(%<body>%r[rule()]%r[tone(muted,%<footer>)],%<title>,,u(%!/FUN`DISPLAY`FRAME))
+          setq(card_body,%<body>%r[rule()]%r[tone(muted,%<footer>)])[if(%<copied>,box(%q<card_body>,%<title>,,u(%!/FUN`DISPLAY`FRAME)),box(%q<card_body>,%<title>))]
         flags: [funsyntax]
 
       # ---- +info and +pinfo: reading the files ------------------------------------
@@ -383,22 +396,22 @@ objects:
       # %0 a file name: the command that reads it.
       FUN`FILE`READCMD:
         value: |-
-          +%q<cmd_word> [if(not(%q<file_own>),[name(%q<file_target>)]/)]%0
+          +%q<cmd_word> [if(not(%q<file_own>),name(%q<file_target>)/)]%0
         flags: [funsyntax]
       # The page of the target's files in %q<page_shown>: a table, or a line saying there are none.
       FUN`FILE`LISTING:
         value: |-
-          uargs(%!/FUN`DISPLAY`CARD,title,[name(%q<file_target>)] · [if(%q<file_private>,private files,info files)],body,if(words(%q<page_shown>),u(%!/FUN`FILE`TABLE,%q<page_shown>),tone(muted,No files yet.)),footer,[if(%q<file_own>,+%q<cmd_word> <file> reads one · +%q<cmd_word> <file>=<text> sets one,+%q<cmd_word> [name(%q<file_target>)]/<file> reads one)][u(%!/FUN`PAGE`FOOTER)])
+          uargs(%!/FUN`DISPLAY`CARD,title,name(%q<file_target>) · [if(%q<file_private>,private files,info files)],body,if(words(%q<page_shown>),u(%!/FUN`FILE`TABLE,%q<page_shown>),tone(muted,No files yet.)),footer,if(%q<file_own>,+%q<cmd_word> <file> reads one · +%q<cmd_word> <file>=<text> sets one,+%q<cmd_word> [name(%q<file_target>)]/<file> reads one)[u(%!/FUN`PAGE`FOOTER)])
         flags: [funsyntax]
       # %0 file ids: name, when it was last set, and whether staff locked it.
       FUN`FILE`TABLE:
         value: |-
-          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,2%r3,1%r3%r2,1%r%r),[tone(strong,File)]%r[iter(%0,cmdlink(setr(file_row_name,u(%!/FUN`FILE`NAME,%i0)),u(%!/FUN`FILE`READCMD,%q<file_row_name>),Read it),%b,%r)],[tone(strong,Updated)]%r[iter(%0,u(%!/FUN`DISPLAY`WHEN,u(%!/FUN`FILE`LEAF,%i0,SET)),%b,%r)],[tone(strong,Locked)]%r[iter(%0,if(strlen(u(%!/FUN`FILE`LEAF,%i0,LOCKED)),locked,-),%b,%r)])
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,2%r3,1%r3%r2,1%r%r),tone(strong,File)%r[iter(%0,cmdlink(setr(file_row_name,u(%!/FUN`FILE`NAME,%i0)),u(%!/FUN`FILE`READCMD,%q<file_row_name>),Read it),%b,%r)],tone(strong,Updated)%r[iter(%0,u(%!/FUN`DISPLAY`WHEN,u(%!/FUN`FILE`LEAF,%i0,SET)),%b,%r)],tone(strong,Locked)%r[iter(%0,if(strlen(u(%!/FUN`FILE`LEAF,%i0,LOCKED)),locked,-),%b,%r)])
         flags: [funsyntax]
       # %0 a file id: the file as a card.
       FUN`FILE`CARD:
         value: |-
-          uargs(%!/FUN`DISPLAY`CARD,title,[name(%q<file_target>)] · [u(%!/FUN`FILE`NAME,%0)][if(%q<file_private>,%b· private)],body,u(%!/FUN`DISPLAY`TEXT,u(%!/FUN`FILE`LEAF,%0,TEXT)),footer,u(%!/FUN`FILE`FOOTER,%0))
+          uargs(%!/FUN`DISPLAY`CARD,copied,1,title,name(%q<file_target>) · [u(%!/FUN`FILE`NAME,%0)][if(%q<file_private>,%b· private)],body,u(%!/FUN`DISPLAY`TEXT,u(%!/FUN`FILE`LEAF,%0,TEXT)),footer,u(%!/FUN`FILE`FOOTER,%0))
         flags: [funsyntax]
       FUN`FILE`FOOTER:
         value: |-
@@ -412,7 +425,7 @@ objects:
       # %0 a typed name: the command that sets the file again, its text as stored, for copying.
       FUN`FILE`RAW:
         value: |-
-          if(strlen(setr(file_id,u(%!/FUN`FILE`FIND,%0))),+%q<cmd_word> [if(not(%q<file_own>),[name(%q<file_target>)]/)][u(%!/FUN`FILE`NAME,%q<file_id>)]=[u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT)],notice(INFO,There is no %q<file_noun> called '%0'. [u(%!/FUN`FILE`LISTCMD)] lists them.,warn))
+          if(strlen(setr(file_id,u(%!/FUN`FILE`FIND,%0))),+%q<cmd_word> [if(not(%q<file_own>),name(%q<file_target>)/)][u(%!/FUN`FILE`NAME,%q<file_id>)]=[u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT)],notice(INFO,There is no %q<file_noun> called '%0'. [u(%!/FUN`FILE`LISTCMD)] lists them.,warn))
         flags: [funsyntax]
 
       # ---- +info and +pinfo: the routines ------------------------------------------
@@ -420,7 +433,9 @@ objects:
       # %q<cmd_left_side>, which is <file> or <player>/<file>.
       INC`FILE`WHO:
         value: |-
-          think setqm(file_target,if(%q<cmd_has_slash>,u(%!/FUN`PLAYER,%q<cmd_before_slash>),%q<viewer_objid>),file_typed,if(%q<cmd_has_slash>,%q<cmd_after_slash>,%q<cmd_left_side>)); @assert strlen(%q<file_target>)=@pemit %#=notice(INFO,There is no player called '%q<cmd_before_slash>'.,warn); think setqm(file_own,not(comp(%q<file_target>,%q<viewer_objid>)),file_whose,if(%q<file_own>,your,[name(%q<file_target>)]'s))
+          think setqm(file_target,if(%q<cmd_has_slash>,u(%!/FUN`FIND`PLAYER,%q<cmd_before_slash>),%q<viewer_objid>),
+          file_typed,if(%q<cmd_has_slash>,%q<cmd_after_slash>,%q<cmd_left_side>)); @assert strlen(%q<file_target>)=@pemit %#=notice(INFO,There is no player called '%q<cmd_before_slash>'.,warn); think setqm(file_own,not(comp(%q<file_target>,%q<viewer_objid>)),
+          file_whose,if(%q<file_own>,your,name(%q<file_target>)'s))
         flags: [cmdsyntax]
       INC`FILE`MAYCHANGE:
         value: |-
@@ -442,7 +457,7 @@ objects:
         flags: [cmdsyntax]
       INC`FILE`APPROVAL:
         value: |-
-          @assert cor(%q<viewer_is_staff>,not(u(%!/FUN`FILE`APPROVED)))=@pemit %#=notice(INFO,Staff keep [if(%q<file_own>,your files now you are,[name(%q<file_target>)]'s files now they are)] approved.,error)
+          @assert cor(%q<viewer_is_staff>,not(u(%!/FUN`FILE`APPROVED)))=@pemit %#=notice(INFO,Staff keep [if(%q<file_own>,your files now you are,name(%q<file_target>)'s files now they are)] approved.,error)
         flags: [cmdsyntax]
       # The file %q<file_id> names, or a new one called %q<file_typed>: sets file_name.
       INC`FILE`OLD:
@@ -456,7 +471,8 @@ objects:
       # +info, +info <player>: a list. Run by FILE`READ too, with file_target and file_own set.
       INC`FILE`LIST:
         value: |-
-          think setqm(file_target,%q<viewer_objid>,file_own,1); @include %!/INC`FILE`SHOWLIST
+          think setqm(file_target,%q<viewer_objid>,
+          file_own,1); @include %!/INC`FILE`SHOWLIST
         flags: [cmdsyntax]
       INC`FILE`OTHERS:
         value: |-
@@ -469,7 +485,8 @@ objects:
       # +info <player>, +info <file>[|<file>...], +info <player>/<file>[|<file>...]. A name alone is a player first.
       INC`FILE`READ:
         value: |-
-          @break cand(not(%q<cmd_has_slash>),strlen(setr(file_listed,u(%!/FUN`PLAYER,%q<cmd_argument>))))={think setqm(file_target,%q<file_listed>,file_own,not(comp(%q<file_listed>,%q<viewer_objid>))); @include %!/INC`FILE`OTHERS}; @include %!/INC`FILE`WHO; @include %!/INC`FILE`MAYREAD; @pemit %#=iter(%q<file_typed>,u(%!/FUN`FILE`SHOWNAMED,trim(%i0)),|,%r)
+          @break cand(not(%q<cmd_has_slash>),strlen(setr(file_listed,u(%!/FUN`FIND`PLAYER,%q<cmd_argument>))))={think setqm(file_target,%q<file_listed>,
+          file_own,not(comp(%q<file_listed>,%q<viewer_objid>))); @include %!/INC`FILE`OTHERS}; @include %!/INC`FILE`WHO; @include %!/INC`FILE`MAYREAD; @pemit %#=iter(%q<file_typed>,u(%!/FUN`FILE`SHOWNAMED,trim(%i0)),|,%r)
         flags: [cmdsyntax]
       # +info/get [<player>/]<file>[|<file>...]
       INC`FILE`GET:
@@ -489,12 +506,13 @@ objects:
       # Writes %q<cmd_right_side> to file %q<file_id> (a new one when empty) named %q<file_name>.
       INC`FILE`STORE:
         value: |-
-          think setqm(file_new,not(strlen(%q<file_id>)),file_id,firstof(%q<file_id>,u(%!/FUN`FILE`NEXT))); @include/args %!/INC`ROOT`PROTECT=holder,%q<file_target>,root,%q<file_root>; &%q<file_root>`%q<file_id>`TEXT %q<file_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &%q<file_root>`%q<file_id>`NAME %q<file_target>=%q<file_name>; &%q<file_root>`%q<file_id>`SET %q<file_target>=secs(); &%q<file_root>`%q<file_id>`BY %q<file_target>=%q<viewer_objid>; @if %q<file_lockit>={&%q<file_root>`%q<file_id>`LOCKED %q<file_target>=%q<viewer_objid>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>=secs()}; @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is [if(%q<file_new>,saved,updated)][if(%q<file_lockit>,%band locked)].,ok); @include/args %!/INC`FILE`TELL=did,if(%q<file_new>,added,changed)
+          think setqm(file_new,not(strlen(%q<file_id>)),
+          file_id,firstof(%q<file_id>,u(%!/FUN`FILE`NEXT))); @include/args %!/INC`ROOT`PROTECT=holder,%q<file_target>,root,%q<file_root>; &%q<file_root>`%q<file_id>`TEXT %q<file_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`FILE`LEAF,%q<file_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &%q<file_root>`%q<file_id>`NAME %q<file_target>=%q<file_name>; &%q<file_root>`%q<file_id>`SET %q<file_target>=secs(); &%q<file_root>`%q<file_id>`BY %q<file_target>=%q<viewer_objid>; @if %q<file_lockit>={&%q<file_root>`%q<file_id>`LOCKED %q<file_target>=%q<viewer_objid>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>=secs()}; @pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is [if(%q<file_new>,saved,updated)][if(%q<file_lockit>,%band locked)].,ok); @include/args %!/INC`FILE`TELL=did,if(%q<file_new>,added,changed)
         flags: [cmdsyntax]
       # Tells a player when someone else %<did> one of their files.
       INC`FILE`TELL:
         value: |-
-          @if not(%q<file_own>)={@pemit %q<file_target>=notice(INFO,[name(%#)] %<did> your %q<file_noun> %q<file_name>.)}
+          @if not(%q<file_own>)={@pemit %q<file_target>=notice(INFO,name(%#) %<did> your %q<file_noun> %q<file_name>.)}
         flags: [cmdsyntax]
       # +info/write [<player>/]<file>: the text, a line at a time.
       INC`FILE`WRITE:
@@ -504,7 +522,7 @@ objects:
       # +info/rename [<player>/]<file>=<new name>
       INC`FILE`RENAME:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(INFO,+%q<cmd_word>/rename <file>=<new name>,warn); @include %!/INC`FILE`WHO; @include %!/INC`FILE`MAYCHANGE; @include %!/INC`FILE`NEED; @include %!/INC`FILE`UNLOCKED; @assert not(strlen(setr(file_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>,file,name))))=@pemit %#=notice(INFO,%q<file_problem>,warn); think setq(file_clash,u(%!/FUN`FILE`EXACT,%q<cmd_right_side>)); @assert cor(not(strlen(%q<file_clash>)),eq(%q<file_clash>,%q<file_id>))=@pemit %#=notice(INFO,There is already a %q<file_noun> called '[u(%!/FUN`FILE`NAME,%q<file_clash>)]'.,warn); &%q<file_root>`%q<file_id>`NAME %q<file_target>=%q<cmd_right_side>; @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is called %q<cmd_right_side> now.,ok); @include/args %!/INC`FILE`TELL=did,renamed
+          @assert %q<cmd_has_equals>=@pemit %#=notice(INFO,+%q<cmd_word>/rename <file>=<new name>,warn); @include %!/INC`FILE`WHO; @include %!/INC`FILE`MAYCHANGE; @include %!/INC`FILE`NEED; @include %!/INC`FILE`UNLOCKED; @assert not(strlen(setr(file_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>,file,name))))=@pemit %#=notice(INFO,%q<file_problem>,warn); think setq(file_clash,u(%!/FUN`FILE`EXACT,%q<cmd_right_side>)); @assert cor(not(strlen(%q<file_clash>)),eq(%q<file_clash>,%q<file_id>))=@pemit %#=notice(INFO,There is already a %q<file_noun> called '[u(%!/FUN`FILE`NAME,%q<file_clash>)]'.,warn); &%q<file_root>`%q<file_id>`NAME %q<file_target>=%q<cmd_right_side>; @pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is called %q<cmd_right_side> now.,ok); @include/args %!/INC`FILE`TELL=did,renamed
         flags: [cmdsyntax]
       # +info/delete [<player>/]<file>[|<file>...]
       INC`FILE`DELETE:
@@ -513,7 +531,7 @@ objects:
         flags: [cmdsyntax]
       INC`FILE`DELETE`ONE:
         value: |-
-          @include %!/INC`FILE`NEED; @include %!/INC`FILE`UNLOCKED; @wipe %q<file_target>/%q<file_root>`%q<file_id>; @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is deleted.,ok); @include/args %!/INC`FILE`TELL=did,deleted
+          @include %!/INC`FILE`NEED; @include %!/INC`FILE`UNLOCKED; @wipe %q<file_target>/%q<file_root>`%q<file_id>; @pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is deleted.,ok); @include/args %!/INC`FILE`TELL=did,deleted
         flags: [cmdsyntax]
       # +info/lock <player>/<file>[|<file>...], +info/unlock: staff only.
       INC`FILE`LOCK:
@@ -522,7 +540,7 @@ objects:
         flags: [cmdsyntax]
       INC`FILE`LOCK`ONE:
         value: |-
-          @include %!/INC`FILE`NEED; @assert not(strlen(u(%!/FUN`FILE`LEAF,%q<file_id>,LOCKED)))=@pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is locked already.,warn); &%q<file_root>`%q<file_id>`LOCKED %q<file_target>=%q<viewer_objid>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>=secs(); @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is locked: only staff change it now.,ok); @include/args %!/INC`FILE`TELL=did,locked
+          @include %!/INC`FILE`NEED; @assert not(strlen(u(%!/FUN`FILE`LEAF,%q<file_id>,LOCKED)))=@pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is locked already.,warn); &%q<file_root>`%q<file_id>`LOCKED %q<file_target>=%q<viewer_objid>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>=secs(); @pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is locked: only staff change it now.,ok); @include/args %!/INC`FILE`TELL=did,locked
         flags: [cmdsyntax]
       INC`FILE`UNLOCK:
         value: |-
@@ -530,19 +548,19 @@ objects:
         flags: [cmdsyntax]
       INC`FILE`UNLOCK`ONE:
         value: |-
-          @include %!/INC`FILE`NEED; @assert strlen(u(%!/FUN`FILE`LEAF,%q<file_id>,LOCKED))=@pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is not locked.,warn); &%q<file_root>`%q<file_id>`LOCKED %q<file_target>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>; @pemit %#=notice(INFO,[capstr(%q<file_whose>)] %q<file_noun> %q<file_name> is unlocked.,ok); @include/args %!/INC`FILE`TELL=did,unlocked
+          @include %!/INC`FILE`NEED; @assert strlen(u(%!/FUN`FILE`LEAF,%q<file_id>,LOCKED))=@pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is not locked.,warn); &%q<file_root>`%q<file_id>`LOCKED %q<file_target>; &%q<file_root>`%q<file_id>`LOCKEDAT %q<file_target>; @pemit %#=notice(INFO,capstr(%q<file_whose>) %q<file_noun> %q<file_name> is unlocked.,ok); @include/args %!/INC`FILE`TELL=did,unlocked
         flags: [cmdsyntax]
 
       # ---- +journal: reading -----------------------------------------------------------
-      # Run with jrnl_target the character, jrnl_own 1 when it is the reader's own journal.
+      # Run with journal_target the character, journal_own 1 when it is the reader's own journal.
       FUN`JOURNAL`IDS:
         value: |-
-          sort(iter(lattr(%q<jrnl_target>/JOURNAL`*`TITLE),extract(%i0,2,1,`)),n)
+          sort(iter(lattr(%q<journal_target>/JOURNAL`*`TITLE),extract(%i0,2,1,`)),n)
         flags: [funsyntax]
       # %0 an entry, %1 a leaf.
       FUN`JOURNAL`LEAF:
         value: |-
-          get(%q<jrnl_target>/JOURNAL`%0`%1)
+          get(%q<journal_target>/JOURNAL`%0`%1)
         flags: [funsyntax]
       FUN`JOURNAL`NEXT:
         value: |-
@@ -551,102 +569,106 @@ objects:
       # %0 an entry: 1 when the reader may read it.
       FUN`JOURNAL`VISIBLE:
         value: |-
-          cor(%q<jrnl_own>,%q<viewer_is_staff>,strmatch(setr(jrnl_seen,u(%!/FUN`JOURNAL`LEAF,%0,SHARE)),all),member(%q<jrnl_seen>,%q<viewer_objid>))
+          cor(%q<journal_own>,%q<viewer_is_staff>,strmatch(setr(journal_seen,u(%!/FUN`JOURNAL`LEAF,%0,SHARE)),all),member(%q<journal_seen>,%q<viewer_objid>))
         flags: [funsyntax]
       # %0 an entry: who reads it. The writer and staff see the names; anyone else sees everyone or you.
       FUN`JOURNAL`SHARING:
         value: |-
-          cond(strmatch(setr(jrnl_seen,u(%!/FUN`JOURNAL`LEAF,%0,SHARE)),all),everyone,not(cor(%q<jrnl_own>,%q<viewer_is_staff>)),you,words(%q<jrnl_seen>),u(%!/FUN`NAMES`SAY,%q<jrnl_seen>),[if(%q<jrnl_own>,you,name(%q<jrnl_target>))] and staff)
+          cond(strmatch(setr(journal_seen,u(%!/FUN`JOURNAL`LEAF,%0,SHARE)),all),everyone,not(cor(%q<journal_own>,%q<viewer_is_staff>)),you,words(%q<journal_seen>),u(%!/FUN`NAMES`SAY,%q<journal_seen>),if(%q<journal_own>,you,name(%q<journal_target>)) and staff)
         flags: [funsyntax]
       # %0 an entry: the command that reads it.
       FUN`JOURNAL`READCMD:
         value: |-
-          +journal [if(not(%q<jrnl_own>),[name(%q<jrnl_target>)]/)]%0
+          +journal [if(not(%q<journal_own>),name(%q<journal_target>)/)]%0
         flags: [funsyntax]
       # The page of entries in %q<page_shown>, newest first.
       FUN`JOURNAL`LISTING:
         value: |-
-          uargs(%!/FUN`DISPLAY`CARD,title,[name(%q<jrnl_target>)] · journal,body,if(words(%q<page_shown>),u(%!/FUN`JOURNAL`TABLE,%q<page_shown>),tone(muted,Nothing written yet.)),footer,[if(%q<jrnl_own>,+journal <number> reads one · +journal <title>=<text> writes one · +journal/share <number>=<names> shares it,+journal [name(%q<jrnl_target>)]/<number> reads one)][u(%!/FUN`PAGE`FOOTER)])
+          uargs(%!/FUN`DISPLAY`CARD,title,name(%q<journal_target>) · journal,body,if(words(%q<page_shown>),u(%!/FUN`JOURNAL`TABLE,%q<page_shown>),tone(muted,Nothing written yet.)),footer,if(%q<journal_own>,+journal <number> reads one · +journal <title>=<text> writes one · +journal/share <number>=<names> shares it,+journal [name(%q<journal_target>)]/<number> reads one)[u(%!/FUN`PAGE`FOOTER)])
         flags: [funsyntax]
       # %0 entries, newest first.
       FUN`JOURNAL`TABLE:
         value: |-
-          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r3%r4,%r%r1%r),[tone(strong,#)]%r[iter(%0,%i0,%b,%r)],[tone(strong,Written)]%r[iter(%0,u(%!/FUN`DISPLAY`DAY,u(%!/FUN`JOURNAL`LEAF,%i0,AT)),%b,%r)],[tone(strong,Title)]%r[iter(%0,cmdlink(u(%!/FUN`JOURNAL`LEAF,%i0,TITLE),u(%!/FUN`JOURNAL`READCMD,%i0),Read it),%b,%r)],[tone(strong,Read by)]%r[iter(%0,u(%!/FUN`JOURNAL`SHARING,%i0),%b,%r)])
+          datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r4,1%r2%r3%r4,%r%r1%r),tone(strong,#)%r[iter(%0,%i0,%b,%r)],tone(strong,Written)%r[iter(%0,u(%!/FUN`DISPLAY`DAY,u(%!/FUN`JOURNAL`LEAF,%i0,AT)),%b,%r)],tone(strong,Title)%r[iter(%0,cmdlink(u(%!/FUN`JOURNAL`LEAF,%i0,TITLE),u(%!/FUN`JOURNAL`READCMD,%i0),Read it),%b,%r)],tone(strong,Read by)%r[iter(%0,u(%!/FUN`JOURNAL`SHARING,%i0),%b,%r)])
         flags: [funsyntax]
       # %0 an entry, as a card.
       FUN`JOURNAL`CARD:
         value: |-
-          uargs(%!/FUN`DISPLAY`CARD,title,[name(%q<jrnl_target>)] · journal %0 · [u(%!/FUN`JOURNAL`LEAF,%0,TITLE)],body,u(%!/FUN`DISPLAY`TEXT,u(%!/FUN`JOURNAL`LEAF,%0,TEXT)),footer,Written [u(%!/FUN`DISPLAY`WHEN,u(%!/FUN`JOURNAL`LEAF,%0,AT))][if(strlen(setr(jrnl_edited,u(%!/FUN`JOURNAL`LEAF,%0,EDITED))),%b· edited [u(%!/FUN`DISPLAY`WHEN,%q<jrnl_edited>)])] · read by [u(%!/FUN`JOURNAL`SHARING,%0)])
+          uargs(%!/FUN`DISPLAY`CARD,copied,1,title,name(%q<journal_target>) · journal %0 · [u(%!/FUN`JOURNAL`LEAF,%0,TITLE)],body,u(%!/FUN`DISPLAY`TEXT,u(%!/FUN`JOURNAL`LEAF,%0,TEXT)),footer,Written [u(%!/FUN`DISPLAY`WHEN,u(%!/FUN`JOURNAL`LEAF,%0,AT))][if(strlen(setr(journal_edited,u(%!/FUN`JOURNAL`LEAF,%0,EDITED))),%b· edited [u(%!/FUN`DISPLAY`WHEN,%q<journal_edited>)])] · read by [u(%!/FUN`JOURNAL`SHARING,%0)])
         flags: [funsyntax]
 
       # ---- +journal: the routines ----------------------------------------------------------
       INC`JOURNAL`MINE:
         value: |-
-          think setqm(jrnl_target,%q<viewer_objid>,jrnl_own,1)
+          think setqm(journal_target,%q<viewer_objid>,
+          journal_own,1)
         flags: [cmdsyntax]
-      # The reader's own entry %q<jrnl_typed>: sets jrnl_id and jrnl_title.
+      # The reader's own entry %q<journal_typed>: sets journal_id and journal_title.
       INC`JOURNAL`NEED:
         value: |-
-          @include %!/INC`JOURNAL`MINE; @assert strlen(%q<jrnl_typed>)=@pemit %#=notice(INFO,Which entry? +journal lists them.,warn); @assert cand(isint(%q<jrnl_typed>),hasattr(%q<jrnl_target>,JOURNAL`%q<jrnl_typed>`TITLE))=@pemit %#=notice(INFO,Your journal has no entry '%q<jrnl_typed>'. +journal lists them.,warn); think setqm(jrnl_id,%q<jrnl_typed>,jrnl_title,u(%!/FUN`JOURNAL`LEAF,%q<jrnl_typed>,TITLE))
+          @include %!/INC`JOURNAL`MINE; @assert strlen(%q<journal_typed>)=@pemit %#=notice(INFO,Which entry? +journal lists them.,warn); @assert cand(isint(%q<journal_typed>),hasattr(%q<journal_target>,JOURNAL`%q<journal_typed>`TITLE))=@pemit %#=notice(INFO,Your journal has no entry '%q<journal_typed>'. +journal lists them.,warn); think setqm(journal_id,%q<journal_typed>,
+          journal_title,u(%!/FUN`JOURNAL`LEAF,%q<journal_typed>,TITLE))
         flags: [cmdsyntax]
       INC`JOURNAL`LIST:
         value: |-
-          @include %!/INC`JOURNAL`MINE; think setq(jrnl_ids,u(%!/FUN`JOURNAL`IDS)); @include %!/INC`JOURNAL`SHOWLIST
+          @include %!/INC`JOURNAL`MINE; think setq(journal_ids,u(%!/FUN`JOURNAL`IDS)); @include %!/INC`JOURNAL`SHOWLIST
         flags: [cmdsyntax]
-      # Shows %q<jrnl_ids>, newest first, a page at a time.
+      # Shows %q<journal_ids>, newest first, a page at a time.
       INC`JOURNAL`SHOWLIST:
         value: |-
-          think setq(page_items,revwords(%q<jrnl_ids>)); @include %!/INC`PAGE`OF; @pemit %#=u(%!/FUN`JOURNAL`LISTING)
+          think setq(page_items,revwords(%q<journal_ids>)); @include %!/INC`PAGE`OF; @pemit %#=u(%!/FUN`JOURNAL`LISTING)
         flags: [cmdsyntax]
       # +journal <number>, +journal <player>, +journal <player>/<number>
       INC`JOURNAL`READ:
         value: |-
-          @break isint(%q<cmd_argument>)={@include %!/INC`JOURNAL`MINE; think setq(jrnl_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`SHOW}; think setqm(jrnl_named,if(%q<cmd_has_slash>,%q<cmd_before_slash>,%q<cmd_argument>),jrnl_target,u(%!/FUN`PLAYER,%q<jrnl_named>)); @assert strlen(%q<jrnl_target>)=@pemit %#=notice(INFO,There is no player called '%q<jrnl_named>'.,warn); think setq(jrnl_own,not(comp(%q<jrnl_target>,%q<viewer_objid>))); @break %q<cmd_has_slash>={think setq(jrnl_typed,%q<cmd_after_slash>); @include %!/INC`JOURNAL`SHOW}; think setq(jrnl_ids,filterbool(%!/FUN`JOURNAL`VISIBLE,u(%!/FUN`JOURNAL`IDS))); @assert cor(%q<jrnl_own>,words(%q<jrnl_ids>))=@pemit %#=notice(INFO,Nothing in [name(%q<jrnl_target>)]'s journal is shared with you.); @include %!/INC`JOURNAL`SHOWLIST
+          @break isint(%q<cmd_argument>)={@include %!/INC`JOURNAL`MINE; think setq(journal_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`SHOW}; think setqm(journal_named,if(%q<cmd_has_slash>,%q<cmd_before_slash>,%q<cmd_argument>),
+          journal_target,u(%!/FUN`FIND`PLAYER,%q<journal_named>)); @assert strlen(%q<journal_target>)=@pemit %#=notice(INFO,There is no player called '%q<journal_named>'.,warn); think setq(journal_own,not(comp(%q<journal_target>,%q<viewer_objid>))); @break %q<cmd_has_slash>={think setq(journal_typed,%q<cmd_after_slash>); @include %!/INC`JOURNAL`SHOW}; think setq(journal_ids,filterbool(%!/FUN`JOURNAL`VISIBLE,u(%!/FUN`JOURNAL`IDS))); @assert cor(%q<journal_own>,words(%q<journal_ids>))=@pemit %#=notice(INFO,Nothing in [name(%q<journal_target>)]'s journal is shared with you.); @include %!/INC`JOURNAL`SHOWLIST
         flags: [cmdsyntax]
-      # Shows entry %q<jrnl_typed> of %q<jrnl_target>'s journal, when the reader may read it.
+      # Shows entry %q<journal_typed> of %q<journal_target>'s journal, when the reader may read it.
       INC`JOURNAL`SHOW:
         value: |-
-          @assert cand(isint(%q<jrnl_typed>),hasattr(%q<jrnl_target>,JOURNAL`%q<jrnl_typed>`TITLE),u(%!/FUN`JOURNAL`VISIBLE,%q<jrnl_typed>))=@pemit %#=notice(INFO,[if(%q<jrnl_own>,Your journal has no entry '%q<jrnl_typed>'.,There is no entry '%q<jrnl_typed>' in [name(%q<jrnl_target>)]'s journal that you can read.)],warn); @pemit %#=u(%!/FUN`JOURNAL`CARD,%q<jrnl_typed>)
+          @assert cand(isint(%q<journal_typed>),hasattr(%q<journal_target>,JOURNAL`%q<journal_typed>`TITLE),u(%!/FUN`JOURNAL`VISIBLE,%q<journal_typed>))=@pemit %#=notice(INFO,if(%q<journal_own>,Your journal has no entry '%q<journal_typed>'.,There is no entry '%q<journal_typed>' in [name(%q<journal_target>)]'s journal that you can read.),warn); @pemit %#=u(%!/FUN`JOURNAL`CARD,%q<journal_typed>)
         flags: [cmdsyntax]
       # +journal <title>=<text>: a new entry.
       INC`JOURNAL`ADD:
         value: |-
-          @include %!/INC`JOURNAL`MINE; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_left_side>,entry,title))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(INFO,+journal <title>=<text> writes an entry.,warn); @assert not(strlen(setr(jrnl_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); think setq(jrnl_id,u(%!/FUN`JOURNAL`NEXT)); @include/args %!/INC`ROOT`PROTECT=holder,%q<jrnl_target>,root,JOURNAL; &JOURNAL`%q<jrnl_id>`TEXT %q<jrnl_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &JOURNAL`%q<jrnl_id>`TITLE %q<jrnl_target>=%q<cmd_left_side>; &JOURNAL`%q<jrnl_id>`AT %q<jrnl_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<cmd_left_side>%, is written. You and staff read it until you share it: +journal/share %q<jrnl_id>=<names> or all.,ok)
+          @include %!/INC`JOURNAL`MINE; @assert not(strlen(setr(journal_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_left_side>,entry,title))))=@pemit %#=notice(INFO,%q<journal_problem>,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(INFO,+journal <title>=<text> writes an entry.,warn); @assert not(strlen(setr(journal_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<journal_problem>,warn); think setq(journal_id,u(%!/FUN`JOURNAL`NEXT)); @include/args %!/INC`ROOT`PROTECT=holder,%q<journal_target>,root,JOURNAL; &JOURNAL`%q<journal_id>`TEXT %q<journal_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so nothing was saved.,error); &JOURNAL`%q<journal_id>`TITLE %q<journal_target>=%q<cmd_left_side>; &JOURNAL`%q<journal_id>`AT %q<journal_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<journal_id>%, %q<cmd_left_side>%, is written. You and staff read it until you share it: +journal/share %q<journal_id>=<names> or all.,ok)
         flags: [cmdsyntax]
       # +journal/write <title>
       INC`JOURNAL`WRITE:
         value: |-
-          @assert not(strlen(setr(jrnl_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_argument>,entry,title))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); think setqm(cmd_left_side,%q<cmd_argument>,write_what,a journal entry called %q<cmd_argument>); @include %!/INC`WRITE`START
+          @assert not(strlen(setr(journal_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_argument>,entry,title))))=@pemit %#=notice(INFO,%q<journal_problem>,warn); think setqm(cmd_left_side,%q<cmd_argument>,
+          write_what,a journal entry called %q<cmd_argument>); @include %!/INC`WRITE`START
         flags: [cmdsyntax]
       # +journal/edit <number>=<text>
       INC`JOURNAL`EDIT:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+journal/edit <number>=<text> replaces an entry's text.,warn); think setq(jrnl_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); &JOURNAL`%q<jrnl_id>`TEXT %q<jrnl_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so the entry is as it was.,error); &JOURNAL`%q<jrnl_id>`EDITED %q<jrnl_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<jrnl_title>%, is updated.,ok)
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+journal/edit <number>=<text> replaces an entry's text.,warn); think setq(journal_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @assert not(strlen(setr(journal_problem,u(%!/FUN`TEXT`PROBLEM,%q<cmd_right_side>))))=@pemit %#=notice(INFO,%q<journal_problem>,warn); &JOURNAL`%q<journal_id>`TEXT %q<journal_target>=%q<cmd_right_side>; @assert not(comp(u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,TEXT),%q<cmd_right_side>))=@pemit %#=notice(INFO,The game keeps no text that long%, so the entry is as it was.,error); &JOURNAL`%q<journal_id>`EDITED %q<journal_target>=secs(); @pemit %#=notice(INFO,Journal entry %q<journal_id>%, %q<journal_title>%, is updated.,ok)
         flags: [cmdsyntax]
       # +journal/title <number>=<title>
       INC`JOURNAL`TITLE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(INFO,+journal/title <number>=<title> renames an entry.,warn); think setq(jrnl_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @assert not(strlen(setr(jrnl_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>,entry,title))))=@pemit %#=notice(INFO,%q<jrnl_problem>,warn); &JOURNAL`%q<jrnl_id>`TITLE %q<jrnl_target>=%q<cmd_right_side>; @pemit %#=notice(INFO,Journal entry %q<jrnl_id> is called %q<cmd_right_side> now.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(INFO,+journal/title <number>=<title> renames an entry.,warn); think setq(journal_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @assert not(strlen(setr(journal_problem,u(%!/FUN`NAME`PROBLEM,%q<cmd_right_side>,entry,title))))=@pemit %#=notice(INFO,%q<journal_problem>,warn); &JOURNAL`%q<journal_id>`TITLE %q<journal_target>=%q<cmd_right_side>; @pemit %#=notice(INFO,Journal entry %q<journal_id> is called %q<cmd_right_side> now.,ok)
         flags: [cmdsyntax]
       # +journal/delete <number>
       INC`JOURNAL`DELETE:
         value: |-
-          think setq(jrnl_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @wipe %q<jrnl_target>/JOURNAL`%q<jrnl_id>; @pemit %#=notice(INFO,Journal entry %q<jrnl_id>%, %q<jrnl_title>%, is deleted.,ok)
+          think setq(journal_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @wipe %q<journal_target>/JOURNAL`%q<journal_id>; @pemit %#=notice(INFO,Journal entry %q<journal_id>%, %q<journal_title>%, is deleted.,ok)
         flags: [cmdsyntax]
       # +journal/get <number>: the command that writes it again, its text as stored.
       INC`JOURNAL`GET:
         value: |-
-          think setq(jrnl_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @pemit %#=+journal/edit %q<jrnl_id>=[u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,TEXT)]
+          think setq(journal_typed,%q<cmd_argument>); @include %!/INC`JOURNAL`NEED; @pemit %#=+journal/edit %q<journal_id>=[u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,TEXT)]
         flags: [cmdsyntax]
       # +journal/share <number>=<names> or all
       INC`JOURNAL`SHARE:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+journal/share <number>=<names> shares an entry with them%, and +journal/share <number>=all with everyone.,warn); think setq(jrnl_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; think setq(jrnl_old,u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,SHARE)); @assert not(strmatch(%q<jrnl_old>,all))=@pemit %#=notice(INFO,Everyone reads journal entry %q<jrnl_id> already. +journal/unshare %q<jrnl_id> keeps it to you again.,warn); @break strmatch(%q<cmd_right_side>,all)={&JOURNAL`%q<jrnl_id>`SHARE %q<jrnl_target>=all; @pemit %#=notice(INFO,Everyone reads journal entry %q<jrnl_id>%, %q<jrnl_title>%, now.,ok)}; @include %!/INC`NAMES`FOUND; think setq(jrnl_added,setdiff(%q<names_found>,%q<jrnl_old> %q<viewer_objid>)); @assert words(%q<jrnl_added>)=@pemit %#=notice(INFO,They read it already.,warn); &JOURNAL`%q<jrnl_id>`SHARE %q<jrnl_target>=setunion(%q<jrnl_old>,%q<jrnl_added>); @pemit %#=notice(INFO,[u(%!/FUN`NAMES`SAY,%q<jrnl_added>)] [if(eq(words(%q<jrnl_added>),1),reads,read)] journal entry %q<jrnl_id>%, %q<jrnl_title>%, now.,ok); @include/args %!/INC`TELL=who,%q<jrnl_added>,message,[name(%#)] shared a journal entry with you: +journal [name(%#)]/%q<jrnl_id>
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(INFO,+journal/share <number>=<names> shares an entry with them%, and +journal/share <number>=all with everyone.,warn); think setq(journal_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; think setq(journal_old,u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,SHARE)); @assert not(strmatch(%q<journal_old>,all))=@pemit %#=notice(INFO,Everyone reads journal entry %q<journal_id> already. +journal/unshare %q<journal_id> keeps it to you again.,warn); @break strmatch(%q<cmd_right_side>,all)={&JOURNAL`%q<journal_id>`SHARE %q<journal_target>=all; @pemit %#=notice(INFO,Everyone reads journal entry %q<journal_id>%, %q<journal_title>%, now.,ok)}; @include %!/INC`NAMES`FOUND; think setq(journal_added,setdiff(%q<names_found>,%q<journal_old> %q<viewer_objid>)); @assert words(%q<journal_added>)=@pemit %#=notice(INFO,They read it already.,warn); &JOURNAL`%q<journal_id>`SHARE %q<journal_target>=setunion(%q<journal_old>,%q<journal_added>); @pemit %#=notice(INFO,u(%!/FUN`NAMES`SAY,%q<journal_added>) [if(eq(words(%q<journal_added>),1),reads,read)] journal entry %q<journal_id>%, %q<journal_title>%, now.,ok); @include/args %!/INC`DO`TELL=who,%q<journal_added>,message,name(%#) shared a journal entry with you: +journal [name(%#)]/%q<journal_id>
         flags: [cmdsyntax]
       # +journal/unshare <number>[=<names>]
       INC`JOURNAL`UNSHARE:
         value: |-
-          think setq(jrnl_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @break not(%q<cmd_has_equals>)={&JOURNAL`%q<jrnl_id>`SHARE %q<jrnl_target>; @pemit %#=notice(INFO,Only you and staff read journal entry %q<jrnl_id>%, %q<jrnl_title>%, now.,ok)}; think setq(jrnl_old,u(%!/FUN`JOURNAL`LEAF,%q<jrnl_id>,SHARE)); @assert not(strmatch(%q<jrnl_old>,all))=@pemit %#=notice(INFO,Everyone reads journal entry %q<jrnl_id>. +journal/unshare %q<jrnl_id> keeps it to you%, and +journal/share then names who else reads it.,warn); @include %!/INC`NAMES`FOUND; think setq(jrnl_dropped,setinter(%q<names_found>,%q<jrnl_old>)); @assert words(%q<jrnl_dropped>)=@pemit %#=notice(INFO,None of them read it.,warn); &JOURNAL`%q<jrnl_id>`SHARE %q<jrnl_target>=setdiff(%q<jrnl_old>,%q<jrnl_dropped>); @pemit %#=notice(INFO,[u(%!/FUN`NAMES`SAY,%q<jrnl_dropped>)] no longer [if(eq(words(%q<jrnl_dropped>),1),reads,read)] journal entry %q<jrnl_id>%, %q<jrnl_title>.,ok)
+          think setq(journal_typed,%q<cmd_left_side>); @include %!/INC`JOURNAL`NEED; @break not(%q<cmd_has_equals>)={&JOURNAL`%q<journal_id>`SHARE %q<journal_target>; @pemit %#=notice(INFO,Only you and staff read journal entry %q<journal_id>%, %q<journal_title>%, now.,ok)}; think setq(journal_old,u(%!/FUN`JOURNAL`LEAF,%q<journal_id>,SHARE)); @assert not(strmatch(%q<journal_old>,all))=@pemit %#=notice(INFO,Everyone reads journal entry %q<journal_id>. +journal/unshare %q<journal_id> keeps it to you%, and +journal/share then names who else reads it.,warn); @include %!/INC`NAMES`FOUND; think setq(journal_dropped,setinter(%q<names_found>,%q<journal_old>)); @assert words(%q<journal_dropped>)=@pemit %#=notice(INFO,None of them read it.,warn); &JOURNAL`%q<journal_id>`SHARE %q<journal_target>=setdiff(%q<journal_old>,%q<journal_dropped>); @pemit %#=notice(INFO,u(%!/FUN`NAMES`SAY,%q<journal_dropped>) no longer [if(eq(words(%q<journal_dropped>),1),reads,read)] journal entry %q<journal_id>%, %q<journal_title>.,ok)
         flags: [cmdsyntax]
       # Parses %q<cmd_right_side> as names: names_found, or a warning naming those that are no player's.
       INC`NAMES`FOUND:
@@ -660,7 +682,7 @@ objects:
       # sends <left>=<text> through the same routine the one-line command runs, checks and all.
       INC`WRITE`START:
         value: |-
-          @include %!/INC`WRITE`SWEEP; think setq(write_key,[u(%!/FUN`WRITE`KEY)]); &%q<write_key> {{info_store}}=%q<cmd_word>; &%q<write_key>`LEFT {{info_store}}=%q<cmd_left_side>; &%q<write_key>`TEXT {{info_store}}; &%q<write_key>`STARTED {{info_store}}=secs(); @input/start Writing %q<write_what>. Type it a line at a time%, with an empty line between paragraphs. .done on a line by itself saves it%, .undo drops the last line%, and @input/cancel throws it away.=.done,%!/INPUT`WRITE`DONE,.undo,%!/INPUT`WRITE`UNDO,*,%!/INPUT`WRITE`LINE,3600
+          @include %!/INC`WRITE`SWEEP; think setq(write_key,u(%!/FUN`WRITE`KEY)); &%q<write_key> {{info_store}}=%q<cmd_word>; &%q<write_key>`LEFT {{info_store}}=%q<cmd_left_side>; &%q<write_key>`TEXT {{info_store}}; &%q<write_key>`STARTED {{info_store}}=secs(); @input/start Writing %q<write_what>. Type it a line at a time%, with an empty line between paragraphs. .done on a line by itself saves it%, .undo drops the last line%, and @input/cancel throws it away.=.done,%!/INPUT`WRITE`DONE,.undo,%!/INPUT`WRITE`UNDO,*,%!/INPUT`WRITE`LINE,3600
         flags: [cmdsyntax]
       # The draft of the writer's connection: DRAFT`<dbref number>-<connection>, so two clients each keep their own.
       FUN`WRITE`KEY:
@@ -676,17 +698,23 @@ objects:
       # Any other line, %0 exactly as typed: added to the draft.
       INPUT`WRITE`LINE:
         value: |-
-          think setqm(write_key,[u(%!/FUN`WRITE`KEY)],write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),get(%!/DATA`CONFIG`LENGTH))=@input/prompt notice(INFO,That line would take it past [get(%!/DATA`CONFIG`LENGTH)] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
+          think setqm(write_key,u(%!/FUN`WRITE`KEY),
+          write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),get(%!/DATA`CONFIG`LENGTH))=@input/prompt notice(INFO,That line would take it past [get(%!/DATA`CONFIG`LENGTH)] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
         flags: [cmdsyntax]
       # .undo: drops the last line.
       INPUT`WRITE`UNDO:
         value: |-
-          think setqm(write_key,[u(%!/FUN`WRITE`KEY)],write_text,get({{info_store}}/%q<write_key>`TEXT),write_lines,words(%q<write_text>,%r)); @assert hasattr({{info_store}},%q<write_key>`TEXT)=@input/prompt Nothing to drop yet. .done ends it.; @if gt(%q<write_lines>,1)={&%q<write_key>`TEXT {{info_store}}=ldelete(%q<write_text>,%q<write_lines>,%r)},{&%q<write_key>`TEXT {{info_store}}}; @input/prompt Dropped the last line.
+          think setqm(write_key,u(%!/FUN`WRITE`KEY),
+          write_text,get({{info_store}}/%q<write_key>`TEXT),
+          write_lines,words(%q<write_text>,%r)); @assert hasattr({{info_store}},%q<write_key>`TEXT)=@input/prompt Nothing to drop yet. .done ends it.; @if gt(%q<write_lines>,1)={&%q<write_key>`TEXT {{info_store}}=ldelete(%q<write_text>,%q<write_lines>,%r)},{&%q<write_key>`TEXT {{info_store}}}; @input/prompt Dropped the last line.
         flags: [cmdsyntax]
       # .done, or an hour after the start: saves what was written, through the command's own routine.
       INPUT`WRITE`DONE:
         value: |-
-          think setqm(write_key,[u(%!/FUN`WRITE`KEY)],write_word,get({{info_store}}/%q<write_key>),write_left,get({{info_store}}/%q<write_key>`LEFT),write_text,get({{info_store}}/%q<write_key>`TEXT)); @wipe {{info_store}}/%q<write_key>; @assert strlen(trim(%q<write_text>))=@pemit %#=notice(INFO,Nothing was written%, so nothing was saved.,warn); @if strmatch(r(reason,args),timeout)={@pemit %#=notice(INFO,An hour has passed since you started%, so what you wrote is being saved.)}; think u(%!/FUN`COMMAND`PARSE,%q<write_word>,,%q<write_left>=%q<write_text>); @include %!/INC`%q<cmd_route>
+          think setqm(write_key,u(%!/FUN`WRITE`KEY),
+          write_word,get({{info_store}}/%q<write_key>),
+          write_left,get({{info_store}}/%q<write_key>`LEFT),
+          write_text,get({{info_store}}/%q<write_key>`TEXT)); @wipe {{info_store}}/%q<write_key>; @assert strlen(trim(%q<write_text>))=@pemit %#=notice(INFO,Nothing was written%, so nothing was saved.,warn); @if strmatch(r(reason,args),timeout)={@pemit %#=notice(INFO,An hour has passed since you started%, so what you wrote is being saved.)}; think u(%!/FUN`COMMAND`PARSE,%q<write_word>,,%q<write_left>=%q<write_text>); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------

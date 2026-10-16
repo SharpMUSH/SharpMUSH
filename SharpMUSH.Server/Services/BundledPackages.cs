@@ -67,7 +67,7 @@ public static class BundledPackages
 		new("room-contents", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// The Play sidebar's Channels and Pages, as room-contents is its Here and Exits.
 		new("comm-feed", BundledPackageHandler.Event, InstallAtFirstBoot: true),
-		// +help before its contributors: scene and wiki-reader attach their SRC registration to the
+		// +help before its contributors: scene-help and wiki-reader attach their SRC registration to the
 		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
 		// which is why this installs at first boot rather than shipping available-and-unenabled.
 		new("plus-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
@@ -75,6 +75,10 @@ public static class BundledPackages
 		// their settings with it.
 		new("plus-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		// Bridges: scene keeps its +help topics and +config settings as its own data, and these register them, so a
+		// game that declines +help or +config still runs scenes. Each installs only where both of its halves are.
+		new("scene-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		new("scene-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// The scene in the room, for the command palette: pushes scene_here as players move. Apart from scene
 		// because it needs the event handler and scene does not.
 		new("scene-here", BundledPackageHandler.Event, InstallAtFirstBoot: true),
@@ -205,6 +209,14 @@ public static class BundledPackages
 		=> manifests.ParseManifest(ManifestYaml(packageId)) switch
 		{
 			ParsedPackageManifest parsed => parsed.Manifest.RequiredPlugins,
+			_ => []
+		};
+
+	/// <summary>The packages a bundled package names in <c>depends:</c>.</summary>
+	public static IReadOnlyList<string> Dependencies(string packageId, IPackageManifestService manifests)
+		=> manifests.ParseManifest(ManifestYaml(packageId)) switch
+		{
+			ParsedPackageManifest parsed => [.. parsed.Manifest.Dependencies.Select(d => d.PackageId)],
 			_ => []
 		};
 

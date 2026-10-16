@@ -143,7 +143,7 @@ public class GameFeatureService(
 			{
 				failures.Add(PluginsLoaded(id)
 					? $"{id} needs an {HandlerKind(package.Requires)} handler; set one first."
-					: $"{id} needs the {string.Join(", ", Catalogue[id].Plugins ?? [])} plugin, which this server has not loaded.");
+					: $"{id} needs the {string.Join(", ", MissingPlugins(id))} plugin, which this server has not loaded.");
 				continue;
 			}
 
@@ -229,14 +229,26 @@ public class GameFeatureService(
 	/// Whether every plugin bundled package <paramref name="packageId"/> names in <c>plugins:</c> is loaded, and every
 	/// plugin its bundled dependencies name: a portal page over a package that needs a plugin needs that plugin too.
 	/// </summary>
-	private bool PluginsLoaded(string packageId, HashSet<string>? seen = null)
+	private bool PluginsLoaded(string packageId) => MissingPlugins(packageId).Count == 0;
+
+	/// <summary>
+	/// The plugins bundled package <paramref name="packageId"/> or one of its bundled dependencies names that this server
+	/// has not loaded. A bridge names none itself, so its are the packages' it joins.
+	/// </summary>
+	private IReadOnlyList<string> MissingPlugins(string packageId)
+		=> [.. PluginsUnder(packageId, new HashSet<string>(StringComparer.OrdinalIgnoreCase)).ToList()
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.Where(plugin => !plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)))];
+
+	private IEnumerable<string> PluginsUnder(string packageId, HashSet<string> seen)
 	{
+		if (!seen.Add(packageId))
+		{
+			return [];
+		}
+
 		var entry = Catalogue.GetValueOrDefault(packageId);
-		seen ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		return seen.Add(packageId)
-			&& (entry.Plugins is not { } required
-				|| required.All(plugin => plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase))))
-			&& (entry.DependsOn ?? []).All(dependency => seen.Contains(dependency) || PluginsLoaded(dependency, seen));
+		return [.. entry.Plugins ?? [], .. (entry.DependsOn ?? []).SelectMany(dependency => PluginsUnder(dependency, seen)).ToList()];
 	}
 
 	/// <summary>Each bundled package's description, bundled dependencies, plugins and category, read from its embedded manifest once.</summary>

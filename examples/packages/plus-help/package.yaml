@@ -1,6 +1,6 @@
 format: "1.10"
 package: plus-help
-version: 1.5.4
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -23,7 +23,9 @@ requires_server: ">=0.1"
 # A topic's name is its attribute path below the root with backticks read as spaces, so
 # HELP`SCENE`JOIN is "scene join". Bodies are run through u(), not get(), which is what lets one
 # carry colour or the reader's own name; what should be shown is escaped, as in any attribute.
-# +help/write is gated on staff, and that gate is the security boundary.
+# +help/write is gated on staff. A game topic then runs as Game Help, which shares its owner with
+# every package object and so would control them all; it is MISTRUST, so it controls only itself and
+# a topic can do no more than the staff member who wrote it could.
 objects:
   - ref: librarian
     type: thing
@@ -77,16 +79,18 @@ objects:
       # colon can separate safely: a source name comes from an attribute name (no colons legal), an
       # object is a DBREF (an objid would not be safe here — it contains one), and an attribute path
       # is backticks and word characters.
-      FUN`GET`OBJECTS:
+      # %0 a source — the objects carrying its topics
+      FUN`SOURCE`OBJECTS:
         value: |-
-          [@@(%0 a source — the objects carrying its topics)][u(%!/SRC`[ucstr(%0)])]
+          u(%!/SRC`[ucstr(%0)])
         flags: [funsyntax]
       # "game" leads because a game's own help should read before the packages'; the rest sort so the
       # index does not reorder itself as packages are installed. A leaf with no value is skipped:
       # +help/unsource clears the value, and attrib_set() leaves the attribute itself in place.
+      # no arguments — every registered source, the game's own first
       FUN`GET`SOURCES:
         value: |-
-          [@@(no arguments — every registered source, the game's own first)][trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(cand(strlen(get(%!/%i0)),not(strmatch(setr(n,lcstr(rest(%i0,`))),game))),%q<n>),%b,%b))]))]
+          trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(cand(strlen(get(%!/%i0)),not(strmatch(setr(registered_name,lcstr(rest(%i0,`))),game))),%q<registered_name>),%b,%b))]))
         flags: [funsyntax]
       # ** is the wildcard that crosses a backtick; * stops at one. The root itself is not matched,
       # which is what we want: it holds the source's description, not a topic.
@@ -94,43 +98,51 @@ objects:
       # An attribute with an empty body is skipped. Writing a multi-word topic creates the branch
       # above it -- +help/write "house rules" sets HELP`HOUSE`RULES, and the engine materializes an
       # empty HELP`HOUSE -- which would otherwise list as a topic named "house" with nothing in it.
-      FUN`GET`SRCRECORDS:
+      # %0 a source — its topics as records
+      FUN`SOURCE`RECORDS:
         value: |-
-          [@@(%0 a source — its topics as records)][iter(u(%!/FUN`GET`OBJECTS,%0),iter(lattr(%i0/HELP`**),if(strlen(get(%i1/%i0)),%0:[num(%i1)]:%i0),%b,%b),%b,%b)]
+          iter(u(%!/FUN`SOURCE`OBJECTS,%0),iter(lattr(%i0/HELP`**),if(strlen(get(%i1/%i0)),%0:[num(%i1)]:%i0),%b,%b),%b,%b)
         flags: [funsyntax]
+      # no arguments — every topic in the game, as records
       FUN`GET`RECORDS:
         value: |-
-          [@@(no arguments — every topic in the game, as records)][trim(squish(iter(u(%!/FUN`GET`SOURCES),u(%!/FUN`GET`SRCRECORDS,%i0),%b,%b)))]
+          trim(squish(iter(u(%!/FUN`GET`SOURCES),u(%!/FUN`SOURCE`RECORDS,%i0),%b,%b)))
         flags: [funsyntax]
 
-      FUN`GET`RSOURCE:
+      # %0 a record — its source
+      FUN`RECORD`SOURCE:
         value: |-
-          [@@(%0 a record — its source)][extract(%0,1,1,:)]
+          extract(%0,1,1,:)
         flags: [funsyntax]
-      FUN`GET`RTOPIC:
+      # %0 a record — its bare topic name, backticks read as spaces
+      FUN`RECORD`TOPIC:
         value: |-
-          [@@(%0 a record — its bare topic name, backticks read as spaces)][lcstr(edit(rest(extract(%0,3,1,:),`),`,%b))]
+          lcstr(edit(rest(extract(%0,3,1,:),`),`,%b))
         flags: [funsyntax]
-      FUN`GET`RNAME:
+      # %0 a record — its qualified name, <source>/<topic>
+      FUN`RECORD`NAME:
         value: |-
-          [@@(%0 a record — its qualified name, <source>/<topic>)][extract(%0,1,1,:)]/[u(%!/FUN`GET`RTOPIC,%0)]
+          extract(%0,1,1,:)/[u(%!/FUN`RECORD`TOPIC,%0)]
         flags: [funsyntax]
       # Raw, for searching and for +help/write to round-trip. Never u() a body to search it.
-      FUN`GET`RBODY:
+      # %0 a record — its body as stored, unevaluated
+      FUN`RECORD`BODY:
         value: |-
-          [@@(%0 a record — its body as stored, unevaluated)][get([extract(%0,2,1,:)]/[extract(%0,3,1,:)])]
+          get(extract(%0,2,1,:)/[extract(%0,3,1,:)])
         flags: [funsyntax]
       # Evaluated, for reading. See the header on why u() is right here.
       # A body with an escape missing is an authoring mistake like any other, and it stops the
       # expression. Fall back to the stored text so the reader still gets something readable and
       # the author can see what they wrote, rather than the whole topic becoming a #-1.
-      FUN`GET`RTEXT:
+      # %0 a record — its body, evaluated, or as stored when evaluating it fails
+      FUN`RECORD`TEXT:
         value: |-
-          [@@(%0 a record — its body, evaluated, or as stored when evaluating it fails)][if(strmatch(setr(t,u([extract(%0,2,1,:)]/[extract(%0,3,1,:)])),#-1*),u(%!/FUN`GET`RBODY,%0),%q<t>)]
+          if(strmatch(setr(topic_text,u(extract(%0,2,1,:)/[extract(%0,3,1,:)])),#-1*),u(%!/FUN`RECORD`BODY,%0),%q<topic_text>)
         flags: [funsyntax]
-      FUN`GET`SRCDESC:
+      # %0 a source — the line describing it, from its root attribute
+      FUN`SOURCE`DESCRIPTION:
         value: |-
-          [@@(%0 a source — the line describing it, from its root attribute)][get([first(u(%!/FUN`GET`OBJECTS,%0))]/HELP)]
+          get(first(u(%!/FUN`SOURCE`OBJECTS,%0))/HELP)
         flags: [funsyntax]
 
       # ── Navigation ──────────────────────────────────────────────────────────
@@ -139,184 +151,222 @@ objects:
       # whose path is the parent's plus ONE segment — what is left after stripping "<parent>`" is
       # non-empty and holds no further backtick. Written with after() rather than by counting
       # segments, because words() does not split on a backtick: words(HELP`SCENE`JOIN,`) is 1.
+      # %0 records · %1 a record — its direct subtopics, in order
       FUN`GET`CHILDREN:
         value: |-
-          [@@(%0 records · %1 a record — its direct subtopics, in order)][trim(squish(iter(%0,if(cand(strmatch(extract(%i0,1,1,:),[extract(%1,1,1,:)]),cand(strlen(setr(r,after(extract(%i0,3,1,:),[extract(%1,3,1,:)]`))),not(strmatch(%q<r>,*`*)))),%i0),%b,%b)))]
+          trim(squish(iter(%0,if(cand(strmatch(extract(%i0,1,1,:),extract(%1,1,1,:)),cand(strlen(setr(child_rest,after(extract(%i0,3,1,:),extract(%1,3,1,:)`))),not(strmatch(%q<child_rest>,*`*)))),%i0),%b,%b)))
         flags: [funsyntax]
       # A topic's own last segment, which is what a subtopic is called under its parent: the child
       # of "scene" called "scene join" lists as "join".
+      # %0 a record — its name relative to its parent
       FUN`GET`LEAFNAME:
         value: |-
-          [@@(%0 a record — its name relative to its parent)][lcstr(edit(last(extract(%0,3,1,:),`),`,%b))]
+          lcstr(edit(last(extract(%0,3,1,:),`),`,%b))
         flags: [funsyntax]
 
       # SEE ALSO is declared, because a pointer at ANOTHER source cannot be derived from the tree.
       # It lives in a parallel SEE tree on the same object, at the same path as the topic, holding a
       # "|"-separated list of topic names — bare or qualified. A separate root keeps HELP purely
       # topics: a SEE leaf must never itself become one.
+      # %0 a record — the topics it points at, as written
       FUN`GET`SEE:
         value: |-
-          [@@(%0 a record — the topics it points at, as written)][get([extract(%0,2,1,:)]/SEE`[rest(extract(%0,3,1,:),`)])]
+          get(extract(%0,2,1,:)/SEE`[rest(extract(%0,3,1,:),`)])
         flags: [funsyntax]
 
       # ── Selection ───────────────────────────────────────────────────────────
       # strmatch() glob-matches case-insensitively, so "+help scene*" wildcards for free, the way
       # the engine's own help does.
+      # %0 records · %1 a source — the ones belonging to it
       FUN`GET`OF:
         value: |-
-          [@@(%0 records · %1 a source — the ones belonging to it)][trim(squish(iter(%0,if(strmatch(extract(%i0,1,1,:),%1),%i0),%b,%b)))]
+          trim(squish(iter(%0,if(strmatch(extract(%i0,1,1,:),%1),%i0),%b,%b)))
         flags: [funsyntax]
+      # %0 records · %1 the name attribute to match on · %2 the query
       FUN`GET`MATCHES:
         value: |-
-          [@@(%0 records · %1 the name attribute to match on · %2 the query)][trim(squish(iter(%0,if(strmatch(u(%!/%1,%i0),%2),%i0),%b,%b)))]
+          trim(squish(iter(%0,if(strmatch(u(%!/%1,%i0),%2),%i0),%b,%b)))
         flags: [funsyntax]
-      FUN`GET`NAMEATTR:
+      # %0 a query — qualified queries match the qualified name, bare ones the bare name
+      FUN`GET`NAMEATTRIBUTE:
         value: |-
-          [@@(%0 a query — qualified queries match the qualified name, bare ones the bare name)][if(strmatch(%0,*/*),FUN`GET`RNAME,FUN`GET`RTOPIC)]
+          if(strmatch(%0,*/*),FUN`RECORD`NAME,FUN`RECORD`TOPIC)
         flags: [funsyntax]
       # One game-authored topic outranks any number of package ones — the game's own word wins.
+      # %0 the matches — narrowed to the game's own topic when it claims the same name
       FUN`GET`RESOLVED:
         value: |-
-          [@@(%0 the matches — narrowed to the game's own topic when it claims the same name)][if(cand(gt(words(%0),1),words(setr(g,u(%!/FUN`GET`OF,%0,game)))),%q<g>,%0)]
+          if(cand(gt(words(%0),1),words(setr(game_matches,u(%!/FUN`GET`OF,%0,game)))),%q<game_matches>,%0)
         flags: [funsyntax]
+      # %0 records · %1 a query — the records it resolves to
       FUN`GET`FOUND:
         value: |-
-          [@@(%0 records · %1 a query — the records it resolves to)][u(%!/FUN`GET`RESOLVED,u(%!/FUN`GET`MATCHES,%0,u(%!/FUN`GET`NAMEATTR,%1),%1))]
+          u(%!/FUN`GET`RESOLVED,u(%!/FUN`GET`MATCHES,%0,u(%!/FUN`GET`NAMEATTRIBUTE,%1),%1))
         flags: [funsyntax]
       # A source with no topics is not listed: the game's own is empty until someone writes a topic,
       # and an empty row is worse than no row.
+      # %0 records — the registered sources that actually have topics
       FUN`GET`LIVESOURCES:
         value: |-
-          [@@(%0 records — the registered sources that actually have topics)][trim(squish(iter(u(%!/FUN`GET`SOURCES),if(words(u(%!/FUN`GET`OF,%0,%i0)),%i0),%b,%b)))]
+          trim(squish(iter(u(%!/FUN`GET`SOURCES),if(words(u(%!/FUN`GET`OF,%0,%i0)),%i0),%b,%b)))
         flags: [funsyntax]
       # What a reader typed, as a topic name: lower case, and a command typed as one ("+scene" or
       # "+scene/join") read as the topic it names, its switch a word of the topic ("scene join").
+      # %0 the query as typed — the topic name it asks for
       FUN`GET`QUERY:
         value: |-
-          [@@(%0 the query as typed — the topic name it asks for)][setq(x,lcstr(trim(squish(%0))))][if(strmatch(%q<x>,+*),trim(edit(after(%q<x>,+),/,%b)),%q<x>)]
+          setq(query_text,lcstr(trim(squish(%0))))[if(strmatch(%q<query_text>,+*),trim(edit(after(%q<query_text>,+),/,%b)),%q<query_text>)]
         flags: [funsyntax]
       # The command a bare word would be: "bug" asks about +bug, "+scene" about itself.
+      # %0 the query as typed — the +command it names
       FUN`GET`COMMAND:
         value: |-
-          [@@(%0 the query as typed — the +command it names)][setq(x,lcstr(trim(%0)))][if(strmatch(%q<x>,+*),%q<x>,+%q<x>)]
+          setq(query_text,lcstr(trim(%0)))[if(strmatch(%q<query_text>,+*),%q<query_text>,+%q<query_text>)]
         flags: [funsyntax]
       # A command's topic is the one that documents it, so "+help bug" finds the topic showing `+bug`
       # without the topic having to be called "bug". A topic documents a command when its body names it
       # in code, whole: `+event <id>` documents +event, `+events` does not.
+      # %0 records · %1 a +command — the records whose body shows it in code
       FUN`GET`DOCUMENTING:
         value: |-
-          [@@(%0 records · %1 a +command — the records whose body shows it in code)][trim(squish(iter(%0,if(cor(strmatch(setr(b,u(%!/FUN`GET`RBODY,%i0)),*`%1`*),strmatch(%q<b>,*`%1 *),strmatch(%q<b>,*`%1/*),strmatch(%q<b>,*`%1=*)),%i0),%b,%b)))]
+          trim(squish(iter(%0,if(cor(strmatch(setr(record_body,u(%!/FUN`RECORD`BODY,%i0)),*`%1`*),strmatch(%q<record_body>,*`%1 *),strmatch(%q<record_body>,*`%1/*),strmatch(%q<record_body>,*`%1=*)),%i0),%b,%b)))
         flags: [funsyntax]
       # A word that is no topic's whole name: the topics whose name begins with it, then those holding it.
+      # %0 records · %1 a word — the records whose bare name starts with it, then those containing it
       FUN`GET`NEAR:
         value: |-
-          [@@(%0 records · %1 a word — the records whose bare name starts with it, then those containing it)][setq(st,trim(squish(iter(%0,if(strmatch(u(%!/FUN`GET`RTOPIC,%i0),%1*),%i0),%b,%b))))][trim(squish(%q<st> [iter(%0,if(cand(strmatch(u(%!/FUN`GET`RTOPIC,%i0),*%1*),not(member(%q<st>,%i0))),%i0),%b,%b)]))]
+          setq(near_starts,trim(squish(iter(%0,if(strmatch(u(%!/FUN`RECORD`TOPIC,%i0),%1*),%i0),%b,%b))))[trim(squish(%q<near_starts> [iter(%0,if(cand(strmatch(u(%!/FUN`RECORD`TOPIC,%i0),*%1*),not(member(%q<near_starts>,%i0))),%i0),%b,%b)]))]
         flags: [funsyntax]
       # Every way a name finds topics, in order, stopping at the first that finds any: the name itself
       # (wildcards included), the command it is, then names that start with or contain it. A wildcard
       # or a source/topic name is only ever the first.
+      # %0 records · %1 the query as typed — the records it finds, with %q<help_query> the query read as a topic name and %q<help_lookup_kind> set to name, command or near
       FUN`GET`LOOKUP:
         value: |-
-          [@@(%0 records · %1 the query as typed — the records it finds, and %q<how> set to name, command or near)][setq(q,u(%!/FUN`GET`QUERY,%1),how,name)][if(words(setr(m,u(%!/FUN`GET`FOUND,%0,%q<q>))),%q<m>,if(regmatch(%q<q>,\[*?/\]),,if(words(setr(m,u(%!/FUN`GET`DOCUMENTING,%0,u(%!/FUN`GET`COMMAND,%1)))),[setq(how,command)]%q<m>,[setq(how,near)][u(%!/FUN`GET`NEAR,%0,%q<q>)])))]
+          setqm(help_query,u(%!/FUN`GET`QUERY,%1),
+          help_lookup_kind,name)[if(words(setr(help_matches,u(%!/FUN`GET`FOUND,%0,%q<help_query>))),%q<help_matches>,if(regmatch(%q<help_query>,\[*?/\]),,if(words(setr(help_matches,u(%!/FUN`GET`DOCUMENTING,%0,u(%!/FUN`GET`COMMAND,%1)))),[setq(help_lookup_kind,command)]%q<help_matches>,[setq(help_lookup_kind,near)][u(%!/FUN`GET`NEAR,%0,%q<help_query>)])))]
         flags: [funsyntax]
       # A page number is a whole number from 1; /0 is a mistake, not page 1.
+      # %0 a page number as typed
       FUN`IS`PAGE:
         value: |-
-          [@@(%0 a page number as typed)][cand(isint(%0),gt(%0,0))]
+          cand(isint(%0),gt(%0,0))
         flags: [funsyntax]
+      # %0 records · %1 the text — records whose name or body contains it
       FUN`GET`SEARCHED:
         value: |-
-          [@@(%0 records · %1 the text — records whose name or body contains it)][trim(squish(iter(%0,if(cor(strmatch(u(%!/FUN`GET`RNAME,%i0),*%1*),strmatch(u(%!/FUN`GET`RBODY,%i0),*%1*)),%i0),%b,%b)))]
+          trim(squish(iter(%0,if(cor(strmatch(u(%!/FUN`RECORD`NAME,%i0),*%1*),strmatch(u(%!/FUN`RECORD`BODY,%i0),*%1*)),%i0),%b,%b)))
         flags: [funsyntax]
 
       # ── Paging ──────────────────────────────────────────────────────────────
-      FUN`GET`ROWS:
+      # no arguments — listing rows that fit the reader's screen, under the title, headings, rule and footer
+      FUN`PAGE`ROWS:
         value: |-
-          [@@(no arguments — listing rows that fit the reader's screen, under the title, headings, rule and footer)][max(5,sub(height(%#,24),8))]
+          max(5,sub(height(%#,24),8))
         flags: [funsyntax]
-      FUN`GET`NPAGES:
+      # %0 records — how many pages the reader's screen splits them into
+      FUN`PAGE`COUNT:
         value: |-
-          [@@(%0 records — how many pages the reader's screen splits them into)][add(1,div(sub(max(1,words(%0)),1),u(%!/FUN`GET`ROWS)))]
+          add(1,div(sub(max(1,words(%0)),1),u(%!/FUN`PAGE`ROWS)))
         flags: [funsyntax]
-      FUN`GET`SLICE:
+      # %0 records · %1 page number — the records shown on that page
+      FUN`PAGE`SLICE:
         value: |-
-          [@@(%0 records · %1 page number — the records shown on that page)][extract(%0,add(1,mul(sub(%1,1),u(%!/FUN`GET`ROWS))),u(%!/FUN`GET`ROWS))]
+          extract(%0,add(1,mul(sub(%1,1),u(%!/FUN`PAGE`ROWS))),u(%!/FUN`PAGE`ROWS))
         flags: [funsyntax]
 
       # ── Display ─────────────────────────────────────────────────────────────
       # cmdlink() names the link; each reader's client writes it in its own dialect (Pueblo XCH_CMD,
       # MXP SEND, the portal's anchor) or shows the bare name, so nothing here asks which client it is.
+      # %0 a record — its qualified name, clickable
       FUN`DISPLAY`REF:
         value: |-
-          [@@(%0 a record — its qualified name, clickable)][cmdlink([u(%!/FUN`GET`RNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
+          cmdlink(u(%!/FUN`RECORD`NAME,%0),+help [u(%!/FUN`RECORD`NAME,%0)])
         flags: [funsyntax]
       # The width a markdown body is rendered at: the whole line, since a screen's box has no sides
       # (FUN`GET`FRAME). rendermarkdown() refuses a width under 10.
+      # no arguments — the reader's width
       FUN`GET`BODYWIDTH:
         value: |-
-          [@@(no arguments — the reader's width)][max(10,width(%#,78))]
+          max(10,width(%#,78))
         flags: [funsyntax]
       # Every screen is a box() with no sides, corners or tees: a titled line across the top, the
       # dividers and bottom line across the whole width, and nothing beside the text, so a line copied
       # from a terminal carries no |. The portal draws its usual card. Table headings are bold rather
       # than ruled off, since a heading rule spans only the table, not the screen.
+      # no arguments — the options every screen's box is drawn with
       FUN`GET`FRAME:
         value: |-
-          [@@(no arguments — the options every screen's box is drawn with)][json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)]
+          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
         flags: [funsyntax]
+      # %0 a record — its first paragraph that is not a heading, rendered and on one line. The listing's
+      # Summary column wraps it to the reader's width.
       FUN`DISPLAY`SUMMARY:
         value: |-
-          [@@(%0 a record · %1 how many characters fit — its first paragraph that is not a heading, rendered and on one line, cut at a word so the row stays one line on the reader's screen)][setq(t,squish(edit(rendermarkdowncustom(before(regedit(regeditall(%r[u(%!/FUN`GET`RTEXT,%0)],%r#+ .*,),^%r+,),%r%r),%!,1000),%r,%b)))][if(lte(strlen(%q<t>),%1),%q<t>,[setq(c,ldelete(setr(c,left(%q<t>,sub(%1,3))),words(%q<c>)))][if(member(.|\,|;|:,right(%q<c>,1),|),left(%q<c>,dec(strlen(%q<c>))),%q<c>)]...)]
+          squish(edit(rendermarkdowncustom(before(regedit(regeditall(%r[u(%!/FUN`RECORD`TEXT,%0)],%r#+ .*,),^%r+,),%r%r),%!,1000),%r,%b))
         flags: [funsyntax]
-      FUN`DISPLAY`SRCTABLE:
+      # %0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and
+      # split on a newline, so a description holding a | stays one cell
+      FUN`DISPLAY`SOURCETABLE:
         value: |-
-          [@@(%0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and split on a newline, so a description holding a | stays one cell)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[tone(strong,Covers)]%r[iter(%0,edit(u(%!/FUN`GET`SRCDESC,%i0),%r,%b),%b,%r)])]
+          datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[tone(strong,Covers)]%r[iter(%0,edit(u(%!/FUN`SOURCE`DESCRIPTION,%i0),%r,%b),%b,%r)])
         flags: [funsyntax]
+      # no arguments — the one line that tells a reader what else to type, kept under 78 columns
       FUN`DISPLAY`SYNTAX:
         value: |-
-          [@@(no arguments — the one line that tells a reader what else to type, kept under 78 columns)]+help <topic>%b·%b+help/list \[<source>\]%b·%b+help/search <text>%b·%b+help/sources
+          +help <topic>%b·%b+help/list \[<source>\]%b·%b+help/search <text>%b·%b+help/sources
         flags: [funsyntax]
       # The front page is a TOPIC, not a string in here: "index", resolved the ordinary way, so a
       # game overrides the shipped text by writing its own with +help/write and nothing new is
       # needed to let it. Below it, what this game actually has installed — no counts, because a
       # reader choosing where to look is not helped by knowing one source has four topics.
+      # %0 every record — the whole front page
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(%0 every record — the whole front page)][box([if(words(setr(i,u(%!/FUN`GET`FOUND,%0,index))),[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%q<i>),%!,u(%!/FUN`GET`BODYWIDTH))]%r)][rule(Available help)]%r[u(%!/FUN`DISPLAY`SRCTABLE,u(%!/FUN`GET`LIVESOURCES,%0))],Help,,u(%!/FUN`GET`FRAME))]%r[u(%!/FUN`DISPLAY`SYNTAX)]
+          box(if(words(setr(index_records,u(%!/FUN`GET`FOUND,%0,index))),rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%q<index_records>),%!,u(%!/FUN`GET`BODYWIDTH))%r)[rule(Available help)]%r[u(%!/FUN`DISPLAY`SOURCETABLE,u(%!/FUN`GET`LIVESOURCES,%0))],Help,,u(%!/FUN`GET`FRAME))%r[u(%!/FUN`DISPLAY`SYNTAX)]
         flags: [funsyntax]
+      # named: title · list the records · page · pages how many · head the command and its switches · tail
+      # what follows them. The next page is head/<n> tail.
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(named: title · list the records · page · pages how many · head the command and its switches · tail what follows them. The next page is head/<n> tail. The summaries are cut to what is left of the reader's width beside the widest topic name, less the gap)][setq(sl,u(%!/FUN`GET`SLICE,%<list>,%<page>))][setq(cw,max(20,sub(width(%#,78),add(2,lmath(max,iter(%q<sl>,strlen(u(%!/FUN`GET`RNAME,%i0))))))))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Topic)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Summary)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`SUMMARY,%i0,%q<cw>),%b,%r)])],%<title>,,u(%!/FUN`GET`FRAME))]%r[words(%<list>)] [if(eq(words(%<list>),1),topic,topics)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])]
+          setq(listing_slice,u(%!/FUN`PAGE`SLICE,%<list>,%<page>))[box(datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Topic)]%r[iter(%q<listing_slice>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Summary)]%r[iter(%q<listing_slice>,u(%!/FUN`DISPLAY`SUMMARY,%i0),%b,%r)]),%<title>,,u(%!/FUN`GET`FRAME))]%r[words(%<list>)] [if(eq(words(%<list>),1),topic,topics)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])]
         flags: [funsyntax]
       # One subtopic, named as it is known under its parent, running the full +help for it.
+      # %0 a child record — its short name, clickable
       FUN`DISPLAY`CHILD:
         value: |-
-          [@@(%0 a child record — its short name, clickable)][cmdlink([u(%!/FUN`GET`LEAFNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
+          cmdlink(u(%!/FUN`GET`LEAFNAME,%0),+help [u(%!/FUN`RECORD`NAME,%0)])
         flags: [funsyntax]
       # One see-also entry. The name is as the author wrote it — bare or qualified — and is shown
       # that way; a name nothing resolves to is still listed, because saying so is more use to a
       # reader than dropping it silently.
+      # %0 a topic name as written
       FUN`DISPLAY`SEEONE:
         value: |-
-          [@@(%0 a topic name as written)][cmdlink(%0,+help %0)]
+          cmdlink(%0,+help %0)
         flags: [funsyntax]
+      # %0 records · %1 a record — the subtopic and see-also lines after a blank line, each omitted when empty
       FUN`DISPLAY`NAV:
         value: |-
-          [@@(%0 records · %1 a record — the subtopic and see-also lines after a blank line, each omitted when empty)][if(words(setr(kids,u(%!/FUN`GET`CHILDREN,%0,%1))),%r%r[ansi(h,tone(primary,Subtopics:))] [iter(%q<kids>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,[tone(muted,%b·%b)])])][if(strlen(setr(see,u(%!/FUN`GET`SEE,%1))),%r[if(words(%q<kids>),,%r)][ansi(h,tone(primary,See also:))] [iter(%q<see>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,[tone(muted,%b·%b)])])]
+          if(words(setr(nav_children,u(%!/FUN`GET`CHILDREN,%0,%1))),%r%r[tone(strong,Subtopics:)] [iter(%q<nav_children>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,tone(muted,%b·%b))])[if(strlen(setr(nav_see_also,u(%!/FUN`GET`SEE,%1))),%r[if(words(%q<nav_children>),,%r)][tone(strong,See also:)] [iter(%q<nav_see_also>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,tone(muted,%b·%b))])]
         flags: [funsyntax]
       # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
+      # %0 records · %1 a record — the whole topic, titled with its name
       FUN`DISPLAY`TOPIC:
         value: |-
-          [@@(%0 records · %1 a record — the whole topic, titled with its name)][box([rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%1),%!,u(%!/FUN`GET`BODYWIDTH))][u(%!/FUN`DISPLAY`NAV,%0,%1)],u(%!/FUN`GET`RNAME,%1),,u(%!/FUN`GET`FRAME))]%r+help/list [u(%!/FUN`GET`RSOURCE,%1)]
+          box(rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%1),%!,u(%!/FUN`GET`BODYWIDTH))[u(%!/FUN`DISPLAY`NAV,%0,%1)],u(%!/FUN`RECORD`NAME,%1),,u(%!/FUN`GET`FRAME))%r+help/list [u(%!/FUN`RECORD`SOURCE,%1)]
         flags: [funsyntax]
-      FUN`DISPLAY`SRCOBJ:
+      # %0 a source — the object carrying its topics, or nothing when that object is gone
+      FUN`DISPLAY`SOURCEOBJECT:
         value: |-
-          [@@(%0 a source — the object carrying its topics, or nothing when that object is gone)][setq(o,first(u(%!/FUN`GET`OBJECTS,%0)))][if(isdbref(%q<o>),%q<o>)]
+          if(isdbref(setr(source_object,first(u(%!/FUN`SOURCE`OBJECTS,%0)))),%q<source_object>)
         flags: [funsyntax]
+      # %0 every record — the registry and what each entry contributes; a source whose object is gone is said
+      # to be missing rather than shown a #-1
       FUN`DISPLAY`SOURCES:
         value: |-
-          [@@(%0 every record — the registry and what each entry contributes; a source whose object is gone is said to be missing rather than shown a #-1)][setq(srcs,u(%!/FUN`GET`SOURCES))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1),grow,json(string,%r%r1)),[tone(strong,Source)]%r[iter(%q<srcs>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<srcs>,firstof(num(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<srcs>,firstof(name(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<srcs>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])],Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
+          setq(source_names,u(%!/FUN`GET`SOURCES))[box(datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1),grow,json(string,%r%r1)),[tone(strong,Source)]%r[iter(%q<source_names>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<source_names>,firstof(num(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<source_names>,firstof(name(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<source_names>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)]),Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
         flags: [funsyntax]
 
       # ── Markdown rendering ──────────────────────────────────────────────────
@@ -328,23 +378,23 @@ objects:
       # Send_OOB for cmdlink(), and the librarian does.
       RENDERMARKUP`H1:
         value: |-
-          [tone(strong,%0)]
+          tone(strong,%0)
         flags: [funsyntax]
       RENDERMARKUP`H2:
         value: |-
-          [ansi(h,tone(primary,%0))]
+          tone(primary,%0)
         flags: [funsyntax]
       RENDERMARKUP`H3:
         value: |-
-          [ansi(h,tone(secondary,%0))]
+          tone(secondary,%0)
         flags: [funsyntax]
       RENDERMARKUP`LISTITEM:
         value: |-
-          [tone(primary,if(%0,%1.,*))] %2
+          tone(primary,if(%0,%1.,*)) %2
         flags: [funsyntax]
       RENDERMARKUP`QUOTE:
         value: |-
-          [tone(muted,%0)]
+          tone(muted,%0)
         flags: [funsyntax]
       # The engine renders a bare [topic] as a command link running "help <topic>" — right for the
       # engine's corpus, wrong inside +help, where a cross-reference means the game's own topic. %1
@@ -352,55 +402,63 @@ objects:
       # is a live "+help join". A topic that means the ENGINE's help says so in prose.
       RENDERMARKUP`LINK:
         value: |-
-          [if(and(%2,strmatch(%1,help *)),[tone(info,helplink(%0,after(%1,help%b)))],%0)]
+          if(cand(%2,strmatch(%1,help *)),tone(info,helplink(%0,after(%1,help%b))),%0)
         flags: [funsyntax]
 
       # helplink(<text>, <topic>) — registered globally by STARTUP, so it runs as this librarian for
       # any caller. It can only ever write a link running "+help <topic>", which is why lending the
       # librarian's Send_OOB to every caller through it lends nothing more.
-      FUN`HELPLINK:
+      # %0 the text · %1 a +help topic — a link running +help <topic>
+      FUN`LINK`HELP:
         value: |-
-          [@@(%0 the text · %1 a +help topic — a link running +help <topic>)][cmdlink(%0,+help %1)]
+          cmdlink(%0,+help %1)
         flags: [funsyntax]
       AINSTALL: |-
         @trigger %!/STARTUP
       AUPDATE: |-
         @trigger %!/STARTUP
       STARTUP: |-
-        @function helplink=%!,FUN`HELPLINK,2,2
+        @function helplink=%!,FUN`LINK`HELP,2,2
 
       # ── Shared command steps ────────────────────────────────────────────────
+      # %0 the message — a mistake in what was typed, reported as a warning.
       INC`DISPLAY`WARN:
         value: |-
-          @@ %0 the message — a mistake in what was typed, reported as a warning; @pemit %#=[notice(HELP,%0,warn)]
+          @pemit %#=notice(HELP,%0,warn)
         flags: [cmdsyntax]
+      # %0 the message — a refusal for want of permission, reported as an error.
       INC`DISPLAY`DENIED:
         value: |-
-          @@ %0 the message - a refusal for want of permission, reported as an error; @pemit %#=[notice(HELP,%0,error)]
+          @pemit %#=notice(HELP,%0,error)
         flags: [cmdsyntax]
+      # %0 the message — for an empty result, which is not a failure.
       INC`DISPLAY`INFO:
         value: |-
-          @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[notice(HELP,%0)]
+          @pemit %#=notice(HELP,%0)
         flags: [cmdsyntax]
       # The miss points at the engine's corpus rather than silently rendering it: +help stays able to
       # answer "does this GAME document this?", which a fallthrough would cost.
+      # No arguments: %q<help_query> matched nothing.
       INC`DISPLAY`MISS:
         value: |-
-          @@ no arguments — %q<q> matched nothing; @pemit %#=[notice(HELP,No local topic '%q<q>'. Try [cmdlink(help %q<q>,help %q<q>)] or [cmdlink(+help/search %q<q>,+help/search %q<q>)].,warn)]
+          @pemit %#=notice(HELP,No local topic '%q<help_query>'. Try [cmdlink(help %q<help_query>,help %q<help_query>)] or [cmdlink(+help/search %q<help_query>,+help/search %q<help_query>)].,warn)
         flags: [cmdsyntax]
       # A usage line names the switch as typed in full, so a reader who wrote /lis sees /list.
+      # No arguments: the usage of switch %q<cmd_switch>.
       INC`DISPLAY`USAGE:
         value: |-
-          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(HELP,Usage: +help/[u(%!/FUN`GET`USAGE,%q<sw>)],warn)]
+          @pemit %#=notice(HELP,Usage: +help/[u(%!/FUN`GET`USAGE,%q<cmd_switch>)],warn)
         flags: [cmdsyntax]
       # A switch that names none, or several, says which it could be and what there is.
+      # No arguments: %q<cmd_typed> is a switch naming no single one.
       INC`DISPLAY`BADSWITCH:
         value: |-
-          @@ no arguments — %q<typed> is a switch naming no single one; @pemit %#=[notice(HELP,[if(not(strlen(%q<typed>)),+help/ needs a switch.,if(words(setr(c,graball(u(%!/FUN`GET`SWITCHES),%q<typed>*))),+help/%q<typed> could be [itemize(iter(%q<c>,/%i0,%b,|),|,or)].,+help has no /%q<typed> switch.))] Switches: [iter(u(%!/FUN`GET`SWITCHES,%#),cmdlink(/%i0,+help/%i0),%b,%b)],warn)]
+          @pemit %#=notice(HELP,[if(not(strlen(%q<cmd_typed>)),+help/ needs a switch.,if(words(setr(switch_candidates,graball(u(%!/FUN`GET`SWITCHES),%q<cmd_typed>*))),+help/%q<cmd_typed> could be [itemize(iter(%q<switch_candidates>,/%i0,%b,|),|,or)].,+help has no /%q<cmd_typed> switch.))] Switches: [iter(u(%!/FUN`GET`SWITCHES,%#),cmdlink(/%i0,+help/%i0),%b,%b)],warn)
         flags: [cmdsyntax]
+      # No arguments: writing help is a staff verb, checked against the caller's flags.
       INC`IS`STAFF:
         value: |-
-          @@ no arguments — writing help is a staff verb, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`DENIED=Staff only.
+          @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`DENIED=Staff only.
         flags: [cmdsyntax]
       # Two checks, in the order the name is transformed. First what +help reserves — "/" separates
       # source from topic, "*" and "?" are its wildcards — then whether the derived PATH can be
@@ -411,29 +469,33 @@ objects:
       # characters and pass "BAD/NAME" on the strength of "BAD". CMD`SOURCE anchors the same way.
       # Its brackets are escaped or "[" opens an evaluation bracket instead.
       #
-      # topic is the caller's trimmed, upper-cased name, passed by name; this leaves %q<obj> and %q<attr> set.
+      # topic is the caller's trimmed, upper-cased name, passed by name; this leaves %q<topic_object> and
+      # %q<topic_attribute> set.
+      # named: topic — validates the staged, trimmed, upper-cased name.
       INC`IS`TOPICNAME:
         value: |-
-          @@ named: topic — validates the staged, trimmed, upper-cased name, and hands back %q<obj> and %q<attr>; @assert strlen(%<topic>)=@include %!/INC`DISPLAY`WARN=Which topic?; @assert regmatch(%<topic>,^\[^*?/\]+$)=@include %!/INC`DISPLAY`WARN=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`WARN=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
+          @assert strlen(%<topic>)=@include %!/INC`DISPLAY`WARN=Which topic?; @assert regmatch(%<topic>,^\[^*?/\]+$)=@include %!/INC`DISPLAY`WARN=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think setq(topic_attribute,HELP`[edit(trim(squish(%<topic>)),%b,`)]); @assert valid(attrname,%q<topic_attribute>)=@include %!/INC`DISPLAY`WARN=A topic name has to be storable as an attribute name.; think setq(topic_object,u(%!/SRC`GAME))
         flags: [cmdsyntax]
       # Takes its arguments by name (@include/args), so a title carrying what the reader typed, commas
       # and all, arrives whole and nothing is left behind in a register.
+      # named: list the records · title · page · head and tail, the next page being head/<n> tail.
       INC`DO`LISTING:
         value: |-
-          @@ named: list the records · title · page · head and tail, the next page being head/<n> tail; @assert words(%<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%<list>))]; @assert lte(%<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %<page>.; @pemit %#=[uargs(%!/FUN`DISPLAY`LISTING,title,%<title>,list,%<list>,page,%<page>,pages,%q<pages>,head,%<head>,tail,%<tail>)]
+          @assert words(%<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think setq(page_count,u(%!/FUN`PAGE`COUNT,%<list>)); @assert lte(%<page>,%q<page_count>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<page_count>,1),are %q<page_count> pages,is one page)] — you asked for page %<page>.; @pemit %#=uargs(%!/FUN`DISPLAY`LISTING,title,%<title>,list,%<list>,page,%<page>,pages,%q<page_count>,head,%<head>,tail,%<tail>)
         flags: [cmdsyntax]
       # One topic renders; none reports the miss; several list the qualified candidates as +help/list
       # does, titled with how they were found.
+      # named: query as typed · page, for several matches.
       INC`DO`SHOW:
         value: |-
-          @@ named: query as typed · page, for several matches; @assert strlen(trim(%<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))][setq(m,u(%!/FUN`GET`LOOKUP,%q<recs>,%<query>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<m>),1)={@include/args %!/INC`DO`LISTING=list,%q<m>,title,[switch(%q<how>,command,Topics about [u(%!/FUN`GET`COMMAND,%<query>)],near,Topics with '%q<q>' in their names,Topics matching '%q<q>')],head,+help,tail,[trim(%<query>)],page,%<page>}; @assert lte(%<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %<page>.; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
+          @assert strlen(trim(%<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think setq(help_records,u(%!/FUN`GET`RECORDS))[setq(help_matches,u(%!/FUN`GET`LOOKUP,%q<help_records>,%<query>))]; @assert words(%q<help_matches>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<help_matches>),1)={@include/args %!/INC`DO`LISTING=list,%q<help_matches>,title,switch(%q<help_lookup_kind>,command,Topics about [u(%!/FUN`GET`COMMAND,%<query>)],near,Topics with '%q<help_query>' in their names,Topics matching '%q<help_query>'),head,+help,tail,trim(%<query>),page,%<page>}; @assert lte(%<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %<page>.; @pemit %#=u(%!/FUN`DISPLAY`TOPIC,%q<help_records>,%q<help_matches>)
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
       # Regex patterns: a non-capturing group is written "(?\:" — a bare colon would end the pattern.
       CMD`INDEX:
         value: |-
-          $^\+help\s*$:@pemit %#=[u(%!/FUN`DISPLAY`INDEX,u(%!/FUN`GET`RECORDS))]
+          $^\+help\s*$:@pemit %#=u(%!/FUN`DISPLAY`INDEX,u(%!/FUN`GET`RECORDS))
         flags: [regexp, cmdsyntax]
       # A page of several matches is asked for as +help/<n> <topic>, through CMD`SWITCH.
       CMD`TOPIC:
@@ -441,46 +503,66 @@ objects:
           $(?s)^\+help\s+(?<q>.*?)\s*$:@include/args %!/INC`DO`SHOW=query,%<q>,page,1
         flags: [regexp, cmdsyntax]
       # Every switch comes through here, named in full or by any beginning only it has (/l is /list),
-      # and runs its INC`SW leaf with %q<rest>, whatever followed the switch. Matching every switch in
+      # and runs its INC`SWITCH leaf with %q<cmd_rest>, whatever followed the switch. Matching every switch in
       # one pattern is what lets a mistyped one answer rather than fall through to Huh?. A page is a
       # last switch of digits: +help/list/2, and +help/2 <topic> for a topic several match.
       CMD`SWITCH:
         value: |-
-          $(?s)^\+help/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(page,u(%!/FUN`GET`PAGE,%q<typed>))][if(strlen(%q<page>),setq(typed,if(strmatch(%q<typed>,*/*),before(%q<typed>,/))))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @break cand(strlen(%q<page>),not(strlen(%q<typed>)))={@assert u(%!/FUN`IS`PAGE,%q<page>)=@pemit %#=[notice(HELP,Usage: +help[chr(91)]/<page>[chr(93)] <topic>,warn)]; @include/args %!/INC`DO`SHOW=query,%q<rest>,page,%q<page>}; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @assert cor(not(strlen(%q<page>)),u(%!/FUN`IS`PAGED,%q<sw>))=@include %!/INC`DISPLAY`WARN=+help/%q<sw> takes no page number.; @assert u(%!/FUN`IS`PAGE,setr(page,strfirstof(%q<page>,1)))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`SW`[ucstr(%q<sw>)]
+          $(?s)^\+help/(?<sw>[^\s=]*)(?<rest>.*)$:think u(%!/FUN`COMMAND`PARSE,r(sw,args),r(rest,args)); @break cand(strlen(%q<cmd_page>),not(strlen(%q<cmd_typed>)))={@assert u(%!/FUN`IS`PAGE,%q<cmd_page>)=@pemit %#=notice(HELP,Usage: +help%[/<page>%] <topic>,warn); @include/args %!/INC`DO`SHOW=query,%q<cmd_rest>,page,%q<cmd_page>}; @assert strlen(%q<cmd_switch>)=@include %!/INC`DISPLAY`BADSWITCH; @assert cor(not(strlen(%q<cmd_page>)),u(%!/FUN`IS`PAGED,%q<cmd_switch>))=@include %!/INC`DISPLAY`WARN=+help/%q<cmd_switch> takes no page number.; @assert u(%!/FUN`IS`PAGE,setr(cmd_page,strfirstof(%q<cmd_page>,1)))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`SWITCH`[ucstr(%q<cmd_switch>)]
         flags: [regexp, cmdsyntax]
+      # %0 the switches as typed, %1 what followed them: sets cmd_typed (the switches without the page),
+      # cmd_rest, cmd_page (the page they end with, or nothing) and cmd_switch (the switch they name).
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_typed,lcstr(%0),
+          cmd_rest,%1,
+          cmd_page,u(%!/FUN`GET`PAGE,%q<cmd_typed>),
+          cmd_typed,if(strlen(%q<cmd_page>),if(strmatch(%q<cmd_typed>,*/*),before(%q<cmd_typed>,/)),%q<cmd_typed>),
+          cmd_switch,u(%!/FUN`GET`SWITCH,%q<cmd_typed>))
+        flags: [funsyntax]
       # The order a reader is shown them in; the staff verbs only to staff.
+      # %0 the reader, optional — the switches, the staff ones too when %0 is staff or not given
       FUN`GET`SWITCHES:
         value: |-
-          [@@(%0 the reader, optional — the switches, the staff ones too when %0 is staff or not given)]list search sources[if(cor(not(strlen(%0)),orflags(%0,Wr)),%bwrite delete source unsource)]
+          list search sources[if(cor(not(strlen(%0)),orflags(%0,Wr)),%bwrite delete source unsource)]
         flags: [funsyntax]
+      # %0 a switch as typed — the one it names, whole or by a beginning no other switch has, or nothing
+      # · %1 the switches to choose from, optional: this object's own when not given. wiki-reader passes
+      # its own.
       FUN`GET`SWITCH:
         value: |-
-          [@@(%0 a switch as typed — the one it names, whole or by a beginning no other switch has, or nothing)][if(regmatch(%0,^\[a-z\]+$),if(member(setr(l,u(%!/FUN`GET`SWITCHES)),%0),%0,if(eq(words(setr(c,graball(%q<l>,%0*))),1),%q<c>)))]
+          if(regmatch(%0,^\[a-z\]+$),if(member(setr(switch_list,strfirstof(%1,u(%!/FUN`GET`SWITCHES))),%0),%0,if(eq(words(setr(switch_candidates,graball(%q<switch_list>,%0*))),1),%q<switch_candidates>)))
         flags: [funsyntax]
+      # %0 a switch — how it is typed, after +help/
       FUN`GET`USAGE:
         value: |-
-          [@@(%0 a switch — how it is typed, after +help/)][switch(%0,list,list\[/<page>\] \[<source>\],search,search\[/<page>\] <text>,sources,sources,write,write <topic>=<text>,delete,delete <topic>,source,source <name>=<object>,unsource,unsource <name>)]
+          switch(%0,list,list\[/<page>\] \[<source>\],search,search\[/<page>\] <text>,sources,sources,write,write <topic>=<text>,delete,delete <topic>,source,source <name>=<object>,unsource,unsource <name>)
         flags: [funsyntax]
+      # %0 a switch — whether what it lists comes in pages
       FUN`IS`PAGED:
         value: |-
-          [@@(%0 a switch — whether what it lists comes in pages)][t(member(list search,%0))]
+          t(member(list search,%0))
         flags: [funsyntax]
       # The page is the last switch, and digits only: +help/list/2. Nothing when there is none.
+      # %0 the switches as typed — the page they end with, or nothing
       FUN`GET`PAGE:
         value: |-
-          [@@(%0 the switches as typed — the page they end with, or nothing)][if(cor(regmatch(%0,^\[0-9\]+$),regmatch(%0,^\[a-z\]+/\[0-9\]+$)),last(%0,/))]
+          if(cor(regmatch(%0,^\[0-9\]+$),regmatch(%0,^\[a-z\]+/\[0-9\]+$)),last(%0,/))
         flags: [funsyntax]
-      INC`SW`LIST:
+      # %q<cmd_rest> — [<source>] · %q<cmd_page> the page.
+      INC`SWITCH`LIST:
         value: |-
-          @@ %q<rest> — \[<source>\] · %q<page> the page; think [setq(src,lcstr(trim(%q<rest>)))]; @assert lte(words(%q<src>),1)=@include %!/INC`DISPLAY`USAGE; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(strlen(%q<src>)),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<src>. Try +help/sources.; @include/args %!/INC`DO`LISTING=list,[if(strlen(%q<src>),u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>)],title,Topics[if(strlen(%q<src>),: %q<src>)],head,+help/list,tail,%q<src>,page,%q<page>
+          think setq(list_source,lcstr(trim(%q<cmd_rest>))); @assert lte(words(%q<list_source>),1)=@include %!/INC`DISPLAY`USAGE; think setq(help_records,u(%!/FUN`GET`RECORDS)); @assert cor(not(strlen(%q<list_source>)),words(u(%!/FUN`GET`OF,%q<help_records>,%q<list_source>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<list_source>. Try +help/sources.; @include/args %!/INC`DO`LISTING=list,if(strlen(%q<list_source>),u(%!/FUN`GET`OF,%q<help_records>,%q<list_source>),%q<help_records>),title,Topics[if(strlen(%q<list_source>),: %q<list_source>)],head,+help/list,tail,%q<list_source>,page,%q<cmd_page>
         flags: [cmdsyntax]
-      INC`SW`SEARCH:
+      # %q<cmd_rest> — <text> · %q<cmd_page> the page.
+      INC`SWITCH`SEARCH:
         value: |-
-          @@ %q<rest> — <text> · %q<page> the page; think [setq(q,lcstr(trim(%q<rest>)))]; @assert strlen(%q<q>)=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`DO`LISTING=list,[u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<q>)],title,Search: %q<q>,head,+help/search,tail,%q<q>,page,%q<page>
+          think setq(search_text,lcstr(trim(%q<cmd_rest>))); @assert strlen(%q<search_text>)=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`DO`LISTING=list,u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<search_text>),title,Search: %q<search_text>,head,+help/search,tail,%q<search_text>,page,%q<cmd_page>
         flags: [cmdsyntax]
-      INC`SW`SOURCES:
+      # %q<cmd_rest> — nothing.
+      INC`SWITCH`SOURCES:
         value: |-
-          @@ %q<rest> — nothing; @assert not(strlen(trim(%q<rest>)))=@include %!/INC`DISPLAY`USAGE; @pemit %#=[u(%!/FUN`DISPLAY`SOURCES,u(%!/FUN`GET`RECORDS))]
+          @assert not(strlen(trim(%q<cmd_rest>)))=@include %!/INC`DISPLAY`USAGE; @pemit %#=u(%!/FUN`DISPLAY`SOURCES,u(%!/FUN`GET`RECORDS))
         flags: [cmdsyntax]
       # attrib_set() rather than "&": the attribute NAME is computed here, and @set obj/attr= sets
       # attribute FLAGS on this engine rather than a value, so it is not an option at all. The body
@@ -490,23 +572,27 @@ objects:
       #
       # attrib_set() is a side-effect function, so a game that sets function_side_effects=no loses
       # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
-      INC`SW`WRITE:
+      # %q<cmd_rest> — <topic>=<text>.
+      INC`SWITCH`WRITE:
         value: |-
-          @@ %q<rest> — <topic>=<text>; @include %!/INC`IS`STAFF; @assert cand(strmatch(%q<rest>,*=*),strlen(trim(before(%q<rest>,=))))=@include %!/INC`DISPLAY`USAGE; think [setq(topic,ucstr(trim(before(%q<rest>,=))))]; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; @assert strlen(setr(body,after(%q<rest>,=)))=@include %!/INC`DISPLAY`WARN=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[notice(HELP,Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
+          @include %!/INC`IS`STAFF; @assert cand(strmatch(%q<cmd_rest>,*=*),strlen(trim(before(%q<cmd_rest>,=))))=@include %!/INC`DISPLAY`USAGE; think setq(topic,ucstr(trim(before(%q<cmd_rest>,=)))); @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; @assert strlen(setr(topic_body,after(%q<cmd_rest>,=)))=@include %!/INC`DISPLAY`WARN=A topic needs a body. Use +help/delete to remove one.; think attrib_set(%q<topic_object>/%q<topic_attribute>,%q<topic_body>); @pemit %#=notice(HELP,Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)
         flags: [cmdsyntax]
-      INC`SW`DELETE:
+      # %q<cmd_rest> — <topic>.
+      INC`SWITCH`DELETE:
         value: |-
-          @@ %q<rest> — <topic>; @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<rest>))))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; @assert strlen(get(%q<obj>/%q<attr>))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; think [attrib_set(%q<obj>/%q<attr>)]; @pemit %#=[notice(HELP,Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
+          @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<cmd_rest>))))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; @assert strlen(get(%q<topic_object>/%q<topic_attribute>))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; think attrib_set(%q<topic_object>/%q<topic_attribute>); @pemit %#=notice(HELP,Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)
         flags: [cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
-      INC`SW`SOURCE:
+      # %q<cmd_rest> — <name>=<object>.
+      INC`SWITCH`SOURCE:
         value: |-
-          @@ %q<rest> — <name>=<object>; @include %!/INC`IS`STAFF; @assert cand(strlen(trim(before(%q<rest>,=))),strlen(trim(after(%q<rest>,=))))=@include %!/INC`DISPLAY`USAGE; think [setq(name,ucstr(trim(before(%q<rest>,=))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is made of letters and digits and _ . -; @assert isdbref(setr(o,locate(%#,trim(after(%q<rest>,=)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,objid(%q<o>))]; @pemit %#=[notice(HELP,[lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.,ok)]
+          @include %!/INC`IS`STAFF; @assert cand(strlen(trim(before(%q<cmd_rest>,=))),strlen(trim(after(%q<cmd_rest>,=))))=@include %!/INC`DISPLAY`USAGE; think setq(source_name,ucstr(trim(before(%q<cmd_rest>,=)))); @assert regmatch(%q<source_name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is made of letters and digits and _ . -; @assert isdbref(setr(source_object,locate(%#,trim(after(%q<cmd_rest>,=)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think attrib_set(%!/SRC`%q<source_name>,objid(%q<source_object>)); @pemit %#=notice(HELP,[lcstr(%q<source_name>)] now reads help from [name(%q<source_object>)] - [words(lattr(%q<source_object>/HELP`**))] topics.,ok)
         flags: [cmdsyntax]
-      INC`SW`UNSOURCE:
+      # %q<cmd_rest> — <name>.
+      INC`SWITCH`UNSOURCE:
         value: |-
-          @@ %q<rest> — <name>; @include %!/INC`IS`STAFF; @assert strlen(setr(name,ucstr(trim(%q<rest>))))=@include %!/INC`DISPLAY`USAGE; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`WARN=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[notice(HELP,Dropped help source [lcstr(%q<name>)].,ok)]
+          @include %!/INC`IS`STAFF; @assert strlen(setr(source_name,ucstr(trim(%q<cmd_rest>))))=@include %!/INC`DISPLAY`USAGE; @assert strlen(get(%!/SRC`%q<source_name>))=@include %!/INC`DISPLAY`WARN=No such help source: [lcstr(%q<source_name>)]; think attrib_set(%!/SRC`%q<source_name>); @pemit %#=notice(HELP,Dropped help source [lcstr(%q<source_name>)].,ok)
         flags: [cmdsyntax]
 
   # ---- this package's own topics ---------------------------------------------
@@ -634,6 +720,9 @@ objects:
   - ref: game_help
     type: thing
     name: Game Help
+    # MISTRUST: a topic body runs as this object, and without it this object would control every
+    # other object the Package Manager owns (the librarian among them), which royalty do not.
+    flags: [MISTRUST]
     attributes:
       HELP:
         value: |-

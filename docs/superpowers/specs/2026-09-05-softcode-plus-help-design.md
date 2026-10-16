@@ -159,7 +159,7 @@ dbref the manifest substitutes for `{{librarian}}`.
 | `+help/source <name>=<object>` | staff | Register a source by hand |
 | `+help/unsource <name>` | staff | Drop a hand-registered source |
 
-Paging reuses the `wiki-reader` idiom: `FUN`GET`ROWS` sized from `height(%#,24)`,
+Paging reuses the `wiki-reader` idiom: `FUN`PAGE`ROWS` sized from `height(%#,24)`,
 `=<n>` as the page suffix.
 
 ## Attribute layout
@@ -279,7 +279,7 @@ out.
 One consequence of evaluating bodies deserves its own line: `[`, `(` and `)` are
 softcode syntax, so prose containing them ends the expression. Shipped topics keep
 clear of parentheses and escape a literal bracket, which is also how a
-cross-reference is spelled; and `FUN`GET`RTEXT` falls back to the stored text when
+cross-reference is spelled; and `FUN`RECORD`TEXT` falls back to the stored text when
 evaluation fails, so a badly written topic degrades to plain markdown rather than
 handing the reader a `#-1`.
 

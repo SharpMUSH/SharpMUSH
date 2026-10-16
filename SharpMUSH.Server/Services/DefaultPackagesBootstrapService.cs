@@ -81,6 +81,18 @@ public class DefaultPackagesBootstrapService(
 				continue;
 			}
 
+			// Bootstrap walks dependencies first, so one that is not here by now was declined or could not install.
+			// A bridge such as scene-help then has nothing to join: it waits for both halves instead of failing its plan.
+			var missing = await BundledPackages.Dependencies(package.PackageId, manifests).ToAsyncEnumerable()
+				.Where(async (dependency, _) => await registry.GetInstalledPackageAsync(dependency) is NotFound)
+				.ToListAsync(cancellationToken);
+			if (missing.Count > 0)
+			{
+				logger.LogDebug("Bundled {PackageId} needs {Missing}, which this game does not have; not installing it.",
+					package.PackageId, string.Join(", ", missing));
+				continue;
+			}
+
 			await InstallOrUpgradeAsync(package.PackageId, cancellationToken);
 		}
 	}
