@@ -15,8 +15,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The bundled scene-availability package, installed from the catalogue with the time package it builds on:
-/// +avail reads a typed &lt;when&gt; into an entry, the entries expand into the moments they cover in their own
+/// The bundled availability package, installed from the catalogue with the time package it builds on, and the
+/// scene-availability bridge on top of it where a test needs scenes: +avail reads a typed &lt;when&gt; into an entry, the entries expand into the moments they cover in their own
 /// zone, and the free slots of several players are laid over each other. Entries the moment-dependent tests
 /// read are written straight onto the Calendar with fixed dates, and every function is handed its moment, so
 /// nothing here depends on the real clock's date. Not in parallel: +avail is global.
@@ -84,19 +84,25 @@ public class SceneAvailabilityIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
-	private async Task InstallAsync()
+	private bool WithScenes { get; set; }
+
+	/// <summary>Installs time and availability, and the scene-availability bridge when <paramref name="withScenes"/>.</summary>
+	private async Task InstallAsync(bool withScenes = false)
 	{
 		await ApplyAsync("time");
-		await ApplyAsync("scene-availability");
+		await ApplyAsync("availability");
+		WithScenes = withScenes;
+		if (withScenes) await ApplyAsync("scene-availability");
 		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>()
-			.GetPackageObjectsAsync("scene-availability");
+			.GetPackageObjectsAsync("availability");
 		Avail = objects.First(o => o.Ref == "availability").Objid;
 		Calendar = objects.First(o => o.Ref == "calendar").Objid;
 	}
 
 	private async Task UninstallAsync()
 	{
-		await Installer.UninstallAsync("scene-availability", force: true, CancellationToken.None);
+		if (WithScenes) await Installer.UninstallAsync("scene-availability", force: true, CancellationToken.None);
+		await Installer.UninstallAsync("availability", force: true, CancellationToken.None);
 		await Installer.UninstallAsync("time", force: true, CancellationToken.None);
 	}
 
@@ -305,7 +311,9 @@ public class SceneAvailabilityIntegrationTests
 			await Assert.That(await As(ann, "+avail/bogus")).Contains("+avail has no /bogus switch.");
 			await Assert.That(await As(ann, "+avail/find Nobody")).Contains("There is no player called 'Nobody'.");
 			await Assert.That(await As(ann, $"+avail/find {bobName}=abc")).Contains("Give a length from 15m to 24h after =");
-			await Assert.That(await As(ann, $"+avail/find {bobName}=1h")).Contains("Free times").And.Contains($"set no times");
+			await Assert.That(await As(ann, $"+avail/find {bobName}=1h")).Contains("Free times").And.Contains($"set no times")
+				.And.DoesNotContain("+scene/schedule").Because("without scene-availability, +avail knows nothing of scenes");
+			await Assert.That(await As(ann, "+avail/scene 1")).Contains("+avail has no /scene switch.");
 
 			await Assert.That(await As(ann, "+avail/clear")).Contains("Removed all 2 of your entries.");
 			await Assert.That(await Think($"lattr({Calendar}/PLAYER`{annKey}**)")).IsEqualTo(string.Empty);
@@ -332,6 +340,7 @@ public class SceneAvailabilityIntegrationTests
 			await Assert.That(await As(staff, "+config avail/find-length=3h")).Contains("avail/find-length is now 3h");
 			await Assert.That(await Think($"get({Avail}/DATA`CONFIG`FIND-LENGTH)")).IsEqualTo("10800");
 			await Assert.That(await As(staff, "+config avail/slot=45")).DoesNotContain("is now");
+			await Assert.That(await As(staff, "+config avail")).DoesNotContain("scene-length");
 		}
 		finally
 		{
@@ -340,11 +349,11 @@ public class SceneAvailabilityIntegrationTests
 	}
 
 	[Test]
-	public async Task AScheduledScenesCardShowsWhoIsFree()
+	public async Task WithScenes_AScheduledScenesCardShowsWhoIsFree()
 	{
 		try
 		{
-			await InstallAsync();
+			await InstallAsync(withScenes: true);
 			var ann = await Player("AvFay");
 			var bob = await Player("AvGus");
 			var cleo = await Player("AvHal");
@@ -374,6 +383,13 @@ public class SceneAvailabilityIntegrationTests
 
 			await Assert.That(await As(ann, "+avail/scene 999999")).Contains("No such scene: 999999");
 			await Assert.That(await As(ann, $"+avail/scene {scene}=1h")).Contains($"Free times for scene {scene}");
+			// Ann and Cleo are free now (Ann's entries start in 2098), so the bridge offers to book the first time.
+			await Assert.That(await As(ann, $"+avail/find {cleoName}=1h")).Contains("Book the first: +scene/schedule <title>=");
+			await Assert.That(await As(ann, "+help avail scene")).Contains("+avail/scene <id>");
+
+			var staff = await Player("AvSceneCfg");
+			await God($"@role/assign #{staff.DbRef.Number}=wizard");
+			await Assert.That(await As(staff, "+config avail/scene-length=3h")).Contains("avail/scene-length is now 3h");
 		}
 		finally
 		{
