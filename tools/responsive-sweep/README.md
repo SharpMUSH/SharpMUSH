@@ -365,3 +365,10 @@ Use disk-backed temporary storage for Chromium, for example:
 mkdir -p /temp/codex/table-layout
 TMPDIR=/temp/codex/table-layout TMP=/temp/codex/table-layout TEMP=/temp/codex/table-layout npm test
 ```
+
+CI generates the current `MarkupStylesheet` through `tools/ClientData` and passes
+its path as `MARKUP_LAYOUT_CSS`; the browser gate therefore tests the actual pinned
+renderer stylesheet. Renderer-version and ClientData changes trigger this workflow.
+A renderer version change also fails the fixture-version check until the radio
+HTML is regenerated and its version marker updated. Local standalone runs use
+the documented stylesheet subset unless `MARKUP_LAYOUT_CSS` is supplied.

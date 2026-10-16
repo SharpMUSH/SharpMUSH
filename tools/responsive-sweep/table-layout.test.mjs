@@ -10,7 +10,7 @@ const radio = readFileSync(new URL('./fixtures/radio-table.html', import.meta.ur
 const shell = readFileSync(new URL('../../SharpMUSH.Client/wwwroot/css/shell.css', import.meta.url), 'utf8');
 // The relevant LayoutCss.Fixed rules shipped by the same renderer. The portal's
 // own CSS is loaded afterward, exactly as index.html loads custom.css.
-const layout = `
+const fallbackLayout = `
 .ms-layout { display:block; max-width:100%; white-space:normal; }
 .ms-text { white-space:pre-wrap; overflow-wrap:anywhere; }
 .ms-table-wrap { max-width:100%; overflow-x:auto; }
@@ -20,6 +20,18 @@ const layout = `
 .ms-table .ms-nowrap, .ms-table .ms-nowrap .ms-text { white-space:pre; overflow-wrap:normal; }
 @media (max-width:48em) { .ms-table.ms-fill > colgroup { display:none; } }
 `;
+
+const layout = process.env.MARKUP_LAYOUT_CSS
+    ? readFileSync(process.env.MARKUP_LAYOUT_CSS, 'utf8')
+    : fallbackLayout;
+
+test('radio fixture matches the pinned renderer version', () => {
+    const props = readFileSync(new URL('../../Directory.Build.props', import.meta.url), 'utf8');
+    const version = props.match(/<MarkupStringVersion>([^<]+)<\/MarkupStringVersion>/)?.[1];
+    const fixtureVersion = radio.match(/Renderer: MarkupString ([^ ]+) -->/)?.[1];
+    assert.ok(version, 'MarkupStringVersion must be present');
+    assert.equal(fixtureVersion, version, 'Regenerate radio-table.html from the new renderer before updating its version marker');
+});
 
 test('radio headers keep whole words while descriptions wrap and narrow tables fit', async () => {
     const browser = await chromium.launch();

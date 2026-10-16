@@ -6,6 +6,8 @@ on:
       - 'SharpMUSH.Client/wwwroot/css/**'
       - 'SharpMUSH.Client/Components/GlobalTerminal.razor*'
       - 'tools/responsive-sweep/**'
+      - 'tools/ClientData/**'
+      - 'Directory.Build.props'
       - '.github/workflows/portal-layout.yml'
   push:
     branches: [main]
@@ -13,6 +15,8 @@ on:
       - 'SharpMUSH.Client/wwwroot/css/**'
       - 'SharpMUSH.Client/Components/GlobalTerminal.razor*'
       - 'tools/responsive-sweep/**'
+      - 'tools/ClientData/**'
+      - 'Directory.Build.props'
       - '.github/workflows/portal-layout.yml'
 
 permissions:
@@ -37,6 +41,14 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: tools/responsive-sweep/package-lock.json
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Generate the current renderer stylesheet
+        run: |
+          dotnet build tools/ClientData -m:2 -nr:false
+          dotnet run --no-build --project tools/ClientData -- SharpMUSH.Documentation/Helpfiles/SharpMUSH "$TMPDIR/client-data"
+          echo "MARKUP_LAYOUT_CSS=$TMPDIR/client-data/markup.css" >> "$GITHUB_ENV"
       - run: npm ci
         working-directory: tools/responsive-sweep
       - run: npx playwright-core install --with-deps chromium
