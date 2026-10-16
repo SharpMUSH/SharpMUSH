@@ -64,7 +64,7 @@ public class SocketCommandAbbreviationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrfull");
 		await CreateTestPlayerAsync(name, "correct-pass-1");
-		var handle = await RegisterConnectionAsync(6001L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {name} correct-pass-1"));
 
@@ -77,7 +77,7 @@ public class SocketCommandAbbreviationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrcon");
 		await CreateTestPlayerAsync(name, "correct-pass-2");
-		var handle = await RegisterConnectionAsync(6002L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"con {name} correct-pass-2"));
 
@@ -90,7 +90,7 @@ public class SocketCommandAbbreviationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrco");
 		await CreateTestPlayerAsync(name, "correct-pass-3");
-		var handle = await RegisterConnectionAsync(6003L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"co {name} correct-pass-3"));
 
@@ -103,7 +103,7 @@ public class SocketCommandAbbreviationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrconn");
 		await CreateTestPlayerAsync(name, "correct-pass-4");
-		var handle = await RegisterConnectionAsync(6004L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"conn {name} correct-pass-4"));
 
@@ -122,12 +122,12 @@ public class SocketCommandAbbreviationTests
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrpass");
 		await CreateTestPlayerAsync(name, "the-real-password-9");
 
-		var wrongHandle = await RegisterConnectionAsync(6005L);
+		var wrongHandle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 		var wrongResult = await Parser.CommandParse(wrongHandle, ConnectionService, MarkupText.Plain($"con {name} not-the-password"));
 		await Assert.That(PlainMessage(wrongResult)).IsEqualTo(ErrorMessages.Returns.InvalidPassword);
 		await Assert.That(ConnectionService.Get(wrongHandle)?.Ref).IsNull();
 
-		var rightHandle = await RegisterConnectionAsync(6006L);
+		var rightHandle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 		var rightResult = await Parser.CommandParse(rightHandle, ConnectionService, MarkupText.Plain($"con {name} the-real-password-9"));
 		await Assert.That(PlainMessage(rightResult).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(rightHandle)?.Ref).IsNotNull();
@@ -144,7 +144,7 @@ public class SocketCommandAbbreviationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrxyz");
 		await CreateTestPlayerAsync(name, "irrelevant-password");
-		var handle = await RegisterConnectionAsync(6007L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"xyz {name} irrelevant-password"));
 
@@ -173,7 +173,7 @@ public class SocketCommandAbbreviationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrpost");
 		await CreateTestPlayerAsync(name, "post-login-pass-1");
-		var handle = await RegisterConnectionAsync(6008L);
+		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
 
 		// Log the player in: after this the connection is bound and Executor resolves to the
 		// player's DBRef on subsequent commands.

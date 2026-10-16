@@ -30,7 +30,7 @@ public class GuestLoginTests
 	[Test]
 	public async ValueTask ConnectGuest_NoGuestCharacters_FailsWithError()
 	{
-		var guestHandle = 1002L;
+		var guestHandle = TestIsolationHelpers.GenerateUniqueHandle();
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
 		var resultMessage = result.Message.ToString();
@@ -71,7 +71,7 @@ public class GuestLoginTests
 
 		await Task.Delay(200);
 
-		var guestHandle = 1000L;
+		var guestHandle = TestIsolationHelpers.GenerateUniqueHandle();
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
 		var resultMessage = result.Message.ToString();
@@ -101,7 +101,7 @@ public class GuestLoginTests
 
 		await Task.Delay(200);
 
-		var guestHandle = 1001L;
+		var guestHandle = TestIsolationHelpers.GenerateUniqueHandle();
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect GUEST"));
 
 		var resultMessage = result.Message.ToString();
@@ -129,7 +129,7 @@ public class GuestLoginTests
 
 		await Task.Delay(200);
 
-		var guestHandle = 1003L;
+		var guestHandle = TestIsolationHelpers.GenerateUniqueHandle();
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
 		var resultMessage = result.Message.ToString();
