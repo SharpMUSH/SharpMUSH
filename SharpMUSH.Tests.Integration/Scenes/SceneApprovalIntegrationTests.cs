@@ -115,17 +115,18 @@ public class SceneApprovalIntegrationTests
 	[Test]
 	public async Task CommandCapture_ExcludesOutputAddressedToAnotherCharacter()
 	{
-		var (recipient, _) = await CreatePlayerAsync($"Capture_{Tag}");
+		var (_, callerHandle) = await CreatePlayerAsync($"CaptureCaller_{Tag}");
+		var (recipient, _) = await CreatePlayerAsync($"CaptureRecipient_{Tag}");
 		var recipientRef = DBRef.Parse(recipient);
 		var otherRecipientOutput = $"OtherRecipient_{Tag}";
 		var before = WebAppFactoryArg.Notifications.CountFor(recipientRef);
 
-		var captured = await RunAs(1, $"@pemit/silent {recipient}={otherRecipientOutput}");
+		var captured = await RunAs(callerHandle, $"@pemit/silent {recipient}={otherRecipientOutput}");
 
 		await Assert.That(WebAppFactoryArg.Notifications.For(recipientRef).Skip(before))
 			.Contains(otherRecipientOutput);
 		await Assert.That(captured).IsEmpty()
-			.Because("output delivered to another character does not answer God's command");
+			.Because("output delivered to another character does not answer the caller's command");
 	}
 
 	[Test]
