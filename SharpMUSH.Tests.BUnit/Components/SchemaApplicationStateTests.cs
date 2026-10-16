@@ -29,9 +29,7 @@ public class SchemaApplicationStateTests
 	[Test]
 	public async Task NamedResetRemovesOnlySelectedKeysThenSeedsResultingDefaults()
 	{
-		SchemaAction? action = null;
-		try { action = JsonSerializer.Deserialize<SchemaAction>("""{"route":"/http/test","on_success":{"reset_fields":["title"]}}""", SchemaJson.Options); }
-		catch (JsonException) { }
+		var action = JsonSerializer.Deserialize<SchemaAction>("""{"route":"/http/test","on_success":{"reset_fields":["title"]}}""", SchemaJson.Options);
 		await Assert.That(action is not null).IsTrue();
 		var state = new SchemaApplicationState();
 		state.Load(Screen("form", new SchemaElement(Key: "title"), new SchemaElement(Key: "retained")), null);

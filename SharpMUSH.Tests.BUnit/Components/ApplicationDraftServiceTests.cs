@@ -5,7 +5,11 @@ namespace SharpMUSH.Tests.BUnit.Components;
 
 public class ApplicationDraftServiceTests
 {
-	private static JsonElement J(string raw) => JsonDocument.Parse(raw).RootElement.Clone();
+	private static JsonElement J(string raw)
+	{
+		using var document = JsonDocument.Parse(raw);
+		return document.RootElement.Clone();
+	}
 	private static readonly JsonElement Declaration = J("""[{"key":"title","type":"text","validation":{"required":true,"max_length":8}},{"key":"text","type":"textarea"},{"key":"softcode","type":"boolean","default":false}]""");
 	private static readonly ApplicationDraftKey Key = new("#1:1", "#2:2", "terminal:1:incarnation");
 
@@ -24,8 +28,11 @@ public class ApplicationDraftServiceTests
 		Task<JsonElement> File(IReadOnlyDictionary<string, JsonElement> _) { writes++; throw new InvalidOperationException("lost callback response"); }
 		await service.RunAsync(Key, "new", Declaration, J("{\"title\":\"hello\"}"), Ok, File);
 		await service.RunAsync(Key, "review", Declaration, J("{}"), Ok, File);
+		InvalidOperationException? failure = null;
 		try { await service.RunAsync(Key, "file", Declaration, J("{}"), Ok, File); }
-		catch (InvalidOperationException) { }
+		catch (InvalidOperationException exception) { failure = exception; }
+		await Assert.That(failure).IsNotNull();
+		await Assert.That(failure!.Message).IsEqualTo("lost callback response");
 		var retry = await service.RunAsync(Key, "file", Declaration, J("{}"), Ok, File);
 		await Assert.That(retry.GetProperty("ok").GetBoolean()).IsFalse();
 		await Assert.That(writes).IsEqualTo(1);

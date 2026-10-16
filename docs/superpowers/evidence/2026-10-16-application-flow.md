@@ -105,3 +105,36 @@ Both changed C# projects received two whitespace-format passes; the final build 
 The main CI suite found three help-navigation failures, an overview exceeding the 30-row terminal limit, and appfields missing from actual main-project function dispatch coverage. These are fixed without expanding runtime behavior: commands and JSON function categories link the adapter, callback/lifetime details have separately addressable topics, and two real parser-dispatch tests accept numeric zero while rejecting its string representation.
 
 Local reproduction before help changes: HelpNavigationTests 1 passed/3 failed; HelpHeightTests 1 failed. After changes: navigation 4, height 1, registry parity 6 passed; ApplicationFormFunctionTests 2 passed through the runtime parser. Pinned-SDK main test-project build: zero warnings/errors. The broader main suite and combined lane validation remain controller-owned; no KnownGaps exception was added.
+
+## External review follow-up
+
+The bounded follow-up preserves the separately approved help and real `appfields` dispatch correction at `fd4b73191727880a84bbde979efc91ba755cccbb`.
+
+| Review thread | Disposition |
+| --- | --- |
+| `PRRT_kwDOLef2xs6tTeym` | Fixed: ApplicationDraftService is a required Commands constructor dependency stored as a non-null member. The sole runtime Commands composition root already registers the singleton; test hosts and ActivatorUtilities callers use that server composition. Static analysis metadata libraries do not construct Commands. |
+| `PRRT_kwDOLef2xs6tS78U` | Fixed: the manually constructed HttpClient is owned by the established TrackingBunitContext, which also owns its handler. |
+| `PRRT_kwDOLef2xs6tTT-c`, `PRRT_kwDOLef2xs6tTT-n`, `PRRT_kwDOLef2xs6tTT-v`, `PRRT_kwDOLef2xs6tTT-3` | Explicit ownership: test-created responses are tracked through context teardown, including delayed replies and early disposal paths. Production HTTP consumers already dispose received responses; context tracking also covers early test exits. |
+| `PRRT_kwDOLef2xs6tS78r` | Fixed: the callback-failure test asserts the exception and its expected message before checking receipt replay behavior. Its JSON helper also disposes the parsed document after cloning the value. |
+| `PRRT_kwDOLef2xs6tS78z` | Fixed: deserializing the supported reset schema must succeed; an exception now fails the test directly instead of being swallowed. |
+| `PRRT_kwDOLef2xs6tS78f` | Retained guard: `_disposed` can change while Dispatch awaits transport. DisposedHostIgnoresDelayedRedirectAndToast explicitly disposes during that await and verifies the late success cannot navigate or show a toast. The warning treats mutable state across an await as a constant. |
+| `PRRT_kwDOLef2xs6tTT-9` | Retained style: the two-response loop groups multiple round-trip assertions for each response. A Select projection is optional and does not correct a defect. |
+
+The new runtime-host composition regression deliberately gives the parser an empty IServiceProvider. Before the fix it fails with `No service for type ApplicationDraftService has been registered`; the corrected command uses its constructed dependency and never asks that incidental provider for a service. The real Jobs proof additionally exercises successful terminal and HTTP draft workflows after the constructor change.
+
+Focused verification commands and results follow. Builds use the pinned SDK first on PATH and `-m:2 -nr:false`; runtime tests use the documented short disk-backed temporary directory and rootless Podman environment. No full engine or bUnit rerun was requested for this bounded follow-up.
+
+The disposal proof uses bUnit's `DisposeComponentsAsync`, which invokes component lifecycle teardown; disposing only the rendered wrapper did not exercise that hook. The existing widget-disposal cases were corrected to use the same actual teardown API. This required no production host change.
+
+| Final command | Result |
+| --- | --- |
+| `dotnet build SharpMUSH.Tests -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ApplicationDraft*/*'` | 8 passed, 0 failed; 16.623 s (composition regression plus publication tests) |
+| `dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/ApplicationFormFunctionTests/*'` | 2 passed, 0 failed; 17.200 s |
+| `dotnet build SharpMUSH.Tests.BUnit -m:2 -nr:false` | 54 existing warnings, none in changed files; 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests.BUnit -- --treenode-filter '/*/*/Schema*/*'` | 142 passed, 0 failed; 623 ms |
+| `dotnet run --no-build --project SharpMUSH.Tests.BUnit -- --treenode-filter '/*/*/ApplicationDraftServiceTests/*'` | 6 passed, 0 failed; 198 ms |
+| `dotnet build SharpMUSH.Tests.Integration -m:2 -nr:false` | 0 warnings, 0 errors |
+| `dotnet run --no-build --project SharpMUSH.Tests.Integration -- --treenode-filter '/*/*/JobsIntegrationTests/DraftAdapterSharesReviewAndFileAcrossTerminalAndPortal'` | 1 passed, 0 failed; 1 min 07.763 s |
+
+All changed C# projects received two whitespace-format passes and their final builds ran the formatting gate. The known full-suite results remain historical; this follow-up reran only the affected checks above.

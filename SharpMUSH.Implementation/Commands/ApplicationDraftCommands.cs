@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -19,7 +18,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["declaration attribute", "action", "JSON fields"], Output = CommandOutput.Value)]
 	public async ValueTask<Option<CallState>> ApplicationDraft(IMUSHCodeParser parser, SharpCommandAttribute _)
 	{
-		var service = parser.ServiceProvider.GetRequiredService<ApplicationDraftService>();
+		var service = ApplicationDrafts;
 		var state = parser.CurrentState;
 		var arguments = state.ArgumentsOrdered;
 		var path = arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";

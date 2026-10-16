@@ -18,7 +18,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
-public class SchemaApplicationHostTests : BunitContext
+public class SchemaApplicationHostTests : TrackingBunitContext
 {
 	private sealed class Handler(Func<HttpRequestMessage, Task<HttpResponseMessage>> send) : HttpMessageHandler
 	{
@@ -28,7 +28,7 @@ public class SchemaApplicationHostTests : BunitContext
 	private AccountAuthService Configure(Func<HttpRequestMessage, Task<HttpResponseMessage>> send)
 	{
 		var factory = Substitute.For<IHttpClientFactory>();
-		factory.CreateClient("api").Returns(new HttpClient(new Handler(send)) { BaseAddress = new("https://localhost/") });
+		factory.CreateClient("api").Returns(Track(new HttpClient(new Handler(send)) { BaseAddress = new("https://localhost/") }));
 		Services.AddMudServices().AddSingleton(factory)
 			.AddSingleton(sp => new SchemaAppService(factory, NullLogger<SchemaAppService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
@@ -43,7 +43,7 @@ public class SchemaApplicationHostTests : BunitContext
 			[new(Kind: "field", Key: "title", Default: JsonSerializer.SerializeToElement("draft")),
 			 new(Kind: "button", Label: "Go", Action: "submit")])], null, null)],
 		new Dictionary<string, SchemaAction> { ["submit"] = new("http", "POST", "/http/test", "fields", null, null) });
-	private static HttpResponseMessage Reply(SchemaActionResult result) => new(HttpStatusCode.OK) { Content = JsonContent.Create(result, options: SchemaJson.Options) };
+	private HttpResponseMessage Reply(SchemaActionResult result) => Track(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(result, options: SchemaJson.Options) });
 
 	[Test]
 	[Arguments(false, "config")]
@@ -65,7 +65,7 @@ public class SchemaApplicationHostTests : BunitContext
 				requested.TrySetResult();
 				return pending.Task;
 			}
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Screen("view", path), options: SchemaJson.Options) });
+			return Task.FromResult(Track(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Screen("view", path), options: SchemaJson.Options) }));
 		});
 		Services.AddSingleton(new ApplicationCatalog([]))
 			.AddSingleton(Substitute.For<IPlayTerminalService>())
@@ -81,13 +81,13 @@ public class SchemaApplicationHostTests : BunitContext
 			await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Config, JsonSerializer.SerializeToElement(new { schemaUrl = "/current" }))));
 		else if (replacement == "actor")
 			await cut.InvokeAsync(() => auth.SetActiveCharacter(new(2, 2, "Other actor", "")));
-		else cut.Dispose();
-		pending.SetResult(new(HttpStatusCode.OK)
+		else await DisposeComponentsAsync();
+		pending.SetResult(Track(new HttpResponseMessage(HttpStatusCode.OK)
 		{
 			Content = delayData
 			? new StringContent("{\"fields\":{\"title\":{\"value\":\"OLD PRIVATE RECORD\",\"visible\":true}}}", System.Text.Encoding.UTF8, "application/json")
 			: JsonContent.Create(Screen("view", "OLD PRIVATE RECORD"), options: SchemaJson.Options)
-		});
+		}));
 		await oldLoad;
 		if (replacement == "dispose") return;
 		await Assert.That(cut.Markup).DoesNotContain("OLD PRIVATE RECORD");
@@ -109,7 +109,7 @@ public class SchemaApplicationHostTests : BunitContext
 				requested.TrySetResult();
 				return pending.Task;
 			}
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Screen("view", path), options: SchemaJson.Options) });
+			return Task.FromResult(Track(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Screen("view", path), options: SchemaJson.Options) }));
 		});
 		Services.AddSingleton(new ApplicationCatalog([]))
 			.AddSingleton(Substitute.For<IPlayTerminalService>())
@@ -124,12 +124,12 @@ public class SchemaApplicationHostTests : BunitContext
 		await requested.Task;
 		await root.InvokeAsync(() => root.Render(p => p.Add(x => x.Value, new ProfilePageContext("Current", false))
 			.AddChildContent<SchemaWidget>(p => p.Add(x => x.Config, config))));
-		pending.SetResult(new(HttpStatusCode.OK)
+		pending.SetResult(Track(new HttpResponseMessage(HttpStatusCode.OK)
 		{
 			Content = delayData
 			? new StringContent("{\"fields\":{\"title\":{\"value\":\"OLD PRIVATE RECORD\",\"visible\":true}}}", System.Text.Encoding.UTF8, "application/json")
 			: JsonContent.Create(Screen("view", "OLD PRIVATE RECORD"), options: SchemaJson.Options)
-		});
+		}));
 		await oldLoad;
 		await Assert.That(root.Markup).DoesNotContain("OLD PRIVATE RECORD");
 		await Assert.That(root.FindComponent<SchemaApplicationHost>().Instance.Document!.Title).IsEqualTo("/schema/Current");
@@ -164,6 +164,22 @@ public class SchemaApplicationHostTests : BunitContext
 		await cut.FindAll("button").First(b => b.TextContent.Contains("Go")).ClickAsync();
 		await Assert.That(cut.Markup).Contains("Retried");
 		await Assert.That(attempts).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task DisposedHostIgnoresDelayedRedirectAndToast()
+	{
+		var pending = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+		Configure(_ => pending.Task);
+		var navigation = Services.GetRequiredService<NavigationManager>();
+		var originalLocation = navigation.Uri;
+		var cut = Render<SchemaApplicationHost>(p => p.Add(x => x.Document, Screen("form", "Private actor")));
+		var click = cut.FindAll("button").First(b => b.TextContent.Contains("Go")).ClickAsync();
+		await DisposeComponentsAsync();
+		pending.SetResult(Reply(new(true, null, null, Screen("view", "Retired"), "/apps/retired", "Retired toast")));
+		await click;
+		await Assert.That(navigation.Uri).IsEqualTo(originalLocation);
+		await Assert.That(Services.GetRequiredService<MudBlazor.ISnackbar>().ShownSnackbars.Count()).IsEqualTo(0);
 	}
 
 	[Test]
