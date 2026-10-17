@@ -444,7 +444,15 @@ public class PackagesController(
 	}
 
 	private ObjectResult ResolutionFailed(PackageManifestResolutionFailure failure)
-		=> StatusCode(failure.StatusCode, failure.Issues is null ? failure.Message : new { failure.Message, failure.Issues });
+	{
+		object body = failure.Issues is null ? failure.Message : new { failure.Message, failure.Issues };
+		return failure.StatusCode switch
+		{
+			StatusCodes.Status404NotFound => NotFound(body),
+			StatusCodes.Status422UnprocessableEntity => UnprocessableEntity(body),
+			_ => StatusCode(failure.StatusCode, body)
+		};
+	}
 
 	private ActionResult<ApplyResponse> Applied(Result<PackageApplyResult> result, WorldBackup? backup) => result switch
 	{
