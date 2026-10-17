@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 using SharpMUSH.Configuration.Options;
@@ -123,9 +124,54 @@ public class ImportPreviewWorkerTests
 		var request = new ImportWorkerRequest(journal.LiveWorldPath, journal.LiveKeyRingPath,
 			new DatabaseImportFiles(privateSource, Format: DatabaseImportFormat.RhostMUSH), null);
 		await File.WriteAllTextAsync(Path.Combine(session.Directory, "request.json"), System.Text.Json.JsonSerializer.Serialize(request));
-		await Assert.That(await ImportWorker.RunAsync(session.Directory)).IsEqualTo(0);
+		var providerProperty = typeof(Quartz.Logging.LogProvider).GetProperty("CurrentLogProvider",
+			System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+			?? throw new InvalidOperationException("Quartz logging provider introspection is unavailable.");
+		var originalLogProvider = providerProperty.GetValue(null);
+		Quartz.Logging.LogContext.SetCurrentLogProvider(NullLoggerFactory.Instance);
+		var parentLogProvider = providerProperty.GetValue(null);
+		try
+		{
+			await RunWorkerProcessAsync(session.Directory);
+			// Quartz creates another logger for every timer job. A disposed worker-owned factory
+			// here would prevent the live host's timers from firing after this test completes.
+			var currentLogProvider = providerProperty.GetValue(null);
+			if (currentLogProvider is Quartz.Logging.ILogProvider logger) _ = logger.GetLogger("LiveTimerAfterImportWorker");
+			await Assert.That(currentLogProvider).IsSameReferenceAs(parentLogProvider);
+		}
+		finally { Quartz.Logging.LogProvider.SetCurrentLogProvider((Quartz.Logging.ILogProvider)originalLogProvider!); }
 		await Assert.That(journal.Get(session.Id).State).IsEqualTo(ImportSessionState.Validating);
 		await Assert.That(() => journal.RequestPromotion(session.Id)).Throws<InvalidOperationException>();
+	}
+
+	private static async Task RunWorkerProcessAsync(string directory)
+	{
+		var entry = System.Reflection.Assembly.GetEntryAssembly()?.Location ?? throw new InvalidOperationException("Test entry assembly is unavailable.");
+		var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+		{
+			UseShellExecute = false,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			WorkingDirectory = directory,
+			ArgumentList =
+			{
+				"exec", "--runtimeconfig", Path.ChangeExtension(entry, ".runtimeconfig.json"),
+				"--depsfile", Path.ChangeExtension(entry, ".deps.json"),
+				typeof(SharpMUSH.Server.Program).Assembly.Location, "--import-worker", directory
+			}
+		};
+		using var process = Process.Start(start) ?? throw new IOException("The import worker did not start.");
+		var output = process.StandardOutput.BaseStream.CopyToAsync(Stream.Null);
+		var error = process.StandardError.ReadToEndAsync();
+		using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+		try { await process.WaitForExitAsync(deadline.Token); }
+		finally
+		{
+			if (!process.HasExited) process.Kill(entireProcessTree: true);
+			await process.WaitForExitAsync(CancellationToken.None);
+			await Task.WhenAll(output, error);
+		}
+		await Assert.That(process.ExitCode).IsEqualTo(0).Because(await error);
 	}
 
 	[Test]
