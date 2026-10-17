@@ -92,8 +92,9 @@ Reuse native `Database/Lightning/WikiTests`: `SetTitleKeepsTheSlugAndWritesNoRev
 `TranslationRoundTripsAndAStaleExpectedRevisionIsRefused`, and
 `DeleteRemovesThePageItsSlugEntryItsRevisionsAndItsTranslations`.
 These pin title/metadata gaps, body advancement, independent locale revision/CAS and cascade.
-`SemanticMutationCoverageTests` adds native restart-persistent requirement and ownership probes,
-explicit delete/recreate identity, and interface drift checks. `WikiRequirementsStoreTests`
+`SemanticMutationCoverageTests` verifies requirement writes and ownership insertion across reopen;
+ownership removal changes membership without advancing the body revision, checked live. It also
+adds explicit delete/recreate identity and interface drift checks. `WikiRequirementsStoreTests`
 already covers category/page requirement persistence and delete cascade.
 `WikiCollectionsControllerTests.RecreatedPageDoesNotInheritOldOwnershipAndCollectionSearchIsScoped`
 covers stale ownership filtering at the collection consumer.
