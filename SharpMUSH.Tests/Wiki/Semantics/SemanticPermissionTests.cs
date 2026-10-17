@@ -84,4 +84,36 @@ public class SemanticPermissionTests
 		await Assert.That(SemanticReferenceTests.Success(graph with { Pages = [renamed] }, visibility: visibility).Rows.Single().Subject.Id).IsEqualTo("a");
 	}
 
+	[Test]
+	public async Task PositiveRelationPredicateAndPopulatedEnumFacetsIgnoreHiddenOnlyChanges()
+	{
+		var graph = SemanticReferenceTests.Graph(
+			SemanticReferenceTests.Fact("a", "t:link", new PageRef("d")),
+			SemanticReferenceTests.Fact("a", "t:class", new Keyword("mage")),
+			SemanticReferenceTests.Fact("c", "t:link", new PageRef("d")),
+			SemanticReferenceTests.Fact("c", "t:class", new Keyword("fighter")),
+			SemanticReferenceTests.Fact("b", "t:link", new PageRef("d")),
+			SemanticReferenceTests.Fact("b", "t:class", new Keyword("mage")));
+		var visibility = WikiVisibility.All with { ExcludedPageIds = new HashSet<string> { "b" } };
+		var changed = graph with
+		{
+			Facts = new(1, [.. graph.Facts.Facts,
+			SemanticReferenceTests.Fact("a", "t:link", new PageRef("b")),
+			SemanticReferenceTests.Fact("c", "t:link", new PageRef("b")),
+			SemanticReferenceTests.Fact("b", "t:class", new Keyword("fighter"))])
+		};
+		var query = SemanticReferenceTests.Query with { Predicates = [new EqualPredicate("t:link", new PageRef("d"))], Columns = ["t:link", "t:class"], Facets = ["t:class"], PageSize = 1 };
+		foreach (var offset in new[] { 0, 1 })
+		{
+			var baseline = SemanticReferenceTests.Success(graph, query with { Offset = offset }, visibility);
+			var actual = SemanticReferenceTests.Success(changed, query with { Offset = offset }, visibility);
+			await Assert.That(actual.Rows.Single().Subject.Id).IsEqualTo(offset == 0 ? "a" : "c");
+			await Assert.That(actual.Rows[0].Cells[0].Values.Single() is PageRef target && target.Id == "d").IsTrue();
+			await Assert.That(actual.Count).IsEqualTo(2L);
+			await Assert.That(actual.HasMore).IsEqualTo(offset == 0);
+			await Assert.That(string.Join(",", actual.Facets.Single().Buckets.Select(bucket => bucket.Value is Keyword keyword ? $"{keyword.Value}:{bucket.Count}" : "unexpected"))).IsEqualTo("fighter:1,mage:1");
+			await Assert.That(System.Text.Json.JsonSerializer.Serialize(actual)).IsEqualTo(System.Text.Json.JsonSerializer.Serialize(baseline));
+		}
+	}
+
 }

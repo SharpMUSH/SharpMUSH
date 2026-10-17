@@ -88,4 +88,32 @@ public class SemanticReferenceTests
 		source.Cancel();
 		await Assert.That(() => ReferenceEvaluator.Evaluate(Graph(), Query, WikiVisibility.All, source.Token)).Throws<OperationCanceledException>();
 	}
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task NullNestedSnapshotRecordsReturnInvalidSnapshot(bool nullSchema)
+	{
+		var snapshot = nullSchema ? Graph() with { Schema = null! } : Graph() with { Facts = null! };
+		await Assert.That(ReferenceEvaluator.Evaluate(snapshot, Query, WikiVisibility.All) is QueryFailure failure && failure.Code == QueryFailureCode.InvalidSnapshot).IsTrue();
+	}
+
+	[Test]
+	public async Task MultipleIntegerCannotBeAnOrderKeyRegardlessOfPresentValues()
+	{
+		foreach (var values in new long[][] { [], [0], [-1, 1] })
+		{
+			var graph = Graph([.. values.Select(value => Fact("a", "t:level", value))]);
+			graph = graph with { Schema = graph.Schema with { Properties = [.. graph.Schema.Properties.Select(property => property.Id == "t:level" ? property with { Cardinality = Cardinality.Multiple } : property)] } };
+			await Assert.That(ReferenceEvaluator.Evaluate(graph, Query with { Sort = new IntegerSort("t:level") }, WikiVisibility.All) is QueryFailure failure && failure.Code == QueryFailureCode.InvalidQuery).IsTrue();
+		}
+	}
+
+	[Test]
+	public async Task IntegerOrderCoversTheEntireSignedDomainWithoutOverflow()
+	{
+		var graph = Graph(Fact("a", "t:level", long.MaxValue), Fact("b", "t:level", 0L), Fact("c", "t:level", long.MinValue));
+		await Assert.That(string.Join(",", Success(graph, Query with { Sort = new IntegerSort("t:level") }).Rows.Select(row => row.Subject.Id))).IsEqualTo("c,b,a,d");
+		await Assert.That(string.Join(",", Success(graph, Query with { Sort = new IntegerSort("t:level", true) }).Rows.Select(row => row.Subject.Id))).IsEqualTo("a,b,c,d");
+	}
+
 }

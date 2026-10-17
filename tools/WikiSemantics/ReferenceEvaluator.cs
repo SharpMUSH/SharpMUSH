@@ -15,7 +15,7 @@ public static class ReferenceEvaluator
 		cancellationToken.ThrowIfCancellationRequested();
 		if (!string.IsNullOrWhiteSpace(visibility.Search))
 			return Failure(QueryFailureCode.UnsupportedVisibility);
-		if (snapshot.Pages.IsDefault || snapshot.Facts.Facts.IsDefault || snapshot.Facts.SchemaVersion != snapshot.Schema.Version
+		if (snapshot.Schema is null || snapshot.Facts is null || snapshot.Pages.IsDefault || snapshot.Facts.Facts.IsDefault || snapshot.Facts.SchemaVersion != snapshot.Schema.Version
 			|| CanonicalFacts.Validate(snapshot.Schema, snapshot.Facts.Facts, cancellationToken) is not CanonicalFactSet canonical)
 			return Failure(QueryFailureCode.InvalidSnapshot);
 		var definitions = snapshot.Schema.Properties.ToDictionary(p => p.Id, StringComparer.Ordinal);
