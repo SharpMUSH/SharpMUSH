@@ -97,6 +97,15 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 		return result;
 	}
 
+	public Task<ApiResult<IReadOnlyList<ImportSessionStatus>>> GetSessionsAsync() =>
+		Client.GetApiAsync<IReadOnlyList<ImportSessionStatus>>("/api/databaseconversion/sessions", "Import history could not be read.");
+
+	public Task<ApiResult<Success>> PromoteAsync(string sessionId) =>
+		Client.PostApiAsync($"/api/databaseconversion/promote/{Uri.EscapeDataString(sessionId)}", new { confirmRestart = true });
+
+	public Task<ApiResult<Success>> RollbackAsync(string sessionId) =>
+		Client.PostApiAsync($"/api/databaseconversion/rollback/{Uri.EscapeDataString(sessionId)}", new { confirmRestart = true });
+
 	private class UploadResponse
 	{
 		public string SessionId { get; set; } = string.Empty;

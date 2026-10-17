@@ -264,6 +264,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
+		services.AddIsolatedDatabaseImports();
 
 		// Wiki subsystem — WikiStoreService over the database provider's IWikiStore (see RegisterDatabaseProvider).
 		services.AddSingleton<WikiMarkdigPipeline>();

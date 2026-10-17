@@ -5,6 +5,11 @@ namespace SharpMUSH.Library.Services.DatabaseConversion;
 /// </summary>
 public record ConversionResult
 {
+	/// <summary>The durable isolated preview identifier, when this result came from the production coordinator.</summary>
+	public string? ImportSessionId { get; init; }
+	/// <summary>A successful preview still needs separate explicit promotion and a process restart.</summary>
+	public bool RequiresPromotion { get; init; }
+
 	/// <summary>The server the database came from, as <c>RhostMUSH</c>; empty when the file was never read.</summary>
 	public string SourceName { get; init; } = "";
 
@@ -38,3 +43,6 @@ public record ConversionResult
 
 	public bool IsSuccessful => Errors.Count == 0;
 }
+
+/// <summary>Safe journal discovery; excludes private paths, source configuration, and key material.</summary>
+public sealed record ImportSessionStatus(string SessionId, string State, ConversionResult? Result, string? Failure);

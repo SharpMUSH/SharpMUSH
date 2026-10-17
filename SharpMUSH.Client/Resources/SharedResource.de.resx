@@ -6449,6 +6449,33 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Verknüpftes Konto verlangen</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Die private Vorschau wurde geprüft. Die laufende Welt ist unverändert. Prüfen Sie den Bericht vor der Übernahme.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Ich bestätige den Austausch von Welt und Konfiguration, das Trennen aller Verbindungen und den Serverneustart.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Vorschau übernehmen und neu starten</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Vorschau verwerfen</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Neustart angefordert. Die Welt wird vor der Wiederaufnahme installiert. Verbinden Sie sich danach erneut und melden Sie sich an.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Die Konfiguration aus {0} wurde nur in der privaten Vorschau vorbereitet.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Letzte Importe</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Ich bestätige die Wiederherstellung der vorherigen Welt und ihrer Schlüssel, das Trennen der Verbindungen und den Neustart.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Vorherige Welt wiederherstellen und neu starten</value>
+  </data>
   <data name="WikiCollections" xml:space="preserve"><value>Sammlungen</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Alle Kategorien durchsuchen</value></data>
   <data name="WikiAllCollections" xml:space="preserve"><value>Alle Sammlungen</value></data>

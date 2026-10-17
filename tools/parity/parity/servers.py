@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import platform
 import re
@@ -59,6 +60,47 @@ def wait_for(predicate, what: str, timeout: float, procs=()):
                 raise StartupError(f"{what}: process exited with {p.returncode} before becoming ready{suffix}")
         time.sleep(0.05)
     raise StartupError(f"timed out after {timeout:.0f}s waiting for {what}")
+
+
+def finish_import_preview(process, world: Path, timeout: float = 180) -> str:
+    """Only a clean exit with a durable authorized promotion intent requests the single restart."""
+    wait_for(lambda: process.poll() is not None, "the isolated import preview to exit", timeout)
+    if process.returncode != 0:
+        detail = startup_failure_code(getattr(process, "log", None))
+        raise StartupError(f"isolated import preview exited with {process.returncode}" + (f" ({detail})" if detail else ""))
+    root = Path(str(world) + ".imports")
+    try:
+        session_id = json.loads((root / "pending.json").read_text(encoding="utf-8"))
+        if not isinstance(session_id, str) or re.fullmatch(r"[0-9a-f]{32}", session_id) is None:
+            raise ValueError("invalid session identifier")
+        session = json.loads((root / session_id / "session.json").read_text(encoding="utf-8"))
+        # ImportSessionState.PromotionRequested; journal enums currently serialize numerically.
+        if session.get("Id") != session_id or session.get("State") != 4:
+            raise ValueError("session is not promotion-requested")
+        if not (root / session_id / "world").is_dir() or not (root / session_id / "keys").is_dir():
+            raise ValueError("staged world/key pair is incomplete")
+    except (OSError, ValueError, TypeError, AttributeError) as error:
+        raise StartupError("import preview exited without a valid durable promotion intent") from error
+    return session_id
+
+
+def verify_import_committed(world: Path, session_id: str):
+    root = Path(str(world) + ".imports")
+    try:
+        session = json.loads((root / session_id / "session.json").read_text(encoding="utf-8"))
+        # ImportSessionState.Committed; no second promotion restart is permitted by the harness.
+        if (root / "pending.json").exists() or session.get("State") != 6:
+            raise ValueError("promotion has not committed")
+    except (OSError, ValueError, AttributeError) as error:
+        raise StartupError("restarted engine did not commit the validated import") from error
+
+
+def engine_ready(port: int) -> bool:
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=1) as response:
+            return response.status == 200
+    except OSError:
+        return False
 
 
 def can_connect(port: int) -> bool:
@@ -243,13 +285,19 @@ class SharpMush:
         wait_for(render_sock.exists, "the renderer socket", 90, [render])
         world = self.work / "world"
         world.mkdir()
-        server = self._run("server", [self.dotnet, "run", "--no-build", "--no-launch-profile"], self.repo / "SharpMUSH.Server",
-                           {"NATS_URL": nats_url, "SHARPMUSH_LIGHTNING_PATH": str(world),
-                            "ASPNETCORE_URLS": f"http://127.0.0.1:{server_port}",
-                            "PENNMUSH_DATABASE_PATH": str(flatfile),
-                            "PENNMUSH_CONVERSION_STOP_ON_FAILURE": "true"})
-        wait_for(lambda: log_contains(server.log, "Database conversion completed successfully"),
-                 "the PennMUSH import to complete (see logs/server.out)", 180, [server])
+        engine_args = [self.dotnet, "run", "--no-build", "--no-launch-profile"]
+        engine_env = {"NATS_URL": nats_url, "SHARPMUSH_LIGHTNING_PATH": str(world),
+                      "ASPNETCORE_URLS": f"http://127.0.0.1:{server_port}",
+                      "PENNMUSH_DATABASE_PATH": str(flatfile),
+                      "PENNMUSH_CONVERSION_STOP_ON_FAILURE": "true"}
+        preview = self._run("server-preview", engine_args, self.repo / "SharpMUSH.Server", engine_env)
+        session_id = finish_import_preview(preview, world)
+        preview.stop()
+        # Exactly one restart against the same world/configuration. The content receipt must
+        # prevent another preview; any second clean exit is a readiness failure, not a loop.
+        server = self._run("server", engine_args, self.repo / "SharpMUSH.Server", engine_env)
+        wait_for(lambda: engine_ready(server_port), "the imported engine to become ready", 180, [server])
+        verify_import_committed(world, session_id)
         sock = self._run("socketserver", [self.dotnet, "run", "--no-build", "--no-launch-profile"], self.repo / "SharpMUSH.SocketServer",
                          {"NATS_URL": nats_url, "Rendering__SocketPath": str(render_sock),
                           "ConnectionServer__TelnetPort": str(self.port),

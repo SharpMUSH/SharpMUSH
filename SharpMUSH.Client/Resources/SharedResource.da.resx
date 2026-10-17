@@ -6449,6 +6449,33 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Kræv tilknyttet konto</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Den private forhåndsvisning er valideret. Den aktive verden er uændret. Gennemgå rapporten før anvendelse.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Jeg bekræfter udskiftning af verden og konfiguration, lukning af forbindelser og genstart af serveren.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Anvend forhåndsvisning og genstart</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Kassér forhåndsvisning</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Genstart anmodet. Verden installeres før driften genoptages. Opret forbindelse og log ind igen.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Konfigurationen fra {0} er kun forberedt i den private forhåndsvisning.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Seneste importer</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Jeg bekræfter gendannelse af den forrige verden og dens nøgler, lukning af forbindelser og genstart.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Gendan forrige verden og genstart</value>
+  </data>
   <data name="WikiCollections" xml:space="preserve"><value>Samlinger</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Se alle kategorier</value></data>
   <data name="WikiAllCollections" xml:space="preserve"><value>Alle samlinger</value></data>

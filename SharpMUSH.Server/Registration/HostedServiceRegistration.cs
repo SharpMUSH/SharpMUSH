@@ -111,7 +111,6 @@ internal static class HostedServiceRegistration
 		// One instance: MSSPReportRequestConsumer asks it to send.
 		services.AddSingleton<Services.MsspReportPublisher>();
 		services.AddHostedService(sp => sp.GetRequiredService<Services.MsspReportPublisher>());
-		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
 

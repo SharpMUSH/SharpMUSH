@@ -18,7 +18,7 @@
             @* Reached from the first-run wizard: the way back to its next step, once the import is done or
                the administrator decides against it. Hidden while converting — leaving then abandons the
                progress view, not the conversion. *@
-            @if (FromSetup && !_isConverting)
+            @if (FromSetup && !_isConverting && _result?.RequiresPromotion != true)
             {
                 <CapsuleButton Class="dbimport-continue-setup" Primary="@(_result is not null)" Icon="@Icons.Material.Filled.ArrowForward"
                                Href="/setup?step=handlers">@Loc["AdmSetupContinue"]</CapsuleButton>
@@ -34,6 +34,16 @@
     @if (_pollError is not null)
     {
         <MudAlert Severity="Severity.Warning" Dense="true">@_pollError</MudAlert>
+    }
+
+    @if (!_isConverting && _result is null && _sessions.Count > 0)
+    {
+        <KitCard Title="@Loc["AdmImportSessions"]">
+            @foreach (var session in _sessions)
+            {
+                <CapsuleButton Class="dbimport-resume" OnClick="@(() => ResumeSession(session))">@session.SessionId — @session.State</CapsuleButton>
+            }
+        </KitCard>
     }
 
     @if (!_isConverting && _result == null)
@@ -244,10 +254,29 @@
                     <MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Dense="true">
                         @(_result.IsSuccessful ? Loc["ConversionSuccess"] : Loc["ConversionErrors"])
                     </MudAlert>
+                    @if (_result.RequiresPromotion && !_restartRequested)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">@Loc["AdmImportPreviewReady"]</MudAlert>
+                        <MudCheckBox T="bool" Class="dbimport-confirm-restart" @bind-Value="_confirmRestart" Disabled="_isPromoting"
+                                     Label="@Loc["AdmImportConfirmRestart"]" />
+                        <div class="dbimport-actions dbimport-actions-start">
+                            <CapsuleButton Class="dbimport-promote" Primary="true" Disabled="@(!_confirmRestart || _isPromoting)" OnClick="PromotePreview">@Loc["AdmImportPromote"]</CapsuleButton>
+                            <CapsuleButton Disabled="_isPromoting" OnClick="AbortPreview">@Loc["AdmImportAbort"]</CapsuleButton>
+                        </div>
+                    }
+                    @if (_canRollback && !_restartRequested)
+                    {
+                        <MudCheckBox T="bool" Class="dbimport-confirm-restart" @bind-Value="_confirmRestart" Disabled="_isPromoting" Label="@Loc["AdmImportConfirmRollback"]" />
+                        <CapsuleButton Class="dbimport-rollback" Disabled="@(!_confirmRestart || _isPromoting)" OnClick="RollbackPreview">@Loc["AdmImportRollback"]</CapsuleButton>
+                    }
+                    @if (_restartRequested)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="dbimport-restart-required">@Loc["AdmImportRestartRequested"]</MudAlert>
+                    }
                     @if (_configImportedFrom is not null)
                     {
                         <MudAlert Severity="Severity.Info" Dense="true" Class="dbimport-config-applied">
-                            @Loc["AdmImportConfigApplied", _configImportedFrom]
+                            @Loc[_result.RequiresPromotion ? "AdmImportConfigPrepared" : "AdmImportConfigApplied", _configImportedFrom]
                         </MudAlert>
                     }
 
@@ -328,7 +357,7 @@
                     </div>
 
                     <div class="dbimport-actions dbimport-actions-start">
-                        <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Primary="true" OnClick="Reset">@Loc["ImportAnotherDatabase"]</CapsuleButton>
+                        <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Primary="true" OnClick="Reset" Disabled="@(_result.RequiresPromotion || _restartRequested)">@Loc["ImportAnotherDatabase"]</CapsuleButton>
                         <CapsuleButton Icon="@Icons.Material.Filled.Download" OnClick="DownloadLog">@Loc["AdmImportDownloadLog"]</CapsuleButton>
                     </div>
                 </div>
@@ -359,6 +388,37 @@
     /// <summary>A mail folder file is RhostMUSH's alone; told from the file, it may still be one.</summary>
     private bool TakesMailFolders => _format is "auto" or "rhostmush";
 
+    private IReadOnlyList<ImportSessionStatus> _sessions = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await ConversionService.GetSessionsAsync() is IReadOnlyList<ImportSessionStatus> sessions)
+            _sessions = sessions;
+    }
+
+    private async Task ResumeSession(ImportSessionStatus session)
+    {
+        _sessionId = session.SessionId;
+        if (session.Result is { } result && session.State is not ("Preparing" or "Converting" or "Validating"))
+        {
+            _result = result with { ImportSessionId = session.SessionId, RequiresPromotion = session.State == "Ready" };
+            _canRollback = session.State is "Committed" or "RecoveryRequired";
+            _restartRequested = session.State is "PromotionRequested" or "RollbackRequested";
+            _finished = DateTimeOffset.UtcNow;
+            _error = session.Failure;
+        }
+        else
+        {
+            _isConverting = true;
+            await UpdateProgressAsync();
+            if (_isConverting) _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        }
+    }
+
+    private bool _canRollback;
+    private bool _confirmRestart;
+    private bool _isPromoting;
+    private bool _restartRequested;
     private bool _isUploading;
     private bool _isConverting;
     private bool _isUpdatingProgress;
@@ -411,9 +471,7 @@
 
         try
         {
-            // The mush.cnf goes with the database: the server applies it once the upload is in and before the
-            // conversion starts, so the conversion reads the source game's master room, ancestors and handlers,
-            // and puts the game's own configuration back if the conversion fails or is cancelled.
+            // Configuration belongs to the isolated preview; the running world's options and secrets stay unchanged.
             await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
             await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
             // A side file chosen before the format was changed to one that has no such file is not sent.
@@ -557,8 +615,52 @@
         _error = error;
     }
 
+    private async Task PromotePreview()
+    {
+        if (!_confirmRestart || _isPromoting || _sessionId is null) return;
+        _isPromoting = true;
+        try
+        {
+            switch (await ConversionService.PromoteAsync(_sessionId))
+            {
+                case Success: _restartRequested = true; break;
+                case ApiFailure failure: _error = failure.Message; break;
+            }
+        }
+        finally { _isPromoting = false; }
+    }
+
+    private async Task RollbackPreview()
+    {
+        if (!_confirmRestart || _isPromoting || _sessionId is null) return;
+        _isPromoting = true;
+        try
+        {
+            switch (await ConversionService.RollbackAsync(_sessionId))
+            {
+                case Success: _restartRequested = true; break;
+                case ApiFailure failure: _error = failure.Message; break;
+            }
+        }
+        finally { _isPromoting = false; }
+    }
+
+    private async Task AbortPreview()
+    {
+        if (_sessionId is null) return;
+        switch (await ConversionService.CancelConversionAsync(_sessionId))
+        {
+            case Success: Reset(); break;
+            case ApiFailure failure: _error = failure.Message; break;
+        }
+    }
+
     private void Reset()
     {
+        _canRollback = false;
+        _confirmRestart = false;
+        _restartRequested = false;
+        _isPromoting = false;
         _selectedFile = null;
         _selectedConfigFile = null;
         _configImportedFrom = null;

@@ -1,232 +1,168 @@
+using System.Security.Claims;
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Configuration;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
-using System.Collections.Concurrent;
+using SharpMUSH.Server.Services.Imports;
 
 namespace SharpMUSH.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = PortalPermission.ServerAdmin)]
-public class DatabaseConversionController(
-	IPennMUSHDatabaseConverter converter,
-	MushCnfImportService mushCnf,
-	IStorageCapacityService capacity,
-	ILogger<DatabaseConversionController> logger)
-	: ControllerBase
+public class DatabaseConversionController(ImportSessionRegistry sessions, ImportPromotionJournal journal,
+	MushCnfImportService configuration, IStorageCapacityService capacity, IAuditLog audit,
+	IHostApplicationLifetime lifetime, ILogger<DatabaseConversionController> logger) : ControllerBase
 {
-	/// <summary>The most either file may be; the admin page allows the same.</summary>
 	private const long MaxUploadFileSize = 100 * 1024 * 1024;
-
-	/// <summary>The most the <c>mush.cnf</c> may be; the admin page allows the same.</summary>
 	private const long MaxConfigFileSize = 1024 * 1024;
-
-	/// <summary>Room for the multipart boundaries and headers around the files.</summary>
 	private const long MultipartOverhead = 1024 * 1024;
 
-	/// <summary>
-	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>), chatdb (<c>chatFile</c>) and
-	/// <c>mush.cnf</c> (<c>configFile</c>) optionally alongside; or a RhostMUSH flatfile, with its mail dump
-	/// (<c>mailFile</c>) and folder dump (<c>mailFolderFile</c>); or a TinyMUX flatfile, with its <c>mail.db</c>
-	/// (<c>mailFile</c>) and <c>comsys.db</c> (<c>chatFile</c>). <c>format</c> is <c>auto</c> (the default: told
-	/// from the file), <c>pennmush</c>, <c>rhostmush</c> or <c>tinymux</c>.
-	/// </summary>
-	/// <remarks>
-	/// The <c>mush.cnf</c> is applied once every file is in and just before the conversion starts, so the conversion
-	/// reads the source game's master room, ancestors and handlers. A conversion that fails or is cancelled puts the
-	/// game's previous configuration back; an upload refused before it starts never changes it.
-	/// </remarks>
+	/// <summary>Uploads immutable private inputs for an isolated preview; this action never applies live configuration or promotes a world.</summary>
 	[HttpPost("upload")]
-	[RequestSizeLimit(4 * MaxUploadFileSize + MaxConfigFileSize + MultipartOverhead)] // Every file at its limit, and the form around them
-	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)] // Each file
+	[RequestSizeLimit(4 * MaxUploadFileSize + MaxConfigFileSize + MultipartOverhead)]
+	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)]
 	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
 		[FromForm] IFormFile? chatFile, [FromForm] IFormFile? configFile, [FromForm] IFormFile? mailFolderFile,
 		[FromForm] string? format, CancellationToken cancellationToken)
 	{
-		if (file == null || file.Length == 0)
-		{
-			return BadRequest("No file uploaded");
-		}
-
-		if (!DatabaseImportFormats.TryParse(format, out var importFormat))
-		{
-			return BadRequest($"Unknown database format \"{format}\": it takes auto, pennmush, rhostmush or tinymux.");
-		}
-
-		if (configFile is { Length: > MaxConfigFileSize })
-		{
-			return BadRequest("The configuration file is larger than 1 MB.");
-		}
-
-		// Before anything is written: an import that fills the disk or the map part-way leaves a half-converted
-		// world, so one that clearly cannot fit is refused while the game is still untouched.
-		var sourceBytes = file.Length + (mailFile?.Length ?? 0) + (chatFile?.Length ?? 0) + (mailFolderFile?.Length ?? 0);
-		if (capacity.Measure().ImportShortfall(sourceBytes) is { Length: > 0 } shortfall)
-		{
-			logger.LogWarning("Database import refused before it started: {Reason}", shortfall);
+		if (file is null || file.Length == 0) return BadRequest("No file uploaded");
+		if (!DatabaseImportFormats.TryParse(format, out var importFormat)) return BadRequest("Unknown database format.");
+		if (configFile is { Length: > MaxConfigFileSize }) return BadRequest("The configuration file is larger than 1 MB.");
+		var inputs = new[] { file, mailFile, chatFile, mailFolderFile }.OfType<IFormFile>().ToArray();
+		if (inputs.Any(input => input.Length > MaxUploadFileSize)) return BadRequest("An import input is larger than 100 MB.");
+		if (capacity.Measure().ImportShortfall(inputs.Sum(input => input.Length), isolated: true) is { Length: > 0 } shortfall)
 			return StatusCode(StatusCodes.Status507InsufficientStorage, shortfall);
-		}
-
-		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
-		string? mailTempPath = null;
-		string? chatTempPath = null;
-		string? folderTempPath = null;
-		Func<Task>? restore = null;
+		var directory = Path.Combine(journal.SessionsPath, ".upload-" + Guid.NewGuid().ToString("N"));
+		ImportPromotionJournal.PrivateDirectory(directory);
+		var started = false;
 		try
 		{
-
-			await using (var stream = System.IO.File.Create(tempPath))
+			async Task<string?> SaveAsync(IFormFile? input, string name)
 			{
-				await file.CopyToAsync(stream, cancellationToken);
+				if (input is null) return null;
+				var path = Path.Combine(directory, name);
+				await using var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+				if (!OperatingSystem.IsWindows()) System.IO.File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+				await input.CopyToAsync(output, cancellationToken);
+				return path;
 			}
-
-			logger.LogInformation("Uploaded database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
-
-			// An empty file is still passed on, so the import reports it rather than dropping it unmentioned.
-			if (mailFile is not null)
-			{
-				mailTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
-				await using var mailStream = System.IO.File.Create(mailTempPath);
-				await mailFile.CopyToAsync(mailStream, cancellationToken);
-				logger.LogInformation("Uploaded mail database file: {FileName} ({Size} bytes)", mailFile.FileName,
-					mailFile.Length);
-			}
-
-			if (chatFile is not null)
-			{
-				chatTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.chatdb");
-				await using var chatStream = System.IO.File.Create(chatTempPath);
-				await chatFile.CopyToAsync(chatStream, cancellationToken);
-				logger.LogInformation("Uploaded chat database file: {FileName} ({Size} bytes)", chatFile.FileName,
-					chatFile.Length);
-			}
-
-			if (mailFolderFile is not null)
-			{
-				folderTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.folder");
-				await using var folderStream = System.IO.File.Create(folderTempPath);
-				await mailFolderFile.CopyToAsync(folderStream, cancellationToken);
-				logger.LogInformation("Uploaded mail folder file: {FileName} ({Size} bytes)", mailFolderFile.FileName,
-					mailFolderFile.Length);
-			}
-
+			var files = new DatabaseImportFiles((await SaveAsync(file, "world"))!, await SaveAsync(mailFile, "mail"),
+				await SaveAsync(chatFile, "chat"), await SaveAsync(mailFolderFile, "folders"), importFormat);
+			string? text = null;
 			if (configFile is not null)
 			{
-				string text;
-				using (var reader = new StreamReader(configFile.OpenReadStream()))
-				{
-					text = await reader.ReadToEndAsync(cancellationToken);
-				}
-
-				PennMushConfigImport import;
-				try
-				{
-					import = await mushCnf.ReadAsync(text, cancellationToken);
-				}
-				catch (Exception ex) when (ex is IOException or FormatException or InvalidOperationException
-					or ArgumentException)
-				{
-					logger.LogWarning(ex, "The configuration uploaded with a database could not be read");
-					DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath, folderTempPath], logger);
-					return BadRequest($"Error importing configuration: {ex.Message}");
-				}
-
-				var previous = await mushCnf.SnapshotAsync(cancellationToken);
-				restore = () => mushCnf.RestoreAsync(previous);
-				await mushCnf.ApplyAsync(import, PortalSecretAuthor.Of(User), cancellationToken);
+				using var reader = new StreamReader(configFile.OpenReadStream());
+				text = await reader.ReadToEndAsync(cancellationToken);
 			}
-
-			var sessionId = Guid.NewGuid().ToString();
-
-			DatabaseConversionSession.StartConversion(sessionId, converter,
-				new DatabaseImportFiles(tempPath, mailTempPath, chatTempPath, folderTempPath, importFormat), logger,
-				cancellationToken, restore);
-
-			return Ok(new { sessionId, message = "Conversion started" });
+			var id = sessions.Start(files, text, await configuration.SnapshotAsync(cancellationToken), directory);
+			started = true;
+			logger.LogInformation("Import preview {SessionId} started by account {AccountId}", id, User.FindFirstValue(ClaimTypes.NameIdentifier));
+			return Ok(new { sessionId = id, message = "Isolated import preview started; promotion requires a separate restart confirmation." });
 		}
-		catch (Exception ex)
+		catch (InvalidOperationException)
 		{
-			logger.LogError(ex, "Error uploading database file");
-			// A failure after the mush.cnf went in (writing it, or starting the conversion) takes it back out.
-			if (restore is not null)
-			{
-				await RestoreAfterFailureAsync(restore);
-			}
-
-			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath, folderTempPath], logger);
-			return StatusCode(500, $"Error uploading file: {ex.Message}");
+			return Conflict("Another preview or restart operation is active; finish or abort it first.");
 		}
+		catch (OperationCanceledException)
+		{
+			return StatusCode(StatusCodes.Status499ClientClosedRequest, "Upload cancelled before preview started.");
+		}
+		catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+		{
+			logger.LogWarning("Import upload was refused: {ErrorType}", error.GetType().Name);
+			return BadRequest("The import upload could not be prepared.");
+		}
+		finally { if (!started) Directory.Delete(directory, recursive: true); }
 	}
 
-	/// <summary>The form's <c>format</c>: none or <c>auto</c> to tell from the file, else a format by name.</summary>
-	/// <summary>Puts the configuration back after a failed upload; a failure here is logged beside the first.</summary>
-	private async Task RestoreAfterFailureAsync(Func<Task> restore)
-	{
-		try
-		{
-			await restore();
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Could not restore the configuration the uploaded mush.cnf replaced");
-		}
-	}
-
-	/// <summary>
-	/// Get the progress of a conversion session
-	/// </summary>
 	[HttpGet("progress/{sessionId}")]
-	public ActionResult<ConversionProgress?> GetProgress(string sessionId)
-	{
-		var progress = DatabaseConversionSession.GetProgress(sessionId);
-		if (progress == null)
-		{
-			return NotFound("Session not found");
-		}
+	public ActionResult<ConversionProgress> GetProgress(string sessionId)
+		=> sessions.Progress(sessionId) is ConversionProgress progress ? Ok(progress) : NotFound("Session not found");
 
-		return Ok(progress);
-	}
-
-	/// <summary>
-	/// Get the result of a completed conversion session
-	/// </summary>
 	[HttpGet("result/{sessionId}")]
-	public async Task<ActionResult<ConversionResult?>> GetResult(string sessionId)
+	public ActionResult<ConversionResult> GetResult(string sessionId)
 	{
-		var result = await DatabaseConversionSession.GetResult(sessionId);
-		if (result == null)
-		{
+		if (sessions.Get(sessionId) is not ImportSession session || session.Result is not { } result
+			|| session.State is ImportSessionState.Preparing or ImportSessionState.Converting or ImportSessionState.Validating)
 			return NotFound("Session not found or not completed");
-		}
-
-		return Ok(result);
+		return Ok(result with { ImportSessionId = session.Id, RequiresPromotion = session.State == ImportSessionState.Ready });
 	}
 
-	/// <summary>
-	/// Cancel a conversion session
-	/// </summary>
+	[HttpGet("sessions")]
+	public ActionResult<IReadOnlyList<ImportSessionStatus>> ListSessions()
+		=> Ok(journal.List().Select(session => new ImportSessionStatus(session.Id, session.State.ToString(), session.Result, session.Failure)).ToArray());
+
+	[HttpGet("status/{sessionId}")]
+	public ActionResult GetStatus(string sessionId)
+		=> sessions.Get(sessionId) is ImportSession session
+			? Ok(new { sessionId, state = session.State.ToString(), result = session.Result, failure = session.Failure })
+			: NotFound("Session not found");
+
 	[HttpPost("cancel/{sessionId}")]
 	public ActionResult CancelConversion(string sessionId)
 	{
-		var cancelled = DatabaseConversionSession.CancelConversion(sessionId);
-		if (!cancelled)
-		{
-			return NotFound("Session not found or already completed");
-		}
+		try { return sessions.Abort(sessionId) ? Ok(new { message = "Preview cancellation requested." }) : Conflict("This session is committed or awaiting restart; it cannot be aborted."); }
+		catch (IOException) { return Conflict("The session worker is still active; retry once its current operation finishes."); }
+	}
 
-		return Ok(new { message = "Conversion cancelled" });
+	public sealed record RestartConfirmation(bool ConfirmRestart);
+
+	/// <summary>Separate authorization and explicit intent: preview/upload permission alone never commits a world.</summary>
+	[HttpPost("promote/{sessionId}")]
+	public async Task<ActionResult> Promote(string sessionId, RestartConfirmation confirmation, CancellationToken cancellationToken)
+	{
+		if (!confirmation.ConfirmRestart) return BadRequest("Promotion requires explicit confirmation that all connections will close and the server must restart.");
+		try
+		{
+			journal.RequestPromotion(sessionId, cancellationToken);
+			Response.OnCompleted(() => { lifetime.StopApplication(); return Task.CompletedTask; });
+			await RecordRestartAuditAsync(sessionId, "database.import.promote", "Validated preview approved; process restart requested.");
+			return Accepted(new { sessionId, state = "restartRequired" });
+		}
+		catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException)
+		{ return Conflict("The preview cannot be promoted: " + error.Message); }
+	}
+
+	[HttpPost("rollback/{sessionId}")]
+	public async Task<ActionResult> Rollback(string sessionId, RestartConfirmation confirmation, CancellationToken cancellationToken)
+	{
+		if (!confirmation.ConfirmRestart) return BadRequest("Rollback requires explicit restart confirmation.");
+		cancellationToken.ThrowIfCancellationRequested();
+		try
+		{
+			journal.RequestRollback(sessionId);
+			Response.OnCompleted(() => { lifetime.StopApplication(); return Task.CompletedTask; });
+			await RecordRestartAuditAsync(sessionId, "database.import.rollback", "Retained matching world/key-ring rollback approved; restart requested.");
+			return Accepted(new { sessionId, state = "restartRequired" });
+		}
+		catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException)
+		{ return Conflict("The retained world cannot be restored: " + error.Message); }
+	}
+
+	private async Task RecordRestartAuditAsync(string sessionId, string action, string details)
+	{
+		try
+		{
+			await audit.RecordPortalAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown", action,
+				new AuditTarget("database-import", sessionId, "Database import"), details, CancellationToken.None);
+		}
+		catch (Exception)
+		{
+			// IAuditLog is best-effort after the action; durable restart intent already exists.
+			logger.LogWarning("Import restart audit failed; the durable restart intent remains active.");
+		}
 	}
 }
 
-/// <summary>
-/// Static class to track conversion sessions
-/// </summary>
+// Retained converter-session compatibility harness; production endpoints use ImportSessionRegistry.
 public static class DatabaseConversionSession
 {
 	private static readonly ConcurrentDictionary<string, SessionData> _sessions = new();

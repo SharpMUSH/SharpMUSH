@@ -6449,6 +6449,33 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Kräv länkat konto</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Den privata förhandsvisningen är validerad. Den aktiva världen är oförändrad. Läs rapporten innan du tillämpar den.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Jag bekräftar att världen och konfigurationen ersätts, anslutningarna stängs och servern startas om.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Tillämpa förhandsvisning och starta om</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Kasta förhandsvisning</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Omstart begärd. Världen installeras innan driften återupptas. Anslut och logga in igen.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Konfigurationen från {0} är endast förberedd i den privata förhandsvisningen.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Senaste importer</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Jag bekräftar återställning av föregående värld och dess nycklar, stängning av anslutningar och omstart.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Återställ föregående värld och starta om</value>
+  </data>
   <data name="WikiCollections" xml:space="preserve"><value>Samlingar</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Bläddra bland alla kategorier</value></data>
   <data name="WikiAllCollections" xml:space="preserve"><value>Alla samlingar</value></data>

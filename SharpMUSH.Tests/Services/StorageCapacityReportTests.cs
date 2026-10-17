@@ -58,6 +58,23 @@ public class StorageCapacityReportTests
 	}
 
 	[Test]
+	public async Task IsolatedPreviewUsesFreshMapCapacityEvenWhenLiveMapIsFull()
+	{
+		var report = Report(mapSize: 64L << 20, filePages: (64L << 20) / Page, usedPages: (64L << 20) / Page);
+		await Assert.That(report.ImportShortfall(10L << 20)).IsNotEmpty();
+		await Assert.That(report.ImportShortfall(10L << 20, isolated: true)).IsEmpty();
+	}
+
+	[Test]
+	public async Task IsolatedPreviewCannotReuseLiveFreePagesAndMustReserveInputCopies()
+	{
+		var report = Report(filePages: 20_000, usedPages: 10_000, diskFree: 1L << 20);
+		await Assert.That(report.ImportShortfall(40L << 20)).IsEmpty();
+		await Assert.That(report.ImportShortfall(40L << 20, isolated: true)).Contains("disk");
+		await Assert.That(Report(mapSize: 20L << 20).ImportShortfall(10L << 20, isolated: true)).Contains("MAPSIZE");
+	}
+
+	[Test]
 	public async Task TheBackupPeakIsTheKeptCopiesPlusTheNextOne()
 	{
 		var backup = Report().Backup;

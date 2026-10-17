@@ -74,21 +74,21 @@ public sealed record StorageCapacityReport
 
 	/// <summary>
 	/// Why an import of <paramref name="sourceBytes"/> of PennMUSH files will not fit, or empty when it will.
-	/// The import writes into the live world, so it needs the room inside the map (free pages first, then
-	/// headroom) and the room on the disk for whatever the file grows by.
+	/// Direct conversion needs reusable live pages plus map headroom. An isolated preview gets a fresh
+	/// map but needs additional disk for the uploaded input and worker copy alongside staged growth.
 	/// </summary>
-	public string ImportShortfall(long sourceBytes)
+	public string ImportShortfall(long sourceBytes, bool isolated = false)
 	{
 		var needed = sourceBytes * ImportExpansionFactor;
-		var room = FreeBytes + MapHeadroomBytes;
+		var room = isolated ? MapSizeBytes : FreeBytes + MapHeadroomBytes;
 		if (room < needed)
 		{
 			return $"the world's map has room for about {room} more bytes and an import of {sourceBytes} bytes of "
 				+ $"PennMUSH files needs about {needed}. Raise SHARPMUSH_LIGHTNING_MAPSIZE and restart first.";
 		}
 
-		var growth = Math.Max(0, needed - FreeBytes);
-		var required = growth + Math.Max(growth / 10, 16L << 20);
+		var growth = isolated ? needed : Math.Max(0, needed - FreeBytes);
+		var required = growth + (isolated ? 2 * sourceBytes : 0) + Math.Max(growth / 10, 16L << 20);
 		return growth > 0 && WorldDiskFreeBytes >= 0 && WorldDiskFreeBytes < required
 			? $"the world's disk has {WorldDiskFreeBytes} bytes free and an import of {sourceBytes} bytes of PennMUSH "
 				+ $"files needs about {required}. Free space on it first."

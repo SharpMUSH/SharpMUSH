@@ -9151,6 +9151,33 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Require linked account</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>This is a validated private preview. The running world has not changed. Review the report before promoting it.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>I confirm replacing the world and configuration, closing all connections, and restarting the server.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Promote preview and restart</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Discard preview</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Restart requested. The world will be installed before the server resumes. Reconnect and sign in again after the restart.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Configuration from {0} is prepared only in the private preview.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Recent imports</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>I confirm restoring the previous world and its encryption keys, closing connections, and restarting.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Restore previous world and restart</value>
+  </data>
   <data name="WikiCollections" xml:space="preserve"><value>Collections</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Browse all categories</value></data>
   <data name="WikiAllCollections" xml:space="preserve"><value>All collections</value></data>

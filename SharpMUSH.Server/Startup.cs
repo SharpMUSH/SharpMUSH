@@ -74,11 +74,12 @@ public class Startup(string colorFile, string natsUrl)
 	/// replaced; naming them is what lets a reader follow one without reading the rest, and lets a
 	/// test assert on one.
 	/// </summary>
-	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment,
+		string? worldPath = null, PluginDirectories? pluginDirectories = null)
 	{
 		services.TryAddSingleton<IHostEnvironment>(environment);
 		services.AddSharpMushHttpPipeline(configuration, environment);
-		services.AddSharpMushDatabase(configuration);
+		services.AddSharpMushDatabase(configuration, worldPath, pluginDirectories);
 		services.AddSharpMushEngine(configuration, natsUrl);
 		services.AddSharpMushOptions(colorFile);
 		services.AddSharpMushLogging(configuration);

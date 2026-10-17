@@ -16,7 +16,7 @@ from parity.normalize import DbrefCanonicalizer, normalize
 from parity.runner import StepRecord, Target, _execute
 from parity.scenario import Step
 from parity.session import split_telnet, strip_telnet
-from parity.servers import StartupError, wait_for
+from parity.servers import StartupError, wait_for, finish_import_preview, verify_import_committed
 
 
 class StartupDiagnosticsTests(unittest.TestCase):
@@ -44,6 +44,62 @@ class StartupDiagnosticsTests(unittest.TestCase):
         process = SimpleNamespace(log=Path("missing-startup-log"), returncode=134, poll=lambda: 134)
         with self.assertRaisesRegex(StartupError, "process exited with 134"):
             wait_for(lambda: False, "import", 1, [process])
+
+
+class ImportRestartTests(unittest.TestCase):
+    def fixture(self, directory, state=4, marker=True):
+        world = Path(directory) / "world"
+        root = Path(str(world) + ".imports")
+        session_id = "a" * 32
+        session = root / session_id
+        (session / "world").mkdir(parents=True)
+        (session / "keys").mkdir()
+        (session / "session.json").write_text(json.dumps({"Id": session_id, "State": state}))
+        if marker:
+            (root / "pending.json").write_text(json.dumps(session_id))
+        return world, root, session_id
+
+    def test_clean_exit_requires_an_actual_durable_promotion_intent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            world, _, session_id = self.fixture(directory)
+            process = SimpleNamespace(returncode=0, poll=lambda: 0)
+            self.assertEqual(finish_import_preview(process, world), session_id)
+
+    def test_clean_exit_without_intent_cannot_fake_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            world, _, _ = self.fixture(directory, marker=False)
+            process = SimpleNamespace(returncode=0, poll=lambda: 0)
+            with self.assertRaisesRegex(StartupError, "without a valid durable"):
+                finish_import_preview(process, world)
+
+    def test_failure_exit_does_not_restart_even_with_an_intent_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            world, _, _ = self.fixture(directory)
+            process = SimpleNamespace(returncode=17, poll=lambda: 17)
+            with self.assertRaisesRegex(StartupError, "exited with 17"):
+                finish_import_preview(process, world)
+
+    def test_aborted_session_is_not_restart_authority(self):
+        with tempfile.TemporaryDirectory() as directory:
+            world, _, _ = self.fixture(directory, state=7)
+            process = SimpleNamespace(returncode=0, poll=lambda: 0)
+            with self.assertRaises(StartupError):
+                finish_import_preview(process, world)
+
+    def test_restart_must_finish_commit_without_another_pending_operation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            world, root, session_id = self.fixture(directory, state=6)
+            with self.assertRaises(StartupError):
+                verify_import_committed(world, session_id)
+            (root / "pending.json").unlink()
+            verify_import_committed(world, session_id)
+
+    def test_a_second_promotion_request_is_not_a_committed_engine(self):
+        with tempfile.TemporaryDirectory() as directory:
+            world, root, session_id = self.fixture(directory, state=4)
+            (root / "pending.json").unlink()
+            with self.assertRaises(StartupError):
+                verify_import_committed(world, session_id)
 
 
 class NormalizeTests(unittest.TestCase):

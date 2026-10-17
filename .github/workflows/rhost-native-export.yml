@@ -8,11 +8,24 @@ on:
       - 'tools/rhost-fixtures/**'
       - 'SharpMUSH.Library/Services/DatabaseConversion/Rhost/**'
       - 'SharpMUSH.Tests/Services/Rhost*'
+      - 'SharpMUSH.Server/Services/Imports/**'
+      - 'SharpMUSH.Server/Program.cs'
+      - 'SharpMUSH.Server/Startup.cs'
+      - 'SharpMUSH.Server/Services/PennMUSHDatabaseConversionService.cs'
+      - 'SharpMUSH.Server/Controllers/DatabaseConversionController.cs'
+      - 'SharpMUSH.Tests/Server/Controllers/Import*'
+      - 'SharpMUSH.Tests/Server/Controllers/DatabaseConversion*'
+      - 'SharpMUSH.Tests/Server/ImportPortalIsolationTests.cs'
+      - 'SharpMUSH.Tests/Services/Import*'
       - 'SharpMUSH.Tests/Services/TestData/RhostNative/**'
       - '.github/workflows/rhost-native-export.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: rhost-native-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   native-backends:
@@ -50,7 +63,7 @@ jobs:
       - name: Build export tests
         run: dotnet build SharpMUSH.Tests -m:2 -nr:false
       - name: Verify actual native exports and imports
-        run: dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/RhostNativeExportImportTests/*'
+        run: dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/RhostNativeExportImportTests/*' --maximum-parallel-tests 8
       - name: Verify failure handling
         run: dotnet run --no-build --project SharpMUSH.Tests -- --treenode-filter '/*/*/RhostOfflineExportTests/*'
       - name: Verify strict readers

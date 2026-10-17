@@ -5743,6 +5743,33 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Exiger un compte lié</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Cet aperçu privé est validé. Le monde actif reste inchangé. Vérifiez le rapport avant de le remplacer.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Je confirme le remplacement du monde et de la configuration, la fermeture des connexions et le redémarrage du serveur.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Appliquer l’aperçu et redémarrer</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Supprimer l’aperçu</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Redémarrage demandé. Le monde sera installé avant la reprise. Reconnectez-vous ensuite.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>La configuration de {0} est préparée uniquement dans l’aperçu privé.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Imports récents</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Je confirme la restauration du monde précédent et de ses clés, la fermeture des connexions et le redémarrage.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Restaurer le monde précédent et redémarrer</value>
+  </data>
   <data name="WikiCollections" xml:space="preserve"><value>Collections</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Parcourir toutes les catégories</value></data>
   <data name="WikiAllCollections" xml:space="preserve"><value>Toutes les collections</value></data>
