@@ -26,7 +26,7 @@ public class PluginDeclinedChoiceTests
 		var before = (await data.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds.ToArray();
 		await Assert.That(before).Contains("scene");
 
-		var root = Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")!, "plugin-declines-" + Guid.NewGuid().ToString("N"));
+		var root = Path.Combine(PluginTestScratch.Root(Environment.GetEnvironmentVariable("TMPDIR")), "plugin-declines-" + Guid.NewGuid().ToString("N"));
 		var directories = new PluginDirectories(Path.Combine(root, "built-in"), Path.Combine(root, "installed"));
 		try
 		{

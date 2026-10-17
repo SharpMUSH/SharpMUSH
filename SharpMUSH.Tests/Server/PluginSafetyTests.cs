@@ -12,11 +12,21 @@ namespace SharpMUSH.Tests.Server;
 
 public class PluginSafetyTests
 {
+	[Test]
+	public async Task MissingTemporaryDirectoryUsesWorkspaceWorkWithoutChangingProcessEnvironment()
+	{
+		var processTemporaryDirectory = Environment.GetEnvironmentVariable("TMPDIR");
+		await Assert.That(PluginTestScratch.Root(null)).IsEqualTo(Path.Combine(Environment.CurrentDirectory, "work"));
+		var configured = Path.Combine(Environment.CurrentDirectory, "work", "configured");
+		await Assert.That(PluginTestScratch.Root(configured)).IsEqualTo(configured);
+		await Assert.That(Environment.GetEnvironmentVariable("TMPDIR")).IsEqualTo(processTemporaryDirectory);
+	}
+
 	private sealed class Scope : IDisposable
 	{
 		public PluginDirectories Directories { get; } = new(
-			Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")!, Guid.NewGuid().ToString("N"), "built-in"),
-			Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")!, Guid.NewGuid().ToString("N"), "installed"));
+			Path.Combine(PluginTestScratch.Root(Environment.GetEnvironmentVariable("TMPDIR")), Guid.NewGuid().ToString("N"), "built-in"),
+			Path.Combine(PluginTestScratch.Root(Environment.GetEnvironmentVariable("TMPDIR")), Guid.NewGuid().ToString("N"), "installed"));
 		public IPluginManager Manager { get; } = Substitute.For<IPluginManager>();
 		public IPackageRegistryService Registry { get; } = Substitute.For<IPackageRegistryService>();
 		public PackageOperationGate Gate { get; } = new();
@@ -171,4 +181,10 @@ public class PluginSafetyTests
 		var result = await controller.Disable("missing", CancellationToken.None);
 		await Assert.That(result.Result is Microsoft.AspNetCore.Mvc.BadRequestObjectResult).IsTrue();
 	}
+}
+
+internal static class PluginTestScratch
+{
+	internal static string Root(string? temporaryDirectory) =>
+		temporaryDirectory ?? Path.Combine(Environment.CurrentDirectory, "work");
 }
