@@ -13,6 +13,17 @@ internal sealed class GatedAnalyzer : IMushCodeAnalyzer, IDisposable
 	public ManualResetEventSlim Release { get; } = new();
 	public bool GateValidation { get; init; }
 	public bool GateProjection { get; init; }
+	private string _projectionTrace = "Projection has not started.";
+	private int _projectionTimedOut;
+
+	public string DescribeProjection()
+	{
+		ThreadPool.GetAvailableThreads(out var workers, out var completionPorts);
+		return $"Projection gate timed out: {Volatile.Read(ref _projectionTimedOut) != 0}; " +
+			$"pool threads: {ThreadPool.ThreadCount}; available workers: {workers}; " +
+			$"available completion ports: {completionPorts}; pending work: {ThreadPool.PendingWorkItemCount}.\n" +
+			Volatile.Read(ref _projectionTrace);
+	}
 
 	/// <summary>
 	/// Completes once the gate holds analysis. Awaited, never waited on: the gate already blocks one
@@ -26,8 +37,16 @@ internal sealed class GatedAnalyzer : IMushCodeAnalyzer, IDisposable
 		public Diagnostic this[int index] => values[index];
 		public IEnumerator<Diagnostic> GetEnumerator()
 		{
+			// Capture before signalling the test: reader-path frames can identify synchronous projection
+			// on that call path. Their absence is inconclusive. Pool counters alone cannot establish
+			// starvation, so retain the actual projection stack too.
+			Volatile.Write(ref owner._projectionTrace, $"Projection thread: {Environment.CurrentManagedThreadId}.\n{Environment.StackTrace}");
 			owner._entered.TrySetResult();
-			if (!owner.Release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException();
+			if (!owner.Release.Wait(TimeSpan.FromSeconds(5)))
+			{
+				Volatile.Write(ref owner._projectionTimedOut, 1);
+				throw new TimeoutException("Diagnostic projection gate expired.");
+			}
 			return values.GetEnumerator();
 		}
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
