@@ -15144,7 +15144,9 @@
           "@discord/link",
           "@discord/unlink",
           "@discord/resume",
-          "@discord/gate"
+          "@discord/gate",
+          "@discord/unrestricted",
+          "@discord/restrict"
         ]
       },
       {
