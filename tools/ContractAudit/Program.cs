@@ -1,3 +1,12 @@
+extern alias ScenePlugin;
+extern alias DiscordPlugin;
+extern alias LspPlugin;
+extern alias McpPlugin;
+
+using System.Diagnostics;
+using SharpMUSH.Tools.ContractAudit;
+using System.Xml.Linq;
+using SharpMUSH.Library.Plugins;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SharpMUSH.Configuration.Options;
@@ -12,7 +21,21 @@ if (args.Length != 2)
 }
 
 var root = Path.GetFullPath(args[0]);
-var source = new[] { "SharpMUSH.Implementation", "SharpMUSH.Library", "SharpMUSH.Server" }
+PluginBase[] shippedPlugins =
+[
+	new ScenePlugin::SharpMUSH.Plugins.Scene.ScenePlugin(),
+	new DiscordPlugin::SharpMUSH.Plugins.Discord.DiscordPlugin(),
+	new LspPlugin::SharpMUSH.Plugins.Lsp.LspPlugin(),
+	new McpPlugin::SharpMUSH.Plugins.Mcp.McpPlugin()
+];
+var shippedProjects = XDocument.Load(Path.Join(root, "SharpMUSH.Server", "SharpMUSH.Server.csproj"))
+	.Descendants("ProjectReference").Select(element => (string?)element.Attribute("Include"))
+	.OfType<string>().Select(path => Path.GetFileNameWithoutExtension(path.Replace('\\', '/')))
+	.Where(name => name.StartsWith("SharpMUSH.Plugins.", StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
+if (!shippedProjects.SetEquals(shippedPlugins.Select(plugin => plugin.GetType().Assembly.GetName().Name!)))
+	throw new InvalidOperationException("Shipped plugin references changed; update the audit's explicit module inventory.");
+var sourceProjects = new[] { "SharpMUSH.Implementation", "SharpMUSH.Library", "SharpMUSH.Server" }.Concat(shippedProjects).Order(StringComparer.Ordinal).ToArray();
+var source = sourceProjects
 	.SelectMany(project => Directory.EnumerateFiles(Path.Join(root, project), "*.cs", SearchOption.AllDirectories))
 	.Where(path => !path.Contains("/obj/") && !path.Contains("/bin/"))
 	.Order(StringComparer.Ordinal)
@@ -38,6 +61,7 @@ foreach (var entry in RegistryInventory.Functions.OrderBy(entry => entry.Name, S
 		source = Locations(entry.Name, "Functions"),
 		status = "pending-behavioral-review",
 		reconciled = "reflection/generated-metadata",
+		review = Review("function", entry.Name),
 		evidence = Evidence("function", entry.Name)
 	});
 }
@@ -54,6 +78,7 @@ foreach (var entry in RegistryInventory.Commands.OrderBy(entry => entry.Name, St
 		source = Locations(entry.Name, "Commands"),
 		status = "pending-behavioral-review",
 		reconciled = "reflection/generated-metadata",
+		review = Review("command", entry.Name),
 		evidence = Evidence("command", entry.Name)
 	});
 	foreach (var spelling in metadata.Switches ?? [])
@@ -83,17 +108,86 @@ foreach (var definition in EventCatalogue.All.OrderBy(definition => definition.N
 		}
 	});
 
+// These are the plugin's actual generated runtime registrations, without initializing services or evaluating delegates.
+var pluginRows = new List<object>();
+var modules = new List<object>();
+foreach (var plugin in shippedPlugins.OrderBy(plugin => plugin.Id, StringComparer.Ordinal))
+{
+	var assembly = plugin.GetType().Assembly;
+	var reflectedFunctions = RegistryInventory.FunctionsFor(assembly);
+	var reflectedCommands = RegistryInventory.CommandsFor(assembly);
+	var registeredFunctions = plugin.GetFunctions().ToDictionary(definition => definition.Attribute.Name, StringComparer.Ordinal);
+	var registeredCommands = plugin.GetCommands().ToDictionary(definition => definition.Attribute.Name, StringComparer.Ordinal);
+	if (!registeredFunctions.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(reflectedFunctions.Select(entry => entry.Name))
+		|| !registeredCommands.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(reflectedCommands.Select(entry => entry.Name)))
+		throw new InvalidOperationException($"Plugin {plugin.Id} generated registrations and reflection disagree.");
+	foreach (var entry in reflectedFunctions.OrderBy(entry => entry.Name, StringComparer.Ordinal))
+	{
+		var attribute = registeredFunctions[entry.Name].Attribute;
+		RequireSame(attribute, entry.Attribute);
+		pluginRows.Add(new
+		{
+			module = plugin.Id,
+			kind = "function",
+			name = entry.Name,
+			origin = entry.Origin,
+			metadata = RegistryInventory.Metadata(attribute),
+			source = ModuleLocations(assembly.GetName().Name!, entry.Name),
+			status = "pending-behavioral-review",
+			reconciled = "reflection/generated-runtime-registration",
+			review = Review("function", entry.Name)
+		});
+	}
+	foreach (var entry in reflectedCommands.OrderBy(entry => entry.Name, StringComparer.Ordinal))
+	{
+		var attribute = registeredCommands[entry.Name].Attribute;
+		RequireSame(attribute, entry.Attribute);
+		pluginRows.Add(new
+		{
+			module = plugin.Id,
+			kind = "command",
+			name = entry.Name,
+			origin = entry.Origin,
+			metadata = RegistryInventory.Metadata(attribute),
+			source = ModuleLocations(assembly.GetName().Name!, entry.Name),
+			status = "pending-behavioral-review",
+			reconciled = "reflection/generated-runtime-registration",
+			review = Review("command", entry.Name)
+		});
+		foreach (var spelling in attribute.Switches ?? [])
+			pluginRows.Add(new
+			{
+				module = plugin.Id,
+				kind = "switch",
+				name = entry.Name + "/" + spelling,
+				target = entry.Name,
+				status = "pending-behavioral-review"
+			});
+	}
+	modules.Add(new
+	{
+		module = plugin.Id,
+		assembly = assembly.GetName().Name,
+		functions = registeredFunctions.Count,
+		commands = registeredCommands.Count,
+		switches = reflectedCommands.Sum(entry => entry.Attribute.Switches?.Length ?? 0),
+		status = "registration-reconciled-behavior-pending"
+	});
+}
+
 var callbacks = source.Where(line => Regex.IsMatch(line.Text,
 	@"\b(EvaluateAttribute\w*|CallAttribute\w*|FetchAttributeFunctionAsync|Queue\w*|Schedule\w*|RegisterRoute\w*)\s*\("))
 	.Select(line => new { source = $"{line.File}:{line.Line}", invocation = line.Text.Trim(), status = "pending-contract-review" });
 var output = new
 {
-	schema = 1,
-	baseRevision = "14fd9ab7aaf5baaaf13e2d2bcefe9641a55d0e4b",
-	scope = "Implementation assembly + shipped default aliases. Re-run at the revision being reviewed.",
+	schema = 2,
+	provenance = SourceProvenance.Capture(root, Git("ls-files", "-z").Split('\0', StringSplitOptions.RemoveEmptyEntries)),
+	scope = "Implementation assembly, shipped default aliases and every plugin module referenced by the Server project. Registration reconciliation is not behavioral completion.",
 	entries = rows,
+	shippedPluginModules = modules,
+	shippedPluginEntries = pluginRows,
 	callbackCandidates = callbacks,
-	excluded = new[] { "runtime configured aliases", "game-defined functions/commands", "loaded/shipped plugin module registrations",
+	excluded = new[] { "runtime configured aliases", "game-defined functions/commands", "third-party/loaded plugin registrations beyond shipped modules",
 		"dynamic HTTP/package callbacks", "live analysis identity and visibility" }
 		.Select(surface => new { surface, total = (int?)null, status = "unknown-pending-inventory" })
 };
@@ -117,7 +211,15 @@ string[] Locations(string name, string directory) => source.Where(line => line.F
 	@"\bName\s*=\s*""" + Regex.Escape(name) + @"""", RegexOptions.IgnoreCase))
 	.Select(line => $"{line.File}:{line.Line}").ToArray();
 
-string[] Evidence(string kind, string name) => name is "sortkey" or "index" or "munge"
+string[] Evidence(string kind, string name) => name == "unique"
+	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
+		"tools/client-tests/monaco-signatures.test.mjs", "SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpfunc.md",
+		"docs/audits/softcode-contracts.md#unique-comparison-labels"]
+	: name is "setunion" or "setdiff" or "setinter" or "setsymdiff"
+	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
+		"tools/client-tests/monaco-signatures.test.mjs", "SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpfunc.md",
+		"docs/audits/softcode-contracts.md#set-operation-overloads"]
+	: name is "sortkey" or "index" or "munge"
 	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
 		"tools/client-tests/monaco-signatures.test.mjs", "docs/audits/softcode-contracts.md#list-transformation-signatures"]
 	: name is "json_map" or "json_mod"
@@ -141,4 +243,30 @@ void AddAliases(string kind, Dictionary<string, string[]> aliases, IEnumerable<s
 				evidence = new[] { "SharpMUSH.Configuration/Options/AliasOptions.cs", "SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs" }
 			});
 	}
+}
+
+string[] ModuleLocations(string project, string name) => source.Where(line => line.File.StartsWith(project + "/", StringComparison.Ordinal)
+	&& Regex.IsMatch(line.Text, @"\bName\s*=\s*""" + Regex.Escape(name) + @"""", RegexOptions.IgnoreCase))
+	.Select(line => $"{line.File}:{line.Line}").ToArray();
+
+object Review(string kind, string name) => new
+{
+	complete = false,
+	reviewedFacets = kind == "function" && name is "json_map" or "json_mod" or "sortkey" or "index" or "munge" or "setunion" or "setdiff" or "setinter" or "setsymdiff" or "unique"
+		? new[] { "registration-metadata", "parameter-labels", "focused-parser-call-shapes", "analysis-portal-monaco-signatures" }
+		: new[] { "registration-metadata" },
+	pendingFacets = new[] { "full-argument-semantics", "evaluation-and-laziness", "authority-and-permissions", "errors-and-boundaries",
+		"resource-limits", "compatibility", "live-consumer-identity" }
+};
+
+string Git(params string[] arguments)
+{
+	var start = new ProcessStartInfo("git") { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true };
+	foreach (var argument in arguments) start.ArgumentList.Add(argument);
+	using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not read source revision.");
+	var output = process.StandardOutput.ReadToEnd();
+	var error = process.StandardError.ReadToEnd();
+	process.WaitForExit();
+	if (process.ExitCode != 0) throw new InvalidOperationException($"Could not read source revision: {error}");
+	return output.Trim();
 }
