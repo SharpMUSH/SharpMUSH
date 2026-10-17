@@ -286,14 +286,14 @@ public class CacheTagOrderingTests
 		public string[] CacheTags => [Tag];
 	}
 
-	private sealed class PausingMemoryCache(string pausedTag = Tag) : IMemoryCache
+	internal sealed class PausingMemoryCache(string pausedTag = Tag) : IMemoryCache
 	{
 		private readonly string _pausedTag = pausedTag;
 		private readonly MemoryCache _inner = new(new MemoryCacheOptions());
 		private int _armed;
 		public TaskCompletionSource Paused { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public ManualResetEventSlim Release { get; } = new();
-		public void Arm() => Interlocked.Exchange(ref _armed, 1);
+		public void Arm(int commitsToSkip = 0) => Interlocked.Exchange(ref _armed, commitsToSkip + 1);
 		public ICacheEntry CreateEntry(object key) => new PausingEntry(_inner.CreateEntry(key), this);
 		public bool TryGetValue(object key, out object? value) => _inner.TryGetValue(key, out value);
 		public void Remove(object key) => _inner.Remove(key);
@@ -317,7 +317,7 @@ public class CacheTagOrderingTests
 			public void Dispose()
 			{
 				// The key is exposed by the public IMemoryCache entry API. All values and operations pass through.
-				if (Key.ToString() == "__fc:t:" + owner._pausedTag && Interlocked.CompareExchange(ref owner._armed, 0, 1) == 1)
+				if (Key.ToString() == "__fc:t:" + owner._pausedTag && Volatile.Read(ref owner._armed) > 0 && Interlocked.Decrement(ref owner._armed) == 0)
 				{
 					owner.Paused.SetResult();
 					if (!owner.Release.Wait(TimeSpan.FromSeconds(10))) throw new TimeoutException("Tag commit was not released");
