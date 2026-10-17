@@ -36,10 +36,19 @@ public class McpAnalysisExecutorTests
 		var code = string.Concat(Enumerable.Repeat("think x\n", 5 * 1024 * 1024 / 8));
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var pending = executor.ExecuteAsync(() => { entered.SetResult(); return analyzer.Validate(code, MushAnalysisMode.CommandsPerLine); });
-		await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
-		executor.Dispose();
-		await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(3))).Throws<OperationCanceledException>();
-		await Assert.That(async () => await executor.ExecuteAsync(() => 1)).Throws<ObjectDisposedException>();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			executor.Dispose();
+			await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(3))).Throws<OperationCanceledException>();
+			await Assert.That(async () => await executor.ExecuteAsync(() => 1)).Throws<ObjectDisposedException>();
+		}
+		finally
+		{
+			executor.Dispose();
+			try { await pending; }
+			catch (OperationCanceledException) { }
+		}
 	}
 
 	[Test]
@@ -72,25 +81,49 @@ public class McpAnalysisExecutorTests
 	{
 		using var executor = new McpAnalysisExecutor(Options.Create(new McpOptions
 		{
-			MaxConcurrentAnalyses = 1, MaxQueuedAnalyses = 0, AnalysisTimeout = TimeSpan.FromMilliseconds(100)
+			MaxConcurrentAnalyses = 1, MaxQueuedAnalyses = 0
 		}));
-		using var entered = new ManualResetEventSlim();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var deadlineObserved = new TaskCompletionSource<ExecutionBudget>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var workerExited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var finish = new ManualResetEventSlim();
 		var pending = executor.ExecuteAsync(() =>
 		{
-			entered.Set();
-			if (!finish.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
-			return 1;
+			try
+			{
+				var budget = ExecutionBudget.Current ?? throw new InvalidOperationException("Analysis worker has no execution budget.");
+				using var registration = budget.Token.Register(() => deadlineObserved.TrySetResult(budget));
+				entered.SetResult();
+				finish.Wait();
+				return 1;
+			}
+			finally { workerExited.TrySetResult(); }
 		});
-		if (!entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
-		var finishedBeforeWorker = pending.Wait(TimeSpan.FromMilliseconds(150));
 		try
 		{
-			await Assert.That(finishedBeforeWorker).IsFalse();
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			var expiredBudget = await deadlineObserved.Task.WaitAsync(TimeSpan.FromSeconds(10));
+			await Assert.That(expiredBudget.IsExpired).IsTrue();
+			// Give cancellation continuations time to run while the worker ignores cancellation.
+			await Task.WhenAny(pending, Task.Delay(60));
+			await Assert.That(pending.IsCompleted).IsFalse();
 			await Assert.That(async () => await executor.ExecuteAsync(() => 2)).Throws<InvalidOperationException>();
 		}
-		finally { finish.Set(); }
-		await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(3))).Throws<OperationCanceledException>();
+		finally
+		{
+			finish.Set();
+			try
+			{
+				try { await pending; }
+				catch (OperationCanceledException) { }
+			}
+			finally
+			{
+				// An abandonment regression can complete pending before the delegate exits.
+				if (entered.Task.IsCompletedSuccessfully) await workerExited.Task;
+			}
+		}
+		await Assert.That(async () => await pending).Throws<OperationCanceledException>();
 		await Assert.That(await executor.ExecuteAsync(() => 3)).IsEqualTo(3);
 	}
 
@@ -101,23 +134,31 @@ public class McpAnalysisExecutorTests
 		{
 			MaxConcurrentAnalyses = 1, MaxQueuedAnalyses = 1
 		}));
-		using var entered = new ManualResetEventSlim();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var finish = new ManualResetEventSlim();
-		var first = executor.ExecuteAsync(() => { entered.Set(); if (!finish.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException(); return 1; });
-		if (!entered.Wait(TimeSpan.FromSeconds(3))) throw new TimeoutException();
 		using var cancellation = new CancellationTokenSource();
-		var ran = false;
-		var queued = executor.ExecuteAsync(() => { ran = true; return 2; }, cancellation.Token);
-		cancellation.Cancel();
+		var first = executor.ExecuteAsync(() => { entered.SetResult(); finish.Wait(); return 1; });
+		var pending = new List<Task> { first };
 		try
 		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			var ran = false;
+			var queued = executor.ExecuteAsync(() => { ran = true; return 2; }, cancellation.Token);
+			pending.Add(queued);
+			await cancellation.CancelAsync();
 			await Assert.That(async () => await queued.WaitAsync(TimeSpan.FromSeconds(3))).Throws<OperationCanceledException>();
 			await Assert.That(ran).IsFalse();
 			var next = executor.ExecuteAsync(() => 3);
+			pending.Add(next);
 			finish.Set();
 			await Assert.That(await first).IsEqualTo(1);
 			await Assert.That(await next).IsEqualTo(3);
 		}
-		finally { finish.Set(); }
+		finally
+		{
+			finish.Set();
+			try { await Task.WhenAll(pending); }
+			catch (OperationCanceledException) { }
+		}
 	}
 }
