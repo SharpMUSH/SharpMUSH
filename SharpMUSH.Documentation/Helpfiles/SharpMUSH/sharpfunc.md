@@ -264,7 +264,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [CTIME()]       | [ETIME()]       | [ETIMEFMT()]    | [ISDAYLIGHT()]  |
 | [MTIME()]       | [RESTARTTIME()] | [SECS()]        | [STARTTIME()]   |
 | [STRINGSECS()]  | [TIME()]        | [TIMECALC()]    | [TIMEFMT()]     |
-| [TIMESTRING()]  | [UPTIME()]      | [UTCTIME()]     |                 |
+| [TIMESTRING()]  | [UPTIME()]      | [UTCTIME()]     | [DATEPARSE()]   |
 
 ::: seealso
 - [timezones]
