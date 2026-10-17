@@ -801,7 +801,7 @@ public class SceneVerbSurfaceIntegrationTests
 		await God1($"&TZ {odd}=Nowhere/Special");
 
 		var said = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule 2099-01-05 20:00/Zones {Tag}=A pitch"));
-		await Assert.That(said).Contains("for Mon Jan 05 20:00:00 2099 (America/New_York).");
+		await Assert.That(said).Contains("for 2099-01-05 20:00:00 -05:00 (America/New_York).");
 		var sceneId = System.Text.RegularExpressions.Regex.Match(said, @"Scheduled scene (\d+)").Groups[1].Value;
 		await Assert.That(await Eval($"scene({sceneId},scheduledfor)")).IsEqualTo("4071344400000")
 			.Because("20:00 in New York in January is 01:00 the next day in UTC");
