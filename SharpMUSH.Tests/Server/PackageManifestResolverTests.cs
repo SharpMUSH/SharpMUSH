@@ -102,6 +102,7 @@ public class PackageManifestResolverTests
 			new PackageManifestSource(PluginPackageFixture.Yaml("sample", dllSha: new string('0', 64)), "new", null));
 		f.Source.GetFileSourceAsync(Remote, "sample", "new", Arg.Any<CancellationToken>()).Returns(files);
 		var first = (await f.Resolver.ResolveAsync(new("test", "sample"), false, CancellationToken.None)).Expect<ResolvedPackageManifest>();
+		await Assert.That(first.BinaryBytes).IsEqualTo(3L + PluginPackageFixture.PluginJson("sample").LongLength);
 		files.Bytes[0] = 9;
 		var original = await first.Files!.ReadFileAsync(PluginPackageFixture.DllName);
 		await Assert.That(original![0]).IsEqualTo((byte)1);

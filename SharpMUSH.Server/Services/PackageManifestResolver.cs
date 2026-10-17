@@ -16,7 +16,11 @@ public union PackageManifestResolution(ResolvedPackageManifest, PackageManifestR
 /// <summary>The exact manifest and files reviewed, together with their configured trust and content identity.</summary>
 public sealed record ResolvedPackageManifest(PackageManifest Manifest, IReadOnlyList<string> Warnings,
 	PackageManifestSource Source, PackageRemoteRecord Remote, string ApplyPath, IPackageFileSource? Files,
-	string? Readme, string Fingerprint);
+	string? Readme, string Fingerprint)
+{
+	/// <summary>Actual snapshot bytes, for enforcing the batch's aggregate retention budget.</summary>
+	public long BinaryBytes { get; init; }
+}
 
 /// <summary>One source resolution path for ordinary and reviewed batch package operations.</summary>
 public sealed class PackageManifestResolver(IPackageRegistryService registry, IPackageSourceService source,
@@ -130,7 +134,8 @@ public sealed class PackageManifestResolver(IPackageRegistryService registry, IP
 			hash.AppendData(pair.Value);
 		}
 		return new ResolvedPackageManifest(manifest, warnings, fetched, remote, applyPath, files, readme,
-			Convert.ToHexStringLower(hash.GetHashAndReset()));
+			Convert.ToHexStringLower(hash.GetHashAndReset()))
+		{ BinaryBytes = binaries.Values.Sum(bytes => bytes.LongLength) };
 
 		void Add(string value)
 		{
