@@ -17,11 +17,11 @@ This deliberately trades repeated pure requirements-wrapper construction for req
 ## Constraints and reviewed handoff
 
 - Binding engine-data-trunk.md and approved semantic architecture remain authoritative. Update its section 2 wording to distinguish actual-host transport from standalone in-memory fixtures.
-- Exact 16-query/9-command names, return types and normalized arguments are in private work/wiki-mediator-routing/transport-preflight.md, checked against current IWikiStore. Recheck signatures before editing; do not add a parallel store interface or fake IMediator dispatcher.
+- The checked-in contracts are authoritative: `SharpMUSH.Library/Stores/IWikiStore.cs` defines the 25 store signatures and normalization contract; `SharpMUSH.Library/Queries/Database/Wiki/WikiQueries.cs` and `SharpMUSH.Library/Commands/Database/Wiki/WikiCommands.cs` define the corresponding 16 queries and 9 commands, including argument order, return types and cache policy. Recheck these sources before editing; do not add a parallel store interface or fake IMediator dispatcher.
 - No semantic DI, tables, bootstrap, migrations, native code extraction, new world access, permission/author reconciliation, installer schema changes, endpoints, dependencies, production activation or deployment.
 - Preserve all existing store method signatures and single-provider forwarding. Providers take no Mediator/cache. Requirements Tag invalidation follows the existing factory-start epoch pipeline; do not substitute item removal.
-- Reuse this worktree on codex/wiki-mediator-routing. Root owns Git/project changes. Preserve all untracked work and prior branches. Never /tmp; use disk-backed /temp/codex/wiki-mediator-routing for TMPDIR/TMP/TEMP, or this worktree's work/ fallback coordinated by root.
-- Use the existing pinned SDK at /home/grave/.codex/worktrees/86d4/SharpMUSH/work/issue-consolidation/dotnet. All dotnet commands require escalation from the start and the shared flock --close /temp/codex/sharpmush-build.lock. No restore downloads. Source freeze must be coordinated before any formatting/build/test.
+- Work in the current isolated checkout; coordinate Git/project changes with the integration owner. Preserve untracked work and prior branches. Create a writable disk-backed task scratch directory (use the workspace's `work/` directory if needed) and set `TMPDIR`, `TMP` and `TEMP` to it before running tools.
+- Use an SDK satisfying the checked-in `global.json`. Serialize builds and test runs sharing output directories; coordinate a source freeze before formatting/build/tests. Restore dependencies using the repository's normal configuration when needed.
 
 ## Parallel task ownership
 
@@ -29,7 +29,7 @@ This deliberately trades repeated pure requirements-wrapper construction for req
 
 Own Library/Queries/Database/Wiki/WikiQueries.cs, Library/Commands/Database/Wiki/WikiCommands.cs, Library/Definitions/CacheTags.cs, Implementation/Services/MediatorWikiStore.cs, Implementation/Handlers/Database/Wiki/WikiQueryHandlers.cs and WikiCommandHandlers.cs. All paths use the SharpMUSH. prefix project directory.
 
-- [x] Recheck all 25 IWikiStore signatures and freeze positional request contracts against the preflight map.
+- [x] Recheck all 25 IWikiStore signatures and freeze positional request contracts against the checked-in query/command records.
 - [x] Implement typed records and conventional handlers depending only on provider IWikiStore; map all parameters/results without normalization or new business rules.
 - [x] Implement the concrete-only transport adapter over IMediator. Declare deliberate uncached policy on ordinary requests; use existing tagged cache/invalidation interfaces for the requirements trio.
 - [x] Self-review mapping and cache policy, freeze source, and hand off exact signatures before the shared build. No wrapper-mirroring tests or deliberately failing compilation as behavioral RED.
@@ -47,7 +47,7 @@ Own Library/Services/WikiStoreService.cs, Server/Registration/DatabaseRegistrati
 
 ## Root integration and review
 
-- [x] Adopt and log selected composition/cache decisions, initialize this plan's private SDD ledger, dispatch disjoint A/B workers with frozen interface handoff and no concurrent builds.
+- [x] Adopt and log selected composition/cache decisions, track task ownership and review, and dispatch disjoint A/B workers with frozen interface handoff and no concurrent builds.
 - [x] Run normal formatting twice, normal build, focused new routing/cache tests, existing wiki/access/localization/controller/native wiki coverage and bUnit HTTP route tests appropriate to the changed composition. Keep exact commands/results and report any skipped tests separately.
 - [x] Update binding trunk paragraph/XML for actual-host Mediator transport and standalone fixtures; do not claim all B2 semantic integration complete.
 - [x] Independent task/whole-diff review, bounded correction and rereview.
