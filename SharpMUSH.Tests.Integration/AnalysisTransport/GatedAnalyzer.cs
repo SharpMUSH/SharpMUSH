@@ -37,9 +37,9 @@ internal sealed class GatedAnalyzer : IMushCodeAnalyzer, IDisposable
 		public Diagnostic this[int index] => values[index];
 		public IEnumerator<Diagnostic> GetEnumerator()
 		{
-			// Capture before signalling the test: an inline continuation includes the socket reader's
-			// DispatchAsync/StartAsync frames; an independent analysis continuation does not. Pool
-			// counters alone cannot establish starvation, so retain the actual projection stack too.
+			// Capture before signalling the test: reader-path frames can identify synchronous projection
+			// on that call path. Their absence is inconclusive. Pool counters alone cannot establish
+			// starvation, so retain the actual projection stack too.
 			Volatile.Write(ref owner._projectionTrace, $"Projection thread: {Environment.CurrentManagedThreadId}.\n{Environment.StackTrace}");
 			owner._entered.TrySetResult();
 			if (!owner.Release.Wait(TimeSpan.FromSeconds(5)))
