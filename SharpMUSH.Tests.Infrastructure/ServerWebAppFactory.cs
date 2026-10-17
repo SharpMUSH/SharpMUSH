@@ -42,6 +42,9 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	/// </summary>
 	protected virtual bool UsesOwnWorld => false;
 
+	/// <summary>Optional final service overrides for an isolated integration host.</summary>
+	protected virtual Action<IServiceCollection>? ConfigureTestServices => null;
+
 	private string? _ownWorldPath;
 
 	public IServiceProvider Services => _server!.Services;
@@ -224,7 +227,7 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications),
 			_sqlPlatform, _ownWorldPath = UsesOwnWorld
 				? Path.Join(Path.GetTempPath(), $"sharpmush-lightning-tests-{GetType().Name}-{Guid.NewGuid():N}")
-				: null);
+				: null, ConfigureTestServices);
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();

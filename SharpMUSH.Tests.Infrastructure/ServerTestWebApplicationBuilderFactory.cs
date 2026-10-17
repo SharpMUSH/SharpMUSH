@@ -27,7 +27,8 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string configFile,
 	INotifyService? notifier,
 	string sqlPlatform = "mysql",
-	string? worldPath = null) :
+	string? worldPath = null,
+	Action<IServiceCollection>? configureTestServices = null) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
 	private readonly string _schedulerName = $"sharpmush-tests-{Guid.NewGuid():N}";
@@ -153,6 +154,8 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 					FixedSecrets.With(SecretDefinition.SqlPassword.Name, ExtractSqlPassword(sqlConnectionString))));
 			}
 		);
+		if (configureTestServices is not null)
+			builder.ConfigureTestServices(configureTestServices);
 	}
 
 	private static string ExtractSqlHost(string connectionString)
