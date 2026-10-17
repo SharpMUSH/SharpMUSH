@@ -45,7 +45,12 @@ public class SemanticMutationCoverageTests : LightningDatabaseFixture
 
 	[Test]
 	public async Task EveryWikiStoreMethodHasAnExplicitImpact()
-		=> await Assert.That(typeof(IWikiStore).GetMethods().Select(m => m.Name)).IsEquivalentTo(WikiMethods.Keys);
+	{
+		// GetMethods does not include inherited interface methods; require an explicit review before adding bases.
+		await Assert.That(typeof(IWikiStore).GetInterfaces()).IsEmpty();
+		// Preserve overloads so a new contract cannot hide behind an already classified method name.
+		await Assert.That(typeof(IWikiStore).GetMethods().Select(m => m.Name)).IsEquivalentTo(WikiMethods.Keys);
+	}
 
 	[Test]
 	public async Task PackageOwnershipSurfaceIsExplicit()

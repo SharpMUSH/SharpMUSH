@@ -87,9 +87,9 @@ public class SemanticContractTests
 		var first = Fact(new Keyword("z"));
 		var second = Fact(new Keyword("a")) with { Provenance = Provenance with { SourcePath = "z.md" } };
 		var winner = second with { Provenance = Provenance with { SourcePath = "a.md" } };
-		foreach (var input in new[] { new[] { first, second, winner }, new[] { winner, second, first } })
+		foreach (var result in new[] { new[] { first, second, winner }, new[] { winner, second, first } }
+			.Select(input => CanonicalFacts.Validate(Schema(), input)))
 		{
-			var result = CanonicalFacts.Validate(Schema(), input);
 			await Assert.That(result is CanonicalFactSet set && set.Facts.Length == 2
 				&& set.Facts[0].Value is Keyword a && a.Value == "a" && set.Facts[0].Provenance.SourcePath == "a.md"
 				&& set.Facts[1].Value is Keyword z && z.Value == "z").IsTrue();

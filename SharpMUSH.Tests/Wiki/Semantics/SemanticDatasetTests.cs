@@ -28,9 +28,11 @@ public class SemanticDatasetTests
 			await Assert.That(PinnedDataset.ReadManifest(yaml) is DatasetFailure).IsTrue();
 	}
 	[Test]
-	public async Task TamperedFirstLockedFileCannotMasqueradeAsPinnedCorpus()
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task TamperedFirstLockedFileCannotMasqueradeAsPinnedCorpus(bool configuredScratch)
 	{
-		var root = Path.Combine(Environment.GetEnvironmentVariable("TMPDIR") ?? throw new InvalidOperationException("Disk TMPDIR required."), "semantic-tamper-" + Guid.NewGuid().ToString("N"));
+		var root = ScratchPath("semantic-tamper-", configuredScratch ? Environment.GetEnvironmentVariable("TMPDIR") : null);
 		Directory.CreateDirectory(root);
 		try
 		{
@@ -47,9 +49,54 @@ public class SemanticDatasetTests
 	}
 
 	[Test]
-	public async Task RefusesOutputSymlinkAncestorBeforeReadingSource()
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task DryRunRefusesCaseAliasedSourceOutputBeforeReadingOrWritingSource(bool configuredScratch)
 	{
-		var scratch = Path.Combine(Environment.GetEnvironmentVariable("TMPDIR") ?? throw new InvalidOperationException("Disk TMPDIR required."), "semantic-output-link-" + Guid.NewGuid().ToString("N"));
+		var scratch = ScratchPath("semantic-output-case-", configuredScratch ? Environment.GetEnvironmentVariable("TMPDIR") : null);
+		var source = Path.Combine(scratch, "Corpus");
+		Directory.CreateDirectory(source);
+		File.WriteAllText(Path.Combine(source, "sentinel"), "immutable source");
+		try
+		{
+			foreach (var output in new[]
+			{
+				Path.Combine(scratch, "corpus", "report"),
+				Path.Combine(scratch, "corpus", "nested", "report"),
+				Path.Combine(scratch, "corpus", "nested", "..", "report") + Path.DirectorySeparatorChar
+			})
+				await Assert.That(DryRunReport.Run(source + Path.DirectorySeparatorChar, output) is DatasetFailure failure && failure.Detail == "Output must be outside the immutable source directory.").IsTrue();
+			await Assert.That(File.ReadAllText(Path.Combine(source, "sentinel"))).IsEqualTo("immutable source");
+			await Assert.That(Directory.EnumerateFileSystemEntries(source).Count()).IsEqualTo(1);
+			await Assert.That(Directory.EnumerateFileSystemEntries(scratch).Count()).IsEqualTo(1);
+		}
+		finally { Directory.Delete(scratch, true); }
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task DryRunAllowsOrdinarySiblingAndSharedPrefixPastContainmentPreflight(bool configuredScratch)
+	{
+		var scratch = ScratchPath("semantic-output-sibling-", configuredScratch ? Environment.GetEnvironmentVariable("TMPDIR") : null);
+		var source = Path.Combine(scratch, "Corpus");
+		Directory.CreateDirectory(source);
+		try
+		{
+			foreach (var output in new[] { Path.Combine(scratch, "report"), Path.Combine(scratch, "CorpusReports", "report") })
+				await Assert.That(DryRunReport.Run(source, output) is DatasetFailure failure && failure.Detail == "Missing or unsafe source file: NOTICE.md").IsTrue();
+			await Assert.That(Directory.EnumerateFileSystemEntries(source).Any()).IsFalse();
+			await Assert.That(Directory.EnumerateFileSystemEntries(scratch).Count()).IsEqualTo(1);
+		}
+		finally { Directory.Delete(scratch, true); }
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task RefusesOutputSymlinkAncestorBeforeReadingSource(bool configuredScratch)
+	{
+		var scratch = ScratchPath("semantic-output-link-", configuredScratch ? Environment.GetEnvironmentVariable("TMPDIR") : null);
 		var source = Path.Combine(scratch, "source");
 		var alias = Path.Combine(scratch, "alias");
 		Directory.CreateDirectory(source);
@@ -62,4 +109,12 @@ public class SemanticDatasetTests
 		}
 		finally { Directory.Delete(scratch, true); }
 	}
+
+	private static string ScratchPath(string prefix, string? configuredRoot)
+	{
+		// CI need not set TMPDIR; keep fallback scratch beside test outputs, never in the OS temporary directory.
+		var root = configuredRoot ?? Path.Combine(AppContext.BaseDirectory, "work");
+		return Path.Combine(root, prefix + Guid.NewGuid().ToString("N"));
+	}
+
 }
