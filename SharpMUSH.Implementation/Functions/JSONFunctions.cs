@@ -453,7 +453,7 @@ public partial class Functions
 	/// <c>&lt;json&gt;</c> with each JSON Pointer's value replaced, typed by what the template holds there.
 	/// One call fills a stored schema, where nested json() calls would rebuild it every time.
 	/// </summary>
-	[SharpFunction(Name = "json_fill", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["json", "pointer", "value..."])]
+	[SharpFunction(Name = "json_fill", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["json", "pointer...|value..."])]
 	public ValueTask<CallState> json_fill(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message.ToPlainText()).ToArray();
@@ -465,7 +465,7 @@ public partial class Functions
 		});
 	}
 
-	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path"])]
+	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "action", "arg..."])]
 	public async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;

@@ -7,11 +7,11 @@ const source = readFileSync(new URL('../../SharpMUSH.Client/wwwroot/js/mush-mona
 // RegistryContractAuditTests separately verifies these declarations reach generated portal data.
 // This test exercises the real browser consumer without needing a .NET build in the Node job.
 const census = JSON.parse(readFileSync(new URL('../../docs/audits/softcode-contracts.json', import.meta.url), 'utf8'));
-const listDefinitions = Object.fromEntries(census.entries
-    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge', 'setunion', 'setdiff', 'setinter', 'setsymdiff', 'unique'].includes(entry.name))
+const censusDefinitions = Object.fromEntries(census.entries
+    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge', 'setunion', 'setdiff', 'setinter', 'setsymdiff', 'unique', 'json_query', 'json_fill'].includes(entry.name))
     .map(entry => [entry.name, { minArgs: entry.metadata.MinArgs, maxArgs: entry.metadata.MaxArgs, parameterNames: entry.metadata.ParameterNames }]));
 const definitions = { functions: {
-    ...listDefinitions,
+    ...censusDefinitions,
     json_map: { minArgs: 2, maxArgs: 33, parameterNames: ['attribute', 'json', 'osep', 'arg...'] },
     switch: { minArgs: 3, maxArgs: 32, parameterNames: ['string', 'case...|result...'] },
     json_mod: { minArgs: 3, maxArgs: 4, parameterNames: ['json', 'action', 'path-or-patch', 'json2'] }
@@ -37,6 +37,24 @@ async function signatureProvider() {
     await new Promise(resolve => setImmediate(resolve));
     assert.ok(provider, 'the actual Monaco signature provider registers');
     return provider;
+}
+
+for (const [line, expected] of [
+    ['json_query({}', ['json']],
+    ['json_query({},size', ['json', '[action]']],
+    ['json_query({},get,a,b', ['json', '[action]', '[arg1]', '[arg2]']],
+    ['json_query({},extract,$.a', ['json', '[action]', '[arg1]']],
+    ['json_fill({},/a,one', ['json', 'pointer1', 'value1']],
+    ['json_fill({},/a,one,/b,two', ['json', 'pointer1', 'value1', '[pointer2]', '[value2]']]
+]) {
+    test(`JSON action and paired-fill signature for ${line}`, async () => {
+        const provider = await signatureProvider();
+        const result = provider.provideSignatureHelp({ getLineContent: () => line }, { lineNumber: 1, column: line.length + 1 });
+        const signature = result.value.signatures[0];
+        const labels = Array.from(signature.parameters, parameter => signature.label.slice(...parameter.label));
+        assert.deepEqual(labels.slice(0, expected.length), expected);
+        assert.equal(result.value.activeParameter, expected.length - 1);
+    });
 }
 
 for (const extraCount of [1, 2, 4]) {
