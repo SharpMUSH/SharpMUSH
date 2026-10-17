@@ -1,10 +1,10 @@
 # Native semantic wiki architecture and validation design
 
-**Status:** Proposed for user and architecture review. This authorizes no product implementation, dependency installation, migration or deployment. Numeric limits below are unvalidated prototype hypotheses, not measured guarantees. Date: 2026-10-16, America/Chicago.
+**Status:** Architecture and isolated prototype approved by the user on 2026-10-17. Production release and deployment are not authorized. Numeric limits below remain unvalidated prototype hypotheses, not measured guarantees. Original design date: 2026-10-16, America/Chicago.
 
 **Intent:** Make relationships such as class→feats and ancestry→heritages navigable, and support a few trustworthy generated lists, while protecting game responsiveness and private wiki content. Store typed facts and use indexed, bounded lookups. Do not assume a graph database or expose unrestricted graph traversal.
 
-**Decision requested:** Approve or amend the architecture and measurement gates first. A measured prototype and a separate implementation plan follow only after approval. Earlier approval of PF2e organization does not approve this semantic model.
+**Approved choices:** Staff property editor plus package manifest fields; same-collection facts initially; optional exact counts; explicit restart and capacity responses; the documented residual activity/timing channels. Implementation proceeds through the phase gates below. Target hardware and numeric performance acceptance remain measurement decisions, not established guarantees.
 
 ## 1. Evidence and current contracts
 
@@ -195,10 +195,10 @@ Index/rebuild space is measured as actual used/allocated storage and duplicate g
 
 Recommended architecture decisions: native fact registry; explicit declarations rather than request-time extraction; ID-based one-hop indexes; canonical facts and direct indexes committed together; visibility-aware source partitions plus endpoint rechecks; no query-result cache initially; bounded dedicated query admission; short reader sections; bounded partition-version invalidation; staged/journaled rebuilds; no nested query rendering; original prerequisite prose retained.
 
-The user still needs to choose the authoring experience (staff property editor plus manifest fields is recommended), whether initial facts can cross collections (same-collection first is recommended), and whether normal views need exact totals at all (optional counts is recommended). Agree target deployment hardware and acceptable game-latency impact before treating numeric SLOs as acceptance criteria. Confirm that opaque data-change restarts and explicit over-capacity authoring/query errors are acceptable tradeoffs for bounded work. Any requirement for property-level secrets or strict timing noninterference changes the design and needs its own approval.
+The user approved the recommended authoring experience (staff property editor plus manifest fields), same-collection facts initially, optional counts, and opaque restarts and explicit capacity errors on 2026-10-17. Agree target deployment hardware and acceptable game-latency impact before treating numeric SLOs as acceptance criteria. Any requirement for property-level secrets or strict timing noninterference changes the design and needs its own approval.
 
 Builder-review questions: Can every legacy write path maintain the epochs/indexes? Can a target/category ACL change avoid degree-sized rewrites? Can an authorized high-degree query progress without scanning denied partitions? Can source/category/page requirements and own drafts share classes without weakening rules? Does every rejected/empty/count/cursor state avoid content disclosure? Can rebuild catch-up fail safely under continuous writes? The prototype must answer these with measured/tested evidence, not a cache hit or a small happy-path demo.
 
 ## Independent review checkpoint
 
-A fresh architecture review identified and corrected three gaps: multivalue ordering could repeat subjects across cursor pages; admitted-source epochs do not provide complete hidden-edge invalidation noninterference; and final consistency checks must include observed-but-excluded targets, not only returned rows. These corrections narrow the proposal and add explicit measurement/threat-model requirements. The design remains unimplemented and requires user review.
+A fresh architecture review identified and corrected three gaps: multivalue ordering could repeat subjects across cursor pages; admitted-source epochs do not provide complete hidden-edge invalidation noninterference; and final consistency checks must include observed-but-excluded targets, not only returned rows. These corrections narrow the proposal and add explicit measurement/threat-model requirements. User approval on 2026-10-17 permits an isolated prototype, subject to the phase gates; implementation and measurements are tracked separately.
