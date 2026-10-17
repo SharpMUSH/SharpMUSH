@@ -24,6 +24,10 @@ public sealed class PluginAdministrationService(
 	PluginInstallOptions installOptions,
 	ILogger<PluginAdministrationService> logger) : IPluginAdministration
 {
+	public Task<PluginDependencySnapshot> ReadDependenciesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+	public Task<PluginStateBlockers> GetBlockersAsync(string pluginId, bool enabled, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
 	private readonly SemaphoreSlim _stateLock = new(1, 1);
 
 	/// <summary>Plugins this process unloaded after the start, so a loaded-but-not-running one is not taken for a failure.</summary>
