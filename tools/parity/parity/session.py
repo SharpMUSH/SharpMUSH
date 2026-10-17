@@ -2,8 +2,10 @@
 
 Output is attributed to commands without sleeps: after every step the runner sends a sentinel
 (`think <token>`) on every open session and reads each stream until its token comes back. Both
-servers process the commands of one connection in order, so everything printed before the token
-belongs to the step (or to earlier queued work) and nothing later can be lost or mis-attributed.
+servers process the foreground commands of one connection in order, so output before that token
+is bounded by the step. This is not a global queue or delivery fence: queued descendants and
+cross-client output can arrive after a token. Scenarios need an explicit completion witness
+(`::until`) when such output must belong to the command's step.
 """
 from __future__ import annotations
 
@@ -100,8 +102,8 @@ class Session:
         return (self._read_until(text.encode() + b"\r\n") + text.encode() + b"\r\n").decode("utf-8", errors="replace")
 
     def sync_start(self) -> str:
-        """Queue the sentinel; pair with `sync_finish`. Sending to every session first lets
-        cross-session output that is already in flight land before its sentinel."""
+        """Queue this connection's foreground sentinel; pair with `sync_finish`.
+        The token does not wait for arbitrary queued work or other clients' delivery."""
         token = self.next_token()
         self.send(f"think {token}")
         return token
@@ -129,8 +131,8 @@ class Session:
         return self._info_sync()
 
     def settle(self) -> str:
-        """Wait for queued work (@wait, @trigger, @dolist...) that the step started: the sentinel
-        goes through the command queue, behind whatever is already queued."""
+        """Put a sentinel on this connection's command queue, behind work already queued there.
+        This does not fence every queued descendant or other clients' delivery."""
         token = self.next_token()
         self.send(f"@wait 0=think {token}")
         return self._read_until(token.encode() + b"\r\n").decode("utf-8", errors="replace")

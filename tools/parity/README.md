@@ -60,15 +60,21 @@ with `::`):
 ::login-fail bad Alice nope            open a session whose login is expected to be refused
 ::as alice                             switch the acting session
 think [add(1,2)]                       a command on the acting session
-::settle                               wait for queued work (@wait, @trigger, @dolist...)
+::settle                               queue a marker on the current connection
 ::until HTTPDONE                       the next command's step also waits for a line ending in HTTPDONE
 ::logout wiz
 ```
 
 `::until` is for output that arrives after the command has run, such as an `@http` reply: the step
-reads up to that line before it sends its sentinel, so the late output lands in the same step on both
-servers however fast each one is. `{{echo}}` in a command becomes, as it is sent, the URL of a local
-HTTP site the harness runs (`parity/echo.py`), which answers with one line describing the request it
+reads up to that line before it sends its sentinel, so the witnessed output lands in the same step on
+both servers. For example, the administrator trigger scenario waits for `Alice says, "triggered 1"`
+on the wizard's connection before sealing that step. This is a scenario-owned completion witness,
+not a guarantee that all asynchronous work in the game has finished. Each marker read retains the
+existing session timeout: the witness and following sentinel use separate read deadlines, rather
+than sharing one end-to-end step deadline.
+
+`{{echo}}` in a command becomes, as it is sent, the URL of a local HTTP site the harness runs
+(`parity/echo.py`), which answers with one line describing the request it
 received (method, Content-Type, Authorization, `X-` headers, body).
 
 ## Upstream pull requests in the reference
@@ -89,10 +95,14 @@ the world (files run in name order; `05-import` runs before anything mutates sta
 ## How output is attributed to a command (no sleeps)
 
 After each command the harness sends a sentinel (`think PSYNC…`) on the acting session and reads until
-it comes back; both servers execute one connection's commands in order, so everything before the
-sentinel belongs to the step. Other sessions are sentinel-synced *afterwards*, so what the command
-wrote to them is attributed to the same step (shown as `[session] …` lines). Pre-login, `INFO` (which
-both servers answer and both end with `### End INFO`) is the sentinel. `QUIT` waits for the socket to
+it comes back; both servers execute one connection's foreground commands in order, so output before
+that sentinel is captured in the step. Other sessions are sentinel-synced *afterwards* and their
+output before those tokens is captured too (shown as `[session] …` lines). These tokens do not fence
+queued descendants or cross-client delivery: a queued action can run after the actor's token, leaving
+its output for a later step. Use an explicit `::until` witness where that output must belong to the
+initiating step; `::settle` puts a marker on the current connection's queue without proving global
+queue completion. Pre-login, `INFO` (which both servers answer and both end with `### End INFO`)
+is the sentinel. `QUIT` waits for the socket to
 close so disconnect announcements land in the step that caused them. PennMUSH runs with
 `--disable-socket-quota` because it otherwise throttles a connection to 1 command per second after a
 burst of 100, which sentinel traffic exhausts. Timeouts are hard errors, never retried.

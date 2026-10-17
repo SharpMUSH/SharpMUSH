@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -15,7 +16,7 @@ from parity.echo import EchoSite
 from parity.normalize import DbrefCanonicalizer, normalize
 from parity.runner import StepRecord, Target, _execute
 from parity.scenario import Step
-from parity.session import split_telnet, strip_telnet
+from parity.session import Session, split_telnet, strip_telnet
 from parity.servers import StartupError, wait_for, finish_import_preview, verify_import_committed
 
 
@@ -372,6 +373,86 @@ class RunnerTests(unittest.TestCase):
         _execute(target, {"wiz": wiz}, {}, Step("command", "@http me/A={{echo}}/get", "wiz", until="DONE"), rec)
         self.assertEqual(wiz.calls, ["send @http me/A=http://127.0.0.1:9/get", "until DONE", "sync"])
         self.assertEqual(rec.output, "late DONE\nafter\n")
+
+
+class TriggerCompletionTests(unittest.TestCase):
+    class ControlledDelivery:
+        """Release queued say output after the first Wiz receive, independently of peer commands.
+
+        Without an explicit witness that receive includes Wiz's foreground token. With a witness
+        it contains only the trigger acknowledgement. Both schedules then deliver the same say to
+        both clients; only socket I/O is replaced, leaving Session parsing and runner sealing real.
+        """
+        def __init__(self):
+            self.buffers = {"wiz": bytearray(), "alice": bytearray()}
+            self.pending_say = False
+            self.connections = iter((self.Socket(self, "wiz"), self.Socket(self, "alice")))
+
+        def connect(self, address, timeout):
+            return next(self.connections)
+
+        class Socket:
+            def __init__(self, delivery, name):
+                self.delivery, self.name = delivery, name
+
+            def setblocking(self, value):
+                pass
+
+            def settimeout(self, value):
+                pass
+
+            def sendall(self, data):
+                command = data.decode().removesuffix("\r\n")
+                if self.name == "wiz" and command == "@trigger *Alice/TRIG=1":
+                    self.delivery.buffers["wiz"].extend(b"Alice - Triggered.\r\n")
+                    self.delivery.pending_say = True
+                elif command.startswith("think "):
+                    self.delivery.buffers[self.name].extend((command[6:] + "\r\n").encode())
+                elif command.startswith("@wait 0=think "):
+                    self.delivery.buffers[self.name].extend((command[14:] + "\r\n").encode())
+                else:
+                    raise AssertionError(f"unexpected controlled command: {command!r}")
+
+            def recv(self, count):
+                buffer = self.delivery.buffers[self.name]
+                if not buffer:
+                    raise AssertionError(f"unexpected read without controlled output: {self.name}")
+                chunk = bytes(buffer[:count])
+                del buffer[:count]
+                if self.name == "wiz" and self.delivery.pending_say:
+                    self.delivery.pending_say = False
+                    self.delivery.buffers["wiz"].extend(b'Alice says, "triggered 1"\r\n')
+                    self.delivery.buffers["alice"].extend(b'You say, "triggered 1"\r\n')
+                return chunk
+
+    def replay_trigger(self, step):
+        delivery = self.ControlledDelivery()
+        with patch("parity.session.socket.create_connection", side_effect=delivery.connect):
+            sessions = {name: Session(name, "controlled", 1, "TEST") for name in ("wiz", "alice")}
+        for session in sessions.values():
+            session.logged_in = True
+        record = StepRecord("20-admin-commands", "admin.force", 2, "command", "wiz", step.text)
+        _execute(Target("controlled", "controlled", 1, "TEST"), sessions, {}, step, record)
+        following = StepRecord("20-admin-commands", "admin.force", 3, "settle", "wiz", "")
+        _execute(None, sessions, {}, Step("settle", "", "wiz"), following)
+        return record, following
+
+    def test_foreground_token_alone_can_split_a_queued_say_across_adjacent_steps(self):
+        record, following = self.replay_trigger(Step("command", "@trigger *Alice/TRIG=1", "wiz"))
+        self.assertEqual(record.output, "Alice - Triggered.\r\n")
+        self.assertEqual(record.async_output, {"alice": 'You say, "triggered 1"\r\n'})
+        self.assertEqual(following.output, 'Alice says, "triggered 1"\r\n')
+        self.assertEqual(following.async_output, {})
+
+    def test_admin_trigger_completion_keeps_both_clients_output_in_the_trigger_step(self):
+        path = Path(__file__).resolve().parent.parent / "scenarios" / "20-admin-commands.scn"
+        loaded = scenario.load(path)
+        case = next(case for case in loaded.cases if case.id == "admin.force")
+        record, following = self.replay_trigger(case.steps[2])
+        self.assertEqual(record.output, 'Alice - Triggered.\r\nAlice says, "triggered 1"\r\n')
+        self.assertEqual(record.async_output, {"alice": 'You say, "triggered 1"\r\n'})
+        self.assertEqual(following.output, "")
+        self.assertEqual(following.async_output, {})
 
 
 class EchoSiteTests(unittest.TestCase):
