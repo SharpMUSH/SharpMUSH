@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Globalization;
+using SharpMUSH.Tests.Infrastructure;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -86,8 +88,120 @@ public class SceneVerbRulesIntegrationTests
 
 	private static long NowMillis => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+	public static IEnumerable<Func<DateExpressionExample>> DateCases() => DateExpressionCorpus.Cases();
+
 	[Test]
-	[Arguments("A", "tomorrow 8pm")]
+	[MethodDataSource(nameof(DateCases))]
+	public async Task ScheduleHelperUsesTheSharedFixedReferenceCorpus(DateExpressionExample example)
+	{
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+		var actual = await Eval($"u({logger}/FUN`SCHEDULE`WHEN,{example.Expression},{DateExpressionCorpus.Zone},{DateExpressionCorpus.Reference})");
+		await Assert.That(actual).IsEqualTo(DateTimeOffset.Parse(example.ExpectedUtc, CultureInfo.InvariantCulture).ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+	}
+
+	[Test]
+	[Arguments("tomorrow 7pm America/Chicagoo")]
+	[Arguments("tomorrow 7pm trailing junk")]
+	[Arguments("03/04")]
+	[Arguments("tomorrow evening")]
+	[Arguments("next Tuesday")]
+	public async Task ScheduleNaturalRefusalDoesNotWrite(string when)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, handle) = await CreatePlayerAsync(TestIsolationHelpers.GenerateUniqueName("NatDeny"));
+		var before = await RunAs(handle, "think words(scenelist(mine))");
+		var said = await RunAs(handle, $"+scene/schedule {when}/Title / extra=Pitch / extra");
+		await Assert.That(said).Contains("can't read that as a time");
+		await Assert.That(said).DoesNotContain("Scheduled scene");
+		await Assert.That(await RunAs(handle, "think words(scenelist(mine))")).IsEqualTo(before);
+	}
+
+	[Test]
+	public async Task RescheduleAndTimedPauseUseNaturalDatesAndRefusePastBeforeMutation()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (actor, handle) = await CreatePlayerAsync($"NaturalLife{Tag}");
+		await God1($"&TZ {actor}=America/Chicago");
+		await Assert.That(await RunAs(handle, "think dateparse(tomorrow noon,,1792152000)")).Contains("1792256400");
+		var id = IdIn(await RunAs(handle, $"+scene/schedule tomorrow noon/Calendar {Tag}=A required pitch"));
+		await Assert.That(id).IsNotEmpty();
+		var expected = long.Parse(await Eval("dateparse(tomorrow noon,America/Chicago,,ms)"), CultureInfo.InvariantCulture);
+		await Assert.That(long.Parse(await Eval($"scene({id},scheduledfor)"))).IsEqualTo(expected);
+		await Assert.That(await RunAs(handle, $"+scene/reschedule {id}=next Tuesday 18:30")).Contains("Rescheduled scene");
+		var previous = await Eval($"scene({id},scheduledfor)");
+		await Assert.That(await RunAs(handle, $"+scene/reschedule {id}=yesterday noon")).Contains("already passed");
+		await Assert.That(await Eval($"scene({id},scheduledfor)")).IsEqualTo(previous);
+		await RunAs(handle, $"+scene/start {id}");
+		await Assert.That(await RunAs(handle, $"+scene/pause {id}=tomorrow evening")).Contains("can't read that as a time");
+		await Assert.That(await Eval($"scene({id},status)")).IsEqualTo("active");
+		await Assert.That(await RunAs(handle, $"+scene/pause {id}=in a fortnight at 19:00")).Contains("rescheduled for");
+		await Assert.That(await Eval($"scene({id},status)")).IsEqualTo("paused");
+		await Assert.That(long.Parse(await Eval($"scene({id},scheduledfor)"))).IsGreaterThan(NowMillis);
+	}
+
+	[Test]
+	public async Task ClockOnlyPastIsRefusedInsteadOfMovingToTomorrow()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, handle) = await CreatePlayerAsync($"ClockPast{Tag}");
+		var before = await RunAs(handle, "think words(scenelist(mine))");
+		var said = await RunAs(handle, "+scene/schedule midnight/Past clock=A pitch");
+		await Assert.That(said).Contains("already passed");
+		await Assert.That(await RunAs(handle, "think words(scenelist(mine))")).IsEqualTo(before);
+	}
+
+	[Test]
+	public async Task EpochZeroIsAnExplicitSceneHelperReference()
+	{
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+		await Assert.That(await Eval($"u({logger}/FUN`SCHEDULE`WHEN,in 1 hour,UTC,0)")).IsEqualTo("3600000");
+	}
+
+	[Test]
+	public async Task ExplicitFoldOffsetsAreConfirmedInTheSchedulingReply()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (actor, handle) = await CreatePlayerAsync($"Fold{Tag}");
+		await God1($"&TZ {actor}=America/New_York");
+		var first = await RunAs(handle, $"+scene/schedule 2099-11-01T01:30:00-04:00/First clock {Tag}=A pitch");
+		var second = await RunAs(handle, $"+scene/schedule 2099-11-01T01:30:00-05:00/Second clock {Tag}=A pitch");
+		await Assert.That(first).Contains("UTC offset -04:00");
+		await Assert.That(second).Contains("UTC offset -05:00");
+		var firstAt = long.Parse(await Eval($"scene({IdIn(first)},scheduledfor)"));
+		var secondAt = long.Parse(await Eval($"scene({IdIn(second)},scheduledfor)"));
+		await Assert.That(secondAt - firstAt).IsEqualTo(3600000L);
+	}
+
+	[Test]
+	[Arguments("+1d", "2027-03-14T17:00:00Z")]
+	[Arguments("in 1 day", "2027-03-14T16:00:00Z")]
+	public async Task LegacyDayOffsetRetainsElapsedTimeWhileNewCalendarPhrasesRespectDst(string expression, string expected)
+	{
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid);
+		var reference = DateTimeOffset.Parse("2027-03-13T17:00:00Z", CultureInfo.InvariantCulture).ToUnixTimeSeconds();
+		await Assert.That(await Eval($"u({logger}/FUN`SCHEDULE`WHEN,{expression},America/New_York,{reference})"))
+			.IsEqualTo(DateTimeOffset.Parse(expected, CultureInfo.InvariantCulture).ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+	}
+
+	[Test]
+	public async Task ScheduleNaturalDatePreservesZoneTitleAndPitchSlashes()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, handle) = await CreatePlayerAsync($"Natural{Tag}");
+		var said = await RunAs(handle, $"+scene/schedule tomorrow 7pm America/Chicago/Title / Part {Tag}=Pitch / part = intact");
+		var id = IdIn(said);
+		await Assert.That(id).IsNotEmpty();
+		await Assert.That(await Eval($"scene({id},title)")).IsEqualTo($"Title / Part {Tag}");
+		await Assert.That(await Eval($"scene({id},summary)")).IsEqualTo("Pitch / part = intact");
+		await Assert.That(long.Parse(await Eval($"scene({id},scheduledfor)"))).IsGreaterThan(NowMillis);
+		await Assert.That(said).Contains("(UTC)");
+	}
+
+	[Test]
+	[Arguments("A", "tomorrow")]
 	[Arguments("B", "garbage")]
 	[Arguments("C", "yesterday")]
 	[Arguments("D", "")]
