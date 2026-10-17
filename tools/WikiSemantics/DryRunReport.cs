@@ -19,7 +19,8 @@ public static class DryRunReport
 			var sourceRoot = Path.GetFullPath(source).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 			var destination = Path.GetFullPath(output);
 			if (SymbolicAncestor(destination)) return new DatasetFailure("Symbolic output ancestors are unsupported.");
-			if ((destination + Path.DirectorySeparatorChar).StartsWith(sourceRoot, StringComparison.Ordinal))
+			// Refuse case-only aliases on every OS: Linux can also host case-insensitive volumes.
+			if ((destination + Path.DirectorySeparatorChar).StartsWith(sourceRoot, StringComparison.OrdinalIgnoreCase))
 				return new DatasetFailure("Output must be outside the immutable source directory.");
 			var verified = PinnedDataset.Load(source, cancellationToken);
 			if (verified is DatasetFailure sourceFailure) return sourceFailure;
@@ -107,7 +108,14 @@ public static class DryRunReport
 		}
 		finally
 		{
-			if (stage is not null && Directory.Exists(stage)) Directory.Delete(stage, true);
+			try
+			{
+				if (stage is not null && Directory.Exists(stage)) Directory.Delete(stage, true);
+			}
+			catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+			{
+				Console.Error.WriteLine($"Failed to remove staging directory '{stage}': {exception.GetType().Name}. Files may remain; inspect and remove them before retrying.");
+			}
 		}
 	}
 	// Conservative preflight/rechecks, not a hostile concurrent-filesystem transaction guarantee.

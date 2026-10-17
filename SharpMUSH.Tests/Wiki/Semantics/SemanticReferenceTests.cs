@@ -70,6 +70,23 @@ public class SemanticReferenceTests
 	}
 
 	[Test]
+	public async Task DifferentFactAndSchemaVersionsRejectTheSnapshot()
+	{
+		var graph = Graph() with { Facts = new(2, []) };
+		await Assert.That(ReferenceEvaluator.Evaluate(graph, Query, WikiVisibility.All) is QueryFailure failure && failure.Code == QueryFailureCode.InvalidSnapshot).IsTrue();
+	}
+
+	[Test]
+	public async Task IntegerRangeRejectsReversedBoundsAndAcceptsEqualBounds()
+	{
+		var graph = Graph(Fact("a", "t:level", 2L), Fact("b", "t:level", 3L));
+		var reversed = Query with { Predicates = [new IntegerRangePredicate("t:level", 3, 2)] };
+		await Assert.That(ReferenceEvaluator.Evaluate(graph, reversed, WikiVisibility.All) is QueryFailure failure && failure.Code == QueryFailureCode.InvalidQuery).IsTrue();
+		var equal = Query with { Predicates = [new IntegerRangePredicate("t:level", 2, 2)] };
+		await Assert.That(Success(graph, equal).Rows.Single().Subject.Id).IsEqualTo("a");
+	}
+
+	[Test]
 	public async Task FacetsAcceptOnlyRegisteredEnumsAtMostSixteenMembers()
 	{
 		foreach (var property in new[] { "t:link", "t:level" })
