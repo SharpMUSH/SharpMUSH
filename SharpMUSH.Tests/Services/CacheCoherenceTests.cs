@@ -93,7 +93,7 @@ public class CacheCoherenceTests
 			.Returns(new ValueTask<AnyOptionalSharpObject>(thing));
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds != thing.Object().CreationTime), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<AnyOptionalSharpObject>(new SharpMUSH.Library.DiscriminatedUnions.None()));
-		var behaviour = new StreamQueryCachingBehavior<ContentsProbeQuery, AnySharpContent>(cache, mediator);
+		var behaviour = new StreamQueryCachingBehavior<ContentsProbeQuery, AnySharpContent>(cache, new ObjectVersions(), mediator);
 
 		// The read that stores the list hands out what the handler just resolved; it looks nothing up again.
 		var read = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => new[] { thing.AsOptionalContent.Expect<AnySharpContent>() }.ToAsyncEnumerable(), CancellationToken.None).ToListAsync();
@@ -108,7 +108,7 @@ public class CacheCoherenceTests
 			Arg.Is<GetObjectNodeQuery>(q => q.DBRef.CreationMilliseconds == thing.Object().CreationTime), Arg.Any<CancellationToken>());
 
 		// The same list, with the number recycled: the stored id no longer matches, so the list is empty.
-		await cache.SetAsync("contents-probe", new CachedObjectRefs([new DBRef(7, thing.Object().CreationTime + 1)]), CacheEntryProfiles.Tagged);
+		await cache.SetAsync("contents-probe", new CachedValue<CachedObjectRefs>(new CachedObjectRefs([new DBRef(7, thing.Object().CreationTime + 1)]), 0, []), CacheEntryProfiles.Tagged);
 		var recycled = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => throw new InvalidOperationException("served from cache"), CancellationToken.None).ToListAsync();
 		await Assert.That(recycled).IsEmpty();
 	}

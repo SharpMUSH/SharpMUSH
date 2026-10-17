@@ -18,7 +18,8 @@ namespace SharpMUSH.Library.Behaviors;
 /// <para>
 /// Two FusionCache behaviours are turned off everywhere a tag can invalidate. A foreground factory's
 /// entry is stamped when the factory starts, which is what lets a tag removed mid-read expire the
-/// result (the mechanism #854 relies on). A factory completed in the background - an eager refresh,
+/// result (the mechanism #854 relies on). The behaviours additionally validate the stored factory-start
+/// epoch against ObjectVersions, since concurrent tag-marker stores can complete out of order. A factory completed in the background - an eager refresh,
 /// or a timed-out factory allowed to finish - is stamped when it is stored, after the tag, and so
 /// survives it holding pre-write data. Tagged entries therefore get no eager refresh, and no
 /// profile lets a timed-out factory complete in the background.

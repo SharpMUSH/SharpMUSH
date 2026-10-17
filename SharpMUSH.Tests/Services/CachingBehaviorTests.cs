@@ -148,7 +148,7 @@ public class CachingBehaviorTests
 			await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
 			await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"@set #{thing.Number}={(attempt % 2 == 0 ? "" : "!")}VISUAL"));
-			kept = (await Cache.TryGetAsync<CachedObjectRefs>(key)).HasValue;
+			kept = (await Cache.TryGetAsync<CachedValue<CachedObjectRefs>>(key)).HasValue;
 		}
 
 		await Assert.That(kept).IsTrue();
@@ -343,7 +343,7 @@ public class CachingBehaviorTests
 		// this specific key via a targeted CacheKey. Multiple retries guard against the whole-tag
 		// sweeps other commands still carry, which are common under parallel CI load.
 		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Contents(dbRef);
-		var cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
+		var cached = await Cache.TryGetAsync<CachedValue<CachedObjectRefs>>(cacheKey);
 		for (var retry = 0; !cached.HasValue && retry < 10; retry++)
 		{
 			result1.Clear();
@@ -351,7 +351,7 @@ public class CachingBehaviorTests
 			{
 				result1.Add(item);
 			}
-			cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
+			cached = await Cache.TryGetAsync<CachedValue<CachedObjectRefs>>(cacheKey);
 		}
 
 		await Assert.That(cached.HasValue).IsTrue();
@@ -506,7 +506,7 @@ public class CachingBehaviorTests
 		var evicted = new List<Library.Models.DBRef>();
 		foreach (var room in bystanders)
 		{
-			var cached = await Cache.TryGetAsync<CachedObjectRefs>(
+			var cached = await Cache.TryGetAsync<CachedValue<CachedObjectRefs>>(
 				SharpMUSH.Library.Definitions.CacheKeys.Contents(room));
 			if (!cached.HasValue) evicted.Add(room);
 		}
@@ -642,8 +642,9 @@ public class CachingBehaviorTests
 	public async Task StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt(bool byKey, bool byTag)
 	{
 		using var cache = new FusionCache(new FusionCacheOptions());
-		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, Substitute.For<Mediator.IMediator>());
-		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, new ObjectVersions());
+		var versions = new ObjectVersions();
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, versions, Substitute.For<Mediator.IMediator>());
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, versions);
 		var probe = new StaleReadProbe();
 		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);
 

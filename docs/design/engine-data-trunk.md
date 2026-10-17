@@ -95,14 +95,27 @@ service before it runs `StartingAsync`, and constructing them resolves the optio
 which reads server data. Test hosts and benchmarks run `Program`, so they migrate the same way
 and call nothing themselves.
 
-## 7. Coherence is by version where a tag cannot reach
+## 7. Coherence is checked against factory-start invalidation epochs
 
-**Decision:** Tagged entries are stamped by FusionCache at factory start, so a tag removed
-during a read expires the result. A key-invalidated object entry has no such stamp, so
-`ObjectVersions` keeps a monotonic version per object number: every removal of `object:#N`
-bumps it before the key goes, and `QueryCachingBehavior` compares the version after its store
-and removes the entry it just stored if the version moved. The comparison is after the store,
-not before it, so the removal happens after the store in every interleaving.
+**Decision:** FusionCache tag expiration remains enabled, but does not alone prove freshness:
+concurrent tag-marker stores can complete in reverse order. Tagged scalar, object-reference and
+stream entries therefore retain an immutable certificate containing the producing factory's start
+epoch and its effective declared and dynamically discovered object tags. Every consumer checks
+that certificate against `ObjectVersions` before serving the stored value or resolving its refs.
+A stale entry is removed; a consumer answers once directly from the handler without recaching or
+retrying. Only the call whose own factory produced the entry may return the source snapshot it
+already read while racing the write. A caller that joined that factory has no such exemption.
+
+`ObjectVersions` retains monotonic counts and last-change epochs in its existing object and tag
+tables. Concurrent older bumps cannot regress a last-change epoch. Dynamic object tags are checked
+against both explicit tag removal and the existing object-key invalidation stamp; discovering a
+tag after loading the source does not grant it a newer start epoch. Unrelated tag changes do not
+expire an entry.
+
+The key-invalidated object node keeps its original representation, identity and fail-safe policy.
+Every removal of `object:#N` bumps its count before and after removal; `QueryCachingBehavior`
+compares the count after its store and removes the entry if the count moved. The comparison is
+after the store, so the removal follows that store in every interleaving.
 
 An answer kept outside the cache is checked against the same versions. `ObjectRelationMemo` keeps
 each object's grants, flags, owner and location until the object's version moves, or for grants
