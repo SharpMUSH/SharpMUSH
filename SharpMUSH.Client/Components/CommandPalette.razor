@@ -286,13 +286,19 @@
 
     private void IdentityChanged()
     {
-        ++_opening;
+        if (_disposed) return;
+        var invalidation = ++_opening;
+        _wasOpen = false;
+        _slotRow = null;
         _configurationRows = [];
         _configurationProblem = null;
         _server = null;
         _destinations = [];
         _itemsFor = null;
-        _ = InvokeAsync(StateHasChanged);
+        if (Open) _ = InvokeAsync(async () =>
+        {
+            if (IsCurrent(invalidation)) await OpenChanged.InvokeAsync(false);
+        });
     }
 
     public void Dispose()

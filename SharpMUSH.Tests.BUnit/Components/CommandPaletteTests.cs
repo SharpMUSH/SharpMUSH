@@ -102,17 +102,37 @@ public class CommandPaletteTests : BunitContext
 		cut.FindAll(".kit-palette-label").Select(e => e.TextContent).ToList();
 
 	[Test]
-	public async Task IdentityChangeDuringOpeningCannotLaunchConfigurationDiscovery()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IdentityChangeDuringOpeningClosesInsteadOfLeavingAnEmptyPalette(bool authenticationChanged)
 	{
 		_auth.SetPolicies("config.admin");
 		var pending = new TaskCompletionSource<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>(TaskCreationOptions.RunContinuationsAsynchronously);
+		bool? requestedOpen = null;
 		var cut = Render<Microsoft.AspNetCore.Components.CascadingValue<Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>>>(p => p
 			.Add(x => x.Value, pending.Task)
-			.AddChildContent<CommandPalette>(child => child.Add(x => x.Open, true)));
-		_account.ActiveCharacterChanged += Raise.Event<Action>();
+			.AddChildContent<CommandPalette>(child => child.Add(x => x.Open, true).Add(x => x.OpenChanged, (bool open) => requestedOpen = open)));
+		if (authenticationChanged) _auth.SetNotAuthorized();
+		else _account.ActiveCharacterChanged += Raise.Event<Action>();
 		pending.SetResult(new(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new("name", "old admin")], "test"))));
 		await cut.InvokeAsync(() => Task.CompletedTask);
 		await Assert.That(_configuration.Requests).IsEqualTo(0);
+		await Assert.That(requestedOpen is false).IsTrue();
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsFalse();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IdentityChangeWhenAlreadyClosedDoesNotCloseOrRestoreFocus(bool authenticationChanged)
+	{
+		var closes = 0;
+		var cut = Render<CommandPalette>(p => p.Add(x => x.OpenChanged, (bool _) => closes++));
+		if (authenticationChanged) _auth.SetNotAuthorized();
+		else _account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(closes).IsEqualTo(0);
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsFalse();
 	}
 
 	[Test]
