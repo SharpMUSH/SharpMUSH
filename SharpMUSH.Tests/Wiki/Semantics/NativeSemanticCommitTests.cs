@@ -425,9 +425,15 @@ public class NativeSemanticCommitTests
 			await Assert.That(() => NativeStateCodec.Summary(malformed)).Throws<InvalidDataException>();
 		}
 		byte[] oversizedString = [1, 255, 255, 255, 255, 7];
-		for (var i = 0; i < 3; i++) { try { NativeStateCodec.Summary(oversizedString); } catch (InvalidDataException) { } }
+		void RejectOversizedString()
+		{
+			try { NativeStateCodec.Summary(oversizedString); }
+			catch (InvalidDataException) { return; }
+			throw new InvalidOperationException("Malformed compact string was accepted.");
+		}
+		for (var i = 0; i < 3; i++) RejectOversizedString();
 		var before = GC.GetAllocatedBytesForCurrentThread();
-		try { NativeStateCodec.Summary(oversizedString); } catch (InvalidDataException) { }
+		RejectOversizedString();
 		var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 		await Assert.That(allocated < 8192).IsTrue();
 		var ascii = state with { Summary = state.Summary with { Visibility = new("Main", ["a", "b", ""], ["r"], false, "") } };

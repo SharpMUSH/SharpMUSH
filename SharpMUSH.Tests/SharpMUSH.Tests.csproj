@@ -176,8 +176,18 @@
   </ItemGroup>
 
   <Target Name="CopyNativeSemanticProbe" AfterTargets="Build">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../tools/WikiSemantics.NativeProbe/WikiSemantics.NativeProbe.csproj"
+             Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier)">
+      <Output TaskParameter="TargetOutputs" ItemName="NativeSemanticProbeTarget" />
+    </MSBuild>
+    <PropertyGroup>
+      <NativeSemanticProbeDirectory>@(NativeSemanticProbeTarget->'%(RootDir)%(Directory)')</NativeSemanticProbeDirectory>
+    </PropertyGroup>
     <ItemGroup>
-      <NativeSemanticProbeFiles Include="$(MSBuildThisFileDirectory)../tools/WikiSemantics.NativeProbe/bin/$(Configuration)/net11.0/**/*" />
+      <!-- Exclude the destination when a caller gives every project the same OutDir. -->
+      <NativeSemanticProbeFiles Include="$(NativeSemanticProbeDirectory)**/*"
+                                Exclude="$(TargetDir)native-semantic-probe/**/*" />
     </ItemGroup>
     <Copy SourceFiles="@(NativeSemanticProbeFiles)"
           DestinationFiles="@(NativeSemanticProbeFiles->'$(OutDir)native-semantic-probe/%(RecursiveDir)%(Filename)%(Extension)')"

@@ -19,19 +19,20 @@ public class NativeSemanticRecoveryTests
 	private static async Task ObserveAbort(Task task)
 	{
 		try { await task; throw new InvalidOperationException("Expected owned abort"); }
-		catch (OwnedAbort) { }
+		catch (OwnedAbort) { return; }
 	}
 	private static async Task ObserveCancellation(Task task)
 	{
 		try { await task; throw new InvalidOperationException("Expected cancellation"); }
-		catch (OperationCanceledException) { }
+		catch (OperationCanceledException) { return; }
 	}
 	private static async Task Drain(IEnumerable<Task> tasks)
 	{
 		var errors = new List<Exception>();
 		foreach (var task in tasks)
 		{
-			try { await task; } catch (OwnedAbort) { } catch (OperationCanceledException) { } catch (Exception error) { errors.Add(error); }
+			// Observe every submitted job before disposal, then propagate all unexpected failures.
+			try { await task; } catch (OwnedAbort) { continue; } catch (OperationCanceledException) { continue; } catch (Exception error) { errors.Add(error); }
 		}
 		if (errors.Count != 0) throw new AggregateException(errors);
 	}
@@ -186,7 +187,7 @@ public class NativeSemanticRecoveryTests
 			var errors = new List<Exception>();
 			foreach (var job in new Task[] { blocker, aggregate, sibling })
 			{
-				try { await job; } catch (LightningStoreException error) when (error.Code == MDBResultCode.MapFull) { } catch (Exception error) { errors.Add(error); }
+				try { await job; } catch (LightningStoreException error) when (error.Code == MDBResultCode.MapFull) { continue; } catch (Exception error) { errors.Add(error); }
 			}
 			if (errors.Count != 0) throw new AggregateException(errors);
 		}
@@ -200,7 +201,10 @@ public class NativeSemanticRecoveryTests
 	}
 	private static async Task RunProbe(string scenario, string world, string evidence, string phase, Guid? fixtureId = null)
 	{
-		var host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? Path.Combine(Environment.GetEnvironmentVariable("DOTNET_ROOT") ?? throw new InvalidOperationException("Explicit dotnet host required"), "dotnet");
+		var executable = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+		var root = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+		var host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH");
+		if (string.IsNullOrWhiteSpace(host)) host = string.IsNullOrWhiteSpace(root) ? executable : Path.Combine(root, executable);
 		var start = new ProcessStartInfo(host) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
 		start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "native-semantic-probe", "WikiSemantics.NativeProbe.dll"));
 		foreach (var arg in new[] { "--scenario", scenario, "--world", world, "--evidence", evidence }) start.ArgumentList.Add(arg);
