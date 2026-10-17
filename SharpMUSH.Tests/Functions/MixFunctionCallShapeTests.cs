@@ -38,8 +38,22 @@ public class MixFunctionCallShapeTests
 	[Test]
 	public async Task ThirtyFourListsWithAnExplicitDelimiterExceedTheFunctionArity()
 	{
-		await Assert.That(await EvaluateWithCallback("unexpected callback", Lists(34)))
+		var connections = Factory.Services.GetRequiredService<IConnectionService>();
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "MixAritySideEffect");
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"&MARKER {obj}=unchanged"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"&CB {obj}=set({obj},MARKER:called)"));
+
+		var refused = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"mix({obj}/CB,{Lists(34)},|)"))
+			?? throw new InvalidOperationException("MIX returned no parser result.");
+		await Assert.That(refused.Message.ToPlainText())
 			.IsEqualTo("#-1 FUNCTION (MIX) EXPECTS AT MOST 35 ARGUMENTS BUT GOT 36");
+		await Assert.That(await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({obj}/MARKER)")))
+			.IsEqualTo(MarkupText.Plain("unchanged"));
+
+		// The same callback can write when admitted: the refusal above suppresses a real side effect.
+		await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"mix({obj}/CB,{Lists(33)},|)"));
+		await Assert.That(await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({obj}/MARKER)")))
+			.IsEqualTo(MarkupText.Plain("called"));
 	}
 
 	[Test]
@@ -69,6 +83,7 @@ public class MixFunctionCallShapeTests
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"&CB {obj}={callback}"));
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"mix({obj}/CB,{lists},|)"))
 			?? throw new InvalidOperationException("MIX returned no parser result.");
+		await Assert.That(result.HadErrors).IsFalse();
 		return result.Message.ToPlainText();
 	}
 }
