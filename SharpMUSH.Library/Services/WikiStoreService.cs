@@ -8,15 +8,11 @@ namespace SharpMUSH.Library.Services;
 /// <see cref="IWikiService"/> over an <see cref="IWikiStore"/>: every rule that is not about storage —
 /// slugs, namespace and category normalisation, locale validation, Markdown rendering and the
 /// source-locale guard on translations — lives here once, and the store only persists.
+/// In the engine host the store is a Mediator transport to data handlers and provider storage;
+/// standalone previews and provider tests may pass their owned store directly.
 /// </summary>
 public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline renderer) : IWikiService
 {
-	// Every requirement set, read once and kept until a write here changes one. Requirements are consulted on
-	// every page read, so they are not read from the store each time.
-	private readonly System.Threading.Lock _requirementsGate = new();
-	private WikiRequirements? _requirements;
-	private int _requirementsVersion;
-
 	public Task<Found<WikiPage>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
 		=> store.GetPageBySlugAsync(Namespace(ns), WikiHelpers.Slugify(slug));
 
@@ -132,40 +128,13 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		};
 	}
 
-	public async Task<Found<None>> DeleteAsync(string id, string editorDbref)
-	{
-		var deleted = await store.DeletePageAsync(id);
-		ForgetRequirements();
-		return deleted;
-	}
+	public Task<Found<None>> DeleteAsync(string id, string editorDbref)
+		=> store.DeletePageAsync(id);
 
+	// The transport owns raw-set caching and invalidation. Rebuild this pure wrapper each read so
+	// commands sent directly through the data trunk cannot leave a facade-local policy snapshot stale.
 	public async Task<WikiRequirements> GetRequirementsAsync()
-	{
-		int version;
-		lock (_requirementsGate)
-		{
-			if (_requirements is { } cached) return cached;
-			version = _requirementsVersion;
-		}
-
-		var loaded = new WikiRequirements(await store.GetRequirementsAsync());
-		lock (_requirementsGate)
-		{
-			// A write that landed while this read was out leaves the version moved; keep nothing then.
-			if (version == _requirementsVersion) _requirements = loaded;
-		}
-
-		return loaded;
-	}
-
-	private void ForgetRequirements()
-	{
-		lock (_requirementsGate)
-		{
-			_requirementsVersion++;
-			_requirements = null;
-		}
-	}
+		=> new(await store.GetRequirementsAsync());
 
 	public async Task<Found<None>> SetRequirementsAsync(WikiRuleTarget target,
 		IReadOnlyDictionary<WikiAction, IReadOnlyList<string>> required, string editorDbref)
@@ -185,10 +154,8 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 				.ToList()))
 			.Where(pair => pair.Scopes.Count > 0)
 			.ToDictionary(pair => pair.Key, pair => pair.Scopes);
-		var result = await store.SetRequirementsAsync(new WikiRequirementSet(target with { Key = key }, normalized, editorDbref,
+		return await store.SetRequirementsAsync(new WikiRequirementSet(target with { Key = key }, normalized, editorDbref,
 			DateTimeOffset.UtcNow));
-		ForgetRequirements();
-		return result;
 	}
 
 	public async Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published)

@@ -52,8 +52,14 @@ composite; each handler and service depends on the store it uses. The concrete p
 one registered singleton, and every interface it serves (the stores, `IWikiStore`,
 `IRoleRegistryService`, the package, application and layout registries, the storage accessor)
 is forwarded from it by a compile-checked registration, never by a cast. A service over a store
-owns the rules that are not about storage and depends on the store alone: `WikiStoreService`
-normalises, renders and validates before `IWikiStore` persists.
+owns the rules that are not about storage: `WikiStoreService` normalises, renders and validates
+before persistence. In the actual host its store-shaped transport is the concrete-only
+`MediatorWikiStore`, which sends normalized data requests to handlers depending on the provider's
+`IWikiStore`. The provider registration never resolves to the transport adapter. Standalone
+in-memory fixtures can supply `InMemoryWikiStore` to the same facade without a server dependency.
+Requirements freshness belongs to the tagged requirements query and requirement/page-deletion
+commands, not to a facade-local authority memo. This transport does not establish the later
+semantic wiki mutation, durable authorization or final-response fences.
 
 Requests and store methods are two vocabularies kept in sync by hand. Small stores make drift
 visible, and a handler that needs two stores says so in its constructor.

@@ -276,7 +276,11 @@ public class NativeSemanticRecoveryTests
 					? await Task.WhenAny(reached, stdout, deadline)
 					: await Task.WhenAny(reached, stdout, stderr, deadline);
 				if (first == reached) { await reached; return; }
-				await first; // Propagate pump faults/cancellation and the deadline.
+				// Propagate pump faults/cancellation and the deadline.
+				await first;
+				// A pump may reach EOF before the coordinator resumes from WhenAny, even though
+				// parsing already completed the checkpoint. Successful EOF cannot undo that marker.
+				if (reached.IsCompleted) { await reached; return; }
 				if (first == stderr) { stderrDrained = true; continue; }
 				throw new InvalidOperationException("Stdout ended before required checkpoint");
 			}
@@ -305,6 +309,48 @@ public class NativeSemanticRecoveryTests
 		finally
 		{
 			checkpoint.TrySetResult(); stdout.TrySetResult();
+			try { await coordination; } catch (InvalidOperationException) { }
+			await Task.WhenAll(checkpoint.Task, stdout.Task);
+		}
+	}
+
+	private sealed class PausedContinuationContext : SynchronizationContext
+	{
+		private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pending = new();
+		public override void Post(SendOrPostCallback callback, object? state) => _pending.Enqueue(() => callback(state));
+		public void Drain()
+		{
+			while (_pending.TryDequeue(out var callback)) callback();
+		}
+	}
+
+	[Test]
+	public async Task ParsedCheckpointSurvivesStdoutEofWinningContinuationRace()
+	{
+		var checkpoint = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var stdout = new TaskCompletionSource();
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		var context = new PausedContinuationContext();
+		var previous = SynchronizationContext.Current;
+		Task coordination;
+		try
+		{
+			SynchronizationContext.SetSynchronizationContext(context);
+			coordination = AwaitCheckpoint(checkpoint.Task, stdout.Task, Task.CompletedTask, timeout.Token);
+		}
+		finally { SynchronizationContext.SetSynchronizationContext(previous); }
+		try
+		{
+			// EOF wins WhenAny, but its queued consumer has not resumed. The parser's checkpoint
+			// is complete before that consumer runs, matching the successful stdout-pump contract.
+			stdout.SetResult();
+			checkpoint.SetResult();
+			context.Drain();
+			await coordination;
+		}
+		finally
+		{
+			checkpoint.TrySetResult(); stdout.TrySetResult(); context.Drain();
 			try { await coordination; } catch (InvalidOperationException) { }
 			await Task.WhenAll(checkpoint.Task, stdout.Task);
 		}
