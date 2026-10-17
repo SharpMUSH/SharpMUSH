@@ -27,6 +27,12 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 			return await HandleShapedAsync(message, next, cancellationToken);
 		}
 
+		if (message is not GetObjectNodeByNumberQuery
+			&& !(message.Profile == CacheEntryProfile.Object && CacheKeys.TryParseObjectNumber(message.CacheKey, out _)))
+		{
+			return await HandleValueAsync(message, next, cancellationToken);
+		}
+
 		// A key-invalidated object entry carries no tag stamp, so a write that lands while the factory
 		// runs would leave the stored entry pre-write. The version is read before and compared after
 		// the store: the removal then happens after the store in every interleaving (see ObjectVersions).
@@ -61,33 +67,54 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 		return value;
 	}
 
+	private async ValueTask<TResponse> HandleValueAsync(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next,
+		CancellationToken cancellationToken)
+	{
+		CachedValue<TResponse>? produced = null;
+		var stored = await cache.GetOrSetAsync<CachedValue<TResponse>>(message.CacheKey,
+			async (ctx, ct) =>
+			{
+				var epoch = versions.Epoch;
+				var result = await next(message, ct);
+				EmbeddedObjectTags.Apply(ctx, message, result);
+				return produced = new CachedValue<TResponse>(result, epoch, ctx.Tags ?? []);
+			}, options: CacheEntryProfiles.For(message.Profile),
+			tags: message.CacheTags.Length > 0 ? message.CacheTags : null, token: cancellationToken);
+		if (!stored.IsCurrent(versions))
+		{
+			await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
+			if (!ReferenceEquals(stored, produced)) return await next(message, cancellationToken);
+		}
+		return stored.Value;
+	}
+
 	private async ValueTask<TResponse> HandleShapedAsync(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next,
 		CancellationToken cancellationToken)
 	{
-		var stored = await cache.GetOrSetAsync<CachedObjectRef>(message.CacheKey,
+		CachedValue<CachedObjectRef>? produced = null;
+		TResponse read = default!;
+		var stored = await cache.GetOrSetAsync<CachedValue<CachedObjectRef>>(message.CacheKey,
 			async (ctx, ct) =>
 			{
+				var epoch = versions.Epoch;
 				var result = await next(message, ct);
 				var reference = ObjectShaped<TResponse>.RefOf(result);
 				EmbeddedObjectTags.Apply(ctx, message, reference is { } named ? [named.Number] : []);
-				return new CachedObjectRef(reference);
-			},
-			options: CacheEntryProfiles.For(message.Profile),
-			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
-			token: cancellationToken);
+				read = result;
+				return produced = new CachedValue<CachedObjectRef>(new CachedObjectRef(reference), epoch, ctx.Tags ?? []);
+			}, options: CacheEntryProfiles.For(message.Profile),
+			tags: message.CacheTags.Length > 0 ? message.CacheTags : null, token: cancellationToken);
 
-		// The full object id: a number recycled since the entry was stored resolves to nothing rather
-		// than to the object that took its place. A ref without milliseconds is a bare number lookup.
-		var node = stored.Ref is { } known
-			? await mediator.Send(new GetObjectNodeQuery(known), cancellationToken)
-			: new None();
-		if (ObjectShaped<TResponse>.TryFromNode(node, out var value))
+		if (!stored.IsCurrent(versions))
 		{
-			return value;
+			await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
+			return ReferenceEquals(stored, produced) ? read : await next(message, cancellationToken);
 		}
 
-		// The object the entry named is gone, or is no longer of the type this result carries: the
-		// entry is stale. Drop it and answer from the source.
+		var node = stored.Value.Ref is { } known
+			? await mediator.Send(new GetObjectNodeQuery(known), cancellationToken)
+			: new None();
+		if (ObjectShaped<TResponse>.TryFromNode(node, out var value)) return value;
 		await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
 		return await next(message, cancellationToken);
 	}

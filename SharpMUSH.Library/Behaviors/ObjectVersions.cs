@@ -3,37 +3,40 @@ using System.Collections.Concurrent;
 namespace SharpMUSH.Library.Behaviors;
 
 /// <summary>
-/// A monotonic version per object number, bumped by every invalidation of that object's key.
+/// Process-local monotonic invalidation counts and epochs for object keys and tags.
+/// Entries retain the factory-start epoch so even a late tag-marker store cannot revive a stale fill.
 /// </summary>
-/// <remarks>
-/// <para>
-/// A key removal during a read says nothing about the entry the read stores afterwards, so a read
-/// that queried before a write committed and stored after the write's invalidation would keep a
-/// pre-write object for the entry's whole lifetime. The caching behaviour reads the version before
-/// its factory runs and again after the store; if it moved, the entry it just stored is removed.
-/// Tagged entries do not need this: FusionCache stamps a foreground factory's entry at factory
-/// start, so a tag removed mid-read already expires the result. One engine process is assumed;
-/// more than one node would need this counter in the shared cache.
-/// </para>
-/// <para>
-/// The table holds one entry per object number ever written, and dbrefs are recycled, so it is
-/// bounded by the highest dbref the database has allocated rather than by write volume: a few
-/// tens of bytes per object, the same order as one cached object node. A recycled dbref keeps
-/// its old count, which is fine, since only movement is compared.
-/// </remarks>
 public sealed class ObjectVersions
 {
-	private readonly ConcurrentDictionary<int, long> _versions = new();
+	private readonly record struct Stamp(long Count, long LastChange);
+	private readonly ConcurrentDictionary<int, Stamp> _versions = new();
+	private readonly ConcurrentDictionary<string, Stamp> _tagVersions = new(StringComparer.Ordinal);
+	private long _epoch;
 
-	public long Of(int number) => _versions.GetValueOrDefault(number);
+	public long Epoch => Volatile.Read(ref _epoch);
+	public long Of(int number) => _versions.GetValueOrDefault(number).Count;
+	public long OfTag(string tag) => _tagVersions.GetValueOrDefault(tag).Count;
 
-	public void Bump(int number) => _versions.AddOrUpdate(number, 1, static (_, version) => version + 1);
+	public void Bump(int number)
+	{
+		var epoch = Interlocked.Increment(ref _epoch);
+		_versions.AddOrUpdate(number, new Stamp(1, epoch), (_, previous) =>
+			new Stamp(previous.Count + 1, Math.Max(previous.LastChange, epoch)));
+	}
 
-	private readonly ConcurrentDictionary<string, long> _tagVersions = new(StringComparer.Ordinal);
+	public void BumpTag(string tag)
+	{
+		var epoch = Interlocked.Increment(ref _epoch);
+		_tagVersions.AddOrUpdate(tag, new Stamp(1, epoch), (_, previous) =>
+			new Stamp(previous.Count + 1, Math.Max(previous.LastChange, epoch)));
+	}
 
-	/// <summary>How many times entries tagged <paramref name="tag"/> have been removed, for a reader that
-	/// keeps an answer of its own outside the cache (<c>FlagList</c>: a flag renamed or deleted).</summary>
-	public long OfTag(string tag) => _tagVersions.GetValueOrDefault(tag);
-
-	public void BumpTag(string tag) => _tagVersions.AddOrUpdate(tag, 1, static (_, version) => version + 1);
+	/// <summary>Tests the effective tag against both explicit tag removal and object-key removal.</summary>
+	public bool ChangedAfter(string tag, long epoch)
+	{
+		if (_tagVersions.GetValueOrDefault(tag).LastChange > epoch) return true;
+		return tag.StartsWith("obj:#", StringComparison.Ordinal)
+			&& int.TryParse(tag.AsSpan("obj:#".Length), out var number)
+			&& _versions.GetValueOrDefault(number).LastChange > epoch;
+	}
 }
