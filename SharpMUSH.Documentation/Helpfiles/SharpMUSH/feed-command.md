@@ -178,6 +178,8 @@ The default line is `<radio/101.5> Ann says, "Coming in."`, or `<radio/101.5> An
 
 These attributes on the kind's owner decide where a line goes and how it reads. Each is named after the kind, and each is optional. They are evaluated as the owner, with the speaker as enactor (`%#`). Each line has been stored by then, so [feedmsg()] can read it from `%<id>`.
 
+An unrestricted Discord channel may supply an external speaker with no game object. Its speaker and enactor are `#-1`; its stored name and display name identify the Discord member. Formats and taps should use `%<name>` or `feedmsg(%<id>,name)` rather than calling `name(%<speaker>)`. External members cannot pass a configured kind or feed send lock. Normal membership gag settings still apply; the default delivery also skips recipients with a configured Interact lock, since an external identity cannot satisfy an object-based lock. A custom DELIVER remains responsible for its own delivery rules, as for ordinary feed lines. See [@discord channels].
+
 - `FEED`<KIND>`ROUTE` returns the objids that should receive the line, separated by spaces. Without it, the line goes to the members who are not gagged.
 - `FEED`<KIND>`DELIVER` is run as an action list, in place, once per line, and does the delivery itself (`@pemit`, `@message`, anything).
 - `FEED`<KIND>`FORMAT`, when there is no DELIVER, is evaluated for each recipient who can hear the speaker, and is the line that recipient sees; an empty result sends them nothing.
