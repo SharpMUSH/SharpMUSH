@@ -1,6 +1,6 @@
 # Dependency-aware package changes: proposal for #2008
 
-Status: design checkpoint, not approved implementation. Functional clarification is pending: improve the existing install/uninstall workflow, or introduce retained-content deactivation. This proposal covers the former only. No product code has changed.
+Status: root-reviewed implementation approved. The user selected improving the existing install/uninstall workflow. Retained-content deactivation is outside this feature.
 
 ## What the current code actually does
 
@@ -14,7 +14,7 @@ At main `d4cdcabf4cac779a6b00a37c871d2dfec0563a99`:
 
 Sources: `SharpMUSH.Contracts/Models/Packages/{PackageRegistryRecords,PluginStatus}.cs`; `SharpMUSH.Server/Services/{GameFeatureService,PluginAdministrationService,BundledPackagePlan}.cs`; `SharpMUSH.Library/Services/{PackagePlanService,PackageInstallService.Apply,PackageInstallService.Lifecycle}.cs`; `SharpMUSH.Library/Services/Interfaces/IPackageOperationRunner.cs`.
 
-## Recommended experience, conditional on the workflow choice
+## Approved experience
 
 Use truthful actions: **Install**, **Uninstall**, **Turn plugin on/off**. Never rename uninstall to disable. Existing objects/attributes, application registrations, wiki ownership and package settings follow the existing uninstall rules; preview describes those effects. Scene/account/game data is not newly deleted by this feature, and no generic retained-data guarantee is invented.
 
@@ -44,8 +44,12 @@ Dependency projection is not a simulated game database. A dependent's cross-pack
 
 A plugin turned on may only start after restart. Do not then attempt packages whose required plugin is not running: mark remaining steps **Awaiting restart**, retain/report their intended actions, and require fresh review after restart. Restart is a separate `ServerOperate` action with its existing confirmation. Unloadable plugin removal can stop immediately; load-once plugins remain **running, off next restart**. File failures and unload refusal report actual configured/running state, not a synthetic all-or-nothing result.
 
-## Pending functional choice
+## Unsupported alternative
 
 If the user chooses **keep content installed while disabling behavior**, this proposal is insufficient and #2008 must not be claimed complete. There is no safe existing generic suspension primitive: packages can attach attributes to shared handlers, register runtime hooks/functions, install declarations/settings/wiki pages, and have arbitrary lifecycle effects. That alternative needs a separate explicit activation contract and package capability policy. Adding an `Enabled` bit or HALTing every owned object alone would not implement it.
 
-Builder/root review and the pending functional answer are required before implementation or PR creation.
+The functional choice and root preflight review are complete. Implementation follows the approved existing-lifecycle scope.
+
+## Reviewed execution contract
+
+Plan requests include explicit intents and per-step configuration, conflict and consent reviews. A server step identity binds action, target kind, exact source and affected state; it excludes answers. The actor-bound opaque token owns the reviewed order and choices. Apply accepts only that token and is idempotent for the same actor/token. Accepted runs own a DI scope and host lifetime rather than an HTTP disconnect token. Active runs are not evicted. Failures inside the batch return partial results so already-collected lifecycle hooks drain after the single queue entry; committed steps remain committed.

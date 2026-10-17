@@ -2,17 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Conditional on choosing the existing lifecycle workflow, review and execute dependency-aware install/uninstall/plugin-state batches without hidden cascades.
+**Goal:** Review and execute dependency-aware install/uninstall/plugin-state batches without hidden cascades.
 
 **Architecture:** A server batch coordinator projects existing dependency metadata and wraps the existing installer, plugin administration and package operation runner. The portal keeps an editable intent queue; the server owns ordering, trust and stale-state validation. No runtime activation flag or alternate install engine.
 
 **Tech Stack:** .NET 11 RC2, existing Mediator/store services, ASP.NET Core, Blazor/MudBlazor, TUnit/bUnit.
 
-**Spec:** `docs/superpowers/specs/2026-10-17-package-activation-batch-design.md` (draft; functional choice and root review pending).
+**Spec:** `docs/superpowers/specs/2026-10-17-package-activation-batch-design.md` (user chose existing install/uninstall; root preflight approved).
 
 ## Global constraints
 
-- No product implementation until the functional answer and design review. No production deployment.
+- Functional choice and root preflight approved. Implement the existing install/uninstall workflow only. No production deployment.
 - Label uninstall honestly. No new user-data deletion, force removal, implicit dependent cascade, automatic conflict decision, or batch rollback claim.
 - Preserve `PackagesAdmin`, separate `ServerOperate`, per-apply `AllowPluginCode`/maximum-version checks, existing backups and lifecycle queue ordering.
 - Temporary work uses `/temp/codex/package-activation-batch`; preserve existing untracked `work/` and the merged import branch.
@@ -60,4 +60,4 @@ Files: `SharpMUSH.Client/Services/PackagesAdminService.cs`; `Pages/Admin/Package
 - [ ] Update the package guide with truthful installation/removal effects and unsupported retained-content suspension; run affected backend/bUnit suites and required CI once.
 - [ ] Obtain independent source review, address comments and create a ready PR referencing #2008 only after the approved functional scope is fulfilled. Do not close the retained-content interpretation through this workflow by assertion.
 
-No local builds/tests are needed for this documentation-only checkpoint. Execution strategy remains the root's existing parallel-worker workflow; this document does not request another execution-mode choice.
+Implementation is approved and runs with normal TDD, formatting gates and affected suites. Task 4 requires real isolated database integration evidence. Execution remains the root's existing parallel-worker workflow; no production actions are authorized here.
