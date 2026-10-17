@@ -31,6 +31,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	Action<IServiceCollection>? configureTestServices = null) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
+	private TestHostLifetime? _lifetime;
 	private readonly string _schedulerName = $"sharpmush-tests-{Guid.NewGuid():N}";
 
 	/// <summary>
@@ -156,6 +157,45 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		);
 		if (configureTestServices is not null)
 			builder.ConfigureTestServices(configureTestServices);
+		builder.ConfigureTestServices(ConfigureOwnedHostLifetime);
+	}
+
+	private void ConfigureOwnedHostLifetime(IServiceCollection services)
+	{
+		var host = services.Last(descriptor => descriptor.ServiceType == typeof(IHost));
+		var configuration = services.Last(descriptor => descriptor.ServiceType == typeof(IConfiguration));
+		if (host.Lifetime != ServiceLifetime.Singleton || host.ImplementationFactory is not { } createHost
+			|| configuration.Lifetime != ServiceLifetime.Singleton || configuration.ImplementationFactory is not { } createConfiguration)
+			throw new InvalidOperationException("The pinned test host requires singleton host/configuration factories; review the hosting upgrade.");
+		if (_lifetime is not null) throw new InvalidOperationException("A test factory cannot compose two root hosts.");
+		var lifetime = _lifetime = new TestHostLifetime(sp => (IHost)createHost(sp));
+		services.Remove(host);
+		// Externally owned instance: DI must not recursively dispose its own host proxy.
+		services.AddSingleton<IHost>(lifetime);
+		services.Remove(configuration);
+		services.AddSingleton<IConfiguration>(sp =>
+		{
+			// Pinned HostBuilder.ResolveHost resolves configuration before IHost. Preserve the original
+			// factory/value and disposal ownership while binding the proxy to this exact root provider.
+			lifetime.Bind(sp);
+			return (IConfiguration)createConfiguration(sp);
+		});
+	}
+
+	public override async ValueTask DisposeAsync()
+	{
+		Exception? factoryFailure = null;
+		try { await base.DisposeAsync(); }
+		catch (Exception error) { factoryFailure = error; }
+		try
+		{
+			if (_lifetime is not null) await _lifetime.DisposeAsync();
+		}
+		catch (Exception error) when (factoryFailure is not null)
+		{
+			throw new AggregateException("Test factory and host disposal both failed.", factoryFailure, error);
+		}
+		if (factoryFailure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(factoryFailure).Throw();
 	}
 
 	private static string ExtractSqlHost(string connectionString)

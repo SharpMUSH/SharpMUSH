@@ -419,7 +419,7 @@ public class IntegratedWikiBoundaryTests
 	}
 
 	// Only called after all provider disposal is awaited.
-	private static string[] OnDiskNames(string path)
+	internal static string[] OnDiskNames(string path)
 	{
 		using var env = new LightningEnvironment(path, new EnvironmentConfiguration { MaxDatabases = 256 });
 		env.Open(EnvironmentOpenFlags.ReadOnly | EnvironmentOpenFlags.NoThreadLocalStorage);
