@@ -11,7 +11,7 @@ Review focus: DST gap/fold handling, bare/this/next weekday differences, literal
 - [x] Implement typed parser and function with fixed reference/zone corpus, ambiguity and bounds tests.
 - [x] Observe scene behavioral RED, integrate schedule/reschedule/pause and preserve legacy offsets/pitches.
 - [x] Document function and scene policies/examples; run focused parser/time and real scene regressions.
-- [ ] Review diff, commit, create/attach PR and report exact validation.
+- [x] Review diff, commit, create/attach PR and report exact validation.
 
 Decision ledger: root approved focused grammar and weekday/calendar choices, caller TZ fallback, bounded slash-prefix strategy with IANA typo/title/pitch regression requirements. User authorized inline execution without further design gates.
 
@@ -26,3 +26,5 @@ Both `dotnet build SharpMUSH.Tests -m:2 -nr:false` and the Integration build pas
 - Broader `/*/*/Scene*/*` baseline: 260/260 passed before the final isolated ISO-clock/contradictory-input guards and extra corpus row; the affected scene rules were then rerun as above.
 
 Behavioral RED preceded implementation through the actual missing function and actual schedule command. Additional observed REDs covered DST reply offsets, explicit-year metadata, ignored/conflicting zones, epoch zero, Unicode numeric exceptions, the ISO/12-hour false range and contradictory year/direction components. No runtime dependency was added. Root independent review and PR handoff follow this checkpoint.
+
+Independent-review follow-up: synchronized the scene browse index with manifest 1.15.0, and refuse signed offsets combined with contradictory textual directions. The existing index-agreement regression failed at 1.14.0 before the fix; actual parser probes reproduced `in -2 hours` and `-2 hours ago` resolving backward before the refusal guard. Four permanent direction regressions now pass. The affected DateExpression classes passed 79/79 and ExamplePackageTests passed 12/12; the test-project build had zero warnings/errors and strict PackageValidator passed all 57 bundled packages/index entries. An attempted combined pipe-separated TUnit filter was stopped after selecting unrelated tests; those two verified groups used separate supported filters.

@@ -101,6 +101,10 @@ public static class DateExpressionParser
 		{
 			if (dateText.StartsWith("in ", StringComparison.OrdinalIgnoreCase) && dateText.EndsWith(" ago", StringComparison.OrdinalIgnoreCase))
 				return Fail("IN AND AGO CONFLICT; GIVE ONE DIRECTION");
+			var hasFutureDirection = dateText.StartsWith("in ", StringComparison.OrdinalIgnoreCase) || dateText.EndsWith(" from now", StringComparison.OrdinalIgnoreCase);
+			var hasPastDirection = dateText.EndsWith(" ago", StringComparison.OrdinalIgnoreCase);
+			if ((body.StartsWith('-') && (hasFutureDirection || hasPastDirection)) || (body.StartsWith('+') && hasPastDirection))
+				return Fail("SIGNED OFFSET AND DIRECTION CONFLICT; GIVE ONE DIRECTION");
 			var days = 0L;
 			var seconds = 0L;
 			var direction = dateText.EndsWith(" ago", StringComparison.OrdinalIgnoreCase) || body.StartsWith('-') ? -1 : 1;
