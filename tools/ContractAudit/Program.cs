@@ -222,6 +222,10 @@ string[] Evidence(string kind, string name) => name == "unique"
 	: name is "sortkey" or "index" or "munge"
 	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
 		"tools/client-tests/monaco-signatures.test.mjs", "docs/audits/softcode-contracts.md#list-transformation-signatures"]
+	: name is "json_query" or "json_fill"
+	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/JsonFunctionUnitTests.cs",
+		$"SharpMUSH.Documentation/Helpfiles/SharpMUSH/{name.Replace('_', '-')}-function.md",
+		"tools/client-tests/monaco-signatures.test.mjs", "docs/audits/softcode-contracts.md#json-query-actions-and-fill-pairs"]
 	: name is "json_map" or "json_mod"
 	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/JsonFunctionUnitTests.cs",
 		$"SharpMUSH.Documentation/Helpfiles/SharpMUSH/{name.Replace('_', '-')}-function.md", "docs/audits/softcode-contracts.md#json-contracts"]
@@ -252,7 +256,7 @@ string[] ModuleLocations(string project, string name) => source.Where(line => li
 object Review(string kind, string name) => new
 {
 	complete = false,
-	reviewedFacets = kind == "function" && name is "json_map" or "json_mod" or "sortkey" or "index" or "munge" or "setunion" or "setdiff" or "setinter" or "setsymdiff" or "unique"
+	reviewedFacets = kind == "function" && name is "json_map" or "json_mod" or "json_query" or "json_fill" or "sortkey" or "index" or "munge" or "setunion" or "setdiff" or "setinter" or "setsymdiff" or "unique"
 		? new[] { "registration-metadata", "parameter-labels", "focused-parser-call-shapes", "analysis-portal-monaco-signatures" }
 		: new[] { "registration-metadata" },
 	pendingFacets = new[] { "full-argument-semantics", "evaluation-and-laziness", "authority-and-permissions", "errors-and-boundaries",
