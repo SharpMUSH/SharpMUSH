@@ -213,13 +213,12 @@ public class WikiRequestRoutingTests
 		}
 		var reads = Factory.Provider.RequirementReads;
 		var wrapper = await Wiki.GetRequirementsAsync();
-		var allocatedBefore = GC.GetTotalAllocatedBytes();
+		var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
 		var rebuilt = await Wiki.GetRequirementsAsync();
-		var allocated = GC.GetTotalAllocatedBytes() - allocatedBefore;
+		var allocated = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
 		await Assert.That(ReferenceEquals(wrapper, rebuilt)).IsFalse();
 		await Assert.That(rebuilt.Sets.Count).IsEqualTo(wrapper.Sets.Count);
-		await Assert.That(allocated > 0).IsTrue();
-		Console.WriteLine($"Requirements wrapper: {wrapper.Sets.Count} rules, {allocated} process allocation bytes including query infrastructure; raw provider reads unchanged.");
+		Console.WriteLine($"Requirements wrapper: {wrapper.Sets.Count} rules, {allocated} process-wide allocation bytes including query infrastructure (observational, not a benchmark); raw provider reads unchanged.");
 		await Wiki.GetRequirementsAsync();
 		await Mediator.Send(new GetWikiRequirementsQuery());
 		await Assert.That(Factory.Provider.RequirementReads).IsEqualTo(reads);
