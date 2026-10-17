@@ -39,13 +39,11 @@ dateparse(tomorrow 7pm,America/Chicago,1792152000)
 dateparse(+1h30m,UTC,1792152000,ms)
 1792157400000
 
+dateparse(tomorrow 7pm America/Chicago,UTC,1792152000,normalized)
+2026-10-17 19:00:00 -05:00 (America/Chicago)
+
 dateparse(next Tuesday,UTC,1792152000)
 #-1 INCOMPLETE DATE: CLOCK TIME REQUIRED; ADD A TIME SUCH AS 19:00 OR NOON
 ```
 
 See also [convtime()] and [timezones].
-
-```
-dateparse(tomorrow 7pm America/Chicago,UTC,1792152000,normalized)
-2026-10-17 19:00:00 -05:00 (America/Chicago)
-```
