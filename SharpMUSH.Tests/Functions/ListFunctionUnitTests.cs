@@ -812,6 +812,57 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("step(test/FN`CALLBACK,a b c d e f g h i j k l,11,,/)", "a|k|k|1|11/l|||0|1")]
+	[Arguments("mix(test/FN`CALLBACK,a,b,c,d,e,f,g,h,i,j,k l,%b)", "a|k|k|1|11 |l|l|1|11")]
+	public async Task CallbackArgumentsAboveNineAndShortFinalRuns(string function, string expected)
+	{
+		var objNum = await CreateObjectWithAttribute("callback_args_obj", "FN`CALLBACK",
+			"%0|%<10>|[r(10,args)]|[hasarg(10,supplied)]|%+");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function.Replace("test", $"#{objNum}")));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("map(test/FN`CALLBACK,a b)", "a|1|1 b|2|1")]
+	[Arguments("step(test/FN`CALLBACK,a b,1)", "a||0 b||0")]
+	public async Task StepOfOneDoesNotSupplyTheMapPosition(string function, string expected)
+	{
+		var objNum = await CreateObjectWithAttribute("step_one_obj", "FN`CALLBACK", "%0|%1|[hasarg(1,supplied)]");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function.Replace("test", $"#{objNum}")));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task StepEnumeratesArgumentValuesAboveNineWithoutLeakingIntoTheLastRun()
+	{
+		var objNum = await CreateObjectWithAttribute("step_registers_obj", "FN`ROW",
+			"iter(sort(registers(,args),n),r(%i0,args),,%b-%b)");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"step(#{objNum}/FN`ROW,a b c d e f g h i j k l,11,,/)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("a - b - c - d - e - f - g - h - i - j - k/l");
+	}
+
+	[Test]
+	[Arguments("iter(lit([add(1,1)]),##)", "[add(1,1)]")]
+	[Arguments("iter(lit([add(1,1)]),%i0)", "[add(1,1)]")]
+	public async Task IterationDoesNotEvaluateCodeLookingElements(string function, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("##")]
+	[Arguments("%i0")]
+	public async Task IterationDoesNotEvaluateStoredCodeLookingElements(string token)
+	{
+		var objNum = await CreateObjectWithAttribute("iter_data_obj", "DATA`TEXT", "[add(1,1)]");
+		await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&FN`SHOW #{objNum}=iter(v(DATA`TEXT),{token})"));
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"u(#{objNum}/FN`SHOW)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("[add(1,1)]");
+	}
+
+	[Test]
 	[Arguments("step(test/FIRST_STEP,a b c d e,2)", "a c e")]
 	public async Task Step(string function, string expected)
 	{
