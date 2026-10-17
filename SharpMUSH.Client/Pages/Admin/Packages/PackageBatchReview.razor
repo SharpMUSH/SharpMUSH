@@ -12,7 +12,19 @@
 <PageTitle>@Loc["PkgBatchReview"] — @Loc["AppTitle"]</PageTitle>
 <div class="page-stack page-stack--padded pkg-batch-review">
     <PlainPageHeader Title="@Loc["PkgBatchReview"]" Description="@Loc["PkgBatchDescription"]" />
-    <PackageBatchQueue Busy="@(_busy || Running)" />
+    <PackageBatchQueue Busy="@(_busy || Running || Packages.Batch.AdmissionBlocked)" />
+    @if (Packages.Batch.AdmissionPending)
+    {
+        <MudAlert Severity="Severity.Info" role="status" aria-live="polite">@Loc["PkgBatchAdmissionPending"]</MudAlert>
+    }
+    else if (Packages.Batch.AdmissionUnknown)
+    {
+        <MudAlert Severity="Severity.Warning" role="status" aria-live="polite">
+            @Loc["PkgBatchUnknownOutcome"]
+            <MudButton Disabled="@_busy" OnClick="@RecoverAdmissionAsync">@Loc["PkgBatchRecoverAdmission"]</MudButton>
+            <MudButton Disabled="@_busy" OnClick="@RefreshUnknownAdmissionAsync">@Loc["PkgBatchReviewRemaining"]</MudButton>
+        </MudAlert>
+    }
     @if (_busy)
     {
         <MudProgressLinear Indeterminate="true" aria-label="@Loc["Loading"]" />
@@ -145,7 +157,7 @@
             </div>
         </KitCard>
     }
-    else if (!Running && Packages.Batch.Intents.Count > 0)
+    else if (!Running && !Packages.Batch.AdmissionBlocked && Packages.Batch.Intents.Count > 0)
     {
         <MudButton Disabled="@_busy" OnClick="@PlanAsync">@Loc["PkgBatchRefreshReview"]</MudButton>
     }
@@ -160,7 +172,7 @@
     private readonly CancellationTokenSource _lifetime = new();
     private Task? _polling;
     private bool Running => _run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running;
-    private bool CanApply => !_busy && !Running && _plan is { ReviewToken: not null, Blockers.Count: 0, Proposals.Count: 0 }
+    private bool CanApply => !_busy && !Running && !Packages.Batch.AdmissionBlocked && _plan is { ReviewToken: not null, Blockers.Count: 0, Proposals.Count: 0 }
         && Packages.Batch.Plan == _plan && _plan.ExpiresAt > DateTimeOffset.UtcNow
         && _plan.Steps.All(s => s.Review is not { } review || !NeedsChoices(review) || Packages.Batch.IsReviewed(s.StepId));
 
@@ -168,6 +180,7 @@
     {
         Packages.Batch.Changed += OnDraftChanged;
         _run = Packages.Batch.Run;
+        if (Packages.Batch.AdmissionBlocked) return;
         if (_run is { } completed && !Running) Packages.Batch.RemoveCompleted(completed);
         if (Running) StartPolling();
         else if (Packages.Batch.Intents.Count > 0) await PlanAsync();
@@ -175,7 +188,7 @@
 
     private void OnDraftChanged()
     {
-        if (Packages.Batch.Plan is null) _plan = null;
+        if (Packages.Batch.Plan is null || Packages.Batch.AdmissionBlocked) _plan = null;
         _run = Packages.Batch.Run;
         if (Running) { _plan = null; StartPolling(); }
         if (!_disposed) _ = InvokeAsync(StateHasChanged);
@@ -183,7 +196,7 @@
 
     private async Task PlanAsync()
     {
-        if (Running || _busy) return;
+        if (Running || _busy || Packages.Batch.AdmissionBlocked) return;
         _busy = true;
         _error = null;
         try
@@ -228,12 +241,31 @@
     private async Task ApplyAsync()
     {
         if (!CanApply || _plan?.ReviewToken is not { } token) return;
+        await SubmitAdmissionAsync(() => Packages.ApplyBatchAsync(token));
+    }
+
+    private Task RecoverAdmissionAsync() => SubmitAdmissionAsync(Packages.RecoverBatchAdmissionAsync);
+
+    private async Task RefreshUnknownAdmissionAsync()
+    {
+        _busy = true;
+        try
+        {
+            if (await Packages.RefreshUnknownBatchAdmissionAsync() is ApiFailure failure) _error = failure.Message;
+            else _error = null;
+        }
+        finally { _busy = false; }
+        if (!Packages.Batch.AdmissionBlocked) await PlanAsync();
+    }
+
+    private async Task SubmitAdmissionAsync(Func<Task<ApiResult<PackageBatchRunResponse>>> submit)
+    {
         _busy = true;
         _error = null;
         try
         {
             var revision = Packages.Batch.Revision;
-            var result = await Packages.ApplyBatchAsync(token);
+            var result = await submit();
             if (_disposed || revision != Packages.Batch.Revision)
             {
                 if (!_disposed) _error = Loc["PkgBatchUnknownOutcome"];
@@ -250,7 +282,7 @@
                     break;
                 case ApiFailure failure:
                     _plan = null;
-                    _error = $"{Loc["PkgBatchUnknownOutcome"]} {failure.Message}";
+                    _error = Packages.Batch.AdmissionUnknown ? $"{Loc["PkgBatchUnknownOutcome"]} {failure.Message}" : failure.Message;
                     break;
             }
         }
@@ -312,6 +344,7 @@
 
     private async Task ReviewRemainingAsync()
     {
+        if (Packages.Batch.AdmissionBlocked) return;
         if (_run is { } run) Packages.Batch.RemoveCompleted(run);
         _run = null;
         Packages.Batch.Run = null;

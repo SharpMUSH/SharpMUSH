@@ -389,11 +389,10 @@
             {
                 case ApiFailure failure:
                     Snackbar.Add(failure.Message, Severity.Error);
-                    if (!on && failure.Status == System.Net.HttpStatusCode.Conflict)
-                    {
-                        Packages.Batch.Queue(new(plugin.Id, PackageBatchAction.PluginOff));
-                        Nav.NavigateTo("/admin/packages/batch");
-                    }
+                    break;
+                case PluginStateBlockers:
+                    Packages.Batch.Queue(new(plugin.Id, on ? PackageBatchAction.PluginOn : PackageBatchAction.PluginOff));
+                    Nav.NavigateTo("/admin/packages/batch");
                     break;
                 case PluginChangeResponse change:
                     Snackbar.Add(on ? Loc["PkgPluginTurnedOn", change.Plugin.Name] : Loc["PkgPluginTurnedOff", change.Plugin.Name], Severity.Success);

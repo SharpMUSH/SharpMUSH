@@ -43,21 +43,29 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 	}
 
 	[Test]
-	[Arguments(false, false)]
-	[Arguments(true, false)]
-	[Arguments(false, true)]
-	public async Task Plugin_off_is_direct_only_without_dependents(bool hasDependents, bool conflict)
+	[Arguments(false, false, false)]
+	[Arguments(true, false, false)]
+	[Arguments(false, true, false)]
+	[Arguments(false, true, true)]
+	public async Task Plugin_off_is_direct_only_without_dependents(bool hasDependents, bool conflict, bool structured)
 	{
 		handler.BlockPluginOff = conflict;
+		handler.StructuredPluginBlocker = structured;
 		handler.Plugin = new("example", "Example", "1.0", null, PluginOrigin.BuiltIn,
 			PluginBootStatus.Loaded, null, true, PluginPendingChange.None, true, null, 1, 1,
 			hasDependents ? ["dependent"] : []);
 		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackages>());
 		host.WaitForAssertion(() => host.FindAll("button.pkg-tab").Single(b => b.TextContent.Contains("PkgPlugins")));
 		await host.FindAll("button.pkg-tab").Single(b => b.TextContent.Contains("PkgPlugins")).ClickAsync();
+		var previousUri = Services.GetRequiredService<NavigationManager>().Uri;
 		await host.Find("button[aria-label='PkgPluginTurnOffNamed(Example)']").ClickAsync();
+		if (conflict && !structured)
+		{
+			await Assert.That(Services.GetRequiredService<NavigationManager>().Uri).IsEqualTo(previousUri);
+			await Assert.That(Services.GetRequiredService<MudBlazor.ISnackbar>().ShownSnackbars.Any(s => s.Message == "The plugin state file changed")).IsTrue();
+		}
 		await Assert.That(handler.PluginChanges).IsEqualTo(hasDependents || conflict ? 0 : 1);
-		await Assert.That(packages.Batch.Intents.Count).IsEqualTo(hasDependents || conflict ? 1 : 0);
+		await Assert.That(packages.Batch.Intents.Count).IsEqualTo(hasDependents || structured ? 1 : 0);
 		await Assert.That(host.Markup).DoesNotContain("PkgPluginDisableTitle");
 	}
 
@@ -187,6 +195,52 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 	}
 
 	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task Inflight_or_unknown_admission_survives_navigation_without_a_new_plan(bool loseResponse, bool refreshActualState)
+	{
+		packages.Batch.Queue(new("a", PackageBatchAction.PluginOff));
+		handler.WaitForApply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.LoseFirstApplyResponse = loseResponse;
+		var first = Render<MudHarness>(p => p.AddChildContent<PackageBatchReview>());
+		var submit = first.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchApply").ClickAsync();
+		await handler.ApplyStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await first.FindComponent<PackageBatchReview>().Instance.DisposeAsync();
+		first.Render(p => p.AddChildContent("<span>Another page</span>"));
+		first.Render(p => p.AddChildContent<PackageBatchReview>());
+		var reopened = first;
+		try
+		{
+			await Assert.That(handler.Plans.Count).IsEqualTo(1);
+			await Assert.That(reopened.FindAll("button").Any(b => b.TextContent.Trim() == "PkgBatchApply" && !b.HasAttribute("disabled"))).IsFalse();
+		}
+		finally { handler.WaitForApply.TrySetResult(); await submit; }
+		if (loseResponse)
+		{
+			await Assert.That(packages.Batch.Run).IsNull();
+			await Assert.That(reopened.Markup).Contains("PkgBatchUnknownOutcome");
+			await Assert.That(reopened.FindAll("button").Any(b => b.TextContent.Trim() == "PkgBatchApply" && !b.HasAttribute("disabled"))).IsFalse();
+		}
+		if (loseResponse && refreshActualState)
+		{
+			await reopened.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchReviewRemaining").ClickAsync();
+			await Assert.That(handler.ActualStateReads).IsEquivalentTo(["/api/packages", "/api/packages/plugins"]);
+			await Assert.That(handler.Plans.Count).IsEqualTo(2);
+			await Assert.That(handler.ApplyTokens.Count).IsEqualTo(1);
+			await Assert.That(packages.Batch.AdmissionBlocked).IsFalse();
+		}
+		else if (loseResponse)
+		{
+			await reopened.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchRecoverAdmission").ClickAsync();
+			await Assert.That(handler.ApplyTokens.Count).IsEqualTo(2);
+			await Assert.That(handler.ApplyTokens[1]).IsEqualTo(handler.ApplyTokens[0]);
+			await Assert.That(handler.Plans.Count).IsEqualTo(1);
+		}
+		else await Assert.That(handler.ApplyTokens.Count).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task An_accepted_run_updates_the_current_page_after_navigation()
 	{
 		packages.Batch.Queue(new("a", PackageBatchAction.PluginOff));
@@ -270,13 +324,15 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 	}
 
 	[Test]
-	public async Task Changed_affected_state_does_not_reuse_an_uninstall_confirmation()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task Changed_affected_state_does_not_reuse_an_uninstall_confirmation(bool sameVersionAndRevision)
 	{
 		packages.Batch.Queue(new("a", PackageBatchAction.Uninstall));
 		packages.Batch.ConfirmUninstall("a", "1.0", 1);
 		packages.Batch.SetPlan(new([new("old", packages.Batch.Intents[0], "Requested", "1.0", 1)], [], [], null, null));
 		await Assert.That(packages.Batch.ReviewFor("old")?.ConfirmUninstall is true).IsTrue();
-		packages.Batch.SetPlan(new([new("new", packages.Batch.Intents[0], "Changed", "2.0", 2)], [], [], null, null));
+		packages.Batch.SetPlan(new([new("new", packages.Batch.Intents[0], "Changed", sameVersionAndRevision ? "1.0" : "2.0", sameVersionAndRevision ? 1 : 2)], [], [], null, null));
 		await Assert.That(packages.Batch.ReviewFor("old")).IsNull();
 		await Assert.That(packages.Batch.ReviewFor("new")).IsNull();
 	}
@@ -314,6 +370,12 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 		public int SingleApplies { get; private set; }
 		public int PluginChanges { get; private set; }
 		public bool BlockPluginOff { get; set; }
+		public bool StructuredPluginBlocker { get; set; }
+		public TaskCompletionSource? WaitForApply { get; set; }
+		public TaskCompletionSource ApplyStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		public List<string> ApplyTokens { get; } = [];
+		public bool LoseFirstApplyResponse { get; set; }
+		public List<string> ActualStateReads { get; } = [];
 		public TaskCompletionSource? WaitForPlan { get; set; }
 		public TaskCompletionSource? WaitForStatus { get; set; }
 		public TaskCompletionSource StatusReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -329,12 +391,21 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 		{
 			var path = request.RequestUri!.AbsolutePath;
 			if (path == "/api/packages")
+			{
+				ActualStateReads.Add(path);
 				return new(HttpStatusCode.OK) { Content = JsonContent.Create<IReadOnlyList<InstalledPackageDto>>([]) };
+			}
 			if (path == "/api/packages/plugins")
+			{
+				ActualStateReads.Add(path);
 				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PluginsResponse(Plugin is null ? [] : [Plugin], true, false)) };
+			}
 			if (path == "/api/packages/plugins/example/disable" && Plugin is { } plugin)
 			{
-				if (BlockPluginOff) return new(HttpStatusCode.Conflict) { Content = new StringContent("Review dependent plugin changes in a batch") };
+				if (BlockPluginOff) return new(HttpStatusCode.Conflict)
+				{
+					Content = StructuredPluginBlocker ? JsonContent.Create(new PluginStateBlockers([], ["dependent-plugin"])) : new StringContent("The plugin state file changed")
+				};
 				PluginChanges++;
 				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PluginChangeResponse(plugin with { Enabled = false }, [], [])) };
 			}
@@ -354,7 +425,16 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 				StatusReadReturned.TrySetResult();
 				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PackageBatchRunResponse("run", PackageBatchRunState.Completed, [])) };
 			}
-			if (request.RequestUri.AbsolutePath == "/api/packages/batches/apply") Applies++;
+			if (request.RequestUri.AbsolutePath == "/api/packages/batches/apply")
+			{
+				Applies++;
+				var apply = (await request.Content!.ReadFromJsonAsync<PackageBatchApplyRequest>(cancellationToken))!;
+				ApplyTokens.Add(apply.ReviewToken);
+				ApplyStarted.TrySetResult();
+				if (WaitForApply is { } pending) await pending.Task;
+				if (LoseFirstApplyResponse && Applies == 1) throw new HttpRequestException("Response lost after admission");
+				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PackageBatchRunResponse("admitted", PackageBatchRunState.Completed, [])) };
+			}
 			return new(HttpStatusCode.Gone) { Content = new StringContent("Progress expired") };
 		}
 	}

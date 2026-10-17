@@ -30,7 +30,7 @@
                             }
                             else { <small>@Loc["PkgBatchStateCheckedAtReview"]</small> }
                         </span>
-                        <MudButton Disabled="@(Busy || Packages.Batch.Run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running)" Size="Size.Small" aria-label="@Loc["PkgBatchRemoveNamed", intent.TargetId]"
+                        <MudButton Disabled="@(Busy || Packages.Batch.AdmissionBlocked || Packages.Batch.Run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running)" Size="Size.Small" aria-label="@Loc["PkgBatchRemoveNamed", intent.TargetId]"
                                    OnClick="@(() => Packages.Batch.Remove(intent.ClientIntentId!))">@Loc["PkgBatchRemove"]</MudButton>
                     </li>
                 }

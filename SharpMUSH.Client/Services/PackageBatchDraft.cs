@@ -22,6 +22,9 @@ public sealed class PackageBatchDraft : IDisposable
 	public void Clear()
 	{
 		Revision++;
+		AuthorityRevision++;
+		AdmissionPending = false;
+		AdmissionUnknown = false;
 		intents.Clear();
 		reviews.Clear();
 		reviewedSteps.Clear();
@@ -53,6 +56,19 @@ public sealed class PackageBatchDraft : IDisposable
 	}
 	public event Action? Changed;
 	public long Revision { get; private set; }
+	public long AuthorityRevision { get; private set; }
+	public bool AdmissionPending { get; private set; }
+	public bool AdmissionUnknown { get; private set; }
+	public bool AdmissionBlocked => AdmissionPending || AdmissionUnknown;
+
+	internal void SetAdmissionState(bool pending, bool unknown)
+	{
+		AdmissionPending = pending;
+		AdmissionUnknown = unknown;
+		if (Plan is { } plan) Plan = plan with { ReviewToken = null };
+		Changed?.Invoke();
+	}
+
 
 	public void Queue(PackageBatchIntent intent, string? prerequisiteReason = null)
 	{
@@ -102,9 +118,10 @@ public sealed class PackageBatchDraft : IDisposable
 		var added = false;
 		foreach (var step in plan.Steps)
 		{
-			if (step.Intent.Action != PackageBatchAction.Uninstall || reviews.ContainsKey(step.StepId)) continue;
-			if (uninstallConsents.TryGetValue(step.Intent.TargetId, out var consent)
-				&& consent.Version == step.InstalledVersion && consent.Revision == step.InstalledRevision)
+			if (step.Intent.Action != PackageBatchAction.Uninstall) continue;
+			if (uninstallConsents.Remove(step.Intent.TargetId, out var consent)
+				&& consent.Version == step.InstalledVersion && consent.Revision == step.InstalledRevision
+				&& !reviews.ContainsKey(step.StepId))
 			{
 				reviews[step.StepId] = new(step.StepId, ConfirmUninstall: true);
 				Revision++;

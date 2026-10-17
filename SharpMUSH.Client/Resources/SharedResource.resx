@@ -9335,4 +9335,10 @@
   <data name="PkgBatchStateCheckedAtReview" xml:space="preserve">
     <value>Current state will be checked at review</value>
   </data>
+  <data name="PkgBatchAdmissionPending" xml:space="preserve">
+    <value>Submitting reviewed changes. Wait for the server response before reviewing another batch.</value>
+  </data>
+  <data name="PkgBatchRecoverAdmission" xml:space="preserve">
+    <value>Recover submitted batch status</value>
+  </data>
 </root>
