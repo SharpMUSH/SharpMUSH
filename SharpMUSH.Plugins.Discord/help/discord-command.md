@@ -72,6 +72,8 @@ The portal's Discord page, under Build & manage, does the same as these commands
 
 ## Setting up the bot
 
+Illustrated setup guide (screens, permissions and channel checks): [https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/guides/discord-setup.md](https://github.com/SharpMUSH/SharpMUSH/blob/main/docs/guides/discord-setup.md).
+
 - `@discord`
 - `@discord/connect`
 
