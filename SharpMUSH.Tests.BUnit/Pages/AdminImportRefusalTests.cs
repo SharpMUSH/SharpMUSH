@@ -52,9 +52,10 @@ public class AdminImportRefusalTests : TrackingBunitContext
 {
 	private const string Reason = "The configuration store is offline.";
 
-	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null)
+	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null, IReadOnlyList<ImportSessionStatus>? sessions = null)
 	{
-		var client = Track(new HttpClient(new RouteHandler(respond, bodies))
+		var client = Track(new HttpClient(new RouteHandler((method, path) => path == "api/databaseconversion/sessions"
+			? Json(HttpStatusCode.OK, JsonSerializer.Serialize(sessions ?? [])) : respond(method, path), bodies))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		});
@@ -314,4 +315,44 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			.Contains("ConversionCancelFailed(Session not found or already completed)");
 		await Assert.That(cut.FindAll("button").Any(b => b.TextContent.Contains("CancelConversion"))).IsTrue();
 	}
+	[Test]
+	public async Task ValidatedPreviewWaitsForExplicitRestartConfirmationBeforePromoting()
+	{
+		var asked = new List<string>();
+		var bodies = new List<string>();
+		AddServices((method, path) =>
+		{
+			asked.Add($"{method} {path}");
+			return path switch
+			{
+				"api/databaseconversion/upload" => Started(),
+				"api/databaseconversion/progress/s1" => Json(HttpStatusCode.OK, "{\"percentageComplete\":100}"),
+				"api/databaseconversion/result/s1" => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionResult { ImportSessionId = "s1", RequiresPromotion = true, PlayersConverted = 1 })),
+				"api/databaseconversion/promote/s1" => Json(HttpStatusCode.Accepted, "{}"),
+				_ => throw new InvalidOperationException("Unexpected request: " + path)
+			};
+		}, bodies);
+		var cut = await StartConversion();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-promote"), TimeSpan.FromSeconds(5));
+		await Assert.That(asked).DoesNotContain("POST api/databaseconversion/promote/s1");
+		await Assert.That(cut.Find(".dbimport-promote").HasAttribute("disabled")).IsTrue();
+		await cut.Find(".dbimport-confirm-restart input").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = true });
+		await Click(cut, "AdmImportPromote");
+		cut.WaitForAssertion(() => cut.Find(".dbimport-restart-required"), TimeSpan.FromSeconds(5));
+		await Assert.That(asked.Count(request => request == "POST api/databaseconversion/promote/s1")).IsEqualTo(1);
+		await Assert.That(bodies.Last()).Contains("true");
+	}
+
+	[Test]
+	public async Task ReloadedReadyPreviewCanBeReviewedWithoutUploadingAgain()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("No upload or promotion expected: " + path),
+			sessions: [new("saved-preview", "Ready", new ConversionResult { PlayersConverted = 2 }, null)]);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
+		await cut.Find(".dbimport-resume").ClickAsync();
+		await Assert.That(cut.FindAll(".dbimport-promote").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".dbimport-promote").HasAttribute("disabled")).IsTrue();
+	}
+
 }

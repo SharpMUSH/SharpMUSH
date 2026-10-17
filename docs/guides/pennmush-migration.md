@@ -18,15 +18,15 @@ Make a current inventory before changing either server:
 
 Create and checksum a PennMUSH flatfile, `maildb`, and `chatdb` while the source is quiescent. Copy them, the complete configuration tree, help/text files, and any other external state to storage the SharpMUSH host cannot overwrite. The importer accepts one uploaded `mush.cnf`; it does not follow that file's includes, so inventory included files and reconcile their effective settings yourself. The mail and chat inputs are optional to the importer, but omitting them intentionally imports no mail aliases/channels from those stores.
 
-Check the destination with `@storage`. Allow space for the disposable destination, source archive, and independent backups. The current importer writes directly into its configured world; production staging and promotion are tracked in [#1969](https://github.com/SharpMUSH/SharpMUSH/issues/1969). A production-sized first rehearsal belongs on a disposable, non-public SharpMUSH installation with the same image and storage settings planned for production.
+Check the destination with `@storage`. Allow space for the disposable destination, source archive, and independent backups. Portal and configured startup imports now build a private preview in `<world>.imports/<session-id>/world`; the running world, configuration, and credentials remain unchanged until a separate promotion and restart. A production-sized first rehearsal belongs on a disposable, non-public SharpMUSH installation with the same image and storage settings planned for production.
 
 ## 2. Rehearse the import
 
 1. Start a clean SharpMUSH stack and protect `/setup` from untrusted visitors. Claim the administrator account linked to `#1`.
-2. From setup, open **Import a PennMUSH, RhostMUSH or TinyMUX database** (later, **Database import** under Build & manage, at `/admin/import`). Leave the format on **Tell from the file** unless the import picks the wrong one. Upload the flatfile and the matching optional `mush.cnf`, `maildb`, and `chatdb` together. Configuration-derived object references and restrictions are applied before objects are converted; mail aliases, messages, channels, memberships, and history come from the ancillary databases.
+2. From setup, open **Import a PennMUSH, RhostMUSH or TinyMUX database** (later, **Database import** under Build & manage, at `/admin/import`). Leave the format on **Tell from the file** unless the import picks the wrong one. Upload the flatfile and the matching optional `mush.cnf`, `maildb`, and `chatdb` together. Configuration-derived object references and restrictions are applied only in the private preview before objects are converted; mail aliases, messages, channels, memberships, and history come from the ancillary databases.
 3. Read every skipped-configuration warning. Reproduce settings SharpMUSH supports and record intentional exceptions.
-4. Upload the flatfile and let conversion finish on the disposable installation. Conversion writes directly into its configured world and a failure can leave partial changes. Discard that destination and start clean before retrying; never run an import against a live game.
-5. Review the import diagnostics and validate the isolated destination. The production import path does not currently perform automatic staging or atomic promotion. Plan a manual cutover only after validation and a recoverable backup.
+4. Upload the flatfile and let the private preview finish. Every declared mail/chat/folder input is parsed before conversion writes begin. Failed or cancelled previews discard their private world and encryption keys, leaving the running game unchanged. Review counts, warnings, rewrites and the downloadable report. **Recent imports** recovers reports and ready previews after a page reload.
+5. A successful preview still needs acceptance and a maintenance window. Select the explicit replacement/restart confirmation, then **Promote preview and restart**. The process stops; its next start installs the staged world and matching encryption keys before opening the provider. The outgoing world and keys are retained together at `<world>.previous` and `<key-ring>.previous`. Existing connections are closed and their outgoing-world bindings removed before imported-world consumers start. If your supervisor does not automatically restart a clean exit, start the server again.
 6. Return to setup to choose HTTP/event handlers and bundled packages. An imported world's own handlers may already be present; do not install a second handler without understanding which attributes the setup choice moves or removes.
 
 An import rehearsal is evidence, not authority. Do not expose its endpoints, accept player changes, or quietly promote it into the production game. Repeat the process from a new final flatfile at cutover.
@@ -59,7 +59,7 @@ The `mush.cnf` slot reads PennMUSH's configuration file. A RhostMUSH or TinyMUX 
 
 ## Exporting a native Rhost database offline
 
-The standalone [RhostExport tool](../../tools/RhostExport/README.md) supports the pinned upstream Linux x64 legacy QDBM object-cache and MDBX attribute-cache profiles. It exports a private writable copy through the matching upstream `dbconvert`, validates the portable output, and publishes a new output directory only after validation. Upload its `world.flat` and any supplied portable mail companions using the existing Rhost import path on a disposable installation.
+The standalone [RhostExport tool](../../tools/RhostExport/README.md) supports the pinned upstream Linux x64 legacy QDBM object-cache and MDBX attribute-cache profiles. It exports a private writable copy through the matching upstream `dbconvert`, validates the portable output, and publishes a new output directory only after validation. Upload its `world.flat` and any supplied portable mail companions using the Rhost private-preview import path. Both pinned native backends are tested through export, isolated worker conversion and restart promotion.
 
 | Source | Supported route |
 | --- | --- |
@@ -69,7 +69,7 @@ The standalone [RhostExport tool](../../tools/RhostExport/README.md) supports th
 | Native mail/folder stores | Supply matching `wmail/unload` portable dumps; native mail is not decoded |
 | Other historical DBM, ABI or cache profiles | Unsupported; export using that source installation first |
 
-Use a stopped source or a complete consistent backup. Preserve originals and record source object and attribute inventories independently. The pinned upstream exporter can exit successfully despite missing attribute records; strict syntax and relationship validation cannot prove universal attribute completeness. Reconcile the exported counts and representative attributes against a healthy source before import. Raw native uploads and the remaining completeness/integration work are tracked in [#1963](https://github.com/SharpMUSH/SharpMUSH/issues/1963). The offline tool does not make the subsequent SharpMUSH import transactional.
+Use a stopped source or a complete consistent backup. Preserve originals and record source object and attribute inventories independently. The pinned upstream exporter can exit successfully despite missing attribute records; strict syntax and relationship validation cannot prove universal attribute completeness. Reconcile the exported counts and representative attributes against a healthy source before import. Raw native files are not accepted by the portal: use the supported offline bridge. The bridge cannot certify every historical storage profile or completeness against an already damaged source; preserve the independent inventory. The subsequent SharpMUSH private-preview and explicit restart-promotion protocol is separate from exporting.
 
 ## 3. Validate the rehearsed world
 
@@ -108,6 +108,27 @@ Rollback triggers should be objective: authentication failure, widespread data m
 
 To return to PennMUSH, stop accepting SharpMUSH changes, restore the old endpoint, and start the preserved PennMUSH world from the pre-cutover state. Player changes made after SharpMUSH opened are not automatically transferable; record that data-loss boundary in the announcement.
 
-The production importer does not automatically retain a `<world>.previous` world. Retain your own pre-cutover SharpMUSH backup and record which isolated destination was selected during manual cutover. Stop the SharpMUSH stack before moving LMDB directories; never copy or read a live `data.mdb` directly. For ongoing SharpMUSH recovery, restore a point-in-time world copy made by `@backup` or a Restic snapshot containing such a copy, following the [backup and restore procedures](../../deploy/README.md#backups-restic).
+A committed import retains `<world>.previous` and the matching `<key-ring>.previous`; neither is deleted automatically. From **Recent imports**, select the committed session and explicitly confirm **Restore previous world and restart**. A rollback also closes connections and requires fresh login. Keep your independent pre-cutover backup. If an interrupted commit blocks startup, stop the server and run the recovery command with exactly the same world and key-ring configuration, then start normally:
+
+```bash
+dotnet SharpMUSH.Server.dll --import-rollback <session-id>
+```
+
+For Compose, stop only the server first, then run its image against the same volumes/environment (the socket service need not be changed):
+
+```bash
+docker compose stop sharpmush-server
+docker compose run --rm --no-deps sharpmush-server --import-rollback <session-id>
+docker compose up -d sharpmush-server
+```
+
+The shipped Compose recipe calls the engine `sharpmush-server`; preserve any deployment overlays and environment settings when running these commands. The recovery command holds the engine lease and refuses to run beside an active engine. It recognizes partially completed rollback moves and retains displaced imported data inside the session directory. Failure stays closed rather than serving a mismatched world/key ring. Do not remove retained directories until the restored world and credential access have been verified. Stop the SharpMUSH stack before moving LMDB directories; never copy or read a live `data.mdb` directly. For ongoing SharpMUSH recovery, restore a point-in-time world copy made by `@backup` or a Restic snapshot containing such a copy, following the [backup and restore procedures](../../deploy/README.md#backups-restic).
 
 Keep the source archive and pre-cutover SharpMUSH backup until acceptance and the observation window are complete. Delete superseded data only after the operator has recorded the decision and verified a separate recoverable backup.
+
+
+## Configured startup imports
+
+`PENNMUSH_DATABASE_PATH` and its existing format/companion/config variables use the same private worker. A valid first start records promotion intent and exits; the second start installs it before resolving live stores. A content receipt prevents importing the same source/configuration on every restart, including recovery from a crash after the committed journal record but before receipt cleanup. Changing any declared source or configuration changes the receipt fingerprint and requests a new preview. A retained `.previous` pair must be archived deliberately before another promotion.
+
+Imports never follow configuration includes. Imported secret values remain encrypted in the private world with its private key ring; source/configuration copies are removed when the worker finishes. Current environment and file secret overrides retain precedence after promotion. Installed plugin code/state is copied privately for preview registration, and preview message publication is disabled. This isolates ordinary plugin services and state; administrator-installed plugins remain trusted executable code, not an operating-system sandbox.

@@ -66,7 +66,7 @@ internal static class DatabaseRegistration
 {
 	/// <summary>Builds the plugin catalog, then puts the Lightning provider behind every store interface it serves.</summary>
 	public static IServiceCollection AddSharpMushDatabase(
-		this IServiceCollection services, IConfiguration configuration)
+		this IServiceCollection services, IConfiguration configuration, string? worldPath = null, PluginDirectories? plugins = null)
 	{
 		// Relations a provider cannot own - an object's location changes under other actors - resolve
 		// through the Mediator's cached queries; the providers ask through this seam and know nothing
@@ -78,7 +78,7 @@ internal static class DatabaseRegistration
 		// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
 		// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB;
 		// SHARPMUSH_LIGHTNING_SYNC (full|nometasync|periodic) → full; SHARPMUSH_LIGHTNING_FLUSH_MS → 1000.
-		var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
+		var lightningPath = worldPath ?? Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
 			?? configuration["Lightning:Path"]
 			?? "lightning-data";
 		var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
@@ -88,7 +88,7 @@ internal static class DatabaseRegistration
 
 		// Shipped plugins sit beside the binary; installed ones on the data volume beside the world, so an image
 		// update keeps them (SHARPMUSH_PLUGINS_PATH names another directory).
-		var pluginDirectories = PluginDirectories.ForWorld(lightningPath,
+		var pluginDirectories = plugins ?? PluginDirectories.ForWorld(lightningPath,
 			Environment.GetEnvironmentVariable(PluginDirectories.PathVariable));
 		services.AddSingleton(pluginDirectories);
 		services.AddSingleton(sp =>

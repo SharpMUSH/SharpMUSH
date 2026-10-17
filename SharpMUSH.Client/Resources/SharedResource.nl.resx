@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Gekoppeld account vereisen</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Deze privévoorvertoning is gevalideerd. De actieve wereld is ongewijzigd. Controleer het verslag voordat u deze toepast.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Ik bevestig het vervangen van wereld en configuratie, het sluiten van verbindingen en het herstarten van de server.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Voorvertoning toepassen en herstarten</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Voorvertoning verwijderen</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Herstart aangevraagd. De wereld wordt voor hervatting geïnstalleerd. Maak opnieuw verbinding en meld u aan.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>De configuratie van {0} is alleen in de privévoorvertoning voorbereid.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Recente imports</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Ik bevestig het herstellen van de vorige wereld en sleutels, het sluiten van verbindingen en het herstarten.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Vorige wereld herstellen en herstarten</value>
+  </data>
 </root>

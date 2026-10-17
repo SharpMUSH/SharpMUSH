@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Требовать связанную учётную запись</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Частная предварительная копия проверена. Действующий мир не изменён. Изучите отчёт перед заменой.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Подтверждаю замену мира и конфигурации, закрытие соединений и перезапуск сервера.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Применить копию и перезапустить</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Удалить предварительную копию</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Запрошен перезапуск. Мир будет установлен до возобновления работы. Подключитесь и войдите снова.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Конфигурация из {0} подготовлена только в частной копии.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Недавние импорты</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Подтверждаю восстановление предыдущего мира и его ключей, закрытие соединений и перезапуск.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Восстановить предыдущий мир и перезапустить</value>
+  </data>
 </root>

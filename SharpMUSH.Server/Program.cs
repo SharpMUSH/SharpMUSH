@@ -42,6 +42,24 @@ public class Program
 	public static async Task Main(params string[] args)
 	{
 		ConfigureMarkup();
+		if (args is ["--import-worker", var sessionDirectory])
+		{
+			Environment.ExitCode = await Services.Imports.ImportWorker.RunAsync(sessionDirectory);
+			return;
+		}
+
+		if (args is ["--import-rollback", var rollbackId])
+		{
+			// Offline recovery must remain available when an interrupted swap intentionally blocks host startup.
+			var recoveryConfig = WebApplication.CreateBuilder(Array.Empty<string>()).Configuration;
+			var path = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") ?? recoveryConfig["Lightning:Path"] ?? "lightning-data";
+			var recovery = new Services.Imports.ImportPromotionJournal(path, Registration.DataProtectionRegistration.KeyRingPath(path));
+			using var lease = recovery.AcquireEngineLease();
+			recovery.RequestRollback(rollbackId);
+			recovery.ApplyPendingBeforeHostConstruction();
+			Console.WriteLine("Import rollback completed. Start the server normally to reopen the restored world.");
+			return;
+		}
 
 		var builder = WebApplication.CreateBuilder(args);
 		DatabaseProviderSetting.EnsureSupported(builder.Configuration["SHARPMUSH_DATABASE_PROVIDER"]);
@@ -68,7 +86,19 @@ public class Program
 		// server data on first use, and the hosted services are constructed before their lifecycle
 		// hooks run, so this is the one place that is both async and provably first. The provider's
 		// factory only constructs.
+		var imports = app.Services.GetRequiredService<Services.Imports.ImportPromotionJournal>();
+		using var engineLease = imports.AcquireEngineLease();
+		imports.ApplyPendingBeforeHostConstruction();
 		await app.Services.GetRequiredService<IDatabaseLifecycle>().Migrate();
+		var startupImport = await app.Services.GetRequiredService<PennMUSHDatabaseConversionService>().RunBeforeServingAsync();
+		if (startupImport.State == Services.Imports.StartupImportState.RestartRequested
+			|| startupImport.State == Services.Imports.StartupImportState.Failed
+			&& string.Equals(Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE"), "true", StringComparison.OrdinalIgnoreCase))
+		{
+			Environment.ExitCode = startupImport.State == Services.Imports.StartupImportState.Failed ? 1 : 0;
+			await app.DisposeAsync();
+			return;
+		}
 
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 		logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);

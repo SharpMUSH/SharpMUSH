@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Изискване на свързан акаунт</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Личният преглед е проверен. Действащият свят не е променен. Прочетете отчета преди прилагане.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Потвърждавам замяната на света и настройките, затварянето на връзките и рестартирането на сървъра.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Приложи прегледа и рестартирай</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Изхвърли прегледа</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Заявен е рестарт. Светът ще бъде инсталиран преди възобновяване. Свържете се и влезте отново.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Настройките от {0} са подготвени само в личния преглед.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Последни импортирания</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Потвърждавам възстановяването на предишния свят и ключовете му, затварянето на връзките и рестарта.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Възстанови предишния свят и рестартирай</value>
+  </data>
 </root>

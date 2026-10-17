@@ -1,4 +1,10 @@
 using System.IO.Compression;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Database.Lightning;
+using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services.Imports;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SharpMUSH.Library.Authorization;
@@ -117,6 +123,24 @@ public class RhostNativeExportImportTests
 			await Assert.That(result.AttributeCount).IsEqualTo(expected.Objects.Sum(x => x.Attributes.Count));
 			await AssertImportedWorldAsync(actualPath, Path.Join(result.OutputDirectory, "mail.dump"),
 				Path.Join(result.OutputDirectory, "folders.dump"));
+			var live = Path.Combine(root, "live");
+			await using (var outgoing = OpenPromoted(live)) await outgoing.Migrate();
+			var liveBefore = SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(live, "data.mdb")));
+			var journal = new ImportPromotionJournal(live);
+			var preview = await new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance)
+				.PreviewAsync(new DatabaseImportFiles(actualPath, Path.Join(result.OutputDirectory, "mail.dump"),
+					MailFolders: Path.Join(result.OutputDirectory, "folders.dump"), Format: DatabaseImportFormat.RhostMUSH));
+			await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
+			await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(live, "data.mdb")))).IsEquivalentTo(liveBefore);
+			await Assert.That(await SourceHashesAsync(source)).IsEqualTo(before);
+			journal.RequestPromotion(preview.Id);
+			journal.ApplyPendingBeforeHostConstruction();
+			await using var promoted = OpenPromoted(live);
+			await Assert.That(await promoted.GetObjectCountAsync()).IsGreaterThanOrEqualTo(expected.Objects.Count);
+			await Assert.That(await promoted.GetAllObjectsAsync().AnyAsync(obj => obj.Name == "Alice")).IsTrue();
+			var widget = await promoted.GetAllObjectsAsync().FirstAsync(obj => obj.Name == "Widget");
+			var description = await promoted.GetAttributeAsync(widget.DBRef, ["DESCRIBE"]).ToListAsync();
+			await Assert.That(description.Last().Value.ToPlainText()).Contains("café 雪");
 		}
 		finally
 		{
@@ -184,6 +208,9 @@ public class RhostNativeExportImportTests
 			Directory.Delete(root, true);
 		}
 	}
+
+	private static LightningDatabase OpenPromoted(string path) => new(NullLogger<LightningDatabase>.Instance,
+		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 
 	private static string CanonicalModel(RhostFlatfile flatfile)
 		=> JsonSerializer.Serialize(new

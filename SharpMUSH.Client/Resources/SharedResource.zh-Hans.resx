@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>要求关联账号</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>私有预览已验证。运行中的世界未改变。应用前请查看报告。</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>我确认替换世界和配置、断开所有连接并重启服务器。</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>应用预览并重启</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>丢弃预览</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>已请求重启。恢复运行前将安装世界。重启后请重新连接并登录。</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>来自 {0} 的配置仅在私有预览中准备。</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>最近的导入</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>我确认恢复原世界及其加密密钥、断开连接并重启。</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>恢复原世界并重启</value>
+  </data>
 </root>

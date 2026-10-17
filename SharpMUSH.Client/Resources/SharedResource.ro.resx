@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Solicită un cont asociat</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Previzualizarea privată este validată. Lumea activă nu s-a schimbat. Examinați raportul înainte de aplicare.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Confirm înlocuirea lumii și configurației, închiderea conexiunilor și repornirea serverului.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Aplică previzualizarea și repornește</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Elimină previzualizarea</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Repornire solicitată. Lumea va fi instalată înainte de reluare. Reconectați-vă și autentificați-vă din nou.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Configurația din {0} este pregătită numai în previzualizarea privată.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Importuri recente</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Confirm restaurarea lumii anterioare și a cheilor sale, închiderea conexiunilor și repornirea.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Restaurează lumea anterioară și repornește</value>
+  </data>
 </root>

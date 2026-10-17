@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Wymagaj połączonego konta</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Prywatny podgląd został sprawdzony. Aktywny świat nie zmienił się. Przejrzyj raport przed zastosowaniem.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Potwierdzam zastąpienie świata i konfiguracji, zamknięcie połączeń i ponowne uruchomienie serwera.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Zastosuj podgląd i uruchom ponownie</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Odrzuć podgląd</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Zażądano restartu. Świat zostanie zainstalowany przed wznowieniem. Połącz się i zaloguj ponownie.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Konfiguracja z {0} została przygotowana tylko w prywatnym podglądzie.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Ostatnie importy</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Potwierdzam przywrócenie poprzedniego świata i jego kluczy, zamknięcie połączeń i restart.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Przywróć poprzedni świat i uruchom ponownie</value>
+  </data>
 </root>

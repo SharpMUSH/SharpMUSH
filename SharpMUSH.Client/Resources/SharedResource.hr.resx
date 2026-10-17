@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Zahtijevaj povezani račun</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Privatni pregled je provjeren. Aktivni svijet nije promijenjen. Pregledajte izvješće prije primjene.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Potvrđujem zamjenu svijeta i postavki, zatvaranje veza i ponovno pokretanje poslužitelja.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Primijeni pregled i ponovno pokreni</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Odbaci pregled</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Zatraženo je ponovno pokretanje. Svijet će biti instaliran prije nastavka rada. Ponovno se povežite i prijavite.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Postavke iz {0} pripremljene su samo u privatnom pregledu.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Nedavni uvozi</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Potvrđujem vraćanje prethodnog svijeta i ključeva, zatvaranje veza i ponovno pokretanje.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Vrati prethodni svijet i ponovno pokreni</value>
+  </data>
 </root>

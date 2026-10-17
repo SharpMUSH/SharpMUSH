@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Összekapcsolt fiók megkövetelése</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>A privát előnézet ellenőrizve. Az aktív világ nem változott. Alkalmazás előtt tekintse át a jelentést.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Megerősítem a világ és a beállítások cseréjét, a kapcsolatok bontását és a szerver újraindítását.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Előnézet alkalmazása és újraindítás</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Előnézet elvetése</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Újraindítás kérve. A világ a működés folytatása előtt települ. Csatlakozzon és jelentkezzen be újra.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>A(z) {0} beállításai csak a privát előnézetben készültek el.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Legutóbbi importálások</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Megerősítem az előző világ és kulcsai visszaállítását, a kapcsolatok bontását és az újraindítást.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Előző világ visszaállítása és újraindítás</value>
+  </data>
 </root>

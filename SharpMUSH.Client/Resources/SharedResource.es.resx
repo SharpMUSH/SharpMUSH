@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Exigir una cuenta vinculada</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Esta vista previa privada está validada. El mundo activo no ha cambiado. Revise el informe antes de aplicarla.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Confirmo reemplazar el mundo y la configuración, cerrar las conexiones y reiniciar el servidor.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Aplicar vista previa y reiniciar</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Descartar vista previa</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Reinicio solicitado. El mundo se instalará antes de reanudar. Vuelva a conectarse e iniciar sesión.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>La configuración de {0} solo está preparada en la vista previa privada.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Importaciones recientes</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Confirmo restaurar el mundo anterior y sus claves, cerrar las conexiones y reiniciar.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Restaurar el mundo anterior y reiniciar</value>
+  </data>
 </root>

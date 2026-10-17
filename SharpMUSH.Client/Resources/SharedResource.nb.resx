@@ -6449,4 +6449,31 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Krev tilknyttet konto</value>
   </data>
+  <data name="AdmImportPreviewReady" xml:space="preserve">
+    <value>Den private forhåndsvisningen er validert. Den aktive verdenen er uendret. Les rapporten før bruk.</value>
+  </data>
+  <data name="AdmImportConfirmRestart" xml:space="preserve">
+    <value>Jeg bekrefter utskifting av verden og konfigurasjon, lukking av forbindelser og omstart av serveren.</value>
+  </data>
+  <data name="AdmImportPromote" xml:space="preserve">
+    <value>Bruk forhåndsvisning og start på nytt</value>
+  </data>
+  <data name="AdmImportAbort" xml:space="preserve">
+    <value>Forkast forhåndsvisning</value>
+  </data>
+  <data name="AdmImportRestartRequested" xml:space="preserve">
+    <value>Omstart er forespurt. Verdenen installeres før driften gjenopptas. Koble til og logg inn igjen.</value>
+  </data>
+  <data name="AdmImportConfigPrepared" xml:space="preserve">
+    <value>Konfigurasjonen fra {0} er bare klargjort i den private forhåndsvisningen.</value>
+  </data>
+  <data name="AdmImportSessions" xml:space="preserve">
+    <value>Nylige importer</value>
+  </data>
+  <data name="AdmImportConfirmRollback" xml:space="preserve">
+    <value>Jeg bekrefter gjenoppretting av forrige verden og dens nøkler, lukking av forbindelser og omstart.</value>
+  </data>
+  <data name="AdmImportRollback" xml:space="preserve">
+    <value>Gjenopprett forrige verden og start på nytt</value>
+  </data>
 </root>
