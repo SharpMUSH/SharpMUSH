@@ -87,6 +87,7 @@ public static class AttributeEntrySeed
 		("LASTIP", ["no_clone","wizard","locked","prefixmatch"]),
 		("LASTLOGOUT", ["no_clone","wizard","locked","prefixmatch"]),
 		("LASTPAGED", ["no_clone","wizard","locked","prefixmatch"]),
+		("LASTPAGER", ["no_clone","wizard","locked","prefixmatch"]),
 		("LASTSITE", ["no_clone","wizard","locked","prefixmatch"]),
 		("LEAVE", ["no_command","prefixmatch"]),
 		("LFAIL", ["no_command","prefixmatch"]),

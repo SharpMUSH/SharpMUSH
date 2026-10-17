@@ -50,6 +50,25 @@ public class RegistryContractAuditTests
 	}
 
 	[Test]
+	public async Task PageReplyReachesGeneratedDeclarationsAndEditor()
+	{
+		var command = CommandLibrary.CreateMetadata().Single(pair => pair.Key.Equals("PAGE", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(command.Value.Switches).Contains("REPLY");
+		await Assert.That(command.Value.SingleArgumentSwitches).Contains("REPLY");
+		await Assert.That(string.Join(',', command.Value.ParameterNames)).IsEqualTo("player-list,message");
+		var snapshot = BuiltInAnalysisCatalog.CreateSnapshot();
+		var entry = snapshot.Entries.Single(entry => entry.Kind == "command" && entry.Name.Equals("PAGE", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(entry.Switches).Contains("REPLY");
+		var analyzer = AnalysisCatalogAnalyzer.Create(snapshot, SharpMUSHOptions.Default());
+		var completion = analyzer.Complete("", 0, 0).Single(item => item.Kind == "Keyword" && item.Label.Equals("PAGE", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(completion.Documentation).Contains("REPLY");
+		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
+		var portal = definitions.RootElement.GetProperty("commands").GetProperty(command.Key);
+		await Assert.That(portal.GetProperty("switches").EnumerateArray().Select(value => value.GetString())).Contains("REPLY");
+		await Assert.That(string.Join(',', portal.GetProperty("parameterNames").EnumerateArray().Select(value => value.GetString()))).IsEqualTo("player-list,message");
+	}
+
+	[Test]
 	public async Task PortalDeclarationsAndAliasesMatchGeneratedContracts()
 	{
 		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);

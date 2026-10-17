@@ -1,0 +1,38 @@
+# The outgoing shorthand is PennMUSH behavior. /reply is a SharpMUSH extension, covered by engine tests.
+::case page.shorthand  omitted recipients reuse the last successful outgoing targets
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as alice
+page Bob=Explicit initial page
+page Bare followup
+page =Equals followup
+page/noeval [add(1,2)] literal
+page/noeval =[add(1,2)] literal
+page Bob=
+page =After empty explicit message
+
+::case page.group  preserve group ordering and successful-only target memory
+::login wiz Wiz wizpass
+::as alice
+page Bob Wiz=Group initial
+page Group followup
+::as wiz
+@set *Bob=HAVEN
+::as alice
+page Bob Wiz=Partial delivery
+page Partial followup
+::as wiz
+@set *Bob=!HAVEN
+
+::case page.reconnect  outgoing target memory is a character attribute across reconnect
+::logout alice
+::login alice Alice alicepass
+page Reconnected followup
+
+::case page.override  only the existing Pemit_All authority bypasses page refusals
+::as wiz
+@set *Bob=HAVEN
+::as alice
+page/override Bob=Unauthorized override
+::as wiz
+@set *Bob=!HAVEN
