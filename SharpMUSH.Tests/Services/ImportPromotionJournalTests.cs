@@ -251,4 +251,20 @@ public class ImportPromotionJournalTests
 		await Assert.That(Directory.Exists(orphan)).IsTrue();
 	}
 
+	[Test]
+	public async Task UnreadableExistingJournalFailsClosedInsteadOfLookingUninitialized()
+	{
+		if (OperatingSystem.IsWindows()) return;
+		var journal = new ImportPromotionJournal(Path.Combine(_root, "live"));
+		var session = journal.Create();
+		var original = File.GetUnixFileMode(session.Directory);
+		try
+		{
+			File.SetUnixFileMode(session.Directory, UnixFileMode.None);
+			await Assert.That(() => journal.List()).Throws<UnauthorizedAccessException>();
+			await Assert.That(journal.ApplyPendingBeforeHostConstruction).Throws<UnauthorizedAccessException>();
+		}
+		finally { File.SetUnixFileMode(session.Directory, original); }
+	}
+
 }

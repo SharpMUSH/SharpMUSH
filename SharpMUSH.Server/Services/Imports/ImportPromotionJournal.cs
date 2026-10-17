@@ -97,9 +97,20 @@ public sealed class ImportPromotionJournal
 		if (!Directory.Exists(_root)) return [];
 		return Directory.EnumerateDirectories(_root)
 			.Where(path => Guid.TryParseExact(Path.GetFileName(path), "N", out _)
-				&& File.Exists(Path.Combine(path, "session.json")))
+				&& HasInitialJournal(path))
 			.OrderByDescending(path => File.GetLastWriteTimeUtc(Path.Combine(path, "session.json")))
 			.Select(path => Get(Path.GetFileName(path))).ToArray();
+	}
+
+	private static bool HasInitialJournal(string directory)
+	{
+		try
+		{
+			File.GetAttributes(Path.Combine(directory, "session.json"));
+			return true;
+		}
+		catch (FileNotFoundException) { return false; }
+		catch (DirectoryNotFoundException) { return false; }
 	}
 
 	public void Save(ImportSession session) => WriteDurable(Path.Combine(session.Directory, "session.json"), session);
