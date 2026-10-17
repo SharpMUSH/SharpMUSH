@@ -29,7 +29,7 @@
 
 `json_query(<json>[, <action>[, <arg>, ...<argN>]])`
 
-This function returns information about JSON data. `<json>` should be a valid JSON string, as returned by the json() function. There are 5 possible `<action>`s:
+This function returns information about JSON data. `<json>` should be a valid JSON string, as returned by the json() function. There are 6 possible `<action>`s:
 
 Action...    Returns...<br>
 type         The type of `<json>`, one of string, number, boolean, null, array or object. Default if no `<action>` is given.<br>
