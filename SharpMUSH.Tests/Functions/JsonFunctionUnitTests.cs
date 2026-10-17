@@ -262,6 +262,19 @@ public class JsonFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	[Test]
+	[Arguments("json_mod(json(object,a,1),patch,null)", "null")]
+	[Arguments("json_mod(json(array,1),patch,null)", "null")]
+	[Arguments("json_mod(null,patch,null)", "null")]
+	[Arguments("json_mod(json(object,a,1),patch,json(object,a,null))", "{}")]
+	public async Task JsonModNullMergePatch(string expression, string expected)
+	{
+		var result = await Parser.FunctionParse(MarkupText.Plain(expression))
+			?? throw new InvalidOperationException("Parser returned no state");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.HadErrors).IsFalse();
+	}
+
 	// Penn json.sort.1-4 (json_mod sort)
 	[Test]
 	[Arguments("json_mod(json(array, json(object, id, 5), json(object, id, 4)), sort, $.id)", """[{"id":4},{"id":5}]""")]

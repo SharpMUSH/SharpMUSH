@@ -235,7 +235,7 @@ public partial class Functions
 					return new CallState(ErrorMessages.Returns.MissingJson2);
 				}
 				var patchDoc = JsonNode.Parse(arg2);
-				var merged = ApplyMergePatch(jsonDoc, patchDoc!);
+				var merged = ApplyMergePatch(jsonDoc, patchDoc);
 				return new CallState(merged?.ToJsonString() ?? "null");
 			}
 
@@ -359,11 +359,11 @@ public partial class Functions
 		}
 	}
 
-	private JsonNode? ApplyMergePatch(JsonNode? target, JsonNode patch)
+	private JsonNode? ApplyMergePatch(JsonNode? target, JsonNode? patch)
 	{
 		if (patch is not JsonObject patchObj)
 		{
-			return patch.DeepClone();
+			return patch?.DeepClone();
 		}
 
 		if (target is not JsonObject targetObj)

@@ -145,7 +145,7 @@ The approved next metadata slice covers only `json_query` and `json_fill`. The i
 
 The focused regressions exercise the actual analysis catalog/analyzer, generated portal definitions and registered Monaco signature provider. Existing JSON parser tests characterize explicit-action queries, segmented and combined paths, multiple fills and rejection of incomplete pairs. Omitted-action coverage in this slice checks editor signatures and exported declarations, rather than adding a parser behavior test. These are partial contract checks: full error/permission/resource-limit/compatibility review and live browser/LSP identity remain pending. The census retains `pending-behavioral-review` and #1797 remains open.
 
-One separate source-only candidate remains under this tracker: `json_mod(json(object,a,1),patch,null)` appears to pass a null `JsonNode` to `ApplyMergePatch`, whose non-object branch calls `DeepClone()`. Existing patch fixtures cover null object members but not a whole-document null patch. This candidate has not been reproduced through the parser in this slice; its caller-visible error and compatibility contract need reproduction and prioritization before any behavior change. No `json_mod` implementation changes are included.
+The metadata slice also identified a separate source-only `json_mod(...,patch,null)` candidate. It was subsequently reproduced through the registered parser and corrected in the [whole-document null merge-patch follow-up](#whole-document-null-merge-patches) below; the metadata correction itself did not change `json_mod`.
 
 Validation on merged paging baseline `79f3c824c96af7ea121f14b45eb44f2c7f6e5e9d`, with SDK `11.0.100-rc.2.26504.105`, disk-backed scratch and maximum test parallelism 8:
 
@@ -156,3 +156,11 @@ Validation on merged paging baseline `79f3c824c96af7ea121f14b45eb44f2c7f6e5e9d`,
 - Changed C# files were formatted twice and `git diff --check` passed. No broad engine run or live browser/LSP test was performed for this slice.
 
 The exporter hashes the sorted tracked paths and their on-disk bytes, excluding the census itself; it does not use Git HEAD as its content identity. Scratch candidates are working-source review evidence. Final tracked census generation is reserved for the approved source commit, followed by a census-only commit, so the snapshot includes the merged paging registration without claiming behavioral completion.
+
+## Whole-document null merge patches
+
+Four new registered-parser cases isolate `json_mod(...,patch,null)`: object, array and null targets must all return the literal JSON text `null` without an internal-error state. Before correction, these three cases returned empty output with `HadErrors=true`; an object-member null patch correctly returned `{}`. The helper now accepts the nullable node produced by `JsonNode.Parse("null")` and returns null for the whole-document replacement. Object-member null still deletes that member.
+
+This follows [RFC 7396 §2](https://www.rfc-editor.org/rfc/rfc7396.html#section-2): a non-object patch replaces the entire target. PennMUSH's pinned [`funjson.c` patch branch](https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/funjson.c#L285) delegates to SQLite `json_patch`; a direct SQLite reference check returns text `null` for all three targets. That reference check is not a native PennMUSH parser run. Registration metadata, argument counts and the census snapshot are unchanged; this is one confirmed runtime correction, and #1797 remains open.
+
+Validation on `08946dc8eead0cd8b26939226335d311e77132ff` plus this correction: the new parser cases were RED (three failures, one member-deletion control pass) before the helper change. After correction, `dotnet build SharpMUSH.Tests -m:2 -nr:false` passed the normal formatting gate with zero warnings/errors, and the complete `JsonFunctionUnitTests` class passed 127 cases with two existing connection-setup OOB skips (129 total, zero failures), including all four regressions. Changed C# was formatted twice; `git diff --check` passed. Full engine and native PennMUSH suites were not run for this bounded correction.
