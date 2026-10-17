@@ -1,0 +1,28 @@
+/* Provider registrations contain long callback URLs and opaque client identifiers. Keep these
+   readable within the configuration column and narrow phone viewports without horizontal scroll. */
+.config-section-page {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.config-section-page p,
+.config-section-page code,
+.config-section-page a {
+    overflow-wrap: anywhere;
+}
+
+.config-section-page code {
+    white-space: normal;
+}
+
+.config-section-page ::deep .mud-input-control,
+.config-section-page ::deep .mud-input-slot {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@container page (max-width: 48rem) {
+    .config-section-page ::deep .mud-checkbox {
+        align-items: flex-start;
+    }
+}

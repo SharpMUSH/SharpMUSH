@@ -1,6 +1,8 @@
 @page "/admin/accounts"
 @attribute [Authorize(Roles = "Wizard,God")]
 @using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models
+@using SharpMUSH.Client.Components.Settings
 @inject AdminAccountsService AccountsService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -10,6 +12,13 @@
 <div class="page-stack page-stack--padded accounts-page">
     <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmAccountsTitle"]" />
 
+    <KitCard Title="@Loc["AdmStaffRecoveryProof"]">
+        @if (_proofGrant is null)
+        {
+            <RecentAccountProofPrompt @key="_proofVersion" Operation="AccountSecurityOperation.StaffRecovery" ReturnPath="/admin/accounts" OnProved="StaffProved" />
+        }
+        <p>@Loc["AdmStaffRecoveryChooseAgain"]</p>
+    </KitCard>
     <KitCard>
         <div class="accounts-body">
             <MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmAccountsSearchPlaceholder"]"
@@ -80,6 +89,9 @@
     private IReadOnlyList<AdminAccountsService.AdminAccountRow> _rows = [];
     private string _search = string.Empty;
     private bool _loading = true;
+    private string? _proofGrant;
+    private int _proofVersion;
+    private void StaffProved(string grant) => _proofGrant = grant;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -155,9 +167,13 @@
 
     private async Task OpenResetAsync(AdminAccountsService.AdminAccountRow row)
     {
-        var temp = $"temp-{Guid.NewGuid().ToString("N")[..10]}";
+        if (_proofGrant is null) { Snackbar.Add(Loc["AdmStaffRecoveryVerifyFirst"], Severity.Warning); return; }
+        var grant = _proofGrant;
+        _proofGrant = null;
+        _proofVersion++;
+        var temp = "temp-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24));
         // The temporary password is in this line and nowhere else, so it must stay up until dismissed.
-        await ReportAsync(await AccountsService.ResetPasswordAsync(row.Id, temp),
+        await ReportAsync(await AccountsService.ResetPasswordAsync(row.Id, temp, grant),
             Loc["AdmPasswordReset", row.Username, temp].Value,
             Loc["AdmResetFailed"].Value,
             Severity.Warning, o => o.RequireInteraction = true);

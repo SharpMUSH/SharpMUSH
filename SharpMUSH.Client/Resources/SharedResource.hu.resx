@@ -6320,6 +6320,123 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maximális játékosszám</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Más bejelentkezési módok</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Folytatás ezzel: {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Bejelentkezés újrakezdése</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Válassz felhasználónevet az új fiókodhoz. A szolgáltatódnál használt e-mail-címet nem használjuk fiókok keresésére vagy összevonására.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>A folytatáshoz igazold a fiókod egyik bejelentkezési módját. Ez a megerősítés egyetlen műveletre érvényes.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Fiókjelszó megerősítése</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Megerősítés hozzáférési kulccsal</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>A hozzáférési kulcs kérése megszakadt. Próbáld újra, amikor készen állsz.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Nem sikerült igazolni a fiók bejelentkezési módját. Próbáld újra.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Bejelentkezési módok</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Kezeld a fiókodhoz hozzáférést adó módokat. A meglévő karakterjelszavak továbbra is működnek. Egy mód eltávolítása vagy módosítása kijelentkezteti a többi munkamenetet.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Más bejelentkezési módok hozzáadása előtt állíts be fiókjelszót egy saját karaktered jelszavával. A karakterjelszóval történő fiókbejelentkezés engedélyezve marad.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Karakterjelszó</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Új jelszó megerősítése</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Fiókjelszó beállítása</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>{0} összekapcsolása</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Összekapcsolás megszüntetése</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Fiókjelszó eltávolítása</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Karakterjelszóval történő fiókbejelentkezés letiltása</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Karakterjelszóval történő fiókbejelentkezés engedélyezése</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>E-mail-cím módosítása</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Fiókjelszó beállítása vagy módosítása</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Karakterbejelentkezés önálló klienssel</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Klienses bejelentkezés ehhez: {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Igazold a fiókodat, majd hozz létre egyszer használható belépést egy önálló MU*-klienshez. Minden belépés két perc után lejár.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Egyszer használható belépés létrehozása</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>{0} másodperc múlva lejár</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Használj TLS-t támogató önálló klienst. A titkosítatlan telnet bárki számára felfedi ezt a belépést, aki megfigyelheti a kapcsolatot.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Még fel nem használt belépések</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Független karakterjelszó beállítása</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Ez a jelszó közvetlenül ezzel a karakterrel jelentkeztet be. Nem módosítja a fiókod jelszavát.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Karakterjelszó beállítása</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>A karakterjelszó megváltozott. A karakter még fel nem használt, egyszer használható belépéseit visszavontuk.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Nem sikerült hozzáférni a vágólaphoz. Jelöld ki és másold ki a megjelenített parancsot.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Létrehozás választott karakterjelszó nélkül; használj egyszer használható klienses belépést, vagy állíts be jelszót később.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Bezárás</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Másolás</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Visszavonás</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>A jelszó módosítása után bontsd a karakterrel játszó meglévő kliensek kapcsolatát.</value>
+  </data>
   <data name="AdmDiscordAccessRestricted" xml:space="preserve">
     <value>Csak összekapcsolt fiókok</value>
   </data>

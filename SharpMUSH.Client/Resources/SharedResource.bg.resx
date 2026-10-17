@@ -6320,6 +6320,123 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Максимален брой играчи</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Други начини за вход</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Продължете с {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Започнете входа отново</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Изберете потребителско име за новия си акаунт. Имейлът от доставчика не се използва за намиране или обединяване на акаунти.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Потвърдете начин за вход в акаунта, за да продължите. Потвърждението е валидно за едно действие.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Потвърдете паролата на акаунта</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Потвърдете с ключ за достъп</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Заявката за ключ за достъп беше отменена. Опитайте отново, когато сте готови.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Начинът за вход в акаунта не можа да бъде потвърден. Опитайте отново.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Начини за вход</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Управлявайте начините за достъп до акаунта си. Съществуващите пароли на персонажите продължават да работят. Премахването или промяната на начин за вход прекратява другите сесии.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Задайте парола на акаунта чрез паролата на свой персонаж, преди да добавяте други начини за вход. Входът в акаунта с парола на персонаж остава разрешен.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Парола на персонажа</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Потвърдете новата парола</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Задайте парола на акаунта</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Свържете {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Прекъснете връзката</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Премахнете паролата на акаунта</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Забранете входа в акаунта с парола на персонаж</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Разрешете входа в акаунта с парола на персонаж</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Променете имейла</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Задайте или променете паролата на акаунта</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Вход с персонаж чрез самостоятелен клиент</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Вход чрез самостоятелен клиент за {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Потвърдете акаунта си, след което създайте еднократен вход за самостоятелен MU* клиент. Всеки вход изтича след две минути.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Създайте еднократен вход</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Изтича след {0} секунди</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Използвайте самостоятелен клиент с TLS. Обикновеният telnet разкрива този вход на всеки, който може да наблюдава връзката.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Неизползвани входове</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Задайте отделна парола на персонажа</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Тази парола позволява директен вход с този персонаж. Тя не променя паролата на акаунта ви.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Задайте парола на персонажа</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Паролата на персонажа е променена. Неизползваните еднократни входове за този персонаж са оттеглени.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Достъпът до клипборда е неуспешен. Изберете и копирайте показаната команда.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Създайте без избрана парола на персонажа; използвайте еднократни входове чрез самостоятелен клиент или задайте парола по-късно.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Затворете</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Копирайте</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Оттеглете</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Прекъснете връзките на съществуващите клиенти, които играят с този персонаж, след промяната на паролата.</value>
+  </data>
   <data name="AdmDiscordAccessRestricted" xml:space="preserve">
     <value>Само свързани акаунти</value>
   </data>

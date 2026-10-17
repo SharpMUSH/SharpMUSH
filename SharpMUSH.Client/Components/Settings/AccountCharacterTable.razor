@@ -42,6 +42,9 @@
                                     <MudIconButton Icon="@Icons.Material.Outlined.Palette" Size="Size.Small"
                                                    Href="@($"/settings/theme#theme-{context.DbrefNumber}")"
                                                    aria-label="@Loc["NavThemeForCharacter", context.Name]" />
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Key" Size="Size.Small"
+                                                   aria-label="@Loc["AuthNativeLoginFor", context.Name]"
+                                                   OnClick="() => _selected = context" />
                                     @* God (#1) never leaves its account. *@
                                     @if (context.DbrefNumber != 1)
                                     {
@@ -53,6 +56,11 @@
                             </RowTemplate>
                         </MudTable>
                     </div>
+                }
+
+                @if (_selected is { } selected)
+                {
+                    <NativeCharacterCredentialsPanel @key="selected" Character="selected" OnClose="() => _selected = null" />
                 }
 
                 <div class="acct-create">
@@ -69,6 +77,14 @@
 </div>
 
 @code {
+    private AccountAuthService.CharacterSummary? _selected;
+
+    protected override void OnParametersSet()
+    {
+        if (_selected is { } selected && !Characters.Any(c => c.DbrefNumber == selected.DbrefNumber && c.CreationTime == selected.CreationTime))
+            _selected = null;
+    }
+
     /// <summary>The characters linked to the account.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<AccountAuthService.CharacterSummary> Characters { get; set; } = [];
 

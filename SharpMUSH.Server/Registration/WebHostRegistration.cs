@@ -97,10 +97,8 @@ internal static class WebHostRegistration
 		services.AddCors(options =>
 		{
 			// C-4: Read allowed origins from Cors:AllowedOrigins config array.
-			// Falls back to dev-only wildcard (no AllowCredentials) when no origins are configured.
-			// AllowCredentials() is required for SignalR WebSocket handshake, so it is only
-			// enabled when specific origins are listed (or unconditionally in development, where
-			// localhost is the only practical origin).
+			// Production allows credentials only for explicitly configured origins.
+			// Development accepts any origin with credentials for local portal/SignalR testing.
 			var allowedOrigins = configuration
 				.GetSection("Cors:AllowedOrigins")
 				.Get<string[]>();
@@ -181,6 +179,7 @@ internal static class WebHostRegistration
 				OAuthBearerAuthenticationHandler.SchemeName, _ => { });
 
 		services.AddAnalysisTransportPolicy(configuration);
+		SharpMUSH.Server.Authentication.External.ExternalAuthenticationRegistration.AddExternalAccountAuthentication(services);
 
 		return services;
 	}

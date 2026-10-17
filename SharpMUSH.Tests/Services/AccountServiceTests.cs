@@ -54,6 +54,50 @@ public class AccountServiceTests
 		};
 
 	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task CharacterPasswordAccountFallbackRespectsExplicitAccountPolicy(bool allowed)
+	{
+		var (svc, db, pw, _) = Build();
+		var account = MakeAccount();
+		account.PasswordHash = null;
+		account.AllowCharacterPasswordAccountLogin = allowed;
+		var player = CharacterForLogin();
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
+		db.GetCharactersForAccountAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new[] { player });
+		pw.PasswordIsValid("character-password", "character-hash").Returns(true);
+
+		await Assert.That(await svc.AuthenticateAsync("TestUser", "character-password") is SharpAccount).IsEqualTo(allowed);
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task NamedCharacterAccountFallbackRespectsExplicitAccountPolicy(bool allowed)
+	{
+		var (svc, db, pw, _) = Build();
+		var account = MakeAccount();
+		account.AllowCharacterPasswordAccountLogin = allowed;
+		var player = CharacterForLogin();
+		db.GetPlayerByNameOrAliasAsync("Character", Arg.Any<CancellationToken>()).Returns(new[] { player }.ToAsyncEnumerable());
+		db.GetAccountForCharacterAsync(player.Object.DBRef, Arg.Any<CancellationToken>()).Returns(account);
+		pw.PasswordIsValid("character-password", "character-hash").Returns(true);
+
+		await Assert.That(await svc.AuthenticateAsync("Character", "character-password") is SharpAccount).IsEqualTo(allowed);
+	}
+
+	private static SharpPlayer CharacterForLogin() => new()
+	{
+		Object = new SharpObject
+		{
+			Key = 10, CreationTime = 1000, Name = "Character", Type = "PLAYER", Locks = SharpObject.EmptyLocks,
+			Owner = null!, Grants = null!, Powers = null!, Attributes = null!, LazyAttributes = null!,
+			AllAttributes = null!, LazyAllAttributes = null!, Flags = null!, Parent = null!, Zone = null!, Children = null!
+		},
+		Location = null!, Home = null!, PasswordHash = "character-hash", Quota = 0
+	};
+
+	[Test]
 	public async ValueTask CreateAccount_NewDisplayName_CreatesAndReturnsAccount()
 	{
 		var (svc, db, pw, _) = Build();

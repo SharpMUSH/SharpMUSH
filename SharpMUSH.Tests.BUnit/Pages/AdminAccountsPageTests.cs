@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using SharpMUSH.Library.Models;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,10 +24,20 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 {
 	public HttpStatusCode ListStatusCode { get; set; } = HttpStatusCode.OK;
 	public string? ListErrorContent { get; set; }
+	public int ResetCount { get; private set; }
+	public string? LastResetProofGrant { get; private set; }
 
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (request.Method == HttpMethod.Get && path == "api/account/security") return Json(new { hasPassword = true, passkeys = Array.Empty<object>(), identities = Array.Empty<object>() });
+		if (request.Method == HttpMethod.Get && path == "api/auth/external/providers") return Json(Array.Empty<object>());
+		if (request.Method == HttpMethod.Post && path == "api/account/security/proof/password") return Json(new { grant = "fresh-proof" });
+		if (request.Method == HttpMethod.Post && path.EndsWith("/reset-password"))
+		{
+			var body = await request.Content!.ReadFromJsonAsync<JsonElement>(cancellationToken);
+			ResetCount++; LastResetProofGrant = body.GetProperty("proofGrant").GetString();
+		}
 
 		if (request.Method == HttpMethod.Get && path == "api/admin/accounts")
 		{
@@ -35,10 +47,10 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 				// owns and disposes it — must not be disposed here. Built in one expression
 				// (rather than a local `var response` mutated afterwards) so CodeQL's disposal
 				// analysis doesn't flag a local it was never meant to dispose.
-				return Task.FromResult(new HttpResponseMessage(ListStatusCode)
+				return new HttpResponseMessage(ListStatusCode)
 				{
 					Content = ListErrorContent != null ? new StringContent(ListErrorContent) : null
-				});
+				};
 			}
 
 			var rows = new object[]
@@ -105,22 +117,22 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 										Characters = Array.Empty<object>(),
 								},
 			};
-			return Task.FromResult(Json(rows));
+			return Json(rows);
 		}
 
 		if (request.Method == HttpMethod.Post &&
 				(path.EndsWith("/reset-password") || path.EndsWith("/disable") || path.EndsWith("/enable")
 					|| path.EndsWith("/status")))
 		{
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+			return new HttpResponseMessage(HttpStatusCode.OK);
 		}
 
 		if (request.Method == HttpMethod.Delete && path.Contains("/characters/"))
 		{
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+			return new HttpResponseMessage(HttpStatusCode.OK);
 		}
 
-		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+		return new HttpResponseMessage(HttpStatusCode.NotFound);
 	}
 
 	private static HttpResponseMessage Json<T>(T value) =>
@@ -159,6 +171,7 @@ file static class AdminAccountsTestServices
 						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 						NullLogger<AccountAuthService>.Instance, []))
 				.AddSingleton(sp => new AdminAccountsService(sp.GetRequiredService<IHttpClientFactory>()))
+				.AddSingleton<AccountSecurityClient>()
 				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -178,6 +191,33 @@ public class AdminAccountsPageTests : TrackingBunitContext, IAsyncDisposable
 	{
 		Auth = this.AddAuthorization();
 		ownedHttpClients.Add(this.AddAdminAccountsTestServices());
+	}
+
+	[TUnit.Core.Test]
+	public async Task StaffResetRequiresFreshProofThenSendsItOnceForChosenRow()
+	{
+		var handler = new AdminAccountsApiHandler(); ownedHttpClients.Add(this.AddAdminAccountsTestServices(handler)); Auth.SetAuthorized("headwiz"); Auth.SetRoles("Wizard");
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>(); cut.WaitForAssertion(() => cut.Find("input[type=password]"));
+		var reset = cut.FindAll("tr").Single(row => row.TextContent.Contains("headwiz-target")).QuerySelectorAll("button").Single(button => button.TextContent.Contains("AdmResetPassword"));
+		await reset.ClickAsync(); await Assert.That(handler.ResetCount).IsEqualTo(0);
+		await cut.Find("input[type=password]").ChangeAsync("dedicated-password");
+		await cut.FindAll("button").Single(button => button.TextContent.Contains("AuthVerifyAccount")).ClickAsync();
+		cut.WaitForAssertion(() => { if (cut.FindAll("input[type=password]").Count != 0) throw new InvalidOperationException("Proof has not completed."); });
+		reset = cut.FindAll("tr").Single(row => row.TextContent.Contains("headwiz-target")).QuerySelectorAll("button").Single(button => button.TextContent.Contains("AdmResetPassword"));
+		await reset.ClickAsync(); cut.WaitForAssertion(() => { if (handler.ResetCount != 1) throw new InvalidOperationException("Reset has not completed."); });
+		await Assert.That(handler.LastResetProofGrant).IsEqualTo("fresh-proof");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ExternalRecoveryProofReturnsWithoutSelectingAnAccountAndRequiresANewRowChoice()
+	{
+		var handler = new AdminAccountsApiHandler(); ownedHttpClients.Add(this.AddAdminAccountsTestServices(handler)); Auth.SetAuthorized("headwiz"); Auth.SetRoles("Wizard");
+		Services.GetRequiredService<AccountSecurityClient>().HoldGrant(AccountSecurityOperation.StaffRecovery, "external-ceremony-proof");
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>(); cut.WaitForAssertion(() => { if (!cut.Markup.Contains("headwiz-target")) throw new InvalidOperationException("Rows not rendered."); });
+		await Assert.That(handler.ResetCount).IsEqualTo(0);
+		var reset = cut.FindAll("tr").Single(row => row.TextContent.Contains("headwiz-target")).QuerySelectorAll("button").Single(button => button.TextContent.Contains("AdmResetPassword"));
+		await reset.ClickAsync(); cut.WaitForAssertion(() => { if (handler.ResetCount != 1) throw new InvalidOperationException("Reset not sent."); });
+		await Assert.That(handler.LastResetProofGrant).IsEqualTo("external-ceremony-proof");
 	}
 
 	[TUnit.Core.Test]

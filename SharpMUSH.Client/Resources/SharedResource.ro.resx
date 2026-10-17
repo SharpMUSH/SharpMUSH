@@ -6320,6 +6320,123 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Număr maxim de jucători</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Alte metode de autentificare</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuă cu {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Reîncepe autentificarea</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Alege un nume de utilizator pentru noul cont. Adresa de e-mail de la furnizor nu este folosită pentru a găsi sau a uni conturi.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Confirmă o metodă de autentificare a contului pentru a continua. Această confirmare este valabilă pentru o singură acțiune.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Confirmă parola contului</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Confirmă cu o cheie de acces</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Solicitarea cheii de acces a fost anulată. Încearcă din nou când ești pregătit.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Metoda de autentificare a contului nu a putut fi confirmată. Încearcă din nou.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Metode de autentificare</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Gestionează metodele de acces la cont. Parolele existente ale personajelor funcționează în continuare. Eliminarea sau modificarea unei metode închide celelalte sesiuni.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Stabilește o parolă a contului folosind parola unui personaj care îți aparține înainte de a adăuga alte metode de autentificare. Autentificarea în cont cu parola personajului rămâne activată.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Parola personajului</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Confirmă noua parolă</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Stabilește parola contului</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Asociază {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Elimină asocierea</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Elimină parola contului</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Dezactivează autentificarea în cont cu parola personajului</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Activează autentificarea în cont cu parola personajului</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Schimbă adresa de e-mail</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Stabilește sau schimbă parola contului</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Autentificarea personajului printr-un client independent</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Autentificare prin client pentru {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Confirmă contul, apoi generează un acces de unică folosință pentru un client MU* independent. Fiecare acces expiră după două minute.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Generează acces de unică folosință</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Expiră în {0} secunde</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Folosește un client independent cu TLS. Telnet necriptat dezvăluie acest acces oricărei persoane care poate observa conexiunea.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Accesuri neutilizate</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Stabilește o parolă independentă a personajului</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Această parolă permite autentificarea directă cu acest personaj. Nu schimbă parola contului.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Stabilește parola personajului</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Parola personajului a fost schimbată. Accesurile de unică folosință neutilizate pentru acest personaj au fost revocate.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Accesul la clipboard a eșuat. Selectează și copiază comanda afișată.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Creează fără a alege o parolă a personajului; folosește accesuri de unică folosință prin client sau stabilește o parolă mai târziu.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Închide</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Copiază</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Revocă</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Deconectează clienții existenți care joacă acest personaj după schimbarea parolei.</value>
+  </data>
   <data name="AdmDiscordAccessRestricted" xml:space="preserve">
     <value>Doar conturi asociate</value>
   </data>

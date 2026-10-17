@@ -1,0 +1,74 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject AccountSecurityClient Security
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> Loc
+<div class="recent-proof">
+    <p>@Loc["AuthProofExplanation"]</p>
+    @if (_hasPassword)
+    {
+        <MudTextField @bind-Value="_password" Label="@Loc["AuthCurrentPassword"]" InputType="InputType.Password" Variant="Variant.Outlined" Disabled="_busy" />
+        <MudButton OnClick="Password" Disabled="_busy" Variant="Variant.Outlined">@(ButtonLabel ?? Loc["AuthVerifyAccount"].Value)</MudButton>
+    }
+    @if (_hasPasskeys) { <MudButton OnClick="Passkey" Disabled="_busy">@Loc["AuthVerifyWithPasskey"]</MudButton> }
+    @foreach (var identity in _identities)
+    {
+        <MudButton OnClick="() => External(identity.Provider, identity.Id)" Disabled="_busy">@Loc["AuthContinueWith", identity.Name]</MudButton>
+    }
+    @if (_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
+</div>
+@code {
+    [Parameter] public AccountSecurityOperation Operation { get; set; }
+    [Parameter] public EventCallback<string> OnProved { get; set; }
+    [Parameter] public string? ButtonLabel { get; set; }
+    [Parameter] public string ReturnPath { get; set; } = "/account";
+    private string _password = "";
+    private bool _busy, _hasPassword, _hasPasskeys;
+    private string? _error;
+    private readonly List<(string Provider,string Id,string Name)> _identities = [];
+    protected override async Task OnInitializedAsync()
+    {
+        if (Security.TakeGrant(Operation) is { } existing) { await OnProved.InvokeAsync(existing); }
+        if (await Security.SecurityAsync() is JsonElement data)
+        {
+            _hasPassword = data.GetProperty("hasPassword").GetBoolean();
+            _hasPasskeys = data.GetProperty("passkeys").GetArrayLength() > 0;
+            if (await Security.ProvidersAsync() is IReadOnlyList<AccountSecurityClient.Provider> providers)
+                foreach (var identity in data.GetProperty("identities").EnumerateArray())
+                    foreach (var provider in providers)
+                        if (identity.GetProperty("registration").GetString() == "external-" + provider.Id)
+                            _identities.Add((provider.Id,identity.GetProperty("id").GetString()!,provider.DisplayName));
+        }
+    }
+    private async Task Password()
+    {
+        _busy = true; _error = null;
+        await Apply(await Security.RequestAsync("api/account/security/proof/password",new { password = _password, operation = Operation }));
+        _password = ""; _busy = false;
+    }
+    private async Task Passkey()
+    {
+        _busy = true; _error = null;
+        if (await Security.RequestAsync("api/account/security/proof/passkey/options",new { operation = Operation }) is JsonElement challenge)
+        {
+            var interop = new PasskeyInterop(JS);
+            if (await interop.GetAsync(challenge.GetProperty("options")) is JsonElement credential)
+                await Apply(await Security.RequestAsync("api/account/security/proof/passkey",new { ceremonyId = challenge.GetProperty("ceremonyId").GetString(), credential }));
+            else _error = Loc["AuthProofCancelled"];
+        }
+        else _error = Loc["AuthProofFailed"];
+        _busy = false;
+    }
+    private async Task External(string provider,string identityId)
+    {
+        _busy = true;
+        if (await Security.StartAsync(provider,ReturnPath,false,2,operation:Operation,identityId:identityId) is ApiFailure failure) { _error = failure.Message; _busy = false; }
+    }
+    private async Task Apply(ApiResult<JsonElement> result)
+    {
+        if (result is JsonElement data && data.TryGetProperty("grant",out var grant)) await OnProved.InvokeAsync(grant.GetString()!);
+        else if (result is ApiFailure failure) _error = failure.Message;
+    }
+}

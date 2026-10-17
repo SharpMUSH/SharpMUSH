@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -7,8 +8,12 @@ namespace SharpMUSH.Library.Services;
 /// DB-backed account session store. Sessions persist across restarts and are revoked
 /// (deleted) by token, account, or origin IP for immediate ban enforcement.
 /// </summary>
-public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : IAccountSessionStore
+public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, AccountCredentialGate? credentialGate = null,
+	IEnumerable<IAccountCredentialRevocation>? revocations = null) : IAccountSessionStore
 {
+	private readonly AccountCredentialGate _credentials = credentialGate ?? new();
+	private readonly IEnumerable<IAccountCredentialRevocation> _revocations = revocations ?? [];
+
 	/// <summary>
 	/// How far the rolling expiry must have drifted before <see cref="ValidateAsync"/> pays for a write,
 	/// as a fraction of the session's own TTL.
@@ -58,6 +63,22 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : 
 	public Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default)
 		=> ValidateAsync(token, remembered: false, ct);
 
+	public async Task<Found<IAccountSessionStore.SessionIdentity>> InspectAsync(string token, CancellationToken ct = default)
+	{
+		var session = await database.GetSessionAsync(token, ct);
+		return session is { Remembered: false } && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < session.ExpiryUnixMs
+			? new IAccountSessionStore.SessionIdentity(session.AccountId, session.CharacterKey, session.CharacterCreationTime)
+			: new NotFound();
+	}
+
+	public async Task<Found<IAccountSessionStore.SessionIdentity>> InspectDigestAsync(string sessionDigest, CancellationToken ct = default)
+		=> await database.GetSessionAuthorityByDigestAsync(sessionDigest, ct) switch
+		{
+			AccountSessionAuthority { Remembered: false } authority when DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < authority.ExpiryUnixMs
+				=> new IAccountSessionStore.SessionIdentity(authority.AccountId, authority.CharacterKey, authority.CharacterCreationTime),
+			_ => new NotFound()
+		};
+
 	public async Task<string?> RedeemRememberedLoginAsync(string token, CancellationToken ct = default)
 		=> await ValidateAsync(token, remembered: true, ct) is { } identity ? identity.AccountId : null;
 
@@ -103,13 +124,21 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : 
 	}
 
 	public Task RevokeAsync(string token, CancellationToken ct = default)
-		=> database.DeleteSessionAsync(token, ct).AsTask();
+		=> _credentials.RunAsync(async () =>
+		{
+			await database.DeleteSessionAsync(token, ct);
+			foreach (var revocation in _revocations) revocation.RevokeSession(token);
+		}, ct);
 
 	public Task RevokeAllForAccountAsync(string accountId, CancellationToken ct = default)
-		=> database.DeleteSessionsForAccountAsync(accountId, ct).AsTask();
+		=> _credentials.RunAsync(async () =>
+		{
+			await database.DeleteSessionsForAccountAsync(accountId, ct);
+			foreach (var revocation in _revocations) revocation.RevokeAccount(accountId);
+		}, ct);
 
 	public Task RevokeAllForIpAsync(string originIp, CancellationToken ct = default)
-		=> database.DeleteSessionsForIpAsync(originIp, ct).AsTask();
+		=> _credentials.RunAsync(() => database.DeleteSessionsForIpAsync(originIp, ct).AsTask(), ct);
 
 	public Task<string[]> GetKnownOriginIpsAsync(CancellationToken ct = default)
 		=> database.GetSessionOriginIpsAsync(ct).AsTask();

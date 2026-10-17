@@ -56,7 +56,7 @@ public class AccountService(
 		// password: the owning account's password (or any *other* linked character's password)
 		// must not be accepted through this identifier.
 		if (namedCharacter is not null)
-			return await CharacterPasswordMatchesAsync(namedCharacter, password);
+			return account.AllowCharacterPasswordAccountLogin && await CharacterPasswordMatchesAsync(namedCharacter, password);
 
 		// Empty stored hashes never match at the account level: God's PennMUSH-default empty
 		// character password stays a telnet-connect special case, and the pre-generated
@@ -64,6 +64,9 @@ public class AccountService(
 		if (!string.IsNullOrEmpty(account.PasswordHash)
 			&& passwordService.PasswordIsValid(password, account.PasswordHash))
 			return true;
+
+		if (!account.AllowCharacterPasswordAccountLogin)
+			return false;
 
 		var characters = await database.GetCharactersForAccountAsync(account.Id!, ct);
 		return await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await CharacterPasswordMatchesAsync(character, password));
@@ -115,7 +118,7 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		if (!passwordService.PasswordIsValid(oldPassword, account.PasswordHash))
+		if (string.IsNullOrEmpty(account.PasswordHash) || !passwordService.PasswordIsValid(oldPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
 
 		var newHash = passwordService.HashPassword(newPassword);
@@ -130,7 +133,7 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		if (!passwordService.PasswordIsValid(currentPassword, account.PasswordHash))
+		if (string.IsNullOrEmpty(account.PasswordHash) || !passwordService.PasswordIsValid(currentPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
 
 		if (newEmail is not null && await database.GetAccountByEmailAsync(newEmail, ct) is not null)

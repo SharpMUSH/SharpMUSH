@@ -7,6 +7,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Server.Authentication.External;
+using Microsoft.Extensions.Hosting;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -45,7 +49,7 @@ public class AccountControllersSessionClaimsTests
 		return new ControllerContext { HttpContext = http };
 	}
 
-	private static AccountController Account(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user, string? bearer = null)
+	private static AccountController Account(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user, string? bearer = null, AccountSecurityService? security = null)
 		=> new(Substitute.For<IMediator>(), accounts, sessions,
 			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IValidateService>(),
 			new PasskeyService(Substitute.For<SharpMUSH.Library.IAccountStore>(),
@@ -53,7 +57,7 @@ public class AccountControllersSessionClaimsTests
 				new PasskeyCeremonyStore(TimeProvider.System), TimeProvider.System, NullLogger<PasskeyService>.Instance),
 			Substitute.For<SharpMUSH.Library.Services.Interfaces.IPortalThemeService>(),
 			new BearerAccountResolver(sessions, accounts),
-			NullLogger<AccountController>.Instance)
+			NullLogger<AccountController>.Instance, security)
 		{ ControllerContext = Context(user, bearer) };
 
 	[Test]
@@ -76,11 +80,19 @@ public class AccountControllersSessionClaimsTests
 	{
 		var accounts = Substitute.For<IAccountService>();
 		var sessions = Substitute.For<IAccountSessionStore>();
-		accounts.ChangePasswordAsync(AccountId, "old", "new").Returns(new ValueTask<SharpMUSH.Library.DiscriminatedUnions.Result<SharpMUSH.Library.DiscriminatedUnions.Success>>(new SharpMUSH.Library.DiscriminatedUnions.Success()));
+		var current = new SharpAccount { Id = AccountId, Username = "owner", PasswordHash = "hash", MustChangePassword = true };
+		accounts.GetByIdAsync(AccountId, Arg.Any<CancellationToken>()).Returns(current);
+		accounts.SetPasswordAsync(AccountId, "new-password", false, Arg.Any<CancellationToken>()).Returns(new ValueTask<Result<Success>>(new Success()));
+		sessions.InspectAsync("token", Arg.Any<CancellationToken>()).Returns(Task.FromResult<Found<IAccountSessionStore.SessionIdentity>>(new IAccountSessionStore.SessionIdentity(AccountId, null, null)));
+		var passwords = Substitute.For<IPasswordService>(); passwords.PasswordIsValid("old", "hash").Returns(true);
+		var gate = new AccountCredentialGate(); var mediator = Substitute.For<IMediator>();
+		var proofService = new AccountRecentProofService(accounts, sessions, passwords, new RecentAccountProofStore(TimeProvider.System), gate);
+		var catalog = new ExternalProviderCatalog(mediator, Substitute.For<ISecretStore>(), Substitute.For<IHostEnvironment>(), gate);
+		var security = new AccountSecurityService(proofService, accounts, sessions, Substitute.For<IBanEnforcer>(), mediator, catalog);
 		var user = Principal(AccountSessionAuthenticationHandler.SchemeName, mustChange: true);
 
 		var refused = await Account(accounts, sessions, user).ChangeUsername(new AccountController.ChangeUsernameRequest("x"));
-		var allowed = await Account(accounts, sessions, user).ChangePassword(new AccountController.ChangePasswordRequest("old", "new"));
+		var allowed = await Account(accounts, sessions, user, "token", security).ChangePassword(new AccountController.ChangePasswordRequest("old", "new-password"));
 
 		await Assert.That(refused).IsTypeOf<ObjectResult>();
 		await Assert.That(((ObjectResult)refused).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);

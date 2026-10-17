@@ -55,6 +55,9 @@ public static class Tables
 	public static readonly TableDef MailSentTo = TableDef.Index("mail.sent.to");
 	public static readonly TableDef MailAlias = TableDef.Node("malias");
 	public static readonly TableDef Account = TableDef.Node("account");
+	/// <summary>Canonical length-prefixed registration/issuer/subject SHA-256 digest to full identity record.</summary>
+	public static readonly TableDef ExternalIdentity = TableDef.Node("acct.external");
+	public static readonly TableDef ExternalIdentityByAccount = TableDef.Index("acct.external.acct", duplicates: true);
 	public static readonly TableDef AccountEmail = TableDef.Index("account.email");
 	public static readonly TableDef AccountUser = TableDef.Index("account.user");
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);
@@ -73,6 +76,8 @@ public static class Tables
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");
+	/// <summary>SHA-256 token digest to token-free session authority, updated with the session in the same transaction.</summary>
+	public static readonly TableDef SessionDigest = TableDef.Node("session.digest");
 	public static readonly TableDef SessionAccount = TableDef.Index("session.acct", duplicates: true);
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);
 	/// <summary>Expiry-ordered session index: big-endian expiry millis + token → empty. The expired-session sweep reads its head.</summary>

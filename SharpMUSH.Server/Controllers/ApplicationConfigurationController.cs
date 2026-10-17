@@ -6,6 +6,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Authentication.External;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -24,6 +25,9 @@ public sealed class ApplicationConfigurationController(
 	{
 		var candidates = (await registry.GetApplicationsAsync()).Select(app => app.ConfigurationTile)
 			.OfType<ApplicationConfigurationTile>().ToList();
+		candidates.AddRange(ExternalProviderDefinition.All.Select(provider => new ApplicationConfigurationTile(
+			"signin-" + provider.Id, provider.DisplayName + " sign-in", "Configure account sign-in with " + provider.DisplayName + ".", "Login",
+			"/admin/config/signin/" + provider.Id, PortalPermission.ConfigAdmin)));
 		foreach (var source in catalog.ApplicationSources)
 		{
 			try { candidates.AddRange(source.GetConfigurationTiles().OfType<ApplicationConfigurationTile>().ToList()); }

@@ -306,6 +306,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IHelpTopicResolver, Implementation.Services.HelpTopicResolver>();
 
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
+		services.AddNativeCharacterCredentials();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		// In-memory registry of global user-defined functions (@function). Not persisted:
 		// durability comes from re-running @function on boot via the @STARTUP attribute pass.

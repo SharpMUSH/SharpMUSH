@@ -19,6 +19,7 @@ public interface ISharpDatabase :
 	IExpandedDataStore,
 	IChannelStore,
 	IAccountStore,
+	IExternalIdentityStore,
 	IServerStateStore,
 	ISessionRecordStore,
 	IReadMarkerStore,

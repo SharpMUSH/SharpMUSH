@@ -6320,6 +6320,123 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Najveći broj igrača</value>
   </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Drugi načini prijave</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Nastavi uz {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Ponovno započni prijavu</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Odaberite korisničko ime za novi račun. E-pošta vašeg pružatelja usluge ne koristi se za pronalaženje ili spajanje računa.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Za nastavak potvrdite način prijave na račun. Ova potvrda vrijedi za jednu radnju.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Potvrdi lozinku računa</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Potvrdi pristupnim ključem</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>Zahtjev za pristupni ključ je otkazan. Pokušajte ponovno kad budete spremni.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>Nije bilo moguće potvrditi način prijave na račun. Pokušajte ponovno.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Načini prijave</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Upravljajte načinima pristupa računu. Postojeće lozinke likova i dalje rade. Uklanjanje ili promjena načina prijave odjavljuje druge sesije.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Prije dodavanja drugih načina prijave postavite lozinku računa pomoću lozinke vlastitog lika. Prijava na račun lozinkom lika ostaje omogućena.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Lozinka lika</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Potvrdi novu lozinku</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Postavi lozinku računa</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Poveži {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Odspoji</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Ukloni lozinku računa</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Onemogući prijavu na račun lozinkom lika</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Omogući prijavu na račun lozinkom lika</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve">
+    <value>Promijeni e-poštu</value>
+  </data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve">
+    <value>Postavi ili promijeni lozinku računa</value>
+  </data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Prijava lika putem samostalnog klijenta</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Prijava putem klijenta za {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Potvrdite račun pa izradite jednokratnu prijavu za samostalni MU* klijent. Svaka prijava istječe nakon dvije minute.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Izradi jednokratnu prijavu</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Istječe za {0} sekundi</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Koristite samostalni klijent s TLS-om. Nešifrirani telnet otkriva ovu prijavu svakome tko može nadzirati vezu.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Neiskorištene prijave</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Postavi zasebnu lozinku lika</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>Ova lozinka služi za izravnu prijavu na ovog lika. Ne mijenja lozinku vašeg računa.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Postavi lozinku lika</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Lozinka lika je promijenjena. Neiskorištene jednokratne prijave za ovog lika su opozvane.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Pristup međuspremniku nije uspio. Odaberite i kopirajte prikazanu naredbu.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Izradi bez odabrane lozinke lika; koristite jednokratne prijave putem klijenta ili postavite lozinku kasnije.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Zatvori</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Kopiraj</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Opozovi</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Nakon promjene lozinke odspoji postojeće klijente koji igraju ovog lika.</value>
+  </data>
   <data name="AdmDiscordAccessRestricted" xml:space="preserve">
     <value>Samo povezani računi</value>
   </data>

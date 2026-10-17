@@ -141,7 +141,9 @@ internal static class DatabaseRegistration
 					refused.Value);
 			}
 
-			var db = new LightningDatabase(dbLogger, storeOptions, password, relations, pluginMigrationSources, pluginFlags);
+			var db = new LightningDatabase(dbLogger, storeOptions, password, relations, pluginMigrationSources, pluginFlags,
+				x.GetRequiredService<AccountCredentialGate>(),
+				new Lazy<IEnumerable<IAccountCredentialRevocation>>(() => x.GetServices<IAccountCredentialRevocation>().ToArray()));
 			return db;
 		});
 		RegisterDatabaseProvider<LightningDatabase>(services);
@@ -195,6 +197,7 @@ internal static class DatabaseRegistration
 		where TProvider : class, ISharpDatabase, IWikiStore, IOAuthStore, IPackageRegistryService,
 		IApplicationRegistryService, ILayoutRegistryService, IRoleRegistryService
 	{
+		Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<AccountCredentialGate>(services);
 		services.AddSingleton<ISharpDatabase>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IDatabaseLifecycle>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IObjectStore>(sp => sp.GetRequiredService<TProvider>());
@@ -206,6 +209,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IExpandedDataStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IChannelStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IAccountStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IExternalIdentityStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IServerStateStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<ISessionRecordStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IReadMarkerStore>(sp => sp.GetRequiredService<TProvider>());

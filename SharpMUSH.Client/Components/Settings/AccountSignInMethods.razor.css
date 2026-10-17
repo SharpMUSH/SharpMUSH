@@ -1,0 +1,4 @@
+.signin-methods { padding: 1.25rem; display: flex; flex-direction: column; align-items: flex-start; gap: .75rem; overflow-wrap: anywhere; }
+.signin-methods p { max-width: 65ch; margin: 0; line-height: 1.6; }
+.signin-method { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; gap: .75rem; }
+@container page (max-width: 48rem) { .signin-methods { padding: 1rem; align-items: stretch; } }

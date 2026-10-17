@@ -16,7 +16,7 @@ public class AdminAccountsService(IHttpClientFactory httpClientFactory)
 	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
 		bool MustChangePassword, bool IsReserved, bool IsGodsAccount, IReadOnlyList<AdminCharacterSummary> Characters);
 
-	private record ResetPasswordRequest(string NewPassword);
+	private record ResetPasswordRequest(string NewPassword, string? ProofGrant);
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
@@ -27,9 +27,9 @@ public class AdminAccountsService(IHttpClientFactory httpClientFactory)
 				: $"api/admin/accounts?search={Uri.EscapeDataString(search)}",
 			"The server returned no account list.");
 
-	public Task<ApiResult<Success>> ResetPasswordAsync(string key, string newPassword) =>
+	public Task<ApiResult<Success>> ResetPasswordAsync(string key, string newPassword, string? proofGrant = null) =>
 		Client.PostApiAsync($"api/admin/accounts/{Uri.EscapeDataString(key)}/reset-password",
-			new ResetPasswordRequest(newPassword));
+			new ResetPasswordRequest(newPassword, proofGrant));
 
 	public Task<ApiResult<Success>> SetDisabledAsync(string key, bool disabled) =>
 		Client.PostApiAsync(

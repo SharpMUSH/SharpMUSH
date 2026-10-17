@@ -5,6 +5,7 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject AccountAuthService AccountAuth
+@inject NativeCharacterCredentialsClient Native
 @inject ICharacterUpgradeService Upgrade
 @inject NavigationManager Nav
 
@@ -28,8 +29,15 @@
 
         <MudTextField @bind-Value="_name" Label="@Loc["NavCharacterName"]"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4" />
+        @if (!Claiming)
+        {
+            <MudCheckBox @bind-Value="_withoutPassword" Label="@Loc["AuthNativeCreatePasswordLater"]" />
+        }
+        @if (Claiming || !_withoutPassword)
+        {
         <MudTextField @bind-Value="_password" Label="@Loc["AuthPassword"]" InputType="InputType.Password"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3" />
+        }
 
         @if (_error is not null)
         {
@@ -62,6 +70,7 @@
     private string _password = string.Empty;
     private string? _error;
     private bool _busy;
+    private bool _withoutPassword;
     private bool _onboarding;
 
     /// <summary>
@@ -82,12 +91,26 @@
     /// <summary>True on <c>/characters/claim</c>: the form links a character that already exists.</summary>
     private bool Claiming => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("characters/claim", StringComparison.OrdinalIgnoreCase);
 
+    private async Task<ApiResult<AccountAuthService.CharacterSummary>> CreateWithoutPasswordAsync()
+    {
+        switch (await Native.CreateWithoutPasswordAsync(_name))
+        {
+            case AccountApiClient.CreateCharacterResponse created:
+                await AccountAuth.GetCharactersAsync();
+                return new AccountAuthService.CharacterSummary(created.DbrefNumber, created.CreationTime ?? 0, _name, created.Flags ?? "");
+            case ApiFailure failure: return failure;
+        }
+        throw new InvalidOperationException("Unexpected character creation response.");
+    }
+
     private async Task CreateAsync()
     {
         _error = null;
         _busy = true;
 
-        var result = Claiming
+        var result = !Claiming && _withoutPassword
+            ? await CreateWithoutPasswordAsync()
+            : Claiming
             ? await AccountAuth.ClaimCharacterAsync(_name, _password)
             : await AccountAuth.CreateCharacterAsync(_name, _password);
 

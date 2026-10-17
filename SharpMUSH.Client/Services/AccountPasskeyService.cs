@@ -7,7 +7,7 @@ namespace SharpMUSH.Client.Services;
 /// The signed-in account's passkeys: listing them, adding one through the browser's prompt, renaming
 /// and removing them. Signing in with one is <see cref="AccountAuthService.LoginWithPasskeyAsync"/>.
 /// </summary>
-public sealed class AccountPasskeyService(IHttpClientFactory httpClientFactory, PasskeyInterop passkeys)
+public sealed class AccountPasskeyService(IHttpClientFactory httpClientFactory, PasskeyInterop passkeys, AccountAuthService? auth = null)
 {
 	private readonly AccountApiClient _api = new(httpClientFactory);
 
@@ -38,5 +38,14 @@ public sealed class AccountPasskeyService(IHttpClientFactory httpClientFactory, 
 
 	public Task<ApiResult<Success>> RenameAsync(string id, string name) => _api.RenamePasskeyAsync(id, name);
 
-	public Task<ApiResult<Success>> RemoveAsync(string id) => _api.RemovePasskeyAsync(id);
+	public async Task<ApiResult<Success>> RemoveAsync(string id, string? proofGrant = null)
+	{
+		var result = await _api.RemovePasskeyAsync(id, proofGrant);
+		if (result is Success && auth is not null)
+		{
+			if (_api.TakeSecuritySignedOut()) await auth.LogoutAsync();
+			if (_api.TakeSecurityReplacement() is { } replacement) await auth.AdoptSecuritySessionAsync(replacement);
+		}
+		return result;
+	}
 }

@@ -12,6 +12,7 @@ public sealed record ObjectRecord
 	public string[] Aliases { get; init; } = [];
 	public long CreationTime { get; init; }
 	public long ModifiedTime { get; init; }
+	public long PasswordCredentialEpoch { get; init; }
 	public string? PasswordHash { get; init; }
 	public string? PasswordSalt { get; init; }
 	public long Quota { get; init; }

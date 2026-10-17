@@ -1,0 +1,6 @@
+.external-complete { width: min(100% - 2rem, 32rem); margin: 3rem auto; display: grid; gap: 1rem; overflow-wrap: anywhere; }
+.external-complete h1 { margin: 0; font-size: 1.75rem; }
+.external-complete p { line-height: 1.6; max-width: 65ch; }
+
+/* OnboardingLayout provides the unnamed size container. */
+@container (max-width: 30rem) { .external-complete { margin: 1.5rem auto; gap: .75rem; } }

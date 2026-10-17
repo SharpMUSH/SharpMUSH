@@ -1,4 +1,6 @@
 @using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models
+@inject IServiceProvider Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IDialogService DialogService
 @inject AccountPasskeyService Passkeys
@@ -68,6 +70,10 @@
                 </ul>
             }
 
+            @if (_removing is not null)
+            {
+                <RecentAccountProofPrompt Operation="AccountSecurityOperation.RemovePasskey" OnProved="RemoveProvedAsync" />
+            }
             @if (State.Adding)
             {
                 <div class="acct-row acct-row--password acct-passkey-add">
@@ -127,6 +133,7 @@
                 State.Adding = false;
                 State.Password = string.Empty;
                 State.Success = Loc["AuthPasskeyAdded"];
+
                 break;
             case ApiFailure failure:
                 State.Error = failure.Message;
@@ -157,11 +164,25 @@
         }
     }
 
+    private AccountApiClient.PasskeySummary? _removing;
+    private async Task RemoveProvedAsync(string grant)
+    {
+        if (_removing is not {} passkey) return;
+        var result=await Passkeys.RemoveAsync(passkey.Id,grant);
+        _removing=null;
+        if(result is ApiFailure failure) State.Error=failure.Message;
+        else
+        {
+            State.Passkeys=State.Passkeys?.Where(key=>key.Id!=passkey.Id).ToList();
+            if(Services.GetService<AccountAuthService>() is { IsLoggedIn:false }) Services.GetRequiredService<NavigationManager>().NavigateTo("/login");
+        }
+    }
     private async Task RemoveAsync(AccountApiClient.PasskeySummary passkey)
     {
         if (!await DialogService.ConfirmAsync(Loc, Loc["AuthPasskeyRemoveConfirmTitle", passkey.Name],
             Loc["AuthPasskeyRemoveConfirm"], Loc["AuthPasskeyRemove"])) return;
 
+        if(Services.GetService<AccountSecurityClient>() is not null) { _removing=passkey; return; }
         State.ClearMessages();
         await BusyChanged.InvokeAsync(true);
         var result = await Passkeys.RemoveAsync(passkey.Id);

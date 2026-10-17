@@ -8848,6 +8848,205 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
+  <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
+  <data name="PkgBrowseInstalled" xml:space="preserve">
+    <value>Installed v{0}</value>
+  </data>
+  <data name="PkgBrowseInstalledOrigin" xml:space="preserve">
+    <value>Installed from {0} (path: {1}).</value>
+  </data>
+  <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
+    <value>Installed status is unavailable. Refresh to try again. {0}</value>
+  </data>
+  <data name="RolSceneJoinPolicy" xml:space="preserve">
+    <value>Joining policy</value>
+  </data>
+  <data name="RolScenePlayerCap" xml:space="preserve">
+    <value>Player cap</value>
+  </data>
+  <data name="AuthOtherSignInMethods" xml:space="preserve">
+    <value>Other sign-in methods</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continue with {0}</value>
+  </data>
+  <data name="AuthStartAgain" xml:space="preserve">
+    <value>Start sign-in again</value>
+  </data>
+  <data name="AuthExternalChooseUsername" xml:space="preserve">
+    <value>Choose a username for your new account. Your provider email is not used to find or merge accounts.</value>
+  </data>
+  <data name="AuthProofExplanation" xml:space="preserve">
+    <value>Verify an account sign-in method to continue. This confirmation is good for one action.</value>
+  </data>
+  <data name="AuthVerifyAccount" xml:space="preserve">
+    <value>Verify account password</value>
+  </data>
+  <data name="AuthVerifyWithPasskey" xml:space="preserve">
+    <value>Verify with a passkey</value>
+  </data>
+  <data name="AuthProofCancelled" xml:space="preserve">
+    <value>The passkey prompt was cancelled. Try again when ready.</value>
+  </data>
+  <data name="AuthProofFailed" xml:space="preserve">
+    <value>The account method could not be verified. Try again.</value>
+  </data>
+  <data name="AuthSignInMethods" xml:space="preserve">
+    <value>Sign-in methods</value>
+  </data>
+  <data name="AuthSignInMethodsBody" xml:space="preserve">
+    <value>Manage the methods that open your account. Existing character passwords keep working. Removing or changing a method signs out other sessions.</value>
+  </data>
+  <data name="AuthLegacyUpgradeBody" xml:space="preserve">
+    <value>Install an account password using an owned character password before adding other sign-in methods. Character-password account login stays enabled.</value>
+  </data>
+  <data name="AuthCharacterPassword" xml:space="preserve">
+    <value>Character password</value>
+  </data>
+  <data name="AuthConfirmNewPassword" xml:space="preserve">
+    <value>Confirm new password</value>
+  </data>
+  <data name="AuthInstallAccountPassword" xml:space="preserve">
+    <value>Set account password</value>
+  </data>
+  <data name="AuthLinkProvider" xml:space="preserve">
+    <value>Link {0}</value>
+  </data>
+  <data name="AuthUnlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="AuthRemoveAccountPassword" xml:space="preserve">
+    <value>Remove account password</value>
+  </data>
+  <data name="AuthDisableLegacyFallback" xml:space="preserve">
+    <value>Disable character-password account login</value>
+  </data>
+  <data name="AuthEnableLegacyFallback" xml:space="preserve">
+    <value>Enable character-password account login</value>
+  </data>
+  <data name="AdmSigninPageTitle" xml:space="preserve">
+    <value>Sign-in provider configuration</value>
+  </data>
+  <data name="AdmSigninTitle" xml:space="preserve">
+    <value>{0} sign-in</value>
+  </data>
+  <data name="AdmSigninDescription" xml:space="preserve">
+    <value>Configure an account sign-in registration.</value>
+  </data>
+  <data name="AdmSigninRegistration" xml:space="preserve">
+    <value>Registration</value>
+  </data>
+  <data name="AdmSigninAffected" xml:space="preserve">
+    <value>{0} account(s) have identities in this registration.</value>
+  </data>
+  <data name="AdmSigninEnable" xml:space="preserve">
+    <value>Enable account sign-in</value>
+  </data>
+  <data name="AdmSigninClientId" xml:space="preserve">
+    <value>Client id</value>
+  </data>
+  <data name="AdmSigninPublicOrigin" xml:space="preserve">
+    <value>Public HTTPS origin</value>
+  </data>
+  <data name="AdmSigninPublicOriginHelp" xml:space="preserve">
+    <value>For example: https://game.example. No path, query or fragment.</value>
+  </data>
+  <data name="AdmSigninCallback" xml:space="preserve">
+    <value>Register this callback URL with the provider:</value>
+  </data>
+  <data name="AdmSigninAudience" xml:space="preserve">
+    <value>Microsoft audience</value>
+  </data>
+  <data name="AdmSigninAudienceHelp" xml:space="preserve">
+    <value>common, organizations, consumers, or a tenant UUID</value>
+  </data>
+  <data name="AdmSigninTenants" xml:space="preserve">
+    <value>Allowed tenant UUIDs</value>
+  </data>
+  <data name="AdmSigninTenantsHelp" xml:space="preserve">
+    <value>Optional comma-separated tenant allowlist</value>
+  </data>
+  <data name="AdmSigninSecret" xml:space="preserve">
+    <value>Client secret:</value>
+  </data>
+  <data name="AdmSigninManageSecret" xml:space="preserve">
+    <value>Manage in Secrets</value>
+  </data>
+  <data name="AdmSigninSecretWriteOnly" xml:space="preserve">
+    <value>Secret values are never returned here.</value>
+  </data>
+  <data name="AdmSigninPublicExchange" xml:space="preserve">
+    <value>This provider uses a public code exchange and requires no sign-in client secret.</value>
+  </data>
+  <data name="AdmSigninAcknowledge" xml:space="preserve">
+    <value>I acknowledge the impact on accounts linked to this registration</value>
+  </data>
+  <data name="AdmSigninApplyHelp" xml:space="preserve">
+    <value>Disabling takes effect immediately. Registration settings and secret changes require a controlled server restart before sign-in becomes ready. Pending sign-ins are invalidated. A client id with linked identities requires an explicit identity migration.</value>
+  </data>
+  <data name="AuthChangeEmail" xml:space="preserve"><value>Change email</value></data>
+  <data name="AuthChangeAccountPassword" xml:space="preserve"><value>Set or change account password</value></data>
+  <data name="AuthNativeLoginTitle" xml:space="preserve">
+    <value>Native character login</value>
+  </data>
+  <data name="AuthNativeLoginFor" xml:space="preserve">
+    <value>Native login for {0}</value>
+  </data>
+  <data name="AuthNativeLoginExplanation" xml:space="preserve">
+    <value>Verify your account, then generate a one-use login for a native MU* client. Each login expires after two minutes.</value>
+  </data>
+  <data name="AuthNativeGenerate" xml:space="preserve">
+    <value>Generate one-use login</value>
+  </data>
+  <data name="AuthNativeExpiresIn" xml:space="preserve">
+    <value>Expires in {0} seconds</value>
+  </data>
+  <data name="AuthNativeTransportAdvice" xml:space="preserve">
+    <value>Use a TLS-enabled native client. Plain telnet exposes this login to anyone who can observe the connection.</value>
+  </data>
+  <data name="AuthNativePending" xml:space="preserve">
+    <value>Outstanding logins</value>
+  </data>
+  <data name="AuthNativeCharacterPassword" xml:space="preserve">
+    <value>Set an independent character password</value>
+  </data>
+  <data name="AuthNativePasswordExplanation" xml:space="preserve">
+    <value>This password signs into this character directly. It does not change your account password.</value>
+  </data>
+  <data name="AuthNativeSetPassword" xml:space="preserve">
+    <value>Set character password</value>
+  </data>
+  <data name="AuthNativePasswordChanged" xml:space="preserve">
+    <value>Character password changed. Outstanding one-use logins for this character were revoked.</value>
+  </data>
+  <data name="AuthNativeCopyFailed" xml:space="preserve">
+    <value>Clipboard access failed. Select and copy the displayed command.</value>
+  </data>
+  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
+    <value>Create without a chosen character password; use one-use native logins or set a password later.</value>
+  </data>
+  <data name="AuthNativeClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AuthNativeCopy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="AuthNativeRevoke" xml:space="preserve">
+    <value>Revoke</value>
+  </data>
+  <data name="AuthNativeDisconnectOthers" xml:space="preserve">
+    <value>Disconnect existing clients playing this character after changing the password.</value>
+  </data>
+  <data name="AdmStaffRecoveryProof" xml:space="preserve">
+    <value>Verify staff recovery</value>
+  </data>
+  <data name="AdmStaffRecoveryChooseAgain" xml:space="preserve">
+    <value>After verification, choose the account to recover. An external sign-in returns here without remembering a selected account.</value>
+  </data>
+  <data name="AdmStaffRecoveryVerifyFirst" xml:space="preserve">
+    <value>Verify a current account sign-in method before choosing an account to recover.</value>
+  </data>
   <data name="AdmRemoteBackupTitle" xml:space="preserve"><value>Remote backups</value></data>
   <data name="AdmRemoteBackupDescription" xml:space="preserve"><value>Configure encrypted remote snapshots. A local hot copy is not a completed remote backup. Disable the legacy sidecar cron before enabling managed scheduling.</value></data>
   <data name="AdmRemoteBackupAgentSeen" xml:space="preserve"><value>Backup agent last seen:</value></data>
@@ -8877,23 +9076,6 @@
   <data name="AdmRemoteBackupCopyRetention" xml:space="preserve"><value>Unknown uploads retain their local copy. Interrupted preparation may leave a job directory under backup.remote-jobs on the server; inspect the failed job before removing its directory.</value></data>
   <data name="AdmRemoteBackupClearAccountId" xml:space="preserve"><value>Clear the stored storage account ID when saving</value></data>
   <data name="AdmRemoteBackupClearAccountKey" xml:space="preserve"><value>Clear the stored storage account key when saving</value></data>
-  <data name="PkgBrowseInstalled" xml:space="preserve">
-    <value>Installed v{0}</value>
-  </data>
-  <data name="PkgBrowseInstalledOrigin" xml:space="preserve">
-    <value>Installed from {0} (path: {1}).</value>
-  </data>
-  <data name="PkgBrowseInstalledUnavailable" xml:space="preserve">
-    <value>Installed status is unavailable. Refresh to try again. {0}</value>
-  </data>
-  <data name="AdmConfigApplications" xml:space="preserve"><value>Application configuration</value></data>
-  <data name="AdmConfigApplicationsLoadFailed" xml:space="preserve"><value>Could not load application configuration</value></data>
-  <data name="RolSceneJoinPolicy" xml:space="preserve">
-    <value>Joining policy</value>
-  </data>
-  <data name="RolScenePlayerCap" xml:space="preserve">
-    <value>Player cap</value>
-  </data>
   <data name="AdmImportRhostGuideTitle" xml:space="preserve">
     <value>RhostMUSH: prepare a portable flatfile from a native backup</value>
   </data>

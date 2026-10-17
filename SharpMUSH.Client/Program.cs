@@ -110,6 +110,8 @@ builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<PasskeyInterop>();
 builder.Services.AddSingleton<AccountPasskeyService>();
+builder.Services.AddSingleton<AccountSecurityClient>();
+builder.Services.AddScoped<NativeCharacterCredentialsClient>();
 builder.Services.AddSingleton<PushInterop>();
 builder.Services.AddSingleton<AccountPushService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
@@ -166,6 +168,7 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
 builder.Services.AddTransient<AccountSessionBearerHandler>();
+builder.Services.AddScoped<ExternalProviderConfigurationService>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = apiBaseAddress)
 	.AddHttpMessageHandler<AccountSessionBearerHandler>();
 

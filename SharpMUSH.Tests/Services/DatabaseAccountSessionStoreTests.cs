@@ -1,4 +1,6 @@
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -10,6 +12,27 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class DatabaseAccountSessionStoreTests
 {
+	[Test]
+	public async Task InspectNeverSlidesAndRejectsRememberedExpiredOrRevokedSessions()
+	{
+		var spy = new SessionSpy();
+		var store = new DatabaseAccountSessionStore(spy.Database);
+		var token = await store.CreateTokenAsync("account", TimeSpan.FromMinutes(15), "203.0.113.1", 7, 123);
+		spy.AgeBy(TimeSpan.FromMinutes(1));
+		var expiry = spy.Stored!.ExpiryUnixMs;
+		var identity = (await store.InspectAsync(token)).Expect<IAccountSessionStore.SessionIdentity>();
+		await Assert.That(identity.AccountId).IsEqualTo("account");
+		await Assert.That(identity.CharacterKey).IsEqualTo(7);
+		await Assert.That(spy.Stored.ExpiryUnixMs).IsEqualTo(expiry);
+		await Assert.That(spy.Touches).IsEqualTo(0);
+		spy.AgeBy(TimeSpan.FromMinutes(20));
+		(await store.InspectAsync(token)).Expect<NotFound>();
+		var remembered = await store.CreateRememberedLoginAsync("account", TimeSpan.FromDays(90), "203.0.113.1");
+		(await store.InspectAsync(remembered)).Expect<NotFound>();
+		await store.RevokeAsync(remembered);
+		(await store.InspectAsync(remembered)).Expect<NotFound>();
+	}
+
 	[Test]
 	public async Task Validate_RepeatedlyWithinTheThreshold_WritesNothing()
 	{

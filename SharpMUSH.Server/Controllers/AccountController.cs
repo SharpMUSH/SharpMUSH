@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Mediator;
 using Microsoft.AspNetCore.Http;
@@ -33,8 +34,13 @@ public class AccountController(
 	PasskeyService passkeys,
 	IPortalThemeService themes,
 	BearerAccountResolver bearer,
-	ILogger<AccountController> logger) : ControllerBase
+	ILogger<AccountController> logger,
+	AccountSecurityService? security = null, AccountSecurityCeremonyStore? securityCeremonies = null) : ControllerBase
 {
+	private AccountSecurityService Security => security ?? HttpContext.RequestServices.GetRequiredService<AccountSecurityService>();
+	private AccountSecurityCeremonyStore Ceremonies => securityCeremonies ?? HttpContext.RequestServices.GetRequiredService<AccountSecurityCeremonyStore>();
+	private string RawSession => SharpMUSH.Server.Authentication.External.ExternalLoginJourney.Bearer(HttpContext) ?? "";
+
 	/// <summary>
 	/// The session behind this request, or null when there is no usable bearer. Used to mark which
 	/// roster entry the caller is acting as — the session token is opaque to the client, so the roster
@@ -75,47 +81,62 @@ public class AccountController(
 			return Ok(summaries);
 		});
 
-	public record CreateCharacterRequest(string Name, string Password);
+	public record CreateCharacterRequest(string Name, string? Password);
 
 	/// <summary>Create a new character and link it to the authenticated account.</summary>
 	[HttpPost("characters")]
-	public Task<IActionResult> CreateCharacter([FromBody] CreateCharacterRequest request)
-		=> AsAccountAsync(async accountId =>
+	public Task<IActionResult> CreateCharacter([FromBody] CreateCharacterRequest request,
+		[FromServices] SharpMUSH.Library.Services.AccountCredentialGate? credentialGate = null,
+		[FromServices] IPasswordService? passwords = null, CancellationToken cancellationToken = default)
+		=> (credentialGate ?? new SharpMUSH.Library.Services.AccountCredentialGate()).RunAsync(() => AsAccountAsync(async accountId =>
 		{
 			if (!options.CurrentValue.Net.PlayerCreation)
 				return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
-
-			if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
-				return BadRequest("Name and Password are required.");
-
-			// The connect screen's rule: ok_player_name(name, NOTHING, NOTHING), with bsd.c's refusals.
-			if (await mediator.CreateStream(new GetPlayerQuery(request.Name))
-					.AnyAsync(x => x.Object.Name.Equals(request.Name, StringComparison.InvariantCultureIgnoreCase)))
+			if (string.IsNullOrWhiteSpace(request.Name) || request.Password is not null && string.IsNullOrWhiteSpace(request.Password))
+				return BadRequest("A name and a nonempty chosen password are required; omit the password to use independent native logins.");
+			if (request.Password is null && passwords is null)
+				return StatusCode(StatusCodes.Status503ServiceUnavailable, "Character credential service is unavailable.");
+			if (await mediator.CreateStream(new GetPlayerQuery(request.Name), cancellationToken)
+					.AnyAsync(x => x.Object.Name.Equals(request.Name, StringComparison.InvariantCultureIgnoreCase), cancellationToken))
 				return Conflict("There is already a player with that name.");
-
 			if (!await validateService.ValidPlayerName(MarkupText.Plain(request.Name), new None(), new None()))
 				return BadRequest("That name is not allowed.");
 
+			DBRef? created = null;
 			try
 			{
+				// Hash and discard an unreachable random credential before dispatch, so neither an empty hash
+				// nor the random plaintext can escape through a queued command or diagnostics.
+				var password = request.Password;
+				string? salt = null;
+				if (password is null && passwords is { } passwordService)
+				{
+					password = passwordService.HashPassword(Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64)));
+					if (string.IsNullOrEmpty(password)) throw new InvalidOperationException("Character password hashing failed.");
+					salt = "";
+				}
 				var defaultHome = options.CurrentValue.Database.DefaultHome;
-				var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
-				var playerRef = await mediator.Send(new CreatePlayerCommand(
-					request.Name, request.Password,
-					new DBRef((int)defaultHome), new DBRef((int)defaultHome),
-					startingQuota));
-
-				await accountService.LinkCharacterAsync(accountId, playerRef);
-
+				var playerRef = await mediator.Send(new CreatePlayerCommand(request.Name, password ?? throw new InvalidOperationException("Character credential missing."),
+					new DBRef((int)defaultHome), new DBRef((int)defaultHome), (int)options.CurrentValue.Limit.StartingQuota, Salt: salt), cancellationToken);
+				created = playerRef;
+				await accountService.LinkCharacterAsync(accountId, playerRef, cancellationToken);
+				if (await accountService.GetAccountForCharacterAsync(playerRef, cancellationToken) is not { } holder || holder.Id != accountId)
+					throw new InvalidOperationException("Character ownership attachment failed.");
 				logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
 				return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds, Flags = await CreatedFlagsAsync(playerRef) });
 			}
-			catch (Exception ex)
+			catch (Exception error)
 			{
-				logger.LogError(ex, "Character creation failed for account {AccountId}", LogSanitizer.Sanitize(accountId));
-				return BadRequest(ex.Message);
+				if (created is { } character)
+				{
+					var heldBy = await accountService.GetAccountForCharacterAsync(character, CancellationToken.None);
+					if (heldBy is null || heldBy.Id == accountId)
+						await mediator.Send(new DeleteObjectCommand(character), CancellationToken.None);
+				}
+				logger.LogWarning("Character creation failed for account {AccountId}: {ErrorType}", LogSanitizer.Sanitize(accountId), error.GetType().Name);
+				return BadRequest("Character creation could not be completed.");
 			}
-		});
+		}), cancellationToken);
 
 	/// <summary>
 	/// A new character's flags, as the roster carries them: the portal adds the row to the account's list itself,
@@ -208,36 +229,26 @@ public class AccountController(
 			};
 		});
 
-	public record ChangePasswordRequest(string OldPassword, string NewPassword);
+	public record ChangePasswordRequest(string OldPassword, string NewPassword, string? ProofGrant = null);
 
 	/// <summary>Change the account password.</summary>
 	[HttpPut("password")]
 	public Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
 		=> AsAccountAsync(async accountId =>
 		{
-			var result = await accountService.ChangePasswordAsync(accountId, request.OldPassword, request.NewPassword);
-			return result switch
-			{
-				Success => NoContent(),
-				Error<string> err => Unauthorized(err.Value)
-			};
+			var result = await Security.PasswordAsync(HttpContext, accountId, request.NewPassword, request.ProofGrant, request.OldPassword, HttpContext.RequestAborted);
+			return result switch { Success => NoContent(), Error<string> error => Unauthorized(error.Value) };
 		}, allowMustChangePassword: true);
 
-	public record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
+	public record ChangeEmailRequest(string? NewEmail, string CurrentPassword, string? ProofGrant = null);
 
 	/// <summary>Add, change, or remove the account email. Send <c>null</c> for <c>NewEmail</c> to clear.</summary>
 	[HttpPut("email")]
 	public Task<IActionResult> ChangeEmail([FromBody] ChangeEmailRequest request)
 		=> AsAccountAsync(async accountId =>
 		{
-			var result = await accountService.ChangeEmailAsync(accountId, request.NewEmail, request.CurrentPassword);
-			return result switch
-			{
-				Success => NoContent(),
-				Error<string> err when err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
-					=> Conflict(err.Value),
-				Error<string> err => Unauthorized(err.Value)
-			};
+			var result = await Security.EmailAsync(HttpContext, accountId, request.NewEmail, request.ProofGrant, request.CurrentPassword, HttpContext.RequestAborted);
+			return result switch { Success => NoContent(), Error<string> error => Unauthorized(error.Value) };
 		});
 
 	public record ChangeUsernameRequest(string NewUsername);
@@ -270,7 +281,7 @@ public class AccountController(
 			return Ok(held.Select(Summarize).ToList());
 		});
 
-	public record PasskeyOptionsRequest(string CurrentPassword);
+	public record PasskeyOptionsRequest(string CurrentPassword, string? ProofGrant = null);
 
 	/// <summary>
 	/// Starts adding a passkey: the options the browser hands to <c>navigator.credentials.create</c>. Asks
@@ -281,18 +292,15 @@ public class AccountController(
 	public Task<IActionResult> PasskeyOptions([FromBody] PasskeyOptionsRequest request)
 		=> AsAccountAsync(async accountId =>
 		{
-			var account = await accountService.GetByIdAsync(accountId);
-			if (account is null) return Unauthorized("Account not found or not active.");
-
-			if (await accountService.AuthenticateAsync(account.Username, request.CurrentPassword ?? string.Empty) is not SharpAccount confirmed
-				|| confirmed.Id != account.Id)
-				return Unauthorized("Current password is incorrect.");
-
-			return await passkeys.BeginRegistrationAsync(account, Request, HttpContext.RequestAborted) switch
-			{
-				PasskeyService.Challenge challenge => Ok(challenge),
-				Error<string> error => BadRequest(error.Value),
-			};
+			var result = await Security.WithProofAsync<PasskeyService.Challenge>(HttpContext, accountId, AccountSecurityOperation.EnrollPasskey,
+				request.ProofGrant, request.CurrentPassword, async (account, authority) =>
+				{
+					var result = await passkeys.BeginRegistrationAsync(account, Request, HttpContext.RequestAborted);
+					if (result is PasskeyService.Challenge challenge && !Ceremonies.Begin(challenge.CeremonyId, accountId, RawSession, account.CredentialEpoch, AccountSecurityOperation.EnrollPasskey, authority))
+						return new Error<string>("Too many pending security requests.");
+					return result;
+				}, HttpContext.RequestAborted);
+			return result switch { PasskeyService.Challenge challenge => Ok(challenge), Error<string> error => Unauthorized(error.Value) };
 		});
 
 	public record AddPasskeyRequest(string? CeremonyId, string? Name, JsonElement Credential);
@@ -300,15 +308,18 @@ public class AccountController(
 	/// <summary>Finishes adding a passkey with the browser's new credential.</summary>
 	[HttpPost("passkeys")]
 	public Task<IActionResult> AddPasskey([FromBody] AddPasskeyRequest request)
-		=> AsAccountAsync(async accountId =>
+		=> AsAccountAsync(async accountId => await HttpContext.RequestServices.GetRequiredService<SharpMUSH.Library.Services.AccountCredentialGate>().RunAsync<IActionResult>(async () =>
 		{
-			return await passkeys.CompleteRegistrationAsync(accountId, request.CeremonyId, request.Name, request.Credential,
-					HttpContext.RequestAborted) switch
-			{
-				AccountPasskey passkey => Ok(Summarize(passkey)),
-				Error<string> error => BadRequest(error.Value),
-			};
-		});
+			var binding = Ceremonies.Take(request.CeremonyId, accountId, RawSession);
+			if (binding is null || binding.Authority is null || binding.Operation != AccountSecurityOperation.EnrollPasskey
+								|| !await HttpContext.RequestServices.GetRequiredService<IAccountProofAuthorityValidator>().IsCurrentAsync(accountId, binding.Authority, HttpContext.RequestAborted)
+				|| await accountSessionStore.InspectAsync(RawSession) is not IAccountSessionStore.SessionIdentity session || session.AccountId != accountId
+				|| await accountService.GetByIdAsync(accountId) is not { IsActive: true, MustChangePassword: false } account || account.CredentialEpoch != binding.Epoch)
+				return Unauthorized("The passkey enrollment expired. Start again.");
+			return await passkeys.CompleteRegistrationAsync(accountId, request.CeremonyId, request.Name, request.Credential, HttpContext.RequestAborted) switch
+			{ AccountPasskey passkey => await Registered(passkey), Error<string> error => BadRequest(error.Value) };
+			Task<IActionResult> Registered(AccountPasskey passkey) => Task.FromResult<IActionResult>(Ok(Summarize(passkey)));
+		}, HttpContext.RequestAborted));
 
 	public record RenamePasskeyRequest(string Name);
 
@@ -331,14 +342,17 @@ public class AccountController(
 
 	/// <summary>Removes one of the account's passkeys. It can no longer sign in.</summary>
 	[HttpDelete("passkeys/{id}")]
-	public Task<IActionResult> RemovePasskey(string id)
+	public Task<IActionResult> RemovePasskey(string id, [FromHeader(Name = "X-SharpMUSH-Proof")] string? proofGrant = null)
 		=> AsAccountAsync(async accountId =>
 		{
-			if (PasskeyService.CredentialIdOf(id) is not { } credentialId
-				|| !await passkeys.RemoveAsync(accountId, credentialId))
-				return NotFound("No such passkey on this account.");
-
-			return NoContent();
+			if (PasskeyService.CredentialIdOf(id) is not { } credentialId) return NotFound();
+			var result = await Security.WithProofAsync<Success>(HttpContext, accountId, AccountSecurityOperation.RemovePasskey, proofGrant, null, async (_, authority) =>
+			{
+				var result = await mediator.Send(new RemoveAccountPasskeyCommand(accountId, credentialId, await Security.EnabledAsync(HttpContext.RequestAborted)));
+				if (result is Success) await Security.RevokeAndReplaceAsync(HttpContext, accountId, authority, HttpContext.RequestAborted);
+				return result;
+			}, HttpContext.RequestAborted);
+			return result switch { Success => NoContent(), Error<string> error => Conflict(error.Value) };
 		});
 
 	/// <summary>

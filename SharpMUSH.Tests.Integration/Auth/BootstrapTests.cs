@@ -7,14 +7,14 @@ namespace SharpMUSH.Tests.Integration.Auth;
 
 /// <summary>
 /// Integration tests for <c>BootstrapService</c>: on a fresh DB it must pre-generate an
-/// unclaimed admin account (empty password hash) linked to player #1 (God) — no env vars,
+/// unclaimed admin account (no dedicated password hash) linked to player #1 (God) — no env vars,
 /// no generated password, no log banner.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class BootstrapTests(ServerWebAppFactory factory)
 {
 	// Order = 0 is the earliest slot in the "SetupFlow" constraint group and must stay unique:
-	// this test asserts the bootstrap admin's password hash is still empty, so it has to observe
+	// this test asserts the bootstrap admin still has no dedicated password hash, so it has to observe
 	// state before SetupFlowTests (Order = 1..5) or AdminAccountsApiTests (Order = 6) claim it.
 	// TUnit's ConstraintKeyScheduler orders same-key tests by Order, with ties broken by
 	// discovery order (unspecified across classes) — see AdminAccountsApiTests' class doc for the
@@ -26,6 +26,6 @@ public class BootstrapTests(ServerWebAppFactory factory)
 		var admin = await accountService.GetAccountForCharacterAsync(new DBRef(1));
 
 		await Assert.That(admin).IsNotNull();
-		await Assert.That(admin!.PasswordHash).IsEqualTo(string.Empty);
+		await Assert.That(admin!.PasswordHash).IsNull();
 	}
 }

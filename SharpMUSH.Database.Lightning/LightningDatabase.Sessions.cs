@@ -1,6 +1,8 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
+using System.Security.Cryptography;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Database.Lightning;
@@ -22,6 +24,7 @@ public partial class LightningDatabase
 	private static void DeleteSessionRow(ITx tx, byte[] token, SessionRecord record)
 	{
 		tx.Delete(Tables.Session, token);
+		tx.Delete(Tables.SessionDigest, SHA256.HashData(token));
 		tx.Delete(Tables.SessionAccount, Keys.Str(record.AccountId), token);
 		tx.Delete(Tables.SessionIp, Keys.Str(record.OriginIp), token);
 		tx.Delete(Tables.SessionExpiry, SessionExpiryKey(record.ExpiryUnixMs, token));
@@ -42,7 +45,7 @@ public partial class LightningDatabase
 	public async ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default)
 	{
 		var key = Keys.Str(session.Token);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			// Replacing an existing session: drop its old secondary entries first so a token that
 			// changes account or origin IP does not leave a stale token behind under the old key.
@@ -65,6 +68,7 @@ public partial class LightningDatabase
 				Remembered = session.Remembered
 			};
 			tx.Put(Tables.Session, key, Codec.Serialize(record));
+			tx.Put(Tables.SessionDigest, SHA256.HashData(key), Codec.Serialize(record));
 			tx.Put(Tables.SessionAccount, Keys.Str(session.AccountId), key);
 			tx.Put(Tables.SessionIp, Keys.Str(session.OriginIp), key);
 			tx.Put(Tables.SessionExpiry, SessionExpiryKey(session.ExpiryUnixMs, key), []);
@@ -79,6 +83,18 @@ public partial class LightningDatabase
 		return ValueTask.FromResult(result);
 	}
 
+	public ValueTask<Found<AccountSessionAuthority>> GetSessionAuthorityByDigestAsync(string digest, CancellationToken cancellationToken = default)
+	{
+		if (digest.Length != 64 || digest.Any(c => !char.IsAsciiHexDigit(c)))
+			return ValueTask.FromResult<Found<AccountSessionAuthority>>(new NotFound());
+		return ValueTask.FromResult(Store.Read<Found<AccountSessionAuthority>>(tx =>
+		{
+			if (!tx.TryGet(Tables.SessionDigest, Convert.FromHexString(digest), out var bytes)) return new NotFound();
+			var record = Codec.Deserialize<SessionRecord>(bytes);
+			return new AccountSessionAuthority(record.AccountId, record.ExpiryUnixMs, record.CharacterKey, record.CharacterCreationTime, record.Remembered);
+		}));
+	}
+
 	/// <summary>
 	/// A conditional update: no-ops (returns <see langword="false"/>, writes nothing) when the token is
 	/// absent, because a renewal racing a revocation must never reinstate a session the revocation just
@@ -87,13 +103,14 @@ public partial class LightningDatabase
 	public async ValueTask<bool> TouchSessionExpiryAsync(string token, long expiryUnixMs, CancellationToken cancellationToken = default)
 	{
 		var key = Keys.Str(token);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Session, key, out var bytes))
 				return false;
 
 			var record = Codec.Deserialize<SessionRecord>(bytes);
 			tx.Put(Tables.Session, key, Codec.Serialize(record with { ExpiryUnixMs = expiryUnixMs }));
+			tx.Put(Tables.SessionDigest, SHA256.HashData(key), Codec.Serialize(record with { ExpiryUnixMs = expiryUnixMs }));
 			tx.Delete(Tables.SessionExpiry, SessionExpiryKey(record.ExpiryUnixMs, key));
 			tx.Put(Tables.SessionExpiry, SessionExpiryKey(expiryUnixMs, key), []);
 			return true;
@@ -103,7 +120,7 @@ public partial class LightningDatabase
 	public async ValueTask DeleteSessionAsync(string token, CancellationToken cancellationToken = default)
 	{
 		var key = Keys.Str(token);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Session, key, out var bytes)) return;
 			DeleteSessionRow(tx, key, Codec.Deserialize<SessionRecord>(bytes));
@@ -113,7 +130,7 @@ public partial class LightningDatabase
 	public async ValueTask DeleteSessionsForAccountAsync(string accountId, CancellationToken cancellationToken = default)
 	{
 		var acctKey = Keys.Str(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			foreach (var token in tx.Dups(Tables.SessionAccount, acctKey).ToList())
 			{
@@ -129,7 +146,7 @@ public partial class LightningDatabase
 	public async ValueTask DeleteSessionsForIpAsync(string originIp, CancellationToken cancellationToken = default)
 	{
 		var ipKey = Keys.Str(originIp);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			foreach (var token in tx.Dups(Tables.SessionIp, ipKey).ToList())
 			{
@@ -168,7 +185,7 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<int> DeleteExpiredSessionsAsync(long nowUnixMs, int maxCount, CancellationToken cancellationToken = default)
-		=> await Store.WriteAsync(tx =>
+		=> await WriteCredentialsAsync(tx =>
 		{
 			// The head of the expiry index, materialised before anything is deleted from it. Read and
 			// delete share one write job, so a renewal either landed before it (and moved the session's

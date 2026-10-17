@@ -1,0 +1,90 @@
+@page "/admin/config/signin/{Provider}"
+@layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Library.Models
+@inject ExternalProviderConfigurationService Providers
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmSigninPageTitle"]</PageTitle>
+<div class="config-section-page page-stack">
+    <PlainPageHeader Kicker="@Loc["Configuration"]" Title="@(_status is null ? Loc["AdmSigninPageTitle"] : Loc["AdmSigninTitle",_status.DisplayName])" Description="@Loc["AdmSigninDescription"]" />
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_status is not null)
+    {
+        <MudAlert Severity="@(_status.Ready ? Severity.Success : Severity.Info)">@_status.Message</MudAlert>
+        <KitCard Title="@Loc["AdmSigninRegistration"]">
+            <div class="page-stack">
+                <p>@Loc["AdmSigninRegistration"]: <code>@_status.Settings.RegistrationId</code>. @Loc["AdmSigninAffected",_status.AffectedAccounts]</p>
+                <MudCheckBox T="bool" @bind-Value="_enabled" Label="@Loc["AdmSigninEnable"]" />
+                <MudTextField T="string" @bind-Value="_clientId" Label="@Loc["AdmSigninClientId"]" Variant="Variant.Outlined" />
+                <MudTextField T="string" @bind-Value="_origin" Label="@Loc["AdmSigninPublicOrigin"]" HelperText="@Loc["AdmSigninPublicOriginHelp"]" Variant="Variant.Outlined" />
+                <p>@Loc["AdmSigninCallback"] <code>@_status.CallbackUrl</code></p>
+                @if (_status.Id == "microsoft")
+                {
+                    <MudTextField T="string" @bind-Value="_audience" Label="@Loc["AdmSigninAudience"]" HelperText="@Loc["AdmSigninAudienceHelp"]" Variant="Variant.Outlined" />
+                    <MudTextField T="string" @bind-Value="_tenants" Label="@Loc["AdmSigninTenants"]" HelperText="@Loc["AdmSigninTenantsHelp"]" Variant="Variant.Outlined" />
+                }
+                @if (_status.SecretName is { } secret)
+                {
+                    <p>@Loc["AdmSigninSecret"] <code>@secret</code>. <a href="/admin/config/secrets">@Loc["AdmSigninManageSecret"]</a>. @Loc["AdmSigninSecretWriteOnly"]</p>
+                }
+                else
+                {
+                    <p>@Loc["AdmSigninPublicExchange"]</p>
+                }
+                <MudCheckBox T="bool" @bind-Value="_acknowledge" Label="@Loc["AdmSigninAcknowledge"]" />
+                <p>@Loc["AdmSigninApplyHelp"]</p>
+                <CapsuleButton Primary="true" Disabled="@_saving" OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
+            </div>
+        </KitCard>
+    }
+</div>
+@code {
+    [Parameter] public string Provider { get; set; } = "";
+    private ExternalProviderStatus? _status;
+    private string? _error;
+    private bool _enabled, _acknowledge, _saving;
+    private bool _loading = true;
+    private string _clientId = "", _origin = "", _audience = "common", _tenants = "";
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _status = null;
+        try { Apply(await Providers.GetAsync(Provider)); }
+        finally { _loading = false; }
+    }
+    private void Apply(ApiResult<ExternalProviderStatus> response)
+    {
+        switch (response)
+        {
+            case ExternalProviderStatus status:
+                _status = status; _error = null;
+                _enabled = status.Settings.Enabled; _clientId = status.Settings.ClientId;
+                _origin = status.Settings.PublicOrigin; _audience = status.Settings.MicrosoftAudience;
+                _tenants = string.Join(", ", status.Settings.AllowedTenants); _acknowledge = false;
+                break;
+            case ApiFailure failure: _error = failure.Message; break;
+        }
+    }
+    private async Task SaveAsync()
+    {
+        if (_status is null) return;
+        _saving = true;
+        try
+        {
+            Apply(await Providers.SaveAsync(Provider, _status.Settings with
+            {
+                Enabled = _enabled, ClientId = _clientId, PublicOrigin = _origin, MicrosoftAudience = _audience,
+                AllowedTenants = _tenants.Split([',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            }, _acknowledge));
+        }
+        finally { _saving = false; }
+    }
+}

@@ -6,6 +6,7 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -15,6 +16,34 @@ from parity.normalize import DbrefCanonicalizer, normalize
 from parity.runner import StepRecord, Target, _execute
 from parity.scenario import Step
 from parity.session import split_telnet, strip_telnet
+from parity.servers import StartupError, wait_for
+
+
+class StartupDiagnosticsTests(unittest.TestCase):
+    def failure(self, text):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "server.out"
+            log.write_text(text, encoding="utf-8")
+            process = SimpleNamespace(log=log, returncode=134, poll=lambda: 134)
+            with self.assertRaises(StartupError) as failure:
+                wait_for(lambda: False, "import", 1, [process])
+            return str(failure.exception)
+
+    def test_lmdb_startup_failure_exposes_code_without_dumping_log_values(self):
+        failure = self.failure("client_secret=must-never-print\nUnhandled exception. LightningDB -30791: MDB_DBS_FULL: Environment maxdbs limit reached\n")
+        self.assertIn("MDB_DBS_FULL", failure)
+        self.assertNotIn("must-never-print", failure)
+        self.assertNotIn("Environment maxdbs", failure)
+
+    def test_dotnet_startup_failure_exposes_type_without_exception_message(self):
+        failure = self.failure("Unhandled exception. System.InvalidOperationException: invalid token must-never-print\n")
+        self.assertIn("System.InvalidOperationException", failure)
+        self.assertNotIn("must-never-print", failure)
+
+    def test_missing_log_preserves_original_startup_failure(self):
+        process = SimpleNamespace(log=Path("missing-startup-log"), returncode=134, poll=lambda: 134)
+        with self.assertRaisesRegex(StartupError, "process exited with 134"):
+            wait_for(lambda: False, "import", 1, [process])
 
 
 class NormalizeTests(unittest.TestCase):

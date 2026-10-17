@@ -430,6 +430,11 @@ public class AccountAuthService(
 	/// Adopts a session the server minted for a sign-in. A session this tab cannot keep is refused
 	/// outright, so the tab never runs as an account a reload would not bring back.
 	/// </summary>
+	public Task<bool> AdoptSecuritySessionAsync(string token)
+			=> TryPersistSessionAsync(token, ActiveCharacter, Username ?? "", false, Role, Permissions);
+
+	public Task<ApiResult<IReadOnlyList<CharacterSummary>>> AdoptExternalSessionAsync(LoginResponse session) => SignedInAsync(session);
+
 	private async Task<ApiResult<IReadOnlyList<CharacterSummary>>> SignedInAsync(LoginResponse session)
 	{
 		if (!await TryPersistSessionAsync(session.AccountSessionToken, Acting(session), session.Username, session.MustChangePassword, session.Role, session.Permissions))
@@ -780,6 +785,8 @@ public class AccountAuthService(
 
 	private async Task<Success> PasswordChangedAsync()
 	{
+		if (_api.TakeSecuritySignedOut()) await LogoutAsync();
+		if (_api.TakeSecurityReplacement() is { } replacement) await AdoptSecuritySessionAsync(replacement);
 		MustChangePassword = false;
 		await _storage.WriteMustChangePasswordAsync(false);
 		return new Success();
@@ -792,9 +799,16 @@ public class AccountAuthService(
 
 		return await _api.ChangeEmailAsync(newEmail, currentPassword) switch
 		{
-			Success success => success,
+			Success => await SecurityChangedAsync(),
 			ApiFailure failure => Logged(failure, "Change email"),
 		};
+	}
+
+	private async Task<Success> SecurityChangedAsync()
+	{
+		if (_api.TakeSecuritySignedOut()) await LogoutAsync();
+		if (_api.TakeSecurityReplacement() is { } replacement) await AdoptSecuritySessionAsync(replacement);
+		return new Success();
 	}
 
 	public async Task<ApiResult<Success>> ChangeUsernameAsync(string newUsername)

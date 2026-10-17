@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import os
 import platform
+import re
 import shutil
 import signal
 import socket
@@ -27,6 +28,23 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
+def startup_failure_code(log: Path | None) -> str:
+    """Only exception types and LMDB codes reach CI stdout; log messages may contain credentials."""
+    if log is None:
+        return ""
+    try:
+        with log.open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            stream.seek(max(0, stream.tell() - 16384))
+            tail = stream.read(16384).decode("utf-8", errors="replace")
+    except OSError:
+        return ""
+    codes = [f"LightningDB {number} {code}" for number, code in
+             re.findall(r"\bLightningDB (-?\d+): (MDB_[A-Z_]+)\b", tail)]
+    codes.extend(re.findall(r"^Unhandled exception\. ([A-Za-z_][A-Za-z0-9_.]*(?:Exception|Error))\b", tail, re.MULTILINE))
+    return "; ".join(dict.fromkeys(codes[-4:]))
+
+
 def wait_for(predicate, what: str, timeout: float, procs=()):
     """Bounded readiness wait: returns as soon as `predicate()` holds, fails on timeout or when a
     watched process has already exited."""
@@ -36,7 +54,9 @@ def wait_for(predicate, what: str, timeout: float, procs=()):
             return
         for p in procs:
             if p.poll() is not None:
-                raise StartupError(f"{what}: process exited with {p.returncode} before becoming ready")
+                detail = startup_failure_code(getattr(p, "log", None))
+                suffix = f" ({detail})" if detail else ""
+                raise StartupError(f"{what}: process exited with {p.returncode} before becoming ready{suffix}")
         time.sleep(0.05)
     raise StartupError(f"timed out after {timeout:.0f}s waiting for {what}")
 

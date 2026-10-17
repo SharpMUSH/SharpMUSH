@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
@@ -39,8 +41,12 @@ public class AuthController(
 	SitelockGuard sitelockGuard,
 	PasskeyService passkeys,
 	IPortalThemeService themes,
-	ILogger<AuthController> logger) : ControllerBase
+	ILogger<AuthController> logger,
+	AccountLoginCompletion? loginCompletion = null, AccountCredentialGate? credentialGate = null) : ControllerBase
 {
+	private readonly AccountCredentialGate fallbackCredentialGate = new();
+	private AccountCredentialGate CredentialGate => credentialGate ?? HttpContext.RequestServices?.GetService<AccountCredentialGate>() ?? fallbackCredentialGate;
+
 	/// <summary>The remote IP the current request originated from, for session origin tracking.</summary>
 	private string ClientIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
@@ -182,38 +188,44 @@ public class AuthController(
 	[HttpPost("switch-character")]
 	[Authorize(AuthenticationSchemes = AccountSessionAuthenticationHandler.SchemeName)]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> SwitchCharacter([FromBody] SwitchCharacterRequest request)
-	{
-		if (IsSitelocked(SitelockGuard.Connect))
-			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+	public Task<IActionResult> SwitchCharacter([FromBody] SwitchCharacterRequest request)
+				=> CredentialGate.RunAsync<IActionResult>(async () =>
+				{
+					if (IsSitelocked(SitelockGuard.Connect))
+						return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
 
-		var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+					var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+					if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
-		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || !account.IsActive)
-			return Unauthorized("Account not found or not active.");
-		if (account.MustChangePassword)
-			return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
+					if (SharpMUSH.Server.Authentication.External.ExternalLoginJourney.Bearer(HttpContext) is not { } sourceToken
+									|| await accountSessionStore.InspectAsync(sourceToken, HttpContext.RequestAborted) is not IAccountSessionStore.SessionIdentity source || source.AccountId != accountId)
+						return Unauthorized("Invalid or expired account session.");
 
-		var characters = await accountService.GetCharactersAsync(accountId);
+					var account = await accountService.GetByIdAsync(accountId);
+					if (account is null || !account.IsActive)
+						return Unauthorized("Account not found or not active.");
+					if (account.MustChangePassword)
+						return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
 
-		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
-			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+					var characters = await accountService.GetCharactersAsync(accountId);
 
-		var character = characters.FirstOrDefault(c =>
-			c.Object.Key == request.CharacterKey && c.Object.CreationTime == request.CharacterCreationTime);
-		if (character is null)
-			return Unauthorized("Character is not linked to this account.");
+					if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
+						return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
-		const int ttl = 60;
-		var ott = await ottStore.CreateTokenAsync(new DBRef(character.Object.Key, character.Object.CreationTime), TimeSpan.FromSeconds(ttl));
-		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), ClientIp(),
-			character.Object.Key, character.Object.CreationTime);
+					var character = characters.FirstOrDefault(c =>
+						c.Object.Key == request.CharacterKey && c.Object.CreationTime == request.CharacterCreationTime);
+					if (character is null)
+						return Unauthorized("Character is not linked to this account.");
 
-		logger.LogInformation("Session rebound to character {Name} (#{Key})", character.Object.Name, character.Object.Key);
-		return Ok(new SwitchCharacterResponse(ott, ttl, sessionToken));
-	}
+					const int ttl = 60;
+					var ott = await ottStore.CreateTokenAsync(new DBRef(character.Object.Key, character.Object.CreationTime), TimeSpan.FromSeconds(ttl));
+					var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), ClientIp(),
+						character.Object.Key, character.Object.CreationTime);
+
+					logger.LogInformation("Session rebound to character {Name} (#{Key})", character.Object.Name, character.Object.Key);
+					return Ok(new SwitchCharacterResponse(ott, ttl, sessionToken));
+
+				}, HttpContext.RequestAborted);
 
 	/// <summary>Request body for account login.</summary>
 	/// <param name="RememberMe">Also keep the account signed in on this browser, in a
@@ -223,7 +235,7 @@ public class AuthController(
 	/// <summary>Response body for account login and registration.</summary>
 	public record AccountLoginResponse(string AccountId, string Username,
 		IReadOnlyList<CharacterSummaryMapper.CharacterSummary> Characters,
-		string AccountSessionToken, bool MustChangePassword, string Role, IReadOnlyList<string> Permissions);
+		string AccountSessionToken, bool MustChangePassword, string Role, IReadOnlyList<string> Permissions, string? ReturnPath = null);
 
 	/// <summary>
 	/// Authenticate to an account (by username or email) and get the character list.
@@ -231,27 +243,29 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("account-login")]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> AccountLogin([FromBody] AccountLoginRequest request)
-	{
-		if (IsSitelocked(SitelockGuard.Connect))
-			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+	public Task<IActionResult> AccountLogin([FromBody] AccountLoginRequest request)
+				=> CredentialGate.RunAsync<IActionResult>(async () =>
+				{
+					if (IsSitelocked(SitelockGuard.Connect))
+						return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
 
-		if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
-			return BadRequest("UsernameOrEmail and Password are required.");
+					if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
+						return BadRequest("UsernameOrEmail and Password are required.");
 
-		switch (await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password))
-		{
-			case SharpAccount account:
-				return await AccountLoggedInAsync(account, request.RememberMe);
-			case AccountUnavailable unavailable:
-				logger.LogInformation("Account login refused for {Identifier}: account is {Status}",
-					LogSanitizer.Sanitize(request.UsernameOrEmail), unavailable.Account.Status);
-				return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
-			default: // NotFound
-				logger.LogInformation("Account login failed for {Identifier}", LogSanitizer.Sanitize(request.UsernameOrEmail));
-				return Unauthorized("Invalid account credentials.");
-		}
-	}
+					switch (await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password))
+					{
+						case SharpAccount account:
+							return await AccountLoggedInAsync(account, request.RememberMe);
+						case AccountUnavailable unavailable:
+							logger.LogInformation("Account login refused for {Identifier}: account is {Status}",
+								LogSanitizer.Sanitize(request.UsernameOrEmail), unavailable.Account.Status);
+							return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
+						default: // NotFound
+							logger.LogInformation("Account login failed for {Identifier}", LogSanitizer.Sanitize(request.UsernameOrEmail));
+							return Unauthorized("Invalid account credentials.");
+					}
+
+				}, HttpContext.RequestAborted);
 
 	/// <summary>
 	/// Starts a passkey sign-in: the options the browser hands to <c>navigator.credentials.get</c>, and
@@ -280,19 +294,21 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("passkey-login")]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> PasskeyLogin([FromBody] PasskeyLoginRequest request)
-	{
-		if (IsSitelocked(SitelockGuard.Connect))
-			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+	public Task<IActionResult> PasskeyLogin([FromBody] PasskeyLoginRequest request)
+				=> CredentialGate.RunAsync<IActionResult>(async () =>
+				{
+					if (IsSitelocked(SitelockGuard.Connect))
+						return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
 
-		return await passkeys.CompleteSignInAsync(request.CeremonyId, request.Credential, HttpContext.RequestAborted) switch
-		{
-			SharpAccount { Status: AccountStatus.Deleted } => Unauthorized("This passkey is not registered here. It may have been removed from the account."),
-			SharpAccount { IsActive: false } account => await PasskeyRefusedAsync(account),
-			SharpAccount account => await AccountLoggedInAsync(account, request.RememberMe),
-			Error<string> error => Unauthorized(error.Value),
-		};
-	}
+					return await passkeys.CompleteSignInAsync(request.CeremonyId, request.Credential, HttpContext.RequestAborted) switch
+					{
+						SharpAccount { Status: AccountStatus.Deleted } => Unauthorized("This passkey is not registered here. It may have been removed from the account."),
+						SharpAccount { IsActive: false } account => await PasskeyRefusedAsync(account),
+						SharpAccount account => await AccountLoggedInAsync(account, request.RememberMe),
+						Error<string> error => Unauthorized(error.Value),
+					};
+
+				}, HttpContext.RequestAborted);
 
 	private async Task<IActionResult> PasskeyRefusedAsync(SharpAccount account)
 	{
@@ -304,38 +320,11 @@ public class AuthController(
 	/// <param name="remember">Also start a remembered login for this browser.</param>
 	/// <param name="preferredKey">The character to bind the session to, when the account still owns it;
 	/// otherwise the primary character.</param>
-	private async Task<IActionResult> AccountLoggedInAsync(SharpAccount account, bool remember,
+	private Task<IActionResult> AccountLoggedInAsync(SharpAccount account, bool remember,
 		int? preferredKey = null, long? preferredCreationTime = null)
-	{
-		var characters = await accountService.GetCharactersAsync(account.Id!);
-
-		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
-			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
-
-		if (remember)
-			await RememberAsync(account.Id!);
-
-		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
-
-		// Bind the session to the primary character up front, so there is never a "has characters but
-		// the token names none" state for a request handler to paper over. Switching mints a new token.
-		// The pick goes through ActingCharacterResolver so that this binding and the implicit
-		// resolution a characterless session falls back to can never name different characters.
-		var primary = characters.FirstOrDefault(c =>
-				c.Object.Key == preferredKey && c.Object.CreationTime == preferredCreationTime)
-			?? ActingCharacterResolver.Primary(characters);
-
-		// The roster carries the binding too — the token is opaque to the client, so this response is
-		// where the tab learns who it starts as.
-		var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-			actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime, themes: themes);
-		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp(),
-			primary?.Object.Key, primary?.Object.CreationTime);
-		logger.LogInformation("Account login success for {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
-		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
-			account.MustChangePassword, role.ToString(), permissions.ToList()));
-	}
+		=> (loginCompletion ?? new AccountLoginCompletion(accountService, accountSessionStore, accountClaims,
+			options, sitelockGuard, themes, CredentialGate))
+			.CompleteAsync(HttpContext, account, remember, preferredKey, preferredCreationTime, HttpContext.RequestAborted);
 
 	/// <summary>Request body for account registration.</summary>
 	/// <param name="RememberMe">As on <see cref="AccountLoginRequest"/>.</param>
@@ -346,23 +335,25 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("account-register")]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
-	{
-		if (IsSitelocked(SitelockGuard.Create))
-			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+	public Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
+				=> CredentialGate.RunAsync<IActionResult>(async () =>
+				{
+					if (IsSitelocked(SitelockGuard.Create))
+						return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
 
-		if (!options.CurrentValue.Net.PlayerCreation)
-			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
+					if (!options.CurrentValue.Net.PlayerCreation)
+						return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
 
-		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-			return BadRequest("Username and Password are required.");
+					if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+						return BadRequest("Username and Password are required.");
 
-		return await accountService.CreateAccountAsync(request.Username, request.Email, request.Password) switch
-		{
-			SharpAccount account => await RegisteredAsync(account, request.RememberMe),
-			Error<string> error => Conflict(error.Value),
-		};
-	}
+					return await accountService.CreateAccountAsync(request.Username, request.Email, request.Password) switch
+					{
+						SharpAccount account => await RegisteredAsync(account, request.RememberMe),
+						Error<string> error => Conflict(error.Value),
+					};
+
+				}, HttpContext.RequestAborted);
 
 	/// <summary>
 	/// Mint the session a newly registered account signs in with.
@@ -403,33 +394,35 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("account-resume")]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> AccountResume([FromBody] AccountResumeRequest? request)
-	{
-		if (IsSitelocked(SitelockGuard.Connect))
-			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+	public Task<IActionResult> AccountResume([FromBody] AccountResumeRequest? request)
+				=> CredentialGate.RunAsync<IActionResult>(async () =>
+				{
+					if (IsSitelocked(SitelockGuard.Connect))
+						return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
 
-		if (RememberedLoginCookie.Read(Request) is not { } token)
-			return Unauthorized("This browser has no remembered login.");
+					if (RememberedLoginCookie.Read(Request) is not { } token)
+						return Unauthorized("This browser has no remembered login.");
 
-		if (await accountSessionStore.RedeemRememberedLoginAsync(token) is not { } accountId)
-		{
-			RememberedLoginCookie.Delete(Response);
-			return Unauthorized("The remembered login has expired or was signed out.");
-		}
+					if (await accountSessionStore.RedeemRememberedLoginAsync(token) is not { } accountId)
+					{
+						RememberedLoginCookie.Delete(Response);
+						return Unauthorized("The remembered login has expired or was signed out.");
+					}
 
-		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || !account.IsActive)
-		{
-			await accountSessionStore.RevokeAsync(token);
-			RememberedLoginCookie.Delete(Response);
-			return Unauthorized("Account not found or not active.");
-		}
+					var account = await accountService.GetByIdAsync(accountId);
+					if (account is null || !account.IsActive)
+					{
+						await accountSessionStore.RevokeAsync(token);
+						RememberedLoginCookie.Delete(Response);
+						return Unauthorized("Account not found or not active.");
+					}
 
-		RememberedLoginCookie.Write(Response, token);
-		logger.LogInformation("Remembered login resumed for {Username} ({Id})",
-			LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
-		return await AccountLoggedInAsync(account, remember: false, request?.CharacterKey, request?.CharacterCreationTime);
-	}
+					RememberedLoginCookie.Write(Response, token);
+					logger.LogInformation("Remembered login resumed for {Username} ({Id})",
+						LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
+					return await AccountLoggedInAsync(account, remember: false, request?.CharacterKey, request?.CharacterCreationTime);
+
+				}, HttpContext.RequestAborted);
 
 	/// <summary>Response body for the debug OTT endpoint.</summary>
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,

@@ -8,7 +8,16 @@ mkdir -p "$archive_dir"
 
 for project in SharpMUSH.Tests SharpMUSH.Tests.BUnit SharpMUSH.Tests.ScenePlugin SharpMUSH.Tests.DiscordPlugin SharpMUSH.Tests.Integration; do
   test -d "$project/bin/Debug"
-  tar -I 'gzip -1' -cf "$archive_dir/$project.tar.gz" "$project/bin/Debug"
+  output_paths=("$project/bin/Debug")
+  if [[ "$project" == SharpMUSH.Tests ]]; then
+    # The capacity regression loads the real shipped plugin catalogue from the
+    # Server output. Test jobs receive archives, not the build job's filesystem.
+    for plugins in SharpMUSH.Server/bin/Debug/*/plugins; do
+      test -d "$plugins"
+      output_paths+=("$plugins")
+    done
+  fi
+  tar -I 'gzip -1' -cf "$archive_dir/$project.tar.gz" "${output_paths[@]}"
 done
 
 # dotnet run --no-build still evaluates the project, so retain restored MSBuild

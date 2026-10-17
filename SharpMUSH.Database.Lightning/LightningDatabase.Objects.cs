@@ -346,11 +346,18 @@ public partial class LightningDatabase
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)player.Object.Key;
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { PasswordHash = password, PasswordSalt = salt ?? "" }));
-		}, cancellationToken);
+			if (found.Record.Type != DatabaseConstants.TypePlayer || found.Record.CreationTime != player.Object.CreationTime)
+				throw new InvalidOperationException("The player identity changed before the password write.");
+			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with
+			{
+				PasswordHash = password,
+				PasswordSalt = salt ?? "",
+				PasswordCredentialEpoch = checked(found.Record.PasswordCredentialEpoch + 1)
+			}));
+		}, cancellationToken, character: player.Object.DBRef);
 	}
 
 	public async ValueTask SetPlayerQuotaAsync(SharpPlayer player, int quota, CancellationToken cancellationToken = default)
@@ -888,12 +895,12 @@ public partial class LightningDatabase
 		var dbref = (long)target.Number;
 		var modified = modifiedTime ?? creationTime;
 
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
 			tx.Put(Tables.Obj, Keys.Dbref(dbref),
 				Codec.Serialize(found.Record with { CreationTime = creationTime, ModifiedTime = modified }));
-		}, cancellationToken);
+		}, cancellationToken, character: target);
 	}
 
 	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default)
@@ -949,7 +956,7 @@ public partial class LightningDatabase
 
 	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			var n = (long)dbref.Number;
 			var key = Keys.Dbref(n);
@@ -966,6 +973,8 @@ public partial class LightningDatabase
 			}
 
 			var record = found.Value.Record;
+			if (tx.TryGet(Tables.AccountChar.Reverse, key, out var heldBy))
+				AdvanceAccountCredentialEpoch(tx, Keys.ReadStr(heldBy));
 
 			// obj.name: the object's own name and every alias.
 			tx.Delete(Tables.ObjName, Keys.Lower(record.Name), key);
@@ -1053,7 +1062,7 @@ public partial class LightningDatabase
 
 			_logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", n, record.Name);
 			return true;
-		}, cancellationToken);
+		}, cancellationToken, character: dbref);
 	}
 
 	#endregion
@@ -1216,6 +1225,7 @@ public partial class LightningDatabase
 		Object = sharpObj,
 		Aliases = record.Aliases,
 		PasswordHash = record.PasswordHash ?? "",
+		PasswordCredentialEpoch = record.PasswordCredentialEpoch,
 		PasswordSalt = record.PasswordSalt,
 		Quota = (int)record.Quota,
 		Location = new(ct => LocationRelation(dbref, ct)),
