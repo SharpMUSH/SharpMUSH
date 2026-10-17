@@ -89,6 +89,10 @@ public record WikiPageSummaryDto(
 	string? Image,
 	string? LastEditedBy)
 {
+	/// <summary>The browsing collection's stable ID, when supplied by a collection listing.</summary>
+	public string? CollectionId { get; init; }
+	public string? CollectionName { get; init; }
+
 	/// <inheritdoc cref="WikiPageDto.Categories"/>
 	public IReadOnlyList<string> Categories { get; init; } = Categories ?? [];
 
@@ -109,7 +113,11 @@ public record WikiPageCountsDto(int Total, int Published, int Drafts, int Restri
 /// as a title; <see cref="Pages"/> counts the pages filed in it that the caller may see; <see cref="Pinned"/> says
 /// whether it has a card on the wiki home.
 /// </summary>
-public record WikiCategorySummaryDto(string Key, string Name, int Pages, bool HasPage, bool Pinned = false);
+public record WikiCategorySummaryDto(string Key, string Name, int Pages, bool HasPage, bool Pinned = false)
+{
+	/// <summary>The first image of a visible preview page, when navigation supplies one.</summary>
+	public string? Image { get; init; }
+}
 
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
 public record WikiTranslationSummaryDto(

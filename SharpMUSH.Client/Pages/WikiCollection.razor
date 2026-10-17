@@ -1,0 +1,15 @@
+@page "/wiki/collections/{Collection}"
+@layout WikiLayout
+@using SharpMUSH.Client.Components.Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WikiCollections"] — @Loc["AppTitle"]</PageTitle>
+<div class="wiki-collection-route">
+    <WikiCollectionBrowser Collection="@Collection" Search="@Search" Category="@Category" />
+</div>
+
+@code {
+    [Parameter] public string Collection { get; set; } = "game";
+    [SupplyParameterFromQuery(Name = "q")] public string? Search { get; set; }
+    [SupplyParameterFromQuery(Name = "category")] public string? Category { get; set; }
+}

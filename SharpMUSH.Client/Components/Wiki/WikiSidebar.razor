@@ -1,3 +1,4 @@
+@using SharpMUSH.Library.API
 @using Microsoft.AspNetCore.Components.Routing
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
@@ -15,7 +16,7 @@
     @if (!Collapsed)
     {
         <SidebarHead Title="@Loc["Wiki"]">
-            <Sub>@Loc["NavWikiMainNamespace"] · @Loc.Plural("NavWikiPagesCount", "count", _pages.Count)</Sub>
+            <Sub>@CollectionTitle · @Loc.Plural("NavWikiPagesCount", "count", (_navigation?.Total ?? 0))</Sub>
         </SidebarHead>
         <SidebarSearch Placeholder="@Loc["NavWikiSearch"]" OnSearch="Search" />
         <SectionLabel>@Loc["NavWikiBrowse"]</SectionLabel>
@@ -24,19 +25,36 @@
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavWikiHome"]" Href="/wiki" IsCurrent="@(_path == "/wiki")" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.History" Label="@Loc["NavWikiRecentChanges"]" Href="/wiki/recent" IsCurrent="@(_path == "/wiki/recent")" Collapsed="@Collapsed" />
     </SidebarGroup>
-    @if (!Collapsed)
+    @if (_failed)
     {
-        <SectionLabel>@Loc["NavWikiCategories"]</SectionLabel>
+        <button type="button" class="wiki-side-new" @onclick="LoadNavigationAsync">@Loc["WikiLoadFailed"]</button>
     }
-    <SidebarGroup Class="wiki-side-cats" Label="@Loc["NavWikiCategories"]">
-        @* Uncategorized pages have no category page to go to, so the strip lists named categories only. *@
-        @foreach (var g in _groups.Where(g => !g.IsUncategorized))
+    @if (_navigation is { } navigation)
+    {
+        @if (!Collapsed)
         {
-            var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
-            var route = WikiCategories.Route(g.Key);
-            <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
+            <SectionLabel>@Loc["WikiCollections"]</SectionLabel>
         }
-    </SidebarGroup>
+        <SidebarGroup Class="wiki-side-collections" Label="@Loc["WikiCollections"]">
+            @foreach (var collection in navigation.Collections)
+            {
+                var route = "/wiki/collections/" + Uri.EscapeDataString(collection.Id);
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.LibraryBooks" Label="@collection.Name" Count="@collection.Pages" Href="@route" IsCurrent="@(navigation.Collection == collection.Id)" Collapsed="@Collapsed" />
+            }
+        </SidebarGroup>
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavWikiCategories"]</SectionLabel>
+        }
+        <SidebarGroup Class="wiki-side-cats" Label="@Loc["NavWikiCategories"]">
+            @foreach (var category in navigation.Categories.Where(row => row.Pinned))
+            {
+                var route = "/wiki/collections/" + Uri.EscapeDataString(navigation.Collection) + "?category=" + Uri.EscapeDataString(category.Key);
+                <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@route" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
+            }
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.List" Label="@Loc["WikiBrowseAllCategories"]" Href="@("/wiki/collections/" + Uri.EscapeDataString(navigation.Collection))" Collapsed="@Collapsed" />
+        </SidebarGroup>
+    }
     <SidebarSpacer />
     <AuthorizeView Policy="wiki.create">
         <Authorized>
@@ -66,10 +84,15 @@
 @code {
     [Parameter] public bool Collapsed { get; set; }
 
-    private IReadOnlyList<WikiPageSummary> _pages = [];
-    private IReadOnlyList<WikiCategoryGroup> _groups = [];
-    private IReadOnlyDictionary<string, string>? _names;
+    private WikiNavigationDto? _navigation;
+    private bool _failed;
+    private int _loadVersion;
+    private bool _disposed;
     private string _path = "/wiki";
+    private string? _category;
+    private string CollectionTitle => _navigation is { } navigation
+        ? navigation.Collections.FirstOrDefault(row => row.Id == navigation.Collection)?.Name ?? Loc["WikiGameCollection"]
+        : Loc["WikiGameCollection"];
     private bool _newOpen;
     private static string NewPageHref => "/wiki/main/new-page/edit";
     private string _newTitle = string.Empty;
@@ -78,25 +101,39 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         Locate();
-        var names = Wiki.GetCategoryNamesAsync().AsTask();
-        var (pages, _) = await Wiki.GetAllPagesAsync(0, 500);
-        _names = await names;
-        _pages = pages;
-        _groups = WikiCategories.Group(pages);
+        await LoadNavigationAsync();
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         Locate();
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () => { await LoadNavigationAsync(); if (!_disposed) StateHasChanged(); });
+    }
+
+    private async Task LoadNavigationAsync()
+    {
+        var version = ++_loadVersion;
+        string? collection = null;
+        string? page = null;
+        if (_path.StartsWith("/wiki/collections/", StringComparison.Ordinal))
+            collection = Uri.UnescapeDataString(_path["/wiki/collections/".Length..]);
+        else if (_path.StartsWith("/wiki/", StringComparison.Ordinal) && _path[6..].Split('/').Length == 2)
+            page = _path[6..];
+        var result = await Wiki.GetNavigationAsync(collection, page);
+        if (_disposed || version != _loadVersion) return;
+        _navigation = result is WikiNavigationDto navigation ? navigation : null;
+        _failed = _navigation is null;
     }
 
     private void Locate()
     {
         var path = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        _category = System.Web.HttpUtility.ParseQueryString(new Uri(Nav.Uri).Query)["category"];
         var cut = path.IndexOfAny(['?', '#']);
         _path = (cut >= 0 ? path[..cut] : path).TrimEnd('/');
         if (_path.Length == 0) _path = "/";
+        if (_path.StartsWith("/wiki/category/", StringComparison.Ordinal))
+            _category = WikiCategories.Key(Uri.UnescapeDataString(_path["/wiki/category/".Length..]));
     }
 
     private void Search(string term)
@@ -113,5 +150,5 @@
         Nav.NavigateTo($"/wiki/main/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit?title={Uri.EscapeDataString(title)}");
     }
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    public void Dispose() { _disposed = true; ++_loadVersion; Nav.LocationChanged -= OnLocationChanged; }
 }

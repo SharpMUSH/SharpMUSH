@@ -6449,4 +6449,11 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Exigir una cuenta vinculada</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Colecciones</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Explorar todas las categorías</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Todas las colecciones</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Wiki del juego</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Anterior</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Siguiente</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Mostrando {0}–{1} de {2}</value></data>
 </root>

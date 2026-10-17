@@ -26,7 +26,7 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	{
 		_nav.NavigateTo(path);
 		var cut = Render<WikiIndexWidget>();
-		cut.WaitForAssertion(() => cut.Find(".wiki-cat-card, .wiki-empty"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".wiki-cat-card, .wiki-empty, .wiki-collection-page"), TimeSpan.FromSeconds(5));
 		return cut;
 	}
 
@@ -59,7 +59,7 @@ public class WikiHomeD1Tests : TrackingBunitContext
 		await Assert.That(pages.Length).IsEqualTo(2);
 		await Assert.That(pages[0].GetAttribute("href")).IsEqualTo("/wiki/main/combat");
 		await Assert.That(pages[0].QuerySelector(".wiki-cat-tag--draft")).IsNotNull();
-		await Assert.That(guides.QuerySelector("a.wiki-cat-all")!.GetAttribute("href")).IsEqualTo("/wiki/category/guides");
+		await Assert.That(guides.QuerySelector("a.wiki-cat-all")!.GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=guides");
 		await Assert.That(guides.QuerySelector("a.wiki-cat-all")!.TextContent).Contains("2");
 
 		var lore = cards[1];
@@ -80,13 +80,8 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	{
 		_fake.Pinned.Clear();
 		var cut = RenderHome("/wiki?q=notes");
-		var cards = cut.FindAll(".wiki-cat-card");
-		await Assert.That(cards.Count).IsEqualTo(1);
-		var uncategorized = cards[0];
-		await Assert.That(uncategorized.QuerySelector(".wiki-cat-name")!.TextContent).IsEqualTo("Uncategorized");
-		await Assert.That(uncategorized.QuerySelector(".wiki-cat-cover-fallback")).IsNotNull();
-		await Assert.That(uncategorized.QuerySelector("a.wiki-cat-all")).IsNull()
-			.Because("pages in no category have no category page to list them all");
+		await Assert.That(cut.FindAll(".wiki-collection-page").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".wiki-collection-page").TextContent).Contains("Loose Notes");
 	}
 
 	[Test]
@@ -103,13 +98,12 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task PinsThatCannotBeReadShowEveryCategory()
+	public async Task FailedNavigationShowsAnErrorInsteadOfInventingAnEmptyOrSampledWiki()
 	{
 		_fake.FailPins = true;
 		var cut = RenderHome();
-		var names = cut.FindAll(".wiki-cat-card .wiki-cat-name").Select(n => n.TextContent).ToList();
-		await Assert.That(names).IsEquivalentTo(["Guides", "Lore", "Uncategorized"])
-			.Because("the home must not say nothing is pinned when it could not ask");
+		await Assert.That(cut.Find("[role='alert']").TextContent).IsNotEmpty();
+		await Assert.That(cut.FindAll(".wiki-cat-card")).IsEmpty();
 	}
 
 	[Test]
@@ -147,16 +141,16 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	{
 		var cut = RenderHome("/wiki?q=harbour");
 		await Assert.That(cut.Find(".wiki-hero-search input").GetAttribute("value")).IsEqualTo("harbour");
-		var cards = cut.FindAll(".wiki-cat-card");
-		await Assert.That(cards.Count).IsEqualTo(1);
-		await Assert.That(cards[0].QuerySelector(".wiki-cat-name")!.TextContent).IsEqualTo("Lore");
+		var rows = cut.FindAll(".wiki-collection-page");
+		await Assert.That(rows.Count).IsEqualTo(1);
+		await Assert.That(rows[0].TextContent).Contains("Harbour Ward");
 	}
 
 	[Test]
 	public async Task SearchFromTheAddress_ClearsWhenTheQueryGoes()
 	{
 		var cut = RenderHome("/wiki?q=harbour");
-		await Assert.That(cut.FindAll(".wiki-cat-card").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".wiki-collection-page").Count).IsEqualTo(1);
 		_nav.NavigateTo("/wiki");
 		cut.WaitForAssertion(() =>
 		{
@@ -171,6 +165,6 @@ public class WikiHomeD1Tests : TrackingBunitContext
 		var cut = RenderHome();
 		await cut.Find(".wiki-hero-search input").InputAsync("zzz");
 		await Assert.That(cut.FindAll(".wiki-cat-card").Count).IsEqualTo(0);
-		await Assert.That(cut.Find(".wiki-empty").TextContent).Contains("zzz");
+		cut.WaitForAssertion(() => { if (!cut.Find(".wiki-empty").TextContent.Contains("zzz")) throw new InvalidOperationException("search not complete"); });
 	}
 }

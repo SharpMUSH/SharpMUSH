@@ -13,10 +13,11 @@ public class WikiSidebarTests : TrackingBunitContext
 {
 	private readonly BunitAuthorizationContext _auth;
 	private readonly BunitNavigationManager _nav;
+	private readonly WikiApiFake _api;
 
 	public WikiSidebarTests()
 	{
-		(_, _auth) = WikiApiFake.Install(this);
+		(_api, _auth) = WikiApiFake.Install(this);
 		_nav = Services.GetRequiredService<BunitNavigationManager>();
 	}
 
@@ -29,16 +30,37 @@ public class WikiSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ImportedCollectionsStayOneEntryAndCountsAreNotCappedAt500()
+	{
+		_api.Collections.Add(new("package:pf2e-remaster", "Pathfinder 2e", 4711));
+		_api.NavigationTotal = 6001;
+		_api.Pinned.Remove("lore");
+		var cut = RenderAt("/wiki");
+		await Assert.That(cut.FindAll(".wiki-side-collections a").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".wiki-side-collections a").TextContent).Contains("4711");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent.Replace(",", "")).Contains("6001");
+		await Assert.That(cut.FindAll(".wiki-side-cats a[href*='category=lore']")).IsEmpty();
+	}
+
+	[Test]
+	public async Task NavigationDoesNotSampleTheFirst500Pages()
+	{
+		RenderAt("/wiki");
+		await Assert.That(_api.Requests.Any(path => path.Contains("take=500", StringComparison.Ordinal))).IsFalse()
+			.Because("category counts and navigation must come from the complete authorized collection, not a partial page sample");
+	}
+
+	[Test]
 	public async Task ListsNamedCategoriesWithCountsAndCovers()
 	{
 		var cut = RenderAt("/wiki");
 		var rows = cut.FindAll(".wiki-side-cats .kit-row");
-		await Assert.That(rows.Count).IsEqualTo(2)
-			.Because("pages in no category have no category page, so the strip does not offer a row for them");
-		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/wiki/category/guides");
+		await Assert.That(rows.Count).IsEqualTo(3)
+			.Because("only pinned categories and the complete category directory belong in the sidebar");
+		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=guides");
 		await Assert.That(rows[0].QuerySelector(".kit-row-count")!.TextContent).IsEqualTo("2");
 		await Assert.That(rows[0].QuerySelector("img.kit-row-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
-		await Assert.That(rows[1].GetAttribute("href")).IsEqualTo("/wiki/category/lore");
+		await Assert.That(rows[1].GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=lore");
 		await Assert.That(rows.Any(r => r.TextContent.Contains("Uncategorized"))).IsFalse();
 	}
 
@@ -46,24 +68,26 @@ public class WikiSidebarTests : TrackingBunitContext
 	public async Task HeaderCountsThePages_AndBrowseLinksHomeAndRecent()
 	{
 		var cut = RenderAt("/wiki");
-		await Assert.That(cut.Find(".kit-side-sub").TextContent).StartsWith("Main namespace").Because("board 21: \"Main namespace · N pages\"");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).StartsWith("Game wiki");
 		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("4");
 		await Assert.That(cut.Find(".wiki-side-browse a[href='/wiki']").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.Find(".wiki-side-browse a[href='/wiki/recent']")).IsNotNull();
 	}
 
 	[Test]
-	public async Task TheCurrentCategoryRowIsCurrent()
+	[Arguments("/wiki/collections/game?category=lore")]
+	[Arguments("/wiki/category/lore")]
+	public async Task TheCurrentCategoryRowIsCurrent(string route)
 	{
-		var cut = RenderAt("/wiki/category/lore");
-		await Assert.That(cut.Find(".wiki-side-cats a[href='/wiki/category/lore']").GetAttribute("aria-current")).IsEqualTo("page");
+		var cut = RenderAt(route);
+		await Assert.That(cut.Find(".wiki-side-cats a[href='/wiki/collections/game?category=lore']").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.FindAll(".wiki-side-browse a[aria-current]").Count).IsEqualTo(0);
 	}
 
 	[Test]
 	public async Task SearchSubmitsToTheWikiHome()
 	{
-		var cut = RenderAt("/wiki/category/lore");
+		var cut = RenderAt("/wiki/collections/game?category=lore");
 		await cut.Find(".kit-side-search input").InputAsync("harbour");
 		await cut.Find(".kit-side-search").SubmitAsync();
 		await Assert.That(_nav.Uri).EndsWith("/wiki?q=harbour");

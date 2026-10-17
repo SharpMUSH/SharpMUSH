@@ -1,8 +1,10 @@
+@using SharpMUSH.Library.API
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Library.Services
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 @* A category's members, under its page (MediaWiki's category listing): its subcategories — the category
    pages that are themselves in this category — as links, then the pages as image tiles with draft and
@@ -11,6 +13,10 @@
     @if (_loading)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+    }
+    else if (_failed)
+    {
+        <div role="alert">@Loc["WikiLoadFailed"]</div>
     }
     else if (_pages.Count == 0 && _subcategories.Count == 0)
     {
@@ -58,6 +64,9 @@
     [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
 
     private bool _loading = true;
+    private bool _failed;
+    private bool _disposed;
+    private int _version;
     private IReadOnlyList<WikiPageSummary> _pages = [];
     private IReadOnlyList<WikiPageSummary> _subcategories = [];
     private string? _loadedCategory;
@@ -68,9 +77,27 @@
         if (key == _loadedCategory) return;
         _loadedCategory = key;
         _loading = true;
+        _failed = false;
+        var version = ++_version;
         try
         {
-            var members = await Wiki.GetAllByCategoryAsync(key);
+            if (await Wiki.GetNavigationAsync(page: "category/" + key) is not WikiNavigationDto navigation)
+            {
+                if (!_disposed && version == _version) _failed = true;
+                return;
+            }
+            var members = new List<WikiPageSummary>();
+            for (var skip = 0; ; skip += 200)
+            {
+                if (await Wiki.GetCollectionPagesAsync(navigation.Collection, skip, 200, category: key) is not WikiPageBatch batch)
+                {
+                    if (!_disposed && version == _version) _failed = true;
+                    return;
+                }
+                if (_disposed || version != _version) return;
+                members.AddRange(batch.Pages);
+                if (skip + batch.Pages.Count >= batch.Total || batch.Pages.Count == 0) break;
+            }
             _subcategories = members.Where(WikiCategories.IsCategoryPage)
                 .OrderBy(p => p.Slug, StringComparer.Ordinal)
                 .ToList();
@@ -80,7 +107,8 @@
         }
         finally
         {
-            _loading = false;
+            if (!_disposed && version == _version) _loading = false;
         }
     }
+    public void Dispose() { _disposed = true; ++_version; }
 }

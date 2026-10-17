@@ -12,6 +12,9 @@ public record WikiPageSummary(
 	DateTimeOffset UpdatedAt,
 	int RevisionNumber)
 {
+	public string? CollectionId { get; init; }
+	public string? CollectionName { get; init; }
+
 	/// <summary>The categories the page is in, as keys.</summary>
 	public IReadOnlyList<string> Categories { get; init; } = [];
 

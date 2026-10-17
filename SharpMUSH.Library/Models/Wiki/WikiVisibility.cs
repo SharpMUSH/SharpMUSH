@@ -22,6 +22,21 @@ public readonly record struct WikiVisibility(bool IncludeDrafts, string? AuthorD
 	/// </summary>
 	public WikiReadRestrictions? Hidden { get; init; }
 
+	/// <summary>Optional collection membership. Null admits every page ID; an empty set admits none.</summary>
+	public IReadOnlySet<string>? IncludedPageIds { get; init; }
+
+	/// <summary>IDs owned by other collections, excluded from the game wiki.</summary>
+	public IReadOnlySet<string>? ExcludedPageIds { get; init; }
+
+	/// <summary>Optional case-insensitive title/category search, applied before paging and counting.</summary>
+	public string? Search { get; init; }
+
+	/// <summary>Whether admission needs page metadata in addition to its index visibility.</summary>
+	public bool NeedsPageMetadata => Hidden is not null || !string.IsNullOrWhiteSpace(Search);
+
+	public bool AdmitsPageId(string id) => (IncludedPageIds is null || IncludedPageIds.Contains(id))
+		&& ExcludedPageIds?.Contains(id) != true;
+
 	/// <summary>True when a page with this flag and author passes the draft rule.</summary>
 	public bool Admits(bool published, string? authorDbref) =>
 		published
@@ -30,7 +45,14 @@ public readonly record struct WikiVisibility(bool IncludeDrafts, string? AuthorD
 
 	/// <summary>True when <paramref name="page"/> is returned: it passes the draft rule and is not hidden.</summary>
 	public bool Admits(WikiPage page)
-		=> Admits(page.Published, page.AuthorDbref) && Hidden?.Hides(page.Namespace, page.Categories, page.Id) != true;
+	{
+		var search = Search?.Trim();
+		return Admits(page.Published, page.AuthorDbref) && AdmitsPageId(page.Id)
+			&& Hidden?.Hides(page.Namespace, page.Categories, page.Id) != true
+			&& (string.IsNullOrWhiteSpace(search) || page.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+				|| page.Categories.Any(category => Services.WikiHelpers.CategoryLabel(category).Contains(search, StringComparison.OrdinalIgnoreCase)));
+	}
+
 }
 
 /// <summary>

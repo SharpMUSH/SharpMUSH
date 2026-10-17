@@ -1,0 +1,129 @@
+@using SharpMUSH.Library.API
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Library.Services
+@inject SharpMUSH.Client.Services.WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+<section class="wiki-collection-browser">
+    @if (_navigation is { } navigation)
+    {
+        @if (!Embedded)
+        {
+            <h1>@Title</h1>
+            <a href="/wiki">@Loc["NavWikiHome"]</a>
+        }
+        <form class="wiki-collection-search" role="search" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+            <input type="search" aria-label="@Loc["NavWikiSearch"]" placeholder="@Loc["NavWikiSearch"]" value="@_search" @oninput="e => _search = e.Value?.ToString() ?? string.Empty" maxlength="200" />
+            <button type="submit">@Loc["NavWikiSearch"]</button>
+        </form>
+        <nav class="wiki-collection-topics" aria-label="@Loc["NavWikiCategories"]">
+            <button type="button" aria-pressed="@(_category.Length == 0)" @onclick="() => SelectCategory(string.Empty)">@Loc["All"]</button>
+            @foreach (var category in navigation.Categories.Where(row => row.Pinned))
+            {
+                <button type="button" aria-pressed="@(_category == category.Key)" @onclick="() => SelectCategory(category.Key)">@category.Name <span>@category.Pages</span></button>
+            }
+        </nav>
+        <details class="wiki-collection-directory">
+            <summary>@Loc["WikiBrowseAllCategories"]</summary>
+            <input type="search" aria-label="@Loc["NavWikiCategories"]" placeholder="@Loc["NavWikiCategories"]" value="@_categorySearch" @oninput="e => _categorySearch = e.Value?.ToString() ?? string.Empty" />
+            <div class="wiki-collection-category-list">
+                @foreach (var category in navigation.Categories.Where(row => row.Name.Contains(_categorySearch, StringComparison.OrdinalIgnoreCase)))
+                {
+                    <button type="button" aria-pressed="@(_category == category.Key)" @onclick="() => SelectCategory(category.Key)">@category.Name <span>@category.Pages</span></button>
+                }
+            </div>
+        </details>
+    }
+    @if (_failed)
+    {
+        <div class="wiki-collection-error" role="alert">@Loc["WikiLoadFailed"] <button type="button" @onclick="ReloadAsync">@Loc["NavWikiBrowse"]</button></div>
+    }
+    else if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" aria-label="@Loc["NavWikiBrowse"]" />
+    }
+    else if (_rows is { } rows)
+    {
+        <p class="wiki-collection-range" aria-live="polite">@string.Format(Loc["WikiPageRange"], rows.Total == 0 ? 0 : _skip + 1, Math.Min(_skip + rows.Pages.Count, rows.Total), rows.Total)</p>
+        @if (rows.Total == 0)
+        {
+            <div class="wiki-empty">@(string.IsNullOrWhiteSpace(_search) ? Loc["NavWikiNoPages"] : string.Format(Loc["NavWikiNoMatches"], _search))</div>
+        }
+        <div class="wiki-collection-pages">
+            @foreach (var article in rows.Pages)
+            {
+                <a class="wiki-collection-page" href="@WikiRoutes.PathFor(article.Namespace, article.Slug)">
+                    <span>@article.Title</span><span class="wiki-collection-page-context">@(article.CollectionName is { Length: > 0 } name ? name + " / " + article.Namespace : article.Namespace)</span>
+                </a>
+            }
+        </div>
+        <nav class="wiki-collection-paging" aria-label="@Loc["NavWikiBrowse"]">
+            <button type="button" disabled="@(_skip == 0)" @onclick="PreviousAsync">@Loc["WikiPreviousPage"]</button>
+            <button type="button" disabled="@(_skip + rows.Pages.Count >= rows.Total)" @onclick="NextAsync">@Loc["WikiNextPage"]</button>
+        </nav>
+    }
+</section>
+
+@code {
+    [Parameter] public string Collection { get; set; } = "game";
+    [Parameter] public string? Search { get; set; }
+    [Parameter] public string? Category { get; set; }
+    [Parameter] public bool Embedded { get; set; }
+    private WikiNavigationDto? _navigation;
+    private WikiPageBatch? _rows;
+    private string? _parameters;
+    private string _search = string.Empty;
+    private string _category = string.Empty;
+    private string _categorySearch = string.Empty;
+    private int _skip;
+    private const int PageSize = 50;
+    private int _version;
+    private bool _failed;
+    private bool _loading;
+    private bool _disposed;
+    private string Title => Collection is "game" ? Loc["WikiGameCollection"] : Collection is "all" ? Loc["WikiAllCollections"]
+        : _navigation?.Collections.FirstOrDefault(row => row.Id == Collection)?.Name ?? Loc["WikiCollections"];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var parameters = Collection + "\n" + Search + "\n" + Category;
+        if (_parameters == parameters) return;
+        _parameters = parameters;
+        _search = Search ?? string.Empty;
+        _category = Category ?? string.Empty;
+        _skip = 0;
+        _navigation = null;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        var version = ++_version;
+        _loading = true;
+        _failed = false;
+        _rows = null;
+        var navigation = await Wiki.GetNavigationAsync(Collection);
+        if (_disposed || version != _version) return;
+        if (navigation is not WikiNavigationDto loaded) { _failed = true; _loading = false; return; }
+        _navigation = loaded;
+        var result = await Wiki.GetCollectionPagesAsync(Collection, _skip, PageSize, _category, _search);
+        if (_disposed || version != _version) return;
+        if (result is WikiPageBatch changed && changed.Total > 0 && _skip >= changed.Total)
+        {
+            _skip = ((changed.Total - 1) / PageSize) * PageSize;
+            result = await Wiki.GetCollectionPagesAsync(Collection, _skip, PageSize, _category, _search);
+            if (_disposed || version != _version) return;
+        }
+        _rows = result is WikiPageBatch batch ? batch : null;
+        if (_rows is { Total: 0 }) _skip = 0;
+        _failed = _rows is null;
+        _loading = false;
+    }
+
+    private async Task ApplySearch() { _skip = 0; await ReloadAsync(); }
+    private async Task SelectCategory(string category) { _category = category; _skip = 0; await ReloadAsync(); }
+    private async Task PreviousAsync() { _skip = Math.Max(0, _skip - PageSize); await ReloadAsync(); }
+    private async Task NextAsync() { _skip += PageSize; await ReloadAsync(); }
+    public void Dispose() { _disposed = true; ++_version; }
+}
