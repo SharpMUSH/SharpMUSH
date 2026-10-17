@@ -42,7 +42,7 @@ The following file map is selected:
 - Existing `Migration/LightningMigration.cs`: a fixture-only identity bind/check before its first seed write; ordinary provider path immediately returns without reads/writes. No semantic tables or migration registration.
 - Provider csproj: add only Infrastructure friend access.
 - New Infrastructure `SemanticWikiPrototypeFixture.cs` in Task A owns issuance and provider-test support; Task B adds `SemanticWikiPrototypeHost.cs` over that owner. All issuance callers live in Infrastructure. Root adds Infrastructure friend access for Tests so atomic Claim can be tested without opening a second environment.
-- New `SharpMUSH.Tests/Wiki/Semantics/IntegratedWikiBoundaryTests.cs`: admission/lifetime/identity evidence using the actual host.
+- New `SharpMUSH.Tests/Wiki/Semantics/IntegratedWikiBoundaryTests.cs`: provider admission/lifetime/identity evidence. `SharpMUSH.Tests/Wiki/Semantics/IntegratedWikiHostBoundaryTests.cs` supplies actual-host composition evidence; `TestHostLifetimeTests.cs` supplies retained host lifetime evidence.
 
 ## Existing constraints that determine the design
 
@@ -164,6 +164,6 @@ Depends on frozen Task A signatures and review. Own Infrastructure wrapper and a
 
 ## Verification and completion limits
 
-Tests use TUnit `/*/*/IntegratedWikiBoundaryTests/*` and actual provider/host behavior. Do not add tests that merely mirror signatures or assert source text. Cancellation/failure paths must drain all started tasks before disposing synchronization objects or storage. Record baseline green separately from actual RED/GREEN and report skipped tests. Whole-branch review is required.
+Tests use distinct TUnit filters: `/*/*/IntegratedWikiBoundaryTests/*` for provider admission, `/*/*/IntegratedWikiHostBoundaryTests/*` for actual-host composition, and `/*/*/TestHostLifetimeTests/*` for retained host lifetime. They exercise actual provider/host behavior. Do not add tests that merely mirror signatures or assert source text. Cancellation/failure paths must drain all started tasks before disposing synchronization objects or storage. Record baseline green separately from actual RED/GREEN and report skipped tests. Whole-branch review is required.
 
 This plan completes only disposable fixture admission/composition. It cannot complete B1 runtime fault proof, atomic integrated mutations, authority certificates, installer compensation, queries, generation rebuild or performance acceptance. No child-process capability transfer is implemented; it needs an explicit later orchestration protocol.

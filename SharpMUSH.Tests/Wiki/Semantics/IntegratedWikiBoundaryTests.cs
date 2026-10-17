@@ -250,10 +250,27 @@ public class IntegratedWikiBoundaryTests
 			var reservation = fixture.WorldPath + ".semantic-reservation";
 			var sibling = Path.Combine(root, "unowned");
 			File.WriteAllText(sibling, "unowned");
+			var probe = Path.Combine(root, "permission-probe");
+			File.WriteAllText(probe, "owned probe");
+			var deniedMode = originalMode & ~(UnixFileMode.UserWrite | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite);
+			var permissionsEnforced = false;
+			try
+			{
+				File.SetUnixFileMode(root, deniedMode);
+				try { File.Delete(probe); }
+				catch (UnauthorizedAccessException) { permissionsEnforced = true; }
+			}
+			finally { File.SetUnixFileMode(root, originalMode); }
+			if (!permissionsEnforced)
+			{
+				Skip.Test("This environment permits file deletion without directory write permission; the Unix permission failure cannot be exercised.");
+				return;
+			}
+
 			var denied = false;
 			try
 			{
-				File.SetUnixFileMode(root, originalMode & ~(UnixFileMode.UserWrite | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite));
+				File.SetUnixFileMode(root, deniedMode);
 				try { await fixture.DisposeAsync(); }
 				catch (UnauthorizedAccessException) { denied = true; }
 			}
