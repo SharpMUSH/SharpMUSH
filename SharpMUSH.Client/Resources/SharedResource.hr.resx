@@ -6320,4 +6320,16 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Najveći broj igrača</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Samo povezani računi</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Bez ograničenja</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Dopusti Discord identitete</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Zahtijevaj povezani račun</value>
+  </data>
 </root>

@@ -47,6 +47,10 @@ public class AdminDiscordPageTests : TrackingBunitContext
 
 		public string ChannelState { get; set; } = "stopped";
 
+		public bool Unrestricted { get; set; }
+
+		public bool RefuseModeChange { get; set; }
+
 		public string Status { get; set; } = "connected";
 
 		public List<string> Calls { get; } = [];
@@ -71,6 +75,13 @@ public class AdminDiscordPageTests : TrackingBunitContext
 					Settings = await request.Content!.ReadFromJsonAsync<DiscordSettingsRequest>(cancellationToken);
 				}
 
+				if (path.EndsWith("/access", StringComparison.Ordinal))
+				{
+					if (RefuseModeChange) return Json(new DiscordAdminAnswer("Discord refused the permission update. Retry after fixing Manage Permissions.", "error"));
+					using var body = await System.Text.Json.JsonDocument.ParseAsync(await request.Content!.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+					Unrestricted = body.RootElement.GetProperty("unrestricted").GetBoolean();
+				}
+
 				if (path.EndsWith("/resume", StringComparison.Ordinal))
 				{
 					ChannelState = "ok";
@@ -91,10 +102,12 @@ public class AdminDiscordPageTests : TrackingBunitContext
 						new DiscordSetupStepView("token", "Bot token", true, null, null),
 						new DiscordSetupStepView("intents", "Privileged intents", false, "Turn on Server Members Intent.", "https://discord.com/developers"),
 					])),
-				"/api/discord/admin/channels" => Json(new List<DiscordChannelView>
+				"/api/discord/admin/channels" => Json(new[]
 				{
-					new("1427000000000000001", "rp-general", "Test Server", "discord/1427000000000000001", ChannelState, 0,
-						ChannelState == "stopped" ? "The webhook was deleted twice." : null, ["@everyone"], At),
+					new { ChannelId = "1427000000000000001", ChannelName = "rp-general", GuildName = "Test Server",
+						Feed = "discord/1427000000000000001", State = ChannelState, Waiting = 0,
+						Fault = ChannelState == "stopped" ? "The webhook was deleted twice." : null,
+						OpenTo = new[] { "@everyone" }, LinkedAt = At, Unrestricted },
 				}),
 				"/api/discord/admin/channels/available" => Json(new List<DiscordTextChannelView>
 				{
@@ -213,6 +226,37 @@ public class AdminDiscordPageTests : TrackingBunitContext
 			if (cut.FindAll("button.adm-discord-resume").Count != 0) throw new InvalidOperationException("still stopped");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(_api.Calls).Contains("POST /api/discord/admin/channels/1427000000000000001/resume");
+	}
+
+	[Test]
+	public async Task ChannelAccessCanBeOpenedAndRestrictedAgain()
+	{
+		var cut = RenderPage();
+		await cut.Find("button.adm-discord-unrestrict").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("button.adm-discord-restrict"), TimeSpan.FromSeconds(5));
+		await Assert.That(_api.Unrestricted).IsTrue();
+		await Assert.That(cut.FindAll(".adm-discord-open").Count).IsEqualTo(0).Because("intentional unrestricted access is not permission drift");
+		await Assert.That(_api.Calls).Contains("PUT /api/discord/admin/channels/1427000000000000001/access");
+
+		await cut.Find("button.adm-discord-restrict").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("button.adm-discord-unrestrict"), TimeSpan.FromSeconds(5));
+		await Assert.That(_api.Unrestricted).IsFalse();
+	}
+
+	[Test]
+	public async Task FailedPermissionChangeKeepsTheCurrentModeAndRetryControl()
+	{
+		_api.Unrestricted = true;
+		_api.RefuseModeChange = true;
+		var cut = RenderPage();
+		await cut.Find("button.adm-discord-restrict").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (!_api.Calls.Contains("PUT /api/discord/admin/channels/1427000000000000001/access"))
+				throw new InvalidOperationException("mode update not sent");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(_api.Unrestricted).IsTrue();
+		await Assert.That(cut.FindAll("button.adm-discord-restrict").Count).IsEqualTo(1);
 	}
 
 	[Test]

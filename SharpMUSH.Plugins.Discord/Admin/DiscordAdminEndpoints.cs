@@ -84,9 +84,13 @@ public static class DiscordAdminEndpoints
 		group.MapDelete("channels/{channelId}", async (string channelId, DiscordRelay relay, CancellationToken cancellationToken) =>
 		{
 			using var timeout = Timeout(cancellationToken);
-			return Parse(channelId) is { } id && await relay.UnlinkAsync(id, timeout.Token) is DiscordChannelLink link
-				? Answer($"Unlinked #{link.ChannelName}. Its feed discord/{link.FeedKey} stays, with its lines.", "ok")
-				: Answer("That channel is not linked.", "warn");
+			if (Parse(channelId) is not { } id) return Answer("That is not a Discord channel id.", "error");
+			return await relay.UnlinkAsync(id, timeout.Token) switch
+			{
+				DiscordChannelLink link => Answer($"Unlinked #{link.ChannelName} and removed its Linked-role requirement. Its feed discord/{link.FeedKey} stays, with its lines.", "ok"),
+				Error<string> error => Answer(error.Value, "error"),
+				_ => Answer("That channel is not linked.", "warn"),
+			};
 		});
 
 		group.MapPost("channels/{channelId}/resume", async (string channelId, DiscordRelay relay, CancellationToken cancellationToken)
@@ -104,8 +108,21 @@ public static class DiscordAdminEndpoints
 
 			using var timeout = Timeout(cancellationToken);
 			return await gate.GateAsync(id, timeout.Token) is { } problem
-				? Answer($"#{link.ChannelName} is still open to everyone: {problem}", "error")
+				? Answer($"Could not require linked accounts in #{link.ChannelName}: {problem}", "error")
 				: Answer($"Only linked members may post in #{link.ChannelName} now.", "ok");
+		});
+
+		group.MapPut("channels/{channelId}/access", async (string channelId, DiscordChannelAccessRequest request,
+			IDiscordLinkStore links, IDiscordChannelGate gate, CancellationToken cancellationToken) =>
+		{
+			if (Parse(channelId) is not { } id || links.Get(id) is not { } link)
+				return Answer("That channel is not linked.", "warn");
+			using var timeout = Timeout(cancellationToken);
+			return await gate.SetUnrestrictedAsync(id, request.Unrestricted, timeout.Token) is { } problem
+				? Answer($"Could not change access in #{link.ChannelName}: {problem}", "error")
+				: Answer(request.Unrestricted
+					? $"#{link.ChannelName} is unrestricted. Discord members can speak under their Discord identity without a game account."
+					: $"Only linked members may post in #{link.ChannelName} now.", "ok");
 		});
 
 		group.MapGet("roles", (DiscordRoleMaps maps, IDiscordRoleStore store) => Roles(maps, store));
@@ -207,7 +224,7 @@ public static class DiscordAdminEndpoints
 				DiscordLinkState.Backlogged => "backlogged",
 				_ => "ok",
 			},
-			status.Depth, status.Link.Fault?.Reason, openTo, status.Link.LinkedAt);
+			status.Depth, status.Link.Fault?.Reason, openTo, status.Link.LinkedAt, status.Link.Unrestricted, status.Link.PermissionProblem);
 
 	public static DiscordRolesView Roles(DiscordRoleMaps maps, IDiscordRoleStore store)
 	{

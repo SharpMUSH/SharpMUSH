@@ -16,7 +16,7 @@
       "id": "discord-channels",
       "heading": "Linked channels",
       "lookup": "@discord channels",
-      "aliases": ["@discord/link", "@discord/unlink", "@discord/resume", "@discord/gate"]
+      "aliases": ["@discord/link", "@discord/unlink", "@discord/resume", "@discord/gate", "@discord/unrestricted", "@discord/restrict"]
     },
     {
       "id": "discord-members",
@@ -92,6 +92,8 @@ Once Discord accepts the token, `@discord` ends with a line starting `Add the bo
 - `@discord/unlink <channel id>`
 - `@discord/resume <channel id>`
 - `@discord/gate <channel id>`
+- `@discord/unrestricted <channel id>`
+- `@discord/restrict <channel id>`
 
 Install the discord package from the portal's Packages page first; it adds the `discord` feed kind. `@discord/link` then makes a webhook in the channel, which the bot posts through, and lets only members holding the Linked role send messages there. These commands return the channel id at once and say how it went when Discord answers.
 
@@ -101,9 +103,14 @@ Install the discord package from the portal's Packages page first; it adds the `
 
 Output: Linked #ooc in My Game. Lines sent on the feed discord/1234567890123456789 are posted there. Only linked members may post there.
 
-- `/unlink` stops posting and deletes the webhook. The feed and its lines stay in the game.
+- `/unlink` removes the Linked-role posting requirement SharpMUSH installed, stops posting and deletes the webhook. The feed and its lines stay in the game. If Discord refuses permission cleanup, the link stays listed with an error so you can fix the bot permissions and retry unlinking. Unrelated administrator permission changes are preserved.
 - `/resume` posts again after a link stopped. `@discord` shows why a link stopped in its State column: a webhook deleted twice within ten minutes, a permission the bot lost, or five posts refused within a minute.
-- `/gate` makes the Linked-role change again, after the bot could not make it while linking.
+- `/gate` or `/restrict` requires a linked game account again. `/gate` also retries a permission change that failed while linking.
+- `/unrestricted` permits Discord members without a game account to speak under a distinct Discord identity. Use it for a newbie/help channel. Admin > Discord offers the same per-channel access controls and shows which mode is active.
+
+For a newly gated channel, SharpMUSH records the previous Send Messages and Send Messages in Threads settings for `@everyone` and Linked. Unlinking or opening the channel restores only those bits if they still match what SharpMUSH wrote. Other overwrites and administrator edits stay intact. For older links without a saved baseline, only recognizable gate bits are cleared to inherit; earlier settings cannot be reconstructed.
+
+Unrestricted channels still follow Discord server permissions. On the game side, guests use the existing channel/feed permissions. External Discord identities cannot satisfy object-based send locks: a configured kind or feed send lock refuses external speech; clear those locks only where public Discord participation is intended. Known disabled or banned game accounts do not gain access through unrestricted mode.
 
 Anything that sends a line on the feed posts it in Discord, such as `@feed/send discord/1234567890123456789=Server restart in ten minutes.` A line sent with `@feed/send/to` is not posted, and neither is one still waiting after a minute. See [@feed].
 
@@ -116,18 +123,21 @@ A member links their Discord account to their game account once. In the game's D
 - A Discord account unlinked from one game account waits a week before it can link a different one.
 - While a game account's ban stands, the Discord account that was linked to it cannot link another.
 
-The bot gives every member linked to an active account a role named Linked, and takes it from everyone else. Only that role may post in linked channels.
+The bot gives every member linked to an active account a role named Linked, and takes it from everyone else. Only that role may post in restricted linked channels. Unrestricted channels do not require that role.
 
 ## Speaking from Discord
 
 - `@discord/speak <channel id>`
 - `@discord/speak/off <channel id>`
+- In Discord: `/speakas <character>` in the channel you want to speak in.
+
+The bot command checks your linked, active game account and accepts only a character you currently own. It sets your speaking identity for that channel alone and replies privately. Choosing a character in one channel leaves your choices in other channels intact. The character must still pass the feed's send permissions when a message arrives.
 
 Anyone may run these, as the character they want to speak as. The character's account must be linked to Discord, and the character must pass the feed's send lock. From then on, each message the member posts in that channel comes into the game as a line on its feed, spoken by that character. One character speaks per channel; choosing another replaces it. `/off` stops it.
 
 This is not private: anyone who reads both the game and the channel can tell which Discord member plays the character.
 
-A member with no character chosen in a channel gets a direct message saying how to choose one, and their messages do not reach the game. Nothing that arrives from Discord is ever evaluated.
+In a restricted channel, a member with no character chosen gets a direct message saying how to choose one, and their messages do not reach the game. In an unrestricted channel, a member without a chosen character speaks under their Discord identity instead; choosing an owned character with `/speakas` or `@discord/speak` uses that character. Nothing that arrives from Discord is ever evaluated.
 
 ## Roles
 

@@ -39,7 +39,9 @@ public sealed record DiscordChannelView(
 	int Waiting,
 	string? Fault,
 	IReadOnlyList<string>? OpenTo,
-	DateTimeOffset LinkedAt);
+	DateTimeOffset LinkedAt,
+	bool Unrestricted = false,
+	string? PermissionProblem = null);
 
 /// <summary>A text channel the bot can see, to link (<c>GET api/discord/admin/channels/available</c>).</summary>
 /// <param name="Missing">The permissions a link needs there that the bot lacks.</param>
@@ -48,6 +50,9 @@ public sealed record DiscordTextChannelView(string ChannelId, string Name, strin
 
 /// <summary>Links a Discord channel (<c>POST api/discord/admin/channels</c>).</summary>
 public sealed record DiscordLinkChannelRequest(string ChannelId);
+
+/// <summary>Sets whether Discord members need a linked game account in this channel.</summary>
+public sealed record DiscordChannelAccessRequest(bool Unrestricted);
 
 /// <summary>What an admin action did, said for the admin.</summary>
 /// <param name="Kind">ok, warn or error.</param>

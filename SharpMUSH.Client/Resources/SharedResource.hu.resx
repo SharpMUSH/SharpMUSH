@@ -6320,4 +6320,16 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maximális játékosszám</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Csak összekapcsolt fiókok</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Korlátozás nélkül</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Discord-azonosságok engedélyezése</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Összekapcsolt fiók megkövetelése</value>
+  </data>
 </root>

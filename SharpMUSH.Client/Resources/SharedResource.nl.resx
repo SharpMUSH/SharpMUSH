@@ -6320,4 +6320,16 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maximumaantal spelers</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Alleen gekoppelde accounts</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Onbeperkt</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Discord-identiteiten toestaan</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Gekoppeld account vereisen</value>
+  </data>
 </root>
