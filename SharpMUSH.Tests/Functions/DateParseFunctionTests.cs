@@ -29,6 +29,8 @@ public class DateParseFunctionTests
 	}
 
 	[Test]
+	[Arguments("dateparse(tomorrow 7pm America/Chicago,UTC,1792152000,normalized)", "2026-10-17 19:00:00 -05:00 (America/Chicago)")]
+	[Arguments("dateparse(2026-11-01T01:30:00-04:00,UTC,,normalized)", "2026-11-01 01:30:00 -04:00 (-04:00)")]
 	[Arguments("dateparse(1792152000.125,UTC,,f)", "1792152000.125")]
 	[Arguments("dateparse(1792152000.125,UTC,,ms)", "1792152000125")]
 	[Arguments("dateparse(-1.5,UTC)", "-2")]

@@ -167,8 +167,8 @@ public class SceneVerbRulesIntegrationTests
 		await God1($"&TZ {actor}=America/New_York");
 		var first = await RunAs(handle, $"+scene/schedule 2099-11-01T01:30:00-04:00/First clock {Tag}=A pitch");
 		var second = await RunAs(handle, $"+scene/schedule 2099-11-01T01:30:00-05:00/Second clock {Tag}=A pitch");
-		await Assert.That(first).Contains("UTC offset -04:00");
-		await Assert.That(second).Contains("UTC offset -05:00");
+		await Assert.That(first).Contains("01:30:00 -04:00 (-04:00)");
+		await Assert.That(second).Contains("01:30:00 -05:00 (-05:00)");
 		var firstAt = long.Parse(await Eval($"scene({IdIn(first)},scheduledfor)"));
 		var secondAt = long.Parse(await Eval($"scene({IdIn(second)},scheduledfor)"));
 		await Assert.That(secondAt - firstAt).IsEqualTo(3600000L);
@@ -197,7 +197,13 @@ public class SceneVerbRulesIntegrationTests
 		await Assert.That(await Eval($"scene({id},title)")).IsEqualTo($"Title / Part {Tag}");
 		await Assert.That(await Eval($"scene({id},summary)")).IsEqualTo("Pitch / part = intact");
 		await Assert.That(long.Parse(await Eval($"scene({id},scheduledfor)"))).IsGreaterThan(NowMillis);
-		await Assert.That(said).Contains("(UTC)");
+		await Assert.That(said).Contains("19:00:00");
+		await Assert.That(said).Contains("(America/Chicago)");
+		var rescheduled = await RunAs(handle, $"+scene/reschedule {id}=2099-10-23T19:00:00-05:00 America/Chicago");
+		await Assert.That(rescheduled).Contains("2099-10-23 19:00:00 -05:00 (America/Chicago)");
+		await RunAs(handle, $"+scene/start {id}");
+		var paused = await RunAs(handle, $"+scene/pause {id}=2099-10-24T19:00:00-05:00 America/Chicago");
+		await Assert.That(paused).Contains("2099-10-24 19:00:00 -05:00 (America/Chicago)");
 	}
 
 	[Test]

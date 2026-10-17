@@ -12,9 +12,9 @@
 -->
 # dateparse()
 
-`dateparse(<expression>[, <timezone>[, <reference>[, <precision>]]])`
+`dateparse(<expression>[, <timezone>[, <reference>[, <output>]]])`
 
-Reads one complete English date expression and returns epoch seconds. `precision` is `s` (whole seconds, default), `f` (fractional seconds), or `ms` (milliseconds). Numeric expression and reference values always mean epoch **seconds**, irrespective of output precision. `reference` defaults to the instant of the call; provide it for repeatable calculations. The zone defaults to the executor's readable, valid `TZ`, then UTC. A zone in the expression overrides it. Use canonical IANA names such as `America/Chicago`, `UTC`, `Z`, or a numeric offset such as `-05:00`.
+Reads one complete English date expression and returns epoch seconds. `output` is `s` (whole seconds, default), `f` (fractional seconds), or `ms` (milliseconds). Use `normalized` to return the resolved local date, exact clock, numeric UTC offset and zone instead of an epoch value. This preserves a zone explicitly written in the expression for confirmations. Numeric expression and reference values always mean epoch **seconds**, irrespective of output precision. `reference` defaults to the instant of the call; provide it for repeatable calculations. The zone defaults to the executor's readable, valid `TZ`, then UTC. A zone in the expression overrides it. Use canonical IANA names such as `America/Chicago`, `UTC`, `Z`, or a numeric offset such as `-05:00`.
 
 Supported families include `tomorrow 7pm`, `the day after tomorrow at noon`, `Tuesday 18:30`, `next week Tuesday 18:30`, `in 90 minutes`, `+1h30m`, `in 7 days at 18:30`, `two weeks from now at 7pm`, `October 23 at 7pm`, `23 Oct 2026 19:00`, ISO timestamps, epoch seconds, `a week from Tuesday at 7pm`, `first Saturday of next month at noon`, and `last Friday of November at 18:00`. English month and weekday names accept usual three-letter forms. English word case and repeated spaces are ignored; IANA names retain their canonical spelling, and an optional `at` precedes clocks.
 
@@ -44,3 +44,8 @@ dateparse(next Tuesday,UTC,1792152000)
 ```
 
 See also [convtime()] and [timezones].
+
+```
+dateparse(tomorrow 7pm America/Chicago,UTC,1792152000,normalized)
+2026-10-17 19:00:00 -05:00 (America/Chicago)
+```
