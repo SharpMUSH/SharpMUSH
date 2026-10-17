@@ -37,15 +37,20 @@ public class PackagePluginsController(
 		Ok(await plugins.ListAsync(cancellationToken));
 
 	[HttpPost("{id}/enable")]
+	[Authorize(Policy = PortalPermission.ServerOperate)]
 	public Task<ActionResult<PluginChangeResponse>> Enable(string id, CancellationToken cancellationToken) =>
 		SetEnabledAsync(id, true, cancellationToken);
 
 	[HttpPost("{id}/disable")]
+	[Authorize(Policy = PortalPermission.ServerOperate)]
 	public Task<ActionResult<PluginChangeResponse>> Disable(string id, CancellationToken cancellationToken) =>
 		SetEnabledAsync(id, false, cancellationToken);
 
 	private async Task<ActionResult<PluginChangeResponse>> SetEnabledAsync(string id, bool enabled, CancellationToken cancellationToken)
 	{
+		var blockers = await plugins.GetBlockersAsync(id, enabled, cancellationToken);
+		if (blockers.Packages.Count > 0 || blockers.Plugins.Count > 0) return Conflict(blockers);
+
 		switch (await plugins.SetEnabledAsync(id, enabled, cancellationToken))
 		{
 			case PluginChangeResponse change:
@@ -55,7 +60,10 @@ public class PackagePluginsController(
 					$"{(enabled ? "Turned on" : "Turned off")}{removed}", cancellationToken);
 				return Ok(change);
 			case Error<string> error:
-				return BadRequest(error.Value);
+				// A dependency can appear while the service waits for the package gate.
+				blockers = await plugins.GetBlockersAsync(id, enabled, cancellationToken);
+				return blockers.Packages.Count > 0 || blockers.Plugins.Count > 0
+					? Conflict(blockers) : BadRequest(error.Value);
 			default:
 				return StatusCode(StatusCodes.Status500InternalServerError);
 		}

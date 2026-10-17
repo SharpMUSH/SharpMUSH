@@ -33,10 +33,24 @@ public partial class PackageInstallService
 		}
 
 		var dependents = await registry.GetPackageDependentsAsync(packageId);
-		if (dependents.Count > 0 && !force)
+		if (dependents.Count > 0 && (!force || installed.Kind == PackageKind.Plugin))
 		{
+			var remedy = installed.Kind == PackageKind.Plugin ? "Uninstall them first." : "Uninstall them first or force-remove.";
 			return new Error<string>(
-				$"Cannot uninstall '{packageId}': {string.Join(", ", dependents.Select(d => d.PackageId))} depend(s) on it. Uninstall them first or force-remove.");
+				$"Cannot uninstall '{packageId}': {string.Join(", ", dependents.Select(d => d.PackageId))} depend(s) on it. {remedy}");
+		}
+
+		// This is authoritative even for ordinary (non-batch) uninstalls and force-removal. Runtime plugin
+		// dependents can still be running after being configured off; removing their prerequisite needs a restart.
+		if (installed.Kind == PackageKind.Plugin)
+		{
+			var blockers = await pluginAdministration.Value.GetBlockersAsync(packageId, false, cancellationToken);
+			if (blockers.Packages.Count > 0 || blockers.Plugins.Count > 0)
+			{
+				return new Error<string>($"Cannot uninstall '{packageId}': packages [{string.Join(", ", blockers.Packages)}] "
+					+ $"and plugins [{string.Join(", ", blockers.Plugins)}] depend on it. Remove dependent packages explicitly "
+					+ "and stop dependent plugins first; a running plugin that cannot unload requires a restart.");
+			}
 		}
 
 		// Managed packages (Phase 4): no game objects/attributes — remove the
