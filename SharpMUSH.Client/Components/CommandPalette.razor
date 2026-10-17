@@ -162,6 +162,8 @@
     private string _query = string.Empty;
     private int _active;
     private bool _rememberFocus;
+    private Task<bool>? _focusRemember;
+    private Task _focusRelease = Task.CompletedTask;
     private bool _focusSlots;
     private string? _itemsFor;
     private IReadOnlyList<ListItem> _items = [];
@@ -232,6 +234,8 @@
         {
             if (_wasOpen) ++_opening;
             _wasOpen = false;
+            _rememberFocus = false;
+            await ReleaseFocusAsync();
             return;
         }
         if (!_wasOpen)
@@ -288,23 +292,23 @@
     {
         if (_disposed) return;
         var invalidation = ++_opening;
-        _wasOpen = false;
+        _rememberFocus = false;
         _slotRow = null;
         _configurationRows = [];
         _configurationProblem = null;
         _server = null;
         _destinations = [];
         _itemsFor = null;
-        if (Open) _ = InvokeAsync(async () =>
-        {
-            if (IsCurrent(invalidation)) await OpenChanged.InvokeAsync(false);
-        });
+        if (Open) _ = InvokeAsync(() => CloseAsync(invalidation));
+        else _wasOpen = false;
     }
 
     public void Dispose()
     {
         _disposed = true;
         ++_opening;
+        _rememberFocus = false;
+        _ = ReleaseFocusAsync();
         Authentication.AuthenticationStateChanged -= AuthenticationChanged;
         if (_account is not null) _account.ActiveCharacterChanged -= IdentityChanged;
     }
@@ -352,13 +356,18 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Remember what opened the palette before focus moves into it, so closing hands it back.
-        if (_rememberFocus)
+        var opening = _opening;
+        if (_rememberFocus && Open && !_disposed)
         {
+            await _focusRelease;
+            if (!IsCurrent(opening) || !_rememberFocus) return;
             _rememberFocus = false;
-            await RunFocusAsync("sharpmushLayout.rememberFocus");
+            var remembering = RunFocusAsync("sharpmushLayout.rememberFocus");
+            _focusRemember = remembering;
+            await remembering;
         }
 
-        if (!Open) return;
+        if (!IsCurrent(opening)) return;
         try
         {
             if (_slotRow is not null)
@@ -487,20 +496,37 @@
         await Server.SetPinsAsync(pins);
     }
 
-    private async Task CloseAsync()
+    private Task CloseAsync() => CloseAsync(++_opening);
+
+    private async Task CloseAsync(int closing)
     {
-        ++_opening;
-        _wasOpen = false;
+        if (!IsCurrent(closing)) return;
+        _rememberFocus = false;
         _slotRow = null;
+        await ReleaseFocusAsync();
+        if (!IsCurrent(closing)) return;
+        _wasOpen = false;
         await OpenChanged.InvokeAsync(false);
-        await RunFocusAsync("sharpmushLayout.restoreFocus");
     }
 
-    /// <summary>Focus hand-off through layout.js; skipped where it is not loaded.</summary>
-    private async Task RunFocusAsync(string identifier)
+    private Task ReleaseFocusAsync()
     {
-        try { await JS.InvokeVoidAsync(identifier); }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
+        if (_focusRemember is not { } remembering) return _focusRelease;
+        _focusRemember = null;
+        return _focusRelease = ReleaseRememberedFocusAsync(_focusRelease, remembering);
+    }
+
+    private async Task ReleaseRememberedFocusAsync(Task previousRelease, Task<bool> remembering)
+    {
+        await previousRelease;
+        if (await remembering) await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
+
+    /// <summary>Focus hand-off through layout.js; a failed remember owns no return frame.</summary>
+    private async Task<bool> RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); return true; }
+        catch (JSException) { return false; }
+        catch (InvalidOperationException) { return false; }
     }
 }

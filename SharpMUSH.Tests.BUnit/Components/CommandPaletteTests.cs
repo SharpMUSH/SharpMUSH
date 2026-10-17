@@ -136,6 +136,120 @@ public class CommandPaletteTests : BunitContext
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IdentityChangeAfterFocusWasRememberedReleasesItsOwnedFrame(bool authenticationChanged)
+	{
+		var closes = 0;
+		var cut = RenderOpen(open => { if (!open) closes++; });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		if (authenticationChanged) _auth.SetNotAuthorized();
+		else _account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(closes).IsEqualTo(1);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+		await cut.Find("input").KeyDownAsync("Escape");
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task IdentityCloseWaitsForPendingRememberThenReleasesBeforeItsCallback()
+	{
+		var remembering = JSInterop.SetupVoid("sharpmushLayout.rememberFocus");
+		var closes = 0;
+		var restoresAtClose = 0;
+		var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cut = RenderOpen(open =>
+		{
+			if (open) return;
+			closes++;
+			restoresAtClose = JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus");
+			closed.TrySetResult();
+		});
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		try
+		{
+			await Assert.That(closes).IsEqualTo(0);
+			await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(0);
+		}
+		finally { remembering.SetVoidResult(); }
+		await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(restoresAtClose).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ConcurrentIdentityClosesJoinThePendingFocusRelease()
+	{
+		var remembering = JSInterop.SetupVoid("sharpmushLayout.rememberFocus");
+		var closes = 0;
+		var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cut = RenderOpen(open => { if (!open) { closes++; closed.TrySetResult(); } });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		_auth.SetNotAuthorized();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		try { await Assert.That(closes).IsEqualTo(0); }
+		finally { remembering.SetVoidResult(); }
+		await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(closes).IsEqualTo(1);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AReopenedPaletteWaitsForThePreviousFocusReleaseBeforeCapturing()
+	{
+		var capturedAgain = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var captures = 0;
+		var remembering = JSInterop.SetupVoid("sharpmushLayout.rememberFocus", _ =>
+		{
+			if (++captures == 2) capturedAgain.TrySetResult();
+			return true;
+		});
+		var closes = 0;
+		var cut = RenderOpen(open => { if (!open) closes++; });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Open, false)));
+		await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Open, true)));
+		try
+		{
+			await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus")).IsEqualTo(1);
+			await Assert.That(closes).IsEqualTo(0);
+		}
+		finally { remembering.SetVoidResult(); }
+		await capturedAgain.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus")).IsEqualTo(2);
+		await Assert.That(closes).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task DisposingAnOpenedPaletteReleasesItsOwnedFrame()
+	{
+		var restored = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		JSInterop.SetupVoid("sharpmushLayout.restoreFocus", _ => { restored.TrySetResult(); return true; }).SetVoidResult();
+		var cut = RenderOpen();
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		await DisposeComponentsAsync();
+		await restored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task FailedFocusRememberOwnsNoReturnFrame()
+	{
+		JSInterop.SetupVoid("sharpmushLayout.rememberFocus").SetException(new Microsoft.JSInterop.JSException("layout unavailable"));
+		var closes = 0;
+		var cut = RenderOpen(open => { if (!open) closes++; });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		cut.WaitForState(() => closes == 1);
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsFalse();
+	}
+
+	[Test]
 	public async Task ConfigurationResponseFromPreviousCharacterIsDiscarded()
 	{
 		_auth.SetPolicies("config.admin");
