@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
@@ -74,7 +75,7 @@ public sealed class SignalEventsService(
 				await events.TriggerEventAsync(SharpEvents.SignalUsr2, null);
 				break;
 			case UserSignal.Usr2:
-				await backups.RunAsync(null);
+				await backups.RunAsync(null, new BackupProvenance("SIGUSR2"));
 				break;
 		}
 	}

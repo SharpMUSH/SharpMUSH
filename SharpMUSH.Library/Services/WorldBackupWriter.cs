@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -58,6 +59,9 @@ public sealed partial class WorldBackupWriter(
 	/// <summary>Free bytes on the filesystem holding a path, or -1 when unknown. Replaceable for tests.</summary>
 	public Func<string, long> FreeBytes { get; init; } = DiskSpace.FreeBytes;
 
+	/// <summary>Reads a symbolic link's target; hosts without link inspection use the text pointer.</summary>
+	public Func<string, string?> ReadLinkTarget { get; init; } = path => new DirectoryInfo(path).LinkTarget;
+
 	/// <summary>
 	/// What a run must find free before it starts: the copy itself and a margin — a tenth of it, and never
 	/// less than 16 MiB — for the estimate being low and for whatever else shares the disk.
@@ -70,7 +74,10 @@ public sealed partial class WorldBackupWriter(
 
 	public TimeSpan ScheduledInterval => options.Interval;
 
-	public async ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
+	public ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
+		=> CreateAsync(new BackupProvenance("automatic safeguard"), ct);
+
+	public async ValueTask<Result<WorldBackup>> CreateAsync(BackupProvenance provenance, CancellationToken ct = default)
 	{
 		await _oneAtATime.WaitAsync(ct);
 		try
@@ -96,14 +103,17 @@ public sealed partial class WorldBackupWriter(
 
 				Directory.CreateDirectory(staging);
 				logger.LogInformation("Writing a world backup into {Path}", staging);
+				var createdAt = time.GetUtcNow();
 				await writePayload(staging, ct);
+				await File.WriteAllTextAsync(Path.Join(staging, "backup.json"),
+					JsonSerializer.Serialize(new WorldBackupMetadata(1, createdAt, provenance, true)), ct);
 
 				var final = Path.Join(options.Root, NextName());
 				Directory.Move(staging, final);
 				PointLatestAt(final);
 				Prune();
 
-				var backup = Describe(new DirectoryInfo(final));
+				var backup = Describe(new DirectoryInfo(final), LatestTarget());
 				logger.LogInformation("World backup {Name} written ({Bytes} bytes)", backup.Name, backup.SizeBytes);
 				return backup;
 			}
@@ -140,11 +150,14 @@ public sealed partial class WorldBackupWriter(
 			: string.Empty;
 	}
 
-	public IReadOnlyList<WorldBackup> List() =>
-		BackupDirectories()
+	public IReadOnlyList<WorldBackup> List()
+	{
+		var latestTarget = LatestTarget();
+		return BackupDirectories()
 			.OrderByDescending(d => d.Name, StringComparer.Ordinal)
-			.Select(Describe)
+			.Select(directory => Describe(directory, latestTarget))
 			.ToArray();
+	}
 
 	private IEnumerable<DirectoryInfo> BackupDirectories()
 	{
@@ -246,7 +259,7 @@ public sealed partial class WorldBackupWriter(
 		}
 	}
 
-	private static WorldBackup Describe(DirectoryInfo directory)
+	private WorldBackup Describe(DirectoryInfo directory, string? latestTarget)
 	{
 		var createdAt = DateTime.TryParseExact(directory.Name[..Math.Min(StampFormat.Length, directory.Name.Length)],
 			StampFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
@@ -256,7 +269,59 @@ public sealed partial class WorldBackupWriter(
 
 		var size = directory.EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
 
-		return new WorldBackup(directory.Name, directory.FullName, createdAt, size);
+		WorldBackupMetadata? metadata = null;
+		var status = "legacy; completion unrecorded";
+		var metadataPath = Path.Join(directory.FullName, "backup.json");
+		var metadataPresent = File.Exists(metadataPath);
+		if (metadataPresent)
+		{
+			try
+			{
+				metadata = JsonSerializer.Deserialize<WorldBackupMetadata>(File.ReadAllText(metadataPath));
+				if (metadata is not { Version: 1, Complete: true, Provenance: not null }
+					|| metadata.CreatedAt == default || string.IsNullOrWhiteSpace(metadata.Provenance.Trigger))
+				{
+					metadata = null;
+					status = "invalid metadata; not recoverable";
+				}
+				else status = "complete; verification unrecorded";
+			}
+			catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+			{
+				status = "unreadable metadata; not recoverable";
+			}
+		}
+
+		return new WorldBackup(directory.Name, directory.FullName, metadata?.CreatedAt ?? createdAt, size)
+		{
+			Provenance = metadata?.Provenance,
+			Status = status,
+			IsRecoverable = !metadataPresent || metadata is not null,
+			IsLatest = latestTarget == directory.Name
+		};
+	}
+
+	private string? LatestTarget()
+	{
+		try
+		{
+			if (ReadLinkTarget(Path.Join(options.Root, LatestName)) is { } target) return Path.GetFileName(target.TrimEnd(Path.DirectorySeparatorChar));
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+		{
+			// Link inspection can be unavailable on the same hosts that need the text pointer.
+			// Keep its read independent, so a failed link probe cannot hide a valid fallback.
+		}
+
+		try
+		{
+			var fallback = Path.Join(options.Root, LatestFallbackName);
+			return File.Exists(fallback) ? File.ReadAllText(fallback).Trim() : null;
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			return null;
+		}
 	}
 
 	/// <summary>
