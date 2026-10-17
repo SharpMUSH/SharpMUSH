@@ -238,4 +238,17 @@ public class ImportPromotionJournalTests
 		await Assert.That(Directory.Exists(session.WorldPath)).IsTrue();
 	}
 
+	[Test]
+	public async Task DirectoryWithoutInitialJournalDoesNotBlockStartupOrNextPreview()
+	{
+		var journal = new ImportPromotionJournal(Path.Combine(_root, "live"));
+		var orphan = Path.Combine(journal.SessionsPath, Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(orphan);
+		File.WriteAllText(Path.Combine(orphan, "session.json.writing-interrupted"), "partial");
+		await Assert.That(journal.List().Count).IsEqualTo(0);
+		journal.ApplyPendingBeforeHostConstruction();
+		await Assert.That(journal.Create().State).IsEqualTo(ImportSessionState.Preparing);
+		await Assert.That(Directory.Exists(orphan)).IsTrue();
+	}
+
 }

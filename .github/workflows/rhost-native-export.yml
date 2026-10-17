@@ -9,12 +9,23 @@ on:
       - 'SharpMUSH.Library/Services/DatabaseConversion/Rhost/**'
       - 'SharpMUSH.Tests/Services/Rhost*'
       - 'SharpMUSH.Server/Services/Imports/**'
+      - 'SharpMUSH.Server/Program.cs'
+      - 'SharpMUSH.Server/Startup.cs'
+      - 'SharpMUSH.Server/Services/PennMUSHDatabaseConversionService.cs'
+      - 'SharpMUSH.Server/Controllers/DatabaseConversionController.cs'
+      - 'SharpMUSH.Tests/Server/Controllers/Import*'
+      - 'SharpMUSH.Tests/Server/Controllers/DatabaseConversion*'
+      - 'SharpMUSH.Tests/Server/ImportPortalIsolationTests.cs'
       - 'SharpMUSH.Tests/Services/Import*'
       - 'SharpMUSH.Tests/Services/TestData/RhostNative/**'
       - '.github/workflows/rhost-native-export.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: rhost-native-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   native-backends:

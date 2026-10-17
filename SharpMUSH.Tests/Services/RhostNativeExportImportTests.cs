@@ -140,8 +140,9 @@ public class RhostNativeExportImportTests
 			await using var promoted = OpenPromoted(live);
 			await Assert.That(await promoted.GetObjectCountAsync()).IsEqualTo(expected.Objects.Count(obj => obj.Type != RhostObjectType.Garbage) + 1);
 			var importedOptions = await promoted.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
-			await Assert.That(importedOptions!.Database.PackageManager!.Value).IsGreaterThan((uint)expected.Objects.Where(obj => obj.Type != RhostObjectType.Garbage).Max(obj => obj.DBRef));
-			var packageManager = await promoted.GetObjectNodeAsync(new DBRef((int)importedOptions.Database.PackageManager.Value));
+			var managerNumber = importedOptions?.Database.PackageManager ?? throw new InvalidOperationException("Imported package manager is not configured.");
+			await Assert.That(managerNumber).IsGreaterThan((uint)expected.Objects.Where(obj => obj.Type != RhostObjectType.Garbage).Max(obj => obj.DBRef));
+			var packageManager = await promoted.GetObjectNodeAsync(new DBRef((int)managerNumber));
 			await Assert.That(packageManager is AnySharpObject and SharpPlayer).IsTrue();
 			await Assert.That(await promoted.GetAllObjectsAsync().AnyAsync(obj => obj.Name == "Alice")).IsTrue();
 			var widget = await promoted.GetAllObjectsAsync().FirstAsync(obj => obj.Name == "Widget");

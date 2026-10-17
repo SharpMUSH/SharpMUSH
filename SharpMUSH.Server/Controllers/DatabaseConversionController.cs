@@ -123,9 +123,8 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		try
 		{
 			journal.RequestPromotion(sessionId, cancellationToken);
-			await audit.RecordPortalAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown", "database.import.promote",
-				new AuditTarget("database-import", sessionId, "Database import"), "Validated preview approved; process restart requested.", CancellationToken.None);
 			Response.OnCompleted(() => { lifetime.StopApplication(); return Task.CompletedTask; });
+			await RecordRestartAuditAsync(sessionId, "database.import.promote", "Validated preview approved; process restart requested.");
 			return Accepted(new { sessionId, state = "restartRequired" });
 		}
 		catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException)
@@ -140,13 +139,26 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		try
 		{
 			journal.RequestRollback(sessionId);
-			await audit.RecordPortalAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown", "database.import.rollback",
-				new AuditTarget("database-import", sessionId, "Database import"), "Retained matching world/key-ring rollback approved; restart requested.", CancellationToken.None);
 			Response.OnCompleted(() => { lifetime.StopApplication(); return Task.CompletedTask; });
+			await RecordRestartAuditAsync(sessionId, "database.import.rollback", "Retained matching world/key-ring rollback approved; restart requested.");
 			return Accepted(new { sessionId, state = "restartRequired" });
 		}
 		catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException)
 		{ return Conflict("The retained world cannot be restored: " + error.Message); }
+	}
+
+	private async Task RecordRestartAuditAsync(string sessionId, string action, string details)
+	{
+		try
+		{
+			await audit.RecordPortalAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown", action,
+				new AuditTarget("database-import", sessionId, "Database import"), details, CancellationToken.None);
+		}
+		catch (Exception error)
+		{
+			// IAuditLog is best-effort after the action; durable restart intent already exists.
+			logger.LogWarning("Import {SessionId} restart audit failed: {ErrorType}", sessionId, error.GetType().Name);
+		}
 	}
 }
 

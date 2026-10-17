@@ -70,7 +70,14 @@ public sealed class ImportPromotionJournal
 			var id = Guid.NewGuid().ToString("N");
 			var session = new ImportSession(id, Path.Combine(_root, id), ImportSessionState.Preparing);
 			PrivateDirectory(session.Directory);
-			Save(session);
+			try { Save(session); }
+			catch
+			{
+				try { Directory.Delete(session.Directory, recursive: true); }
+				catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
+				{ /* An unjournaled directory carries no intent and is ignored by discovery. */ }
+				throw;
+			}
 			return session;
 		}
 	}
@@ -89,7 +96,8 @@ public sealed class ImportPromotionJournal
 	{
 		if (!Directory.Exists(_root)) return [];
 		return Directory.EnumerateDirectories(_root)
-			.Where(path => Guid.TryParseExact(Path.GetFileName(path), "N", out _))
+			.Where(path => Guid.TryParseExact(Path.GetFileName(path), "N", out _)
+				&& File.Exists(Path.Combine(path, "session.json")))
 			.OrderByDescending(path => File.GetLastWriteTimeUtc(Path.Combine(path, "session.json")))
 			.Select(path => Get(Path.GetFileName(path))).ToArray();
 	}
