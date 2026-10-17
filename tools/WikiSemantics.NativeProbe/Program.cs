@@ -15,12 +15,18 @@ var scenario = options["--scenario"];
 var world = Path.GetFullPath(options["--world"]);
 var evidence = Path.GetFullPath(options["--evidence"]);
 if (world == evidence || evidence.StartsWith(world + Path.DirectorySeparatorChar, StringComparison.Ordinal)) throw new ArgumentException("Evidence must be outside world");
-Directory.CreateDirectory(evidence);
+if (scenario != "cipher-cursor-error") Directory.CreateDirectory(evidence);
 using var watchdog = new Timer(_ => Environment.Exit(124), null, TimeSpan.FromSeconds(90), Timeout.InfiniteTimeSpan);
 void Mark(string phase, Guid mutation = default)
 {
 	Console.WriteLine(JsonSerializer.Serialize(new { phase, pid = Environment.ProcessId, scenario, world, mutation }));
 	Console.Out.Flush();
+}
+if (scenario == "cipher-cursor-error")
+{
+	if (options.ContainsKey("--fixture-id")) throw new ArgumentException("Cipher probe requires a new owned world");
+	CipherCursorErrorScenario.Run(world, evidence, phase => Mark(phase));
+	return;
 }
 if (scenario == "persisted-flags")
 {
