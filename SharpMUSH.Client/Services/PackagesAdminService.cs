@@ -31,9 +31,10 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 	}
 
 	private string? admissionToken;
+	private bool HasActiveBatchRun => Batch.Run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running;
 
 	public Task<ApiResult<PackageBatchPlanResponse>> PlanBatchAsync(PackageBatchPlanRequest request) =>
-		Batch.AdmissionBlocked
+		Batch.AdmissionBlocked || HasActiveBatchRun
 			? Task.FromResult<ApiResult<PackageBatchPlanResponse>>(new ApiFailure(ApiFailureKind.Unexpected,
 				"Resolve the submitted batch's outcome before reviewing another batch."))
 			: Client.PostApiAsync<PackageBatchPlanRequest, PackageBatchPlanResponse>(
@@ -41,9 +42,8 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 
 	public async Task<ApiResult<PackageBatchRunResponse>> ApplyBatchAsync(string reviewToken)
 	{
-		if (Batch.AdmissionPending || (Batch.AdmissionUnknown && admissionToken != reviewToken))
+		if (HasActiveBatchRun || Batch.AdmissionPending || (Batch.AdmissionUnknown && admissionToken != reviewToken))
 			return new ApiFailure(ApiFailureKind.Unexpected, "A submitted batch's outcome is still unresolved.");
-		var revision = Batch.Revision;
 		var authority = Batch.AuthorityRevision;
 		var recovering = Batch.AdmissionUnknown;
 		admissionToken = reviewToken;
@@ -58,7 +58,9 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 		var unknown = result is ApiFailure failure && (recovering
 			|| failure.Status is not (HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized
 				or HttpStatusCode.Forbidden or HttpStatusCode.Conflict or HttpStatusCode.Gone));
-		if (revision == Batch.Revision && result is PackageBatchRunResponse run) Batch.Run = run;
+		// Draft edits cannot erase an accepted operation. Its ownership follows the account authority,
+		// while its immutable intent and results remain separate from any newly queued choices.
+		if (result is PackageBatchRunResponse run) Batch.Run = run;
 		if (!unknown) admissionToken = null;
 		Batch.SetAdmissionState(pending: false, unknown);
 		return result;

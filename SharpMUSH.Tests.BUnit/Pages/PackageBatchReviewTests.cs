@@ -241,6 +241,62 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 	}
 
 	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Accepted_running_admission_survives_browse_or_central_draft_edits(bool throughBrowse)
+	{
+		packages.Batch.Queue(new("tools", PackageBatchAction.Install, new("official", "tools", "0.9.0")));
+		var original = packages.Batch.Intents.Single();
+		handler.WaitForApply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.WaitForStatus = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.ApplyState = PackageBatchRunState.Running;
+		handler.StatusRunId = "admitted";
+		handler.StatusSteps = [new("original-step", original, PackageBatchStepState.Completed)];
+		var host = Render<MudHarness>(p => p.AddChildContent<PackageBatchReview>());
+		var revision = packages.Batch.Revision;
+		var submit = host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchApply").ClickAsync();
+		await handler.ApplyStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			if (throughBrowse)
+			{
+				await host.FindComponent<PackageBatchReview>().Instance.DisposeAsync();
+				Services.GetRequiredService<NavigationManager>().NavigateTo("/admin/packages/browse?remote=official");
+				host.Render(p => p.AddChildContent<AdminPackageBrowse>());
+				host.WaitForAssertion(() => host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchQueueInstall"));
+				await host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchQueueInstall").ClickAsync();
+				host.Render(p => p.AddChildContent<PackageBatchReview>());
+			}
+			else packages.Batch.Queue(new("tools", PackageBatchAction.Uninstall));
+			await Assert.That(packages.Batch.Revision).IsGreaterThan(revision);
+		}
+		finally { handler.WaitForApply.TrySetResult(); await submit; }
+		await Assert.That(packages.Batch.Run?.Id).IsEqualTo("admitted");
+		await Assert.That(packages.Batch.Run?.State).IsEqualTo(PackageBatchRunState.Running);
+		await Assert.That(host.Markup).Contains("PkgBatchRunRunning");
+		await Assert.That(host.Markup).DoesNotContain("PkgBatchUnknownOutcome");
+		await Assert.That(packages.Batch.Intents.Any(i => i.TargetId == "tools")).IsTrue();
+		await Assert.That(await packages.PlanBatchAsync(packages.Batch.Request()) is ApiFailure).IsTrue();
+		await Assert.That(await packages.ApplyBatchAsync("another-token") is ApiFailure).IsTrue();
+		await Assert.That(handler.Plans.Count).IsEqualTo(1);
+		await Assert.That(handler.ApplyTokens.Count).IsEqualTo(1);
+		await Assert.That(host.FindAll("button").Any(b => b.TextContent.Trim() == "PkgBatchApply" && !b.HasAttribute("disabled"))).IsFalse();
+		await handler.StatusReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		packages.Batch.Queue(new("later", PackageBatchAction.PluginOff));
+		handler.WaitForStatus.TrySetResult();
+		host.WaitForAssertion(() =>
+		{
+			if (packages.Batch.Run?.State != PackageBatchRunState.Completed) throw new InvalidOperationException("completion was discarded after another draft edit");
+		}, TimeSpan.FromSeconds(5));
+		var edited = packages.Batch.Intents.Single(i => i.TargetId == "tools");
+		await Assert.That(edited.ClientIntentId).IsEqualTo(original.ClientIntentId);
+		await Assert.That(edited.Action).IsEqualTo(throughBrowse ? PackageBatchAction.Install : PackageBatchAction.Uninstall);
+		await Assert.That(edited.Source?.Version).IsEqualTo(throughBrowse ? "1.0.0" : null);
+		await Assert.That(packages.Batch.Run?.Id).IsEqualTo("admitted");
+		await Assert.That(packages.Batch.Intents.Any(i => i.TargetId == "later")).IsTrue();
+	}
+
+	[Test]
 	public async Task An_accepted_run_updates_the_current_page_after_navigation()
 	{
 		packages.Batch.Queue(new("a", PackageBatchAction.PluginOff));
@@ -375,12 +431,15 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 		public TaskCompletionSource ApplyStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public List<string> ApplyTokens { get; } = [];
 		public bool LoseFirstApplyResponse { get; set; }
+		public PackageBatchRunState ApplyState { get; set; } = PackageBatchRunState.Completed;
 		public List<string> ActualStateReads { get; } = [];
 		public TaskCompletionSource? WaitForPlan { get; set; }
 		public TaskCompletionSource? WaitForStatus { get; set; }
 		public TaskCompletionSource StatusReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public TaskCompletionSource StatusReadReturned { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public bool StatusCancelled { get; private set; }
+		public string StatusRunId { get; set; } = "run";
+		public IReadOnlyList<PackageBatchStepProgress> StatusSteps { get; set; } = [];
 
 		public PluginStatusDto? Plugin { get; set; }
 
@@ -390,6 +449,14 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			var path = request.RequestUri!.AbsolutePath;
+			if (path == "/api/packages/remotes")
+				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { new PackageRemoteRecord("official", "https://example.com/packages.git", PackageRemoteTrust.Official, null) }) };
+			if (path == "/api/packages/remotes/official/browse")
+				return new(HttpStatusCode.OK)
+				{
+					Content = JsonContent.Create(new PackageRepoSnapshot("official", "https://example.com/packages.git", "abc123",
+					[new("tools", "tools", "1.1.0", "Useful tools", [new("1.0.0", "tools/v1.0.0", "abc123")])]))
+				};
 			if (path == "/api/packages")
 			{
 				ActualStateReads.Add(path);
@@ -423,7 +490,7 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 				try { await status.Task.WaitAsync(cancellationToken); }
 				catch (OperationCanceledException) { StatusCancelled = true; throw; }
 				StatusReadReturned.TrySetResult();
-				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PackageBatchRunResponse("run", PackageBatchRunState.Completed, [])) };
+				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PackageBatchRunResponse(StatusRunId, PackageBatchRunState.Completed, StatusSteps)) };
 			}
 			if (request.RequestUri.AbsolutePath == "/api/packages/batches/apply")
 			{
@@ -433,7 +500,7 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 				ApplyStarted.TrySetResult();
 				if (WaitForApply is { } pending) await pending.Task;
 				if (LoseFirstApplyResponse && Applies == 1) throw new HttpRequestException("Response lost after admission");
-				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PackageBatchRunResponse("admitted", PackageBatchRunState.Completed, [])) };
+				return new(HttpStatusCode.OK) { Content = JsonContent.Create(new PackageBatchRunResponse("admitted", ApplyState, [])) };
 			}
 			return new(HttpStatusCode.Gone) { Content = new StringContent("Progress expired") };
 		}

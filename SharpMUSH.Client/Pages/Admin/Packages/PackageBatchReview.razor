@@ -264,13 +264,9 @@
         _error = null;
         try
         {
-            var revision = Packages.Batch.Revision;
+            var authority = Packages.Batch.AuthorityRevision;
             var result = await submit();
-            if (_disposed || revision != Packages.Batch.Revision)
-            {
-                if (!_disposed) _error = Loc["PkgBatchUnknownOutcome"];
-                return;
-            }
+            if (_disposed || authority != Packages.Batch.AuthorityRevision) return;
             switch (result)
             {
                 case PackageBatchRunResponse run:
@@ -314,9 +310,11 @@
     private async Task RefreshRunAsync()
     {
         if (_run is not { } previous) return;
-        var revision = Packages.Batch.Revision;
+        var authority = Packages.Batch.AuthorityRevision;
         var result = await Packages.GetBatchRunAsync(previous.Id, _lifetime.Token);
-        if (_disposed || revision != Packages.Batch.Revision) return;
+        if (_disposed || authority != Packages.Batch.AuthorityRevision || Packages.Batch.Run?.Id != previous.Id) return;
+        if (result is PackageBatchRunResponse wrong && wrong.Id != previous.Id)
+            result = new ApiFailure(ApiFailureKind.Unexpected, "The server returned a different batch run.");
         switch (result)
         {
             case PackageBatchRunResponse run:
