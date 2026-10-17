@@ -1,4 +1,8 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -51,10 +55,52 @@ public class InplaceDepthLimitTests
 		await Run($"&CMD {obj}=${command}:@include {obj}/INC");
 
 		// A typed line runs the matched body in place, as a queue entry of its own (src/game.c:1224-1225).
-		await Run(command);
+		var parser = Parser;
+		var initialDepth = parser.CurrentState.InplaceDepth;
+		var initialCommandText = parser.CurrentState.CommandText is not null;
+		var budgetMs = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+			.CurrentValue.Limit.QueueEntryCpuTime;
+		var elapsed = Stopwatch.StartNew();
+		var result = await parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		elapsed.Stop();
+		var count = await Get(obj, "CNT");
+		var reason = "the body is depth 0, like a typed line, so its includes run at depths 1 through 50";
+		if (count != "50")
+		{
+			// Evidence only after failure: bypass Mediator/FusionCache to distinguish a stale final get()
+			// from a stored undercount. Never replace the original assertion with a diagnostic read error.
+			string storedCount;
+			try
+			{
+				// Cooperative cancellation only: the provider may perform its synchronous read before checking it.
+				using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+				var stored = await WebAppFactoryArg.Services.GetRequiredService<IAttributeStore>()
+					.GetAttributeAsync(obj, ["CNT"], timeout.Token).LastOrDefaultAsync(timeout.Token);
+				storedCount = stored is null ? "<missing>"
+					: stored.IsUnreadable || stored.IsMetadataUnreadable ? "<unreadable>" : stored.Value.ToPlainText();
+			}
+			catch (Exception exception)
+			{
+				storedCount = $"<read failed: {exception.GetType().Name}: {exception.Message}>";
+			}
+			reason += "; failure evidence: " + JsonSerializer.Serialize(new
+			{
+				command,
+				Object = obj.ToString(),
+				initialDepth,
+				initialCommandText,
+				budgetMs,
+				ElapsedMs = elapsed.Elapsed.TotalMilliseconds,
+				ObservedCount = count,
+				StoredCount = storedCount,
+				result.HadErrors,
+				result.IsParseFailure,
+				result.Depth,
+				Message = result.Message.ToPlainText()
+			});
+		}
 
-		await Assert.That(await Get(obj, "CNT")).IsEqualTo("50")
-			.Because("the body is depth 0, like a typed line, so its includes run at depths 1 through 50");
+		await Assert.That(count).IsEqualTo("50").Because(reason);
 	}
 
 	[Test]
