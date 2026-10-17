@@ -8,6 +8,11 @@
   ],
   "sections": [
     {
+      "id": "reply-and-target-memory",
+      "heading": "Reply and target memory",
+      "lookup": "page targets"
+    },
+    {
       "id": "recipient-matching-and-poses",
       "heading": "Recipient matching and poses",
       "lookup": "page recipient matching and poses"
@@ -47,11 +52,11 @@
 
 `page[/<switch>] [<player-list>=]<message>`
 
-This command sends a message to a player or list of players. If the player's name contains spaces, surround it with double-quotes. If you have already paged someone since connecting, just typing:
+This command sends a message to a player or list of players. If the player's name contains spaces, surround it with double-quotes. If you have already paged someone, just typing:
 
 '`page <message>`' or '`page =<message>`'
 
-will send the message to the last person paged. You cannot page a player if they are set HAVEN or if you do not pass their @lock/page. In the latter case, the player's ``PAGE_LOCK`FAILURE``, ``PAGE_LOCK`OFAILURE``, and ``PAGE_LOCK`AFAILURE`` attributes will be activated if set.
+will send the message to your last successful outgoing recipients. `page/reply <message>` instead answers only the last sender who paged you (see [page targets]). You cannot page a player if they are set HAVEN or if you do not pass their @lock/page. In the latter case, the player's ``PAGE_LOCK`FAILURE``, ``PAGE_LOCK`OFAILURE``, and ``PAGE_LOCK`AFAILURE`` attributes will be activated if set.
 
 ### Examples
 ```sharp
@@ -62,6 +67,18 @@ You paged Airwolf with 'see, I don't have to retype the name.'.
 > page "John Lennon" Ringo=Paul's fine!
 ```
 
+## Reply and target memory
+
+`page/reply[/noeval] <message>`
+
+This SharpMUSH extension sends to the last sender who actually reached you, never the other recipients of a group page. The complete argument is the message, including any `=`. With no incoming sender remembered, it sends nothing and tells you why.
+
+Outgoing shorthand (`page <message>` or `page =<message>`) reuses the successful recipients of your last outgoing page, preserving their order. Failed pages leave these targets unchanged; partial delivery remembers only the recipients reached. A successful reply is itself an outgoing page, so later outgoing shorthand follows that reply.
+
+The contexts belong to your character, shared across its connections and retained across reconnects. Another character on the same account or socket has its own contexts. Stored full object IDs follow renamed players but never a replacement reusing their dbref. Deleted or unavailable targets still go through normal page refusals. These contexts work independently of page logging. A pre-existing custom `LASTPAGER` is ignored until a genuine incoming page replaces it with protected context.
+
+`/reply` keeps normal HAVEN, page-lock, interaction and formatting rules. `/noeval` keeps its text literal; `/override` needs the existing wizard or Pemit_All authority. It cannot combine with `/list`, `/recall`, `/conversations`, `/timestamps` or `/port`.
+
 ## Recipient matching and poses
 
 Page will attempt a partial match on the name, checking both for an @alias and to see if the name matches someone connected. If the first character of `<message>` is a : or a ;, it will send the page in pose format.
@@ -70,10 +87,10 @@ Objects may page players, but not vice versa. If an object pages a NOSPOOF playe
 
 When a player is paged, their PAGEFORMAT attribute is checked, and if exists, the page as viewed by the player is set to the results of calling PAGEFORMAT. See help @pageformat.
 
-Page takes these switches: `/noeval`, `/override`, `/port` and `/list`, and `/recall`, `/conversations` and `/timestamps` for the page log.
+Page takes these switches: `/reply`, `/noeval`, `/override`, `/port` and `/list`, and `/recall`, `/conversations` and `/timestamps` for the page log.
 
 The `/noeval` switch prevents the MUSH from evaluating the message.<br>
-The `/override` switch is admin-only, and overrides pagelocks and HAVEN.<br>
+The `/override` switch needs wizard or Pemit_All authority and overrides pagelocks and HAVEN.<br>
 The `/port` switch is admin-only, and will page a single port descriptor directly, including connections that have not yet logged into a player.<br>
 The `/list` switch tells you who you last paged.<br>
 The `/recall`, `/conversations` and `/timestamps` switches read your page log; see [page recall].
