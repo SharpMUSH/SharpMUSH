@@ -30,6 +30,7 @@ public static class PackageBatchPlanner
 		var prerequisites = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 		var selected = new Dictionary<string, PackageBatchCandidate>(StringComparer.OrdinalIgnoreCase);
 		var visiting = new List<string>();
+		var pluginPath = new List<string>();
 		var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var intent in request.Intents)
@@ -104,13 +105,16 @@ public static class PackageBatchPlanner
 			var current = IsPackage(intent) ? installed.GetValueOrDefault(intent.TargetId) : null;
 			var candidate = intent.Action == PackageBatchAction.Install ? selected.GetValueOrDefault(intent.TargetId) : null;
 			if (candidate is not null) intent = intent with { Source = candidate.Source };
-			var plugin = !IsPackage(intent) ? plugins.GetValueOrDefault(intent.TargetId) : null;
+			var plugin = !IsPackage(intent) || intent.Action == PackageBatchAction.Uninstall && current?.Kind == PackageKind.Plugin
+				? plugins.Values.FirstOrDefault(p => Same(p.Id, intent.TargetId) || Same(p.Package ?? "", intent.TargetId)) : null;
 			var identity = JsonSerializer.Serialize(new { intent.Action, intent.TargetId, candidate, State = state });
 			return new PackageBatchStep(Hash(identity), intent, "Explicitly requested", current?.Version, current?.CurrentRevision,
 				candidate?.Manifest.Version.ToString(), candidate?.Commit, plugin,
 				RequiresRestart: intent.Action == PackageBatchAction.PluginOn && plugin is not null && !IsRunning(plugin)
 					|| intent.Action == PackageBatchAction.PluginOff && plugin is not null && IsRunning(plugin) && !plugin.Unloadable
-					|| candidate?.Manifest.Kind == PackageKind.Plugin);
+					|| candidate?.Manifest.Kind == PackageKind.Plugin
+					|| intent.Action == PackageBatchAction.Uninstall && current?.Kind == PackageKind.Plugin
+						&& plugin is not null && IsRunning(plugin) && !plugin.Unloadable);
 		}).ToList();
 		return new(steps, proposals.Values.ToList(), blockers.Distinct().ToList(), null, null);
 
@@ -187,37 +191,75 @@ public static class PackageBatchPlanner
 			if (!installed.ContainsKey(intent.TargetId)) Block(intent.TargetId, "not-installed", $"{intent.TargetId} is not installed.");
 			foreach (var dependent in projection.Dependencies.Where(d => Same(d.DependsOnId, intent.TargetId) && installed.ContainsKey(d.PackageId)))
 			{
+				if (UpgradeDropsRequirement(dependent.PackageId, intent.TargetId, pluginRequirement: false, intent)) continue;
 				var next = new PackageBatchIntent(dependent.PackageId, PackageBatchAction.Uninstall);
 				if (!Requested(dependent.PackageId, PackageBatchAction.Uninstall)) Propose(next, $"{dependent.PackageId} depends on {intent.TargetId}.");
 				VisitRemoval(next);
 				Before(next, intent);
 			}
+			if (installed.GetValueOrDefault(intent.TargetId)?.Kind != PackageKind.Plugin) return;
+			var ownedIds = plugins.Values.Where(p => Same(p.Package ?? "", intent.TargetId))
+				.Select(p => p.Id).Append(intent.TargetId).Distinct(StringComparer.OrdinalIgnoreCase);
+			foreach (var pluginId in ownedIds)
+			{
+				var requiredBy = installed.Values.Where(p => p.Plugins?.Contains(pluginId, StringComparer.OrdinalIgnoreCase) ?? false)
+					.Select(p => p.Id).Concat(plugins.GetValueOrDefault(pluginId)?.Dependents ?? [])
+					.Where(id => !Same(id, intent.TargetId)).Distinct(StringComparer.OrdinalIgnoreCase);
+				foreach (var package in requiredBy) RequireContentRemoval(package, pluginId, intent);
+				RequireDependentPluginsOff(pluginId, intent);
+			}
+		}
+		bool UpgradeDropsRequirement(string packageId, string dependency, bool pluginRequirement, PackageBatchIntent after)
+		{
+			if (!intents.TryGetValue(Key(packageId, PackageBatchAction.Install), out var update)
+				|| update.Action != PackageBatchAction.Install) return false;
+			var desired = Candidate(update);
+			if (desired is null) return false;
+			var stillRequired = pluginRequirement
+				? desired.Manifest.RequiredPlugins.Contains(dependency, StringComparer.OrdinalIgnoreCase)
+				: desired.Manifest.Dependencies.Any(d => Same(d.PackageId, dependency));
+			if (stillRequired) return false;
+			Before(update, after);
+			return true;
+		}
+		void RequireContentRemoval(string package, string pluginId, PackageBatchIntent after)
+		{
+			if (UpgradeDropsRequirement(package, pluginId, pluginRequirement: true, after)) return;
+			var removal = new PackageBatchIntent(package, PackageBatchAction.Uninstall);
+			if (!Requested(package, removal.Action)) Propose(removal, $"{package} requires plugin {pluginId}.");
+			VisitRemoval(removal);
+			Before(removal, after);
+		}
+		void RequireDependentPluginsOff(string pluginId, PackageBatchIntent after)
+		{
+			foreach (var dependent in projection.PluginDependencies.Where(p => p.Value.Contains(pluginId, StringComparer.OrdinalIgnoreCase)))
+			{
+				if (!plugins.TryGetValue(dependent.Key, out var current) || !current.Enabled && !IsRunning(current)) continue;
+				var next = new PackageBatchIntent(dependent.Key, PackageBatchAction.PluginOff);
+				if (!Requested(next.TargetId, next.Action)) Propose(next, $"Plugin {dependent.Key} requires {pluginId}.");
+				VisitPlugin(next);
+				Before(next, after);
+			}
 		}
 		void VisitPlugin(PackageBatchIntent intent)
 		{
+			var at = pluginPath.FindIndex(id => Same(id, intent.TargetId));
+			if (at >= 0)
+			{
+				Block(intent.TargetId, "dependency-cycle", $"Dependency cycle: {string.Join(" -> ", pluginPath.Skip(at).Append(intent.TargetId))}");
+				return;
+			}
 			if (!visited.Add("plugin:" + intent.TargetId)) return;
 			if (!plugins.TryGetValue(intent.TargetId, out var plugin))
 			{
 				Block(intent.TargetId, "missing-plugin", $"Plugin {intent.TargetId} is unavailable.");
 				return;
 			}
+			pluginPath.Add(intent.TargetId);
 			if (intent.Action == PackageBatchAction.PluginOff)
 			{
-				foreach (var package in plugin.Dependents)
-				{
-					var removal = new PackageBatchIntent(package, PackageBatchAction.Uninstall);
-					if (!Requested(package, PackageBatchAction.Uninstall)) Propose(removal, $"{package} requires plugin {plugin.Id}.");
-					VisitRemoval(removal);
-					Before(removal, intent);
-				}
-				foreach (var dependent in projection.PluginDependencies.Where(p => p.Value.Contains(plugin.Id, StringComparer.OrdinalIgnoreCase)))
-				{
-					if (!plugins.TryGetValue(dependent.Key, out var current) || !current.Enabled) continue;
-					var next = new PackageBatchIntent(dependent.Key, PackageBatchAction.PluginOff);
-					if (!Requested(next.TargetId, next.Action)) Propose(next, $"Plugin {dependent.Key} requires {plugin.Id}.");
-					VisitPlugin(next);
-					Before(next, intent);
-				}
+				foreach (var package in plugin.Dependents) RequireContentRemoval(package, plugin.Id, intent);
+				RequireDependentPluginsOff(plugin.Id, intent);
 			}
 			else
 			{
@@ -231,6 +273,7 @@ public static class PackageBatchPlanner
 					Before(next, intent);
 				}
 			}
+			pluginPath.RemoveAt(pluginPath.Count - 1);
 		}
 	}
 

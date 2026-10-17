@@ -104,6 +104,125 @@ public class PackageBatchPlannerTests
 		var reviewed = PackageBatchPlanner.Plan(new([Install("a")], [new(first.Steps[0].StepId,
 			new() { ["secret"] = "answer" })]), new([], [], [candidate], [], new Dictionary<string, IReadOnlyList<string>>()));
 		await Assert.That(first.Steps[0].StepId).IsEqualTo(reviewed.Steps[0].StepId);
+		var revision = Plan([Install("a")], [Installed("a")], [], [candidate]);
+		var newerRevision = Plan([Install("a")], [Installed("a") with { CurrentRevision = 2 }], [], [candidate]);
+		await Assert.That(revision.Steps[0].StepId).IsNotEqualTo(newerRevision.Steps[0].StepId);
+		var pluginBefore = Plan([Install("a")], [], [], [candidate], [Plugin("p")]);
+		var pluginAfter = Plan([Install("a")], [], [], [candidate], [Plugin("p") with { Enabled = true, Pending = PluginPendingChange.Starts }]);
+		await Assert.That(pluginBefore.Steps[0].StepId).IsNotEqualTo(pluginAfter.Steps[0].StepId);
+	}
+
+	[Test]
+	public async Task RemovingPluginOwner_ProposesItsContentDependents_ThenOrdersApprovedRemovalFirst()
+	{
+		var owner = Installed("plugin") with { Kind = PackageKind.Plugin };
+		var content = Installed("content") with { Plugins = ["plugin"] };
+		var plugin = Plugin("plugin") with { Package = "plugin", Dependents = ["content"] };
+		var plan = Plan([Remove("plugin")], [owner, content], [], [], [plugin]);
+		await Assert.That(plan.Proposals.Select(p => p.Intent.TargetId)).Contains("content");
+		await Assert.That(plan.Blockers).IsNotEmpty();
+		var accepted = Plan([Remove("plugin"), Remove("content")], [owner, content], [], [], [plugin]);
+		await Assert.That(accepted.Blockers).IsEmpty();
+		await Assert.That(accepted.Steps.Select(p => p.Intent.TargetId)).IsEquivalentTo(["content", "plugin"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task DiscoveredPluginPrerequisites_AreProposed_ThenEnabledBeforeDependent()
+	{
+		PackageBatchIntent enable = new("leaf", PackageBatchAction.PluginOn);
+		var projection = new PackageBatchProjection([], [], [], [Plugin("base"), Plugin("leaf")],
+			new Dictionary<string, IReadOnlyList<string>> { ["leaf"] = ["base"] });
+		var plan = PackageBatchPlanner.Plan(new([enable]), projection);
+		await Assert.That(plan.Proposals.Select(p => p.Intent)).IsEquivalentTo([new PackageBatchIntent("base", PackageBatchAction.PluginOn)]);
+		await Assert.That(plan.Steps.Select(p => p.Intent.TargetId)).IsEquivalentTo(["leaf"]);
+		var accepted = PackageBatchPlanner.Plan(new([enable, new("base", PackageBatchAction.PluginOn)]), projection);
+		await Assert.That(accepted.Blockers).IsEmpty();
+		await Assert.That(accepted.Steps.Select(p => p.Intent.TargetId)).IsEquivalentTo(["base", "leaf"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(accepted.Steps.All(p => p.RequiresRestart)).IsTrue();
+	}
+
+	[Test]
+	public async Task DiscoveredPluginDependents_MustBeExplicitlyTurnedOffFirst()
+	{
+		var projection = new PackageBatchProjection([], [], [],
+			[Plugin("base") with { Enabled = true }, Plugin("leaf") with { Enabled = true }],
+			new Dictionary<string, IReadOnlyList<string>> { ["leaf"] = ["base"] });
+		var plan = PackageBatchPlanner.Plan(new([new("base", PackageBatchAction.PluginOff)]), projection);
+		await Assert.That(plan.Proposals.Select(p => p.Intent.TargetId)).IsEquivalentTo(["leaf"]);
+		var accepted = PackageBatchPlanner.Plan(new([new("base", PackageBatchAction.PluginOff), new("leaf", PackageBatchAction.PluginOff)]), projection);
+		await Assert.That(accepted.Blockers).IsEmpty();
+		await Assert.That(accepted.Steps.Select(p => p.Intent.TargetId)).IsEquivalentTo(["leaf", "base"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task PluginCycle_IsDiagnosed_AndMissingRequiredPluginBlocksInstall()
+	{
+		var projection = new PackageBatchProjection([], [], [], [Plugin("a"), Plugin("b")],
+			new Dictionary<string, IReadOnlyList<string>> { ["a"] = ["b"], ["b"] = ["a"] });
+		var plan = PackageBatchPlanner.Plan(new([new("a", PackageBatchAction.PluginOn)]), projection);
+		await Assert.That(plan.Blockers.Single(b => b.Code == "dependency-cycle").Message).Contains("a -> b -> a");
+		var content = Candidate("content") with { Manifest = Manifest("content") with { Plugins = ["missing"] } };
+		var missing = Plan([Install("content")], [], [], [content]);
+		await Assert.That(missing.Blockers.Select(b => b.Code)).Contains("missing-plugin");
+	}
+
+	[Test]
+	public async Task RemovingPluginOwner_RequiresDiscoveredDependentPluginOffFirst()
+	{
+		var projection = new PackageBatchProjection([Installed("owner") with { Kind = PackageKind.Plugin }], [], [],
+			[Plugin("owner") with { Package = "owner" }, Plugin("dependent") with { Enabled = true, Status = PluginBootStatus.Loaded }],
+			new Dictionary<string, IReadOnlyList<string>> { ["dependent"] = ["owner"] });
+		var proposed = PackageBatchPlanner.Plan(new([Remove("owner")]), projection);
+		await Assert.That(proposed.Proposals.Select(p => p.Intent)).IsEquivalentTo([new PackageBatchIntent("dependent", PackageBatchAction.PluginOff)]);
+		var accepted = PackageBatchPlanner.Plan(new([Remove("owner"), new("dependent", PackageBatchAction.PluginOff)]), projection);
+		await Assert.That(accepted.Blockers).IsEmpty();
+		await Assert.That(accepted.Steps.Select(p => p.Intent.TargetId)).IsEquivalentTo(["dependent", "owner"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(accepted.Steps[0].RequiresRestart).IsTrue();
+	}
+
+	[Test]
+	public async Task SelectedUpgradeThatDropsOldDependency_RunsBeforeRemovingPrerequisite()
+	{
+		var plan = Plan([Remove("b"), Install("a")], [Installed("a"), Installed("b")],
+			[new("a", "b", "")], [Candidate("a")]);
+		await Assert.That(plan.Blockers).IsEmpty();
+		await Assert.That(plan.Proposals).IsEmpty();
+		await Assert.That(plan.Steps.Select(s => s.Intent.TargetId)).IsEquivalentTo(["a", "b"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task SelectedUpgradeThatDropsPluginRequirement_RunsBeforeTurningPluginOffOrRemovingOwner()
+	{
+		var owner = Installed("plugin") with { Kind = PackageKind.Plugin };
+		var content = Installed("a") with { Plugins = ["plugin"] };
+		var plugin = Plugin("plugin") with { Package = "plugin", Dependents = ["a"] };
+		foreach (var action in new[] { PackageBatchAction.PluginOff, PackageBatchAction.Uninstall })
+		{
+			var plan = Plan([new("plugin", action), Install("a")], [owner, content], [], [Candidate("a")], [plugin]);
+			await Assert.That(plan.Blockers).IsEmpty();
+			await Assert.That(plan.Proposals).IsEmpty();
+			await Assert.That(plan.Steps.Select(s => s.Intent.TargetId)).IsEquivalentTo(["a", "plugin"],
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		}
+	}
+
+	[Test]
+	public async Task UninstallingRunningLoadOncePlugin_ShowsRestartBoundary_OnlyWhenNeeded()
+	{
+		var owner = Installed("plugin") with { Kind = PackageKind.Plugin };
+		var running = Plugin("plugin") with { Package = "plugin", Enabled = true, Status = PluginBootStatus.Loaded };
+		var plan = Plan([Remove("plugin")], [owner], [], [], [running]);
+		await Assert.That(plan.Steps[0].Plugin?.Id).IsEqualTo("plugin");
+		await Assert.That(plan.Steps[0].RequiresRestart).IsTrue();
+		var stopped = Plan([Remove("plugin")], [owner], [], [], [Plugin("plugin") with { Package = "plugin" }]);
+		await Assert.That(stopped.Steps[0].RequiresRestart).IsFalse();
+		var unloadable = Plan([Remove("plugin")], [owner], [], [], [running with { Unloadable = true }]);
+		await Assert.That(unloadable.Steps[0].RequiresRestart).IsFalse();
 	}
 
 	private static PackageBatchPlanResponse Plan(PackageBatchIntent[] intents, InstalledPackageRecord[] installed,
