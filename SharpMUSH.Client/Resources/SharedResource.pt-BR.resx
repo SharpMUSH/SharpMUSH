@@ -6320,4 +6320,16 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Limite de jogadores</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Somente contas vinculadas</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Sem restrições</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Permitir identidades do Discord</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Exigir conta vinculada</value>
+  </data>
 </root>

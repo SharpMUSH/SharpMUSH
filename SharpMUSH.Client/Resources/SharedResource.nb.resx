@@ -6320,4 +6320,16 @@
   <data name="RolScenePlayerCap" xml:space="preserve">
     <value>Maksimalt antall spillere</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Bare tilknyttede kontoer</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Ubegrenset</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Tillat Discord-identiteter</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Krev tilknyttet konto</value>
+  </data>
 </root>

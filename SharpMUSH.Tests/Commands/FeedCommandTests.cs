@@ -55,6 +55,76 @@ public class FeedCommandTests : ServerTestBase
 		=> WebAppFactoryArg.Notifications.For(who.DbRef).Where(line => line.Contains(containing, StringComparison.Ordinal)).ToList();
 
 	[Test]
+	public async Task ExternalRouteAndFormatAlwaysSeeNoCharacterEnactor()
+	{
+		await Cmd($"&FEED`{_kind.ToUpperInvariant()}`ROUTE {Ref(_system)}=switch(%#,#-1,{Ref(_ann)},{Ref(_bo)})");
+		await Cmd($"&FEED`{_kind.ToUpperInvariant()}`FORMAT {Ref(_system)}=External %# %<name>: %<text>");
+		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
+		var kind = (await feeds.GetKindAsync(_kind)).Expect<SharpFeedKind>();
+		var system = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(_system.DbRef))).Expect<AnySharpObject>();
+		var text = TestIsolationHelpers.GenerateUniqueName("ExternalRoute");
+		var delivered = (await feeds.SendExternalAsync(CommandParser.FromState(ParserState.RootFor(_system.DbRef)),
+			new(kind, SharpFeed.New(_kind, "newbies"), system, new("discord", "1234", "Ann"), FeedStyles.Say, MarkupText.Plain(text), "discord/99"))).Expect<FeedDelivery>();
+		await Assert.That(delivered.Recipients.Select(recipient => recipient.Number)).IsEquivalentTo(new[] { _ann.DbRef.Number });
+		await WebAppFactoryArg.Notifications.WaitForAsync(_ann.DbRef, text);
+		await Assert.That(Lines(_ann, text).Single()).Contains("External #-1 [Discord] Ann (1234)");
+	}
+
+	[Test]
+	public async Task GuestCanUseAnOpenFeedThroughItsOrdinaryPublicCommand()
+	{
+		var radio = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "GuestFeed");
+		await Cmd($"@tel {Ref(radio)}=[config(master_room)]");
+		await Cmd($"@feed/undefine {_kind}");
+		await Cmd($"@feed/define {_kind}={Ref(radio)}");
+		await Cmd($"&CMD`SEND {Ref(radio)}=$+guestfeed *:@feed/send {_kind}/guest=%0");
+		await Cmd($"@feed/join {_kind}/guest={Ref(_bo)}");
+		await Cmd($"@set {Ref(_ann)}=GUEST");
+		var text = TestIsolationHelpers.GenerateUniqueName("GuestSpeech");
+		await Heard(_ann, $"+guestfeed {text}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(_bo.DbRef, text);
+		await Assert.That(Lines(_bo, text).Single()).Contains(_ann.Name);
+		var lines = await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedMessagesQuery(_kind, "guest", 0));
+		await Assert.That(lines.Single().Speaker.Number).IsEqualTo(_ann.DbRef.Number);
+	}
+
+	[Test]
+	public async Task ExternalDiscordIdentityIsDeliveredStoredAndExposedWithoutACharacter()
+	{
+		await Cmd($"@feed/join {_kind}/newbies={Ref(_ann)}");
+		var tap = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "ExternalTap");
+		await Cmd($"&LOG {Ref(tap)}=@pemit {Ref(_bo)}=External %<speaker>: %<name> %<text>");
+		await Cmd($"@feed/tap {_kind}={Ref(tap)}/LOG");
+		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
+		var kind = (await feeds.GetKindAsync(_kind)).Expect<SharpFeedKind>();
+		var system = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(_system.DbRef))).Expect<AnySharpObject>();
+		var text = TestIsolationHelpers.GenerateUniqueName("ExternalFeed");
+		var result = await feeds.SendExternalAsync(CommandParser.FromState(ParserState.RootFor(_system.DbRef)),
+			new(kind, SharpFeed.New(_kind, "newbies"), system, new("discord", "1234", "Ann"), FeedStyles.Say, MarkupText.Plain(text), "discord/99"));
+		var delivery = result.Expect<FeedDelivery>();
+		await WebAppFactoryArg.Notifications.WaitForAsync(_ann.DbRef, text);
+		await Assert.That(Lines(_ann, text).Single()).Contains("[Discord] Ann (1234)");
+		await WebAppFactoryArg.Notifications.WaitForAsync(_bo.DbRef, text);
+		await Assert.That(Lines(_bo, text).Single()).Contains("External #-1: [Discord] Ann (1234)");
+		var stored = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedMessageQuery(delivery.Id))).Expect<SharpFeedMessage>();
+		await Assert.That(stored.Speaker.Number).IsEqualTo(-1);
+		await Assert.That(stored.ExternalIdentity?.Subject).IsEqualTo("1234");
+		await Assert.That(await Eval($"feedmsg({delivery.Id},external_provider)")).IsEqualTo("discord");
+	}
+	[Test]
+	public async Task ExternalDiscordSpeechCannotBorrowBridgeAuthorityToPassSendLocks()
+	{
+		await Cmd($"@feed/lock {_kind}/locked/send=#TRUE");
+		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
+		var kind = (await feeds.GetKindAsync(_kind)).Expect<SharpFeedKind>();
+		var feed = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedQuery(_kind, "locked"))).Expect<SharpFeed>();
+		var system = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(_system.DbRef))).Expect<AnySharpObject>();
+		var result = await feeds.SendExternalAsync(CommandParser.FromState(ParserState.RootFor(_system.DbRef)),
+			new(kind, feed, system, new("discord", "1234", "Ann"), FeedStyles.Say, MarkupText.Plain("blocked"), "discord/99"));
+		await Assert.That(result is Error<string>).IsTrue();
+	}
+
+	[Test]
 	public async Task MembersGetTheDefaultLine_ExceptTheGagged()
 	{
 		await Assert.That(await Heard(_system, $"@feed/join {_kind}/1={Ref(_ann)}")).Contains($"Joined {_ann.Name}");

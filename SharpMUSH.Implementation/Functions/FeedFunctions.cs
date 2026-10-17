@@ -82,6 +82,8 @@ public partial class Functions
 			"key" => new CallState(message.Key),
 			"time" => new CallState(message.At.ToUnixTimeSeconds()),
 			"speaker" => new CallState(message.Speaker),
+			"external_provider" => new CallState(message.ExternalIdentity?.Provider ?? ""),
+			"external_id" => new CallState(message.ExternalIdentity?.Subject ?? ""),
 			"name" => new CallState(message.SpeakerName),
 			"executor" => new CallState(message.Executor),
 			"executor_name" => new CallState(message.ExecutorName),

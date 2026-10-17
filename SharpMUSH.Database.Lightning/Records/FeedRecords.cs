@@ -65,6 +65,7 @@ public sealed record FeedMessageRecord
 	public string? Line { get; init; }
 
 	public string Audience { get; init; } = "";
+	public SharpMUSH.Library.Models.ExternalFeedIdentity? ExternalIdentity { get; init; }
 
 	/// <summary>What the line counts against the feed's byte limit.</summary>
 	public long Bytes { get; init; }

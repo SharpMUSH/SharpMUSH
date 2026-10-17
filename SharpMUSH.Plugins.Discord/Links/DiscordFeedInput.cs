@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Discord.Members;
 
 namespace SharpMUSH.Plugins.Discord.Links;
 
@@ -18,19 +19,26 @@ namespace SharpMUSH.Plugins.Discord.Links;
 /// that character would send it.
 /// </summary>
 /// <remarks>The host's services are resolved when first used: some are built after the plugin's.</remarks>
-public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordFeedInput> logger) : IDiscordFeedInput
+public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordFeedInput> logger, DiscordLinkMutationGate? mutations = null) : IDiscordFeedInput
 {
 	/// <summary>How long a line waits for the game's queue before the author is told it did not get through.</summary>
 	public static readonly TimeSpan QueueTimeout = TimeSpan.FromSeconds(30);
 
+	private readonly DiscordLinkMutationGate lifecycle = mutations ?? services.GetService<DiscordLinkMutationGate>() ?? new();
 	private IMediator Mediator => services.GetRequiredService<IMediator>();
 
-	public async Task<SpeechOutcome> SpeakAsync(DiscordSpeech speech, CancellationToken cancellationToken)
+	public Task<SpeechOutcome> SpeakAsync(DiscordSpeech speech, CancellationToken cancellationToken)
+		=> lifecycle.RunAsync(() => EnqueueAsync(speech, cancellationToken), cancellationToken);
+
+	private async Task<SpeechOutcome> EnqueueAsync(DiscordSpeech speech, CancellationToken cancellationToken)
 	{
-		if (!DBRef.TryParse(speech.Character, out var parsed) || parsed is not { } dbref
-			|| await Mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is not AnySharpObject { IsPlayer: true } character)
+		AnySharpObject? player = null;
+		if (speech.ExternalIdentity is null)
 		{
-			return new Refused("The character you speak as there is gone. Choose another with @discord/speak.");
+			if (!DBRef.TryParse(speech.Character, out var parsed) || parsed is not { IsObjid: true } dbref
+				|| await Mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is not AnySharpObject { IsPlayer: true } current)
+				return new Refused("The character you speak as there is gone. Choose another with /speakas.");
+			player = current;
 		}
 
 		var feeds = services.GetRequiredService<IFeedService>();
@@ -53,7 +61,7 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 
 			try
 			{
-				spoken.TrySetResult(await SendAsync(speech, kind, bridge, character));
+				spoken.TrySetResult(await SendAsync(speech));
 			}
 			catch (Exception exception)
 			{
@@ -62,7 +70,7 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 			}
 
 			return null;
-		}, "discord:speak", "discord", bridge.Object().DBRef, dbref, notifyOnRejection: false);
+		}, "discord:speak", "discord", bridge.Object().DBRef, player?.Object().DBRef ?? new DBRef(-1), notifyOnRejection: false);
 		if (!admission.Accepted)
 		{
 			logger.LogWarning("[Discord] A line from #{Channel} was not queued: {Reason}", speech.Link.ChannelName, admission.Reason);
@@ -80,7 +88,12 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 		catch (TimeoutException)
 		{
 			// The queue took it just as the wait ran out; the speaker hears what became of it.
-			return await spoken.Task.WaitAsync(cancellationToken);
+			return await spoken.Task;
+		}
+		catch (OperationCanceledException)
+		{
+			if (Interlocked.CompareExchange(ref claim, Abandoned, Pending) == Sent) await spoken.Task;
+			throw;
 		}
 	}
 
@@ -93,9 +106,43 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 	/// makes, then the line. The account is checked here rather than before queueing, since a line can wait behind others
 	/// while the character moves to another account or the account is disabled.
 	/// </summary>
-	private async Task<SpeechOutcome> SendAsync(DiscordSpeech speech, SharpFeedKind kind, AnySharpObject bridge,
-		AnySharpObject character)
+	private async Task<SpeechOutcome> SendAsync(DiscordSpeech speech)
 	{
+		if (services.GetRequiredService<IDiscordLinkStore>().Get(speech.Link.ChannelId) is not { } currentLink)
+			return new Refused("That Discord channel is no longer linked.");
+		var feeds = services.GetRequiredService<IFeedService>();
+		if (await feeds.GetKindAsync(DiscordChannelLink.FeedKind) is not SharpFeedKind currentKind
+			|| await Mediator.Send(new GetObjectNodeQuery(currentKind.Owner), ExecutionBudget.CurrentToken) is not AnySharpObject currentBridge)
+			return new Refused("The Discord feed or its owner is no longer available.");
+		var kind = currentKind; var bridge = currentBridge;
+		AnySharpObject? character = null;
+		if (speech.ExternalIdentity is null)
+		{
+			if (!DBRef.TryParse(speech.Character, out var parsed) || parsed is not { IsObjid: true } currentRef
+				|| await Mediator.Send(new GetObjectNodeQuery(currentRef), ExecutionBudget.CurrentToken) is not AnySharpObject { IsPlayer: true } currentPlayer)
+				return new Refused("Your speaking character is gone or was replaced. Choose it again with /speakas.");
+			character = currentPlayer;
+		}
+
+		if (speech.AuthorId != 0 && services.GetRequiredService<IDiscordAccountStore>().Get(speech.AuthorId) is { } user
+			&& await services.GetRequiredService<IDiscordStandings>().StandingAsync(user.AccountId, ExecutionBudget.CurrentToken) != DiscordStanding.Active)
+			return new Refused("Your game account is not active.");
+		if (speech.ExternalIdentity is { } identity)
+		{
+			if (!currentLink.Unrestricted || identity.Subject != speech.AuthorId.ToString(CultureInfo.InvariantCulture)) return new Refused("That channel requires a linked character.");
+			var externalKind = kind;
+			var externalFeed = await Mediator.Send(new GetFeedQuery(externalKind.Name, currentLink.FeedKey), ExecutionBudget.CurrentToken) is SharpFeed existing ? existing : SharpFeed.New(externalKind.Name, currentLink.FeedKey);
+			var externalParser = services.GetRequiredService<IMUSHCodeParser>().FromState(ParserState.RootFor(bridge.Object().DBRef) with { Enactor = new DBRef(-1), ExecutionBudget = ExecutionBudget.Current });
+			return await services.GetRequiredService<IFeedService>().SendExternalAsync(externalParser,
+				new(externalKind, externalFeed, bridge, identity, speech.Style, speech.Text, speech.Origin)) switch
+			{ FeedDelivery delivered => new Spoken(delivered.Id), Error<string> error => new Refused(error.Value) };
+		}
+		if (speech.AuthorId != 0 && (services.GetRequiredService<IDiscordAccountStore>().Get(speech.AuthorId) is not { Linked: true } author
+			|| author.AccountId != speech.AccountId || services.GetRequiredService<IDiscordSpeakerStore>().Character(speech.AuthorId, speech.Link.ChannelId) != speech.Character))
+			return new Refused("Your Discord speaking identity changed. Choose it again with /speakas.");
+
+		if (character is null) return new Refused("That character is no longer available.");
+
 		var name = character.Object().Name;
 		if (await services.GetRequiredService<IAccountService>().GetAccountForCharacterAsync(character.Object().DBRef,
 			ExecutionBudget.CurrentToken) is not { } account || account.Id != speech.AccountId)
@@ -118,7 +165,6 @@ public sealed class DiscordFeedInput(IServiceProvider services, ILogger<DiscordF
 			SharpFeed found => found,
 			_ => SharpFeed.New(kind.Name, speech.Link.FeedKey),
 		};
-		var feeds = services.GetRequiredService<IFeedService>();
 		if (!await feeds.CanRunAsync(character, kind) && !await feeds.PassesAsync(kind, feed, FeedLocks.Send, character))
 		{
 			return new Refused($"{name} may not send to {feed.Name}.");

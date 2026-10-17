@@ -85,6 +85,38 @@ public class DiscordInboundTests
 			users ?? new Dictionary<ulong, string>(), new Dictionary<ulong, string>(), new Dictionary<ulong, string>());
 
 	[Test]
+	public async Task UnrestrictedLinkedMemberWithoutSpeakerKeepsDiscordIdentity()
+	{
+		var bridge = new Bridge(); bridge.Linked(Ann);
+		bridge.Links.Get(Channel).Returns(Link with { Unrestricted = true });
+		await bridge.Inbound.ReceivedAsync(Message("Hello."), default);
+		await Assert.That(bridge.Game.Spoken.Single().ExternalIdentity?.Provider).IsEqualTo("discord");
+		await Assert.That(bridge.Game.Spoken.Single().ExternalIdentity?.Subject).IsEqualTo(Ann.ToString());
+	}
+	[Test]
+	public async Task ExternalNameNeverAddsTerminalControlCharacters()
+	{
+		var bridge = new Bridge(); bridge.Links.Get(Channel).Returns(Link with { Unrestricted = true });
+		await bridge.Inbound.ReceivedAsync(Message("hello") with { AuthorName = "\u001b[31mGod\u202e" }, default);
+		var identity = bridge.Game.Spoken.Single().ExternalIdentity!;
+		await Assert.That(identity.Name.Contains('\u001b')).IsFalse();
+		await Assert.That(identity.Name.Contains('\u202e')).IsFalse();
+		await Assert.That(identity.DisplayName.StartsWith("[Discord] ")).IsTrue();
+	}
+
+	[Test]
+	public async Task UnrestrictedMemberSpeaksWithAnExternalIdentity()
+	{
+		var bridge = new Bridge();
+		var json = System.Text.Json.JsonSerializer.Serialize(Link);
+		bridge.Links.Get(Channel).Returns(System.Text.Json.JsonSerializer.Deserialize<DiscordChannelLink>(json[..^1] + ",\"Unrestricted\":true}"));
+		await bridge.Inbound.ReceivedAsync(Message("Hello, game."), CancellationToken.None);
+		await Assert.That(bridge.Game.Spoken.Count).IsEqualTo(1);
+		await Assert.That(bridge.Discord.Deleted).IsEmpty();
+		await Assert.That(bridge.Game.Spoken.Single().Character).IsNullOrEmpty();
+	}
+
+	[Test]
 	public async Task ALinkedMember_SpeaksAsTheirIdentity_WithTheMessageAsOrigin()
 	{
 		var bridge = new Bridge();

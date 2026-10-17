@@ -29,7 +29,8 @@ public sealed class DiscordRelay(
 	Func<DiscordChannelLink, IDiscordLinkPoster> posters,
 	DiscordOutboxOptions options,
 	TimeProvider time,
-	ILogger<DiscordRelay> logger) : IHostedService, IFeedLineListener
+	ILogger<DiscordRelay> logger,
+	SharpMUSH.Plugins.Discord.Members.IDiscordChannelGate? channelGate = null, DiscordLinkMutationGate? mutations = null) : IHostedService, IFeedLineListener
 {
 	/// <summary>Who the secret store records as having stored a webhook token the relay made by itself.</summary>
 	public static readonly SecretAuthor Author = new("discord", "Discord link");
@@ -50,7 +51,7 @@ public sealed class DiscordRelay(
 	/// <summary>
 	/// One link, unlink or resume at a time, so two admins linking the same channel cannot both make it a webhook.
 	/// </summary>
-	private readonly SemaphoreSlim _changing = new(1, 1);
+	private readonly DiscordLinkMutationGate _changing = mutations ?? new();
 	private readonly CancellationTokenSource _stopping = new();
 	private ITimer? _forgetting;
 
@@ -59,7 +60,7 @@ public sealed class DiscordRelay(
 			.OrderBy(link => link.GuildName, StringComparer.OrdinalIgnoreCase)
 			.ThenBy(link => link.ChannelName, StringComparer.OrdinalIgnoreCase)
 			.Select(link => _links.TryGetValue(link.ChannelId, out var runner)
-				? new DiscordLinkStatus(runner.Link, runner.Sender.State, runner.Sender.Depth)
+				? new DiscordLinkStatus(link, runner.Sender.State, runner.Sender.Depth)
 				: new DiscordLinkStatus(link, link.Fault is null ? DiscordLinkState.Ok : DiscordLinkState.Faulted, 0))
 			.ToList();
 
@@ -68,20 +69,9 @@ public sealed class DiscordRelay(
 	/// token as a secret, and starts posting the feed's lines there.
 	/// </summary>
 	/// <param name="linkedBy">Who asked, by objid.</param>
-	public async Task<Result<DiscordChannelLink>> LinkAsync(ulong channelId, string linkedBy, SecretAuthor author,
+	public Task<Result<DiscordChannelLink>> LinkAsync(ulong channelId, string linkedBy, SecretAuthor author,
 		CancellationToken cancellationToken)
-	{
-		await _changing.WaitAsync(cancellationToken);
-		try
-		{
-			return await LinkNewAsync(channelId, linkedBy, author, cancellationToken);
-		}
-		finally
-		{
-			_changing.Release();
-		}
-	}
-
+		=> _changing.RunAsync(() => LinkNewAsync(channelId, linkedBy, author, cancellationToken), cancellationToken);
 	private async Task<Result<DiscordChannelLink>> LinkNewAsync(ulong channelId, string linkedBy, SecretAuthor author,
 		CancellationToken cancellationToken)
 	{
@@ -99,25 +89,17 @@ public sealed class DiscordRelay(
 
 	/// <summary>Stops posting to the channel, deletes its webhook as far as Discord lets it, and forgets the link.</summary>
 	/// <returns>The link that was dropped, or <see cref="NotFound"/>.</returns>
-	public async Task<Found<DiscordChannelLink>> UnlinkAsync(ulong channelId, CancellationToken cancellationToken)
-	{
-		await _changing.WaitAsync(cancellationToken);
-		try
-		{
-			return await DropAsync(channelId, cancellationToken);
-		}
-		finally
-		{
-			_changing.Release();
-		}
-	}
-
-	private async Task<Found<DiscordChannelLink>> DropAsync(ulong channelId, CancellationToken cancellationToken)
+	public Task<FoundResult<DiscordChannelLink>> UnlinkAsync(ulong channelId, CancellationToken cancellationToken)
+		=> _changing.RunAsync(() => DropAsync(channelId, cancellationToken), cancellationToken);
+	private async Task<FoundResult<DiscordChannelLink>> DropAsync(ulong channelId, CancellationToken cancellationToken)
 	{
 		if (store.Get(channelId) is not { } link)
 		{
 			return new NotFound();
 		}
+
+		if (channelGate is not null && await channelGate.RestoreAsync(channelId, cancellationToken) is { } problem)
+			return new Error<string>(problem);
 
 		if (_links.TryRemove(channelId, out var runner))
 		{
@@ -133,19 +115,8 @@ public sealed class DiscordRelay(
 
 	/// <summary>An admin fixed what stopped the link; it posts again, starting with what is still young enough.</summary>
 	/// <returns>The link, or <see cref="NotFound"/>.</returns>
-	public async Task<Found<DiscordChannelLink>> ResumeAsync(ulong channelId, CancellationToken cancellationToken)
-	{
-		await _changing.WaitAsync(cancellationToken);
-		try
-		{
-			return await RestartAsync(channelId, cancellationToken);
-		}
-		finally
-		{
-			_changing.Release();
-		}
-	}
-
+	public Task<Found<DiscordChannelLink>> ResumeAsync(ulong channelId, CancellationToken cancellationToken)
+		=> _changing.RunAsync(() => RestartAsync(channelId, cancellationToken), cancellationToken);
 	private async Task<Found<DiscordChannelLink>> RestartAsync(ulong channelId, CancellationToken cancellationToken)
 	{
 		if (store.Get(channelId) is not { } link)
@@ -154,7 +125,7 @@ public sealed class DiscordRelay(
 		}
 
 		var resumed = link with { Fault = null };
-		await store.SaveAsync(resumed, cancellationToken);
+		resumed = await store.UpdateAsync(channelId, current => current with { Fault = null }, cancellationToken) ?? resumed;
 		if (_links.TryGetValue(channelId, out var runner))
 		{
 			runner.Link = resumed;
@@ -261,7 +232,7 @@ public sealed class DiscordRelay(
 		}
 
 		var link = new DiscordChannelLink(channelId, created.GuildId, created.WebhookId, created.ChannelName,
-			created.GuildName, time.GetUtcNow(), linkedBy);
+			created.GuildName, time.GetUtcNow(), linkedBy, PermissionHistoryKnown: true);
 		await store.SaveAsync(link, CancellationToken.None);
 		Start(link);
 		logger.LogInformation("[Discord] Linked #{Channel} in {Guild}.", link.ChannelName, link.GuildName);
@@ -335,8 +306,7 @@ public sealed class DiscordRelay(
 
 		logger.LogWarning("[Discord] #{Channel} stopped posting ({Code}): {Reason}", runner.Link.ChannelName, broken.Code,
 			broken.Reason);
-		runner.Link = runner.Link with { Fault = new DiscordLinkFault(broken.Code, broken.Reason, now) };
-		await store.SaveAsync(runner.Link, cancellationToken);
+		runner.Link = await store.UpdateAsync(runner.Link.ChannelId, current => current with { Fault = new DiscordLinkFault(broken.Code, broken.Reason, now) }, cancellationToken) ?? runner.Link;
 	}
 
 	/// <summary>
@@ -379,8 +349,7 @@ public sealed class DiscordRelay(
 			return refused.Value;
 		}
 
-		runner.Link = runner.Link with { WebhookId = created.WebhookId };
-		await store.SaveAsync(runner.Link, CancellationToken.None);
+		runner.Link = await store.UpdateAsync(runner.Link.ChannelId, current => current with { WebhookId = created.WebhookId }, CancellationToken.None) ?? runner.Link;
 		runner.Poster.WebhookId = created.WebhookId;
 		logger.LogInformation("[Discord] #{Channel}'s webhook was deleted; the bot made a new one.", runner.Link.ChannelName);
 		return null;

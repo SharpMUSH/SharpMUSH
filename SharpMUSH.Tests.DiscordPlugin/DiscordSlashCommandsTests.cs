@@ -34,6 +34,14 @@ public class DiscordSlashCommandsTests
 	}
 
 	[Test]
+	public async Task SpeakAsIsDiscoverableAndRequiresACharacter()
+	{
+		var command = DiscordSlashCommands.Commands.OfType<Discord.SlashCommandProperties>().Single(command => command.Name.Value == "speakas");
+		await Assert.That(command.Options.Value.Single().Name).IsEqualTo("character");
+		await Assert.That(command.Options.Value.Single().IsRequired).IsTrue();
+	}
+
+	[Test]
 	public async Task Link_AnswersWithTheGamesConfirmPage()
 	{
 		var answer = await Commands("https://game.example/").LinkAnswerAsync(Ann);
