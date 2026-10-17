@@ -96,7 +96,8 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 				+ string.Join(" | ", failures.Select(f => $"{f.Item1}: {f.Item2}")));
 	}
 
-	[Test]
+	// This real-clock window must not compete with unrelated authentication work for the credential gate.
+	[Test, NotInParallel]
 	public async Task RollingWindow_StillSlides_PastTheOriginalExpiry()
 	{
 		var store = new DatabaseAccountSessionStore(Db);

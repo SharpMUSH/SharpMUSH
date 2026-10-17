@@ -72,6 +72,9 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 	public async Task FlaggedAccount_CannotListCharacters_ButCanChangePassword()
 	{
 		var (http, account) = await RegisterAccountAsync();
+		using var initialLogin = await http.PostAsJsonAsync("api/auth/account-login", new { UsernameOrEmail = account.Username, Password });
+		await Assert.That(initialLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		account = (await initialLogin.Content.ReadFromJsonAsync<AccountLoginResponse>())!;
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
 		await accountService.ForcePasswordChangeAsync(account.AccountId);
 
@@ -90,11 +93,24 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		using var changeResponse = await http.SendAsync(changeRequest);
 		await Assert.That(changeResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 
-		// Unblocked afterwards
+		// Credential changes revoke the old session, then replace only this proved browser's session.
+		using var stale = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
+		stale.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
+		using var staleResponse = await http.SendAsync(stale);
+		await Assert.That(staleResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+		var replacement = changeResponse.Headers.GetValues("X-SharpMUSH-Replacement-Session").Single();
+		await Assert.That(replacement).IsNotEqualTo(account.AccountSessionToken);
+		await Assert.That(changeResponse.Headers.Contains("X-SharpMUSH-Signed-Out")).IsFalse();
 		using var listAgain = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
-		listAgain.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
+		listAgain.Headers.Authorization = new AuthenticationHeaderValue("Bearer", replacement);
 		using var listAgainResponse = await http.SendAsync(listAgain);
 		await Assert.That(listAgainResponse.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		using var oldLogin = await http.PostAsJsonAsync("api/auth/account-login", new { UsernameOrEmail = account.Username, Password });
+		await Assert.That(oldLogin.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+		using var freshLogin = await http.PostAsJsonAsync("api/auth/account-login", new { UsernameOrEmail = account.Username, Password = "brand-new-pass-1" });
+		await Assert.That(freshLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var refreshed = await freshLogin.Content.ReadFromJsonAsync<AccountLoginResponse>();
+		await Assert.That(refreshed!.MustChangePassword).IsFalse();
 	}
 
 	[Test]

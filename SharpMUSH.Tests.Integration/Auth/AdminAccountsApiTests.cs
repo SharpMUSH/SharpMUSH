@@ -96,6 +96,17 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		return (http, body!.AccountSessionToken);
 	}
 
+	private static async Task<string> ProveStaffRecoveryAsync(HttpClient http, string sessionToken)
+	{
+		using var request = AsGod(new HttpRequestMessage(HttpMethod.Post, "api/account/security/proof/password")
+		{
+			Content = JsonContent.Create(new { Password = "god-admin-pass-1", Operation = AccountSecurityOperation.StaffRecovery })
+		}, sessionToken);
+		using var response = await http.SendAsync(request);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		return (await response.Content.ReadFromJsonAsync<RecentAccountProof>())!.Grant;
+	}
+
 	/// <summary>Looks up an account's admin-route key (God session required) by username.</summary>
 	private static async Task<string> GetAdminKeyAsync(HttpClient godHttp, string godSessionToken, string username)
 	{
@@ -303,9 +314,16 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
 		var targetRow = rows!.Single(r => r.Username == target.Username);
 
-		using var resetRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/reset-password")
+		using var proofless = AsGod(new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/reset-password")
 		{
 			Content = JsonContent.Create(new { NewPassword = "admin-reset-pass-1" })
+		}, sessionToken);
+		using var refused = await http.SendAsync(proofless);
+		await Assert.That(refused.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+		var proofGrant = await ProveStaffRecoveryAsync(http, sessionToken);
+		using var resetRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{targetRow.Id}/reset-password")
+		{
+			Content = JsonContent.Create(new { NewPassword = "admin-reset-pass-1", ProofGrant = proofGrant })
 		};
 		resetRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
 		using var resetResponse = await http.SendAsync(resetRequest);
@@ -416,9 +434,10 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		var targetSessionToken = (await targetLogin.Content.ReadFromJsonAsync<AccountLoginResponse>())!.AccountSessionToken;
 
 		var key = await GetAdminKeyAsync(godHttp, godSessionToken, target.Username);
+		var proofGrant = await ProveStaffRecoveryAsync(godHttp, godSessionToken);
 		using var resetRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{key}/reset-password")
 		{
-			Content = JsonContent.Create(new { NewPassword = "admin-reset-pass-2" })
+			Content = JsonContent.Create(new { NewPassword = "admin-reset-pass-2", ProofGrant = proofGrant })
 		};
 		AsGod(resetRequest, godSessionToken);
 		using var resetResponse = await godHttp.SendAsync(resetRequest);

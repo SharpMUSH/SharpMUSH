@@ -56,6 +56,9 @@ jobs:
       - name: Test i18n tools
         run: python3 -m unittest discover -s tools/i18n -p 'test_*.py' -v
 
+      - name: Test isolated test artifact packaging
+        run: python3 -m unittest discover -s .github/scripts -p test_pack_test_build.py -v
+
       - name: Restore dependencies
         run: dotnet restore
 
