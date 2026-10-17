@@ -480,7 +480,7 @@
     }
 
     private bool Pinnable(PaletteRow row)
-        => _server is not null && row.Kind is not (PaletteRowKind.Page or PaletteRowKind.Help) && !row.Id.StartsWith("input:", StringComparison.Ordinal)
+        => _server is not null && PalettePinsRequest.IsValidId(row.Id) && row.Kind is not (PaletteRowKind.Page or PaletteRowKind.Help) && !row.Id.StartsWith("input:", StringComparison.Ordinal)
             && !(row.Kind == PaletteRowKind.Go && row.Href?.Contains('?') == true);
 
     private bool IsPinned(PaletteRow row) => _server?.Pins.Contains(row.Id) == true;

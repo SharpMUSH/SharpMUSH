@@ -85,4 +85,10 @@ public sealed record PaletteResponse(
 	IReadOnlyList<string> Invalid);
 
 /// <summary>The pins the portal writes back (<c>PUT api/palette/pins</c>), in order.</summary>
-public sealed record PalettePinsRequest(IReadOnlyList<string> Pins);
+public sealed record PalettePinsRequest(IReadOnlyList<string> Pins)
+{
+	public const int MaxPinLength = 200;
+
+	public static bool IsValidId(string? id) => !string.IsNullOrWhiteSpace(id) && id.Length <= MaxPinLength
+		&& !id.Any(character => char.IsWhiteSpace(character) || char.IsControl(character));
+}

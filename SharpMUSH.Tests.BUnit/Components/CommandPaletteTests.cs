@@ -278,6 +278,29 @@ public class CommandPaletteTests : BunitContext
 	}
 
 	[Test]
+	[Arguments(200, true)]
+	[Arguments(201, false)]
+	public async Task ConfigurationRowsRespectTheServerPinIdBoundary(int idLength, bool pinnable)
+	{
+		_auth.SetPolicies("config.admin");
+		_palette.Response = Response([]);
+		var route = "/apps/" + new string('x', 100);
+		var key = new string('k', idLength - ("go:" + route + "#config-option-").Length);
+		var href = route + "#config-option-" + key;
+		_configuration.Pending = Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(
+			(IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[new("app:example:" + key, "Example", "Settings", route, new(key, "Length-bound option", "Declared setting"))]);
+		var cut = RenderOpen();
+		await cut.Find("input").InputAsync("Length-bound option");
+		cut.WaitForState(() => Labels(cut).Contains("Length-bound option"));
+		var row = cut.FindAll("[role='option']").Single(element => element.QuerySelector(".kit-palette-label")?.TextContent == "Length-bound option");
+		await Assert.That(row.QuerySelector(".kit-palette-pin") is not null).IsEqualTo(pinnable);
+		await cut.Find("input").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "p", AltKey = true });
+		await Assert.That(_palette.PinWrites.Count).IsEqualTo(pinnable ? 1 : 0);
+		await cut.Find("input").KeyDownAsync("Enter");
+		await Assert.That(Nav.Uri).EndsWith(href);
+	}
+
+	[Test]
 	public async Task ConfigurationResultNavigatesToItsFieldByKeyboard()
 	{
 		_auth.SetPolicies("config.admin");
