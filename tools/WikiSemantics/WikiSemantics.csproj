@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../SharpMUSH.Contracts/SharpMUSH.Contracts.csproj" />
     <ProjectReference Include="../../SharpMUSH.Library/SharpMUSH.Library.csproj" />
+    <EmbeddedResource Include="pf2e-source-lock.json" />
   </ItemGroup>
 </Project>
