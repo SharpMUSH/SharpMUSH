@@ -2,6 +2,8 @@ using SharpMUSH.Tests.Wiki;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -43,8 +45,16 @@ public class WikiCommandTests
 		IConnectionService connectionService, string namePrefix)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(services, mediator, connectionService, namePrefix);
-		await services.GetRequiredService<IRoleRegistryService>().AssignRoleToObjectAsync(player.DbRef.Number, BuiltInRoles.ApprovedSlug);
+		await ApprovePlayerAsync(services, mediator, player);
 		return player;
+	}
+
+	private static async Task ApprovePlayerAsync(IServiceProvider services, IMediator mediator,
+		TestIsolationHelpers.TestPlayer player)
+	{
+		await services.GetRequiredService<IRoleRegistryService>().AssignRoleToObjectAsync(player.DbRef.Number, BuiltInRoles.ApprovedSlug);
+		// Match RoleManagementService: a direct store write does not expire Mediator-cached grants.
+		await mediator.Send(new InvalidateGrantsCommand(player.DbRef.Number));
 	}
 
 	private async Task ExpectNotify(SharpMUSH.Library.Models.DBRef player, string contains) =>
@@ -62,6 +72,25 @@ public class WikiCommandTests
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(player).Count(delivery =>
 			delivery.Type == INotifyService.NotificationType.Announce
 			&& delivery.Message.Contains(contains, StringComparison.Ordinal))).IsEqualTo(1);
+
+	[Test]
+	public async ValueTask WikiCreate_ApprovalRefreshesGrantsAlreadyReadBeforeAssignment()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiWarmGrants");
+		var before = await Mediator.Send(new GetObjectGrantsQuery(player.DbRef.Number, true));
+		await Assert.That(before.Has(PortalPermission.WikiCreate)).IsFalse();
+
+		await ApprovePlayerAsync(WebAppFactoryArg.Services, Mediator, player);
+		var title = TestIsolationHelpers.GenerateUniqueName("Warm Grants Page");
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/create {title}=approved body"));
+
+		var created = await WikiService.GetBySlugAsync(title, WikiNamespace.Main);
+		await Assert.That(created is WikiPage).IsTrue().Because("Actual command output: "
+			+ string.Join(" | ", WebAppFactoryArg.Notifications.DeliveriesFor(player.DbRef).Select(delivery => delivery.Message)));
+		await Assert.That(created.Expect<WikiPage>().MarkdownSource).IsEqualTo("approved body");
+		await ExpectNotify(player.DbRef, $"WIKI: Created page '{title}'");
+	}
 
 	[Test]
 	public async ValueTask WikiCreate_ThenView_ShowsRenderedPage()
