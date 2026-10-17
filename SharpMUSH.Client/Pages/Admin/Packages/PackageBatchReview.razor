@@ -251,8 +251,7 @@
         _busy = true;
         try
         {
-            if (await Packages.RefreshUnknownBatchAdmissionAsync() is ApiFailure failure) _error = failure.Message;
-            else _error = null;
+            _error = await Packages.RefreshUnknownBatchAdmissionAsync() is ApiFailure failure ? failure.Message : null;
         }
         finally { _busy = false; }
         if (!Packages.Batch.AdmissionBlocked) await PlanAsync();

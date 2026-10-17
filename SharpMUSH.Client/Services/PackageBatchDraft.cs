@@ -116,9 +116,8 @@ public sealed class PackageBatchDraft : IDisposable
 		foreach (var stale in reviews.Keys.Where(k => !current.Contains(k)).ToList()) reviews.Remove(stale);
 		reviewedSteps.RemoveWhere(id => !current.Contains(id));
 		var added = false;
-		foreach (var step in plan.Steps)
+		foreach (var step in plan.Steps.Where(step => step.Intent.Action == PackageBatchAction.Uninstall))
 		{
-			if (step.Intent.Action != PackageBatchAction.Uninstall) continue;
 			if (uninstallConsents.Remove(step.Intent.TargetId, out var consent)
 				&& consent.Version == step.InstalledVersion && consent.Revision == step.InstalledRevision
 				&& !reviews.ContainsKey(step.StepId))

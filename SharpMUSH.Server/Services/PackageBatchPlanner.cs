@@ -79,10 +79,9 @@ public static class PackageBatchPlanner
 		foreach (var plugin in intents.Values.Where(i => i.Action == PackageBatchAction.PluginOff)) running.Remove(plugin.TargetId);
 		foreach (var candidate in selected.Values.Where(c => Requested(c.Manifest.Name, PackageBatchAction.Install)))
 		{
-			foreach (var issue in PackagePlanService.CheckDependenciesAndConflicts(candidate.Manifest, projected, running))
+			foreach (var issue in PackagePlanService.CheckDependenciesAndConflicts(candidate.Manifest, projected, running).Where(issue => issue.IsConflict))
 			{
-				if (issue.IsConflict)
-					Block(candidate.Manifest.Name, "package-conflict", $"{candidate.Manifest.Name} conflicts with {issue.PackageId} {issue.InstalledVersion}.");
+				Block(candidate.Manifest.Name, "package-conflict", $"{candidate.Manifest.Name} conflicts with {issue.PackageId} {issue.InstalledVersion}.");
 			}
 		}
 
