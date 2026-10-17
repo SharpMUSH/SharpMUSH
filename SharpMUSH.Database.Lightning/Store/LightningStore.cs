@@ -23,9 +23,21 @@ public sealed partial class LightningStore : IDisposable
 	/// <summary>The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size.</summary>
 	internal int MaxKeySize => _env.MaxKeySize;
 
-	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> swap in a whole
-	/// new dictionary, and reader threads outside the gate's write lock must see the swap, never a stale one.</summary>
-	private volatile Dictionary<TableDef, LmdbDb> _tables = new();
+	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> publish a whole
+	/// handle/flag snapshot. Readers outside the gate's write lock must see matching metadata and handles.</summary>
+	private volatile TableSnapshot _tableSnapshot = TableSnapshot.Empty;
+	private Dictionary<TableDef, LmdbDb> _tables => _tableSnapshot.Handles;
+
+	// These maps are immutable after publication. Handles and their actual persisted flags move together
+	// through one reference, including OpenTable, which can publish while ordinary readers coexist.
+	private sealed record NativeTable(TableDef Definition, LmdbDb Handle, DatabaseOpenFlags Flags);
+	private sealed record TableSnapshot(Dictionary<TableDef, LmdbDb> Handles, Dictionary<string, NativeTable> ByName)
+	{
+		public static readonly TableSnapshot Empty = new(new(), new(StringComparer.Ordinal));
+		public static TableSnapshot Capture(LightningTransaction tx, Dictionary<TableDef, LmdbDb> handles)
+			=> new(handles, handles.ToDictionary(pair => pair.Key.Name,
+				pair => new NativeTable(pair.Key, pair.Value, pair.Value.GetFlags(tx)), StringComparer.Ordinal));
+	}
 
 	private bool _disposed;
 
@@ -215,9 +227,10 @@ public sealed partial class LightningStore : IDisposable
 		{
 			tables[def] = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
 		}
+		var snapshot = TableSnapshot.Capture(tx, tables);
 		var openCode = tx.Commit();
 		if (openCode != MDBResultCode.Success) throw LightningStoreException.From(openCode, "open");
-		_tables = tables;
+		_tableSnapshot = snapshot;
 		// A fresh environment: whatever a periodic flush failed to do belonged to the old one, and the
 		// close that ended it has already reported (or is about to report) its own result.
 		_flushFailure = null;
@@ -235,7 +248,7 @@ public sealed partial class LightningStore : IDisposable
 	{
 		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
-		_tables = new();
+		_tableSnapshot = TableSnapshot.Empty;
 		var flushed = MDBResultCode.Success;
 		if (_options.Sync != LightningSyncMode.Full)
 		{
@@ -278,15 +291,22 @@ public sealed partial class LightningStore : IDisposable
 
 			var def = duplicates ? TableDef.Index(name, duplicates: true) : TableDef.Node(name);
 			var handle = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
+			var current = _tableSnapshot;
+			var handles = new Dictionary<TableDef, LmdbDb>(current.Handles) { [def] = handle };
+			var names = new Dictionary<string, NativeTable>(current.ByName, StringComparer.Ordinal)
+			{
+				[name] = new NativeTable(def, handle, handle.GetFlags(tx))
+			};
+			var snapshot = new TableSnapshot(handles, names);
 			var code = tx.Commit();
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"open table {name}");
-			_tables = new Dictionary<TableDef, LmdbDb>(_tables) { [def] = handle };
+			_tableSnapshot = snapshot;
 			_pluginTables = _pluginTables.SetItem(name, def);
 			return def;
 		});
 	}
 
-	private TableDef? FindTable(string name) => _tables.Keys.FirstOrDefault(t => t.Name == name);
+	private TableDef? FindTable(string name) => _tableSnapshot.ByName.TryGetValue(name, out var entry) ? entry.Definition : null;
 
 	public T Read<T>(Func<ITx, T> read)
 	{
@@ -297,7 +317,7 @@ public sealed partial class LightningStore : IDisposable
 			T result;
 			try
 			{
-				result = read(new Tx(tx, _tables));
+				result = read(new Tx(tx, _tableSnapshot));
 			}
 			catch
 			{
@@ -380,7 +400,7 @@ public sealed partial class LightningStore : IDisposable
 				var only = items[0];
 				try
 				{
-					only.Result = only.Work(new Tx(parent, _tables));
+					only.Result = only.Work(new Tx(parent, _tableSnapshot));
 				}
 				catch (Exception ex)
 				{
@@ -398,7 +418,7 @@ public sealed partial class LightningStore : IDisposable
 				using var child = _env.BeginTransaction(parent);
 				try
 				{
-					item.Result = item.Work(new Tx(child, _tables));
+					item.Result = item.Work(new Tx(child, _tableSnapshot));
 					var code = child.Commit();
 					if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
 				}
@@ -651,9 +671,17 @@ public sealed partial class LightningStore : IDisposable
 		if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
 	}
 
-	private sealed class Tx(LightningTransaction tx, Dictionary<TableDef, LmdbDb> tables) : ITx
+	// A native cursor failure must never look like end-of-data, including in diagnostics and counts.
+	private static bool FoundNative(MDBResultCode code, string operation)
 	{
-		private LmdbDb Db(TableDef t) => tables[t];
+		if (code == MDBResultCode.NotFound) return false;
+		if (code != MDBResultCode.Success) throw LightningStoreException.From(code, operation);
+		return true;
+	}
+
+	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables) : ITx
+	{
+		private LmdbDb Db(TableDef t) => tables.Handles[t];
 
 		public bool TryGet(TableDef table, ReadOnlySpan<byte> key, out byte[] value)
 		{
@@ -692,15 +720,15 @@ public sealed partial class LightningStore : IDisposable
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			var positioned = prefix.Length == 0 ? cursor.First().resultCode : cursor.SetRange(prefix);
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				// The prefix test reads the mapped page directly; only an entry that is yielded is copied out.
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 		}
 
 		/// <summary>
@@ -719,50 +747,51 @@ public sealed partial class LightningStore : IDisposable
 			// start at the prefix instead, where nothing has been yielded yet and nothing needs skipping.
 			var resumeIsInsidePrefix = afterKey.AsSpan().SequenceCompareTo(prefix) >= 0;
 			var positioned = resumeIsInsidePrefix ? cursor.SetRange(afterKey) : cursor.SetRange(prefix);
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 
 			while (resumeIsInsidePrefix)
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!k.AsSpan().SequenceEqual(afterKey)) break;
 				if (afterValue is not null && v.AsSpan().SequenceCompareTo(afterValue) > 0) break;
-				if (cursor.Next().resultCode != MDBResultCode.Success) yield break;
+				if (!FoundNative(cursor.Next().resultCode, "cursor resume next")) yield break;
 			}
 
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 		}
 
+		/// <summary>Native lower-bound seek; startKey must be nonempty. Use Range(table, []) for a full scan.</summary>
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			var positioned = cursor.SetRange(startKey);
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 		}
 
 		public long CountRange(TableDef table, byte[] prefix, byte[] startKey)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.SetRange(startKey) != MDBResultCode.Success) return 0;
+			if (!FoundNative(cursor.SetRange(startKey), "count range seek")) return 0;
 			var count = 0L;
 			do
 			{
 				var (code, k, _) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success || !Keys.StartsWith(k.AsSpan(), prefix)) break;
+				if (!FoundNative(code, "count range current") || !Keys.StartsWith(k.AsSpan(), prefix)) break;
 				count++;
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 
 			return count;
 		}
@@ -775,34 +804,34 @@ public sealed partial class LightningStore : IDisposable
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			var positioned = PrefixSuccessor(prefix) is { } past && cursor.SetRange(past) == MDBResultCode.Success
+			var positioned = PrefixSuccessor(prefix) is { } past && FoundNative(cursor.SetRange(past), "reverse range seek")
 				? cursor.Previous().resultCode
 				: cursor.Last().resultCode;
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Previous().resultCode, "cursor previous"));
 		}
 
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverseBefore(TableDef table, byte[] prefix, byte[] beforeKey)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			// The first key at or past beforeKey, then one step back; with nothing at or past it, the last key.
-			var positioned = cursor.SetRange(beforeKey) == MDBResultCode.Success
+			var positioned = FoundNative(cursor.SetRange(beforeKey), "reverse before seek")
 				? cursor.Previous().resultCode
 				: cursor.Last().resultCode;
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Previous().resultCode, "cursor previous"));
 		}
 
 		/// <summary>The smallest key greater than every key starting with <paramref name="prefix"/>; null when there is none.</summary>
@@ -822,22 +851,26 @@ public sealed partial class LightningStore : IDisposable
 		public IEnumerable<byte[]> Dups(TableDef table, byte[] key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.Set(key) != MDBResultCode.Success) yield break;
+			if (!FoundNative(cursor.Set(key), "duplicates seek")) yield break;
 			do
 			{
 				var (code, _, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				yield return v.CopyToNewArray();
-			} while (cursor.NextDuplicate().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.NextDuplicate().resultCode, "cursor next duplicate"));
 		}
 
 		public Result<long> CountDups(TableDef table, ReadOnlySpan<byte> key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.Set(key) != MDBResultCode.Success) return 0L;
-			// mdb_cursor_count is only defined for a DUPSORT database; a plain one holds one value per key.
-			if (!table.Duplicates) return 1L;
+			var positioned = cursor.Set(key);
+			if (positioned == MDBResultCode.NotFound) return 0L;
+			if (positioned != MDBResultCode.Success) return new Error<string>(LightningStoreException.Describe(positioned, $"count seek {table}"));
+			// mdb_cursor_count is only defined for DUPSORT. TableDef aliases compare by name, so only
+			// the persisted flags captured with this handle can decide whether a key has duplicates.
+			if ((tables.ByName[table.Name].Flags & DatabaseOpenFlags.DuplicatesSort) == 0) return 1L;
 			var code = cursor.Count(out var count);
+			if (code == MDBResultCode.NotFound) return 0L;
 			if (code != MDBResultCode.Success) return new Error<string>(LightningStoreException.Describe(code, $"count {table}"));
 			return count;
 		}
@@ -846,12 +879,13 @@ public sealed partial class LightningStore : IDisposable
 		{
 			// Materialized: the cursor behind Range must not be walked while its rows are being deleted.
 			var keys = Range(table, prefix).ToList();
+			var duplicates = (tables.ByName[table.Name].Flags & DatabaseOpenFlags.DuplicatesSort) != 0;
+			var deleted = 0;
 			foreach (var (k, v) in keys)
 			{
-				if (table.Duplicates) tx.Delete(Db(table), k, v);
-				else tx.Delete(Db(table), k);
+				if (duplicates ? Delete(table, k, v) : Delete(table, k)) deleted++;
 			}
-			return keys.Count;
+			return deleted;
 		}
 	}
 }

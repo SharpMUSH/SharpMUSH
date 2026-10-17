@@ -10,5 +10,6 @@
     <ProjectReference Include="../../SharpMUSH.Contracts/SharpMUSH.Contracts.csproj" />
     <ProjectReference Include="../../SharpMUSH.Library/SharpMUSH.Library.csproj" />
     <EmbeddedResource Include="pf2e-source-lock.json" />
+    <InternalsVisibleTo Include="SharpMUSH.Tests" />
   </ItemGroup>
 </Project>
