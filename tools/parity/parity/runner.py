@@ -99,8 +99,8 @@ def _execute(target, sessions, banners, step, rec):
 
 
 def _sync_others(sessions, actor, rec):
-    # Barrier 2: whatever the step wrote to other sessions is already on their streams and is
-    # followed by their sentinel.
+    # Capture each peer stream through its foreground sentinel. Queued descendants can still
+    # run after the actor's token; scenarios need ::until for an explicit completion witness.
     others = {n: s for n, s in sessions.items() if n != actor}
     tokens = {n: s.sync_start() for n, s in others.items() if s.logged_in}
     for n, s in others.items():
