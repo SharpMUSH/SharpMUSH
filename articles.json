@@ -5426,6 +5426,12 @@
     ],
     "sections": [
       {
+        "id": "reply-and-target-memory",
+        "lookup": "page targets",
+        "heading": "Reply and target memory",
+        "aliases": []
+      },
+      {
         "id": "recipient-matching-and-poses",
         "lookup": "page recipient matching and poses",
         "heading": "Recipient matching and poses",
