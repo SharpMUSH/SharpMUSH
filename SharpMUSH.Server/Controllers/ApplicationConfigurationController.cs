@@ -26,11 +26,11 @@ public sealed class ApplicationConfigurationController(
 		var candidates = (await registry.GetApplicationsAsync()).Select(app => app.ConfigurationTile)
 			.OfType<ApplicationConfigurationTile>().ToList();
 		candidates.AddRange(ExternalProviderDefinition.All.Select(provider => new ApplicationConfigurationTile(
-	 "signin-" + provider.Id, provider.DisplayName + " sign-in", "Configure account sign-in with " + provider.DisplayName + ".", "Login",
-	 "/admin/config/signin/" + provider.Id, PortalPermission.ConfigAdmin)));
+			"signin-" + provider.Id, provider.DisplayName + " sign-in", "Configure account sign-in with " + provider.DisplayName + ".", "Login",
+			"/admin/config/signin/" + provider.Id, PortalPermission.ConfigAdmin)));
 		foreach (var source in catalog.ApplicationSources)
 		{
-			try { candidates.AddRange(source.GetConfigurationTiles().ToList()); }
+			try { candidates.AddRange(source.GetConfigurationTiles().OfType<ApplicationConfigurationTile>().ToList()); }
 			catch (Exception exception)
 			{
 				logger.LogWarning(exception, "A plugin could not describe its configuration tiles.");

@@ -101,10 +101,10 @@
 
 **Files:** Update auth ADR, deployment/provider/recovery guide, approved spec status and work evidence; update issue #1983 and PR #1992 title/body with four providers and old-method preservation.
 
-- [ ] Run focused foundation/security/provider/flow/native suites, auth integration and affected bUnit tests; resolve failures before expanding scope.
-- [ ] Run pinned-SDK server/client/test builds, relevant Node suite, formatting twice and `git diff --check`; retain exact evidence in task scratch.
+- [x] Run focused foundation/security/provider/flow/native suites, auth integration and affected bUnit tests; resolve failures before expanding scope.
+- [x] Run pinned-SDK server/client/test builds, relevant Node suite, formatting twice and `git diff --check`; retain exact evidence in task scratch.
 - [x] Document provider registrations/callbacks/scopes, restart/effective-state/disable impact, secret/DataProtection backup, optional-password/native journey, fallback/recovery limits, plain-telnet exposure and real-provider smoke matrix.
-- [ ] Obtain independent full-branch review; fix load-bearing findings and run targeted verification.
+- [x] Obtain independent full-branch review; fix load-bearing findings and run targeted verification.
 - [ ] Push own branch, update existing PR, wait for current-head CI and address comments. Real provider credentials remain operator supplied; mark real-provider smoke unverified unless performed.
 
 ## Self-review and execution ruling

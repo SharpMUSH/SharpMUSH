@@ -1,6 +1,6 @@
 format: "1.10"
 package: plus-help
-version: 1.6.0
+version: 1.7.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -142,7 +142,7 @@ objects:
       # %0 a source — the line describing it, from its root attribute
       FUN`SOURCE`DESCRIPTION:
         value: |-
-          get(first(u(%!/FUN`SOURCE`OBJECTS,%0))/HELP)
+          if(isdbref(setr(description_object,first(u(%!/FUN`SOURCE`OBJECTS,%0)))),get(%q<description_object>/HELP))
         flags: [funsyntax]
 
       # ── Navigation ──────────────────────────────────────────────────────────
@@ -305,11 +305,17 @@ objects:
         value: |-
           squish(edit(rendermarkdowncustom(before(regedit(regeditall(%r[u(%!/FUN`RECORD`TEXT,%0)],%r#+ .*,),^%r+,),%r%r),%!,1000),%r,%b))
         flags: [funsyntax]
-      # %0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and
+      # %0 sources — the descriptive table on +help/sources. Cells are joined with %r and
       # split on a newline, so a description holding a | stays one cell
       FUN`DISPLAY`SOURCETABLE:
         value: |-
           datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[tone(strong,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[tone(strong,Covers)]%r[iter(%0,edit(u(%!/FUN`SOURCE`DESCRIPTION,%i0),%r,%b),%b,%r)])
+        flags: [funsyntax]
+      # %0 live sources — short clickable names flow into as many columns as each reader can fit.
+      # Leave width to the layout renderer so the portal can reflow the same grid responsively.
+      FUN`DISPLAY`SOURCEGRID:
+        value: |-
+          grid(iter(%0,cmdlink(%i0,+help/list %i0),%b,%r),%r)
         flags: [funsyntax]
       # no arguments — the one line that tells a reader what else to type, kept under 78 columns
       FUN`DISPLAY`SYNTAX:
@@ -323,7 +329,7 @@ objects:
       # %0 every record — the whole front page
       FUN`DISPLAY`INDEX:
         value: |-
-          box(if(words(setr(index_records,u(%!/FUN`GET`FOUND,%0,index))),rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%q<index_records>),%!,u(%!/FUN`GET`BODYWIDTH))%r)[rule(Available help)]%r[u(%!/FUN`DISPLAY`SOURCETABLE,u(%!/FUN`GET`LIVESOURCES,%0))],Help,,u(%!/FUN`GET`FRAME))%r[u(%!/FUN`DISPLAY`SYNTAX)]
+          box(if(words(setr(index_records,u(%!/FUN`GET`FOUND,%0,index))),rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%q<index_records>),%!,u(%!/FUN`GET`BODYWIDTH))%r)[rule(Available help)]%r[u(%!/FUN`DISPLAY`SOURCEGRID,u(%!/FUN`GET`LIVESOURCES,%0))],Help,,u(%!/FUN`GET`FRAME))%r[u(%!/FUN`DISPLAY`SYNTAX)]
         flags: [funsyntax]
       # named: title · list the records · page · pages how many · head the command and its switches · tail
       # what follows them. The next page is head/<n> tail.
@@ -366,7 +372,7 @@ objects:
       # to be missing rather than shown a #-1
       FUN`DISPLAY`SOURCES:
         value: |-
-          setq(source_names,u(%!/FUN`GET`SOURCES))[box(datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1),grow,json(string,%r%r1)),[tone(strong,Source)]%r[iter(%q<source_names>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<source_names>,firstof(num(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<source_names>,firstof(name(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<source_names>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)]),Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
+          setq(source_names,u(%!/FUN`GET`SOURCES))[box(u(%!/FUN`DISPLAY`SOURCETABLE,%q<source_names>)%r[rule(Registry)]%r[datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1),grow,json(string,%r%r1)),[tone(strong,Source)]%r[iter(%q<source_names>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<source_names>,firstof(num(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<source_names>,firstof(name(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<source_names>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])],Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
         flags: [funsyntax]
 
       # ── Markdown rendering ──────────────────────────────────────────────────
@@ -627,12 +633,12 @@ objects:
 
           ## Reading
 
-          - `+help` — the index: every source and what it covers
+          - `+help` — a compact grid of source links
           - `+help <topic>` — a topic; `*` and `?` wildcard, so `+help scene*` works
           - `+help <source>/<topic>` — when two sources claim the same name
           - `+help/list \[<source>\]` — every topic, or one source's
           - `+help/search <text>` — topic names and bodies containing the text
-          - `+help/sources` — where the topics come from
+          - `+help/sources` — source descriptions, registry objects and topic counts
 
           A topic name can be several words: `+help scene join`. A command finds the topic that
           shows it, so `+help +scene/join`, `+help event` and `+help +events` all work. A word that
@@ -697,7 +703,8 @@ objects:
           when both claim the same name.
       HELP`SOURCES:
         value: |-
-          Topics come from two places, and `+help/sources` shows both.
+          The front page lists source names as links to their topics. `+help/sources` describes what each
+          covers and shows the registry objects and topic counts, including empty or missing sources.
 
           **Every source is an object with a `HELP` tree**, including this package's own topics and
           the game's. A package registers its object with the librarian in its manifest. The package

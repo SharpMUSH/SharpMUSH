@@ -1,0 +1,31 @@
+# Opt-in overlay for either production stack. Replaces legacy cron on the SAME backup service.
+# docker compose -f docker-compose.cloudflare.yml -f docker-compose.remote-backups.yml --profile backup up -d --build
+services:
+  sharpmush-server:
+    environment:
+      SHARPMUSH_BACKUP_AGENT_TOKEN: ${SHARPMUSH_BACKUP_AGENT_TOKEN:?Set a random token of at least 32 characters}
+  backup:
+    image: sharpmush-backup-agent:local
+    build:
+      context: ./backup-agent
+    entrypoint: [python3, /opt/backup-agent/agent.py]
+    environment:
+      SHARPMUSH_BACKUP_AGENT_URL: http://sharpmush-server:8080
+      SHARPMUSH_BACKUP_AGENT_TOKEN: ${SHARPMUSH_BACKUP_AGENT_TOKEN:?Set a random token of at least 32 characters}
+      # Exact host roots only. Each worker root must be inside an explicitly read-only mount.
+      BACKUP_AGENT_COPY_SOURCE_ROOT: ${BACKUP_AGENT_COPY_SOURCE_ROOT:-/app/data/backup.remote-jobs}
+      BACKUP_AGENT_COPY_MOUNT_ROOT: ${BACKUP_AGENT_COPY_MOUNT_ROOT:-/data/backup.remote-jobs}
+      BACKUP_AGENT_PLUGIN_SOURCE_ROOT: ${BACKUP_AGENT_PLUGIN_SOURCE_ROOT:-/app/data/lightning.plugins}
+      BACKUP_AGENT_PLUGIN_MOUNT_ROOT: ${BACKUP_AGENT_PLUGIN_MOUNT_ROOT:-/data/lightning.plugins}
+      BACKUP_AGENT_KEYS_SOURCE_ROOT: ${BACKUP_AGENT_KEYS_SOURCE_ROOT:-/app/data/lightning.dataprotection-keys}
+      BACKUP_AGENT_KEYS_MOUNT_ROOT: ${BACKUP_AGENT_KEYS_MOUNT_ROOT:-/data/lightning.dataprotection-keys}
+      BACKUP_AGENT_WIKI_SOURCE_ROOT: ${BACKUP_AGENT_WIKI_SOURCE_ROOT:-/app/data/wiki-assets}
+      BACKUP_AGENT_WIKI_MOUNT_ROOT: ${BACKUP_AGENT_WIKI_MOUNT_ROOT:-/data/wiki-assets}
+      BACKUP_AGENT_STATE: /agent-state
+      TMPDIR: /agent-state/tmp
+      TMP: /agent-state/tmp
+      TEMP: /agent-state/tmp
+    volumes:
+      - backup-agent-state:/agent-state
+volumes:
+  backup-agent-state:

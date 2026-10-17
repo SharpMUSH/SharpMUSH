@@ -126,6 +126,22 @@ public class ApplicationConfigurationTests
 	}
 
 	[Test]
+	[Arguments("line one\nline two")]
+	[Arguments("line one\r\nline two")]
+	[Arguments("line one\u2028line two\u2029end")]
+	public async Task ConfigurationTileTextPreservesLineBreaksWhenExported(string text)
+	{
+		var parsed = new SharpMUSH.Library.Services.PackageManifestService().ParseManifest("format: 1.11\npackage: example-app\nversion: 1.0.0\nkind: application\napplication:\n  slug: example\n  display_name: Example\n  schema_url: http/example/schema\n")
+			.Expect<SharpMUSH.Library.Models.Packages.ParsedPackageManifest>();
+		var tile = new ApplicationConfigurationTile("example", text, text, text, "/apps/example/settings", "config.admin");
+		var manifest = parsed.Manifest with { Application = parsed.Manifest.Application! with { ConfigurationTile = tile } };
+		var written = SharpMUSH.Library.Services.PackageManifestWriter.Write(manifest);
+		var roundTrip = new SharpMUSH.Library.Services.PackageManifestService().ParseManifest(written)
+			.Expect<SharpMUSH.Library.Models.Packages.ParsedPackageManifest>();
+		await Assert.That(roundTrip.Manifest.Application!.ConfigurationTile).IsEqualTo(tile);
+	}
+
+	[Test]
 	[Arguments("1.10", false)]
 	[Arguments("1.11", true)]
 	public async Task ConfigurationTileRequiresItsIntroducedManifestFormat(string format, bool supported)
@@ -166,6 +182,7 @@ public class ApplicationConfigurationTests
 		public IEnumerable<RegisteredApplication> GetApplications() => [];
 		public IEnumerable<ApplicationConfigurationTile> GetConfigurationTiles() =>
 		[
+			null!, // A third-party plugin can violate its non-nullable contribution contract.
 			new("discord", "Discord", "Bot settings", "Forum", "/admin/discord", "discord.admin"),
 			new("private", "Private", "Hidden settings", "Lock", "/admin/private", "private.admin"),
 			new("external", "External", "Bad link", "Link", "//example.com/admin", "discord.admin"),

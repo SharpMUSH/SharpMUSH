@@ -326,11 +326,24 @@ that resolves straight to your server:
 ```bash
 cd deploy
 cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN and your domain
-docker compose -f docker-compose.cloudflare.yml run --rm backup restic init   # optional, once — backups only
-docker compose -f docker-compose.cloudflare.yml up -d --build
 ```
 
-Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.yml logs -f cloudflared`
+In `.env`, choose exactly one `COMPOSE_FILE` setting:
+
+- With native TLS: `COMPOSE_FILE=docker-compose.cloudflare.yml:docker-compose.telnet-tls.yml`.
+  Follow the [complete native TLS recipe](native-client-tls.md) first, including issuance,
+  certificate permissions, the systemd overlay and renewal hook.
+- Without native TLS: `COMPOSE_FILE=docker-compose.cloudflare.yml`.
+
+The following commands use that persisted selection. Do not add a base-only `-f` argument:
+that would override the selection and remove TLS from a TLS-enabled deployment.
+
+```bash
+docker compose run --rm backup restic init   # optional, once — backups only
+docker compose up -d --build
+```
+
+Check the tunnel is healthy with `docker compose logs -f cloudflared`
 (you want to see it register a connection to Cloudflare), then load `https://mush.example.com`.
 
 ### Ports with Cloudflare
@@ -541,7 +554,12 @@ reports each of them:
 | **Allocated on disk** | What the filesystem actually holds for it, which is what `du` shows. It can be less than the length, because the file is sparse. | `kind="allocated"` |
 | **Live data** | Pages holding records now. The rest of the file is **free pages**, which later writes reuse. | `kind="live"`, `kind="free_pages"` |
 
-Two rules follow from this:
+`@storage` shows the **Map** bar as logical file length against the map limit. **File size**
+and **Inside file** are byte figures, without a bar: live data filling the current file means no
+reusable pages, not that the database has reached its capacity. **On disk** remains the physical
+allocation, which may be smaller for a sparse file.
+
+Three rules follow from this:
 
 - **Deleting records never shrinks the file.** LMDB puts the freed pages on its free list and the
   next writes reuse them, so the file stops growing but stays the same size. The only way to give the
@@ -772,3 +790,108 @@ See [Connections during deployment](connection-updates.md) for lifecycle notices
 ## Editor and MCP analysis
 
 Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compose overlay, secure desktop editor configuration, curl smoke requests and troubleshooting. An entry in `.env` is not automatically forwarded to the server.
+
+### Manage remote backups in the website
+
+The optional `docker-compose.remote-backups.yml` overlay replaces the legacy cron entrypoint on
+**the existing `backup` service** with a narrowly scoped SharpMUSH worker. Do not run a second
+legacy cron container against the same configuration. The default stacks retain their existing
+`.env`/`BACKUP_CRON` behavior until you choose this overlay; they do not report remote results.
+
+1. Initialize the repository using the existing Restic instructions above and save the password
+   separately. Managed jobs never initialize repositories, prune snapshots or restore data.
+2. Add `SHARPMUSH_BACKUP_AGENT_TOKEN` to `deploy/.env`, generated with `openssl rand -hex 32`.
+   This deployment token permits only claiming backup jobs and posting receipts; keep it private.
+3. Include `-f docker-compose.remote-backups.yml` after your base production compose file and any
+   other overlays, with `--profile backup up -d --build`. This requires a deployment/restart.
+4. Open **Administration → Remote backups** (`/admin/backups`, `server.admin` permission).
+   Enter the repository, encryption password and storage account credentials from the old `.env`
+   configuration, choose the interval in hours (1–8760), and enable managed scheduling. Those
+   repository settings are now managed in the website; the worker ignores inherited legacy
+   `RESTIC_*`, `B2_*` and cron settings. Its subprocess environment is explicitly constructed.
+
+Supported repositories are `b2:bucket:path`, `s3:https://host/bucket`, and
+`rest:https://host/repository`. Put storage credentials into the separate account fields; userinfo,
+queries, fragments, HTTP, local paths, SFTP and helper commands are rejected. The account fields
+mean B2 account ID/key, AWS access key ID/secret, or REST username/password. Blank credential
+fields preserve the existing secret. To switch to an anonymous backend, explicitly select the account ID/key clear checkboxes and save; queued jobs keep their pinned credentials. Environment/file overrides must be removed by the operator before the website can clear them. Configured secrets use the server's encrypted secret store;
+ordinary status reads return only whether they are configured. Keep the Data Protection key ring
+with your disaster recovery materials. A queued job pins an encrypted credential/configuration
+snapshot, so changing a repository affects only later jobs.
+
+**Back up now** queues a fresh provider-safe hot copy. That copy lives under
+`data/backup.remote-jobs/<job-id>/`, outside ordinary local backup retention. The worker snapshots
+only that completed world plus the fixed wiki assets, Data Protection keys and installed plugins;
+it never reads live LMDB. The worker mount stays read-only. A job succeeds only after Restic exits
+zero and emits a full snapshot ID. Exit 3 is a partial backup and is shown as failed. Each run records
+whether it was manual or scheduled. A successful local copy alone never advances remote success.
+
+The page refreshes history and agent health every ten seconds. A missing agent is visible after
+two minutes. A running job whose two-hour lease expires becomes **unknown** and keeps its local
+copy, blocking another job until the owning worker reconciles it. Worker state must persist in the
+`backup-agent-state` volume. An interrupted worker without a durable exit receipt reports an
+**unconfirmed** result, even if a tagged Restic snapshot exists, because partial snapshots also
+exist. It never reruns that upload automatically. The worker's inherited process lock prevents a
+restarted agent from reconciling or deleting a copy while an old Restic child still reads it.
+Definite exit receipts permit staging cleanup; lost worker state requires operator investigation
+rather than automatically deleting a potentially active copy. Failed/interrupted preparation may
+leave a job directory for operator inspection. History retains the latest 50 runs, plus unresolved abandoned jobs. The last-success timestamp persists independently of history retention.
+
+No raw Restic logs are sent to the portal. Results include stable error codes and the process exit
+code; inspect repository access and storage credentials on authentication or connectivity failures.
+The agent token is accepted only on `/api/backup-agent/claim`, `/heartbeat` and `/receipt`, not on admin routes.
+The shipped overlay uses the private compose network; use HTTPS for an agent hosted elsewhere.
+
+If the worker-state volume or its identity is lost, investigate the old process and remote repository,
+then use **Abandon unknown job and retain its copy** on the website. This audited admin action
+unblocks scheduling without deleting the uncertain copy. A late authenticated receipt still records
+its actual outcome and safely cleans its owned copy; abandoned unresolved jobs are retained beyond
+the ordinary 50-run display history so late receipts remain valid.
+
+The worker interprets [Restic JSON summaries and exit codes](https://restic.readthedocs.io/en/stable/075_scripting.html). Known failure codes distinguish missing repositories (10), repository locks (11), rejected passwords (12), partial source reads (3), cancellation (130), and worker timeout/interruption.
+
+An interrupted preparation directory belongs to the failed job ID under `data/backup.remote-jobs/`. It can consume a full world copy beyond local retention. Before removing such a directory, verify the job never received a worker claim and the old server copy process has stopped; remove only that job directory. Never infer process completion from lease expiry alone.
+
+Managed uploads require the configured Data Protection key ring (mapped by default to `/data/lightning.dataprotection-keys`) to exist as a directory; a missing key ring fails with `required-key-ring-missing` before Restic starts, because world ciphertext without its keys cannot be restored. Absent default wiki/plugin directories remain optional; configured or previously present directories are required. Transient preparation-result persistence failures retry the existing completed copy on a later coordinator tick without invoking the provider again.
+
+#### Configured paths and read-only worker mappings
+
+Managed jobs carry the server's actual installed-plugin, wiki-asset and Data Protection paths, pinned in the
+encrypted job profile. The hot-copy path comes from the configured `SHARPMUSH_BACKUP_PATH` plus
+`.remote-jobs/<job-id>/<completed-copy>`. Changing those paths on the server does not grant the
+worker access to another directory: declare exact source-to-mount mappings in deployment configuration.
+The website cannot change these mappings or supply arbitrary filesystem sources.
+
+| Purpose | Server source-root variable | Read-only worker mount-root variable | Defaults |
+|---|---|---|---|
+| Completed world copies | `BACKUP_AGENT_COPY_SOURCE_ROOT` | `BACKUP_AGENT_COPY_MOUNT_ROOT` | `/app/data/backup.remote-jobs` → `/data/backup.remote-jobs` |
+| Installed plugins | `BACKUP_AGENT_PLUGIN_SOURCE_ROOT` | `BACKUP_AGENT_PLUGIN_MOUNT_ROOT` | `/app/data/lightning.plugins` → `/data/lightning.plugins` |
+| Data Protection keys | `BACKUP_AGENT_KEYS_SOURCE_ROOT` | `BACKUP_AGENT_KEYS_MOUNT_ROOT` | `/app/data/lightning.dataprotection-keys` → `/data/lightning.dataprotection-keys` |
+| Wiki assets (`Wiki:AssetRoot`) | `BACKUP_AGENT_WIKI_SOURCE_ROOT` | `BACKUP_AGENT_WIKI_MOUNT_ROOT` | `/app/data/wiki-assets` → `/data/wiki-assets` |
+
+For example, with `SHARPMUSH_BACKUP_PATH=/app/data/snapshots`, set the copy source root to
+`/app/data/snapshots.remote-jobs` and its mount root to `/data/snapshots.remote-jobs`. The existing
+read-only `app-data:/data:ro` mount already covers that directory. A plugin override at
+`/app/data/managed-plugins` similarly maps to `/data/managed-plugins`; the worker includes that
+actual directory rather than the default plugin folder.
+
+For sources on separate volumes, append
+[`docker-compose.remote-backups.paths.example.yml`](docker-compose.remote-backups.paths.example.yml)
+after the base stack and managed-backup overlay. It declares server mounts at `/srv/backups`,
+`/srv/plugins`, `/srv/wiki-assets` and `/srv/key-ring`, and mounts the same volumes read-only in the worker under
+`/readonly`. Prepare the existing data and normal server write permissions before adopting those
+paths; this example performs no migration. Preserve the existing key ring when moving it.
+
+Mappings require exact server roots, absolute paths without traversal, and worker roots inside
+explicitly declared read-only mounts. A world source additionally requires the current job ID and
+one completed-copy directory; symlink escapes are rejected. Drain pending jobs or keep their old
+mapped roots mounted when changing deployment paths, because jobs retain their pinned source paths.
+
+`copy-root-unmapped`, `plugin-root-unmapped`, `wiki-root-unmapped` or `key-ring-root-unmapped` means the server path and
+its deployment mapping differ: correct the matching source root and read-only mount root before
+requesting another job. `configured-plugin-directory-missing` and `configured-wiki-directory-missing`
+mean an explicitly configured directory, or one present when the job was queued, is absent from the worker mount.
+Fix the mount or restore that directory; the worker never silently skips it. An absent default
+plugin/wiki directory that was absent at queue time remains optional. Missing keys
+remain a hard failure. `backup-source-path-escape` rejects traversal or symlink mappings;
+`local-copy-missing` means the completed copy's `data.mdb` is unavailable in the declared mount.

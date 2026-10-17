@@ -47,7 +47,7 @@ packages:
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.6.0
+    version: 1.7.0
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: plus-config/
     name: "+config"
@@ -77,7 +77,7 @@ packages:
   - path: messages/
     name: Messages
     package: messages
-    version: 1.2.0
+    version: 1.2.1
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
   - path: radio/
     name: Radio

@@ -26,9 +26,14 @@ package.
 (the picture `/assets/logo.png` in the web portal, and in an MXP or Pueblo client once `mud_url` is set; `LOGO` in the
 logo's green in a terminal) and the commands,
 each section a `rule()` over a `fields()` list. On a screen too narrow for both, the commands go under the logo. A
-section is left out while the option behind it (`player_creation`, `guests`) is off. `FUN`CONNECT`MENU`, `FUN`LAYOUT`SECTION`,
-`FUN`LAYOUT`LIST` and `FUN`LAYOUT`COMMAND` build it.
+section is left out while the option behind it (`player_creation`, `guests`) is off. `` FUN`CONNECT`MENU ``, `` FUN`LAYOUT`SECTION ``,
+`` FUN`LAYOUT`LIST `` and `` FUN`LAYOUT`COMMAND `` build it.
 
 The other messages greet the player by name (`MOTD`), or use `notice()` (`WIZMOTD`, `GUEST`, `REGISTER`, `DOWN`).
 The screens shown before login (`CONNECT`, `REGISTER`) carry no command links; after login, `help` and `WHO` in
 `MOTD` and `GUEST` are. The object holds the `Send_OOB` power for the links and the picture.
+
+Package Update replaces messages that still match their installed baseline. A locally edited message is
+preserved unless the administrator chooses the package's value when resolving its conflict. Version 1.2.1
+keeps the former helper names (`` FUN`MENU ``, `` FUN`SECTION ``, `` FUN`LIST ``, `` FUN`COMMAND `` and
+`` FUN`ONLINE ``) as aliases, so messages kept from before 1.2 still work after the helper rename.
