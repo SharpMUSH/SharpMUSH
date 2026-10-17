@@ -2,4 +2,6 @@
 .pkg-batch-queue ul { margin: 0 0 0.75rem; padding: 0; list-style: none; }
 .pkg-batch-queue li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
 .pkg-batch-queue li > span { min-width: 0; flex: 1 1 14rem; }
+.pkg-batch-queue li + li { margin-top: 0.75rem; }
+.pkg-batch-source { display: block; }
 .pkg-batch-queue small { display: block; color: var(--text-dim); }

@@ -19,7 +19,7 @@
                         <span><strong>@Loc[ActionKey(intent.Action)]</strong> @intent.TargetId
                             @if (intent.Source is { } source)
                             {
-                                <span> @source.Remote / @source.Path @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</span>
+                                <span class="pkg-batch-source">@source.Remote / @source.Path @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</span>
                             }
                             @if (Packages.Batch.PrerequisiteReason(intent.ClientIntentId!) is { } reason)
                             { <small>@Loc["PkgBatchAcceptedPrerequisite"]: @reason</small> }
