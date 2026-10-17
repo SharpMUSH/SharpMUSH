@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Library.Models;
@@ -26,7 +27,8 @@ public class DebugAuthenticationHandler(
 	IOptionsMonitor<AuthenticationSchemeOptions> options,
 	ILoggerFactory logger,
 	UrlEncoder encoder,
-	IAccountService accountService)
+	IAccountService accountService,
+	IMemoryCache cache)
 	: AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
 	public const string SchemeName = "DebugAuth";
@@ -35,16 +37,18 @@ public class DebugAuthenticationHandler(
 	// lookups just to rebuild an identical claim set. The account claims only change on the
 	// rare setup-claim rename, so a short TTL keeps dev requests cheap without going stale.
 	private static readonly TimeSpan ClaimsCacheTtl = TimeSpan.FromSeconds(30);
-	private static (List<Claim> Claims, DateTimeOffset At)? _cachedClaims;
+	// Each host owns a world and its bootstrap identity. A process-wide claims value can
+	// authenticate one host as another world's account, even when both use player #1.
+	private static readonly object ClaimsCacheKey = new();
 
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
 		// A request carrying an app's token is the app's, not the debug admin's.
 		if (OAuthBearerAuthenticationHandler.AppToken(Request) is not null) return AuthenticateResult.NoResult();
 
-		if (_cachedClaims is { } cached && DateTimeOffset.UtcNow - cached.At < ClaimsCacheTtl)
+		if (cache.TryGetValue<List<Claim>>(ClaimsCacheKey, out var cached) && cached is not null)
 		{
-			var cachedIdentity = new ClaimsIdentity(cached.Claims, SchemeName);
+			var cachedIdentity = new ClaimsIdentity(cached, SchemeName);
 			return AuthenticateResult.Success(
 				new AuthenticationTicket(new ClaimsPrincipal(cachedIdentity), SchemeName));
 		}
@@ -114,7 +118,7 @@ public class DebugAuthenticationHandler(
 		// Only cache fully-resolved claims — fallback claims must retry next request so the
 		// real account shows up as soon as bootstrap completes.
 		if (claims.Any(c => c.Type == ClaimTypes.NameIdentifier && c.Value != "debug-bootstrap-pending"))
-			_cachedClaims = (claims, DateTimeOffset.UtcNow);
+			cache.Set(ClaimsCacheKey, claims, ClaimsCacheTtl);
 
 		var identity = new ClaimsIdentity(claims, SchemeName);
 		var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);

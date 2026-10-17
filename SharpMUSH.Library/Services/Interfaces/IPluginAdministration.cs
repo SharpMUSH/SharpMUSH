@@ -12,11 +12,15 @@ public interface IPluginAdministration
 	/// <summary>Every plugin found at the last start or on disk now, and what the portal may do with them.</summary>
 	Task<PluginsResponse> ListAsync(CancellationToken cancellationToken = default);
 
+	/// <summary>The discovered dependency graph and the identity of the files and metadata it was read from.</summary>
+	Task<PluginDependencySnapshot> ReadDependenciesAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>Packages and plugins that prevent the requested state change, without changing anything.</summary>
+	Task<PluginStateBlockers> GetBlockersAsync(string pluginId, bool enabled, CancellationToken cancellationToken = default);
+
 	/// <summary>
-	/// Turns <paramref name="pluginId"/> on or off. Off is recorded for the next start, and takes effect at once
-	/// for a plugin that only adds commands and functions. The installed packages that need the plugin are
-	/// uninstalled first (a shipped one is recorded as declined, so the next start does not put it back); turning
-	/// the plugin on again lets the next start reinstall a shipped one.
+	/// Turns a plugin on or off after checking dependencies inside the package operation gate. Dependents must be
+	/// removed or turned off explicitly first. Enabling does not change any bundled package's declined choice.
 	/// </summary>
 	Task<Result<PluginChangeResponse>> SetEnabledAsync(string pluginId, bool enabled,
 		CancellationToken cancellationToken = default);

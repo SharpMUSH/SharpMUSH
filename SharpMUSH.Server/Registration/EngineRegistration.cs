@@ -206,6 +206,9 @@ internal static class EngineRegistration
 		services.AddSingleton<Services.PluginAdministrationService>();
 		services.AddSingleton<IPluginAdministration>(sp => sp.GetRequiredService<Services.PluginAdministrationService>());
 		services.AddSingleton<Services.PluginUploadStore>();
+		services.AddSingleton<Services.PackageManifestResolver>();
+		services.AddSingleton<Services.PackageBatchRunRegistry>();
+		services.AddScoped<Services.PackageBatchService>();
 		services.AddSingleton<IServerRestart, Services.ServerRestartService>();
 		// Serves a managed plugin's compiled UI assembly bytes to the WASM client, re-verifying them against
 		// the Phase-4 install-time SHA-256 sidecar before serving. The PluginsUiController gates it on

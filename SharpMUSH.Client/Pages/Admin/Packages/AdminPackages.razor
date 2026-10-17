@@ -112,6 +112,7 @@
             }
         </div>
     </KitCard>
+    <PackageBatchQueue />
 </div>
 
 <PackageReadmeDialog @ref="_readme" />
@@ -164,21 +165,7 @@
         <MudAlert Severity="Severity.Warning" Class="mt-2">
             @Loc["PkgDependedOnBy", string.Join(", ", _uninstallTarget.Dependents)]
         </MudAlert>
-        <MudCheckBox T="bool" @bind-Value="_forceUninstall" Label="@Loc["PkgForceRemoval"]" Color="Color.Error" />
-    }
-</ConfirmDialog>
 
-<ConfirmDialog @bind-Visible="_showDisable" Title="@Loc["PkgPluginDisableTitle", _disableTarget?.Name ?? string.Empty]"
-               ConfirmText="@Loc["PkgPluginTurnOff"]" Busy="_busy" OnConfirm="DisablePluginAsync">
-    @if (_disableTarget is { } target)
-    {
-        @if (target.Dependents.Count > 0)
-        {
-            <MudAlert Severity="Severity.Warning" Class="mb-2">
-                @Loc["PkgPluginDisableDependents", string.Join(", ", target.Dependents)]
-            </MudAlert>
-        }
-        <MudText>@(target.Unloadable ? Loc["PkgPluginStopsNow", target.Name] : Loc["PkgPluginStopsAtRestart", target.Name])</MudText>
     }
 </ConfirmDialog>
 
@@ -195,8 +182,6 @@
 
     private PluginsResponse? _plugins;
 
-    private bool _showDisable;
-    private PluginStatusDto? _disableTarget;
     private bool _showRestart;
     private bool _restarting;
 
@@ -275,7 +260,6 @@
 
     private bool _showUninstall;
     private InstalledPackageDto? _uninstallTarget;
-    private bool _forceUninstall;
 
     protected override async Task OnInitializedAsync() => await ReloadAsync();
 
@@ -365,27 +349,17 @@
     private void OpenUninstall(InstalledPackageDto target)
     {
         _uninstallTarget = target;
-        _forceUninstall = false;
         _showUninstall = true;
     }
 
-    private async Task UninstallAsync()
+    private Task UninstallAsync()
     {
-        if (_uninstallTarget is null) return;
-        _busy = true;
-        try
-        {
-            if (await Packages.UninstallAsync(_uninstallTarget.Package.Id, _forceUninstall) is ApiFailure failure)
-            {
-                Snackbar.Add(failure.Message, Severity.Error);
-                return;
-            }
-            Snackbar.Add(Loc["PkgUninstalled", _uninstallTarget.Package.Id], Severity.Success);
-            _showUninstall = false;
-            _updates.Remove(_uninstallTarget.Package.Id);
-            await ReloadAsync();
-        }
-        finally { _busy = false; }
+        if (_uninstallTarget is not { } target) return Task.CompletedTask;
+        Packages.Batch.Queue(new(target.Package.Id, PackageBatchAction.Uninstall));
+        Packages.Batch.ConfirmUninstall(target.Package.Id, target.Package.Version, target.Package.CurrentRevision);
+        _showUninstall = false;
+        Nav.NavigateTo("/admin/packages/batch");
+        return Task.CompletedTask;
     }
 
     private async Task ReloadPluginsAsync() =>
@@ -397,21 +371,13 @@
 
     private async Task TogglePluginAsync(PluginStatusDto plugin, bool on)
     {
-        if (!on)
+        if (!on && plugin.Dependents.Count == 0 && Packages.Batch.Intents.Count == 0)
         {
-            _disableTarget = plugin;
-            _showDisable = true;
+            await SetPluginEnabledAsync(plugin, false);
             return;
         }
-
-        await SetPluginEnabledAsync(plugin, true);
-    }
-
-    private async Task DisablePluginAsync()
-    {
-        if (_disableTarget is not { } target) return;
-        await SetPluginEnabledAsync(target, false);
-        _showDisable = false;
+        Packages.Batch.Queue(new(plugin.Id, on ? PackageBatchAction.PluginOn : PackageBatchAction.PluginOff));
+        Nav.NavigateTo("/admin/packages/batch");
     }
 
     private async Task SetPluginEnabledAsync(PluginStatusDto plugin, bool on)
@@ -423,6 +389,10 @@
             {
                 case ApiFailure failure:
                     Snackbar.Add(failure.Message, Severity.Error);
+                    break;
+                case PluginStateBlockers:
+                    Packages.Batch.Queue(new(plugin.Id, on ? PackageBatchAction.PluginOn : PackageBatchAction.PluginOff));
+                    Nav.NavigateTo("/admin/packages/batch");
                     break;
                 case PluginChangeResponse change:
                     Snackbar.Add(on ? Loc["PkgPluginTurnedOn", change.Plugin.Name] : Loc["PkgPluginTurnedOff", change.Plugin.Name], Severity.Success);

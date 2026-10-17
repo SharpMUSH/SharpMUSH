@@ -39,6 +39,7 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 		factory.Services.GetRequiredService<IPackageAuthoringService>(),
 		factory.Services.GetRequiredService<IPackageOperationRunner>(),
 		factory.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
+		factory.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 		factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>(),
 		factory.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 
@@ -75,10 +76,11 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 		await Assert.That(remotes.Count(r => r.Name == BundledPackages.RemoteName)).IsEqualTo(1);
 
 		var upsert = await controller.UpsertRemote(
-			new RemoteRequest(BundledPackages.RemoteName, "https://example.invalid/repo", "community", null));
+			new RemoteRequest(BundledPackages.RemoteName, "https://example.invalid/repo", "community", null),
+			factory.Services.GetRequiredService<IPackageOperationGate>());
 		await Assert.That(upsert).IsTypeOf<ConflictObjectResult>();
 
-		var delete = await controller.DeleteRemote(BundledPackages.RemoteName);
+		var delete = await controller.DeleteRemote(BundledPackages.RemoteName, factory.Services.GetRequiredService<IPackageOperationGate>());
 		await Assert.That(delete).IsTypeOf<ConflictObjectResult>();
 	}
 

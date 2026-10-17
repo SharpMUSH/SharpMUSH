@@ -45,7 +45,7 @@ public class PackageOperationGateTests
 			services.GetRequiredService<IPackageWikiService>(),
 			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
 			services.GetRequiredService<EngineVersion>(),
-			services.GetRequiredService<Lazy<IPluginManager>>());
+			services.GetRequiredService<Lazy<IPluginManager>>(), services.GetRequiredService<Lazy<IPluginAdministration>>());
 	}
 
 	private static PackageManifest Manifest(string id, string version) =>
