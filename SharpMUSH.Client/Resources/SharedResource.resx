@@ -9178,4 +9178,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Restore previous world and restart</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Collections</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Browse all categories</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>All collections</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Game wiki</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Previous</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Next</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Showing {0}–{1} of {2}</value></data>
 </root>

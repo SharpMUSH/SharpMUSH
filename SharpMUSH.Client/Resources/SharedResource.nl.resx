@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Vorige wereld herstellen en herstarten</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Collecties</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Alle categorieën bekijken</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Alle collecties</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Spelwiki</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Vorige</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Volgende</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>{0}–{1} van {2}</value></data>
 </root>

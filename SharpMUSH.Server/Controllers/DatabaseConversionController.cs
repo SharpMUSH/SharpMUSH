@@ -154,10 +154,10 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 			await audit.RecordPortalAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown", action,
 				new AuditTarget("database-import", sessionId, "Database import"), details, CancellationToken.None);
 		}
-		catch (Exception error)
+		catch (Exception)
 		{
 			// IAuditLog is best-effort after the action; durable restart intent already exists.
-			logger.LogWarning("Import {SessionId} restart audit failed: {ErrorType}", sessionId, error.GetType().Name);
+			logger.LogWarning("Import restart audit failed; the durable restart intent remains active.");
 		}
 	}
 }

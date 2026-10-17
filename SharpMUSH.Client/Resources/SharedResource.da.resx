@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Gendan forrige verden og genstart</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Samlinger</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Se alle kategorier</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Alle samlinger</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Spillets wiki</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Forrige</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Næste</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Viser {0}–{1} af {2}</value></data>
 </root>

@@ -42,12 +42,12 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
-    version: 1.14.0
+    version: 1.15.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.7.0
+    version: 1.8.0
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: plus-config/
     name: "+config"

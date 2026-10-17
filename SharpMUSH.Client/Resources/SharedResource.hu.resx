@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Előző világ visszaállítása és újraindítás</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Gyűjtemények</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Összes kategória böngészése</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Összes gyűjtemény</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Játék wiki</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Előző</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Következő</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>{0}–{1} / {2}</value></data>
 </root>

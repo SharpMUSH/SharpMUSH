@@ -21,6 +21,13 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../tools/ContractAudit/SourceProvenance.cs" Link="Documentation/SourceProvenance.cs" />
+    <ProjectReference Include="../SharpMUSH.Plugins.Scene/SharpMUSH.Plugins.Scene.csproj" Aliases="ScenePlugin" />
+    <ProjectReference Include="../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
+    <ProjectReference Include="../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" Aliases="LspPlugin" />
+    <ProjectReference Include="../SharpMUSH.Plugins.Mcp/SharpMUSH.Plugins.Mcp.csproj" Aliases="McpPlugin" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- The config generators are Roslyn analyzers (IncludeBuildOutput=false), so their output cannot
          be referenced. Link the emitter's source instead: EmitTests then covers the same code that runs
          at build time, without disturbing how the analyzer is packaged. -->

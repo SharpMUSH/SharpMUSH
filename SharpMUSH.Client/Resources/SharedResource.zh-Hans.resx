@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>恢复原世界并重启</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>合集</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>浏览所有分类</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>所有合集</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>游戏维基</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>上一页</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>下一页</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>显示第 {0}–{1} 项，共 {2} 项</value></data>
 </root>

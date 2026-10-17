@@ -9,6 +9,10 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../SharpMUSH.Implementation/SharpMUSH.Implementation.csproj" />
+    <ProjectReference Include="../../SharpMUSH.Plugins.Scene/SharpMUSH.Plugins.Scene.csproj" Aliases="ScenePlugin" />
+    <ProjectReference Include="../../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
+    <ProjectReference Include="../../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" Aliases="LspPlugin" />
+    <ProjectReference Include="../../SharpMUSH.Plugins.Mcp/SharpMUSH.Plugins.Mcp.csproj" Aliases="McpPlugin" />
     <Compile Include="../../SharpMUSH.Tests.Infrastructure/RegistryInventory.cs" Link="RegistryInventory.cs" />
   </ItemGroup>
 </Project>

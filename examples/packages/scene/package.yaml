@@ -1,6 +1,6 @@
 format: "1.10"
 package: scene
-version: 1.14.0
+version: 1.15.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -180,7 +180,7 @@ objects:
         A pose can't be left empty. Use +scene/delete <pose> to remove it.
       # The two ways a time given to +scene/schedule, /reschedule or /pause is refused (FUN`SCHEDULE`WHEN).
       DATA`DENY`BADTIME: |-
-        I can't read that as a time. Give a date and time, such as 2026-12-31 20:00, or a time from now, such as +3d, +12h or +1w.
+        I can't read that as a time. Give a date and time, such as 2026-12-31 20:00, tomorrow 7pm or next Tuesday 18:30, or a time from now, such as +3d, +12h or +1w.
       DATA`DENY`PASTTIME: |-
         That time has already passed. Give one to come, such as +3d.
       # The name a member poses under in scene %0: the persona they set there with +scene/as, or their own.
@@ -691,7 +691,7 @@ objects:
       # pattern for all three: $+scene/pause *=* would also match here, and both would run.
       CMD`PAUSE`ID:
         value: |-
-          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn); think setq(pause_when,trim(after(%1,chr(61))))[setq(pause_at,if(strlen(%q<pause_when>),u(%!/FUN`SCHEDULE`WHEN,%q<pause_when>,u(%!/FUN`ZONE,%#))))]; @assert cor(not(strlen(%q<pause_when>)),isint(%q<pause_at>))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADTIME),warn); @assert cor(not(strlen(%q<pause_when>)),gt(%q<pause_at>,mul(secs(),1000)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/status=paused; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/set %q<scene_id>/scheduledfor=%q<pause_at>; @pemit %#=notice(SCENE,Scene %q<scene_id> paused[if(strlen(%q<pause_at>),%b[chr(40)]rescheduled for [u(%!/FUN`AT,%q<pause_at>,u(%!/FUN`ZONE,%#))][chr(41)])]. It is on the schedule until +scene/start %q<scene_id> resumes it.,ok)
+          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn); think setq(pause_ref,secs(f),pause_when,trim(after(%1,chr(61))))[setq(pause_at,if(strlen(%q<pause_when>),u(%!/FUN`SCHEDULE`WHEN,%q<pause_when>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)))]; @assert cor(not(strlen(%q<pause_when>)),isint(%q<pause_at>))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<pause_at>,warn); @assert cor(not(strlen(%q<pause_when>)),gt(%q<pause_at>,mul(%q<pause_ref>,1000)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/status=paused; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/set %q<scene_id>/scheduledfor=%q<pause_at>; @pemit %#=notice(SCENE,Scene %q<scene_id> paused[if(strlen(%q<pause_at>),%b[chr(40)]rescheduled for [u(%!/FUN`SCHEDULE`DISPLAY,%q<pause_when>,%q<pause_at>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)][chr(41)])]. It is on the schedule until +scene/start %q<scene_id> resumes it.,ok)
         flags: [REGEXP]
 
       CMD`FINISH:
@@ -967,23 +967,29 @@ objects:
         flags: [REGEXP]
 
       # ---- scheduling (+scene/schedule ...): roomless future scenes --------------
-      # FUN`SCHEDULE`WHEN(<when>[, <zone>]) is UTC milliseconds, or #-1 when it can't be read. It takes what
-      # +job/due takes, so players have one way to write a time: +<n>h, +<n>d or +<n>w from now, or a date
-      # convtime() reads (2026-12-31 20:00), read in <zone> (FUN`ZONE, the player's own); and epoch seconds,
-      # which the portal sends. Every verb that takes a time refuses one
-      # it can't read, or one already past, before it writes anything: a scene scheduled for no time, or for
-      # one gone, was on no list its owner could find it on.
-      # Rescheduling a running scene pauses it: a scene with a time to come is not live. The schedule
-      # (scenelist(scheduled)) lists every paused scene, with or without a time.
+      # Shared date grammar; one captured reference per operation. The original single h/d/w
+      # forms retain elapsed-seconds semantics. New day/week phrases use calendar arithmetic.
       FUN`SCHEDULE`WHEN: |-
-        setq(when_text,edit(trim(lcstr(%0)),+,,%b,))[cond(not(strlen(%q<when_text>)),#-1,cand(isint(left(%q<when_text>,dec(strlen(%q<when_text>)))),match(h d w,right(%q<when_text>,1))),mul(add(secs(),mul(left(%q<when_text>,dec(strlen(%q<when_text>))),switch(right(%q<when_text>,1),h,3600,w,604800,86400))),1000),isint(trim(%0)),mul(trim(%0),1000),isint(setr(when_secs,if(strlen(%1),convtime(trim(%0),%1),convtime(trim(%0))))),mul(%q<when_secs>,1000),#-1)]
+        setq(when_text,edit(trim(lcstr(%0)),%b,),when_ref,if(strlen(%2),%2,secs(f)),when_zone,firstof(%1,UTC))[if(regmatch(%q<when_text>,\\A\[+-\]?\[0-9\]+\[hdw\]\\z),mul(add(%q<when_ref>,mul(left(%q<when_text>,dec(strlen(%q<when_text>))),switch(right(%q<when_text>,1),h,3600,w,604800,86400))),1000),dateparse(trim(%0),%q<when_zone>,%q<when_ref>,ms))]
+      # Display the expression's resolved zone, rather than the caller's fallback. The same
+      # captured reference is passed to the instant and display parses. Legacy offsets stay elapsed.
+      FUN`SCHEDULE`DISPLAY: |-
+        if(regmatch(edit(trim(lcstr(%0)),%b,),\\A\[+-\]?\[0-9\]+\[hdw\]\\z),[u(%!/FUN`AT,%1,%2)]. UTC offset [u(%!/FUN`SCHEDULE`OFFSET,%1,%2)],dateparse(trim(%0),%2,%3,normalized))
+      # Numeric offset makes repeated local clocks distinguishable in confirmations.
+      FUN`SCHEDULE`OFFSET: |-
+        timefmt($Z,div(%0,1000),firstof(%1,UTC))
+      # Slash is both the schedule separator and part of IANA names. Try at most eight
+      # complete prefixes; the first valid one leaves the entire remaining title verbatim.
+      # Numeric short dates are ambiguous, never an epoch prefix followed by a numeric title.
+      FUN`SCHEDULE`SPLIT: |-
+        setq(split_problem,#-1 INVALID DATE: GIVE A DATE AND EXACT CLOCK TIME)[if(regmatch(%0,\\A\[0-9\]\[0-9\]?/\[0-9\]\[0-9\]?/),dateparse(extract(%0,1,2,/),%1,%2),firstof(first(iter(lnum(1,min(8,sub(words(%0,/),1))),if(isint(setr(split_try,u(%!/FUN`SCHEDULE`WHEN,extract(%0,1,%i0,/),%1,%2))),%i0,setq(split_problem,%q<split_try>)))),%q<split_problem>))]
       CMD`SCHEDULE:
         value: |-
-          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),pos(/,before(%1,chr(61))),strlen(setr(schedule_title,trim(after(before(%1,chr(61)),/)))),strlen(trim(setr(schedule_pitch,after(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,before(%1,/),u(%!/FUN`ZONE,%#))))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADTIME),warn); @assert gt(%q<schedule_at>,mul(secs(),1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @assert not(strmatch(setr(scene_id,scenecreate(,%#,%q<schedule_title>,%q<schedule_pitch>,%q<schedule_at>)),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`AT,%q<schedule_at>,u(%!/FUN`ZONE,%#))].,ok)
+          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),pos(/,setr(schedule_head,before(%1,chr(61)))),strlen(trim(setr(schedule_pitch,after(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); think setq(schedule_ref,secs(f),schedule_zone,firstof(u(%!/FUN`ZONE,%#),UTC)); @assert isint(setr(schedule_cut,u(%!/FUN`SCHEDULE`SPLIT,%q<schedule_head>,%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_cut>,warn); @assert strlen(setr(schedule_title,trim(extract(%q<schedule_head>,add(%q<schedule_cut>,1),words(%q<schedule_head>,/),/))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @assert not(strmatch(setr(scene_id,scenecreate(,%#,%q<schedule_title>,%q<schedule_pitch>,%q<schedule_at>)),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`SCHEDULE`DISPLAY,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_at>,%q<schedule_zone>,%q<schedule_ref>)].,ok)
         flags: [REGEXP]
       CMD`RESCHEDULE:
         value: |-
-          $(?is)^\+scene/res(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),strlen(setr(scene_id,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`RESCHEDULE),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,Scene %q<scene_id> is %q<scene_status>. Only a scene still to come can be rescheduled.,warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,after(%1,chr(61)),u(%!/FUN`ZONE,%#))))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADTIME),warn); @assert gt(%q<schedule_at>,mul(secs(),1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/scheduledfor=%q<schedule_at>; @scene/set %q<scene_id>/status=switch(%q<scene_status>,active,paused,%q<scene_status>); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Rescheduled scene %q<scene_id> for [u(%!/FUN`AT,%q<schedule_at>,u(%!/FUN`ZONE,%#))].[if(strmatch(%q<scene_status>,active),%bIt is paused until +scene/start %q<scene_id> resumes it.)],ok)
+          $(?is)^\+scene/res(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),strlen(setr(scene_id,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`RESCHEDULE),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,Scene %q<scene_id> is %q<scene_status>. Only a scene still to come can be rescheduled.,warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,after(%1,chr(61)),firstof(u(%!/FUN`ZONE,%#),UTC),setr(schedule_ref,secs(f)))))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/scheduledfor=%q<schedule_at>; @scene/set %q<scene_id>/status=switch(%q<scene_status>,active,paused,%q<scene_status>); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Rescheduled scene %q<scene_id> for [u(%!/FUN`SCHEDULE`DISPLAY,after(%1,chr(61)),%q<schedule_at>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<schedule_ref>)].[if(strmatch(%q<scene_status>,active),%bIt is paused until +scene/start %q<scene_id> resumes it.)],ok)
         flags: [REGEXP]
       # +scene/unschedule and +scene/cancel take a scene off the schedule for good: its time is cleared
       # and its status is `cancelled`, so it is in no list but the archive. (@scene/delete is the POSE
@@ -1234,7 +1240,7 @@ objects:
       DATA`USAGE`REDO: |-
         +scene/redo <pose>
       DATA`USAGE`RESCHEDULE: |-
-        +scene/reschedule <id>=<when>, where <when> is a date and time such as 2026-12-31 20:00, or a time from now such as +3d
+        +scene/reschedule <id>=<when>, where <when> is a date and time such as tomorrow 7pm, next Tuesday 18:30, 2026-12-31 20:00, or +3d; add an IANA zone to override your timezone
       DATA`USAGE`REWRITE: |-
         +scene/rewrite <pose>=<text>
       DATA`USAGE`RSVP: |-
@@ -1242,7 +1248,7 @@ objects:
       DATA`USAGE`SAY: |-
         +scene/say <id>=<text>
       DATA`USAGE`SCHEDULE: |-
-        +scene/schedule <when>/<title>=<pitch>, where <when> is a date and time such as 2026-12-31 20:00, or a time from now such as +3d
+        +scene/schedule <when>/<title>=<pitch>, where <when> is a date and time such as tomorrow 7pm, next Tuesday 18:30, 2026-12-31 20:00, or +3d; add an IANA zone to override your timezone
       DATA`USAGE`SEMIPOSE: |-
         +scene/semipose <id>=<text>
       DATA`USAGE`SET: |-
@@ -1446,7 +1452,7 @@ objects:
         A scene can be announced before it happens, so people can plan around it.
 
         - `+scene/schedule <when>/<title>=<pitch>` — announce one. `<when>` is a date and time, such as
-          `+scene/schedule 2026-12-31 20:00/Market day=An evening of trading and intrigue`, or a time from now: `+3d`, `+12h` or `+1w`
+          `+scene/schedule tomorrow 7pm/Market day=An evening of trading and intrigue`, `next Tuesday 18:30`, `in 7 days at 18:30`, `first Saturday of next month at noon`, an ISO date such as `2026-12-31 20:00`, or an elapsed offset: `+3d`, `+12h` or `+1w`
         - `+scene/upcoming` \(or `+scenes`, `+events`\) — what is scheduled in the next 30 days \(or as many
           as `+config scene` sets\), by day, and how many have RSVP'd
         - `+scene/upcoming <days>` \(or `+scenes <days>`\) — look further ahead; `all` for everything
@@ -1458,9 +1464,17 @@ objects:
         Rescheduling a running scene pauses it. A scheduled or paused scene records nothing and is not
         listed as live until its owner starts it. A finished or cancelled scene can't be rescheduled.
 
-        Times are your own. A date and time you type is read in your time zone, and the schedule, a
-        scene's card and every message show times in it, with the zone named. Your zone is the one
-        `+timezone` sets; without one, times are the game's.
+        Scheduling uses the zone `+timezone` sets, or UTC when absent. Append an IANA name to override it:
+        `tomorrow 7pm America/Chicago`. Confirmations show the resolved date, clock, zone and UTC offset.
+        Slashes inside the zone, title and pitch are preserved. The schedule and cards use each reader's zone.
+
+        A date needs an exact clock: `next Tuesday` and `tomorrow evening` ask you to clarify. A clock alone
+        means today, so one already passed is refused. `this Tuesday` is in the current Monday-based week;
+        `next Tuesday` is strictly later; `next week Tuesday` is in the following Monday-based week.
+        New day/week phrases advance the local calendar; legacy single `+3d` or `+1w` offsets retain elapsed
+        durations. DST gaps and repeated clocks require another time or an ISO timestamp with an explicit offset.
+        Numeric dates like `03/04`, ambiguous abbreviations like `CST`, ranges and recurrences are not guessed.
+        See `help dateparse policies` for the complete grammar and policy.
       HELP`SCENE`TYPES: |-
         Every line in a scene has a **type**: in character \(`ic`\), out of character \(`ooc`\), narration,
         and whatever else the game adds, such as `radio`. The type decides how the line looks, here and in

@@ -251,3 +251,8 @@
 		display: none;
 	}
 }
+
+.wiki-collections { margin-block: 1.5rem; display: grid; gap: .75rem; }
+.wiki-collection-entry { display: flex; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-row); }
+.wiki-collection-entry:focus-visible, .wiki-browse-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wiki-browse-all { display: inline-block; margin-block: 1rem; }

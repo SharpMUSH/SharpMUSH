@@ -18,6 +18,8 @@ public class WikiRouteUniquenessTests
 	[
 		typeof(WikiController),
 		typeof(WikiBrowseController),
+		typeof(WikiCollectionsController),
+		typeof(WikiRequirementsController),
 		typeof(WikiRevisionsController),
 		typeof(WikiTranslationsController),
 		typeof(WikiAdminController),

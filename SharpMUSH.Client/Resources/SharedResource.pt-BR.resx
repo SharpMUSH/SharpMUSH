@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Restaurar mundo anterior e reiniciar</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Coleções</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Explorar todas as categorias</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Todas as coleções</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Wiki do jogo</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Anterior</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Próxima</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Exibindo {0}–{1} de {2}</value></data>
 </root>

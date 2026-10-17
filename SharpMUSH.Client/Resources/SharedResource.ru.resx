@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Восстановить предыдущий мир и перезапустить</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Коллекции</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Все категории</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Все коллекции</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Вики игры</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Назад</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Далее</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Показаны {0}–{1} из {2}</value></data>
 </root>

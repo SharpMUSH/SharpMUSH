@@ -6476,4 +6476,11 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Restaurează lumea anterioară și repornește</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Colecții</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Răsfoiește toate categoriile</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Toate colecțiile</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Wiki-ul jocului</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Înapoi</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Înainte</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Se afișează {0}–{1} din {2}</value></data>
 </root>

@@ -23,17 +23,27 @@ file sealed class WikiListHandler : HttpMessageHandler
 	]
 	""";
 
+	private static string FirstPage()
+	{
+		using var document = System.Text.Json.JsonDocument.Parse(Pages);
+		return "[" + document.RootElement[0].GetRawText() + "]";
+	}
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var body = request.RequestUri!.AbsolutePath switch
 		{
 			"/api/wiki/pages" => Pages,
+			"/api/wiki/navigation" => """{"collection":"game","total":2,"collections":[],"categories":[{"key":"guides","name":"Guides","pages":1,"hasPage":true,"pinned":true},{"key":"house_rules","name":"House rules","pages":1,"hasPage":true,"pinned":true}]}""",
+			_ when request.RequestUri.AbsolutePath.StartsWith("/api/wiki/collections/", StringComparison.Ordinal) => FirstPage(),
 			"/api/wiki/pinned-categories" => """["guides","house_rules"]""",
 			_ => null,
 		};
-		return Task.FromResult(body is null
+		var result = body is null
 			? new HttpResponseMessage(HttpStatusCode.NotFound)
-			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+		result.Headers.Add("X-Total-Count", "1");
+		return Task.FromResult(result);
 	}
 }
 

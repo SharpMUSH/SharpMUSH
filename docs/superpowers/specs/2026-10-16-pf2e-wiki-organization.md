@@ -1,6 +1,8 @@
 # PF2e wiki organization proposal
 
-Status: review proposal for [#1970](https://github.com/SharpMUSH/SharpMUSH/issues/1970). Runtime and content migration are subsequent implementation work; this document does not mark the usability issue resolved.
+Status: collection browsing foundations are implemented and locally verified; [#1970](https://github.com/SharpMUSH/SharpMUSH/issues/1970) remains open. The foundation preserves existing canonical identity and supplies authorized complete counts, scoped category membership and paginated title/category search. Authored collection landings, readable collection metadata, content-specific discovery and canonical migration are not implemented by that foundation.
+
+The subsequent [research report](../../research/pf2e-wiki-organization.md) and its cited primary sources supersede any suggestion below that moving a flat category directory behind one collection entry completes the exploration problem. The report separates observed reference patterns from SharpMUSH recommendations and records the limits of the research.
 
 ## Observed structure
 
@@ -8,13 +10,15 @@ The [owned PF2e package](https://github.com/SharpMUSH/SharpMUSH.Packages/tree/26
 
 The category pages already contain useful authored navigation: Ancestries links each ancestry and related heritage/feat indexes; Alchemist Feats groups feats by level. Preserve those relationships rather than generating another flat index.
 
-`SharpMUSH.Client/Components/Wiki/WikiSidebar.razor` fetches the first 500 page summaries and groups their categories. It renders every resulting named group in the global sidebar. Thus the visible categories and counts depend on a partial page sample, rather than a complete navigation model. A 4,711-page pack exceeds this cap substantially. Raising the cap would increase clutter and transfer cost without making the information architecture coherent.
+At the original baseline, `SharpMUSH.Client/Components/Wiki/WikiSidebar.razor` fetched the first 500 page summaries and rendered their category groups globally. That made counts and visible categories depend on a partial sample. The implemented foundation removes this sampling and isolates package-owned page IDs for browsing; the full 4,711-page import has been exercised. This proves scale and selection mechanics, not that the imported reference now has an adequate task-oriented layout.
 
 ## Recommended experience
 
 Give the pack one **Pathfinder 2e** collection entry at the wiki home. The default global sidebar contains administrator-selected game categories and collection entries; the full category directory remains searchable from Browse all categories. Imported subcategories do not each become global navigation entries merely because a page names them.
 
-The PF2e landing page exposes seven curated starting points: Character creation, Classes and feats, Spells, Actions and skills, Equipment, Rules, Conditions and DCs. Within the collection, show its own topic navigation and a visible route back to the game's wiki. Preserve links from class and ancestry articles into their specialized feat/heritage indexes. Long result sets need server-side pagination and topic/search filters; counts must come from authorized complete data rather than the first 500 pages.
+The next authored landing should answer recognizable tasks: Build a character, Play and look up rules, Spells, Equipment, and Run a game, with sources and an exhaustive directory as supporting routes. These are research-backed candidate groups, not a hard-coded PF2e taxonomy or a requirement to rename existing categories. Validate their actual destinations against the installed package and preserve its authored ancestry/heritage and class/feat indexes, including category introductions. A package label, the existing four pins and a flat searchable directory are useful mechanisms but do not supply this landing.
+
+The implemented foundation supplies bounded server-side pagination and counts from complete authorized data. Its search matches localized/source titles and category labels; it does not search article bodies or provide structured gameplay facets. Within a collection, show its context and a visible return route to the game's wiki. Existing canonical article links remain authoritative until a separate migration contract is implemented.
 
 Representative journeys:
 
@@ -27,11 +31,11 @@ Representative journeys:
 
 ## Identity and namespacing
 
-Add a collection identity independent of the existing namespace enum. A namespace describes page purpose (Main, Category, Help, etc.); a collection describes ownership and browsing context. Recommended identity: `pf2e-remaster`, with human label Pathfinder 2e. Do not introduce one global enum member per rules system, or encode all collection behavior in display-title prefixes.
+Add a collection identity independent of the existing namespace enum. A namespace describes page purpose (Main, Category, Help, etc.); a collection describes ownership and browsing context. Recommended stable identity: `pf2e-remaster`, with an explicitly authored, localized human label such as Pathfinder 2e Remaster. Do not introduce one global enum member per rules system, or encode all collection behavior in display-title prefixes.
 
 Keep article display titles short within the collection. Search and cross-collection links show the collection label as context. Use collection-qualified canonical routes and page keys only after the alias/migration contract exists. The exact route syntax remains a design decision for implementation review; examples here describe navigation, not already-supported URLs.
 
-Package identity is the durable source of imported collection membership. Manually authored pages can opt into collections with authorization. Category identity must also be scoped; a PF2e Conditions category and a game's Conditions category must coexist without accidental membership mixing. Collection membership does not grant read/edit permissions.
+Package identity is the durable source of imported collection membership. Authorized assignment of manually authored pages to collections is a future contract, not a capability supplied by the ownership-based browsing foundation. Category identity must also be scoped; a PF2e Conditions category and a game's Conditions category must coexist without accidental membership mixing. Collection membership does not grant read/edit permissions.
 
 ## Alternatives considered
 
@@ -52,12 +56,31 @@ Package identity is the durable source of imported collection membership. Manual
 
 No migration deletes categories merely because they originated in the pack: game-authored pages may reference them. Report mixed ownership and require an explicit reassignment plan. Keep licensing/attribution and permissions intact.
 
-## Bounded implementation sequence
+## Current foundation and next bounded milestones
 
-1. Complete the representative inventory and usability review with an operator; settle collection route/key and alias contracts.
-2. Add collection metadata, authorized full-data count/list/search endpoints, package schema support and explicit backfill migration. Prove cache coherence, permission filtering, upgrade idempotence and collision behavior.
-3. Replace sampled global category navigation with curated categories/collections and a paginated searchable category directory. Add collection landing/topic navigation and scoped search with clear context.
-4. Publish the coordinated PF2e package update and aliases/migration tooling. Validate clean install, repeated import and upgrade against all 4,711 pages, plus unrelated game pages.
+The foundation implements package-ownership selection, complete authorized navigation/counts, scoped category member browsing, paginated collection routes and localized/source title/category-label search. Mechanical storage/API tests and full-scale import evidence support those claims. It retains existing page IDs, global namespace/slug identity and canonical links. It does not introduce new independent canonical keys, a landing manifest or a content facet schema. See the [implementation plan](../plans/2026-10-16-wiki-collections.md) and [operator guide](../../guides/wiki-collections.md) for the narrower runtime support.
+
+### Next: explicit metadata, owned landing and authored task hubs
+
+Add a generic collection presentation contract: a readable localized label, a short snapshot description, and an explicit landing-page reference. Define navigation groups and destinations as authored data, with ownership and read-visibility validation. Do not guess a landing from a title, choose the first page, hard-code PF2e labels in the portal, or manufacture a hierarchy from category spelling. A missing or inaccessible landing must have an honest browsing fallback.
+
+Preserve category introduction text and specialized indexes alongside generated scoped members. Verify the representative ancestry/heritage, class/feat-level, condition lookup and return-to-game journeys on the complete import. The sidebar and landing should expose understandable context without flattening every category into a peer or adding an unnecessary intermediate page for known-item search. [Research rationale and accessibility acceptance](../../research/pf2e-wiki-organization.md#make-the-landing-answer-player-and-gm-questions).
+
+### Then: measure structured metadata before offering facets
+
+Inventory coverage and provenance for content kind, class/ancestry relationships, feat level, spell tradition/rank, item category/level/price, source book/page and version relationships. The current coverage of these fields is an open question. Publish coverage and ambiguity counts before choosing filters. Prefer maintained structured import fields over per-request prose inference, and do not expose a filter that silently excludes valid unclassified records. Body search is another explicit search capability, not something the current title/category-label search implies. [Reference evidence and boundaries](../../research/pf2e-wiki-organization.md#let-search-refine-the-reference-without-hiding-its-structure).
+
+### Later: qualified canonical identity, aliases and category-reference migration
+
+Specify stable collection-qualified page/category identity and durable aliases before changing keys or routes. Produce an operator-reviewable dry run covering collisions, inbound article links, category membership references, pins, translations, requirements, package baselines and local edits. An article redirect alone does not rewrite category membership. Preserve page IDs/history and unambiguous bookmarks; ambiguous old names require explicit resolution. Validate clean install, repeated import and upgrade from the existing package alongside unrelated game pages. [Migration rationale](../../research/pf2e-wiki-organization.md#preserve-identities-permissions-and-provenance-through-updates).
+
+### Decision boundaries
+
+- Collection owns reference context; namespace describes page purpose; category relationships and content facets serve separate navigation jobs.
+- Package ownership identifies current membership but does not establish independent canonical names or a permission grant.
+- Source/version metadata is distinct from gameplay topics; measure retained alias/version relationships before promising legacy-name discovery.
+- Research-informed task groups remain proposals until destinations and user journeys are validated. No fixed number of pins or category rows is evidence of usable exploration.
+- Publish this foundation as a scoped improvement. Keep #1970 open until authored exploration, identity migration and relevant acceptance evidence are addressed; do not label it a completed PF2e redesign.
 
 ## Acceptance evidence before implementation is called complete
 

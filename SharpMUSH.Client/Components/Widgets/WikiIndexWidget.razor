@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using SharpMUSH.Library.API
 @using Microsoft.AspNetCore.Components.Routing
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
@@ -13,7 +14,7 @@
 @* D1 §6.1 wiki home (board 21): a glass hero (the home page's image, a search field, New page for
    creators) and category cards — a cover, the name and count, the top three pages with draft and
    locked tags, and "All N pages". Only the categories staff pinned get a card; a search looks through
-   every category. Search reads ?q= from the address and filters as you type. *@
+   every category. Search reads ?q= from the address and submits a paginated search across all collections. *@
 <div class="wiki-index-container">
     <div class="wiki-index">
         <GlassBanner Title="@Loc["NavWikiHeroTitle"]" Kicker="@string.Format(Loc["NavWikiHeroKicker"], Loc["AppTitle"])" ImageUrl="@_heroImage"
@@ -37,7 +38,26 @@
             </Actions>
         </GlassBanner>
 
-        @if (_loading)
+        @if (_navigation is { Collections.Count: > 0 } navigation && !Searching)
+        {
+            <section class="wiki-collections">
+                <h2>@Loc["WikiCollections"]</h2>
+                @foreach (var collection in navigation.Collections)
+                {
+                    <a class="wiki-collection-entry" href="@WikiLocaleLinks.WithLocale("/wiki/collections/" + Uri.EscapeDataString(collection.Id), _locale)">@collection.Name <span>@collection.Pages</span></a>
+                }
+            </section>
+        }
+        <a class="wiki-browse-all" href="@WikiLocaleLinks.WithLocale("/wiki/collections/game", _locale)">@Loc["WikiBrowseAllCategories"]</a>
+        @if (_loadFailed)
+        {
+            <div class="wiki-empty" role="alert">@Loc["WikiLoadFailed"]</div>
+        }
+        else if (Searching)
+        {
+            <WikiCollectionBrowser Collection="all" Search="@_search" Locale="@_locale" Embedded="true" />
+        }
+        else if (_loading)
         {
             <div class="wiki-cat-grid">
                 @for (var i = 0; i < 3; i++)
@@ -49,8 +69,8 @@
         else if (FilteredGroups.Count == 0)
         {
             <div class="wiki-empty">
-                @(!Searching ? (_pages.Count == 0 ? Loc["NavWikiNoPages"] : Loc["NavWikiNoPinned"]) : string.Format(Loc["NavWikiNoMatches"], _search))
-                @if (!Searching && _pages.Count > 0)
+                @(!Searching ? ((_navigation?.Total ?? 0) == 0 ? Loc["NavWikiNoPages"] : Loc["NavWikiNoPinned"]) : string.Format(Loc["NavWikiNoMatches"], _search))
+                @if (!Searching && (_navigation?.Total ?? 0) > 0)
                 {
                     <AuthorizeView Policy="wiki.admin">
                         <Authorized>
@@ -79,7 +99,7 @@
                         <div class="wiki-cat-body">
                             <div class="wiki-cat-head">
                                 <h2 class="wiki-cat-name">@label</h2>
-                                <span class="wiki-cat-count">@g.Pages.Count</span>
+                                <span class="wiki-cat-count">@CountFor(g.Key)</span>
                                 @if (!g.IsUncategorized)
                                 {
                                     <AuthorizeView Policy="wiki.admin">
@@ -94,7 +114,7 @@
                                 @foreach (var page in g.Pages.Take(TopPages))
                                 {
                                     var p = page;
-                                    <a class="wiki-cat-page" href="@WikiRoutes.PathFor(p.Namespace, p.Slug)">
+                                    <a class="wiki-cat-page" href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(p.Namespace, p.Slug), _locale)">
                                         <span class="wiki-cat-page-title">@p.Title</span>
                                         @if (!p.Published)
                                         {
@@ -109,7 +129,7 @@
                             </div>
                             @if (!g.IsUncategorized)
                             {
-                                <a class="wiki-cat-all" href="@WikiCategories.Route(g.Key)">@Loc.Plural("NavWikiAllPages", "count", g.Pages.Count)</a>
+                                <a class="wiki-cat-all" href="@WikiLocaleLinks.WithLocale("/wiki/collections/game?category=" + Uri.EscapeDataString(g.Key), _locale)">@Loc.Plural("NavWikiAllPages", "count", CountFor(g.Key))</a>
                             }
                         </div>
                     </div>
@@ -135,12 +155,16 @@
     /// <summary>The keys of the categories pinned to the wiki home: the only ones with a card unless searching.</summary>
     private HashSet<string> _pinned = new(StringComparer.Ordinal);
 
-    /// <summary>True when the pins could not be read; every category gets a card then.</summary>
-    private bool _pinsUnavailable;
+    /// <summary>Navigation failure is visible rather than presenting incomplete category counts.</summary>
+    private bool _loadFailed;
+    private WikiNavigationDto? _navigation;
 
     private bool Searching => !string.IsNullOrWhiteSpace(_search);
 
-    private static string NewPageHref => "/wiki/main/new-page/edit";
+    private string NewPageHref => WikiLocaleLinks.WithLocale("/wiki/main/new-page/edit", _locale);
+    private string? _locale;
+    private int _version;
+    private bool _disposed;
 
     /// <summary>Each category's name in the reader's language; a category with no page shows its key.</summary>
     private IReadOnlyDictionary<string, string>? _names;
@@ -149,20 +173,42 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         ReadQuery();
+        await LoadAsync();
+    }
 
-        var names = Wiki.GetCategoryNamesAsync().AsTask();
-        var pinned = Wiki.GetPinnedCategoriesAsync().AsTask();
-        var (items, _) = await Wiki.GetAllPagesAsync(skip: 0, take: 500);
-        _names = await names;
-        // Without the pins the home cannot tell which categories to show, so it shows them all rather than
-        // claiming none is pinned.
-        if (await pinned is List<string> keys) _pinned = keys.ToHashSet(StringComparer.Ordinal);
-        else _pinsUnavailable = true;
-        _pages = items;
+    private async Task LoadAsync()
+    {
+        var version = ++_version;
+        var locale = _locale;
+        _loading = true;
+        _loadFailed = false;
+        if (await Wiki.GetNavigationAsync(lang: locale) is WikiNavigationDto navigation)
+        {
+            if (_disposed || version != _version) return;
+            _navigation = navigation;
+            _names = navigation.Categories.ToDictionary(row => row.Key, row => row.Name);
+            _pinned = navigation.Categories.Where(row => row.Pinned).Select(row => row.Key).ToHashSet(StringComparer.Ordinal);
+            var previews = new Dictionary<(string, string), WikiPageSummary>();
+            foreach (var category in _pinned)
+            {
+                var result = await Wiki.GetCollectionPagesAsync("game", take: TopPages, category: category, lang: locale);
+                if (_disposed || version != _version) return;
+                if (result is not WikiPageBatch batch)
+                { _loadFailed = true; break; }
+                foreach (var page in batch.Pages) previews.TryAdd((page.Namespace, page.Slug), page);
+            }
+            _pages = previews.Values.ToList();
+        }
+        else
+        {
+            if (_disposed || version != _version) return;
+            _loadFailed = true;
+        }
+        if (_disposed || version != _version) return;
         _loading = false;
 
         // The hero shows the home page's own image when it has one; nothing else in the data names one.
-        if (await Wiki.GetWikiArticle("home", "main") is WikiArticle home)
+        if (await Wiki.GetWikiArticle("home", "main", lang: locale) is WikiArticle home && !_disposed && version == _version)
         {
             _heroImage = home.Image;
         }
@@ -170,14 +216,20 @@
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        ReadQuery();
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            var previousLocale = _locale;
+            ReadQuery();
+            if (previousLocale != _locale) await LoadAsync();
+            if (!_disposed) StateHasChanged();
+        });
     }
 
     private void ReadQuery()
     {
         // ?q=… from the shell search or the sidebar; the client has no query-string helper library.
         _search = string.Empty;
+        _locale = WikiLocaleLinks.FromUri(Nav.Uri);
         var query = new Uri(Nav.Uri).Query.TrimStart('?');
         foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -192,7 +244,7 @@
     private void ApplySearch()
     {
         var term = _search.Trim();
-        Nav.NavigateTo(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}");
+        Nav.NavigateTo(WikiLocaleLinks.WithLocale(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}", _locale));
     }
 
     private IReadOnlyList<WikiCategoryGroup> FilteredGroups
@@ -200,14 +252,14 @@
         get
         {
             if (!Searching)
-                return _pinsUnavailable
-                    ? WikiCategories.Group(_pages)
-                    : WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)).ToList();
+                return WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)).ToList();
 
             return WikiCategories.Group(_pages.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase))));
         }
     }
+
+    private int CountFor(string key) => _navigation?.Categories.FirstOrDefault(row => row.Key == key)?.Pages ?? 0;
 
     private void SetPinned(string key, bool pinned)
     {
@@ -215,5 +267,5 @@
         else _pinned.Remove(key);
     }
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    public void Dispose() { _disposed = true; ++_version; Nav.LocationChanged -= OnLocationChanged; }
 }
