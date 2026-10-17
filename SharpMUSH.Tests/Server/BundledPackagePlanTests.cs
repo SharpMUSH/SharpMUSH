@@ -55,4 +55,11 @@ public class BundledPackagePlanTests
 		await Assert.That(plan.Install).DoesNotContain("not-bundled");
 		await Assert.That(plan.Install).DoesNotContain("chargen");
 	}
+	[Test]
+	public async Task CatalogueOrderCannotPutDependentBeforeItsPrerequisite()
+	{
+		var plan = BundledPackagePlan.For(["app"], new HashSet<string>(), Dependencies, ["app", "lib", "base", "other"]);
+		await Assert.That(plan.Install).IsEquivalentTo(["base", "lib", "app"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 }

@@ -84,7 +84,7 @@ public sealed record PluginsResponse(IReadOnlyList<PluginStatusDto> Plugins, boo
 
 /// <summary>What turning a plugin on or off did.</summary>
 /// <param name="Plugin">The plugin afterwards.</param>
-/// <param name="RemovedPackages">Packages that needed the plugin and were uninstalled with it.</param>
+/// <param name="RemovedPackages">Compatibility field; always empty. Dependents are removed only by a separately reviewed package operation.</param>
 /// <param name="Notes">What the administrator should know, such as that a restart is needed.</param>
 public sealed record PluginChangeResponse(PluginStatusDto Plugin, IReadOnlyList<string> RemovedPackages, IReadOnlyList<string> Notes);
 
@@ -94,3 +94,9 @@ public sealed record PluginChangeResponse(PluginStatusDto Plugin, IReadOnlyList<
 /// <param name="PackageId">The package's id.</param>
 /// <param name="Version">The package's version.</param>
 public sealed record PluginUploadResponse(string Remote, string Path, string PackageId, string Version);
+
+/// <summary>The discovered plugin dependencies and a fingerprint of their metadata and files.</summary>
+public sealed record PluginDependencySnapshot(IReadOnlyDictionary<string, IReadOnlyList<string>> Dependencies, string Fingerprint);
+
+/// <summary>Packages and plugins that prevent a requested plugin state change.</summary>
+public sealed record PluginStateBlockers(IReadOnlyList<string> Packages, IReadOnlyList<string> Plugins);

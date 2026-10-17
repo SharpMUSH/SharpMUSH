@@ -16,6 +16,10 @@ public sealed record BundledPackagePlan(IReadOnlyList<string> Install, IReadOnly
 	public static BundledPackagePlan For(IEnumerable<string> wanted, IReadOnlySet<string> installed,
 		IReadOnlyDictionary<string, IReadOnlyList<string>> dependencies, IReadOnlyList<string> order)
 	{
+		var sorted = PackageDependencyOrder.For(order, id => dependencies.GetValueOrDefault(id) ?? []);
+		if (sorted.Cycles.Count > 0)
+			throw new InvalidOperationException($"Bundled dependency cycle: {string.Join(" -> ", sorted.Cycles[0])}");
+		order = sorted.Ordered;
 		var asked = wanted.Where(order.Contains).ToHashSet(StringComparer.OrdinalIgnoreCase);
 		var needed = new HashSet<string>(asked, StringComparer.OrdinalIgnoreCase);
 		var pending = new Stack<string>(asked);

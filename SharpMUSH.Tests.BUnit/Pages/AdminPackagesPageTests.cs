@@ -102,6 +102,28 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 	}
 
 	[TUnit.Core.Test]
+	public async Task Installed_view_exposes_the_shared_change_queue()
+	{
+		var host = Render<MudHarness>(p => p
+			.AddChildContent<SharpMUSH.Client.Pages.Admin.Packages.AdminPackages>());
+		await Assert.That(host.Markup).Contains("PkgBatchQueue");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Browse_and_installed_views_share_editable_intents_without_duplicate_targets()
+	{
+		var service = Services.GetRequiredService<PackagesAdminService>();
+		service.Batch.Queue(new("who-where", PackageBatchAction.Uninstall));
+		service.Batch.Queue(new("WHO-WHERE", PackageBatchAction.Install, new("official", "apps/who", "2.0")));
+		var host = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Admin.Packages.AdminPackages>());
+		await Assert.That(service.Batch.Intents.Count).IsEqualTo(1);
+		await Assert.That(host.Markup).Contains("apps/who");
+		await host.Find("button[aria-label='PkgBatchRemoveNamed(WHO-WHERE)']").ClickAsync();
+		await Assert.That(service.Batch.Intents.Count).IsEqualTo(0);
+		await Assert.That(host.Markup).Contains("PkgBatchEmpty");
+	}
+
+	[TUnit.Core.Test]
 	public async Task RendersInstalledVersion_NotTheLiteralExpressionText()
 	{
 		var host = Render<MudHarness>(p => p

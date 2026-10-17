@@ -91,7 +91,8 @@
                                 <MudSelectItem Value="@DevChannel">@Loc["PkgDevChannelOption", entry.Version ?? "tip"]</MudSelectItem>
                             </MudSelect>
                             <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small"
-                                       OnClick="@(() => GoToReview(entry))">@Loc["PkgReviewInstall"]</MudButton>
+                                       Disabled="@(entry.PackageId is null)" OnClick="@(() => QueueInstall(entry))">@Loc["PkgBatchQueueInstall"]</MudButton>
+                            <MudButton Size="Size.Small" OnClick="@(() => GoToReview(entry))">@Loc["PkgReviewInstall"]</MudButton>
                         </div>
                         @if (entry.Versions.Count == 0)
                         {
@@ -105,6 +106,7 @@
             }
         </div>
     }
+    <PackageBatchQueue />
 </div>
 
 <PackageReadmeDialog @ref="_readme" />
@@ -186,6 +188,14 @@
     private Task ShowReadmeAsync(PackageRepoEntry entry)
         => _readme?.ShowAsync(entry.PackageId ?? entry.Path, () => Packages.GetRemoteReadmeAsync(_selectedRemote, entry.Path))
             ?? Task.CompletedTask;
+
+    private void QueueInstall(PackageRepoEntry entry)
+    {
+        if (entry.PackageId is null) return;
+        var version = SelectedVersion(entry);
+        Packages.Batch.Queue(new(entry.PackageId, PackageBatchAction.Install,
+            new(_selectedRemote, entry.Path, version == DevChannel ? null : version)));
+    }
 
     private void GoToReview(PackageRepoEntry entry)
     {

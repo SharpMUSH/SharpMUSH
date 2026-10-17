@@ -34,7 +34,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="MaximumServer">The newest SharpMUSH version the package runs on (<c>maximum_server</c>, format 1.6), or null for no limit.</param>
 /// <param name="Plugins">
 /// The plugins the package's code calls into (<c>plugins:</c>, format 1.7), by plugin id, or null for none. The package
-/// installs only while each of them runs, and turning one off uninstalls it.
+/// installs only while each of them runs. An installed package blocks turning a required plugin off until the package is explicitly removed.
 /// </param>
 /// <param name="Category">
 /// The group the package is listed under where packages are offered together, such as <c>Staff</c> (<c>category:</c>,

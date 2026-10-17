@@ -174,6 +174,7 @@ public class PlusHelpIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 

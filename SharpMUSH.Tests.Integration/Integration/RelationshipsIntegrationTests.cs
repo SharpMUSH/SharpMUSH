@@ -73,6 +73,7 @@ public class RelationshipsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
 		// The card reads finger's fields, so finger comes first when the game does not have it.

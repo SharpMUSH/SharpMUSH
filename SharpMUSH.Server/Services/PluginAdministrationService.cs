@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -18,14 +20,10 @@ public sealed class PluginAdministrationService(
 	PluginDirectories directories,
 	IPluginManager manager,
 	IPackageRegistryService registry,
-	IPackageInstallService installer,
-	IPackageOperationRunner operations,
-	GameFeatureService features,
+	IPackageOperationGate gate,
 	PluginInstallOptions installOptions,
 	ILogger<PluginAdministrationService> logger) : IPluginAdministration
 {
-	private readonly SemaphoreSlim _stateLock = new(1, 1);
-
 	/// <summary>Plugins this process unloaded after the start, so a loaded-but-not-running one is not taken for a failure.</summary>
 	private readonly HashSet<string> _unloaded = new(StringComparer.OrdinalIgnoreCase);
 
@@ -37,8 +35,12 @@ public sealed class PluginAdministrationService(
 	}
 
 	/// <inheritdoc />
-	public async Task<Result<PluginChangeResponse>> SetEnabledAsync(string pluginId, bool enabled,
-		CancellationToken cancellationToken = default)
+	public Task<Result<PluginChangeResponse>> SetEnabledAsync(string pluginId, bool enabled,
+		CancellationToken cancellationToken = default) =>
+		gate.RunAsync(() => SetEnabledExclusiveAsync(pluginId, enabled, cancellationToken), cancellationToken);
+
+	private async Task<Result<PluginChangeResponse>> SetEnabledExclusiveAsync(string pluginId, bool enabled,
+		CancellationToken cancellationToken)
 	{
 		if ((await StatusesAsync()).FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))
 			is not { } plugin)
@@ -46,53 +48,38 @@ public sealed class PluginAdministrationService(
 			return new Error<string>($"There is no plugin '{pluginId}'.");
 		}
 
+		// The caller's preview is advisory: packages and plugin state can change while it waits for the gate.
+		var blockers = await GetBlockersAsync(plugin.Id, enabled, cancellationToken);
+		if (blockers.Packages.Count > 0 || blockers.Plugins.Count > 0)
+		{
+			return new Error<string>($"Cannot turn {(enabled ? "on" : "off")} '{plugin.Id}': "
+				+ $"resolve package dependencies [{string.Join(", ", blockers.Packages)}] and plugin dependencies [{string.Join(", ", blockers.Plugins)}] first.");
+		}
+
 		if (plugin.Enabled == enabled)
 		{
 			return new PluginChangeResponse(plugin, [], [enabled ? $"{plugin.Name} is already on." : $"{plugin.Name} is already off."]);
 		}
 
-		var removed = new List<string>();
-		var notes = new List<string>();
-		if (!enabled && plugin.Dependents.Count > 0)
-		{
-			switch (await RemoveDependentsAsync(plugin, cancellationToken))
-			{
-				case IReadOnlyList<string> uninstalled:
-					removed.AddRange(uninstalled);
-					break;
-				case Error<string> error:
-					return error;
-			}
-		}
-
-		await _stateLock.WaitAsync(cancellationToken);
+		PluginState state;
 		try
 		{
-			PluginState.Read(directories.StateFile).With(plugin.Id, enabled).Write(directories.StateFile);
+			// A display/read fallback must never become the state persisted by a mutation.
+			state = PluginState.Read(directories.StateFile);
 		}
-		finally
+		catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException)
 		{
-			_stateLock.Release();
+			logger.LogError(ex, "The plugin state file {Path} cannot be read for a state change.", directories.StateFile);
+			return new Error<string>("The plugin state file cannot be read. Repair it before changing plugin state.");
 		}
-
-		if (enabled)
-		{
-			// A shipped package over this plugin comes back at the next start, once the plugin runs again.
-			foreach (var packageId in features.PackagesOver(plugin.Id))
-			{
-				await features.SetDeclinedAsync(packageId, declined: false);
-			}
-		}
-		else if (plugin.Unloadable && manager.Registration(plugin.Id) is not null)
+		state.With(plugin.Id, enabled).Write(directories.StateFile);
+		var notes = new List<string>();
+		if (!enabled && plugin.Unloadable && manager.Registration(plugin.Id) is not null)
 		{
 			switch (await manager.UnloadAsync(plugin.Id))
 			{
 				case Success:
-					lock (_unloaded)
-					{
-						_unloaded.Add(plugin.Id);
-					}
-
+					lock (_unloaded) _unloaded.Add(plugin.Id);
 					notes.Add($"{plugin.Name} stopped.");
 					break;
 				case Error<string> error:
@@ -105,54 +92,100 @@ public sealed class PluginAdministrationService(
 		var after = (await StatusesAsync()).First(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase));
 		if (after.Pending != PluginPendingChange.None)
 		{
-			notes.Add(enabled
-				? $"{plugin.Name} starts when the server restarts."
-				: $"{plugin.Name} stops when the server restarts.");
+			notes.Add(enabled ? $"{plugin.Name} starts when the server restarts." : $"{plugin.Name} stops when the server restarts.");
 		}
-
-		return new PluginChangeResponse(after, removed, notes);
+		return new PluginChangeResponse(after, [], notes);
 	}
 
-	/// <summary>
-	/// Uninstalls the packages that need <paramref name="plugin"/>, dependents of dependents first, in one package
-	/// operation (one backup first). A shipped package is recorded as declined so the next start leaves it out.
-	/// </summary>
-	private async Task<Result<IReadOnlyList<string>>> RemoveDependentsAsync(PluginStatusDto plugin, CancellationToken cancellationToken)
+	private IReadOnlyList<PluginLoaderService.PluginCandidate> Discover() =>
+		PluginLoaderService.Discover(directories.BuiltIn, logger, PluginOrigin.BuiltIn)
+			.Concat(PluginLoaderService.Discover(directories.Installed, logger, PluginOrigin.Installed)).ToArray();
+
+	private Dictionary<string, IReadOnlyList<string>> Dependencies(IReadOnlyList<PluginLoaderService.PluginCandidate> discovered)
 	{
-		var order = plugin.Dependents.Reverse().ToList();
-		var outcome = await operations.RunAsync("uninstall", async token =>
+		var result = discovered.GroupBy(p => p.Id, StringComparer.OrdinalIgnoreCase)
+			.ToDictionary(g => g.Key, g => g.First().Dependencies, StringComparer.OrdinalIgnoreCase);
+		// A changed or removed manifest must not erase the dependencies of code still running in this process.
+		foreach (var plugin in catalog.Plugins.Where(p => manager.Registration(p.Id) is not null))
 		{
-			var done = new List<string>();
-			foreach (var packageId in order)
-			{
-				if (await installer.UninstallAsync(packageId, cancellationToken: token) is Error<string> error)
-				{
-					return (Result<IReadOnlyList<string>>)new Error<string>(
-						$"{packageId} needs {plugin.Name} and could not be uninstalled, so {plugin.Name} is still on: {error.Value}");
-				}
-
-				done.Add(packageId);
-			}
-
-			return new Result<IReadOnlyList<string>>(done);
-		}, cancellationToken);
-
-		switch (outcome)
-		{
-			case PackageOperationRan<Result<IReadOnlyList<string>>> { Result: IReadOnlyList<string> done }:
-				foreach (var packageId in done)
-				{
-					await features.SetDeclinedAsync(packageId, declined: true);
-				}
-
-				return new Result<IReadOnlyList<string>>(done);
-			case PackageOperationRan<Result<IReadOnlyList<string>>> { Result: Error<string> error }:
-				return error;
-			case PackageOperationRefused refused:
-				return new Error<string>(refused.Reason);
-			default:
-				return new Error<string>("The package operation did not run.");
+			result[plugin.Id] = (result.GetValueOrDefault(plugin.Id) ?? []).Concat(plugin.Dependencies)
+				.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToArray();
 		}
+		return result;
+	}
+
+	/// <inheritdoc />
+	public async Task<PluginDependencySnapshot> ReadDependenciesAsync(CancellationToken cancellationToken = default)
+	{
+		var discovered = Discover();
+		var dependencies = Dependencies(discovered);
+		var files = new List<object>();
+		foreach (var candidate in discovered.OrderBy(p => p.DllPath, StringComparer.Ordinal))
+		{
+			var folder = Path.GetDirectoryName(candidate.DllPath)!;
+			var paths = Directory.Exists(folder)
+				? Directory.EnumerateFiles(folder).Where(p => p.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+					|| string.Equals(Path.GetFileName(p), PluginManifest.FileName, StringComparison.OrdinalIgnoreCase))
+					.Order(StringComparer.Ordinal).ToArray()
+				: [];
+			var identities = new List<object>();
+			foreach (var path in paths)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				var file = new FileInfo(path);
+				await using var stream = File.OpenRead(path);
+				identities.Add(new
+				{
+					Path = Path.GetFullPath(path),
+					file.Length,
+					file.CreationTimeUtc,
+					file.LastWriteTimeUtc,
+					Hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken))
+				});
+			}
+			files.Add(new { Candidate = candidate, Files = identities });
+		}
+		var identity = JsonSerializer.SerializeToUtf8Bytes(new
+		{
+			Files = files,
+			Dependencies = dependencies.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase)
+		});
+		return new PluginDependencySnapshot(dependencies, Convert.ToHexString(SHA256.HashData(identity)));
+	}
+
+	/// <inheritdoc />
+	public async Task<PluginStateBlockers> GetBlockersAsync(string pluginId, bool enabled,
+		CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var discovered = Discover();
+		var dependencies = Dependencies(discovered);
+		var state = ReadState();
+		if (enabled)
+		{
+			var candidates = discovered.GroupBy(p => p.Id, StringComparer.OrdinalIgnoreCase)
+				.ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+			return new PluginStateBlockers([], (dependencies.GetValueOrDefault(pluginId) ?? [])
+				.Where(id => state.IsDisabled(id) || !candidates.TryGetValue(id, out var candidate) || candidate.Problem is not null)
+				.Order(StringComparer.OrdinalIgnoreCase).ToArray());
+		}
+
+		var installed = await registry.GetInstalledPackagesAsync();
+		if (!dependencies.ContainsKey(pluginId)
+			&& !catalog.Entries.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+			&& !installed.Any(p => p.Kind == PackageKind.Plugin && string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
+		{
+			// Unknown ids remain ordinary validation errors rather than prompting a dependency batch.
+			return new PluginStateBlockers([], []);
+		}
+		var packageDependencies = await registry.GetAllPackageDependenciesAsync();
+		var owner = installed.FirstOrDefault(p => p.Kind == PackageKind.Plugin
+			&& string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))?.Id;
+		return new PluginStateBlockers(Dependents(pluginId, owner, installed, packageDependencies),
+			dependencies.Where(pair => !string.Equals(pair.Key, pluginId, StringComparison.OrdinalIgnoreCase)
+				&& pair.Value.Contains(pluginId, StringComparer.OrdinalIgnoreCase)
+				&& (!state.IsDisabled(pair.Key) || manager.Registration(pair.Key) is not null))
+				.Select(pair => pair.Key).Order(StringComparer.OrdinalIgnoreCase).ToArray());
 	}
 
 	/// <summary>Every plugin the last start found or that is on disk now, shipped ones first.</summary>
@@ -295,7 +328,7 @@ public sealed class PluginAdministrationService(
 	{
 		lock (_unloaded)
 		{
-			return _unloaded.Contains(pluginId);
+			return _unloaded.Contains(pluginId) || manager.WasUnloaded(pluginId);
 		}
 	}
 

@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text.Json;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
@@ -8,14 +10,98 @@ namespace SharpMUSH.Client.Services;
 /// Typed client for the package manager admin API (<c>api/packages</c>).
 /// </summary>
 /// <remarks>
-/// Every call goes through <see cref="ApiCall"/>, which is also where the exception boundary is.
-/// These seventeen methods used to have no <c>catch</c> between them: an unreachable server threw
+/// Calls use <see cref="ApiCall"/>'s exception boundary; plugin state changes retain the same boundary
+/// while distinguishing the typed dependency-blocker response from ordinary failures.
+/// These methods used to have no <c>catch</c> between them: an unreachable server threw
 /// <see cref="HttpRequestException"/> straight out into the render loop, so the package pages went
 /// blank where every other admin page shows the reason.
 /// </remarks>
-public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerInfoService serverInfo)
+public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerInfoService serverInfo, AccountAuthService? accountAuth = null)
+	: IDisposable
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
+
+	/// <summary>Unsaved batch choices live only in this browser session's memory.</summary>
+	public PackageBatchDraft Batch { get; } = new(accountAuth);
+
+	public void Dispose()
+	{
+		admissionToken = null;
+		Batch.Dispose();
+	}
+
+	private string? admissionToken;
+	private bool HasActiveBatchRun => Batch.Run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running;
+
+	public Task<ApiResult<PackageBatchPlanResponse>> PlanBatchAsync(PackageBatchPlanRequest request) =>
+		Batch.AdmissionBlocked || HasActiveBatchRun
+			? Task.FromResult<ApiResult<PackageBatchPlanResponse>>(new ApiFailure(ApiFailureKind.Unexpected,
+				"Resolve the submitted batch's outcome before reviewing another batch."))
+			: Client.PostApiAsync<PackageBatchPlanRequest, PackageBatchPlanResponse>(
+				"api/packages/batches/plan", request, "The server returned no batch plan.");
+
+	public async Task<ApiResult<PackageBatchRunResponse>> ApplyBatchAsync(string reviewToken)
+	{
+		if (HasActiveBatchRun || Batch.AdmissionPending || (Batch.AdmissionUnknown && admissionToken != reviewToken))
+			return new ApiFailure(ApiFailureKind.Unexpected, "A submitted batch's outcome is still unresolved.");
+		var authority = Batch.AuthorityRevision;
+		var recovering = Batch.AdmissionUnknown;
+		admissionToken = reviewToken;
+		Batch.SetAdmissionState(pending: true, unknown: false);
+		var result = await Changing(Client.PostApiAsync<PackageBatchApplyRequest, PackageBatchRunResponse>(
+			"api/packages/batches/apply", new(reviewToken), "The batch outcome is unknown. Refresh actual state before retrying."));
+		if (authority != Batch.AuthorityRevision)
+		{
+			if (admissionToken == reviewToken) admissionToken = null;
+			return result;
+		}
+		var unknown = result is ApiFailure failure && (recovering
+			|| failure.Status is not (HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized
+				or HttpStatusCode.Forbidden or HttpStatusCode.Conflict or HttpStatusCode.Gone));
+		// Draft edits cannot erase an accepted operation. Its ownership follows the account authority,
+		// while its immutable intent and results remain separate from any newly queued choices.
+		if (result is PackageBatchRunResponse run) Batch.Run = run;
+		if (!unknown) admissionToken = null;
+		Batch.SetAdmissionState(pending: false, unknown);
+		return result;
+	}
+
+	/// <summary>Recovers an uncertain admission with its original actor-bound, idempotent review token.</summary>
+	public Task<ApiResult<PackageBatchRunResponse>> RecoverBatchAdmissionAsync() =>
+		Batch.AdmissionUnknown && admissionToken is { } token
+			? ApplyBatchAsync(token)
+			: Task.FromResult<ApiResult<PackageBatchRunResponse>>(new ApiFailure(ApiFailureKind.Unexpected, "No uncertain admission is available to recover."));
+
+	/// <summary>An explicit refresh is required before abandoning an admission whose outcome cannot be recovered.</summary>
+	public async Task<ApiResult<Success>> RefreshUnknownBatchAdmissionAsync()
+	{
+		if (!Batch.AdmissionUnknown || Batch.AdmissionPending)
+			return new ApiFailure(ApiFailureKind.Unexpected, "No uncertain admission is available to refresh.");
+		var revision = Batch.Revision;
+		var authority = Batch.AuthorityRevision;
+		var installed = GetInstalledAsync();
+		var plugins = GetPluginsAsync();
+		await Task.WhenAll(installed, plugins);
+		if (await installed is ApiFailure packageFailure) return packageFailure;
+		if (await plugins is ApiFailure pluginFailure) return pluginFailure;
+		if (revision != Batch.Revision || authority != Batch.AuthorityRevision
+			|| Batch.AdmissionPending || !Batch.AdmissionUnknown)
+			return new ApiFailure(ApiFailureKind.Unexpected, "The draft changed during the refresh. Refresh actual state again.");
+		admissionToken = null;
+		Batch.SetAdmissionState(pending: false, unknown: false);
+		return new Success();
+	}
+
+	public async Task<ApiResult<PackageBatchRunResponse>> GetBatchRunAsync(string id, CancellationToken cancellationToken = default)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Get, $"api/packages/batches/{Uri.EscapeDataString(id)}");
+		var result = await Client.SendApiAsync<PackageBatchRunResponse>(request,
+			"The batch outcome is unknown. Refresh actual state before retrying.", cancellationToken);
+		if (result is not PackageBatchRunResponse { State: PackageBatchRunState.Pending or PackageBatchRunState.Running })
+			serverInfo.Refresh();
+		return result;
+	}
+
 
 	/// <summary>
 	/// A call that may install or remove packages: whatever its answer, the portal asks the server again which
@@ -123,11 +209,40 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 	public Task<ApiResult<PluginsResponse>> GetPluginsAsync() =>
 		Client.GetApiAsync<PluginsResponse>("api/packages/plugins", "The server returned no plugin list.");
 
-	/// <summary>Turns plugin <paramref name="id"/> on or off; turning it off uninstalls the packages that need it.</summary>
-	public Task<ApiResult<PluginChangeResponse>> SetPluginEnabledAsync(string id, bool enabled) =>
-		Changing(Client.PostApiAsync<object?, PluginChangeResponse>(
-			$"api/packages/plugins/{Uri.EscapeDataString(id)}/{(enabled ? "enable" : "disable")}", null,
-			"The server changed the plugin but described nothing."));
+	/// <summary>Turns plugin <paramref name="id"/> on or off; dependencies requiring other changes must be reviewed as a batch.</summary>
+	public Task<PluginStateChangeResult> SetPluginEnabledAsync(string id, bool enabled) =>
+		Changing(SetPluginStateAsync(id, enabled));
+
+	private async Task<PluginStateChangeResult> SetPluginStateAsync(string id, bool enabled)
+	{
+		try
+		{
+			using var response = await Client.PostAsync(
+				$"api/packages/plugins/{Uri.EscapeDataString(id)}/{(enabled ? "enable" : "disable")}", null);
+			var body = await response.Content.ReadAsStringAsync();
+			if (response.IsSuccessStatusCode)
+			{
+				try
+				{
+					return JsonSerializer.Deserialize<PluginChangeResponse>(body, JsonSerializerOptions.Web) is { } changed
+						? changed : new ApiFailure(ApiFailureKind.Unexpected, "The server changed the plugin but described nothing.");
+				}
+				catch (JsonException ex) { return ApiFailure.Malformed(ex, response.StatusCode); }
+			}
+			if (response.StatusCode == HttpStatusCode.Conflict)
+			{
+				try
+				{
+					var blockers = JsonSerializer.Deserialize<PluginStateBlockers>(body, JsonSerializerOptions.Web);
+					if (blockers is { Packages: not null, Plugins: not null }
+						&& (blockers.Packages.Count > 0 || blockers.Plugins.Count > 0)) return blockers;
+				}
+				catch (JsonException) { }
+			}
+			return ApiFailure.FromStatus(response.StatusCode, body);
+		}
+		catch (Exception ex) { return ApiFailure.Transport(ex); }
+	}
 
 	/// <summary>Stages an uploaded plugin package (a .zip) for review; nothing is installed yet.</summary>
 	public async Task<ApiResult<PluginUploadResponse>> UploadPluginAsync(Stream archive, string fileName)

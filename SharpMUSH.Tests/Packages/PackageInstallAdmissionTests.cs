@@ -92,7 +92,7 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IPackageWikiService>(),
 				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
 				services.GetRequiredService<EngineVersion>(),
-				services.GetRequiredService<Lazy<IPluginManager>>())
+				services.GetRequiredService<Lazy<IPluginManager>>(), services.GetRequiredService<Lazy<IPluginAdministration>>())
 		};
 	}
 
@@ -511,7 +511,7 @@ public class PackageInstallAdmissionTests
 			services.GetRequiredService<IPackageWikiService>(),
 			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
 			services.GetRequiredService<EngineVersion>(),
-			new Lazy<IPluginManager>(plugins));
+			new Lazy<IPluginManager>(plugins), services.GetRequiredService<Lazy<IPluginAdministration>>());
 	}
 
 	private async Task<IReadOnlyList<string>> PluginsOfAsync(string packageId) =>

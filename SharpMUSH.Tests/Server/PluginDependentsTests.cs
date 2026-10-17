@@ -4,8 +4,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Server;
 
 /// <summary>
-/// The packages disabling a plugin uninstalls, read backwards: each package must come after the ones it depends on,
-/// or the uninstall of a dependency is refused while its dependent is still installed.
+/// The packages that block disabling a plugin, listed with prerequisites first so a reviewed removal can reverse
+/// the order and remove each dependent before its prerequisites.
 /// </summary>
 public class PluginDependentsTests
 {
