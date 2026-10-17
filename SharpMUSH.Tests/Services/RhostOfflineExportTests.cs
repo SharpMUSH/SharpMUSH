@@ -19,10 +19,22 @@ public class RhostOfflineExportTests
 		using var fixture = new Fixture(body);
 		var before = File.ReadAllBytes(fixture.Checkpoint);
 		Exception? failure = null;
-		try { await new RhostOfflineExporter().ExportAsync(fixture.Options); }
+		var options = reason == "timeout" ? fixture.Options with { Timeout = TimeSpan.FromMilliseconds(500) } : fixture.Options;
+		try { await new RhostOfflineExporter().ExportAsync(options); }
 		catch (Exception ex) { failure = ex; }
 		if (reason == "timeout") await Assert.That(failure is TimeoutException).IsTrue();
-		else await Assert.That(failure is InvalidDataException or IOException).IsTrue();
+		else await Assert.That(failure is InvalidDataException or IOException).IsTrue().Because(failure?.ToString() ?? "The exporter returned without a failure.");
+		await Assert.That(Directory.Exists(fixture.Options.OutputDirectory)).IsFalse();
+		await Assert.That(File.ReadAllBytes(fixture.Checkpoint).SequenceEqual(before)).IsTrue();
+		await Assert.That(Directory.GetDirectories(fixture.Root).Length).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task DiagnosticBudgetAllowsExporterInitializationBeforeFlooding()
+	{
+		using var fixture = new Fixture("cat >/dev/null; sleep 1; yes flood >&2");
+		var before = File.ReadAllBytes(fixture.Checkpoint);
+		await Assert.ThrowsAsync<InvalidDataException>(() => new RhostOfflineExporter().ExportAsync(fixture.Options));
 		await Assert.That(Directory.Exists(fixture.Options.OutputDirectory)).IsFalse();
 		await Assert.That(File.ReadAllBytes(fixture.Checkpoint).SequenceEqual(before)).IsTrue();
 		await Assert.That(Directory.GetDirectories(fixture.Root).Length).IsEqualTo(1);
@@ -109,7 +121,7 @@ public class RhostOfflineExportTests
 			File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 			var profile = Path.Combine(Root, "profile.json");
 			File.WriteAllText(profile, JsonSerializer.Serialize(new { schema = 1, upstreamRevision = "bfd2894c7239d02b8bec15c36939706be371715c", backend = "legacy-qdbm", rid = "linux-x64", littleEndian = true, pointerSize = 8, intSize = 4, offTSize = 8, exporterSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(executable))) }));
-			Options = new() { SourceDirectory = Source, DatabaseBase = "native", Checkpoint = "checkpoint", ExporterPath = executable, ExporterProfilePath = profile, OutputDirectory = Path.Combine(Root, "output"), Backend = RhostBackend.LegacyQdbm, Timeout = TimeSpan.FromMilliseconds(500), MaxOutputBytes = 4096, MaxDiagnosticBytes = 4096 };
+			Options = new() { SourceDirectory = Source, DatabaseBase = "native", Checkpoint = "checkpoint", ExporterPath = executable, ExporterProfilePath = profile, OutputDirectory = Path.Combine(Root, "output"), Backend = RhostBackend.LegacyQdbm, Timeout = TimeSpan.FromSeconds(30), MaxOutputBytes = 4096, MaxDiagnosticBytes = 4096 };
 		}
 		public void Dispose() => Directory.Delete(Root, true);
 	}
