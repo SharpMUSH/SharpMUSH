@@ -8,6 +8,8 @@ Sixteen static expressions derived directly from the refined primary mascot. Sha
 
 Download `sharpie-discord-emoji.zip` and extract its 16 PNGs. In Discord, open Server Settings → Emoji → Upload Emoji with the server's emoji-management permission. Upload the individual files, not the ZIP. The filenames provide names such as `sharpie_happy`, used in chat as `:sharpie_happy:`. Nothing in this package uploads to or modifies a Discord server automatically.
 
+Emoji derivatives fit the primary’s visible silhouette to a 126px long edge within the 128px canvas, leaving approximately one pixel of edge safety. The remaining space on the shorter axis follows the artwork’s proportions; no stretching or ear cropping is applied. This removes the identity master’s layout padding from the emoji files.
+
 `png-128/` contains the transparent 128 × 128 upload files. Each is below 256 KiB. Discord commonly displays custom emoji at 32 × 32, so the preview includes that size. `png-512/` supplies larger renders; `svg/` supplies editable path masters. This is an emoji pack, not a Discord sticker pack. No Nitro-dependent animation is required.
 
 Official requirements: [Discord custom emoji guide](https://support.discord.com/hc/en-us/articles/360041139231-How-to-Add-Emojis-on-Discord) and [Discord emoji API reference](https://github.com/discord/discord-api-docs/blob/main/developers/resources/emoji.mdx).

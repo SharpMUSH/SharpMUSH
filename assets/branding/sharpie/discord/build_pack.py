@@ -15,6 +15,12 @@ NS='http://www.w3.org/2000/svg';ET.register_namespace('',NS)
 INK='#17333E';MINT='#00DDB3';WHITE='#FFFFFF'
 source=ASSETS/'approved/svg/sharpie-primary.svg'
 base=ET.parse(source).getroot()
+# Fit the visible primary silhouette, not its padded 512-unit identity canvas.
+measures=json.loads((ASSETS/'approved/provenance/measurements.json').read_text())
+bounds=next(v['rendered_alpha_bounds_512'] for v in measures['variants'] if v['name']=='sharpie-primary')
+span=max(bounds[2]-bounds[0],bounds[3]-bounds[1])*128/126
+cx=(bounds[0]+bounds[2])/2;cy=(bounds[1]+bounds[3])/2
+base.set('viewBox',f'{cx-span/2:.6f} {cy-span/2:.6f} {span:.6f} {span:.6f}')
 # The primary's clipped facial group is the stable derivative boundary.
 detail=base.find(f'{{{NS}}}g/{{{NS}}}g')
 assert detail is not None and detail[7].get('id')=='forehead-m'
@@ -71,8 +77,8 @@ for name,ek,mk in specs:
  im=Image.open(HERE/'png-512'/f'sharpie_{name}.png').convert('RGBA');im.resize((128,128),Image.Resampling.LANCZOS).save(HERE/'png-128'/f'sharpie_{name}.png',optimize=True)
  p=HERE/'png-128'/f'sharpie_{name}.png';assert p.stat().st_size<256*1024
  small=Image.open(p);assert small.size==(128,128) and small.mode=='RGBA' and small.getpixel((0,0))[3]==0
- manifest.append({'name':'sharpie_'+name,'file':'png-128/'+p.name,'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
-(HERE/'manifest.json').write_text(json.dumps({'source':'../approved/svg/sharpie-primary.svg','source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'format':'static transparent PNG','size':[128,128],'emoji':manifest},indent=2)+'\n')
+ manifest.append({'alpha_bounds':list(small.getchannel('A').getbbox()),'name':'sharpie_'+name,'file':'png-128/'+p.name,'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+(HERE/'manifest.json').write_text(json.dumps({'source':'../approved/svg/sharpie-primary.svg','source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'format':'static transparent PNG','size':[128,128],'framing':{'method':'uniform visible-silhouette fit','target_long_edge_px':126,'safety_margin_px':1,'viewBox':[float(x) for x in base.get('viewBox').split()]},'emoji':manifest},indent=2)+'\n')
 font=ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans.ttf',15) if Path('/usr/share/fonts/TTF/DejaVuSans.ttf').exists() else ImageFont.load_default()
 canvas=Image.new('RGB',(1152,760),'#E5E7EB');draw=ImageDraw.Draw(canvas)
 for row,bg in enumerate(('#E5E7EB','#313338')):
