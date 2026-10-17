@@ -1,8 +1,8 @@
 # Semantic wiki Phase A validation
 
-Status: integration verification in progress. This is an offline correctness baseline for the approved prototype, not a released game feature or a performance result.
+Status: offline Phase A integration verified. This is an offline correctness baseline for the approved prototype, not a released game feature or a performance result.
 
-The user approved the architecture and recommended choices on 2026-10-17. [Architecture PR #2016](https://github.com/SharpMUSH/SharpMUSH/pull/2016) merged at `59458edad21dc79706ee9a19d4865d583b4c8eaf`. [The implementation plan](../superpowers/plans/2026-10-17-semantic-wiki-phase-a.md) separates this milestone from the indexed, recovery and shared-game-load gates.
+The user approved the architecture and recommended choices on 2026-10-17. [Implementation issue #2031](https://github.com/SharpMUSH/SharpMUSH/issues/2031) tracks the A–D prototype following the completed PF2e organization review (#1970). [Architecture PR #2016](https://github.com/SharpMUSH/SharpMUSH/pull/2016) merged at `59458edad21dc79706ee9a19d4865d583b4c8eaf`. [The implementation plan](../superpowers/plans/2026-10-17-semantic-wiki-phase-a.md) separates this milestone from the indexed, recovery and shared-game-load gates.
 
 ## Reproducible source and extraction
 
@@ -59,14 +59,22 @@ Canonical validation tests cover qualified property keys, typed failure results 
 | Dataset safeguards | 6 passed, no failures/skips |
 | Authored extraction samples | 2 passed, no failures/skips |
 | Explicit corpus oracle and frozen declarations | Each passed 1/1, no failures/skips; fresh integration reruns also passed |
-| Fresh integration formatting-gated build | 0 warnings/errors, 54.15 seconds |
-| Complete engine suite | Initial integration: 18,514 passed, 2 failed, 50 skipped (18,566 total), 7m32s; failures under investigation |
+| Final integration formatting-gated build | 0 warnings/errors, 1m04.80s |
+| Complete engine suite | 18,519 passed, 0 failed, 50 skipped (18,569 total), 6m57.037s |
 | Tracked-repository C# whitespace | Passed for all 3,859 tracked C# files |
-| Independent final review | Pending |
+| Independent final review | Whole-branch Phase A spec/quality PASS; separate fixture and grant-cache fix reviews PASS |
 
-Worker reports retain behavioral RED/GREEN evidence and normal formatting-gated builds. Scope-specific independent reviews passed after correcting qualified-key and malformed-record boundaries and strengthening meaningful aggregate/ordering tests. Extraction review independently verified all source bytes, exact coverage, deterministic outputs and attribution preservation; its README reproducibility correction was applied. Tracked-repository whitespace verification passed. The complete engine suite and fresh whole-branch review remain final integration gates. The two initial suite failures are the Rhost exporter stderr-budget test and the import-preview live-file hash assertion; neither is waived.
+Worker reports retain behavioral RED/GREEN evidence and normal formatting-gated builds. Independent whole-branch and scoped correction reviews passed without findings. Extraction review rechecked every source byte, coverage, deterministic output and attribution preservation. The final complete engine run and tracked-repository formatting passed.
+
+Integration also corrected three existing test fixtures; production behavior is unchanged:
+
+- **Exporter deadline:** A delayed real child showed the 500 ms fixture deadline could expire before the intended byte-budget failure. Ordinary failure cases now allow initialization time; the dedicated timeout remains 500 ms. All 21 focused cases passed with strict error and source/publication assertions. The initial suite discarded exception details, so its exact original exception is not claimed.
+- **Preview isolation:** A controlled maintenance job changed only expanded server data before any upload. The dedicated fixture now awaits maintenance shutdown and drains startup work before its baseline. Its complete live-file hash remains strict and ordered; a real write control proves writes are still detected. Both cases passed. The original run did not capture its exact writer.
+- **Wiki grant setup:** The fixture assigned approval directly without production’s grant invalidation. A real mediator cache prewarm followed by the old setup and an actual command reproduced `needs wiki.create`. The setup now sends production’s per-object invalidation. All 71 wiki command cases passed, including persisted-page/output checks and the four prior failures. Their original outputs were not retained, so precise original denials are not asserted retrospectively.
 
 ## Next gated milestone
+
+[The reviewed B1 implementation plan](../superpowers/plans/2026-10-17-semantic-wiki-phase-b1.md) narrows the next slice to native storage evidence; B1 is only part of Phase B.
 
 Phase B needs an atomic page/fact/summary/index/version commit, immutable target identities, a bounded visibility-class catalog and bounded direct inverse reads. It must prove real package keep-mine/take-theirs/removal/compensation behavior at the new aggregate boundary and preserve existing authorization policy. Portal grants currently aggregate account/character authority separately from acting-character draft attribution; the prototype must not silently change that contract.
 
