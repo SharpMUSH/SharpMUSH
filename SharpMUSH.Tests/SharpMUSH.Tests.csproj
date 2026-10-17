@@ -21,6 +21,7 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../tools/ContractAudit/SourceProvenance.cs" Link="Documentation/SourceProvenance.cs" />
     <ProjectReference Include="../SharpMUSH.Plugins.Scene/SharpMUSH.Plugins.Scene.csproj" Aliases="ScenePlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" Aliases="LspPlugin" />

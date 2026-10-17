@@ -1,7 +1,6 @@
 {
   "schema": 2,
-  "baseRevision": "ab28a4d7a44452978c186e1cd00edde60c8e6b2d",
-  "trackedChanges": true,
+  "provenance": {"Algorithm":"sha256-length-prefixed-tracked-paths-and-bytes-excluding-census","ContentSha256":"603842435af355e840569b1588626746e360778c2f26b0a090d67881a743fa57","Files":5419},
   "scope": "Implementation assembly, shipped default aliases and every plugin module referenced by the Server project. Registration reconciliation is not behavioral completion.",
   "entries": [
     {"kind":"function","name":"@@","origin":"Functions.AtAt","metadata":{"EmptyCallMinArgs":0,"Flags":1,"MaxArgs":2147483647,"MinArgs":1,"Name":"@@","ParameterNames":[],"Restrict":[],"SideEffectMinArgs":0,"UpperName":"@@"},"source":["SharpMUSH.Implementation/Functions/StringFunctions.cs:2221"],"status":"pending-behavioral-review","reconciled":"reflection/generated-metadata","review":{"complete":false,"reviewedFacets":["registration-metadata"],"pendingFacets":["full-argument-semantics","evaluation-and-laziness","authority-and-permissions","errors-and-boundaries","resource-limits","compatibility","live-consumer-identity"]},"evidence":["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs","docs/audits/softcode-contracts.md#function-consumers"]},

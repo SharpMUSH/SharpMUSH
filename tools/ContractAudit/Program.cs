@@ -4,6 +4,7 @@ extern alias LspPlugin;
 extern alias McpPlugin;
 
 using System.Diagnostics;
+using SharpMUSH.Tools.ContractAudit;
 using System.Xml.Linq;
 using SharpMUSH.Library.Plugins;
 using System.Text.Json;
@@ -180,8 +181,7 @@ var callbacks = source.Where(line => Regex.IsMatch(line.Text,
 var output = new
 {
 	schema = 2,
-	baseRevision = Git("rev-parse", "HEAD"),
-	trackedChanges = Git("status", "--porcelain", "--untracked-files=no").Length != 0,
+	provenance = SourceProvenance.Capture(root, Git("ls-files", "-z").Split('\0', StringSplitOptions.RemoveEmptyEntries)),
 	scope = "Implementation assembly, shipped default aliases and every plugin module referenced by the Server project. Registration reconciliation is not behavioral completion.",
 	entries = rows,
 	shippedPluginModules = modules,
