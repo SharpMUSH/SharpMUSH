@@ -1,6 +1,24 @@
 # Offline semantic wiki extraction prototype
 
-This tool verifies and extracts the immutable `pf2e-remaster` 1.1.1 package at Git commit `2659a733a4519b76e64a727be2687794afc04f6b`. It has no network, production DI, live wiki writes, index, or authorization cache.
+This tool verifies and extracts the immutable `pf2e-remaster` 1.1.1 package at Git commit `2659a733a4519b76e64a727be2687794afc04f6b`. It has no network, production DI, live wiki writes, production index, or authorization cache.
+
+## Native foundation under construction
+
+The tool also contains pure B1 key/codec/preparation components. These do not yet establish the native aggregate, recovery, indexed-query or live authorization gates in [the B1 plan](../../docs/superpowers/plans/2026-10-17-semantic-wiki-phase-b1.md).
+
+Record format version is 1, followed by a kind byte: page 1, facts 2, internal schema identity 3. Counts and lengths are signed little-endian int32; stored integer fields are little-endian int64. Strings are strict UTF-8. Page encoding retains every source field/stamp; facts retain each typed value and all provenance fields. Nullable draft author has an explicit presence byte. Invalid tags, Boolean bytes, lengths, UTF-8 and trailing data reject explicitly. Decoding requires a separate caller-owned model-memory reservation.
+
+Native key ordering is separate from record encoding. IDs are positive unsigned 64-bit big-endian. Integer keys encode the signed value after XOR with the sign bit, also big-endian. Scalar tags are PageRef 1, Integer 2, Boolean 3, Keyword 4; every key scalar occupies eight bytes. PageRef/keyword scalars are numeric IDs, Boolean is zero or one. Registry kinds are Page 1, Property 2, Keyword 3, Collection 4, Class 5.
+
+| Key | Layout | Bytes |
+| --- | --- | ---: |
+| Subject | subject ID | 8 |
+| Forward | subject, property, scalar tag, scalar | 25 |
+| Posting | collection, class, property, scalar tag, scalar, subject | 41 |
+| Registry lookup | registry kind, SHA256 of exact external identity | 33 |
+| Registry reverse | registry kind, ID | 9 |
+
+Preparation measures inputs before allocation and detaches schema/page arrays before invoking the supplied fact enumerable. It stops at raw fact 129 even if entries would deduplicate. Its immutable certificate identifies the exact schema; request digest additionally covers the complete canonical page/facts, expected state version and deletion. Pure preparation's size estimate cannot authorize writes: the later aggregate must check the complete transactional delta before its first mutation, including registries, catalog, versions and receipts. Prototype limits remain experimental: 128 facts/subject, 64KiB canonical facts, 128KiB native key-plus-value reads, 8KiB structural descriptors, 16KiB summaries and 256KiB complete write deltas.
 
 The embedded checked lock was independently compared with that Git tree. All 4,714 declared/required files (4,560,161 bytes) must match both exact SHA256 and Git blob SHA1 before any Markdown is interpreted. These are the manifest, all 4,711 declared page files, NOTICE.md and README.md. Extra undeclared files are ignored; the lock does not authenticate a checkout's history, remote, or any live wiki. The manifest's declared files must exactly match that set. Traversal and symlink paths are refused. Reads are bounded to 1 MiB/file, use cancellation, and extraction uses the verified immutable in-memory text.
 
