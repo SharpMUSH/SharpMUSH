@@ -241,6 +241,29 @@ public class PackageBatchExecutionTests
 	}
 
 	[Test]
+	public async Task ExplicitNewPluginAndContent_AreReviewableButContentWaitsUntilPluginActuallyRuns()
+	{
+		using var f = new Fixture();
+		f.AddPlugin("managed", new PluginPackageFixture.BinarySource("managed"));
+		f.Add("content", plugin: "managed");
+		PackageBatchIntent[] intents = [Install("content"), Install("managed")];
+		var initial = (await f.Service.PlanAsync(new(intents), Actor)).Expect<PackageBatchPlanResponse>();
+		var pluginStep = initial.Steps.Single(s => s.Intent.TargetId == "managed");
+		var reviewed = (await f.Service.PlanAsync(new(intents, [new(pluginStep.StepId, AllowPluginCode: true)]), Actor))
+			.Expect<PackageBatchPlanResponse>();
+		await Assert.That(reviewed.Blockers).IsEmpty();
+		var run = await f.Apply(reviewed);
+		await Assert.That(f.Applied).IsEquivalentTo(["managed"]);
+		await Assert.That(run.State).IsEqualTo(PackageBatchRunState.AwaitingRestart);
+		await Assert.That(run.Steps.Single(s => s.Intent.TargetId == "content").State).IsEqualTo(PackageBatchStepState.AwaitingRestart);
+		f.Registrations["managed"] = new(false, 1, 0);
+		f.PluginStates[0] = f.PluginStates[0] with { Status = PluginBootStatus.Loaded, Pending = PluginPendingChange.None };
+		var resumed = await f.Apply(await f.Review([Install("content")]));
+		await Assert.That(resumed.State).IsEqualTo(PackageBatchRunState.Completed);
+		await Assert.That(f.Applied).IsEquivalentTo(["managed", "content"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task AggregateBinaryLimitRefusesBeforeTokenAndWrites()
 	{
 		using var f = new Fixture();

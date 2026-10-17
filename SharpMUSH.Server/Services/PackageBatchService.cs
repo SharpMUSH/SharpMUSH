@@ -312,6 +312,9 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 		foreach (var candidate in candidates.Where(c => normalized.Any(i => i.Action == PackageBatchAction.Install && Same(i.TargetId, c.Manifest.Name))))
 			desired.Add(new(candidate.Manifest.Name, candidate.Manifest.Version.ToString(), "projection", null, candidate.Commit, null, DateTimeOffset.UnixEpoch, 0));
 		var desiredPlugins = pluginList.Plugins.Where(PackageBatchPlanner.IsRunning).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		foreach (var candidate in candidates.Where(c => c.Manifest.Kind == PackageKind.Plugin && normalized.Any(i =>
+			i.Action == PackageBatchAction.Install && Same(i.TargetId, c.Manifest.Name) && i.Source == c.Source)))
+			desiredPlugins.Add(candidate.Manifest.Name);
 		foreach (var intent in normalized.Where(i => i.Action == PackageBatchAction.PluginOn)) desiredPlugins.Add(intent.TargetId);
 		foreach (var intent in normalized.Where(i => i.Action == PackageBatchAction.PluginOff)) desiredPlugins.Remove(intent.TargetId);
 		var reviews = (request.Reviews ?? []).GroupBy(r => r.StepId, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);

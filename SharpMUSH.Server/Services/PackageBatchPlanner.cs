@@ -179,6 +179,13 @@ public static class PackageBatchPlanner
 			{
 				var next = new PackageBatchIntent(pluginId, PackageBatchAction.PluginOn);
 				if (Requested(pluginId, PackageBatchAction.PluginOff)) Block(id, "contradictory-dependency", $"{id} requires plugin {pluginId}, requested off.");
+				else if (intents.GetValueOrDefault(Key(pluginId, PackageBatchAction.Install)) is { Action: PackageBatchAction.Install } provider
+					&& Candidate(provider) is { Manifest.Kind: PackageKind.Plugin })
+				{
+					// Managed plugin manifests must name their package id; only this explicitly selected source provides it.
+					VisitInstall(provider);
+					Before(provider, intent);
+				}
 				else if (!plugins.TryGetValue(pluginId, out var plugin)) Block(id, "missing-plugin", $"{id} requires unavailable plugin {pluginId}.");
 				else if (!IsRunning(plugin) && !Requested(pluginId, PackageBatchAction.PluginOn)) Propose(next, $"{id} requires plugin {pluginId} running.");
 				Before(next, intent);

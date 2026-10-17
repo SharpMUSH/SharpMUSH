@@ -170,6 +170,33 @@ public class PackageBatchPlannerTests
 	}
 
 	[Test]
+	public async Task ExplicitPluginPackageInstall_ProvidesRequiredPlugin_AndRunsBeforeContent()
+	{
+		var content = Candidate("content") with { Manifest = Manifest("content") with { Plugins = ["managed"] } };
+		var managed = Candidate("managed") with { Manifest = Manifest("managed") with { Kind = PackageKind.Plugin } };
+		var plan = Plan([Install("content"), Install("managed")], [], [], [content, managed]);
+		await Assert.That(plan.Blockers).IsEmpty();
+		await Assert.That(plan.Proposals).IsEmpty();
+		await Assert.That(plan.Steps.Select(s => s.Intent.TargetId)).IsEquivalentTo(["managed", "content"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(plan.Steps[0].RequiresRestart).IsTrue();
+	}
+
+	[Test]
+	public async Task RequiredPlugin_IsNotProvidedByUnselectedOrDifferentSourcePluginCandidate()
+	{
+		var content = Candidate("content") with { Manifest = Manifest("content") with { Plugins = ["managed"] } };
+		var managed = Candidate("managed") with { Manifest = Manifest("managed") with { Kind = PackageKind.Plugin } };
+		var unselected = Plan([Install("content")], [], [], [content, managed]);
+		await Assert.That(unselected.Blockers.Select(b => b.Code)).Contains("missing-plugin");
+		var other = Candidate("managed") with { Source = new("other", "managed") };
+		var wrongSource = Plan([Install("content"), Install("managed") with { Source = other.Source }], [], [], [content, managed, other]);
+		await Assert.That(wrongSource.Blockers.Select(b => b.Code)).Contains("missing-plugin");
+		var off = Plan([Install("content"), Install("managed"), new("managed", PackageBatchAction.PluginOff)], [], [], [content, managed]);
+		await Assert.That(off.Blockers.Select(b => b.Code)).Contains("contradictory-dependency");
+	}
+
+	[Test]
 	public async Task RemovingPluginOwner_RequiresDiscoveredDependentPluginOffFirst()
 	{
 		var projection = new PackageBatchProjection([Installed("owner") with { Kind = PackageKind.Plugin }], [], [],
