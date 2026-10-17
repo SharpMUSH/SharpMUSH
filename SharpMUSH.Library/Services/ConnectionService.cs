@@ -126,11 +126,19 @@ public class ConnectionService(
 
 	public async ValueTask Bind(long handle, DBRef player, bool firstLogin = false)
 	{
-		var get = Get(handle);
-		if (get is null) return;
+		await BindCoreAsync(handle, player, firstLogin, null);
+	}
 
-		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return;
-		if (!await ReplaceAsync(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn })) return;
+	public ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize)
+		=> BindCoreAsync(handle, player, false, authorize);
+
+	private async ValueTask<bool> BindCoreAsync(long handle, DBRef player, bool firstLogin, Func<Task<bool>>? authorize)
+	{
+		var get = Get(handle);
+		if (get is null || authorize is not null && get.Ref is not null) return false;
+
+		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return false;
+		if (!await ReplaceAsync(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, authorize)) return false;
 
 		if (stateStore != null)
 		{
@@ -147,6 +155,7 @@ public class ConnectionService(
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State,
 			IConnectionService.ConnectionState.LoggedIn, firstLogin));
+		return true;
 	}
 
 	public async ValueTask Unbind(long handle)
@@ -233,11 +242,12 @@ public class ConnectionService(
 	}
 
 	/// <summary>Swaps <paramref name="current"/> for <paramref name="next"/> if it is still the stored entry.</summary>
-	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next)
+	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next, Func<Task<bool>>? authorize = null)
 	{
 		await current.Binding.PublicationGate.WaitAsync();
 		try
 		{
+			if (authorize is not null && !await authorize()) return false;
 			lock (_bindingLock)
 			{
 				if (!_sessionState.TryUpdate(current.Handle, next with { Binding = new() }, current)) return false;

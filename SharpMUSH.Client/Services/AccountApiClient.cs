@@ -185,10 +185,26 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 			$"api/account/characters/{dbrefNumber}/appearance", appearance, "The server did not say what it stored.");
 
 	public Task<ApiResult<Success>> ChangePasswordAsync(string oldPassword, string newPassword) =>
-		Client.PutApiAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));
+		SecurityPutAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));
 
 	public Task<ApiResult<Success>> ChangeEmailAsync(string? newEmail, string currentPassword) =>
-		Client.PutApiAsync("api/account/email", new ChangeEmailRequest(newEmail, currentPassword));
+		SecurityPutAsync("api/account/email", new ChangeEmailRequest(newEmail, currentPassword));
+
+	private string? securityReplacement;
+	private bool securitySignedOut;
+	public bool TakeSecuritySignedOut() { var value = securitySignedOut; securitySignedOut = false; return value; }
+	public string? TakeSecurityReplacement() { var token = securityReplacement; securityReplacement = null; return token; }
+	private async Task<ApiResult<Success>> SecurityPutAsync<T>(string path, T body)
+	{
+		try
+		{
+			using var response = await Client.PutAsJsonAsync(path, body);
+			securitySignedOut = response.Headers.Contains("X-SharpMUSH-Signed-Out");
+			securityReplacement = response.Headers.TryGetValues("X-SharpMUSH-Replacement-Session", out var values) ? values.SingleOrDefault() : null;
+			return response.IsSuccessStatusCode ? new Success() : ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
+		}
+		catch (Exception ex) { return ApiFailure.Transport(ex); }
+	}
 
 	public Task<ApiResult<Success>> ChangeUsernameAsync(string newUsername) =>
 		Client.PutApiAsync("api/account/username", new ChangeUsernameRequest(newUsername));
@@ -214,8 +230,19 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<Success>> RenamePasskeyAsync(string id, string name) =>
 		Client.PutApiAsync($"api/account/passkeys/{Uri.EscapeDataString(id)}", new RenamePasskeyRequest(name));
 
-	public Task<ApiResult<Success>> RemovePasskeyAsync(string id) =>
-		Client.DeleteApiAsync($"api/account/passkeys/{Uri.EscapeDataString(id)}");
+	public async Task<ApiResult<Success>> RemovePasskeyAsync(string id, string? proofGrant = null)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Delete, $"api/account/passkeys/{Uri.EscapeDataString(id)}");
+		if (proofGrant is not null) request.Headers.Add("X-SharpMUSH-Proof", proofGrant);
+		try
+		{
+			using var response = await Client.SendAsync(request);
+			securitySignedOut = response.Headers.Contains("X-SharpMUSH-Signed-Out");
+			securityReplacement = response.Headers.TryGetValues("X-SharpMUSH-Replacement-Session", out var values) ? values.SingleOrDefault() : null;
+			return response.IsSuccessStatusCode ? new Success() : ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
+		}
+		catch (Exception ex) { return ApiFailure.Transport(ex); }
+	}
 
 	public Task<ApiResult<Success>> LogoutAsync() => Client.PostApiAsync("api/account/logout");
 }

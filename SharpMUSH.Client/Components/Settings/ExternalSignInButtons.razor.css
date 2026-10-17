@@ -1,0 +1,4 @@
+.external-signin { display: grid; gap: .65rem; margin-top: 1rem; }
+.external-signin-button { min-height: 2.75rem; padding: .6rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm, 6px); color: var(--text-primary); background: var(--surface-1); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.external-signin-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.external-signin-button:disabled { opacity: .6; cursor: wait; }

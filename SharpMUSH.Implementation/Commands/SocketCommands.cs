@@ -241,7 +241,9 @@ public partial class Commands
 
 		if (username.Equals("token", StringComparison.OrdinalIgnoreCase))
 		{
-			return await HandleTokenLogin(parser, handle, password, ipAddress);
+			return password.StartsWith("nc1_", StringComparison.Ordinal)
+				? await HandleNativeTokenLogin(parser, handle, password, ipAddress, hostName)
+				: await HandleTokenLogin(parser, handle, password, ipAddress);
 		}
 
 		var nameItems = ArgHelpers.NameList(username).ToList();

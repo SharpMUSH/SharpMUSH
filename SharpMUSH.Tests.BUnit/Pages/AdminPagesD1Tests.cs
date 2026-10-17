@@ -60,6 +60,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton<AdminGuestsService>()
 			.AddSingleton<AdminAccountsService>()
+			.AddSingleton<AccountSecurityClient>()
 			.AddSingleton<AdminCharactersService>()
 			.AddSingleton<AdminAuditService>()
 			.AddSingleton<AdminBansService>()

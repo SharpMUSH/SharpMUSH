@@ -71,7 +71,7 @@ public partial class LightningDatabase
 	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (tx.TryGet(Tables.AccountUser, Keys.Lower(username), out _))
 				throw new InvalidOperationException($"Username '{username}' is already taken.");
@@ -103,34 +103,36 @@ public partial class LightningDatabase
 	public async ValueTask UpdateAccountPasswordAsync(string accountId, string newHash, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
 			var updated = record with { PasswordHash = newHash, CredentialEpoch = checked(record.CredentialEpoch + 1), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(updated));
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask UpdateAccountMustChangePasswordAsync(string accountId, bool value, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
-			var updated = record with { MustChangePassword = value, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+			if (record.MustChangePassword == value) return;
+			var updated = record with { MustChangePassword = value, CredentialEpoch = checked(record.CredentialEpoch + 1), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(updated));
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask UpdateAccountEmailAsync(string accountId, string? newEmail, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
+			if (string.Equals(record.Email, newEmail, StringComparison.Ordinal)) return;
 
 			if (newEmail is not null && tx.TryGet(Tables.AccountEmail, Keys.Lower(newEmail), out var ownerBytes) && Keys.ReadStr(ownerBytes) != key)
 				throw new InvalidOperationException($"Email '{newEmail}' is already registered.");
@@ -140,15 +142,15 @@ public partial class LightningDatabase
 			if (newEmail is not null)
 				tx.Put(Tables.AccountEmail, Keys.Lower(newEmail), Keys.Str(key));
 
-			var updated = record with { Email = newEmail, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+			var updated = record with { Email = newEmail, CredentialEpoch = checked(record.CredentialEpoch + 1), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(updated));
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
@@ -167,7 +169,7 @@ public partial class LightningDatabase
 	public async ValueTask<CharacterLinkWrite> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		return await Store.WriteAsync<CharacterLinkWrite>(tx =>
+		return await WriteCredentialsAsync<CharacterLinkWrite>(tx =>
 		{
 			if (tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var heldBy))
 			{
@@ -180,13 +182,13 @@ public partial class LightningDatabase
 			tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
 			AdvanceAccountCredentialEpoch(tx, key);
 			return new Linked();
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask<bool> UnlinkCharacterFromAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			var held = tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var heldBy)
 				&& Keys.ReadStr(heldBy) == key;
@@ -194,7 +196,7 @@ public partial class LightningDatabase
 			tx.Delete(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
 			if (held) AdvanceAccountCredentialEpoch(tx, key);
 			return held;
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public ValueTask<IReadOnlyList<SharpPlayer>> GetCharactersForAccountAsync(string accountId, CancellationToken cancellationToken = default)
@@ -220,26 +222,27 @@ public partial class LightningDatabase
 	public async ValueTask UpdateAccountStatusAsync(string accountId, AccountStatus status, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
-			var updated = record with { Status = status.ToString(), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+			var updated = record with { Status = status.ToString(), CredentialEpoch = checked(record.CredentialEpoch + 1), UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(updated));
 			tx.Delete(Tables.AccountBan, Keys.Str(key));
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask<bool> BanAccountAsync(AccountBan ban, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(ban.AccountId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(key), out var bytes)) return false;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
 			tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(record with
 			{
 				Status = nameof(AccountStatus.Disabled),
+				CredentialEpoch = checked(record.CredentialEpoch + 1),
 				UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}));
 			tx.Put(Tables.AccountBan, Keys.Str(key), Codec.Serialize(new AccountBanRecord
@@ -250,14 +253,14 @@ public partial class LightningDatabase
 				ExpiresAtMs = ban.ExpiresAt?.ToUnixTimeMilliseconds()
 			}));
 			return true;
-		}, cancellationToken);
+		}, cancellationToken, accountId: ban.AccountId);
 	}
 
 	public async ValueTask<bool> LiftAccountBanAsync(string accountId, DateTimeOffset? expiredBy = null,
 		CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.AccountBan, Keys.Str(key), out var banBytes)) return false;
 			if (expiredBy is { } now && !MapToBan(key, Codec.Deserialize<AccountBanRecord>(banBytes)).HasExpired(now))
@@ -270,11 +273,12 @@ public partial class LightningDatabase
 				tx.Put(Tables.Account, Keys.Str(key), Codec.Serialize(record with
 				{
 					Status = nameof(AccountStatus.Active),
+					CredentialEpoch = checked(record.CredentialEpoch + 1),
 					UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 				}));
 			}
 			return true;
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public ValueTask<AccountBan?> GetAccountBanAsync(string accountId, CancellationToken cancellationToken = default)

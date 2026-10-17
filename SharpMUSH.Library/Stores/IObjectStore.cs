@@ -55,6 +55,13 @@ public interface IObjectStore
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default);
 
+	/// <summary>Always reads exact active account/character ownership and both credential epochs in one snapshot.</summary>
+	ValueTask<Found<NativeCharacterAuthority>> GetNativeCharacterAuthorityAsync(string accountId, DBRef character, CancellationToken cancellationToken = default);
+
+	/// <summary>Writes a prehashed owned-character password only after rechecking full identity and ownership in the transaction.</summary>
+	ValueTask<Result<Success>> SetOwnedPlayerPasswordAsync(string accountId, DBRef character, string passwordHash, CancellationToken cancellationToken = default);
+
+
 	/// <summary>
 	/// Sets the quota for a player.
 	/// </summary>

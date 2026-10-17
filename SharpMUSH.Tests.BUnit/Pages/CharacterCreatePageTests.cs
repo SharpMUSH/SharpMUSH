@@ -55,6 +55,7 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 			.AddMudServices()
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(factory)
+			.AddSingleton<NativeCharacterCredentialsClient>()
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),

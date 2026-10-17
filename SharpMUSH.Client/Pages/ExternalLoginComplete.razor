@@ -1,0 +1,63 @@
+@page "/auth/external/complete"
+@layout OnboardingLayout
+@using SharpMUSH.Client.Layout
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models
+@using System.Text.Json
+@inject AccountSecurityClient Security
+@inject AccountAuthService Auth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+<PageTitle>@Loc["AuthSignIn"] — @Loc["AppTitle"]</PageTitle>
+<div class="external-complete">
+    <h1>@Loc["AuthSignIn"]</h1>
+    @if (_error is not null && !_signup)
+    {
+        <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert>
+        <MudLink Href="/login">@Loc["AuthStartAgain"]</MudLink>
+    }
+    else if (_signup)
+    {
+        <p>@Loc["AuthExternalChooseUsername"]</p>
+        @if(_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
+        <MudTextField @bind-Value="_username" Label="@Loc["AuthUsername"]" Variant="Variant.Outlined" Disabled="_busy" />
+        <MudButton OnClick="Create" Disabled="_busy" Variant="Variant.Filled" Color="Color.Primary">@Loc["AuthCreateAccount"]</MudButton>
+        <MudButton OnClick="Cancel" Disabled="_busy">@Loc["Cancel"]</MudButton>
+    }
+    else { <MudProgressCircular Indeterminate="true" aria-label="@Loc["Loading"]" /> }
+</div>
+@code {
+    private bool _signup, _busy;
+    private string _username = "";
+    private string? _error;
+    private string _returnPath = "/account";
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitAsync();
+        await Apply(await Security.RequestAsync("api/auth/external/complete", new { }, csrf: true));
+    }
+    private async Task Create()
+    {
+        _busy = true; _error=null;
+        await Apply(await Security.RequestAsync("api/auth/external/signup", new { username = _username }, csrf: true));
+        _busy = false;
+    }
+    private async Task Cancel() { await Security.RequestAsync("api/auth/external/cancel", new { }, csrf: true); Nav.NavigateTo("/login"); }
+    private async Task Apply(ApiResult<JsonElement> result)
+    {
+        if (result is ApiFailure failure) { _error = failure.Message; return; }
+        if (result is not JsonElement data) return;
+        if (data.TryGetProperty("returnPath", out var returnPath) && returnPath.GetString() is { } path && Allowed(path)) _returnPath = path;
+        if (data.TryGetProperty("signupRequired", out var signup) && signup.GetBoolean()) { _signup = true; return; }
+        if (data.TryGetProperty("grant", out var grant) && data.TryGetProperty("operation", out var operation))
+        {
+            Security.HoldGrant((AccountSecurityOperation)operation.GetInt32(), grant.GetString()!);
+            Nav.NavigateTo(_returnPath); return;
+        }
+        if (data.TryGetProperty("linked", out _)) { Nav.NavigateTo(_returnPath); return; }
+        if (await Security.AdoptAsync(data) is ApiFailure adoption) { _error = adoption.Message; return; }
+        Nav.NavigateTo(Auth.MustChangePassword ? "/account" : Auth.Characters.Count == 0 ? "/characters/new" : _returnPath);
+    }
+    private static bool Allowed(string path) => path.StartsWith('/') && !path.StartsWith("//", StringComparison.Ordinal) && !path.Contains('\\') && !path.Any(char.IsControl);
+}

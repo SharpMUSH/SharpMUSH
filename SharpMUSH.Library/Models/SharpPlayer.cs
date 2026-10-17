@@ -21,6 +21,8 @@ public class SharpPlayer : IObjectShaped<SharpPlayer>
 
 	public required string PasswordHash { get; set; }
 
+	public long PasswordCredentialEpoch { get; set; }
+
 	public string? PasswordSalt { get; set; }
 
 	/// <summary>

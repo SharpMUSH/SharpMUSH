@@ -35,7 +35,7 @@ public partial class LightningDatabase
 	public async ValueTask UpdateAccountCharacterPasswordLoginAsync(string accountId, bool enabled, CancellationToken cancellationToken = default)
 	{
 		var accountKey = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(accountKey), out var bytes)) return;
 			var record = Codec.Deserialize<AccountRecord>(bytes);
@@ -46,14 +46,14 @@ public partial class LightningDatabase
 				CredentialEpoch = checked(record.CredentialEpoch + 1),
 				UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}));
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask<Result<Success>> TryRemoveAccountPasswordAsync(string accountId, IReadOnlyCollection<string> enabledRegistrations,
 		CancellationToken cancellationToken = default)
 	{
 		var accountKey = ParseAccountId(accountId);
-		return await Store.WriteAsync<Result<Success>>(tx =>
+		return await WriteCredentialsAsync<Result<Success>>(tx =>
 		{
 			if (!tx.TryGet(Tables.Account, Keys.Str(accountKey), out var bytes)) return new Error<string>("Account not found.");
 			var record = Codec.Deserialize<AccountRecord>(bytes);
@@ -67,7 +67,7 @@ public partial class LightningDatabase
 				UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}));
 			return new Success();
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask<Result<Success>> TryRemoveAccountPasskeyAsync(string accountId, byte[] credentialId,
@@ -75,7 +75,7 @@ public partial class LightningDatabase
 	{
 		var accountKey = ParseAccountId(accountId);
 		var key = PasskeyKey(credentialId);
-		return await Store.WriteAsync<Result<Success>>(tx =>
+		return await WriteCredentialsAsync<Result<Success>>(tx =>
 		{
 			if (ReadOwnPasskey(tx, accountKey, key) is not { } record || !record.CredentialId.SequenceEqual(credentialId))
 				return new Error<string>("Passkey not found.");
@@ -85,6 +85,6 @@ public partial class LightningDatabase
 			tx.Delete(Tables.AccountPasskeyByAccount, Keys.Str(accountKey), key);
 			AdvanceAccountCredentialEpoch(tx, accountKey);
 			return new Success();
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 }

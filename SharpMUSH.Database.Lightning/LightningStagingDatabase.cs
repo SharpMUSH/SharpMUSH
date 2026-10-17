@@ -53,27 +53,28 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 	/// directory under its own gate and reopens, so every reference the host already holds keeps working
 	/// and reads issued mid-swap block on the gate rather than failing. This instance is spent afterwards.
 	/// </summary>
-	public async Task PromoteToLiveAsync(CancellationToken ct = default)
-	{
-		if (IsPromoted) throw new InvalidOperationException("Staging already promoted.");
-		if (_aborted) throw new InvalidOperationException("Staging was aborted.");
+	public Task PromoteToLiveAsync(CancellationToken ct = default)
+		=> _live.MutateWorldAuthorityAsync(async () =>
+		{
+			if (IsPromoted) throw new InvalidOperationException("Staging already promoted.");
+			if (_aborted) throw new InvalidOperationException("Staging was aborted.");
 
-		// Must be fully closed before the move: LMDB writes its lock file and pending pages into this
-		// directory, and the live environment is about to open it as its own.
-		await base.DisposeAsync();
-		var previousPath = _live.Store.Path + ".previous";
-		_live.Store.SwapDirectory(StagingPath, previousPath);
-		// The definitions the live instance holds in memory were read from the world just moved aside.
-		_live.ReloadDefinitions();
+			// Must be fully closed before the move: LMDB writes its lock file and pending pages into this
+			// directory, and the live environment is about to open it as its own.
+			await base.DisposeAsync();
+			var previousPath = _live.Store.Path + ".previous";
+			_live.Store.SwapDirectory(StagingPath, previousPath);
+			// The definitions the live instance holds in memory were read from the world just moved aside.
+			_live.ReloadDefinitions();
 
-		// The live instance now fronts a world whose ids it never allocated — rebuild its allocators or
-		// the next @create would overwrite an imported object.
-		await _live.RecomputeCountersAsync(ct);
+			// The live instance now fronts a world whose ids it never allocated — rebuild its allocators or
+			// the next @create would overwrite an imported object.
+			await _live.RecomputeCountersAsync(ct);
 
-		IsPromoted = true;
-		_logger.LogInformation("Lightning staging database {StagingId} promoted to live at {Path}; the world it replaced is kept at {PreviousPath}",
-			StagingId, _live.Store.Path, previousPath);
-	}
+			IsPromoted = true;
+			_logger.LogInformation("Lightning staging database {StagingId} promoted to live at {Path}; the world it replaced is kept at {PreviousPath}",
+				StagingId, _live.Store.Path, previousPath);
+		}, ct);
 
 	/// <summary>Closes and deletes this world. The live one is never touched. Idempotent, and a no-op
 	/// after a promotion.</summary>

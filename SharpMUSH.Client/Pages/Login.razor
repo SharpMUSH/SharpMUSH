@@ -92,6 +92,8 @@
             </MudTabPanel>
         </MudTabs>
 
+        <SharpMUSH.Client.Components.Settings.ExternalSignInButtons RememberMe="_rememberMe" ReturnPath="@(_returnUrl is { } route && route.StartsWith('/') && !route.StartsWith("//", StringComparison.Ordinal) ? route : "/account")" />
+
         <MudDivider Class="my-3" />
         <MudText Align="Align.Center" Style="font-size:0.8125rem;color:var(--text-faint);">
             @Loc["AuthConnectDirectly"]

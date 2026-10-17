@@ -14,7 +14,7 @@ namespace SharpMUSH.Server.Authentication.Passkeys;
 
 /// <summary>
 /// Registering passkeys to an account and signing in with them (WebAuthn, through Fido2NetLib). Passkeys
-/// sit beside the account's password; they replace typing it, not having it.
+/// are independent account sign-in methods; an account password is optional.
 /// </summary>
 /// <remarks>
 /// <para>Every passkey is a discoverable credential, so sign-in asks for no name first: the browser

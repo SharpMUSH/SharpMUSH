@@ -1,3 +1,5 @@
+using SharpMUSH.Library.DiscriminatedUnions;
+
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
@@ -33,6 +35,12 @@ public interface IAccountSessionStore
 	/// the request that was holding it.
 	/// </summary>
 	Task<SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default);
+
+	/// <summary>Checks a live tab session without renewing its expiry; remembered credentials are refused.</summary>
+	Task<Found<SessionIdentity>> InspectAsync(string token, CancellationToken ct = default);
+
+	/// <summary>Checks a source-session digest without retaining its bearer or extending expiry.</summary>
+	Task<Found<SessionIdentity>> InspectDigestAsync(string sessionDigest, CancellationToken ct = default);
 
 	/// <summary>
 	/// Creates a remembered login for <paramref name="accountId"/>: a credential that lasts

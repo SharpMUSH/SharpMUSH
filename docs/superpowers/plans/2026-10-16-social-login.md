@@ -38,12 +38,12 @@
 
 **Interfaces:** Produce `ExternalIdentityKey(string Registration, string Issuer, string Subject)` and `ExternalIdentity` (id/account/key/label/timestamps); `IExternalIdentityStore` with lookup/list, atomic provision/attach, last-use and guarded removal. Add nullable account hash and `AllowCharacterPasswordAccountLogin`. Preserve existing store signatures where compatible and provide explicit social-account provisioning transaction.
 
-- [ ] Write regression tests for old account hash, linked-character fallback, named-character account login, direct connect, bootstrap empty hash, and idempotent migration preserving links/sessions.
-- [ ] Run focused tests and capture failing new fallback/social expectations.
-- [ ] Implement migration plus optional-password representation; enable fallback for existing records and preserve existing registration behavior; social provisioning explicitly disables it.
-- [ ] Add identity transaction tests for full canonical tuple, collisions, same-email nonmerge, concurrent signup/link, deleted account refusal and same-provider multiple identities.
-- [ ] Implement canonical length-prefixed SHA256 key and full tuple equality, atomic provision/attach/removal with account-method count checks.
-- [ ] Run focused tests, format twice, commit foundations.
+- [x] Write regression tests for old account hash, linked-character fallback, named-character account login, direct connect, bootstrap empty hash, and idempotent migration preserving links/sessions.
+- [x] Run focused tests and capture failing new fallback/social expectations.
+- [x] Implement migration plus optional-password representation; enable fallback for existing records and preserve existing registration behavior; social provisioning explicitly disables it.
+- [x] Add identity transaction tests for full canonical tuple, collisions, same-email nonmerge, concurrent signup/link, deleted account refusal and same-provider multiple identities.
+- [x] Implement canonical length-prefixed SHA256 key and full tuple equality, atomic provision/attach/removal with account-method count checks.
+- [x] Run focused tests, format twice, commit foundations.
 
 ### Task 2: Credential proof, revocation and recovery boundary
 
@@ -51,12 +51,12 @@
 
 **Interfaces:** Gate exposes async account-scoped execution; proof store issues/takes operation-bound grants using session digest and account id, five-minute fixed expiry. Session store adds non-sliding live validation. Security service verifies dedicated account password or matching passkey/external proof, coordinates credential mutations/revocation and explicit legacy upgrade.
 
-- [ ] Add failing tests for expired/replayed/wrong-session proof; fallback/native strings rejected by dedicated proof; remembered login is not proof; non-sliding check leaves expiry unchanged.
-- [ ] Implement bounded proof store, credential epochs/gate, session revocation hooks and owned-character mutation serialization.
-- [ ] Add failing tests for first/change/remove password, passkey/email proof, final-method race, forced change, explicit legacy-only upgrade preserving current login.
-- [ ] Implement security endpoints retaining existing request forms, optional proof path and replacement-session response after account-wide revocation.
-- [ ] Add staff recovery tests for self/equal/higher/inactive privileged/owner/reserved targets and recent actor proof; implement persisted-grant hierarchy guard, audit and full revocation without enabling disabled targets.
-- [ ] Run security/session/passkey/recovery tests, format twice, commit.
+- [x] Add failing tests for expired/replayed/wrong-session proof; fallback/native strings rejected by dedicated proof; remembered login is not proof; non-sliding check leaves expiry unchanged.
+- [x] Implement bounded proof store, credential epochs/gate, session revocation hooks and owned-character mutation serialization.
+- [x] Add failing tests for first/change/remove password, passkey/email proof, final-method race, forced change, explicit legacy-only upgrade preserving legacy fallback.
+- [x] Implement security endpoints retaining existing request forms, optional proof path and replacement-session response after account-wide revocation.
+- [x] Add staff recovery tests for self/equal/higher/inactive privileged/owner/reserved targets and recent actor proof; implement persisted-grant hierarchy guard, audit and full revocation without enabling disabled targets.
+- [x] Run security/session/passkey/recovery tests, format twice, commit.
 
 ### Task 3: Four provider configurations and remote protocol integration
 
@@ -64,12 +64,12 @@
 
 **Interfaces:** `ExternalProviderRegistration` contains stable registration, provider, trusted HTTPS public origin, client id, Microsoft audience/tenants, enabled/config generation. `ExternalProviderCatalog` exposes ready public summaries and validated effective configuration, never secret values. Adapter returns `ExternalIdentityKey` plus bounded display label after validated handler proof.
 
-- [ ] Add failing config tests: all disabled, invalid production origin/userinfo/remote URL refused, secret absent/error, immediate disable and generation invalidation, restart-required effective status.
-- [ ] Add only framework-aligned OIDC dependency needed; register named remote schemes without changing default AccountSession scheme.
-- [ ] Configure Google/Microsoft OIDC code+PKCE/nonce validation, Microsoft-aware concrete tenant issuer validation and configured audience; Discord and Grapevine OAuth code exchange/userinfo using official capabilities and minimal scopes.
-- [ ] Add deterministic refusal/success tests for denied/missing/wrong claims, issuer/audience/tenant, token exchange errors and no token persistence; read current official protocol references when implementing adapters.
-- [ ] Add four distinct Sign-in provider admin tiles with real server readers/validation, secret links/status and affected-account disable acknowledgement; integrate #1984 contract after available.
-- [ ] Run provider/config/auth-scheme tests, format twice, commit.
+- [x] Add failing config tests: all disabled, invalid production origin/userinfo/remote URL refused, secret absent/error, immediate disable and generation invalidation, restart-required effective status.
+- [x] Add only framework-aligned OIDC dependency needed; register named remote schemes without changing default AccountSession scheme.
+- [x] Configure Google/Microsoft OIDC code+PKCE/nonce validation, Microsoft-aware concrete tenant issuer validation and configured audience; Discord and Grapevine OAuth code exchange/userinfo using official capabilities and minimal scopes.
+- [x] Add deterministic refusal/success tests for denied/missing/wrong claims, issuer/audience/tenant, token exchange errors and no token persistence; read current official protocol references when implementing adapters.
+- [x] Add four distinct Sign-in provider admin tiles with real server readers/validation, secret links/status and affected-account disable acknowledgement; integrate #1984 contract after available.
+- [x] Run provider/config/auth-scheme tests, format twice, commit.
 
 ### Task 4: Browser-bound login, signup and identity management journey
 
@@ -77,12 +77,12 @@
 
 **Interfaces:** Start endpoints create purpose/return/remember/account/session/config-bound transaction. Remote completion issues only browser-bound opaque handoff; POST handoff returns existing `AccountLoginResponse` or pending signup; signup consumes five-minute transaction only after successful atomic provision.
 
-- [ ] Write failing flow tests for same-origin/CSRF, wrong browser/account/session, open redirect, handoff/callback replay, config disable/change and username collision retry.
-- [ ] Extract shared session completion preserving bound character, permissions, remember policy, bans/logins/sitelock and MustChangePassword.
-- [ ] Implement start/callback/handoff/signup/link/reauth flows, clearing transient cookies at terminal outcomes and never authenticating APIs via external cookies.
-- [ ] Implement provider buttons, completion/signup page and explicit account-wide identity list/link/unlink/security proof UI, supporting multiple identities per provider and optional account password.
-- [ ] Add bUnit tests for password/passkey methods still visible, provider readiness, passwordless first password and security-removal signout warning.
-- [ ] Run flow/auth/bUnit tests, format twice, commit.
+- [x] Write failing flow tests for same-origin/CSRF, wrong browser/account/session, open redirect, handoff/callback replay, config disable/change and username collision retry.
+- [x] Extract shared session completion preserving bound character, permissions, remember policy, bans/logins/sitelock and MustChangePassword.
+- [x] Implement start/callback/handoff/signup/link/reauth flows, clearing transient cookies at terminal outcomes and never authenticating APIs via external cookies.
+- [x] Implement provider buttons, completion/signup page and explicit account-wide identity list/link/unlink/security proof UI, supporting multiple identities per provider and optional account password.
+- [x] Add bUnit tests for password/passkey methods still visible, provider readiness, passwordless first password and security-removal signout warning.
+- [x] Run flow/auth/bUnit tests, format twice, commit.
 
 ### Task 5: Independent character passwords and native secrets
 
@@ -90,12 +90,12 @@
 
 **Interfaces:** Mint returns plaintext once, opaque id, full DBRef and expiry; status excludes plaintext. Store contains only digest/session digest/full character identity/epochs under shared credential gate. `connect token nc1_...` dispatches separately and reuses normal player login completion.
 
-- [ ] Add failing atomic many-consumer, expiry boundary, capacity/rates, purpose separation, redaction and restart invalidation tests.
-- [ ] Implement bounded digest-only store with cleanup, non-sliding source-session revalidation and explicit revocation.
-- [ ] Add owned-character tests for nullable creation password producing nonempty unreachable random hash, failed attach reconciliation, full-identity owner password reset and recycled/transfer/ban races.
-- [ ] Implement exact-owned credential writes under provider boundary/gate, mint/redeem final-bind validation and revocation hooks without changing existing persistent or browser OTT login paths.
-- [ ] Implement generate/countdown/copy/revoke native panel, no-store responses and secure-transport advice; native credentials never enter account/claim/password APIs.
-- [ ] Run native/connect/OTT/resume/bUnit regressions, inspect captured logs for raw secrets, format twice, commit.
+- [x] Add failing atomic many-consumer, expiry boundary, capacity/rates, purpose separation, redaction and restart invalidation tests.
+- [x] Implement bounded digest-only store with cleanup, non-sliding source-session revalidation and explicit revocation.
+- [x] Add owned-character tests for nullable creation password producing nonempty unreachable random hash, failed attach reconciliation, full-identity owner password reset and recycled/transfer/ban races.
+- [x] Implement exact-owned credential writes under provider boundary/gate, mint/redeem final-bind validation and revocation hooks without changing existing persistent or browser OTT login paths.
+- [x] Implement generate/countdown/copy/revoke native panel, no-store responses and secure-transport advice; native credentials never enter account/claim/password APIs.
+- [x] Run native/connect/OTT/resume/bUnit regressions, inspect captured logs for raw secrets, format twice, commit.
 
 ### Task 6: Integration acceptance, documentation, review and CI
 
@@ -103,7 +103,7 @@
 
 - [ ] Run focused foundation/security/provider/flow/native suites, auth integration and affected bUnit tests; resolve failures before expanding scope.
 - [ ] Run pinned-SDK server/client/test builds, relevant Node suite, formatting twice and `git diff --check`; retain exact evidence in task scratch.
-- [ ] Document provider registrations/callbacks/scopes, restart/effective-state/disable impact, secret/DataProtection backup, optional-password/native journey, fallback/recovery limits, plain-telnet exposure and real-provider smoke matrix.
+- [x] Document provider registrations/callbacks/scopes, restart/effective-state/disable impact, secret/DataProtection backup, optional-password/native journey, fallback/recovery limits, plain-telnet exposure and real-provider smoke matrix.
 - [ ] Obtain independent full-branch review; fix load-bearing findings and run targeted verification.
 - [ ] Push own branch, update existing PR, wait for current-head CI and address comments. Real provider credentials remain operator supplied; mark real-provider smoke unverified unless performed.
 

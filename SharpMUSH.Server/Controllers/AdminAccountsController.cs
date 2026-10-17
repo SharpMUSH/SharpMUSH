@@ -33,7 +33,8 @@ public class AdminAccountsController(
 	IAuditLog audit,
 	IMediator mediator,
 	BearerAccountResolver bearer,
-	ILogger<AdminAccountsController> logger) : ControllerBase
+	ILogger<AdminAccountsController> logger,
+ AccountSecurityService? security = null, AccountRecoveryHierarchy? recovery = null) : ControllerBase
 {
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
 	/// <param name="IsReserved">
@@ -45,7 +46,7 @@ public class AdminAccountsController(
 	/// </param>
 	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
 		bool MustChangePassword, bool IsReserved, bool IsGodsAccount, IReadOnlyList<AdminCharacterSummary> Characters);
-	public record ResetPasswordRequest(string NewPassword);
+	public record ResetPasswordRequest(string NewPassword, string? ProofGrant = null);
 
 	private static string FullId(string key) => $"node_accounts/{key}";
 
@@ -108,18 +109,38 @@ public class AdminAccountsController(
 
 	[HttpPost("{key}/reset-password")]
 	public Task<IActionResult> ResetPassword(string key, [FromBody] ResetPasswordRequest request)
-		=> AsModeratorAsync(async adminId =>
+	=> AsModeratorAsync(async adminId =>
+	{
+		if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8) return BadRequest("NewPassword must be at least 8 characters.");
+		if (security is null || recovery is null) return StatusCode(StatusCodes.Status403Forbidden, "Fresh account verification is required.");
+		var ct = HttpContext.RequestAborted;
+		var sourceToken = SharpMUSH.Server.Authentication.External.ExternalLoginJourney.Bearer(HttpContext);
+		if (sourceToken is null || await accountSessionStore.InspectAsync(sourceToken, ct) is not IAccountSessionStore.SessionIdentity source || source.AccountId != adminId)
+			return StatusCode(StatusCodes.Status403Forbidden, "Fresh account verification is required.");
+		return await security.WithProofAsync<IActionResult>(HttpContext, adminId, AccountSecurityOperation.StaffRecovery, request.ProofGrant, null, async (_, _) =>
 		{
-			if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
-				return BadRequest("NewPassword must be at least 8 characters.");
-
-			var result = await accountService.SetPasswordAsync(FullId(key), request.NewPassword, mustChangePassword: true);
-			if (result is Error<string> error) return NotFound(error.Value);
-			await accountSessionStore.RevokeAllForAccountAsync(FullId(key));
-			await audit.RecordPortalAsync(adminId, AuditActions.AccountPassword, await AccountTargetAsync(key));
+			IActionResult result = await recovery.AuthorizeAsync(adminId, FullId(key), ct) switch
+			{
+				SharpAccount target => await ResetAsync(target),
+				SharpMUSH.Library.DiscriminatedUnions.NotFound => NotFound($"No account with key '{key}'."),
+				Error<string> error => StatusCode(StatusCodes.Status403Forbidden, error.Value)
+			};
+			return result;
+		}, ct) switch
+		{
+			IActionResult result => result,
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, error.Value)
+		};
+		async Task<IActionResult> ResetAsync(SharpAccount target)
+		{
+			if (await accountService.SetPasswordAsync(target.Id!, request.NewPassword, mustChangePassword: true, ct) is Error<string> error) return NotFound(error.Value);
+			await security.RevokeAsync(target.Id!, ct);
+			if (target.Id == adminId) Response.Headers["X-SharpMUSH-Signed-Out"] = "true";
+			await audit.RecordPortalAsync(adminId, AuditActions.AccountPassword, AuditTargets.Of(target), "Staff recovery; temporary password requires change.", ct);
 			logger.LogInformation("Admin {AdminId} reset password for account {Key}", LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key));
 			return NoContent();
-		});
+		}
+	});
 
 	[HttpPost("{key}/disable")]
 	public Task<IActionResult> Disable(string key)

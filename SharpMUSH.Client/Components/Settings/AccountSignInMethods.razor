@@ -1,0 +1,110 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models
+@inject IServiceProvider Services
+@inject AccountAuthService Auth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+@if (_client is not null && _loaded)
+{
+    <KitCard Title="@Loc["AuthSignInMethods"]">
+        <div class="signin-methods">
+            <p>@Loc["AuthSignInMethodsBody"]</p>
+            @if (_legacyOnly)
+            {
+                <MudAlert Severity="Severity.Info">@Loc["AuthLegacyUpgradeBody"]</MudAlert>
+                <MudSelect T="string" @bind-Value="_character" Label="@Loc["Character"]">
+                    @foreach (var c in Auth.Characters) { <MudSelectItem T="string" Value="@(c.DbrefNumber + ":" + c.CreationTime)">@c.Name</MudSelectItem> }
+                </MudSelect>
+                <MudTextField @bind-Value="_characterPassword" Label="@Loc["AuthCharacterPassword"]" InputType="InputType.Password" />
+                <MudTextField @bind-Value="_newPassword" Label="@Loc["AuthNewPassword"]" InputType="InputType.Password" />
+                <MudTextField @bind-Value="_confirmation" Label="@Loc["AuthConfirmNewPassword"]" InputType="InputType.Password" />
+                <MudButton OnClick="Upgrade" Disabled="_busy">@Loc["AuthInstallAccountPassword"]</MudButton>
+            }
+            else
+            {
+                @foreach (var provider in _providers)
+                {
+                    <MudButton OnClick="() => Choose(AccountSecurityOperation.LinkIdentity, provider.Id)" Disabled="_busy">@Loc["AuthLinkProvider", provider.DisplayName]</MudButton>
+                }
+                @foreach (var identity in _identities)
+                {
+                    <div class="signin-method"><span>@identity.Label</span><MudButton OnClick="() => Choose(AccountSecurityOperation.UnlinkIdentity, identity.Id)" Disabled="_busy">@Loc["AuthUnlink"]</MudButton></div>
+                }
+                @if(_hasPassword) { <MudButton OnClick='() => Choose(AccountSecurityOperation.AccountPassword, "remove")' Disabled="_busy">@Loc["AuthRemoveAccountPassword"]</MudButton> }
+                <MudButton OnClick='() => Choose(AccountSecurityOperation.AccountPassword, "set")' Disabled="_busy">@Loc["AuthChangeAccountPassword"]</MudButton>
+                <MudTextField @bind-Value="_newPassword" Label="@Loc["AuthNewPassword"]" InputType="InputType.Password" />
+                <MudTextField @bind-Value="_confirmation" Label="@Loc["AuthConfirmNewPassword"]" InputType="InputType.Password" />
+                <MudButton OnClick='() => Choose(AccountSecurityOperation.LegacyFallback, _legacy ? "disable" : "enable")' Disabled="_busy">@Loc[_legacy ? "AuthDisableLegacyFallback" : "AuthEnableLegacyFallback"]</MudButton>
+                <MudTextField @bind-Value="_email" Label="@Loc["AuthEmailOptional"]" />
+                <MudButton OnClick='() => Choose(AccountSecurityOperation.Email, "email")' Disabled="_busy">@Loc["AuthChangeEmail"]</MudButton>
+                <MudTextField @bind-Value="_passkeyName" Label="@Loc["AuthPasskeyName"]" />
+                <MudButton OnClick='() => Choose(AccountSecurityOperation.EnrollPasskey, "passkey")' Disabled="_busy">@Loc["AuthPasskeyAdd"]</MudButton>
+                @if (_operation is { } operation)
+                {
+                    <RecentAccountProofPrompt @key="operation" Operation="operation" OnProved="Apply" />
+                }
+            }
+            @if (_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
+        </div>
+    </KitCard>
+}
+@code {
+    private AccountSecurityClient? _client;
+    private IReadOnlyList<AccountSecurityClient.Provider> _providers = [];
+    private readonly List<(string Id,string Label)> _identities = [];
+    private bool _loaded, _legacyOnly, _legacy, _hasPassword, _busy;
+    private string? _error;
+    private AccountSecurityOperation? _operation;
+    private string _target = "", _newPassword = "", _confirmation = "", _characterPassword = "", _character = "", _email = "", _passkeyName = "";
+    protected override async Task OnInitializedAsync()
+    {
+        _client = Services.GetService<AccountSecurityClient>();
+        if (_client is null) return;
+        if (await _client.SecurityAsync() is not JsonElement data) return;
+        _hasPassword = data.GetProperty("hasPassword").GetBoolean(); _legacy = data.GetProperty("allowCharacterPasswordAccountLogin").GetBoolean();
+        _legacyOnly = !_hasPassword && data.GetProperty("passkeys").GetArrayLength() == 0 && data.GetProperty("identities").GetArrayLength() == 0;
+        foreach (var identity in data.GetProperty("identities").EnumerateArray()) _identities.Add((identity.GetProperty("id").GetString()!,identity.GetProperty("label").GetString() ?? identity.GetProperty("registration").GetString()!));
+        if (await _client.ProvidersAsync() is IReadOnlyList<AccountSecurityClient.Provider> providers) _providers = providers;
+        _loaded = true;
+    }
+    private void Choose(AccountSecurityOperation operation,string target) { _operation = null; _target = target; _operation = operation; _error = null; }
+    private async Task Apply(string grant)
+    {
+        if (_client is null || _operation is not {} op) return;
+        _busy = true;
+        if (op == AccountSecurityOperation.LinkIdentity)
+        {
+            var started = await _client.StartAsync(_target,"/account",false,1,grant);
+            if (started is ApiFailure failure) { _error = failure.Message; _busy = false; }
+            return;
+        }
+        if(op == AccountSecurityOperation.EnrollPasskey)
+        {
+            if(await _client.RequestAsync("api/account/passkeys/options",new { currentPassword="", proofGrant=grant }) is not JsonElement challenge) { _error=Loc["AuthProofFailed"]; _busy=false; _operation=null; return; }
+            if(await new PasskeyInterop(JS).CreateAsync(challenge.GetProperty("options")) is not JsonElement credential) { _error=Loc["AuthProofCancelled"]; _busy=false; _operation=null; return; }
+            var added=await _client.RequestAsync("api/account/passkeys",new {ceremonyId=challenge.GetProperty("ceremonyId").GetString(),name=_passkeyName,credential});
+            if(added is ApiFailure failed) { _error=failed.Message; _busy=false; _operation=null; return; }
+            Nav.NavigateTo("/account",forceLoad:true); return;
+        }
+        var result = op switch
+        {
+            AccountSecurityOperation.UnlinkIdentity => await _client.RequestAsync("api/account/security/identities/" + Uri.EscapeDataString(_target),new { proofGrant = grant },"DELETE"),
+            AccountSecurityOperation.Email => await _client.RequestAsync("api/account/email",new { newEmail=string.IsNullOrWhiteSpace(_email)?null:_email, currentPassword="",proofGrant=grant },"PUT"),
+            AccountSecurityOperation.LegacyFallback => await _client.RequestAsync("api/account/security/legacy-fallback",new { enabled = !_legacy, proofGrant = grant },"PUT"),
+            _ => _target == "remove" ? await _client.RequestAsync("api/account/security/password",new { proofGrant = grant },"DELETE")
+                : await _client.RequestAsync("api/account/security/password",new { newPassword = _newPassword, confirmation = _confirmation, proofGrant = grant },"PUT")
+        };
+        if (result is ApiFailure refusal) { _error = refusal.Message; _operation = null; _busy = false; return; }
+        if(Auth.IsLoggedIn) { _operation=null; _busy=false; Nav.NavigateTo("/account",forceLoad:true); }
+        else Nav.NavigateTo("/login");
+    }
+    private async Task Upgrade()
+    {
+        if (_client is null || _character.Split(':') is not [var number,var creation] || !int.TryParse(number,out var key) || !long.TryParse(creation,out var timestamp)) return;
+        _busy = true;
+        if (await _client.RequestAsync("api/account/security/legacy-upgrade",new { characterKey = key, characterCreationTime = timestamp, characterPassword = _characterPassword, newPassword = _newPassword, confirmation = _confirmation }) is ApiFailure failure) { _error = failure.Message; _busy = false; return; }
+        await Auth.LogoutAsync(); Nav.NavigateTo("/login");
+    }
+}

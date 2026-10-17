@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library;
 
@@ -12,6 +13,9 @@ public interface ISessionRecordStore
 
 	/// <summary>Returns the session for a token, or null if absent.</summary>
 	ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default);
+
+	/// <summary>Reads token-free authority by lowercase SHA-256 token digest, without sliding the session expiry.</summary>
+	ValueTask<Found<AccountSessionAuthority>> GetSessionAuthorityByDigestAsync(string digest, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Slides an existing session's expiry to <paramref name="expiryUnixMs"/>. Returns <c>true</c> if the

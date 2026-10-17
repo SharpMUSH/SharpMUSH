@@ -86,7 +86,7 @@ public partial class LightningDatabase
 		if (!ValidExternalIdentity(key, label) || string.IsNullOrWhiteSpace(username) || username.Length > 128
 			|| SystemAccount.IsReserved(username)) return new Error<string>("Invalid account or external identity.");
 		var digest = ExternalIdentityDigest(key);
-		return await Store.WriteAsync<Result<SharpAccount>>(tx =>
+		return await WriteCredentialsAsync<Result<SharpAccount>>(tx =>
 		{
 			// Any stored tuple (including a digest collision or unavailable holder) reserves this key.
 			if (tx.TryGet(Tables.ExternalIdentity, digest, out _)) return new Error<string>("External identity is already registered.");
@@ -111,7 +111,7 @@ public partial class LightningDatabase
 		if (!ValidExternalIdentity(key, label)) return new Error<string>("Invalid external identity.");
 		var digest = ExternalIdentityDigest(key);
 		var accountKey = ParseAccountId(accountId);
-		return await Store.WriteAsync<Result<ExternalIdentity>>(tx =>
+		return await WriteCredentialsAsync<Result<ExternalIdentity>>(tx =>
 		{
 			if (ReadAccountByKey(tx, accountKey) is not { IsActive: true }) return new Error<string>("Account is unavailable.");
 			if (tx.TryGet(Tables.ExternalIdentity, digest, out var bytes))
@@ -122,7 +122,7 @@ public partial class LightningDatabase
 					: new Error<string>("External identity is already registered.");
 			}
 			return WriteExternalIdentity(tx, accountKey, digest, key, label);
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 
 	public async ValueTask<bool> RecordExternalIdentityUseAsync(string accountId, ExternalIdentityKey key, DateTimeOffset usedAt,
@@ -131,7 +131,7 @@ public partial class LightningDatabase
 		if (!ValidExternalIdentity(key)) return false;
 		var digest = ExternalIdentityDigest(key);
 		var accountKey = ParseAccountId(accountId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (ReadAccountByKey(tx, accountKey) is not { IsActive: true }
 				|| !tx.TryGet(Tables.ExternalIdentity, digest, out var bytes)) return false;
@@ -151,7 +151,7 @@ public partial class LightningDatabase
 		if (!ValidExternalIdentity(key)) return new Error<string>("Invalid external identity.");
 		var accountKey = ParseAccountId(accountId);
 		var digest = ExternalIdentityDigest(key);
-		return await Store.WriteAsync<Result<Success>>(tx =>
+		return await WriteCredentialsAsync<Result<Success>>(tx =>
 		{
 			if (!tx.TryGet(Tables.ExternalIdentity, digest, out var bytes)) return new Error<string>("Identity not found.");
 			var record = Codec.Deserialize<ExternalIdentityRecord>(bytes);
@@ -162,6 +162,6 @@ public partial class LightningDatabase
 			tx.Delete(Tables.ExternalIdentityByAccount, Keys.Str(accountKey), digest);
 			AdvanceAccountCredentialEpoch(tx, accountKey);
 			return new Success();
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 }

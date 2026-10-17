@@ -76,6 +76,8 @@ public static class Tables
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");
+	/// <summary>SHA-256 token digest to token-free session authority, updated with the session in the same transaction.</summary>
+	public static readonly TableDef SessionDigest = TableDef.Node("session.digest");
 	public static readonly TableDef SessionAccount = TableDef.Index("session.acct", duplicates: true);
 	public static readonly TableDef SessionIp = TableDef.Index("session.ip", duplicates: true);
 	/// <summary>Expiry-ordered session index: big-endian expiry millis + token → empty. The expired-session sweep reads its head.</summary>

@@ -86,6 +86,10 @@ public interface IConnectionService
 	/// </param>
 	ValueTask Bind(long handle, DBRef player, bool firstLogin = false);
 
+	/// <summary>Checks local authority after the publication fence is acquired, immediately before the binding changes.</summary>
+	ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize);
+
+
 	/// <summary>
 	/// Transitions a connection to <see cref="ConnectionState.AccountMode"/>, storing the account ID in metadata.
 	/// The connection is not yet associated with a MUSH character.

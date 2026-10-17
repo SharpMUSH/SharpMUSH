@@ -5,6 +5,7 @@ using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -28,7 +29,9 @@ public partial class LightningDatabase(
 	IPasswordService passwordService,
 	IObjectRelationLoader? relations,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
-	IReadOnlyList<PluginFlag>? pluginFlags = null)
+	IReadOnlyList<PluginFlag>? pluginFlags = null,
+	AccountCredentialGate? credentialGate = null,
+	Lazy<IEnumerable<IAccountCredentialRevocation>>? credentialRevokers = null)
 	: ISharpDatabase, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,
 		IApplicationRegistryService, ILightningStorageAccessor, IAsyncDisposable
 {
@@ -37,6 +40,8 @@ public partial class LightningDatabase(
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 
 	private readonly ILogger<LightningDatabase> _logger = logger;
+	private readonly AccountCredentialGate _credentialGate = credentialGate ?? new();
+	private readonly Lazy<IEnumerable<IAccountCredentialRevocation>> _credentialRevokers = credentialRevokers ?? new(() => []);
 	private readonly LightningStoreOptions _options = options;
 	private readonly IPasswordService _passwordService = passwordService;
 
@@ -150,15 +155,19 @@ public partial class LightningDatabase(
 	internal static long? GetSingleEdge(ITx tx, TableDef forward, long from)
 		=> tx.Dups(forward, Keys.Dbref(from)).Select(v => (long?)Keys.ReadDbref(v)).FirstOrDefault();
 
+	internal Task MutateWorldAuthorityAsync(Func<Task> mutation, CancellationToken cancellationToken = default)
+		=> _credentialGate.RunAsync(mutation, cancellationToken);
+
 	/// <summary>Drains the writer, closes the environment, deletes the directory, reopens it empty and
 	/// migrates from scratch.</summary>
 	public async ValueTask WipeDatabaseAsync(CancellationToken cancellationToken = default)
-	{
-		_logger.LogWarning("WIPING DATABASE at {Path} - this is destructive and irreversible!", Store.Path);
-		Store.WipeDirectory();
-		InvalidateDefinitions();
-		await Migrate(cancellationToken);
-	}
+		=> await MutateWorldAuthorityAsync(async () =>
+		{
+			_logger.LogWarning("WIPING DATABASE at {Path} - this is destructive and irreversible!", Store.Path);
+			Store.WipeDirectory();
+			InvalidateDefinitions();
+			await Migrate(cancellationToken);
+		}, cancellationToken);
 
 	/// <summary>
 	/// A second, fully migrated world at <c>&lt;path&gt;.staging-&lt;id&gt;</c> with its own store and writer,

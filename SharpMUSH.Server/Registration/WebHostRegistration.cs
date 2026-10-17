@@ -181,6 +181,7 @@ internal static class WebHostRegistration
 				OAuthBearerAuthenticationHandler.SchemeName, _ => { });
 
 		services.AddAnalysisTransportPolicy(configuration);
+		SharpMUSH.Server.Authentication.External.ExternalAuthenticationRegistration.AddExternalAccountAuthentication(services);
 
 		return services;
 	}

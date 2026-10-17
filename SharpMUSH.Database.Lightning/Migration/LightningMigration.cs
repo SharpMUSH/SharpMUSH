@@ -13,6 +13,7 @@ public partial class LightningDatabase
 {
 	internal const string InitialMigrationId = "0001_initial";
 	internal const string AccountCredentialMigrationId = "0002_account_credentials";
+	internal const string SessionDigestMigrationId = "0003_session_digest_authority";
 
 	/// <summary>
 	/// Idempotent world setup, run under <see cref="MigrateLock"/>:
@@ -26,6 +27,9 @@ public partial class LightningDatabase
 	/// 5. ensure the singleton server-state row exists.
 	/// </summary>
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
+		=> await _credentialGate.RunAsync(() => MigrateCoreAsync(cancellationToken), cancellationToken);
+
+	private async Task MigrateCoreAsync(CancellationToken cancellationToken)
 	{
 		await MigrateLock.WaitAsync(cancellationToken);
 		try
@@ -45,6 +49,7 @@ public partial class LightningDatabase
 			}
 
 			await Store.WriteAsync(MigrateAccountCredentials, cancellationToken);
+			await Store.WriteAsync(MigrateSessionDigests, cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -73,6 +78,18 @@ public partial class LightningDatabase
 		}
 
 		ReloadDefinitions();
+	}
+
+	private static void MigrateSessionDigests(ITx tx)
+	{
+		var marker = Keys.Str("mig:" + SessionDigestMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		foreach (var row in tx.Range(Tables.Session, []))
+			tx.Put(Tables.SessionDigest, System.Security.Cryptography.SHA256.HashData(row.Key), row.Value);
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = SessionDigestMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
 	}
 
 	private static void MigrateAccountCredentials(ITx tx)

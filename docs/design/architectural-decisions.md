@@ -13,33 +13,22 @@ area's TODO list includes a "Review & Confirm Decisions" step as item #1.
 
 ## 1. Authentication & Sessions
 
-### 1.1 Identity Provider: ASP.NET Identity + Game Character Layer
+### 1.1 Custom Accounts and Game Characters
 
-**Decision:** ASP.NET Identity manages web accounts (email, password hash,
-external logins). Game characters retain their own passwords in the SharpMUSH
-object DB. The two layers are linked by a foreign key (AccountId on character).
+**Decision:** The custom `SharpAccount` model manages web accounts, optional email and local password, passkeys and external identities. ASP.NET Identity is not the account store. Game characters keep independent passwords in the object database and link to an account through `AccountId`.
 
-**Trust model:** Account login = full access to all linked characters. No
-character password required after account authentication.
+**Trust model:** Account login grants access to all linked characters; selecting one does not ask for its character password. Direct character-password `connect` remains available, including for linked characters, subject to current account and server restrictions.
 
-**Existing implementation** (already built):
-- MUSH: `login <name-or-email> <password>` → AccountMode
-- MUSH: `play <character-name>` → connects as character (no char password)
-- Web: `POST /api/auth/account-login` → session token + character list
-- Web: `POST /api/auth/mush-token` with AccountSessionToken → OTT (no char password)
-- Legacy: `connect <character> <password>` → direct login (unlinked characters)
+**Existing methods remain available:**
 
-**Character password purpose (limited scope):**
-- Legacy `connect` command (for unlinked characters or traditional MU* clients)
-- Claiming/linking a character to an account (proving ownership)
-- Initial creation via `make` (sets a character password for legacy compat)
+- MUSH: `login <name-or-email> <password>` opens account mode; `play <character-name>` connects an owned character.
+- Web: `POST /api/auth/account-login` returns the account session and roster; `POST /api/auth/mush-token` exchanges that session for the existing browser OTT.
+- Legacy: `connect <character> <password>` retains its direct character-login semantics.
+- Character-password account login remains enabled on migrated and existing compatible accounts. External provisioning alone defaults it off; linking another method never disables it automatically.
 
-**Migration path for existing games:**
-- First web login for legacy players: "Claim" flow — enter character name +
-  character password → system creates a web account and links the character
-- Admin bulk-import option for migrating existing game databases
+An account holder can claim an unlinked character by proving its nonempty character password. Character passwords are separate from explicit account methods: they do not satisfy ordinary recent-account proof. A legacy-only account has a separate audited upgrade ceremony that installs an account method without disabling existing fallback. New characters may use a discarded random password hash until an independent password is explicitly chosen; an empty hash must not represent a new passwordless character.
 
-### 1.2 Token Strategy: JWT in Memory + httpOnly Refresh Cookie
+### 1.2 Token Strategy: DB-backed AccountSession
 
 > **Amended & confirmed 2026-07-15 — reversed.** The DB-backed account-session
 > token is now the **single** web credential; it authenticates both REST and
@@ -175,29 +164,21 @@ are managed in game with `@role` and in the portal's Roles page; `roles()`,
 `hasrole()`, `permission()` and the `ROLE^`/`PERM^` lock keys read them, and
 `examine` shows an object's roles and overrides.
 
-### 1.5 Login Methods: Password + Discord OAuth (Progressive)
+### 1.5 Login Methods: Password, Passkeys and Four External Providers
 
-**Decision:** Ship with email+password (ASP.NET Identity). Add Discord OAuth
-as the first external provider. Google/GitHub as later additions.
+**Decision:** Preserve account-password, character-password, passkey, browser OTT, remembered-login and reconnect methods. Offer disabled-by-default Discord, Google, Microsoft and Grapevine account sign-in. External identities use an immutable registration/issuer/subject tuple; email never finds, merges or claims an account, and bot/chat integrations remain separate.
 
-**Why Discord first:** The MU* community organizes on Discord. "Log in with
-Discord" is the highest-ROI external auth integration.
+Google and Microsoft use framework OIDC authorization-code, PKCE, state, nonce and signed-token validation. Microsoft validates the concrete tenant issuer and configured account audience. Discord uses its confidential OAuth code exchange with `identify`; Grapevine uses its documented public code exchange with `profile` and no client-secret or unsupported PKCE assumption. Provider tokens are not retained.
 
-**Important:** External auth (Discord, Google) authenticates the WEB ACCOUNT
-only. Once authenticated, character access follows the same trust model — no
-character password needed for linked characters.
+An unknown external identity requires explicit username confirmation before atomic account-and-identity creation. A known identity uses the same current login policy and session/roster issuance as other account methods. Browser-bound one-use transactions and handoffs keep credentials out of URLs. Changing or disabling a registration invalidates pending authority; changing its client id with existing identities requires a reviewed migration.
 
-**Progressive plan:**
-1. Phase 1: Email + password (ASP.NET Identity)
-2. Phase 2: Discord OAuth ("Link Discord" in account settings)
-3. Phase 3: Google OAuth (if demand exists)
-4. Passkeys/WebAuthn as opt-in — built. An account adds passkeys from `/account` (its password
-   confirms it) and signs in with one from `/login`; the password stays. Every passkey is a
-   discoverable credential with user verification required, so sign-in asks for no name.
-   Credentials live with the account (`IAccountStore` passkey methods); ceremonies are
-   `PasskeyService` over Fido2NetLib. The relying party is the portal's own host, or
-   `Passkeys:RelyingPartyId` for a parent domain; a portal served from another origin must be in
-   `Passkeys:Origins` (else `Cors:AllowedOrigins`). Telnet login is unchanged.
+Account security changes require an operation-bound recent proof of a dedicated password, registered passkey or fresh ceremony for an attached external identity. Current source session, credential epoch and external provider generation are rechecked at the final decision. Enrollment and link transactions retain that proved authority. Final usable account-method removal is refused transactionally. Revoking changes end other sessions; the initiating browser receives a replacement only when its proved method survives. Additions preserve existing sessions.
+
+Passkeys remain discoverable WebAuthn credentials with user verification through `PasskeyService` and Fido2NetLib. They do not require a local account password. The relying party is the portal host or `Passkeys:RelyingPartyId`; cross-origin portals must be listed in `Passkeys:Origins` or `Cors:AllowedOrigins`.
+
+External-only accounts can use independent character passwords or two-minute, one-use `connect token nc1_…` credentials. Native authority binds the exact character incarnation, ownership, account/character credential epochs and live issuing session, with a final check immediately before connection binding. The existing browser OTT remains a separate purpose and keeps its existing contract.
+
+See [Account sign-in providers](../guides/social-account-login.md) for operator configuration, recovery limits and real-provider smoke steps.
 
 ---
 

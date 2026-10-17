@@ -1,0 +1,33 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IServiceProvider Services
+@inject IStringLocalizer<SharedResource> Loc
+@if (_providers.Count > 0)
+{
+    <div class="external-signin" aria-label="@Loc["AuthOtherSignInMethods"]">
+        @foreach (var provider in _providers)
+        {
+            <button type="button" class="external-signin-button" disabled="@_busy" @onclick="() => Start(provider.Id)">@Loc["AuthContinueWith", provider.DisplayName]</button>
+        }
+    </div>
+    @if (_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
+}
+@code {
+    [Parameter] public bool RememberMe { get; set; }
+    [Parameter] public string ReturnPath { get; set; } = "/account";
+    private IReadOnlyList<AccountSecurityClient.Provider> _providers = [];
+    private AccountSecurityClient? _client;
+    private bool _busy;
+    private string? _error;
+    protected override async Task OnInitializedAsync()
+    {
+        _client = Services.GetService<AccountSecurityClient>();
+        if (_client is not null && await _client.ProvidersAsync() is IReadOnlyList<AccountSecurityClient.Provider> providers) _providers = providers;
+    }
+    private async Task Start(string provider)
+    {
+        if (_client is null) return;
+        _busy = true; _error = null;
+        if (await _client.StartAsync(provider, ReturnPath, RememberMe) is ApiFailure failure) { _error = failure.Message; _busy = false; }
+    }
+}

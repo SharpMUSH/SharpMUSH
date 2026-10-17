@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>Digest-only, fixed-lifetime proof grants. Restart invalidates every pending grant.</summary>
-public sealed class RecentAccountProofStore(TimeProvider time, int capacity = 10_000) : IRecentAccountProofStore
+public sealed class RecentAccountProofStore(TimeProvider time, int capacity = 10_000) : IRecentAccountProofStore, IAccountCredentialRevocation
 {
 	public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(5);
 	private sealed record Entry(string AccountId, string SessionDigest, AccountSecurityOperation Operation,
@@ -65,6 +65,8 @@ public sealed class RecentAccountProofStore(TimeProvider time, int capacity = 10
 			foreach (var key in _entries.Where(pair => pair.Value.SessionDigest == digest).Select(pair => pair.Key).ToArray())
 				_entries.Remove(key);
 	}
+
+	public void RevokeCharacter(DBRef character) { }
 
 	private void Sweep()
 	{

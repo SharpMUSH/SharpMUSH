@@ -1,4 +1,6 @@
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -9,6 +11,26 @@ namespace SharpMUSH.Tests.Services;
 public class InMemoryAccountSessionStoreTests
 {
 	private static InMemoryAccountSessionStore CreateStore() => new();
+
+	private sealed class Clock : TimeProvider
+	{
+		public DateTimeOffset Now { get; set; } = DateTimeOffset.UnixEpoch;
+		public override DateTimeOffset GetUtcNow() => Now;
+	}
+
+	[Test]
+	public async Task InspectDoesNotKeepAMintingSessionAliveAndRejectsRememberedCredentials()
+	{
+		var clock = new Clock();
+		var store = new InMemoryAccountSessionStore(clock);
+		var token = await store.CreateTokenAsync("account", TimeSpan.FromMinutes(15), "203.0.113.1");
+		clock.Now += TimeSpan.FromMinutes(14);
+		(await store.InspectAsync(token)).Expect<IAccountSessionStore.SessionIdentity>();
+		clock.Now += TimeSpan.FromMinutes(1);
+		(await store.InspectAsync(token)).Expect<NotFound>();
+		var remembered = await store.CreateRememberedLoginAsync("account", TimeSpan.FromDays(90), "203.0.113.1");
+		(await store.InspectAsync(remembered)).Expect<NotFound>();
+	}
 
 	[Test]
 	public async ValueTask CreateToken_Returns32CharHexGuid()
@@ -102,20 +124,20 @@ public class InMemoryAccountSessionStoreTests
 	}
 
 	[Test]
-	[Skip("Timing-sensitive: 200ms TTL + 100ms+150ms delays are too tight on loaded CI. Pre-existing flake; see cc86928a.")]
 	public async ValueTask ValidateAsync_SlidesExpiry_TokenRemainsValid()
 	{
-		var store = CreateStore();
-		// TTL of 200 ms; we'll validate at ~100 ms and expect the expiry is extended
+		var clock = new Clock();
+		var store = new InMemoryAccountSessionStore(clock);
+		// Deterministic time preserves the original sliding-expiry contract under loaded CI.
 		var token = await store.CreateTokenAsync("acct-slide", TimeSpan.FromMilliseconds(200), "0.0.0.0");
 
-		await Task.Delay(100);
+		clock.Now += TimeSpan.FromMilliseconds(100);
 		var first = (await store.ValidateAsync(token))?.AccountId; // slides expiry to now+200 ms
 		await Assert.That(first).IsEqualTo("acct-slide");
 
 		// If expiry did NOT slide, this 150 ms delay would exceed the original 200 ms window.
 		// Because it DID slide, the token should still be valid.
-		await Task.Delay(150);
+		clock.Now += TimeSpan.FromMilliseconds(150);
 		var second = (await store.ValidateAsync(token))?.AccountId;
 		await Assert.That(second).IsEqualTo("acct-slide");
 	}

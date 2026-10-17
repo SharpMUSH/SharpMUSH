@@ -51,7 +51,7 @@ public partial class LightningDatabase
 			LastUsedAtMs = passkey.LastUsedAt?.ToUnixTimeMilliseconds()
 		};
 
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (tx.TryGet(Tables.AccountPasskey, key, out _)) return PasskeyAddOutcome.AlreadyRegistered;
 			if (tx.Dups(Tables.AccountPasskeyByAccount, Keys.Str(accountKey)).Count() >= maxPerAccount)
@@ -60,7 +60,7 @@ public partial class LightningDatabase
 			tx.Put(Tables.AccountPasskeyByAccount, Keys.Str(accountKey), key);
 			AdvanceAccountCredentialEpoch(tx, accountKey);
 			return PasskeyAddOutcome.Added;
-		}, cancellationToken);
+		}, cancellationToken, accountId: passkey.AccountId);
 	}
 
 	public ValueTask<AccountPasskey?> GetAccountPasskeyAsync(byte[] credentialId, CancellationToken cancellationToken = default)
@@ -87,7 +87,7 @@ public partial class LightningDatabase
 		DateTimeOffset usedAt, CancellationToken cancellationToken = default)
 	{
 		var key = PasskeyKey(credentialId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (!tx.TryGet(Tables.AccountPasskey, key, out var bytes)) return false;
 			var record = Codec.Deserialize<AccountPasskeyRecord>(bytes);
@@ -107,7 +107,7 @@ public partial class LightningDatabase
 	{
 		var accountKey = ParseAccountId(accountId);
 		var key = PasskeyKey(credentialId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (ReadOwnPasskey(tx, accountKey, key) is not { } record) return false;
 			tx.Put(Tables.AccountPasskey, key, Codec.Serialize(record with { Name = name }));
@@ -119,13 +119,13 @@ public partial class LightningDatabase
 	{
 		var accountKey = ParseAccountId(accountId);
 		var key = PasskeyKey(credentialId);
-		return await Store.WriteAsync(tx =>
+		return await WriteCredentialsAsync(tx =>
 		{
 			if (ReadOwnPasskey(tx, accountKey, key) is null) return false;
 			tx.Delete(Tables.AccountPasskey, key);
 			tx.Delete(Tables.AccountPasskeyByAccount, Keys.Str(accountKey), key);
 			AdvanceAccountCredentialEpoch(tx, accountKey);
 			return true;
-		}, cancellationToken);
+		}, cancellationToken, accountId: accountId);
 	}
 }
