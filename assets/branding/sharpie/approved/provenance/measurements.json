@@ -1,0 +1,295 @@
+{
+  "palette": {
+    "ink": "#17333E",
+    "mint": "#00DDB3",
+    "white": "#FFFFFF"
+  },
+  "variants": [
+    {
+      "authored_anchors": {
+        "nose_stem_start": [
+          259.7752808988764,
+          380.5842696629213
+        ]
+      },
+      "features": {
+        "forehead-m": {
+          "bbox_xywh": [
+            193.079,
+            193.079,
+            132.135,
+            114.517
+          ],
+          "bbox_center": [
+            259.1465,
+            250.3375
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "eye-left": {
+          "bbox_xywh": [
+            150.292,
+            300.723,
+            70.4719,
+            60.426
+          ],
+          "bbox_center": [
+            185.52795,
+            330.93600000000004
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "eye-right": {
+          "bbox_xywh": [
+            298.787,
+            300.723,
+            70.4719,
+            60.426
+          ],
+          "bbox_center": [
+            334.02295,
+            330.93600000000004
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "nose-mouth": {
+          "bbox_xywh": [
+            220.764,
+            362.966,
+            78.0225,
+            43.8939
+          ],
+          "bbox_center": [
+            259.77525,
+            384.91295
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        }
+      },
+      "name": "sharpie-primary",
+      "source_sheet": 1,
+      "source_crop_xyxy": [
+        39,
+        140,
+        369,
+        500
+      ],
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "rendered_alpha_bounds_512": [
+        50.75,
+        32.0,
+        461.25,
+        480.0
+      ],
+      "sha256_svg": "cc34b6348db62ffa0ed83236218271fbb191714a182f6e55ef664dd866cb5988",
+      "path_elements": 15,
+      "construction": "Manually refined native B\u00e9zier paths; mirrored paired features; exact silhouette clipping."
+    },
+    {
+      "authored_anchors": {
+        "nose_stem_start": [
+          258.79999999999995,
+          348.3999999999999
+        ]
+      },
+      "features": {
+        "forehead-m": {
+          "bbox_xywh": [
+            209.333,
+            209.333,
+            98.0,
+            84.9333
+          ],
+          "bbox_center": [
+            258.33299999999997,
+            251.79964999999999
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "eye-left": {
+          "bbox_xywh": [
+            177.6,
+            289.169,
+            52.2667,
+            44.816
+          ],
+          "bbox_center": [
+            203.73335,
+            311.577
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "eye-right": {
+          "bbox_xywh": [
+            287.733,
+            289.169,
+            52.2667,
+            44.816
+          ],
+          "bbox_center": [
+            313.86635,
+            311.577
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "nose-mouth": {
+          "bbox_xywh": [
+            229.867,
+            335.333,
+            57.8667,
+            32.5547
+          ],
+          "bbox_center": [
+            258.80035,
+            351.61035000000004
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        }
+      },
+      "name": "sharpie-primary-badge",
+      "source_sheet": 1,
+      "source_crop_xyxy": [
+        39,
+        140,
+        369,
+        500
+      ],
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "rendered_alpha_bounds_512": [
+        32.0,
+        32.0,
+        480.0,
+        480.0
+      ],
+      "sha256_svg": "7f48db51d549d31b77edf380e3c0b76f27663b72a145c01a2f1592cad3e1570d",
+      "path_elements": 17,
+      "construction": "Manually refined native B\u00e9zier paths; mirrored paired features; exact silhouette clipping."
+    },
+    {
+      "authored_anchors": {},
+      "features": {
+        "forehead-m": {
+          "bbox_xywh": [
+            183.652,
+            151.652,
+            144.696,
+            111.304
+          ],
+          "bbox_center": [
+            256.0,
+            207.30399999999997
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "nose": {
+          "bbox_xywh": [
+            234.087,
+            302.609,
+            43.8261,
+            27.1304
+          ],
+          "bbox_center": [
+            256.00005,
+            316.1742
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        }
+      },
+      "name": "sharpie-smile",
+      "source_sheet": 2,
+      "source_crop_xyxy": [
+        814,
+        606,
+        1125,
+        942
+      ],
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "rendered_alpha_bounds_512": [
+        52.75,
+        32.0,
+        459.25,
+        480.0
+      ],
+      "sha256_svg": "08d6f7437131c2b88adf16de54b1bd09864fcb55f4341d6e14d5d14df5829724",
+      "path_elements": 9,
+      "construction": "Manually refined native B\u00e9zier paths; mirrored paired features; exact silhouette clipping."
+    },
+    {
+      "authored_anchors": {},
+      "features": {
+        "forehead-m": {
+          "bbox_xywh": [
+            136.8,
+            166.07,
+            135.957,
+            107.632
+          ],
+          "bbox_center": [
+            204.7785,
+            219.886
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        },
+        "nose": {
+          "bbox_xywh": [
+            187.076,
+            317.605,
+            35.4054,
+            25.4919
+          ],
+          "bbox_center": [
+            204.7787,
+            330.35095
+          ],
+          "measurement": "Inkscape geometric bounds after SVG transforms"
+        }
+      },
+      "name": "sharpie-minimal",
+      "source_sheet": 2,
+      "source_crop_xyxy": [
+        1180,
+        635,
+        1512,
+        930
+      ],
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "rendered_alpha_bounds_512": [
+        32.0,
+        59.75,
+        480.0,
+        452.25
+      ],
+      "sha256_svg": "affd5116339dd71487aecf015e93de8a39d9c6c09291717d4377da9795586cde",
+      "path_elements": 10,
+      "construction": "Manually refined native B\u00e9zier paths; mirrored paired features; exact silhouette clipping."
+    }
+  ],
+  "clear_space_recommendation": 32,
+  "minimum_sizes_recommendation_px": {
+    "sharpie-primary": 48,
+    "sharpie-primary-badge": 48,
+    "sharpie-smile": 24,
+    "sharpie-minimal": 32
+  },
+  "badge_derivation": "Primary paths reused without geometry edits; translate(53.8 44) scale(.7) inside a pure-white circular backing."
+}
