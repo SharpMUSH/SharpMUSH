@@ -13,6 +13,8 @@ internal sealed class GatedAnalyzer : IMushCodeAnalyzer, IDisposable
 	public ManualResetEventSlim Release { get; } = new();
 	public bool GateValidation { get; init; }
 	public bool GateProjection { get; init; }
+	public bool FastValidation { get; init; }
+	public bool ProjectionHasExecutionBudget { get; private set; }
 	private string _projectionTrace = "Projection has not started.";
 	private int _projectionTimedOut;
 
@@ -41,6 +43,7 @@ internal sealed class GatedAnalyzer : IMushCodeAnalyzer, IDisposable
 			// on that call path. Their absence is inconclusive. Pool counters alone cannot establish
 			// starvation, so retain the actual projection stack too.
 			Volatile.Write(ref owner._projectionTrace, $"Projection thread: {Environment.CurrentManagedThreadId}.\n{Environment.StackTrace}");
+			owner.ProjectionHasExecutionBudget = ExecutionBudget.Current is not null;
 			owner._entered.TrySetResult();
 			if (!owner.Release.Wait(TimeSpan.FromSeconds(5)))
 			{
@@ -52,7 +55,7 @@ internal sealed class GatedAnalyzer : IMushCodeAnalyzer, IDisposable
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 	}
 	private void Wait() { _entered.TrySetResult(); if (!Release.Wait(TimeSpan.FromSeconds(5), ExecutionBudget.CurrentToken)) throw new TimeoutException(); }
-	public IReadOnlyList<Diagnostic> Validate(string code, MushAnalysisMode mode = MushAnalysisMode.Function) { if (GateValidation && code == "slow[") Wait(); var values = _inner.Validate(code, mode); return GateProjection && code == "slow[" ? new ProjectionList(values, this) : values; }
+	public IReadOnlyList<Diagnostic> Validate(string code, MushAnalysisMode mode = MushAnalysisMode.Function) { if (GateValidation && code == "slow[") Wait(); var values = FastValidation && code == "slow[" ? Array.Empty<Diagnostic>() : _inner.Validate(code, mode); return GateProjection && code == "slow[" ? new ProjectionList(values, this) : values; }
 	public IReadOnlyList<CompletionSuggestion> Complete(string code, int line, int character) { if (!GateValidation && code == "get") Wait(); return _inner.Complete(code, line, character); }
 	public string Format(string code) => _inner.Format(code);
 	public string FormatIndented(string code, int width = 78, MushAnalysisMode mode = MushAnalysisMode.Function) => _inner.FormatIndented(code, width, mode);
