@@ -2,6 +2,9 @@ namespace SharpMUSH.Library.Definitions;
 
 public static class CacheTags
 {
+	/// <summary>All stored wiki requirement sets; requirement writes and page deletion expire it.</summary>
+	public const string WikiRequirements = "wiki-requirements";
+
 	public const string ObjectContents = "object-contents";
 	/// <summary>
 	/// Every cached attribute read, of every object. Only a write that cannot name the objects it

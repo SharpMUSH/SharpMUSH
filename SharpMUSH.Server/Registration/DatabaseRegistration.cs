@@ -218,7 +218,12 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IFeedStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IWikiStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IOAuthStore>(sp => sp.GetRequiredService<TProvider>());
-		services.AddSingleton<IWikiService, WikiStoreService>();
+		// Keep IWikiStore bound to the provider for handlers. Only the host facade uses the
+		// concrete transport, avoiding a recursive adapter -> handler -> adapter composition.
+		services.AddSingleton<Implementation.Services.MediatorWikiStore>();
+		services.AddSingleton<IWikiService>(sp => new WikiStoreService(
+			sp.GetRequiredService<Implementation.Services.MediatorWikiStore>(),
+			sp.GetRequiredService<WikiMarkdigPipeline>()));
 
 		// Portal subsystems the provider also backs: package registry, layout registry, RBAC roles.
 		services.AddSingleton<IPackageRegistryService>(sp => sp.GetRequiredService<TProvider>());
