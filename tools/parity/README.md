@@ -141,6 +141,15 @@ routing. Those are behaviour and appear as differences.
   If a step is inserted or removed and a key now points at a different command (or at nothing), the
   entry is reported as **orphaned** and the run fails; re-key it (for the baseline, regenerate it).
 
+The `11-page-shorthand` scenario adds four exact setup-login baseline entries, pinned to their
+commands: `page.shorthand#0` (Alice), `page.shorthand#1` (Bob), `page.group#0` (Wiz), and
+`page.reconnect#1` (Alice reconnecting). They reproduce existing login gaps already recorded for
+other scenarios: welcome/MOTD and MAIL output, room-name/dbref decoration, and the reconnect's
+last-connection host display. These remain open login differences, not deliberate compatibility
+choices or a broader normalization rule. All 18 non-login steps remain strictly compared,
+including shorthand delivery, NOEVAL, recipient order, partial delivery, the post-reconnect page,
+and unauthorized override. No page-command step is added to the baseline.
+
 ## Coverage map
 
 `report.md` ends with the number of PennMUSH commands and functions (from PennMUSH's own

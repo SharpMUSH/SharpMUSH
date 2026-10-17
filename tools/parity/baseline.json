@@ -85,6 +85,22 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "11-page-shorthand/page.group#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "11-page-shorthand/page.reconnect#1",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "11-page-shorthand/page.shorthand#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "11-page-shorthand/page.shorthand#1",
+   "command": "Bob bobpass"
+  },
+  {
    "key": "15-player-aliases/alias.set#0",
    "command": "Alice alicepass"
   },
