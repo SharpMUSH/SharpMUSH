@@ -61,7 +61,18 @@ public sealed class PluginAdministrationService(
 			return new PluginChangeResponse(plugin, [], [enabled ? $"{plugin.Name} is already on." : $"{plugin.Name} is already off."]);
 		}
 
-		PluginState.Read(directories.StateFile).With(plugin.Id, enabled).Write(directories.StateFile);
+		PluginState state;
+		try
+		{
+			// A display/read fallback must never become the state persisted by a mutation.
+			state = PluginState.Read(directories.StateFile);
+		}
+		catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException)
+		{
+			logger.LogError(ex, "The plugin state file {Path} cannot be read for a state change.", directories.StateFile);
+			return new Error<string>("The plugin state file cannot be read. Repair it before changing plugin state.");
+		}
+		state.With(plugin.Id, enabled).Write(directories.StateFile);
 		var notes = new List<string>();
 		if (!enabled && plugin.Unloadable && manager.Registration(plugin.Id) is not null)
 		{
@@ -149,7 +160,7 @@ public sealed class PluginAdministrationService(
 		cancellationToken.ThrowIfCancellationRequested();
 		var discovered = Discover();
 		var dependencies = Dependencies(discovered);
-		var state = PluginState.Read(directories.StateFile);
+		var state = ReadState();
 		if (enabled)
 		{
 			var candidates = discovered.GroupBy(p => p.Id, StringComparer.OrdinalIgnoreCase)

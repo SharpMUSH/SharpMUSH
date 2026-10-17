@@ -181,6 +181,55 @@ public class PluginSafetyTests
 		var result = await controller.Disable("missing", CancellationToken.None);
 		await Assert.That(result.Result is Microsoft.AspNetCore.Mvc.BadRequestObjectResult).IsTrue();
 	}
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CorruptStateStillBlocksConfiguredAndRunningDependentsWithoutChangingTheFile(bool running)
+	{
+		using var scope = new Scope();
+		scope.Plugin("owner");
+		if (running)
+		{
+			var dependent = Substitute.For<IPlugin>();
+			dependent.Id.Returns("dependent");
+			dependent.Version.Returns("1.0");
+			dependent.Dependencies.Returns(["owner"]);
+			scope.Catalog = PluginCatalog.ForPlugins([dependent]);
+			scope.Manager.Registration("dependent").Returns(new PluginRegistration(false, 0, 0));
+		}
+		else scope.Plugin("dependent", "owner");
+		var corrupt = System.Text.Encoding.UTF8.GetBytes("{invalid plugin state");
+		await File.WriteAllBytesAsync(scope.Directories.StateFile, corrupt);
+		var service = scope.Service;
+
+		var blockers = await service.GetBlockersAsync("owner", false);
+
+		await Assert.That(blockers.Plugins).Contains("dependent");
+		await Assert.That(await service.SetEnabledAsync("owner", false) is Error<string>).IsTrue();
+		var unknownBlockers = await service.GetBlockersAsync("missing", false);
+		await Assert.That(unknownBlockers.Packages).IsEmpty();
+		await Assert.That(unknownBlockers.Plugins).IsEmpty();
+		var controller = new SharpMUSH.Server.Controllers.PackagePluginsController(service, null!, new(true), Substitute.For<IAuditLog>());
+		await Assert.That((await controller.Disable("missing", CancellationToken.None)).Result is Microsoft.AspNetCore.Mvc.BadRequestObjectResult).IsTrue();
+		await Assert.That(await File.ReadAllBytesAsync(scope.Directories.StateFile)).IsEquivalentTo(corrupt, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task CorruptStateRefusesMutationBeforeWritingOrUnloadingPlugin()
+	{
+		using var scope = new Scope();
+		scope.Plugin("owner");
+		scope.Manager.Registration("owner").Returns(new PluginRegistration(true, 1, 0));
+		var corrupt = System.Text.Encoding.UTF8.GetBytes("{invalid plugin state");
+		await File.WriteAllBytesAsync(scope.Directories.StateFile, corrupt);
+
+		var error = (await scope.Service.SetEnabledAsync("owner", false)).Expect<Error<string>>();
+
+		await Assert.That(error.Value).Contains("Repair");
+		await Assert.That(await File.ReadAllBytesAsync(scope.Directories.StateFile)).IsEquivalentTo(corrupt, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await scope.Manager.DidNotReceive().UnloadAsync(Arg.Any<string>());
+	}
+
 }
 
 internal static class PluginTestScratch
