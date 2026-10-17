@@ -5139,7 +5139,7 @@ Tue Sep 22 13:54:04 2015
 # step()
 `step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]])`
 
-  This function is similar to map(), except you can pass up to 30 elements of the list at a time, in %0-%9 and v(10)-v(29). `<step>` must be between 1 and 30, with a step of 1 equivalent to map(). If the elements of the list can't be split up evenly, the last evaluation will run with some of the registers unset; the %+ substitution or the registers() function can be used to see which/how many are set.
+  This function is similar to map(), except you can pass up to 30 elements of the list at a time, in %0-%9 and %`<10>`-%`<29>` (or r(10,args)-r(29,args)). `<step>` must be between 1 and 30. A step of 1 calls the attribute once per element with %1 unset. If the elements of the list can't be split up evenly, the last evaluation will run with some of the registers unset; the %+ substitution or the registers() function can be used to see which/how many are set.
 
   Example:
 ```sharp
@@ -5150,7 +5150,7 @@ d - e -
 ```
 
   Using registers() to avoid extra delimiters:<br>
-    > &foo me=iter(registers(,args),v(%i0),,%b-%b)<br>
+    > &foo me=iter(sort(registers(,args),n),r(%i0,args),,%b-%b)<br>
     > think step(foo, a b c d e, 3,, %r)<br>
     a - b - c<br>
     d - e

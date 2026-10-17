@@ -25,7 +25,7 @@
 
 `iter(<list>, <pattern>[, <delimiter>[, <output separator>]])`
 
-For each word in `<list>`, iter() evaluates `<pattern>` once, and returns a list of the results of those evaluations. Words in `<list>` are separated by `<delimiter>`, if given, and spaces if not. Words in the resulting list are separated by the given `<ouput separator>`, or a space if no output separator is given.
+For each word in `<list>`, iter() evaluates `<pattern>` once, and returns a list of the results of those evaluations. Words in `<list>` are separated by `<delimiter>`, if given, and spaces if not. Words in the resulting list are separated by the given `<output separator>`, or the input delimiter if no output separator is given.
 
 In `<pattern>`, "##" stands for the current word and "#@" for its position in `<list>`, counting from 1. The word is never evaluated as code, so ## is safe on user input. See [compatibility parser in iter is data not code].
 
@@ -33,7 +33,7 @@ parse() is an alias for iter().
 
 - [iter nesting]: nested iter()s, where ## and #@ count, and `innermost_tokens`
 - [iter iteration examples]: patterns, positions, and calling an attribute
-- [iter separator examples]: an output separator, and why ## is unsafe
+- [iter separator examples]: an output separator, and keeping code-looking input as text
 
 ::: seealso
 - [ilev()]
@@ -88,10 +88,11 @@ You say, "0
 2"
 ```
 
-An example of why using ## instead of %i0 can be insecure, and lead to unintended evaluation:<br>
+Both ## and %i0 insert the element as text without evaluating it. Read stored player text with v() or get(), not u():
 ```sharp
-> say iter((1\,1),add##)
-You say, "2"
-> say iter((1\,1),add%i0)
-You say, "add(1,1)"
+> &DATA`TEXT me=[add(1,1)]
+> think iter(v(DATA`TEXT),##)
+[add(1,1)]
+> think iter(v(DATA`TEXT),%i0)
+[add(1,1)]
 ```
