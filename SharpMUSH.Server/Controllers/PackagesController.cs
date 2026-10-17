@@ -11,7 +11,6 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
-using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -32,6 +31,7 @@ public class PackagesController(
 	IPackageAuthoringService authoring,
 	IPackageOperationRunner operations,
 	PluginUploadStore uploads,
+	PackageManifestResolver manifestResolver,
 	IAuditLog audit,
 	EngineVersion engine) : ControllerBase
 {
@@ -316,7 +316,7 @@ public class PackagesController(
 
 	/// <summary>Adds or updates a configured remote.</summary>
 	[HttpPost("remotes")]
-	public async Task<IActionResult> UpsertRemote([FromBody] RemoteRequest request)
+	public async Task<IActionResult> UpsertRemote([FromBody] RemoteRequest request, [FromServices] IPackageOperationGate packageGate)
 	{
 		if (BundledPackages.IsCatalogueRemote(request.Name))
 		{
@@ -338,15 +338,18 @@ public class PackagesController(
 			return BadRequest("Trust must be official, community, or unknown.");
 		}
 
-		await registry.UpsertPackageRemoteAsync(new PackageRemoteRecord(
-			request.Name.Trim(), request.Url.Trim(), trust,
-			string.IsNullOrWhiteSpace(request.Branch) ? null : request.Branch.Trim()));
+		await packageGate.RunAsync(async () =>
+		{
+			await registry.UpsertPackageRemoteAsync(new PackageRemoteRecord(request.Name.Trim(), request.Url.Trim(), trust,
+				string.IsNullOrWhiteSpace(request.Branch) ? null : request.Branch.Trim()));
+			return true;
+		});
 		return NoContent();
 	}
 
 	/// <summary>Removes a configured remote.</summary>
 	[HttpDelete("remotes/{name}")]
-	public async Task<IActionResult> DeleteRemote(string name)
+	public async Task<IActionResult> DeleteRemote(string name, [FromServices] IPackageOperationGate packageGate)
 	{
 		if (BundledPackages.IsCatalogueRemote(name))
 		{
@@ -354,7 +357,7 @@ public class PackagesController(
 				$"'{BundledPackages.RemoteName}' is the catalogue shipped with this server and cannot be removed.");
 		}
 
-		await registry.RemovePackageRemoteAsync(name);
+		await packageGate.RunAsync(async () => { await registry.RemovePackageRemoteAsync(name); return true; });
 		return NoContent();
 	}
 
@@ -388,156 +391,51 @@ public class PackagesController(
 	[HttpPost("plan")]
 	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request,
 		CancellationToken cancellationToken)
-		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
+		=> await manifestResolver.ResolveAsync(new(request.Remote, request.Path, request.Version), false, cancellationToken) switch
 		{
-			FetchedManifest fetched => await PlanManifestAsync(request, fetched, cancellationToken),
-			ActionResult response => response,
+			ResolvedPackageManifest fetched => Ok(PackageReviewPresenter.For(fetched.Manifest, fetched.Source.Commit,
+				await installer.PlanAsync(fetched.Manifest, request.ConfigureAnswers, cancellationToken),
+				request.ConfigureAnswers ?? new Dictionary<string, string>(), fetched.Warnings)),
+			PackageManifestResolutionFailure failure => ResolutionFailed(failure)
 		};
-
-	/// <summary>Plans a fetched manifest against the live game and renders the review panes.</summary>
-	private async Task<ActionResult<PlanResponse>> PlanManifestAsync(
-		PlanRequest request, FetchedManifest fetched, CancellationToken cancellationToken)
-	{
-		var (manifest, warnings, manifestSource) = fetched;
-
-		var answers = request.ConfigureAnswers ?? new Dictionary<string, string>();
-		var changeset = await installer.PlanAsync(manifest, answers, cancellationToken);
-
-		var configure = manifest.Configure.Values
-			.Select(c => new ConfigurePromptDto(
-				c.Key, c.Label, c.Type.ToString().ToLowerInvariant(), c.Default,
-				answers.ContainsKey(c.Key) || c.Default is not null))
-			.ToList();
-
-		var renders = changeset.Attributes
-			.Select(a => new AttributeRenderDto(
-				a.TargetRef, a.Attribute,
-				a.BaseValue is null ? null : MushcodeHighlighter.ToHtml(a.BaseValue),
-				a.LiveValue is null ? null : MushcodeHighlighter.ToHtml(a.LiveValue),
-				a.NewValue is null ? null : MushcodeHighlighter.ToHtml(a.NewValue),
-				MushcodeHighlighter.FindDangerousPatterns(a.MergedValue ?? a.NewValue ?? ""),
-				a.MergedValue is null ? null : MushcodeHighlighter.ToHtml(a.MergedValue)))
-			.ToList();
-
-		return Ok(new PlanResponse(
-			manifest.Name, manifest.Version.ToString(), manifestSource.Commit,
-			changeset, configure, renders, warnings, manifest.Kind, manifest.Binary));
-	}
 
 	/// <summary>Applies a reviewed plan (decision 20.8: never automatic — this is the explicit confirmation).</summary>
 	[HttpPost("apply")]
 	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request,
 		CancellationToken cancellationToken)
-		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
+		=> await manifestResolver.ResolveAsync(new(request.Remote, request.Path, request.Version), false, cancellationToken) switch
 		{
-			FetchedManifest fetched => await ApplyManifestAsync(request, fetched, cancellationToken),
-			ActionResult response => response,
+			ResolvedPackageManifest fetched => await ApplyManifestAsync(request, fetched, cancellationToken),
+			PackageManifestResolutionFailure failure => ResolutionFailed(failure)
 		};
 
-	/// <summary>Installs a fetched manifest from the remote it was fetched from.</summary>
-	private async Task<ActionResult<ApplyResponse>> ApplyManifestAsync(
-		ApplyRequest request, FetchedManifest fetched,
-		CancellationToken cancellationToken)
+	private async Task<ActionResult<ApplyResponse>> ApplyManifestAsync(ApplyRequest request,
+		ResolvedPackageManifest fetched, CancellationToken cancellationToken)
 	{
-		var (manifest, _, manifestSource) = fetched;
-
-		// FetchManifestAsync looked the remote up already, but it can be removed in between.
-		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
-		var isUpload = PluginUploadStore.IsUploadRemote(request.Remote);
-		PackageRemoteRecord remote;
-		if (isCatalogue)
-		{
-			remote = CatalogueRemote;
-		}
-		else if (isUpload)
-		{
-			remote = new PackageRemoteRecord(PluginUploadStore.RemoteName, PluginUploadStore.SourceRepo, PackageRemoteTrust.Unknown, null);
-		}
-		else if (await registry.GetPackageRemoteAsync(request.Remote) is PackageRemoteRecord configured)
-		{
-			remote = configured;
-		}
-		else
-		{
-			return NotFound($"No configured remote named '{request.Remote}'.");
-		}
-
-		// Plugin packages carry a compiled DLL alongside package.yaml; resolve a binary reader over
-		// the same commit (or the staged upload) so the installer can verify and deposit the bytes.
-		// Softcode/application packages need none.
-		IPackageFileSource? fileSource = null;
-		if ((manifest.Kind is PackageKind.Plugin or PackageKind.Ui) && isCatalogue)
-		{
-			// The catalogue embeds manifests, not DLLs: there is nothing to read the binaries out
-			// of. No bundled package is a plugin package today, and this refuses rather than handing the
-			// installer a git source that would try to clone "bundled:sharpmush".
-			return BadRequest("A plugin package cannot be installed from the bundled catalogue.");
-		}
-
-		if (isUpload)
-		{
-			if (uploads.Files(request.Path) is not { } staged)
-			{
-				return NotFound("That upload is no longer waiting; upload the package again.");
-			}
-
-			fileSource = staged;
-		}
-		else if (manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
-		{
-			switch (await source.GetFileSourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken))
-			{
-				case Error<string> error:
-					return BadRequest(error.Value);
-				case IPackageFileSource binary:
-					fileSource = binary;
-					break;
-			}
-		}
-
-		// A catalogue install records the package id as its path, which is what first-boot bootstrap
-		// writes. Normalizing here (rather than trusting whatever path the client echoed back) keeps
-		// the two routes producing one identity, so update checks and uninstall cannot tell them apart.
-		var applyPath = isCatalogue ? manifest.Name : request.Path;
-
-		var applyRequest = new PackageApplyRequest(
-			new PackageApplySource(remote.Url, applyPath, manifestSource.Commit, remote.Branch),
-			request.ConfigureAnswers ?? new Dictionary<string, string>(),
-			request.Decisions ?? [],
-			request.KeepRevisions,
-			request.AllowPluginCode,
-			request.AllowPastMaximum,
-			fetched.Readme);
-
-		var outcome = await operations.RunAsync("apply",
-			token => installer.ApplyAsync(manifest, applyRequest, token, fileSource), cancellationToken,
-			async _ => new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier),
+		var manifest = fetched.Manifest;
+		var remote = fetched.Remote;
+		var applyRequest = new PackageApplyRequest(new(remote.Url, fetched.ApplyPath, fetched.Source.Commit, remote.Branch),
+			request.ConfigureAnswers ?? new Dictionary<string, string>(), request.Decisions ?? [], request.KeepRevisions,
+			request.AllowPluginCode, request.AllowPastMaximum, fetched.Readme);
+		var outcome = await operations.RunAsync("apply", token => installer.ApplyAsync(manifest, applyRequest, token, fetched.Files),
+			cancellationToken, async _ => new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier),
 				await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord ? "update" : "install",
 				$"{manifest.Name} v{manifest.Version}"));
-		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult } && manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
+		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult }
+			&& manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
-			if (isUpload)
-			{
-				uploads.Discard(request.Path);
-			}
-
+			if (PluginUploadStore.IsUploadRemote(request.Remote)) uploads.Discard(request.Path);
 			if (User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } accountId)
-			{
 				await audit.RecordPortalAsync(accountId, AuditActions.PluginInstall,
 					new AuditTarget(AuditTargetKinds.Plugin, manifest.Name, manifest.Name),
-					$"v{manifest.Version} from {(isUpload ? "an upload" : remote.Url)}", cancellationToken);
-			}
+					$"v{manifest.Version} from {(PluginUploadStore.IsUploadRemote(request.Remote) ? "an upload" : remote.Url)}", cancellationToken);
 		}
-
 		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult }
 			&& PackageServerCompatibility.Check(manifest, engine.Current) is { Fit: PackageServerFit.AboveMaximum } past
 			&& User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } confirmedBy)
-		{
 			await audit.RecordPortalAsync(confirmedBy, AuditActions.PackagePastMaximum,
 				new AuditTarget(AuditTargetKinds.Package, manifest.Name, manifest.Name),
 				$"v{manifest.Version} applied on SharpMUSH {past.Server}, past maximum_server {past.Maximum}", cancellationToken);
-		}
-
 		return outcome switch
 		{
 			PackageOperationRan<Result<PackageApplyResult>> ran => Applied(ran.Result, ran.Backup),
@@ -545,175 +443,14 @@ public class PackagesController(
 		};
 	}
 
+	private ObjectResult ResolutionFailed(PackageManifestResolutionFailure failure)
+		=> StatusCode(failure.StatusCode, failure.Issues is null ? failure.Message : new { failure.Message, failure.Issues });
+
 	private ActionResult<ApplyResponse> Applied(Result<PackageApplyResult> result, WorldBackup? backup) => result switch
 	{
 		PackageApplyResult ok => Ok(new ApplyResponse(ok.Revision, ok.CreatedObjects, WithBackupNote(ok.Notes, backup))),
 		Error<string> error => BadRequest(error.Value)
 	};
-
-	/// <summary>A parsed manifest, the warnings its parse raised, and where it was read from.</summary>
-	private readonly record struct FetchedManifest(
-		PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source)
-	{
-		/// <summary>The README beside the manifest, read from the same place; null when it has none.</summary>
-		public string? Readme { get; init; }
-	}
-
-	private async Task<ValueOrResponse<FetchedManifest>> FetchManifestAsync(
-		string remoteName, string path, string? version, CancellationToken cancellationToken)
-	{
-		var isCatalogue = BundledPackages.IsCatalogueRemote(remoteName);
-
-		ValueOrResponse<PackageManifestSource> fetched;
-		PackageRemoteRecord? configured = null;
-		if (isCatalogue)
-		{
-			fetched = FetchCatalogueManifest(path);
-		}
-		else if (PluginUploadStore.IsUploadRemote(remoteName))
-		{
-			// An upload has no commit; its token stands in for one, so the record says which upload it was.
-			fetched = uploads.ManifestYaml(path) is { } yaml
-				? new PackageManifestSource(yaml, path, null)
-				: NotFound("That upload is no longer waiting; upload the package again.");
-		}
-		else
-		{
-			if (await registry.GetPackageRemoteAsync(remoteName) is not PackageRemoteRecord remote)
-			{
-				return NotFound($"No configured remote named '{remoteName}'.");
-			}
-
-			configured = remote;
-			fetched = await source.GetManifestAsync(remote, path, version, cancellationToken) switch
-			{
-				PackageManifestSource fromRemote => fromRemote,
-				Error<string> error => NotFound(error.Value)
-			};
-		}
-
-		return fetched switch
-		{
-			PackageManifestSource manifestSource => ParseFetchedManifest(manifestSource, isCatalogue, version) switch
-			{
-				FetchedManifest parsed => await ReadPackageFilesAsync(parsed, remoteName, configured, path, cancellationToken),
-				ActionResult response => response,
-			},
-			ActionResult response => response,
-		};
-	}
-
-	/// <summary>
-	/// Reads the files a manifest brings with it from where the manifest came from, so the plan and the apply
-	/// carry the same text: the bodies of a content pack's <c>file:</c> wiki pages, and the package's README.
-	/// The catalogue embeds no package files; its README is <see cref="BundledPackages.Readme"/>.
-	/// </summary>
-	private async Task<ValueOrResponse<FetchedManifest>> ReadPackageFilesAsync(
-		FetchedManifest fetched, string remoteName, PackageRemoteRecord? remote, string path, CancellationToken cancellationToken)
-	{
-		if (BundledPackages.IsCatalogueRemote(remoteName)
-			&& BundledPackages.Find(fetched.Manifest.Name) is BundledPackages.Descriptor descriptor)
-		{
-			return fetched with { Readme = BundledPackages.Readme(descriptor, fetched.Manifest) };
-		}
-
-		IPackageFileSource? files = null;
-		if (PluginUploadStore.IsUploadRemote(remoteName))
-		{
-			files = uploads.Files(path);
-		}
-		else if (remote is not null)
-		{
-			switch (await source.GetFileSourceAsync(remote, path, fetched.Source.Commit, cancellationToken))
-			{
-				// Only the wiki pages are needed to install; a package whose files cannot be read installs without
-				// its README.
-				case Error<string> error when PackageWikiBodies.NeedsFiles(fetched.Manifest):
-					return BadRequest(error.Value);
-				case Error<string>:
-					break;
-				case IPackageFileSource found:
-					files = found;
-					break;
-			}
-		}
-
-		var withReadme = fetched with
-		{
-			Readme = await PackageReadme.ReadAsync(files, cancellationToken) switch
-			{
-				string readme => readme,
-				Library.DiscriminatedUnions.NotFound => null
-			}
-		};
-
-		if (!PackageWikiBodies.NeedsFiles(fetched.Manifest))
-		{
-			return withReadme;
-		}
-
-		return await PackageWikiBodies.LoadAsync(fetched.Manifest, files, cancellationToken) switch
-		{
-			PackageWikiLoad loaded => withReadme with
-			{
-				Manifest = loaded.Manifest,
-				Warnings = [.. fetched.Warnings, .. loaded.Warnings.Select(w => w.ToString())]
-			},
-			Error<string> error => UnprocessableEntity(new { Message = "The manifest is invalid.", Issues = new[] { error.Value } }),
-		};
-	}
-
-	/// <summary>Parses a fetched manifest, answering with its issues when it does not parse.</summary>
-	private ValueOrResponse<FetchedManifest> ParseFetchedManifest(
-		PackageManifestSource manifestSource, bool isCatalogue, string? version)
-		=> manifests.ParseManifest(manifestSource.ManifestYaml) switch
-		{
-			ParsedPackageManifest parsed => HonourRequestedVersion(parsed, manifestSource, isCatalogue, version),
-			PackageManifestFailure failure => UnprocessableEntity(new
-			{
-				Message = "The manifest is invalid.",
-				Issues = failure.Issues.Select(i => i.ToString()).ToList()
-			}),
-		};
-
-	/// <summary>The parsed manifest, unless the catalogue cannot serve the version that was asked for.</summary>
-	private ValueOrResponse<FetchedManifest> HonourRequestedVersion(
-		ParsedPackageManifest parsed, PackageManifestSource manifestSource, bool isCatalogue, string? version)
-	{
-		// The image ships exactly one version of each catalogue package, so an explicit version
-		// request can only be honoured when it names that one. Serving the shipped manifest anyway
-		// would install something other than what was asked for.
-		var shipped = parsed.Manifest.Version.ToString();
-		if (isCatalogue && !string.IsNullOrWhiteSpace(version) &&
-			!string.Equals(version, shipped, StringComparison.OrdinalIgnoreCase))
-		{
-			return NotFound(
-				$"This server ships {parsed.Manifest.Name} v{shipped}; the catalogue has no other versions.");
-		}
-
-		return new FetchedManifest(
-			parsed.Manifest,
-			parsed.Warnings.Select(w => w.ToString()).ToList(),
-			manifestSource);
-	}
-
-	/// <summary>
-	/// Reads a catalogue manifest out of the server assembly. <paramref name="path"/> is the
-	/// package id (the catalogue has no directories); a trailing slash is tolerated because the
-	/// browse entries of a git remote carry one and the UI passes back whatever it was given.
-	/// </summary>
-	private ValueOrResponse<PackageManifestSource> FetchCatalogueManifest(string path)
-	{
-		var packageId = (path ?? "").Trim().Trim('/');
-		if (!BundledPackages.Contains(packageId))
-		{
-			return NotFound($"'{packageId}' is not shipped with this server.");
-		}
-
-		// Version stays null: the catalogue is a dev channel of one, not a release tag.
-		return new PackageManifestSource(
-			BundledPackages.ManifestYaml(packageId), BundledPackages.SourceCommit, null);
-	}
 
 	/// <summary>
 	/// The catalogue as a browse snapshot. An entry whose manifest does not parse is still listed,

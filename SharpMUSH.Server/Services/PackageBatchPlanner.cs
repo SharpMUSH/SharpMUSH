@@ -8,12 +8,12 @@ using SharpMUSH.Library.Services;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>A resolved candidate from the existing package sources, never a second dependency registry.</summary>
-public sealed record PackageBatchCandidate(PackageBatchSource Source, PackageManifest Manifest, string Commit);
+public sealed record PackageBatchCandidate(PackageBatchSource Source, PackageManifest Manifest, string Commit, string Fingerprint = "", IReadOnlyList<string>? Warnings = null);
 
 /// <summary>One read-only projection of authoritative package and discovered plugin metadata.</summary>
 public sealed record PackageBatchProjection(IReadOnlyList<InstalledPackageRecord> Installed,
 	IReadOnlyList<PackageDependencyRecord> Dependencies, IReadOnlyList<PackageBatchCandidate> Candidates,
-	IReadOnlyList<PluginStatusDto> Plugins, IReadOnlyDictionary<string, IReadOnlyList<string>> PluginDependencies);
+	IReadOnlyList<PluginStatusDto> Plugins, IReadOnlyDictionary<string, IReadOnlyList<string>> PluginDependencies, string PluginFingerprint = "");
 
 /// <summary>Pure planning: only explicit intents become steps; dependency closure is offered separately.</summary>
 public static class PackageBatchPlanner
@@ -97,7 +97,9 @@ public static class PackageBatchPlanner
 			Installed = projection.Installed.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase),
 			Dependencies = projection.Dependencies.OrderBy(p => p.PackageId).ThenBy(p => p.DependsOnId),
 			Plugins = projection.Plugins.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase),
-			PluginDependencies = projection.PluginDependencies.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase)
+			PluginDependencies = projection.PluginDependencies.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase),
+			projection.PluginFingerprint,
+			Candidates = projection.Candidates.OrderBy(p => p.Manifest.Name, StringComparer.OrdinalIgnoreCase)
 		});
 		var steps = ordered.Select(key =>
 		{

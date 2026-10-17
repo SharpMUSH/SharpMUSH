@@ -119,24 +119,10 @@ public partial class PackageInstallService
 			return new Error<string>($"Plan is blocked: {string.Join("; ", blockedPages.Select(w => $"wiki page {w.TargetRef}/{w.Page}: {w.Detail}"))}");
 		}
 
+		var decisionErrors = PackageConflictReview.Validate(changeset with { Wiki = wikiPlan }, request.ConflictDecisions);
+		if (decisionErrors.Count > 0) return new Error<string>($"Unresolved conflicts: {string.Join("; ", decisionErrors)}");
 		var decisions = request.ConflictDecisions.ToDictionary(
 			d => DecisionKey(d.TargetRef, d.Attribute), d => d, StringComparer.Ordinal);
-		var undecided = changeset.Attributes
-			.Where(a => a.Action == PackageAttributeAction.Conflict
-				&& !decisions.ContainsKey(DecisionKey(a.TargetRef, a.Attribute)))
-			.Select(a => $"{a.TargetRef}/{a.Attribute}")
-			.Concat(changeset.Structure
-				.Where(s => s.Action == PackageStructureAction.Conflict
-					&& !decisions.ContainsKey(DecisionKey(s.TargetRef, LockDecisionAttribute(s.Element))))
-				.Select(s => $"{s.TargetRef}/lock:{s.Element}"))
-			.Concat(wikiPlan
-				.Where(w => w.Action == PackageWikiAction.Conflict && !decisions.ContainsKey(DecisionKey(w.TargetRef, w.Page)))
-				.Select(w => $"{w.TargetRef}/{w.Page}"))
-			.ToList();
-		if (undecided.Count > 0)
-		{
-			return new Error<string>($"Unresolved conflicts: {string.Join(", ", undecided)}");
-		}
 
 		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
 		await using var writes = BeginWrites(pmWizard);
