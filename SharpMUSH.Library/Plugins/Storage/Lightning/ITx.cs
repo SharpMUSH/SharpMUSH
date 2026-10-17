@@ -18,7 +18,8 @@ public interface ITx
 	/// <summary>As <see cref="Range"/>, resuming strictly after (<paramref name="afterKey"/>, <paramref name="afterValue"/>).</summary>
 	IEnumerable<(byte[] Key, byte[] Value)> RangeFrom(TableDef table, byte[] prefix, byte[] afterKey, byte[]? afterValue);
 	/// <summary>All entries whose key is greater than or equal to <paramref name="startKey"/>, in key order, with no
-	/// prefix restriction — the rest of the table from that point on.</summary>
+	/// prefix restriction — the rest of the table from that point on. The native lower-bound key must be nonempty;
+	/// use <c>Range(table, [])</c> to scan the whole table. Native failures propagate rather than appearing as EOF.</summary>
 	IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey);
 	/// <summary>
 	/// All entries whose key starts with <paramref name="prefix"/>, in reverse key order (last first): a
@@ -36,14 +37,16 @@ public interface ITx
 	/// <summary>
 	/// How many entries whose key starts with <paramref name="prefix"/> sort at or after
 	/// <paramref name="startKey"/>, which starts with <paramref name="prefix"/> or is the prefix itself. The
-	/// provider counts on the cursor without copying an entry out.
+	/// provider counts on the cursor without copying an entry out. The native lower-bound key must be nonempty;
+	/// use <see cref="Count"/> for a whole-table count. Native failures propagate rather than returning zero.
 	/// </summary>
 	long CountRange(TableDef table, byte[] prefix, byte[] startKey)
 		=> RangeFromKey(table, startKey).TakeWhile(entry => entry.Key.AsSpan().StartsWith(prefix)).LongCount();
-	/// <summary>All duplicate values stored under <paramref name="key"/>, in order.</summary>
+	/// <summary>All duplicate values stored under the nonempty <paramref name="key"/>, in order.
+	/// Native failures propagate rather than appearing as EOF.</summary>
 	IEnumerable<byte[]> Dups(TableDef table, byte[] key);
 	/// <summary>
-	/// How many values are stored under <paramref name="key"/>, answered by LMDB from the key's
+	/// How many values are stored under the nonempty <paramref name="key"/>, answered by LMDB from the key's
 	/// duplicate count rather than by reading the values out; zero for a key that is absent, or the
 	/// error LMDB reported when it could not count.
 	/// </summary>
