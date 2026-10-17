@@ -48,6 +48,7 @@ public class PackagePluginsController(
 
 	private async Task<ActionResult<PluginChangeResponse>> SetEnabledAsync(string id, bool enabled, CancellationToken cancellationToken)
 	{
+		if (!await KnownPluginAsync(id, cancellationToken)) return BadRequest($"There is no plugin '{id}'.");
 		var blockers = await plugins.GetBlockersAsync(id, enabled, cancellationToken);
 		if (blockers.Packages.Count > 0 || blockers.Plugins.Count > 0) return Conflict(blockers);
 
@@ -60,7 +61,9 @@ public class PackagePluginsController(
 					$"{(enabled ? "Turned on" : "Turned off")}{removed}", cancellationToken);
 				return Ok(change);
 			case Error<string> error:
-				// A dependency can appear while the service waits for the package gate.
+				// A dependency can appear while the service waits for the package gate. A target that disappeared
+				// meanwhile is still an ordinary validation error, even when its package row has dependents.
+				if (!await KnownPluginAsync(id, cancellationToken)) return BadRequest(error.Value);
 				blockers = await plugins.GetBlockersAsync(id, enabled, cancellationToken);
 				return blockers.Packages.Count > 0 || blockers.Plugins.Count > 0
 					? Conflict(blockers) : BadRequest(error.Value);
@@ -68,6 +71,9 @@ public class PackagePluginsController(
 				return StatusCode(StatusCodes.Status500InternalServerError);
 		}
 	}
+
+	private async Task<bool> KnownPluginAsync(string id, CancellationToken cancellationToken) =>
+		(await plugins.ListAsync(cancellationToken)).Plugins.Any(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// Stages an uploaded plugin package (a <c>.zip</c> of <c>package.yaml</c> and its files, multipart field

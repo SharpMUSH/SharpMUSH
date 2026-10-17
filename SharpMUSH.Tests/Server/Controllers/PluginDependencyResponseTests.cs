@@ -14,6 +14,9 @@ public class PluginDependencyResponseTests
 	public async Task DependenciesReturnStructuredConflict()
 	{
 		var plugins = Substitute.For<IPluginAdministration>();
+		plugins.ListAsync(Arg.Any<CancellationToken>()).Returns(new PluginsResponse([
+			new PluginStatusDto("owner", "Owner", "1", null, PluginOrigin.Installed, PluginBootStatus.NotStarted,
+				null, true, PluginPendingChange.None, false, "owner", 0, 0, ["content"])], true, false));
 		var blockers = new PluginStateBlockers(["content"], ["dependent"]);
 		plugins.GetBlockersAsync("owner", false, Arg.Any<CancellationToken>()).Returns(blockers);
 		plugins.SetEnabledAsync("owner", false, Arg.Any<CancellationToken>()).Returns(new Error<string>("Has dependents."));
@@ -26,6 +29,7 @@ public class PluginDependencyResponseTests
 	public async Task OrdinaryErrorsDoNotReturnDependencyConflict()
 	{
 		var plugins = Substitute.For<IPluginAdministration>();
+		plugins.ListAsync(Arg.Any<CancellationToken>()).Returns(new PluginsResponse([], true, false));
 		plugins.GetBlockersAsync("missing", false, Arg.Any<CancellationToken>()).Returns(new PluginStateBlockers([], []));
 		plugins.SetEnabledAsync("missing", false, Arg.Any<CancellationToken>()).Returns(new Error<string>("Unknown plugin."));
 		var controller = new PackagePluginsController(plugins, null!, new(true), Substitute.For<IAuditLog>());
@@ -41,5 +45,16 @@ public class PluginDependencyResponseTests
 			.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
 			.Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>();
 		await Assert.That(authorization.Any(a => a.Policy == SharpMUSH.Library.Authorization.PortalPermission.ServerOperate)).IsTrue();
+	}
+
+	[Test]
+	public async Task UnknownPluginWithRegistryDependentsDoesNotPromptDependencyBatch()
+	{
+		var plugins = Substitute.For<IPluginAdministration>();
+		plugins.ListAsync(Arg.Any<CancellationToken>()).Returns(new PluginsResponse([], true, false));
+		plugins.GetBlockersAsync("missing", false, Arg.Any<CancellationToken>()).Returns(new PluginStateBlockers(["content"], []));
+		plugins.SetEnabledAsync("missing", false, Arg.Any<CancellationToken>()).Returns(new Error<string>("There is no plugin 'missing'."));
+		var controller = new PackagePluginsController(plugins, null!, new(true), Substitute.For<IAuditLog>());
+		await Assert.That((await controller.Disable("missing", CancellationToken.None)).Result is BadRequestObjectResult).IsTrue();
 	}
 }
