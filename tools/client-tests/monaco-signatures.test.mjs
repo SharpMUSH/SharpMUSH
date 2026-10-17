@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../../SharpMUSH.Client/wwwroot/js/mush-mona
 // This test exercises the real browser consumer without needing a .NET build in the Node job.
 const census = JSON.parse(readFileSync(new URL('../../docs/audits/softcode-contracts.json', import.meta.url), 'utf8'));
 const censusDefinitions = Object.fromEntries(census.entries
-    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge', 'setunion', 'setdiff', 'setinter', 'setsymdiff', 'unique', 'json_query', 'json_fill'].includes(entry.name))
+    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge', 'setunion', 'setdiff', 'setinter', 'setsymdiff', 'unique', 'json_query', 'json_fill', 'mix'].includes(entry.name))
     .map(entry => [entry.name, { minArgs: entry.metadata.MinArgs, maxArgs: entry.metadata.MaxArgs, parameterNames: entry.metadata.ParameterNames }]));
 const definitions = { functions: {
     ...censusDefinitions,
@@ -121,3 +121,21 @@ test('unique portal signature puts comparison type before input and output separ
     assert.deepEqual(labels, ['list', '[sort-type]', '[delimiter]', '[osep]']);
     assert.equal(result.value.activeParameter, 3);
 });
+
+for (const [line, active, activeLabel] of [
+    ['mix(me/callback,a b,1 2', 2, 'list2'],
+    ['mix(me/callback,a|b,1|2,|', 3, '[list-or-delimiter1]'],
+    ['mix(me/callback,a|b,1|2,x|y,|', 4, '[list-or-delimiter2]'],
+    ['mix(me/callback,a|b,1|2,x|y,X|Y,|', 5, '[list-or-delimiter3]']
+]) {
+    test(`mix portal signature does not invent an output separator for ${line}`, async () => {
+        const provider = await signatureProvider();
+        const result = provider.provideSignatureHelp({ getLineContent: () => line }, { lineNumber: 1, column: line.length + 1 });
+        const signature = result.value.signatures[0];
+        const labels = Array.from(signature.parameters, parameter => signature.label.slice(...parameter.label));
+        assert.deepEqual(labels.slice(0, 6), ['attribute', 'list1', 'list2', '[list-or-delimiter1]', '[list-or-delimiter2]', '[list-or-delimiter3]']);
+        assert.equal(result.value.activeParameter, active);
+        assert.equal(labels[active], activeLabel);
+        assert.ok(!labels.includes('[outsep]'));
+    });
+}

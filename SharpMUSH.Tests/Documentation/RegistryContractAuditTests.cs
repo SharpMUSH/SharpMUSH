@@ -71,6 +71,33 @@ public class RegistryContractAuditTests
 	}
 
 	[Test]
+	[Arguments("mix(me/callback,a b,1 2)", 2, "list2")]
+	[Arguments("mix(me/callback,a|b,1|2,|)", 3, "list-or-delimiter1")]
+	[Arguments("mix(me/callback,a|b,1|2,x|y,|)", 4, "list-or-delimiter2")]
+	[Arguments("mix(me/callback,a|b,1|2,x|y,X|Y,|)", 5, "list-or-delimiter3")]
+	public async Task MixSignaturesKeepOptionalListsAndFinalDelimiterDistinctFromAnOutputSeparator(string source, int active, string activeLabel)
+	{
+		var snapshot = BuiltInAnalysisCatalog.CreateSnapshot();
+		var analyzer = AnalysisCatalogAnalyzer.Create(snapshot, SharpMUSHOptions.Default());
+		var signature = analyzer.SignatureHelp(source, 0, source.Length - 1);
+		await Assert.That(signature).IsNotNull();
+		await Assert.That(string.Join(',', signature!.Parameters.Take(6).Select(parameter => parameter.Label)))
+			.IsEqualTo("attribute,list1,list2,list-or-delimiter1,list-or-delimiter2,list-or-delimiter3");
+		await Assert.That(signature.ActiveParameter).IsEqualTo(active);
+		await Assert.That(signature.Parameters[active].Label).IsEqualTo(activeLabel);
+		await Assert.That(signature.Parameters.Count).IsEqualTo(35);
+		await Assert.That(signature.Parameters.Any(parameter => parameter.Label == "outsep")).IsFalse();
+		var entry = snapshot.Entries.Single(entry => entry.Kind == "function" && entry.Name == "mix");
+		await Assert.That(string.Join(',', entry.ParameterNames)).IsEqualTo("attribute,list1,list2,list-or-delimiter...");
+		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
+		var portal = definitions.RootElement.GetProperty("functions").GetProperty("mix");
+		await Assert.That(string.Join(',', portal.GetProperty("parameterNames").EnumerateArray().Select(value => value.GetString())))
+			.IsEqualTo("attribute,list1,list2,list-or-delimiter...");
+		await Assert.That(portal.GetProperty("minArgs").GetInt32()).IsEqualTo(3);
+		await Assert.That(portal.GetProperty("maxArgs").GetInt32()).IsEqualTo(35);
+	}
+
+	[Test]
 	public async Task PageReplyReachesGeneratedDeclarationsAndEditor()
 	{
 		var command = CommandLibrary.CreateMetadata().Single(pair => pair.Key.Equals("PAGE", StringComparison.OrdinalIgnoreCase));
