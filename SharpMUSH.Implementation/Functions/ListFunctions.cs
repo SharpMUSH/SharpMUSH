@@ -609,7 +609,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(index + 1);
 	}
 
-	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "delimiter", "outsep"])]
+	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list-or-delimiter..."])]
 	public async ValueTask<CallState> Mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -621,7 +621,7 @@ public partial class Functions
 		MString delimiter;
 		var listCount = argCount - 1;
 
-		// If more than 2 lists, last arg is delimiter
+		// With any optional arguments, the last is the delimiter; earlier optional arguments are lists.
 		if (argCount > 3)
 		{
 			delimiter = parser.CurrentState.ArgumentsOrdered[(argCount - 1).ToString()].Message;
