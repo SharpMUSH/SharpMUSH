@@ -110,6 +110,7 @@ internal static class WebHostRegistration
 					builder.WithOrigins(allowedOrigins)
 						.AllowAnyMethod()
 						.AllowAnyHeader()
+						.WithExposedHeaders("X-Total-Count")
 						.AllowCredentials();
 				}
 				else if (environment.IsDevelopment())
@@ -117,6 +118,7 @@ internal static class WebHostRegistration
 					builder.SetIsOriginAllowed(_ => true)
 						.AllowAnyMethod()
 						.AllowAnyHeader()
+						.WithExposedHeaders("X-Total-Count")
 						.AllowCredentials();
 				}
 				else

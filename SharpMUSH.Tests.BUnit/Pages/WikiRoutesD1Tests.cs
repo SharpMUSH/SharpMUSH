@@ -106,6 +106,17 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task CategoryMembersStayWithinTheirOwningPackage()
+	{
+		_fake.PageCollection = "package:pf2e-remaster";
+		_fake.CollectionRows = [WikiApiFake.Page("1", "rule", "Package rule", "guides")];
+		var cut = RenderCategory("guides");
+		cut.WaitForAssertion(() => cut.Find(".kit-tile"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-tile").Select(tile => tile.TextContent).Single()).Contains("Package rule");
+		await Assert.That(_fake.Requests.Any(path => path.Contains("package%3Apf2e-remaster/pages", StringComparison.Ordinal))).IsTrue();
+	}
+
+	[Test]
 	public async Task Category_WithNoPages_ShowsTheEmptyState()
 	{
 		var cut = RenderCategory("empty");

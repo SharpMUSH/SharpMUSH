@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using SharpMUSH.Library.API;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +40,41 @@ internal sealed class WikiApiFake : HttpMessageHandler
 		[.. Enumerable.Range(1, 250).Select(i => Page("1", $"big_{i}", $"Big {i}", "big"))];
 
 	public bool Refuse { get; set; }
+	public int? NavigationTotal { get; set; }
+	public string? PageCollection { get; set; }
+	public WikiNavigationDto? NavigationResult { get; set; }
+	public List<WikiCollectionSummaryDto> Collections { get; } = [];
+	public string[]? CollectionRows { get; set; }
+
+	private string Navigation(HttpRequestMessage request)
+	{
+		var collection = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query)["collection"] ?? PageCollection ?? "game";
+		if (NavigationResult is { } navigation) return JsonSerializer.Serialize(navigation, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+		return JsonSerializer.Serialize(new WikiNavigationDto(collection, NavigationTotal ?? AllPages.Length, Collections,
+			[new WikiCategorySummaryDto("guides", "Guides", 2, true, Pinned.Contains("guides")) { Image = "/api/wiki-assets/a/intro.jpg" },
+			 new WikiCategorySummaryDto("lore", "Lore", 1, true, Pinned.Contains("lore")) { Image = "/api/wiki-assets/b/harbour.jpg" }]),
+			new JsonSerializerOptions(JsonSerializerDefaults.Web));
+	}
+
+	private string[] CollectionResults(HttpRequestMessage request)
+	{
+		var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query);
+		var rows = CollectionRows ?? query["category"] switch
+		{
+			"big" => BigCategory,
+			"realms" => [Page("5", "harbour_lore", "Harbour lore", "realms", ns: "category"), Page("3", "harbour", "Harbour Ward", "realms")],
+			_ => AllPages
+		};
+		return rows.Where(json =>
+{
+	using var doc = JsonDocument.Parse(json);
+	var categories = doc.RootElement.GetProperty("categories").EnumerateArray().Select(row => row.GetString() ?? "").ToArray();
+	return (string.IsNullOrWhiteSpace(query["category"]) || categories.Contains(query["category"]))
+		&& (string.IsNullOrWhiteSpace(query["search"]) || doc.RootElement.GetProperty("title").GetString()!.Contains(query["search"]!, StringComparison.OrdinalIgnoreCase)
+			|| categories.Any(row => row.Contains(query["search"]!, StringComparison.OrdinalIgnoreCase)));
+}).ToArray();
+	}
+	public List<string> Requests { get; } = [];
 
 	/// <summary>The categories pinned to the wiki home; a pin request changes them as the API does.</summary>
 	public List<string> Pinned { get; } = ["guides", "lore"];
@@ -56,6 +93,7 @@ internal sealed class WikiApiFake : HttpMessageHandler
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
+		Requests.Add(request.RequestUri!.PathAndQuery);
 		if (Refuse) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
 		var path = request.RequestUri!.AbsolutePath;
 		if (request.Method == HttpMethod.Put && path.StartsWith("/api/wiki/categories/", StringComparison.Ordinal) && path.EndsWith("/pin", StringComparison.Ordinal))
@@ -68,6 +106,8 @@ internal sealed class WikiApiFake : HttpMessageHandler
 
 		string? body = path switch
 		{
+			"/api/wiki/navigation" when !FailPins => Navigation(request),
+			_ when path.StartsWith("/api/wiki/collections/", StringComparison.Ordinal) && path.EndsWith("/pages", StringComparison.Ordinal) => Paged(request, CollectionResults(request)),
 			"/api/wiki/pinned-categories" when !FailPins => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			_ when request.Method == HttpMethod.Put && path.EndsWith("/pin", StringComparison.Ordinal) => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			"/api/wiki/pages" => "[" + string.Join(",", AllPages) + "]",
@@ -79,9 +119,12 @@ internal sealed class WikiApiFake : HttpMessageHandler
 			"/api/wiki/category/realms" => Paged(request, [Page("5", "harbour_lore", "Harbour lore", "realms", ns: "category"), AllPages[2]]),
 			_ => null,
 		};
-		return Task.FromResult(body is null
+		var result = body is null
 			? new HttpResponseMessage(HttpStatusCode.NotFound)
-			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+		if (path.StartsWith("/api/wiki/collections/", StringComparison.Ordinal))
+			result.Headers.Add("X-Total-Count", CollectionResults(request).Length.ToString());
+		return Task.FromResult(result);
 	}
 
 	/// <summary>Registers the fake API, a real WikiService, MudBlazor, localization and authorization on a bUnit context.</summary>

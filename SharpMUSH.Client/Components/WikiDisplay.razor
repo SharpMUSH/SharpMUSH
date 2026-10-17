@@ -47,7 +47,7 @@ else if (Article is null && IsCategoryPage)
                     </AuthorizeView>
                 </Actions>
             </WikiPageHeader>
-            <WikiCategoryMembers Category="@Slug" />
+            <WikiCategoryMembers Category="@Slug" Locale="@Locale" />
         </div>
         <aside class="wiki-page-aside">
             <AuthorizeView Policy="wiki.admin">
@@ -117,7 +117,7 @@ else
                 @CategoryBar
                 @if (IsCategoryPage)
                 {
-                    <WikiCategoryMembers Category="@Slug" />
+                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" />
                 }
             }
             else

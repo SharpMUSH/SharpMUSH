@@ -6449,4 +6449,11 @@
   <data name="AdmDiscordRestrict" xml:space="preserve">
     <value>Изискване на свързан акаунт</value>
   </data>
+  <data name="WikiCollections" xml:space="preserve"><value>Колекции</value></data>
+  <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Всички категории</value></data>
+  <data name="WikiAllCollections" xml:space="preserve"><value>Всички колекции</value></data>
+  <data name="WikiGameCollection" xml:space="preserve"><value>Уики на играта</value></data>
+  <data name="WikiPreviousPage" xml:space="preserve"><value>Предишна</value></data>
+  <data name="WikiNextPage" xml:space="preserve"><value>Следваща</value></data>
+  <data name="WikiPageRange" xml:space="preserve"><value>Показани {0}–{1} от {2}</value></data>
 </root>

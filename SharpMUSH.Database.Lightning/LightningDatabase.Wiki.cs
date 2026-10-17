@@ -107,7 +107,8 @@ public partial class LightningDatabase : IWikiStore
 	/// <summary>Whether <paramref name="visibility"/> admits an index entry, reading its page only when a hidden rule needs it.</summary>
 	private static bool WikiEntryAdmitted(ITx tx, (byte[] Key, byte[] Value) entry, WikiVisibility visibility)
 		=> WikiVisibilityAdmits(visibility, entry.Value)
-			&& (visibility.Hidden is null || ReadWikiPage(tx, WikiIndexPageKey(entry.Key)) is { } page && visibility.Admits(page));
+			&& visibility.AdmitsPageId(WikiPageId(WikiIndexPageKey(entry.Key)))
+			&& (!visibility.NeedsPageMetadata || ReadWikiPage(tx, WikiIndexPageKey(entry.Key)) is { } page && visibility.Admits(page));
 
 	private static long WikiIndexPageKey(byte[] key) => Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
 
@@ -197,8 +198,9 @@ public partial class LightningDatabase : IWikiStore
 	{
 		var admitted = entries
 			.Where(entry => WikiVisibilityAdmits(visibility, entry.Value))
-			.Select(entry => WikiIndexPageKey(entry.Key));
-		return visibility.Hidden is null
+			.Select(entry => WikiIndexPageKey(entry.Key))
+			.Where(key => visibility.AdmitsPageId(WikiPageId(key)));
+		return !visibility.NeedsPageMetadata
 			? admitted.Select(key => (key, (WikiPage?)null))
 			: admitted
 				.Select(key => (Key: key, Page: ReadWikiPage(tx, key)))
