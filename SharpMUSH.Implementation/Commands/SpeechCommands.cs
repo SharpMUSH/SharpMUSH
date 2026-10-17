@@ -184,12 +184,7 @@ public partial class Commands
 			// Nothing from the value is used or exposed until its metadata, owner and protection are trusted.
 			var attribute = await Mediator.CreateStream(new GetAttributeQuery(executor.Object().DBRef, ["LASTPAGER"]))
 				.SingleOrDefaultAsync();
-			if (attribute is not null && (attribute.IsUnreadable || attribute.IsMetadataUnreadable))
-			{
-				await NotifyService.Notify(executor, "I can't find who last paged you.", executor);
-				return CallState.Empty;
-			}
-			if (attribute is null || string.IsNullOrWhiteSpace(attribute.Value.ToPlainText()))
+			if (attribute is null || attribute.IsUnreadable || attribute.IsMetadataUnreadable)
 			{
 				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
 				return CallState.Empty;
@@ -199,11 +194,17 @@ public partial class Commands
 			// A legacy custom LASTPAGER may predate the protected definition. Never trust its old text.
 			if (owner?.Object.Key != 1 || !flags.IsSupersetOf(IncomingPageContextFlags))
 			{
-				await NotifyService.Notify(executor, "I can't find who last paged you.", executor);
+				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
+				return CallState.Empty;
+			}
+			var context = attribute.Value.ToPlainText();
+			if (string.IsNullOrWhiteSpace(context))
+			{
+				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
 				return CallState.Empty;
 			}
 			// Exactly one incarnation-qualified sender, never a recipient list or a recycled bare dbref.
-			if (!DBRef.TryParse(attribute.Value.ToPlainText(), out var target) || target!.Value.CreationMilliseconds is null)
+			if (!DBRef.TryParse(context, out var target) || target!.Value.CreationMilliseconds is null)
 			{
 				await NotifyService.Notify(executor, "I can't find who last paged you.", executor);
 				return CallState.Empty;

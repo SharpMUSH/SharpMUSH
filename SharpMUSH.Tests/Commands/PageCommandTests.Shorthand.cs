@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -225,6 +226,46 @@ public partial class PageCommandTests
 			await Assert.That(Notifications.For(incoming.DbRef).Skip(start)).Contains($"{sender.Name} pages: [add(1,2)]=literal");
 			await CommandAsync(sender, $"&LASTPAGER me={sender.DbRef}");
 			await Assert.That(await Context(sender, "LASTPAGER")).IsEqualTo(incoming.DbRef.ToString());
+		}
+		finally { await DisconnectPages(sender, incoming); }
+	}
+
+	[Test]
+	[Arguments("mortal_dark")]
+	[Arguments("internal")]
+	public async ValueTask UntrustedHiddenIncomingContextDoesNotDiscloseExistenceOrEmptiness(string hiddenFlag)
+	{
+		var sender = await CreatePlayerAsync("PageHiddenContextSender");
+		var incoming = await CreatePlayerAsync("PageHiddenContextIncoming");
+		try
+		{
+			var owner = sender.Object switch
+			{
+				SharpPlayer player => player,
+				_ => throw new InvalidOperationException("Test sender must be a player.")
+			};
+			var flag = await Mediator.CreateStream(new GetAttributeFlagsQuery()).SingleAsync(flag => flag.Name == hiddenFlag);
+			var replies = new List<string>();
+			var targetStart = Notifications.CountFor(incoming.DbRef);
+			var start = Notifications.CountFor(sender.DbRef);
+			await CommandAsync(sender, "page/reply Missing context");
+			replies.AddRange(Notifications.For(sender.DbRef).Skip(start)
+				.Where(line => line is "No one has paged you yet." or "I can't find who last paged you."));
+			foreach (var text in new[] { string.Empty, incoming.DbRef.ToString() })
+			{
+				// The batch preserves an empty node, unlike normal attribute clearing, and the legacy owner
+				// makes it untrusted even though a newly created node receives the current seed's flags.
+				await Mediator.Send(new SetAttributesCommand(sender.DbRef,
+					[new AttributeWrite(["LASTPAGER"], MarkupText.Plain(text), owner, [flag])]));
+				await Assert.That((await StoredIncomingContext(sender)).Value.ToPlainText()).IsEqualTo(text);
+				start = Notifications.CountFor(sender.DbRef);
+				await CommandAsync(sender, "page/reply Hidden context");
+				replies.AddRange(Notifications.For(sender.DbRef).Skip(start)
+				.Where(line => line is "No one has paged you yet." or "I can't find who last paged you."));
+			}
+			await Assert.That(string.Join('|', replies)).IsEqualTo(string.Join('|', Enumerable.Repeat("No one has paged you yet.", 3)));
+			await Assert.That(Notifications.For(incoming.DbRef).Skip(targetStart)
+				.Any(line => line.Contains("Hidden context", StringComparison.Ordinal))).IsFalse();
 		}
 		finally { await DisconnectPages(sender, incoming); }
 	}
