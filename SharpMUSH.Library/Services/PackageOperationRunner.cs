@@ -105,9 +105,19 @@ public sealed class PackageOperationRunner(
 			WorldBackup? backup = null;
 			if (backups is { IsSupported: true, PackageOperationKeep: > 0 })
 			{
-				var context = provenance is null
-					? new BackupProvenance("pre-package", Operation: operation)
-					: await provenance(cancellationToken);
+				BackupProvenance context;
+				try
+				{
+					context = provenance is null
+						? new BackupProvenance("pre-package", Operation: operation)
+						: await provenance(cancellationToken);
+				}
+				catch (Exception exception) when (exception is not OperationCanceledException)
+				{
+					logger.LogError(exception, "The provenance before a package {Operation} could not be resolved.", operation);
+					return new Finished<T>(new PackageOperationRefused(
+						$"The package {operation} was refused because its backup provenance could not be resolved; nothing was changed."), []);
+				}
 				switch (await backups.CreateBeforePackageOperationAsync(context, cancellationToken))
 				{
 					case WorldBackup written:

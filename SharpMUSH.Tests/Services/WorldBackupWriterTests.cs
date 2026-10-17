@@ -70,6 +70,29 @@ public class WorldBackupWriterTests
 	}
 
 	[Test]
+	public async Task OneInventoryUsesOneLatestPointerSnapshot()
+	{
+		var root = TempPath();
+		try
+		{
+			var writer = Writer(root, 2, new FrozenClock(Instant));
+			var first = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var second = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var reads = 0;
+			var reader = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 2 },
+				(_, _) => throw new InvalidOperationException("The inventory must not create a backup."), NullLogger.Instance)
+			{
+				ReadLinkTarget = _ => ++reads == 1 ? second.Name : first.Name
+			};
+			var listed = reader.List();
+			await Assert.That(listed.Count(backup => backup.IsLatest)).IsEqualTo(1);
+			await Assert.That(listed.Single(backup => backup.IsLatest).Name).IsEqualTo(second.Name);
+			await Assert.That(reads).IsEqualTo(1);
+		}
+		finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+	}
+
+	[Test]
 	public async Task MetadataFailureDoesNotPromoteOrPruneACopy()
 	{
 		var root = TempPath();

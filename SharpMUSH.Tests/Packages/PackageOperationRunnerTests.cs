@@ -32,6 +32,29 @@ public class PackageOperationRunnerTests
 		NullLogger<PackageOperationRunner>.Instance);
 
 	[Test]
+	public async Task ProvenanceLookupFailureRefusesWithoutTakingABackupOrRunningTheOperation()
+	{
+		var backups = new RecordingBackups(keep: 2);
+		var ran = false;
+		var outcome = await Runner(backups).RunAsync("apply", _ => { ran = true; return Task.FromResult(true); },
+			provenance: _ => Task.FromException<BackupProvenance>(new IOException("Synthetic provenance lookup failure")));
+		outcome.Expect<PackageOperationRefused>();
+		await Assert.That(ran).IsFalse();
+		await Assert.That(backups.Calls).IsEmpty();
+	}
+
+	[Test]
+	public async Task ProvenanceLookupCancellationRemainsCancellation()
+	{
+		var backups = new RecordingBackups(keep: 2);
+		using var cancellation = new CancellationTokenSource();
+		await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+			await Runner(backups).RunAsync("apply", _ => Task.FromResult(true), cancellation.Token,
+				_ => { cancellation.Cancel(); return Task.FromCanceled<BackupProvenance>(cancellation.Token); }));
+		await Assert.That(backups.Calls).IsEmpty();
+	}
+
+	[Test]
 	public async Task BackupBeforeOperationCarriesInitiatingContext()
 	{
 		var root = Path.Join(Path.GetTempPath(), "package-provenance-" + Guid.NewGuid().ToString("N"));

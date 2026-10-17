@@ -113,7 +113,7 @@ public sealed partial class WorldBackupWriter(
 				PointLatestAt(final);
 				Prune();
 
-				var backup = Describe(new DirectoryInfo(final));
+				var backup = Describe(new DirectoryInfo(final), LatestTarget());
 				logger.LogInformation("World backup {Name} written ({Bytes} bytes)", backup.Name, backup.SizeBytes);
 				return backup;
 			}
@@ -150,11 +150,14 @@ public sealed partial class WorldBackupWriter(
 			: string.Empty;
 	}
 
-	public IReadOnlyList<WorldBackup> List() =>
-		BackupDirectories()
+	public IReadOnlyList<WorldBackup> List()
+	{
+		var latestTarget = LatestTarget();
+		return BackupDirectories()
 			.OrderByDescending(d => d.Name, StringComparer.Ordinal)
-			.Select(Describe)
+			.Select(directory => Describe(directory, latestTarget))
 			.ToArray();
+	}
 
 	private IEnumerable<DirectoryInfo> BackupDirectories()
 	{
@@ -256,7 +259,7 @@ public sealed partial class WorldBackupWriter(
 		}
 	}
 
-	private WorldBackup Describe(DirectoryInfo directory)
+	private WorldBackup Describe(DirectoryInfo directory, string? latestTarget)
 	{
 		var createdAt = DateTime.TryParseExact(directory.Name[..Math.Min(StampFormat.Length, directory.Name.Length)],
 			StampFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
@@ -294,7 +297,7 @@ public sealed partial class WorldBackupWriter(
 			Provenance = metadata?.Provenance,
 			Status = status,
 			IsRecoverable = !metadataPresent || metadata is not null,
-			IsLatest = LatestTarget() == directory.Name
+			IsLatest = latestTarget == directory.Name
 		};
 	}
 
