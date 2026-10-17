@@ -23,9 +23,21 @@ public sealed partial class LightningStore : IDisposable
 	/// <summary>The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size.</summary>
 	internal int MaxKeySize => _env.MaxKeySize;
 
-	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> swap in a whole
-	/// new dictionary, and reader threads outside the gate's write lock must see the swap, never a stale one.</summary>
-	private volatile Dictionary<TableDef, LmdbDb> _tables = new();
+	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> publish a whole
+	/// handle/flag snapshot. Readers outside the gate's write lock must see matching metadata and handles.</summary>
+	private volatile TableSnapshot _tableSnapshot = TableSnapshot.Empty;
+	private Dictionary<TableDef, LmdbDb> _tables => _tableSnapshot.Handles;
+
+	// These maps are immutable after publication. Handles and their actual persisted flags move together
+	// through one reference, including OpenTable, which can publish while ordinary readers coexist.
+	private sealed record NativeTable(TableDef Definition, LmdbDb Handle, DatabaseOpenFlags Flags);
+	private sealed record TableSnapshot(Dictionary<TableDef, LmdbDb> Handles, Dictionary<string, NativeTable> ByName)
+	{
+		public static readonly TableSnapshot Empty = new(new(), new(StringComparer.Ordinal));
+		public static TableSnapshot Capture(LightningTransaction tx, Dictionary<TableDef, LmdbDb> handles)
+			=> new(handles, handles.ToDictionary(pair => pair.Key.Name,
+				pair => new NativeTable(pair.Key, pair.Value, pair.Value.GetFlags(tx)), StringComparer.Ordinal));
+	}
 
 	private bool _disposed;
 
@@ -215,9 +227,10 @@ public sealed partial class LightningStore : IDisposable
 		{
 			tables[def] = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
 		}
+		var snapshot = TableSnapshot.Capture(tx, tables);
 		var openCode = tx.Commit();
 		if (openCode != MDBResultCode.Success) throw LightningStoreException.From(openCode, "open");
-		_tables = tables;
+		_tableSnapshot = snapshot;
 		// A fresh environment: whatever a periodic flush failed to do belonged to the old one, and the
 		// close that ended it has already reported (or is about to report) its own result.
 		_flushFailure = null;
@@ -235,7 +248,7 @@ public sealed partial class LightningStore : IDisposable
 	{
 		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
-		_tables = new();
+		_tableSnapshot = TableSnapshot.Empty;
 		var flushed = MDBResultCode.Success;
 		if (_options.Sync != LightningSyncMode.Full)
 		{
@@ -278,15 +291,22 @@ public sealed partial class LightningStore : IDisposable
 
 			var def = duplicates ? TableDef.Index(name, duplicates: true) : TableDef.Node(name);
 			var handle = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
+			var current = _tableSnapshot;
+			var handles = new Dictionary<TableDef, LmdbDb>(current.Handles) { [def] = handle };
+			var names = new Dictionary<string, NativeTable>(current.ByName, StringComparer.Ordinal)
+			{
+				[name] = new NativeTable(def, handle, handle.GetFlags(tx))
+			};
+			var snapshot = new TableSnapshot(handles, names);
 			var code = tx.Commit();
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"open table {name}");
-			_tables = new Dictionary<TableDef, LmdbDb>(_tables) { [def] = handle };
+			_tableSnapshot = snapshot;
 			_pluginTables = _pluginTables.SetItem(name, def);
 			return def;
 		});
 	}
 
-	private TableDef? FindTable(string name) => _tables.Keys.FirstOrDefault(t => t.Name == name);
+	private TableDef? FindTable(string name) => _tableSnapshot.ByName.TryGetValue(name, out var entry) ? entry.Definition : null;
 
 	public T Read<T>(Func<ITx, T> read)
 	{
@@ -297,7 +317,7 @@ public sealed partial class LightningStore : IDisposable
 			T result;
 			try
 			{
-				result = read(new Tx(tx, _tables));
+				result = read(new Tx(tx, _tableSnapshot));
 			}
 			catch
 			{
@@ -380,7 +400,7 @@ public sealed partial class LightningStore : IDisposable
 				var only = items[0];
 				try
 				{
-					only.Result = only.Work(new Tx(parent, _tables));
+					only.Result = only.Work(new Tx(parent, _tableSnapshot));
 				}
 				catch (Exception ex)
 				{
@@ -398,7 +418,7 @@ public sealed partial class LightningStore : IDisposable
 				using var child = _env.BeginTransaction(parent);
 				try
 				{
-					item.Result = item.Work(new Tx(child, _tables));
+					item.Result = item.Work(new Tx(child, _tableSnapshot));
 					var code = child.Commit();
 					if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
 				}
@@ -651,9 +671,9 @@ public sealed partial class LightningStore : IDisposable
 		if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
 	}
 
-	private sealed class Tx(LightningTransaction tx, Dictionary<TableDef, LmdbDb> tables) : ITx
+	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables) : ITx
 	{
-		private LmdbDb Db(TableDef t) => tables[t];
+		private LmdbDb Db(TableDef t) => tables.Handles[t];
 
 		public bool TryGet(TableDef table, ReadOnlySpan<byte> key, out byte[] value)
 		{
