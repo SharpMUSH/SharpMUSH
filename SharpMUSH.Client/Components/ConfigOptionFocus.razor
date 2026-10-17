@@ -1,0 +1,47 @@
+@using SharpMUSH.Client.Models.Configuration
+@implements IDisposable
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@code {
+    [Parameter] public bool Ready { get; set; } = true;
+    private string? _key;
+    private string? _handled;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += Changed;
+        ReadLocation();
+    }
+
+    private void Changed(object? sender, LocationChangedEventArgs args)
+    {
+        ReadLocation();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ReadLocation()
+    {
+        _key = ConfigurationOptionLocation.Read(Nav.Uri);
+        if (_key is null) _handled = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!Ready || _key is null || _handled == Nav.Uri) return;
+        _handled = Nav.Uri;
+        try
+        {
+            if (!await JS.InvokeAsync<bool>("sharpmushLayout.focusConfigurationOption", _key))
+                Snackbar.Add(Loc["ConfigurationOptionUnavailable"], Severity.Info);
+        }
+        catch (Exception exception) when (exception is JSException or JSDisconnectedException or InvalidOperationException or TaskCanceledException)
+        {
+            // Navigation or teardown can retire a rendered field before focus reaches the browser.
+        }
+    }
+
+    public void Dispose() => Nav.LocationChanged -= Changed;
+}

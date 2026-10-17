@@ -1,5 +1,7 @@
 @page "/admin/config/restrictions"
 @layout ConfigLayout
+@implements IDisposable
+@inject NavigationManager Nav
 @attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Components.Admin
 @using SharpMUSH.Client.Services
@@ -13,7 +15,7 @@
 
     @* The kit's chips switch the two lists, as on the media library. Only the chosen list is rendered,
        and each branch is its own component, so switching loads that list afresh. *@
-    <div class="page-stack restr-body">
+    <div class="page-stack restr-body" data-config-option="@(_table == FunctionsTable ? "Restriction.FunctionRestrictions" : "Restriction.CommandRestrictions")">
         <TypeChips Items="@Tables" Selected="@_table" SelectedChanged="@(t => _table = t)" AriaLabel="@Loc["Restrictions"]" />
 
         @if (_table == FunctionsTable)
@@ -33,11 +35,32 @@
     </div>
 </div>
 
+<ConfigOptionFocus />
+
 @code {
     private const string CommandsTable = "commands";
     private const string FunctionsTable = "functions";
 
     private string _table = CommandsTable;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += LocationChanged;
+        SelectOption();
+    }
+    protected override void OnParametersSet() => SelectOption();
+    private void SelectOption()
+    {
+        var option = SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.Read(Nav.Uri);
+        if (option == "Restriction.FunctionRestrictions") _table = FunctionsTable;
+        else if (option == "Restriction.CommandRestrictions") _table = CommandsTable;
+    }
+    private void LocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        SelectOption();
+        _ = InvokeAsync(StateHasChanged);
+    }
+    public void Dispose() => Nav.LocationChanged -= LocationChanged;
 
     private IReadOnlyList<(string Key, string Label)> Tables =>
     [

@@ -34,6 +34,14 @@ internal sealed class StubPaletteClient() : PaletteClient(Substitute.For<IHttpCl
 	}
 }
 
+internal sealed class StubConfigurationSearchClient() : ConfigurationSearchClient(Substitute.For<IHttpClientFactory>())
+{
+	public Task<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>? Pending { get; set; }
+	public int Requests { get; private set; }
+	public override Task<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>> GetAsync()
+	{ Requests++; return Pending ?? Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(Array.Empty<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>()); }
+}
+
 /// <summary>Answers <c>POST api/commands</c> with one line naming the command, recording each.</summary>
 internal sealed class PaletteCommandHandler : HttpMessageHandler
 {
@@ -61,6 +69,8 @@ public class CommandPaletteTests : BunitContext
 {
 	private readonly BunitAuthorizationContext _auth;
 	private readonly StubPaletteClient _palette = new();
+	private readonly StubConfigurationSearchClient _configuration = new();
+	private readonly IAccountAuthState _account = Substitute.For<IAccountAuthState>();
 	private readonly PaletteCommandHandler _commands = new();
 	private readonly IPlayTerminalService _terminal = Substitute.For<IPlayTerminalService>();
 	private readonly PaletteContext _page = new();
@@ -73,6 +83,8 @@ public class CommandPaletteTests : BunitContext
 		Services.AddMudServices();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		Services.AddSingleton<PaletteClient>(_palette);
+		Services.AddSingleton<ConfigurationSearchClient>(_configuration);
+		Services.AddSingleton(_account);
 		Services.AddSingleton(_page);
 		Services.AddSingleton(_terminal);
 		Services.AddSingleton(new GameCommandService(factory));
@@ -88,6 +100,76 @@ public class CommandPaletteTests : BunitContext
 
 	private static List<string> Labels(IRenderedComponent<CommandPalette> cut) =>
 		cut.FindAll(".kit-palette-label").Select(e => e.TextContent).ToList();
+
+	[Test]
+	public async Task IdentityChangeDuringOpeningCannotLaunchConfigurationDiscovery()
+	{
+		_auth.SetPolicies("config.admin");
+		var pending = new TaskCompletionSource<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cut = Render<Microsoft.AspNetCore.Components.CascadingValue<Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>>>(p => p
+			.Add(x => x.Value, pending.Task)
+			.AddChildContent<CommandPalette>(child => child.Add(x => x.Open, true)));
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		pending.SetResult(new(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new("name", "old admin")], "test"))));
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(_configuration.Requests).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ConfigurationResponseFromPreviousCharacterIsDiscarded()
+	{
+		_auth.SetPolicies("config.admin");
+		var pending = new TaskCompletionSource<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_configuration.Pending = pending.Task;
+		var cut = RenderOpen();
+		cut.WaitForState(() => _configuration.Requests == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		pending.SetResult((IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[new("private", "Private", "Private", "/admin/config/net", new("Net.Port", "Previous character marker", "Private description"))]);
+		await cut.Find("input").InputAsync("Previous character marker");
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(Labels(cut)).DoesNotContain("Previous character marker");
+	}
+
+	[Test]
+	[Arguments(ApiFailureKind.Transport, "Configuration search is unavailable")]
+	[Arguments(ApiFailureKind.Forbidden, "no longer have access")]
+	public async Task ConfigurationFailureIsDistinctFromAnEmptyCatalog(ApiFailureKind kind, string expected)
+	{
+		_auth.SetPolicies("config.admin");
+		_configuration.Pending = Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(new ApiFailure(kind, "sensitive upstream details"));
+		var cut = RenderOpen();
+		cut.WaitForState(() => cut.Markup.Contains(expected, StringComparison.OrdinalIgnoreCase));
+		await Assert.That(cut.Markup).DoesNotContain("sensitive upstream details");
+		await Assert.That(Labels(cut)).Contains("Wiki");
+	}
+
+	[Test]
+	public async Task ConfigurationResultNavigatesToItsFieldByKeyboard()
+	{
+		_auth.SetPolicies("config.admin");
+		_configuration.Pending = Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>((IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[
+			new("core:Net.Port", "Server", "Net", "/admin/config/net", new("Net.Port", "Port number", "Listener connection port", ["listen_port"]))]);
+		var cut = RenderOpen();
+		await cut.Find("input").InputAsync("listen_port");
+		cut.WaitForState(() => Labels(cut).Contains("Port number"));
+		await cut.Find("input").KeyDownAsync("Enter");
+		await Assert.That(Nav.Uri).EndsWith("/admin/config/net#config-option-Net.Port");
+	}
+
+	[Test]
+	public async Task ConfigurationResponseFromPreviousIdentityIsDiscarded()
+	{
+		_auth.SetPolicies("config.admin");
+		var pending = new TaskCompletionSource<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_configuration.Pending = pending.Task;
+		var cut = RenderOpen();
+		cut.WaitForState(() => _configuration.Requests == 1);
+		_auth.SetNotAuthorized();
+		pending.SetResult((IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[new("private", "Private", "Private", "/admin/config/net", new("Net.Port", "Confidential marker", "Private description"))]);
+		await cut.Find("input").InputAsync("Confidential");
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(Labels(cut)).DoesNotContain("Confidential marker");
+	}
 
 	[Test]
 	public async Task Closed_RendersNothing()

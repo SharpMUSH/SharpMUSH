@@ -737,7 +737,7 @@ public partial class PackageInstallService
 			zones.Add(zone);
 		}
 
-		if (spec.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || string.IsNullOrWhiteSpace(tile.Id)
+		if (spec.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || !tile.HasValidOptions() || string.IsNullOrWhiteSpace(tile.Id)
 			|| string.IsNullOrWhiteSpace(tile.Title) || string.IsNullOrWhiteSpace(tile.Permission)))
 			return new Error<string>("Application configuration tile is invalid.");
 

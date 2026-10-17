@@ -92,6 +92,19 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task OptionNavigationPreservesDraftAndIdentifiesRenderedControl()
+	{
+		var cut = RenderChat();
+		await cut.FindAll(".cfg-row").First(row => row.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat#config-option-Chat.NoisyCEmit");
+		cut.Render(parameters => parameters.Add(page => page.Category, "chat"));
+		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(1);
+		await Assert.That(cut.Find("[data-config-option='Chat.NoisyCEmit']").QuerySelector("button[role=switch]") is not null).IsTrue();
+		cut.WaitForState(() => JSInterop.Invocations.Any(invocation => invocation.Identifier == "sharpmushLayout.focusConfigurationOption"));
+		await Assert.That(JSInterop.Invocations["sharpmushLayout.focusConfigurationOption"].Last().Arguments[0]).IsEqualTo("Chat.NoisyCEmit");
+	}
+
+	[Test]
 	public async Task RendersGroupsAsSectionLabelsWithCards()
 	{
 		var cut = RenderChat();

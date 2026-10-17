@@ -127,6 +127,21 @@ public class DynamicApplicationPageTests : TrackingBunitContext, IAsyncDisposabl
 		Render<DynamicApplication>(p => p.Add(c => c.Slug, "character-header"));
 
 	[Test]
+	public async Task ConfigurationFocusFragmentDoesNotRefetchApplicationOrLoseItsState()
+	{
+		Seed(loggedIn: true, characters: [new CharacterSummary(5, 1000L, "Alpha", "", IsActing: true)]);
+		var nav = Services.GetRequiredService<BunitNavigationManager>();
+		nav.NavigateTo("/apps/character-header");
+		var cut = RenderApp();
+		cut.WaitForState(() => cut.Markup.Contains("Alpha the Grey"));
+		var before = _requests.Count;
+		await cut.InvokeAsync(() => nav.NavigateTo("/apps/character-header#config-option-fullname"));
+		cut.Render(parameters => parameters.Add(page => page.Slug, "character-header"));
+		await Assert.That(_requests.Count).IsEqualTo(before);
+		await Assert.That(cut.Markup).Contains("Alpha the Grey");
+	}
+
+	[Test]
 	public async Task The_acting_characters_objid_replaces_the_placeholder()
 	{
 		// #5 created at 1000 → objid "#5:1000", which is what DBRef.ToString() spells.
@@ -284,6 +299,7 @@ public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposa
 		Services.AddSingleton<TerminalLoginService>();
 		// MainLayout always mounts the command palette.
 		Services.AddSingleton<PaletteClient>();
+		Services.AddSingleton<ConfigurationSearchClient>();
 		Services.AddSingleton<PaletteContext>();
 		Services.AddSingleton<GameCommandService>();
 

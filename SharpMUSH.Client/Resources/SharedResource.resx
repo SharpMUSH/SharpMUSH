@@ -9158,4 +9158,16 @@
   <data name="WikiPreviousPage" xml:space="preserve"><value>Previous</value></data>
   <data name="WikiNextPage" xml:space="preserve"><value>Next</value></data>
   <data name="WikiPageRange" xml:space="preserve"><value>Showing {0}–{1} of {2}</value></data>
+  <data name="ConfigurationOptionUnavailable" xml:space="preserve">
+    <value>This option is no longer available on this page.</value>
+  </data>
+  <data name="ConfigurationOptionRestartRequired" xml:space="preserve">
+    <value>Requires server restart</value>
+  </data>
+  <data name="ConfigurationSearchAccessDenied" xml:space="preserve">
+    <value>You no longer have access to configuration search.</value>
+  </data>
+  <data name="ConfigurationSearchUnavailable" xml:space="preserve">
+    <value>Configuration search is unavailable. Other search results are still available.</value>
+  </data>
 </root>

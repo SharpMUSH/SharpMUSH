@@ -6,6 +6,10 @@
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
 @inject PaletteContext PageContext
+@inject ConfigurationSearchClient ConfigurationSearch
+@inject AuthenticationStateProvider Authentication
+@inject IServiceProvider Services
+@implements IDisposable
 @inject PaletteClient Server
 @inject IPlayTerminalService PlayTerminal
 @inject GameCommandService Commands
@@ -114,6 +118,10 @@
                         </li>
                     }
                 </ul>
+                @if (_configurationProblem is { } configurationProblem)
+                {
+                    <div class="kit-palette-note" role="status">@configurationProblem</div>
+                }
                 @if (_query.Length == 0 && _server is { } server && (server.Invalid.Count > 0 || server.Dropped > 0))
                 {
                     @* Only someone who may examine an object is told what is wrong with its entries. *@
@@ -159,7 +167,11 @@
     private IReadOnlyList<ListItem> _items = [];
     private bool _wasOpen;
     private int _opening;
+    private bool _disposed;
+    private IAccountAuthState? _account;
     private IReadOnlyList<PaletteRow> _destinations = [];
+    private IReadOnlyList<PaletteRow> _configurationRows = [];
+    private string? _configurationProblem;
     private PaletteResponse? _server;
     private readonly HashSet<string> _expanded = [];
     private PaletteRow? _slotRow;
@@ -189,7 +201,8 @@
         _server,
         PageContext.Page,
         PlayTerminal.IsConnected,
-        new PaletteWords(Loc["NavPaletteLeave"], Loc["NavPaletteHelpOn"]));
+        new PaletteWords(Loc["NavPaletteLeave"], Loc["NavPaletteHelpOn"]),
+        _configurationRows);
 
     private IReadOnlyList<ListItem> Build()
     {
@@ -214,18 +227,32 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Open && !_wasOpen)
+        if (_disposed) return;
+        if (!Open)
         {
+            if (_wasOpen) ++_opening;
+            _wasOpen = false;
+            return;
+        }
+        if (!_wasOpen)
+        {
+            _wasOpen = true;
+            var opening = ++_opening;
             _query = string.Empty;
             _active = 0;
             _slotRow = null;
             _output = null;
             // The last opening's rows may be another character's: the account can have switched since.
             _server = null;
+            _configurationRows = [];
+            _configurationProblem = null;
             _expanded.Clear();
             var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+            if (!IsCurrent(opening)) return;
             var build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
+            if (!IsCurrent(opening)) return;
             var scenes = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
+            if (!IsCurrent(opening)) return;
             _destinations =
             [
                 PaletteRow.Go("/", Icons.Material.Outlined.Home, Loc["Home"]),
@@ -239,16 +266,78 @@
             ];
             _itemsFor = null;
             _rememberFocus = true;
-            _ = LoadAsync(++_opening);
+            _ = LoadAsync(opening);
+            var authorized = await Authorization.AuthorizeAsync(user, "config.admin");
+            if (IsCurrent(opening) && authorized.Succeeded)
+                _ = LoadConfigurationAsync(opening);
         }
-        _wasOpen = Open;
+    }
+
+    private bool IsCurrent(int opening) => !_disposed && Open && opening == _opening;
+
+    protected override void OnInitialized()
+    {
+        Authentication.AuthenticationStateChanged += AuthenticationChanged;
+        _account = Services.GetService(typeof(IAccountAuthState)) as IAccountAuthState;
+        if (_account is not null) _account.ActiveCharacterChanged += IdentityChanged;
+    }
+
+    private void AuthenticationChanged(Task<AuthenticationState> state) => IdentityChanged();
+
+    private void IdentityChanged()
+    {
+        ++_opening;
+        _configurationRows = [];
+        _configurationProblem = null;
+        _server = null;
+        _destinations = [];
+        _itemsFor = null;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ++_opening;
+        Authentication.AuthenticationStateChanged -= AuthenticationChanged;
+        if (_account is not null) _account.ActiveCharacterChanged -= IdentityChanged;
+    }
+
+    private async Task LoadConfigurationAsync(int opening)
+    {
+        if (!IsCurrent(opening)) return;
+        var answer = await ConfigurationSearch.GetAsync();
+        if (!IsCurrent(opening)) return;
+        if (answer is ApiFailure failure)
+        {
+            _configurationRows = [];
+            _configurationProblem = Loc[failure.Kind is ApiFailureKind.Forbidden or ApiFailureKind.Unauthenticated
+                ? "ConfigurationSearchAccessDenied" : "ConfigurationSearchUnavailable"];
+            _itemsFor = null;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+        if (answer is not IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry> entries) return;
+        _configurationProblem = null;
+        string Text(string? resource, string fallback) => resource is not null && Loc[resource] is { ResourceNotFound: false } localized ? localized.Value : fallback;
+        _configurationRows = entries.Select(entry => PaletteRow.Go(entry.Href, Icons.Material.Outlined.Settings,
+            Text(entry.Option.LabelResourceKey, entry.Option.Label), entry.Source + " · " + entry.Section) with
+        {
+            Info = Text(entry.Option.DescriptionResourceKey, entry.Option.Description)
+                + (entry.Option.RequiresRestart ? " — " + Loc["ConfigurationOptionRestartRequired"] : "")
+                + (entry.Option.ReadOnlyReason is { } reason ? " — " + reason : ""),
+            Keywords = string.Join(' ', new[] { entry.Option.Key, entry.Source, entry.Section }.Concat(entry.Option.Aliases ?? []))
+        }).ToArray();
+        _itemsFor = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>Fetches the server's rows and adds them, unless the palette has closed or opened again since.</summary>
     private async Task LoadAsync(int opening)
     {
+        if (!IsCurrent(opening)) return;
         var answer = await Server.GetAsync(PlayTerminal.Prompt?.Session);
-        if (opening != _opening || !Open || answer is not PaletteResponse response) return;
+        if (!IsCurrent(opening) || answer is not PaletteResponse response) return;
         _server = response;
         _itemsFor = null;
         await InvokeAsync(StateHasChanged);
@@ -394,6 +483,7 @@
 
     private async Task CloseAsync()
     {
+        ++_opening;
         _wasOpen = false;
         _slotRow = null;
         await OpenChanged.InvokeAsync(false);

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Portal.Applications;
 using MudBlazor;
 
 namespace SharpMUSH.Client.Models.Configuration;
@@ -28,47 +29,47 @@ public static class ConfigSections
 	[
 		new("Server", "Server", "ServerCategoryDescription", Icons.Material.Outlined.Dns, false,
 		[
-			new("/admin/config/net", "Net", Icons.Material.Outlined.NetworkCheck, "Network"),
-			new("/admin/config/database", "Database", Icons.Material.Outlined.Storage, "Database"),
-			new("/admin/config/mssp", "Mssp", Icons.Material.Outlined.Radar, "AdmMssp"),
+			new(ConfigurationOptionRoutes.ForCategory("Net"), "Net", Icons.Material.Outlined.NetworkCheck, "Network"),
+			new(ConfigurationOptionRoutes.ForCategory("Database"), "Database", Icons.Material.Outlined.Storage, "Database"),
+			new(ConfigurationOptionRoutes.ForCategory("Mssp"), "Mssp", Icons.Material.Outlined.Radar, "AdmMssp"),
 		]),
 		new("Performance", "Performance", "PerformanceCategoryDescription", Icons.Material.Outlined.Speed, false,
 		[
-			new("/admin/config/limit", "Limit", Icons.Material.Outlined.Timer, "Limits"),
-			new("/admin/config/command", "Command", Icons.Material.Outlined.Terminal, "Commands"),
+			new(ConfigurationOptionRoutes.ForCategory("Limit"), "Limit", Icons.Material.Outlined.Timer, "Limits"),
+			new(ConfigurationOptionRoutes.ForCategory("Command"), "Command", Icons.Material.Outlined.Terminal, "Commands"),
 		]),
 		new("Security", "Security", "SecurityCategoryDescription", Icons.Material.Outlined.Shield, true,
 		[
-			new("/admin/config/sitelock", "SitelockRules", Icons.Material.Outlined.Lock, "Sitelock"),
-			new("/admin/config/bannednames", "BannedNames", Icons.Material.Outlined.Block, "BannedNames"),
-			new("/admin/config/restrictions", "Restriction", Icons.Material.Outlined.GppBad, "Restrictions"),
-			new("/admin/config/secrets", "Secrets", Icons.Material.Outlined.Key, "AdmSecrets"),
-			new("/admin/config/apps", "Apps", Icons.Material.Outlined.Extension, "OAuthAdmApps"),
+			new(ConfigurationOptionRoutes.ForCategory("SitelockRules"), "SitelockRules", Icons.Material.Outlined.Lock, "Sitelock"),
+			new(ConfigurationOptionRoutes.ForCategory("BannedNames"), "BannedNames", Icons.Material.Outlined.Block, "BannedNames"),
+			new(ConfigurationOptionRoutes.ForCategory("Restriction"), "Restriction", Icons.Material.Outlined.GppBad, "Restrictions"),
+			new(ConfigurationOptionRoutes.ForCategory("Secrets"), "Secrets", Icons.Material.Outlined.Key, "AdmSecrets"),
+			new(ConfigurationOptionRoutes.ForCategory("Apps"), "Apps", Icons.Material.Outlined.Extension, "OAuthAdmApps"),
 		]),
 		new("Content", "Content", "ContentCategoryDescription", Icons.Material.Outlined.Article, false,
 		[
-			new("/admin/config/cosmetic", "Cosmetic", Icons.Material.Outlined.Palette, "Cosmetic"),
-			new("/admin/config/asciitranslations", "AsciiTranslations", Icons.Material.Outlined.Translate, "AsciiTranslations"),
-			new("/admin/config/chat", "Chat", Icons.Material.Outlined.Chat, "Chat"),
-			new("/admin/config/wiki", "Wiki", Icons.Material.Outlined.MenuBook, "Wiki"),
+			new(ConfigurationOptionRoutes.ForCategory("Cosmetic"), "Cosmetic", Icons.Material.Outlined.Palette, "Cosmetic"),
+			new(ConfigurationOptionRoutes.ForCategory("AsciiTranslations"), "AsciiTranslations", Icons.Material.Outlined.Translate, "AsciiTranslations"),
+			new(ConfigurationOptionRoutes.ForCategory("Chat"), "Chat", Icons.Material.Outlined.Chat, "Chat"),
+			new(ConfigurationOptionRoutes.ForCategory("Wiki"), "Wiki", Icons.Material.Outlined.MenuBook, "Wiki"),
 		]),
 		new("Logs", "LogsAndFiles", "LogsCategoryDescription", Icons.Material.Outlined.FolderOpen, false,
 		[
-			new("/admin/config/log", "Log", Icons.Material.Outlined.Description, "Logging"),
-			new("/admin/config/file", "File", Icons.Material.Outlined.Folder, "Files"),
-			new("/admin/config/textfile", "TextFile", Icons.Material.Outlined.TextSnippet, "TextFiles"),
-			new("/admin/config/dump", "Dump", Icons.Material.Outlined.Save, "DatabaseDumps"),
+			new(ConfigurationOptionRoutes.ForCategory("Log"), "Log", Icons.Material.Outlined.Description, "Logging"),
+			new(ConfigurationOptionRoutes.ForCategory("File"), "File", Icons.Material.Outlined.Folder, "Files"),
+			new(ConfigurationOptionRoutes.ForCategory("TextFile"), "TextFile", Icons.Material.Outlined.TextSnippet, "TextFiles"),
+			new(ConfigurationOptionRoutes.ForCategory("Dump"), "Dump", Icons.Material.Outlined.Save, "DatabaseDumps"),
 		]),
 		new("Advanced", "Advanced", "AdvancedCategoryDescription", Icons.Material.Outlined.Tune, false,
 		[
-			new("/admin/config/attribute", "Attribute", Icons.Material.Outlined.Label, "Attributes"),
-			new("/admin/config/flag", "Flag", Icons.Material.Outlined.Flag, "Flags"),
-			new("/admin/config/cost", "Cost", Icons.Material.Outlined.MonetizationOn, "Costs"),
-			new("/admin/config/compatibility", "Compatibility", Icons.Material.Outlined.Verified, "Compatibility"),
-			new("/admin/config/alias", "Alias", Icons.Material.Outlined.Link, "Aliases"),
-			new("/admin/config/debug", "Debug", Icons.Material.Outlined.BugReport, "Debug"),
-			new("/admin/config/function", "Function", Icons.Material.Outlined.Functions, "Functions"),
-			new("/admin/config/warning", "Warning", Icons.Material.Outlined.Warning, "Warnings"),
+			new(ConfigurationOptionRoutes.ForCategory("Attribute"), "Attribute", Icons.Material.Outlined.Label, "Attributes"),
+			new(ConfigurationOptionRoutes.ForCategory("Flag"), "Flag", Icons.Material.Outlined.Flag, "Flags"),
+			new(ConfigurationOptionRoutes.ForCategory("Cost"), "Cost", Icons.Material.Outlined.MonetizationOn, "Costs"),
+			new(ConfigurationOptionRoutes.ForCategory("Compatibility"), "Compatibility", Icons.Material.Outlined.Verified, "Compatibility"),
+			new(ConfigurationOptionRoutes.ForCategory("Alias"), "Alias", Icons.Material.Outlined.Link, "Aliases"),
+			new(ConfigurationOptionRoutes.ForCategory("Debug"), "Debug", Icons.Material.Outlined.BugReport, "Debug"),
+			new(ConfigurationOptionRoutes.ForCategory("Function"), "Function", Icons.Material.Outlined.Functions, "Functions"),
+			new(ConfigurationOptionRoutes.ForCategory("Warning"), "Warning", Icons.Material.Outlined.Warning, "Warnings"),
 		]),
 	];
 

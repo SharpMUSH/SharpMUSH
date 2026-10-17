@@ -13,6 +13,18 @@ namespace SharpMUSH.Tests.DiscordPlugin;
 public class DiscordConfigurationTileTests
 {
 	[Test]
+	public async Task DiscordFieldsShareSecretDefinitionAndRequireTheTilePermission()
+	{
+		var tile = new SharpMUSH.Plugins.Discord.DiscordPlugin().GetConfigurationTiles().Single();
+		await Assert.That(tile.Options is not null).IsTrue();
+		var token = tile.Options!.SingleOrDefault(option => option.Key == SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name);
+		await Assert.That(token is not null).IsTrue();
+		await Assert.That(token!.Description).IsEqualTo(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Description);
+		await Assert.That(token.Route).IsEqualTo("/admin/config/secrets");
+		await Assert.That(tile.Permission).IsEqualTo(SharpMUSH.Plugins.Discord.DiscordPlugin.AdminPermission);
+	}
+
+	[Test]
 	public async Task DiscordContributesItsExistingProtectedAdminScreen()
 	{
 		var source = (IApplicationSource)new SharpMUSH.Plugins.Discord.DiscordPlugin();
@@ -27,7 +39,8 @@ public class DiscordConfigurationTileTests
 	public async Task ConfigurationMetadataSurvivesClosingAndReopeningTheWorld()
 	{
 		var path = Path.Join(Path.GetTempPath(), "application-tile-" + Guid.NewGuid().ToString("N"));
-		var tile = new ApplicationConfigurationTile("example", "Example", "Settings", "Settings", "/apps/example/settings", "config.admin");
+		var tile = new ApplicationConfigurationTile("example", "Example", "Settings", "Settings", "/apps/example/settings", "config.admin")
+		{ Options = [new("timeout", "Timeout", "Handshake", ["connection"])] };
 		var app = new RegisteredApplication("example", "Example", null, ApplicationKind.Page,
 			"http/example/schema", null, null, PortalRole.Wizard, null, null, 0, ConfigurationTile: tile);
 		LightningDatabase Open() => new(NullLogger<LightningDatabase>.Instance,

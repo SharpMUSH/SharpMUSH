@@ -165,7 +165,7 @@ public class ApplicationConfigurationTests
 			.Expect<SharpMUSH.Library.Models.Packages.ParsedPackageManifest>();
 		await Assert.That(package.Manifest.Application!.ConfigurationTile is not null).IsEqualTo(supported);
 		await Assert.That(package.Warnings.Any(issue => issue.Path == "application.configuration_tile")).IsEqualTo(!supported);
-		await Assert.That(SharpMUSH.Library.Models.Packages.PackageFormatVersion.Supported.Minor).IsEqualTo(11);
+		await Assert.That(SharpMUSH.Library.Models.Packages.PackageFormatVersion.Supported.Minor).IsEqualTo(12);
 	}
 
 	[Test]

@@ -136,7 +136,7 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         if (Location() is { } location && string.Equals(location.Slug, Slug, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(Nav.Uri, _loadedUri, StringComparison.Ordinal))
+            && !string.Equals(SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(Nav.Uri), _loadedUri, StringComparison.Ordinal))
         {
             _ = InvokeAsync(async () =>
             {
@@ -148,7 +148,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (string.Equals(Nav.Uri, _loadedUri, StringComparison.Ordinal) && ReferenceEquals(AuthState, _loadedAuth)
+        if (string.Equals(SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(Nav.Uri), _loadedUri, StringComparison.Ordinal) && ReferenceEquals(AuthState, _loadedAuth)
             && string.Equals(_app?.Slug, Slug, StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -160,7 +160,7 @@
     private async Task LoadAsync()
     {
         var generation = ++_generation;
-        _loadedUri = Nav.Uri;
+        _loadedUri = SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(Nav.Uri);
         _loadedAuth = AuthState;
         _loading = true;
         _schema = null;

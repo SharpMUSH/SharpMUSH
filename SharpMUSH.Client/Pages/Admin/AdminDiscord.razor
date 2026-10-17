@@ -59,15 +59,15 @@
                         </ol>
                         <div class="adm-discord-bans">
                             <MudSwitch T="bool" Value="@connection.MirrorBans" ValueChanged="@(on => ActAsync(Discord.MirrorBansAsync(on)))"
-                                       Disabled="@_busy" Color="Color.Primary" Label="@Loc["AdmDiscordMirrorBans"]" />
-                            <span class="adm-discord-sub">@Loc["AdmDiscordMirrorBansSub"]</span>
+                                       Disabled="@_busy" Color="Color.Primary" Label="@Loc[DiscordConfigurationFields.MirrorBans.LabelResourceKey!]" data-config-option="@DiscordConfigurationFields.MirrorBans.Key" />
+                            <span class="adm-discord-sub">@Loc[DiscordConfigurationFields.MirrorBans.DescriptionResourceKey!]</span>
                         </div>
                         <div class="adm-discord-actions">
                             @if (connection.InviteUrl is { } invite)
                             {
                                 <a class="adm-discord-invite" href="@invite" target="_blank" rel="noopener">@Loc["AdmDiscordInvite"]</a>
                             }
-                            <a class="adm-discord-token" href="admin/config/secrets">@Loc["AdmDiscordToken"]</a>
+                            <a class="adm-discord-token" href="@DiscordConfigurationFields.Token.Href("/admin/config/secrets")">@Loc["AdmDiscordToken"]</a>
                             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Class="adm-discord-reconnect" Disabled="@_busy"
                                            OnClick="ReconnectAsync">@Loc["AdmDiscordReconnect"]</CapsuleButton>
                         </div>
@@ -344,6 +344,8 @@
         }
     </div>
 </FeatureGate>
+
+<ConfigOptionFocus Ready="@(!_loading && !_forbidden)" />
 
 @code {
     /// <summary>Roles the game hands out itself, which the server refuses to map.</summary>
