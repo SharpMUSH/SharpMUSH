@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../tools/WikiSemantics/WikiSemantics.csproj" />
+    <!-- Run the recovery probe as a separate process with its own dependency output. -->
+    <ProjectReference Include="../tools/WikiSemantics.NativeProbe/WikiSemantics.NativeProbe.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
     <Compile Include="../tools/ContractAudit/SourceProvenance.cs" Link="Documentation/SourceProvenance.cs" />
     <ProjectReference Include="../SharpMUSH.Plugins.Scene/SharpMUSH.Plugins.Scene.csproj" Aliases="ScenePlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
@@ -172,6 +174,15 @@
          that needs a test rather than only a reviewer. -->
     <ProjectReference Include="..\SharpMUSH.LanguageServer\SharpMUSH.LanguageServer.csproj" />
   </ItemGroup>
+
+  <Target Name="CopyNativeSemanticProbe" AfterTargets="Build">
+    <ItemGroup>
+      <NativeSemanticProbeFiles Include="$(MSBuildThisFileDirectory)../tools/WikiSemantics.NativeProbe/bin/$(Configuration)/net11.0/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NativeSemanticProbeFiles)"
+          DestinationFiles="@(NativeSemanticProbeFiles->'$(OutDir)native-semantic-probe/%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 
   <!-- Drop the built CommandOnlyPlugin (DLL + manifest only — its SharpMUSH deps resolve from this host's
        output via sharedTypes) into plugins-unit/command-only/ so the unload unit test can load it from disk
