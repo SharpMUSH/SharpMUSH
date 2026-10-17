@@ -27,6 +27,9 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 	private readonly WorldBackupWriter _writer;
 	private readonly Func<Guid, WorldBackupWriter> _remoteWriter;
 
+	// Listing remains available when future package copies are disabled. Construction writes nothing.
+	private readonly WorldBackupWriter _packageInventoryWriter;
+
 	/// <summary>
 	/// The copies taken before a portal package operation: the same copy routine, into
 	/// <see cref="WorldBackupOptions.PackageOperationRoot"/> with its own retention. Null when
@@ -60,15 +63,14 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 			Interval = TimeSpan.Zero
 		}, copy, logger)
 		{ EstimateCopyBytes = estimate };
-		_packageOperationWriter = options.PackageOperationKeep > 0
-			? new WorldBackupWriter(options with
-			{
-				Root = options.PackageOperationRoot,
-				Keep = options.PackageOperationKeep,
-				Interval = TimeSpan.Zero
-			}, copy, logger)
-			{ EstimateCopyBytes = estimate }
-			: null;
+		_packageInventoryWriter = new WorldBackupWriter(options with
+		{
+			Root = options.PackageOperationRoot,
+			Keep = options.PackageOperationKeep,
+			Interval = TimeSpan.Zero
+		}, copy, logger)
+		{ EstimateCopyBytes = estimate };
+		_packageOperationWriter = options.PackageOperationKeep > 0 ? _packageInventoryWriter : null;
 	}
 
 	public bool IsSupported => true;
@@ -84,21 +86,33 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 	public ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
 		=> _writer.CreateAsync(ct);
 
+	public ValueTask<Result<WorldBackup>> CreateAsync(BackupProvenance provenance, CancellationToken ct = default)
+		=> _writer.CreateAsync(provenance, ct);
+
 	public ValueTask<Result<WorldBackup>> CreateRemoteAsync(Guid jobId, CancellationToken ct = default)
-		=> _remoteWriter(jobId).CreateAsync(ct);
+		=> _remoteWriter(jobId).CreateAsync(new BackupProvenance("remote backup job", Operation: jobId.ToString("N")), ct);
 
 	public IReadOnlyList<WorldBackup> List() => _writer.List();
 
 	public ValueTask<Result<WorldBackupCheck>> CheckLatestAsync(CancellationToken ct = default)
-		=> List() is [var latest, ..]
-			? new ValueTask<Result<WorldBackupCheck>>(Task.Run(() => LightningBackupCheck.Check(latest, ct), ct))
-			: ValueTask.FromResult<Result<WorldBackupCheck>>(new Error<string>("there is no backup to check yet; run @backup first"));
+	{
+		if (List() is not [var latest, ..])
+			return ValueTask.FromResult<Result<WorldBackupCheck>>(new Error<string>("there is no backup to check yet; run @backup first"));
+		if (!latest.IsRecoverable)
+			return ValueTask.FromResult<Result<WorldBackupCheck>>(new Error<string>(
+				$"newest backup {latest.Name} has invalid or incomplete metadata and is not recoverable; inspect @storage/backups or run @backup"));
+		return new ValueTask<Result<WorldBackupCheck>>(Task.Run(() => LightningBackupCheck.Check(latest, ct), ct));
+	}
 
 	public int PackageOperationKeep => _packageOperationWriter?.Keep ?? 0;
 
 	public ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(CancellationToken ct = default)
-		=> _packageOperationWriter?.CreateAsync(ct)
+		=> _packageOperationWriter?.CreateAsync(new BackupProvenance("pre-package", Operation: "unknown"), ct)
 			?? ValueTask.FromResult<Result<WorldBackup>>(new Error<string>("automatic backups before package operations are turned off"));
 
-	public IReadOnlyList<WorldBackup> ListPackageOperationBackups() => _packageOperationWriter?.List() ?? [];
+	public ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(BackupProvenance provenance, CancellationToken ct = default)
+		=> _packageOperationWriter?.CreateAsync(provenance, ct)
+			?? ValueTask.FromResult<Result<WorldBackup>>(new Error<string>("automatic backups before package operations are turned off"));
+
+	public IReadOnlyList<WorldBackup> ListPackageOperationBackups() => _packageInventoryWriter.List();
 }

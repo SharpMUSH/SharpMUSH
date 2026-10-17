@@ -212,7 +212,8 @@ public class PackagesController(
 	/// </summary>
 	[HttpPost("{id}/rollback/{revision:int}")]
 	public async Task<ActionResult<PackageRollbackResult>> Rollback(string id, int revision, CancellationToken cancellationToken)
-		=> await operations.RunAsync("rollback", token => installer.RollbackAsync(id, revision, token), cancellationToken) switch
+		=> await operations.RunAsync("rollback", token => installer.RollbackAsync(id, revision, token), cancellationToken,
+			_ => Task.FromResult(new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier), "rollback", $"{id} revision {revision}"))) switch
 		{
 			PackageOperationRan<Result<PackageRollbackResult>> ran => RolledBack(ran.Result, ran.Backup),
 			PackageOperationRefused refused => Unavailable(refused)
@@ -240,7 +241,8 @@ public class PackagesController(
 	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, [FromServices] GameFeatureService features,
 		CancellationToken cancellationToken)
 	{
-		return await operations.RunAsync("uninstall", token => installer.UninstallAsync(id, force, token), cancellationToken) switch
+		return await operations.RunAsync("uninstall", token => installer.UninstallAsync(id, force, token), cancellationToken,
+			_ => Task.FromResult(new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier), "uninstall", id))) switch
 		{
 			PackageOperationRan<Result<Success>> { Result: var result } => result switch
 			{
@@ -508,7 +510,10 @@ public class PackagesController(
 			fetched.Readme);
 
 		var outcome = await operations.RunAsync("apply",
-			token => installer.ApplyAsync(manifest, applyRequest, token, fileSource), cancellationToken);
+			token => installer.ApplyAsync(manifest, applyRequest, token, fileSource), cancellationToken,
+			async _ => new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier),
+				await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord ? "update" : "install",
+				$"{manifest.Name} v{manifest.Version}"));
 		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult } && manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			if (isUpload)
@@ -516,7 +521,7 @@ public class PackagesController(
 				uploads.Discard(request.Path);
 			}
 
-			if (User.FindFirstValue(ClaimTypes.NameIdentifier) is { } accountId)
+			if (User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } accountId)
 			{
 				await audit.RecordPortalAsync(accountId, AuditActions.PluginInstall,
 					new AuditTarget(AuditTargetKinds.Plugin, manifest.Name, manifest.Name),
@@ -526,7 +531,7 @@ public class PackagesController(
 
 		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult }
 			&& PackageServerCompatibility.Check(manifest, engine.Current) is { Fit: PackageServerFit.AboveMaximum } past
-			&& User.FindFirstValue(ClaimTypes.NameIdentifier) is { } confirmedBy)
+			&& User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } confirmedBy)
 		{
 			await audit.RecordPortalAsync(confirmedBy, AuditActions.PackagePastMaximum,
 				new AuditTarget(AuditTargetKinds.Package, manifest.Name, manifest.Name),

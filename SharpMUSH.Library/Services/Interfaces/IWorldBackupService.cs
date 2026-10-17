@@ -45,6 +45,10 @@ public interface IWorldBackupService
 	/// </summary>
 	ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default);
 
+	/// <summary>Takes a copy with the initiating operation's provenance.</summary>
+	ValueTask<Result<WorldBackup>> CreateAsync(BackupProvenance provenance, CancellationToken ct = default)
+		=> CreateAsync(ct);
+
 	/// <summary>Writes an independently retained safe copy for one remote job; the caller owns cleanup.</summary>
 	ValueTask<Result<WorldBackup>> CreateRemoteAsync(Guid jobId, CancellationToken ct = default)
 		=> ValueTask.FromResult<Result<WorldBackup>>(new Error<string>("remote backup copies are unavailable"));
@@ -72,6 +76,10 @@ public interface IWorldBackupService
 	/// package's <c>plugins/</c> directory is not in it.
 	/// </summary>
 	ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(CancellationToken ct = default);
+
+	/// <summary>Takes a pre-package copy with the operation and administrator when known.</summary>
+	ValueTask<Result<WorldBackup>> CreateBeforePackageOperationAsync(BackupProvenance provenance, CancellationToken ct = default)
+		=> CreateBeforePackageOperationAsync(ct);
 
 	/// <summary>The pre-package-operation copies currently on disk, newest first.</summary>
 	IReadOnlyList<WorldBackup> ListPackageOperationBackups();

@@ -20,9 +20,10 @@ public interface IPackageOperationRunner
 {
 	/// <param name="operation">A short name for the queue entry and the logs: <c>apply</c>, <c>rollback</c>, <c>uninstall</c>.</param>
 	/// <param name="body">The package operation itself.</param>
+	/// <param name="provenance">Resolves the initiating context inside the operation gate, immediately before its backup.</param>
 	/// <param name="cancellationToken">The caller's token, passed on to <paramref name="body"/>.</param>
 	Task<PackageOperationOutcome<T>> RunAsync<T>(
 		string operation,
 		Func<CancellationToken, Task<T>> body,
-		CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default, Func<CancellationToken, Task<Models.BackupProvenance>>? provenance = null);
 }

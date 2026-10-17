@@ -31,12 +31,12 @@ public sealed class PackageOperationRunner(
 	public async Task<PackageOperationOutcome<T>> RunAsync<T>(
 		string operation,
 		Func<CancellationToken, Task<T>> body,
-		CancellationToken cancellationToken = default)
+		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
 	{
 		await _sequence.WaitAsync(cancellationToken);
 		try
 		{
-			return await RunInSequenceAsync(operation, body, cancellationToken);
+			return await RunInSequenceAsync(operation, body, cancellationToken, provenance);
 		}
 		finally
 		{
@@ -47,7 +47,7 @@ public sealed class PackageOperationRunner(
 	private async Task<PackageOperationOutcome<T>> RunInSequenceAsync<T>(
 		string operation,
 		Func<CancellationToken, Task<T>> body,
-		CancellationToken cancellationToken)
+		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
 	{
 		var completion = new TaskCompletionSource<Finished<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var abandoned = false;
@@ -59,7 +59,7 @@ public sealed class PackageOperationRunner(
 			{
 				// A request that gave up while waiting its turn has nobody left to answer.
 				if (Volatile.Read(ref abandoned)) return null;
-				var execution = ExecuteAsync(operation, body, cancellationToken);
+				var execution = ExecuteAsync(operation, body, cancellationToken, provenance);
 				// The outcome, a fault included, belongs to the request waiting on it, not to the queue.
 				await ((Task)execution).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 				completion.TrySetFromTask(execution);
@@ -91,7 +91,7 @@ public sealed class PackageOperationRunner(
 
 	/// <summary>The operation's queue entry: the backup and then the operation, in one hold of the gate.</summary>
 	private async Task<Finished<T>> ExecuteAsync<T>(
-		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken)
+		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
 	{
 		// The entry's time budget is for softcode. A package operation is not softcode, and stopping it
 		// part way only makes it undo what it has done, so it runs to the end.
@@ -105,7 +105,20 @@ public sealed class PackageOperationRunner(
 			WorldBackup? backup = null;
 			if (backups is { IsSupported: true, PackageOperationKeep: > 0 })
 			{
-				switch (await backups.CreateBeforePackageOperationAsync(cancellationToken))
+				BackupProvenance context;
+				try
+				{
+					context = provenance is null
+						? new BackupProvenance("pre-package", Operation: operation)
+						: await provenance(cancellationToken);
+				}
+				catch (Exception exception) when (exception is not OperationCanceledException)
+				{
+					logger.LogError(exception, "The provenance before a package {Operation} could not be resolved.", operation);
+					return new Finished<T>(new PackageOperationRefused(
+						$"The package {operation} was refused because its backup provenance could not be resolved; nothing was changed."), []);
+				}
+				switch (await backups.CreateBeforePackageOperationAsync(context, cancellationToken))
 				{
 					case WorldBackup written:
 						backup = written;

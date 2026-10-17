@@ -111,37 +111,22 @@ public partial class Commands
 	/// same situation as one whose support is not written yet.</para>
 	/// </summary>
 	[SharpCommand(Name = "@BACKUP", Switches = ["LIST"], Behavior = CB.Default,
-		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 1, ParameterNames = ["page"])]
 	public async ValueTask<Option<CallState>> Backup(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!parser.CurrentState.Switches.Contains("LIST"))
 		{
+			if ((parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Length > 0)
+			{
+				await NotifyService.Notify(executor, "Use @backup with no argument, or @backup/list <page>.");
+				return new None();
+			}
 			return await BackupNowAsync(executor);
 		}
 
-		if (!WorldBackupService.IsSupported)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
-				executor, WorldBackupService.UnavailableReason);
-			return new None();
-		}
-
-		var existing = WorldBackupService.List();
-		if (existing.Count == 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListEmpty), executor);
-			return new None();
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListHeaderFormat),
-			executor, WorldBackupService.Root);
-		foreach (var backup in existing)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListRowFormat),
-				executor, backup.Name, DescribeBytes(backup.SizeBytes));
-		}
+		await BackupInventoryAsync(executor, parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "");
 
 		return new None();
 	}
