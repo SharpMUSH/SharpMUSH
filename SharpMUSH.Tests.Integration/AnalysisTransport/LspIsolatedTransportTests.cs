@@ -116,9 +116,11 @@ public class LspIsolatedTransportTests
 	}
 
 	[Test]
-	public async Task CloseDuringDiagnosticProjection_SuppressesOldPublicationAfterClear()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CloseDuringDiagnosticProjection_SuppressesOldPublicationAfterClear(bool fastValidation)
 	{
-		using var analyzer = new GatedAnalyzer { GateProjection = true };
+		using var analyzer = new GatedAnalyzer { GateProjection = true, FastValidation = fastValidation };
 		await using var app = await StartApp(sessions: new FixedAnalysisSessions(analyzer));
 		using var socket = await Connect(app); await Initialize(socket);
 		const string uri = "file:///projection.fun";
@@ -128,6 +130,7 @@ public class LspIsolatedTransportTests
 			await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "slow[" } } });
 			phase = "waiting for diagnostic projection";
 			await analyzer.Entered(TimeSpan.FromSeconds(3));
+			await Assert.That(analyzer.ProjectionHasExecutionBudget).IsTrue();
 			phase = "sending didClose";
 			await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didClose", @params = new { textDocument = new { uri } } });
 			phase = "waiting for empty diagnostics while projection is held";

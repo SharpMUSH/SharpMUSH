@@ -177,7 +177,16 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 				await StartAsync(null, uri, snapshot, async token =>
 				{
 					var analyzer = await _identity.CreateAnalyzerAsync(token);
-					return analyzer.Validate(snapshot.Text, MushParseMode.ForFileName(new Uri(uri).AbsolutePath));
+					// Projection is synchronous analysis too: keep it on the bounded worker, before
+					// its task completes. A fast validation must not pull it onto the reader loop.
+					return analyzer.Validate(snapshot.Text, MushParseMode.ForFileName(new Uri(uri).AbsolutePath)).Take(1000).Select(diagnostic => new
+					{
+						range = diagnostic.Range,
+						severity = diagnostic.Severity.ToString() == "Error" ? 1 : diagnostic.Severity.ToString() == "Warning" ? 2 : diagnostic.Severity.ToString() == "Hint" ? 4 : 3,
+						message = diagnostic.Message.Length > 1024 ? diagnostic.Message[..1024] + "..." : diagnostic.Message,
+						source = diagnostic.Source,
+						code = diagnostic.Code
+					}).ToArray();
 				});
 				return;
 			}
@@ -255,14 +264,7 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 					var result = await AnalyseAsync(operation, work.Token);
 					if (id is not null) await Result(id.Value, result);
 					else if (uri is not null && snapshot is not null && _documents.Get(uri)?.Generation == snapshot.Generation)
-						await Diagnostics(uri, snapshot.Version, ((IReadOnlyList<SharpMUSH.Library.Models.Diagnostic>)result!).Take(1000).Select(diagnostic => new
-						{
-							range = diagnostic.Range,
-							severity = diagnostic.Severity.ToString() == "Error" ? 1 : diagnostic.Severity.ToString() == "Warning" ? 2 : diagnostic.Severity.ToString() == "Hint" ? 4 : 3,
-							message = diagnostic.Message.Length > 1024 ? diagnostic.Message[..1024] + "..." : diagnostic.Message,
-							source = diagnostic.Source,
-							code = diagnostic.Code
-						}).ToArray(), () => _documents.Get(uri)?.Generation == snapshot.Generation);
+						await Diagnostics(uri, snapshot.Version, (object[])result!, () => _documents.Get(uri)?.Generation == snapshot.Generation);
 				}
 				catch (OperationCanceledException) when (!_stop.IsCancellationRequested)
 				{
