@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -75,6 +76,7 @@ public class Startup(string colorFile, string natsUrl)
 	/// </summary>
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
+		services.TryAddSingleton<IHostEnvironment>(environment);
 		services.AddSharpMushHttpPipeline(configuration, environment);
 		services.AddSharpMushDatabase(configuration);
 		services.AddSharpMushEngine(configuration, natsUrl);

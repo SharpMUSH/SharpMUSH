@@ -87,7 +87,8 @@ public interface IConnectionService
 	ValueTask Bind(long handle, DBRef player, bool firstLogin = false);
 
 	/// <summary>Checks local authority after the publication fence is acquired, immediately before the binding changes.</summary>
-	ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize);
+	/// <remarks>The non-throwing commit signal runs after local binding and index replacement, before fallible publication.</remarks>
+	ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize, Action? onCommitted = null);
 
 
 	/// <summary>

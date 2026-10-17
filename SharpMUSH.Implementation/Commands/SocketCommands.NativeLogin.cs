@@ -40,9 +40,21 @@ public partial class Commands
 				}
 				selected = player;
 				return true;
-			}, async (character, validateFinalAuthority) => await ConnectionService.BindAuthorizedAsync(handle, character,
-				async () => transport is not null && ReferenceEquals(transport.Metadata, ConnectionService.Get(handle)?.Metadata)
-					&& await validateFinalAuthority()), sourceHost: hostName);
+			}, async (character, validateFinalAuthority) =>
+			{
+				var bindingCommitted = false;
+				try
+				{
+					return await ConnectionService.BindAuthorizedAsync(handle, character,
+						async () => transport is not null && ReferenceEquals(transport.Metadata, ConnectionService.Get(handle)?.Metadata)
+							&& await validateFinalAuthority(), () => bindingCommitted = true);
+				}
+				catch (Exception error) when (bindingCommitted)
+				{
+					Logger.LogWarning("Native binding publication failed for handle {Handle}: {ErrorType}", handle, error.GetType().Name);
+					return true;
+				}
+			}, sourceHost: hostName);
 
 			if (result is bool bound && bound && selected is { } loggedIn) committed = loggedIn;
 		}

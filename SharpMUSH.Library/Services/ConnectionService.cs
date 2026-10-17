@@ -129,16 +129,18 @@ public class ConnectionService(
 		await BindCoreAsync(handle, player, firstLogin, null);
 	}
 
-	public ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize)
-		=> BindCoreAsync(handle, player, false, authorize);
+	public ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize, Action? onCommitted = null)
+		=> BindCoreAsync(handle, player, false, authorize, onCommitted);
 
-	private async ValueTask<bool> BindCoreAsync(long handle, DBRef player, bool firstLogin, Func<Task<bool>>? authorize)
+	private async ValueTask<bool> BindCoreAsync(long handle, DBRef player, bool firstLogin, Func<Task<bool>>? authorize, Action? onCommitted = null)
 	{
 		var get = Get(handle);
 		if (get is null || authorize is not null && get.Ref is not null) return false;
 
 		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return false;
 		if (!await ReplaceAsync(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, authorize)) return false;
+		// The local binding and player index are committed before any fallible notification work.
+		onCommitted?.Invoke();
 
 		if (stateStore != null)
 		{

@@ -14,7 +14,7 @@ using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-public class ExternalLoginUiTests : BunitContext
+public class ExternalLoginUiTests : TrackingBunitContext
 {
 	private sealed class Handler : HttpMessageHandler
 	{
@@ -34,7 +34,7 @@ public class ExternalLoginUiTests : BunitContext
 	}
 	private Handler Setup()
 	{
-		var handler = new Handler(); var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") };
+		var handler = new Handler(); var http = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") });
 		var factory = Substitute.For<IHttpClientFactory>(); factory.CreateClient("api").Returns(http);
 		Services.AddMudServices(); Services.AddSingleton(factory); JSInterop.Mode = JSRuntimeMode.Loose;
 		Services.AddSingleton<IStringLocalizer<SharedResource>>(PortalLocalizer.Create());
