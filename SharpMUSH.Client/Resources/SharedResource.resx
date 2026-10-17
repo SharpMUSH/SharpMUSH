@@ -9197,4 +9197,142 @@
   <data name="ConfigurationSearchUnavailable" xml:space="preserve">
     <value>Configuration search is unavailable. Other search results are still available.</value>
   </data>
+  <data name="PkgBatchQueue" xml:space="preserve">
+    <value>Queued changes</value>
+  </data>
+  <data name="PkgBatchEmpty" xml:space="preserve">
+    <value>No changes queued.</value>
+  </data>
+  <data name="PkgBatchRemoveNamed" xml:space="preserve">
+    <value>Remove queued change for {0}</value>
+  </data>
+  <data name="PkgBatchRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="PkgBatchReview" xml:space="preserve">
+    <value>Review queued changes</value>
+  </data>
+  <data name="PkgBatchQueueInstall" xml:space="preserve">
+    <value>Queue install</value>
+  </data>
+  <data name="PkgBatchDescription" xml:space="preserve">
+    <value>Review the ordered changes before applying. Completed steps stay applied if a later step fails.</value>
+  </data>
+  <data name="PkgBatchResults" xml:space="preserve">
+    <value>Batch results</value>
+  </data>
+  <data name="PkgBatchReviewRemaining" xml:space="preserve">
+    <value>Refresh state and review remaining changes</value>
+  </data>
+  <data name="PkgBatchRefreshStatus" xml:space="preserve">
+    <value>Refresh status</value>
+  </data>
+  <data name="PkgBatchProposals" xml:space="preserve">
+    <value>Suggested prerequisites</value>
+  </data>
+  <data name="PkgBatchProposalsDescription" xml:space="preserve">
+    <value>These changes are not queued. Add each change explicitly, then review the new plan.</value>
+  </data>
+  <data name="PkgBatchAddChange" xml:space="preserve">
+    <value>Add this change to the queue</value>
+  </data>
+  <data name="PkgBatchOrderedChanges" xml:space="preserve">
+    <value>Ordered changes</value>
+  </data>
+  <data name="PkgBatchCurrentState" xml:space="preserve">
+    <value>Current version: {0}</value>
+  </data>
+  <data name="PkgBatchNotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="PkgBatchRestartBoundary" xml:space="preserve">
+    <value>A restart may be required. Dependent changes wait until the plugin is running, then need fresh review.</value>
+  </data>
+  <data name="PkgBatchReviewStep" xml:space="preserve">
+    <value>Configure and review this install</value>
+  </data>
+  <data name="PkgBatchChoicesSaved" xml:space="preserve">
+    <value>Review choices saved in this session</value>
+  </data>
+  <data name="PkgBatchConfirmUninstall" xml:space="preserve">
+    <value>Uninstall {0} and remove its managed package content</value>
+  </data>
+  <data name="PkgBatchExpires" xml:space="preserve">
+    <value>Review expires: {0}</value>
+  </data>
+  <data name="PkgBatchRefreshReview" xml:space="preserve">
+    <value>Refresh review</value>
+  </data>
+  <data name="PkgBatchApply" xml:space="preserve">
+    <value>Apply reviewed changes</value>
+  </data>
+  <data name="PkgBatchUnknownOutcome" xml:space="preserve">
+    <value>The outcome is unknown. Refresh actual state and review again before retrying.</value>
+  </data>
+  <data name="PkgBatchSaveChoices" xml:space="preserve">
+    <value>Save choices and return to batch</value>
+  </data>
+  <data name="PkgBatchReviewExpired" xml:space="preserve">
+    <value>This step changed or its review is unavailable. Return to the queued changes and refresh the review.</value>
+  </data>
+  <data name="PkgBatchRunPending" xml:space="preserve">
+    <value>Waiting to start</value>
+  </data>
+  <data name="PkgBatchRunRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="PkgBatchRunCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="PkgBatchRunPartial" xml:space="preserve">
+    <value>Partially completed; completed changes remain applied</value>
+  </data>
+  <data name="PkgBatchRunFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="PkgBatchRunAwaitingRestart" xml:space="preserve">
+    <value>Awaiting restart and fresh review</value>
+  </data>
+  <data name="PkgBatchRunCancelled" xml:space="preserve">
+    <value>Cancelled; check each step for committed changes</value>
+  </data>
+  <data name="PkgBatchRunUnknown" xml:space="preserve">
+    <value>Outcome unknown</value>
+  </data>
+  <data name="PkgBatchStepPending" xml:space="preserve">
+    <value>Not started</value>
+  </data>
+  <data name="PkgBatchStepRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="PkgBatchStepCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="PkgBatchStepFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="PkgBatchStepUnrun" xml:space="preserve">
+    <value>Not run</value>
+  </data>
+  <data name="PkgBatchStepAwaitingRestart" xml:space="preserve">
+    <value>Awaiting restart</value>
+  </data>
+  <data name="PkgBatchStepNeedsReview" xml:space="preserve">
+    <value>Needs fresh review</value>
+  </data>
+  <data name="PkgBatchStepCancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="PkgBatchStepUnknown" xml:space="preserve">
+    <value>Outcome unknown</value>
+  </data>
+  <data name="PkgBatchAcceptedPrerequisite" xml:space="preserve">
+    <value>Accepted prerequisite</value>
+  </data>
+  <data name="PkgBatchRequestedChange" xml:space="preserve">
+    <value>Requested change</value>
+  </data>
+  <data name="PkgBatchStateCheckedAtReview" xml:space="preserve">
+    <value>Current state will be checked at review</value>
+  </data>
 </root>

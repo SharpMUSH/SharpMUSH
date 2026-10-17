@@ -13,9 +13,41 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="HttpRequestException"/> straight out into the render loop, so the package pages went
 /// blank where every other admin page shows the reason.
 /// </remarks>
-public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerInfoService serverInfo)
+public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerInfoService serverInfo, AccountAuthService? accountAuth = null)
+	: IDisposable
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
+
+	/// <summary>Unsaved batch choices live only in this browser session's memory.</summary>
+	public PackageBatchDraft Batch { get; } = new(accountAuth);
+
+	public void Dispose() => Batch.Dispose();
+
+	public Task<ApiResult<PackageBatchPlanResponse>> PlanBatchAsync(PackageBatchPlanRequest request) =>
+		Client.PostApiAsync<PackageBatchPlanRequest, PackageBatchPlanResponse>(
+			"api/packages/batches/plan", request, "The server returned no batch plan.");
+
+	public async Task<ApiResult<PackageBatchRunResponse>> ApplyBatchAsync(string reviewToken)
+	{
+		var revision = Batch.Revision;
+		var result = await Changing(Client.PostApiAsync<PackageBatchApplyRequest, PackageBatchRunResponse>(
+			"api/packages/batches/apply", new(reviewToken), "The batch outcome is unknown. Refresh actual state before retrying."));
+		// Retain an accepted run even if its page was left while admission was in flight. A changed
+		// draft or account authority must not inherit the previous request's result.
+		if (revision == Batch.Revision && result is PackageBatchRunResponse run) Batch.Run = run;
+		return result;
+	}
+
+	public async Task<ApiResult<PackageBatchRunResponse>> GetBatchRunAsync(string id, CancellationToken cancellationToken = default)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Get, $"api/packages/batches/{Uri.EscapeDataString(id)}");
+		var result = await Client.SendApiAsync<PackageBatchRunResponse>(request,
+			"The batch outcome is unknown. Refresh actual state before retrying.", cancellationToken);
+		if (result is not PackageBatchRunResponse { State: PackageBatchRunState.Pending or PackageBatchRunState.Running })
+			serverInfo.Refresh();
+		return result;
+	}
+
 
 	/// <summary>
 	/// A call that may install or remove packages: whatever its answer, the portal asks the server again which
@@ -123,7 +155,7 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 	public Task<ApiResult<PluginsResponse>> GetPluginsAsync() =>
 		Client.GetApiAsync<PluginsResponse>("api/packages/plugins", "The server returned no plugin list.");
 
-	/// <summary>Turns plugin <paramref name="id"/> on or off; turning it off uninstalls the packages that need it.</summary>
+	/// <summary>Turns plugin <paramref name="id"/> on or off; dependencies requiring other changes must be reviewed as a batch.</summary>
 	public Task<ApiResult<PluginChangeResponse>> SetPluginEnabledAsync(string id, bool enabled) =>
 		Changing(Client.PostApiAsync<object?, PluginChangeResponse>(
 			$"api/packages/plugins/{Uri.EscapeDataString(id)}/{(enabled ? "enable" : "disable")}", null,

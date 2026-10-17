@@ -67,7 +67,7 @@
         </MudTooltip>
         <MudTooltip Text="@Loc["PkgUninstall"]">
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["PkgUninstall"]"
-                           Color="Color.Error"
+                           Color="Color.Error" Disabled="@Busy"
                            OnClick="@OnUninstall" />
         </MudTooltip>
     </Actions>

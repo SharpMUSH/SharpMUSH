@@ -1,0 +1,359 @@
+@page "/admin/packages/batch"
+@attribute [Authorize(Policy = "packages.admin")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models.Packages
+@implements IAsyncDisposable
+@inject PackagesAdminService Packages
+@inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+
+<PageTitle>@Loc["PkgBatchReview"] — @Loc["AppTitle"]</PageTitle>
+<div class="page-stack page-stack--padded pkg-batch-review">
+    <PlainPageHeader Title="@Loc["PkgBatchReview"]" Description="@Loc["PkgBatchDescription"]" />
+    <PackageBatchQueue Busy="@(_busy || Running)" />
+    @if (_busy)
+    {
+        <MudProgressLinear Indeterminate="true" aria-label="@Loc["Loading"]" />
+    }
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert>
+    }
+    @if (_run is { } run)
+    {
+        <KitCard Title="@Loc["PkgBatchResults"]">
+            <div class="pkg-batch-body" role="status" aria-live="polite" aria-atomic="true">
+                <MudText>@Loc[$"PkgBatchRun{run.State}"]</MudText>
+                @if (run.Message is { } message) { <MudText>@message</MudText> }
+                <ol>
+                    @foreach (var step in run.Steps)
+                    {
+                        <li><strong>@Loc[PackageBatchQueue.ActionKey(step.Intent.Action)] @step.Intent.TargetId</strong>
+                            <span>@Loc[$"PkgBatchStep{step.State}"]</span>
+                            @if (step.Message is { } note) { <p>@note</p> }
+                            @if (step.ReviewUrl is { } url && SafeReviewUrl(url))
+                            {
+                                <MudButton Variant="Variant.Text" Disabled="@(_busy || Running)" OnClick="@(() => ReviewFailedStepAsync(step))">@Loc["PkgReview"]</MudButton>
+                            }
+                            @if (step.Plugin is { } plugin)
+                            {
+                                <p>@Loc[plugin.Enabled ? "PkgPluginTurnedOn" : "PkgPluginTurnedOff", plugin.Name]
+                                    <span>@Loc[PluginStateKey(plugin.Status)]</span>
+                                    @if (plugin.Pending != SharpMUSH.Library.Models.Packages.PluginPendingChange.None)
+                                    { <span>@Loc[plugin.Pending == SharpMUSH.Library.Models.Packages.PluginPendingChange.Starts ? "PkgPluginStartsAtRestart" : "PkgPluginStopsAtRestartShort"]</span> }
+                                </p>
+                            }
+                        </li>
+                    }
+                </ol>
+                @if (!Running)
+                {
+                    <MudButton Disabled="@_busy" OnClick="@ReviewRemainingAsync">@Loc["PkgBatchReviewRemaining"]</MudButton>
+                    <MudButton Disabled="@_busy" OnClick="@RefreshRunAsync">@Loc["PkgBatchRefreshStatus"]</MudButton>
+                }
+            </div>
+        </KitCard>
+    }
+    @if (_plan is { } plan)
+    {
+        @foreach (var blocker in plan.Blockers)
+        {
+            <MudAlert Severity="Severity.Warning"><strong>@blocker.TargetId</strong>: @blocker.Message</MudAlert>
+        }
+        @if (plan.Proposals.Count > 0)
+        {
+            <KitCard Title="@Loc["PkgBatchProposals"]">
+                <div class="pkg-batch-body">
+                    <p>@Loc["PkgBatchProposalsDescription"]</p>
+                    <ul>
+                        @foreach (var proposal in plan.Proposals)
+                        {
+                            <li>@Loc[PackageBatchQueue.ActionKey(proposal.Intent.Action)] <strong>@proposal.Intent.TargetId</strong>
+                                <p>@proposal.Reason</p>
+                                <MudButton Disabled="@(_busy || Running)" OnClick="@(() => AddProposalAsync(proposal))">@Loc["PkgBatchAddChange"]</MudButton>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </KitCard>
+        }
+        <KitCard Title="@Loc["PkgBatchOrderedChanges"]">
+            <div class="pkg-batch-body">
+                <ol>
+                    @foreach (var step in plan.Steps)
+                    {
+                        <li @key="step.StepId">
+                            <strong>@Loc[PackageBatchQueue.ActionKey(step.Intent.Action)] @step.Intent.TargetId</strong>
+                            <p>@step.Reason</p>
+                            @if (step.Plugin is { } currentPlugin)
+                            {
+                                <p>@Loc[PluginStateKey(currentPlugin.Status)]
+                                    @if (currentPlugin.Pending != SharpMUSH.Library.Models.Packages.PluginPendingChange.None)
+                                    { <span>@Loc[currentPlugin.Pending == SharpMUSH.Library.Models.Packages.PluginPendingChange.Starts ? "PkgPluginStartsAtRestart" : "PkgPluginStopsAtRestartShort"]</span> }
+                                </p>
+                            }
+                            else
+                            {
+                            <p>@Loc["PkgBatchCurrentState", step.InstalledVersion ?? Loc["PkgBatchNotInstalled"]]
+                                @if (step.ResolvedVersion is { } version) { <span> / @version</span> }
+                                @if (step.Commit is { } commit) { <span> / @commit</span> }
+                            </p>
+                            }
+                            @if (step.Intent.Source is { } source)
+                            { <p>@source.Remote / @source.Path / @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</p> }
+                            @if (step.RequiresRestart)
+                            { <MudAlert Severity="Severity.Info">@Loc["PkgBatchRestartBoundary"]</MudAlert> }
+
+                            @if (step.Review is { } content)
+                            {
+                                <p>@Loc["PkgObjectsCount", content.Changeset.Objects.Count] /
+                                    @Loc["PkgAttributesCount", content.Changeset.Attributes.Count] /
+                                    @Loc["PkgWikiPagesCount", content.Changeset.Wiki?.Count ?? 0]</p>
+                                <details>
+                                    <summary>@Loc["PkgReview"]</summary>
+                                    <ul>
+                                        @foreach (var obj in content.Changeset.Objects)
+                                        { <li>@obj.Action: @obj.Ref — @obj.Name</li> }
+                                        @foreach (var attributeChange in content.Changeset.Attributes)
+                                        { <li>@attributeChange.Action: @attributeChange.TargetRef / @attributeChange.Attribute</li> }
+                                        @foreach (var item in content.Changeset.Wiki ?? [])
+                                        { <li>@item.Action: @item.Page</li> }
+                                    </ul>
+                                </details>
+                            }
+                            @if (step.Intent.Action == PackageBatchAction.Install && step.Intent.Source is not null)
+                            {
+                                <MudLink Href="@ReviewLink(step)">@Loc["PkgBatchReviewStep"]</MudLink>
+                                @if (Packages.Batch.IsReviewed(step.StepId))
+                                { <span>@Loc["PkgBatchChoicesSaved"]</span> }
+                            }
+                            @if (step.Intent.Action == PackageBatchAction.Uninstall && Packages.Batch.ReviewFor(step.StepId)?.ConfirmUninstall != true)
+                            {
+                                <MudCheckBox T="bool" Value="false" ValueChanged="@(value => ConfirmUninstallAsync(step, value))"
+                                             Disabled="@(_busy || Running)" Label="@Loc["PkgBatchConfirmUninstall", step.Intent.TargetId]" />
+                            }
+                        </li>
+                    }
+                </ol>
+                @if (plan.ExpiresAt is { } expiry) { <p>@Loc["PkgBatchExpires", expiry.ToLocalTime().ToString("g")]</p> }
+                <div class="pkg-batch-actions">
+                    <MudButton Variant="Variant.Outlined" Disabled="@(_busy || Running)" OnClick="@PlanAsync">@Loc["PkgBatchRefreshReview"]</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanApply)" OnClick="@ApplyAsync">@Loc["PkgBatchApply"]</MudButton>
+                </div>
+            </div>
+        </KitCard>
+    }
+    else if (!Running && Packages.Batch.Intents.Count > 0)
+    {
+        <MudButton Disabled="@_busy" OnClick="@PlanAsync">@Loc["PkgBatchRefreshReview"]</MudButton>
+    }
+</div>
+
+@code {
+    private PackageBatchPlanResponse? _plan;
+    private PackageBatchRunResponse? _run;
+    private string? _error;
+    private bool _busy;
+    private bool _disposed;
+    private readonly CancellationTokenSource _lifetime = new();
+    private Task? _polling;
+    private bool Running => _run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running;
+    private bool CanApply => !_busy && !Running && _plan is { ReviewToken: not null, Blockers.Count: 0, Proposals.Count: 0 }
+        && Packages.Batch.Plan == _plan && _plan.ExpiresAt > DateTimeOffset.UtcNow
+        && _plan.Steps.All(s => s.Review is not { } review || !NeedsChoices(review) || Packages.Batch.IsReviewed(s.StepId));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Packages.Batch.Changed += OnDraftChanged;
+        _run = Packages.Batch.Run;
+        if (_run is { } completed && !Running) Packages.Batch.RemoveCompleted(completed);
+        if (Running) StartPolling();
+        else if (Packages.Batch.Intents.Count > 0) await PlanAsync();
+    }
+
+    private void OnDraftChanged()
+    {
+        if (Packages.Batch.Plan is null) _plan = null;
+        _run = Packages.Batch.Run;
+        if (Running) { _plan = null; StartPolling(); }
+        if (!_disposed) _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PlanAsync()
+    {
+        if (Running || _busy) return;
+        _busy = true;
+        _error = null;
+        try
+        {
+            var revision = Packages.Batch.Revision;
+            var result = await Packages.PlanBatchAsync(Packages.Batch.Request());
+            if (_disposed || revision != Packages.Batch.Revision) { _plan = null; return; }
+            switch (result)
+            {
+                case PackageBatchPlanResponse plan:
+                    _plan = plan;
+                    if (Packages.Batch.SetPlan(plan))
+                    {
+                        revision = Packages.Batch.Revision;
+                        var confirmedResult = await Packages.PlanBatchAsync(Packages.Batch.Request());
+                        if (_disposed || revision != Packages.Batch.Revision) { _plan = null; return; }
+                        switch (confirmedResult)
+                        {
+                            case PackageBatchPlanResponse confirmed: _plan = confirmed; Packages.Batch.SetPlan(confirmed); break;
+                            case ApiFailure failure: _plan = null; _error = failure.Message; break;
+                        }
+                    }
+                    break;
+                case ApiFailure failure: _plan = null; _error = failure.Message; break;
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task AddProposalAsync(PackageBatchProposal proposal)
+    {
+        Packages.Batch.Queue(proposal.Intent, proposal.Reason);
+        await PlanAsync();
+    }
+
+    private async Task ConfirmUninstallAsync(PackageBatchStep step, bool value)
+    {
+        Packages.Batch.SaveReview(new(step.StepId, ConfirmUninstall: value));
+        await PlanAsync();
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (!CanApply || _plan?.ReviewToken is not { } token) return;
+        _busy = true;
+        _error = null;
+        try
+        {
+            var revision = Packages.Batch.Revision;
+            var result = await Packages.ApplyBatchAsync(token);
+            if (_disposed || revision != Packages.Batch.Revision)
+            {
+                if (!_disposed) _error = Loc["PkgBatchUnknownOutcome"];
+                return;
+            }
+            switch (result)
+            {
+                case PackageBatchRunResponse run:
+                    _run = run;
+                    Packages.Batch.Run = run;
+                    if (!Running) Packages.Batch.RemoveCompleted(run);
+                    _plan = null;
+                    if (Running) StartPolling();
+                    break;
+                case ApiFailure failure:
+                    _plan = null;
+                    _error = $"{Loc["PkgBatchUnknownOutcome"]} {failure.Message}";
+                    break;
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    private void StartPolling()
+    {
+        if (!_disposed) _polling ??= PollAsync();
+    }
+
+    private async Task PollAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(750));
+            while (Running && await timer.WaitForNextTickAsync(_lifetime.Token))
+            {
+                await RefreshRunAsync();
+                if (_disposed) return;
+                await InvokeAsync(StateHasChanged);
+                if (_error is not null) break;
+            }
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _polling = null; }
+    }
+
+    private async Task RefreshRunAsync()
+    {
+        if (_run is not { } previous) return;
+        var revision = Packages.Batch.Revision;
+        var result = await Packages.GetBatchRunAsync(previous.Id, _lifetime.Token);
+        if (_disposed || revision != Packages.Batch.Revision) return;
+        switch (result)
+        {
+            case PackageBatchRunResponse run:
+                _run = run;
+                Packages.Batch.Run = run;
+                if (!Running) Packages.Batch.RemoveCompleted(run);
+                _error = null;
+                break;
+            case ApiFailure failure:
+                _run = previous with { State = PackageBatchRunState.Unknown };
+                Packages.Batch.Run = _run;
+                _error = $"{Loc["PkgBatchUnknownOutcome"]} {failure.Message}";
+                break;
+        }
+    }
+
+    private async Task ReviewFailedStepAsync(PackageBatchStepProgress failed)
+    {
+        await ReviewRemainingAsync();
+        var step = _plan?.Steps.FirstOrDefault(s => s.Intent.ClientIntentId == failed.Intent.ClientIntentId
+            && s.Intent.Action == failed.Intent.Action
+            && string.Equals(s.Intent.TargetId, failed.Intent.TargetId, StringComparison.OrdinalIgnoreCase));
+        if (step is { Intent.Source: not null, Review: not null }) Nav.NavigateTo(ReviewLink(step));
+    }
+
+    private async Task ReviewRemainingAsync()
+    {
+        if (_run is { } run) Packages.Batch.RemoveCompleted(run);
+        _run = null;
+        Packages.Batch.Run = null;
+        await PlanAsync();
+    }
+
+    private static bool NeedsChoices(PlanResponse review) =>
+        review.Configure.Count > 0
+        || review.Kind is PackageKind.Plugin or PackageKind.Ui
+        || review.Changeset.Compatibility?.Fit == PackageServerFit.AboveMaximum
+        || review.Changeset.Attributes.Any(a => a.Action == PackageAttributeAction.Conflict)
+        || review.Changeset.Structure.Any(s => s.Action == PackageStructureAction.Conflict)
+        || (review.Changeset.Wiki?.Any(w => w.Action == PackageWikiAction.Conflict) ?? false)
+        || (review.Changeset.Settings?.Any(s => s.Action is PackageSettingAction.Set or PackageSettingAction.Restore) ?? false)
+        || (review.Changeset.Declarations?.Any(d => (d.Retroactive ?? 0) > 0) ?? false);
+
+    private static string PluginStateKey(SharpMUSH.Library.Models.Packages.PluginBootStatus status) => status switch
+    {
+        SharpMUSH.Library.Models.Packages.PluginBootStatus.Loaded => "PkgPluginRunning",
+        SharpMUSH.Library.Models.Packages.PluginBootStatus.Disabled => "PkgPluginOff",
+        SharpMUSH.Library.Models.Packages.PluginBootStatus.Failed => "PkgPluginFailed",
+        SharpMUSH.Library.Models.Packages.PluginBootStatus.Incompatible => "PkgPluginIncompatible",
+        SharpMUSH.Library.Models.Packages.PluginBootStatus.Duplicate => "PkgPluginDuplicate",
+        _ => "PkgPluginNotStarted"
+    };
+
+    private static bool SafeReviewUrl(string url) => url.StartsWith("/admin/packages/review?", StringComparison.Ordinal);
+    private static string ReviewLink(PackageBatchStep step)
+    {
+        var source = step.Intent.Source!;
+        return $"/admin/packages/review?remote={Uri.EscapeDataString(source.Remote)}&path={Uri.EscapeDataString(source.Path)}"
+            + (source.Version is null ? "" : $"&version={Uri.EscapeDataString(source.Version)}")
+            + $"&batchStep={Uri.EscapeDataString(step.StepId)}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Packages.Batch.Changed -= OnDraftChanged;
+        await _lifetime.CancelAsync();
+        if (_polling is { } polling) await polling;
+        _lifetime.Dispose();
+    }
+}
