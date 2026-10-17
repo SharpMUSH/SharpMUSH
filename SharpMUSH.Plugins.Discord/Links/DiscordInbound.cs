@@ -36,7 +36,7 @@ public sealed record DiscordIncoming(
 /// <param name="Character">The speaking identity, by objid.</param>
 /// <param name="Origin"><c>discord/&lt;message id&gt;</c>, so the line's way back out replaces the message.</param>
 public sealed record DiscordSpeech(DiscordChannelLink Link, string AccountId, string Character, string Style, MString Text,
-	string Origin);
+	string Origin, ExternalFeedIdentity? ExternalIdentity = null, ulong AuthorId = 0);
 
 public readonly record struct Spoken(long LineId);
 
@@ -98,13 +98,15 @@ public sealed class DiscordInbound(
 			return;
 		}
 
-		if (accounts.Get(message.AuthorId) is not { Linked: true } account)
+		var account = accounts.Get(message.AuthorId);
+		if (!link.Unrestricted && account is not { Linked: true })
 		{
 			await RemoveUnlinkedAsync(message, link, cancellationToken);
 			return;
 		}
 
-		if (speakers.Character(message.AuthorId, message.ChannelId) is not { } character)
+		var character = account is { Linked: true } ? speakers.Character(message.AuthorId, message.ChannelId) : null;
+		if (!link.Unrestricted && character is null)
 		{
 			await TellOnceAsync(message.AuthorId, $"speak:{link.ChannelId}",
 				$"Your message in #{link.ChannelName} did not reach the game: you have no character to speak as there. "
@@ -119,13 +121,20 @@ public sealed class DiscordInbound(
 			return;
 		}
 
-		var speech = new DiscordSpeech(link, account.AccountId, character, style, text,
-			$"{DiscordChannelLink.FeedKind}/{message.MessageId.ToString(CultureInfo.InvariantCulture)}");
+		var speech = new DiscordSpeech(link, account?.AccountId ?? "", character ?? "", style, text,
+			$"{DiscordChannelLink.FeedKind}/{message.MessageId.ToString(CultureInfo.InvariantCulture)}",
+			character is null ? new ExternalFeedIdentity("discord", message.AuthorId.ToString(CultureInfo.InvariantCulture), SafeName(message.AuthorName)) : null, message.AuthorId);
 		if (await game.SpeakAsync(speech, cancellationToken) is Refused refused)
 		{
 			await TellAsync(message.AuthorId, $"Your message in #{link.ChannelName} did not reach the game: {refused.Reason}",
 				cancellationToken);
 		}
+	}
+
+	public static string SafeName(string name)
+	{
+		var safe = new string(name.Where(c => !char.IsControl(c) && c is not '\u202a' and not '\u202b' and not '\u202c' and not '\u202d' and not '\u202e' and not '\u2066' and not '\u2067' and not '\u2068' and not '\u2069').Take(80).ToArray()).Trim();
+		return safe.Length == 0 ? "member" : safe;
 	}
 
 	/// <summary>A message the bot posted was deleted: the lines it carried leave the game's recall.</summary>

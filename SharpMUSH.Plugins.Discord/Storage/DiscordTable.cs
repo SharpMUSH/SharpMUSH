@@ -39,6 +39,16 @@ public sealed class DiscordTable<T> where T : class
 		}, cancellationToken);
 	}
 
+	/// <summary>Updates an existing record in one provider transaction; never recreates a removed record.</summary>
+	public async ValueTask<T?> UpdateAsync(ulong id, Func<T, T> change, CancellationToken cancellationToken = default)
+		=> await _accessor.WriteAsync(tx =>
+		{
+			if (!tx.TryGet(_table, Key(id), out var bytes) || Deserialize(bytes) is not { } current) return null;
+			var updated = change(current);
+			tx.Put(_table, Key(id), JsonSerializer.SerializeToUtf8Bytes(updated, JsonOptions));
+			return updated;
+		}, cancellationToken);
+
 	/// <returns>Whether there was a record to remove.</returns>
 	public async ValueTask<bool> RemoveAsync(ulong id, CancellationToken cancellationToken = default)
 		=> await _accessor.WriteAsync(tx => tx.Delete(_table, Key(id)), cancellationToken);

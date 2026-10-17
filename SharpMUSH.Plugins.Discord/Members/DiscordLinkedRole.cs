@@ -14,6 +14,9 @@ public interface IDiscordChannelGate
 	/// </summary>
 	/// <returns>Null once done, else why it could not be, said for the admin.</returns>
 	Task<string?> GateAsync(ulong channelId, CancellationToken cancellationToken);
+	Task<string?> SetUnrestrictedAsync(ulong channelId, bool unrestricted, CancellationToken cancellationToken);
+	Task<string?> RestoreAsync(ulong channelId, CancellationToken cancellationToken);
+	Task<string?> ReconcileAsync(ulong channelId, CancellationToken cancellationToken);
 
 	/// <summary>
 	/// Who besides the Linked role may post in the channel: <c>@everyone</c>, or a role the channel allows it to.
@@ -29,7 +32,7 @@ public interface IDiscordChannelGate
 /// it was away.
 /// </summary>
 public sealed class DiscordLinkedRole(IDiscordAccountStore store, IDiscordStandings standings, ILogger<DiscordLinkedRole> logger)
-	: IDiscordClientHandler, IDiscordLinkedRole, IDiscordChannelGate
+	: IDiscordClientHandler, IDiscordLinkedRole, IDiscordPermissionChannels
 {
 	public const string RoleName = "Linked";
 
@@ -63,44 +66,25 @@ public sealed class DiscordLinkedRole(IDiscordAccountStore store, IDiscordStandi
 		return role;
 	}
 
-	public async Task<string?> GateAsync(ulong channelId, CancellationToken cancellationToken)
+	public Task<IDiscordPermissionChannel> OpenAsync(ulong channelId, CancellationToken ct)
 	{
-		if (_client is not { ConnectionState: ConnectionState.Connected } client)
-		{
-			return "The bot is not connected to Discord.";
-		}
-
-		if (client.GetChannel(channelId) is not SocketTextChannel channel)
-		{
-			return "The bot cannot see that channel.";
-		}
-
-		if (!channel.Guild.CurrentUser.GetPermissions(channel).ManageRoles)
-		{
-			return $"The bot lacks Manage Permissions in #{channel.Name}.";
-		}
-
-		if (await RoleAsync(channel.Guild) is not { } role)
-		{
-			return $"The bot lacks Manage Roles in {channel.Guild.Name}, so there is no {RoleName} role.";
-		}
-
-		var options = new RequestOptions { CancelToken = cancellationToken, AuditLogReason = "Only linked members post in a linked channel" };
-		try
-		{
-			// The Linked role first: if the second change fails, the channel is left open rather than closed to everyone.
-			var linked = channel.GetPermissionOverwrite(role) ?? OverwritePermissions.InheritAll;
-			await channel.AddPermissionOverwriteAsync(role,
-				linked.Modify(sendMessages: PermValue.Allow, sendMessagesInThreads: PermValue.Allow), options);
-			var everyone = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole) ?? OverwritePermissions.InheritAll;
-			await channel.AddPermissionOverwriteAsync(channel.Guild.EveryoneRole,
-				everyone.Modify(sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny), options);
-			return null;
-		}
-		catch (Exception exception) when (exception is HttpException or HttpRequestException or TimeoutException)
-		{
-			return $"Discord refused the change in #{channel.Name}: {exception.Message}";
-		}
+		if (_client is not { ConnectionState: ConnectionState.Connected } client) throw new InvalidOperationException("The bot is not connected to Discord.");
+		if (client.GetChannel(channelId) is not SocketTextChannel channel) throw new InvalidOperationException("The bot cannot see that channel.");
+		if (!channel.Guild.CurrentUser.GetPermissions(channel).ManageRoles) throw new InvalidOperationException($"The bot lacks Manage Permissions in #{channel.Name}.");
+		return Task.FromResult<IDiscordPermissionChannel>(new DiscordPermissionChannel(channel.Guild.EveryoneRole.Id,
+			store.Guild(channel.Guild.Id)?.LinkedRoleId ?? 0,
+			async token =>
+			{
+				var fresh = await client.Rest.GetGuildAsync(channel.Guild.Id, new RequestOptions { CancelToken = token });
+				if (store.Guild(channel.Guild.Id) is { } saved && fresh.GetRole(saved.LinkedRoleId) is { } role) return role;
+				if (!channel.Guild.CurrentUser.GuildPermissions.ManageRoles) throw new InvalidOperationException("The bot cannot make its Linked role.");
+				var made = await channel.Guild.CreateRoleAsync(RoleName, GuildPermissions.None, isHoisted: false, isMentionable: false,
+					options: new RequestOptions { CancelToken = token, AuditLogReason = "SharpMUSH linked channel access" });
+				await store.SaveGuildAsync(new(channel.Guild.Id, made.Id), token);
+				return made;
+			},
+			async token => await client.Rest.GetChannelAsync(channelId, new RequestOptions { CancelToken = token }) as IGuildChannel ?? throw new InvalidOperationException("The channel is gone."),
+			async (id, token) => (await client.Rest.GetGuildAsync(channel.Guild.Id, new RequestOptions { CancelToken = token })).GetRole(id)));
 	}
 
 	public IReadOnlyList<string>? OpenTo(ulong channelId)

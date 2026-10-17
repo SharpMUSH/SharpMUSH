@@ -207,7 +207,8 @@ public partial class LightningDatabase
 
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken cancellationToken = default)
 	{
-		var result = Store.Read(tx => tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var idBytes)
+		var result = Store.Read(tx => (!characterRef.IsObjid || HeaderRef(tx, characterRef.Number) == characterRef)
+			&& tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var idBytes)
 			? ReadAccountByKey(tx, Keys.ReadStr(idBytes))
 			: null);
 		return ValueTask.FromResult(result);

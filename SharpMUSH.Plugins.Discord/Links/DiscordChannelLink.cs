@@ -21,7 +21,11 @@ public sealed record DiscordChannelLink(
 	string GuildName,
 	DateTimeOffset LinkedAt,
 	string LinkedBy,
-	DiscordLinkFault? Fault = null)
+	DiscordLinkFault? Fault = null,
+	bool Unrestricted = false,
+	SharpMUSH.Plugins.Discord.Members.DiscordGateSnapshot? GateSnapshot = null,
+	string? PermissionProblem = null,
+	bool PermissionHistoryKnown = false)
 {
 	/// <summary>The feed kind every linked channel's feed belongs to.</summary>
 	public const string FeedKind = "discord";

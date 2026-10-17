@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -23,6 +24,7 @@ public sealed class DiscordSlashCommands(
 {
 	public const string Link = "link";
 	public const string Unlink = "unlink";
+	public const string SpeakAs = "speakas";
 
 	/// <summary>The bundled package that turns Discord on; the portal shows the confirm page only while it is installed.</summary>
 	public const string PackageId = "discord";
@@ -44,6 +46,10 @@ public sealed class DiscordSlashCommands(
 			.Build(),
 		new SlashCommandBuilder().WithName(Unlink)
 			.WithDescription("Unlink your Discord account from your game account.")
+			.Build(),
+		new SlashCommandBuilder().WithName(SpeakAs)
+			.WithDescription("Choose your own game character to speak as in this channel.")
+			.AddOption("character", ApplicationCommandOptionType.String, "Your exact character name or objid", isRequired: true)
 			.Build(),
 	];
 
@@ -77,6 +83,21 @@ public sealed class DiscordSlashCommands(
 			_ => "Your Discord account is not linked to a game account.",
 		};
 
+	public async Task<string> SpeakAsAnswerAsync(ulong userId, ulong channelId, string character, CancellationToken ct)
+	{
+		var identities = services.GetRequiredService<DiscordIdentities>();
+		return await identities.SpeakAsAsync(userId, channelId, character, async player =>
+		{
+			var feeds = services.GetRequiredService<IFeedService>();
+			if (await feeds.GetKindAsync(Links.DiscordChannelLink.FeedKind) is not SharpMUSH.Library.Models.SharpFeedKind kind) return false;
+			var mediator = services.GetRequiredService<Mediator.IMediator>();
+			var key = channelId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+			var feed = await mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedQuery(kind.Name, key), ct) is SharpMUSH.Library.Models.SharpFeed found ? found : SharpMUSH.Library.Models.SharpFeed.New(kind.Name, key);
+			return !await player.HasFlag("GAGGED") && (await feeds.CanRunAsync(player, kind) || await feeds.PassesAsync(kind, feed, SharpMUSH.Library.Models.FeedLocks.Send, player));
+		}, ct) switch
+		{ string answer => answer, Error<string> error => error.Value };
+	}
+
 	private async Task RegisterAsync(DiscordSocketClient client)
 	{
 		try
@@ -96,6 +117,17 @@ public sealed class DiscordSlashCommands(
 			case Link:
 				var user = new DiscordUserCard(command.User.Id, command.User.Username, command.User.GetDisplayAvatarUrl());
 				await command.RespondAsync(await LinkAnswerAsync(user), ephemeral: true);
+				break;
+			case SpeakAs:
+				await command.DeferAsync(ephemeral: true);
+				using (var proofTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+				{
+					var name = command.Data.Options.FirstOrDefault(option => option.Name == "character")?.Value as string ?? "";
+					var answer = command.ChannelId is { } channelId
+						? await SpeakAsAnswerAsync(command.User.Id, channelId, name, proofTimeout.Token)
+						: "Choose a character in a linked server channel.";
+					await command.FollowupAsync(answer, ephemeral: true, allowedMentions: AllowedMentions.None);
+				}
 				break;
 			case Unlink:
 				// Taking the Linked role can outlast the three seconds Discord waits for an answer.

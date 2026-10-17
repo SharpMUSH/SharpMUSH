@@ -36,10 +36,34 @@ public class DiscordIdentitiesTests
 				.Returns(new SharpAccount { Id = account, Username = account, PasswordHash = "" });
 
 		public void Linked(string account)
-			=> Store.ForAccount(account).Returns(new DiscordAccountLink(Ann, account, "ann", Now));
+		{
+			var user = new DiscordAccountLink(Ann, account, "ann", Now);
+			Store.ForAccount(account).Returns(user); Store.Get(Ann).Returns(user);
+		}
 
 		public Task<Result<string>> SpeakAsync(DiscordCharacter character, ulong channel = Channel, bool maySend = true)
 			=> Identities.SpeakAsync(character, channel, () => Task.FromResult(maySend), CancellationToken.None);
+	}
+
+	[Test]
+	public async Task DiscordChoiceCannotSelectSomebodyElsesCharacter()
+	{
+		var game = new Game();
+		game.Store.Get(Ann).Returns(new DiscordAccountLink(Ann, "mine", "ann", Now));
+		game.Accounts.GetByIdAsync("mine", Arg.Any<CancellationToken>()).Returns(new SharpAccount { Id = "mine", Username = "mine", PasswordHash = "" });
+		game.Accounts.GetCharactersAsync("mine", Arg.Any<CancellationToken>()).Returns(Array.Empty<SharpPlayer>());
+		var result = await game.Identities.SpeakAsAsync(Ann, Channel, "AnotherPlayer", _ => Task.FromResult(true), default);
+		await Assert.That(result is Error<string>).IsTrue();
+		await Assert.That(game.Speakers.Character(Ann, Channel)).IsNull();
+	}
+	[Test]
+	public async Task DiscordChoiceRejectsInactiveAccountBeforeConsultingRoster()
+	{
+		var game = new Game();
+		game.Store.Get(Ann).Returns(new DiscordAccountLink(Ann, "mine", "ann", Now));
+		game.Accounts.GetByIdAsync("mine", Arg.Any<CancellationToken>()).Returns(new SharpAccount { Id = "mine", Username = "mine", PasswordHash = "", Status = AccountStatus.Disabled });
+		await Assert.That(await game.Identities.SpeakAsAsync(Ann, Channel, "Annabel", _ => Task.FromResult(true), default) is Error<string>).IsTrue();
+		await game.Accounts.DidNotReceive().GetCharactersAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

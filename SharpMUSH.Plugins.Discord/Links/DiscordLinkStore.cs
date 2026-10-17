@@ -13,6 +13,9 @@ public interface IDiscordLinkStore
 	/// <summary>Adds the link, or replaces the one for the same channel.</summary>
 	ValueTask SaveAsync(DiscordChannelLink link, CancellationToken cancellationToken = default);
 
+	/// <summary>Atomically changes an existing link; absent links must never be recreated.</summary>
+	ValueTask<DiscordChannelLink?> UpdateAsync(ulong channelId, Func<DiscordChannelLink, DiscordChannelLink> change, CancellationToken cancellationToken = default);
+
 	/// <returns>Whether there was a link to remove.</returns>
 	ValueTask<bool> RemoveAsync(ulong channelId, CancellationToken cancellationToken = default);
 }
@@ -30,6 +33,9 @@ public sealed class LightningDiscordLinkStore(ILightningStorageAccessor accessor
 
 	public ValueTask SaveAsync(DiscordChannelLink link, CancellationToken cancellationToken = default)
 		=> _links.SaveAsync(link.ChannelId, link, cancellationToken);
+
+	public ValueTask<DiscordChannelLink?> UpdateAsync(ulong channelId, Func<DiscordChannelLink, DiscordChannelLink> change, CancellationToken cancellationToken = default)
+		=> _links.UpdateAsync(channelId, change, cancellationToken);
 
 	public ValueTask<bool> RemoveAsync(ulong channelId, CancellationToken cancellationToken = default)
 		=> _links.RemoveAsync(channelId, cancellationToken);

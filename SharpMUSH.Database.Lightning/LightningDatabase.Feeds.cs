@@ -243,6 +243,7 @@ public partial class LightningDatabase
 			DisplayName = message.DisplayName,
 			Line = message.Line is { } line ? MarkupTextSerializer.Serialize(line) : null,
 			Audience = message.Audience,
+			ExternalIdentity = message.ExternalIdentity,
 			Bytes = Keys.Str(text).Length
 		};
 
@@ -502,10 +503,10 @@ public partial class LightningDatabase
 			record.LastId, record.StoredBytes);
 
 	private static SharpFeedMessage ToMessage(string kind, string key, FeedMessageRecord record)
-		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), DBRef.Parse(record.Speaker),
+		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), record.ExternalIdentity is null ? DBRef.Parse(record.Speaker) : new DBRef(-1),
 			record.SpeakerName, DBRef.Parse(record.Executor), record.ExecutorName,
 			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName, record.Style, MarkupTextSerializer.Deserialize(record.Text), record.DisplayName,
-			record.Line is null ? null : MarkupTextSerializer.Deserialize(record.Line), record.Audience);
+			record.Line is null ? null : MarkupTextSerializer.Deserialize(record.Line), record.Audience, record.ExternalIdentity);
 
 	private static FeedSettings ToSettings(FeedSettingsRecord record)
 		=> new(record.MaxMessages, record.MaxBytes, record.MaxLength,

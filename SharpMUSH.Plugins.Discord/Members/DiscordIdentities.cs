@@ -17,8 +17,9 @@ public sealed class DiscordIdentities(
 	IDiscordLinkStore links,
 	DiscordAccounts accounts,
 	IDiscordSpeakerStore speakers,
-	IAccountService accountService)
+	IAccountService accountService, DiscordLinkMutationGate? mutations = null)
 {
+	private readonly DiscordLinkMutationGate lifecycle = mutations ?? new();
 	/// <summary>Makes <paramref name="character"/> its account's Discord user's identity in the channel.</summary>
 	/// <param name="maySend">Whether the character passes the channel's feed send lock, asked once the rest holds.</param>
 	/// <returns>What to tell the character.</returns>
@@ -34,6 +35,20 @@ public sealed class DiscordIdentities(
 		};
 	}
 
+	/// <summary>Discord's explicit choice is limited to the linked account's current exact roster.</summary>
+	public async Task<Result<string>> SpeakAsAsync(ulong userId, ulong channelId, string name,
+		Func<AnySharpObject, Task<bool>> maySend, CancellationToken ct)
+	{
+		if (accounts.Find(userId) is not { } linked || await accountService.GetByIdAsync(linked.AccountId, ct) is not { IsActive: true })
+			return new Error<string>("Link an active game account with /link first.");
+		var roster = await accountService.GetCharactersAsync(linked.AccountId, ct);
+		var matches = roster.Where(player => string.Equals(player.Object.Name, name.Trim(), StringComparison.OrdinalIgnoreCase)
+			|| player.Object.DBRef.ToString() == name.Trim()).ToArray();
+		if (matches is not [var player]) return new Error<string>("Choose an exact character name or objid from your own game account.");
+		var character = new DiscordCharacter(player.Object.DBRef, player.Object.Name, true);
+		return await SpeakAsync(character, channelId, async () => accounts.Find(userId)?.AccountId == linked.AccountId && await maySend(new AnySharpObject(player)), ct);
+	}
+
 	/// <summary>Stops <paramref name="character"/> speaking in the channel, if it is who its Discord user speaks as there.</summary>
 	public async Task<Result<string>> StopAsync(DiscordCharacter character, ulong channelId, CancellationToken cancellationToken)
 	{
@@ -46,20 +61,27 @@ public sealed class DiscordIdentities(
 		};
 	}
 
-	private async Task<Result<string>> ChosenAsync(DiscordCharacter character, DiscordChannelLink link, DiscordAccountLink user,
+	private Task<Result<string>> ChosenAsync(DiscordCharacter character, DiscordChannelLink link, DiscordAccountLink user,
 		CancellationToken cancellationToken)
+		=> lifecycle.TryRunAsync<Result<string>>(async () =>
 	{
+		if (await accountService.GetAccountForCharacterAsync(character.Objid, cancellationToken) is not { IsActive: true, Id: { } owner }
+			|| accounts.Find(user.UserId) is not { } current || current.AccountId != owner || current.AccountId != user.AccountId
+			|| links.Get(link.ChannelId) is null)
+			return new Error<string>("Your character ownership or Discord link changed. Choose it again.");
 		await speakers.SetAsync(user.UserId, link.ChannelId, character.Objid.ToString(), cancellationToken);
 		return $"Your messages as {user.Username} in #{link.ChannelName} now reach the game as {character.Name}. "
 			+ $"Anyone who reads both can tell that {user.Username} plays {character.Name}.";
-	}
+	}, new Error<string>("Discord channel access is being updated. Try choosing your character again shortly."), cancellationToken);
 
-	private async Task<Result<string>> StoppedAsync(DiscordCharacter character, DiscordChannelLink link, DiscordAccountLink user,
+	private Task<Result<string>> StoppedAsync(DiscordCharacter character, DiscordChannelLink link, DiscordAccountLink user,
 		CancellationToken cancellationToken)
+		=> lifecycle.TryRunAsync<Result<string>>(async () =>
 	{
+		if (speakers.Character(user.UserId, link.ChannelId) != character.Objid.ToString()) return new Error<string>("Your Discord speaking identity changed. Try again.");
 		await speakers.ClearAsync(user.UserId, link.ChannelId, cancellationToken);
 		return $"{character.Name} no longer speaks for {user.Username} in #{link.ChannelName}.";
-	}
+	}, new Error<string>("Discord channel access is being updated. Try again shortly."), cancellationToken);
 
 	private async Task<LinkedOrError> LinkedAsync(DiscordCharacter character, ulong channelId, CancellationToken cancellationToken)
 	{
@@ -73,7 +95,7 @@ public sealed class DiscordIdentities(
 			return new Error<string>("That channel is not linked.");
 		}
 
-		if (await accountService.GetAccountForCharacterAsync(character.Objid, cancellationToken) is not { Id: { } accountId })
+		if (await accountService.GetAccountForCharacterAsync(character.Objid, cancellationToken) is not { IsActive: true, Id: { } accountId })
 		{
 			return new Error<string>($"{character.Name} is not on a game account, so it cannot speak in Discord.");
 		}

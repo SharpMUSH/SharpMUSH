@@ -36,6 +36,10 @@ public interface IFeedService
 	/// </summary>
 	ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send);
 
+	/// <summary>Trusted transport input with no game-object authority. Configured send locks refuse external speakers.</summary>
+	ValueTask<Result<FeedDelivery>> SendExternalAsync(IMUSHCodeParser parser, ExternalFeedSend send)
+		=> ValueTask.FromResult<Result<FeedDelivery>>(new Error<string>("External feed input is unavailable."));
+
 	/// <summary>
 	/// Drops every line older than its feed's <c>max_age</c> as of <paramref name="now"/>, in every feed that has
 	/// one, so a feed nobody writes to ages too. Returns how many lines went.
@@ -73,3 +77,7 @@ public sealed record FeedSend(
 /// <param name="Recipients">Who it was delivered to (for <c>DELIVER</c>, who it was handed to deliver to).</param>
 /// <param name="Stored">Whether it was stored.</param>
 public sealed record FeedDelivery(long Id, IReadOnlyList<DBRef> Recipients, bool Stored);
+
+/// <summary>A trusted transport's external speech; the executor does not lend its privileges to the speaker.</summary>
+public sealed record ExternalFeedSend(SharpFeedKind Kind, SharpFeed Feed, AnySharpObject Executor,
+	ExternalFeedIdentity Identity, string Style, MString Text, string Origin);
