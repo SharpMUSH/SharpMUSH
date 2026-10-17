@@ -64,9 +64,11 @@ public class PlusHelpSourceFallbackTests
 	});
 
 	[Test]
-	public Task AnExactTopicWinsOverTheSourceName() => WithSourceAsync(async source =>
+	[Arguments("DISCORD-SCENES")]
+	[Arguments("DISCORD-SCENES WALKTHROUGH")]
+	public Task ExistingExactAndFuzzyTopicMatchesWinOverTheSourceName(string topic) => WithSourceAsync(async source =>
 	{
-		await GodAsync($"&HELP`DISCORD-SCENES {source.Object}=Exact topic wins this collision.");
+		await GodAsync($"&HELP`{topic.Replace(' ', '`')} {source.Object}=Exact topic wins this collision.");
 		var shown = (await ShownAsync(source, "+help discord-scenes")).ToPlainText();
 		await Assert.That(shown).Contains("Exact topic wins this collision.");
 		await Assert.That(shown).DoesNotContain("Topics: discord-scenes");
