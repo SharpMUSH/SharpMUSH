@@ -8,10 +8,10 @@
 
 <PageTitle>@Loc["BannedNames"] - @Loc["Configuration"]</PageTitle>
 
-<div class="config-section-page">
+<div class="config-section-page" data-config-option="BannedNames.BannedNames">
     <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["BannedPlayerNames"]" Description="@Loc["BannedNamesDescription"]" />
 
-    <AdminKeyValueList Text="@Text"
+    <AdminKeyValueList ConfigurationOptionKey="BannedNames.BannedNames" Text="@Text"
                        Load="@(() => BannedNamesService.GetBannedNamesAsync().AsEntriesAsync())"
                        Add="@((name, _) => BannedNamesService.AddBannedNameAsync(name))"
                        Delete="@BannedNamesService.DeleteBannedNameAsync" />

@@ -6,6 +6,10 @@
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
 @inject PaletteContext PageContext
+@inject ConfigurationSearchClient ConfigurationSearch
+@inject AuthenticationStateProvider Authentication
+@inject IServiceProvider Services
+@implements IDisposable
 @inject PaletteClient Server
 @inject IPlayTerminalService PlayTerminal
 @inject GameCommandService Commands
@@ -114,6 +118,10 @@
                         </li>
                     }
                 </ul>
+                @if (_configurationProblem is { } configurationProblem)
+                {
+                    <div class="kit-palette-note" role="status">@configurationProblem</div>
+                }
                 @if (_query.Length == 0 && _server is { } server && (server.Invalid.Count > 0 || server.Dropped > 0))
                 {
                     @* Only someone who may examine an object is told what is wrong with its entries. *@
@@ -154,12 +162,18 @@
     private string _query = string.Empty;
     private int _active;
     private bool _rememberFocus;
+    private Task<bool>? _focusRemember;
+    private Task _focusRelease = Task.CompletedTask;
     private bool _focusSlots;
     private string? _itemsFor;
     private IReadOnlyList<ListItem> _items = [];
     private bool _wasOpen;
     private int _opening;
+    private bool _disposed;
+    private IAccountAuthState? _account;
     private IReadOnlyList<PaletteRow> _destinations = [];
+    private IReadOnlyList<PaletteRow> _configurationRows = [];
+    private string? _configurationProblem;
     private PaletteResponse? _server;
     private readonly HashSet<string> _expanded = [];
     private PaletteRow? _slotRow;
@@ -189,7 +203,8 @@
         _server,
         PageContext.Page,
         PlayTerminal.IsConnected,
-        new PaletteWords(Loc["NavPaletteLeave"], Loc["NavPaletteHelpOn"]));
+        new PaletteWords(Loc["NavPaletteLeave"], Loc["NavPaletteHelpOn"]),
+        _configurationRows);
 
     private IReadOnlyList<ListItem> Build()
     {
@@ -214,18 +229,34 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Open && !_wasOpen)
+        if (_disposed) return;
+        if (!Open)
         {
+            if (_wasOpen) ++_opening;
+            _wasOpen = false;
+            _rememberFocus = false;
+            await ReleaseFocusAsync();
+            return;
+        }
+        if (!_wasOpen)
+        {
+            _wasOpen = true;
+            var opening = ++_opening;
             _query = string.Empty;
             _active = 0;
             _slotRow = null;
             _output = null;
             // The last opening's rows may be another character's: the account can have switched since.
             _server = null;
+            _configurationRows = [];
+            _configurationProblem = null;
             _expanded.Clear();
             var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+            if (!IsCurrent(opening)) return;
             var build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
+            if (!IsCurrent(opening)) return;
             var scenes = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
+            if (!IsCurrent(opening)) return;
             _destinations =
             [
                 PaletteRow.Go("/", Icons.Material.Outlined.Home, Loc["Home"]),
@@ -239,16 +270,84 @@
             ];
             _itemsFor = null;
             _rememberFocus = true;
-            _ = LoadAsync(++_opening);
+            _ = LoadAsync(opening);
+            var authorized = await Authorization.AuthorizeAsync(user, "config.admin");
+            if (IsCurrent(opening) && authorized.Succeeded)
+                _ = LoadConfigurationAsync(opening);
         }
-        _wasOpen = Open;
+    }
+
+    private bool IsCurrent(int opening) => !_disposed && Open && opening == _opening;
+
+    protected override void OnInitialized()
+    {
+        Authentication.AuthenticationStateChanged += AuthenticationChanged;
+        _account = Services.GetService(typeof(IAccountAuthState)) as IAccountAuthState;
+        if (_account is not null) _account.ActiveCharacterChanged += IdentityChanged;
+    }
+
+    private void AuthenticationChanged(Task<AuthenticationState> state) => IdentityChanged();
+
+    private void IdentityChanged()
+    {
+        if (_disposed) return;
+        var invalidation = ++_opening;
+        _rememberFocus = false;
+        _slotRow = null;
+        _configurationRows = [];
+        _configurationProblem = null;
+        _server = null;
+        _destinations = [];
+        _itemsFor = null;
+        if (Open) _ = InvokeAsync(() => CloseAsync(invalidation));
+        else _wasOpen = false;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ++_opening;
+        _rememberFocus = false;
+        _ = ReleaseFocusAsync();
+        Authentication.AuthenticationStateChanged -= AuthenticationChanged;
+        if (_account is not null) _account.ActiveCharacterChanged -= IdentityChanged;
+    }
+
+    private async Task LoadConfigurationAsync(int opening)
+    {
+        if (!IsCurrent(opening)) return;
+        var answer = await ConfigurationSearch.GetAsync();
+        if (!IsCurrent(opening)) return;
+        if (answer is ApiFailure failure)
+        {
+            _configurationRows = [];
+            _configurationProblem = Loc[failure.Kind is ApiFailureKind.Forbidden or ApiFailureKind.Unauthenticated
+                ? "ConfigurationSearchAccessDenied" : "ConfigurationSearchUnavailable"];
+            _itemsFor = null;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+        if (answer is not IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry> entries) return;
+        _configurationProblem = null;
+        string Text(string? resource, string fallback) => resource is not null && Loc[resource] is { ResourceNotFound: false } localized ? localized.Value : fallback;
+        _configurationRows = entries.Select(entry => PaletteRow.Go(entry.Href, Icons.Material.Outlined.Settings,
+            Text(entry.Option.LabelResourceKey, entry.Option.Label), entry.Source + " · " + entry.Section) with
+        {
+            Info = Text(entry.Option.DescriptionResourceKey, entry.Option.Description)
+                + (entry.Option.RequiresRestart ? " — " + Loc["ConfigurationOptionRestartRequired"] : "")
+                + (entry.Option.ReadOnlyReason is { } reason ? " — " + reason : ""),
+            Keywords = string.Join(' ', new[] { entry.Option.Key, entry.Source, entry.Section }.Concat(entry.Option.Aliases ?? []))
+        }).ToArray();
+        _itemsFor = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>Fetches the server's rows and adds them, unless the palette has closed or opened again since.</summary>
     private async Task LoadAsync(int opening)
     {
+        if (!IsCurrent(opening)) return;
         var answer = await Server.GetAsync(PlayTerminal.Prompt?.Session);
-        if (opening != _opening || !Open || answer is not PaletteResponse response) return;
+        if (!IsCurrent(opening) || answer is not PaletteResponse response) return;
         _server = response;
         _itemsFor = null;
         await InvokeAsync(StateHasChanged);
@@ -257,13 +356,18 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Remember what opened the palette before focus moves into it, so closing hands it back.
-        if (_rememberFocus)
+        var opening = _opening;
+        if (_rememberFocus && Open && !_disposed)
         {
+            await _focusRelease;
+            if (!IsCurrent(opening) || !_rememberFocus) return;
             _rememberFocus = false;
-            await RunFocusAsync("sharpmushLayout.rememberFocus");
+            var remembering = RunFocusAsync("sharpmushLayout.rememberFocus");
+            _focusRemember = remembering;
+            await remembering;
         }
 
-        if (!Open) return;
+        if (!IsCurrent(opening)) return;
         try
         {
             if (_slotRow is not null)
@@ -376,7 +480,7 @@
     }
 
     private bool Pinnable(PaletteRow row)
-        => _server is not null && row.Kind is not (PaletteRowKind.Page or PaletteRowKind.Help) && !row.Id.StartsWith("input:", StringComparison.Ordinal)
+        => _server is not null && PalettePinsRequest.IsValidId(row.Id) && row.Kind is not (PaletteRowKind.Page or PaletteRowKind.Help) && !row.Id.StartsWith("input:", StringComparison.Ordinal)
             && !(row.Kind == PaletteRowKind.Go && row.Href?.Contains('?') == true);
 
     private bool IsPinned(PaletteRow row) => _server?.Pins.Contains(row.Id) == true;
@@ -392,19 +496,37 @@
         await Server.SetPinsAsync(pins);
     }
 
-    private async Task CloseAsync()
+    private Task CloseAsync() => CloseAsync(++_opening);
+
+    private async Task CloseAsync(int closing)
     {
-        _wasOpen = false;
+        if (!IsCurrent(closing)) return;
+        _rememberFocus = false;
         _slotRow = null;
+        await ReleaseFocusAsync();
+        if (!IsCurrent(closing)) return;
+        _wasOpen = false;
         await OpenChanged.InvokeAsync(false);
-        await RunFocusAsync("sharpmushLayout.restoreFocus");
     }
 
-    /// <summary>Focus hand-off through layout.js; skipped where it is not loaded.</summary>
-    private async Task RunFocusAsync(string identifier)
+    private Task ReleaseFocusAsync()
     {
-        try { await JS.InvokeVoidAsync(identifier); }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
+        if (_focusRemember is not { } remembering) return _focusRelease;
+        _focusRemember = null;
+        return _focusRelease = ReleaseRememberedFocusAsync(_focusRelease, remembering);
+    }
+
+    private async Task ReleaseRememberedFocusAsync(Task previousRelease, Task<bool> remembering)
+    {
+        await previousRelease;
+        if (await remembering) await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
+
+    /// <summary>Focus hand-off through layout.js; a failed remember owns no return frame.</summary>
+    private async Task<bool> RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); return true; }
+        catch (JSException) { return false; }
+        catch (InvalidOperationException) { return false; }
     }
 }

@@ -60,6 +60,7 @@ public class MainLayoutBootRequestTests : TrackingBunitContext
 		Services.AddSingleton<TerminalLoginService>();
 		// MainLayout always mounts the command palette.
 		Services.AddSingleton<PaletteClient>();
+		Services.AddSingleton<ConfigurationSearchClient>();
 		Services.AddSingleton<PaletteContext>();
 		Services.AddSingleton<GameCommandService>();
 		var terminal = new TerminalServiceHost(() => Substitute.For<ITerminalService>());

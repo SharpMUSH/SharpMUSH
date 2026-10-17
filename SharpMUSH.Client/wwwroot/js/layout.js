@@ -7,6 +7,23 @@ window.sharpmushLayout = {
 		return window.matchMedia(this.touchChromeQuery).matches;
 	},
 
+	// The key is data, never a selector. Only a control rendered by this authorized page can match.
+	focusConfigurationOption: function (key) {
+		const row = Array.from(document.querySelectorAll('[data-config-option]'))
+			.find(element => element.dataset.configOption === key);
+		if (!row) return false;
+		for (const previous of document.querySelectorAll('[data-config-selected]')) previous.removeAttribute('data-config-selected');
+		row.setAttribute('data-config-selected', 'true');
+		let details = row.closest('details');
+		while (details) { details.open = true; details = details.parentElement?.closest('details'); }
+		row.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+		const control = Array.from(row.querySelectorAll('input:not([type="hidden"]), select, textarea, button, [tabindex]'))
+			.find(element => !element.disabled && element.getAttribute('aria-disabled') !== 'true');
+		if (control) control.focus({ preventScroll: true });
+		else { row.setAttribute('tabindex', '-1'); row.focus({ preventScroll: true }); }
+		return true;
+	},
+
 	// A modal (the image viewer) remembers what opened it and hands focus back when it closes, so a
 	// keyboard user is not dropped on <body>. A stack: a modal opened from another (a picture from the
 	// character sheet) hands focus back to the sheet, and the sheet then to what opened it.

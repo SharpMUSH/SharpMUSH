@@ -49,7 +49,7 @@ public class DiscordGuideUiTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".adm-discord-step:not(.adm-discord-step--done)")).IsEmpty();
 		await Assert.That(cut.FindAll(".adm-discord-unrestrict").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".adm-discord-restrict").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".adm-discord-token").GetAttribute("href")).IsEqualTo("admin/config/secrets");
+		await Assert.That(cut.Find(".adm-discord-token").GetAttribute("href")).IsEqualTo("/admin/config/secrets#config-option-discord.token");
 		await CaptureAsync("discord-admin.html", cut.Markup);
 	}
 

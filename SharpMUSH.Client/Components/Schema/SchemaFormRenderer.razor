@@ -188,7 +188,10 @@ else
         switch ((element.Kind ?? "field").ToLowerInvariant())
         {
             case "field":
-                @RenderField(element)
+                @if (!string.Equals(element.Type, "hidden", StringComparison.OrdinalIgnoreCase))
+                {
+                    <div data-config-option="@element.Key">@RenderField(element)</div>
+                }
                 break;
             case var kind when SchemaDisplay.Kinds.Contains(kind):
                 <div class="mb-2">

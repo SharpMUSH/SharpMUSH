@@ -35,7 +35,7 @@ public static class ExternalAuthenticationRegistration
 		});
 		foreach (var definition in ExternalProviderDefinition.All)
 		{
-			if (definition.RequiresClientSecret) services.AddSingleton(new SecretDefinition(definition.SecretName, definition.DisplayName + " account sign-in client secret."));
+			if (definition.RequiresClientSecret) services.AddSingleton(new SecretDefinition(definition.SecretName, SharpMUSH.Library.Models.Portal.Applications.SignInConfigurationFields.ClientSecret(definition.SecretName, definition.DisplayName).Description));
 			if (definition.OpenIdConnect)
 			{
 				services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<OpenIdConnectOptions>, OpenIdConnectPostConfigureOptions>());

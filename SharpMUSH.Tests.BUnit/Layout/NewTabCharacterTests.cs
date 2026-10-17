@@ -178,6 +178,7 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton<TerminalLoginService>();
 		// MainLayout always mounts the command palette.
 		Services.AddSingleton<PaletteClient>();
+		Services.AddSingleton<ConfigurationSearchClient>();
 		Services.AddSingleton<PaletteContext>();
 		Services.AddSingleton<GameCommandService>();
 		// MainLayout resolves an application's own display name for the /apps/{slug} topbar title.

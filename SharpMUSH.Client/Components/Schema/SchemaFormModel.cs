@@ -71,6 +71,21 @@ public sealed class SchemaFormModel
 		}
 	}
 
+	/// <summary>Reveals a declared visible field without changing the form's draft values.</summary>
+	public bool ShowOption(string key)
+	{
+		var pages = Document?.Pages?.OrderBy(page => page.Order).ToArray() ?? [];
+		for (var index = 0; index < pages.Length; index++)
+		{
+			if (!(pages[index].Sections ?? []).SelectMany(section => section.Elements ?? []).Any(field =>
+				field.Key == key && string.Equals(field.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase)
+				&& !string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase))) continue;
+			PageIndex = index;
+			return true;
+		}
+		return false;
+	}
+
 	/// <summary>Every input field the document declares, on every page.</summary>
 	public IEnumerable<SchemaElement> Fields()
 		=> (Document?.Pages ?? [])

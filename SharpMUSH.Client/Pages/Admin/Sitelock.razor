@@ -9,7 +9,7 @@
 
 <PageTitle>@Loc["SitelockRules"] - @Loc["Configuration"]</PageTitle>
 
-<div class="config-section-page">
+<div class="config-section-page" data-config-option="SitelockRules.Rules">
     <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["SitelockRules"]">
         <DescriptionContent>
             @Loc["SitelockDescription"]
@@ -17,7 +17,7 @@
         </DescriptionContent>
     </PlainPageHeader>
 
-    <AdminKeyValueList Text="@Text"
+    <AdminKeyValueList ConfigurationOptionKey="SitelockRules.Rules" Text="@Text"
                        Load="@(() => SitelockService.GetSitelockRulesAsync().AsEntriesAsync())"
                        Add="@SitelockService.AddSitelockRuleAsync"
                        Delete="@SitelockService.DeleteSitelockRuleAsync" />

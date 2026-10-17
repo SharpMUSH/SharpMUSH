@@ -31,8 +31,8 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 	/// <summary>Who runs the bot: its token, its setup, and later its links and mappings.</summary>
 	public const string AdminPermission = "discord.admin";
 
-	public static readonly SecretDefinition Token = new("discord.token",
-		"The Discord bot's token, from the Bot page of its application in the Discord developer portal.", AdminPermission);
+	public static readonly SecretDefinition Token = new(SharpMUSH.Library.Models.Portal.Discord.DiscordConfigurationFields.Token.Key,
+		SharpMUSH.Library.Models.Portal.Discord.DiscordConfigurationFields.Token.Description, AdminPermission);
 
 	public override string Id => "discord";
 
@@ -41,7 +41,7 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 	public IEnumerable<ApplicationConfigurationTile> GetConfigurationTiles() =>
 	[
 		new("discord", "Discord", "Bot connection, linked channels, roles and account settings.",
-			"Forum", "/admin/discord", AdminPermission)
+			"Forum", "/admin/discord", AdminPermission) { Options = [SharpMUSH.Library.Models.Portal.Discord.DiscordConfigurationFields.MirrorBans, SharpMUSH.Library.Models.Portal.Discord.DiscordConfigurationFields.Token] }
 	];
 
 	public void RegisterServices(IServiceCollection services)

@@ -8,10 +8,10 @@
 
 <PageTitle>@Loc["AsciiTranslations"] - @Loc["Configuration"]</PageTitle>
 
-<div class="config-section-page">
+<div class="config-section-page" data-config-option="AsciiTranslations.Translations">
     <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AsciiTranslations"]" Description="@Loc["AsciiTranslationsDescription"]" />
 
-    <AdminKeyValueList Text="@Text"
+    <AdminKeyValueList ConfigurationOptionKey="AsciiTranslations.Translations" Text="@Text"
                        Load="@(() => AsciiTranslationsService.GetAsync().AsEntriesAsync())"
                        Add="@((character, values) => AsciiTranslationsService.SetAsync(character, values.FirstOrDefault() ?? string.Empty))"
                        Delete="@AsciiTranslationsService.DeleteAsync" />

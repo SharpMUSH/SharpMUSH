@@ -34,6 +34,14 @@ internal sealed class StubPaletteClient() : PaletteClient(Substitute.For<IHttpCl
 	}
 }
 
+internal sealed class StubConfigurationSearchClient() : ConfigurationSearchClient(Substitute.For<IHttpClientFactory>())
+{
+	public Task<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>? Pending { get; set; }
+	public int Requests { get; private set; }
+	public override Task<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>> GetAsync()
+	{ Requests++; return Pending ?? Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(Array.Empty<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>()); }
+}
+
 /// <summary>Answers <c>POST api/commands</c> with one line naming the command, recording each.</summary>
 internal sealed class PaletteCommandHandler : HttpMessageHandler
 {
@@ -61,6 +69,8 @@ public class CommandPaletteTests : BunitContext
 {
 	private readonly BunitAuthorizationContext _auth;
 	private readonly StubPaletteClient _palette = new();
+	private readonly StubConfigurationSearchClient _configuration = new();
+	private readonly IAccountAuthState _account = Substitute.For<IAccountAuthState>();
 	private readonly PaletteCommandHandler _commands = new();
 	private readonly IPlayTerminalService _terminal = Substitute.For<IPlayTerminalService>();
 	private readonly PaletteContext _page = new();
@@ -73,6 +83,8 @@ public class CommandPaletteTests : BunitContext
 		Services.AddMudServices();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		Services.AddSingleton<PaletteClient>(_palette);
+		Services.AddSingleton<ConfigurationSearchClient>(_configuration);
+		Services.AddSingleton(_account);
 		Services.AddSingleton(_page);
 		Services.AddSingleton(_terminal);
 		Services.AddSingleton(new GameCommandService(factory));
@@ -88,6 +100,233 @@ public class CommandPaletteTests : BunitContext
 
 	private static List<string> Labels(IRenderedComponent<CommandPalette> cut) =>
 		cut.FindAll(".kit-palette-label").Select(e => e.TextContent).ToList();
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IdentityChangeDuringOpeningClosesInsteadOfLeavingAnEmptyPalette(bool authenticationChanged)
+	{
+		_auth.SetPolicies("config.admin");
+		var pending = new TaskCompletionSource<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>(TaskCreationOptions.RunContinuationsAsynchronously);
+		bool? requestedOpen = null;
+		var cut = Render<Microsoft.AspNetCore.Components.CascadingValue<Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>>>(p => p
+			.Add(x => x.Value, pending.Task)
+			.AddChildContent<CommandPalette>(child => child.Add(x => x.Open, true).Add(x => x.OpenChanged, (bool open) => requestedOpen = open)));
+		if (authenticationChanged) _auth.SetNotAuthorized();
+		else _account.ActiveCharacterChanged += Raise.Event<Action>();
+		pending.SetResult(new(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new("name", "old admin")], "test"))));
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(_configuration.Requests).IsEqualTo(0);
+		await Assert.That(requestedOpen is false).IsTrue();
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsFalse();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IdentityChangeWhenAlreadyClosedDoesNotCloseOrRestoreFocus(bool authenticationChanged)
+	{
+		var closes = 0;
+		var cut = Render<CommandPalette>(p => p.Add(x => x.OpenChanged, (bool _) => closes++));
+		if (authenticationChanged) _auth.SetNotAuthorized();
+		else _account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(closes).IsEqualTo(0);
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsFalse();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IdentityChangeAfterFocusWasRememberedReleasesItsOwnedFrame(bool authenticationChanged)
+	{
+		var closes = 0;
+		var cut = RenderOpen(open => { if (!open) closes++; });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		if (authenticationChanged) _auth.SetNotAuthorized();
+		else _account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(closes).IsEqualTo(1);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+		await cut.Find("input").KeyDownAsync("Escape");
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task IdentityCloseWaitsForPendingRememberThenReleasesBeforeItsCallback()
+	{
+		var remembering = JSInterop.SetupVoid("sharpmushLayout.rememberFocus");
+		var closes = 0;
+		var restoresAtClose = 0;
+		var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cut = RenderOpen(open =>
+		{
+			if (open) return;
+			closes++;
+			restoresAtClose = JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus");
+			closed.TrySetResult();
+		});
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		try
+		{
+			await Assert.That(closes).IsEqualTo(0);
+			await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(0);
+		}
+		finally { remembering.SetVoidResult(); }
+		await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(restoresAtClose).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ConcurrentIdentityClosesJoinThePendingFocusRelease()
+	{
+		var remembering = JSInterop.SetupVoid("sharpmushLayout.rememberFocus");
+		var closes = 0;
+		var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cut = RenderOpen(open => { if (!open) { closes++; closed.TrySetResult(); } });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		_auth.SetNotAuthorized();
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		try { await Assert.That(closes).IsEqualTo(0); }
+		finally { remembering.SetVoidResult(); }
+		await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(closes).IsEqualTo(1);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AReopenedPaletteWaitsForThePreviousFocusReleaseBeforeCapturing()
+	{
+		var capturedAgain = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var captures = 0;
+		var remembering = JSInterop.SetupVoid("sharpmushLayout.rememberFocus", _ =>
+		{
+			if (++captures == 2) capturedAgain.TrySetResult();
+			return true;
+		});
+		var closes = 0;
+		var cut = RenderOpen(open => { if (!open) closes++; });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Open, false)));
+		await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Open, true)));
+		try
+		{
+			await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus")).IsEqualTo(1);
+			await Assert.That(closes).IsEqualTo(0);
+		}
+		finally { remembering.SetVoidResult(); }
+		await capturedAgain.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus")).IsEqualTo(2);
+		await Assert.That(closes).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task DisposingAnOpenedPaletteReleasesItsOwnedFrame()
+	{
+		var restored = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		JSInterop.SetupVoid("sharpmushLayout.restoreFocus", _ => { restored.TrySetResult(); return true; }).SetVoidResult();
+		var cut = RenderOpen();
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		await DisposeComponentsAsync();
+		await restored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task FailedFocusRememberOwnsNoReturnFrame()
+	{
+		JSInterop.SetupVoid("sharpmushLayout.rememberFocus").SetException(new Microsoft.JSInterop.JSException("layout unavailable"));
+		var closes = 0;
+		var cut = RenderOpen(open => { if (!open) closes++; });
+		cut.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus") == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		cut.WaitForState(() => closes == 1);
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsFalse();
+	}
+
+	[Test]
+	public async Task ConfigurationResponseFromPreviousCharacterIsDiscarded()
+	{
+		_auth.SetPolicies("config.admin");
+		var pending = new TaskCompletionSource<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_configuration.Pending = pending.Task;
+		var cut = RenderOpen();
+		cut.WaitForState(() => _configuration.Requests == 1);
+		_account.ActiveCharacterChanged += Raise.Event<Action>();
+		pending.SetResult((IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[new("private", "Private", "Private", "/admin/config/net", new("Net.Port", "Previous character marker", "Private description"))]);
+		await cut.Find("input").InputAsync("Previous character marker");
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(Labels(cut)).DoesNotContain("Previous character marker");
+	}
+
+	[Test]
+	[Arguments(ApiFailureKind.Transport, "Configuration search is unavailable")]
+	[Arguments(ApiFailureKind.Forbidden, "no longer have access")]
+	public async Task ConfigurationFailureIsDistinctFromAnEmptyCatalog(ApiFailureKind kind, string expected)
+	{
+		_auth.SetPolicies("config.admin");
+		_configuration.Pending = Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(new ApiFailure(kind, "sensitive upstream details"));
+		var cut = RenderOpen();
+		cut.WaitForState(() => cut.Markup.Contains(expected, StringComparison.OrdinalIgnoreCase));
+		await Assert.That(cut.Markup).DoesNotContain("sensitive upstream details");
+		await Assert.That(Labels(cut)).Contains("Wiki");
+	}
+
+	[Test]
+	[Arguments(200, true)]
+	[Arguments(201, false)]
+	public async Task ConfigurationRowsRespectTheServerPinIdBoundary(int idLength, bool pinnable)
+	{
+		_auth.SetPolicies("config.admin");
+		_palette.Response = Response([]);
+		var route = "/apps/" + new string('x', 100);
+		var key = new string('k', idLength - ("go:" + route + "#config-option-").Length);
+		var href = route + "#config-option-" + key;
+		_configuration.Pending = Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(
+			(IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[new("app:example:" + key, "Example", "Settings", route, new(key, "Length-bound option", "Declared setting"))]);
+		var cut = RenderOpen();
+		await cut.Find("input").InputAsync("Length-bound option");
+		cut.WaitForState(() => Labels(cut).Contains("Length-bound option"));
+		var row = cut.FindAll("[role='option']").Single(element => element.QuerySelector(".kit-palette-label")?.TextContent == "Length-bound option");
+		await Assert.That(row.QuerySelector(".kit-palette-pin") is not null).IsEqualTo(pinnable);
+		await cut.Find("input").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "p", AltKey = true });
+		await Assert.That(_palette.PinWrites.Count).IsEqualTo(pinnable ? 1 : 0);
+		await cut.Find("input").KeyDownAsync("Enter");
+		await Assert.That(Nav.Uri).EndsWith(href);
+	}
+
+	[Test]
+	public async Task ConfigurationResultNavigatesToItsFieldByKeyboard()
+	{
+		_auth.SetPolicies("config.admin");
+		_configuration.Pending = Task.FromResult<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>((IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[
+			new("core:Net.Port", "Server", "Net", "/admin/config/net", new("Net.Port", "Port number", "Listener connection port", ["listen_port"]))]);
+		var cut = RenderOpen();
+		await cut.Find("input").InputAsync("listen_port");
+		cut.WaitForState(() => Labels(cut).Contains("Port number"));
+		await cut.Find("input").KeyDownAsync("Enter");
+		await Assert.That(Nav.Uri).EndsWith("/admin/config/net#config-option-Net.Port");
+	}
+
+	[Test]
+	public async Task ConfigurationResponseFromPreviousIdentityIsDiscarded()
+	{
+		_auth.SetPolicies("config.admin");
+		var pending = new TaskCompletionSource<ApiResult<IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_configuration.Pending = pending.Task;
+		var cut = RenderOpen();
+		cut.WaitForState(() => _configuration.Requests == 1);
+		_auth.SetNotAuthorized();
+		pending.SetResult((IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry>)[new("private", "Private", "Private", "/admin/config/net", new("Net.Port", "Confidential marker", "Private description"))]);
+		await cut.Find("input").InputAsync("Confidential");
+		await cut.InvokeAsync(() => Task.CompletedTask);
+		await Assert.That(Labels(cut)).DoesNotContain("Confidential marker");
+	}
 
 	[Test]
 	public async Task Closed_RendersNothing()

@@ -1,6 +1,7 @@
 @page "/admin/config/signin/{Provider}"
 @layout ConfigLayout
 @attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models
 @inject ExternalProviderConfigurationService Providers
 @inject IStringLocalizer<SharedResource> Loc
@@ -22,18 +23,18 @@
         <KitCard Title="@Loc["AdmSigninRegistration"]">
             <div class="page-stack">
                 <p>@Loc["AdmSigninRegistration"]: <code>@_status.Settings.RegistrationId</code>. @Loc["AdmSigninAffected",_status.AffectedAccounts]</p>
-                <MudCheckBox T="bool" @bind-Value="_enabled" Label="@Loc["AdmSigninEnable"]" />
-                <MudTextField T="string" @bind-Value="_clientId" Label="@Loc["AdmSigninClientId"]" Variant="Variant.Outlined" />
-                <MudTextField T="string" @bind-Value="_origin" Label="@Loc["AdmSigninPublicOrigin"]" HelperText="@Loc["AdmSigninPublicOriginHelp"]" Variant="Variant.Outlined" />
+                <MudCheckBox T="bool" @bind-Value="_enabled" Label="@Loc[SignInConfigurationFields.Enabled.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.Enabled.Key" />
+                <MudTextField T="string" @bind-Value="_clientId" Label="@Loc[SignInConfigurationFields.ClientId.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.ClientId.Key" Variant="Variant.Outlined" />
+                <MudTextField T="string" @bind-Value="_origin" Label="@Loc[SignInConfigurationFields.PublicOrigin.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.PublicOrigin.Key" HelperText="@Loc["AdmSigninPublicOriginHelp"]" Variant="Variant.Outlined" />
                 <p>@Loc["AdmSigninCallback"] <code>@_status.CallbackUrl</code></p>
                 @if (_status.Id == "microsoft")
                 {
-                    <MudTextField T="string" @bind-Value="_audience" Label="@Loc["AdmSigninAudience"]" HelperText="@Loc["AdmSigninAudienceHelp"]" Variant="Variant.Outlined" />
-                    <MudTextField T="string" @bind-Value="_tenants" Label="@Loc["AdmSigninTenants"]" HelperText="@Loc["AdmSigninTenantsHelp"]" Variant="Variant.Outlined" />
+                    <MudTextField T="string" @bind-Value="_audience" Label="@Loc[SignInConfigurationFields.MicrosoftAudience.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.MicrosoftAudience.Key" HelperText="@Loc["AdmSigninAudienceHelp"]" Variant="Variant.Outlined" />
+                    <MudTextField T="string" @bind-Value="_tenants" Label="@Loc[SignInConfigurationFields.AllowedTenants.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.AllowedTenants.Key" HelperText="@Loc["AdmSigninTenantsHelp"]" Variant="Variant.Outlined" />
                 }
                 @if (_status.SecretName is { } secret)
                 {
-                    <p>@Loc["AdmSigninSecret"] <code>@secret</code>. <a href="/admin/config/secrets">@Loc["AdmSigninManageSecret"]</a>. @Loc["AdmSigninSecretWriteOnly"]</p>
+                    <p>@Loc["AdmSigninSecret"] <code>@secret</code>. <a href="@SignInConfigurationFields.ClientSecret(secret, _status.DisplayName).Href("/admin/config/secrets")">@Loc["AdmSigninManageSecret"]</a>. @Loc["AdmSigninSecretWriteOnly"]</p>
                 }
                 else
                 {
@@ -46,8 +47,12 @@
         </KitCard>
     }
 </div>
+<ConfigOptionFocus Ready="@(!_loading && _status is not null)" />
 @code {
     [Parameter] public string Provider { get; set; } = "";
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+    private string? _loadedProvider;
+    private Task<AuthenticationState>? _loadedAuth;
     private ExternalProviderStatus? _status;
     private string? _error;
     private bool _enabled, _acknowledge, _saving;
@@ -55,6 +60,9 @@
     private string _clientId = "", _origin = "", _audience = "common", _tenants = "";
     protected override async Task OnParametersSetAsync()
     {
+        if (_status is not null && Provider == _loadedProvider && ReferenceEquals(AuthState, _loadedAuth)) return;
+        _loadedProvider = Provider;
+        _loadedAuth = AuthState;
         _loading = true;
         _status = null;
         try { Apply(await Providers.GetAsync(Provider)); }

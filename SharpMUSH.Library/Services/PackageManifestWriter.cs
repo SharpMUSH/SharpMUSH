@@ -389,6 +389,23 @@ public static class PackageManifestWriter
 			AppendOptional(yaml, "icon", tile.Icon, "    ");
 			yaml.Append("    route: ").AppendLine(Scalar(tile.Route));
 			yaml.Append("    permission: ").AppendLine(Scalar(tile.Permission));
+			if (tile.Options is { Count: > 0 } options)
+			{
+				yaml.AppendLine("    options:");
+				foreach (var option in options)
+				{
+					yaml.Append("      - key: ").AppendLine(Scalar(option.Key));
+					yaml.Append("        label: ").AppendLine(Scalar(option.Label));
+					yaml.Append("        description: ").AppendLine(Scalar(option.Description));
+					if (option.Aliases is { Count: > 0 }) yaml.Append("        aliases: ").AppendLine(Flow(option.Aliases));
+					AppendOptional(yaml, "permission", option.Permission, "        ");
+					AppendOptional(yaml, "route", option.Route, "        ");
+					if (option.RequiresRestart) yaml.AppendLine("        requires_restart: true");
+					AppendOptional(yaml, "read_only_reason", option.ReadOnlyReason, "        ");
+					AppendOptional(yaml, "label_resource_key", option.LabelResourceKey, "        ");
+					AppendOptional(yaml, "description_resource_key", option.DescriptionResourceKey, "        ");
+				}
+			}
 		}
 
 		if (application.Zones.Count > 0)

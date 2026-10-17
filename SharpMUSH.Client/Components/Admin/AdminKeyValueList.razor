@@ -93,7 +93,15 @@
     }
 </div>
 
+@if (ConfigurationOptionKey is not null)
+{
+    <ConfigOptionFocus Ready="@(!_loading)" OptionKey="@ConfigurationOptionKey" />
+}
+
 @code {
+    /// <summary>Owns configuration deep-link focus after this list has rendered its controls.</summary>
+    [Parameter] public string? ConfigurationOptionKey { get; set; }
+
     /// <summary>Every string this list renders, so the page keeps its own resource keys.</summary>
     [Parameter, EditorRequired]
     public AdminKeyValueListText Text { get; set; } = default!;

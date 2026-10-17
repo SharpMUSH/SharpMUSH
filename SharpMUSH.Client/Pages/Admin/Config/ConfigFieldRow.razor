@@ -4,7 +4,7 @@
 @* One property of a config section (README §6.4): its name, key and help on the left, the kit control
    for its type on the right. Every edit goes to the section's ConfigDraft, then tells the page, which
    owns the unsaved bar. *@
-<div class="cfg-row @(Stacked ? "cfg-row--stacked" : "cfg-row--inline")">
+<div data-config-option="@Property.Path" class="cfg-row @(Stacked ? "cfg-row--stacked" : "cfg-row--inline")">
     <div class="cfg-row-text">
         <div class="cfg-row-name">
             <span>@DisplayName</span>
