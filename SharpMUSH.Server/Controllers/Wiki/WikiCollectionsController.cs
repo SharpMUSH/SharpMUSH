@@ -87,11 +87,11 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		for (var skip = 0; ; skip += batchSize)
 		{
 			var batch = await Wiki.GetAllPagesAsync(skip, batchSize, visibility: visibility);
-			foreach (var row in await Localization.LocalizeAllAsync(batch, lang, await IncludeDraftsAsync()))
-				if (row.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
-					|| row.Page.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
-					|| row.Page.Categories.Any(key => WikiHelpers.CategoryLabel(key, names).Contains(term, StringComparison.OrdinalIgnoreCase)))
-					matching.Add(row.Page.Id);
+			var localized = await Localization.LocalizeAllAsync(batch, lang, await IncludeDraftsAsync());
+			foreach (var row in localized.Where(row => row.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+				|| row.Page.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+				|| row.Page.Categories.Any(key => WikiHelpers.CategoryLabel(key, names).Contains(term, StringComparison.OrdinalIgnoreCase))))
+				matching.Add(row.Page.Id);
 			if (batch.Count < batchSize) break;
 			HttpContext.RequestAborted.ThrowIfCancellationRequested();
 		}

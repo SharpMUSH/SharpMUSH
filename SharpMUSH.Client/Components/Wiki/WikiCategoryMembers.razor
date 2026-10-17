@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Library.Services
+@inject NavigationManager Nav
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
@@ -30,7 +31,7 @@
             <nav class="wiki-cat-subs">
                 @foreach (var sub in _subcategories)
                 {
-                    <a class="wiki-catlink" href="@WikiCategories.Route(sub.Slug)">@(string.IsNullOrEmpty(sub.Title) ? WikiHelpers.CategoryLabel(sub.Slug) : sub.Title)</a>
+                    <a class="wiki-catlink" href="@WikiLocaleLinks.WithLocale(WikiCategories.Route(sub.Slug), EffectiveLocale)">@(string.IsNullOrEmpty(sub.Title) ? WikiHelpers.CategoryLabel(sub.Slug) : sub.Title)</a>
                 }
             </nav>
         }
@@ -40,7 +41,7 @@
             <div class="wiki-cat-grid">
                 @foreach (var p in _pages)
                 {
-                    <ImageTile Label="@p.Title" ImageUrl="@p.Image" Height="76" Href="@WikiRoutes.PathFor(p.Namespace, p.Slug)"
+                    <ImageTile Label="@p.Title" ImageUrl="@p.Image" Height="76" Href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(p.Namespace, p.Slug), EffectiveLocale)"
                                Sub="@(p.LastEditedBy is null ? Loc.Format(p.UpdatedAt) : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, Loc.Format(p.UpdatedAt)))">
                         <Overlay>
                             @if (!p.Published)
@@ -63,6 +64,9 @@
     /// <summary>The category, as its key or its name.</summary>
     [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
 
+    [Parameter] public string? Locale { get; set; }
+    private string? EffectiveLocale => Locale ?? WikiLocaleLinks.FromUri(Nav.Uri);
+
     private bool _loading = true;
     private bool _failed;
     private bool _disposed;
@@ -74,14 +78,15 @@
     protected override async Task OnParametersSetAsync()
     {
         var key = WikiCategories.Key(Category);
-        if (key == _loadedCategory) return;
-        _loadedCategory = key;
+        var selection = key + "\n" + EffectiveLocale;
+        if (selection == _loadedCategory) return;
+        _loadedCategory = selection;
         _loading = true;
         _failed = false;
         var version = ++_version;
         try
         {
-            if (await Wiki.GetNavigationAsync(page: "category/" + key) is not WikiNavigationDto navigation)
+            if (await Wiki.GetNavigationAsync(page: "category/" + key, lang: EffectiveLocale) is not WikiNavigationDto navigation)
             {
                 if (!_disposed && version == _version) _failed = true;
                 return;
@@ -89,7 +94,7 @@
             var members = new List<WikiPageSummary>();
             for (var skip = 0; ; skip += 200)
             {
-                if (await Wiki.GetCollectionPagesAsync(navigation.Collection, skip, 200, category: key) is not WikiPageBatch batch)
+                if (await Wiki.GetCollectionPagesAsync(navigation.Collection, skip, 200, category: key, lang: EffectiveLocale) is not WikiPageBatch batch)
                 {
                     if (!_disposed && version == _version) _failed = true;
                     return;

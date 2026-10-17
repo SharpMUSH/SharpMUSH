@@ -532,31 +532,40 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			: $"{(first ? '?' : '&')}lang={Uri.EscapeDataString(lang)}";
 
 	/// <summary>Complete authorized collection navigation, independent of page listing limits.</summary>
-	public async ValueTask<ApiResult<WikiNavigationDto>> GetNavigationAsync(string? collection = null, string? page = null)
+	public async ValueTask<ApiResult<WikiNavigationDto>> GetNavigationAsync(string? collection = null, string? page = null, string? lang = null)
 	{
 		var query = new List<string>();
 		if (collection is not null) query.Add("collection=" + Uri.EscapeDataString(collection));
 		if (page is not null) query.Add("page=" + Uri.EscapeDataString(page));
+		if (!string.IsNullOrWhiteSpace(lang)) query.Add("lang=" + Uri.EscapeDataString(lang));
 		return await httpClientFactory.CreateClient("api").GetApiAsync<WikiNavigationDto>(
 			"api/wiki/navigation" + (query.Count == 0 ? "" : "?" + string.Join('&', query)), "Wiki navigation is unavailable.");
 	}
 
 	public async ValueTask<ApiResult<WikiPageBatch>> GetCollectionPagesAsync(string collection, int skip = 0, int take = 50,
-		string? category = null, string? search = null)
+		string? category = null, string? search = null, string? lang = null)
 	{
 		var query = $"?skip={skip}&take={take}";
 		if (!string.IsNullOrWhiteSpace(category)) query += "&category=" + Uri.EscapeDataString(category);
 		if (!string.IsNullOrWhiteSpace(search)) query += "&search=" + Uri.EscapeDataString(search);
+		query += LangQuery(lang, first: false);
 		try
 		{
 			using var response = await httpClientFactory.CreateClient("api").GetAsync(
 				"api/wiki/collections/" + Uri.EscapeDataString(collection) + "/pages" + query);
 			if (!response.IsSuccessStatusCode) return ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
-			var rows = await response.Content.ReadFromJsonAsync<List<WikiPageSummaryDto>>();
-			if (rows is null || !response.Headers.TryGetValues("X-Total-Count", out var values)
-				|| !int.TryParse(values.SingleOrDefault(), out var total) || total < 0)
-				return new ApiFailure(ApiFailureKind.Unexpected, "The wiki listing was incomplete.");
-			return new WikiPageBatch(rows.Select(ToSummary).ToList(), total);
+			try
+			{
+				var rows = await response.Content.ReadFromJsonAsync<List<WikiPageSummaryDto>>();
+				if (rows is null || !response.Headers.TryGetValues("X-Total-Count", out var values)
+					|| !int.TryParse(values.SingleOrDefault(), out var total) || total < 0)
+					return new ApiFailure(ApiFailureKind.Unexpected, "The wiki listing was incomplete.");
+				return new WikiPageBatch(rows.Select(ToSummary).ToList(), total);
+			}
+			catch (Exception error) when (error is System.Text.Json.JsonException or NotSupportedException)
+			{
+				return ApiFailure.Malformed(error, response.StatusCode);
+			}
 		}
 		catch (Exception error) { return ApiFailure.Transport(error); }
 	}

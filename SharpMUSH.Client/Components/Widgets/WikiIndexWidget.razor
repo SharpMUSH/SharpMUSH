@@ -44,18 +44,18 @@
                 <h2>@Loc["WikiCollections"]</h2>
                 @foreach (var collection in navigation.Collections)
                 {
-                    <a class="wiki-collection-entry" href="@("/wiki/collections/" + Uri.EscapeDataString(collection.Id))">@collection.Name <span>@collection.Pages</span></a>
+                    <a class="wiki-collection-entry" href="@WikiLocaleLinks.WithLocale("/wiki/collections/" + Uri.EscapeDataString(collection.Id), _locale)">@collection.Name <span>@collection.Pages</span></a>
                 }
             </section>
         }
-        <a class="wiki-browse-all" href="/wiki/collections/game">@Loc["WikiBrowseAllCategories"]</a>
+        <a class="wiki-browse-all" href="@WikiLocaleLinks.WithLocale("/wiki/collections/game", _locale)">@Loc["WikiBrowseAllCategories"]</a>
         @if (_loadFailed)
         {
             <div class="wiki-empty" role="alert">@Loc["WikiLoadFailed"]</div>
         }
         else if (Searching)
         {
-            <WikiCollectionBrowser Collection="all" Search="@_search" Embedded="true" />
+            <WikiCollectionBrowser Collection="all" Search="@_search" Locale="@_locale" Embedded="true" />
         }
         else if (_loading)
         {
@@ -114,7 +114,7 @@
                                 @foreach (var page in g.Pages.Take(TopPages))
                                 {
                                     var p = page;
-                                    <a class="wiki-cat-page" href="@WikiRoutes.PathFor(p.Namespace, p.Slug)">
+                                    <a class="wiki-cat-page" href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(p.Namespace, p.Slug), _locale)">
                                         <span class="wiki-cat-page-title">@p.Title</span>
                                         @if (!p.Published)
                                         {
@@ -129,7 +129,7 @@
                             </div>
                             @if (!g.IsUncategorized)
                             {
-                                <a class="wiki-cat-all" href="@("/wiki/collections/game?category=" + Uri.EscapeDataString(g.Key))">@Loc.Plural("NavWikiAllPages", "count", CountFor(g.Key))</a>
+                                <a class="wiki-cat-all" href="@WikiLocaleLinks.WithLocale("/wiki/collections/game?category=" + Uri.EscapeDataString(g.Key), _locale)">@Loc.Plural("NavWikiAllPages", "count", CountFor(g.Key))</a>
                             }
                         </div>
                     </div>
@@ -161,7 +161,10 @@
 
     private bool Searching => !string.IsNullOrWhiteSpace(_search);
 
-    private static string NewPageHref => "/wiki/main/new-page/edit";
+    private string NewPageHref => WikiLocaleLinks.WithLocale("/wiki/main/new-page/edit", _locale);
+    private string? _locale;
+    private int _version;
+    private bool _disposed;
 
     /// <summary>Each category's name in the reader's language; a category with no page shows its key.</summary>
     private IReadOnlyDictionary<string, string>? _names;
@@ -170,26 +173,42 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         ReadQuery();
+        await LoadAsync();
+    }
 
-        if (await Wiki.GetNavigationAsync() is WikiNavigationDto navigation)
+    private async Task LoadAsync()
+    {
+        var version = ++_version;
+        var locale = _locale;
+        _loading = true;
+        _loadFailed = false;
+        if (await Wiki.GetNavigationAsync(lang: locale) is WikiNavigationDto navigation)
         {
+            if (_disposed || version != _version) return;
             _navigation = navigation;
             _names = navigation.Categories.ToDictionary(row => row.Key, row => row.Name);
             _pinned = navigation.Categories.Where(row => row.Pinned).Select(row => row.Key).ToHashSet(StringComparer.Ordinal);
             var previews = new Dictionary<(string, string), WikiPageSummary>();
             foreach (var category in _pinned)
             {
-                if (await Wiki.GetCollectionPagesAsync("game", take: TopPages, category: category) is not WikiPageBatch batch)
+                var result = await Wiki.GetCollectionPagesAsync("game", take: TopPages, category: category, lang: locale);
+                if (_disposed || version != _version) return;
+                if (result is not WikiPageBatch batch)
                 { _loadFailed = true; break; }
                 foreach (var page in batch.Pages) previews.TryAdd((page.Namespace, page.Slug), page);
             }
             _pages = previews.Values.ToList();
         }
-        else _loadFailed = true;
+        else
+        {
+            if (_disposed || version != _version) return;
+            _loadFailed = true;
+        }
+        if (_disposed || version != _version) return;
         _loading = false;
 
         // The hero shows the home page's own image when it has one; nothing else in the data names one.
-        if (await Wiki.GetWikiArticle("home", "main") is WikiArticle home)
+        if (await Wiki.GetWikiArticle("home", "main", lang: locale) is WikiArticle home && !_disposed && version == _version)
         {
             _heroImage = home.Image;
         }
@@ -197,14 +216,20 @@
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        ReadQuery();
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            var previousLocale = _locale;
+            ReadQuery();
+            if (previousLocale != _locale) await LoadAsync();
+            if (!_disposed) StateHasChanged();
+        });
     }
 
     private void ReadQuery()
     {
         // ?q=… from the shell search or the sidebar; the client has no query-string helper library.
         _search = string.Empty;
+        _locale = WikiLocaleLinks.FromUri(Nav.Uri);
         var query = new Uri(Nav.Uri).Query.TrimStart('?');
         foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -219,7 +244,7 @@
     private void ApplySearch()
     {
         var term = _search.Trim();
-        Nav.NavigateTo(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}");
+        Nav.NavigateTo(WikiLocaleLinks.WithLocale(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}", _locale));
     }
 
     private IReadOnlyList<WikiCategoryGroup> FilteredGroups
@@ -242,5 +267,5 @@
         else _pinned.Remove(key);
     }
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    public void Dispose() { _disposed = true; ++_version; Nav.LocationChanged -= OnLocationChanged; }
 }

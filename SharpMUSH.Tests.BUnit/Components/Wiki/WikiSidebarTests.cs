@@ -43,6 +43,15 @@ public class WikiSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AllCollectionsHeaderDoesNotMislabelTheGlobalTotalAsGameWiki()
+	{
+		_api.NavigationTotal = 4715;
+		var cut = RenderAt("/wiki/collections/all");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).StartsWith("All collections");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent.Replace(",", "")).Contains("4715");
+	}
+
+	[Test]
 	public async Task NavigationDoesNotSampleTheFirst500Pages()
 	{
 		RenderAt("/wiki");
