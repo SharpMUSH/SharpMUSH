@@ -17,7 +17,7 @@ public static class CanonicalFacts
 		foreach (var definition in schema.Properties)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			if (string.IsNullOrWhiteSpace(definition.Id) || definition.SchemaVersion != schema.Version
+			if (definition is null || !QualifiedProperty(definition.Id) || definition.SchemaVersion != schema.Version
 				|| !Enum.IsDefined(definition.Type) || !Enum.IsDefined(definition.Cardinality)
 				|| definition.AllowedKeywords.IsDefault || definitions.ContainsKey(definition.Id))
 				return Fail(ValidationCode.InvalidSchema, "Invalid, duplicate or differently versioned property definition.");
@@ -37,10 +37,12 @@ public static class CanonicalFacts
 		foreach (var fact in facts)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			if (fact is null)
+				return Fail(ValidationCode.InvalidSchema, "A fact entry is null.");
 			if (string.IsNullOrWhiteSpace(fact.Subject.Id))
 				return Fail(ValidationCode.MissingTarget, "Subject incarnation is required.");
-			if (!definitions.TryGetValue(fact.Property, out var definition))
-				return Fail(ValidationCode.UnknownProperty, fact.Property);
+			if (!QualifiedProperty(fact.Property) || !definitions.TryGetValue(fact.Property, out var definition))
+				return Fail(ValidationCode.UnknownProperty, "Unknown or malformed property key.");
 			var value = fact.Value;
 			if (!Matches(value, definition.Type))
 				return Fail(ValidationCode.WrongType, fact.Property);
@@ -112,6 +114,24 @@ public static class CanonicalFacts
 		Keyword keyword => "k:" + keyword.Value,
 		_ => "invalid"
 	};
+
+	private static bool QualifiedProperty(string? value)
+	{
+		if (value is null)
+			return false;
+		var separator = value.IndexOf(':');
+		if (separator <= 0 || separator == value.Length - 1 || value.LastIndexOf(':') != separator)
+			return false;
+		for (var i = 0; i < value.Length; i++)
+		{
+			if (i == separator)
+				continue;
+			var character = value[i];
+			if (!char.IsAsciiLetterOrDigit(character) && (i == 0 || i == separator + 1 || character is not ('.' or '_' or '-')))
+				return false;
+		}
+		return true;
+	}
 
 	private static bool Matches(SemanticValue value, SemanticType type) => type switch
 	{
