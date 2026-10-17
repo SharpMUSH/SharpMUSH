@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Plugins.Discord.Members;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -41,6 +43,18 @@ public class DiscordRelayTests
 			}
 
 			return ValueTask.CompletedTask;
+		}
+
+		public ValueTask<DiscordChannelLink?> UpdateAsync(ulong channelId, Func<DiscordChannelLink, DiscordChannelLink> change, CancellationToken cancellationToken = default)
+		{
+			while (_links.TryGetValue(channelId, out var current))
+			{
+				var updated = change(current);
+				if (!_links.TryUpdate(channelId, updated, current)) continue;
+				if (updated.Fault is not null) Faulted.TrySetResult(updated);
+				return ValueTask.FromResult<DiscordChannelLink?>(updated);
+			}
+			return ValueTask.FromResult<DiscordChannelLink?>(null);
 		}
 
 		public ValueTask<bool> RemoveAsync(ulong channelId, CancellationToken cancellationToken = default)
@@ -180,6 +194,8 @@ public class DiscordRelayTests
 	private sealed class Harness
 	{
 		public MemoryLinkStore Store { get; } = new();
+		public IDiscordChannelGate? Gate { get; set; }
+		public DiscordLinkMutationGate Mutations { get; } = new();
 		public MemoryMessagePairs Pairs { get; } = new();
 		public RecordingMessages Messages { get; } = new();
 		public MemorySecrets Secrets { get; } = new();
@@ -199,7 +215,7 @@ public class DiscordRelayTests
 					Posters.Add(poster);
 					return poster;
 				},
-				new DiscordOutboxOptions(Gather: TimeSpan.Zero), new FixedClock(), NullLogger<DiscordRelay>.Instance);
+				new DiscordOutboxOptions(Gather: TimeSpan.Zero), new FixedClock(), NullLogger<DiscordRelay>.Instance, Gate, Mutations);
 	}
 
 	private static WebhookCreation Webhook(ulong id, string token)
@@ -209,6 +225,36 @@ public class DiscordRelayTests
 		string origin = "")
 		=> new(new SharpFeedMessage(1, kind, key, Now, new DBRef(5), "Alice", new DBRef(5), "Alice", null, "", "say",
 			MString.Plain(text), Audience: audience), [], true, origin, to ?? []);
+
+	[Test]
+	public async Task ModeChangeWaitingBehindUnlinkCannotResurrectTheLink(CancellationToken ct)
+	{
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var harness = new Harness { Gate = Substitute.For<IDiscordChannelGate>() };
+		harness.Gate.RestoreAsync(Channel, Arg.Any<CancellationToken>()).Returns(_ => { entered.SetResult(); return release.Task; });
+		var relay = harness.Relay(Webhook(1, "token"));
+		await relay.StartAsync(ct); await relay.LinkAsync(Channel, "#1:1", Admin, ct);
+		var unlink = relay.UnlinkAsync(Channel, ct);
+		await entered.Task.WaitAsync(ct);
+		var access = new DiscordChannelAccess(harness.Store, Substitute.For<IDiscordPermissionChannels>(), harness.Mutations);
+		var change = access.SetUnrestrictedAsync(Channel, true, ct);
+		await Assert.That(change.IsCompleted).IsFalse();
+		release.SetResult(null);
+		await Assert.That(await unlink is DiscordChannelLink).IsTrue();
+		await Assert.That(await change).IsEqualTo("That channel is not linked.");
+		await Assert.That(harness.Store.Get(Channel)).IsNull();
+		await relay.StopAsync(ct);
+	}
+	[Test]
+	public async Task ListingUsesCurrentPersistedModeEvenWhenRunnerWasStartedEarlier(CancellationToken ct)
+	{
+		var harness = new Harness(); var relay = harness.Relay(Webhook(1, "token"));
+		await relay.StartAsync(ct); await relay.LinkAsync(Channel, "#1:1", Admin, ct);
+		await harness.Store.SaveAsync(harness.Store.Get(Channel)! with { Unrestricted = true });
+		await Assert.That(relay.Links().Single().Link.Unrestricted).IsTrue();
+		await relay.StopAsync(ct);
+	}
 
 	[Test, Timeout(30_000)]
 	public async Task ALinkedChannel_GetsItsFeedsLines_AsTheSpeaker(CancellationToken cancellationToken)

@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>Bestehende Clients, die diesen Charakter spielen, nach der Passwortänderung trennen.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Nur verknüpfte Konten</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Uneingeschränkt</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Discord-Identitäten erlauben</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Verknüpftes Konto verlangen</value>
+  </data>
 </root>

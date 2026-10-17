@@ -71,6 +71,9 @@ These functions read feeds (see [@feed]); they change nothing. Like @feed, they 
 
 - **feedmsg()**: One fact of a stored line: `id`, `feed` (`<kind>/<key>`), `kind`, `key`, `time` (seconds since the epoch), `speaker` (objid), `name` (the speaker's name when it was sent), `executor` (the objid of the object whose code sent it), `executor_name` (its name then), `location` (the speaker's location then), `location_name` (its name then), `style`, `text` (the message as written, markup kept) or `display` (the `@feed/send/as` name, or empty). Names are kept as they were, so a line still reads whole after its speaker is destroyed or renamed. It returns `#-1 NO SUCH FEED LINE` for a line that is not stored, because it was never logged or has been dropped.
 
+A line from an unrestricted Discord channel can have an external speaker instead of a character. For those lines, `speaker` is `#-1`, `location` is empty, and `name` and `display` contain the distinct Discord name and user id captured when the line arrived. `external_provider` returns `discord` and `external_id` returns the stable Discord user id; both are empty for ordinary game speakers. Do not use `name(feedmsg(<id>,speaker))` to render an external author: use the stored `display` or `name` field. These fields remain available in stored history after a restart.
+
+
 ## feedrecall()
 
 `feedrecall(<feed>, <count>[, <after id>])`

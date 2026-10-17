@@ -61,7 +61,8 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 				provider.GetRequiredService<DiscordGatewayService>(), provider.GetRequiredService<IDiscordMessagePairs>(),
 				provider.GetRequiredService<IDiscordMessages>(),
 				link => new DiscordWebhookPoster(link.ChannelId, link.WebhookId, secrets),
-				new DiscordOutboxOptions(), TimeProvider.System, provider.GetRequiredService<ILogger<DiscordRelay>>());
+				new DiscordOutboxOptions(), TimeProvider.System, provider.GetRequiredService<ILogger<DiscordRelay>>(),
+				provider.GetRequiredService<IDiscordChannelGate>(), provider.GetRequiredService<DiscordLinkMutationGate>());
 		});
 		services.AddSingleton<IFeedLineListener>(provider => provider.GetRequiredService<DiscordRelay>());
 		services.AddHostedService(provider => provider.GetRequiredService<DiscordRelay>());
@@ -78,7 +79,10 @@ public sealed class DiscordPlugin : PluginBase, IServiceRegistrar, IEndpointCont
 			provider.GetRequiredService<IDiscordSpeakerStore>(), provider.GetRequiredService<DiscordLinkTickets>(),
 			provider.GetRequiredService<IAccountService>(), provider.GetRequiredService<IDiscordLinkedRole>(), TimeProvider.System,
 			provider.GetRequiredService<ILogger<DiscordAccounts>>()));
-		services.AddSingleton<IDiscordChannelGate>(provider => provider.GetRequiredService<DiscordLinkedRole>());
+		services.AddSingleton<DiscordLinkMutationGate>();
+		services.AddSingleton<IDiscordPermissionChannels>(provider => provider.GetRequiredService<DiscordLinkedRole>());
+		services.AddSingleton<IDiscordChannelGate, DiscordChannelAccess>();
+		services.AddSingleton<IDiscordClientHandler, DiscordChannelAccessReconciler>();
 		services.AddSingleton<DiscordSlashCommands>();
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordLinkedRole>());
 		services.AddSingleton<IDiscordClientHandler>(provider => provider.GetRequiredService<DiscordSlashCommands>());

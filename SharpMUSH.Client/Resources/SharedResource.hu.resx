@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>A jelszó módosítása után bontsd a karakterrel játszó meglévő kliensek kapcsolatát.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Csak összekapcsolt fiókok</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Korlátozás nélkül</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Discord-azonosságok engedélyezése</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Összekapcsolt fiók megkövetelése</value>
+  </data>
 </root>

@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>Прекъснете връзките на съществуващите клиенти, които играят с този персонаж, след промяната на паролата.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Само свързани акаунти</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Без ограничение</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Разрешаване на Discord самоличности</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Изискване на свързан акаунт</value>
+  </data>
 </root>

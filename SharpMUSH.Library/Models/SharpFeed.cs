@@ -143,7 +143,8 @@ public sealed record SharpFeedMessage(
 	MString Text,
 	string DisplayName = "",
 	MString? Line = null,
-	string Audience = "")
+	string Audience = "",
+	ExternalFeedIdentity? ExternalIdentity = null)
 {
 	public string Feed => $"{Kind}/{Key}";
 }
@@ -187,4 +188,10 @@ public static class FeedStyles
 	public const string Announce = "announce";
 
 	public static readonly IReadOnlyList<string> All = [Say, Pose, SemiPose, Emit, Announce];
+}
+
+/// <summary>A remote speaker, never a game object. Stable identity and the name at sending survive recall/restart.</summary>
+public sealed record ExternalFeedIdentity(string Provider, string Subject, string Name)
+{
+	public string DisplayName => $"[{(Provider == "discord" ? "Discord" : Provider)}] {Name} ({Subject})";
 }

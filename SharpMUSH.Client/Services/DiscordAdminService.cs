@@ -40,6 +40,10 @@ public class DiscordAdminService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<DiscordAdminAnswer>> GateAsync(string channelId) =>
 		Client.PostApiAsync<object?, DiscordAdminAnswer>($"{Base}/channels/{Uri.EscapeDataString(channelId)}/gate", null, NoAnswer);
 
+	public Task<ApiResult<DiscordAdminAnswer>> ChannelAccessAsync(string channelId, bool unrestricted) =>
+		Client.PutApiAsync<DiscordChannelAccessRequest, DiscordAdminAnswer>($"{Base}/channels/{Uri.EscapeDataString(channelId)}/access",
+			new DiscordChannelAccessRequest(unrestricted), NoAnswer);
+
 	public Task<ApiResult<DiscordRolesView>> RolesAsync() =>
 		Client.GetApiAsync<DiscordRolesView>($"{Base}/roles", "The server returned no roles.");
 

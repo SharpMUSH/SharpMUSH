@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>Deconectează clienții existenți care joacă acest personaj după schimbarea parolei.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Doar conturi asociate</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Fără restricții</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Permite identități Discord</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Solicită un cont asociat</value>
+  </data>
 </root>

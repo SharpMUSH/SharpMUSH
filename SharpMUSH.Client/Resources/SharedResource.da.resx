@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>Afbryd eksisterende klienter, der spiller denne figur, efter ændring af adgangskoden.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Kun tilknyttede konti</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Ubegrænset</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Tillad Discord-identiteter</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Kræv tilknyttet konto</value>
+  </data>
 </root>

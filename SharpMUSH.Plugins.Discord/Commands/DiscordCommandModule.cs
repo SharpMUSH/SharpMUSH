@@ -42,7 +42,7 @@ public static class DiscordCommandModule
 	/// <summary>How long a link or unlink waits on Discord before the admin is told it did not answer.</summary>
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
-	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "SPEAK", "OFF", "MAP", "UNMAP",
+	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "UNRESTRICTED", "RESTRICT", "SPEAK", "OFF", "MAP", "UNMAP",
 			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY", "BANS", "EVENT", "START", "END"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "role"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -91,7 +91,7 @@ public static class DiscordCommandModule
 		}
 
 		var gate = services.GetRequiredService<IDiscordChannelGate>();
-		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME" or "GATE");
+		var action = switches.FirstOrDefault(name => name is "LINK" or "UNLINK" or "RESUME" or "GATE" or "UNRESTRICTED" or "RESTRICT");
 		if (action is null)
 		{
 			var state = gateway.State;
@@ -125,7 +125,8 @@ public static class DiscordCommandModule
 			{
 				"LINK" => LinkAsync(relay, feeds, gate, executor, channelId, cancellationToken),
 				"UNLINK" => UnlinkAsync(relay, channelId, cancellationToken),
-				"GATE" => GateAsync(relay, gate, channelId, cancellationToken),
+				"GATE" or "RESTRICT" => AccessAsync(relay, gate, channelId, false, cancellationToken),
+				"UNRESTRICTED" => AccessAsync(relay, gate, channelId, true, cancellationToken),
 				_ => ResumeAsync(relay, channelId, cancellationToken),
 			}));
 		}
@@ -167,7 +168,7 @@ public static class DiscordCommandModule
 		};
 	}
 
-	private static async ValueTask<MString> GateAsync(DiscordRelay relay, IDiscordChannelGate gate, ulong channelId,
+	private static async ValueTask<MString> AccessAsync(DiscordRelay relay, IDiscordChannelGate gate, ulong channelId, bool unrestricted,
 		CancellationToken cancellationToken)
 	{
 		if (relay.Links().FirstOrDefault(status => status.Link.ChannelId == channelId) is not { Link: var link })
@@ -175,9 +176,11 @@ public static class DiscordCommandModule
 			return Notice("That channel is not linked.", NoticeKind.Warn);
 		}
 
-		return await gate.GateAsync(channelId, cancellationToken) is { } problem
-			? Notice($"#{link.ChannelName} is still open to everyone: {problem}", NoticeKind.Error)
-			: Notice($"Only linked members may post in #{link.ChannelName} now.", NoticeKind.Ok);
+		return await gate.SetUnrestrictedAsync(channelId, unrestricted, cancellationToken) is { } problem
+			? Notice($"Could not change access in #{link.ChannelName}: {problem}", NoticeKind.Error)
+			: Notice(unrestricted
+				? $"#{link.ChannelName} is unrestricted. Discord members may speak under their Discord identity without a game account."
+				: $"Only linked members may post in #{link.ChannelName} now.", NoticeKind.Ok);
 	}
 
 	/// <summary>
@@ -238,7 +241,8 @@ public static class DiscordCommandModule
 	private static async ValueTask<MString> UnlinkAsync(DiscordRelay relay, ulong channelId, CancellationToken cancellationToken)
 		=> await relay.UnlinkAsync(channelId, cancellationToken) switch
 		{
-			DiscordChannelLink link => Notice($"Unlinked #{link.ChannelName}. Its feed discord/{link.FeedKey} stays, with its lines.", NoticeKind.Ok),
+			DiscordChannelLink link => Notice($"Unlinked #{link.ChannelName} and removed its Linked-role requirement. Its feed discord/{link.FeedKey} stays, with its lines.", NoticeKind.Ok),
+			Error<string> error => Notice(error.Value, NoticeKind.Error),
 			_ => Notice("That channel is not linked.", NoticeKind.Warn),
 		};
 
@@ -356,6 +360,8 @@ public static class DiscordCommandModule
 			DiscordLinkState.Backlogged => $"behind, {status.Depth} lines waiting",
 			_ => "posting",
 		};
+		if (status.Link.PermissionProblem is { } problem) posting += $"; permissions: {problem}";
+		if (status.Link.Unrestricted) return $"{posting}; unrestricted (Discord identities allowed)";
 		return openTo is [_, ..]
 			? $"{posting}; {string.Join(" and ", openTo)} may post without linking: @discord/gate {status.Link.FeedKey}"
 			: posting;

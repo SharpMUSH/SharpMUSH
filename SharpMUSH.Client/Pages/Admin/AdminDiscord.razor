@@ -95,7 +95,8 @@
                                             <span class="adm-discord-name">#@channel.ChannelName</span>
                                             <span class="adm-discord-sub">@channel.GuildName</span>
                                             <Pill Tag="true" Warn="@(channel.State != "ok")">@ChannelState(channel)</Pill>
-                                            @if (channel.OpenTo is [_, ..] open)
+                                            <Pill Tag="true" Class="adm-discord-access">@Loc[channel.Unrestricted ? "AdmDiscordAccessUnrestricted" : "AdmDiscordAccessRestricted"]</Pill>
+                                            @if (!channel.Unrestricted && channel.OpenTo is [_, ..] open)
                                             {
                                                 <Pill Tag="true" Warn="true" Class="adm-discord-open">@string.Format(Loc["AdmDiscordOpenTo"], string.Join(", ", open))</Pill>
                                             }
@@ -105,14 +106,28 @@
                                         {
                                             <span class="adm-discord-sub adm-discord-fault">@fault</span>
                                         }
+                                        @if (channel.PermissionProblem is { } permissionProblem)
+                                        {
+                                            <span class="adm-discord-sub adm-discord-permission-fault">@permissionProblem</span>
+                                        }
                                     </div>
                                     <div class="adm-discord-row-actions">
+                                        @if (channel.Unrestricted)
+                                        {
+                                            <CapsuleButton Class="adm-discord-restrict" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.ChannelAccessAsync(channel.ChannelId, false)))">@Loc["AdmDiscordRestrict"]</CapsuleButton>
+                                        }
+                                        else
+                                        {
+                                            <CapsuleButton Class="adm-discord-unrestrict" Disabled="@_busy"
+                                                           OnClick="@(() => ActAsync(Discord.ChannelAccessAsync(channel.ChannelId, true)))">@Loc["AdmDiscordMakeUnrestricted"]</CapsuleButton>
+                                        }
                                         @if (channel.State == "stopped")
                                         {
                                             <CapsuleButton Class="adm-discord-resume" Disabled="@_busy"
                                                            OnClick="@(() => ActAsync(Discord.ResumeAsync(channel.ChannelId)))">@Loc["AdmDiscordResume"]</CapsuleButton>
                                         }
-                                        @if (channel.OpenTo is [_, ..])
+                                        @if (!channel.Unrestricted && channel.OpenTo is [_, ..])
                                         {
                                             <CapsuleButton Class="adm-discord-gate" Disabled="@_busy"
                                                            OnClick="@(() => ActAsync(Discord.GateAsync(channel.ChannelId)))">@Loc["AdmDiscordGate"]</CapsuleButton>

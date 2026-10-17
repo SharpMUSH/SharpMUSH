@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>Koppla från befintliga klienter som spelar den här karaktären efter att lösenordet ändrats.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Endast länkade konton</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Obegränsad</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Tillåt Discord-identiteter</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Kräv länkat konto</value>
+  </data>
 </root>

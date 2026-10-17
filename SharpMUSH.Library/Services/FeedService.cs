@@ -71,7 +71,20 @@ public class FeedService(
 		return purged;
 	}
 
-	public async ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send)
+	public ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send) => SendCoreAsync(parser, send, null);
+
+	public ValueTask<Result<FeedDelivery>> SendExternalAsync(IMUSHCodeParser parser, ExternalFeedSend send)
+	{
+		if (send.Kind.Lock(FeedLocks.Send).Length != 0 || send.Feed.Lock(FeedLocks.Send).Length != 0)
+			return ValueTask.FromResult<Result<FeedDelivery>>(new Error<string>("External Discord members cannot pass a configured feed send lock."));
+		if (send.Identity.Provider != "discord" || !ulong.TryParse(send.Identity.Subject, out _) || string.IsNullOrWhiteSpace(send.Identity.Name)
+			|| send.Identity.Name.Length > 80 || send.Identity.Name.Any(char.IsControl))
+			return ValueTask.FromResult<Result<FeedDelivery>>(new Error<string>("Invalid external feed identity."));
+		return SendCoreAsync(parser.FromState(parser.CurrentState with { Enactor = new DBRef(-1) }),
+			new(send.Kind, send.Feed, send.Executor, send.Executor, send.Style, send.Text, [], Origin: send.Origin), send.Identity);
+	}
+
+	private async ValueTask<Result<FeedDelivery>> SendCoreAsync(IMUSHCodeParser parser, FeedSend send, ExternalFeedIdentity? external)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var (kind, feed, speaker, executor, style, text, to, displayName, origin) = send;
@@ -84,10 +97,10 @@ public class FeedService(
 		var id = await ids.NextAsync(ct);
 		var speakerObject = speaker.Object();
 		var executorObject = executor.Object();
-		var location = (await speaker.Where()).Object();
-		var message = new SharpFeedMessage(id, kind.Name, feed.Key, DateTimeOffset.UtcNow, speakerObject.DBRef,
-			speakerObject.Name, executorObject.DBRef, executorObject.Name, location.DBRef, location.Name, style, text,
-			displayName);
+		var location = external is null ? (await speaker.Where()).Object() : null;
+		var message = new SharpFeedMessage(id, kind.Name, feed.Key, DateTimeOffset.UtcNow, external is null ? speakerObject.DBRef : new DBRef(-1),
+			external?.DisplayName ?? speakerObject.Name, executorObject.DBRef, executorObject.Name, location?.DBRef, location?.Name ?? "", style, text,
+			external?.DisplayName ?? displayName, ExternalIdentity: external);
 
 		// Stored first, so feedmsg() answers for it inside ROUTE, DELIVER, FORMAT and the taps.
 		var stored = settings.Logged == true;
@@ -171,7 +184,7 @@ public class FeedService(
 			await parser.With(state => state with
 			{
 				Executor = ownerRef,
-				Enactor = speaker.Object().DBRef,
+				Enactor = message.Speaker,
 				Caller = state.Executor,
 				Registers = registers,
 				Arguments = arguments,
@@ -195,7 +208,11 @@ public class FeedService(
 		var delivered = new List<DBRef>();
 		foreach (var recipient in recipients)
 		{
-			if (!await permissionService.CanInteract(speaker, recipient, IPermissionService.InteractType.Hear)) continue;
+			if (message.ExternalIdentity is null)
+			{
+				if (!await permissionService.CanInteract(speaker, recipient, IPermissionService.InteractType.Hear)) continue;
+			}
+			else if (await lockService.LookupAsync(recipient, nameof(LockType.Interact), ExecutionBudget.CurrentToken) is ResolvedLock) continue;
 
 			var line = defaultLine ?? await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
 				IFeedService.TieIn(message.Kind, "FORMAT"), Arguments(("text", message.Text),
@@ -206,7 +223,7 @@ public class FeedService(
 			// Every listener hears the speaker from where the line was sent, found once in SendAsync, and has
 			// just passed the hearing check, which the listener pass would otherwise make again.
 			var context = new NotificationContext(recipient.Object().DBRef, message.Location, []) { HearingChecked = true };
-			await notifyService.NotifyWithContextAsync(context, line, speaker, type, target: recipient);
+			await notifyService.NotifyWithContextAsync(context, line, message.ExternalIdentity is null ? speaker : null, type, target: recipient);
 			delivered.Add(recipient.Object().DBRef);
 		}
 

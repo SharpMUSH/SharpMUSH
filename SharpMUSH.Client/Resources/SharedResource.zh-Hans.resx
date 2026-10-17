@@ -6437,4 +6437,16 @@
   <data name="AuthNativeDisconnectOthers" xml:space="preserve">
     <value>更改密码后，断开正在扮演该角色的现有客户端连接。</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>仅限已关联账号</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>不受限</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>允许 Discord 身份</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>要求关联账号</value>
+  </data>
 </root>

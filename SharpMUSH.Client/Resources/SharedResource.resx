@@ -9139,4 +9139,16 @@
   <data name="AdmImportRhostRehearse" xml:space="preserve">
     <value>Rehearse on a disposable SharpMUSH instance and keep a backup of the destination world before importing. This import writes the configured world directly; it does not stage a separate world for transactional promotion.</value>
   </data>
+  <data name="AdmDiscordAccessRestricted" xml:space="preserve">
+    <value>Linked accounts only</value>
+  </data>
+  <data name="AdmDiscordAccessUnrestricted" xml:space="preserve">
+    <value>Unrestricted</value>
+  </data>
+  <data name="AdmDiscordMakeUnrestricted" xml:space="preserve">
+    <value>Allow Discord identities</value>
+  </data>
+  <data name="AdmDiscordRestrict" xml:space="preserve">
+    <value>Require linked account</value>
+  </data>
 </root>
