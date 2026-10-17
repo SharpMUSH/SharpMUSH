@@ -13,6 +13,7 @@ game installed and what *this* game's staff wrote. The two never merge.
 |---|---|---|
 | `+help` | all | The index: a compact grid of source links, without descriptions |
 | `+help <topic>` | all | A topic. `*` and `?` wildcard |
+| `+help <source>` | all | The source's topic list when no topic matches |
 | `+help <source>/<topic>` | all | The qualified form, for when two sources claim a name |
 | `+help/list[/<page>] [<source>]` | all | Every topic, or one source's |
 | `+help/search[/<page>] <text>` | all | Topic names and bodies containing the text |
@@ -26,7 +27,9 @@ A long listing comes in pages, asked for as a last switch: `+help/list/2`, `+hel
 and `+help/2 <topic>` when several topics match. A topic name can be several words: `+help scene join`. `+help` itself renders the `index` topic —
 which a game replaces by writing its own, since the `game` source outranks a package's.
 
-Source links open `+help/list <source>`. Their grid follows the reader's terminal width and reflows
+Source links open `+help/list <source>`. Typing `+help <source>` opens the same listing when no
+topic matches; topic names always win. Case and registered source aliases work as with `/list`.
+Empty or unavailable sources keep the ordinary no-topic response. Their grid follows the reader's terminal width and reflows
 in the portal. Plain terminals show the names; `+help/list <source>` remains the typed fallback.
 `+help/sources` includes registered sources with no topics or missing objects, while the front page
 only offers sources that currently have topics. Source descriptions are read as stored text.
