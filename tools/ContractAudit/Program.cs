@@ -211,7 +211,11 @@ string[] Locations(string name, string directory) => source.Where(line => line.F
 	@"\bName\s*=\s*""" + Regex.Escape(name) + @"""", RegexOptions.IgnoreCase))
 	.Select(line => $"{line.File}:{line.Line}").ToArray();
 
-string[] Evidence(string kind, string name) => name is "setunion" or "setdiff" or "setinter" or "setsymdiff"
+string[] Evidence(string kind, string name) => name == "unique"
+	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
+		"tools/client-tests/monaco-signatures.test.mjs", "SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpfunc.md",
+		"docs/audits/softcode-contracts.md#unique-comparison-labels"]
+	: name is "setunion" or "setdiff" or "setinter" or "setsymdiff"
 	? ["SharpMUSH.Tests/Documentation/RegistryContractAuditTests.cs", "SharpMUSH.Tests/Functions/ListFunctionUnitTests.cs",
 		"tools/client-tests/monaco-signatures.test.mjs", "SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpfunc.md",
 		"docs/audits/softcode-contracts.md#set-operation-overloads"]
@@ -248,7 +252,7 @@ string[] ModuleLocations(string project, string name) => source.Where(line => li
 object Review(string kind, string name) => new
 {
 	complete = false,
-	reviewedFacets = kind == "function" && name is "json_map" or "json_mod" or "sortkey" or "index" or "munge" or "setunion" or "setdiff" or "setinter" or "setsymdiff"
+	reviewedFacets = kind == "function" && name is "json_map" or "json_mod" or "sortkey" or "index" or "munge" or "setunion" or "setdiff" or "setinter" or "setsymdiff" or "unique"
 		? new[] { "registration-metadata", "parameter-labels", "focused-parser-call-shapes", "analysis-portal-monaco-signatures" }
 		: new[] { "registration-metadata" },
 	pendingFacets = new[] { "full-argument-semantics", "evaluation-and-laziness", "authority-and-permissions", "errors-and-boundaries",

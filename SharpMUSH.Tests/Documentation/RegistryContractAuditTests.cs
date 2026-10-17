@@ -28,6 +28,7 @@ public class RegistryContractAuditTests
 	}
 
 	[Test]
+	[Arguments("unique", "list,sort-type,delimiter,osep", "unique(01|1|2,n,|,;)")]
 	[Arguments("setunion", "list1,list2,delimiter,sort-type,osep", "setunion(9|2,2|10,|,n,;)")]
 	[Arguments("setdiff", "list1,list2,delimiter,sort-type,osep", "setdiff(9|2,2|10,|,n,;)")]
 	[Arguments("setinter", "list1,list2,delimiter,sort-type,osep", "setinter(9|2,2|10,|,n,;)")]

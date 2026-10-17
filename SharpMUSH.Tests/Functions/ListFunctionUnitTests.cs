@@ -750,6 +750,15 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("unique(9|9|2|9,n,|,;)", "9;2;9")]
+	[Arguments("unique(01|1|2,n,|,;)", "01;2")]
+	public async Task UniqueCallShapePreservesAdjacentComparisonAndOrder(string function, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
 	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
 	public async Task Matchall(string function, string expected)
 	{

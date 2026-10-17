@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../../SharpMUSH.Client/wwwroot/js/mush-mona
 // This test exercises the real browser consumer without needing a .NET build in the Node job.
 const census = JSON.parse(readFileSync(new URL('../../docs/audits/softcode-contracts.json', import.meta.url), 'utf8'));
 const listDefinitions = Object.fromEntries(census.entries
-    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge', 'setunion', 'setdiff', 'setinter', 'setsymdiff'].includes(entry.name))
+    .filter(entry => entry.kind === 'function' && ['sortkey', 'index', 'munge', 'setunion', 'setdiff', 'setinter', 'setsymdiff', 'unique'].includes(entry.name))
     .map(entry => [entry.name, { minArgs: entry.metadata.MinArgs, maxArgs: entry.metadata.MaxArgs, parameterNames: entry.metadata.ParameterNames }]));
 const definitions = { functions: {
     ...listDefinitions,
@@ -93,3 +93,13 @@ for (const name of ['setunion', 'setdiff', 'setinter', 'setsymdiff']) {
         assert.equal(result.value.activeParameter, 4);
     });
 }
+
+test('unique portal signature puts comparison type before input and output separators', async () => {
+    const provider = await signatureProvider();
+    const line = 'unique(01|1|2,n,|,;';
+    const result = provider.provideSignatureHelp({ getLineContent: () => line }, { lineNumber: 1, column: line.length + 1 });
+    const signature = result.value.signatures[0];
+    const labels = Array.from(signature.parameters, parameter => signature.label.slice(...parameter.label));
+    assert.deepEqual(labels, ['list', '[sort-type]', '[delimiter]', '[osep]']);
+    assert.equal(result.value.activeParameter, 3);
+});
