@@ -78,22 +78,25 @@ public sealed class ImportSessionRegistry(ImportPreviewCoordinator previews, Imp
 
 	public bool Abort(string id)
 	{
+		if (Get(id) is not ImportSession session) return false;
+		if (session.State == ImportSessionState.Ready) return AbortClosedPreview(id);
 		if (_running.TryGetValue(id, out var running))
 		{
-			try { running.Cancellation.Cancel(); return true; }
-			catch (ObjectDisposedException) { /* Worker completed between lookup and cancellation; read its journal below. */ }
+			try { running.Cancellation.Cancel(); }
+			catch (ObjectDisposedException) { /* Worker completed between lookup and cancellation. */ }
+			if (Get(id) is not ImportSession current) return false;
+			return current.State == ImportSessionState.Ready ? AbortClosedPreview(id)
+				: current.State is ImportSessionState.Preparing or ImportSessionState.Converting or ImportSessionState.Validating or ImportSessionState.Aborted;
 		}
-		if (Get(id) is not ImportSession session || session.State is ImportSessionState.Committing or ImportSessionState.Committed
-			or ImportSessionState.PromotionRequested or ImportSessionState.RollbackRequested or ImportSessionState.RecoveryRequired) return false;
-		// An orphan worker can finish safely, but its directory must not be removed while it is writing.
+		// A surviving worker keeps ownership until its provider is closed.
 		using var owned = new FileStream(Path.Combine(session.Directory, "worker.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-		journal.Save(session with
-		{
-			State = ImportSessionState.Aborted,
-			Failure = "Preview aborted by an administrator.",
-			Result = new ConversionResult { Aborted = true, Errors = ["Preview aborted by an administrator."] }
-		});
-		ImportPreviewCoordinator.CleanupStaging(session);
+		return AbortClosedPreview(id);
+	}
+
+	private bool AbortClosedPreview(string id)
+	{
+		if (!journal.AbortPreview(id, "Preview aborted by an administrator.")) return false;
+		ImportPreviewCoordinator.CleanupStaging(journal.Get(id));
 		return true;
 	}
 

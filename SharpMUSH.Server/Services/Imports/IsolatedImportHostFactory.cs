@@ -4,9 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Database.Lightning;
-using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Secrets;
@@ -44,13 +41,7 @@ public sealed class IsolatedImportHostFactory
 		builder.Services.RemoveAll<IConnectionStateStore>();
 		builder.Services.RemoveAll<IMessageBus>();
 		builder.Services.AddSingleton<IMessageBus, ImportMessageBus>();
-		builder.Services.AddSingleton(new LightningWorldPath(session.WorldPath));
-		builder.Services.AddSingleton(sp => new LightningDatabase(
-			sp.GetRequiredService<ILogger<LightningDatabase>>(),
-			new LightningStoreOptions { Path = session.WorldPath },
-			sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
-			sp.GetRequiredService<PluginCatalog>().MigrationSources,
-			sp.GetRequiredService<PluginCatalog>().AllFlags));
+
 		// The normal host's environment/file secret overrides and key-ring path must not leak into preview.
 		builder.Services.AddSingleton(new SecretStoreOptions(Path.Combine(session.Directory, "secret-overrides"), _ => null));
 		builder.Services.AddSingleton<IDataProtectionProvider>(DataProtectionProvider.Create(new DirectoryInfo(session.KeyRingPath),

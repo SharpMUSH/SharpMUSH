@@ -7,6 +7,7 @@ using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services.Imports;
@@ -50,6 +51,10 @@ public class ImportPreviewWorkerTests
 		await Assert.That(preview.Result!.TotalObjects).IsGreaterThan(0);
 		await using var staged = Open(preview.WorldPath);
 		await Assert.That(await staged.GetObjectCountAsync()).IsGreaterThan(0);
+		var configuration = await staged.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
+		await Assert.That(configuration?.Database.PackageManager).IsNotNull();
+		var manager = await staged.GetObjectNodeAsync(new DBRef((int)configuration!.Database.PackageManager!.Value));
+		await Assert.That(manager is AnySharpObject and SharpPlayer).IsTrue();
 		await Assert.That(Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(_root, "live", "data.mdb"))))).IsEqualTo(hash);
 		await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(source))).IsEquivalentTo(sourceHash);
 	}
@@ -105,6 +110,41 @@ public class ImportPreviewWorkerTests
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Aborted);
 		await Assert.That(Directory.Exists(preview.WorldPath)).IsFalse();
 		await Assert.That(Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(_root, "live", "data.mdb"))))).IsEqualTo(hash);
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task WorkerCompletionDoesNotExposeReadyBeforeParentSourceValidation()
+	{
+		var (journal, source, _) = await SetupAsync();
+		var session = journal.Create();
+		var privateSource = Path.Combine(session.Directory, "world.source");
+		File.Copy(source, privateSource);
+		var request = new ImportWorkerRequest(journal.LiveWorldPath, journal.LiveKeyRingPath,
+			new DatabaseImportFiles(privateSource, Format: DatabaseImportFormat.RhostMUSH), null);
+		await File.WriteAllTextAsync(Path.Combine(session.Directory, "request.json"), System.Text.Json.JsonSerializer.Serialize(request));
+		await Assert.That(await ImportWorker.RunAsync(session.Directory)).IsEqualTo(0);
+		await Assert.That(journal.Get(session.Id).State).IsEqualTo(ImportSessionState.Validating);
+		await Assert.That(() => journal.RequestPromotion(session.Id)).Throws<InvalidOperationException>();
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task PrivateHostUsesTheSameConfiguredMapCeilingAsThePromotedHost()
+	{
+		var (journal, _, _) = await SetupAsync();
+		var session = journal.Create();
+		var previous = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
+		try
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE", (256L << 20).ToString(System.Globalization.CultureInfo.InvariantCulture));
+			var host = await new IsolatedImportHostFactory().CreateAsync(session);
+			await using var owned = (IAsyncDisposable)host;
+			var capacity = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<IStorageCapacityService>(host.Services).Measure();
+			await Assert.That(capacity.MapSizeBytes).IsEqualTo(256L << 20);
+			await Assert.That(capacity.WorldPath).IsEqualTo(session.WorldPath);
+		}
+		finally { Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE", previous); }
 	}
 
 }

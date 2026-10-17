@@ -206,4 +206,36 @@ public class ImportPromotionJournalTests
 		await Assert.That(journal.Create().State).IsEqualTo(ImportSessionState.Preparing);
 	}
 
+	[Test]
+	public async Task AuthorizedPromotionIntentRecoversWhenPendingMarkerWasNotPersisted()
+	{
+		var live = Path.Combine(_root, "live");
+		var journal = new ImportPromotionJournal(live);
+		var session = journal.Create();
+		await Populate(live, "Original sentinel");
+		await Populate(session.WorldPath, "Imported sentinel");
+		Directory.CreateDirectory(session.KeyRingPath);
+		journal.MarkReady(session.Id);
+		journal.RequestPromotion(session.Id);
+		File.Delete(Path.Combine(journal.SessionsPath, "pending.json"));
+		journal.ApplyPendingBeforeHostConstruction();
+		await Assert.That(journal.Get(session.Id).State).IsEqualTo(ImportSessionState.Committed);
+		await using var reopened = Open(live);
+		await Assert.That(Contains(reopened, "Imported sentinel")).IsTrue();
+	}
+
+	[Test]
+	public async Task AcceptedPromotionCannotBeOverwrittenByLateCancellation()
+	{
+		var journal = new ImportPromotionJournal(Path.Combine(_root, "live"));
+		var session = journal.Create();
+		Directory.CreateDirectory(session.WorldPath);
+		Directory.CreateDirectory(session.KeyRingPath);
+		journal.MarkReady(session.Id);
+		journal.RequestPromotion(session.Id);
+		await Assert.That(journal.AbortPreview(session.Id, "late cancellation")).IsFalse();
+		await Assert.That(journal.Get(session.Id).State).IsEqualTo(ImportSessionState.PromotionRequested);
+		await Assert.That(Directory.Exists(session.WorldPath)).IsTrue();
+	}
+
 }

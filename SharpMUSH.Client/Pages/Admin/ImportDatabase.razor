@@ -399,7 +399,7 @@
     private async Task ResumeSession(ImportSessionStatus session)
     {
         _sessionId = session.SessionId;
-        if (session.Result is { } result)
+        if (session.Result is { } result && session.State is not ("Preparing" or "Converting" or "Validating"))
         {
             _result = result with { ImportSessionId = session.SessionId, RequiresPromotion = session.State == "Ready" };
             _canRollback = session.State is "Committed" or "RecoveryRequired";

@@ -355,4 +355,21 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		await Assert.That(cut.Find(".dbimport-promote").HasAttribute("disabled")).IsTrue();
 	}
 
+	[Test]
+	public async Task ReloadedValidationReportKeepsPollingRatherThanClaimingSuccessEarly()
+	{
+		AddServices((_, path) => path switch
+		{
+			"api/databaseconversion/progress/validating" => Json(HttpStatusCode.OK, "{\"percentageComplete\":100,\"currentPhase\":\"Validating\"}"),
+			"api/databaseconversion/result/validating" => Refusal(HttpStatusCode.NotFound, "Not completed"),
+			_ => throw new InvalidOperationException("Unexpected request: " + path)
+		}, sessions: [new("validating", "Validating", new ConversionResult { PlayersConverted = 2 }, null)]);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
+		await cut.Find(".dbimport-resume").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-cancel"));
+		await Assert.That(cut.FindAll(".dbimport-promote")).IsEmpty();
+		await Assert.That(cut.FindAll(".dbimport-dropzone")).IsEmpty();
+	}
+
 }

@@ -101,20 +101,22 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 				if (!(await HashAsync(source, cancellationToken)).AsSpan().SequenceEqual(hash))
 					throw new IOException("A source input changed during preview; promotion is refused.");
 			if (session.State == ImportSessionState.Aborted) CleanupStaging(session);
+			else
+			{
+				if (session.State != ImportSessionState.Validating || session.Result is not { IsSuccessful: true, Aborted: false })
+					throw new IOException("The import worker did not finish validation.");
+				cancellationToken.ThrowIfCancellationRequested();
+				journal.MarkReady(session.Id);
+				session = journal.Get(session.Id);
+			}
 			return session;
 		}
 		catch (Exception error)
 		{
 			logger.LogWarning("Import session {SessionId} aborted: {ErrorType}", session.Id, error.GetType().Name);
 			var failure = error is OperationCanceledException ? "Import preview was cancelled." : "Import preview failed: " + error.GetType().Name;
-			session = journal.Get(session.Id) with
-			{
-				State = ImportSessionState.Aborted,
-				Failure = failure,
-				Result = new ConversionResult { Aborted = true, Errors = [failure] }
-			};
-			journal.Save(session);
-			CleanupStaging(session);
+			if (journal.AbortPreview(session.Id, failure)) CleanupStaging(journal.Get(session.Id));
+			session = journal.Get(session.Id);
 			return session;
 		}
 		finally

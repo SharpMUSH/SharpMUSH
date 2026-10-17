@@ -38,7 +38,7 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		if (configFile is { Length: > MaxConfigFileSize }) return BadRequest("The configuration file is larger than 1 MB.");
 		var inputs = new[] { file, mailFile, chatFile, mailFolderFile }.OfType<IFormFile>().ToArray();
 		if (inputs.Any(input => input.Length > MaxUploadFileSize)) return BadRequest("An import input is larger than 100 MB.");
-		if (capacity.Measure().ImportShortfall(inputs.Sum(input => input.Length)) is { Length: > 0 } shortfall)
+		if (capacity.Measure().ImportShortfall(inputs.Sum(input => input.Length), isolated: true) is { Length: > 0 } shortfall)
 			return StatusCode(StatusCodes.Status507InsufficientStorage, shortfall);
 		var directory = Path.Combine(journal.SessionsPath, ".upload-" + Guid.NewGuid().ToString("N"));
 		ImportPromotionJournal.PrivateDirectory(directory);

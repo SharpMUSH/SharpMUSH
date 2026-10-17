@@ -63,7 +63,8 @@ public sealed class ImportPromotionJournal
 			if (File.Exists(_pending)) throw new InvalidOperationException("An import promotion or rollback is pending restart.");
 			foreach (var active in List())
 			{
-				if (active.State is ImportSessionState.Preparing or ImportSessionState.Converting or ImportSessionState.Validating or ImportSessionState.Ready)
+				if (active.State is ImportSessionState.Preparing or ImportSessionState.Converting or ImportSessionState.Validating or ImportSessionState.Ready
+					or ImportSessionState.PromotionRequested or ImportSessionState.RollbackRequested or ImportSessionState.Committing or ImportSessionState.RecoveryRequired)
 					throw new InvalidOperationException("Another import session is active; finish or abort it first.");
 			}
 			var id = Guid.NewGuid().ToString("N");
@@ -94,7 +95,32 @@ public sealed class ImportPromotionJournal
 	}
 
 	public void Save(ImportSession session) => WriteDurable(Path.Combine(session.Directory, "session.json"), session);
-	public void MarkReady(string id) => Save(Get(id) with { State = ImportSessionState.Ready });
+	public void MarkReady(string id)
+	{
+		lock (_sync)
+		{
+			var session = Get(id);
+			if (session.State is not (ImportSessionState.Preparing or ImportSessionState.Validating))
+				throw new InvalidOperationException("This preview can no longer become ready.");
+			Save(session with { State = ImportSessionState.Ready });
+		}
+	}
+
+	public bool AbortPreview(string id, string reason)
+	{
+		lock (_sync)
+		{
+			var session = Get(id);
+			if (session.State is not (ImportSessionState.Preparing or ImportSessionState.Converting or ImportSessionState.Validating or ImportSessionState.Ready or ImportSessionState.Aborted)) return false;
+			Save(session with
+			{
+				State = ImportSessionState.Aborted,
+				Failure = reason,
+				Result = (session.Result ?? new ConversionResult()) with { Aborted = true, Errors = [.. session.Result?.Errors ?? [], reason] }
+			});
+			return true;
+		}
+	}
 
 	public void RequestPromotion(string id, CancellationToken cancellationToken = default)
 	{
@@ -133,7 +159,14 @@ public sealed class ImportPromotionJournal
 
 	public void ApplyPendingBeforeHostConstruction()
 	{
-		if (!File.Exists(_pending)) return;
+		if (!File.Exists(_pending))
+		{
+			// The authorized intent record may have reached disk before the separate marker write.
+			var intents = List().Where(session => session.State is ImportSessionState.PromotionRequested or ImportSessionState.RollbackRequested).ToArray();
+			if (intents.Length == 0) return;
+			if (intents.Length != 1) throw new IOException("Multiple restart intents require explicit operator recovery.");
+			WriteDurable(_pending, intents[0].Id);
+		}
 		var id = JsonSerializer.Deserialize<string>(File.ReadAllText(_pending)) ?? throw new IOException("Empty promotion intent.");
 		var session = Get(id);
 		if (session.State is ImportSessionState.Committed or ImportSessionState.RolledBack)
