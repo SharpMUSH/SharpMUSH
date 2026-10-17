@@ -38,7 +38,8 @@ public sealed partial class LightningStore
 		{
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
 			using var cursor = tx.CreateCursor(_tables[table]);
-			if (cursor.SetRange(prefix) != MDBResultCode.Success)
+			var positioned = prefix.Length == 0 ? cursor.First().resultCode : cursor.SetRange(prefix);
+			if (!FoundNative(positioned, "prefix footprint seek"))
 			{
 				return (0, 0);
 			}
@@ -47,10 +48,10 @@ public sealed partial class LightningStore
 			do
 			{
 				var (code, key, _) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success || !Keys.StartsWith(key.AsSpan(), prefix)) break;
+				if (!FoundNative(code, "prefix footprint current") || !Keys.StartsWith(key.AsSpan(), prefix)) break;
 				entries++;
 				bytes += key.AsSpan().Length;
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "prefix footprint next"));
 
 			return (entries, bytes);
 		}

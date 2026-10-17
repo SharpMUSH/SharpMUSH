@@ -671,6 +671,14 @@ public sealed partial class LightningStore : IDisposable
 		if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
 	}
 
+	// A native cursor failure must never look like end-of-data, including in diagnostics and counts.
+	private static bool FoundNative(MDBResultCode code, string operation)
+	{
+		if (code == MDBResultCode.NotFound) return false;
+		if (code != MDBResultCode.Success) throw LightningStoreException.From(code, operation);
+		return true;
+	}
+
 	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables) : ITx
 	{
 		private LmdbDb Db(TableDef t) => tables.Handles[t];
@@ -712,15 +720,15 @@ public sealed partial class LightningStore : IDisposable
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			var positioned = prefix.Length == 0 ? cursor.First().resultCode : cursor.SetRange(prefix);
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				// The prefix test reads the mapped page directly; only an entry that is yielded is copied out.
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 		}
 
 		/// <summary>
@@ -739,50 +747,51 @@ public sealed partial class LightningStore : IDisposable
 			// start at the prefix instead, where nothing has been yielded yet and nothing needs skipping.
 			var resumeIsInsidePrefix = afterKey.AsSpan().SequenceCompareTo(prefix) >= 0;
 			var positioned = resumeIsInsidePrefix ? cursor.SetRange(afterKey) : cursor.SetRange(prefix);
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 
 			while (resumeIsInsidePrefix)
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!k.AsSpan().SequenceEqual(afterKey)) break;
 				if (afterValue is not null && v.AsSpan().SequenceCompareTo(afterValue) > 0) break;
-				if (cursor.Next().resultCode != MDBResultCode.Success) yield break;
+				if (!FoundNative(cursor.Next().resultCode, "cursor resume next")) yield break;
 			}
 
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 		}
 
+		/// <summary>Native lower-bound seek; startKey must be nonempty. Use Range(table, []) for a full scan.</summary>
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			var positioned = cursor.SetRange(startKey);
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 		}
 
 		public long CountRange(TableDef table, byte[] prefix, byte[] startKey)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.SetRange(startKey) != MDBResultCode.Success) return 0;
+			if (!FoundNative(cursor.SetRange(startKey), "count range seek")) return 0;
 			var count = 0L;
 			do
 			{
 				var (code, k, _) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success || !Keys.StartsWith(k.AsSpan(), prefix)) break;
+				if (!FoundNative(code, "count range current") || !Keys.StartsWith(k.AsSpan(), prefix)) break;
 				count++;
-			} while (cursor.Next().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Next().resultCode, "cursor next"));
 
 			return count;
 		}
@@ -795,34 +804,34 @@ public sealed partial class LightningStore : IDisposable
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			var positioned = PrefixSuccessor(prefix) is { } past && cursor.SetRange(past) == MDBResultCode.Success
+			var positioned = PrefixSuccessor(prefix) is { } past && FoundNative(cursor.SetRange(past), "reverse range seek")
 				? cursor.Previous().resultCode
 				: cursor.Last().resultCode;
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Previous().resultCode, "cursor previous"));
 		}
 
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverseBefore(TableDef table, byte[] prefix, byte[] beforeKey)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			// The first key at or past beforeKey, then one step back; with nothing at or past it, the last key.
-			var positioned = cursor.SetRange(beforeKey) == MDBResultCode.Success
+			var positioned = FoundNative(cursor.SetRange(beforeKey), "reverse before seek")
 				? cursor.Previous().resultCode
 				: cursor.Last().resultCode;
-			if (positioned != MDBResultCode.Success) yield break;
+			if (!FoundNative(positioned, "cursor position")) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
 				yield return (k.CopyToNewArray(), v.CopyToNewArray());
-			} while (cursor.Previous().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.Previous().resultCode, "cursor previous"));
 		}
 
 		/// <summary>The smallest key greater than every key starting with <paramref name="prefix"/>; null when there is none.</summary>
@@ -842,22 +851,26 @@ public sealed partial class LightningStore : IDisposable
 		public IEnumerable<byte[]> Dups(TableDef table, byte[] key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.Set(key) != MDBResultCode.Success) yield break;
+			if (!FoundNative(cursor.Set(key), "duplicates seek")) yield break;
 			do
 			{
 				var (code, _, v) = cursor.GetCurrent();
-				if (code != MDBResultCode.Success) yield break;
+				if (!FoundNative(code, "cursor current")) yield break;
 				yield return v.CopyToNewArray();
-			} while (cursor.NextDuplicate().resultCode == MDBResultCode.Success);
+			} while (FoundNative(cursor.NextDuplicate().resultCode, "cursor next duplicate"));
 		}
 
 		public Result<long> CountDups(TableDef table, ReadOnlySpan<byte> key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.Set(key) != MDBResultCode.Success) return 0L;
-			// mdb_cursor_count is only defined for a DUPSORT database; a plain one holds one value per key.
-			if (!table.Duplicates) return 1L;
+			var positioned = cursor.Set(key);
+			if (positioned == MDBResultCode.NotFound) return 0L;
+			if (positioned != MDBResultCode.Success) return new Error<string>(LightningStoreException.Describe(positioned, $"count seek {table}"));
+			// mdb_cursor_count is only defined for DUPSORT. TableDef aliases compare by name, so only
+			// the persisted flags captured with this handle can decide whether a key has duplicates.
+			if ((tables.ByName[table.Name].Flags & DatabaseOpenFlags.DuplicatesSort) == 0) return 1L;
 			var code = cursor.Count(out var count);
+			if (code == MDBResultCode.NotFound) return 0L;
 			if (code != MDBResultCode.Success) return new Error<string>(LightningStoreException.Describe(code, $"count {table}"));
 			return count;
 		}
@@ -866,12 +879,13 @@ public sealed partial class LightningStore : IDisposable
 		{
 			// Materialized: the cursor behind Range must not be walked while its rows are being deleted.
 			var keys = Range(table, prefix).ToList();
+			var duplicates = (tables.ByName[table.Name].Flags & DatabaseOpenFlags.DuplicatesSort) != 0;
+			var deleted = 0;
 			foreach (var (k, v) in keys)
 			{
-				if (table.Duplicates) tx.Delete(Db(table), k, v);
-				else tx.Delete(Db(table), k);
+				if (duplicates ? Delete(table, k, v) : Delete(table, k)) deleted++;
 			}
-			return keys.Count;
+			return deleted;
 		}
 	}
 }

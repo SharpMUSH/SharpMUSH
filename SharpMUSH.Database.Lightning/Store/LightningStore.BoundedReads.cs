@@ -36,13 +36,6 @@ public sealed partial class LightningStore
 			return entry.Handle;
 		}
 
-		private static bool FoundNative(MDBResultCode code, string operation)
-		{
-			if (code == MDBResultCode.NotFound) return false;
-			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, operation);
-			return true;
-		}
-
 		// Conservative accounting (not measured CLR layout): 64 bytes for each owner/cursor/builder/entry,
 		// 32-byte array header and round payload up to 8-byte alignment. Reference slots cost 8 bytes.
 		// Range reserves fixed staging storage and its final immutable-array overlap before allocating;
