@@ -17,13 +17,11 @@
         </DescriptionContent>
     </PlainPageHeader>
 
-    <AdminKeyValueList Text="@Text"
+    <AdminKeyValueList ConfigurationOptionKey="SitelockRules.Rules" Text="@Text"
                        Load="@(() => SitelockService.GetSitelockRulesAsync().AsEntriesAsync())"
                        Add="@SitelockService.AddSitelockRuleAsync"
                        Delete="@SitelockService.DeleteSitelockRuleAsync" />
 </div>
-
-<ConfigOptionFocus />
 
 @code {
     private AdminKeyValueListText Text => new(

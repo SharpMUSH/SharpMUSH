@@ -52,3 +52,8 @@ Files: CommandPalette.razor; PaletteRow.cs/PaletteRanker.cs; ConfigFieldRow.razo
 - RED evidence: initial catalog 4 failures; palette/navigation 2; JS focus 2; ABI/equality and draft fragment tests; strict metadata declarations 8 failures/22; character response and delayed opening each 1 failure.
 - Independent review corrections: malformed declared string metadata now fails closed, including permission/route fields; opening stamps are captured before the first await and checked after each async source, on character/auth changes, close and disposal.
 - Verification logs are in `/temp/codex/configuration-option-search/`; full BUnit 2639/2639 and full client JavaScript 102/102 passed; normal BUnit build had 54 pre-existing warnings and 0 errors. Discord configuration contract tests 3/3 passed with a 0-warning/0-error build. No PR or deployment is authorized by this plan.
+
+## PR review follow-up
+- Both remote P2s reproduced: option-only navigation rotated the server form-instance header; ASCII custom controls lacked focus support. Reserved focus navigation now preserves the instance and unsaved fields, while meaningful query changes still retire it.
+- Delayed loads reproduced premature focus for all five custom list destinations. The shared list now gates focus on completion and declares its owning key. A separate two-list staggered test proves a ready non-target list cannot focus a pending target.
+- Full component suite passed 2647/2647 after these behavioral corrections. CodeQL test-only nullable paths were simplified to direct APIs and required single-item lookups; the explicit validation and asynchronous permission loops remain intentional.

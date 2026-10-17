@@ -43,12 +43,10 @@ public class SchemaFormModelTests
 	{
 		var model = Loaded(Form(Page("one", 1, Field("first")), Page("two", 2, Field("later"), Field("secret", "hidden"))));
 		model.SetString("first", "unsaved");
-		var method = typeof(SchemaFormModel).GetMethod("ShowOption");
-		await Assert.That(method is not null).IsTrue();
-		await Assert.That((bool)method!.Invoke(model, ["later"])!).IsTrue();
+		await Assert.That(model.ShowOption("later")).IsTrue();
 		await Assert.That(model.PageIndex).IsEqualTo(1);
 		await Assert.That(model.GetString("first")).IsEqualTo("unsaved");
-		await Assert.That((bool)method.Invoke(model, ["secret"])!).IsFalse();
+		await Assert.That(model.ShowOption("secret")).IsFalse();
 	}
 
 	[Test]

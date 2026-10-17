@@ -17,9 +17,8 @@ public class DiscordConfigurationTileTests
 	{
 		var tile = new SharpMUSH.Plugins.Discord.DiscordPlugin().GetConfigurationTiles().Single();
 		await Assert.That(tile.Options is not null).IsTrue();
-		var token = tile.Options!.SingleOrDefault(option => option.Key == SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name);
-		await Assert.That(token is not null).IsTrue();
-		await Assert.That(token!.Description).IsEqualTo(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Description);
+		var token = tile.Options!.Single(option => option.Key == SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Name);
+		await Assert.That(token.Description).IsEqualTo(SharpMUSH.Plugins.Discord.DiscordPlugin.Token.Description);
 		await Assert.That(token.Route).IsEqualTo("/admin/config/secrets");
 		await Assert.That(tile.Permission).IsEqualTo(SharpMUSH.Plugins.Discord.DiscordPlugin.AdminPermission);
 	}

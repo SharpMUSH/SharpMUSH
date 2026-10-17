@@ -136,6 +136,30 @@ public class SchemaApplicationHostTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task OptionOnlyNavigationPreservesTheServerDraftInstanceAndUnsavedFields()
+	{
+		var instances = new List<string>();
+		Configure(request =>
+		{
+			instances.Add(request.Headers.GetValues("X-SharpMUSH-Form-Instance").Single());
+			return Task.FromResult(Reply(new(true, null, null, null, null, null)));
+		});
+		var navigation = Services.GetRequiredService<NavigationManager>();
+		navigation.NavigateTo("/apps/settings");
+		var cut = Render<SchemaApplicationHost>(p => p.Add(x => x.Document, Screen("form", "Edit")));
+		await cut.Find("input").ChangeAsync("unsaved");
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Go")).ClickAsync();
+		await cut.InvokeAsync(() => navigation.NavigateTo("/apps/settings#config-option-title"));
+		await Assert.That(cut.Find("input").GetAttribute("value")).IsEqualTo("unsaved");
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Go")).ClickAsync();
+		await Assert.That(instances.Count).IsEqualTo(2);
+		await Assert.That(instances.Distinct().Count()).IsEqualTo(1);
+		await cut.InvokeAsync(() => navigation.NavigateTo("/apps/settings?record=other#config-option-title"));
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Go")).ClickAsync();
+		await Assert.That(instances.Distinct().Count()).IsEqualTo(2);
+	}
+
+	[Test]
 	public async Task HostsAndReplacementDocumentsUseDistinctFormInstances()
 	{
 		var instances = new List<string>();

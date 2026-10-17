@@ -7,6 +7,7 @@
 
 @code {
     [Parameter] public bool Ready { get; set; } = true;
+    [Parameter] public string? OptionKey { get; set; }
     private string? _key;
     private string? _handled;
 
@@ -15,6 +16,8 @@
         Nav.LocationChanged += Changed;
         ReadLocation();
     }
+
+    protected override void OnParametersSet() => ReadLocation();
 
     private void Changed(object? sender, LocationChangedEventArgs args)
     {
@@ -25,6 +28,7 @@
     private void ReadLocation()
     {
         _key = ConfigurationOptionLocation.Read(Nav.Uri);
+        if (OptionKey is not null && _key != OptionKey) _key = null;
         if (_key is null) _handled = null;
     }
 

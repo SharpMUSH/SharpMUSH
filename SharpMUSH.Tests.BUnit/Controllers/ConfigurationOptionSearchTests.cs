@@ -81,9 +81,8 @@ public class ConfigurationOptionSearchTests
 		registry.GetApplicationsAsync().Returns(Task.FromResult<IReadOnlyList<RegisteredApplication>>([]));
 		var result = await Controller(registry, "config.admin").Options();
 		var rows = (IReadOnlyList<ConfigurationSearchEntry>)((OkObjectResult)result.Result!).Value!;
-		var secret = rows.SingleOrDefault(row => row.Option.Key == "auth.microsoft.clientsecret");
-		await Assert.That(secret is not null).IsTrue();
-		await Assert.That(secret!.Route).IsEqualTo("/admin/config/secrets");
+		var secret = rows.Single(row => row.Option.Key == "auth.microsoft.clientsecret");
+		await Assert.That(secret.Route).IsEqualTo("/admin/config/secrets");
 		await Assert.That(secret.Option.RequiresRestart).IsTrue();
 		await Assert.That(JsonSerializer.Serialize(secret)).DoesNotContain("Ciphertext");
 	}

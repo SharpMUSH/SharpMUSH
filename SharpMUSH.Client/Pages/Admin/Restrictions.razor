@@ -20,22 +20,20 @@
 
         @if (_table == FunctionsTable)
         {
-            <AdminKeyValueList Text="@FunctionText"
+            <AdminKeyValueList ConfigurationOptionKey="Restriction.FunctionRestrictions" Text="@FunctionText"
                                Load="@(() => RestrictionsService.GetFunctionRestrictionsAsync().AsEntriesAsync())"
                                Add="@RestrictionsService.AddFunctionRestrictionAsync"
                                Delete="@RestrictionsService.DeleteFunctionRestrictionAsync" />
         }
         else
         {
-            <AdminKeyValueList Text="@CommandText"
+            <AdminKeyValueList ConfigurationOptionKey="Restriction.CommandRestrictions" Text="@CommandText"
                                Load="@(() => RestrictionsService.GetCommandRestrictionsAsync().AsEntriesAsync())"
                                Add="@RestrictionsService.AddCommandRestrictionAsync"
                                Delete="@RestrictionsService.DeleteCommandRestrictionAsync" />
         }
     </div>
 </div>
-
-<ConfigOptionFocus />
 
 @code {
     private const string CommandsTable = "commands";
