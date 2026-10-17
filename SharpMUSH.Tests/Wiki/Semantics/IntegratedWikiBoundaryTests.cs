@@ -232,6 +232,52 @@ public class IntegratedWikiBoundaryTests
 	}
 
 	[Test]
+	public async Task ReservationCleanupCanRetryAfterRevocation()
+	{
+		if (OperatingSystem.IsWindows())
+		{
+			Skip.Test("Reservation deletion failure requires Unix directory permissions.");
+			return;
+		}
+
+		var root = Path.Combine(ScratchRoot, "reservation-retry-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(root);
+		var originalMode = File.GetUnixFileMode(root);
+		SemanticWikiPrototypeFixture? fixture = null;
+		try
+		{
+			fixture = new SemanticWikiPrototypeFixture(root);
+			var reservation = fixture.WorldPath + ".semantic-reservation";
+			var sibling = Path.Combine(root, "unowned");
+			File.WriteAllText(sibling, "unowned");
+			var denied = false;
+			try
+			{
+				File.SetUnixFileMode(root, originalMode & ~(UnixFileMode.UserWrite | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite));
+				try { await fixture.DisposeAsync(); }
+				catch (UnauthorizedAccessException) { denied = true; }
+			}
+			finally { File.SetUnixFileMode(root, originalMode); }
+
+			await Assert.That(denied).IsTrue();
+			await Assert.That(Directory.Exists(fixture.WorldPath)).IsTrue();
+			await Assert.That(File.Exists(reservation)).IsTrue();
+			await Assert.That(() => fixture.Capability.Claim(Options(fixture.WorldPath))).Throws<InvalidOperationException>();
+			await fixture.DisposeAsync();
+			await Assert.That(Directory.Exists(fixture.WorldPath)).IsFalse();
+			await Assert.That(File.Exists(reservation)).IsFalse();
+			await fixture.DisposeAsync();
+			await Assert.That(File.ReadAllText(sibling)).IsEqualTo("unowned");
+		}
+		finally
+		{
+			File.SetUnixFileMode(root, originalMode);
+			try { if (fixture is not null) await fixture.DisposeAsync(); }
+			finally { Directory.Delete(root, true); }
+		}
+	}
+
+	[Test]
 	public async Task DisposedIssuanceRejectsReopenAndCleanupLeavesUnownedSibling()
 	{
 		var fixture = new SemanticWikiPrototypeFixture(ScratchRoot);

@@ -17,6 +17,7 @@ internal sealed class SemanticFixtureCapability : IDisposable
 	private bool _claimed;
 	private bool _initialized;
 	private bool _poisoned;
+	private bool _reservationRemoved;
 	private readonly SemanticFixtureOwnership _ownership = new();
 
 	private sealed record Marker(int Version, string CanonicalPath, Guid FixtureId);
@@ -157,12 +158,13 @@ internal sealed class SemanticFixtureCapability : IDisposable
 	{
 		lock (_gate)
 		{
-			if (_ownership.IsRevoked) return;
+			if (_reservationRemoved) return;
 			_ownership.Revoke(_active is not null);
 			// Uncertain native ownership retains the reservation and all potentially live files.
 			if (!_ownership.MayRemoveArtifacts) return;
 			_reservation.Dispose();
 			File.Delete(_reservationPath);
+			_reservationRemoved = true;
 		}
 	}
 }
