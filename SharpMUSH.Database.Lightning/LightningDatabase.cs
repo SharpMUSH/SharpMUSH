@@ -68,7 +68,8 @@ public partial class LightningDatabase(
 	/// </summary>
 	public virtual ValueTask DisposeAsync()
 	{
-		Store.Dispose();
+		if (_fixtureLease is { } lease) DisposeSemanticFixture(lease);
+		else Store.Dispose();
 		return ValueTask.CompletedTask;
 	}
 

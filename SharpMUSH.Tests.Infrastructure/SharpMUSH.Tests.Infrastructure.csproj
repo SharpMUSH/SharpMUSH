@@ -45,4 +45,8 @@
 		<ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="SharpMUSH.Tests" />
+	</ItemGroup>
+
 </Project>
