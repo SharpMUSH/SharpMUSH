@@ -32,7 +32,7 @@ public class PaletteController(
 	public const int MaxPins = 50;
 
 	/// <summary>The longest pin id: an objid and an attribute name, or a client id.</summary>
-	public const int MaxPinLength = 200;
+	public const int MaxPinLength = PalettePinsRequest.MaxPinLength;
 
 	[HttpGet]
 	public async Task<ActionResult<PaletteResponse>> Get([FromQuery] Guid? input, CancellationToken ct)
@@ -46,8 +46,7 @@ public class PaletteController(
 	{
 		var pins = request.Pins ?? [];
 		if (pins.Count > MaxPins) return BadRequest($"At most {MaxPins} pins.");
-		if (pins.Any(pin => string.IsNullOrWhiteSpace(pin) || pin.Length > MaxPinLength
-				|| pin.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))))
+		if (pins.Any(pin => !PalettePinsRequest.IsValidId(pin)))
 			return BadRequest($"A pin is one id of at most {MaxPinLength} characters, without spaces.");
 		if (await User.ResolvePlayerAsync(projection, ct) is not { } character) return Unauthorized();
 

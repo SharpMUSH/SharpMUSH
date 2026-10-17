@@ -20,6 +20,7 @@ namespace SharpMUSH.Library.Services;
 public partial class PackageManifestService : IPackageManifestService
 {
 	private static readonly IDeserializer Deserializer = new DeserializerBuilder().Build();
+	private static readonly IDeserializer TypedOptionDeserializer = new DeserializerBuilder().WithAttemptingUnquotedStringTypeDeserialization().Build();
 
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
@@ -170,6 +171,19 @@ public partial class PackageManifestService : IPackageManifestService
 		var objects = kind == PackageKind.Softcode
 			? contentPack ? [] : ReadObjects(doc, issues)
 			: ReadNoObjects(doc, kind, issues);
+		// Legacy manifest scalars retain their original parsing contract. Only new option
+		// declarations infer unquoted scalar types, so malformed permissions cannot lose their gate.
+		if (format.Major == 1 && format.Minor >= ConfigurationOptionsFormat.Minor
+			&& doc.GetValueOrDefault("application") is Dictionary<object, object> applicationFields
+			&& applicationFields.GetValueOrDefault("configuration_tile") is Dictionary<object, object> tileFields
+			&& tileFields.ContainsKey("options"))
+		{
+			if (!TryDeserialize(yaml, issues, out var typedRoot, typedOptions: true)) return new PackageManifestFailure(issues);
+			if (typedRoot is Dictionary<object, object> typedDocument
+				&& typedDocument.GetValueOrDefault("application") is Dictionary<object, object> typedApplication
+				&& typedApplication.GetValueOrDefault("configuration_tile") is Dictionary<object, object> typedTile)
+				tileFields["options"] = typedTile.GetValueOrDefault("options")!;
+		}
 		var application = ReadApplication(doc, name, kind, format, issues);
 		var binary = ReadBinaries(doc, kind, issues);
 		var declarations = ReadDeclarations(doc, kind, issues);
@@ -254,6 +268,8 @@ public partial class PackageManifestService : IPackageManifestService
 
 	/// <summary>The first format that supports application configuration discovery tiles.</summary>
 	public static PackageFormatVersion ConfigurationTileFormat { get; } = new(1, 11);
+
+	public static PackageFormatVersion ConfigurationOptionsFormat { get; } = new(1, 12);
 
 	/// <summary>
 	/// Reads <c>category:</c> (format 1.10): the one group the package is listed under where packages are offered
@@ -434,7 +450,7 @@ public partial class PackageManifestService : IPackageManifestService
 			entry.GetValueOrDefault("description") as string);
 	}
 
-	private static bool TryDeserialize(string yaml, List<PackageManifestIssue> issues, out object? root)
+	private static bool TryDeserialize(string yaml, List<PackageManifestIssue> issues, out object? root, bool typedOptions = false)
 	{
 		root = null;
 		if (string.IsNullOrWhiteSpace(yaml))
@@ -445,7 +461,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 		try
 		{
-			root = Deserializer.Deserialize<object?>(yaml);
+			root = (typedOptions ? TypedOptionDeserializer : Deserializer).Deserialize<object?>(yaml);
 			return true;
 		}
 		catch (YamlException ex)
@@ -1121,8 +1137,9 @@ public partial class PackageManifestService : IPackageManifestService
 			{
 				var fields = Normalize(rawTile);
 				string Field(string key) => fields.TryGetValue(key, out var value) && value is string text ? text : "";
-				configurationTile = new(Field("id"), Field("title"), Field("description"), Field("icon"), Field("route"), Field("permission"));
-				if (!configurationTile.HasSafeRoute() || string.IsNullOrWhiteSpace(configurationTile.Id)
+				var options = ReadConfigurationOptions(fields, format, issues);
+				configurationTile = new(Field("id"), Field("title"), Field("description"), Field("icon"), Field("route"), Field("permission")) { Options = options };
+				if (!configurationTile.HasSafeRoute() || !configurationTile.HasValidOptions() || string.IsNullOrWhiteSpace(configurationTile.Id)
 					|| string.IsNullOrWhiteSpace(configurationTile.Title) || string.IsNullOrWhiteSpace(configurationTile.Permission))
 					issues.Add(PackageManifestIssue.Error("application.configuration_tile",
 						"Configuration tile requires an id, title, permission and canonical local /admin/ or /apps/ route."));
@@ -1146,6 +1163,52 @@ public partial class PackageManifestService : IPackageManifestService
 			AppString("permission"),
 			AppString("nav_url"),
 			configurationTile);
+	}
+
+	private static IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationOption>? ReadConfigurationOptions(
+		Dictionary<string, object?> fields, PackageFormatVersion format, List<PackageManifestIssue> issues)
+	{
+		if (!fields.TryGetValue("options", out var raw) || raw is null) return null;
+		if (format.Major == 1 && format.Minor < ConfigurationOptionsFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning("application.configuration_tile.options", "Option metadata needs format 1.12 or later and is ignored."));
+			return null;
+		}
+		var result = new List<SharpMUSH.Library.Models.Portal.Applications.ConfigurationOption>();
+		if (raw is not List<object> list || list.Count > 128)
+		{
+			issues.Add(PackageManifestIssue.Error("application.configuration_tile.options", "Options must be a list of at most 128 fields."));
+			return null;
+		}
+		foreach (var item in list)
+		{
+			if (item is not Dictionary<object, object> mapping)
+			{
+				issues.Add(PackageManifestIssue.Error("application.configuration_tile.options", "Each option must be a mapping."));
+				continue;
+			}
+			var values = Normalize(mapping);
+			if (values.TryGetValue("aliases", out var aliasValue) && aliasValue is not null && aliasValue is not List<object>)
+				issues.Add(PackageManifestIssue.Error("application.configuration_tile.options", "Aliases must be a list of words."));
+			if (values.TryGetValue("requires_restart", out var restartValue) && restartValue is not null && restartValue is not bool)
+				issues.Add(PackageManifestIssue.Error("application.configuration_tile.options", "requires_restart must be true or false."));
+			foreach (var key in new[] { "key", "label", "description", "permission", "route", "read_only_reason", "label_resource_key", "description_resource_key" })
+				if (values.TryGetValue(key, out var value) && value is not string)
+					issues.Add(PackageManifestIssue.Error("application.configuration_tile.options", $"{key} must be a string when declared."));
+			string Text(string key) => values.TryGetValue(key, out var value) && value is string text ? text : "";
+			string? OptionalText(string key) => values.ContainsKey(key) ? Text(key) : null;
+			var aliases = values.GetValueOrDefault("aliases") is List<object> words ? words.Select(word => word as string ?? "").ToArray() : [];
+			var option = new SharpMUSH.Library.Models.Portal.Applications.ConfigurationOption(Text("key"), Text("label"), Text("description"), aliases,
+				Permission: OptionalText("permission"),
+				Route: OptionalText("route"),
+				RequiresRestart: values.GetValueOrDefault("requires_restart") is true,
+				ReadOnlyReason: OptionalText("read_only_reason"),
+				LabelResourceKey: OptionalText("label_resource_key"),
+				DescriptionResourceKey: OptionalText("description_resource_key"));
+			if (!option.IsValid()) issues.Add(PackageManifestIssue.Error("application.configuration_tile.options", "Invalid option metadata."));
+			result.Add(option);
+		}
+		return result;
 	}
 
 	/// <summary>True when a field carries at least one <c>{{ref}}</c> token (validated separately by <see cref="ValidateRefs"/>).</summary>

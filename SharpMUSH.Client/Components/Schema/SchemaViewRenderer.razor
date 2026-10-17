@@ -164,7 +164,7 @@ else
             default:
                 var raw = ValueToString(element.Key is not null ? Lookup(element.Key) : null);
                 var display = string.IsNullOrEmpty(raw) ? ValueToString(element.Default) : raw;
-                <div class="schema-field">
+                <div class="schema-field" data-config-option="@element.Key">
                     @if (!string.IsNullOrWhiteSpace(element.Label))
                     {
                         <div class="schema-label">@element.Label</div>

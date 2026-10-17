@@ -71,6 +71,25 @@ public class AdminKeyValueListTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AnAlreadyLoadedListCannotFocusAnotherListsPendingField()
+	{
+		Register();
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/admin/config/restrictions#config-option-Restriction.FunctionRestrictions");
+		var pending = new TaskCompletionSource<ApiResult<IReadOnlyList<AdminKeyValueEntry>>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var loaded = Render<AdminKeyValueList>(p => p.Add(x => x.Text, KeyOnlyText())
+			.Add(x => x.Load, () => Entries()).Add(x => x.ConfigurationOptionKey, "Restriction.CommandRestrictions"));
+		var target = Render<AdminKeyValueList>(p => p.Add(x => x.Text, KeyOnlyText())
+			.Add(x => x.Load, () => pending.Task).Add(x => x.ConfigurationOptionKey, "Restriction.FunctionRestrictions"));
+		await Assert.That(loaded.FindAll("input").Count).IsGreaterThan(0);
+		await Assert.That(target.FindAll("input").Count).IsEqualTo(0);
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.focusConfigurationOption")).IsEqualTo(0);
+		pending.SetResult((IReadOnlyList<AdminKeyValueEntry>)[]);
+		target.WaitForState(() => target.FindAll("input").Count > 0);
+		target.WaitForState(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.focusConfigurationOption") == 1);
+		await Assert.That(JSInterop.Invocations.Single(call => call.Identifier == "sharpmushLayout.focusConfigurationOption").Arguments[0]).IsEqualTo("Restriction.FunctionRestrictions");
+	}
+
+	[Test]
 	public async Task EntriesRenderSortedWithTheirValues()
 	{
 		var component = Render(TextWithValues(),

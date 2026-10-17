@@ -100,7 +100,7 @@ public class ApplicationsController(
 	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
 	public async Task<IActionResult> Upsert([FromBody] ApplicationDto dto)
 	{
-		if (dto.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || string.IsNullOrWhiteSpace(tile.Id)
+		if (dto.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || !tile.HasValidOptions() || string.IsNullOrWhiteSpace(tile.Id)
 			|| string.IsNullOrWhiteSpace(tile.Title) || string.IsNullOrWhiteSpace(tile.Permission)))
 			return BadRequest(new { error = "Configuration tiles require an id, title, permission and canonical local /admin/ or /apps/ route." });
 

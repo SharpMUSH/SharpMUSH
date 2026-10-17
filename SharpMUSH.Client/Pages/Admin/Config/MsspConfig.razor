@@ -13,7 +13,7 @@
    reports itself is a greyed, read-only row saying where its value comes from, with a link to the
    section that sets it; the rest edit the mssp option. The unsaved bar works as on every config
    section, and the aside shows the saved report as crawlers read it. *@
-<div class="config-section">
+<div class="config-section" data-config-option="Mssp.Variables">
     <div class="config-section-main">
         <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AdmMssp"]" Description="@Loc["AdmMsspDescription"]" />
 
@@ -136,6 +136,8 @@
         </aside>
     }
 </div>
+
+<ConfigOptionFocus Ready="@(!_loading && _loadError is null)" />
 
 @code {
     private bool _loading = true;

@@ -686,3 +686,22 @@ test('the scene compose watch pins the page to the visible area while the keyboa
     assert.equal(doc.listeners.size, 0);
     assert.equal(win.listeners.size, 0);
 });
+
+test('configuration focus finds a declared key, highlights its row and focuses its control', () => {
+    const { layout, document } = boot();
+    let focused = false, scrolled = false;
+    const control = { disabled: false, getAttribute: () => null, focus: () => { focused = true; } };
+    const row = { dataset: { configOption: 'Net.Port' }, setAttribute: () => {}, removeAttribute: () => {},
+        querySelectorAll: () => [control], closest: () => null, scrollIntoView: () => { scrolled = true; } };
+    document.querySelectorAll = selector => selector === '[data-config-option]' ? [row] : [];
+    assert.equal(layout.focusConfigurationOption('Net.Port'), true);
+    assert.equal(focused, true);
+    assert.equal(scrolled, true);
+    assert.equal(layout.focusConfigurationOption('missing'), false);
+});
+
+test('configuration focus treats an option key as data rather than a selector', () => {
+    const { layout, document } = boot();
+    document.querySelectorAll = selector => { assert.ok(['[data-config-option]', '[data-config-selected]'].includes(selector)); return []; };
+    assert.equal(layout.focusConfigurationOption('x\"] button, input'), false);
+});

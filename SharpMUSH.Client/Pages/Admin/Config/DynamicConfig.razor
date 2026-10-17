@@ -132,6 +132,8 @@
     }
 </div>
 
+<ConfigOptionFocus Ready="@(!_loading && _categoryMetadata is not null)" />
+
 @code {
     [Parameter]
     public string Category { get; set; } = string.Empty;

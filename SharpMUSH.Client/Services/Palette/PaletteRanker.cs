@@ -15,7 +15,8 @@ public sealed record PaletteSnapshot(
 	PaletteResponse? Server,
 	string? Page,
 	bool TerminalConnected,
-	PaletteWords? Words = null);
+	PaletteWords? Words = null,
+	IReadOnlyList<PaletteRow>? Configuration = null);
 
 /// <summary>The labels of the rows the palette makes itself.</summary>
 /// <param name="HelpOnFormat">"Help on {0}".</param>
@@ -90,6 +91,7 @@ public static class PaletteRanker
 			.. inputActive ? InputRows(snapshot, []) : [],
 			.. entries.Select(row => raised.GetValueOrDefault(row.Id) ?? row),
 			.. snapshot.PageRows,
+			.. snapshot.Configuration ?? [],
 			.. snapshot.Destinations,
 			.. BuiltinRows(snapshot).Where(row => !declared.Contains(row.Key)),
 			.. entries.Select(row => row.Entry?.Help).OfType<string>().Select(topic => HelpRow(snapshot, topic))
@@ -120,10 +122,12 @@ public static class PaletteRanker
 				|| FirstWord(row.Line).StartsWith(term, StringComparison.CurrentCultureIgnoreCase) ? 60
 			: InOrder(term, label) ? 30
 			: 0;
-		var keyword = Words(row.Keywords ?? string.Empty).Any(word => word.StartsWith(term, StringComparison.CurrentCultureIgnoreCase)) ? 20 : 0;
-		if (match + keyword == 0) return 0;
+		var description = row.Info?.Contains(term, StringComparison.CurrentCultureIgnoreCase) == true ? 10 : 0;
+		var keyword = (row.Keywords?.Contains(term, StringComparison.CurrentCultureIgnoreCase) == true
+			|| Words(row.Keywords ?? string.Empty).Any(word => word.StartsWith(term, StringComparison.CurrentCultureIgnoreCase))) ? 20 : 0;
+		if (match + keyword + description == 0) return 0;
 
-		var score = (double)(match + keyword);
+		var score = (double)(match + keyword + description);
 		if (pins.Contains(row.Id)) score += 50;
 		if (row.Kind == PaletteRowKind.Input && inputActive) score += 40;
 		if (page is not null && row.Entry?.Context == page) score += 30;
@@ -215,6 +219,7 @@ public static class PaletteRanker
 	private static PaletteRow? Find(string pin, PaletteSnapshot snapshot, IReadOnlyList<PaletteRow> entries)
 		=> entries.FirstOrDefault(row => row.Id == pin)
 			?? snapshot.Destinations.FirstOrDefault(row => row.Id == pin)
+			?? snapshot.Configuration?.FirstOrDefault(row => row.Id == pin)
 			?? snapshot.PageRows.FirstOrDefault(row => row.Id == pin)
 			?? (pin.StartsWith("cmd:", StringComparison.Ordinal)
 				? BuiltinRows(snapshot).FirstOrDefault(row => row.Id == pin)

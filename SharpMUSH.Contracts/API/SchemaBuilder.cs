@@ -31,6 +31,19 @@ public static partial class SchemaBuilder
 		};
 	}
 
+	/// <summary>Search metadata is generated without constructing defaults or reading live options.</summary>
+	public static IReadOnlyList<SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry> BuildSearchMetadata()
+		=> ConfigMetadata.PropertyNames.Select(property =>
+		{
+			var attribute = ConfigMetadata.PropertyMetadata[property];
+			var path = attribute.Category + "." + property;
+			return new SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry(
+				"core:" + path, "Server", attribute.Category,
+				SharpMUSH.Library.Models.Portal.Applications.ConfigurationOptionRoutes.ForCategory(attribute.Category),
+				new(path, FormatPropertyDisplayName(attribute.Name), attribute.Description,
+					[attribute.Name, property], ReadOnlyReason: attribute.Unused));
+		}).ToArray();
+
 	private static List<CategoryMetadata> BuildCategoriesFromProperties(List<PropertyMetadata> properties)
 	{
 		var categories = new Dictionary<string, CategoryMetadata>();

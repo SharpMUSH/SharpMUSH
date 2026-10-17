@@ -27,6 +27,11 @@ else if (_state.Form.GlobalError is { } diagnostic)
     <div role="alert">@diagnostic</div>
 }
 
+@if (Nav.ToAbsoluteUri(Nav.Uri).AbsolutePath.StartsWith("/apps/", StringComparison.Ordinal))
+{
+    <ConfigOptionFocus Ready="@(_state.Document is not null)" />
+}
+
 @code {
     [Parameter] public PortalSchemaDocument? Document { get; set; }
     [Parameter] public SchemaData? Data { get; set; }
@@ -35,11 +40,13 @@ else if (_state.Form.GlobalError is { } diagnostic)
     private PortalSchemaDocument? _loadedDocument;
     private SchemaData? _loadedData;
     private bool _disposed;
+    private string _locationIdentity = string.Empty;
     private AccountAuthService? _auth;
     private string _instance = Guid.NewGuid().ToString("N");
 
     protected override void OnInitialized()
     {
+        _locationIdentity = SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(Nav.Uri);
         Nav.LocationChanged += Leaving;
         _auth = Services.GetService<AccountAuthService>();
         if (_auth is not null) _auth.ActiveCharacterChanged += CharacterChanged;
@@ -52,8 +59,20 @@ else if (_state.Form.GlobalError is { } diagnostic)
     }
     private void Leaving(object? sender, LocationChangedEventArgs args)
     {
-        _instance = Guid.NewGuid().ToString("N");
-        _state.Retire();
+        var identity = SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.LoadIdentity(args.Location);
+        if (_locationIdentity != identity)
+        {
+            _locationIdentity = identity;
+            _instance = Guid.NewGuid().ToString("N");
+            _state.Retire();
+        }
+        RevealOption();
+        _ = InvokeAsync(StateHasChanged);
+    }
+    private void RevealOption()
+    {
+        if (SharpMUSH.Client.Models.Configuration.ConfigurationOptionLocation.Read(Nav.Uri) is { } key)
+            _state.Form.ShowOption(key);
     }
     protected override void OnParametersSet()
     {
@@ -69,6 +88,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
             _state.UpdateData(Data);
             _loadedData = Data;
         }
+        RevealOption();
     }
 
     private async Task Dispatch(SchemaActionRequest request)

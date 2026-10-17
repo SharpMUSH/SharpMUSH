@@ -39,6 +39,17 @@ public class SchemaFormModelTests
 	}
 
 	[Test]
+	public async Task ConfigurationNavigationSelectsVisibleFieldPageWithoutResettingDraft()
+	{
+		var model = Loaded(Form(Page("one", 1, Field("first")), Page("two", 2, Field("later"), Field("secret", "hidden"))));
+		model.SetString("first", "unsaved");
+		await Assert.That(model.ShowOption("later")).IsTrue();
+		await Assert.That(model.PageIndex).IsEqualTo(1);
+		await Assert.That(model.GetString("first")).IsEqualTo("unsaved");
+		await Assert.That(model.ShowOption("secret")).IsFalse();
+	}
+
+	[Test]
 	public async Task ErrorsForAnotherPageRemainVisibleInTheSummary()
 	{
 		var model = Loaded(Form(Page("one", 1, Field("first")), Page("two", 2, Field("later"))));
