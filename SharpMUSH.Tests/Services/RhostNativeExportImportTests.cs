@@ -131,12 +131,13 @@ public class RhostNativeExportImportTests
 				.PreviewAsync(new DatabaseImportFiles(actualPath, Path.Join(result.OutputDirectory, "mail.dump"),
 					MailFolders: Path.Join(result.OutputDirectory, "folders.dump"), Format: DatabaseImportFormat.RhostMUSH));
 			await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
+			await Assert.That(preview.Result!.Warnings.Any(warning => warning.Contains("Destroyed objects (garbage) not imported", StringComparison.Ordinal))).IsTrue();
 			await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(live, "data.mdb")))).IsEquivalentTo(liveBefore);
 			await Assert.That(await SourceHashesAsync(source)).IsEqualTo(before);
 			journal.RequestPromotion(preview.Id);
 			journal.ApplyPendingBeforeHostConstruction();
 			await using var promoted = OpenPromoted(live);
-			await Assert.That(await promoted.GetObjectCountAsync()).IsGreaterThanOrEqualTo(expected.Objects.Count);
+			await Assert.That(await promoted.GetObjectCountAsync()).IsEqualTo(expected.Objects.Count(obj => obj.Type != RhostObjectType.Garbage));
 			await Assert.That(await promoted.GetAllObjectsAsync().AnyAsync(obj => obj.Name == "Alice")).IsTrue();
 			var widget = await promoted.GetAllObjectsAsync().FirstAsync(obj => obj.Name == "Widget");
 			var description = await promoted.GetAttributeAsync(widget.DBRef, ["DESCRIBE"]).ToListAsync();

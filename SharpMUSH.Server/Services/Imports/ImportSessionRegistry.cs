@@ -100,7 +100,11 @@ public sealed class ImportSessionRegistry(ImportPreviewCoordinator previews, Imp
 	public async ValueTask DisposeAsync()
 	{
 		var running = _running.Values.ToArray();
-		foreach (var entry in running) entry.Cancellation.Cancel();
+		foreach (var entry in running)
+		{
+			try { entry.Cancellation.Cancel(); }
+			catch (ObjectDisposedException) { /* Worker completed after the shutdown snapshot. */ }
+		}
 		await Task.WhenAll(running.Select(entry => entry.Work));
 	}
 }

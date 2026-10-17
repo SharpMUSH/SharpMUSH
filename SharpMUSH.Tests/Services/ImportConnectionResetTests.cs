@@ -24,6 +24,7 @@ public class ImportConnectionResetTests
 			var session = journal.Create();
 			Directory.CreateDirectory(journal.LiveWorldPath);
 			Directory.CreateDirectory(session.WorldPath);
+			Directory.CreateDirectory(session.KeyRingPath);
 			journal.MarkReady(session.Id);
 			journal.RequestPromotion(session.Id);
 			journal.ApplyPendingBeforeHostConstruction();

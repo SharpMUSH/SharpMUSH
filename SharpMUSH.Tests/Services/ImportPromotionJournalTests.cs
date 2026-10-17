@@ -45,6 +45,7 @@ public class ImportPromotionJournalTests
 		File.WriteAllText(Path.Combine(journal.LiveKeyRingPath, "key.xml"), "outgoing key");
 		Directory.CreateDirectory(session.KeyRingPath);
 		File.WriteAllText(Path.Combine(session.KeyRingPath, "key.xml"), "import key");
+		Directory.CreateDirectory(session.KeyRingPath);
 		journal.MarkReady(session.Id);
 		journal.RequestPromotion(session.Id);
 		await using (var stillLive = Open(live))
@@ -75,6 +76,7 @@ public class ImportPromotionJournalTests
 		var session = journal.Create();
 		await Populate(live, "Live sentinel");
 		await Populate(session.WorldPath, "Imported sentinel");
+		Directory.CreateDirectory(session.KeyRingPath);
 		journal.MarkReady(session.Id);
 		await Assert.That(() => journal.RequestPromotion(session.Id, new CancellationToken(true))).Throws<OperationCanceledException>();
 		Directory.CreateDirectory(live + ".previous");
@@ -95,6 +97,7 @@ public class ImportPromotionJournalTests
 		Directory.CreateDirectory(session.KeyRingPath);
 		File.WriteAllText(Path.Combine(session.KeyRingPath, "key.xml"), "import key");
 		File.WriteAllText(keyParent, "block the key-directory move after the world move");
+		Directory.CreateDirectory(session.KeyRingPath);
 		journal.MarkReady(session.Id);
 		journal.RequestPromotion(session.Id);
 		await Assert.That(journal.ApplyPendingBeforeHostConstruction).Throws<IOException>();
@@ -126,6 +129,7 @@ public class ImportPromotionJournalTests
 		await File.WriteAllTextAsync(Path.Combine(journal.LiveKeyRingPath, "key.xml"), "original key");
 		Directory.CreateDirectory(session.KeyRingPath);
 		await File.WriteAllTextAsync(Path.Combine(session.KeyRingPath, "key.xml"), "imported key");
+		Directory.CreateDirectory(session.KeyRingPath);
 		journal.MarkReady(session.Id);
 		journal.RequestPromotion(session.Id);
 		journal.ApplyPendingBeforeHostConstruction();
@@ -153,6 +157,7 @@ public class ImportPromotionJournalTests
 		var session = journal.Create();
 		await Populate(live, "Original sentinel");
 		await Populate(session.WorldPath, "Imported sentinel");
+		Directory.CreateDirectory(session.KeyRingPath);
 		journal.MarkReady(session.Id);
 		journal.RequestPromotion(session.Id);
 		journal.ApplyPendingBeforeHostConstruction();
@@ -172,6 +177,33 @@ public class ImportPromotionJournalTests
 		await Assert.That(journal.Get(session.Id).State).IsEqualTo(ImportSessionState.RolledBack);
 		await using var restored = Open(live);
 		await Assert.That(Contains(restored, "Original sentinel")).IsTrue();
+	}
+
+	[Test]
+	public async Task MissingStagedKeysRefusePromotionBeforeAnyLiveDirectoryMoves()
+	{
+		var live = Path.Combine(_root, "live");
+		var journal = new ImportPromotionJournal(live);
+		var session = journal.Create();
+		await Populate(live, "Original sentinel");
+		await Populate(session.WorldPath, "Imported sentinel");
+		journal.MarkReady(session.Id);
+		await Assert.That(() => journal.RequestPromotion(session.Id)).Throws<IOException>();
+		await using var unchanged = Open(live);
+		await Assert.That(Contains(unchanged, "Original sentinel")).IsTrue();
+		await Assert.That(Directory.Exists(live + ".previous")).IsFalse();
+	}
+
+	[Test]
+	public async Task PluginFilesNamedSessionJsonDoNotBecomeImportJournals()
+	{
+		var journal = new ImportPromotionJournal(Path.Combine(_root, "live"));
+		var previous = journal.Create();
+		journal.Save(previous with { State = ImportSessionState.Aborted });
+		var plugin = Path.Combine(previous.Directory, "plugins", "sample");
+		Directory.CreateDirectory(plugin);
+		await File.WriteAllTextAsync(Path.Combine(plugin, "session.json"), "plugin-owned non-journal data");
+		await Assert.That(journal.Create().State).IsEqualTo(ImportSessionState.Preparing);
 	}
 
 }

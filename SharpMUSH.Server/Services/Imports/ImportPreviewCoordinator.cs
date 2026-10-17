@@ -186,7 +186,7 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 
 	internal static void CleanupStaging(ImportSession session)
 	{
-		foreach (var directory in new[] { session.WorldPath, session.KeyRingPath })
+		foreach (var directory in new[] { session.WorldPath, session.KeyRingPath, Path.Combine(session.Directory, "plugins") })
 			if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
 	}
 }

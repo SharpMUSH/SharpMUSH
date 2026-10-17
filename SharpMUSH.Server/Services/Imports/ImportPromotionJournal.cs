@@ -61,9 +61,8 @@ public sealed class ImportPromotionJournal
 		{
 			PrivateDirectory(_root);
 			if (File.Exists(_pending)) throw new InvalidOperationException("An import promotion or rollback is pending restart.");
-			foreach (var file in System.IO.Directory.EnumerateFiles(_root, "session.json", SearchOption.AllDirectories))
+			foreach (var active in List())
 			{
-				var active = JsonSerializer.Deserialize<ImportSession>(File.ReadAllText(file))!;
 				if (active.State is ImportSessionState.Preparing or ImportSessionState.Converting or ImportSessionState.Validating or ImportSessionState.Ready)
 					throw new InvalidOperationException("Another import session is active; finish or abort it first.");
 			}
@@ -106,7 +105,8 @@ public sealed class ImportPromotionJournal
 			var session = Get(id);
 			if (session.State != ImportSessionState.Ready) throw new InvalidOperationException("Only a validated ready preview can be promoted.");
 			EnsureNoPrevious();
-			if (!System.IO.Directory.Exists(session.WorldPath)) throw new IOException("The staged world is missing.");
+			if (!System.IO.Directory.Exists(session.WorldPath) || !System.IO.Directory.Exists(session.KeyRingPath))
+				throw new IOException("The staged world or its matching encryption key ring is missing.");
 			Save(session with { State = ImportSessionState.PromotionRequested, HadKeyRing = System.IO.Directory.Exists(LiveKeyRingPath) });
 			WriteDurable(_pending, id);
 		}
