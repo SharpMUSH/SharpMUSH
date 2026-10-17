@@ -10,7 +10,7 @@ The exporter compiles the existing [RegistryInventory](../../SharpMUSH.Tests.Inf
 
 At this baseline: 661 function declarations, 223 command declarations, 28 function alias spellings, 11 command alias spellings 643 command/switch declarations and 52 declared event callbacks. Counts are observations, never test constants. The live reconciliation compares sets/contracts rather than parameter count or fixed totals. An alias that overlaps a declared name remains represented as an alias declaration; consumers may suppress duplicate spelling entries. `SingleArgumentSwitches` stays separate from the list of public switches.
 
-Dynamic configured aliases, game-defined functions/commands, shipped or loaded plugin modules, dynamic HTTP/package callback registrations, and live analysis identity/visibility are explicitly `unknown-pending-inventory`, with null totals. Their absence from the shipped implementation census is not evidence of zero entries or reviewed safety.
+Dynamic configured aliases, game-defined functions/commands, third-party loaded plugin modules, dynamic HTTP/package callback registrations, and live analysis identity/visibility are explicitly `unknown-pending-inventory`, with null totals. Their absence from the shipped implementation census is not evidence of zero entries or reviewed safety.
 
 Regenerate from the repository root using the pinned SDK, with disk-backed TMPDIR/TMP/TEMP:
 
@@ -113,3 +113,17 @@ Validation uses SDK `11.0.100-rc.2.26504.105`, `-m:2 -nr:false`, `TMPDIR=TMP=TEM
 - GREEN: `dotnet build SharpMUSH.Tests -m:2 -nr:false` passed with zero warnings/errors; `RegistryContractAuditTests` passed 7/7 against the corrected generated catalog and portal definitions.
 - GREEN: corrected `ListFunctionUnitTests` passed 407/407; changed C# formatted twice to convergence and `git diff --check` passed.
 - Full engine suite, live LSP/browser interaction and production validation were not run for this metadata slice. CI and independent review remain required before merge; no merge or deployment was performed.
+
+## Set-operation overloads
+
+The four set operations (`setunion`, `setdiff`, `setinter`, `setsymdiff`) now declare all five canonical labels: `list1, list2, delimiter, sort-type, osep`. Their arity and execution are unchanged. Twenty-four real parser cases characterize the existing canonical and TinyMUX-reversed five-argument calls, four-argument sorting, an empty fourth argument, an invalid sort token, and an empty input delimiter. In particular, an unknown non-empty fourth argument is a sort token, not a non-empty output separator. The shipped help now describes that behavior; the reverse five-argument spelling remains documented.
+
+The actual analyzer, generated portal definitions and registered Monaco signature provider each cover these five labels and the active fifth parameter. These are focused argument/consumer checks; permission, resource-limit, complete compatibility and live consumer identity review remain pending. #1797 remains open.
+
+## Shipped plugin inventory
+
+Schema 2 also inventories the actual generated registrations of every plugin referenced by the Server project: Scene, Discord, Lsp and Mcp. Each module's reflected declarations and complete metadata must agree with its generated `GetFunctions()` / `GetCommands()` results. Module-qualified rows keep namespaces distinct. Empty modules have explicit zero-registration records. The exporter fails if the Server's shipped project references change without an inventory update.
+
+The census records its actual Git revision and whether tracked source changes were present, rather than reporting a historical hardcoded revision. Per-entry reviewed facets distinguish registration evidence and focused parser/signature evidence from pending semantic review; no entry is marked behaviorally complete. Callback source candidates now include shipped module sources but remain candidates. Dynamically loaded third-party modules, configured aliases, game-defined contracts and live identity/visibility still have unknown totals. Historical baseline counts above remain historical observations.
+
+Validation of this slice: actual pre-change parser characterization 24/24; missing-label regressions RED 4/7 analyzer cases and four Monaco cases; corrected generated analysis/portal contracts 11/11; complete list-function family 431/431; shipped-plugin census regression RED against schema 1 then GREEN 1/1 against schema 2; complete client Node suite 99/99. Tests and exporter build with zero warnings/errors. Two exports compare byte-for-byte. Corrected help initially exceeded the screen limit by two rows; concise wording passes `HelpHeightTests` 1/1 without changing the gate. Full engine CI and independent review remain required before merge.

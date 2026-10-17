@@ -38,16 +38,24 @@ public static class RegistryInventory
 	}
 
 	private static readonly Lazy<IReadOnlyList<FunctionEntry>> LazyFunctions =
-		new(() => Attributed<SharpFunctionAttribute, FunctionEntry>((a, t, m) => new FunctionEntry(a.Name, a, t, m)));
+		new(() => FunctionsFor(typeof(SharpMUSH.Implementation.Functions.Functions).Assembly));
 
 	private static readonly Lazy<IReadOnlyList<CommandEntry>> LazyCommands =
-		new(() => Attributed<SharpCommandAttribute, CommandEntry>((a, t, m) => new CommandEntry(a.Name, a, t, m)));
+		new(() => CommandsFor(typeof(SharpMUSH.Implementation.Functions.Functions).Assembly));
 
 	/// <summary>Every <c>[SharpFunction]</c> in the implementation assembly.</summary>
 	public static IReadOnlyList<FunctionEntry> Functions => LazyFunctions.Value;
 
 	/// <summary>Every <c>[SharpCommand]</c> in the implementation assembly.</summary>
 	public static IReadOnlyList<CommandEntry> Commands => LazyCommands.Value;
+
+	/// <summary>Declarations in a specified module; membership comes from attributes, never source patterns.</summary>
+	public static IReadOnlyList<FunctionEntry> FunctionsFor(Assembly assembly) =>
+		Attributed<SharpFunctionAttribute, FunctionEntry>(assembly, (a, t, m) => new FunctionEntry(a.Name, a, t, m));
+
+	/// <inheritdoc cref="FunctionsFor"/>
+	public static IReadOnlyList<CommandEntry> CommandsFor(Assembly assembly) =>
+		Attributed<SharpCommandAttribute, CommandEntry>(assembly, (a, t, m) => new CommandEntry(a.Name, a, t, m));
 
 	/// <summary>
 	/// Every name a caller can type to reach a function: the registered names plus the shipped
@@ -81,13 +89,13 @@ public static class RegistryInventory
 		return all;
 	}
 
-	private static List<TEntry> Attributed<TAttribute, TEntry>(Func<TAttribute, Type, string, TEntry> project)
+	private static List<TEntry> Attributed<TAttribute, TEntry>(Assembly assembly, Func<TAttribute, Type, string, TEntry> project)
 		where TAttribute : Attribute
 	{
 		const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
 
 		var entries = new List<TEntry>();
-		foreach (var type in typeof(SharpMUSH.Implementation.Functions.Functions).Assembly.GetTypes())
+		foreach (var type in assembly.GetTypes())
 			foreach (var method in type.GetMethods(All))
 				foreach (var attribute in method.GetCustomAttributes<TAttribute>())
 					entries.Add(project(attribute, type, method.Name));

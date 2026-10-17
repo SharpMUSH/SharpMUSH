@@ -719,6 +719,37 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("setunion(9|2,2|10,|,n,;)", "2;9;10")]
+	[Arguments("setunion(9|2,2|10,|,;,n)", "2;9;10")]
+	[Arguments("setunion(9|2,2|10,|,n)", "2|9|10")]
+	[Arguments("setunion(c|a,a|b,|,)", "abc")]
+	[Arguments("setunion(c|a,a|b,|,;)", "a|b|c")]
+	[Arguments("setunion(c a,a b,,a,;)", "a;b;c")]
+	[Arguments("setdiff(9|2,2|10,|,n,;)", "9")]
+	[Arguments("setdiff(9|2,2|10,|,;,n)", "9")]
+	[Arguments("setdiff(9|2,2|10,|,n)", "9")]
+	[Arguments("setdiff(c|a,a|b,|,)", "c")]
+	[Arguments("setdiff(c|a,a|b,|,;)", "c")]
+	[Arguments("setdiff(c a,a b,,a,;)", "c")]
+	[Arguments("setinter(9|2,2|10,|,n,;)", "2")]
+	[Arguments("setinter(9|2,2|10,|,;,n)", "2")]
+	[Arguments("setinter(9|2,2|10,|,n)", "2")]
+	[Arguments("setinter(c|a,a|b,|,)", "a")]
+	[Arguments("setinter(c|a,a|b,|,;)", "a")]
+	[Arguments("setinter(c a,a b,,a,;)", "a")]
+	[Arguments("setsymdiff(9|2,2|10,|,n,;)", "9;10")]
+	[Arguments("setsymdiff(9|2,2|10,|,;,n)", "9;10")]
+	[Arguments("setsymdiff(9|2,2|10,|,n)", "9|10")]
+	[Arguments("setsymdiff(c|a,a|b,|,)", "bc")]
+	[Arguments("setsymdiff(c|a,a|b,|,;)", "b|c")]
+	[Arguments("setsymdiff(c a,a b,,a,;)", "b;c")]
+	public async Task SetOperationCallShapesPreserveDeclaredAndCompatibilityOverloads(string function, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
 	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
 	public async Task Matchall(string function, string expected)
 	{

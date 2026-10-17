@@ -1573,19 +1573,19 @@ public partial class Functions
 		return new CallState(MarkupText.Join(delimiter, listItems));
 	}
 
-	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
+	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter", "sort-type", "osep"])]
 	public ValueTask<CallState> SetUnion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SetManipulationAsync(parser, onlyInFirst: true, onlyInSecond: true, inBoth: true);
 
-	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
+	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter", "sort-type", "osep"])]
 	public ValueTask<CallState> SetDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SetManipulationAsync(parser, onlyInFirst: true, onlyInSecond: false, inBoth: false);
 
-	[SharpFunction(Name = "setinter", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
+	[SharpFunction(Name = "setinter", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter", "sort-type", "osep"])]
 	public ValueTask<CallState> SetIntersection(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SetManipulationAsync(parser, onlyInFirst: false, onlyInSecond: false, inBoth: true);
 
-	[SharpFunction(Name = "setsymdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
+	[SharpFunction(Name = "setsymdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter", "sort-type", "osep"])]
 	public ValueTask<CallState> SetSymmetricalDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SetManipulationAsync(parser, onlyInFirst: true, onlyInSecond: true, inBoth: false);
 

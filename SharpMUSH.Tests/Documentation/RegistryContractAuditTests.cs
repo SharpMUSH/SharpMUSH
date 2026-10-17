@@ -28,6 +28,10 @@ public class RegistryContractAuditTests
 	}
 
 	[Test]
+	[Arguments("setunion", "list1,list2,delimiter,sort-type,osep", "setunion(9|2,2|10,|,n,;)")]
+	[Arguments("setdiff", "list1,list2,delimiter,sort-type,osep", "setdiff(9|2,2|10,|,n,;)")]
+	[Arguments("setinter", "list1,list2,delimiter,sort-type,osep", "setinter(9|2,2|10,|,n,;)")]
+	[Arguments("setsymdiff", "list1,list2,delimiter,sort-type,osep", "setsymdiff(9|2,2|10,|,n,;)")]
 	[Arguments("sortkey", "attribute,list,sort-type,delimiter,osep", "sortkey(me/key,ab|a|abc,n,|,;)")]
 	[Arguments("index", "list,delimiter,first,length", "index(a|b|c,|,2,2)")]
 	[Arguments("munge", "attribute,list1,list2,delimiter,osep", "munge(me/order,b|a|c,2|1|3,|,;)")]
