@@ -6,7 +6,7 @@
     ::login-fail bad Wiz nope     open a session whose login is expected to be refused
     think add(1,2)                sent verbatim on the current session
     ::as alice                    switch the current session
-    ::settle                      wait for queued work (@wait/@trigger) to finish
+    ::settle                      queue a marker on the current connection (not global completion)
     ::until DONE                  the next command's step also waits for a line ending in DONE
     ::logout wiz
 

@@ -9,6 +9,27 @@ namespace SharpMUSH.Tests.Documentation;
 public class RegistryContractAuditTests
 {
 	[Test]
+	[Arguments("json_query", "json,action,arg...", "json_query({})", "json")]
+	[Arguments("json_query", "json,action,arg...", "json_query({},size)", "json,action")]
+	[Arguments("json_query", "json,action,arg...", "json_query({},get,a,b)", "json,action,arg1,arg2")]
+	[Arguments("json_query", "json,action,arg...", "json_query({},extract,$.a)", "json,action,arg1")]
+	[Arguments("json_fill", "json,pointer...|value...", "json_fill({},/a,one)", "json,pointer1,value1")]
+	[Arguments("json_fill", "json,pointer...|value...", "json_fill({},/a,one,/b,two)", "json,pointer1,value1,pointer2,value2")]
+	public async Task JsonQueryAndFillSignaturesDescribeTheirArgumentRoles(string name, string declaration, string source, string expected)
+	{
+		var snapshot = BuiltInAnalysisCatalog.CreateSnapshot();
+		var analyzer = AnalysisCatalogAnalyzer.Create(snapshot, SharpMUSHOptions.Default());
+		var signature = analyzer.SignatureHelp(source, 0, source.Length - 1);
+		await Assert.That(signature).IsNotNull();
+		await Assert.That(string.Join(',', signature!.Parameters.Select(parameter => parameter.Label))).IsEqualTo(expected);
+		await Assert.That(signature.ActiveParameter).IsEqualTo(expected.Split(',').Length - 1);
+		using var definitions = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
+		var parameters = definitions.RootElement.GetProperty("functions").GetProperty(name).GetProperty("parameterNames");
+		await Assert.That(string.Join(',', parameters.EnumerateArray().Select(value => value.GetString()))).IsEqualTo(declaration);
+		await Assert.That(string.Join(',', snapshot.Entries.Single(entry => entry.Kind == "function" && entry.Name == name).ParameterNames)).IsEqualTo(declaration);
+	}
+
+	[Test]
 	[Arguments("json_map", "attribute,json,osep,arg...")]
 	[Arguments("json_mod", "json,action,path-or-patch,json2")]
 	public async Task JsonSignaturesReachAnalysisAndPortal(string name, string expected)

@@ -137,6 +137,26 @@ The adjacent `unique` declaration also mislabeled its second and third arguments
 
 The positional function bodies and arity are unchanged. Built-in calls currently receive numbered argument frames in `FunctionInvocationPipeline`; that path does not read `ParameterNames`. Named attribute bindings use the separately registered `@function/args` argument names. Correcting these built-in declaration labels is not a new named-call syntax or a claim that those separate binding contracts were audited here.
 
+## JSON query actions and fill pairs
+
+The approved next metadata slice covers only `json_query` and `json_fill`. The inventory at `cb4b3321d21112c19b29ab542a8bdf17cd104f7a` found that `json_query` called its second argument `path`, although the implementation and shipped help identify it as an optional action (default `type`). `get` and `exists` consume following path segments; `extract` consumes one combined path. The declaration now uses `json, action, arg...` without imposing a new action-dependent arity rule.
+
+`json_fill` consumes pointer/value pairs after its template. Its old declaration, `json, pointer, value...`, made the registered Monaco provider label a second pointer as `value2`. The existing paired pattern now declares `json, pointer...|value...`, expanding to `pointer1, value1, pointer2, value2`. Both shipped help entries already describe the correct call shapes; those shapes are retained, and the stale `json_query` action count is corrected from five to six. Function bodies, arity, flags, evaluation and error behavior are unchanged.
+
+The focused regressions exercise the actual analysis catalog/analyzer, generated portal definitions and registered Monaco signature provider. Existing JSON parser tests characterize explicit-action queries, segmented and combined paths, multiple fills and rejection of incomplete pairs. Omitted-action coverage in this slice checks editor signatures and exported declarations, rather than adding a parser behavior test. These are partial contract checks: full error/permission/resource-limit/compatibility review and live browser/LSP identity remain pending. The census retains `pending-behavioral-review` and #1797 remains open.
+
+The metadata slice also identified a separate source-only `json_mod(...,patch,null)` candidate. It was subsequently reproduced through the registered parser and corrected in the [whole-document null merge-patch follow-up](#whole-document-null-merge-patches) below; the metadata correction itself did not change `json_mod`.
+
+Validation on merged paging baseline `79f3c824c96af7ea121f14b45eb44f2c7f6e5e9d`, with SDK `11.0.100-rc.2.26504.105`, disk-backed scratch and maximum test parallelism 8:
+
+- RED: six focused C# cases fail with old metadata (five at actual analyzer labels, the query with omitted action at the generated portal declaration); registered Monaco provider cases fail 5/19 while 14 controls pass.
+- Parser characterization before correction: `JsonFunctionUnitTests` 123 passed, two existing OOB setup skips. After correction: the same 123 passed/two skips; bodies, arity and evaluation are unchanged.
+- GREEN: normal tests and exporter builds have zero warnings/errors; all `RegistryContractAuditTests` pass 19/19, including the independently merged paging contracts.
+- GREEN: the registered Monaco signature suite passes 19/19 against a real exporter-produced scratch census candidate. Two exports compare byte-for-byte; the original tracked census was restored after this fixture check.
+- Changed C# files were formatted twice and `git diff --check` passed. No broad engine run or live browser/LSP test was performed for this slice.
+
+The exporter hashes the sorted tracked paths and their on-disk bytes, excluding the census itself; it does not use Git HEAD as its content identity. Scratch candidates are working-source review evidence. Final tracked census generation is reserved for the approved source commit, followed by a census-only commit, so the snapshot includes the merged paging registration without claiming behavioral completion.
+
 ## Whole-document null merge patches
 
 Four new registered-parser cases isolate `json_mod(...,patch,null)`: object, array and null targets must all return the literal JSON text `null` without an internal-error state. Before correction, these three cases returned empty output with `HadErrors=true`; an object-member null patch correctly returned `{}`. The helper now accepts the nullable node produced by `JsonNode.Parse("null")` and returns null for the whole-document replacement. Object-member null still deletes that member.

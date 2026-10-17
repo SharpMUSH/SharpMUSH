@@ -29,6 +29,8 @@ think [haspower(*Alice,GUEST)]
 ::case admin.force  @force and @trigger
 @force *Alice=say forced hello
 &TRIG *Alice=say triggered %0
+# The foreground sentinel can precede the queued action; wait for its actor-visible output.
+::until Alice says, "triggered 1"
 @trigger *Alice/TRIG=1
 ::settle
 
