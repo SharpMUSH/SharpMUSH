@@ -20,9 +20,9 @@
 -->
 # mix()
 
-`mix([<object>/]<attribute>, <list1>, <list2>[, ... , <list30>, <delim>])`
+`mix([<object>/]<attribute>, <list1>, <list2>[, ... , <list33>, <delim>])`
 
-This function is similar to MAP(), except that it takes the elements of up to 30 lists, one by one, and passes them to the user-defined function as %0, %1, up to %9, respectively, for elements of `<list1>` to `<list30>`. Use %`<10>`-%`<29>` or r(10,args)-r(29,args) for arguments 10 or higher; v(10) reads the attribute named 10. If the lists are of different sizes, the shorter ones are padded with empty elements. `<delim>` is used to separate elements; if it is not specified, it defaults to a space. If using more than 2 lists, the last argument must be a delimiter.
+This function is similar to MAP(), except that it takes the elements of up to 33 lists, one row at a time, and passes them to the user-defined function as numeric arguments 0 through 32. Arguments 0 through 9 are available as %0 through %9. Use %`<10>`-%`<32>` or r(10,args)-r(32,args) for arguments 10 or higher; v(10) reads the attribute named 10. If the lists are of different sizes, the shorter ones are padded with empty elements. `<delim>` is used to separate elements; if it is not specified, it defaults to a space. If using more than 2 lists, the last argument must be a delimiter. The 33-list limit uses all 35 function arguments: the callback, 33 lists, and the final delimiter.
 
 ## Parallel list examples
 
