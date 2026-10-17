@@ -10,6 +10,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Infrastructure;
@@ -19,48 +20,46 @@ namespace SharpMUSH.Tests.Integration.Packages;
 public sealed class PackageBatchAcceptanceFactory : ServerWebAppFactory
 {
 	protected override bool UsesOwnWorld => true;
-	public PackageBatchSourceFault Fault { get; } = new();
+	public PackageBatchInstallFault Fault { get; } = new();
 	protected override Action<IServiceCollection>? ConfigureTestServices => services =>
 	{
-		services.RemoveAll<IPackageSourceService>();
-		services.AddSingleton<IPackageSourceService>(provider => new PackageBatchFaultingSource(
-			new GitPackageSourceService(provider.GetRequiredService<IPackageManifestService>()),
+		services.RemoveAll<IPackageInstallService>();
+		services.AddSingleton<PackageInstallService>();
+		services.AddSingleton<IPackageInstallService>(provider => new PackageBatchFaultingInstaller(
+			provider.GetRequiredService<PackageInstallService>(),
 			provider.GetRequiredService<IPackageRegistryService>(), Fault));
 	};
 }
 
-public sealed class PackageBatchSourceFault
+public sealed class PackageBatchInstallFault
 {
 	public sealed record Target(string Prerequisite, string Dependent);
 	public volatile Target? Armed;
 	public int Failures;
 }
 
-/// <summary>Only injects a source read failure after the real prerequisite install commits.</summary>
-internal sealed class PackageBatchFaultingSource(IPackageSourceService real, IPackageRegistryService registry,
-	PackageBatchSourceFault fault) : IPackageSourceService
+/// <summary>Refuses only the later installer call after the real prerequisite and its registry state commit.</summary>
+internal sealed class PackageBatchFaultingInstaller(IPackageInstallService real, IPackageRegistryService registry,
+	PackageBatchInstallFault fault) : IPackageInstallService
 {
-	public Task<Result<PackageRepoSnapshot>> RefreshAsync(PackageRemoteRecord remote, CancellationToken cancellationToken = default) =>
-		real.RefreshAsync(remote, cancellationToken);
-	public async Task<Result<PackageManifestSource>> GetManifestAsync(PackageRemoteRecord remote, string path,
-		string? version = null, CancellationToken cancellationToken = default)
+	public Task<PackageChangeset> PlanAsync(PackageManifest manifest, IReadOnlyDictionary<string, string>? configureAnswers = null,
+		CancellationToken cancellationToken = default) => real.PlanAsync(manifest, configureAnswers, cancellationToken);
+	public async Task<Result<PackageApplyResult>> ApplyAsync(PackageManifest manifest, PackageApplyRequest request,
+		CancellationToken cancellationToken = default, IPackageFileSource? fileSource = null)
 	{
-		if (fault.Armed is { } armed && path.Trim('/') == armed.Dependent
+		if (fault.Armed is { } armed && manifest.Name == armed.Dependent
 			&& await registry.GetInstalledPackageAsync(armed.Prerequisite) is InstalledPackageRecord)
 		{
 			Interlocked.Increment(ref fault.Failures);
-			return new Error<string>("Fixture source became unavailable after the prerequisite committed.");
+			return new Error<string>("Fixture installer refused after the prerequisite committed.");
 		}
-		return await real.GetManifestAsync(remote, path, version, cancellationToken);
+		return await real.ApplyAsync(manifest, request, cancellationToken, fileSource);
 	}
-	public Task<Result<PackageUpdateInfo>> CheckForUpdateAsync(PackageRemoteRecord remote, InstalledPackageRecord installed,
-		CancellationToken cancellationToken = default) => real.CheckForUpdateAsync(remote, installed, cancellationToken);
-	public Task<Result<CommunityRepoDirectory>> GetCommunityListingsAsync(PackageRemoteRecord remote,
-		CancellationToken cancellationToken = default) => real.GetCommunityListingsAsync(remote, cancellationToken);
-	public Task<Result<string>> GetReadmeAsync(PackageRemoteRecord remote, string path, string? version = null,
-		CancellationToken cancellationToken = default) => real.GetReadmeAsync(remote, path, version, cancellationToken);
-	public Task<Result<IPackageFileSource>> GetFileSourceAsync(PackageRemoteRecord remote, string path, string commit,
-		CancellationToken cancellationToken = default) => real.GetFileSourceAsync(remote, path, commit, cancellationToken);
+	public Task<Result<Success>> UninstallAsync(string packageId, bool force = false, CancellationToken cancellationToken = default) =>
+		real.UninstallAsync(packageId, force, cancellationToken);
+	public Task<Result<PackageRollbackResult>> RollbackAsync(string packageId, int revision, CancellationToken cancellationToken = default) =>
+		real.RollbackAsync(packageId, revision, cancellationToken);
+	public Task<Found<string>> GetReadmeAsync(string packageId) => real.GetReadmeAsync(packageId);
 }
 
 /// <summary>Real HTTP review, Git resolution, database writes and lifecycle execution in an isolated world.</summary>
@@ -110,7 +109,7 @@ public class PackageBatchAcceptanceTests
 	}
 
 	[Test, Arguments(false), Arguments(true)]
-	public async Task ReviewedDependencyPair_InstallsContentAndHooks_ThenUninstallsInReverseOrder(bool failLaterSource)
+	public async Task ReviewedDependencyPair_InstallsContentAndHooks_ThenUninstallsInReverseOrder(bool failLaterInstall)
 	{
 		var suffix = Guid.NewGuid().ToString("N");
 		var dependency = $"batch-base-{suffix}";
@@ -137,9 +136,9 @@ public class PackageBatchAcceptanceTests
 			await Assert.That(preview.Blockers).IsEmpty();
 			await Assert.That(preview.Steps.Select(s => s.Intent.TargetId).ToArray()).IsEquivalentTo([dependency, dependent]);
 			await Assert.That(preview.Steps[0].Intent.TargetId).IsEqualTo(dependency);
-			if (failLaterSource) Factory.Fault.Armed = new(dependency, dependent);
+			if (failLaterInstall) Factory.Fault.Armed = new(dependency, dependent);
 			var installed = await ApplyAndWaitAsync(http, preview);
-			if (failLaterSource)
+			if (failLaterInstall)
 			{
 				await Assert.That(installed.State).IsEqualTo(PackageBatchRunState.Partial);
 				await Assert.That(Factory.Fault.Failures).IsGreaterThan(0);

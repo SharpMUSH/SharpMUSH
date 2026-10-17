@@ -80,6 +80,51 @@ public class PackageBatchExecutionTests
 		await Assert.That(f.Runner.Backups).IsEqualTo(0);
 	}
 
+	[Test, Arguments(true), Arguments(false)]
+	public async Task GatedSnapshotReadsEachSourceOnce_ThenUsesPinnedBytesAndFreshContentPlans(bool backup)
+	{
+		using var f = new Fixture(); f.Add("a"); f.Add("b", "a");
+		var review = await f.Review([Install("b"), Install("a")]);
+		f.Source.ClearReceivedCalls();
+		var plans = new Dictionary<string, int>();
+		f.PlanFor = manifest => { plans[manifest.Name] = plans.GetValueOrDefault(manifest.Name) + 1; return Changes(manifest); };
+		f.Runner.BackupEnabled = backup;
+		f.AfterApply = id =>
+		{
+			if (id != "a") return;
+			f.Commit = "remote-tip-moved-after-validation";
+			f.Manifests["b"] = "invalid later remote content";
+		};
+		var run = await f.Apply(review);
+		await Assert.That(run.State).IsEqualTo(PackageBatchRunState.Completed);
+		await Assert.That(f.AppliedCommits).IsEquivalentTo(["reviewed", "reviewed"]);
+		await f.Source.Received(2).RefreshAsync(Arg.Any<PackageRemoteRecord>(), Arg.Any<CancellationToken>());
+		await f.Source.Received(2).GetManifestAsync(Arg.Any<PackageRemoteRecord>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+		await f.Source.Received(2).GetFileSourceAsync(Arg.Any<PackageRemoteRecord>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+		await Assert.That(f.Source.ReceivedCalls().Count()).IsEqualTo(6);
+		await Assert.That(plans["b"]).IsGreaterThanOrEqualTo(2);
+	}
+
+	[Test, Arguments("trust"), Arguments("url"), Arguments("branch"), Arguments("authority"), Arguments("registry"), Arguments("plugins")]
+	public async Task CachedBodyRevalidationStillRejectsLiveDriftAfterBackupProvenance(string change)
+	{
+		using var f = new Fixture(); f.Add("a");
+		var review = await f.Review([Install("a")]);
+		f.Runner.AfterProvenance = () =>
+		{
+			if (change == "trust") f.Remote = f.Remote with { Trust = PackageRemoteTrust.Official };
+			if (change == "url") f.Remote = f.Remote with { Url = "https://changed.example.test/repo" };
+			if (change == "branch") f.Remote = f.Remote with { Branch = "changed" };
+			if (change == "authority") f.Authorized = false;
+			if (change == "registry") f.Installed.Add(new("other", "1.0", "test", "other", "old", null, DateTimeOffset.UnixEpoch, 1));
+			if (change == "plugins") f.PluginStates.Add(Plugin("changed"));
+		};
+		var run = await f.Apply(review);
+		await Assert.That(run.State).IsEqualTo(PackageBatchRunState.Failed);
+		await Assert.That(f.Runner.Backups).IsEqualTo(1);
+		await Assert.That(f.Applied).IsEmpty();
+	}
+
 	[Test]
 	public async Task LaterConflictPreservesCommittedPrerequisite_AndRetryGetsFreshReview()
 	{
@@ -283,6 +328,38 @@ public class PackageBatchExecutionTests
 	}
 
 	[Test]
+	public async Task RetainedWikiTextBudgetRefusesBeforeTokenOrWrites()
+	{
+		using var f = new Fixture(); f.Add("large");
+		f.Manifests["large"] = "format: 1.4\n" + f.Manifests["large"] + "wiki:\n"
+			+ string.Concat(Enumerable.Range(0, 33).Select(i => $"  - page: help:page-{i}\n    title: Page {i}\n    file: wiki/page-{i}.md\n"));
+		var body = new byte[PackageWikiBodies.MaxBodyBytes]; Array.Fill(body, (byte)'x');
+		f.Files["large"] = new ContentFiles(body);
+		var plan = (await f.Service.PlanAsync(new([Install("large")]), Actor)).Expect<PackageBatchPlanResponse>();
+		await Assert.That(plan.ReviewToken).IsNull();
+		await Assert.That(plan.Blockers.Select(b => b.Code)).Contains("batch-payload-limit");
+		await Assert.That(f.Applied).IsEmpty();
+		await Assert.That(f.Runner.Backups).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task NonmanagedSnapshotKeepsReadme_WithoutPassingUnusedSourceFilesToInstaller()
+	{
+		using var f = new Fixture(); f.Add("content");
+		f.Files["content"] = new ContentFiles(System.Text.Encoding.UTF8.GetBytes("reviewed readme"));
+		var run = await f.Apply(await f.Review([Install("content")]));
+		await Assert.That(run.State).IsEqualTo(PackageBatchRunState.Completed);
+		await Assert.That(f.AppliedFiles.Single()).IsNull();
+		await Assert.That(f.AppliedReadmes.Single()).IsEqualTo("reviewed readme");
+	}
+
+	private sealed class ContentFiles(byte[] bytes) : IPackageFileSource
+	{
+		public Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+			=> Task.FromResult<byte[]?>(path == "README.md" || path.StartsWith("wiki/", StringComparison.Ordinal) ? bytes : null);
+	}
+
+	[Test]
 	public async Task DisabledBackupsStillRevalidateBeforeWrites()
 	{
 		using var f = new Fixture(); f.Add("a"); f.Runner.BackupEnabled = false;
@@ -350,6 +427,10 @@ public class PackageBatchExecutionTests
 		public List<InstalledPackageRecord> Installed { get; } = [];
 		public List<PluginStatusDto> PluginStates { get; } = [];
 		public List<string> Applied { get; } = [];
+		public List<string> AppliedCommits { get; } = [];
+		public List<IPackageFileSource?> AppliedFiles { get; } = [];
+		public List<string?> AppliedReadmes { get; } = [];
+		public IPackageSourceService Source { get; } = Substitute.For<IPackageSourceService>();
 		public List<string> Removed { get; } = [];
 		public Dictionary<string, PluginRegistration> Registrations { get; } = [];
 		public Dictionary<string, IPackageFileSource> Files { get; } = [];
@@ -365,7 +446,7 @@ public class PackageBatchExecutionTests
 		public Fixture()
 		{
 			var registry = Substitute.For<IPackageRegistryService>();
-			var source = Substitute.For<IPackageSourceService>();
+			var source = Source;
 			var installer = Substitute.For<IPackageInstallService>();
 			var manager = Substitute.For<IPluginManager>();
 			manager.Registration(Arg.Any<string>()).Returns(info => Registrations.GetValueOrDefault(info.Arg<string>()));
@@ -413,6 +494,9 @@ public class PackageBatchExecutionTests
 				.Returns(info =>
 				{
 					var manifest = info.Arg<PackageManifest>(); Applied.Add(manifest.Name);
+					AppliedCommits.Add(info.Arg<PackageApplyRequest>().Source.Commit);
+					AppliedFiles.Add(info.ArgAt<IPackageFileSource?>(3));
+					AppliedReadmes.Add(info.Arg<PackageApplyRequest>().Readme);
 					Installed.RemoveAll(p => p.Id == manifest.Name);
 					Installed.Add(new(manifest.Name, manifest.Version.ToString(), Remote.Url, manifest.Name, Commit, null, DateTimeOffset.UtcNow, 1, Kind: manifest.Kind));
 					if (manifest.Kind == PackageKind.Plugin && PluginStates.All(p => p.Id != manifest.Name))
@@ -473,6 +557,7 @@ public class PackageBatchExecutionTests
 		public bool BackupEnabled = true;
 		public int Backups;
 		public Action? BeforeBody;
+		public Action? AfterProvenance;
 		public Func<Task>? AfterBody;
 		public CancellationToken Token;
 		private readonly PackageOperationGate _gate = new();
@@ -484,7 +569,7 @@ public class PackageBatchExecutionTests
 				BeforeBody?.Invoke();
 				if (BackupEnabled && provenance is not null)
 				{
-					try { await provenance(cancellationToken); }
+					try { await provenance(cancellationToken); AfterProvenance?.Invoke(); }
 					catch (Exception) { return new PackageOperationRefused("Provenance refused"); }
 				}
 				if (BackupEnabled) Backups++;

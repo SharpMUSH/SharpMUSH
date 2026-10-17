@@ -23,9 +23,15 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 	EngineVersion engine, PluginInstallOptions installOptions, GameFeatureService features,
 	PluginUploadStore uploads, IAuditLog audit, ILogger<PackageBatchService> logger)
 {
-	private const long MaxBatchBinaryBytes = 64 * 1024 * 1024;
+	private const long MaxBatchPayloadBytes = 64 * 1024 * 1024;
 	private sealed record Prepared(PackageBatchPlanResponse Plan, string Fingerprint, IReadOnlyList<PackageBatchCandidate> Candidates);
 	private sealed record Finished(PackageBatchRunState State, string? Message = null);
+	/// <summary>Only the gated run owns these payloads; reviews and the run registry never retain files.</summary>
+	private sealed class ExecutionSources
+	{
+		public Dictionary<PackageBatchSource, ResolvedPackageManifest> Payloads { get; } = [];
+		public bool Frozen { get; set; }
+	}
 
 	public async Task<Result<PackageBatchPlanResponse>> PlanAsync(PackageBatchPlanRequest request, CapabilityActor actor,
 		CancellationToken cancellationToken = default)
@@ -92,6 +98,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 	private async Task ExecuteAsync(PackageBatchAdmission admission, CancellationToken hostToken)
 	{
 		var snapshot = admission.Snapshot;
+		var sources = new ExecutionSources();
 		var steps = snapshot.Plan.Steps.Select(s => new PackageBatchStepProgress(s.StepId, s.Intent, PackageBatchStepState.Unrun)).ToArray();
 		runs.Update(admission.Run.Id, PackageBatchRunState.Running, steps);
 		try
@@ -102,7 +109,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 				// All exits after a committed step return normally so the runner drains collected lifecycle hooks.
 				try
 				{
-					var current = await RevalidateAsync(snapshot, token);
+					var current = await RevalidateAsync(snapshot, token, sources);
 					var restartPending = false;
 					var reviews = (snapshot.Request.Reviews ?? []).ToDictionary(r => r.StepId, StringComparer.Ordinal);
 					foreach (var (step, index) in snapshot.Plan.Steps.Select((step, index) => (step, index)))
@@ -118,8 +125,8 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 							{
 								case PackageBatchAction.Install:
 									if (step.Intent.Source is not { } source) return Stop(index, PackageBatchStepState.Failed, "The package source is missing.");
-									if (await resolver.ResolveAsync(source, true, token) is not ResolvedPackageManifest fetched)
-										return Stop(index, PackageBatchStepState.NeedsReview, "The package source is unavailable; review again.");
+									if (!sources.Payloads.TryGetValue(source, out var fetched))
+										return Stop(index, PackageBatchStepState.NeedsReview, "The reviewed package snapshot is unavailable; review again.");
 									var candidate = current.Candidates.Single(c => Same(c.Manifest.Name, step.Intent.TargetId));
 									if (candidate.Fingerprint != fetched.Fingerprint) return Stop(index, PackageBatchStepState.NeedsReview, "The source changed; review again.");
 									if (fetched.Manifest.RequiredPlugins.Any(id => manager.Registration(id) is null))
@@ -208,9 +215,10 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 				}
 				catch (OperationCanceledException) { return new Finished(HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Cancelled, "Execution stopped; refresh actual state."); }
 				catch (Exception) { return new Finished(HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Failed, "The batch could not continue. Refresh actual state."); }
+				finally { sources.Payloads.Clear(); } // Release binary snapshots before deferred lifecycle hooks run.
 			}, CancellationToken.None, async _ =>
 			{
-				await RevalidateAsync(snapshot, hostToken);
+				await RevalidateAsync(snapshot, hostToken, sources);
 				return new BackupProvenance("pre-package", snapshot.Actor.AccountId, "batch",
 					string.Join(", ", snapshot.Plan.Steps.Select(s => s.Intent.TargetId)));
 			});
@@ -224,6 +232,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 		}
 		catch (OperationCanceledException) { runs.Update(admission.Run.Id, HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Cancelled, steps, "Execution stopped. Refresh actual state."); }
 		catch (Exception) { runs.Update(admission.Run.Id, PackageBatchRunState.Unknown, steps, "The outcome is unknown. Refresh actual state."); }
+		finally { sources.Payloads.Clear(); } // Also covers pre-backup refusal and runner exceptions before the body.
 
 		bool HasCompleted() => steps.Any(s => s.State == PackageBatchStepState.Completed);
 		void Publish() => runs.Update(admission.Run.Id, PackageBatchRunState.Running, steps);
@@ -253,7 +262,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 		}
 	}
 
-	private async Task<Prepared> PrepareAsync(PackageBatchPlanRequest request, CancellationToken token)
+	private async Task<Prepared> PrepareAsync(PackageBatchPlanRequest request, CancellationToken token, ExecutionSources? sources = null)
 	{
 		var blockers = new List<PackageBatchBlocker>();
 		void Block(string id, string code, string text) => blockers.Add(new(id, code, text));
@@ -270,22 +279,51 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 		var queued = new HashSet<string>(StringComparer.Ordinal);
 		var pending = new Queue<PackageBatchIntent>(request.Intents.Where(i => i.Action == PackageBatchAction.Install));
 		long binaryBytes = 0;
+		long payloadBytes = 0;
 		while (pending.TryDequeue(out var intent))
 		{
 			if (intent.Source is not { } source) { Block(intent.TargetId, "missing-source", "Choose a package source."); continue; }
 			if (!queued.Add(JsonSerializer.Serialize(source))) continue;
 			if (queued.Count > 32) { Block(intent.TargetId, "batch-limit", "Resolve at most 32 package sources per batch."); break; }
-			if (await resolver.ResolveAsync(source, true, token) is not ResolvedPackageManifest resolved)
-			{ Block(intent.TargetId, "source-unavailable", "The requested source could not be resolved. Refresh and choose an available source."); continue; }
+			ResolvedPackageManifest resolved;
+			if (sources is { Frozen: true })
+			{
+				if (!sources.Payloads.TryGetValue(source, out var cached))
+				{ Block(intent.TargetId, "source-unavailable", "The reviewed source snapshot is unavailable. Request a fresh review."); continue; }
+				// A cached payload never grants trust after its configured source changed or disappeared.
+				if (!BundledPackages.IsCatalogueRemote(cached.Remote.Name) && !PluginUploadStore.IsUploadRemote(cached.Remote.Name)
+					&& !remotes.Contains(cached.Remote))
+				{ Block(intent.TargetId, "source-changed", "The configured source changed. Request a fresh review."); continue; }
+				resolved = cached;
+			}
+			else
+			{
+				if (await resolver.ResolveAsync(source, true, token) is not ResolvedPackageManifest fresh)
+				{ Block(intent.TargetId, "source-unavailable", "The requested source could not be resolved. Refresh and choose an available source."); continue; }
+				resolved = fresh;
+			}
 			if (!Same(intent.TargetId, resolved.Manifest.Name)) { Block(intent.TargetId, "source-mismatch", "The source names a different package."); continue; }
 			binaryBytes += resolved.BinaryBytes;
-			if (binaryBytes > MaxBatchBinaryBytes) { Block(intent.TargetId, "batch-binary-limit", "A batch may contain at most 64 MiB of binary package files."); break; }
+			if (binaryBytes > MaxBatchPayloadBytes) { Block(intent.TargetId, "batch-binary-limit", "A batch may contain at most 64 MiB of binary package files."); break; }
+			// Account for retained UTF-16 payload text without serializing another large manifest copy.
+			// This bounds payload size, not object/copy overhead in the managed heap.
+			payloadBytes += resolved.BinaryBytes + 2L * (resolved.Source.ManifestYaml.Length + (long)(resolved.Readme?.Length ?? 0)
+				+ resolved.Manifest.WikiPages.Sum(page => (long)(page.Markdown?.Length ?? 0))
+				+ resolved.Warnings.Sum(warning => (long)warning.Length));
+			if (payloadBytes > MaxBatchPayloadBytes) { Block(intent.TargetId, "batch-payload-limit", "A batch may retain at most 64 MiB of source payloads, including loaded text and binaries."); break; }
 			var canonical = new PackageBatchSource(resolved.Remote.Name, resolved.ApplyPath, source.Version);
+			if (sources is { Frozen: false })
+			{
+				// Ordinary content already has its README/wiki bodies loaded and needs no source file provider.
+				var retained = resolved.Manifest.Kind is PackageKind.Plugin or PackageKind.Ui ? resolved : resolved with { Files = null };
+				sources.Payloads[source] = retained;
+				sources.Payloads[canonical] = retained;
+			}
 			canonicalSources[intent.TargetId] = canonical;
 			candidates.Add(new(canonical, resolved.Manifest, resolved.Source.Commit, resolved.Fingerprint, resolved.Warnings));
-			foreach (var dependency in resolved.Manifest.Dependencies)
+			foreach (var dependency in resolved.Manifest.Dependencies.Where(d =>
+				!request.Intents.Any(i => i.Action == PackageBatchAction.Install && Same(i.TargetId, d.PackageId))))
 			{
-				if (request.Intents.Any(i => i.Action == PackageBatchAction.Install && Same(i.TargetId, dependency.PackageId))) continue;
 				if (installed.FirstOrDefault(p => Same(p.Id, dependency.PackageId)) is { } current
 					&& PackageVersion.TryParse(current.Version, out var version)
 					&& dependency.Constraint.IsSatisfiedBy(version, includePrereleases: true)) continue;
@@ -359,12 +397,13 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 				|| await capabilities.AuthorizeAsync(actor, PortalPermission.ServerOperate, token));
 
 	private sealed class ReviewChangedException() : Exception("The reviewed state or authority changed.");
-	private async Task<Prepared> RevalidateAsync(PackageBatchReviewSnapshot snapshot, CancellationToken token)
+	private async Task<Prepared> RevalidateAsync(PackageBatchReviewSnapshot snapshot, CancellationToken token, ExecutionSources sources)
 	{
 		token.ThrowIfCancellationRequested();
 		if (!await Authorized(snapshot.Actor, token, snapshot.Request.Intents)) throw new ReviewChangedException();
-		var current = await PrepareAsync(snapshot.Request, token);
+		var current = await PrepareAsync(snapshot.Request, token, sources);
 		if (current.Plan.Blockers.Count > 0 || current.Fingerprint != snapshot.Fingerprint) throw new ReviewChangedException();
+		sources.Frozen = true;
 		return current;
 	}
 

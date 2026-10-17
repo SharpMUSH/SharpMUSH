@@ -8,6 +8,8 @@ Suggested prerequisites are proposals. Add them explicitly and review again befo
 
 Each install retains its ordinary configuration, conflict and code trust review. Each uninstall requires confirmation. A review token refers to the reviewed sources, installed state and choices; changes to that state require a fresh review. Removing an item from the queue changes what is requested, not what is already installed.
 
+At the first execution check, the server refreshes the sources and checks that they still match the accepted review. The admitted run then uses that exact payload; later remote commits do not change its files. Permissions, configured source trust, content conflicts and plugin requirements are still checked during execution. A batch resolves at most 32 sources and retains at most 64 MiB of counted text and binary payloads; this is a payload limit, not a bound on total process memory.
+
 One automatic pre-package backup precedes the batch when backups are enabled. The batch is not an atomic transaction and does not automatically roll back. If a later step fails, earlier completed changes remain installed or removed, including their lifecycle effects. Inspect actual package state, fix the reported problem and review a new request for the remaining work.
 
 Plugin registration, enabled state and running state are separate. Enabling or disabling a plugin can require a server restart. A restart boundary does not claim that code was hot-loaded or unloaded. Restart when instructed, refresh actual state and create a fresh review for dependent work.
