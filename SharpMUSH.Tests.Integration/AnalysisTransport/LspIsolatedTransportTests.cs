@@ -141,7 +141,7 @@ public class LspIsolatedTransportTests
 			await Send(socket, new { jsonrpc = "2.0", id = 3, method = "unknown" });
 			await Assert.That((await Receive(socket)).GetProperty("id").GetInt32()).IsEqualTo(3);
 		}
-		catch (Exception exception) when (exception is OperationCanceledException or TimeoutException or WebSocketException)
+		catch (Exception exception) when (exception is OperationCanceledException or TimeoutException or WebSocketException or JsonException)
 		{
 			throw new InvalidOperationException($"LSP diagnostic-close test failed while {phase}.\n{analyzer.DescribeProjection()}", exception);
 		}
