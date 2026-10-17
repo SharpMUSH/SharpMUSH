@@ -98,10 +98,11 @@ objects:
       # An attribute with an empty body is skipped. Writing a multi-word topic creates the branch
       # above it -- +help/write "house rules" sets HELP`HOUSE`RULES, and the engine materializes an
       # empty HELP`HOUSE -- which would otherwise list as a topic named "house" with nothing in it.
+      # Missing objects must not turn lattr() error words into phantom topic records.
       # %0 a source — its topics as records
       FUN`SOURCE`RECORDS:
         value: |-
-          iter(u(%!/FUN`SOURCE`OBJECTS,%0),iter(lattr(%i0/HELP`**),if(strlen(get(%i1/%i0)),%0:[num(%i1)]:%i0),%b,%b),%b,%b)
+          iter(u(%!/FUN`SOURCE`OBJECTS,%0),if(isdbref(%i0),iter(lattr(%i0/HELP`**),if(strlen(get(%i1/%i0)),%0:[num(%i1)]:%i0),%b,%b)),%b,%b)
         flags: [funsyntax]
       # no arguments — every topic in the game, as records
       FUN`GET`RECORDS:
@@ -489,12 +490,12 @@ objects:
         value: |-
           @assert words(%<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think setq(page_count,u(%!/FUN`PAGE`COUNT,%<list>)); @assert lte(%<page>,%q<page_count>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<page_count>,1),are %q<page_count> pages,is one page)] — you asked for page %<page>.; @pemit %#=uargs(%!/FUN`DISPLAY`LISTING,title,%<title>,list,%<list>,page,%<page>,pages,%q<page_count>,head,%<head>,tail,%<tail>)
         flags: [cmdsyntax]
-      # One topic renders; none reports the miss; several list the qualified candidates as +help/list
-      # does, titled with how they were found.
+      # A topic match wins; a source with readable records lists through the same renderer as
+      # +help/list. Empty, unavailable and inaccessible sources keep the ordinary topic miss.
       # named: query as typed · page, for several matches.
       INC`DO`SHOW:
         value: |-
-          @assert strlen(trim(%<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think setq(help_records,u(%!/FUN`GET`RECORDS))[setq(help_matches,u(%!/FUN`GET`LOOKUP,%q<help_records>,%<query>))]; @assert words(%q<help_matches>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<help_matches>),1)={@include/args %!/INC`DO`LISTING=list,%q<help_matches>,title,switch(%q<help_lookup_kind>,command,Topics about [u(%!/FUN`GET`COMMAND,%<query>)],near,Topics with '%q<help_query>' in their names,Topics matching '%q<help_query>'),head,+help,tail,trim(%<query>),page,%<page>}; @assert lte(%<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %<page>.; @pemit %#=u(%!/FUN`DISPLAY`TOPIC,%q<help_records>,%q<help_matches>)
+          @assert strlen(trim(%<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think setq(help_records,u(%!/FUN`GET`RECORDS))[setq(help_matches,u(%!/FUN`GET`LOOKUP,%q<help_records>,%<query>))]; @break cand(not(words(%q<help_matches>)),words(setr(source_matches,u(%!/FUN`GET`OF,%q<help_records>,lcstr(trim(%<query>))))))={@include/args %!/INC`DO`LISTING=list,%q<source_matches>,title,Topics: [lcstr(trim(%<query>))],head,+help/list,tail,lcstr(trim(%<query>)),page,%<page>}; @assert words(%q<help_matches>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<help_matches>),1)={@include/args %!/INC`DO`LISTING=list,%q<help_matches>,title,switch(%q<help_lookup_kind>,command,Topics about [u(%!/FUN`GET`COMMAND,%<query>)],near,Topics with '%q<help_query>' in their names,Topics matching '%q<help_query>'),head,+help,tail,trim(%<query>),page,%<page>}; @assert lte(%<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %<page>.; @pemit %#=u(%!/FUN`DISPLAY`TOPIC,%q<help_records>,%q<help_matches>)
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
@@ -635,6 +636,7 @@ objects:
 
           - `+help` — a compact grid of source links
           - `+help <topic>` — a topic; `*` and `?` wildcard, so `+help scene*` works
+          - `+help <source>` — its topic list when no topic matches the name
           - `+help <source>/<topic>` — when two sources claim the same name
           - `+help/list \[<source>\]` — every topic, or one source's
           - `+help/search <text>` — topic names and bodies containing the text
