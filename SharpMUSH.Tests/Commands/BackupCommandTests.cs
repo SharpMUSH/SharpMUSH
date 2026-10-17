@@ -68,7 +68,7 @@ public class BackupCommandTests : ServerTestBase
 		await Assert.That(messages.Any(message =>
 				message.Contains("@backup is not available here", StringComparison.OrdinalIgnoreCase)
 				|| message.Contains("No backups have been taken yet", StringComparison.OrdinalIgnoreCase)
-				|| message.Contains("Backups in ", StringComparison.OrdinalIgnoreCase)))
+				|| message.Contains("Backup inventory", StringComparison.OrdinalIgnoreCase)))
 			.IsTrue();
 	}
 

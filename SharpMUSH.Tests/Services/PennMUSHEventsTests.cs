@@ -66,7 +66,7 @@ public class PennMUSHEventsTests
 	public async Task TheBackupScheduleWarnsAtFiveAndOneMinutesThenBacksUp()
 	{
 		var runner = Substitute.For<IBackupRunner>();
-		runner.RunAsync(Arg.Any<DBRef?>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
+		runner.RunAsync(Arg.Any<DBRef?>(), Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
 		var schedule = CreateSchedule(runner);
 		var interval = TimeSpan.FromMinutes(10);
 
@@ -79,10 +79,10 @@ public class PennMUSHEventsTests
 
 		await schedule.TickAsync(Start + TimeSpan.FromMinutes(9), interval);
 		await runner.Received(1).WarnAsync(1);
-		await runner.DidNotReceive().RunAsync(Arg.Any<DBRef?>(), Arg.Any<CancellationToken>());
+		await runner.DidNotReceive().RunAsync(Arg.Any<DBRef?>(), Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>());
 
 		await schedule.TickAsync(Start + TimeSpan.FromMinutes(10), interval);
-		await runner.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
+		await runner.Received(1).RunAsync(null, Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>());
 
 		await schedule.TickAsync(Start + TimeSpan.FromMinutes(15), interval);
 		await runner.Received(2).WarnAsync(5);
@@ -92,7 +92,7 @@ public class PennMUSHEventsTests
 	public async Task AScheduleShorterThanFiveMinutesWarnsOnlyAtOne()
 	{
 		var runner = Substitute.For<IBackupRunner>();
-		runner.RunAsync(Arg.Any<DBRef?>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
+		runner.RunAsync(Arg.Any<DBRef?>(), Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
 		var schedule = CreateSchedule(runner);
 		var interval = TimeSpan.FromMinutes(3);
 
@@ -103,7 +103,7 @@ public class PennMUSHEventsTests
 
 		await runner.DidNotReceive().WarnAsync(5);
 		await runner.Received(1).WarnAsync(1);
-		await runner.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
+		await runner.Received(1).RunAsync(null, Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -130,7 +130,7 @@ public class PennMUSHEventsTests
 	public async Task AWrittenBackupRaisesBackupAndDumpComplete()
 	{
 		var backups = Substitute.For<IWorldBackupService>();
-		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
+		backups.CreateAsync(Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(Written));
 		var events = Substitute.For<IEventService>();
 		var broadcast = Substitute.For<IGameBroadcastService>();
 		var runner = new BackupRunner(backups, events, broadcast, Options(), NullLogger<BackupRunner>.Instance);
@@ -151,7 +151,7 @@ public class PennMUSHEventsTests
 	public async Task AFailedBackupRaisesDumpErrorAndTellsWizards()
 	{
 		var backups = Substitute.For<IWorldBackupService>();
-		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(new Error<string>("disk full")));
+		backups.CreateAsync(Arg.Any<BackupProvenance>(), Arg.Any<CancellationToken>()).Returns(new Result<WorldBackup>(new Error<string>("disk full")));
 		var events = Substitute.For<IEventService>();
 		var broadcast = Substitute.For<IGameBroadcastService>();
 		var runner = new BackupRunner(backups, events, broadcast, Options(), NullLogger<BackupRunner>.Instance);
@@ -255,7 +255,7 @@ public class PennMUSHEventsTests
 		await service.HandleAsync(SignalEventsService.UserSignal.Usr2);
 
 		await restart.Received(1).RestartAsync("SIGUSR1");
-		await backups.Received(1).RunAsync(null, Arg.Any<CancellationToken>());
+		await backups.Received(1).RunAsync(null, Arg.Is<BackupProvenance>(provenance => provenance.Trigger == "SIGUSR2"), Arg.Any<CancellationToken>());
 		await events.DidNotReceive().TriggerEventAsync(Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 

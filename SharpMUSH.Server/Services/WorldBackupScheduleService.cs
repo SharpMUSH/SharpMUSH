@@ -110,7 +110,7 @@ public sealed class WorldBackupScheduleService(
 		}
 
 		StartCycle(now);
-		if (await runner.RunAsync(null, cancellationToken) is WorldBackup backup)
+		if (await runner.RunAsync(null, new BackupProvenance("scheduled"), cancellationToken) is WorldBackup backup)
 		{
 			logger.LogInformation("Scheduled world backup {Name} written", backup.Name);
 		}

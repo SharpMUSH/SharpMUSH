@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -25,14 +26,24 @@ public partial class Commands
 	/// keeps, with the retention policy for each. <c>/PURGE</c> runs a retention pass now, under that
 	/// policy — which, unless the server was configured otherwise, keeps everything.</para>
 	/// </summary>
-	[SharpCommand(Name = "@STORAGE", Switches = ["HISTORY", "PURGE"], Behavior = CB.Default,
-		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@STORAGE", Switches = ["HISTORY", "PURGE", "BACKUPS"], Behavior = CB.Default,
+		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 1, ParameterNames = ["page"])]
 	public async ValueTask<Option<CallState>> Storage(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
+		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
+		if (argument.Length > 0 && !switches.Contains("BACKUPS"))
+		{
+			await NotifyService.Notify(executor, "Only @storage/backups accepts a page number.");
+			return CallState.Empty;
+		}
 
-		if (switches.Contains("PURGE"))
+		if (switches.Contains("BACKUPS"))
+		{
+			await BackupInventoryAsync(executor, argument);
+		}
+		else if (switches.Contains("PURGE"))
 		{
 			await StoragePurgeAsync(executor);
 		}
@@ -125,6 +136,7 @@ public partial class Commands
 					("Path", backup.Root),
 					("Copies", $"{backup.Copies} of {backup.Keep} kept, {DescribeKnownBytes(backup.CopiesBytes)}"),
 					("Next copy", $"{DescribeKnownBytes(backup.NextCopyBytes)}, {DescribeKnownBytes(backup.PeakBytes)} at the peak"))]));
+			parts.Add(new TextBlock(MarkupText.Plain("Inventory: @storage/backups [page] (includes pre-package copies).")));
 		}
 
 		if (report.Leftovers.Count > 0)
@@ -144,6 +156,48 @@ public partial class Commands
 		parts.Add(new Bullets([.. StorageNotes(report, backup).Select(note => (Block)new TextBlock(MarkupText.Plain(note)))]));
 
 		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Storage"), [.. parts]), 78));
+	}
+
+	/// <summary>Both backup commands show the same read-only inventory, ten copies at a time.</summary>
+	private async ValueTask BackupInventoryAsync(AnySharpObject executor, string argument)
+	{
+		if (!WorldBackupService.IsSupported)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
+				executor, WorldBackupService.UnavailableReason);
+			return;
+		}
+
+		var page = 1;
+		if (argument.Length > 0 && (!int.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out page) || page < 1))
+		{
+			await NotifyService.Notify(executor, "Use @storage/backups <positive page number> or @backup/list <page>.");
+			return;
+		}
+
+		var inventory = WorldBackupInventory.Read(WorldBackupService, page);
+		if (page > inventory.Pages)
+		{
+			await NotifyService.Notify(executor, $"There are {inventory.Pages} backup inventory page(s).");
+			return;
+		}
+
+		var parts = new List<Block>();
+		foreach (var entry in inventory.Entries)
+		{
+			parts.Add(new Rule(MarkupText.Plain(entry.Backup.Name + (entry.Backup.IsLatest ? " (latest in group)" : ""))));
+			parts.Add(new Fields([.. Facts(
+				("Created", entry.Timestamp), ("Backup size", entry.Size), ("Reason", entry.Reason),
+				("Initiator", entry.Backup.Provenance?.Initiator ?? "unknown"),
+				("Operation", entry.Backup.Provenance?.Operation ?? "unknown"),
+				("Package", entry.Backup.Provenance?.Package ?? "unknown"),
+				("Status", entry.Backup.Status), ("Retention", entry.Keep > 0 ? $"{entry.Group}; keep {entry.Keep}" : $"{entry.Group}; automatic copies disabled"),
+				("Recovery path", entry.Backup.Path))]));
+		}
+
+		if (inventory.Total == 0) parts.Add(new TextBlock(MarkupText.Plain("No backups on disk.")));
+		parts.Add(new TextBlock(MarkupText.Plain($"Page {page}/{inventory.Pages}; {inventory.Total} copies. @storage/backups <page> or @backup/list <page>.")));
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Backup inventory"), [.. parts]), 78));
 	}
 
 	/// <summary>The few things the figures alone do not say.</summary>

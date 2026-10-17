@@ -33,6 +33,170 @@ public class WorldBackupWriterTests
 			NullLogger.Instance,
 			clock);
 
+	[Test]
+	public async Task UnsupportedLinkInspectionStillReadsTextPointerAndDoesNotFailCompletedCopies()
+	{
+		var root = TempPath();
+		try
+		{
+			var writer = Writer(root, 2, new FrozenClock(Instant));
+			var first = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var second = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var link = Path.Join(root, "latest");
+			if (Directory.Exists(link)) Directory.Delete(link);
+			File.WriteAllText(Path.Join(root, "latest.txt"), second.Name);
+			var unsupported = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 2 },
+				(dir, _) =>
+				{
+					File.WriteAllText(Path.Join(dir, "world"), "x");
+					return ValueTask.CompletedTask;
+				}, NullLogger.Instance, new FrozenClock(Instant))
+			{
+				ReadLinkTarget = _ => throw new PlatformNotSupportedException("link inspection unavailable")
+			};
+			var listed = unsupported.List();
+			await Assert.That(listed[0].Name).IsEqualTo(second.Name);
+			await Assert.That(listed[0].IsLatest).IsTrue();
+			await Assert.That(listed[1].IsLatest).IsFalse();
+			var third = (await unsupported.CreateAsync()).Expect<WorldBackup>();
+			await Assert.That(Directory.Exists(third.Path)).IsTrue();
+			await Assert.That(unsupported.List().Count).IsEqualTo(2);
+			await Assert.That(Directory.Exists(first.Path)).IsFalse();
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, true);
+		}
+	}
+
+	[Test]
+	public async Task OneInventoryUsesOneLatestPointerSnapshot()
+	{
+		var root = TempPath();
+		try
+		{
+			var writer = Writer(root, 2, new FrozenClock(Instant));
+			var first = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var second = (await writer.CreateAsync()).Expect<WorldBackup>();
+			var reads = 0;
+			var reader = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 2 },
+				(_, _) => throw new InvalidOperationException("The inventory must not create a backup."), NullLogger.Instance)
+			{
+				ReadLinkTarget = _ => ++reads == 1 ? second.Name : first.Name
+			};
+			var listed = reader.List();
+			await Assert.That(listed.Count(backup => backup.IsLatest)).IsEqualTo(1);
+			await Assert.That(listed.Single(backup => backup.IsLatest).Name).IsEqualTo(second.Name);
+			await Assert.That(reads).IsEqualTo(1);
+		}
+		finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+	}
+
+	[Test]
+	public async Task MetadataFailureDoesNotPromoteOrPruneACopy()
+	{
+		var root = TempPath();
+		try
+		{
+			var first = (await Writer(root, 1, new FrozenClock(Instant)).CreateAsync()).Expect<WorldBackup>();
+			var writer = new WorldBackupWriter(new WorldBackupOptions { Root = root, Keep = 1 },
+				(dir, _) =>
+				{
+					File.WriteAllText(Path.Join(dir, "world"), "x");
+					Directory.CreateDirectory(Path.Join(dir, "backup.json"));
+					return ValueTask.CompletedTask;
+				}, NullLogger.Instance, new FrozenClock(Instant));
+			(await writer.CreateAsync()).Expect<Error<string>>();
+			await Assert.That(writer.List().Select(copy => copy.Name)).IsEquivalentTo([first.Name]);
+			await Assert.That(writer.List()[0].IsLatest).IsTrue();
+			await Assert.That(Directory.EnumerateDirectories(root, ".incoming-*").Any()).IsFalse();
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, true);
+		}
+	}
+
+	[Test]
+	public async Task CompletedCopyPersistsMetadataBeforePromotion()
+	{
+		var root = TempPath();
+		try
+		{
+			var backup = (await Writer(root, 2, new FrozenClock(Instant)).CreateAsync()).Expect<WorldBackup>();
+			await Assert.That(File.Exists(Path.Join(backup.Path, "backup.json"))).IsTrue();
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	[Arguments("manual administrator request", "#7", null)]
+	[Arguments("scheduled", null, null)]
+	[Arguments("pre-package", "admin-account", "install")]
+	[Arguments("pre-package", "admin-account", "update")]
+	[Arguments("pre-package", "admin-account", "rollback")]
+	[Arguments("pre-package", "admin-account", "uninstall")]
+	public async Task ProvenanceSurvivesRestartRetentionAndLatest(string trigger, string? initiator, string? operation)
+	{
+		var root = TempPath();
+		try
+		{
+			var writer = Writer(root, 2, new FrozenClock(Instant));
+			var first = (await writer.CreateAsync(new BackupProvenance(trigger, initiator, operation, "example v1"))).Expect<WorldBackup>();
+			var second = (await writer.CreateAsync(new BackupProvenance("scheduled"))).Expect<WorldBackup>();
+			var restarted = Writer(root, 2, new FrozenClock(Instant.AddHours(-1)));
+			var listed = restarted.List();
+			await Assert.That(listed[1].Provenance).IsEqualTo(new BackupProvenance(trigger, initiator, operation, "example v1"));
+			await Assert.That(listed[1].CreatedAt).IsEqualTo(Instant);
+			await Assert.That(listed[0].IsLatest).IsTrue();
+			await Assert.That(listed[1].IsLatest).IsFalse();
+			await Assert.That(listed[1].SizeBytes).IsEqualTo(Directory.EnumerateFiles(first.Path).Sum(file => new FileInfo(file).Length));
+			await restarted.CreateAsync(new BackupProvenance("manual administrator request", "#1"));
+			var kept = restarted.List();
+			await Assert.That(Directory.Exists(first.Path)).IsFalse();
+			await Assert.That(kept.Count).IsEqualTo(2);
+			await Assert.That(kept[0].Provenance!.Initiator).IsEqualTo("#1");
+			await Assert.That(kept[0].IsLatest).IsTrue();
+			await Assert.That(kept[1].Name).IsEqualTo(second.Name);
+			await Assert.That(kept[1].Provenance!.Trigger).IsEqualTo("scheduled");
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task LegacyAndDamagedMetadataStayHonestAndIncomingIsNeverListed()
+	{
+		var root = TempPath();
+		try
+		{
+			var legacy = Path.Join(root, "20260101-000000-000");
+			Directory.CreateDirectory(legacy);
+			File.WriteAllText(Path.Join(legacy, "world"), "old world");
+			Directory.CreateDirectory(Path.Join(root, ".incoming-abandoned"));
+			var writer = Writer(root, 5, new FrozenClock(Instant));
+			var copy = (await writer.CreateAsync()).Expect<WorldBackup>();
+			File.WriteAllText(Path.Join(copy.Path, "backup.json"), "{broken");
+			var listed = writer.List();
+			await Assert.That(listed.Count).IsEqualTo(2);
+			await Assert.That(listed[0].IsRecoverable).IsFalse();
+			await Assert.That(listed[0].Status).Contains("not recoverable");
+			await Assert.That(listed[1].Provenance).IsNull();
+			await Assert.That(listed[1].Status).Contains("legacy");
+			await Assert.That(listed[1].SizeBytes).IsEqualTo(9);
+			await Assert.That(File.Exists(Path.Join(legacy, "backup.json"))).IsFalse();
+		}
+		finally
+		{
+			if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+		}
+	}
+
 	/// <summary>
 	/// Retention frees the oldest name. A copy that reused it would sort oldest and be pruned the
 	/// moment it was written.

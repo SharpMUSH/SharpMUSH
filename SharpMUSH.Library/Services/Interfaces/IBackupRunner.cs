@@ -20,6 +20,10 @@ public interface IBackupRunner
 	/// <c>DUMP`COMPLETE</c>; a failed one raises <c>BACKUP`ERROR</c> and <c>DUMP`ERROR</c> and tells wizards and
 	/// royalty.
 	/// </summary>
-	/// <param name="enactor">Who asked for it; null for the schedule.</param>
+	/// <param name="enactor">Who asked for it; null for an automatic trigger.</param>
 	ValueTask<Result<WorldBackup>> RunAsync(DBRef? enactor, CancellationToken cancellationToken = default);
+
+	/// <summary>Runs a backup with the trigger supplied explicitly by its caller.</summary>
+	ValueTask<Result<WorldBackup>> RunAsync(DBRef? enactor, BackupProvenance provenance, CancellationToken cancellationToken = default)
+		=> RunAsync(enactor, cancellationToken);
 }
