@@ -109,7 +109,7 @@ line no verb matches answers with the switch's usage line instead of `Huh?`.
 | `+scene/edit <id>=<before>^^^<after>` · `/rewrite <id>=<text>` | fix a typo in your pose · replace its text |
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |
-| `+scene/schedule <when>/<title>=<pitch>` | schedule a roomless future scene with a required nonblank pitch; `<when>` is a date `convtime()` reads (`2026-12-31 20:00`), `+<n>h`/`+<n>d`/`+<n>w` from now, or epoch seconds, and must be to come |
+| `+scene/schedule <when>/<title>=<pitch>` | schedule a roomless future scene with a required nonblank pitch; `<when>` uses `dateparse()` (for example `tomorrow 7pm`, `next Tuesday 18:30`, `in 7 days at 18:30`, `first Saturday of next month at noon`, ISO or epoch seconds), and must be to come; the original single `+<n>h`/`+<n>d`/`+<n>w` forms keep their elapsed-seconds meaning |
 | `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming [<days>\|all]` (`+scenes`, `+events`) | manage / list scheduled, grouped by day, 30 days ahead unless told (``DATA`CONFIG`SCHEDULE-DAYS``); rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
 | `+pot` | pose tracker (turn order for the focused scene, idle time and the length of each last pose) |
 
@@ -138,3 +138,11 @@ think scenepose(scenewhere(loc(me)), first(sceneposes(scenewhere(loc(me)))), con
 
 The portal `/scenes` browser and `/scenes/{id}/live` feed read the same data over
 `/api/scenes`; the live page receives each new pose over `game.scene.{id}` as it is captured.
+
+### Natural scheduling times
+
+Schedule, reschedule and timed pause share `dateparse()`'s bounded English grammar. Dates without clocks (`next Tuesday`), vague dayparts (`tomorrow evening`), ambiguous numeric dates (`03/04`) and abbreviations (`CST`) produce guidance before any scene write. Clock-only input means today, so an already-past clock is refused rather than moved to tomorrow. Use `tomorrow 19:00` to say that explicitly. Ranges and recurring schedules are unsupported.
+
+`this Tuesday` is in the current Monday-based week; `next Tuesday` is strictly later than today; `next week Tuesday` is in the following Monday-based week. Bare weekdays choose their next occurrence (today only before the given clock). Missing years use this year. New days/weeks/fortnights use the local calendar, while hours/minutes/seconds are elapsed; DST gaps or repeated clocks require another time or an explicit ISO offset. The legacy single `+3d`/`+1w` forms retain fixed elapsed durations for compatibility; `in 3 days` uses calendar days.
+
+Your valid `TZ` supplies the zone; without one the new scheduling grammar uses UTC. A zone on the expression overrides it: `+scene/schedule tomorrow 7pm America/Chicago/An evening / part two=A pitch / with slashes`. The first completely parsed prefix before a slash is the date; the remaining title and the pitch are retained. At most eight slash boundaries are tried. Replies show the actual resolved date, clock and zone. General `dateparse()` can return past times; these scene verbs always require a future time. See `help dateparse policies` for the complete contract.
