@@ -2178,6 +2178,29 @@
     "file": "datatable-function.md"
   },
   {
+    "id": "dateparse-function",
+    "lookup": "dateparse()",
+    "title": "dateparse()",
+    "aliases": [
+      "dateparse"
+    ],
+    "sections": [
+      {
+        "id": "policies",
+        "lookup": "dateparse policies",
+        "heading": "Calendar and ambiguity policies",
+        "aliases": []
+      },
+      {
+        "id": "examples",
+        "lookup": "dateparse examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "dateparse-function.md"
+  },
+  {
     "id": "debug",
     "lookup": "debug",
     "title": "DEBUG",
