@@ -204,12 +204,12 @@ public partial class Commands
 				return CallState.Empty;
 			}
 			// Exactly one incarnation-qualified sender, never a recipient list or a recycled bare dbref.
-			if (!DBRef.TryParse(context, out var target) || target!.Value.CreationMilliseconds is null)
+			if (!DBRef.TryParse(context, out var parsed) || parsed is not DBRef { CreationMilliseconds: not null } target)
 			{
 				await NotifyService.Notify(executor, "I can't find who last paged you.", executor);
 				return CallState.Empty;
 			}
-			recipientsText = target.Value.ToString();
+			recipientsText = target.ToString();
 		}
 		else if (!hasEquals || string.IsNullOrWhiteSpace(first.ToPlainText()))
 		{
