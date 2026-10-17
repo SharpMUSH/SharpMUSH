@@ -122,18 +122,28 @@ public class LspIsolatedTransportTests
 		await using var app = await StartApp(sessions: new FixedAnalysisSessions(analyzer));
 		using var socket = await Connect(app); await Initialize(socket);
 		const string uri = "file:///projection.fun";
-		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "slow[" } } });
-		await analyzer.Entered(TimeSpan.FromSeconds(3));
+		var phase = "sending didOpen";
 		try
 		{
+			await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "slow[" } } });
+			phase = "waiting for diagnostic projection";
+			await analyzer.Entered(TimeSpan.FromSeconds(3));
+			phase = "sending didClose";
 			await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didClose", @params = new { textDocument = new { uri } } });
+			phase = "waiting for empty diagnostics while projection is held";
 			await Assert.That((await Receive(socket)).GetProperty("params").GetProperty("diagnostics").GetArrayLength()).IsEqualTo(0);
 			analyzer.Release.Set();
+			phase = "checking first response after releasing projection";
 			await Send(socket, new { jsonrpc = "2.0", id = 2, method = "unknown" });
 			await Assert.That((await Receive(socket)).GetProperty("id").GetInt32()).IsEqualTo(2);
 			await Task.Delay(50);
+			phase = "checking second response for stale diagnostics";
 			await Send(socket, new { jsonrpc = "2.0", id = 3, method = "unknown" });
 			await Assert.That((await Receive(socket)).GetProperty("id").GetInt32()).IsEqualTo(3);
+		}
+		catch (Exception exception) when (exception is OperationCanceledException or TimeoutException or WebSocketException)
+		{
+			throw new InvalidOperationException($"LSP diagnostic-close test failed while {phase}.\n{analyzer.DescribeProjection()}", exception);
 		}
 		finally { analyzer.Release.Set(); }
 	}
