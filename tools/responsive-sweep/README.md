@@ -48,18 +48,23 @@ otherwise most of the run is failures rather than measurements.
 
 ## Setup
 
-There is no `package.json` at the repo root — this is a .NET repo, not a JS one — so this
-tool carries its own minimal `package.json` pinning `playwright-core@1.62.1`, the version
-whose `browsers.json` expects chromium revision `1234`, which is what is already present
-under `~/.cache/ms-playwright`. `playwright-core` never bundles or downloads a browser
-itself; it only launches whatever revision-matched build it finds in that cache. Installing
-a mismatched `playwright-core` version would either fail to find the cached browser or
-silently try to fetch one.
+This tool has its own `package.json` and lockfile pinning `playwright-core@1.62.1`.
+Dependency installation does not download Chromium; provision the matching browser
+explicitly on a fresh machine:
 
 ```bash
 cd tools/responsive-sweep
-npm install --offline   # resolves from the local npm cache; touches no network
+npm ci
+npx playwright-core install chromium
 ```
+
+The browser install downloads the revision required by the pinned dependency into
+Playwright's cache. Linux machines missing browser system libraries can use
+`npx playwright-core install --with-deps chromium`, as the layout CI workflow does.
+For an offline run, both the npm packages and matching browser must already be
+cached: `npm install --offline` installs only the dependencies. Alternatively set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing compatible system Chromium for the
+standalone table tests.
 
 `node_modules/` here is covered by the repo's root `.gitignore` (`node_modules/`), so
 nothing from this install is committed.
