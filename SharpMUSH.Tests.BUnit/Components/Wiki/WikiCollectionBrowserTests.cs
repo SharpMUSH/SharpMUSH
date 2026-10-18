@@ -25,4 +25,20 @@ public class WikiCollectionBrowserTests : TrackingBunitContext
 		await Assert.That(cut.Find(".wiki-collection-page").TextContent).Contains("Rule 0610");
 		await Assert.That(api.Requests.Any(path => path.Contains("skip=500", StringComparison.Ordinal))).IsTrue();
 	}
+	[Test]
+	public async Task RevokedNavigationRemovesPreviouslyVisibleCollectionChrome()
+	{
+		var (api, _) = WikiApiFake.Install(this);
+		api.CollectionRows = Enumerable.Range(0, 61)
+			.Select(i => WikiApiFake.Page("1", $"rule_{i:D2}", $"Rule {i:D2}", "guides")).ToArray();
+		var cut = Render<WikiCollectionBrowser>(parameters => parameters.Add(p => p.Collection, "all"));
+		cut.WaitForAssertion(() => cut.Find(".wiki-collection-page"));
+		api.Refuse = true;
+		await cut.FindAll(".wiki-collection-paging button")[1].ClickAsync(new());
+		cut.WaitForAssertion(() => cut.Find(".wiki-collection-error"));
+		await Assert.That(cut.FindAll(".wiki-collection-page")).IsEmpty();
+		await Assert.That(cut.FindAll(".wiki-collection-topics, .wiki-collection-directory")).IsEmpty()
+			.Because("a revoked navigation read must remove titles and categories retained from the previous authorized response");
+	}
+
 }

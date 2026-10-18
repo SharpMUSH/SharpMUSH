@@ -8,8 +8,8 @@
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
-@* D1 §6.1 wiki page sidebar (board 21): "Wiki · Main namespace · N pages", a search that lands on
-   the wiki home, Browse (Wiki home, Recent changes), the categories as image rows with counts, and
+@* D1 §6.1 wiki page sidebar (board 21): "Wiki · Main namespace · N pages", scoped collection search,
+   Browse (Wiki home, Recent changes), the categories as image rows with counts, and
    a dashed New page button for those who may create. Collapsed keeps the category covers. Hosted
    by WikiLayout until the shell's page-sidebar slot exists (Phase 1). *@
 <SidebarPanel Class="wiki-side" Collapsed="@Collapsed">
@@ -24,6 +24,7 @@
     <SidebarGroup Class="wiki-side-browse" Label="@Loc["NavWikiBrowse"]">
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavWikiHome"]" Href="@WikiLocaleLinks.WithLocale("/wiki", _locale)" IsCurrent="@(_path == "/wiki")" Collapsed="@Collapsed" />
         <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.History" Label="@Loc["NavWikiRecentChanges"]" Href="@WikiLocaleLinks.WithLocale("/wiki/recent", _locale)" IsCurrent="@(_path == "/wiki/recent")" Collapsed="@Collapsed" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Search" Label="@Loc["WikiAllCollections"]" Href="@GlobalSearchHref" Collapsed="@Collapsed" />
     </SidebarGroup>
     @if (_failed)
     {
@@ -49,8 +50,8 @@
         <SidebarGroup Class="wiki-side-cats" Label="@Loc["NavWikiCategories"]">
             @foreach (var category in navigation.Categories.Where(row => row.Pinned))
             {
-                var route = "/wiki/collections/" + Uri.EscapeDataString(navigation.Collection) + "?category=" + Uri.EscapeDataString(category.Key);
-                <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@WikiLocaleLinks.WithLocale(route, _locale)" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
+                var route = WikiJourneyLinks.Collection(WikiBrowseState.FromUri(Nav.Uri, navigation.Collection) with { Category = category.Key, Skip = 0 });
+                <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@route" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
             }
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.List" Label="@Loc["WikiBrowseAllCategories"]" Href="@WikiLocaleLinks.WithLocale("/wiki/collections/" + Uri.EscapeDataString(navigation.Collection), _locale)" Collapsed="@Collapsed" />
         </SidebarGroup>
@@ -85,6 +86,7 @@
     [Parameter] public bool Collapsed { get; set; }
 
     private WikiNavigationDto? _navigation;
+    private string? _authorizedUri;
     private bool _failed;
     private int _loadVersion;
     private bool _disposed;
@@ -96,6 +98,7 @@
             : navigation.Collections.FirstOrDefault(row => row.Id == navigation.Collection)?.Name ?? Loc["WikiGameCollection"]
         : Loc["WikiGameCollection"];
     private bool _newOpen;
+    private string GlobalSearchHref => WikiJourneyLinks.Collection(WikiBrowseState.FromUri(Nav.Uri, "all") with { Category = null, Skip = 0 });
     private string NewPageHref => WikiLocaleLinks.WithLocale("/wiki/main/new-page/edit", _locale);
     private string _newTitle = string.Empty;
 
@@ -109,29 +112,45 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         Locate();
-        _ = InvokeAsync(async () => { await LoadNavigationAsync(); if (!_disposed) StateHasChanged(); });
+        _ = InvokeAsync(async () =>
+        {
+            var load = LoadNavigationAsync();
+            if (!_disposed) StateHasChanged();
+            await load;
+            if (!_disposed) StateHasChanged();
+        });
     }
 
     private async Task LoadNavigationAsync()
     {
+        if (_disposed) return;
         var version = ++_loadVersion;
+        var requestedUri = Nav.Uri;
+        var path = _path;
+        var locale = _locale;
+        // A directory authorizes actions only for the route that requested it.
+        _navigation = null;
+        _authorizedUri = null;
+        _failed = false;
         string? collection = null;
         string? page = null;
-        if (_path.StartsWith("/wiki/collections/", StringComparison.Ordinal))
-            collection = Uri.UnescapeDataString(_path["/wiki/collections/".Length..]);
-        else if (_path.StartsWith("/wiki/", StringComparison.Ordinal) && _path[6..].Split('/').Length == 2)
-            page = _path[6..];
-        var result = await Wiki.GetNavigationAsync(collection, page, lang: _locale);
-        if (_disposed || version != _loadVersion) return;
+        if (path.StartsWith("/wiki/collections/", StringComparison.Ordinal))
+            collection = Uri.UnescapeDataString(path["/wiki/collections/".Length..]);
+        else if (path.StartsWith("/wiki/", StringComparison.Ordinal) && path[6..].Split('/').Length == 2)
+            page = path[6..];
+        var result = await Wiki.GetNavigationAsync(collection, page, lang: locale);
+        if (_disposed || version != _loadVersion || requestedUri != Nav.Uri) return;
         _navigation = result is WikiNavigationDto navigation ? navigation : null;
+        _authorizedUri = _navigation is null ? null : requestedUri;
         _failed = _navigation is null;
     }
 
     private void Locate()
     {
         var path = "/" + Nav.ToBaseRelativePath(Nav.Uri);
-        _category = System.Web.HttpUtility.ParseQueryString(new Uri(Nav.Uri).Query)["category"];
-        _locale = WikiLocaleLinks.FromUri(Nav.Uri);
+        var state = WikiBrowseState.FromUri(Nav.Uri, "game");
+        _category = state.Category;
+        _locale = state.Locale;
         var cut = path.IndexOfAny(['?', '#']);
         _path = (cut >= 0 ? path[..cut] : path).TrimEnd('/');
         if (_path.Length == 0) _path = "/";
@@ -141,7 +160,8 @@
 
     private void Search(string term)
     {
-        Nav.NavigateTo(WikiLocaleLinks.WithLocale(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}", _locale));
+        if (_navigation is not { } navigation || _authorizedUri != Nav.Uri) return;
+        Nav.NavigateTo(WikiJourneyLinks.Collection(new WikiBrowseState(navigation.Collection, term, _category, 0, _locale)));
     }
 
     private void CreatePage()
