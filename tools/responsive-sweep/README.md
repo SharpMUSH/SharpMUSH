@@ -382,3 +382,8 @@ Its fixture is the Longsword article rendered by the shared wiki pipeline from
 `pf2e-remaster` 1.1.1 at the source revision recorded in the fixture comment.
 For an existing system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` when running
 `node --test wiki-tables.test.mjs`; otherwise Playwright uses its installed browser.
+
+The README-context case applies the dialog's source CSS with its `::deep` scope
+combinator removed in the isolated shell. It forces a wide native table and
+checks that the focusable wrapper owns overflow and visible keyboard focus;
+it does not claim to exercise the compiled dialog or full Blazor application.

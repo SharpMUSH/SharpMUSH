@@ -43,3 +43,34 @@ main { padding:20px 28px; max-width:640px; margin:auto; }
         await browser.close();
     }
 });
+
+// Exercise the component's source rules without Blazor's generated scope selector; the
+// actual scoped component lifecycle is a separate .NET concern.
+const readmeCss = readFileSync(new URL('../../SharpMUSH.Client/Components/Admin/PackageReadmeDialog.razor.css', import.meta.url), 'utf8').replaceAll('::deep', '');
+
+test('package README table wrappers own keyboard scrolling and a visible focus indicator', async () => {
+    const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE });
+    try {
+        const page = await browser.newPage({ viewport: { width: 320, height: 900 } });
+        await page.setContent(`<style>${shell}
+${readmeCss}
+body { margin:0; font:15px Arial,sans-serif; --accent:#008866; }
+main { padding:20px 28px; }
+/* Force a wide README table independently of this article's wrapping text. */
+.package-readme table { min-width:640px; }
+</style><main><div class="package-readme">${fixture}</div></main>`);
+        const wrapper = page.locator('.wiki-table-scroll');
+        assert.equal(await wrapper.evaluate(element => getComputedStyle(element).overflowX), 'auto');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 320);
+        assert.equal(await page.getByRole('table').count(), 1);
+        assert.equal(await page.getByRole('columnheader').count(), 6);
+        await page.keyboard.press('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.className), 'wiki-table-scroll');
+        assert.equal(await wrapper.evaluate(element => getComputedStyle(element).outlineStyle), 'solid');
+        await page.keyboard.press('ArrowRight');
+        await page.waitForFunction(() => document.querySelector('.wiki-table-scroll').scrollLeft > 0);
+        assert.equal(await page.locator('table').evaluate(element => getComputedStyle(element).display), 'table');
+    } finally {
+        await browser.close();
+    }
+});
