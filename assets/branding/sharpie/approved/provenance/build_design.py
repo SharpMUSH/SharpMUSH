@@ -1,5 +1,5 @@
 from pathlib import Path
-import json, html
+import json
 root=Path('assets/branding/sharpie/approved')
 m=json.loads((root/'provenance/measurements.json').read_text())
 labels={'primary':'Primary head','primary-badge':'Primary circular badge','smile':'Smiling head','minimal':'Minimal sitting mascot'}

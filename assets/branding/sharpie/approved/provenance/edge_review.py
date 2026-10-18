@@ -1,6 +1,6 @@
 """Render 4x vector edge proofs and validate structure, palette and source reuse."""
 from pathlib import Path
-import subprocess,json,xml.etree.ElementTree as ET
+import subprocess,xml.etree.ElementTree as ET
 from PIL import Image,ImageDraw
 p=Path('assets/branding/sharpie/approved');scratch=Path('work/sharpie-production');scratch.mkdir(parents=True,exist_ok=True);out=p/'provenance/edge-review';out.mkdir(exist_ok=True)
 names=['sharpie-primary','sharpie-primary-badge','sharpie-smile','sharpie-minimal']
@@ -14,7 +14,7 @@ for name in names:
  proof=Image.new('RGB',(4096,2112),'#E5E7EB');d=ImageDraw.Draw(proof);d.rectangle((2048,0,4096,2112),fill='#10242D')
  proof.paste(im,(0,64),im);proof.paste(im,(2048,64),im);d.text((32,24),f'{name} | 4x native SVG render | light',fill='#17333E');d.text((2080,24),f'{name} | 4x native SVG render | dark',fill='#FFFFFF');proof.save(out/f'{name}-4x.png')
  # A full-width image plus small edge crops makes every contour easy to inspect.
- tiles=Image.new('RGB',(1600,1600),'#E5E7EB');td=ImageDraw.Draw(tiles)
+ tiles=Image.new('RGB',(1600,1600),'#E5E7EB')
  regions=[(200,80,1000,880),(1000,80,1800,880),(200,1180,1000,1980),(1000,1180,1800,1980)]
  for i,region in enumerate(regions):
   crop=im.crop(region);x=(i%2)*800;y=(i//2)*800;tiles.paste(crop,(x,y),crop)

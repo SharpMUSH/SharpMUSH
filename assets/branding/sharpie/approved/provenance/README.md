@@ -37,9 +37,10 @@ From the repository root, create `work/sharpie-production`, set `TMPDIR`, `TMP` 
 
 ```sh
 python assets/branding/sharpie/approved/provenance/reconstruct.py
+python assets/branding/sharpie/approved/provenance/build_design.py
 python assets/branding/sharpie/approved/provenance/edge_review.py
 ```
 
-Requires Python/Pillow and Inkscape. No tracing package or original temporary attachment is needed. The source script regenerates SVGs, transparent 1024px PNGs, measured feature bounds, hashes and the dual-background preview. The review script validates SVG structure, unique IDs, palette and transparent corners, then creates native 4x light/dark render proofs and enlarged edge crops.
+Requires Python/Pillow and Inkscape. No tracing package or original temporary attachment is needed. The source script regenerates SVGs, transparent 1024px PNGs, measured feature bounds, hashes and the dual-background preview. The design builder refreshes `../sharpie-design-standard.html` and `../README.md` from the regenerated measurements. The review script validates SVG structure, unique IDs, palette and transparent corners, then creates native 4x light/dark render proofs and enlarged edge crops.
 
 All four marks were rendered at 2048px and visually reviewed on light gray and dark backgrounds. The contour review covered ears, forehead marks, eyes, cheek tips, chin joins, body/paws and tail. Proofs are retained in `edge-review/`. These checks establish the delivered geometry and its rendering; very small favicon sizes, print processes, embroidery and future animation rigs still require medium-specific optical checks.
