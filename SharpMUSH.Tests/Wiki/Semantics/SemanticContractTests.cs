@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
-using SharpMUSH.Tools.WikiSemantics;
+using SharpMUSH.Library.Models.Wiki.Semantics;
+using SharpMUSH.Library.Wiki.Semantics;
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
 public class SemanticContractTests

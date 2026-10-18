@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Tools.WikiSemantics;
 

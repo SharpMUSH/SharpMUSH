@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text;
 using SharpMUSH.Tools.WikiSemantics;
 using SharpMUSH.Tools.WikiSemantics.Native;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
