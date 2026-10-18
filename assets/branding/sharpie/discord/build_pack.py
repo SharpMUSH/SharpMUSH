@@ -23,8 +23,13 @@ cx=(bounds[0]+bounds[2])/2;cy=(bounds[1]+bounds[3])/2
 base.set('viewBox',f'{cx-span/2:.6f} {cy-span/2:.6f} {span:.6f} {span:.6f}')
 # The primary's clipped facial group is the stable derivative boundary.
 detail=base.find(f'{{{NS}}}g/{{{NS}}}g')
-assert detail is not None and detail[7].get('id')=='forehead-m'
-assert detail[8].get('id')=='eye-left' and detail[13].get('id')=='nose-mouth'
+expected_tags=['path','path','g','path','g','path','g','path','path','path','g','ellipse','ellipse','path']
+if detail is None or [x.tag for x in detail]!=['{'+NS+'}'+tag for tag in expected_tags]:
+ raise ValueError(f'{source}: unexpected primary detail structure; refusing positional expression slicing')
+if (detail[7].get('id')!='forehead-m' or detail[8].get('id')!='eye-left' or detail[13].get('id')!='nose-mouth'
+ or [x.get('id') for x in detail[10]]!=['eye-right',None]
+ or detail.get('clip-path')!='url(#silhouette)'):
+ raise ValueError(f'{source}: primary expression boundaries changed; refusing positional expression slicing')
 original_eyes=[copy.deepcopy(x) for x in list(detail)[8:13]]
 original_mouth=copy.deepcopy(detail[13])
 def node(tag,**attrs):return ET.Element('{'+NS+'}'+tag,{k.replace('_','-'):str(v) for k,v in attrs.items()})
@@ -79,7 +84,8 @@ for name,ek,mk in specs:
  small=Image.open(p);assert small.size==(128,128) and small.mode=='RGBA' and small.getpixel((0,0))[3]==0
  manifest.append({'alpha_bounds':list(small.getchannel('A').getbbox()),'name':'sharpie_'+name,'file':'png-128/'+p.name,'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
 (HERE/'manifest.json').write_text(json.dumps({'source':'../approved/svg/sharpie-primary.svg','source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'format':'static transparent PNG','size':[128,128],'framing':{'method':'uniform visible-silhouette fit','target_long_edge_px':126,'safety_margin_px':1,'viewBox':[float(x) for x in base.get('viewBox').split()]},'emoji':manifest},indent=2)+'\n')
-font=ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans.ttf',15) if Path('/usr/share/fonts/TTF/DejaVuSans.ttf').exists() else ImageFont.load_default()
+try:font=ImageFont.truetype('DejaVuSans.ttf',15)
+except OSError:font=ImageFont.load_default()
 canvas=Image.new('RGB',(1152,760),'#E5E7EB');draw=ImageDraw.Draw(canvas)
 for row,bg in enumerate(('#E5E7EB','#313338')):
  draw.rectangle((0,row*380,1152,(row+1)*380),fill=bg)

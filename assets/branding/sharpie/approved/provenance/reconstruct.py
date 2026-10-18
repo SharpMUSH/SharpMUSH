@@ -57,7 +57,9 @@ for name,outer,detail,box,sheet,crop in P:
  svg=f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="title desc"><title id="title">{name.replace("-"," ").title()}</title><desc id="desc">Refined Sharpie path master in ink, mint and pure white.</desc><defs><clipPath id="silhouette"><path d="{outer}"/></clipPath></defs><g transform="translate({tx:.6f} {ty:.6f}) scale({s:.8f})">{base}<g clip-path="url(#silhouette)">{detail}</g></g></svg>'
  f=OUT/'svg'/f'{name}.svg';f.write_text(svg);r=ET.fromstring(svg);assert not any(x.tag.endswith(('image','script','foreignObject')) for x in r.iter())
  subprocess.run(['inkscape',str(f),'--export-type=png',f'--export-filename={OUT}/png/{name}.png','--export-width=2048'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
- im=Image.open(OUT/'png'/f'{name}.png').convert('RGBA');bounds=[v/4 for v in im.getchannel('A').getbbox()];im.resize((1024,1024),Image.Resampling.LANCZOS).save(OUT/'png'/f'{name}.png')
+ im=Image.open(OUT/'png'/f'{name}.png').convert('RGBA');alpha_bounds=im.getchannel('A').getbbox()
+ if alpha_bounds is None:raise ValueError(f'{name}: rendered asset has no visible alpha bounds')
+ bounds=[v/4 for v in alpha_bounds];im.resize((1024,1024),Image.Resampling.LANCZOS).save(OUT/'png'/f'{name}.png')
  query=subprocess.run(['inkscape',str(f),'--query-all'],check=True,capture_output=True,text=True).stdout
  features={}
  for line in query.splitlines():
