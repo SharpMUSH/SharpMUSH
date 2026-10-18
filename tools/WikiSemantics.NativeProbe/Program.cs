@@ -4,6 +4,7 @@ using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Tools.WikiSemantics;
 using SharpMUSH.Tools.WikiSemantics.Native;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 // Disposable test process only; no production registration, arbitrary fault hooks or native-file edits.
 var options = new Dictionary<string, string>(StringComparer.Ordinal);

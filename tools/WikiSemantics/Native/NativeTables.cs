@@ -1,5 +1,6 @@
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Database.Lightning.Semantics;
 
 namespace SharpMUSH.Tools.WikiSemantics.Native;
 
@@ -8,6 +9,7 @@ internal sealed class NativeTables
 	internal const string Prefix = "prototype.semantic.b1.";
 	internal readonly TableDef Metadata, Registry, Pages, Summaries, Facts, Forward, Postings, Catalog, Partitions, Mutations;
 	internal IReadOnlyList<TableDef> All { get; }
+	internal WikiSemanticTables Projection { get; }
 	internal NativeTables(ILightningStorageAccessor storage)
 	{
 		Metadata = storage.OpenTable(Prefix + "metadata", false);
@@ -22,5 +24,6 @@ internal sealed class NativeTables
 		Partitions = storage.OpenTable(Prefix + "partitions", false);
 		Mutations = storage.OpenTable(Prefix + "mutations", false);
 		All = [Metadata, Registry, Pages, Summaries, Facts, Forward, Postings, Catalog, Partitions, Mutations];
+		Projection = new(Metadata, Registry, Summaries, Facts, Forward, Postings, Catalog, Partitions, legacyB1Summary: true);
 	}
 }
