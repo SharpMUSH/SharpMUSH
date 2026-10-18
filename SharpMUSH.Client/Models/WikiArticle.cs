@@ -32,9 +32,9 @@ public class WikiArticle
 
 	/// <summary>
 	/// Pre-rendered HTML produced by <see cref="SharpMUSH.Library.Services.WikiMarkdigPipeline"/>
-	/// at write time. When non-null, <c>WikiDisplay</c> injects this directly and skips the
-	/// client-side rendering pass. When null, the component falls back to rendering
-	/// <see cref="Content"/> via the injected pipeline.
+	/// at write time. <c>WikiDisplay</c> normally uses this directly; table articles use the current
+	/// pipeline's layout so existing installations need no content rewrite. When null, the
+	/// component also renders <see cref="Content"/> via the injected pipeline.
 	/// </summary>
 	public string? RenderedHtml { get; set; }
 

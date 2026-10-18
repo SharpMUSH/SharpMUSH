@@ -372,3 +372,13 @@ renderer stylesheet. Renderer-version and ClientData changes trigger this workfl
 A renderer version change also fails the fixture-version check until the radio
 HTML is regenerated and its version marker updated. Local standalone runs use
 the documented stylesheet subset unless `MARKUP_LAYOUT_CSS` is supplied.
+
+The wiki-table regression also loads the real `wiki-render.js` post-render pass over
+PF2e equipment HTML produced by the current shared wiki renderer. It verifies narrow-screen containment,
+keyboard scrolling, unchanged native table/header semantics, repeat-render
+idempotence and desktop fit. No game, package reimport or database edit is needed.
+Stored-HTML upgrades are separately tested through WikiDisplay article replacement.
+Its fixture is the Longsword article rendered by the shared wiki pipeline from
+`pf2e-remaster` 1.1.1 at the source revision recorded in the fixture comment.
+For an existing system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` when running
+`node --test wiki-tables.test.mjs`; otherwise Playwright uses its installed browser.

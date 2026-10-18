@@ -1023,6 +1023,19 @@ pre.ms-preformatted {
     color: var(--text-dim);
 }
 
+/* Keep equipment/rules tables scrollable without widening the whole article. The focusable
+   wrapper preserves native table semantics and supports keyboard horizontal scrolling. */
+.WikiContent .wiki-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0 0 1em;
+}
+
+.WikiContent .wiki-table-scroll:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 /* Tables (Markdig pipe tables) */
 .WikiContent .mud-card-content table {
     border-collapse: collapse;
@@ -1043,6 +1056,10 @@ pre.ms-preformatted {
 
 .WikiContent .mud-card-content tbody tr:hover {
     background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.WikiContent .wiki-table-scroll table {
+    margin-bottom: 0;
 }
 
 /* Horizontal rules */
