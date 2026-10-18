@@ -137,24 +137,27 @@ public class FingerIntegrationTests
 		try
 		{
 			await InstallAsync();
-			var ann = await Player("HdAnn");
+			// The displayed name deliberately contains both age values: it is not a profile field.
+			var ann = await Player("HdAnn32And33");
+			string WithoutPlayerName(string card) => card.Replace(ann.Name, string.Empty, StringComparison.Ordinal);
+
 			var bo = await Player("HdBo");
 			var staff = await Player("HdStaff");
 			await God($"@permission/allow #{staff.DbRef.Number}=softcode.finger.edit");
 
 			await As(ann, "+finger/set age=32");
 			await Assert.That(await As(ann, "+finger/hide age")).Contains("Only you and staff see your Age now.");
-			await Assert.That(await As(bo, $"+finger {ann.Name}")).DoesNotContain("32");
-			await Assert.That(await As(ann, "+finger")).Contains("32 (hidden)");
-			await Assert.That(await As(staff, $"+finger {ann.Name}")).Contains("32 (hidden)");
+			await Assert.That(WithoutPlayerName(await As(bo, $"+finger {ann.Name}"))).DoesNotContain("32");
+			await Assert.That(WithoutPlayerName(await As(ann, "+finger"))).Contains("32 (hidden)");
+			await Assert.That(WithoutPlayerName(await As(staff, $"+finger {ann.Name}"))).Contains("32 (hidden)");
 
 			// A hidden field stays hidden when it changes.
 			await As(ann, "+finger/set age=33");
-			await Assert.That(await As(bo, $"+finger {ann.Name}")).DoesNotContain("33");
+			await Assert.That(WithoutPlayerName(await As(bo, $"+finger {ann.Name}"))).DoesNotContain("33");
 			await Assert.That(await As(ann, "+finger/fields")).Contains("set · hidden");
 
 			await Assert.That(await As(ann, "+finger/unhide age")).Contains("Everyone sees your Age again.");
-			await Assert.That(await As(bo, $"+finger {ann.Name}")).Contains("Age:").And.Contains("33");
+			await Assert.That(WithoutPlayerName(await As(bo, $"+finger {ann.Name}"))).Contains("Age:").And.Contains("33");
 		}
 		finally
 		{
