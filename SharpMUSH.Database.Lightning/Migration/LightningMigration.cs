@@ -27,13 +27,27 @@ public partial class LightningDatabase
 	/// 5. ensure the singleton server-state row exists.
 	/// </summary>
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
-		=> await _credentialGate.RunAsync(() => MigrateCoreAsync(cancellationToken), cancellationToken);
+	{
+		try
+		{
+			await _credentialGate.RunAsync(() => MigrateCoreAsync(cancellationToken), cancellationToken);
+			// Binding the primitive is not enough: seeds, plugins, credentials AND definition reload
+			// must all have succeeded before the first issued lineage becomes reopenable.
+			_fixtureLease?.Initialized();
+		}
+		catch
+		{
+			_fixtureLease?.InitializationFailed();
+			throw;
+		}
+	}
 
 	private async Task MigrateCoreAsync(CancellationToken cancellationToken)
 	{
 		await MigrateLock.WaitAsync(cancellationToken);
 		try
 		{
+			await InitializeSemanticFixtureIdentityAsync(cancellationToken);
 			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
 			InvalidateDefinitions();
 			await Store.WriteAsync(SeedRoles, cancellationToken);
