@@ -48,18 +48,23 @@ otherwise most of the run is failures rather than measurements.
 
 ## Setup
 
-There is no `package.json` at the repo root — this is a .NET repo, not a JS one — so this
-tool carries its own minimal `package.json` pinning `playwright-core@1.62.1`, the version
-whose `browsers.json` expects chromium revision `1234`, which is what is already present
-under `~/.cache/ms-playwright`. `playwright-core` never bundles or downloads a browser
-itself; it only launches whatever revision-matched build it finds in that cache. Installing
-a mismatched `playwright-core` version would either fail to find the cached browser or
-silently try to fetch one.
+This tool has its own `package.json` and lockfile pinning `playwright-core@1.62.1`.
+Dependency installation does not download Chromium; provision the matching browser
+explicitly on a fresh machine:
 
 ```bash
 cd tools/responsive-sweep
-npm install --offline   # resolves from the local npm cache; touches no network
+npm ci
+npx playwright-core install chromium
 ```
+
+The browser install downloads the revision required by the pinned dependency into
+Playwright's cache. Linux machines missing browser system libraries can use
+`npx playwright-core install --with-deps chromium`, as the layout CI workflow does.
+For an offline run, both the npm packages and matching browser must already be
+cached: `npm install --offline` installs only the dependencies. Alternatively set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing compatible system Chromium for the
+standalone table tests.
 
 `node_modules/` here is covered by the repo's root `.gitignore` (`node_modules/`), so
 nothing from this install is committed.
@@ -372,3 +377,18 @@ renderer stylesheet. Renderer-version and ClientData changes trigger this workfl
 A renderer version change also fails the fixture-version check until the radio
 HTML is regenerated and its version marker updated. Local standalone runs use
 the documented stylesheet subset unless `MARKUP_LAYOUT_CSS` is supplied.
+
+The wiki-table regression also loads the real `wiki-render.js` post-render pass over
+PF2e equipment HTML produced by the current shared wiki renderer. It verifies narrow-screen containment,
+keyboard scrolling, unchanged native table/header semantics, repeat-render
+idempotence and desktop fit. No game, package reimport or database edit is needed.
+Stored-HTML upgrades are separately tested through WikiDisplay article replacement.
+Its fixture is the Longsword article rendered by the shared wiki pipeline from
+`pf2e-remaster` 1.1.1 at the source revision recorded in the fixture comment.
+For an existing system Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` when running
+`node --test wiki-tables.test.mjs`; otherwise Playwright uses its installed browser.
+
+The README-context case applies the dialog's source CSS with its `::deep` scope
+combinator removed in the isolated shell. It forces a wide native table and
+checks that the focusable wrapper owns overflow and visible keyboard focus;
+it does not claim to exercise the compiled dialog or full Blazor application.

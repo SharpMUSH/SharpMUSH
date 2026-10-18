@@ -410,6 +410,38 @@ else
     private string? _markedFrom;
     private Task<string>? _marking;
 
+    // Stored table HTML may predate the scroll container. Keep the current layout in the
+    // render tree, rather than reparenting Blazor's raw-markup nodes after rendering.
+    private (string Source, string Stored, string Rendered)? _tableLayout;
+
+    private string RenderedArticleHtml()
+    {
+        if (Article is not { } article)
+        {
+            _tableLayout = null;
+            return string.Empty;
+        }
+
+        if (article.RenderedHtml is not { } stored)
+        {
+            _tableLayout = null;
+            return Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(article.Content);
+        }
+
+        if (!stored.Contains("<table", StringComparison.OrdinalIgnoreCase))
+        {
+            _tableLayout = null;
+            return stored;
+        }
+
+        if (_tableLayout is { } cached && cached.Source == article.Content && cached.Stored == stored)
+            return cached.Rendered;
+
+        var rendered = Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(article.Content);
+        _tableLayout = (article.Content, stored, rendered);
+        return rendered;
+    }
+
     // Each category's name in the language the page is shown in: its category page's title, translated.
     // Categories are the page's, the same in every translation; only their names change.
     private IReadOnlyDictionary<string, string>? _categoryNames;
@@ -417,13 +449,9 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        // The server renders the article; the Markdig pipeline is only for the rare page that arrives
-        // without its HTML, so it is resolved (and its pipeline built) only then rather than by every
-        // wiki view, the home page's included.
-        var html = Article?.RenderedHtml
-                   ?? (Article is not null
-                       ? Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(Article.Content)
-                       : string.Empty);
+        // Usually the stored HTML is enough. Tables use the current shared layout even when the
+        // article was installed before it existed; memoization avoids reparsing on parent renders.
+        var html = RenderedArticleHtml();
 
         // The banner shows the lead image; the body must not show it a second time.
         if (!Embedded && HasBanner)
