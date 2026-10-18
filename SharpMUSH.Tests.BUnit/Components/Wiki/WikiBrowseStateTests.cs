@@ -220,7 +220,7 @@ public class WikiBrowseStateTests : TrackingBunitContext
 	public async Task ArticleLinksReplaceDuplicateContextAndPreserveFragmentsAndArticleFields()
 	{
 		var path = WikiJourneyLinks.Article("/wiki/main/intro?membersSkip=100&lang=en&lang=de&browseQ=old&browseQ=forged&returnUrl=https%3A%2F%2Fevil.example#sheet%20one",
-			new WikiBrowseState("package:reference", "Étoile & C++", "guides", 500, "fr"));
+			new WikiBrowseState("package:reference", "Étoile & C++", "guides", 500, "fr"), membersCollection: "package:reference");
 		var uri = new Uri(new Uri(_nav.BaseUri), path);
 		await Assert.That(uri.AbsolutePath).IsEqualTo("/wiki/main/intro");
 		await Assert.That(uri.Fragment).IsEqualTo("#sheet%20one");

@@ -5,7 +5,7 @@ public static class WikiLocaleLinks
 {
 	public static string? FromUri(string uri)
 	{
-		var locale = System.Web.HttpUtility.ParseQueryString(new Uri(uri).Query)["lang"];
+		var locale = WikiBrowseState.ReadQuery(uri).GetValueOrDefault("lang");
 		return string.IsNullOrWhiteSpace(locale) ? null : locale;
 	}
 

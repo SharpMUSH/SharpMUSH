@@ -6483,4 +6483,10 @@
   <data name="WikiPreviousPage" xml:space="preserve"><value>上一页</value></data>
   <data name="WikiNextPage" xml:space="preserve"><value>下一页</value></data>
   <data name="WikiPageRange" xml:space="preserve"><value>显示第 {0}–{1} 项，共 {2} 项</value></data>
+  <data name="NavWikiBackToResults" xml:space="preserve">
+    <value>返回结果</value>
+  </data>
+  <data name="NavWikiGameWiki" xml:space="preserve">
+    <value>游戏维基</value>
+  </data>
 </root>

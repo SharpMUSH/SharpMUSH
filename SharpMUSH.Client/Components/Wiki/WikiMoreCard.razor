@@ -5,14 +5,14 @@
 @* The aside's card of other pages in the page's first category, with a link to all of them. *@
 <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], CategoryLabel)">
     <Controls>
-        <a class="wiki-more-all" href="@WikiCategories.Route(Category)">@Loc.Plural("NavWikiAllShort", "count", Total)</a>
+        <a class="wiki-more-all" href="@Link(WikiCategories.Route(Category))">@Loc.Plural("NavWikiAllShort", "count", Total)</a>
     </Controls>
     <ChildContent>
     <CardRows>
         @foreach (var page2 in Pages)
         {
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
-                        Href="@WikiRoutes.PathFor(page2.Namespace, page2.Slug)" />
+                        Href="@Link(WikiRoutes.PathFor(page2.Namespace, page2.Slug))" />
         }
     </CardRows>
     </ChildContent>
@@ -29,4 +29,12 @@
 
     /// <summary>How many pages the category holds, the shown page included.</summary>
     [Parameter] public int Total { get; set; }
+
+    [Parameter] public WikiBrowseState? BrowseState { get; set; }
+    [Parameter] public string? MembersCollection { get; set; }
+    [Parameter] public int MembersSkip { get; set; }
+    [Parameter] public string? Locale { get; set; }
+
+    private string Link(string path) => path.StartsWith("/character/", StringComparison.Ordinal)
+        ? path : WikiJourneyLinks.Article(path, BrowseState, MembersCollection, MembersSkip, Locale);
 }

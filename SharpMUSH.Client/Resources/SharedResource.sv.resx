@@ -6483,4 +6483,10 @@
   <data name="WikiPreviousPage" xml:space="preserve"><value>Föregående</value></data>
   <data name="WikiNextPage" xml:space="preserve"><value>Nästa</value></data>
   <data name="WikiPageRange" xml:space="preserve"><value>Visar {0}–{1} av {2}</value></data>
+  <data name="NavWikiBackToResults" xml:space="preserve">
+    <value>Tillbaka till resultaten</value>
+  </data>
+  <data name="NavWikiGameWiki" xml:space="preserve">
+    <value>Spelets wiki</value>
+  </data>
 </root>

@@ -5777,4 +5777,10 @@
   <data name="WikiPreviousPage" xml:space="preserve"><value>Précédent</value></data>
   <data name="WikiNextPage" xml:space="preserve"><value>Suivant</value></data>
   <data name="WikiPageRange" xml:space="preserve"><value>Affichage de {0} à {1} sur {2}</value></data>
+  <data name="NavWikiBackToResults" xml:space="preserve">
+    <value>Retour aux résultats</value>
+  </data>
+  <data name="NavWikiGameWiki" xml:space="preserve">
+    <value>Wiki du jeu</value>
+  </data>
 </root>

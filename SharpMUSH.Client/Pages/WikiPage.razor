@@ -1,8 +1,11 @@
 @page "/wiki/{Ns}/{Slug}"
 @layout WikiLayout
 @using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Models.Wiki
+@using Microsoft.AspNetCore.Components.Routing
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 @if (!_redirecting)
 {
@@ -10,7 +13,8 @@
     <PalettePage Kind="wiki" Subject="@($"{Ns}/{Slug}")" Rows="@PaletteRows" />
 
     <WikiView @key="@($"{Ns}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns"
-              Locale="@Lang" Mode="WikiView.WikiMode.View" />
+              Locale="@Lang" BrowseState="@_browseState" MembersCollection="@_membersCollection" MembersSkip="@_membersSkip"
+              Mode="WikiView.WikiMode.View" />
 }
 
 @code {
@@ -25,6 +29,36 @@
     public string? Lang { get; set; }
 
     private bool _redirecting;
+    private bool _disposed;
+    private WikiBrowseState? _browseState;
+    private string? _membersCollection;
+    private int _membersSkip;
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+
+    private void ReadJourney()
+    {
+        var query = WikiBrowseState.ReadQuery(Nav.Uri);
+        Lang = WikiLocaleLinks.FromUri(Nav.Uri);
+        _browseState = !string.IsNullOrWhiteSpace(query.GetValueOrDefault("browseCollection"))
+            ? new WikiBrowseState(query["browseCollection"], query.GetValueOrDefault("browseQ"), query.GetValueOrDefault("browseCategory"),
+                WikiBrowseState.ParseSkip(query.GetValueOrDefault("browseSkip")), Lang).Normalize()
+            : null;
+        _membersCollection = string.IsNullOrWhiteSpace(query.GetValueOrDefault("membersCollection")) ? null : query["membersCollection"].Trim();
+        _membersSkip = WikiBrowseState.ParseSkip(query.GetValueOrDefault("membersSkip"));
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed || new Uri(args.Location).AbsolutePath != WikiRoutes.WikiPathFor(Ns, Slug)) return;
+            ReadJourney();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() { _disposed = true; Nav.LocationChanged -= OnLocationChanged; }
 
     private IReadOnlyList<PaletteRow> PaletteRows =>
     [
@@ -41,6 +75,7 @@
     // is bounced straight forward again, trapping the user on the profile.
     protected override void OnParametersSet()
     {
+        ReadJourney();
         _redirecting = WikiRoutes.IsCharacterProfile(Ns);
         if (_redirecting)
         {
