@@ -157,7 +157,10 @@ public partial class LightningDatabase(
 		=> tx.Dups(forward, Keys.Dbref(from)).Select(v => (long?)Keys.ReadDbref(v)).FirstOrDefault();
 
 	internal Task MutateWorldAuthorityAsync(Func<Task> mutation, CancellationToken cancellationToken = default)
-		=> _credentialGate.RunAsync(mutation, cancellationToken);
+	{
+		if (_fixtureLease is not null) throw Semantics.SemanticFixtureCapability.Unavailable();
+		return _credentialGate.RunAsync(mutation, cancellationToken);
+	}
 
 	/// <summary>Drains the writer, closes the environment, deletes the directory, reopens it empty and
 	/// migrates from scratch.</summary>
@@ -177,6 +180,7 @@ public partial class LightningDatabase(
 	/// </summary>
 	public async Task<IStagingDatabase> CreateStagingAsync(CancellationToken ct = default)
 	{
+		if (_fixtureLease is not null) throw Semantics.SemanticFixtureCapability.Unavailable();
 		var stagingId = Guid.NewGuid().ToString("N")[..8];
 		var stagingPath = Store.Path + ".staging-" + stagingId;
 		if (Directory.Exists(stagingPath))

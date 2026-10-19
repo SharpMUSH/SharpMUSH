@@ -14,6 +14,12 @@
 
 **Source reference convention:** paths are relative to the current repository checkout. In the contract and ownership matrix, `Library/`, `Server/`, `Tests/`, `Tests.Infrastructure/` and `provider` mean `SharpMUSH.Library/`, `SharpMUSH.Server/`, `SharpMUSH.Tests/`, `SharpMUSH.Tests.Infrastructure/` and `SharpMUSH.Database.Lightning/`; `tools` means `tools/WikiSemantics/`. Provider file names and `Store/`, `Semantics/` and `Migration/` paths are relative to `SharpMUSH.Database.Lightning/`. Package service files and `PackageOperationRunner.cs` are in `SharpMUSH.Library/Services/`; `EngineRegistration.cs` is in `SharpMUSH.Server/Registration/`. Line references locate the inspected definitions; verify those definitions in the executing checkout rather than treating line numbers as a source freeze. The checked-in fixture owner/host (`SharpMUSH.Tests.Infrastructure/SemanticWikiPrototypeFixture.cs`, `SemanticWikiPrototypeHost.cs`), admission (`SharpMUSH.Database.Lightning/Semantics/SemanticFixtureCapability.cs`, `Store/LightningStore.FixtureAdmission.cs`) and B1 native files named below supply the implementation boundaries.
 
+## Implementation checkpoint — 2026-10-19
+
+The selected Tasks 1–3 are implemented and independently reviewed for issued disposable actual hosts. The four ordinary typed writes maintain one bounded legacy/projection/receipt delta; unsupported mutation paths remain fenced. Runtime acceptance includes replay/mismatch across reopen, full-table equality after managed partial-Apply rollback, and a real typed Create command reaching the 256 KiB aggregate guard while below the 4 MiB working allowance. The actual pinned PF2e corpus round-trips through native storage and reopens without changing source files.
+
+This checkpoint publishes no query readiness or production activation and does not complete the downstream mutation/reader/package contracts. The separately merged #2040 native-error proof is qualified to its supported encrypted Linux x64 AES-GCM callback path; historical pending-native-test statements below do not describe that proof's current status. The remaining Phase B gates stay in force.
+
 ## Global Constraints
 
 - Satisfy the merged fixture-boundary prerequisite above before implementation. The concrete contracts below are selected; do not redesign them or reopen policy choices during execution.

@@ -7,7 +7,7 @@ namespace SharpMUSH.Database.Lightning.Semantics;
 /// In-process authority for one disposable lineage. Trusted orchestration respects its reservation
 /// and never replaces paths during admission; this is not a defense against a malicious OS user.
 /// </summary>
-internal sealed class SemanticFixtureCapability : IDisposable
+internal sealed partial class SemanticFixtureCapability : IDisposable
 {
 	private const string MarkerName = ".semantic-fixture.json";
 	private readonly object _gate = new();
@@ -18,6 +18,7 @@ internal sealed class SemanticFixtureCapability : IDisposable
 	private bool _initialized;
 	private bool _poisoned;
 	private bool _reservationRemoved;
+	private bool _claiming;
 	private readonly SemanticFixtureOwnership _ownership = new();
 
 	private sealed record Marker(int Version, string CanonicalPath, Guid FixtureId);
@@ -70,20 +71,27 @@ internal sealed class SemanticFixtureCapability : IDisposable
 	internal SemanticFixtureLease Claim(LightningStoreOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
+		bool firstOpen;
 		lock (_gate)
 		{
-			if (_ownership.IsRevoked || _poisoned || _ownership.IsQuarantined) throw new InvalidOperationException("Fixture issuance is revoked or incomplete.");
-			if (_active is not null) throw new InvalidOperationException("Fixture already has an active storage lease.");
+			if (_ownership.IsRevoked || _poisoned || _ownership.IsQuarantined || _phase == SemanticFixturePhase.Failed)
+				throw new InvalidOperationException("Fixture issuance is revoked or incomplete.");
+			if (_active is not null || _claiming) throw new InvalidOperationException("Fixture already has an active storage lease.");
 			if (!string.Equals(Path.GetFullPath(options.Path), CanonicalPath, StringComparison.Ordinal))
 				throw new InvalidOperationException("Fixture options do not name the issued path.");
 			if (options.Sync != LightningSyncMode.Full) throw new InvalidOperationException("Fixtures require full-sync storage.");
+			if (_claimed && !_initialized) throw new InvalidOperationException("First fixture migration never completed.");
+			firstOpen = !_claimed;
+			_claiming = true;
+		}
+		try
+		{
 			RejectLinkedAncestors(CanonicalPath);
 			var markerPath = Path.Combine(CanonicalPath, MarkerName);
 			try
 			{
-				if ((File.GetAttributes(markerPath) & FileAttributes.ReparsePoint) != 0)
-					throw new InvalidOperationException("A fixture marker cannot be linked.");
-				if (new FileInfo(markerPath).Length > 4096) throw new InvalidOperationException("Invalid fixture marker length.");
+				if ((File.GetAttributes(markerPath) & FileAttributes.ReparsePoint) != 0 || new FileInfo(markerPath).Length > 4096)
+					throw new InvalidOperationException("Invalid fixture marker.");
 				var marker = JsonSerializer.Deserialize<Marker>(File.ReadAllText(markerPath));
 				if (marker is not { Version: 1 } || marker.FixtureId != FixtureId || marker.CanonicalPath != CanonicalPath)
 					throw new InvalidOperationException("Fixture marker does not match its issued identity.");
@@ -92,23 +100,22 @@ internal sealed class SemanticFixtureCapability : IDisposable
 			{
 				throw new InvalidOperationException("Fixture marker is unavailable or invalid.", error);
 			}
-
-			if (!_claimed)
+			AtomicWikiActivation? activation = null;
+			if (firstOpen)
 			{
 				if (Directory.EnumerateFileSystemEntries(CanonicalPath).Any(entry => Path.GetFileName(entry) != MarkerName))
 					throw new InvalidOperationException("A first fixture open requires an empty issued directory.");
 			}
-			else
+			else activation = LightningStore.RequireFixtureIdentity(options, FixtureId);
+			lock (_gate)
 			{
-				if (!_initialized) throw new InvalidOperationException("First fixture migration never completed.");
-				// Closed-only checker: dispose its environment before the writing constructor runs.
-				LightningStore.RequireFixtureIdentity(options, FixtureId);
+				_phase = activation is null ? SemanticFixturePhase.Inactive : SemanticFixturePhase.Active;
+				_active = new SemanticFixtureLease(this, firstOpen);
+				_claimed = true;
+				return _active;
 			}
-
-			_active = new SemanticFixtureLease(this, !_claimed);
-			_claimed = true;
-			return _active;
 		}
+		finally { lock (_gate) _claiming = false; }
 	}
 
 	internal static void RejectLinkedAncestors(string path)
@@ -126,6 +133,7 @@ internal sealed class SemanticFixtureCapability : IDisposable
 		{
 			if (_active != lease || _poisoned || _ownership.IsQuarantined) throw new InvalidOperationException("Fixture lease is not usable.");
 			_initialized = true;
+			lease.MarkInitialized();
 		}
 	}
 
@@ -159,7 +167,7 @@ internal sealed class SemanticFixtureCapability : IDisposable
 		lock (_gate)
 		{
 			if (_reservationRemoved) return;
-			_ownership.Revoke(_active is not null);
+			_ownership.Revoke(_active is not null || _claiming);
 			// Uncertain native ownership retains the reservation and all potentially live files.
 			if (!_ownership.MayRemoveArtifacts) return;
 			_reservation.Dispose();
@@ -173,6 +181,7 @@ internal sealed class SemanticFixtureCapability : IDisposable
 internal sealed class SemanticFixtureLease : IDisposable
 {
 	private readonly SemanticFixtureCapability _owner;
+	internal SemanticFixtureCapability Owner => _owner;
 	internal SemanticFixtureLease(SemanticFixtureCapability owner, bool firstOpen)
 	{
 		_owner = owner;
@@ -181,6 +190,8 @@ internal sealed class SemanticFixtureLease : IDisposable
 	internal Guid FixtureId => _owner.FixtureId;
 	internal string CanonicalPath => _owner.CanonicalPath;
 	internal bool IsFirstOpen { get; }
+	internal bool IsInitialized { get; private set; }
+	internal void MarkInitialized() => IsInitialized = true;
 	internal void Initialized() => _owner.Initialized(this);
 	internal void InitializationFailed() => _owner.InitializationFailed(this);
 	internal void Quarantine() => _owner.Quarantine(this);

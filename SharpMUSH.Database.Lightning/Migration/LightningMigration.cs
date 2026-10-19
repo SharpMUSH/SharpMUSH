@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -48,14 +49,21 @@ public partial class LightningDatabase
 		try
 		{
 			await InitializeSemanticFixtureIdentityAsync(cancellationToken);
-			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
+			using var migrationAdmission = EnterFixtureMutation(SemanticFixtureMutation.Pin);
+			await Store.WriteAsync(tx =>
+			{
+				RequireFixtureMutation(tx, migrationAdmission);
+				AtomicMigrationGuardObserved?.Invoke(AtomicWikiPhase);
+				UpsertSeedDefinitions(tx);
+			}, cancellationToken);
 			InvalidateDefinitions();
 			await Store.WriteAsync(SeedRoles, cancellationToken);
 
 			var initialApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialMigrationId), out _));
 			if (!initialApplied)
 			{
-				await Store.WriteAsync(ApplyInitialSeed, cancellationToken);
+				using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+				await WriteFixtureAsync(admission, ApplyInitialSeed, cancellationToken);
 				// After the object seed because it writes attributes onto #4 owned by #1, and through
 				// SetAttributeAsync rather than raw puts so the stored values match what a write in game makes.
 				await AncestorSeed.SeedAncestorFormatsAsync(this, cancellationToken);

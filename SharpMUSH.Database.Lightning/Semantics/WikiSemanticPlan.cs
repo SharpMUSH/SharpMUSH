@@ -63,12 +63,17 @@ internal sealed class WikiSemanticPlannedDelta(NativeReadReservation lifetime, C
 		Revision = revision;
 	}
 	internal void Clear() { _changes.Clear(); Bytes = 0; Revision = checked(Revision + 1); }
-	internal void Apply(ITx tx, CancellationToken ct)
+	internal void Apply(ITx tx, CancellationToken ct, Action<TableDef>? putApplied = null)
 	{
 		foreach (var change in _changes)
 		{
 			ct.ThrowIfCancellationRequested();
-			if (change.Value is null) tx.Delete(change.Table, change.Key); else tx.Put(change.Table, change.Key, change.Value);
+			if (change.Value is null) tx.Delete(change.Table, change.Key);
+			else
+			{
+				tx.Put(change.Table, change.Key, change.Value);
+				putApplied?.Invoke(change.Table);
+			}
 		}
 		ct.ThrowIfCancellationRequested();
 	}
@@ -91,6 +96,7 @@ internal sealed class WikiSemanticWork : IDisposable
 	internal readonly WikiSemanticTables Tables;
 	private readonly bool _ownsLifetime;
 	private readonly bool _ownsDelta;
+	private bool _emptyBase;
 	private readonly Dictionary<(WikiSemanticRegistryKind Kind, string Identity), (ulong Id, byte[] Key, long Revision)> _registry = [];
 	private readonly Dictionary<WikiSemanticRegistryKind, (ulong Next, byte[] Key, long Revision)> _next = [];
 	private WikiSemanticWork(ITx tx, WikiSemanticTables tables, NativeReadBudget budget, NativeReadReservation lifetime, bool ownsLifetime, WikiSemanticPlannedDelta? delta)
@@ -116,6 +122,13 @@ internal sealed class WikiSemanticWork : IDisposable
 			return new WikiSemanticWork(tx, tables, budget, scope, owns, delta);
 		}
 		catch { if (owns) scope.Dispose(); throw; }
+	}
+
+	internal static WikiSemanticWork CreateEmptyBase(ITx tx, WikiSemanticTables tables, NativeReadBudget budget, NativeReadReservation lifetime, WikiSemanticPlannedDelta delta)
+	{
+		var work = Create(tx, tables, budget, lifetime, delta);
+		work._emptyBase = true;
+		return work;
 	}
 
 	internal byte[] Bytes(long estimate, Func<byte[]> encode)
@@ -145,6 +158,7 @@ internal sealed class WikiSemanticWork : IDisposable
 			Lifetime.ReserveAdditional(checked(overhead + value.Length * (long)factor));
 			return decode(value);
 		}
+		if (_emptyBase) return null;
 		if (Reader.ReadValue(table, key, Budget) is not NativeReadValue owner) return null;
 		using (owner)
 		{
