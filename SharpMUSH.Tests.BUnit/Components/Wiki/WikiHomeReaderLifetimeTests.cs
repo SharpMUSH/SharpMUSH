@@ -45,12 +45,12 @@ public class WikiHomeReaderLifetimeTests : TrackingBunitContext
 			cut.WaitForAssertion(() => Require(_api.CurrentDirectoryRequests == 1, "The same URI did not reauthorize the current reader."));
 			await AssertNoPrivateHome(cut);
 			await Assert.That(cut.FindAll(".wiki-collection-entry, .wiki-cat-card")).IsEmpty();
-			await cut.InvokeAsync(() => pending.TrySetResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
+			await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
 			cut.WaitForAssertion(() => cut.Find("[role='alert']"));
 			await AssertNoPrivateHome(cut);
 			await Assert.That(_nav.Uri).IsEqualTo(originalUri);
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.ServiceUnavailable))); }
 	}
 
 	[Test]
@@ -200,6 +200,12 @@ public class WikiHomeReaderLifetimeTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("private-home-");
 	}
 
+	// A successful completion transfers ownership to the HTTP consumer; a rejected retry does not.
+	private static void CompletePending(TaskCompletionSource<HttpResponseMessage> pending, HttpResponseMessage response)
+	{
+		if (!pending.TrySetResult(response)) response.Dispose();
+	}
+
 	private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 
 	public sealed class HomeHost : ComponentBase
@@ -229,7 +235,7 @@ public class WikiHomeReaderLifetimeTests : TrackingBunitContext
 		public int OldHeroRequests { get; private set; }
 		public int Requests { get; private set; }
 
-		public void CompleteOld() => _old.TrySetResult(Response(PendingStage!, true));
+		public void CompleteOld() => CompletePending(_old, Response(PendingStage!, true));
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{

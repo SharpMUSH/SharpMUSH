@@ -346,12 +346,12 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 			cut.WaitForAssertion(() => Require(_api.MemberRequests.Count == 1, "Initial member request did not start."));
 			_nav.NavigateTo("/wiki/category/" + category + "?membersCollection=" + Uri.EscapeDataString(collection) + "&lang=de");
 			WaitForMember(cut, title);
-			await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Batch([CategoryApi.Row("private", "STALE PRIVATE MEMBER")], 1)));
+			await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Batch([CategoryApi.Row("private", "STALE PRIVATE MEMBER")], 1)));
 			await Assert.That(cut.Markup).DoesNotContain("STALE PRIVATE MEMBER");
 			await Assert.That(new Uri(_nav.Uri).AbsolutePath).IsEqualTo("/wiki/category/lore");
 			await AssertRequest(_api.MemberRequests.Last(), collection, "0", "lore", "de");
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Batch([], 0))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Batch([], 0))); }
 	}
 
 	[Test]
@@ -407,10 +407,10 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 			await Assert.That(cut.Markup).DoesNotContain("Owner member 000");
 			await Assert.That(cut.Markup).DoesNotContain("Private rules collection");
 			await Assert.That(cut.Markup).DoesNotContain("Guides français");
-			await cut.InvokeAsync(() => pending.TrySetResult(new HttpResponseMessage(HttpStatusCode.Forbidden)));
+			await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.Forbidden)));
 			await Assert.That(_nav.Uri).IsEqualTo(unchanged);
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(new HttpResponseMessage(HttpStatusCode.Forbidden))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.Forbidden))); }
 	}
 
 	[Test]
@@ -435,13 +435,13 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 			var before = _api.NavigationRequests.Count;
 			await cut.InvokeAsync(() => RaiseReaderChanged(auth, characterChange));
 			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > before, "Reader change did not start current authorization."));
-			await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Navigation("package:rules")));
+			await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Navigation("package:rules")));
 			await Assert.That(cut.Markup).DoesNotContain("Private rules collection");
 			await Assert.That(cut.Markup).DoesNotContain("Guides français");
 			await Assert.That(cut.Markup).DoesNotContain("Package member");
 			await Assert.That(cut.Markup).DoesNotContain("Owner member");
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(new HttpResponseMessage(HttpStatusCode.Forbidden))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.Forbidden))); }
 	}
 
 	[Test]
@@ -466,12 +466,12 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 			cut.WaitForAssertion(() => Require(_api.MemberRequests.Count == 1, "Initial package member request did not start."));
 			_nav.NavigateTo("/wiki/category/guides?membersCollection=game&lang=fr-CA");
 			WaitForMember(cut, "Game member 000");
-			await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Batch([CategoryApi.Row("old", "OLD PACKAGE SECRET")], 1)));
+			await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Batch([CategoryApi.Row("old", "OLD PACKAGE SECRET")], 1)));
 			await Assert.That(cut.Markup).DoesNotContain("OLD PACKAGE SECRET");
 			await Assert.That(_api.ArticleRequests.Count).IsEqualTo(1);
 			await AssertRequest(_api.MemberRequests.Last(), "game", "0", "guides", "fr-CA");
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Batch([], 0))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Batch([], 0))); }
 	}
 
 	[Test]
@@ -491,11 +491,11 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 			_api.RefuseMembers = true;
 			await cut.InvokeAsync(() => RaiseReaderChanged(auth, characterChange));
 			cut.WaitForAssertion(() => cut.Find(".wiki-cat [role='alert']"));
-			await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Batch([CategoryApi.Row("old", "OLD CHARACTER SECRET")], 1)));
+			await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Batch([CategoryApi.Row("old", "OLD CHARACTER SECRET")], 1)));
 			await Assert.That(cut.Markup).DoesNotContain("OLD CHARACTER SECRET");
 			await Assert.That(MemberLinks(cut)).IsEmpty();
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(CategoryApi.Batch([], 0))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Batch([], 0))); }
 	}
 
 	[Test]
@@ -563,6 +563,12 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 	private static IElement Pager<T>(IRenderedComponent<T> cut, int index) where T : IComponent => cut.FindAll(".wiki-cat-paging button")[index];
 	private static Uri Address(IElement link) => new(new Uri("http://localhost/"), link.GetAttribute("href") ?? string.Empty);
 	private static NameValueCollection Query(Uri uri) => System.Web.HttpUtility.ParseQueryString(uri.Query);
+	// A successful completion transfers ownership to the HTTP consumer; a rejected retry does not.
+	private static void CompletePending(TaskCompletionSource<HttpResponseMessage> pending, HttpResponseMessage response)
+	{
+		if (!pending.TrySetResult(response)) response.Dispose();
+	}
+
 	private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 	private static async Task AssertRequest(Uri uri, string collection, string skip, string category, string? locale)
 	{
