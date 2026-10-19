@@ -129,7 +129,7 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		else
 		{
 			rows = await Wiki.GetByCategoryAsync(category, skip, take, visibility);
-			total = (await Wiki.CountPagesByCategoryAsync(visibility)).GetValueOrDefault(WikiHelpers.CategoryKey(category));
+			total = await Wiki.CountPagesInCategoryAsync(category, visibility);
 		}
 		Response.Headers["X-Total-Count"] = total.ToString(System.Globalization.CultureInfo.InvariantCulture);
 		return Ok((await LocalizedListAsync(rows, lang)).Select(row =>

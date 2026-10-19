@@ -21,6 +21,7 @@ reject unclassified additions/removals. This is drift detection, not transaction
 | CountPagesAsync | Read | filtered count | explicit authorized count |
 | CountPagesByStateAsync | Read | filtered count | explicit authorized count |
 | CountPagesByCategoryAsync | Read | filtered categories | explicit authorized facets |
+| CountPagesInCategoryAsync | Read | exact category prefix + visibility | explicit authorized single-category count |
 | GetPagesByCategoryAsync | Read | filtered ordered page rows | authorized bounded reads |
 | GetRequirementsAsync | Read | requirement rows | coherent ACL snapshot |
 | GetPinnedCategoriesAsync | Read | pin rows | presentation snapshot only |

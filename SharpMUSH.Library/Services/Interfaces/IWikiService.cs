@@ -78,6 +78,11 @@ public interface IWikiService
 	/// <summary>How many pages <paramref name="visibility"/> admits in each category, keyed by category key.</summary>
 	Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility);
 
+	/// <summary>How many pages <paramref name="visibility"/> admits in one category, across namespaces.</summary>
+	/// <remarks>The default preserves existing implementers; indexed stores override this dictionary fallback.</remarks>
+	async Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
+		=> (await CountPagesByCategoryAsync(visibility)).GetValueOrDefault(WikiHelpers.CategoryKey(category));
+
 	/// <summary>
 	/// Gives each category in <paramref name="names"/> that has no page a page in the category namespace,
 	/// titled with the name exactly as typed, so <c>Places of Note</c> keeps its capitals although its key is

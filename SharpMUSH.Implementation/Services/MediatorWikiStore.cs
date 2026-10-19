@@ -32,6 +32,9 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 	public Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility)
 		=> mediator.Send(new CountWikiPagesByCategoryQuery(visibility)).AsTask();
 
+	public Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
+		=> mediator.Send(new CountWikiPagesInCategoryQuery(category, visibility)).AsTask();
+
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> mediator.Send(new GetWikiPagesByCategoryQuery(category, skip, take, visibility)).AsTask();
 

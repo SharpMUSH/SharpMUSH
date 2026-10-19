@@ -36,6 +36,9 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility)
 		=> store.CountPagesByCategoryAsync(visibility);
 
+	public Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
+		=> store.CountPagesInCategoryAsync(WikiHelpers.CategoryKey(category), visibility);
+
 	public async Task<IReadOnlyList<WikiPage>> NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled,
 		string authorDbref, string sourceLocale)
 	{
