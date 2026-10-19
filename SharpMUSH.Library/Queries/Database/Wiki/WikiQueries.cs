@@ -29,6 +29,9 @@ public sealed record CountWikiPagesByCategoryQuery(WikiVisibility Visibility) : 
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.CountPagesInCategoryAsync"/>. Uncached.</summary>
 public sealed record CountWikiPagesInCategoryQuery(string Category, WikiVisibility Visibility) : IQuery<int>;
 
+/// <summary>Operation-local admitted page traversal through <see cref="IWikiStore.ScanPagesAsync"/>. Uncached.</summary>
+public sealed record ScanWikiPagesQuery(WikiVisibility Visibility, WikiPageScanPosition Position, int Take) : IQuery<WikiPageScanBatch>;
+
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.GetPagesByCategoryAsync"/>. Uncached.</summary>
 public sealed record GetWikiPagesByCategoryQuery(string Category, int Skip, int Take, WikiVisibility Visibility) : IQuery<IReadOnlyList<WikiPage>>;
 

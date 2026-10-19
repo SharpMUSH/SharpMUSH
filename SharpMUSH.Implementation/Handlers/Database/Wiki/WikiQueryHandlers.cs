@@ -54,6 +54,12 @@ public sealed class CountWikiPagesInCategoryQueryHandler(IWikiStore store) : IQu
 		=> new(store.CountPagesInCategoryAsync(query.Category, query.Visibility));
 }
 
+public sealed class ScanWikiPagesQueryHandler(IWikiStore store) : IQueryHandler<ScanWikiPagesQuery, WikiPageScanBatch>
+{
+	public ValueTask<WikiPageScanBatch> Handle(ScanWikiPagesQuery query, CancellationToken cancellationToken)
+		=> new(store.ScanPagesAsync(query.Visibility, query.Position, query.Take));
+}
+
 public sealed class GetWikiPagesByCategoryQueryHandler(IWikiStore store) : IQueryHandler<GetWikiPagesByCategoryQuery, IReadOnlyList<WikiPage>>
 {
 	public ValueTask<IReadOnlyList<WikiPage>> Handle(GetWikiPagesByCategoryQuery query, CancellationToken cancellationToken)

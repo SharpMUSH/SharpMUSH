@@ -89,6 +89,65 @@ public class WikiCategoryCountCompatibilityTests
 	}
 
 	[Test]
+	public async Task LegacyStoreAndServiceImplementersInheritScanFallbackWithoutImplementingTheNewMethod()
+	{
+		var store = new InMemoryWikiStore();
+		var service = new WikiStoreService(store, new WikiMarkdigPipeline());
+		var first = (await service.CreateAsync("A", "body", "#1")).Expect<WikiPage>();
+		var draft = (await service.CreateAsync("B", "body", "#43")).Expect<WikiPage>();
+		var last = (await service.CreateAsync("C", "body", "#1")).Expect<WikiPage>();
+		await service.SetMetadataAsync(draft.Id, [], false);
+		var legacyStore = LegacyImplementer<IWikiStore>(store);
+		var legacyService = LegacyImplementer<IWikiService>(service);
+		foreach (var scan in new Func<WikiPageScanPosition, Task<WikiPageScanBatch>>[]
+		{
+			position => legacyStore.ScanPagesAsync(WikiVisibility.PublishedOnly, position, 1),
+			position => legacyService.ScanPagesAsync(WikiVisibility.PublishedOnly, position, 1)
+		})
+		{
+			var batch = await scan(new WikiPageScanStart());
+			await Assert.That(batch.Pages.Single().Id).IsEqualTo(first.Id);
+			var next = batch.Next is WikiPageScanContinuation continuation ? continuation
+				: throw new InvalidOperationException("Legacy scan must continue.");
+			var second = await scan(next);
+			await Assert.That(second.Pages.Single().Id).IsEqualTo(last.Id);
+			var finalPosition = second.Next is WikiPageScanContinuation final ? final
+				: throw new InvalidOperationException("Exact-full legacy batch must continue.");
+			var end = await scan(finalPosition);
+			await Assert.That(end.Pages).IsEmpty();
+			await Assert.That(end.Next is WikiPageScanEnd).IsTrue();
+		}
+		await Assert.That(legacyStore.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+			.Any(method => method.Name == nameof(IWikiStore.ScanPagesAsync))).IsFalse();
+		await Assert.That(legacyService.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+			.Any(method => method.Name == nameof(IWikiService.ScanPagesAsync))).IsFalse();
+		await Assert.That(typeof(ICacheable).IsAssignableFrom(typeof(ScanWikiPagesQuery))).IsFalse();
+	}
+
+	[Test]
+	public async Task InMemorySeekSurvivesDeletedBoundaryAndUsesCurrentExplicitVisibility()
+	{
+		var store = new InMemoryWikiStore();
+		var service = new WikiStoreService(store, new WikiMarkdigPipeline());
+		var first = (await service.CreateAsync("A", "body", "#1")).Expect<WikiPage>();
+		var second = (await service.CreateAsync("B", "body", "#1", categories: ["secret"])).Expect<WikiPage>();
+		var last = (await service.CreateAsync("C", "body", "#42")).Expect<WikiPage>();
+		await service.SetMetadataAsync(last.Id, [], false);
+		var batch = await store.ScanPagesAsync(WikiVisibility.All, new WikiPageScanStart(), 1);
+		await Assert.That(batch.Pages.Single().Id).IsEqualTo(first.Id);
+		var position = batch.Next is WikiPageScanContinuation next ? next
+			: throw new InvalidOperationException("Expected memory continuation.");
+		await store.DeletePageAsync(first.Id);
+		var resumed = await store.ScanPagesAsync(new WikiVisibility(false, "#42")
+		{
+			IncludedPageIds = new HashSet<string> { second.Id, last.Id },
+			Hidden = new WikiReadRestrictions(false, new HashSet<string>(), new HashSet<string> { "secret" }, new HashSet<string>())
+		}, position, 2);
+		await Assert.That(resumed.Pages.Single().Id).IsEqualTo(last.Id);
+		await Assert.That(resumed.Next is WikiPageScanEnd).IsTrue();
+	}
+
+	[Test]
 	public async Task InMemoryScalarCountsDuplicateMembershipOnceAndPreservesAdmission()
 	{
 		var store = new InMemoryWikiStore();
