@@ -1,6 +1,7 @@
 using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using Records = SharpMUSH.Database.Lightning.Records;
@@ -83,7 +84,8 @@ public partial class LightningDatabase
 
 	public async Task RemoveInstalledPackageAsync(string packageId)
 	{
-		await Store.WriteAsync(tx =>
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+		await WriteFixtureAsync(admission, tx =>
 		{
 			tx.DeletePrefix(Tables.PkgObj, Keys.Composite(packageId, ""));
 			tx.DeletePrefix(Tables.PkgAttr, Keys.Composite(packageId, ""));
@@ -227,6 +229,7 @@ public partial class LightningDatabase
 
 	public async Task UpsertPackageWikiPageAsync(PackageWikiPageRecord record)
 	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
 		var stored = new Records.PackageWikiPageRecord
 		{
 			PackageId = record.PackageId,
@@ -243,7 +246,7 @@ public partial class LightningDatabase
 			Pinned = record.Pinned,
 			BaselineVersion = record.BaselineVersion
 		};
-		await Store.WriteAsync(tx =>
+		await WriteFixtureAsync(admission, tx =>
 			tx.Put(Tables.PkgWiki, Keys.Composite(record.PackageId, record.Namespace, record.Slug), Codec.Serialize(stored)));
 	}
 
@@ -268,7 +271,10 @@ public partial class LightningDatabase
 			.ToList()));
 
 	public async Task RemovePackageWikiPageAsync(string packageId, string ns, string slug)
-		=> await Store.WriteAsync(tx => tx.Delete(Tables.PkgWiki, Keys.Composite(packageId, ns, slug)));
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+		await WriteFixtureAsync(admission, tx => tx.Delete(Tables.PkgWiki, Keys.Composite(packageId, ns, slug)));
+	}
 
 	#endregion
 

@@ -225,6 +225,7 @@ public sealed partial class LightningStore : IDisposable
 		var tables = new Dictionary<TableDef, LmdbDb>();
 		foreach (var def in Tables.All.Concat(_pluginTables.Values))
 		{
+			NativeTableName.Validate(def.Name);
 			tables[def] = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
 		}
 		var snapshot = TableSnapshot.Capture(tx, tables);
@@ -306,7 +307,11 @@ public sealed partial class LightningStore : IDisposable
 		});
 	}
 
-	private TableDef? FindTable(string name) => _tableSnapshot.ByName.TryGetValue(name, out var entry) ? entry.Definition : null;
+	private TableDef? FindTable(string name)
+	{
+		NativeTableName.Validate(name);
+		return _tableSnapshot.ByName.TryGetValue(name, out var entry) ? entry.Definition : null;
+	}
 
 	public T Read<T>(Func<ITx, T> read)
 	{
@@ -681,7 +686,11 @@ public sealed partial class LightningStore : IDisposable
 
 	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables) : ITx
 	{
-		private LmdbDb Db(TableDef t) => tables.Handles[t];
+		private LmdbDb Db(TableDef t)
+		{
+			NativeTableName.Validate(t.Name);
+			return tables.Handles[t];
+		}
 
 		public bool TryGet(TableDef table, ReadOnlySpan<byte> key, out byte[] value)
 		{

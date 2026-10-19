@@ -17,7 +17,7 @@ public sealed partial class LightningStore
 		[UnsafeAccessor(UnsafeAccessorKind.Field, Name = "size")]
 		private static extern ref nint NativeSize(ref MDBValue value);
 
-		private static int CheckedLength(MDBValue value)
+		internal static int CheckedLength(MDBValue value)
 		{
 			var size = NativeSize(ref value);
 			if (size < 0 || size > int.MaxValue || size > NativeReadBudget.MaxRecordBytes)
@@ -29,6 +29,7 @@ public sealed partial class LightningStore
 		{
 			ArgumentNullException.ThrowIfNull(budget);
 			budget.CancellationToken.ThrowIfCancellationRequested();
+			NativeTableName.Validate(table.Name);
 			// TableDef equality is name-only; requested flags cannot certify an existing native table.
 			if (!tables.ByName.TryGetValue(table.Name, out var entry)) throw new KeyNotFoundException($"Unknown native table {table.Name}.");
 			// Reverse/integer comparators would also invalidate this API's bytewise interval semantics.
@@ -54,6 +55,7 @@ public sealed partial class LightningStore
 			var valueLength = CheckedLength(nativeValue);
 			if ((long)keyLength + valueLength > NativeReadBudget.MaxRecordBytes) throw new NativeReadLimitException("record-bytes");
 			budget.ChargeBytes(valueLength);
+			budget.ChargeRecord();
 			var reservation = budget.ReserveWorking(ObjectBytes + ArrayBytes(valueLength));
 			try
 			{
@@ -101,6 +103,7 @@ public sealed partial class LightningStore
 						if (recordBytes > NativeReadBudget.MaxRecordBytes) throw new NativeReadLimitException("record-bytes");
 						if (bytes + recordBytes > NativeReadBudget.MaxRecordBytes) return Finish(entries, count, false, reservation);
 						budget.ChargeBytes(valueLength);
+						budget.ChargeRecord();
 						reservation.ReserveAdditional(ObjectBytes + ArrayBytes(keyLength) + ArrayBytes(valueLength));
 						var keyCopy = new byte[keyLength];
 						var valueCopy = new byte[valueLength];

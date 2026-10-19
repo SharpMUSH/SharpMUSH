@@ -242,9 +242,10 @@ internal static class WikiSemanticCodec
 		public byte Byte() => Take(1)[0];
 		public bool Boolean() => Byte() switch { 0 => false, 1 => true, _ => throw new InvalidDataException("Invalid Boolean encoding.") };
 		public long Int64() => BinaryPrimitives.ReadInt64LittleEndian(Take(8));
+		public int Int32() => BinaryPrimitives.ReadInt32LittleEndian(Take(4));
 		public int Count(int maximum, int minimumBytes)
 		{
-			var count = BinaryPrimitives.ReadInt32LittleEndian(Take(4));
+			var count = Int32();
 			if (count < 0 || count > maximum || count > (_data.Length - _position) / minimumBytes) throw new InvalidDataException("Invalid count.");
 			return count;
 		}

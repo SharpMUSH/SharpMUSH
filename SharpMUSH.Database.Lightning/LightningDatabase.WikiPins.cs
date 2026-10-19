@@ -1,4 +1,5 @@
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Database.Lightning;
@@ -20,7 +21,9 @@ public partial class LightningDatabase
 				.ToList()));
 
 	public async Task<bool> SetCategoryPinnedAsync(string category, bool pinned)
-		=> await Store.WriteAsync(tx =>
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Pin);
+		return await WriteFixtureAsync(admission, tx =>
 		{
 			var key = WikiPinKey(category);
 			if (tx.TryGet(Tables.WikiPin, key, out _) == pinned) return false;
@@ -28,4 +31,5 @@ public partial class LightningDatabase
 			else tx.Delete(Tables.WikiPin, key);
 			return true;
 		});
+	}
 }
