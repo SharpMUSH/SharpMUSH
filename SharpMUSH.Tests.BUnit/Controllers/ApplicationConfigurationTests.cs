@@ -144,8 +144,10 @@ public class ApplicationConfigurationTests
 	[Test]
 	[Arguments("1.10", false)]
 	[Arguments("1.11", true)]
-	public async Task ConfigurationTileRequiresItsIntroducedManifestFormat(string format, bool supported)
+	[Arguments(null, true)] // The current format must continue supporting configuration tiles.
+	public async Task ConfigurationTileRequiresItsIntroducedManifestFormat(string? format, bool supported)
 	{
+		format ??= SharpMUSH.Library.Models.Packages.PackageFormatVersion.Supported.ToString();
 		var yaml = $"""
 			format: {format}
 			package: example-app
@@ -165,7 +167,6 @@ public class ApplicationConfigurationTests
 			.Expect<SharpMUSH.Library.Models.Packages.ParsedPackageManifest>();
 		await Assert.That(package.Manifest.Application!.ConfigurationTile is not null).IsEqualTo(supported);
 		await Assert.That(package.Warnings.Any(issue => issue.Path == "application.configuration_tile")).IsEqualTo(!supported);
-		await Assert.That(SharpMUSH.Library.Models.Packages.PackageFormatVersion.Supported.Minor).IsEqualTo(12);
 	}
 
 	[Test]

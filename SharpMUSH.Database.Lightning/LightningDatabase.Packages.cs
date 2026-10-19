@@ -45,7 +45,8 @@ public partial class LightningDatabase
 		PastMaximumServer = package.PastMaximum?.Server,
 		PastMaximum = package.PastMaximum?.Maximum,
 		PastMaximumAt = package.PastMaximum is { } past ? FormatPackageTimestamp(past.At) : null,
-		Plugins = package.Plugins?.ToArray()
+		Plugins = package.Plugins?.ToArray(),
+		WikiCollectionName = package.WikiCollectionName
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
@@ -58,7 +59,10 @@ public partial class LightningDatabase
 		r is { PastMaximumServer: { } server, PastMaximum: { } maximum, PastMaximumAt: { } at }
 			? new PackageMaximumOverride(server, maximum, ParsePackageTimestamp(at))
 			: null,
-		r.Plugins is { Length: > 0 } ? r.Plugins : null);
+		r.Plugins is { Length: > 0 } ? r.Plugins : null)
+	{
+		WikiCollectionName = r.WikiCollectionName
+	};
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 		=> await Store.WriteAsync(tx =>

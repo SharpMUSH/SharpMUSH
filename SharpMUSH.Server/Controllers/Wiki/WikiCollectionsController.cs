@@ -17,7 +17,8 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 	IWikiAccessService access, IWikiNameResolver names, IPackageRegistryService packages,
 	ILogger<WikiCollectionsController> logger) : WikiControllerBase(wiki, localization, access, names, logger)
 {
-	private sealed record Membership(IReadOnlyDictionary<string, HashSet<string>> Packages, HashSet<string> All);
+	private sealed record Membership(IReadOnlyDictionary<string, HashSet<string>> Packages, HashSet<string> All,
+		IReadOnlyDictionary<string, string> Labels);
 
 	private async Task<Membership> MembershipAsync()
 	{
@@ -28,8 +29,17 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		if (ambiguous) throw new InvalidDataException("A wiki page has conflicting package ownership.");
 		var groups = records.GroupBy(record => "package:" + record.PackageId, StringComparer.Ordinal)
 			.ToDictionary(group => group.Key, group => group.Select(record => record.PageId).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
-		return new Membership(groups, records.Select(record => record.PageId).ToHashSet(StringComparer.Ordinal));
+		var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var installed in await packages.GetInstalledPackagesAsync())
+		{
+			if (!string.IsNullOrWhiteSpace(installed.WikiCollectionName))
+				labels["package:" + installed.Id] = installed.WikiCollectionName.Trim();
+		}
+		return new Membership(groups, records.Select(record => record.PageId).ToHashSet(StringComparer.Ordinal), labels);
 	}
+
+	private static string CollectionLabel(Membership membership, string collection) =>
+		membership.Labels.GetValueOrDefault(collection) ?? collection["package:".Length..].Replace('-', ' ');
 
 	private static WikiVisibility Select(WikiVisibility visibility, Membership membership, string collection)
 		=> collection switch
@@ -59,7 +69,7 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		foreach (var key in membership.Packages.Keys.Order(StringComparer.Ordinal))
 		{
 			var count = await Wiki.CountPagesAsync(null, Select(visibility, membership, key));
-			if (count > 0) collections.Add(new(key, key["package:".Length..].Replace('-', ' '), count));
+			if (count > 0) collections.Add(new(key, CollectionLabel(membership, key), count));
 		}
 		var counts = await Wiki.CountPagesByCategoryAsync(selected);
 		var labels = await Localization.GetCategoryNamesAsync(lang, selected);
@@ -125,7 +135,7 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		return Ok((await LocalizedListAsync(rows, lang)).Select(row =>
 		{
 			var owner = membership.Packages.FirstOrDefault(pair => pair.Value.Contains(row.Id)).Key;
-			return row with { CollectionId = owner ?? "game", CollectionName = owner is null ? null : owner["package:".Length..].Replace('-', ' ') };
+			return row with { CollectionId = owner ?? "game", CollectionName = owner is null ? null : CollectionLabel(membership, owner) };
 		}).ToList());
 	}
 }

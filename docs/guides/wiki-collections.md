@@ -20,6 +20,25 @@ Useful routes:
 - `/wiki/collections/package%3Apf2e-remaster?q=spell&category=spells&skip=50` — the second page of matching spell results.
 - `/wiki/category/spells?membersCollection=package%3Apf2e-remaster&membersSkip=50` — the second page of that reference's Spells members.
 
+## Authoring a collection name
+
+A package can set its public wiki collection label independently of its package ID, starting with manifest format 1.13:
+
+```yaml
+format: 1.13
+package: independent-rules
+version: 1.0.0
+wiki_collection_name: Independent Rules
+wiki:
+  - page: main:guide
+    title: Rules Guide
+    markdown: Rules.
+```
+
+The optional `wiki_collection_name` is trimmed and must contain 1–100 characters, with no control characters or line breaks. It labels collection navigation and search-result context. The package ID, collection URL (`/wiki/collections/package%3Aindependent-rules`) and page ownership remain the same. Edition-specific wording can stay in the collection's main article.
+
+Without this metadata, existing packages keep the package ID with hyphens replaced by spaces as their collection label. An upgrade records the new label; omitting the key on a later upgrade restores that fallback. Rollback restores the label recorded in the selected revision; revisions created before this metadata have no authored label. A manifest below format 1.13 warns and ignores the key.
+
 ## Installation and updates
 
 Collection membership follows the installed package's ownership of each page. It does not depend on matching a title or guessing a prefix. Existing installations gain collection browsing without rewriting page IDs, history, slugs, translations or bookmarks. Reapplying a package continues to use the installer's existing merge and conflict rules for local edits.
@@ -30,7 +49,7 @@ This first browsing phase preserves the existing global namespace and slug ident
 
 ## Exploration still being developed
 
-This first phase supplies collection isolation, accurate counts and complete browsing. A readable authored collection label, explicit landing and task-oriented hubs remain subsequent work; the package's pins and complete category directory do not replace that information architecture. Authored category introductions and existing specialized indexes now remain accessible as distinct destinations in those journeys.
+This first phase supplies collection isolation, accurate counts and complete browsing. Explicit landing and task-oriented hubs remain subsequent work; the package's pins and complete category directory do not replace that information architecture. Authored category introductions and existing specialized indexes now remain accessible as distinct destinations in those journeys.
 
 The [PF2e organization research](../research/pf2e-wiki-organization.md) recommends measuring content-kind, relationship, facet and source/version metadata before adding filters. Their coverage in the import is not established by this browsing phase. Qualified identity, durable aliases and category-reference rewrites require a separate dry-run migration. These boundaries remain tracked in [#1970](https://github.com/SharpMUSH/SharpMUSH/issues/1970).
 

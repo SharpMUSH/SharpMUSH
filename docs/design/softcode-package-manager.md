@@ -191,6 +191,12 @@ content pack. The reference is `examples/packages/README.md`. The decisions:
   pre-package backup covers them.
 - **Rollback** leaves wiki pages as they are; a page's history is the way back for its text.
 
+### Wiki collection display name (format 1.13)
+
+An optional top-level `wiki_collection_name` supplies the public label for the package's wiki collection. It is a scalar string trimmed to 1–100 characters, with control characters and line/paragraph breaks refused. An explicit empty or null value is invalid; omit the key to use the existing package-ID label with hyphens replaced by spaces. Formats below 1.13 warn and ignore this field before validating its value.
+
+The label is metadata, separate from the package ID, collection URL and wiki ownership. It is persisted on the installed package and in each revision snapshot. An apply or upgrade replaces it, including clearing it when absent; rollback restores the selected snapshot's value, with null as the default for legacy snapshots. The Lightning registry's nullable field reads older records without a migration. Collection navigation and result-row context use the same label lookup; authorization still decides which collections/pages are visible.
+
 ### Attribute entries (format 1.5)
 
 `attributes:` maps an attribute name to the standard attribute entry `@attribute` would make:

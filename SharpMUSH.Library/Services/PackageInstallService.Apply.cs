@@ -535,7 +535,10 @@ public partial class PackageInstallService
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
 			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
-			Kind: manifest.Kind, PastMaximum: pastMaximum, Plugins: manifest.Plugins));
+			Kind: manifest.Kind, PastMaximum: pastMaximum, Plugins: manifest.Plugins)
+		{
+			WikiCollectionName = manifest.WikiCollectionName
+		});
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -557,7 +560,10 @@ public partial class PackageInstallService
 			structureSnapshot,
 			pastMaximum,
 			run.Request.Readme,
-			manifest.Plugins);
+			manifest.Plugins)
+		{
+			WikiCollectionName = manifest.WikiCollectionName
+		};
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
@@ -668,16 +674,22 @@ public partial class PackageInstallService
 		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
 			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed,
-			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, notes), Plugins: manifest.Plugins));
+			Kind: manifest.Kind, PastMaximum: PastMaximum(manifest, notes), Plugins: manifest.Plugins)
+		{
+			WikiCollectionName = manifest.WikiCollectionName
+		});
 
 		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
 			.ToList());
 
 		// A minimal revision snapshot: a managed package has no objects/attributes,
-		// so history records only the version + commit it deposited.
+		// so history retains the version and deployment metadata without an object snapshot.
 		var snapshot = new PackageRevisionSnapshot(
-			manifest.Version.ToString(), [], [], [], Readme: request.Readme, Plugins: manifest.Plugins);
+			manifest.Version.ToString(), [], [], [], Readme: request.Readme, Plugins: manifest.Plugins)
+		{
+			WikiCollectionName = manifest.WikiCollectionName
+		};
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
 			installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,

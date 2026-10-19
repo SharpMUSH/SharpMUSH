@@ -95,6 +95,7 @@ public static class PackageManifestWriter
 		}
 
 		AppendOptional(yaml, "category", manifest.Category);
+		AppendOptional(yaml, "wiki_collection_name", manifest.WikiCollectionName);
 
 		AppendOptional(yaml, "convention_prefix", manifest.ConventionPrefix);
 

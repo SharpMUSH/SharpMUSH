@@ -11,7 +11,7 @@ using YamlDotNet.Serialization;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Parses package.yaml manifests (format v2, decisions 20.11–20.20) and
+/// Parses package.yaml manifests (format 1.13, decisions 20.11–20.20) and
 /// index.yaml repo listings into validated models. Deserializes to a generic
 /// node graph and hand-maps so every issue carries a precise document path,
 /// and so shorthand forms (attribute value as a bare string, dependency as a
@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
-		"category",
+		"category", "wiki_collection_name",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
 		"attributes"
@@ -136,6 +136,7 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		var category = ReadCategory(doc, format, issues);
+		var wikiCollectionName = ReadWikiCollectionName(doc, format, issues);
 		var conventionPrefix = OptionalString(doc, "convention_prefix", issues);
 		var requiresServer = ReadConstraintField(doc, "requires_server", issues);
 		var (verifiedServer, maximumServer) = ReadServerRange(doc, requiresServer, issues);
@@ -230,7 +231,10 @@ public partial class PackageManifestService : IPackageManifestService
 			verifiedServer,
 			maximumServer,
 			plugins.Count == 0 ? null : plugins,
-			category);
+			category)
+		{
+			WikiCollectionName = wikiCollectionName
+		};
 
 		return new ParsedPackageManifest(manifest, issues);
 	}
@@ -270,6 +274,45 @@ public partial class PackageManifestService : IPackageManifestService
 	public static PackageFormatVersion ConfigurationTileFormat { get; } = new(1, 11);
 
 	public static PackageFormatVersion ConfigurationOptionsFormat { get; } = new(1, 12);
+
+	/// <summary>The first format that supports an authored public wiki collection label.</summary>
+	public static PackageFormatVersion WikiCollectionNameFormat { get; } = new(1, 13);
+
+	private static string? ReadWikiCollectionName(
+		Dictionary<string, object?> doc, PackageFormatVersion format, List<PackageManifestIssue> issues)
+	{
+		const string key = "wiki_collection_name";
+		const int maxLength = 100;
+		if (!doc.TryGetValue(key, out var node)) return null;
+		// Earlier formats ignore this key before inspecting its value, like other gated metadata.
+		if (format.Major == WikiCollectionNameFormat.Major && format.Minor < WikiCollectionNameFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning(key,
+				$"'{key}' needs format {WikiCollectionNameFormat} or later and is ignored; set format: {WikiCollectionNameFormat}."));
+			return null;
+		}
+
+		if (node is not string text)
+		{
+			issues.Add(PackageManifestIssue.Error(key, $"'{key}' must be a nonempty single-line string."));
+			return null;
+		}
+
+		if (text.Any(character => char.IsControl(character) || character is '\u2028' or '\u2029'))
+		{
+			issues.Add(PackageManifestIssue.Error(key, $"'{key}' must not contain control characters or line breaks."));
+			return null;
+		}
+
+		var label = text.Trim();
+		if (label.Length is 0 or > maxLength)
+		{
+			issues.Add(PackageManifestIssue.Error(key, $"'{key}' must contain between 1 and {maxLength} characters after trimming."));
+			return null;
+		}
+
+		return label;
+	}
 
 	/// <summary>
 	/// Reads <c>category:</c> (format 1.10): the one group the package is listed under where packages are offered
