@@ -121,6 +121,16 @@ journey and chapter cards; compact instructions do not need a new illustration e
 Every selected style needs a neutral fallback. Loading errors never block guidance.
 No image generation occurs during a user's visit.
 
+Inventory check (2026-10-19): all 504 PNGs decode, with exactly 42 images for each
+of the 12 styles. The set occupies 64,609,741 bytes. Native widths are 218–355 px
+and heights 208–333 px; none is a high-resolution hero asset. Use these cuts as
+small portraits/cards at conservative display sizes (roughly 100–160 CSS px on
+high-density screens), with `object-fit: contain` and uncropped bounds. A larger
+welcome illustration requires separately prepared and visually approved artwork,
+not enlarging a 300-pixel crop. Do not include the whole atlas in initial download
+or a service-worker precache. File integrity is not anatomy or visual approval;
+the production selection still needs per-image review.
+
 ## Administrator journey
 
 First Setup currently includes claim/sign-in, import, handlers and packages. Keep
