@@ -489,6 +489,11 @@ public partial class PackageInstallService
 			notes.Add("Wiki pages are left as they are: a rollback restores objects and attributes only.");
 		}
 
+		var landing = await RestoreWikiLandingAsync(packageId, snapshot, notes, cancellationToken) switch
+		{
+			PackageWikiLandingBound bound => bound.Binding,
+			PackageWikiLandingAbsent => null
+		};
 		var newRevision = installed.CurrentRevision + 1;
 		await writes.UpsertInstalledPackageAsync(installed with
 		{
@@ -496,6 +501,7 @@ public partial class PackageInstallService
 			PastMaximum = snapshot.PastMaximum,
 			Plugins = snapshot.Plugins,
 			WikiCollectionName = snapshot.WikiCollectionName,
+			WikiLandingPage = landing,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});
@@ -503,6 +509,9 @@ public partial class PackageInstallService
 		{
 			Revision = newRevision,
 			Kind = PackageRevisionKind.Rollback,
+			ManifestSnapshotJson = landing == snapshot.WikiLandingPage
+				? record.ManifestSnapshotJson
+				: JsonSerializer.Serialize(snapshot with { WikiLandingPage = landing }, SnapshotJson),
 			AppliedAt = DateTimeOffset.UtcNow
 		});
 		writes.Commit();

@@ -20,6 +20,7 @@ public sealed record InstalledPackageRecord
 	public string? PastMaximumAt { get; init; }
 	public string[]? Plugins { get; init; }
 	public string? WikiCollectionName { get; init; }
+	public SharpMUSH.Library.Models.Packages.PackageWikiLandingPageBinding? WikiLandingPage { get; init; }
 }
 
 /// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.PackageObjectRecord</c>.</summary>
