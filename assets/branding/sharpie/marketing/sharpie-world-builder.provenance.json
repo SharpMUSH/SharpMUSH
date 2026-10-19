@@ -1,0 +1,19 @@
+{
+  "generator": "OpenAI built-in imagegen",
+  "source": "exec-66a2bce2-ab57-4499-affc-d809f5687b5b.png",
+  "source_sha256": "ff131a0be0351a4d4be1c6f31cbaa6873499a714aac1d37f490b624f61d84857",
+  "action": "Sharpie sits at the RIGHT of a small abstract text-world diorama, lifting an arch-shaped room tile into a connected path with one forepaw, the other forepaw steadying a small speech-bubble sign. A compact connected world of three room forms and one chat bubble, physical contact, no floating unrelated objects.",
+  "reference": "Approved minimal Sharpie logo; mint #00DDB3, ink #17333E, white",
+  "constraints": "Flat colors; no palette normalization; native alpha; rounded white hind paws; complete silhouette",
+  "export": "Lossless optimized PNG; exact RGBA round-trip verified",
+  "size": [
+    1254,
+    1254
+  ],
+  "alpha_bounds": [
+    25,
+    68,
+    1224,
+    1204
+  ]
+}

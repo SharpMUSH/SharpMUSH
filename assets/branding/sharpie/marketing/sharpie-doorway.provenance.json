@@ -1,0 +1,19 @@
+{
+  "generator": "OpenAI built-in imagegen",
+  "source": "exec-1d17520f-05e8-4795-a27b-c3ea0060f056.png",
+  "source_sha256": "698c196478a7ca8a6e67f70d367b837179621881cc3fafef3d3a9a768fd25b81",
+  "action": "Sharpie leans over a large upright doorway, both forepaws resting naturally on its low sill, looking through it toward the viewer. Inside doorway is a tiny connected-room diagram. Distinct confident peek-through pose, no waving, no book.",
+  "reference": "Approved minimal Sharpie logo; mint #00DDB3, ink #17333E, white",
+  "constraints": "Flat colors; no palette normalization; native alpha; rounded white hind paws; complete silhouette",
+  "export": "Lossless optimized PNG; exact RGBA round-trip verified",
+  "size": [
+    1254,
+    1254
+  ],
+  "alpha_bounds": [
+    37,
+    23,
+    1222,
+    1222
+  ]
+}
