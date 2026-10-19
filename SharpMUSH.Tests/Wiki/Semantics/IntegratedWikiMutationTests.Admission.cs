@@ -22,8 +22,9 @@ public partial class IntegratedWikiMutationTests
 		Task? parent = null;
 		try
 		{
-			if (openTable) parent = Task.Run(() => accessor.OpenTable("fixture.paused.raw", false));
-			else parent = accessor.WriteAsync(tx => true).AsTask();
+			parent = openTable
+				? Task.Run(() => accessor.OpenTable("fixture.paused.raw", false))
+				: accessor.WriteAsync(tx => true).AsTask();
 			await WaitForLease(provider);
 			await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
 			using var cancellation = new CancellationTokenSource();

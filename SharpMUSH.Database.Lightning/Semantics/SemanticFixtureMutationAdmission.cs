@@ -54,10 +54,8 @@ internal sealed partial class SemanticFixtureCapability
 		{
 			if (_active is null || _ownership.IsRevoked || _poisoned || _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed)
 				throw Unavailable();
-			if (_phase == SemanticFixturePhase.Active)
-			{
-				if (operation == SemanticFixtureMutation.Unsupported) throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
-			}
+			if (_phase == SemanticFixturePhase.Active && operation == SemanticFixtureMutation.Unsupported)
+				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
 			var lease = new SemanticFixtureMutationLease(this, _phase);
 			if (_phase == SemanticFixturePhase.Inactive) _legacyMutationsInFlight = checked(_legacyMutationsInFlight + 1);
 			return lease;
