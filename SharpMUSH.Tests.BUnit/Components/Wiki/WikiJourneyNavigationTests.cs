@@ -288,12 +288,12 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 			await Assert.That(cut.Markup).DoesNotContain("Reference library");
 			await Assert.That(Query(cut.Find("#guide"))["browseCollection"]).IsNull();
 			_api.PendingNavigation = null;
-			await cut.InvokeAsync(() => denied.TrySetResult(new HttpResponseMessage(HttpStatusCode.Forbidden)));
+			await cut.InvokeAsync(() => CompletePending(denied, new HttpResponseMessage(HttpStatusCode.Forbidden)));
 			await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
 			await Assert.That(_nav.Uri).IsEqualTo(originalUri);
 			await Assert.That(_api.ArticleRequests.Count).IsEqualTo(2);
 		}
-		finally { await cut.InvokeAsync(() => denied.TrySetResult(new HttpResponseMessage(HttpStatusCode.Forbidden))); }
+		finally { await cut.InvokeAsync(() => CompletePending(denied, new HttpResponseMessage(HttpStatusCode.Forbidden))); }
 	}
 
 	[Test]
@@ -317,14 +317,14 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 			auth.AccountSessionToken.Returns("second-character-session");
 			await cut.InvokeAsync(() => RaiseReaderChanged(auth, characterChange));
 			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count >= 3, "New credential was not checked for both return and owner fallback."));
-			await cut.InvokeAsync(() => old.TrySetResult(JourneyApi.Navigation("package:reference")));
+			await cut.InvokeAsync(() => CompletePending(old, JourneyApi.Navigation("package:reference")));
 
 			await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
 			await Assert.That(Query(cut.Find("#guide"))["browseCollection"]).IsNull();
 			await Assert.That(cut.Markup).DoesNotContain("Reference library");
 			await Assert.That(_nav.Uri).IsEqualTo(originalUri);
 		}
-		finally { await cut.InvokeAsync(() => old.TrySetResult(new HttpResponseMessage(HttpStatusCode.Forbidden))); }
+		finally { await cut.InvokeAsync(() => CompletePending(old, new HttpResponseMessage(HttpStatusCode.Forbidden))); }
 	}
 
 	[Test]
@@ -369,13 +369,13 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 			auth.AccountSessionToken.Returns("other-character-session");
 			await cut.InvokeAsync(() => RaiseReaderChanged(auth, characterChange));
 			cut.WaitForAssertion(() => Require(_api.ArticleRequests.Count == 2, "The new reader did not reauthorize the article body."));
-			await cut.InvokeAsync(() => old.TrySetResult(JourneyApi.Article("intro")));
+			await cut.InvokeAsync(() => CompletePending(old, JourneyApi.Article("intro")));
 
 			await Assert.That(cut.Markup).DoesNotContain("Introduction body");
 			await Assert.That(cut.FindAll(".wiki-article-body")).IsEmpty();
 			await Assert.That(_nav.Uri).IsEqualTo(originalUri);
 		}
-		finally { await cut.InvokeAsync(() => old.TrySetResult(new HttpResponseMessage(HttpStatusCode.NotFound))); }
+		finally { await cut.InvokeAsync(() => CompletePending(old, new HttpResponseMessage(HttpStatusCode.NotFound))); }
 	}
 
 	[Test]
@@ -483,7 +483,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 			await Assert.That(Query(cut.Find("#guide"))["membersCollection"]).IsEqualTo("package:owner");
 			await Assert.That(cut.Markup).DoesNotContain("Reference library");
 		}
-		finally { await cut.InvokeAsync(() => pending.TrySetResult(new HttpResponseMessage(HttpStatusCode.NotFound))); }
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound))); }
 	}
 
 	private static AccountAuthService? Install(TrackingBunitContext context, JourneyApi api, bool realAccount = false)
@@ -556,6 +556,12 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 	private static string Path(IElement link) => Address(link).AbsolutePath;
 	private static NameValueCollection Query(IElement link) => Query(Address(link));
 	private static NameValueCollection Query(Uri uri) => System.Web.HttpUtility.ParseQueryString(uri.Query);
+	// A successful completion transfers ownership to the HTTP consumer; a rejected retry does not.
+	private static void CompletePending(TaskCompletionSource<HttpResponseMessage> pending, HttpResponseMessage response)
+	{
+		if (!pending.TrySetResult(response)) response.Dispose();
+	}
+
 	private static void Require(bool condition, string message)
 	{
 		if (!condition) throw new InvalidOperationException(message);
