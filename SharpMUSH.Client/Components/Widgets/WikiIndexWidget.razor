@@ -8,6 +8,7 @@
 @using SharpMUSH.Library.Services
 @inject WikiService Wiki
 @inject NavigationManager Nav
+@inject IAccountAuthState AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
@@ -24,8 +25,8 @@
                     <p class="wiki-hero-blurb">@Loc["NavWikiHeroBlurb"]</p>
                     <form class="wiki-hero-search" role="search" @onsubmit="ApplySearch" @onsubmit:preventDefault>
                         <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
-                        <input type="search" placeholder="@Loc["NavWikiSearch"]" aria-label="@Loc["NavWikiSearch"]" value="@_search"
-                               @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+                        <input type="search" placeholder="@Loc["NavWikiSearch"]" aria-label="@Loc["NavWikiSearch"]" value="@_draft"
+                               @oninput="@(e => _draft = e.Value?.ToString() ?? string.Empty)" />
                     </form>
                 </div>
             </Secondary>
@@ -55,7 +56,7 @@
         }
         else if (Searching)
         {
-            <WikiCollectionBrowser Collection="all" Search="@_search" Locale="@_locale" Embedded="true" />
+            <WikiCollectionBrowser Collection="all" Search="@_search" Category="@_browseCategory" Skip="@_browseSkip" Locale="@_locale" Embedded="true" />
         }
         else if (_loading)
         {
@@ -149,6 +150,9 @@
 
     private bool _loading = true;
     private string _search = string.Empty;
+    private string _draft = string.Empty;
+    private string? _browseCategory;
+    private int _browseSkip;
     private string? _heroImage;
     private IReadOnlyList<WikiPageSummary> _pages = [];
 
@@ -172,16 +176,18 @@
     protected override async Task OnInitializedAsync()
     {
         Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.AuthStateChanged += OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged += OnReaderChanged;
         ReadQuery();
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
-        var version = ++_version;
+        if (_disposed) return;
+        var version = Interlocked.Increment(ref _version);
         var locale = _locale;
-        _loading = true;
-        _loadFailed = false;
+        ClearReaderData();
         if (await Wiki.GetNavigationAsync(lang: locale) is WikiNavigationDto navigation)
         {
             if (_disposed || version != _version) return;
@@ -214,6 +220,33 @@
         }
     }
 
+    private void ClearReaderData()
+    {
+        _navigation = null;
+        _names = null;
+        _pinned = new(StringComparer.Ordinal);
+        _pages = [];
+        _heroImage = null;
+        _loading = true;
+        _loadFailed = false;
+    }
+
+    private void OnReaderChanged()
+    {
+        if (_disposed) return;
+        // Authority changes at the same URI must invalidate pending reads before dispatching
+        // the refresh, and remove every label/image authorized for the previous reader.
+        Interlocked.Increment(ref _version);
+        ClearReaderData();
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+            await LoadAsync();
+            if (!_disposed) StateHasChanged();
+        });
+    }
+
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         _ = InvokeAsync(async () =>
@@ -227,25 +260,16 @@
 
     private void ReadQuery()
     {
-        // ?q=… from the shell search or the sidebar; the client has no query-string helper library.
-        _search = string.Empty;
-        _locale = WikiLocaleLinks.FromUri(Nav.Uri);
-        var query = new Uri(Nav.Uri).Query.TrimStart('?');
-        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var eq = pair.IndexOf('=');
-            var key = eq < 0 ? pair : pair[..eq];
-            if (key != "q") continue;
-            _search = eq < 0 ? string.Empty : Uri.UnescapeDataString(pair[(eq + 1)..].Replace('+', ' '));
-            return;
-        }
+        // Preserve legacy /wiki?q= links while using the same last-value and length policy as collection routes.
+        var state = WikiBrowseState.FromUri(Nav.Uri, "all");
+        _search = state.Search ?? string.Empty;
+        _draft = _search;
+        _browseCategory = state.Category;
+        _browseSkip = state.Skip;
+        _locale = state.Locale;
     }
 
-    private void ApplySearch()
-    {
-        var term = _search.Trim();
-        Nav.NavigateTo(WikiLocaleLinks.WithLocale(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}", _locale));
-    }
+    private void ApplySearch() => Nav.NavigateTo(WikiJourneyLinks.Collection(new WikiBrowseState("all", _draft, Locale: _locale)));
 
     private IReadOnlyList<WikiCategoryGroup> FilteredGroups
     {
@@ -267,5 +291,12 @@
         else _pinned.Remove(key);
     }
 
-    public void Dispose() { _disposed = true; ++_version; Nav.LocationChanged -= OnLocationChanged; }
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _version);
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.AuthStateChanged -= OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+    }
 }

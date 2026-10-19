@@ -81,3 +81,22 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+.kit-tile--text-only {
+	box-sizing: border-box;
+	min-height: 44px;
+	justify-content: center;
+	padding: 8px 0;
+}
+
+.kit-tile--text-only .kit-tile-label,
+.kit-tile--text-only .kit-tile-sub {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.kit-tile-overlay--inline {
+	position: static;
+	width: 100%;
+	flex-wrap: wrap;
+}

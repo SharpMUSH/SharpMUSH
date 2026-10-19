@@ -160,11 +160,38 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Typing_FiltersTheCards_AndNoMatchSaysSo()
+	public async Task TypingPreservesCardsUntilSubmissionThenRoutesABoundedSearchWithLocale()
 	{
-		var cut = RenderHome();
-		await cut.Find(".wiki-hero-search input").InputAsync("zzz");
-		await Assert.That(cut.FindAll(".wiki-cat-card").Count).IsEqualTo(0);
-		cut.WaitForAssertion(() => { if (!cut.Find(".wiki-empty").TextContent.Contains("zzz")) throw new InvalidOperationException("search not complete"); });
+		var cut = RenderHome("/wiki?lang=fr");
+		var originalRoute = _nav.Uri;
+		var originalRequests = _fake.Requests.Count;
+		var bounded = "zzz " + new string('x', 196);
+		var draft = "  " + bounded + "overflow  ";
+		await cut.Find(".wiki-hero-search input").InputAsync(draft);
+		await Assert.That(cut.FindAll(".wiki-cat-card .wiki-cat-name").Select(node => node.TextContent))
+			.IsEquivalentTo(["Guides", "Lore"]);
+		await Assert.That(cut.FindAll(".wiki-collection-page, .wiki-empty")).IsEmpty();
+		await Assert.That(cut.Find(".wiki-hero-search input").GetAttribute("value")).IsEqualTo(draft);
+		await Assert.That(_nav.Uri).IsEqualTo(originalRoute);
+		await Assert.That(_fake.Requests.Count).IsEqualTo(originalRequests);
+
+		await cut.Find(".wiki-hero-search").SubmitAsync();
+		var location = new Uri(_nav.Uri);
+		var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+		await Assert.That(location.AbsolutePath).IsEqualTo("/wiki/collections/all");
+		await Assert.That(query["q"]).IsEqualTo(bounded);
+		await Assert.That(query["lang"]).IsEqualTo("fr");
+		await Assert.That(query["skip"]).IsNull();
+		await Assert.That(query.Count).IsEqualTo(2);
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Find(".wiki-empty").TextContent.Contains(bounded, StringComparison.Ordinal))
+				throw new InvalidOperationException("Submitted no-match search was not rendered.");
+		});
+		await Assert.That(cut.FindAll(".wiki-cat-card, .wiki-collection-page")).IsEmpty();
+		var rowsRequest = _fake.Requests.Last(path => path.StartsWith("/api/wiki/collections/all/pages", StringComparison.Ordinal));
+		var rowsQuery = System.Web.HttpUtility.ParseQueryString(new Uri(new Uri(_nav.BaseUri), rowsRequest).Query);
+		await Assert.That(rowsQuery["search"]).IsEqualTo(bounded);
+		await Assert.That(rowsQuery["lang"]).IsEqualTo("fr");
 	}
 }

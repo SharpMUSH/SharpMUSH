@@ -8,6 +8,7 @@
 @inject WikiService Wiki
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@inject IAccountAuthState AccountAuth
 @implements IDisposable
 
 @if (_loading)
@@ -25,7 +26,8 @@ else if (_loadFailed)
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Locale="@Locale" Article="@_article"
+    <WikiDisplay @key="_readerVersion" Slug="@Slug" Namespace="@Namespace" Locale="@Locale" Article="@_article"
+                 BrowseState="@BrowseState" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip"
                  Embedded="@Embedded" ShowTitle="@ShowTitle"
                  ActivateEditMode="ActivateEditMode" />
 }
@@ -34,7 +36,7 @@ else
     @* Outside an embed the editor takes the page's full height (full-height passes a definite height
        down through the shell), so the source and preview panes fill the window and scroll inside it. *@
     <div class="wiki-view-edit @(Embedded ? null : "full-height")">
-        <WikiEdit Article="@_editDraft"
+        <WikiEdit @key="_readerVersion" Article="@_editDraft"
                   SourceLocale="@_sourceLocale"
                   SelectedLocale="@_selectedLocale"
                   AvailableLocales="@_availableLocales"
@@ -78,6 +80,13 @@ else
     /// <summary>The locale requested via <c>?lang=</c>; null means the reader's stored preference.</summary>
     [Parameter] public string? Locale { get; init; }
 
+    /// <summary>Untrusted return destination; the display validates it through normal navigation.</summary>
+    [Parameter] public WikiBrowseState? BrowseState { get; init; }
+
+    /// <summary>The independently selected member collection, not the article's owner or its return origin.</summary>
+    [Parameter] public string? MembersCollection { get; init; }
+    [Parameter] public int MembersSkip { get; init; }
+
     /// <summary>The title a page that does not exist yet starts from; null or blank means its slug.</summary>
     [Parameter] public string? NewTitle { get; init; }
 
@@ -105,6 +114,12 @@ else
     private WikiArticle? _editDraft;
     private string? _saveError;
     private bool _loading = true;
+    private bool _disposed;
+    private int _readerVersion;
+    private int _loadVersion;
+
+    private bool IsCurrentReader(int reader) => !_disposed && reader == Volatile.Read(ref _readerVersion);
+    private bool IsCurrentLoad(int reader, int load) => IsCurrentReader(reader) && load == Volatile.Read(ref _loadVersion);
 
     private string _sourceLocale = "en";
     private string _selectedLocale = "en";
@@ -123,11 +138,15 @@ else
 
     public async Task ActivateEditMode()
     {
-        _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
+        var reader = Volatile.Read(ref _readerVersion);
+        if (!IsCurrentReader(reader) || _loading) return;
+        var names = await Wiki.GetCategoryNamesAsync(_selectedLocale);
+        if (!IsCurrentReader(reader)) return;
+        _categoryNames = names;
         _editDraft = BuildEditDraft();
         _saveError = null;
         await SetModeAsync(WikiMode.Edit);
-        StateHasChanged();
+        if (IsCurrentReader(reader)) StateHasChanged();
     }
 
     private async Task SetModeAsync(WikiMode mode)
@@ -175,6 +194,8 @@ else
 
     private async Task HandleSave(WikiArticle draft)
     {
+        var reader = Volatile.Read(ref _readerVersion);
+        if (!IsCurrentReader(reader) || _loading) return;
         _saveError = null;
         _saveConflict = false;
 
@@ -185,6 +206,7 @@ else
             var translationResult = await Wiki.UpsertTranslationAsync(
                 draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,
                 ExpectedTranslationRevision, editSummary: null, ns: Namespace);
+            if (!IsCurrentReader(reader)) return;
 
             switch (translationResult)
             {
@@ -219,12 +241,14 @@ else
         {
             result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace);
         }
+        if (!IsCurrentReader(reader)) return;
 
         if (result is WikiArticle saved
             && (saved.Published != draft.Published || !saved.Categories.Order().SequenceEqual(draft.Categories.Select(WikiCategories.Key).Distinct().Order())))
         {
             // Content save succeeded; categories and the published switch are page metadata, their own call.
             result = await Wiki.SetMetadataAsync(saved.Slug, draft.Categories, draft.Published, Namespace);
+            if (!IsCurrentReader(reader)) return;
         }
 
         switch (result)
@@ -233,8 +257,10 @@ else
                 _article = updated;
                 _editDraft = null;
                 await SetModeAsync(WikiMode.View);
+                if (!IsCurrentReader(reader)) return;
                 // A host framing the page (the profile's Biography card) titles and dates it from these.
                 await OnLoaded.InvokeAsync(true);
+                if (!IsCurrentReader(reader)) return;
                 await OnArticle.InvokeAsync(updated);
                 break;
             case ApiFailure failure:
@@ -243,8 +269,7 @@ else
         }
     }
 
-    /// <summary>Swaps in the article returned by a successful history-dialog rollback.</summary>
-
+    /// <summary>Drops the editing draft and returns to reading.</summary>
     private async Task HandleCancel()
     {
         _editDraft = null;
@@ -262,19 +287,63 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        AccountAuth.AuthStateChanged += OnAuthStateChanged;
+        AccountAuth.ActiveCharacterChanged += OnAuthStateChanged;
+        await ReadForReaderAsync(Volatile.Read(ref _readerVersion));
+    }
+
+    private async Task ReadForReaderAsync(int reader)
+    {
+        if (!IsCurrentReader(reader)) return;
         _loading = true;
-        if (!await LoadAsync()) StartRetrying();
+        var loaded = await LoadAsync(reader);
+        if (!IsCurrentReader(reader)) return;
+        if (!loaded) StartRetrying(reader);
         _loading = false;
-        await base.OnInitializedAsync();
+    }
+
+    private void OnAuthStateChanged()
+    {
+        if (_disposed) return;
+        var reader = Interlocked.Increment(ref _readerVersion);
+        Interlocked.Increment(ref _loadVersion);
+        _ = InvokeAsync(async () =>
+        {
+            if (!IsCurrentReader(reader)) return;
+            _retry?.Cancel();
+            _retry = null;
+            _article = null;
+            _editDraft = null;
+            _saveError = null;
+            _saveConflict = false;
+            _categoryNames = null;
+            _availableLocales = [];
+            _loadedRevision = 0;
+            _sourceLocale = "en";
+            _selectedLocale = "en";
+            _loadFailed = false;
+            _loading = true;
+            StateHasChanged();
+            // Remove the previous reader's host title/metadata immediately. A boolean "not found"
+            // notification waits for the actual read: some hosts unmount this view on that answer.
+            await OnArticle.InvokeAsync(null);
+            if (!IsCurrentReader(reader)) return;
+            await ReadForReaderAsync(reader);
+            if (IsCurrentReader(reader)) StateHasChanged();
+        });
     }
 
     /// <summary>
     /// Reads the page. False when the server did not answer: the view then says so and keeps asking, so a
     /// game that restarts does not leave the page claiming it does not exist.
     /// </summary>
-    private async Task<bool> LoadAsync()
+    private async Task<bool> LoadAsync(int reader)
     {
-        switch (await Wiki.GetWikiArticle(Slug, Namespace, Locale))
+        if (!IsCurrentReader(reader)) return true;
+        var load = Interlocked.Increment(ref _loadVersion);
+        var result = await Wiki.GetWikiArticle(Slug, Namespace, Locale);
+        if (!IsCurrentLoad(reader, load)) return true;
+        switch (result)
         {
             case WikiArticle article:
                 _article = article;
@@ -287,22 +356,22 @@ else
                 return false;
         }
         _loadFailed = false;
-        await ShowLoadedAsync();
+        await ShowLoadedAsync(reader, load);
         return true;
     }
 
-    private void StartRetrying()
+    private void StartRetrying(int reader)
     {
-        if (_retry is not null) return;
+        if (!IsCurrentReader(reader) || _retry is not null) return;
         _retry = new CancellationTokenSource();
-        _ = RetryAndReleaseAsync(_retry);
+        _ = RetryAndReleaseAsync(_retry, reader);
     }
 
-    private async Task RetryAndReleaseAsync(CancellationTokenSource retry)
+    private async Task RetryAndReleaseAsync(CancellationTokenSource retry, int reader)
     {
         try
         {
-            await RetryAsync(retry.Token);
+            await RetryAsync(retry.Token, reader);
         }
         finally
         {
@@ -311,9 +380,9 @@ else
         }
     }
 
-    private async Task RetryAsync(CancellationToken token)
+    private async Task RetryAsync(CancellationToken token, int reader)
     {
-        for (var attempt = 0; !token.IsCancellationRequested; attempt++)
+        for (var attempt = 0; !token.IsCancellationRequested && IsCurrentReader(reader); attempt++)
         {
             try
             {
@@ -323,23 +392,33 @@ else
             {
                 return;
             }
-            if (!_loadFailed) return;
+            if (!_loadFailed || !IsCurrentReader(reader)) return;
             var loaded = false;
             await InvokeAsync(async () =>
             {
-                loaded = await LoadAsync();
-                if (loaded) StateHasChanged();
+                if (token.IsCancellationRequested || !IsCurrentReader(reader)) return;
+                loaded = await LoadAsync(reader);
+                if (loaded && IsCurrentReader(reader)) StateHasChanged();
             });
             if (loaded) return;
         }
     }
 
-    private Task RetryNowAsync() => LoadAsync();
+    private Task RetryNowAsync() => LoadAsync(Volatile.Read(ref _readerVersion));
 
-    public void Dispose() => _retry?.Cancel();
-
-    private async Task ShowLoadedAsync()
+    public void Dispose()
     {
+        _disposed = true;
+        Interlocked.Increment(ref _readerVersion);
+        Interlocked.Increment(ref _loadVersion);
+        _retry?.Cancel();
+        AccountAuth.AuthStateChanged -= OnAuthStateChanged;
+        AccountAuth.ActiveCharacterChanged -= OnAuthStateChanged;
+    }
+
+    private async Task ShowLoadedAsync(int reader, int load)
+    {
+        if (!IsCurrentLoad(reader, load)) return;
         if (_article is not null)
         {
             // The served locale is the source locale unless a translation won, in which case the source is
@@ -354,11 +433,14 @@ else
         {
             // A cold load into Edit mode never calls ActivateEditMode, so it must build the draft
             // itself or WikiEdit's `Article is not null` guard renders nothing.
-            _categoryNames = await Wiki.GetCategoryNamesAsync(_selectedLocale);
+            var names = await Wiki.GetCategoryNamesAsync(_selectedLocale);
+            if (!IsCurrentLoad(reader, load)) return;
+            _categoryNames = names;
             _editDraft = BuildEditDraft();
         }
 
         await OnLoaded.InvokeAsync(_article is not null);
+        if (!IsCurrentLoad(reader, load)) return;
         await OnArticle.InvokeAsync(_article);
     }
 }

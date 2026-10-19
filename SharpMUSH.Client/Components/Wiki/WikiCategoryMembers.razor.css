@@ -20,10 +20,12 @@
 	.wiki-cat-grid {
 		grid-template-columns: minmax(0, 1fr);
 	}
+	.wiki-cat-paging button { flex: 1; }
 }
 
-.wiki-cat-subs {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-}
+.wiki-cat-range { margin: 0; }
+.wiki-cat-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wiki-cat-paging { display: flex; flex-wrap: wrap; gap: .6rem; }
+.wiki-cat button { min-height: 44px; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-row); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.wiki-cat button:disabled { opacity: .5; cursor: default; }
+.wiki-cat button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

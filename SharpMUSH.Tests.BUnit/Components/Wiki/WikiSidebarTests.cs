@@ -1,7 +1,11 @@
+using System.Net;
+using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using SharpMUSH.Client.Components.Wiki;
+using SharpMUSH.Library.API;
 
 namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 
@@ -66,10 +70,12 @@ public class WikiSidebarTests : TrackingBunitContext
 		var rows = cut.FindAll(".wiki-side-cats .kit-row");
 		await Assert.That(rows.Count).IsEqualTo(3)
 			.Because("only pinned categories and the complete category directory belong in the sidebar");
-		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=guides");
+		await Assert.That(rows[0].GetAttribute("href")).StartsWith("/wiki/category/guides?");
+		await Assert.That(cut.Find(".wiki-side-members[href='/wiki/collections/game?category=guides']")).IsNotNull();
 		await Assert.That(rows[0].QuerySelector(".kit-row-count")!.TextContent).IsEqualTo("2");
 		await Assert.That(rows[0].QuerySelector("img.kit-row-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
-		await Assert.That(rows[1].GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=lore");
+		await Assert.That(rows[1].GetAttribute("href")).StartsWith("/wiki/category/lore?");
+		await Assert.That(cut.Find(".wiki-side-members[href='/wiki/collections/game?category=lore']")).IsNotNull();
 		await Assert.That(rows.Any(r => r.TextContent.Contains("Uncategorized"))).IsFalse();
 	}
 
@@ -94,12 +100,65 @@ public class WikiSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task SearchSubmitsToTheWikiHome()
+	public async Task SearchStaysInTheAuthorizedCollectionAndRetainsCategoryAndLocale()
 	{
-		var cut = RenderAt("/wiki/collections/game?category=lore");
+		_api.Collections.Add(new("package:reference", "Reference", 4711));
+		var cut = RenderAt("/wiki/collections/package%3Areference?category=lore&skip=500&lang=fr");
 		await cut.Find(".kit-side-search input").InputAsync("harbour");
 		await cut.Find(".kit-side-search").SubmitAsync();
-		await Assert.That(_nav.Uri).EndsWith("/wiki?q=harbour");
+		var location = new Uri(_nav.Uri);
+		var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+		await Assert.That(Uri.UnescapeDataString(location.AbsolutePath)).IsEqualTo("/wiki/collections/package:reference");
+		await Assert.That(query["q"]).IsEqualTo("harbour");
+		await Assert.That(query["category"]).IsEqualTo("lore");
+		await Assert.That(query["lang"]).IsEqualTo("fr");
+		await Assert.That(query["skip"]).IsNull();
+	}
+
+	[Test]
+	public async Task CategoryLinksRetainSubmittedSearchAndLocaleWhileResettingTheOffset()
+	{
+		var cut = RenderAt("/wiki/collections/game?q=harbour&category=guides&skip=500&lang=fr");
+		var href = cut.FindAll(".wiki-side-cats a").Single(link => link.GetAttribute("href")!.Contains("category=lore", StringComparison.Ordinal)).GetAttribute("href");
+		var query = System.Web.HttpUtility.ParseQueryString(new Uri(new Uri(_nav.Uri), href).Query);
+		await Assert.That(query["q"]).IsEqualTo("harbour");
+		await Assert.That(query["category"]).IsEqualTo("lore");
+		await Assert.That(query["lang"]).IsEqualTo("fr");
+		await Assert.That(query["skip"]).IsNull();
+		await Assert.That(query.GetValues("lang")!.Length).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task SearchEncodesUnicodeAndQueryPunctuationWithoutAddingFields()
+	{
+		var cut = RenderAt("/wiki/collections/game?category=lore&lang=fr");
+		await cut.Find(".kit-side-search input").InputAsync("  Étoile & C++ \"quoted\" #fragment  ");
+		await cut.Find(".kit-side-search").SubmitAsync();
+		var location = new Uri(_nav.Uri);
+		var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+		await Assert.That(location.AbsolutePath).IsEqualTo("/wiki/collections/game");
+		await Assert.That(query["q"]).IsEqualTo("Étoile & C++ \"quoted\" #fragment");
+		await Assert.That(query["category"]).IsEqualTo("lore");
+		await Assert.That(query["lang"]).IsEqualTo("fr");
+		await Assert.That(query.Count).IsEqualTo(3);
+		await Assert.That(location.Fragment).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task SearchFromDirectArticleUsesItsAuthorizedOwnerCollection()
+	{
+		_api.PageCollection = "package:reference";
+		_api.Collections.Add(new("package:reference", "Reference", 4711));
+		var cut = RenderAt("/wiki/main/intro?lang=fr&browseCollection=forged&returnUrl=https%3A%2F%2Fevil.example%2F");
+		await cut.Find(".kit-side-search input").InputAsync("harbour");
+		await cut.Find(".kit-side-search").SubmitAsync();
+		var location = new Uri(_nav.Uri);
+		var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+		await Assert.That(Uri.UnescapeDataString(location.AbsolutePath)).IsEqualTo("/wiki/collections/package:reference");
+		await Assert.That(query["q"]).IsEqualTo("harbour");
+		await Assert.That(query["lang"]).IsEqualTo("fr");
+		await Assert.That(query["returnUrl"]).IsNull();
+		await Assert.That(location.Host).IsEqualTo(new Uri(_nav.BaseUri).Host);
 	}
 
 	[Test]
@@ -143,4 +202,116 @@ public class WikiSidebarTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".kit-row-label").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-side-search").Count).IsEqualTo(0);
 	}
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task SearchCannotUseThePreviousCollectionWhileTheCurrentDirectoryIsPending(bool allowed)
+	{
+		var handler = InstallDelayedDirectory();
+		var cut = RenderAt("/wiki/collections/package%3Afirst?category=first&lang=fr");
+		const string destination = "/wiki/collections/package%3Asecond?category=second&lang=de";
+		_nav.NavigateTo(destination);
+		cut.WaitForAssertion(() =>
+		{
+			if (!handler.SecondRequested) throw new InvalidOperationException("The second collection read was not started.");
+		});
+		var pendingRoute = _nav.Uri;
+		try
+		{
+			await cut.Find(".kit-side-search input").InputAsync("harbour");
+			await cut.Find(".kit-side-search").SubmitAsync();
+			await Assert.That(_nav.Uri).IsEqualTo(pendingRoute)
+				.Because("search has no current authorized scope until the destination directory finishes");
+			await cut.InvokeAsync(() => handler.CompleteSecond(allowed));
+			if (allowed)
+			{
+				cut.WaitForAssertion(() => cut.Find(".wiki-side-cats a[href*='category=second']"));
+				await cut.Find(".kit-side-search input").InputAsync("harbour");
+				await cut.Find(".kit-side-search").SubmitAsync();
+				var location = new Uri(_nav.Uri);
+				var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+				await Assert.That(Uri.UnescapeDataString(location.AbsolutePath)).IsEqualTo("/wiki/collections/package:second");
+				await Assert.That(query["q"]).IsEqualTo("harbour");
+				await Assert.That(query["category"]).IsEqualTo("second");
+				await Assert.That(query["lang"]).IsEqualTo("de");
+			}
+			else
+			{
+				cut.WaitForAssertion(() => cut.Find("button.wiki-side-new"));
+				await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+				await cut.Find(".kit-side-search input").InputAsync("blocked");
+				await cut.Find(".kit-side-search").SubmitAsync();
+				await Assert.That(_nav.Uri).IsEqualTo(pendingRoute);
+			}
+		}
+		finally { await cut.InvokeAsync(() => handler.CompleteSecond(false)); }
+	}
+
+	[Test]
+	public async Task PendingAndRevokedDirectoriesDoNotLeavePreviousCollectionChromeActionable()
+	{
+		var handler = InstallDelayedDirectory();
+		var cut = RenderAt("/wiki/collections/package%3Afirst?lang=fr");
+		await Assert.That(cut.Find(".wiki-side-cats").TextContent).Contains("First private category");
+		_nav.NavigateTo("/wiki/collections/package%3Asecond?category=second&lang=de");
+		cut.WaitForAssertion(() =>
+		{
+			if (!handler.SecondRequested) throw new InvalidOperationException("The second collection read was not started.");
+		});
+		try
+		{
+			await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("First private category");
+			await Assert.That(cut.Markup).DoesNotContain("First private collection");
+			await cut.InvokeAsync(() => handler.CompleteSecond(false));
+			cut.WaitForAssertion(() => cut.Find("button.wiki-side-new"));
+			await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("First private category");
+			await Assert.That(cut.Markup).DoesNotContain("First private collection");
+		}
+		finally { await cut.InvokeAsync(() => handler.CompleteSecond(false)); }
+	}
+
+	private DelayedDirectoryApi InstallDelayedDirectory()
+	{
+		var handler = new DelayedDirectoryApi();
+		var client = Track(new HttpClient(handler) { BaseAddress = new Uri(_nav.BaseUri) });
+		Services.GetRequiredService<IHttpClientFactory>().CreateClient("api").Returns(client);
+		return handler;
+	}
+
+	private sealed class DelayedDirectoryApi : HttpMessageHandler
+	{
+		private readonly TaskCompletionSource<HttpResponseMessage> _second = new();
+		private bool _completed;
+		private bool _allowed;
+		public bool SecondRequested { get; private set; }
+
+		public void CompleteSecond(bool allowed)
+		{
+			if (_completed) return;
+			_completed = true;
+			_allowed = allowed;
+			_second.SetResult(allowed ? Directory("second") : new HttpResponseMessage(HttpStatusCode.Forbidden));
+		}
+
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var collection = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query)["collection"];
+			if (collection == "package:second")
+			{
+				SecondRequested = true;
+				return _completed ? Task.FromResult(_allowed ? Directory("second") : new HttpResponseMessage(HttpStatusCode.Forbidden)) : _second.Task;
+			}
+			return Task.FromResult(Directory("first"));
+		}
+
+		private static HttpResponseMessage Directory(string key) => new(HttpStatusCode.OK)
+		{
+			Content = JsonContent.Create(new WikiNavigationDto("package:" + key, 4,
+				[new WikiCollectionSummaryDto("package:" + key, key == "first" ? "First private collection" : "Second collection", 4)],
+				[new WikiCategorySummaryDto(key, key == "first" ? "First private category" : "Second category", 4, true, true)]))
+		};
+	}
+
 }

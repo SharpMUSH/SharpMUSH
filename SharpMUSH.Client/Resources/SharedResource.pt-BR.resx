@@ -6483,4 +6483,11 @@
   <data name="WikiPreviousPage" xml:space="preserve"><value>Anterior</value></data>
   <data name="WikiNextPage" xml:space="preserve"><value>Próxima</value></data>
   <data name="WikiPageRange" xml:space="preserve"><value>Exibindo {0}–{1} de {2}</value></data>
+  <data name="NavWikiBackToResults" xml:space="preserve">
+    <value>Voltar aos resultados</value>
+  </data>
+  <data name="NavWikiGameWiki" xml:space="preserve">
+    <value>Wiki do jogo</value>
+  </data>
+  <data name="WikiBrowseMembers" xml:space="preserve"><value>Explorar membros</value></data>
 </root>

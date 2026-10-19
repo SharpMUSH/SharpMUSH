@@ -72,7 +72,11 @@ internal sealed class WikiApiFake : HttpMessageHandler
 	return (string.IsNullOrWhiteSpace(query["category"]) || categories.Contains(query["category"]))
 		&& (string.IsNullOrWhiteSpace(query["search"]) || doc.RootElement.GetProperty("title").GetString()!.Contains(query["search"]!, StringComparison.OrdinalIgnoreCase)
 			|| categories.Any(row => row.Contains(query["search"]!, StringComparison.OrdinalIgnoreCase)));
-}).ToArray();
+}).OrderBy(json =>
+		{
+			using var doc = JsonDocument.Parse(json);
+			return doc.RootElement.GetProperty("title").GetString();
+		}, StringComparer.Ordinal).ToArray();
 	}
 	public List<string> Requests { get; } = [];
 

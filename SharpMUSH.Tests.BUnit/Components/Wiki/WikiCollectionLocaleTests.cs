@@ -31,7 +31,7 @@ public class WikiCollectionLocaleTests : TrackingBunitContext
 		nav.NavigateTo("/wiki/collections/all?lang=fr&q=R%C3%A8gle");
 		var cut = Render<WikiCollection>(parameters => parameters.Add(p => p.Collection, "all"));
 		cut.WaitForAssertion(() => RequireContains("Règle 00", cut.Find(".wiki-collection-page").TextContent));
-		await Assert.That(cut.Find(".wiki-collection-page").GetAttribute("href")).IsEqualTo("/wiki/main/rule_00?lang=fr");
+		await AssertCollectionArticleLink(cut.Find(".wiki-collection-page").GetAttribute("href"), "fr", "Règle");
 		await Assert.That(cut.Find("h1 + a").GetAttribute("href")).IsEqualTo("/wiki?lang=fr");
 		await cut.FindAll(".wiki-collection-paging button")[1].ClickAsync(new());
 		cut.WaitForAssertion(() => RequireContains("Règle 50", cut.Find(".wiki-collection-page").TextContent));
@@ -54,7 +54,7 @@ public class WikiCollectionLocaleTests : TrackingBunitContext
 		nav.NavigateTo("/wiki/collections/all?lang=de");
 		cut.WaitForAssertion(() => RequireContains("Regel 00", cut.Find(".wiki-collection-page").TextContent));
 		await Assert.That(_api.Requests.Any(uri => uri.AbsolutePath == "/api/wiki/navigation" && uri.Query.Contains("lang=de", StringComparison.Ordinal))).IsTrue();
-		await Assert.That(cut.Find(".wiki-collection-page").GetAttribute("href")).IsEqualTo("/wiki/main/rule_00?lang=de");
+		await AssertCollectionArticleLink(cut.Find(".wiki-collection-page").GetAttribute("href"), "de", null);
 	}
 
 	[Test]
@@ -88,6 +88,23 @@ public class WikiCollectionLocaleTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task HomeSearchNavigatesToTheAllCollectionBrowserWithLocale()
+	{
+		var nav = Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo("/wiki?lang=fr");
+		var cut = Render<WikiIndexWidget>();
+		cut.WaitForAssertion(() => cut.Find(".wiki-hero-search"));
+		await cut.Find(".wiki-hero-search input").InputAsync("  Règle & C++  ");
+		await cut.Find(".wiki-hero-search").SubmitAsync();
+		var location = new Uri(nav.Uri);
+		var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+		await Assert.That(location.AbsolutePath).IsEqualTo("/wiki/collections/all");
+		await Assert.That(query["q"]).IsEqualTo("Règle & C++");
+		await Assert.That(query["lang"]).IsEqualTo("fr");
+		await Assert.That(query["skip"]).IsNull();
+	}
+
+	[Test]
 	public async Task CategoryUsesExplicitArticleLocaleForRequestsAndMemberLinks()
 	{
 		var cut = Render<WikiCategoryMembers>(parameters => parameters
@@ -104,6 +121,19 @@ public class WikiCollectionLocaleTests : TrackingBunitContext
 		_api.Malformed = true;
 		var result = await Services.GetRequiredService<WikiService>().GetCollectionPagesAsync("all");
 		await Assert.That(result is ApiFailure { Kind: ApiFailureKind.Unexpected }).IsTrue();
+	}
+
+	private static async Task AssertCollectionArticleLink(string? href, string locale, string? search)
+	{
+		var article = new Uri(new Uri("https://localhost/"), href ?? throw new InvalidOperationException("Article link missing."));
+		var query = System.Web.HttpUtility.ParseQueryString(article.Query);
+		await Assert.That(article.AbsolutePath).IsEqualTo("/wiki/main/rule_00");
+		await Assert.That(query["lang"]).IsEqualTo(locale);
+		await Assert.That(query["browseCollection"]).IsEqualTo("all");
+		await Assert.That(query["browseQ"]).IsEqualTo(search);
+		await Assert.That(query["browseCategory"]).IsNull();
+		await Assert.That(query["browseSkip"]).IsNull();
+		await Assert.That(query["membersCollection"]).IsEqualTo("all");
 	}
 
 	private static void RequireContains(string expected, string actual)

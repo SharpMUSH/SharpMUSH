@@ -4,6 +4,7 @@
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
+@using SharpMUSH.Library.API
 @using System.Net
 @using System.Text
 @using System.Text.RegularExpressions
@@ -14,6 +15,8 @@
 @inject ILogger<WikiDisplay> Logger
 @inject NavigationManager Nav
 @inject CharacterDirectoryService Characters
+@inject IAccountAuthState AccountAuth
+@implements IDisposable
 
 @if (Article is null && IsCharacterBiography)
 {
@@ -37,6 +40,7 @@ else if (Article is null && IsCategoryPage)
        without one still lists its members, as MediaWiki's does. *@
     <div class="wiki-page">
         <div class="wiki-page-main">
+            @JourneyNavigation
             <WikiPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug, _categoryNames)">
                 <Actions>
                     @CategoryPinButton
@@ -47,7 +51,7 @@ else if (Article is null && IsCategoryPage)
                     </AuthorizeView>
                 </Actions>
             </WikiPageHeader>
-            <WikiCategoryMembers Category="@Slug" Locale="@Locale" />
+            <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" />
         </div>
         <aside class="wiki-page-aside">
             <AuthorizeView Policy="wiki.admin">
@@ -64,7 +68,7 @@ else if (Article is null)
         @* Embedded on another page, there is no wiki the reader came from, so no way "back" to it. *@
         @if (!Embedded)
         {
-            <BackLink Class="wiki-back" Href="/wiki">@Loc["Wiki"]</BackLink>
+            @JourneyNavigation
         }
         <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
             <AuthorizeView Policy="wiki.create">
@@ -100,6 +104,7 @@ else
         <div class="wiki-page-main">
             @if (!Embedded)
             {
+                @JourneyNavigation
                 <WikiPageHeader Title="@Article.Title" Kicker="@Kicker" Banner="@(HasBanner ? LeadImage : null)"
                                 Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact"
                                 Meta="@MetaLine" Actions="@HeaderActions" />
@@ -117,7 +122,7 @@ else
                 @CategoryBar
                 @if (IsCategoryPage)
                 {
-                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" />
+                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" />
                 }
             }
             else
@@ -157,7 +162,8 @@ else
                 @if (_more.Count > 0)
                 {
                     <WikiMoreCard Category="@(_moreLoadedFor!)"CategoryLabel="@WikiHelpers.CategoryLabel(_moreLoadedFor!, _categoryNames)"
-                                  Pages="_more" Total="_moreTotal" />
+                                  Pages="_more" Total="_moreTotal" BrowseState="@_returnState"
+                                  MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" Locale="@Locale" />
                 }
             </aside>
         }
@@ -175,6 +181,10 @@ else
     /// <summary>The locale the reader asked for via <c>?lang=</c>; null means their stored preference.</summary>
     [Parameter]
     public string? Locale { get; init; }
+
+    [Parameter] public WikiBrowseState? BrowseState { get; init; }
+    [Parameter] public string? MembersCollection { get; init; }
+    [Parameter] public int MembersSkip { get; init; }
 
     [Parameter]
     public WikiArticle? Article { get; init; }
@@ -197,12 +207,8 @@ else
         "<div class=\"wiki-directive\" data-directive=\"([a-z]+)\" data-arg=\"([^\"]*)\"></div>",
         RegexOptions.Compiled);
 
-    private static readonly Regex WikiLinkHref = new(
-        "<a href=\"/wiki/([^\"#?]+)\">",
-        RegexOptions.Compiled);
-
     // Character biographies render as their /character/{slug} alias. HTML stored before that
-    // change still carries the /wiki/character/... form, which WikiLinkHref above still matches,
+    // change still carries the /wiki/character/... form, which the canonical target reader matches,
     // so both shapes have to be recognised for redlink marking to survive the transition.
     private static readonly Regex CharacterLinkHref = new(
         "<a href=\"/character/([^\"#?/]+)\">",
@@ -234,6 +240,109 @@ else
 
     private string PagePath => WikiRoutes.WikiPathFor(Namespace, Slug);
 
+    private WikiBrowseState? _returnState;
+    private string? _ownerHref;
+    private string? _ownerLabel;
+    private (string Page, string Uri, WikiBrowseState? Browse, string? Locale, string? Members, int Skip)? _navigationFor;
+    private Task _navigationLoad = Task.CompletedTask;
+    private int _navigationVersion;
+    private int _renderVersion;
+    private bool _disposed;
+
+    private RenderFragment JourneyNavigation => __builder =>
+    {
+        @if (!Embedded)
+        {
+            <nav class="wiki-journey" aria-label="@Loc["Wiki"]">
+                @if (_returnState is { } state)
+                {
+                    <BackLink Class="wiki-back wiki-back-results" Href="@WikiJourneyLinks.Collection(state)">@Loc["NavWikiBackToResults"]</BackLink>
+                }
+                else if (_ownerHref is not null)
+                {
+                    <BackLink Class="wiki-back" Href="@_ownerHref">@Loc["NavWikiBrowse"] @_ownerLabel</BackLink>
+                }
+                <a class="wiki-game-link" href="@WikiLocaleLinks.WithLocale("/wiki", Locale)">@Loc["NavWikiGameWiki"]</a>
+            </nav>
+        }
+    };
+
+    // A successful navigation read authorizes only this displayed destination. It is discarded on
+    // every URI/context change; collection hints never establish article ownership or read permission.
+    private Task LoadNavigationAsync()
+    {
+        var identity = (PagePath, Nav.Uri, BrowseState, Locale, MembersCollection, MembersSkip);
+        if (_navigationFor == identity) return _navigationLoad;
+        _navigationFor = identity;
+        var version = Interlocked.Increment(ref _navigationVersion);
+        _returnState = null;
+        _ownerHref = null;
+        _ownerLabel = null;
+        _navigationLoad = Embedded ? Task.CompletedTask : ResolveNavigationAsync(version);
+        return _navigationLoad;
+    }
+
+    private async Task ResolveNavigationAsync(int version)
+    {
+        if (BrowseState?.Normalize() is { } browse)
+        {
+            var result = await Wiki.GetNavigationAsync(collection: browse.Collection, lang: Locale);
+            if (_disposed || version != _navigationVersion) return;
+            if (result is WikiNavigationDto navigation && navigation.Collection == browse.Collection)
+            {
+                _returnState = browse with { Locale = Locale ?? browse.Locale };
+                return;
+            }
+        }
+
+        var ownerResult = await Wiki.GetNavigationAsync(page: $"{Namespace ?? "main"}/{Slug}", lang: Locale);
+        if (_disposed || version != _navigationVersion) return;
+        if (ownerResult is WikiNavigationDto owner)
+        {
+            _ownerHref = WikiJourneyLinks.Collection(new WikiBrowseState(owner.Collection, Locale: Locale));
+            _ownerLabel = owner.Collections.FirstOrDefault(collection => collection.Id == owner.Collection)?.Name
+                ?? (owner.Collection == "game" ? Loc["NavWikiGameWiki"] : Loc["WikiCollections"]);
+        }
+    }
+
+    private string JourneyHref(string path, string? locale = null) =>
+        WikiJourneyLinks.Article(path, _returnState, MembersCollection, MembersSkip, locale ?? Locale);
+
+    protected override void OnInitialized()
+    {
+        AccountAuth.AuthStateChanged += OnAuthStateChanged;
+        AccountAuth.ActiveCharacterChanged += OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        if (_disposed) return;
+        // Refuse old-credential completions even before the renderer can process this notification.
+        Interlocked.Increment(ref _navigationVersion);
+        Interlocked.Increment(ref _renderVersion);
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            _navigationFor = null;
+            _returnState = null;
+            _ownerHref = null;
+            _ownerLabel = null;
+            _segments = WikiBody.Split(PresentHtml(_marking?.IsCompletedSuccessfully == true ? _marking.Result : _markedFrom ?? string.Empty));
+            StateHasChanged();
+            await UpdateDisplayAsync();
+            if (!_disposed) StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _navigationVersion);
+        Interlocked.Increment(ref _renderVersion);
+        AccountAuth.AuthStateChanged -= OnAuthStateChanged;
+        AccountAuth.ActiveCharacterChanged -= OnAuthStateChanged;
+    }
+
     /// <summary>True for a category's own page, whose view lists the category's members after its text.</summary>
     private bool IsCategoryPage => string.Equals(Namespace, "category", StringComparison.OrdinalIgnoreCase);
 
@@ -255,7 +364,7 @@ else
                 <span class="wiki-catlinks-label">@Loc["NavWikiCategories"]</span>
                 @foreach (var category in Article.Categories)
                 {
-                    <a class="wiki-catlink" href="@WikiCategories.Route(category)">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
+                    <a class="wiki-catlink" href="@JourneyHref(WikiCategories.Route(category))">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
                 }
             </nav>
         }
@@ -344,7 +453,7 @@ else
         ?? [];
 
     private string LocaleHref(string locale) =>
-        $"{PagePath}?lang={Uri.EscapeDataString(locale)}";
+        JourneyHref(PagePath, locale);
 
     /// <summary>
     /// The locale a "Translate this page" link should target. The raw <c>?lang=</c> wins over
@@ -408,6 +517,7 @@ else
     // article back (often while the first check is still out), and asking the server again which of
     // its links exist would change nothing.
     private string? _markedFrom;
+    private (string Page, string? Locale)? _markedIdentity;
     private Task<string>? _marking;
 
     // Stored table HTML may predate the scroll container. Keep the current layout in the
@@ -447,8 +557,12 @@ else
     private IReadOnlyDictionary<string, string>? _categoryNames;
     private string? _categoryNamesFor;
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => UpdateDisplayAsync();
+
+    private async Task UpdateDisplayAsync()
     {
+        var version = Interlocked.Increment(ref _renderVersion);
+        var navigation = LoadNavigationAsync();
         // Usually the stored HTML is enough. Tables use the current shared layout even when the
         // article was installed before it existed; memoization avoids reparsing on parent renders.
         var html = RenderedArticleHtml();
@@ -464,24 +578,32 @@ else
         _toc = BuildToc(html);
         _mentioned = Embedded ? [] : FindMentioned(html);
 
-        if (html != _markedFrom || _marking is null)
+        if (html != _markedFrom || _markedIdentity != (PagePath, Locale) || _marking is null)
         {
             _markedFrom = html;
+            _markedIdentity = (PagePath, Locale);
             _marking = MarkRedlinksAsync(html);
         }
 
         var marking = _marking;
         // Unmarked until the redlink check answers; the lifecycle renders as soon as this awaits.
-        _segments = WikiBody.Split(marking.IsCompletedSuccessfully ? MarkMentions(marking.Result) : html);
+        _segments = WikiBody.Split(PresentHtml(marking.IsCompletedSuccessfully ? marking.Result : html));
 
-        var marked = MarkMentions(await marking);
-        if (marking == _marking && marked != html)
+        await navigation;
+        if (_disposed || version != _renderVersion) return;
+        _segments = WikiBody.Split(PresentHtml(marking.IsCompletedSuccessfully ? marking.Result : html));
+
+        var marked = await marking;
+        if (_disposed || version != _renderVersion) return;
+        if (marking == _marking)
         {
-            _segments = WikiBody.Split(marked);
+            _segments = WikiBody.Split(PresentHtml(marked));
         }
 
         await LoadCategoryNamesAsync();
+        if (_disposed || version != _renderVersion) return;
         await LoadMoreAsync();
+        if (_disposed || version != _renderVersion) return;
         await LoadMentionImagesAsync();
     }
 
@@ -613,7 +735,7 @@ else
     /// <summary>The link for a TOC entry: the page path with the query as addressed now (so a
     /// translated page keeps its <c>?lang=</c>) plus the anchor. A bare <c>#anchor</c> would resolve
     /// against <c>&lt;base href="/"&gt;</c> and leave the page.</summary>
-    private string TocHref(string anchor) => $"{PagePath}{new Uri(Nav.Uri).Query}#{anchor}";
+    private string TocHref(string anchor) => $"{JourneyHref(PagePath + new Uri(Nav.Uri).Query)}#{anchor}";
 
     /// <summary>Whether anything remains to show once the banner has taken the first image. A
     /// directive placeholder is an empty element the body hydrates into a listing, so it counts.</summary>
@@ -626,40 +748,68 @@ else
     private static readonly Regex AnyTag = new(@"<[^>]+>", RegexOptions.Singleline, TimeSpan.FromSeconds(1));
     private static readonly Regex EmbeddedMedia = new(@"<(img|video|audio|iframe|svg|table)\b", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
-    /// <summary>An anchor found in rendered HTML: the href as written, and the wiki page
-    /// reference ("ns/slug") whose existence decides whether it is a redlink.</summary>
-    private readonly record struct LinkTarget(string Href, string Reference);
+    private static readonly Regex AnchorTag = new("<a\\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>", RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private static readonly Regex HtmlAttribute = new("(?<name>[^\\s\"'<>/=]+)(?:\\s*=\\s*(?:\"(?<quoted>[^\"]*)\"|'(?<single>[^']*)'|(?<bare>[^\\s>]+)))?", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
-    private static List<LinkTarget> FindLinkTargets(string html) =>
-        WikiLinkHref.Matches(html)
-            .Select(m => new LinkTarget($"/wiki/{m.Groups[1].Value}", m.Groups[1].Value))
-            .Concat(CharacterLinkHref.Matches(html)
-                .Select(m => new LinkTarget(
-                    $"/character/{m.Groups[1].Value}",
-                    $"character/{m.Groups[1].Value}")))
-            .DistinctBy(t => t.Href, StringComparer.Ordinal)
-            .ToList();
+    /// <summary>An HTML-decoded href and its canonical existence key. Queries are presentation only.</summary>
+    private readonly record struct LinkTarget(string Href, string Reference, bool Journey);
+
+    private static string AttributeValue(Match attribute) => attribute.Groups["quoted"].Success ? attribute.Groups["quoted"].Value
+        : attribute.Groups["single"].Success ? attribute.Groups["single"].Value : attribute.Groups["bare"].Value;
+
+    // Consume complete attribute values, so text such as title="href='...'" is never a link target.
+    private static Match FindAttribute(string tag, string name) => HtmlAttribute.Matches(tag, 2)
+        .FirstOrDefault(attribute => string.Equals(attribute.Groups["name"].Value, name, StringComparison.OrdinalIgnoreCase)) ?? Match.Empty;
+
+    private static bool TryLinkTarget(string tag, out LinkTarget target)
+    {
+        target = default;
+        if (FindAttribute(tag, "download").Success) return false;
+        var attribute = FindAttribute(tag, "href");
+        if (!attribute.Success) return false;
+        var href = WebUtility.HtmlDecode(AttributeValue(attribute));
+        var end = href.IndexOfAny(['?', '#']);
+        var path = end < 0 ? href : href[..end];
+        var character = path.StartsWith("/character/", StringComparison.Ordinal);
+        var wiki = path.StartsWith("/wiki/", StringComparison.Ordinal);
+        if (!character && !wiki) return false;
+        var parts = path[(character ? "/character/".Length : "/wiki/".Length)..].Split('/');
+        if (character ? parts.Length != 1 : parts.Length != 2) return false;
+        var ns = character ? "character" : parts[0];
+        if (!Enum.GetNames<SharpMUSH.Library.Models.Wiki.WikiNamespace>().Any(name => string.Equals(name, ns, StringComparison.OrdinalIgnoreCase))) return false;
+        var slug = Uri.UnescapeDataString(parts[^1]);
+        if (slug.Length == 0 || slug.Contains('/') || slug.Contains('\\') || slug.Any(char.IsControl)) return false;
+        target = new LinkTarget(href, $"{ns}/{slug}", !WikiRoutes.IsCharacterProfile(ns));
+        return true;
+    }
+
+    private static string AddRedlinkClass(string tag)
+    {
+        var attribute = FindAttribute(tag, "class");
+        if (!attribute.Success) return tag.Insert(tag.Length - 1, " class=\"wiki-redlink\"");
+        var classes = WebUtility.HtmlDecode(AttributeValue(attribute));
+        if (classes.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Contains("wiki-redlink", StringComparer.Ordinal)) return tag;
+        return tag[..attribute.Index] + $"class=\"{WebUtility.HtmlEncode(classes)} wiki-redlink\"" + tag[(attribute.Index + attribute.Length)..];
+    }
+
+    private string PresentHtml(string html) => AnchorTag.Replace(MarkMentions(html), match =>
+    {
+        if (!TryLinkTarget(match.Value, out var target) || !target.Journey) return match.Value;
+        var href = FindAttribute(match.Value, "href");
+        return match.Value[..href.Index] + $"href=\"{WebUtility.HtmlEncode(JourneyHref(target.Href))}\"" + match.Value[(href.Index + href.Length)..];
+    });
 
     private async Task<string> MarkRedlinksAsync(string html)
     {
-        var targets = FindLinkTargets(html);
-        if (targets.Count == 0) return html;
-
-        var exists = await Wiki.CheckExistsAsync(
-            targets.Select(t => WebUtility.HtmlDecode(t.Reference)!).Distinct(StringComparer.Ordinal));
-
-        foreach (var target in targets)
+        var targets = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match anchor in AnchorTag.Matches(html))
         {
-            var decoded = WebUtility.HtmlDecode(target.Reference);
-            if (exists.TryGetValue(decoded, out var found) && !found)
-            {
-                html = html.Replace(
-                    $"<a href=\"{target.Href}\">",
-                    $"<a href=\"{target.Href}\" class=\"wiki-redlink\">");
-            }
+            if (TryLinkTarget(anchor.Value, out var target)) targets.Add(target.Reference);
         }
-
-        return html;
+        if (targets.Count == 0) return html;
+        var exists = await Wiki.CheckExistsAsync(targets);
+        return AnchorTag.Replace(html, match => TryLinkTarget(match.Value, out var target)
+            && exists.TryGetValue(target.Reference, out var found) && !found ? AddRedlinkClass(match.Value) : match.Value);
     }
 
     /// <summary>

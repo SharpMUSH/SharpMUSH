@@ -595,10 +595,10 @@ public class AccountAuthService(
 	}
 
 	/// <summary>
-	/// Switch the active character under the current account session and return an OTT for it.
-	/// Calls <c>POST api/auth/switch-character</c>, the session-based replacement for the retired
-	/// <c>jwt-switch-character</c> flow: the same account session stays active — this
-	/// mints no new token family, just a fresh single-use OTT for the target character.
+	/// Switch the active character by adopting a new account-session token bound to that character,
+	/// and return its fresh single-use OTT. Calls <c>POST api/auth/switch-character</c>, the session-based
+	/// replacement for the retired <c>jwt-switch-character</c> flow. The previous account-session token
+	/// is not revoked; it remains usable until its own sliding TTL expires, so other tabs keep their session.
 	/// </summary>
 	public async Task<ApiResult<string>> SwitchCharacterAsync(CharacterSummary character)
 	{

@@ -1,16 +1,31 @@
 @page "/wiki/collections/{Collection}"
 @layout WikiLayout
 @using SharpMUSH.Client.Components.Wiki
+@using SharpMUSH.Client.Models.Wiki
+@using Microsoft.AspNetCore.Components.Routing
 @inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>@Loc["WikiCollections"] — @Loc["AppTitle"]</PageTitle>
 <div class="wiki-collection-route">
-    <WikiCollectionBrowser Collection="@Collection" Search="@Search" Category="@Category" Locale="@Lang" />
+    <WikiCollectionBrowser Collection="@_state.Collection" Search="@_state.Search" Category="@_state.Category" Skip="@_state.Skip" Locale="@_state.Locale" />
 </div>
 
 @code {
     [Parameter] public string Collection { get; set; } = "game";
-    [SupplyParameterFromQuery(Name = "lang")] public string? Lang { get; set; }
-    [SupplyParameterFromQuery(Name = "q")] public string? Search { get; set; }
-    [SupplyParameterFromQuery(Name = "category")] public string? Category { get; set; }
+    private WikiBrowseState _state = new("game");
+    private bool _disposed;
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+    protected override void OnParametersSet() => ReadRoute();
+
+    private void ReadRoute() => _state = WikiBrowseState.FromUri(Nav.Uri,
+        new Uri(Nav.Uri).AbsolutePath.StartsWith("/wiki/collections/", StringComparison.Ordinal) ? null : Collection);
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        _ = InvokeAsync(() => { if (_disposed) return; ReadRoute(); StateHasChanged(); });
+    }
+
+    public void Dispose() { _disposed = true; Nav.LocationChanged -= OnLocationChanged; }
 }

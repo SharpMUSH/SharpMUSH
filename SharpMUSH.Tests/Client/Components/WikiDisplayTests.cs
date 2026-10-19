@@ -27,6 +27,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
@@ -56,6 +57,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
@@ -85,6 +87,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
@@ -114,6 +117,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
@@ -144,6 +148,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
@@ -177,6 +182,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
@@ -206,6 +212,7 @@ public class WikiDisplayTests
 		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
 		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
 		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());

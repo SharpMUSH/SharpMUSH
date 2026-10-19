@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using SharpMUSH.Client.Components.Kit;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
@@ -95,6 +96,55 @@ public class TileTests : TrackingBunitContext
 		var cut = Render<ImageTile>(p => p.Add(x => x.Label, "x").Add(x => x.ImageUrl, "data:image/png;base64,AAAA"));
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".kit-tile-fallback")).IsNotNull();
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	[Arguments("data:image/png;base64,AAAA")]
+	public async Task ImageTile_OptOutWithoutRenderableImage_OmitsTheMediaBox(string? imageUrl)
+	{
+		var cut = RenderOptOut(imageUrl);
+		await Assert.That(cut.FindAll(".kit-tile-media").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".kit-tile-fallback").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("img.kit-tile-img").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ImageTile_OptOutWithRenderableImage_KeepsConfiguredImageHeight()
+	{
+		var cut = RenderOptOut("/api/wiki-assets/page/cover.jpg");
+		await Assert.That(cut.Find("img.kit-tile-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/page/cover.jpg");
+		await Assert.That(cut.Find(".kit-tile-media").GetAttribute("style")).Contains("height:76px");
+		await Assert.That(cut.Find("img.kit-tile-img").GetAttribute("style")).Contains("height:76px");
+	}
+
+	[Test]
+	public async Task ImageTile_OptOutWithoutImage_KeepsLinkedTextAndBadgesInFlow()
+	{
+		var cut = RenderOptOut(null, builder => builder.AddMarkupContent(0, "<span class='badge'>Restricted</span>"));
+		var link = cut.Find("a.kit-tile");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/wiki/main/guide");
+		await Assert.That(link.QuerySelector(".kit-tile-label")!.TextContent).IsEqualTo("A long guide title that must wrap on narrow screens");
+		await Assert.That(link.QuerySelector(".kit-tile-sub")!.TextContent).IsEqualTo("Edited by Mara");
+		await Assert.That(link.QuerySelector(".kit-tile-overlay .badge")!.TextContent).IsEqualTo("Restricted");
+		await Assert.That(link.QuerySelector(".kit-tile-overlay")!.Closest(".kit-tile-media")).IsNull();
+	}
+
+	private IRenderedComponent<DynamicComponent> RenderOptOut(string? imageUrl, RenderFragment? overlay = null)
+	{
+		var values = new Dictionary<string, object>
+		{
+			[nameof(ImageTile.Label)] = "A long guide title that must wrap on narrow screens",
+			[nameof(ImageTile.Height)] = 76,
+			[nameof(ImageTile.Href)] = "/wiki/main/guide",
+			[nameof(ImageTile.Sub)] = "Edited by Mara",
+			["ShowPlaceholder"] = false,
+		};
+		if (imageUrl is not null) values[nameof(ImageTile.ImageUrl)] = imageUrl;
+		if (overlay is not null) values[nameof(ImageTile.Overlay)] = overlay;
+		return Render<DynamicComponent>(p => p.Add(x => x.Type, typeof(ImageTile)).Add(x => x.Parameters, values));
 	}
 
 	[Test]

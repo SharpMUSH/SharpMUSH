@@ -4139,6 +4139,12 @@
   <data name="NavWikiBrowse" xml:space="preserve">
     <value>Browse</value>
   </data>
+  <data name="NavWikiBackToResults" xml:space="preserve">
+    <value>Back to results</value>
+  </data>
+  <data name="NavWikiGameWiki" xml:space="preserve">
+    <value>Game wiki</value>
+  </data>
   <data name="NavWikiHome" xml:space="preserve">
     <value>Wiki home</value>
   </data>
@@ -9341,4 +9347,5 @@
   <data name="PkgBatchRecoverAdmission" xml:space="preserve">
     <value>Recover submitted batch status</value>
   </data>
+  <data name="WikiBrowseMembers" xml:space="preserve"><value>Browse members</value></data>
 </root>

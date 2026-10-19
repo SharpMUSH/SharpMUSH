@@ -16,3 +16,14 @@ summary { cursor: pointer; padding-block: .6rem; }
 .wiki-collection-error { color: var(--text); padding: 1rem; border: 1px solid var(--border); }
 .wiki-collection-topics button { display: inline-flex; align-items: center; gap: .5rem; }
 .wiki-collection-topics span { opacity: .65; }
+
+.wiki-collection-topic { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .65rem; padding: .35rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-row); background: var(--surface); }
+.wiki-collection-category-intro, .wiki-collection-category-name { min-width: 0; flex: 1 1 8rem; padding-block: .5rem; color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.wiki-collection-category-intro:hover { color: var(--accent); }
+.wiki-collection-topic button { min-height: 44px; font-size: .85rem; }
+.wiki-collection-topics > button { min-height: 44px; }
+@container page (max-width: 48rem) {
+    .wiki-collection-topic { width: 100%; }
+    .wiki-collection-page { flex-direction: column; gap: .25rem; }
+    .wiki-collection-paging button { min-height: 44px; flex: 1; }
+}

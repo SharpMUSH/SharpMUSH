@@ -4,6 +4,8 @@
 @using SharpMUSH.Library.Services
 @inject SharpMUSH.Client.Services.WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+@inject IAccountAuthState AccountAuth
 @implements IDisposable
 
 <section class="wiki-collection-browser">
@@ -12,17 +14,27 @@
         @if (!Embedded)
         {
             <h1>@Title</h1>
-            <a href="@WikiLocaleLinks.WithLocale("/wiki", Locale)">@Loc["NavWikiHome"]</a>
+            <a href="@WikiLocaleLinks.WithLocale("/wiki", _state.Locale)">@Loc["NavWikiHome"]</a>
         }
         <form class="wiki-collection-search" role="search" @onsubmit="ApplySearch" @onsubmit:preventDefault>
-            <input type="search" aria-label="@Loc["NavWikiSearch"]" placeholder="@Loc["NavWikiSearch"]" value="@_search" @oninput="e => _search = e.Value?.ToString() ?? string.Empty" maxlength="200" />
+            <input type="search" aria-label="@Loc["NavWikiSearch"]" placeholder="@Loc["NavWikiSearch"]" value="@_draft" @oninput="e => _draft = e.Value?.ToString() ?? string.Empty" maxlength="200" />
             <button type="submit">@Loc["NavWikiSearch"]</button>
         </form>
         <nav class="wiki-collection-topics" aria-label="@Loc["NavWikiCategories"]">
-            <button type="button" aria-pressed="@(_category.Length == 0)" @onclick="() => SelectCategory(string.Empty)">@Loc["All"]</button>
+            <button type="button" aria-pressed="@(string.IsNullOrEmpty(_state.Category))" @onclick="() => SelectCategory(string.Empty)">@Loc["All"]</button>
             @foreach (var category in navigation.Categories.Where(row => row.Pinned))
             {
-                <button type="button" aria-pressed="@(_category == category.Key)" @onclick="() => SelectCategory(category.Key)">@category.Name <span>@category.Pages</span></button>
+                <div class="wiki-collection-topic">
+                    @if (category.HasPage)
+                    {
+                        <a class="wiki-collection-category-intro" href="@CategoryHref(category.Key)">@category.Name</a>
+                    }
+                    else
+                    {
+                        <span class="wiki-collection-category-name">@category.Name</span>
+                    }
+                    <button type="button" aria-pressed="@(_state.Category == category.Key)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" @onclick="() => SelectCategory(category.Key)">@Loc["WikiBrowseMembers"] <span>@category.Pages</span></button>
+                </div>
             }
         </nav>
         <details class="wiki-collection-directory">
@@ -31,7 +43,17 @@
             <div class="wiki-collection-category-list">
                 @foreach (var category in navigation.Categories.Where(row => row.Name.Contains(_categorySearch, StringComparison.OrdinalIgnoreCase)))
                 {
-                    <button type="button" aria-pressed="@(_category == category.Key)" @onclick="() => SelectCategory(category.Key)">@category.Name <span>@category.Pages</span></button>
+                    <div class="wiki-collection-topic">
+                        @if (category.HasPage)
+                        {
+                            <a class="wiki-collection-category-intro" href="@CategoryHref(category.Key)">@category.Name</a>
+                        }
+                        else
+                        {
+                            <span class="wiki-collection-category-name">@category.Name</span>
+                        }
+                        <button type="button" aria-pressed="@(_state.Category == category.Key)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" @onclick="() => SelectCategory(category.Key)">@Loc["WikiBrowseMembers"] <span>@category.Pages</span></button>
+                    </div>
                 }
             </div>
         </details>
@@ -46,22 +68,22 @@
     }
     else if (_rows is { } rows)
     {
-        <p class="wiki-collection-range" aria-live="polite">@string.Format(Loc["WikiPageRange"], rows.Total == 0 ? 0 : _skip + 1, Math.Min(_skip + rows.Pages.Count, rows.Total), rows.Total)</p>
+        <p class="wiki-collection-range" aria-live="polite">@string.Format(Loc["WikiPageRange"], rows.Total == 0 ? 0 : _state.Skip + 1, Math.Min((long)_state.Skip + rows.Pages.Count, rows.Total), rows.Total)</p>
         @if (rows.Total == 0)
         {
-            <div class="wiki-empty">@(string.IsNullOrWhiteSpace(_search) ? Loc["NavWikiNoPages"] : string.Format(Loc["NavWikiNoMatches"], _search))</div>
+            <div class="wiki-empty">@(string.IsNullOrWhiteSpace(_state.Search) ? Loc["NavWikiNoPages"] : string.Format(Loc["NavWikiNoMatches"], _state.Search))</div>
         }
         <div class="wiki-collection-pages">
             @foreach (var article in rows.Pages)
             {
-                <a class="wiki-collection-page" href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(article.Namespace, article.Slug), Locale)">
+                <a class="wiki-collection-page" href="@WikiJourneyLinks.Page(article.Namespace, article.Slug, _state, membersCollection: _state.Collection)">
                     <span>@article.Title</span><span class="wiki-collection-page-context">@(article.CollectionName is { Length: > 0 } name ? name + " / " + article.Namespace : article.Namespace)</span>
                 </a>
             }
         </div>
         <nav class="wiki-collection-paging" aria-label="@Loc["NavWikiBrowse"]">
-            <button type="button" disabled="@(_skip == 0)" @onclick="PreviousAsync">@Loc["WikiPreviousPage"]</button>
-            <button type="button" disabled="@(_skip + rows.Pages.Count >= rows.Total)" @onclick="NextAsync">@Loc["WikiNextPage"]</button>
+            <button type="button" disabled="@(_state.Skip == 0)" @onclick="PreviousAsync">@Loc["WikiPreviousPage"]</button>
+            <button type="button" disabled="@((long)_state.Skip + rows.Pages.Count >= rows.Total)" @onclick="NextAsync">@Loc["WikiNextPage"]</button>
         </nav>
     }
 </section>
@@ -70,62 +92,135 @@
     [Parameter] public string Collection { get; set; } = "game";
     [Parameter] public string? Search { get; set; }
     [Parameter] public string? Category { get; set; }
+    [Parameter] public int Skip { get; set; }
     [Parameter] public string? Locale { get; set; }
     [Parameter] public bool Embedded { get; set; }
     private WikiNavigationDto? _navigation;
     private WikiPageBatch? _rows;
-    private string? _parameters;
-    private string _search = string.Empty;
-    private string _category = string.Empty;
+    private WikiBrowseState? _parameters;
+    private WikiBrowseState _state = new("game");
+    private string _draft = string.Empty;
     private string _categorySearch = string.Empty;
-    private int _skip;
-    private const int PageSize = 50;
     private int _version;
     private bool _failed;
     private bool _loading;
     private bool _disposed;
-    private string Title => Collection is "game" ? Loc["WikiGameCollection"] : Collection is "all" ? Loc["WikiAllCollections"]
-        : _navigation?.Collections.FirstOrDefault(row => row.Id == Collection)?.Name ?? Loc["WikiCollections"];
+    private string Title => _state.Collection is "game" ? Loc["WikiGameCollection"] : _state.Collection is "all" ? Loc["WikiAllCollections"]
+        : _navigation?.Collections.FirstOrDefault(row => row.Id == _state.Collection)?.Name ?? Loc["WikiCollections"];
+
+    private string CategoryHref(string key) => WikiJourneyLinks.Article(WikiCategories.Route(key), _state, membersCollection: _state.Collection);
+
+    protected override void OnInitialized()
+    {
+        AccountAuth.AuthStateChanged += OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged += OnReaderChanged;
+    }
+
+    private void OnReaderChanged()
+    {
+        if (_disposed) return;
+        Interlocked.Increment(ref _version);
+        _navigation = null;
+        _rows = null;
+        _failed = false;
+        _loading = true;
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+            await ReloadAsync();
+            if (!_disposed) StateHasChanged();
+        });
+    }
 
     protected override async Task OnParametersSetAsync()
     {
-        var parameters = Collection + "\n" + Search + "\n" + Category + "\n" + Locale;
-        if (_parameters == parameters) return;
-        _parameters = parameters;
-        _search = Search ?? string.Empty;
-        _category = Category ?? string.Empty;
-        _skip = 0;
-        _navigation = null;
+        var state = new WikiBrowseState(Collection, Search, Category, Skip, Locale).Normalize();
+        if (_parameters == state) return;
+        SetState(state);
         await ReloadAsync();
+    }
+
+    private void SetState(WikiBrowseState state)
+    {
+        _parameters = _state = state;
+        _draft = state.Search ?? string.Empty;
     }
 
     private async Task ReloadAsync()
     {
         var version = ++_version;
+        var requested = _state;
+        var state = requested;
         _loading = true;
         _failed = false;
         _rows = null;
-        var navigation = await Wiki.GetNavigationAsync(Collection, lang: Locale);
+        _navigation = null;
+        var navigation = await Wiki.GetNavigationAsync(state.Collection, lang: state.Locale);
         if (_disposed || version != _version) return;
         if (navigation is not WikiNavigationDto loaded) { _failed = true; _loading = false; return; }
-        _navigation = loaded;
-        var result = await Wiki.GetCollectionPagesAsync(Collection, _skip, PageSize, _category, _search, lang: Locale);
+        var result = await Wiki.GetCollectionPagesAsync(state.Collection, state.Skip, WikiBrowseState.PageSize, state.Category, state.Search, lang: state.Locale);
         if (_disposed || version != _version) return;
-        if (result is WikiPageBatch changed && changed.Total > 0 && _skip >= changed.Total)
+        if (result is WikiPageBatch changed && changed.Total > 0 && state.Skip >= changed.Total)
         {
-            _skip = ((changed.Total - 1) / PageSize) * PageSize;
-            result = await Wiki.GetCollectionPagesAsync(Collection, _skip, PageSize, _category, _search, lang: Locale);
+            state = state with { Skip = ((changed.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize };
+            result = await Wiki.GetCollectionPagesAsync(state.Collection, state.Skip, WikiBrowseState.PageSize, state.Category, state.Search, lang: state.Locale);
             if (_disposed || version != _version) return;
         }
-        _rows = result is WikiPageBatch batch ? batch : null;
-        if (_rows is { Total: 0 }) _skip = 0;
-        _failed = _rows is null;
+        if (result is not WikiPageBatch rows)
+        {
+            _failed = true;
+            _loading = false;
+            return;
+        }
+        if (rows.Total == 0) state = state with { Skip = 0 };
+        // A second concurrent shrink cannot justify an unbounded correction loop or a fictitious range.
+        if (rows.Total > 0 && rows.Pages.Count == 0)
+        {
+            if (state.Skip >= rows.Total)
+                state = state with { Skip = ((rows.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize };
+            _parameters = _state = state;
+            _failed = true;
+            _loading = false;
+            Canonicalize(requested, state);
+            return;
+        }
+        _parameters = _state = state;
+        _navigation = loaded;
+        _rows = rows;
         _loading = false;
+        Canonicalize(requested, state);
     }
 
-    private async Task ApplySearch() { _skip = 0; await ReloadAsync(); }
-    private async Task SelectCategory(string category) { _category = category; _skip = 0; await ReloadAsync(); }
-    private async Task PreviousAsync() { _skip = Math.Max(0, _skip - PageSize); await ReloadAsync(); }
-    private async Task NextAsync() { _skip += PageSize; await ReloadAsync(); }
-    public void Dispose() { _disposed = true; ++_version; }
+    private void Canonicalize(WikiBrowseState requested, WikiBrowseState completed)
+    {
+        var current = new Uri(Nav.Uri);
+        if (!current.AbsolutePath.StartsWith("/wiki/collections/", StringComparison.Ordinal)
+            || WikiBrowseState.FromUri(Nav.Uri) != requested) return;
+        var target = WikiJourneyLinks.Collection(completed);
+        if (current.PathAndQuery != new Uri(new Uri(Nav.BaseUri), target).PathAndQuery)
+            Nav.NavigateTo(target, replace: true);
+    }
+
+    private async Task NavigateAsync(WikiBrowseState state)
+    {
+        state = state.Normalize();
+        // Establish the identity before navigation re-renders the route, avoiding a duplicate fetch.
+        SetState(state);
+        ++_version;
+        Nav.NavigateTo(WikiJourneyLinks.Collection(state));
+        await ReloadAsync();
+    }
+
+    private Task ApplySearch() => NavigateAsync(_state with { Search = _draft, Skip = 0 });
+    private Task SelectCategory(string category) => NavigateAsync(_state with { Category = category, Skip = 0 });
+    private Task PreviousAsync() => NavigateAsync(_state.Previous());
+    private Task NextAsync() => NavigateAsync(_state.Next());
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _version);
+        AccountAuth.AuthStateChanged -= OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+    }
 }

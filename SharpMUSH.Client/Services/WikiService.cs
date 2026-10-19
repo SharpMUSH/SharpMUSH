@@ -538,8 +538,19 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		if (collection is not null) query.Add("collection=" + Uri.EscapeDataString(collection));
 		if (page is not null) query.Add("page=" + Uri.EscapeDataString(page));
 		if (!string.IsNullOrWhiteSpace(lang)) query.Add("lang=" + Uri.EscapeDataString(lang));
-		return await httpClientFactory.CreateClient("api").GetApiAsync<WikiNavigationDto>(
+		var result = await httpClientFactory.CreateClient("api").GetApiAsync<WikiNavigationDto>(
 			"api/wiki/navigation" + (query.Count == 0 ? "" : "?" + string.Join('&', query)), "Wiki navigation is unavailable.");
+		if (result is not WikiNavigationDto navigation) return result;
+		// JSON can deserialize an unrelated object into this positional record with null required
+		// members. A response that omitted its directory is not an authorized empty directory.
+		if (string.IsNullOrWhiteSpace(navigation.Collection) || navigation.Total < 0
+			|| navigation.Collections is null || navigation.Categories is null
+			|| navigation.Collections.Any(item => item is null || string.IsNullOrWhiteSpace(item.Id)
+				|| string.IsNullOrWhiteSpace(item.Name) || item.Pages < 0)
+			|| navigation.Categories.Any(item => item is null || string.IsNullOrWhiteSpace(item.Key)
+				|| string.IsNullOrWhiteSpace(item.Name) || item.Pages < 0))
+			return new ApiFailure(ApiFailureKind.Unexpected, "The wiki navigation response was incomplete.");
+		return navigation;
 	}
 
 	public async ValueTask<ApiResult<WikiPageBatch>> GetCollectionPagesAsync(string collection, int skip = 0, int take = 50,

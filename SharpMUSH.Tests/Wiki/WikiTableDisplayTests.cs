@@ -20,6 +20,7 @@ public class WikiTableDisplayTests
 		ctx.AddAuthorization();
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
+		ctx.Services.AddSingleton(Substitute.For<IAccountAuthState>());
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
 		ctx.Services.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));

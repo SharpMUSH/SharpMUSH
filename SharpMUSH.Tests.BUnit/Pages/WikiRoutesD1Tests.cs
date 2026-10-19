@@ -86,23 +86,25 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-page-kicker").TextContent).IsEqualTo("Category");
 		var tiles = cut.FindAll(".kit-tile");
 		await Assert.That(tiles.Count).IsEqualTo(2);
-		// newest first: the draft "Combat Basics" (updated 01-02) leads "Getting Started" (01-01)
+		// Preserve the collection API title order; no whole-category recency sort.
 		await Assert.That(tiles[0].GetAttribute("href")).IsEqualTo("/wiki/main/combat");
 		await Assert.That(tiles[0].QuerySelector(".wiki-cat-tag--draft")).IsNotNull();
 		await Assert.That(tiles[0].QuerySelector(".wiki-cat-tag--draft")!.ClassList).Contains("kit-pill--warn")
 			.Because("the tag styles come from the kit pill; the widget's scoped .wiki-cat-tag rules do not reach this page");
 		await Assert.That(tiles[1].GetAttribute("href")).IsEqualTo("/wiki/main/intro");
 		await Assert.That(tiles[1].QuerySelector("img.kit-tile-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
-		await Assert.That(cut.Find(".wiki-cat").TextContent).Contains("2 pages in this category");
+		await Assert.That(cut.Find(".wiki-cat-range").TextContent).Contains("Showing 1–2 of 2");
 	}
 
 	[Test]
-	public async Task Category_ListsEveryPage_NotJustTheFirstRequest()
+	public async Task Category_ListsOnePageAndTheServerTotalWithoutDrainingTheCategory()
 	{
 		var cut = RenderCategory("big");
 		cut.WaitForAssertion(() => cut.Find(".kit-tile"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll(".kit-tile").Count).IsEqualTo(WikiApiFake.BigCategory.Length);
-		await Assert.That(cut.Find(".wiki-cat").TextContent).Contains("250 pages in this category");
+		await Assert.That(cut.FindAll(".kit-tile").Count).IsEqualTo(50);
+		await Assert.That(cut.Find(".wiki-cat-range").TextContent).Contains("Showing 1–50 of 250");
+		await Assert.That(_fake.Requests.Count(path => path.Contains("/collections/", StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(_fake.Requests.Single(path => path.Contains("/collections/", StringComparison.Ordinal))).Contains("skip=0&take=50");
 	}
 
 	[Test]
@@ -126,17 +128,17 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Category_ListsCategoryPagesAsSubcategories_NotAsTiles()
+	public async Task Category_PreservesMixedTitleOrderAndMarksSubcategoryTiles()
 	{
 		var cut = RenderCategory("realms");
-		cut.WaitForAssertion(() => cut.Find(".wiki-cat-subs a"), TimeSpan.FromSeconds(5));
-		var subs = cut.FindAll(".wiki-cat-subs a.wiki-catlink");
-		await Assert.That(subs.Count).IsEqualTo(1);
-		await Assert.That(subs[0].GetAttribute("href")).IsEqualTo("/wiki/category/harbour_lore");
-		await Assert.That(subs[0].TextContent).IsEqualTo("Harbour lore");
-		var tiles = cut.FindAll(".kit-tile");
-		await Assert.That(tiles.Count).IsEqualTo(1).Because("a subcategory is listed as a link, not as a page tile");
+		cut.WaitForAssertion(() => cut.Find(".kit-tile"), TimeSpan.FromSeconds(5));
+		var tiles = cut.FindAll(".wiki-cat .kit-tile");
+		await Assert.That(tiles.Count).IsEqualTo(2);
 		await Assert.That(tiles[0].GetAttribute("href")).IsEqualTo("/wiki/main/harbour");
+		await Assert.That(tiles[1].GetAttribute("href")).IsEqualTo("/wiki/category/harbour_lore");
+		await Assert.That(tiles[1].TextContent).Contains("Harbour lore");
+		await Assert.That(tiles[1].QuerySelector(".wiki-cat-tag")!.TextContent).IsEqualTo("Category");
+		await Assert.That(cut.Find(".wiki-cat-range").TextContent).Contains("Showing 1–2 of 2");
 	}
 
 	[Test]
