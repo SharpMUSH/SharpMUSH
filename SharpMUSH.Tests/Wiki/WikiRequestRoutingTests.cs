@@ -9,6 +9,12 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Queries.Database.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Wiki;
 
@@ -123,6 +129,145 @@ public class WikiRequestRoutingTests
 	public required WikiRequestRoutingFactory Factory { get; init; }
 	private IWikiService Wiki => Factory.Services.GetRequiredService<IWikiService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+
+	private async Task<(List<WikiPageSummaryDto> Rows, string Total)> CategoryPagesAsync(string collection, string category,
+		string? lang = null, string? search = null)
+	{
+		await using var scope = Factory.Services.CreateAsyncScope();
+		var controller = ActivatorUtilities.CreateInstance<WikiCollectionsController>(scope.ServiceProvider);
+		controller.ControllerContext = new ControllerContext
+		{
+			HttpContext = new DefaultHttpContext { RequestServices = scope.ServiceProvider }
+		};
+		var result = await controller.Pages(collection, category: category, lang: lang, search: search);
+		if (result is not OkObjectResult { Value: List<WikiPageSummaryDto> rows })
+			throw new InvalidOperationException($"Expected successful category page, received {result.GetType().Name}.");
+		return (rows, controller.Response.Headers["X-Total-Count"].ToString());
+	}
+
+	private async Task OwnCategoryPageAsync(string package, WikiPage page)
+		=> await Factory.Services.GetRequiredService<IPackageRegistryService>().UpsertPackageWikiPageAsync(new PackageWikiPageRecord(
+			package, page.Id, page.Namespace, page.Slug, page.Title, page.MarkdownSource, page.Categories,
+			page.Published, PackageWikiRequires.None, false, "1.0.0"));
+
+	[Test]
+	public async Task CollectionCategoryPagesUseOneNormalizedScalarRequestInsteadOfTheWholeCategoryDictionary()
+	{
+		var id = Guid.NewGuid().ToString("N");
+		var category = $"Count Category {id}";
+		var package = $"count-routing-{id}";
+		var selected = new List<WikiPage>();
+		try
+		{
+			var member = (await Wiki.CreateAsync($"Count member {id}", "public", "#1", sourceLocale: "en",
+				categories: [category])).Expect<WikiPage>();
+			selected.Add(member);
+			await OwnCategoryPageAsync(package, member);
+			for (var i = 0; i < 24; i++)
+			{
+				var unrelated = (await Wiki.CreateAsync($"Unrelated count {id} {i}", "public", "#1",
+					categories: [$"Other Category {id} {i}"])).Expect<WikiPage>();
+				selected.Add(unrelated);
+				await OwnCategoryPageAsync(package, unrelated);
+			}
+			Factory.Requests.Clear();
+			var dictionaryCalls = Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.CountPagesByCategoryAsync));
+			var (rows, total) = await CategoryPagesAsync("package:" + package, " " + category.ToUpperInvariant() + " ");
+			await Assert.That(rows.Select(row => row.Id)).IsEquivalentTo(new[] { member.Id });
+			await Assert.That(total).IsEqualTo("1");
+			var messages = Factory.Requests.Messages.ToArray();
+			var scalars = messages.OfType<CountWikiPagesInCategoryQuery>().ToArray();
+			await Assert.That(scalars.Length).IsEqualTo(1);
+			var scalar = scalars.Single();
+			await Assert.That(scalar.Category).IsEqualTo(member.Categories.Single());
+			var visibility = scalar.Visibility;
+			var listing = messages.OfType<GetWikiPagesByCategoryQuery>().Single();
+			await Assert.That(visibility).IsEqualTo(listing.Visibility);
+			await Assert.That(visibility.IncludedPageIds?.ToArray() ?? []).IsEquivalentTo(selected.Select(page => page.Id));
+			await Assert.That(visibility.ExcludedPageIds is null).IsTrue();
+			await Assert.That(visibility.IncludeDrafts).IsFalse();
+			await Assert.That(visibility.AuthorDbref is null).IsTrue();
+			await Assert.That(messages.OfType<CountWikiPagesByCategoryQuery>()).IsEmpty();
+			await Assert.That(Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.CountPagesByCategoryAsync)) - dictionaryCalls)
+				.IsEqualTo(0);
+		}
+		finally
+		{
+			await Factory.Services.GetRequiredService<IPackageRegistryService>().RemoveInstalledPackageAsync(package);
+			foreach (var page in selected) await Wiki.DeleteAsync(page.Id, "#1");
+		}
+	}
+
+	[Test]
+	public async Task CollectionCategoryTotalsPreserveOwnerRestrictionsDraftsMissingCategoriesAndLocalizedSearch()
+	{
+		var id = Guid.NewGuid().ToString("N");
+		var category = $"count_guard_{id}";
+		var package = $"count-guard-{id}";
+		var pages = new List<WikiPage>();
+		try
+		{
+			foreach (var title in new[] { "Public", "Draft", "Restricted", "Other owner" })
+			{
+				var page = (await Wiki.CreateAsync($"{title} {id}", "body", "#1", sourceLocale: "en",
+					categories: [category])).Expect<WikiPage>();
+				pages.Add(page);
+				await OwnCategoryPageAsync(title == "Other owner" ? package + "-other" : package, page);
+			}
+			await Wiki.SetMetadataAsync(pages[1].Id, [category], false);
+			await Wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(pages[2].Id),
+				new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = [PortalPermission.WikiAdmin] }, "#1");
+			var translatedTitle = $"Traduit {id}";
+			(await Wiki.UpsertTranslationAsync(pages[0].Id, "fr", translatedTitle, "traduit", "#1", null, true, null))
+				.Expect<WikiTranslation>();
+			foreach (var lang in new[] { "en", "fr", "zz" })
+			{
+				var (rows, total) = await CategoryPagesAsync("package:" + package, category, lang);
+				await Assert.That(rows.Select(row => row.Id)).IsEquivalentTo(new[] { pages[0].Id });
+				await Assert.That(total).IsEqualTo("1");
+			}
+			var translated = await CategoryPagesAsync("package:" + package, category, "fr", translatedTitle);
+			await Assert.That(translated.Rows.Single().Title).IsEqualTo(translatedTitle);
+			await Assert.That(translated.Total).IsEqualTo("1");
+			var missing = await CategoryPagesAsync("package:" + package, category + "_missing");
+			await Assert.That(missing.Rows).IsEmpty();
+			await Assert.That(missing.Total).IsEqualTo("0");
+			var noMatch = await CategoryPagesAsync("package:" + package, category, "fr", "absent-" + id);
+			await Assert.That(noMatch.Rows).IsEmpty();
+			await Assert.That(noMatch.Total).IsEqualTo("0");
+		}
+		finally
+		{
+			var registry = Factory.Services.GetRequiredService<IPackageRegistryService>();
+			await registry.RemoveInstalledPackageAsync(package);
+			await registry.RemoveInstalledPackageAsync(package + "-other");
+			foreach (var page in pages) await Wiki.DeleteAsync(page.Id, "#1");
+		}
+	}
+
+	[Test]
+	public async Task CategoryScalarUsesProviderOnEveryRequestAndRequirementsChangesAffectTheNextTotal()
+	{
+		var id = Guid.NewGuid().ToString("N");
+		var category = "count_freshness_" + id;
+		var page = (await Wiki.CreateAsync("Count freshness " + id, "body", "#1", categories: [category])).Expect<WikiPage>();
+		try
+		{
+			var before = Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.CountPagesInCategoryAsync));
+			await Assert.That((await CategoryPagesAsync("all", category)).Total).IsEqualTo("1");
+			await Assert.That((await CategoryPagesAsync("all", category)).Total).IsEqualTo("1");
+			await Assert.That(Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.CountPagesInCategoryAsync)) - before)
+				.IsEqualTo(2);
+			await Wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id),
+				new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = [PortalPermission.WikiAdmin] }, "#1");
+			var denied = await CategoryPagesAsync("all", category);
+			await Assert.That(denied.Rows).IsEmpty();
+			await Assert.That(denied.Total).IsEqualTo("0");
+			await Assert.That(Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.CountPagesInCategoryAsync)) - before)
+				.IsEqualTo(3);
+		}
+		finally { await Wiki.DeleteAsync(page.Id, "#1"); }
+	}
 
 	[Test]
 	public async Task HostFacadeUsesGeneratedRequestsAndPreservesStoredJourney()

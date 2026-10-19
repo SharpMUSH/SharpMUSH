@@ -378,6 +378,10 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
 			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));
 
+	public Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
+		=> Task.FromResult(Store.Read(tx => tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category))
+			.Count(entry => WikiEntryAdmitted(tx, entry, visibility))));
+
 	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)
 	{
 		var record = new WikiPageRecord

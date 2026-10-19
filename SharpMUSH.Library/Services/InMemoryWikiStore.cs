@@ -70,6 +70,10 @@ public sealed class InMemoryWikiStore : IWikiStore
 			.CountBy(c => c)
 			.ToDictionary(pair => pair.Key, pair => pair.Value));
 
+	public Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
+		=> Task.FromResult(Visible(_pagesById.Values, visibility)
+			.Count(page => page.Categories.Contains(category, StringComparer.OrdinalIgnoreCase)));
+
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
 			.Where(p => p.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))

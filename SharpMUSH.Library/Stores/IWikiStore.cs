@@ -49,6 +49,11 @@ public interface IWikiStore
 	/// </summary>
 	Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility);
 
+	/// <summary>How many pages <paramref name="visibility"/> admits in one category, across namespaces.</summary>
+	/// <remarks>The default preserves existing implementers; indexed stores override this dictionary fallback.</remarks>
+	async Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
+		=> (await CountPagesByCategoryAsync(visibility)).GetValueOrDefault(SharpMUSH.Library.Services.WikiHelpers.CategoryKey(category));
+
 	/// <summary>Pages in <paramref name="category"/>, case-insensitively, ordered by title.</summary>
 	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
 	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);
