@@ -1,0 +1,213 @@
+{
+  "source": "../approved/svg/sharpie-minimal.svg",
+  "source_sha256": "affd5116339dd71487aecf015e93de8a39d9c6c09291717d4377da9795586cde",
+  "expression_source": "../discord/svg/",
+  "format": "static transparent PNG",
+  "size": [
+    128,
+    128
+  ],
+  "framing": {
+    "target_long_edge_px": 126,
+    "viewBox": [
+      28.444444,
+      28.444444,
+      455.111111,
+      455.111111
+    ]
+  },
+  "emoji": [
+    {
+      "name": "sharpie_min_neutral",
+      "file": "png-128/sharpie_min_neutral.png",
+      "bytes": 14569,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "e52c0b33054617dea95cb2855116fcac69b17d53c2b1daab04f588db7e8be48d"
+    },
+    {
+      "name": "sharpie_min_happy",
+      "file": "png-128/sharpie_min_happy.png",
+      "bytes": 14472,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "3054737bfac320d03f57a8152cee51300a98fd825d118b4ad17f4865c2fabf45"
+    },
+    {
+      "name": "sharpie_min_laugh",
+      "file": "png-128/sharpie_min_laugh.png",
+      "bytes": 14666,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "14ace75a01ebfd15e256e637277491d67cb9f79cf89e9c74f3e50019b52eaf3e"
+    },
+    {
+      "name": "sharpie_min_wink",
+      "file": "png-128/sharpie_min_wink.png",
+      "bytes": 14832,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "14e0ce5c759391d4e5e90b67d7220916c60ee954d96539274bf442a76d5b33ea"
+    },
+    {
+      "name": "sharpie_min_love",
+      "file": "png-128/sharpie_min_love.png",
+      "bytes": 14768,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "494f119714c73d70c2678f112f85ee5b6008b5b6a53a5991e91ce3796dd91151"
+    },
+    {
+      "name": "sharpie_min_sad",
+      "file": "png-128/sharpie_min_sad.png",
+      "bytes": 14256,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "05bc6ccfd9193ee2986fea2ab1af6946bda2ce2f9d38687587cb4a792842df4d"
+    },
+    {
+      "name": "sharpie_min_cry",
+      "file": "png-128/sharpie_min_cry.png",
+      "bytes": 14696,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "92c8e6906242a8374f7c44efa0c22181d561feff1b0b3af3e0f561e1975f6d62"
+    },
+    {
+      "name": "sharpie_min_surprised",
+      "file": "png-128/sharpie_min_surprised.png",
+      "bytes": 14715,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "59761b78cd0926ee055d053351d748c2179441369c6885e3b4e619c9244dc315"
+    },
+    {
+      "name": "sharpie_min_thinking",
+      "file": "png-128/sharpie_min_thinking.png",
+      "bytes": 15292,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "1838273fac08a6229aee4051bf134ffb8d51ae76cf13240e46f9448e56de8490"
+    },
+    {
+      "name": "sharpie_min_sleepy",
+      "file": "png-128/sharpie_min_sleepy.png",
+      "bytes": 14109,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "5e1afbc602dfd3d2c3762af9f693d9a9ac08d852d927dc803e48294f0a66d88b"
+    },
+    {
+      "name": "sharpie_min_annoyed",
+      "file": "png-128/sharpie_min_annoyed.png",
+      "bytes": 14701,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "005d6856982cdf2699dd3c1a03fcaa4359389fe35127c4f64b768a5894866893"
+    },
+    {
+      "name": "sharpie_min_smug",
+      "file": "png-128/sharpie_min_smug.png",
+      "bytes": 14309,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "6329a5ec64747db0c48330fc97e4e1c690b4c8cc1073e05d7f43c50afe1bb87b"
+    },
+    {
+      "name": "sharpie_min_confused",
+      "file": "png-128/sharpie_min_confused.png",
+      "bytes": 14412,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "9d8dc93361e24011c838da86ffa43f860742a266e79f84287e169f19f08eed0f"
+    },
+    {
+      "name": "sharpie_min_sweat",
+      "file": "png-128/sharpie_min_sweat.png",
+      "bytes": 15496,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "78f831a744a8c6024ef143039f0d14113c89faf8e624d1169970e6f3226c5ae0"
+    },
+    {
+      "name": "sharpie_min_sparkle",
+      "file": "png-128/sharpie_min_sparkle.png",
+      "bytes": 15471,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "30fc3615e50da53c85c639c3444de3409e5c90e074ce7c5958df8ec2c60d0f1b"
+    },
+    {
+      "name": "sharpie_min_grin",
+      "file": "png-128/sharpie_min_grin.png",
+      "bytes": 15559,
+      "alpha_bounds": [
+        0,
+        7,
+        128,
+        122
+      ],
+      "sha256": "1ac06ab0d2ac8e57f7ddd62099f3e0d677bf4ab3a42507b9996be8fe8ca50a59"
+    }
+  ]
+}
