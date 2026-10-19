@@ -1,8 +1,13 @@
-# Semantic wiki mutation coverage (Phase A)
+# Semantic wiki mutation coverage
 
-This inventory describes the current Lightning provider. There are no durable semantic epochs,
-partition catalogs or transactional semantic indexes. A source body revision cannot certify a
-query snapshot: title, categories, publication, requirements and ownership can change without it.
+The API matrix records the ordinary Lightning provider boundaries inventoried in Phase A.
+At that checkpoint there were no durable semantic epochs, partition catalogs or transactional
+semantic indexes. Subsequent private disposable-fixture work adds durable semantic state and
+atomic index planning; its narrow supported writer set is described below. It does not change
+the ordinary-provider matrix into a production semantic implementation.
+
+A source body revision cannot certify a query snapshot: title, categories, publication,
+requirements and ownership can change without it.
 Classification below is conservative: a title affects projected output, and translated titles,
 bodies and publication affect locale views. “Semantic mutation” includes authorization and query
 membership dependencies, even when an operation does not edit authored facts.
@@ -11,6 +16,8 @@ membership dependencies, even when an operation does not edit authored facts.
 
 Each row names one `IWikiStore` method; `SemanticMutationCoverageTests` reflects the interface to
 reject unclassified additions/removals. This is drift detection, not transactional correctness.
+The current boundary column describes ordinary/nonactivated operation. The future obligation
+column remains the full contract; the private fixture checkpoint does not discharge it globally.
 
 | API | Class | Current boundary/stamp | Future atomic obligation |
 | --- | --- | --- | --- |
@@ -43,9 +50,53 @@ reject unclassified additions/removals. This is drift detection, not transaction
 | DeleteTranslationAsync | Semantic mutation | one write: locale row and history removed | locale fallback/projection/visibility stamp; canonical source facts unchanged |
 
 A write is a Lightning `Store.WriteAsync` transaction, not a transaction spanning service calls.
-Read methods do not advance stamps. Future obligations describe design requirements, not existing
-implementation. Publication and read requirements both matter; a future epoch must also cover
+Read methods do not advance stamps. Future obligations describe the outstanding production
+requirements, not capabilities established by this matrix. Publication and read requirements
+both matter; a future epoch must also cover
 role/permission changes outside these interfaces and reauthorize every relation target.
+
+## Private disposable-fixture checkpoint
+
+Explicit activation of an issued disposable actual host admits the existing typed
+`IWikiService`/Mediator/store consumer for Create, Body, Title, Metadata and Delete. Ordinary and
+admitted-Inactive behavior retains the legacy path. No production registration, automatic
+migration or runtime semantic query is enabled; `QueryReady` remains false, including after reopen.
+
+The Active branch prepares a bounded immutable intent and uses one owning Lightning writer
+callback to plan and apply legacy rows, bodyless semantic summaries, current-schema empty facts,
+immutable identity registry rows, state versions, commit sequence and compact operation receipt.
+Create allocates identity; Body appends source history; Title and Metadata retain their existing
+history behavior. The shared projection planner also supports the separate fact-bearing B1
+fixture's indexes and visibility-class/partition accounting. Integrated Active fixtures retain
+their empty schema/zero-fact/zero-class invariant; this checkpoint does not enable authored facts
+or package schema authoring.
+
+Delete composes bounded complete source-history, page, matching slug, list-index and page-rule
+removal with a durable bodyless tombstone and receipt in that same parent. It retains the original
+immutable identity and old receipts, appends no synthetic revision, and does not rewrite incoming
+edges or reuse the deleted ID for a same-slug replacement. A matching restored receipt replays its
+original result before target absence checks. Malformed or contradictory integrated state and
+incomplete or over-budget history refuse before application. The shared owning section retains
+the 128-record/128-KiB cumulative checked-read, 4-MiB working and 256-KiB complete-delta bounds;
+this is a bounded cascade, not permission to truncate or stage a larger delete.
+
+Page-rule removal follows the existing Delete command's tagged requirements-cache invalidation.
+The activation requirements digest/certificate remains a historical bootstrap identity rather
+than a current authorization epoch. Requirements editing, translation/locale mutation, package
+ownership/apply/undo, independent retention and other unsupported writers remain fenced after
+activation. Their ordinary-provider behavior and classification below remain applicable.
+
+`IntegratedWikiMutationTests` supplies actual-host consumer, exact-row, requirements-cache,
+delete/recreate and reopen coverage for the checkpoint. Additional delete receipt/resource/fault/
+concurrency evidence and the native-to-offline reader oracle have separate review and execution
+gates; their presence in source is not a claim that those gates passed. B1 fixture/oracle results
+also do not establish integrated authored-fact import or production-reader correctness.
+
+Production readers still require bounded coherent final liveness/state/authorization validation
+for every observed source and target, including excluded/deleted predicate and projection targets,
+within the same request budget. Current permissions, no native reader held across awaits and no
+incoming-edge fanout remain obligations. Tombstones, private durable versions and offline oracle
+evaluation do not satisfy those reader gates or concurrent revocation safety.
 
 ## Ownership outside IWikiStore
 
@@ -104,8 +155,10 @@ covers stale ownership filtering at the collection consumer.
 Dedicated native failed-apply compensation and package revision rollback probes were not identified
 in the reused wiki suite; the matrix describes those paths from source inspection.
 
-These tests establish present boundaries. They prove no semantic-index transaction, concurrent
-revocation safety, durable epoch recovery, bounded query performance or package-wide atomicity.
+These ordinary-provider tests establish the Phase A boundaries above. They do not establish a
+semantic-index transaction, concurrent revocation safety, durable epoch recovery, bounded query
+performance or package-wide atomicity. The separate private fixture evidence has the narrower
+scope described in its checkpoint and does not remove those production obligations.
 
 ## Approved authoring direction
 

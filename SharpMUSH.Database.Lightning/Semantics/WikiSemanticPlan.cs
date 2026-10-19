@@ -63,12 +63,15 @@ internal sealed class WikiSemanticPlannedDelta(NativeReadReservation lifetime, C
 		Revision = revision;
 	}
 	internal void Clear() { _changes.Clear(); Bytes = 0; Revision = checked(Revision + 1); }
-	internal void Apply(ITx tx, CancellationToken ct, Action<TableDef>? putApplied = null)
+	internal void Apply(ITx tx, CancellationToken ct, Action<TableDef>? putApplied = null, Action<TableDef>? deleteApplied = null)
 	{
 		foreach (var change in _changes)
 		{
 			ct.ThrowIfCancellationRequested();
-			if (change.Value is null) tx.Delete(change.Table, change.Key);
+			if (change.Value is null)
+			{
+				if (tx.Delete(change.Table, change.Key)) deleteApplied?.Invoke(change.Table);
+			}
 			else
 			{
 				tx.Put(change.Table, change.Key, change.Value);
