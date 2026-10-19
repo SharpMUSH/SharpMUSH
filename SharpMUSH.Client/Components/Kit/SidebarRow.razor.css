@@ -146,6 +146,20 @@
 	padding-bottom: 6px;
 }
 
+.kit-row--wrap-label {
+	height: auto;
+	min-height: 44px;
+	padding-top: 7px;
+	padding-bottom: 7px;
+}
+
+.kit-row--wrap-label .kit-row-label {
+	white-space: normal;
+	overflow: visible;
+	text-overflow: clip;
+	overflow-wrap: anywhere;
+}
+
 .kit-row-text {
 	flex: 1 1 auto;
 	min-width: 0;

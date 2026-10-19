@@ -6490,4 +6490,5 @@
     <value>Вики игры</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Просмотреть элементы</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Избранные темы</value></data>
 </root>

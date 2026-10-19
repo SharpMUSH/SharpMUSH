@@ -11,6 +11,48 @@ public class WikiMarkdigPipelineTests
 	private static WikiMarkdigPipeline Pipeline() => new();
 
 	[Test]
+	public async Task AuthoredNextStepContainerKeepsSafeClassAndWikiLinks()
+	{
+		var html = Pipeline().RenderToHtml("""
+			::: wiki-next-step
+			### Next step
+
+			Continue with [[Create your first character|main:character_creation_guide]].
+
+			Return to [[the learning path|main:learn_pf2e]].
+			:::
+			""");
+
+		await Assert.That(html).Contains("<div class=\"wiki-next-step\">");
+		await Assert.That(html).Contains(">Next step</h3>");
+		await Assert.That(html).Contains("href=\"/wiki/main/character_creation_guide\">Create your first character</a>");
+		await Assert.That(html).Contains("href=\"/wiki/main/learn_pf2e\">the learning path</a>");
+		await Assert.That(html).DoesNotContain("wiki-directive");
+	}
+
+	[Test]
+	public async Task AuthoredNextStepContainerDoesNotRelaxMarkdownSafety()
+	{
+		var html = Pipeline().RenderToHtml("""
+			::: wiki-next-step
+			### Next step {onclick="alert(1)" style="position:fixed"}
+
+			[[Continue safely|main:procedure]] [unsafe](javascript:alert(1)){onmouseover="alert(1)"}
+
+			<script>alert(1)</script>
+			:::
+			""");
+
+		await Assert.That(html).Contains("<div class=\"wiki-next-step\">");
+		await Assert.That(html).Contains("href=\"/wiki/main/procedure\">Continue safely</a>");
+		await Assert.That(html).DoesNotContain("onclick=");
+		await Assert.That(html).DoesNotContain("onmouseover=");
+		await Assert.That(html).DoesNotContain("style=");
+		await Assert.That(html).DoesNotContain("href=\"javascript:");
+		await Assert.That(html).DoesNotContain("<script>");
+	}
+
+	[Test]
 	public async Task RenderToHtml_Bold_ProducesStrongTag()
 	{
 		var html = Pipeline().RenderToHtml("Hello **world**.");

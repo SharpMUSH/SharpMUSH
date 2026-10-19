@@ -6490,4 +6490,5 @@
     <value>游戏维基</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>浏览成员</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>精选主题</value></data>
 </root>

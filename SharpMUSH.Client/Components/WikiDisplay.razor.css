@@ -59,6 +59,27 @@
 	font-size: 18px;
 }
 
+/* The author chooses the action and its place in the article. */
+.WikiContent ::deep .wiki-next-step {
+	margin-block: 1.5rem;
+	padding: 1rem 1.25rem;
+	border: 1px solid var(--border);
+	border-inline-start: 3px solid var(--accent);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	color: var(--text);
+	font-size: inherit;
+	overflow-wrap: anywhere;
+}
+
+.WikiContent ::deep .wiki-next-step > :first-child { margin-top: 0; }
+.WikiContent ::deep .wiki-next-step > :last-child { margin-bottom: 0; }
+.WikiContent ::deep .wiki-next-step a:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
 .wiki-article-body ::deep pre,
 .wiki-article-body ::deep table {
 	overflow-x: auto;

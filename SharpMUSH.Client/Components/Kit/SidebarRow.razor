@@ -36,6 +36,9 @@ else
     [Parameter] public string? Icon { get; set; }
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
 
+    /// <summary>Show the complete label on as many lines as needed; other rows stay compact.</summary>
+    [Parameter] public bool WrapLabel { get; set; }
+
     /// <summary>A dim second line under the label ("Wren · 2h ago"); the row grows to fit it.</summary>
     [Parameter] public string? Sub { get; set; }
 
@@ -70,6 +73,7 @@ else
         Mono ? "kit-row--mono" : null,
         Collapsed ? "kit-row--collapsed" : null,
         Sub is not null ? "kit-row--two-line" : null,
+        WrapLabel && !Collapsed ? "kit-row--wrap-label" : null,
         Class,
     }.Where(c => !string.IsNullOrEmpty(c)));
 
