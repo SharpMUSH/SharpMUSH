@@ -21,7 +21,8 @@ public partial class LightningDatabase
 			separators++;
 			lastSeparator = i;
 		}
-		if (separators != 2 || lastSeparator != key.Length - 10
+		// Existing slugs may contain NUL code units. Only the final delimiter has a fixed position.
+		if (separators < 2 || lastSeparator != key.Length - 10
 			|| Keys.ReadDbref(key.AsSpan(key.Length - 8)) < 0)
 			throw new ArgumentException("Invalid wiki namespace scan key.", nameof(token));
 		return key;

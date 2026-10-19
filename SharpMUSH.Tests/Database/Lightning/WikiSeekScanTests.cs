@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 
@@ -19,6 +20,31 @@ public class WikiSeekScanTests : LightningDatabaseFixture
 
 	private static WikiPageScanContinuation Resume(WikiPageScanBatch batch) => batch.Next is WikiPageScanContinuation next
 		? next : throw new InvalidOperationException("Expected continuation.");
+
+	[Test]
+	[Arguments("a\0b")]
+	[Arguments("\0a")]
+	[Arguments("a\0")]
+	[Arguments("a\0\0b")]
+	public async Task SeekResumesFromPersistedFacadeCreatedSlugContainingNul(string slug)
+	{
+		IWikiService wiki = new WikiStoreService(Db, new WikiMarkdigPipeline());
+		var boundary = (await wiki.CreateAsync("Boundary", "body", "#1", sourceLocale: "en", slug: slug)).Expect<WikiPage>();
+		var tail = (await wiki.CreateAsync("Tail", "body", "#1", sourceLocale: "en", slug: "z")).Expect<WikiPage>();
+		await Assert.That(boundary.Slug).IsEqualTo(slug);
+		await ReopenAsync();
+		await Assert.That((await Db.GetPageByIdAsync(boundary.Id)).Expect<WikiPage>().Slug).IsEqualTo(slug);
+		var first = await Db.ScanPagesAsync(WikiVisibility.PublishedOnly, new WikiPageScanStart(), 1);
+		await Assert.That(first.Pages.Single().Id).IsEqualTo(boundary.Id);
+		await Assert.That(first.Pages.Single().Slug).IsEqualTo(slug);
+		// The real key and token were produced by ordinary facade writes and the first successful scan.
+		// Resuming must accept that stored position without changing its key or skipping the next page.
+		var resumed = await Db.ScanPagesAsync(WikiVisibility.PublishedOnly, Resume(first), 1);
+		await Assert.That(resumed.Pages.Single().Id).IsEqualTo(tail.Id);
+		var end = await Db.ScanPagesAsync(WikiVisibility.PublishedOnly, Resume(resumed), 1);
+		await Assert.That(end.Pages).IsEmpty();
+		await Assert.That(end.Next is WikiPageScanEnd).IsTrue();
+	}
 
 	[Test]
 	public async Task SeekBatchesPreserveOrderAndExactFullTerminalBatchWithoutLookaheadLoss()

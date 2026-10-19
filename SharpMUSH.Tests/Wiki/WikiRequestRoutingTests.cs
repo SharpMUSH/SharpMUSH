@@ -270,7 +270,9 @@ public class WikiRequestRoutingTests
 	}
 
 	[Test]
-	public async Task LocalizedCollectionSearchSeeksCandidatesInsteadOfRestartingPositiveOffsets()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LocalizedCollectionSearchSeeksCandidatesInsteadOfRestartingPositiveOffsets(bool nulBoundary)
 	{
 		var id = Guid.NewGuid().ToString("N");
 		var package = "search-seek-" + id;
@@ -284,12 +286,14 @@ public class WikiRequestRoutingTests
 			// Slugs put the sole translated-title match beyond both 128-row search boundaries.
 			for (var i = 0; i < 257; i++)
 			{
-				var page = (await Wiki.CreateAsync($"Seek {id} {i:D3}", sourceBody, "#1", sourceLocale: "en"))
+				var page = (await Wiki.CreateAsync($"Seek {id} {i:D3}", sourceBody, "#1", sourceLocale: "en",
+					slug: nulBoundary && i == 127 ? $"seek_{id}_{i:D3}\0" : null))
 					.Expect<WikiPage>();
 				pages.Add(page);
 				await OwnCategoryPageAsync(package, page);
 			}
 			var target = pages[^1];
+			await Assert.That(pages[127].Slug.Contains('\0')).IsEqualTo(nulBoundary);
 			(await Wiki.UpsertTranslationAsync(target.Id, "fr", translatedTitle, translatedBody, "#1", null, true, null))
 				.Expect<WikiTranslation>();
 			await using var scope = Factory.Services.CreateAsyncScope();
