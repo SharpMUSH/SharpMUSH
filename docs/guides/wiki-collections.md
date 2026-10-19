@@ -8,7 +8,7 @@ Search, category, result offset and requested language are part of the collectio
 
 A category name opens its introduction when that page is available to you. **Browse members** filters the selected collection instead. On a category article, the member list shows 50 entries at a time with its own Previous/Next controls and range. Paging members keeps the original search results available through **Back to results**. A separate **Game wiki** link remains available. Direct article visits do not invent a previous search.
 
-Existing article links still open the same pages. Opening an imported article or category selects its owning collection in the sidebar; a category's members stay within that collection. **Wiki home** returns to the game's own navigation. Pages still obey their normal read requirements and draft visibility.
+Existing article links still open the same pages. Opening an imported article or category selects its owning collection in the sidebar. Direct category entry defaults its members to the authorized owner; an explicit member selection keeps its independently authorized collection. The member selection and original search return remain separate. **Wiki home** returns to the game's own navigation. Pages still obey their normal read requirements and draft visibility.
 
 Useful routes:
 

@@ -76,7 +76,7 @@
         <div class="wiki-collection-pages">
             @foreach (var article in rows.Pages)
             {
-                <a class="wiki-collection-page" href="@WikiJourneyLinks.Article(WikiRoutes.PathFor(article.Namespace, article.Slug), _state, membersCollection: _state.Collection)">
+                <a class="wiki-collection-page" href="@WikiJourneyLinks.Page(article.Namespace, article.Slug, _state, membersCollection: _state.Collection)">
                     <span>@article.Title</span><span class="wiki-collection-page-context">@(article.CollectionName is { Length: > 0 } name ? name + " / " + article.Namespace : article.Namespace)</span>
                 </a>
             }

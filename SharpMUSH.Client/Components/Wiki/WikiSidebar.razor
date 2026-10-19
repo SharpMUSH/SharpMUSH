@@ -52,7 +52,7 @@
             @foreach (var category in navigation.Categories.Where(row => row.Pinned))
             {
                 var route = WikiJourneyLinks.Collection(WikiBrowseState.FromUri(Nav.Uri, navigation.Collection) with { Category = category.Key, Skip = 0 });
-                var introduction = WikiJourneyLinks.Article(WikiCategories.Route(category.Key), WikiBrowseState.FromUri(Nav.Uri, navigation.Collection), membersCollection: navigation.Collection);
+                var introduction = WikiJourneyLinks.Article(WikiCategories.Route(category.Key), _returnState, membersCollection: navigation.Collection, locale: _locale);
                 <div class="wiki-side-category">
                     <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@(category.HasPage ? introduction : route)" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
                     @if (category.HasPage && !Collapsed)
@@ -94,6 +94,7 @@
     [Parameter] public bool Collapsed { get; set; }
 
     private WikiNavigationDto? _navigation;
+    private WikiBrowseState? _returnState;
     private string? _authorizedUri;
     private bool _failed;
     private int _loadVersion;
@@ -124,6 +125,7 @@
         if (_disposed) return;
         Interlocked.Increment(ref _loadVersion);
         _navigation = null;
+        _returnState = null;
         _authorizedUri = null;
         _failed = false;
         _ = InvokeAsync(async () =>
@@ -156,6 +158,7 @@
         var locale = _locale;
         // A directory authorizes actions only for the route that requested it.
         _navigation = null;
+        _returnState = null;
         _authorizedUri = null;
         _failed = false;
         string? collection = null;
@@ -166,9 +169,36 @@
             page = path[6..];
         var result = await Wiki.GetNavigationAsync(collection, page, lang: locale);
         if (_disposed || version != _loadVersion || requestedUri != Nav.Uri) return;
-        _navigation = result is WikiNavigationDto navigation ? navigation : null;
-        _authorizedUri = _navigation is null ? null : requestedUri;
-        _failed = _navigation is null;
+        if (result is not WikiNavigationDto navigation)
+        {
+            _failed = true;
+            return;
+        }
+
+        WikiBrowseState? returnState = null;
+        if (collection is not null)
+        {
+            // A collection visit seeds its submitted result state. Article owner selection is
+            // independent: an article can carry a different, explicitly authorized return origin.
+            returnState = WikiBrowseState.FromUri(requestedUri, navigation.Collection);
+        }
+        else if (page is not null)
+        {
+            var query = WikiBrowseState.ReadQuery(requestedUri);
+            if (!string.IsNullOrWhiteSpace(query.GetValueOrDefault("browseCollection")))
+            {
+                var browse = new WikiBrowseState(query["browseCollection"], query.GetValueOrDefault("browseQ"),
+                    query.GetValueOrDefault("browseCategory"), WikiBrowseState.ParseSkip(query.GetValueOrDefault("browseSkip")), locale).Normalize();
+                var origin = await Wiki.GetNavigationAsync(collection: browse.Collection, lang: locale);
+                if (_disposed || version != _loadVersion || requestedUri != Nav.Uri) return;
+                if (origin is WikiNavigationDto authorized && authorized.Collection == browse.Collection) returnState = browse;
+            }
+        }
+        else returnState = WikiBrowseState.FromUri(requestedUri, navigation.Collection);
+
+        _navigation = navigation;
+        _returnState = returnState;
+        _authorizedUri = requestedUri;
     }
 
     private void Locate()

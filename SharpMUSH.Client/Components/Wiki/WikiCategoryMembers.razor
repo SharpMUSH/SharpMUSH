@@ -171,7 +171,7 @@
         }
     }
 
-    private string MemberHref(WikiPageSummary page) => WikiJourneyLinks.Article(WikiRoutes.PathFor(page.Namespace, page.Slug), BrowseState,
+    private string MemberHref(WikiPageSummary page) => WikiJourneyLinks.Page(page.Namespace, page.Slug, BrowseState,
         MembersCollection, _skip, EffectiveLocale);
 
     private string PageHref(int offset)

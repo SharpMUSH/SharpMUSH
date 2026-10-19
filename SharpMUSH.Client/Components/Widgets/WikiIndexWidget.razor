@@ -8,6 +8,7 @@
 @using SharpMUSH.Library.Services
 @inject WikiService Wiki
 @inject NavigationManager Nav
+@inject IAccountAuthState AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
@@ -175,16 +176,18 @@
     protected override async Task OnInitializedAsync()
     {
         Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.AuthStateChanged += OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged += OnReaderChanged;
         ReadQuery();
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
-        var version = ++_version;
+        if (_disposed) return;
+        var version = Interlocked.Increment(ref _version);
         var locale = _locale;
-        _loading = true;
-        _loadFailed = false;
+        ClearReaderData();
         if (await Wiki.GetNavigationAsync(lang: locale) is WikiNavigationDto navigation)
         {
             if (_disposed || version != _version) return;
@@ -215,6 +218,33 @@
         {
             _heroImage = home.Image;
         }
+    }
+
+    private void ClearReaderData()
+    {
+        _navigation = null;
+        _names = null;
+        _pinned = new(StringComparer.Ordinal);
+        _pages = [];
+        _heroImage = null;
+        _loading = true;
+        _loadFailed = false;
+    }
+
+    private void OnReaderChanged()
+    {
+        if (_disposed) return;
+        // Authority changes at the same URI must invalidate pending reads before dispatching
+        // the refresh, and remove every label/image authorized for the previous reader.
+        Interlocked.Increment(ref _version);
+        ClearReaderData();
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+            await LoadAsync();
+            if (!_disposed) StateHasChanged();
+        });
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -261,5 +291,12 @@
         else _pinned.Remove(key);
     }
 
-    public void Dispose() { _disposed = true; ++_version; Nav.LocationChanged -= OnLocationChanged; }
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _version);
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.AuthStateChanged -= OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+    }
 }

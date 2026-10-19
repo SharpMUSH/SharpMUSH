@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Services;
+
 namespace SharpMUSH.Client.Models.Wiki;
 
 /// <summary>Builds local wiki journeys from structured state; no free-form return URL is accepted.</summary>
@@ -15,6 +17,16 @@ public static class WikiJourneyLinks
 		if (state.Skip != 0) query["skip"] = state.Skip.ToString(System.Globalization.CultureInfo.InvariantCulture);
 		Add(query, "lang", state.Locale);
 		return Append("/wiki/collections/" + Uri.EscapeDataString(state.Collection), query);
+	}
+
+	/// <summary>Canonical page destinations include biographies on character profiles outside the wiki.</summary>
+	public static string Page(string ns, string slug, WikiBrowseState? state, string? membersCollection = null,
+		int? membersSkip = null, string? locale = null)
+	{
+		var path = WikiRoutes.PathFor(ns, slug);
+		return WikiRoutes.IsCharacterProfile(ns)
+			? WikiLocaleLinks.WithLocale(path, locale ?? state?.Normalize().Locale)
+			: Article(path, state, membersCollection, membersSkip, locale);
 	}
 
 	public static string Article(string path, WikiBrowseState? state, string? membersCollection = null,

@@ -35,6 +35,88 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task CharacterBiographyMemberKeepsCanonicalProfileDestinationAndRequestedLocale()
+	{
+		_api.Members = _ => Task.FromResult(CategoryApi.Batch([CategoryApi.Row("Ada", "Ada biography", "character")], 1));
+		var cut = Open("/wiki/category/guides?" + Journey);
+		WaitForMember(cut, "Ada biography");
+
+		var destination = Address(cut.Find(".wiki-cat a.kit-tile"));
+		await Assert.That(destination.AbsolutePath).IsEqualTo("/character/ada");
+		await Assert.That(Query(destination)["lang"]).IsEqualTo("fr-CA");
+	}
+
+	[Test]
+	public async Task ArticleSidebarIntroductionReturnsToOriginalSearchWhileMembersUseAuthorizedSidebarOwner()
+	{
+		_nav.NavigateTo("/wiki/main/intro?" + Journey);
+		var sidebar = Render<WikiSidebar>();
+		sidebar.WaitForAssertion(() => sidebar.Find(".wiki-side-cats a.kit-row"));
+		var introduction = sidebar.Find(".wiki-side-cats a.kit-row").GetAttribute("href")!;
+		var query = Query(new Uri(new Uri(_nav.Uri), introduction));
+		await Assert.That(query["browseCollection"]).IsEqualTo("package:origin");
+		await Assert.That(query["browseQ"]).IsEqualTo("Règle & C++");
+		await Assert.That(query["browseCategory"]).IsEqualTo("fighter & feats");
+		await Assert.That(query["browseSkip"]).IsEqualTo("100");
+		await Assert.That(query["membersCollection"]).IsEqualTo("package:owner");
+		await Assert.That(query["membersSkip"]).IsNull();
+		await Assert.That(query["lang"]).IsEqualTo("fr-CA");
+
+		var article = Open(introduction);
+		WaitForMember(article, "Owner member 000");
+		article.WaitForAssertion(() => article.Find(".wiki-back-results"));
+		var back = Address(article.Find(".wiki-back-results"));
+		await Assert.That(back.AbsolutePath).IsEqualTo("/wiki/collections/package%3Aorigin");
+		await Assert.That(Query(back)["q"]).IsEqualTo("Règle & C++");
+		await Assert.That(Query(back)["category"]).IsEqualTo("fighter & feats");
+		await Assert.That(Query(back)["skip"]).IsEqualTo("100");
+		await Assert.That(Query(back)["lang"]).IsEqualTo("fr-CA");
+		await Assert.That(_api.NavigationRequests.Any(uri => Query(uri)["collection"] == "package:origin")).IsTrue();
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("package:hidden")]
+	[Arguments("package:unknown")]
+	[Arguments("https://outside.invalid/private")]
+	public async Task ArticleSidebarIntroductionDoesNotInventOrPropagateAnUnauthorizedReturn(string? origin)
+	{
+		_nav.NavigateTo("/wiki/main/intro?lang=fr-CA" + (origin is null ? string.Empty
+			: "&browseCollection=" + Uri.EscapeDataString(origin) + "&browseQ=PRIVATE_QUERY&browseCategory=PRIVATE_CATEGORY&browseSkip=100"));
+		var sidebar = Render<WikiSidebar>();
+		sidebar.WaitForAssertion(() => sidebar.Find(".wiki-side-cats a.kit-row"));
+		var introduction = sidebar.Find(".wiki-side-cats a.kit-row").GetAttribute("href")!;
+		var query = Query(new Uri(new Uri(_nav.Uri), introduction));
+		await Assert.That(query["browseCollection"]).IsNull();
+		await Assert.That(query["browseQ"]).IsNull();
+		await Assert.That(query["browseCategory"]).IsNull();
+		await Assert.That(query["browseSkip"]).IsNull();
+		await Assert.That(query["membersCollection"]).IsEqualTo("package:owner");
+		await Assert.That(query["lang"]).IsEqualTo("fr-CA");
+		await Assert.That(sidebar.Markup).DoesNotContain("PRIVATE_QUERY");
+		await Assert.That(sidebar.Markup).DoesNotContain("PRIVATE_CATEGORY");
+
+		var article = Open(introduction);
+		WaitForMember(article, "Owner member 000");
+		await Assert.That(article.FindAll(".wiki-back-results")).IsEmpty();
+	}
+
+	[Test]
+	public async Task CollectionSidebarIntroductionSeedsTheSubmittedOriginAndKeepsItsSelectedMembers()
+	{
+		_nav.NavigateTo("/wiki/collections/package%3Arules?q=R%C3%A8gle&category=fighter&skip=100&lang=fr-CA");
+		var sidebar = Render<WikiSidebar>();
+		sidebar.WaitForAssertion(() => sidebar.Find(".wiki-side-cats a.kit-row"));
+		var query = Query(Address(sidebar.Find(".wiki-side-cats a.kit-row")));
+		await Assert.That(query["browseCollection"]).IsEqualTo("package:rules");
+		await Assert.That(query["browseQ"]).IsEqualTo("Règle");
+		await Assert.That(query["browseCategory"]).IsEqualTo("fighter");
+		await Assert.That(query["browseSkip"]).IsEqualTo("100");
+		await Assert.That(query["membersCollection"]).IsEqualTo("package:rules");
+		await Assert.That(query["lang"]).IsEqualTo("fr-CA");
+	}
+
+	[Test]
 	public async Task TextOnlyCategoryMemberKeepsNavigationMetadataAndAccessBadges()
 	{
 		_api.Members = _ => Task.FromResult(CategoryApi.Batch(
