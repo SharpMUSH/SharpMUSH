@@ -23,6 +23,7 @@ public class SemanticMutationCoverageTests : LightningDatabaseFixture
 		["CountPagesAsync"] = Impact.Read,
 		["CountPagesByStateAsync"] = Impact.Read,
 		["CountPagesByCategoryAsync"] = Impact.Read,
+		["CountPagesInCategoryAsync"] = Impact.Read,
 		["GetPagesByCategoryAsync"] = Impact.Read,
 		["GetRequirementsAsync"] = Impact.Read,
 		["GetPinnedCategoriesAsync"] = Impact.Read,
