@@ -43,9 +43,14 @@ apply or rollback, the removal of the package's rows for an uninstall. Then:
 
 - **A failure the process survives** (an error result or an exception) replays the inverses newest
   first, which puts the world back where it started unless an inverse itself fails. For an error
-  result, the error names every write that could not be reverted. For an exception, a write that
-  could not be reverted is dropped without a report, so that the original exception is what
-  surfaces (`PackageWriteTransaction.DisposeAsync`).
+  result, the error names every write that could not be reverted alongside the original failure.
+  For an exception, failed compensation throws `PackageCompensationException` from disposal,
+  carrying the unrestored steps; this can supersede the original unwinding exception. Successful
+  compensation leaves the original exception intact. Recovery uses its own 30-second ambient
+  execution budget, independent of cancelled request/entry tokens. This is a dispatch/cooperative
+  policy: expiry prevents starting further inverses and reports them as unattempted, but every
+  already-started inverse is awaited even beyond expiry. It is not a hard native completion SLA,
+  and a noncooperative inverse can still hold the queue/gate while it settles.
 - **Package operations are serialized with each other.** Apply, uninstall, rollback and the
   profile-handler reset hold one process-wide gate (`IPackageOperationGate`, #1484) from their
   first registry read to their last write.
