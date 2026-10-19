@@ -495,6 +495,7 @@ public partial class PackageInstallService
 			Version = snapshot.Version,
 			PastMaximum = snapshot.PastMaximum,
 			Plugins = snapshot.Plugins,
+			WikiCollectionName = snapshot.WikiCollectionName,
 			CurrentRevision = newRevision,
 			InstalledAt = DateTimeOffset.UtcNow
 		});

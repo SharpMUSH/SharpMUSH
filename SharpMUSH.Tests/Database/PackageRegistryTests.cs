@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
@@ -36,6 +37,31 @@ public class PackageRegistryTests
 	private static InstalledPackageRecord SamplePackage(string id, string version = "1.2.0", int revision = 1) => new(
 		id, version, "https://github.com/SharpMUSH/SharpMUSH-Packages", $"{id}/",
 		"a3f8c1d000000", "main", Anchor, revision);
+
+	[Test]
+	public async Task InstalledCollectionNameSurvivesProviderWritesUpdatesAndRemoval()
+	{
+		var id = Id("collection-label");
+		var node = JsonSerializer.SerializeToNode(SamplePackage(id)) ?? throw new InvalidOperationException("The registry fixture could not serialize.");
+		try
+		{
+			foreach (var expected in new string?[] { "Independent Rules", "Independent Rules Second Edition", null })
+			{
+				node["WikiCollectionName"] = expected;
+				var package = node.Deserialize<InstalledPackageRecord>() ?? throw new InvalidOperationException("The registry fixture could not deserialize.");
+				await Registry.UpsertInstalledPackageAsync(package);
+				var fetched = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+				var listed = (await Registry.GetInstalledPackagesAsync()).Single(row => row.Id == id);
+				foreach (var actual in new[] { fetched, listed })
+				{
+					var json = JsonSerializer.SerializeToElement(actual);
+					await Assert.That(json.TryGetProperty("WikiCollectionName", out var label) ? label.GetString() : null).IsEqualTo(expected);
+					await Assert.That(actual.Id).IsEqualTo(id);
+				}
+			}
+		}
+		finally { await Registry.RemoveInstalledPackageAsync(id); }
+	}
 
 	[Test]
 	public async Task InstalledPackages_UpsertGetListRemove()

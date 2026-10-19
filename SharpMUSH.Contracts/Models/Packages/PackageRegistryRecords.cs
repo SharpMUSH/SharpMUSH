@@ -45,7 +45,11 @@ public sealed record InstalledPackageRecord(
 	IReadOnlyList<PackageSettingRecord>? Settings = null,
 	PackageKind Kind = PackageKind.Softcode,
 	PackageMaximumOverride? PastMaximum = null,
-	IReadOnlyList<string>? Plugins = null);
+	IReadOnlyList<string>? Plugins = null)
+{
+	/// <summary>The authored public label from the last applied manifest, or null for the package-id-derived fallback.</summary>
+	public string? WikiCollectionName { get; init; }
+}
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,6 +28,7 @@ public class WikiCollectionsControllerTests
 		var localization = new WikiLocalizationService(wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance);
 		var access = new WikiAccessService(wiki, InMemoryRoleRegistry.Seeded(), new PermissionResolver());
 		var packages = Substitute.For<IPackageRegistryService>();
+		packages.GetInstalledPackagesAsync().Returns(Task.FromResult<IReadOnlyList<InstalledPackageRecord>>([]));
 		packages.GetAllPackageWikiPagesAsync().Returns(Task.FromResult<IReadOnlyList<PackageWikiPageRecord>>([]));
 		var controller = new WikiCollectionsController(wiki, localization, access, Substitute.For<IWikiNameResolver>(), packages,
 			NullLogger<WikiCollectionsController>.Instance)
@@ -39,6 +41,55 @@ public class WikiCollectionsControllerTests
 
 	private static PackageWikiPageRecord Own(WikiPage page, string package = "pf2e-remaster") => new(package, page.Id,
 		page.Namespace, page.Slug, page.Title, page.MarkdownSource, page.Categories, page.Published, PackageWikiRequires.None, false, "1.1.1");
+
+	// JSON seeds the optional registry field without requiring its new compile-time API during RED.
+	private static InstalledPackageRecord Installed(string id, string? label)
+	{
+		var json = JsonSerializer.SerializeToNode(new InstalledPackageRecord(id, "1.0.0", "https://example.invalid/packages", null,
+			"commit", null, DateTimeOffset.UnixEpoch, 1)) ?? throw new InvalidOperationException("The registry fixture could not serialize.");
+		json["WikiCollectionName"] = label;
+		return json.Deserialize<InstalledPackageRecord>() ?? throw new InvalidOperationException("The registry fixture could not deserialize.");
+	}
+
+	[Test]
+	[Arguments("Pathfinder 2e", "Pathfinder 2e")]
+	[Arguments("Règles: deuxième édition", "Règles: deuxième édition")]
+	[Arguments(null, "generic rules")]
+	public async Task AuthoredRegistryLabelNamesNavigationAndResultRowsWhileCollectionIdentityStaysStable(string? label, string expected)
+	{
+		var (controller, wiki, packages) = Build();
+		var page = (await wiki.CreateAsync("Guide", "Rules", "#1")).Expect<WikiPage>();
+		packages.GetAllPackageWikiPagesAsync().Returns(Task.FromResult<IReadOnlyList<PackageWikiPageRecord>>([Own(page, "generic-rules")]));
+		packages.GetInstalledPackagesAsync().Returns(Task.FromResult<IReadOnlyList<InstalledPackageRecord>>([Installed("generic-rules", label)]));
+
+		var home = Value<WikiNavigationDto>(await controller.Navigation());
+		await Assert.That(home.Collections.Single().Id).IsEqualTo("package:generic-rules");
+		await Assert.That(home.Collections.Single().Name).IsEqualTo(expected);
+		var selected = Value<WikiNavigationDto>(await controller.Navigation("package:generic-rules"));
+		await Assert.That(selected.Collection).IsEqualTo("package:generic-rules");
+		await Assert.That(selected.Collections.Single().Name).IsEqualTo(expected);
+		foreach (var collection in new[] { "all", "package:generic-rules" })
+		{
+			var rows = Value<List<WikiPageSummaryDto>>(await controller.Pages(collection));
+			await Assert.That(rows.Single().CollectionId).IsEqualTo("package:generic-rules");
+			await Assert.That(rows.Single().CollectionName).IsEqualTo(expected);
+		}
+	}
+
+	[Test]
+	public async Task InstalledDisplayNameDoesNotRevealAHiddenOnlyCollection()
+	{
+		var (controller, wiki, packages) = Build();
+		var hidden = (await wiki.CreateAsync("Private guide", "Private", "#1")).Expect<WikiPage>();
+		await wiki.SetMetadataAsync(hidden.Id, [], false);
+		packages.GetAllPackageWikiPagesAsync().Returns(Task.FromResult<IReadOnlyList<PackageWikiPageRecord>>([Own(hidden, "private-rules")]));
+		packages.GetInstalledPackagesAsync().Returns(Task.FromResult<IReadOnlyList<InstalledPackageRecord>>([Installed("private-rules", "PRIVATE_AUTHORED_LABEL")]));
+		var home = Value<WikiNavigationDto>(await controller.Navigation());
+		await Assert.That(home.Collections).IsEmpty();
+		await Assert.That(JsonSerializer.Serialize(home)).DoesNotContain("PRIVATE_AUTHORED_LABEL");
+		await Assert.That(await controller.Navigation("package:private-rules") is NotFoundResult).IsTrue();
+		await Assert.That(Value<List<WikiPageSummaryDto>>(await controller.Pages("all"))).IsEmpty();
+	}
 
 	[Test]
 	public async Task SearchUsesVisibleTranslatedTitlesAndNeverReturnsPageBodies()

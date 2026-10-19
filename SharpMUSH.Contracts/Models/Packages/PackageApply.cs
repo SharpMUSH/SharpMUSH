@@ -98,7 +98,11 @@ public sealed record PackageRevisionSnapshot(
 	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null,
 	PackageMaximumOverride? PastMaximum = null,
 	string? Readme = null,
-	IReadOnlyList<string>? Plugins = null);
+	IReadOnlyList<string>? Plugins = null)
+{
+	/// <summary>The collection label applied at this revision; rollback restores it, including null for legacy revisions.</summary>
+	public string? WikiCollectionName { get; init; }
+}
 
 /// <summary>One object in a revision snapshot.</summary>
 /// <param name="Ref">The manifest ref that produced or targets the object.</param>
