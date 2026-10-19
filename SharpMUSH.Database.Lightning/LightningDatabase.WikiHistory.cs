@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
@@ -10,7 +11,7 @@ namespace SharpMUSH.Database.Lightning;
 public partial class LightningDatabase
 {
 	/// <summary>The wiki's revision streams as an <see cref="IHistoryStore"/>.</summary>
-	public IHistoryStore WikiHistory => field ??= new WikiRevisionHistory(Store);
+	public IHistoryStore WikiHistory => field ??= new WikiRevisionHistory(this, Store);
 
 	/// <summary>
 	/// Retention over <see cref="Tables.WikiRev"/>. A stream is one <c>(page, locale)</c>: the source text
@@ -24,7 +25,7 @@ public partial class LightningDatabase
 	/// and a rollback to it is refused, while every revision that survives keeps its number — numbering
 	/// continues from the page row, never from the history, so a gap never renumbers anything.</para>
 	/// </remarks>
-	private sealed class WikiRevisionHistory(LightningStore store) : IHistoryStore
+	private sealed class WikiRevisionHistory(LightningDatabase provider, LightningStore store) : IHistoryStore
 	{
 		/// <summary>Rows the read covers before a batch is cut at the next stream boundary.</summary>
 		private const int ScanBudgetPerCandidate = 16;
@@ -63,7 +64,9 @@ public partial class LightningDatabase
 
 		public async ValueTask<(int Records, long Bytes)> PurgeAsync(HistoryPurgeBatch batch, HistoryRetentionRule rule,
 			DateTimeOffset now, CancellationToken ct = default)
-			=> await store.WriteAsync(tx =>
+		{
+			using var admission = provider.EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+			return await provider.WriteFixtureAsync(admission, tx =>
 			{
 				var deleted = 0;
 				var freed = 0L;
@@ -86,6 +89,7 @@ public partial class LightningDatabase
 
 				return (deleted, freed);
 			}, ct);
+		}
 
 		/// <summary>The key without its trailing revision number: the <c>(page, locale)</c> stream.</summary>
 		private static ReadOnlyMemory<byte> StreamOf(byte[] key) => key.AsMemory(0, key.Length - sizeof(uint));

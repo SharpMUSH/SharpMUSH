@@ -2,8 +2,9 @@ using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Tools.WikiSemantics;
 using SharpMUSH.Tools.WikiSemantics.Native;
+using SharpMUSH.Database.Lightning.Semantics;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
@@ -397,7 +398,7 @@ public class NativeSemanticCommitTests
 			return fixture.Read(tx =>
 			{
 				var before = GC.GetAllocatedBytesForCurrentThread();
-				using var work = NativeWork.Create(tx, tables, budget);
+				using var work = WikiSemanticWork.Create(tx, tables.Projection, budget);
 				var decoded = work.Read(table, key, NativeStateCodec.Summary) ?? throw new InvalidOperationException();
 				if (decoded.Summary.Visibility.Categories.Length != 1000) throw new InvalidOperationException();
 				return (GC.GetAllocatedBytesForCurrentThread() - before, budget.WorkingBytes);
@@ -408,7 +409,7 @@ public class NativeSemanticCommitTests
 		Console.WriteLine($"compactUnicode allocation={measured.Allocated} reservation={measured.Reserved}; cumulativeGC is reported separately from outstanding working");
 		await Assert.That(measured.Allocated <= measured.Reserved).IsTrue();
 		var low = NativeSemanticFixture.Budget(working: 64);
-		await Assert.That(() => fixture.Read(tx => NativeWork.Create(tx, tables, low))).Throws<SharpMUSH.Library.Plugins.Storage.Lightning.NativeReadLimitException>();
+		await Assert.That(() => fixture.Read(tx => WikiSemanticWork.Create(tx, tables.Projection, low))).Throws<SharpMUSH.Library.Plugins.Storage.Lightning.NativeReadLimitException>();
 		await Assert.That(low.WorkingBytes).IsEqualTo(0L);
 	}
 	[Test]

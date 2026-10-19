@@ -9,7 +9,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests;
 
-/// <summary>Owns one disposable world lineage. Integrated semantic operations remain unimplemented.</summary>
+/// <summary>Owns one disposable world lineage; actual-host projection activation is explicit.</summary>
 public sealed class SemanticWikiPrototypeFixture(string ownedScratchRoot) : IAsyncDisposable
 {
 	private readonly object _disposeGate = new();

@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
@@ -380,6 +381,19 @@ public partial class LightningDatabase : IWikiStore
 
 	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)
 	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.LegacyWiki);
+		if (admission is { Phase: SemanticFixturePhase.Active })
+		{
+			using var scope = new LegacyWikiPreparationScope(admission, CancellationToken.None);
+			var mutation = PrepareLegacyIntent(() => PreparedLegacyWikiMutation.Create.Prepare(scope, page, editSummary));
+			page = mutation.Page;
+			return await CommitLegacyFixtureAsync(mutation, admission, CancellationToken.None) switch
+			{
+				IntegratedWikiCommitted committed => committed.Page,
+				IntegratedWikiDuplicate duplicate => new Error<string>($"A wiki page with slug '{duplicate.Slug}' already exists in namespace '{duplicate.Namespace}'."),
+				_ => throw SemanticFixtureCapability.Unavailable()
+			};
+		}
 		var record = new WikiPageRecord
 		{
 			Slug = page.Slug,
@@ -400,7 +414,7 @@ public partial class LightningDatabase : IWikiStore
 
 		// The duplicate check and the insert share one write job, so two creators of the same
 		// (namespace, slug) cannot both pass the check.
-		return await Store.WriteAsync<Result<WikiPage>>(tx =>
+		return await WriteFixtureAsync<Result<WikiPage>>(admission, tx =>
 		{
 			var slugKey = WikiSlugKey(record.Namespace, record.Slug);
 			if (tx.TryGet(Tables.WikiSlug, slugKey, out _))
@@ -421,7 +435,15 @@ public partial class LightningDatabase : IWikiStore
 
 	public async Task<Found<WikiPage>> UpdatePageBodyAsync(string id, WikiBody body, string editorDbref, string? editSummary,
 		DateTimeOffset at)
-		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.LegacyWiki);
+		if (admission is { Phase: SemanticFixturePhase.Active })
+		{
+			using var scope = new LegacyWikiPreparationScope(admission, CancellationToken.None);
+			var mutation = PrepareLegacyIntent(() => PreparedLegacyWikiMutation.Body.Prepare(scope, id, body, editorDbref, editSummary, at));
+			return LegacyFreshPage(await CommitLegacyFixtureAsync(mutation, admission, CancellationToken.None));
+		}
+		return await WriteFixtureAsync<Found<WikiPage>>(admission, tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -442,9 +464,12 @@ public partial class LightningDatabase : IWikiStore
 			AppendWikiRevision(tx, page.Id, string.Empty, revision, body.Markdown, editorDbref, editSummary, at);
 			return page;
 		});
+	}
 
 	public async Task<Found<None>> DeletePageAsync(string id)
-		=> await Store.WriteAsync<Found<None>>(tx =>
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+		return await WriteFixtureAsync<Found<None>>(admission, tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -460,9 +485,18 @@ public partial class LightningDatabase : IWikiStore
 			tx.Delete(Tables.WikiRequirement, WikiRequirementKey(WikiRuleScope.Page, pageId));
 			return new None();
 		});
+	}
 
 	public async Task<Found<WikiPage>> SetPageTitleAsync(string id, string title)
-		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.LegacyWiki);
+		if (admission is { Phase: SemanticFixturePhase.Active })
+		{
+			using var scope = new LegacyWikiPreparationScope(admission, CancellationToken.None);
+			var mutation = PrepareLegacyIntent(() => PreparedLegacyWikiMutation.Title.Prepare(scope, id, title));
+			return LegacyFreshPage(await CommitLegacyFixtureAsync(mutation, admission, CancellationToken.None));
+		}
+		return await WriteFixtureAsync<Found<WikiPage>>(admission, tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -471,9 +505,19 @@ public partial class LightningDatabase : IWikiStore
 			PutWikiPage(tx, found.Key, found.Record, updated);
 			return MapWikiPage(found.Key, updated);
 		});
+	}
 
 	public async Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
-		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.LegacyWiki);
+		if (admission is { Phase: SemanticFixturePhase.Active })
+		{
+			using var scope = new LegacyWikiPreparationScope(admission, CancellationToken.None);
+			var mutation = PrepareLegacyIntent(() => PreparedLegacyWikiMutation.Metadata.Prepare(scope, id, categories, published));
+			categories = mutation.Categories;
+			return LegacyFreshPage(await CommitLegacyFixtureAsync(mutation, admission, CancellationToken.None));
+		}
+		return await WriteFixtureAsync<Found<WikiPage>>(admission, tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -481,6 +525,7 @@ public partial class LightningDatabase : IWikiStore
 			PutWikiPage(tx, found.Key, found.Record, updated);
 			return MapWikiPage(found.Key, updated);
 		});
+	}
 
 	/// <summary>The stream read backwards: its keys end with the big-endian revision number, so key order is
 	/// revision order and a page costs <c>skip + take</c> entries with only <c>take</c> decoded.</summary>
@@ -541,12 +586,13 @@ public partial class LightningDatabase : IWikiStore
 		WikiBody body, string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber,
 		DateTimeOffset at)
 	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
 		var stamp = WikiTimestamp(at);
 
 		// The compare-and-swap, the row write and the revision append are one job on the writer thread.
 		// Never make this an unconditional write: two translators who both loaded revision 4 would both
 		// write 5 and one would lose their prose.
-		return await Store.WriteAsync<TranslationWriteResult>(tx =>
+		return await WriteFixtureAsync<TranslationWriteResult>(admission, tx =>
 		{
 			if (TryReadWikiPage(tx, pageId) is not { } found) return new Error<string>($"No wiki page with id '{pageId}'.");
 
@@ -597,7 +643,9 @@ public partial class LightningDatabase : IWikiStore
 	}
 
 	public async Task<Found<None>> DeleteTranslationAsync(string pageId, string locale)
-		=> await Store.WriteAsync<Found<None>>(tx =>
+	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+		return await WriteFixtureAsync<Found<None>>(admission, tx =>
 		{
 			var canonicalPageId = CanonicalWikiPageId(pageId);
 			var key = WikiTranslationKey(canonicalPageId, locale);
@@ -607,4 +655,5 @@ public partial class LightningDatabase : IWikiStore
 			tx.Delete(Tables.WikiTr, key);
 			return new None();
 		});
+	}
 }

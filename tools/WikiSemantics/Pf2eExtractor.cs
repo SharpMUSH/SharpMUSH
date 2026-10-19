@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Models.Wiki.Semantics;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Tools.WikiSemantics;
 

@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -25,8 +26,9 @@ public partial class LightningDatabase
 
 	public async Task<Found<None>> SetRequirementsAsync(WikiRequirementSet set)
 	{
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
 		var key = set.Target.Scope == WikiRuleScope.Page ? CanonicalWikiPageId(set.Target.Key) : set.Target.Key;
-		return await Store.WriteAsync<Found<None>>(tx =>
+		return await WriteFixtureAsync<Found<None>>(admission, tx =>
 		{
 			if (set.Target.Scope == WikiRuleScope.Page && TryReadWikiPage(tx, key) is null) return new NotFound();
 
