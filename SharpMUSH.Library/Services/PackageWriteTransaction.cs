@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -46,6 +47,10 @@ public sealed class PackageWriteTransaction(
 	private readonly HashSet<int> _created = [];
 	private bool _settled;
 
+	// A recovery dispatch/cooperative deadline, not a hard completion limit for a started inverse.
+	internal static readonly TimeSpan RecoveryTimeout = TimeSpan.FromSeconds(30);
+	internal TimeProvider RecoveryClock { get; init; } = TimeProvider.System;
+
 	private AnySharpObject Executor => packageManager;
 
 	/// <summary>
@@ -72,13 +77,16 @@ public sealed class PackageWriteTransaction(
 
 	/// <summary>
 	/// Reverts an operation that neither committed nor reverted: one an exception is unwinding. A
-	/// write that cannot be reverted here is dropped, so that the exception, not the cleanup, surfaces.
+	/// failure to restore is reported by <see cref="PackageCompensationException"/>, which can
+	/// supersede the original unwinding exception. An explicit <see cref="RevertAsync"/> instead
+	/// combines the original failure and unrestored steps in its returned error.
 	/// </summary>
 	public async ValueTask DisposeAsync()
 	{
 		if (!_settled)
 		{
-			await RevertAllAsync();
+			var unrestored = await RevertAllAsync();
+			if (unrestored.Count != 0) throw new PackageCompensationException(unrestored);
 		}
 	}
 
@@ -86,10 +94,22 @@ public sealed class PackageWriteTransaction(
 	{
 		_settled = true;
 		var unrestored = new List<string>();
+		// Recovery must not inherit the cancelled execution/request lifetime it is repairing.
+		using var recovery = new ExecutionBudget(RecoveryTimeout, CancellationToken.None, RecoveryClock);
+		using var scope = recovery.Enter();
 		while (_undo.TryPop(out var step))
 		{
+			if (recovery.IsExceeded)
+			{
+				unrestored.Add($"{step.What} (not attempted: recovery deadline exceeded)");
+				continue;
+			}
+
 			try
 			{
+				// Do not start another inverse after the deadline. A started inverse is always joined:
+				// racing it with WaitAsync would let mutation escape its operation's gate/sequence.
+				recovery.ThrowIfExceeded();
 				await step.Revert();
 			}
 			catch (Exception ex)
@@ -295,17 +315,22 @@ public sealed class PackageWriteTransaction(
 				var target = now.Object();
 				foreach (var name in target.Locks.Keys.Where(k => !previous.ContainsKey(k)).ToList())
 				{
-					await locks.UnsetAsync(Executor, now, name);
+					RequireRestored(await locks.UnsetAsync(Executor, now, name));
 				}
 
 				foreach (var (name, data) in previous.Where(l => !target.Locks.TryGetValue(l.Key, out var live) || live != l.Value))
 				{
-					await locks.RestoreAsync(Executor, now, name, data);
+					RequireRestored(await locks.RestoreAsync(Executor, now, name, data));
 				}
 			});
 		}
 
 		return result;
+	}
+
+	private static void RequireRestored(Result<Success> result)
+	{
+		if (result is Error<string> error) throw new InvalidOperationException(error.Value);
 	}
 
 	// ── Attributes ──────────────────────────────────────────────────────────
