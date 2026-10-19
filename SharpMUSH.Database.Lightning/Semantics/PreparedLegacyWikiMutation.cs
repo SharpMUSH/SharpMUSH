@@ -5,13 +5,14 @@ using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Database.Lightning.Semantics;
 
-internal enum WikiLegacyMutationKind { Create = 1, Body = 2, Title = 3, Metadata = 4 }
+internal enum WikiLegacyMutationKind { Create = 1, Body = 2, Title = 3, Metadata = 4, Delete = 5 }
 internal sealed record IntegratedWikiReceipt(Guid MutationId, string RequestDigest, string PageId,
 	long StateVersion, long CommitSequence, int BodyRevision, WikiLegacyMutationKind Kind);
 internal sealed record IntegratedWikiCommitted(IntegratedWikiReceipt Receipt, WikiPage Page);
+internal sealed record IntegratedWikiDeleted(IntegratedWikiReceipt Receipt);
 internal sealed record IntegratedWikiReplayed(IntegratedWikiReceipt Receipt);
 internal sealed record IntegratedWikiDuplicate(string Namespace, string Slug);
-internal union IntegratedWikiCommitResult(IntegratedWikiCommitted, IntegratedWikiReplayed, IntegratedWikiDuplicate, NotFound);
+internal union IntegratedWikiCommitResult(IntegratedWikiCommitted, IntegratedWikiDeleted, IntegratedWikiReplayed, IntegratedWikiDuplicate, NotFound);
 
 /// <summary>Closed immutable normalized request. The caller owns its one scope until the actual parent completes.</summary>
 internal abstract class PreparedLegacyWikiMutation
@@ -34,10 +35,22 @@ internal abstract class PreparedLegacyWikiMutation
 			Body body => Body.Prepare(scope, body.Id, body.Value, body.Editor, body.EditSummary, body.At),
 			Title title => Title.Prepare(scope, title.Id, title.Value),
 			Metadata metadata => Metadata.Prepare(scope, metadata.Id, metadata.Categories, metadata.Published),
+			Delete delete => Delete.Prepare(scope, delete.Id),
 			_ => throw new ArgumentException("Unknown restored request.", nameof(request))
 		};
 		restored.MutationId = mutationId;
 		return restored;
+	}
+	internal sealed class Delete : PreparedLegacyWikiMutation
+	{
+		private Delete(LegacyWikiPreparationScope scope, string id, string digest)
+			: base(scope, WikiLegacyMutationKind.Delete, digest) => Id = id;
+		internal string Id { get; }
+		internal static Delete Prepare(LegacyWikiPreparationScope scope, string id)
+		{
+			id = scope.Target(id);
+			return new(scope, id, scope.Digest(WikiLegacyMutationKind.Delete, [id, string.Empty]));
+		}
 	}
 	internal sealed class Create : PreparedLegacyWikiMutation
 	{

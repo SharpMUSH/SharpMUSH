@@ -19,6 +19,7 @@ public partial class LightningDatabase
 	// Test-friend diagnostics: scalars/table identity only, no transaction, keys or values escape.
 	internal Action<string>? AtomicLegacyCapacityObserved { get; set; }
 	internal Action<TableDef>? AtomicLegacyPutApplied { get; set; }
+	internal Action<TableDef>? AtomicLegacyDeleteApplied { get; set; }
 	private static T PrepareLegacyIntent<T>(Func<T> prepare)
 	{
 		try { return prepare(); }
@@ -66,7 +67,8 @@ public partial class LightningDatabase
 			catch (Exception error) when (error is InvalidDataException or JsonException or ArgumentException or KeyNotFoundException)
 			{ throw SemanticFixtureCapability.Unavailable(); }
 			// No typed catch may turn a partially applied parent into a successful result.
-			if (result is IntegratedWikiCommitted) work.Delta.Apply(tx, scope.Budget.CancellationToken, AtomicLegacyPutApplied);
+			if (result is IntegratedWikiCommitted or IntegratedWikiDeleted)
+				work.Delta.Apply(tx, scope.Budget.CancellationToken, AtomicLegacyPutApplied, AtomicLegacyDeleteApplied);
 			return result;
 		}, ct);
 	}
@@ -81,10 +83,13 @@ public partial class LightningDatabase
 			if (receipt.MutationId != mutation.MutationId) throw new InvalidDataException("Receipt identity differs from its key.");
 			if (receipt.RequestDigest != mutation.RequestDigest || receipt.Kind != mutation.Kind)
 				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.MutationMismatch);
+			if (mutation is PreparedLegacyWikiMutation.Delete delete && receipt.PageId != delete.Id)
+				throw new InvalidDataException("Receipt names another delete target.");
 			return new IntegratedWikiReplayed(receipt);
 		}
 		var schema = work.ReadBytes(AtomicWikiLayout.Metadata, work.Key(1));
 		if (schema is null || !schema.AsSpan().SequenceEqual(AtomicWikiLayout.SchemaBytes)) throw new InvalidDataException("Incompatible projection schema.");
+		if (mutation is PreparedLegacyWikiMutation.Delete deletion) return PlanLegacyFixtureDelete(tx, deletion, work);
 		long key;
 		WikiPageRecord? old = null;
 		WikiPageRecord updated;
