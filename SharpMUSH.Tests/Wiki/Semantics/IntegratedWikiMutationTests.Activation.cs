@@ -225,9 +225,9 @@ public partial class IntegratedWikiMutationTests
 		// Valid owned inactive raw setup, then fully closed corroboration; no malformed native data.
 		host.Services.GetRequiredService<ILightningStorageAccessor>().OpenTable(AtomicWikiLayout.Metadata.Name, false);
 		await host.CloseAsync();
-		var before = SHA256.HashData(File.ReadAllBytes(Path.Combine(host.WorldPath, "data.mdb")));
+		var before = SHA256.HashData(File.ReadAllBytes(Path.Join(host.WorldPath, "data.mdb")));
 		await Assert.That(() => host.OpenAsync()).Throws<InvalidOperationException>();
-		await Assert.That(SHA256.HashData(File.ReadAllBytes(Path.Combine(host.WorldPath, "data.mdb")))).IsEquivalentTo(before);
+		await Assert.That(SHA256.HashData(File.ReadAllBytes(Path.Join(host.WorldPath, "data.mdb")))).IsEquivalentTo(before);
 	}
 
 	[Test]
@@ -254,7 +254,11 @@ public partial class IntegratedWikiMutationTests
 				await AssertFixtureFailure(() => accessor.WriteAsync(tx =>
 				{
 					tx.Put(plugin, [7], [8]);
-					try { operation(tx); } catch (WikiFixtureMutationException) { }
+					try { operation(tx); }
+					catch (WikiFixtureMutationException error) when (error.Reason == WikiFixtureMutationFailure.UnsupportedOperation)
+					{
+						// Deliberately catch the immediate refusal: the poisoned parent must still abort below.
+					}
 					return true;
 				}).AsTask(), WikiFixtureMutationFailure.UnsupportedOperation);
 				await Assert.That(accessor.Read(tx => tx.TryGet(plugin, new byte[] { 7 }, out _))).IsFalse();

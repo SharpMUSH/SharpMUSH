@@ -27,7 +27,11 @@ public sealed partial class LightningStore
 					found++;
 					if (definition == AtomicWikiLayout.Metadata) metadata = table;
 				}
-				catch (LightningException error) when (error.StatusCode == (int)MDBResultCode.NotFound) { }
+				catch (LightningException error) when (error.StatusCode == (int)MDBResultCode.NotFound)
+				{
+					// Absence is counted below; opening an existing layout must never create a missing table.
+					continue;
+				}
 			}
 			using var root = tx.OpenDatabase();
 			using var cursor = tx.CreateCursor(root);

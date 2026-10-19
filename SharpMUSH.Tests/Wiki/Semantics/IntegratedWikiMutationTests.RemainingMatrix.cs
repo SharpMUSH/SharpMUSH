@@ -60,12 +60,12 @@ public partial class IntegratedWikiMutationTests
 			var result = transaction.Commit();
 			if (result != MDBResultCode.Success) throw new InvalidOperationException("Owned layout setup did not commit.");
 		}
-		var before = SHA256.HashData(File.ReadAllBytes(Path.Combine(host.WorldPath, "data.mdb")));
+		var before = SHA256.HashData(File.ReadAllBytes(Path.Join(host.WorldPath, "data.mdb")));
 		var published = false;
 		host.ProviderOpened = _ => published = true;
 		await Assert.That(() => host.OpenAsync()).Throws<InvalidOperationException>();
 		await Assert.That(published).IsFalse();
-		await Assert.That(SHA256.HashData(File.ReadAllBytes(Path.Combine(host.WorldPath, "data.mdb")))).IsEquivalentTo(before);
+		await Assert.That(SHA256.HashData(File.ReadAllBytes(Path.Join(host.WorldPath, "data.mdb")))).IsEquivalentTo(before);
 	}
 
 	[Test]

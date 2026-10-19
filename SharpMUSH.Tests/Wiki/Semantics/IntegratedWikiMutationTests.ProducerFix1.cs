@@ -67,7 +67,10 @@ public partial class IntegratedWikiMutationTests
 		{
 			// After name validation is fixed, setup may reject early. The forged definition still must poison.
 			try { alias = accessor.OpenTable(aliasName, false); }
-			catch (ArgumentException) { }
+			catch (ArgumentException)
+			{
+				// Rejecting alias registration is expected; the forged definition still exercises poisoning.
+			}
 		}
 		var existing = provider.Store.Read(tx =>
 		{

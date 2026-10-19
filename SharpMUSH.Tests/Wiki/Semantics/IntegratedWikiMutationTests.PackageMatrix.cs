@@ -241,7 +241,11 @@ public partial class IntegratedWikiMutationTests
 			release.TrySetResult();
 			await bodyFinished.Task.WaitAsync(TimeSpan.FromSeconds(30));
 			await host.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests(TimeSpan.FromSeconds(30));
-			try { await parent; } catch (OperationCanceledException) { }
+			try { await parent; }
+			catch (OperationCanceledException)
+			{
+				// Cancellation was asserted above; cleanup still awaits the actual parent after queue drain.
+			}
 		}
 		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
 	}
@@ -264,7 +268,16 @@ public partial class IntegratedWikiMutationTests
 			await Assert.That(() => parent).Throws<OperationCanceledException>();
 			await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
 		}
-		finally { release.TrySetResult(); await held; try { await parent; } catch (OperationCanceledException) { } }
+		finally
+		{
+			release.TrySetResult();
+			await held;
+			try { await parent; }
+			catch (OperationCanceledException)
+			{
+				// Cancellation was asserted above; observe completion after releasing the held gate.
+			}
+		}
 		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
 	}
 

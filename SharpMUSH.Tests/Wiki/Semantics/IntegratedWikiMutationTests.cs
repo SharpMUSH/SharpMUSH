@@ -17,7 +17,7 @@ public partial class IntegratedWikiMutationTests
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
 	// The runner supplies the approved disk-backed TMPDIR/TMP/TEMP before starting this process.
-	private static string ScratchRoot => Path.Combine(Path.GetTempPath(), "semantic-wiki-first-atomic", "integrated-wiki-mutations");
+	private static string ScratchRoot => Path.Join(Path.GetTempPath(), "semantic-wiki-first-atomic", "integrated-wiki-mutations");
 	private static string ConfigFile => Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
 	private SemanticWikiPrototypeHost NewHost(Action<IServiceCollection>? configure = null)
