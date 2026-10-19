@@ -58,6 +58,42 @@ public sealed class InMemoryWikiStore : IWikiStore
 	public Task<int> CountPagesAsync(string? ns, WikiVisibility visibility)
 		=> Task.FromResult(Visible(InNamespace(ns), visibility).Count());
 
+	public Task<WikiPageScanBatch> ScanPagesAsync(WikiVisibility visibility, WikiPageScanPosition position, int take)
+	{
+		const string prefix = "memory-wiki-scan:v1:";
+		var offset = WikiPageScan.Validate(position, take);
+		_ = checked(offset + take);
+		var after = Array.Empty<string>();
+		if (position is WikiPageScanContinuation continuation)
+		{
+			after = System.Text.Json.JsonSerializer.Deserialize<string[]>(WikiPageScan.Decode(continuation.Token, prefix))
+				?? throw new ArgumentException("Invalid memory wiki scan position.", nameof(position));
+			if (after.Length != 3 || after.Any(value => value is null))
+				throw new ArgumentException("Invalid memory wiki scan position.", nameof(position));
+		}
+		static int Compare(WikiPage page, string[] key)
+		{
+			var ns = StringComparer.Ordinal.Compare(page.Namespace, key[0]);
+			if (ns != 0) return ns;
+			var slug = StringComparer.Ordinal.Compare(page.Slug, key[1]);
+			return slug != 0 ? slug : StringComparer.Ordinal.Compare(page.Id, key[2]);
+		}
+		var ordered = _pagesById.Values.OrderBy(page => page.Namespace, StringComparer.Ordinal)
+			.ThenBy(page => page.Slug, StringComparer.Ordinal).ThenBy(page => page.Id, StringComparer.Ordinal);
+		using var entries = ordered.Where(page => after.Length == 0 || Compare(page, after) > 0).GetEnumerator();
+		var pages = new List<WikiPage>();
+		while (pages.Count < take)
+		{
+			if (!entries.MoveNext()) return Task.FromResult(new WikiPageScanBatch(pages, new WikiPageScanEnd()));
+			offset = checked(offset + 1);
+			if (visibility.Admits(entries.Current)) pages.Add(entries.Current);
+		}
+		var last = entries.Current;
+		var token = WikiPageScan.Encode(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+			new[] { last.Namespace, last.Slug, last.Id }), prefix);
+		return Task.FromResult(new WikiPageScanBatch(pages, new WikiPageScanContinuation(offset, token)));
+	}
+
 	public Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility)
 	{
 		var counted = Visible(_pagesById.Values, visibility).ToList();

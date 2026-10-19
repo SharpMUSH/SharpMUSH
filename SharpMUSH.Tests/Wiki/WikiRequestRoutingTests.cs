@@ -270,6 +270,66 @@ public class WikiRequestRoutingTests
 	}
 
 	[Test]
+	public async Task LocalizedCollectionSearchSeeksCandidatesInsteadOfRestartingPositiveOffsets()
+	{
+		var id = Guid.NewGuid().ToString("N");
+		var package = "search-seek-" + id;
+		var pages = new List<WikiPage>();
+		var sourceBody = "SEARCH_SOURCE_BODY_" + id;
+		var translatedBody = "SEARCH_TRANSLATED_BODY_" + id;
+		var needle = "Aiguille" + id;
+		var translatedTitle = "La " + needle;
+		try
+		{
+			// Slugs put the sole translated-title match beyond both 128-row search boundaries.
+			for (var i = 0; i < 257; i++)
+			{
+				var page = (await Wiki.CreateAsync($"Seek {id} {i:D3}", sourceBody, "#1", sourceLocale: "en"))
+					.Expect<WikiPage>();
+				pages.Add(page);
+				await OwnCategoryPageAsync(package, page);
+			}
+			var target = pages[^1];
+			(await Wiki.UpsertTranslationAsync(target.Id, "fr", translatedTitle, translatedBody, "#1", null, true, null))
+				.Expect<WikiTranslation>();
+			await using var scope = Factory.Services.CreateAsyncScope();
+			var controller = ActivatorUtilities.CreateInstance<WikiCollectionsController>(scope.ServiceProvider);
+			controller.ControllerContext = new ControllerContext
+			{
+				HttpContext = new DefaultHttpContext { RequestServices = scope.ServiceProvider }
+			};
+			Factory.Requests.Clear();
+			var result = await controller.Pages("package:" + package, search: needle, lang: "fr");
+			if (result is not OkObjectResult { Value: List<WikiPageSummaryDto> rows })
+				throw new InvalidOperationException($"Expected successful localized search, received {result.GetType().Name}.");
+			await Assert.That(rows.Select(row => row.Id)).IsEquivalentTo(new[] { target.Id });
+			await Assert.That(controller.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("1");
+			await Assert.That(rows.Single().Title).IsEqualTo(translatedTitle);
+			await Assert.That(rows.Single().CollectionId).IsEqualTo("package:" + package);
+			var payload = System.Text.Json.JsonSerializer.Serialize(rows);
+			await Assert.That(payload).DoesNotContain(sourceBody);
+			await Assert.That(payload).DoesNotContain(translatedBody);
+			var messages = Factory.Requests.Messages.ToArray();
+			var scans = messages.OfType<ScanWikiPagesQuery>().ToArray();
+			await Assert.That(scans.Length >= 3).IsTrue();
+			var initial = messages.OfType<CountWikiPagesQuery>().First().Visibility;
+			await Assert.That(initial.IncludedPageIds?.ToArray() ?? []).IsEquivalentTo(pages.Select(page => page.Id));
+			foreach (var scan in scans)
+			{
+				await Assert.That(scan.Visibility).IsEqualTo(initial);
+			}
+			await Assert.That(scans[0].Position is WikiPageScanStart).IsTrue();
+			await Assert.That(scans.Skip(1).All(scan => scan.Position is WikiPageScanContinuation)).IsTrue();
+			await Assert.That(messages.OfType<GetWikiPagesQuery>().Where(query => query.Ns is null && query.Skip > 0)).IsEmpty();
+		}
+		finally
+		{
+			await Factory.Services.GetRequiredService<IPackageRegistryService>().RemoveInstalledPackageAsync(package);
+			foreach (var page in pages) await Wiki.DeleteAsync(page.Id, "#1");
+		}
+	}
+
+	[Test]
 	public async Task HostFacadeUsesGeneratedRequestsAndPreservesStoredJourney()
 	{
 		Factory.Requests.Clear();

@@ -18,6 +18,7 @@ reject unclassified additions/removals. This is drift detection, not transaction
 | GetPageByIdAsync | Read | page row | bounded identity lookup |
 | GetRecentPagesAsync | Read | visibility before limit | authorized bounded reads |
 | GetPagesAsync | Read | visibility before paging | authorized bounded reads |
+| ScanPagesAsync | Read | visibility on every strict-after batch | operation-local traversal; no snapshot or whole-request work bound |
 | CountPagesAsync | Read | filtered count | explicit authorized count |
 | CountPagesByStateAsync | Read | filtered count | explicit authorized count |
 | CountPagesByCategoryAsync | Read | filtered categories | explicit authorized facets |

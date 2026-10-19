@@ -94,15 +94,17 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		var names = await Localization.GetCategoryNamesAsync(lang, visibility);
 		var matching = new HashSet<string>(StringComparer.Ordinal);
 		const int batchSize = 128;
-		for (var skip = 0; ; skip += batchSize)
+		WikiPageScanPosition position = new WikiPageScanStart();
+		while (true)
 		{
-			var batch = await Wiki.GetAllPagesAsync(skip, batchSize, visibility: visibility);
-			var localized = await Localization.LocalizeAllAsync(batch, lang, await IncludeDraftsAsync());
+			var batch = await Wiki.ScanPagesAsync(visibility, position, batchSize);
+			var localized = await Localization.LocalizeAllAsync(batch.Pages, lang, await IncludeDraftsAsync());
 			foreach (var row in localized.Where(row => row.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
 				|| row.Page.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
 				|| row.Page.Categories.Any(key => WikiHelpers.CategoryLabel(key, names).Contains(term, StringComparison.OrdinalIgnoreCase))))
 				matching.Add(row.Page.Id);
-			if (batch.Count < batchSize) break;
+			if (batch.Next is not WikiPageScanContinuation continuation) break;
+			position = continuation;
 			HttpContext.RequestAborted.ThrowIfCancellationRequested();
 		}
 		return visibility with { IncludedPageIds = matching };

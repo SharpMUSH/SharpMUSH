@@ -78,6 +78,11 @@ public interface IWikiService
 	/// <summary>How many pages <paramref name="visibility"/> admits in each category, keyed by category key.</summary>
 	Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility);
 
+	/// <summary>Scans admitted pages in namespace/slug order, with explicit operation-local position and visibility.</summary>
+	/// <remarks>Legacy implementations retain their existing offset listing semantics.</remarks>
+	Task<WikiPageScanBatch> ScanPagesAsync(WikiVisibility visibility, WikiPageScanPosition position, int take)
+		=> WikiPageScan.FallbackAsync(position, take, (skip, count) => GetAllPagesAsync(skip, count, visibility: visibility));
+
 	/// <summary>How many pages <paramref name="visibility"/> admits in one category, across namespaces.</summary>
 	/// <remarks>The default preserves existing implementers; indexed stores override this dictionary fallback.</remarks>
 	async Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)

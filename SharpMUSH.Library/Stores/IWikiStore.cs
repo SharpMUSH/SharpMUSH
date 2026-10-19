@@ -37,6 +37,11 @@ public interface IWikiStore
 	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
 	Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take, WikiVisibility visibility);
 
+	/// <summary>Scans admitted pages in namespace/slug order without retaining a transaction between batches.</summary>
+	/// <remarks>Legacy implementations use their existing offset listing. Tokens are operation-local positions only.</remarks>
+	Task<WikiPageScanBatch> ScanPagesAsync(WikiVisibility visibility, WikiPageScanPosition position, int take)
+		=> WikiPageScan.FallbackAsync(position, take, (skip, count) => GetPagesAsync(null, skip, count, visibility));
+
 	/// <summary>The pages <paramref name="visibility"/> admits. A page whose stored published flag is absent counts as published.</summary>
 	Task<int> CountPagesAsync(string? ns, WikiVisibility visibility);
 
