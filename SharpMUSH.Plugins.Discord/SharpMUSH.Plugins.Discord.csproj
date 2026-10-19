@@ -13,7 +13,7 @@
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 		<!-- The Discord gateway and REST client. Loads in the plugin's own load context with its dependencies. -->
-		<PackageReference Include="Discord.Net.WebSocket" Version="3.20.1" />
+		<PackageReference Include="Discord.Net.WebSocket" Version="3.20.2" />
 		<!-- Posts through each linked channel's webhook, which needs only the webhook's own token. -->
 		<PackageReference Include="Discord.Net.Webhook" Version="3.20.1" />
 		<!-- Host-owned contracts: kept out of the plugin's output so the host's copies are the ones that load. -->
