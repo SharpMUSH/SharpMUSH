@@ -39,6 +39,45 @@ The optional `wiki_collection_name` is trimmed and must contain 1–100 characte
 
 Without this metadata, existing packages keep the package ID with hyphens replaced by spaces as their collection label. An upgrade records the new label; omitting the key on a later upgrade restores that fallback. Rollback restores the label recorded in the selected revision; revisions created before this metadata have no authored label. A manifest below format 1.13 warns and ignores the key.
 
+## Authoring an entrance and next steps
+
+Give readers an entrance by authoring a published Category introduction and setting `pin: true`. The collection displays authorized pinned introductions as **Featured topics**, before search and the complete directory. Its title opens the introduction; **Browse members** remains a separate filter. A category without a readable introduction keeps ordinary member browsing without a featured introduction link. Pins are presentation metadata, so curate the featured set rather than relying on a title or slug to sort an entrance first.
+
+For example, a workshop package can author:
+
+```yaml
+format: 1.13
+package: workshop-manual
+version: 1.0.0
+wiki_collection_name: Workshop manual
+wiki:
+  - page: category:workshop_orientation
+    title: Start here — Workshop manual
+    published: true
+    pin: true
+    markdown: |
+      Read the [[equipment checklist|main:workshop_equipment]], then
+      the [[safety preparation|main:workshop_safety]] before starting a procedure.
+```
+
+The category key and title are authored content. The engine does not interpret “Start here,” choose a Main article, or derive a lesson sequence from title, modification time or directory order. The collection label names the collection and does not select a landing page. Requirements and draft visibility still apply to every introduction and destination.
+
+Within an instructional article, use an ordinary Markdown container for a named next action and a return link:
+
+```markdown
+::: wiki-next-step
+### Next step
+
+Continue with [[Prepare the equipment|main:workshop_equipment]].
+
+Return to [[the maintenance manual|category:workshop_orientation]].
+:::
+```
+
+The portal styles this block in the reading column. It uses normal wiki links, which retain the reader's search return, selected member collection and requested language. Use an explicit branch when readers have a choice; author procedure-to-verification links for a manual or “Continue exploring” for a public tour. Keep private destination titles and secret facts out of public prose. Raw HTML, event handlers, inline styles and unsafe URL schemes remain restricted by the Markdown pipeline.
+
+The **More in …** card remains a reference list of related pages, with complete wrapping labels. Its order does not define the next lesson or procedure. Reading order belongs in the authored introduction and next-step links.
+
 ## Installation and updates
 
 Collection membership follows the installed package's ownership of each page. It does not depend on matching a title or guessing a prefix. Existing installations gain collection browsing without rewriting page IDs, history, slugs, translations or bookmarks. Reapplying a package continues to use the installer's existing merge and conflict rules for local edits.
@@ -49,7 +88,7 @@ This first browsing phase preserves the existing global namespace and slug ident
 
 ## Exploration still being developed
 
-This first phase supplies collection isolation, accurate counts and complete browsing. Explicit landing and task-oriented hubs remain subsequent work; the package's pins and complete category directory do not replace that information architecture. Authored category introductions and existing specialized indexes now remain accessible as distinct destinations in those journeys.
+Collection browsing supplies isolation, accurate counts and complete directories. Authors can now feature a pinned category introduction and supply explicit next-step links. A dedicated arbitrary collection landing target and structured task metadata remain subsequent work; pins and directory order do not establish those contracts.
 
 The [PF2e organization research](../research/pf2e-wiki-organization.md) recommends measuring content-kind, relationship, facet and source/version metadata before adding filters. Their coverage in the import is not established by this browsing phase. Qualified identity, durable aliases and category-reference rewrites require a separate dry-run migration. These boundaries remain tracked in [#1970](https://github.com/SharpMUSH/SharpMUSH/issues/1970).
 

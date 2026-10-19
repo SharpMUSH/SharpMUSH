@@ -9348,4 +9348,5 @@
     <value>Recover submitted batch status</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Browse members</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Featured topics</value></data>
 </root>

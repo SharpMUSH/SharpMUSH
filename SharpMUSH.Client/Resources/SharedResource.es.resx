@@ -6490,4 +6490,5 @@
     <value>Wiki del juego</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Explorar miembros</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Temas destacados</value></data>
 </root>

@@ -12,7 +12,7 @@
         @foreach (var page2 in Pages)
         {
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
-                        Href="@Link(WikiRoutes.PathFor(page2.Namespace, page2.Slug))" />
+                        Href="@Link(WikiRoutes.PathFor(page2.Namespace, page2.Slug))" WrapLabel="true" />
         }
     </CardRows>
     </ChildContent>

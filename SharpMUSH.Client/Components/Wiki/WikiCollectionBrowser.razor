@@ -16,23 +16,31 @@
             <h1>@Title</h1>
             <a href="@WikiLocaleLinks.WithLocale("/wiki", _state.Locale)">@Loc["NavWikiHome"]</a>
         }
+        @if (navigation.Categories.Any(row => row.Pinned && row.HasPage))
+        {
+            <section class="wiki-collection-featured" aria-label="@Loc["WikiFeaturedTopics"]">
+                <h2>@Loc["WikiFeaturedTopics"]</h2>
+                <div class="wiki-collection-featured-grid">
+                    @foreach (var category in navigation.Categories.Where(row => row.Pinned && row.HasPage))
+                    {
+                        <div class="wiki-collection-topic">
+                            <a class="wiki-collection-category-intro" href="@CategoryHref(category.Key)">@category.Name</a>
+                            <button type="button" aria-pressed="@(_state.Category == category.Key)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" @onclick="() => SelectCategory(category.Key)">@Loc["WikiBrowseMembers"] <span>@category.Pages</span></button>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
         <form class="wiki-collection-search" role="search" @onsubmit="ApplySearch" @onsubmit:preventDefault>
             <input type="search" aria-label="@Loc["NavWikiSearch"]" placeholder="@Loc["NavWikiSearch"]" value="@_draft" @oninput="e => _draft = e.Value?.ToString() ?? string.Empty" maxlength="200" />
             <button type="submit">@Loc["NavWikiSearch"]</button>
         </form>
         <nav class="wiki-collection-topics" aria-label="@Loc["NavWikiCategories"]">
             <button type="button" aria-pressed="@(string.IsNullOrEmpty(_state.Category))" @onclick="() => SelectCategory(string.Empty)">@Loc["All"]</button>
-            @foreach (var category in navigation.Categories.Where(row => row.Pinned))
+            @foreach (var category in navigation.Categories.Where(row => row.Pinned && !row.HasPage))
             {
                 <div class="wiki-collection-topic">
-                    @if (category.HasPage)
-                    {
-                        <a class="wiki-collection-category-intro" href="@CategoryHref(category.Key)">@category.Name</a>
-                    }
-                    else
-                    {
-                        <span class="wiki-collection-category-name">@category.Name</span>
-                    }
+                    <span class="wiki-collection-category-name">@category.Name</span>
                     <button type="button" aria-pressed="@(_state.Category == category.Key)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" @onclick="() => SelectCategory(category.Key)">@Loc["WikiBrowseMembers"] <span>@category.Pages</span></button>
                 </div>
             }

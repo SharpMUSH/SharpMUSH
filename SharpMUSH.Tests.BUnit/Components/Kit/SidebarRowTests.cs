@@ -12,6 +12,18 @@ public class SidebarRowTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task DefaultImageRowRemainsCompactWhenOtherSurfacesOptIntoWrapping()
+	{
+		const string title = "Workshop maintenance manual — preparing the pressure regulator for cold start verification";
+		var cut = Render<SidebarRow>(parameters => parameters.Add(p => p.Label, title)
+			.Add(p => p.Lead, SidebarRow.SidebarLead.Image).Add(p => p.Href, "/scenes/42"));
+
+		await Assert.That(cut.Find("a.kit-row").ClassList.Contains("kit-row--wrap-label")).IsFalse();
+		await Assert.That(cut.Find(".kit-row-label").TextContent).IsEqualTo(title);
+		await Assert.That(cut.Find("a.kit-row").GetAttribute("href")).IsEqualTo("/scenes/42");
+	}
+
+	[Test]
 	public async Task WithHref_RendersAnAnchor_AndCurrentSetsAriaCurrent()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Salt Market").Add(x => x.Href, "/scenes/42").Add(x => x.IsCurrent, true));

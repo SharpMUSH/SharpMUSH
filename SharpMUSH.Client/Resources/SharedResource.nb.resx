@@ -6490,4 +6490,5 @@
     <value>Spillets wiki</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Bla gjennom medlemmer</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Utvalgte emner</value></data>
 </root>

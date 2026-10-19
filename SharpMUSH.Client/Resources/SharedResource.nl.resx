@@ -6490,4 +6490,5 @@
     <value>Spelwiki</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Leden bekijken</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Uitgelichte onderwerpen</value></data>
 </root>

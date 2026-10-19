@@ -6490,4 +6490,5 @@
     <value>Wiki-ul jocului</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Răsfoiește membrii</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Subiecte recomandate</value></data>
 </root>
