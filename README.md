@@ -1,37 +1,36 @@
 # SharpMUSH
-<img align="left" width="300em" src="./Solution Files/Logo.svg" alt="A sharp logo for SharpMUSH."/>
-SharpMUSH is a modern iteration of a style of <em>text-based role-playing</em> servers referred to as '<b>MUSHes</b>' or '<b>MU*</b>', written with more modern needs in mind.
-<br/>
-<br/>
-It takes its basis and functionality heavily from PennMUSH and its brethren with the intent of a compatibility layer.
 
-![C#](https://img.shields.io/badge/c%23-%23239120.svg?style=for-the-badge&logo=c-sharp&logoColor=white)
-![.Net](https://img.shields.io/badge/.NET-5C2D91?style=for-the-badge&logo=.net&logoColor=white)
-![Visual Studio](https://img.shields.io/badge/Visual%20Studio-5C2D91.svg?style=for-the-badge&logo=visual-studio&logoColor=white)<br/>
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/SharpMUSH/SharpMUSH/dotnet.yml?style=for-the-badge)](https://github.com/SharpMUSH/SharpMUSH/actions/workflows/dotnet.yml)
-[![Discord](https://img.shields.io/discord/1216626296642343044?style=for-the-badge&refresh=1)](https://discord.gg/jYErRbqaC9)<br/>
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/SharpMUSH/SharpMUSH)
+**Build and run your own multiplayer text world.**
 
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
+SharpMUSH is an open-source MUSH server for collaborative stories, roleplay and world building. Create rooms and characters, write softcode, and manage your game through a browser-based portal. SharpMUSH targets PennMUSH compatibility so existing worlds have a path forward.
 
-# Why SharpMUSH
-SharpMUSH is a modern iteration of the time-tested MUSH frameworks. It provides a layer of compatibility for PennMUSH for transferability, and builds a modern tech landscape around it that does away with many of the limitations that have made MUSHes harder to use, without losing what makes them great.
+**[Try the live example](https://mush.sharpmush.com)** · **[Run a game](https://sharpmush.com/guides/docker-quickstart/)** · **[Read the docs](https://sharpmush.com)**
 
-# Documentation
-You can find our documentation here: [SharpMUSH Documentation](https://sharpmush.com).
-This features such elements as our Compatibility, Installation, and API documentation, and how to download SharpMUSH and get up and running!
+<p align="center">
+  <img src="assets/branding/sharpie/marketing/sharpie-world-builder.png" width="320" alt="Sharpie, the SharpMUSH mascot, joins rooms and conversation into a connected world." />
+</p>
 
-# Release Status
+## A world you can make your own
+
+- **Build together.** Create interconnected rooms, characters and shared stories with familiar MUSH softcode.
+- **Manage in a browser.** Use the web portal for characters, scenes, game information and administration.
+- **Add capabilities.** Install [softcode packages](https://github.com/SharpMUSH/SharpMUSH.Packages), or extend the server with [C# plugins](https://sharpmush.com/guides/plugins/).
+- **Bring an existing world.** Read the [PennMUSH migration guide](https://sharpmush.com/guides/pennmush-migration/) and [compatibility reference](https://sharpmush.com/reference/compatibility/) before moving your game.
+
+Meet **Sharpie**, our mascot and fellow world builder.
+
+## Join in
+
+[Ask questions on Discord](https://discord.gg/jYErRbqaC9) · [Explore the package library](https://sharpmush.com/guides/package-library/) · [Develop SharpMUSH](https://sharpmush.com/guides/local-install/)
+
+[![Build status](https://github.com/SharpMUSH/SharpMUSH/actions/workflows/dotnet.yml/badge.svg)](https://github.com/SharpMUSH/SharpMUSH/actions/workflows/dotnet.yml)
+[![Discord](https://img.shields.io/discord/1216626296642343044?label=Discord)](https://discord.gg/jYErRbqaC9)
+
+## Release Status
 Currently, there is no Release Candidate for SharpMUSH. 
 We are still in the early stages of development, and are working on getting a stable release out.
 
-# Docker Deployment
+## Docker Deployment
 SharpMUSH is available as Docker images on DockerHub:
 - `sharpmush/sharpmush-server` - Main server
 - `sharpmush/sharpmush-socketserver` - Stable telnet/WebSocket socket owner
@@ -39,10 +38,10 @@ SharpMUSH is available as Docker images on DockerHub:
 
 For information on setting up automatic DockerHub publishing when new versions are released, see [DockerHub Setup Guide](./docs/DOCKERHUB_SETUP.md).
 
-# Quick Contribution Guide
+## Quick Contribution Guide
 The full guide to running SharpMUSH from source and running its tests is [Develop SharpMUSH](https://sharpmush.com/guides/local-install/) on the documentation site.
 
-## How to Build and Test
+### How to Build and Test
 - Install [.NET 11](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) — SDK 11.0.100-rc.2 or newer, as pinned in `global.json`
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
