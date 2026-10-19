@@ -19,6 +19,77 @@ public partial class PackageManifestService
 		WikiNamespace.Main, WikiNamespace.Help, WikiNamespace.Category
 	};
 
+	/// <summary>The first format that supports an authored package wiki entrance.</summary>
+	public static PackageFormatVersion WikiLandingPageFormat { get; } = new(1, 14);
+
+	/// <summary>
+	/// Validates authored landing metadata, including programmatically supplied manifests. Installers must
+	/// check these issues before writing package state. This does not resolve an installed page binding.
+	/// </summary>
+	public static IReadOnlyList<PackageManifestIssue> ValidateWikiLandingPage(PackageManifest manifest)
+	{
+		ArgumentNullException.ThrowIfNull(manifest);
+		var issues = new List<PackageManifestIssue>();
+		ValidateWikiLandingPage(manifest.Format, manifest.Kind, manifest.WikiPages, manifest.WikiLandingPage, issues);
+		return issues;
+	}
+
+	private static void ValidateWikiLandingPage(
+		PackageFormatVersion format, PackageKind kind, IReadOnlyList<PackageWikiPageSpec> pages,
+		PackageWikiLandingPageSpec? landing, List<PackageManifestIssue> issues)
+	{
+		if (landing is null) return;
+		const string key = "wiki_landing_page";
+		if (format.Major < WikiLandingPageFormat.Major
+			|| format.Major == WikiLandingPageFormat.Major && format.Minor < WikiLandingPageFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Error(key, $"'{key}' needs format {WikiLandingPageFormat} or later."));
+		}
+
+		if (kind is not (PackageKind.Softcode or PackageKind.Application))
+		{
+			issues.Add(PackageManifestIssue.Error(key, "Only softcode and application packages can declare a wiki landing page."));
+		}
+
+		if (!PackageWikiNamespaces.Contains(landing.Namespace) || landing.Page is null || !IsPageSlug(landing.Page))
+		{
+			issues.Add(PackageManifestIssue.Error(key, "The landing page must name a canonical main, help or category page slug."));
+			return;
+		}
+
+		if (pages.Count(page => page.Namespace == landing.Namespace && page.Page == landing.Page) != 1)
+		{
+			issues.Add(PackageManifestIssue.Error(key, $"'{landing.Label}' must name exactly one page declared in 'wiki'."));
+		}
+	}
+
+	private static PackageWikiLandingPageSpec? ReadWikiLandingPage(
+		Dictionary<string, object?> doc, PackageFormatVersion format, PackageKind kind,
+		IReadOnlyList<PackageWikiPageSpec> pages, List<PackageManifestIssue> issues)
+	{
+		const string key = "wiki_landing_page";
+		if (!doc.TryGetValue(key, out var node)) return null;
+		// Match earlier gated metadata: old formats ignore even malformed nodes.
+		if (format.Major == WikiLandingPageFormat.Major && format.Minor < WikiLandingPageFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Warning(key,
+				$"'{key}' needs format {WikiLandingPageFormat} or later and is ignored; set format: {WikiLandingPageFormat}."));
+			return null;
+		}
+
+		if (node is not string text || text.Any(character => char.IsControl(character) && character != '\t'
+			|| character is '\u2028' or '\u2029'))
+		{
+			issues.Add(PackageManifestIssue.Error(key, $"'{key}' must be a nonempty single-line namespace:slug scalar."));
+			return null;
+		}
+
+		if (ReadWikiPageName(text.Trim(), key, issues) is not { } page) return null;
+		var landing = new PackageWikiLandingPageSpec(page.Namespace, page.Slug);
+		ValidateWikiLandingPage(format, kind, pages, landing, issues);
+		return landing;
+	}
+
 	/// <summary>The longest slug, in UTF-8 bytes: it is part of a stored key, which has a limit of its own.</summary>
 	private const int MaxPageSlugBytes = 200;
 
@@ -133,12 +204,15 @@ public partial class PackageManifestService
 	/// </summary>
 	private static (WikiNamespace Namespace, string Slug)? ReadWikiPageName(
 		Dictionary<string, object?> entry, string path, List<PackageManifestIssue> issues)
+		=> ReadWikiPageName((entry.GetValueOrDefault("page") as string)?.Trim() ?? "", $"{path}.page", issues);
+
+	private static (WikiNamespace Namespace, string Slug)? ReadWikiPageName(
+		string text, string path, List<PackageManifestIssue> issues)
 	{
-		var text = (entry.GetValueOrDefault("page") as string)?.Trim() ?? "";
 		var colon = text.IndexOf(':');
 		if (colon < 0)
 		{
-			issues.Add(PackageManifestIssue.Error($"{path}.page",
+			issues.Add(PackageManifestIssue.Error(path,
 				$"'{text}' does not name its namespace: write namespace:slug, such as main:{(text.Length == 0 ? "coast_road" : WikiHelpers.Slugify(text))}."));
 			return null;
 		}
@@ -147,7 +221,7 @@ public partial class PackageManifestService
 		var slug = text[(colon + 1)..];
 		if (prefix is not ("main" or "help" or "category"))
 		{
-			issues.Add(PackageManifestIssue.Error($"{path}.page",
+			issues.Add(PackageManifestIssue.Error(path,
 				WikiHelpers.ParseNamespace(prefix) is { } ns && PackageWikiNamespaces.Contains(ns)
 					? $"'{prefix}' is written in lower case: {WikiHelpers.NamespaceName(ns)}:{slug}."
 					: WikiHelpers.ParseNamespace(prefix) is { } other
@@ -158,7 +232,7 @@ public partial class PackageManifestService
 
 		if (!IsPageSlug(slug))
 		{
-			issues.Add(PackageManifestIssue.Error($"{path}.page",
+			issues.Add(PackageManifestIssue.Error(path,
 				$"'{slug}' is not a page slug: lowercase, no spaces (use _), no ':' or '/', and one the wiki keeps as it is, such as {prefix}:coast_road."));
 			return null;
 		}

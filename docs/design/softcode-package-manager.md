@@ -197,6 +197,29 @@ An optional top-level `wiki_collection_name` supplies the public label for the p
 
 The label is metadata, separate from the package ID, collection URL and wiki ownership. It is persisted on the installed package and in each revision snapshot. An apply or upgrade replaces it, including clearing it when absent; rollback restores the selected snapshot's value, with null as the default for legacy snapshots. The Lightning registry's nullable field reads older records without a migration. Collection navigation and result-row context use the same label lookup; authorization still decides which collections/pages are visible.
 
+### Wiki collection entrance (format 1.14)
+
+An optional top-level `wiki_landing_page` selects one page declared by the same manifest's `wiki:` block:
+
+```yaml
+format: 1.14
+package: independent-rules
+version: 1.0.0
+wiki_landing_page: 'main:guide'
+wiki:
+  - page: main:guide
+    title: Rules guide
+    markdown: Start here.
+```
+
+The value is one nonempty, single-line scalar, with surrounding whitespace trimmed and nothing else normalized. It uses the same canonical authored `namespace:slug` parser as `wiki[].page`: lowercase `main`, `help` or `category`, and an unchanged slug of at most 200 UTF-8 bytes, with no whitespace, controls, slash, backslash, colon, URL query or fragment. A null, list, mapping, undeclared key or duplicate/ambiguous target is invalid. Softcode and application packages may declare it; plugin and UI packages may not. Formats at or below 1.13 warn and ignore the field before inspecting its value, including malformed nodes. A newer minor format still produces its independent format warning.
+
+Omitting the key means no authored entrance. Removing it on an upgrade clears the entrance; changing it explicitly requests a new binding to the newly named declared page. An installed entrance must bind the actual owned page identity rather than following a later page recreated at the same slug. Installed binding, rollback and read authorization belong to the installer and collection reader; the manifest stores only the authored target. Neither a title, category pin nor `wiki_collection_name` selects an entrance. `homepage` remains the external project/documentation URL and is never used as this target.
+
+`PackageManifestService.ValidateWikiLandingPage(PackageManifest)` checks programmatically supplied landing metadata with the same validation core as parsing. An installer must check its errors before any writes. The writer checks it before producing YAML, rejects inconsistent metadata with `ArgumentException`, quotes the canonical scalar and preserves the selected format. Existing manifests without this field retain their format and output.
+
+Format change note: 1.14 adds `wiki_landing_page` and the shared authoring validation seam. Format 1.13 collection-name behavior is unchanged. This format number does not assert a released server version or add an inferred `requires_server` requirement.
+
 ### Attribute entries (format 1.5)
 
 `attributes:` maps an attribute name to the standard attribute entry `@attribute` would make:

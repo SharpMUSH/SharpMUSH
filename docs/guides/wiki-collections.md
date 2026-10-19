@@ -39,6 +39,25 @@ The optional `wiki_collection_name` is trimmed and must contain 1–100 characte
 
 Without this metadata, existing packages keep the package ID with hyphens replaced by spaces as their collection label. An upgrade records the new label; omitting the key on a later upgrade restores that fallback. Rollback restores the label recorded in the selected revision; revisions created before this metadata have no authored label. A manifest below format 1.13 warns and ignores the key.
 
+## Declaring a landing page
+
+Manifest format 1.14 adds an explicit collection entrance, separate from the collection label and category pins:
+
+```yaml
+format: 1.14
+package: independent-rules
+version: 1.0.0
+wiki_landing_page: 'main:guide'
+wiki:
+  - page: main:guide
+    title: Rules guide
+    markdown: Start here.
+```
+
+`wiki_landing_page` must name exactly one `wiki:` page in this manifest. Use lowercase `main:`, `help:` or `category:` and its exact canonical slug, at most 200 UTF-8 bytes. Surrounding whitespace is trimmed; case, spelling and punctuation are not repaired. An empty or null value, list, mapping, multiline value, undeclared page or duplicate target is rejected. Plugin and UI packages cannot declare it; softcode and application packages can. Formats through 1.13 warn and ignore this key, including malformed values.
+
+Omit the key for no entrance; omitting it on an upgrade removes the entrance. Change the value to explicitly request a binding to another declared page. The installed entrance must retain the owned page's identity, so deleting and recreating a page at the same slug does not silently replace it. The package `homepage` is still an external project/documentation URL. Titles, pins and collection labels never infer a target. These authoring rules are separate from the installed binding and reader lifecycle.
+
 ## Authoring an entrance and next steps
 
 Give readers an entrance by authoring a published Category introduction and setting `pin: true`. The collection displays authorized pinned introductions as **Featured topics**, before search and the complete directory. Its title opens the introduction; **Browse members** remains a separate filter. A category without a readable introduction keeps ordinary member browsing without a featured introduction link. Pins are presentation metadata, so curate the featured set rather than relying on a title or slug to sort an entrance first.
@@ -88,7 +107,7 @@ This first browsing phase preserves the existing global namespace and slug ident
 
 ## Exploration still being developed
 
-Collection browsing supplies isolation, accurate counts and complete directories. Authors can now feature a pinned category introduction and supply explicit next-step links. A dedicated arbitrary collection landing target and structured task metadata remain subsequent work; pins and directory order do not establish those contracts.
+Collection browsing supplies isolation, accurate counts and complete directories. Authors can now feature a pinned category introduction and supply explicit next-step links. Format 1.14 defines an explicit authored landing target; installed binding and reader lifecycle are separate work. Structured task metadata remains subsequent work; pins and directory order do not establish those contracts.
 
 The [PF2e organization research](../research/pf2e-wiki-organization.md) recommends measuring content-kind, relationship, facet and source/version metadata before adding filters. Their coverage in the import is not established by this browsing phase. Qualified identity, durable aliases and category-reference rewrites require a separate dry-run migration. These boundaries remain tracked in [#1970](https://github.com/SharpMUSH/SharpMUSH/issues/1970).
 

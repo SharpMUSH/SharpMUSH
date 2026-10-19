@@ -11,7 +11,7 @@ using YamlDotNet.Serialization;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Parses package.yaml manifests (format 1.13, decisions 20.11–20.20) and
+/// Parses package.yaml manifests (format 1.14, decisions 20.11–20.20) and
 /// index.yaml repo listings into validated models. Deserializes to a generic
 /// node graph and hand-maps so every issue carries a precise document path,
 /// and so shorthand forms (attribute value as a bare string, dependency as a
@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
-		"category", "wiki_collection_name",
+		"category", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
 		"attributes"
@@ -197,6 +197,7 @@ public partial class PackageManifestService : IPackageManifestService
 		var settings = ReadSettings(doc, kind, issues);
 		var locale = ReadLocale(doc, issues);
 		var wiki = ReadWiki(doc, kind, declarations, issues);
+		var wikiLandingPage = ReadWikiLandingPage(doc, format, kind, wiki, issues);
 
 		ValidateRefs(objects, application, configure, dependencies, settings, issues);
 
@@ -233,7 +234,8 @@ public partial class PackageManifestService : IPackageManifestService
 			plugins.Count == 0 ? null : plugins,
 			category)
 		{
-			WikiCollectionName = wikiCollectionName
+			WikiCollectionName = wikiCollectionName,
+			WikiLandingPage = wikiLandingPage
 		};
 
 		return new ParsedPackageManifest(manifest, issues);
