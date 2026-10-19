@@ -62,8 +62,8 @@ public class MigrationTests
 			await Assert.That(godName).IsEqualTo("God");
 
 			var migrations = db.Store.Read(tx => tx.Range(Tables.Meta, Keys.Str("mig:")).Select(e => Codec.Deserialize<MigrationRecord>(e.Value).Id).ToArray());
-			await Assert.That(migrations).IsEquivalentTo([LightningDatabase.InitialMigrationId, LightningDatabase.AccountCredentialMigrationId, LightningDatabase.SessionDigestMigrationId])
-				.Because("a new world records the initial seed, account credential and session digest migrations");
+			await Assert.That(migrations).IsEquivalentTo([LightningDatabase.InitialMigrationId, LightningDatabase.AccountCredentialMigrationId, LightningDatabase.SessionDigestMigrationId, LightningDatabase.OnboardingMigrationId])
+				.Because("a new world records the initial seed, account credential, session digest and onboarding migrations");
 		}
 		finally
 		{

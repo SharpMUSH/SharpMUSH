@@ -14,6 +14,7 @@ public partial class LightningDatabase
 {
 	internal const string InitialMigrationId = "0001_initial";
 	internal const string AccountCredentialMigrationId = "0002_account_credentials";
+	internal const string OnboardingMigrationId = "0004_onboarding_progress_v1";
 	internal const string SessionDigestMigrationId = "0003_session_digest_authority";
 
 	/// <summary>
@@ -72,6 +73,7 @@ public partial class LightningDatabase
 
 			await Store.WriteAsync(MigrateAccountCredentials, cancellationToken);
 			await Store.WriteAsync(MigrateSessionDigests, cancellationToken);
+			await Store.WriteAsync(MigrateOnboarding, cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -100,6 +102,16 @@ public partial class LightningDatabase
 		}
 
 		ReloadDefinitions();
+	}
+
+	private static void MigrateOnboarding(ITx tx)
+	{
+		var marker = Keys.Str("mig:" + OnboardingMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		var identity = Keys.Str("onboarding:game-id");
+		if (!tx.TryGet(Tables.Meta, identity, out _))
+			tx.Put(Tables.Meta, identity, Keys.Str(Guid.NewGuid().ToString("N")));
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord { Id = OnboardingMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }));
 	}
 
 	private static void MigrateSessionDigests(ITx tx)
