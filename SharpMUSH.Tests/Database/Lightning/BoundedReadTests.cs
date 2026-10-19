@@ -111,10 +111,68 @@ public class BoundedReadTests
 		await Assert.That(first.Entries.Length).IsEqualTo(128);
 		await Assert.That(first.Exhausted).IsFalse();
 		await Assert.That(budget.Probes).IsEqualTo(256); // seek + GetCurrent + 127*(advance + GetCurrent)
+		await Assert.That(budget.Records).IsEqualTo(128);
 		using var second = Range(store, budget, after: first.Entries[^1].Key);
 		await Assert.That(second.Entries.Length).IsEqualTo(1);
 		await Assert.That(second.Entries[0].Key[0]).IsEqualTo((byte)129);
 		await Assert.That(second.Exhausted).IsTrue();
+		await Assert.That(budget.Records).IsEqualTo(129); // the original constructor imposes no shared 128-record cap
+	}
+
+	[Test]
+	public async Task OptionalRecordAllowanceIsSharedAcrossPointAndRangeAndRetainsPriorOwner()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx => { tx.Put(Tables.Meta, [1], [7]); tx.Put(Tables.Meta, [2], [8]); tx.Put(Tables.Meta, [3], [9]); });
+		var budget = new NativeReadBudget(128, Cap, 4 << 20, CancellationToken.None, maxRecords: 2);
+		using var prior = store.Read(tx => Checked(tx).ReadValue(Tables.Meta, [1], budget)).Expect<NativeReadValue>();
+		var owned = budget.WorkingBytes;
+		var error = Capture(() => { using var batch = Range(store, budget, start: [2]); });
+		await Assert.That(error is NativeReadLimitException { Dimension: "records" }).IsTrue();
+		await Assert.That(budget.Records).IsEqualTo(2);
+		await Assert.That(budget.Probes).IsEqualTo(5);
+		await Assert.That(budget.Bytes).IsEqualTo(6L);
+		await Assert.That(budget.WorkingBytes).IsEqualTo(owned);
+		await Assert.That(prior.Value[0]).IsEqualTo((byte)7);
+		var pointError = Capture(() => store.Read(tx => Checked(tx).ReadValue(Tables.Meta, [3], budget)));
+		await Assert.That(pointError is NativeReadLimitException { Dimension: "records" }).IsTrue();
+		await Assert.That(budget.Records).IsEqualTo(2);
+		await Assert.That(budget.Probes).IsEqualTo(6);
+		await Assert.That(budget.Bytes).IsEqualTo(8L);
+		await Assert.That(budget.WorkingBytes).IsEqualTo(owned);
+		var counters = (budget.Records, budget.Probes, budget.Bytes, budget.WorkingBytes);
+		await Assert.That(Capture(budget.ChargeRecord) is NativeReadLimitException { Dimension: "records" }).IsTrue();
+		await Assert.That((budget.Records, budget.Probes, budget.Bytes, budget.WorkingBytes)).IsEqualTo(counters);
+		await Assert.That(store.Read(tx => Checked(tx).ReadValue(Tables.Meta, [9], budget)) is NotFound).IsTrue();
+		await Assert.That(budget.Records).IsEqualTo(2);
+		await Assert.That(budget.Probes).IsEqualTo(7);
+		prior.Dispose();
+		await Assert.That(budget.WorkingBytes).IsEqualTo(0L);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task NulNamesRejectBeforeOrdinaryOpenAndCheckedLookup(bool wikiPage)
+	{
+		using var store = Open();
+		await store.WriteAsync(tx => tx.Put(Tables.Meta, [1], [7]));
+		var alias = TableDef.Node((wikiPage ? Tables.WikiPage.Name : Tables.Meta.Name) + "\0plugin");
+		await Assert.That(() => store.OpenTable(alias.Name, false)).Throws<ArgumentException>();
+		await Assert.That(() => store.Read(tx => tx.Count(alias))).Throws<ArgumentException>();
+		var budget = Budget();
+		await Assert.That(() => store.Read(tx => Checked(tx).ReadValue(alias, [1], budget))).Throws<ArgumentException>();
+		await Assert.That(() => store.Read(tx => Checked(tx).ReadRange(alias, [], [], [], [], budget))).Throws<ArgumentException>();
+		await Assert.That(budget.Probes).IsEqualTo(0);
+		await Assert.That(budget.Records).IsEqualTo(0);
+		await Assert.That(budget.Bytes).IsEqualTo(0L);
+		await Assert.That(budget.WorkingBytes).IsEqualTo(0L);
+		var valid = store.OpenTable("bounded.valid.\u03bb", false);
+		await store.WriteAsync(tx => tx.Put(valid, [1], [8]));
+		using var plugin = store.Read(tx => Checked(tx).ReadValue(valid, [1], budget)).Expect<NativeReadValue>();
+		using var core = store.Read(tx => Checked(tx).ReadValue(Tables.Meta, [1], budget)).Expect<NativeReadValue>();
+		await Assert.That(plugin.Value[0]).IsEqualTo((byte)8);
+		await Assert.That(core.Value[0]).IsEqualTo((byte)7);
 	}
 
 	[Test]

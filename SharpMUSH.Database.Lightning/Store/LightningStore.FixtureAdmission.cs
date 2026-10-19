@@ -1,4 +1,5 @@
 using LightningDB;
+using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using LmdbDb = LightningDB.LightningDatabase;
 
@@ -6,10 +7,10 @@ namespace SharpMUSH.Database.Lightning.Store;
 
 public sealed partial class LightningStore
 {
-	private const string FixtureIdentityKey = "prototype.semantic.fixture.identity/v1";
+	internal const string FixtureIdentityKey = "prototype.semantic.fixture.identity/v1";
 
 	/// <summary>Only for an exclusively claimed, fully closed fixture, before the writing constructor.</summary>
-	internal static void RequireFixtureIdentity(LightningStoreOptions options, Guid expected)
+	internal static AtomicWikiActivation? RequireFixtureIdentity(LightningStoreOptions options, Guid expected)
 	{
 		if (!File.Exists(System.IO.Path.Combine(options.Path, "data.mdb")))
 			throw new InvalidOperationException("An initialized fixture must have existing native data.");
@@ -33,6 +34,7 @@ public sealed partial class LightningStore
 			using var meta = tx.OpenDatabase(Tables.Meta.Name, new DatabaseConfiguration { Flags = DatabaseOpenFlags.None });
 			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != expected)
 				throw new InvalidOperationException("Existing fixture Meta identity does not match issuance.");
+			return RequireAtomicLayout(tx, meta, expected);
 		}
 		catch (Exception error) when (error is not InvalidOperationException)
 		{

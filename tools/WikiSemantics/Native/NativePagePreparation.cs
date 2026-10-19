@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
+using SharpMUSH.Database.Lightning.Semantics;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Tools.WikiSemantics.Native;
 
@@ -30,15 +32,11 @@ public static class NativePagePreparation
 			NativeCodec.MeasureSchema(schema);
 			// The caller's enumerable is executable code, even in GetEnumerator. Own every
 			// array before invoking it so schema admission and its certificate share one snapshot.
-			schema = FreezeSchema(schema, ct);
+			schema = PreparedWikiProjection.FreezeSchema(schema, ct);
 			page = page with
 			{
 				Collections = ImmutableArray.Create(page.Collections.AsSpan()),
-				Visibility = page.Visibility with
-				{
-					Categories = CanonicalSet(page.Visibility.Categories, ct),
-					RuleIds = CanonicalSet(page.Visibility.RuleIds, ct)
-				}
+				Visibility = PreparedWikiProjection.FreezeVisibility(page.Visibility, ct)
 			};
 			ct.ThrowIfCancellationRequested();
 			var schemaBytes = NativeCodec.SchemaIdentity(schema);
@@ -58,9 +56,10 @@ public static class NativePagePreparation
 			var rawFacts = new CanonicalFactSet(schema.Version, raw.ToImmutable());
 			NativeCodec.MeasureFacts(rawFacts, NativeFixtureLimits.MaxFactBytes);
 			ct.ThrowIfCancellationRequested();
-			var validation = CanonicalFacts.Validate(schema, rawFacts.Facts, ct);
+			var validation = PreparedWikiProjection.PrepareProjection(schema, NativeCodec.Projection(page), rawFacts, deleted, ct);
 			if (validation is ValidationFailure failure) return failure;
-			if (validation is not CanonicalFactSet canonical) throw new InvalidOperationException("Invalid canonical result.");
+			if (validation is not PreparedWikiProjection projection) throw new InvalidOperationException("Invalid projection result.");
+			var canonical = projection.Facts;
 			var frozen = page;
 			var encodedPage = NativeCodec.EncodePage(frozen);
 			var encodedFacts = NativeCodec.EncodeFacts(canonical);
@@ -79,33 +78,11 @@ public static class NativePagePreparation
 			state[8] = deleted ? (byte)1 : (byte)0;
 			digest.AppendData(state);
 			return new PreparedNativePage(frozen, canonical, expectedStateVersion, mutationId, deleted,
-				Convert.ToHexStringLower(digest.GetHashAndReset()), Convert.ToHexStringLower(SHA256.HashData(schemaBytes)));
+				Convert.ToHexStringLower(digest.GetHashAndReset()), Convert.ToHexStringLower(SHA256.HashData(schemaBytes)), projection);
 		}
 		catch (InvalidDataException e) { return Fail(ValidationCode.Quota, e.Message); }
 		catch (ArgumentException) { return Fail(ValidationCode.InvalidSchema, "Malformed or missing encoded metadata."); }
 		catch (OverflowException) { return Fail(ValidationCode.Quota, "Prepared sizes overflowed."); }
-	}
-	private static SemanticSchema FreezeSchema(SemanticSchema schema, CancellationToken ct)
-	{
-		var properties = ImmutableArray.CreateBuilder<PropertyDefinition>(schema.Properties.Length);
-		foreach (var property in schema.Properties)
-		{
-			ct.ThrowIfCancellationRequested();
-			properties.Add(property with { AllowedKeywords = ImmutableArray.Create(property.AllowedKeywords.AsSpan()) });
-		}
-		return schema with { Properties = properties.MoveToImmutable() };
-	}
-
-	private static ImmutableArray<string> CanonicalSet(ImmutableArray<string> values, CancellationToken ct)
-	{
-		var result = new SortedSet<string>(StringComparer.Ordinal);
-		foreach (var value in values)
-		{
-			ct.ThrowIfCancellationRequested();
-			if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Structural identity is empty.");
-			result.Add(value);
-		}
-		return [.. result];
 	}
 	private static ValidationFailure Fail(ValidationCode code, string detail) => new(code, detail);
 }

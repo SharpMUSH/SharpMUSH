@@ -21,16 +21,25 @@ public sealed class NativeReadBudget
 	private readonly int _maxProbes;
 	private readonly long _maxBytes;
 	private readonly long _maxWorkingBytes;
+	private readonly int? _maxRecords;
 
 	public NativeReadBudget(int maxProbes, long maxBytes, long maxWorkingBytes, CancellationToken cancellationToken)
+		: this(maxProbes, maxBytes, maxWorkingBytes, cancellationToken, maxRecords: null) { }
+
+	/// <summary>Optionally bounds shared record admission separately from probes and bytes; null preserves legacy admission.</summary>
+	public NativeReadBudget(int maxProbes, long maxBytes, long maxWorkingBytes, CancellationToken cancellationToken, int? maxRecords)
 	{
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxProbes);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxBytes);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxWorkingBytes);
+		if (maxRecords is { } limit) ArgumentOutOfRangeException.ThrowIfNegative(limit);
 		(_maxProbes, _maxBytes, _maxWorkingBytes, CancellationToken) = (maxProbes, maxBytes, maxWorkingBytes, cancellationToken);
+		_maxRecords = maxRecords;
 	}
 
 	public int Probes { get; private set; }
+	/// <summary>Records admitted at a checked native payload-copy boundary; an upper bound on completed copies.</summary>
+	public int Records { get; private set; }
 	public long Bytes { get; private set; }
 	public long WorkingBytes { get; private set; }
 	public CancellationToken CancellationToken { get; }
@@ -48,6 +57,14 @@ public sealed class NativeReadBudget
 		ArgumentOutOfRangeException.ThrowIfNegative(bytes);
 		if (bytes > _maxBytes - Bytes) throw new NativeReadLimitException("bytes");
 		Bytes += bytes;
+	}
+
+	/// <summary>Admits one valid native record before payload allocation; rejection changes no counters.</summary>
+	public void ChargeRecord()
+	{
+		CancellationToken.ThrowIfCancellationRequested();
+		if (_maxRecords is { } limit && Records == limit) throw new NativeReadLimitException("records");
+		Records++;
 	}
 
 	public NativeReadReservation ReserveWorking(long bytes)

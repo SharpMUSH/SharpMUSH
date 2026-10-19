@@ -9,6 +9,8 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Tools.WikiSemantics;
 using SharpMUSH.Tools.WikiSemantics.Native;
+using SharpMUSH.Database.Lightning.Semantics;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
@@ -258,7 +260,7 @@ public class NativeSemanticCorpusTests
 		// worst-case decoder/string/key overlap before constructing the offline oracle structures.
 		offline.Reserve(checked(tables.Values.Sum(rows => rows.Sum(r => 4096L + (r.Key.Length + r.Value.Length) * 32L))));
 		var ids = new Dictionary<(NativeRegistryKind Kind, string Identity), ulong>();
-		var reverse = new Dictionary<(NativeRegistryKind Kind, ulong Id), NativeRegistryEntry>();
+		var reverse = new Dictionary<(NativeRegistryKind Kind, ulong Id), WikiSemanticRegistryEntry>();
 		var lookup = new Dictionary<string, Row>(StringComparer.Ordinal);
 		foreach (var row in tables["registry"])
 		{
@@ -366,7 +368,7 @@ public class NativeSemanticCorpusTests
 		Console.WriteLine($"NATIVE_CORPUS registryIdentities={ids.Count} catalogClasses={classMembers.Count} maxDescriptorBytes={classMembers.Values.Max(c => c.Descriptor.Length)} completeForward={expectedForward.Count} completePostings={expectedPostings.Count}");
 	}
 	private static void CatalogAndMetadata(SemanticSnapshot expected, Dictionary<string, List<Row>> tables,
-		Dictionary<(NativeRegistryKind Kind, ulong Id), NativeRegistryEntry> reverse, Dictionary<ulong, (byte[] Descriptor, long Members)> classes, ulong collection)
+		Dictionary<(NativeRegistryKind Kind, ulong Id), WikiSemanticRegistryEntry> reverse, Dictionary<ulong, (byte[] Descriptor, long Members)> classes, ulong collection)
 	{
 		var metadata = tables["metadata"].ToDictionary(r => Hex(r.Key), r => r.Value);
 		var expectedKeys = new HashSet<string>(StringComparer.Ordinal) { "01", "02", "03", "04", "05" };

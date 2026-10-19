@@ -11,7 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests;
 
-/// <summary>Owns a retained actual test host; semantic operations remain unimplemented.</summary>
+/// <summary>Owns a retained actual test host with explicit fixture-only projection activation.</summary>
 public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 {
 	private readonly SemanticWikiPrototypeFixture _fixture;
@@ -43,6 +43,7 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 
 	public string WorldPath => _fixture.WorldPath;
 	public Guid FixtureId => _fixture.FixtureId;
+	internal Action<LightningDatabase>? ProviderOpened { get; set; }
 	public string CleanupDiagnostic => _fixture.CleanupDiagnostic;
 	public IServiceProvider Services => Volatile.Read(ref _services)
 		?? throw new InvalidOperationException("Fixture host is closed or opening.");
@@ -66,18 +67,42 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 		finally { _lifecycle.Release(); }
 	}
 
+	public async Task ActivateAtomicWikiProjectionAsync(CancellationToken ct = default)
+	{
+		EnterLifecycle();
+		try
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			RejectReplacementOperations();
+			if (Services.GetRequiredService<IPackageInstallService>() is not SemanticWikiPackageAdmission installer
+				|| Services.GetRequiredService<IPackageOperationRunner>() is not SemanticWikiPackageOperationRunner runner
+				|| !ReferenceEquals(installer.Owner, _fixture.Capability) || !ReferenceEquals(runner.Owner, _fixture.Capability))
+				throw SemanticFixtureCapability.Unavailable();
+			await Services.GetRequiredService<LightningDatabase>().ActivateAtomicWikiProjectionAsync(_fixture.Capability, ct);
+		}
+		finally { _lifecycle.Release(); }
+	}
+
 	private void ConfigureFixtureServices(IServiceCollection services)
 	{
 		services.RemoveAll<LightningDatabase>();
 		services.AddSingleton(sp =>
 		{
 			var catalog = sp.GetRequiredService<PluginCatalog>();
-			return _fixture.OpenProvider(sp.GetRequiredService<ILogger<LightningDatabase>>(),
+			var provider = _fixture.OpenProvider(sp.GetRequiredService<ILogger<LightningDatabase>>(),
 				new LightningStoreOptions { Path = WorldPath, Sync = LightningSyncMode.Full },
 				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
 				catalog.MigrationSources, catalog.AllFlags, sp.GetRequiredService<AccountCredentialGate>(),
 				new Lazy<IEnumerable<IAccountCredentialRevocation>>(() => sp.GetServices<IAccountCredentialRevocation>().ToArray()));
+			ProviderOpened?.Invoke(provider);
+			return provider;
 		});
+		services.AddSingleton<PackageInstallService>();
+		services.AddSingleton<PackageOperationRunner>();
+		services.RemoveAll<IPackageInstallService>();
+		services.RemoveAll<IPackageOperationRunner>();
+		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability));
+		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability));
 		_configureTestServices?.Invoke(services);
 	}
 

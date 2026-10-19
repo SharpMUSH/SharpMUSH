@@ -5,6 +5,8 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Authentication;
 using SharpMUSH.Tools.WikiSemantics;
+using SharpMUSH.Library.Models.Wiki.Semantics;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Tests.Wiki.Semantics;
 

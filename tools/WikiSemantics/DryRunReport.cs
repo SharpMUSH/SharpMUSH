@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Tools.WikiSemantics;
 

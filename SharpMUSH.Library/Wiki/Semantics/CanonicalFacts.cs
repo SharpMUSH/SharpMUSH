@@ -1,9 +1,10 @@
 using System.Collections.Immutable;
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
+using System.Text;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
-namespace SharpMUSH.Tools.WikiSemantics;
+namespace SharpMUSH.Library.Wiki.Semantics;
 
 /// <summary>Pure offline validation. It makes no authorization decision about source or target pages.</summary>
 public static class CanonicalFacts
@@ -66,13 +67,13 @@ public static class CanonicalFacts
 		foreach (var subject in canonical.Values.GroupBy(f => f.Subject))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			if (subject.Count() > 128)
+			if (subject.Count() > WikiSemanticPolicy.MaxFacts)
 				return Fail(ValidationCode.Quota, "More than 128 facts per subject.");
 			var bytes = 0L;
 			foreach (var property in subject.GroupBy(f => f.Property))
 			{
 				cancellationToken.ThrowIfCancellationRequested();
-				if (property.Count() > 32)
+				if (property.Count() > WikiSemanticPolicy.MaxValuesPerProperty)
 					return Fail(ValidationCode.Quota, "More than 32 values per property.");
 				if (definitions[property.Key].Cardinality == Cardinality.Single && property.Count() > 1)
 					return Fail(ValidationCode.Cardinality, property.Key);
@@ -80,7 +81,7 @@ public static class CanonicalFacts
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 					bytes += Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(new { fact.Subject, fact.Property, Value = ValueKey(fact.Value), fact.Provenance }));
-					if (bytes > 64 * 1024)
+					if (bytes > WikiSemanticPolicy.MaxFactBytes)
 						return Fail(ValidationCode.Quota, "More than 64 KiB canonical data per subject.");
 				}
 			}
@@ -150,7 +151,7 @@ public static class CanonicalFacts
 		try
 		{
 			var value = keyword.Value.Normalize(NormalizationForm.FormKC).Trim().ToLowerInvariant();
-			if (value.Length == 0 || Encoding.UTF8.GetByteCount(value) > 256 || value.Any(char.IsControl))
+			if (value.Length == 0 || Encoding.UTF8.GetByteCount(value) > WikiSemanticPolicy.MaxKeywordBytes || value.Any(char.IsControl))
 				return false;
 			normalized = new(value);
 			return true;

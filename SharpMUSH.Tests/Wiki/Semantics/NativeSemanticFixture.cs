@@ -3,6 +3,7 @@ using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Tools.WikiSemantics;
 using SharpMUSH.Tools.WikiSemantics.Native;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
