@@ -472,7 +472,18 @@ public partial class LightningDatabase : IWikiStore
 
 	public async Task<Found<None>> DeletePageAsync(string id)
 	{
-		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.LegacyWiki);
+		if (admission is { Phase: SemanticFixturePhase.Active })
+		{
+			using var scope = new LegacyWikiPreparationScope(admission, CancellationToken.None);
+			var mutation = PrepareLegacyIntent(() => PreparedLegacyWikiMutation.Delete.Prepare(scope, id));
+			return await CommitLegacyFixtureAsync(mutation, admission, CancellationToken.None) switch
+			{
+				IntegratedWikiDeleted => new None(),
+				NotFound => new NotFound(),
+				_ => throw SemanticFixtureCapability.Unavailable()
+			};
+		}
 		return await WriteFixtureAsync<Found<None>>(admission, tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
