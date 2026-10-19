@@ -29,6 +29,10 @@ format: 1.13
 package: independent-rules
 version: 1.0.0
 wiki_collection_name: Independent Rules
+wiki:
+  - page: main:guide
+    title: Rules Guide
+    markdown: Rules.
 ```
 
 The optional `wiki_collection_name` is trimmed and must contain 1–100 characters, with no control characters or line breaks. It labels collection navigation and search-result context. The package ID, collection URL (`/wiki/collections/package%3Aindependent-rules`) and page ownership remain the same. Edition-specific wording can stay in the collection's main article.
