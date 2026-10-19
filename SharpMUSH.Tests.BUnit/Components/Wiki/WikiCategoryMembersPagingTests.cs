@@ -215,7 +215,7 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 		_api.Total = 511;
 		var cut = Open("/wiki/category/guides?membersSkip=600&" + Journey);
 		WaitForMember(cut, "Package member 500");
-		await Assert.That(_api.MemberRequests.Select(uri => Query(uri)["skip"]).ToArray()).IsEquivalentTo(new[] { "600", "500" });
+		await Assert.That(_api.MemberRequests.Select(uri => Query(uri)["skip"] ?? throw new InvalidOperationException("Member request is missing its skip parameter.")).ToArray()).IsEquivalentTo(new[] { "600", "500" });
 		await Assert.That(Query(new Uri(_nav.Uri))["membersSkip"]).IsEqualTo("500");
 		await Assert.That(Query(new Uri(_nav.Uri))["browseSkip"]).IsEqualTo("100");
 		await Assert.That(MemberLinks(cut).Count).IsEqualTo(11);
@@ -442,6 +442,40 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 			await Assert.That(cut.Markup).DoesNotContain("Owner member");
 		}
 		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.Forbidden))); }
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MissingNavigationAfterReaderChangeClearsCompletedIntroductionAndRejectsLatePrivateResponse(bool characterChange)
+	{
+		var auth = Services.GetRequiredService<IAccountAuthState>();
+		_nav.NavigateTo("/wiki/collections/package%3Arules?lang=fr-CA");
+		var cut = RenderSurface("browser");
+		cut.WaitForAssertion(() => Require(cut.Markup.Contains("Guides français", StringComparison.Ordinal), "Initial authorized introduction did not render."));
+		var unchanged = _nav.Uri;
+		var pending = new TaskCompletionSource<HttpResponseMessage>();
+		_api.Directory = _ => pending.Task;
+		try
+		{
+			var before = _api.NavigationRequests.Count;
+			await cut.InvokeAsync(() => RaiseReaderChanged(auth, characterChange));
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > before, "Reader change did not reauthorize the introduction."));
+			await Assert.That(cut.Markup).DoesNotContain("Guides français");
+			await Assert.That(cut.FindAll("a.wiki-collection-category-intro")).IsEmpty();
+
+			_api.Directory = _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+			before = _api.NavigationRequests.Count;
+			await cut.InvokeAsync(() => RaiseReaderChanged(auth, !characterChange));
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > before, "Latest reader did not check missing navigation."));
+			cut.WaitForAssertion(() => cut.Find(".wiki-collection-error"));
+			await cut.InvokeAsync(() => CompletePending(pending, CategoryApi.Navigation("package:rules")));
+			await Assert.That(cut.Markup).DoesNotContain("Guides français");
+			await Assert.That(cut.Markup).DoesNotContain("Private rules collection");
+			await Assert.That(cut.FindAll("a.wiki-collection-category-intro")).IsEmpty();
+			await Assert.That(_nav.Uri).IsEqualTo(unchanged);
+		}
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound))); }
 	}
 
 	[Test]

@@ -96,7 +96,7 @@ public class WikiBrowseStateTests : TrackingBunitContext
 	{
 		var cut = Browse("?q=Rule&skip=500&lang=fr");
 		await cut.Find(".wiki-collection-search input").InputAsync("unsubmitted draft");
-		await cut.FindAll(".wiki-collection-topics button")[1].ClickAsync(new());
+		await cut.Find(".wiki-collection-featured button[aria-label$=': Guides']").ClickAsync(new());
 		await Assert.That(Query(RowRequests[^1], "search")).IsEqualTo("Rule");
 		var location = new Uri(_nav.Uri);
 		await Assert.That(Query(location, "category")).IsEqualTo("guides");

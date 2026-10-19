@@ -6490,4 +6490,5 @@
     <value>A játék wikije</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Tagok böngészése</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Kiemelt témák</value></data>
 </root>

@@ -1,4 +1,13 @@
 .wiki-collection-browser { min-width: 0; display: grid; gap: 1rem; }
+.wiki-collection-featured { min-width: 0; }
+.wiki-collection-featured h2 { margin: 0 0 .65rem; font-size: 1rem; color: var(--text-dim); }
+.wiki-collection-featured-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: .75rem; }
+.wiki-collection-featured .wiki-collection-topic { align-items: start; flex-direction: column; padding: 1rem; border-inline-start: 3px solid var(--accent); }
+.wiki-collection-featured .wiki-collection-category-intro { flex: none; width: 100%; min-height: 44px; display: flex; align-items: center; font-size: 1.15rem; text-decoration: none; }
+.wiki-collection-featured .wiki-collection-category-intro:hover { text-decoration: underline; }
+.wiki-collection-featured button { color: var(--text-dim); }
+.wiki-collection-featured button[aria-pressed="true"] { color: var(--accent); }
+.wiki-collection-featured button span { margin-inline-start: .5rem; }
 .wiki-collection-search, .wiki-collection-topics, .wiki-collection-paging { display: flex; flex-wrap: wrap; gap: .6rem; }
 input { min-width: 0; max-width: 100%; padding: .65rem; border: 1px solid var(--border); border-radius: var(--radius-row); background: var(--surface); color: var(--text); font: inherit; }
 .wiki-collection-search input { flex: 1 1 14rem; }
@@ -23,7 +32,7 @@ summary { cursor: pointer; padding-block: .6rem; }
 .wiki-collection-topic button { min-height: 44px; font-size: .85rem; }
 .wiki-collection-topics > button { min-height: 44px; }
 @container page (max-width: 48rem) {
-    .wiki-collection-topic { width: 100%; }
+    .wiki-collection-topic { width: 100%; box-sizing: border-box; }
     .wiki-collection-page { flex-direction: column; gap: .25rem; }
     .wiki-collection-paging button { min-height: 44px; flex: 1; }
 }

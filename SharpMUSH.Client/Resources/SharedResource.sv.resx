@@ -6490,4 +6490,5 @@
     <value>Spelets wiki</value>
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Bläddra bland medlemmar</value></data>
+  <data name="WikiFeaturedTopics" xml:space="preserve"><value>Utvalda ämnen</value></data>
 </root>
