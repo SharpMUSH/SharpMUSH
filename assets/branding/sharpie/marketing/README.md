@@ -7,3 +7,5 @@ Palette authority: mint green `#00DDB3`, ink `#17333E`, white. Keep flat mascot 
 ## Activate the repository preview after merge
 
 Open this repository's **Settings → General → Social preview → Edit → Upload an image** and choose `social-preview.png` from this folder. A PR can deliver the file but cannot activate this GitHub setting. The exported PNG must stay under 1 MB. See [GitHub social-preview guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/customizing-your-repositorys-social-media-preview).
+
+The original SharpMUSH M remains the primary brand identifier. `sharpmush-logo.svg` is an unchanged copy of the repository’s canonical logo used in the share-card source. Sharpie is a supporting mascot, not a replacement for the M.

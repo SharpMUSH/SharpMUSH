@@ -1,4 +1,4 @@
-# SharpMUSH
+# <img src="Solution%20Files/Logo.svg" width="56" height="56" alt="" /> SharpMUSH
 
 **Build and run your own multiplayer text world.**
 
@@ -16,8 +16,6 @@ SharpMUSH is an open-source MUSH server for collaborative stories, roleplay and 
 - **Manage in a browser.** Use the web portal for characters, scenes, game information and administration.
 - **Add capabilities.** Install [softcode packages](https://github.com/SharpMUSH/SharpMUSH.Packages), or extend the server with [C# plugins](https://sharpmush.com/guides/plugins/).
 - **Bring an existing world.** Read the [PennMUSH migration guide](https://sharpmush.com/guides/pennmush-migration/) and [compatibility reference](https://sharpmush.com/reference/compatibility/) before moving your game.
-
-Meet **Sharpie**, our mascot and fellow world builder.
 
 ## Join in
 
