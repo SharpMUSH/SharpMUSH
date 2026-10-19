@@ -1,7 +1,8 @@
 # Sharpie guided journeys
 
-Status: proposed for user review, 2026-10-19. Player onboarding comes first;
-new-administrator onboarding is a separate, required companion journey.
+Status: onboarding design approved by the user, 2026-10-19. Player onboarding
+comes first; new-administrator onboarding is a separate, required companion
+journey. Artwork direction is being agreed separately before parallel production.
 
 ## Outcome
 
@@ -24,8 +25,12 @@ authored, deterministic and sensitive to the features actually available.
 - Prioritize players joining a configured game. Also improve First Setup and
   provide a new-admin onboarding journey.
 - Keep Sharpie's guidance optional, resumable, accessible and unobtrusive.
+- Generate a new per-genre artwork inventory with native transparent backgrounds
+  and no baked-in text. Reduce the style count in collaboration with the user;
+  the old atlas is reference material, not the production inventory.
 
-The choices below are proposed implementation decisions, not prior user approval.
+The journey below is approved. Final artwork styles and production breadth remain
+open; recommendations about those are not yet user decisions.
 
 ## Experience
 
@@ -106,15 +111,18 @@ help links and actual installed versions as evidence. No package-name-only guess
 
 Select artwork by explicit admin override, then supported subgenre, supported genre,
 then neutral Sharpie. Subgenre is open-ended; an unknown label is a normal fallback.
-Genre does not determine art style. Admins choose one coherent style, with chibi
-proposed as the default; players can choose reduced imagery or no mascot.
+Genre does not determine art style. Admins choose one coherent style from the
+smaller set to be agreed; players can choose reduced imagery or no mascot.
 
-The source atlas has 42 themes and 12 styles, 504 individual images. These are
-concept assets, not an automatically approved production bundle. Curate complete,
-anatomically sound cuts, record provenance and sizes, and serve only needed assets.
-Use original-background artwork in intentionally framed cards; do not revive the
-rejected automated transparency workflow. Approved transparent brand SVGs can be
-used for small UI guidance. Preserve ink/mint/white identity and the canonical M.
+The old atlas has 42 themes and 12 styles, 504 individual images. Use it as visual
+reference while generating new, individually framed illustrations with native
+alpha, no baked-in text, complete anatomy and complete silhouettes. Do not remove
+the backgrounds from the rejected old cuts or upscale them for production. Record
+provenance and dimensions; serve only selected assets. Review every new asset on
+white, near-black and representative theme colors at its actual display size.
+Reject halos, stray pixels, extra limbs, clipped ears/paws/tails and drifting mint.
+Approved transparent brand SVGs remain suitable for compact UI guidance. Preserve
+ink/mint/white identity and the canonical M.
 
 The same guide keeps the same representation across steps. Genre art can head the
 journey and chapter cards; compact instructions do not need a new illustration each.
@@ -123,11 +131,10 @@ No image generation occurs during a user's visit.
 
 Inventory check (2026-10-19): all 504 PNGs decode, with exactly 42 images for each
 of the 12 styles. The set occupies 64,609,741 bytes. Native widths are 218–355 px
-and heights 208–333 px; none is a high-resolution hero asset. Use these cuts as
-small portraits/cards at conservative display sizes (roughly 100–160 CSS px on
-high-density screens), with `object-fit: contain` and uncropped bounds. A larger
-welcome illustration requires separately prepared and visually approved artwork,
-not enlarging a 300-pixel crop. Do not include the whole atlas in initial download
+and heights 208–333 px; none is a high-resolution hero asset. This reinforces the
+decision to generate new assets rather than reuse the cuts. New assets must have
+sufficient native resolution for their intended display size and device density,
+with `object-fit: contain` and uncropped bounds. Do not include the whole atlas in initial download
 or a service-worker precache. File integrity is not anatomy or visual approval;
 the production selection still needs per-image review.
 
@@ -243,8 +250,10 @@ what is new for MUSH users, admin configuration, and authoring/curating guide ar
 Use the same verified command/capability catalog for UI and docs where practical.
 Deliver implementation PRs and screenshots; do not merge or deploy without approval.
 
-## Review decisions
+## Remaining artwork decisions
 
-The proposed defaults are opt-in entry, a compact contextual guide plus `/welcome`,
-chibi genre art, no mascot chat, and no automatic execution of example commands.
-Review these alongside the player-first/admin-second scope before implementation.
+Opt-in entry, a compact contextual guide plus `/welcome`, no mascot chat, no
+automatic execution of example commands, and player-first/admin-second scope are
+approved. Agree the reduced style set, neutral reference poses and per-genre
+production coverage next; run artwork production alongside implementation once
+the art direction is established.
