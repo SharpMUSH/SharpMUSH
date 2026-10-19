@@ -13,3 +13,19 @@ WikiCollectionImportUiTests exercises real component callbacks against those res
 | ancestries-390.jpg | WikiCollectionBrowser | 390 px; actual imported Ancestries results |
 
 All four captured components (including WikiSidebar) were checked at 320, 390 and 1100 pixels: document width equals viewport width and no descendant extends past it. Native Enter opens the category directory; the following Tab reaches its search field with a visible focus outline. Chromium 1234 and Playwright Core 1.62.1 were used in an isolated local context. These checks do not establish complete WCAG conformance or replace task testing of the next authored layout.
+
+## Full running-portal navigation captures, 2026-10-19
+
+The following originals come from the published local portal using the actual 4,723-page PF2e import, including the authored Wizard learning revision. They supersede the older component-shell captures for this navigation increment. The world and two ordinary acceptance characters are disposable; no production game was changed.
+
+| Image | Running application state |
+| --- | --- |
+| navigation-directory-1440.png | PF2e collection's expanded category directory, searched for spells; introduction and member-filter actions remain distinct |
+| navigation-members-1440.png | Spells category, members 51–100 of 678, compact text-only entries and retained category badges |
+| navigation-members-390.png | The same member page on a phone, with visible range and Previous/Next controls |
+
+The full capture run also checked category introductions and article return links at 320 pixels. All nine desktop/phone captures had document width at most viewport width and no page errors. The 50 text-only member links had no media/fallback boxes and minimum heights above 44 pixels at both desktop and phone widths. Real images remain covered by rendered component regressions; the shared tile retains its default placeholder for other callers.
+
+The actual HTTP trace shows one 50-row member request per selected page, unchanged filtered-results return state (51–100 of 678), and isolated game/package membership for the same category key. Activating the bottom Next button focuses and scrolls the new range into view. Separate real account-panel character-switch checks removed a formerly visible private collection row and draft article at unchanged URLs; the second reader's article response was 404.
+
+These results establish local application behavior for this increment. They do not bound native database candidate work, replace the related/More panel's legacy drain, establish the complete PF2e play journey or concurrent-load gate, or activate the semantic prototype. Those remain tracked in #2044 and #2031.

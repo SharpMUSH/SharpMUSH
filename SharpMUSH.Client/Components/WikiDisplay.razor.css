@@ -18,6 +18,25 @@
 	min-width: 0;
 }
 
+/* Return actions remain distinct and wrap within the available article width. */
+.wiki-journey {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .5rem 1rem;
+}
+
+.wiki-journey ::deep .wiki-back {
+	align-self: center;
+	margin-bottom: 0;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.wiki-game-link {
+	overflow-wrap: anywhere;
+}
+
 .wiki-page-aside {
 	display: flex;
 	flex-direction: column;

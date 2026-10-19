@@ -70,10 +70,12 @@ public class WikiSidebarTests : TrackingBunitContext
 		var rows = cut.FindAll(".wiki-side-cats .kit-row");
 		await Assert.That(rows.Count).IsEqualTo(3)
 			.Because("only pinned categories and the complete category directory belong in the sidebar");
-		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=guides");
+		await Assert.That(rows[0].GetAttribute("href")).StartsWith("/wiki/category/guides?");
+		await Assert.That(cut.Find(".wiki-side-members[href='/wiki/collections/game?category=guides']")).IsNotNull();
 		await Assert.That(rows[0].QuerySelector(".kit-row-count")!.TextContent).IsEqualTo("2");
 		await Assert.That(rows[0].QuerySelector("img.kit-row-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
-		await Assert.That(rows[1].GetAttribute("href")).IsEqualTo("/wiki/collections/game?category=lore");
+		await Assert.That(rows[1].GetAttribute("href")).StartsWith("/wiki/category/lore?");
+		await Assert.That(cut.Find(".wiki-side-members[href='/wiki/collections/game?category=lore']")).IsNotNull();
 		await Assert.That(rows.Any(r => r.TextContent.Contains("Uncategorized"))).IsFalse();
 	}
 

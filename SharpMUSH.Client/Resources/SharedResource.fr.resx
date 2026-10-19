@@ -5783,4 +5783,5 @@
   <data name="NavWikiGameWiki" xml:space="preserve">
     <value>Wiki du jeu</value>
   </data>
+  <data name="WikiBrowseMembers" xml:space="preserve"><value>Parcourir les pages</value></data>
 </root>

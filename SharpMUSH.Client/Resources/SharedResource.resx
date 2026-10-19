@@ -9347,4 +9347,5 @@
   <data name="PkgBatchRecoverAdmission" xml:space="preserve">
     <value>Recover submitted batch status</value>
   </data>
+  <data name="WikiBrowseMembers" xml:space="preserve"><value>Browse members</value></data>
 </root>

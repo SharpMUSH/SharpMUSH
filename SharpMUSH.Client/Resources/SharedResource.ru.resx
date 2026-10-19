@@ -6489,4 +6489,5 @@
   <data name="NavWikiGameWiki" xml:space="preserve">
     <value>Вики игры</value>
   </data>
+  <data name="WikiBrowseMembers" xml:space="preserve"><value>Просмотреть элементы</value></data>
 </root>

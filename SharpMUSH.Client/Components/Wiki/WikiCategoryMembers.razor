@@ -4,12 +4,11 @@
 @using SharpMUSH.Library.Services
 @inject NavigationManager Nav
 @inject WikiService Wiki
+@inject IAccountAuthState AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
-@* A category's members, under its page (MediaWiki's category listing): its subcategories — the category
-   pages that are themselves in this category — as links, then the pages as image tiles with draft and
-   locked tags where the home cards show them. *@
+@* One authorized, title-ordered page of members. Scope and the reader's return destination are independent. *@
 <div class="wiki-cat">
     @if (_loading)
     {
@@ -17,103 +16,211 @@
     }
     else if (_failed)
     {
-        <div role="alert">@Loc["WikiLoadFailed"]</div>
+        <div role="alert">@Loc["WikiLoadFailed"] <button type="button" @onclick="ReloadAsync">@Loc["NavWikiBrowse"]</button></div>
     }
-    else if (_pages.Count == 0 && _subcategories.Count == 0)
+    else if (_batch is { } batch)
     {
-        <EmptyState Class="wiki-cat-empty">@Loc["NavWikiCategoryEmpty"]</EmptyState>
-    }
-    else
-    {
-        @if (_subcategories.Count > 0)
+        <SectionLabel>@Loc["NavWikiBrowse"] · @_collectionLabel</SectionLabel>
+        <p class="wiki-cat-range" aria-live="polite" tabindex="-1" @ref="_range">@string.Format(Loc["WikiPageRange"], batch.Total == 0 ? 0 : _skip + 1, Math.Min((long)_skip + batch.Pages.Count, batch.Total), batch.Total)</p>
+        @Pager
+        @if (batch.Total == 0)
         {
-            <SectionLabel>@Loc.Plural("NavWikiSubcategories", "count", _subcategories.Count)</SectionLabel>
-            <nav class="wiki-cat-subs">
-                @foreach (var sub in _subcategories)
-                {
-                    <a class="wiki-catlink" href="@WikiLocaleLinks.WithLocale(WikiCategories.Route(sub.Slug), EffectiveLocale)">@(string.IsNullOrEmpty(sub.Title) ? WikiHelpers.CategoryLabel(sub.Slug) : sub.Title)</a>
-                }
-            </nav>
+            <EmptyState Class="wiki-cat-empty">@Loc["NavWikiCategoryEmpty"]</EmptyState>
         }
-        @if (_pages.Count > 0)
-        {
-            <SectionLabel>@Loc.Plural("NavWikiCategoryPages", "count", _pages.Count)</SectionLabel>
-            <div class="wiki-cat-grid">
-                @foreach (var p in _pages)
-                {
-                    <ImageTile Label="@p.Title" ImageUrl="@p.Image" Height="76" Href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(p.Namespace, p.Slug), EffectiveLocale)"
-                               Sub="@(p.LastEditedBy is null ? Loc.Format(p.UpdatedAt) : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, Loc.Format(p.UpdatedAt)))">
-                        <Overlay>
-                            @if (!p.Published)
-                            {
-                                <Pill Tag="true" Warn="true" Class="wiki-cat-tag wiki-cat-tag--draft">@Loc["NavWikiDraft"]</Pill>
-                            }
-                            @if (p.IsRestricted)
-                            {
-                                <Pill Tag="true" Class="wiki-cat-tag wiki-cat-tag--locked">@Loc["NavWikiLocked"]</Pill>
-                            }
-                        </Overlay>
-                    </ImageTile>
-                }
-            </div>
-        }
+        <div class="wiki-cat-grid">
+            @foreach (var entry in batch.Pages)
+            {
+                <ImageTile Label="@entry.Title" ImageUrl="@entry.Image" ShowPlaceholder="false" Height="76" Href="@MemberHref(entry)"
+                           Sub="@(entry.LastEditedBy is null ? Loc.Format(entry.UpdatedAt) : string.Format(Loc["NavWikiEditedBy"], entry.LastEditedBy, Loc.Format(entry.UpdatedAt)))">
+                    <Overlay>
+                        @if (WikiCategories.IsCategoryPage(entry))
+                        {
+                            <Pill Tag="true" Class="wiki-cat-tag">@Loc["NavWikiCategoryKicker"]</Pill>
+                        }
+                        @if (!entry.Published)
+                        {
+                            <Pill Tag="true" Warn="true" Class="wiki-cat-tag wiki-cat-tag--draft">@Loc["NavWikiDraft"]</Pill>
+                        }
+                        @if (entry.IsRestricted)
+                        {
+                            <Pill Tag="true" Class="wiki-cat-tag wiki-cat-tag--locked">@Loc["NavWikiLocked"]</Pill>
+                        }
+                    </Overlay>
+                </ImageTile>
+            }
+        </div>
+        @Pager
     }
 </div>
 
 @code {
-    /// <summary>The category, as its key or its name.</summary>
     [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
-
     [Parameter] public string? Locale { get; set; }
+    [Parameter] public string? MembersCollection { get; set; }
+    [Parameter] public int MembersSkip { get; set; }
+    [Parameter] public WikiBrowseState? BrowseState { get; set; }
     private string? EffectiveLocale => Locale ?? WikiLocaleLinks.FromUri(Nav.Uri);
-
+    private (string Category, string? Collection, string? Locale, int Skip)? _loaded;
     private bool _loading = true;
     private bool _failed;
     private bool _disposed;
     private int _version;
-    private IReadOnlyList<WikiPageSummary> _pages = [];
-    private IReadOnlyList<WikiPageSummary> _subcategories = [];
-    private string? _loadedCategory;
+    private int _skip;
+    private WikiPageBatch? _batch;
+    private string? _collectionLabel;
+    private ElementReference _range;
+    private bool _focusRange;
+
+    protected override void OnInitialized()
+    {
+        AccountAuth.AuthStateChanged += OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged += OnReaderChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
-        var key = WikiCategories.Key(Category);
-        var selection = key + "\n" + EffectiveLocale;
-        if (selection == _loadedCategory) return;
-        _loadedCategory = selection;
+        var selection = (WikiCategories.Key(Category), string.IsNullOrWhiteSpace(MembersCollection) ? null : MembersCollection.Trim(), EffectiveLocale,
+            new WikiBrowseState("game", Skip: MembersSkip).Normalize().Skip);
+        if (_loaded == selection) return;
+        _loaded = selection;
+        _skip = selection.Item4;
+        await ReloadAsync();
+    }
+
+    private void OnReaderChanged()
+    {
+        if (_disposed) return;
+        Interlocked.Increment(ref _version);
+        Clear();
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+            await ReloadAsync();
+            if (!_disposed) StateHasChanged();
+        });
+    }
+
+    private void Clear()
+    {
         _loading = true;
         _failed = false;
-        var version = ++_version;
-        try
+        _batch = null;
+        _collectionLabel = null;
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_disposed || _loaded is not { } selection) return;
+        var version = Interlocked.Increment(ref _version);
+        var requestedUri = Nav.Uri;
+        var offset = _skip;
+        Clear();
+        var navigationResult = selection.Collection is { } scope
+            ? await Wiki.GetNavigationAsync(collection: scope, lang: selection.Locale)
+            : await Wiki.GetNavigationAsync(page: "category/" + selection.Category, lang: selection.Locale);
+        if (_disposed || version != _version) return;
+        // A missing/refused owner may still have public game members. An outage is not evidence of a different owner.
+        // Explicit scopes are never replaced, and an expired session or failed response remains retryable.
+        if (selection.Collection is null && navigationResult is ApiFailure { Kind: ApiFailureKind.NotFound or ApiFailureKind.Forbidden })
         {
-            if (await Wiki.GetNavigationAsync(page: "category/" + key, lang: EffectiveLocale) is not WikiNavigationDto navigation)
-            {
-                if (!_disposed && version == _version) _failed = true;
-                return;
-            }
-            var members = new List<WikiPageSummary>();
-            for (var skip = 0; ; skip += 200)
-            {
-                if (await Wiki.GetCollectionPagesAsync(navigation.Collection, skip, 200, category: key, lang: EffectiveLocale) is not WikiPageBatch batch)
-                {
-                    if (!_disposed && version == _version) _failed = true;
-                    return;
-                }
-                if (_disposed || version != _version) return;
-                members.AddRange(batch.Pages);
-                if (skip + batch.Pages.Count >= batch.Total || batch.Pages.Count == 0) break;
-            }
-            _subcategories = members.Where(WikiCategories.IsCategoryPage)
-                .OrderBy(p => p.Slug, StringComparer.Ordinal)
-                .ToList();
-            _pages = members.Where(p => !WikiCategories.IsCategoryPage(p))
-                .OrderByDescending(p => p.UpdatedAt)
-                .ToList();
+            navigationResult = await Wiki.GetNavigationAsync(collection: "game", lang: selection.Locale);
+            if (_disposed || version != _version) return;
         }
-        finally
+        if (navigationResult is not WikiNavigationDto navigation || (selection.Collection is not null && navigation.Collection != selection.Collection))
         {
-            if (!_disposed && version == _version) _loading = false;
+            _loading = false;
+            _failed = true;
+            return;
+        }
+        var result = await Wiki.GetCollectionPagesAsync(navigation.Collection, offset, WikiBrowseState.PageSize, selection.Category, lang: selection.Locale);
+        if (_disposed || version != _version) return;
+        if (result is WikiPageBatch changed && changed.Total > 0 && offset >= changed.Total)
+        {
+            offset = ((changed.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize;
+            result = await Wiki.GetCollectionPagesAsync(navigation.Collection, offset, WikiBrowseState.PageSize, selection.Category, lang: selection.Locale);
+            if (_disposed || version != _version) return;
+        }
+        if (result is not WikiPageBatch batch)
+        {
+            _loading = false;
+            _failed = true;
+            return;
+        }
+        if (batch.Total == 0) offset = 0;
+        // At most one corrective request: a second shrink is retryable, never a fabricated range.
+        if (batch.Total > 0 && batch.Pages.Count == 0)
+        {
+            if (offset >= batch.Total) offset = ((batch.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize;
+            _failed = true;
+        }
+        else
+        {
+            _batch = batch;
+            _collectionLabel = navigation.Collection == "game" ? Loc["WikiGameCollection"] : navigation.Collection == "all" ? Loc["WikiAllCollections"]
+                : navigation.Collections.FirstOrDefault(collection => collection.Id == navigation.Collection)?.Name ?? Loc["WikiCollections"];
+        }
+        _skip = offset;
+        _loaded = (selection.Category, selection.Collection, selection.Locale, offset);
+        _loading = false;
+        // Canonical replacement must reuse this response and must never erase a newer route.
+        if (requestedUri == Nav.Uri && new Uri(requestedUri).AbsolutePath == WikiCategories.Route(selection.Category))
+        {
+            var target = PageHref(offset);
+            if (new Uri(requestedUri).PathAndQuery + new Uri(requestedUri).Fragment != target) Nav.NavigateTo(target, replace: true);
         }
     }
-    public void Dispose() { _disposed = true; ++_version; }
+
+    private string MemberHref(WikiPageSummary page) => WikiJourneyLinks.Article(WikiRoutes.PathFor(page.Namespace, page.Slug), BrowseState,
+        MembersCollection, _skip, EffectiveLocale);
+
+    private string PageHref(int offset)
+    {
+        var current = new Uri(Nav.Uri);
+        var query = WikiBrowseState.ReadQuery(Nav.Uri);
+        query.Remove("membersSkip");
+        if (offset > 0) query["membersSkip"] = offset.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return current.AbsolutePath + (query.Count == 0 ? string.Empty : "?" + string.Join('&', query.Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value)))) + current.Fragment;
+    }
+
+    // The same controls before and after the tiles keep paging reachable without crossing fifty links.
+    private RenderFragment Pager => __builder =>
+    {
+        @if (_batch is { } batch)
+        {
+            <nav class="wiki-cat-paging" aria-label="@Loc["WikiBrowseMembers"]">
+                <button type="button" disabled="@(_skip == 0)" @onclick="() => NavigateAsync(Math.Max(0, _skip - WikiBrowseState.PageSize))">@Loc["WikiPreviousPage"]</button>
+                <button type="button" disabled="@((long)_skip + batch.Pages.Count >= batch.Total)" @onclick="NextAsync">@Loc["WikiNextPage"]</button>
+            </nav>
+        }
+    };
+
+    private Task NextAsync() => NavigateAsync(new WikiBrowseState("game", Skip: _skip).Next().Skip);
+
+    private async Task NavigateAsync(int offset)
+    {
+        if (_loaded is not { } selection || _disposed) return;
+        _skip = offset;
+        _loaded = (selection.Category, selection.Collection, selection.Locale, offset);
+        _focusRange = true;
+        Nav.NavigateTo(PageHref(offset));
+        await ReloadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusRange && !_loading && _batch is not null)
+        {
+            _focusRange = false;
+            await _range.FocusAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _version);
+        AccountAuth.AuthStateChanged -= OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+    }
 }

@@ -1,13 +1,13 @@
 @* D1 §4.6 image tile: rooms, exits, pages and scenes. Full-width image 52px tall (76 on category
-   covers), radius 10, a 13px label with an optional right-aligned dim count. No image → --surface-2
-   fill with a centred icon. Overlay content (pills, keycaps) sits over the image. *@
+   covers), radius 10, a 13px label with an optional right-aligned dim count. By default, missing
+   images use a --surface-2 icon fill. Text-only callers can hide it; badges then follow normal flow. *@
 @if (Href is not null)
 {
-    <a class="kit-tile" href="@Href">@Inner</a>
+    <a class="@TileClass" href="@Href">@Inner</a>
 }
 else
 {
-    <button type="button" class="kit-tile" @onclick="OnClick">@Inner</button>
+    <button type="button" class="@TileClass" @onclick="OnClick">@Inner</button>
 }
 
 @code {
@@ -16,6 +16,9 @@ else
     [Parameter] public string? Alt { get; set; }
     [Parameter] public int? Count { get; set; }
     [Parameter] public int Height { get; set; } = 52;
+
+    /// <summary>Whether an image-less tile keeps the default icon placeholder.</summary>
+    [Parameter] public bool ShowPlaceholder { get; set; } = true;
 
     /// <summary>The fallback icon when there is no image; defaults to a picture outline.</summary>
     [Parameter] public string? Icon { get; set; }
@@ -26,22 +29,33 @@ else
     [Parameter] public string? Href { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
 
+    private bool HasImage => ImageUrlPolicy.IsRenderable(ImageUrl);
+    private bool ShowMedia => HasImage || ShowPlaceholder;
+    private string TileClass => ShowMedia ? "kit-tile" : "kit-tile kit-tile--text-only";
+
     private RenderFragment Inner => __builder =>
     {
-        <span class="kit-tile-media" style="@($"height:{Height}px;")">
-            @if (ImageUrlPolicy.IsRenderable(ImageUrl))
-            {
-                <img class="kit-tile-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
-            }
-            else
-            {
-                <span class="kit-tile-fallback" aria-hidden="true"><MudIcon Icon="@(Icon ?? Icons.Material.Outlined.Image)" Size="Size.Small" /></span>
-            }
-            @if (Overlay is not null)
-            {
-                <span class="kit-tile-overlay">@Overlay</span>
-            }
-        </span>
+        @if (ShowMedia)
+        {
+            <span class="kit-tile-media" style="@($"height:{Height}px;")">
+                @if (HasImage)
+                {
+                    <img class="kit-tile-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
+                }
+                else
+                {
+                    <span class="kit-tile-fallback" aria-hidden="true"><MudIcon Icon="@(Icon ?? Icons.Material.Outlined.Image)" Size="Size.Small" /></span>
+                }
+                @if (Overlay is not null)
+                {
+                    <span class="kit-tile-overlay">@Overlay</span>
+                }
+            </span>
+        }
+        else if (Overlay is not null)
+        {
+            <span class="kit-tile-overlay kit-tile-overlay--inline">@Overlay</span>
+        }
         <span class="kit-tile-row">
             <span class="kit-tile-label">@Label</span>
             @if (Count is not null)

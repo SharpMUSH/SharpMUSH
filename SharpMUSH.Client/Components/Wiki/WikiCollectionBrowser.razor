@@ -5,6 +5,7 @@
 @inject SharpMUSH.Client.Services.WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Nav
+@inject IAccountAuthState AccountAuth
 @implements IDisposable
 
 <section class="wiki-collection-browser">
@@ -23,7 +24,17 @@
             <button type="button" aria-pressed="@(string.IsNullOrEmpty(_state.Category))" @onclick="() => SelectCategory(string.Empty)">@Loc["All"]</button>
             @foreach (var category in navigation.Categories.Where(row => row.Pinned))
             {
-                <button type="button" aria-pressed="@(_state.Category == category.Key)" @onclick="() => SelectCategory(category.Key)">@category.Name <span>@category.Pages</span></button>
+                <div class="wiki-collection-topic">
+                    @if (category.HasPage)
+                    {
+                        <a class="wiki-collection-category-intro" href="@CategoryHref(category.Key)">@category.Name</a>
+                    }
+                    else
+                    {
+                        <span class="wiki-collection-category-name">@category.Name</span>
+                    }
+                    <button type="button" aria-pressed="@(_state.Category == category.Key)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" @onclick="() => SelectCategory(category.Key)">@Loc["WikiBrowseMembers"] <span>@category.Pages</span></button>
+                </div>
             }
         </nav>
         <details class="wiki-collection-directory">
@@ -32,7 +43,17 @@
             <div class="wiki-collection-category-list">
                 @foreach (var category in navigation.Categories.Where(row => row.Name.Contains(_categorySearch, StringComparison.OrdinalIgnoreCase)))
                 {
-                    <button type="button" aria-pressed="@(_state.Category == category.Key)" @onclick="() => SelectCategory(category.Key)">@category.Name <span>@category.Pages</span></button>
+                    <div class="wiki-collection-topic">
+                        @if (category.HasPage)
+                        {
+                            <a class="wiki-collection-category-intro" href="@CategoryHref(category.Key)">@category.Name</a>
+                        }
+                        else
+                        {
+                            <span class="wiki-collection-category-name">@category.Name</span>
+                        }
+                        <button type="button" aria-pressed="@(_state.Category == category.Key)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" @onclick="() => SelectCategory(category.Key)">@Loc["WikiBrowseMembers"] <span>@category.Pages</span></button>
+                    </div>
                 }
             </div>
         </details>
@@ -86,6 +107,31 @@
     private bool _disposed;
     private string Title => _state.Collection is "game" ? Loc["WikiGameCollection"] : _state.Collection is "all" ? Loc["WikiAllCollections"]
         : _navigation?.Collections.FirstOrDefault(row => row.Id == _state.Collection)?.Name ?? Loc["WikiCollections"];
+
+    private string CategoryHref(string key) => WikiJourneyLinks.Article(WikiCategories.Route(key), _state, membersCollection: _state.Collection);
+
+    protected override void OnInitialized()
+    {
+        AccountAuth.AuthStateChanged += OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged += OnReaderChanged;
+    }
+
+    private void OnReaderChanged()
+    {
+        if (_disposed) return;
+        Interlocked.Increment(ref _version);
+        _navigation = null;
+        _rows = null;
+        _failed = false;
+        _loading = true;
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+            await ReloadAsync();
+            if (!_disposed) StateHasChanged();
+        });
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -170,5 +216,11 @@
     private Task SelectCategory(string category) => NavigateAsync(_state with { Category = category, Skip = 0 });
     private Task PreviousAsync() => NavigateAsync(_state.Previous());
     private Task NextAsync() => NavigateAsync(_state.Next());
-    public void Dispose() { _disposed = true; ++_version; }
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _version);
+        AccountAuth.AuthStateChanged -= OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+    }
 }

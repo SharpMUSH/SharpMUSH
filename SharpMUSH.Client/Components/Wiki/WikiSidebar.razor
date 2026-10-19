@@ -5,6 +5,7 @@
 @using SharpMUSH.Library.Services
 @inject WikiService Wiki
 @inject NavigationManager Nav
+@inject IAccountAuthState AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
@@ -51,7 +52,14 @@
             @foreach (var category in navigation.Categories.Where(row => row.Pinned))
             {
                 var route = WikiJourneyLinks.Collection(WikiBrowseState.FromUri(Nav.Uri, navigation.Collection) with { Category = category.Key, Skip = 0 });
-                <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@route" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
+                var introduction = WikiJourneyLinks.Article(WikiCategories.Route(category.Key), WikiBrowseState.FromUri(Nav.Uri, navigation.Collection), membersCollection: navigation.Collection);
+                <div class="wiki-side-category">
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@(category.HasPage ? introduction : route)" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
+                    @if (category.HasPage && !Collapsed)
+                    {
+                        <a class="wiki-side-members" href="@route" aria-current="@(_category == category.Key ? "page" : null)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")">@Loc["WikiBrowseMembers"]</a>
+                    }
+                </div>
             }
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.List" Label="@Loc["WikiBrowseAllCategories"]" Href="@WikiLocaleLinks.WithLocale("/wiki/collections/" + Uri.EscapeDataString(navigation.Collection), _locale)" Collapsed="@Collapsed" />
         </SidebarGroup>
@@ -105,8 +113,26 @@
     protected override async Task OnInitializedAsync()
     {
         Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.AuthStateChanged += OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged += OnReaderChanged;
         Locate();
         await LoadNavigationAsync();
+    }
+
+    private void OnReaderChanged()
+    {
+        if (_disposed) return;
+        Interlocked.Increment(ref _loadVersion);
+        _navigation = null;
+        _authorizedUri = null;
+        _failed = false;
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed) return;
+            StateHasChanged();
+            await LoadNavigationAsync();
+            if (!_disposed) StateHasChanged();
+        });
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -173,5 +199,12 @@
         Nav.NavigateTo(WikiLocaleLinks.WithLocale($"/wiki/main/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit?title={Uri.EscapeDataString(title)}", _locale));
     }
 
-    public void Dispose() { _disposed = true; ++_loadVersion; Nav.LocationChanged -= OnLocationChanged; }
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _loadVersion);
+        Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.AuthStateChanged -= OnReaderChanged;
+        AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+    }
 }
