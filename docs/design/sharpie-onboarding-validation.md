@@ -7,8 +7,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,898 passed**, zero failed/skipped after entry-link
-  localization (`entrypoint-localization-green.log`).
+- Full component suite: **2,901 passed**, zero failed/skipped after the guide
+  navigation and framing changes (`guide-navigation-tests.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -21,7 +21,7 @@ supersede earlier statements about missing publication or completed checks.
 - Whole-branch source review completed; its remaining entry-link localization
   finding is addressed and the fresh full component suite passes.
 - Still open: broader keyboard/screen-reader checks, real failed-connection
-  retry/claim/additional-character journeys, published admin draft-feedback
+  retry/claim journeys, published admin draft-feedback
   recheck, and PR/CI verification. The fresh genre-art inventory is not approved.
 
 ## Verified on 2026-10-19
@@ -214,3 +214,28 @@ focus to the opener. Screenshot: `work/onboarding/play-guide-closed.png`.
 A component regression checks that the dialog is outside the Play layout and
 the game card remains mounted. This panel is modal while explicitly open; close
 it to resume typing. Further refinement of guide insertion/focus is pending.
+
+
+## Guide navigation and review follow-up — 2026-10-19
+
+The Play guide now has one sheet boundary, with both inner card borders removed.
+Back to game and Open the full guide or change my starting point are button-styled
+controls together above the lesson. The latter remains a semantic navigation link.
+There is one full-guide link in the sheet for all progress states. The outer
+accordion is gone; the optional command reference retains its disclosure.
+Back to game preserves the journey, while Stop this guide dismisses it.
+
+Published client checked in the real browser: both top controls are present,
+Sharpie remains visible, and the inner frames are absent. Evidence:
+`work/onboarding/guide-navigation.png`. Viewport screenshot capture was used;
+full-page capture resizes this responsive surface and closes the sheet.
+Full bUnit suite: 2,901 passed, zero failed/skipped. Changed C# whitespace and
+`git diff --check` pass. Successful insertion closing the panel is component-tested;
+its latest real-browser acceptance remains open.
+
+Ten automated review threads were answered with ownership/control-flow evidence:
+six response-disposal warnings transfer ownership to consumers that dispose the
+response; three state guards intentionally recheck after awaited JS calls; the
+optional presentation boundary logs failures, propagates caller cancellation,
+and returns no unverified links. No safety guards were removed to silence these
+findings. CI and broader end-to-end acceptance remain required.
