@@ -190,3 +190,27 @@ expanded the command reference. The accessibility tree exposed the new heading,
 expanded state and command/audience definitions. The reduced Sharpie remained
 visible. Screenshot: `work/onboarding/roleplay-keyboard-reference.png`.
 This verifies these interactions, not a complete screen-reader assessment.
+
+### Additional-character runtime journey (2026-10-19)
+
+Signed in through the visible login form as the disposable player with Remember me
+unchecked. Created JourneySecond using the existing no-chosen-password option.
+The portal returned to /account, listing JourneyTester (#17) and JourneySecond
+(#18). Opening Play authenticated JourneyTester through OTT and displayed Room
+Zero; creating the additional character did not switch the active character.
+The contextual Sharpie guide remained available and expanded successfully.
+Screenshots: `additional-character-account.png` and
+`additional-character-original-play.png` under `work/onboarding/`.
+The claim and failed-connection retry journeys remain open.
+
+### Play-height correction (2026-10-19)
+
+User review rejected the guide stacked above Play. Replaced it with an explicit
+header control opening the existing dismissible side-sheet surface. The terminal
+remains mounted and no guide content occupies the Play flex column. Desktop
+measured 918x836 before and during opening; at a 390x844 viewport Play remained
+374x828, with document scroll width 390. Escape closed the sheet and restored
+focus to the opener. Screenshot: `work/onboarding/play-guide-closed.png`.
+A component regression checks that the dialog is outside the Play layout and
+the game card remains mounted. This panel is modal while explicitly open; close
+it to resume typing. Further refinement of guide insertion/focus is pending.

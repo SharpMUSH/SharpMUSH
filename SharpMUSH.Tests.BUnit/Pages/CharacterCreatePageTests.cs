@@ -135,9 +135,10 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 	{
 		var api = SeedLoggedIn(true);
 		api.FailRoster(true);
+		await Services.GetRequiredService<AccountAuthService>().InitAsync();
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
 		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "NavCreateCharacter").HasAttribute("disabled")).IsTrue();
-		cut.WaitForAssertion(() =>
+		await cut.WaitForAssertionAsync(() =>
 		{
 			if (cut.FindAll("button").Single(b => b.TextContent.Trim() == "GuideRetryRoster").HasAttribute("disabled"))
 				throw new InvalidOperationException("Roster request is still running");

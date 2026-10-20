@@ -506,12 +506,23 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(scene: false);
-		cut.WaitForAssertion(() => cut.Find("button.play-conn:not(.play-room-btn)"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.play-conn:not(.play-room-btn):not(.play-guide-btn)"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play .sharp-terminal-connbar").Count).IsEqualTo(0);
-		await Assert.That(cut.Find("button.play-conn:not(.play-room-btn)").GetAttribute("aria-label")).IsEqualTo("Disconnect");
+		await Assert.That(cut.Find("button.play-conn:not(.play-room-btn):not(.play-guide-btn)").GetAttribute("aria-label")).IsEqualTo("Disconnect");
 
-		await cut.Find("button.play-conn:not(.play-room-btn)").ClickAsync();
+		await cut.Find("button.play-conn:not(.play-room-btn):not(.play-guide-btn)").ClickAsync();
 		await _play.Received(1).DisconnectAsync();
+	}
+
+	[Test]
+	public async Task GuideOpensInADialog_OutsideThePlayLayout()
+	{
+		var cut = RenderPlay();
+		await Assert.That(cut.FindAll(".play-main .guide-companion").Count).IsEqualTo(0);
+		await cut.Find("button.play-guide-btn").ClickAsync();
+		await Assert.That(cut.FindAll("[role=dialog]").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".play-main [role=dialog]").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".play-main .play-card").Count).IsEqualTo(1);
 	}
 
 	[Test]

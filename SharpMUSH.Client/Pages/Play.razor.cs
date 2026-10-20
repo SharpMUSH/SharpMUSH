@@ -211,6 +211,7 @@ public partial class Play
 	private string SheetLabel(PlaySheet sheet) => sheet switch
 	{
 		PlaySheet.Room => Loc["NavPlayTabRoom"],
+		PlaySheet.Guide => Loc["GuideWithSharpie"],
 		PlaySheet.Details => Room.Info?.Name ?? Loc["NavPlayTabRoom"],
 		_ => Loc["NavPlayTabs"],
 	};

@@ -16,7 +16,7 @@
 }
 else if (Guide is { Ready: true, Progress.Active: true })
 {
-    <details class="guide-companion">
+    <details class="guide-companion" open="@Expanded">
         <summary>@Loc["GuideCompanionTitle", Lesson.Title]</summary>
         <div class="guide-companion-content">
             @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideReloadProgress"]</button></p> }
@@ -30,6 +30,7 @@ else if (Guide is { Ready: true, Progress.Active: true })
 }
 
 @code {
+    [Parameter] public bool Expanded { get; set; }
     [Parameter] public OnboardingService? Guide { get; set; }
     [Parameter] public Func<Task<bool>>? InsertLook { get; set; }
     [Parameter] public EventCallback OnExit { get; set; }

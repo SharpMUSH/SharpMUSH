@@ -50,10 +50,7 @@ else
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
         <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
-            <div class="play-main" @ref="_guideReturnTarget" tabindex="-1" data-guide-anchor="play">
-                <SharpMUSH.Client.Components.Onboarding.GuideCompanion Guide="@(ServiceProvider.GetService<OnboardingService>())"
-                    OnExit="ReturnFromGuideAsync"
-                    InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
+            <div class="play-main" tabindex="-1" data-guide-anchor="play">
                 @* The open banner's room name is the page's h1; otherwise this one, for the reader alone, so the page
                    has a heading to land on (FocusOnNavigate) and to jump back to. *@
                 @if (!BannerShown)
@@ -89,6 +86,8 @@ else
                                             Name="@ViewerName" ImageUrl="@ViewerImage?.Url" Character="@ViewerCharacter" Connected="@PlayTerminal.IsConnected" />
                         </Lead>
                         <Controls>
+                            <PlayControl Class="play-guide-btn" Label="@Loc["GuideWithSharpie"]" Icon="@Icons.Material.Outlined.HelpOutline" PopsUp="true"
+                                         OnClick="() => OpenMobileSheetAsync(PlaySheet.Guide)" />
                             @* On a phone these step back into the banner's controls row (Play.razor.css). *@
                             <span class="play-head-more">
                                 @if (View == PlayView.Terminal)
@@ -183,6 +182,13 @@ else
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
                                 Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls(PlaySettingsMenu.Sheet)" />
                     break;
+                case PlaySheet.Guide:
+                    <button type="button" @onclick="CloseMobileSheet">@Loc["GuideClose"]</button>
+                <SharpMUSH.Client.Components.Onboarding.GuideCompanion Expanded="true" Guide="@(ServiceProvider.GetService<OnboardingService>())"
+                    OnExit="CloseMobileSheet"
+                    InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
+                    <a href="/welcome">@Loc["GuideOpenFull"]</a>
+                    break;
                 case PlaySheet.Room:
                     <PlayRoomTabs Entries="_asideEntries" @bind-Selected="_sheetEntry" Label="@SheetLabel(sheet)" Room="Room"
                                   Context="_sheetContext" ParametersFor="EntryParameters" />
@@ -209,13 +215,6 @@ else
 }
 
 @code {
-    private ElementReference _guideReturnTarget;
-    private async Task ReturnFromGuideAsync()
-    {
-        try { await _guideReturnTarget.FocusAsync(preventScroll: true); }
-        catch (JSException) { /* A disconnected browser cannot receive focus. */ }
-    }
-
     /// <summary>The connection row's buttons, in the card header: Disconnect, Connect, or Login for a visitor.</summary>
     private RenderFragment ConnectionControl => __builder =>
     {
