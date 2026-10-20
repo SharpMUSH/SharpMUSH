@@ -49,7 +49,7 @@ public partial class TaskScheduler(
 	INotifyService? notifyService = null,
 	IInputSessionService? inputSessions = null,
 	IQueueDiagnosticsRecorder? diagnostics = null)
-	: ITaskScheduler, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
+	: ITaskScheduler, IQueueReleaseObserver, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
@@ -72,6 +72,7 @@ public partial class TaskScheduler(
 	{
 		public DeferredSchedule? Deferred { get; init; }
 		public QueueObservation? Observation { get; init; }
+		public Action<QueueEntryRelease>? OnObservedRelease { get; init; }
 		public QueueOutcome? DeferredReleaseOutcome { get; init; }
 		public bool HaltAccountingSettled { get; init; }
 		public PendingInputCommand? PendingInput { get; init; }
@@ -269,12 +270,25 @@ public partial class TaskScheduler(
 		lock (_admissionLock) entry = RemoveEntry(pid);
 		if (entry is not null) DisposeEntry(entry, outcome);
 	}
-	private static void DisposeEntry(QueueEntry entry, QueueOutcome outcome = QueueOutcome.Cancelled)
+	private void DisposeEntry(QueueEntry entry, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
-		entry.Observation?.Complete(entry.DeferredReleaseOutcome ?? outcome);
+		outcome = entry.DeferredReleaseOutcome ?? outcome;
+		var failedInvocations = entry.Observation?.FailedInvocations;
+		if (outcome == QueueOutcome.Completed && failedInvocations > 0) outcome = QueueOutcome.InvocationFailure;
+		entry.Observation?.Complete(outcome);
 		try { entry.OnReleased?.Invoke(); }
-		finally { entry.Cts.Dispose(); }
+		catch (Exception exception) { logger.LogError(exception, "Queue release callback failed for PID {Pid}", entry.Pid); }
+		finally
+		{
+			try { entry.Cts.Dispose(); }
+			finally
+			{
+				try { entry.OnObservedRelease?.Invoke(new(entry.Pid, outcome, failedInvocations)); }
+				catch (Exception exception) { logger.LogError(exception, "Queue release observer failed for PID {Pid}", entry.Pid); }
+			}
+		}
 	}
+
 	private bool ReleasePending(long pid)
 	{
 		QueueEntry? entry;
@@ -295,7 +309,7 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
-	 bool chargesOwner = true, DBRef? enactor = null)
+	 bool chargesOwner = true, DBRef? enactor = null, Action<QueueEntryRelease>? onObservedRelease = null)
 	{
 		// A typed line is invisible to the queue quota, as it is in PennMUSH: run_user_input builds its
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
@@ -369,6 +383,7 @@ public partial class TaskScheduler(
 				var entry = new QueueEntry(pid, SchedulerKeys.TriggerName(identity, pid), group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased, ManagesSemaphoreCount: managesSemaphoreCount)
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
+					OnObservedRelease = onObservedRelease,
 					PendingInput = pendingInput,
 					Enactor = enactor ?? executor,
 					ChargesOwner = chargesOwner,
@@ -805,6 +820,7 @@ public partial class TaskScheduler(
 			await foreach (var entry in _immediateQueue.Reader.ReadAllAsync(shutdownToken))
 			{
 				await AwaitRunawayHalts();
+				var outcome = QueueOutcome.Cancelled;
 				try
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);
@@ -823,16 +839,16 @@ public partial class TaskScheduler(
 					{
 						budget.ThrowIfExceeded();
 						await entry.Action();
-						var outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
+						outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
 							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed;
 						entry.Observation?.Complete(outcome);
 						if (outcome == QueueOutcome.ExecutionLimit) await NotifyExpired(entry);
 					}
-					catch (OperationCanceledException) when (budget.IsExpired) { entry.Observation?.Complete(QueueOutcome.ExecutionLimit); await NotifyExpired(entry); }
-					catch (OperationCanceledException) when (budget.IsCancelled) { entry.Observation?.Complete(QueueOutcome.Cancelled); logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
+					catch (OperationCanceledException) when (budget.IsExpired) { outcome = QueueOutcome.ExecutionLimit; entry.Observation?.Complete(outcome); await NotifyExpired(entry); }
+					catch (OperationCanceledException) when (budget.IsCancelled) { outcome = QueueOutcome.Cancelled; entry.Observation?.Complete(outcome); logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
 				}
-				catch (Exception ex) { entry.Observation?.Complete(QueueOutcome.Failed); logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
-				finally { Release(entry.Pid); }
+				catch (Exception ex) { outcome = QueueOutcome.Failed; entry.Observation?.Complete(outcome); logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
+				finally { Release(entry.Pid, outcome); }
 			}
 		}
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested) { }
@@ -888,6 +904,14 @@ public partial class TaskScheduler(
 
 	public ValueTask<QueueAdmissionResult> AdmitSocketWork(Func<ValueTask<CallState?>> action, string triggerName, string group, Action? onReleased = null)
 	 => Admit(action, triggerName, group, null, onReleased: onReleased, notifyOnRejection: false, chargesOwner: false);
+
+	public ValueTask<QueueAdmissionResult> AdmitObservedSocketWork(Func<ValueTask<CallState?>> action,
+		string triggerName, string group, Action<QueueEntryRelease> onReleased)
+	{
+		ArgumentNullException.ThrowIfNull(onReleased);
+		return Admit(action, triggerName, group, null, notifyOnRejection: false, chargesOwner: false,
+			onObservedRelease: onReleased);
+	}
 
 	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
