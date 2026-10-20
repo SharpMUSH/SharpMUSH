@@ -22,7 +22,7 @@
             </MudAlert>
         }
 
-        <MudText Typo="Typo.h5" GutterBottom="true">@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])</MudText>
+        <MudText Typo="Typo.h5" HtmlTag="h1" GutterBottom="true">@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])</MudText>
         <MudText Typo="Typo.body2" Style="color:var(--text-faint);">
             @(Claiming ? Loc["NavClaimCharacterBlurb"] : Loc["NavCreateCharacterBlurb"])
         </MudText>

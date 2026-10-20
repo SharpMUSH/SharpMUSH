@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,921 passed**, zero failed/skipped after the
-  asynchronous-guard review (`review-async-guards.log`).
+- Full component suite: **2,925 passed**, zero failed/skipped after the
+  keyboard handoff fixes (`keyboard-handoff-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -37,8 +37,8 @@ The dated records below provide the details and limitations of each observation.
 
 | Requirement | Current evidence | Remaining gate |
 |---|---|---|
-| Four familiarity paths | Browser-selected all four paths; complete authenticated desktop Discord and fresh mobile other-roleplay sequences through connected Play; returning mobile MUSH sequence | Fresh authenticated MUSH sequence and remaining viewport coverage |
-| Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests | Complete keyboard-only journey across login and character handoffs |
+| Four familiarity paths | Browser-selected all four paths; complete authenticated desktop Discord, fresh desktop MUSH and fresh mobile other-roleplay sequences through connected Play; returning mobile MUSH sequence | Remaining viewport coverage |
+| Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests; fresh keyboard login/create/welcome/Play journey | Screen-reader review remains open |
 | Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
 | Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Multi-player audience check |
@@ -740,3 +740,32 @@ confirms no draft insertion or send occurs. All 2,921 component tests and
 formatting pass. Independent source review of periodic refresh, Explore return,
 response guards and the current cleanup found no concrete actionable defect;
 that review did not run tests.
+
+### Fresh veteran keyboard journey (2026-10-20)
+
+A new disposable account was registered without resetting existing progress.
+At 1280×900, keyboard-only interaction from the sign-in page entered the existing
+fixture credentials, disabled Remember me and submitted. First-character
+creation retained `returnUrl=/welcome`. Tab/Enter on Skip to main content and
+Tab reached Character name; typing VeteranPilot, selecting the no-chosen-password
+checkbox with Space and submitting with Enter returned to `/welcome`.
+
+Anonymous import was declined by keyboard. Selecting the MUSH path showed five
+fresh lessons: MUSH differences, account/character separation, Story/Terminal,
+channels, and game-specific additions. No practice panel appeared. Enter
+completed each lesson; completion focused its message, then Tab/Enter opened
+Play connected as VeteranPilot with focus in Game command. Explicitly typing
+and sending `look` returned the room description. Screenshot:
+`work/onboarding/fresh-veteran-keyboard-play.png`.
+
+This run also found two accessibility gaps: path selection left focus on the
+choice and required eight further Tab presses to reach Complete; create/claim
+used an h5 for the page title. Regressions reproduced both. The fixes focus and
+scroll the chosen lesson once after a successful selection and expose the
+create/claim title as h1 while preserving its visual typography.
+
+After publishing the fixes, keyboard activation of the MUSH choice in the live
+preview focused the `Just what's new` h2 and scrolled it into view. The live
+create page exposed `Create a character` as h1. The full component suite passed
+2,925 tests, with zero failures or skips; targeted formatting and `git diff
+--check` passed. Screenshot: `work/onboarding/welcome-path-focus.png`.

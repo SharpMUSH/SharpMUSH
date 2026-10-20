@@ -96,7 +96,7 @@
     [Parameter] public GuideImagery Imagery { get; set; } = GuideImagery.Full;
     private string? _failedArt;
     private ElementReference _heading;
-    public ValueTask FocusHeadingAsync() => _heading.FocusAsync(preventScroll: true);
+    public ValueTask FocusHeadingAsync(bool preventScroll = true) => _heading.FocusAsync(preventScroll: preventScroll);
     private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0].Replace("@", "").Replace("/", "_");
     private bool _practiced;
     private string CompleteLabel => Lesson.Id == "useful-action" && !_practiced ? Loc["GuideKnown"] : Loc["GuideUnderstood"];

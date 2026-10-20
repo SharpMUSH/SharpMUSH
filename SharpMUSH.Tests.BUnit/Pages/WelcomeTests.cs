@@ -92,6 +92,20 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task SelectingWelcomePathFocusesLessonOnce(bool preview)
+	{
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo(preview ? "/welcome?preview=true" : "/welcome");
+		var page = Render<Welcome>();
+		var before = JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus");
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus")).IsEqualTo(before + 1);
+		await page.Find(".welcome-imagery select").ChangeAsync("Reduced");
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus")).IsEqualTo(before + 1);
+	}
+
+	[Test]
 	public async Task VeteranFinishesAfterItsFiveLessons()
 	{
 		var page = Render<Welcome>();

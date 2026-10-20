@@ -101,6 +101,17 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 	[TUnit.Core.Test]
 	[TUnit.Core.Arguments(false)]
 	[TUnit.Core.Arguments(true)]
+	public async Task Create_and_claim_have_a_page_level_heading(bool claim)
+	{
+		SeedLoggedIn(true);
+		Services.GetRequiredService<NavigationManager>().NavigateTo(claim ? "/characters/claim" : "/characters/new");
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await Assert.That(cut.Find("h1").TextContent).IsEqualTo(claim ? "NavClaimACharacter" : "NavCreateACharacter");
+	}
+
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments(false)]
+	[TUnit.Core.Arguments(true)]
 	public async Task Additional_character_does_not_switch_the_active_character(bool returnToGuide)
 	{
 		SeedLoggedIn(true, existingCharacter: true);
