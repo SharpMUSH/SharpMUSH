@@ -1594,6 +1594,9 @@
   <data name="CommandRestrictFailed" xml:space="preserve">
     <value>Restrict attempt failed.</value>
   </data>
+  <data name="CommandRestrictUnsupportedWordFormat" xml:space="preserve">
+    <value>Restrict attempt failed: '{0}' is not supported in a command restriction.</value>
+  </data>
   <data name="CommandAlwaysEnabled" xml:space="preserve">
     <value>@command is ALWAYS enabled.</value>
   </data>

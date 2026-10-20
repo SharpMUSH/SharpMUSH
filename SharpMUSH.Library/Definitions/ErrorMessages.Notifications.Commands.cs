@@ -27,6 +27,8 @@ public static partial class ErrorMessages
 		public const string CommandRemovedWithAliasesFormat = "Removed {0} and aliases from command table.";
 		public const string CommandHowToRestrict = "How do you want to restrict the command?";
 		public const string CommandRestrictFailed = "Restrict attempt failed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandRestrictUnsupportedWordFormat = "Restrict attempt failed: '{0}' is not supported in a command restriction.";
 		public const string CommandAlwaysEnabled = "@command is ALWAYS enabled.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandCalledByTheGameFormat = "{0} is run by the game itself and cannot be disabled.";

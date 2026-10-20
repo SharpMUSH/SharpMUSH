@@ -3,7 +3,7 @@
   "corpus": "help",
   "id": "mail-other",
   "lookup": "Other Mail Commands",
-  "aliases": ["Mail-other", "@mail/clear", "@mail/unclear", "@mail/tag", "@mail/untag", "@mail/unread", "@mail/status"],
+  "aliases": ["Mail-other", "@mail/clear", "@mail/unclear", "@mail/purge", "@mail/tag", "@mail/untag", "@mail/unread", "@mail/status"],
   "sections": [
     {"id": "tagging", "heading": "Tagging mail", "lookup": "other mail commands tagging"},
     {"id": "status", "heading": "Unread and status", "lookup": "other mail commands status"}
@@ -14,9 +14,12 @@
 
 - `@mail/clear [<msg-list> | all]`
 - `@mail/unclear [<msg-list> | all]`
-* These commands mark mail in the current folder as cleared or uncleared. Cleared mail is kept, and can be uncleared; nothing deletes it automatically.
+* These commands mark mail in the current folder as cleared or uncleared. Cleared mail is kept, and can be uncleared, until you purge it.
 * If no msg-list is specified, all mail in your current folder is cleared.
 * If "all" is given instead of a msg-list, all mail in **all** folders is cleared/uncleared.
+
+- `@mail/purge`
+* Deletes all of your cleared mail, in every folder.
 
 - [other mail commands tagging]: tagging mail to act on it en masse
 - [other mail commands status]: marking mail unread, and setting its status

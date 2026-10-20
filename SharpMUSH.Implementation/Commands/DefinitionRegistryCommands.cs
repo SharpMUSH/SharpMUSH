@@ -704,6 +704,16 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
+		// Penn's logging words (CMD_T_LOGNAME, CMD_T_LOGARGS) are restriction words there, not a lock;
+		// SharpMUSH does not log commands, so they are refused rather than read as a name lock.
+		if (words.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(token => token.TrimStart('!'))
+				.FirstOrDefault(UnsupportedCommandRestrictionWords.Contains) is { } unsupported)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictUnsupportedWordFormat), executor,
+				unsupported.ToLowerInvariant());
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
 		var attribute = definition.Attribute;
 		switch (await RestrictionFromWords(words, attribute.Behavior))
 		{
@@ -967,6 +977,9 @@ public partial class Commands : ICommandRestrictionApplier
 
 	private readonly record struct CommandRestriction(string Lock, CommandBehavior Behavior, bool Disables);
 
+	/// <summary>Penn's command restriction words that SharpMUSH does not support.</summary>
+	private static readonly HashSet<string> UnsupportedCommandRestrictionWords = new(["LOGNAME", "LOGARGS"], StringComparer.OrdinalIgnoreCase);
+
 	/// <summary>
 	/// Penn's old-style restriction words as a lock, the way <c>restrict_command</c> builds one: the
 	/// named flags and powers OR'ed, the allowed types OR'ed, and <c>!FLAG^FIXED</c> for
@@ -1116,15 +1129,18 @@ public partial class Commands : ICommandRestrictionApplier
 			"DELETE" => await DeleteFunctionAsync(executor, userFunctionService, functionName),
 			"DISABLE" => await SetFunctionEnabledAsync(executor, userFunctionService, functionName, false),
 			"ENABLE" => await SetFunctionEnabledAsync(executor, userFunctionService, functionName, true),
-			"RESTRICT" => await RestrictFunctionAsync(executor, userFunctionService, functionName, rightSide),
+			"RESTRICT" => await RestrictFunctionAsync(executor, userFunctionService, functionName, rightSide, switches.Contains("BUILTIN")),
 			"ARGS" => await NameFunctionArgumentsAsync(executor, userFunctionService, functionName, rightSide),
 			_ => await DefineOrDescribeFunctionAsync(parser, executor, userFunctionService, functionName)
 		};
 	}
 
-	/// <summary>The <c>@function</c> switches that act on a named function, in the order they are tried.</summary>
+	/// <summary>
+	/// The <c>@function</c> switches that act on a named function, in the order they are tried.
+	/// RESTRICT comes before BUILTIN: <c>/restrict/builtin</c> restricts the built-in.
+	/// </summary>
 	private static readonly string[] FunctionActionSwitches =
-		["ALIAS", "CLONE", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "RESTRICT", "ARGS"];
+		["ALIAS", "CLONE", "RESTRICT", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "ARGS"];
 
 	/// <summary><c>@function</c> with no arguments: how many user-defined and built-in functions there are.</summary>
 	private async ValueTask<Option<CallState>> SummarizeFunctionsAsync(IMUSHCodeParser parser, AnySharpObject executor)
@@ -1373,17 +1389,18 @@ public partial class Commands : ICommandRestrictionApplier
 	/// @function/restrict &lt;function&gt;=&lt;restriction&gt;: set the permission restriction on a
 	/// function. A user function stores it on its registry entry; a built-in (or "deleted"
 	/// built-in / clone) stores it in the registry's built-in restriction overlay, consulted
-	/// at call time. An empty restriction clears it.
+	/// at call time. An empty restriction clears it. With /builtin it is always the built-in's,
+	/// even when a user function overrides it.
 	/// </summary>
 	private async ValueTask<Option<CallState>> RestrictFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
-		string functionName, string? restriction)
+		string functionName, string? restriction, bool builtin)
 	{
 		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
 
-		if (!SetFunctionRestriction(userFunctionService, functionName, restriction))
+		if (!SetFunctionRestriction(userFunctionService, functionName, restriction, builtin))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
 			return new CallState(ErrorMessages.Returns.FunctionNotFound);
@@ -1442,15 +1459,18 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	/// <summary>Stores the restriction where <see cref="RestrictFunctionAsync"/> says; false when there is no such function.</summary>
-	private bool SetFunctionRestriction(IUserDefinedFunctionService userFunctionService, string functionName, string? restriction)
+	private bool SetFunctionRestriction(IUserDefinedFunctionService userFunctionService, string functionName, string? restriction,
+		bool builtin)
 	{
-		if (userFunctionService.Get(functionName) is not null)
+		if (!builtin && userFunctionService.Get(functionName) is not null)
 		{
 			userFunctionService.SetRestriction(functionName, restriction);
 			return true;
 		}
 
-		if (FunctionLibrary != null && FunctionLibrary.ContainsKey(functionName.ToUpper()))
+		// With /builtin the generated built-in counts even while @function/delete has it out of the library.
+		if ((FunctionLibrary != null && FunctionLibrary.ContainsKey(functionName.ToUpper()))
+				|| (builtin && Functions.Builtins.ContainsKey(functionName.ToLowerInvariant())))
 		{
 			userFunctionService.SetBuiltinRestriction(functionName, restriction);
 			return true;
