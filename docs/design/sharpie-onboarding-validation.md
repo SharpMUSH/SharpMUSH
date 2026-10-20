@@ -36,6 +36,34 @@ supersede earlier statements about missing publication or completed checks.
 
 ## Requirement-to-evidence audit (2026-10-20)
 
+### Latest integration and narrow-screen welcome check
+
+At `18a9d4808`, main is integrated without unresolved conflicts. Both local
+builds passed and 65 focused cases passed: 15 external-login UI, 10 setup
+identity, 38 import and two startup-coordinator tests. Formatting passed.
+GitHub's normal build, parity and layout workflows now run on this revision;
+their completion remains a separate gate.
+
+The published welcome-starter form was checked at a 320px browser viewport:
+document width remained 320px, all four starter buttons measured 44px high,
+and they wrapped into two rows with 16px left inset. Tab from the welcome
+textarea reached Collaborative stories. The accessibility tree exposes the
+named Welcome starters group and all four named buttons. Evidence:
+`work/onboarding/welcome-starters-320.png`. This is responsive and keyboard
+evidence, not a native screen-reader or 200% browser-zoom acceptance check.
+The published client used for this check still predates the neutral preview
+label update; the source and focused tests include that update.
+
+The Discord-path channel-help lesson also reflows at 320px without horizontal
+overflow. Its three command definitions each occupy 244px and have no internal
+horizontal overflow, including `@chat NAME=Can someone help?`. The accessibility
+tree exposes command/description pairs, the channel audience explanation, and
+named Stop, Back, Skip and completion controls. Tab from Stop reaches Back.
+Selecting the Discord path initially moves focus to the first lesson heading.
+Evidence: `work/onboarding/channel-help-keyboard-320.png`. This check uses the
+administrator's explicit player-guide preview and does not claim a new
+ordinary-player permission or live command-delivery test.
+
 This checklist separates demonstrated behavior from remaining acceptance work.
 The dated records below provide the details and limitations of each observation.
 
