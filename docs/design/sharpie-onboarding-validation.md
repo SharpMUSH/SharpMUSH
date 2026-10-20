@@ -420,3 +420,12 @@ reference disclosure and scrolled it fully into view (top 787.8px, bottom
 channel lesson. The viewport override was reset. Screenshot:
 `work/onboarding/channel-step-mobile-final.png`. This remains viewport emulation,
 not physical-device or virtual-keyboard testing.
+
+### Channel lesson simplification
+
+Following user review, the primary channel lesson now shows only discovery,
+joining and asking a question. Each command has a separate, short explanation
+in an unnumbered definition list with explicit zero list margins and spacing
+between rows. The long help/safety paragraph and secondary description/leave
+commands remain out of this introductory step; fuller instructions are available
+in the player guide. Channel audience and the meaning of NAME remain explicit.

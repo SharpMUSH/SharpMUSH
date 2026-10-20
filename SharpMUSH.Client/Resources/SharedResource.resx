@@ -9597,11 +9597,11 @@
   <data name="GuideStop" xml:space="preserve"><value>Stop this guide</value></data>
   <data name="GuideChannelsTitle" xml:space="preserve"><value>Find people who can help</value></data>
   <data name="GuideChannelsDiscover" xml:space="preserve"><value>Channels connect people across rooms. In Play, Browse channels opens the channel browser. Games often have newbie, help or social channels; their names and access rules vary.</value></data>
-  <data name="GuideChannelsList" xml:space="preserve"><value>See channels this character can see. Look for one intended for newcomer questions.</value></data>
+  <data name="GuideChannelsList" xml:space="preserve"><value>Find a channel.</value></data>
   <data name="GuideChannelsDescription" xml:space="preserve"><value>Read its description before joining. Replace NAME with a channel shown by the game.</value></data>
-  <data name="GuideChannelsJoin" xml:space="preserve"><value>Join it if permitted. You can leave with @channel/off NAME.</value></data>
-  <data name="GuideChannelsChat" xml:space="preserve"><value>Send your question after choosing the right channel. This is a real message, not local practice.</value></data>
-  <data name="GuideChannelsAudience" xml:space="preserve"><value>Channel messages reach people listening on that channel, not just your room. Follow its rules and avoid posting passwords or private information. Use help @channel and help @chat for details; if no help channel is available, use the game’s advertised support route.</value></data>
+  <data name="GuideChannelsJoin" xml:space="preserve"><value>Join that channel.</value></data>
+  <data name="GuideChannelsChat" xml:space="preserve"><value>Ask your question.</value></data>
+  <data name="GuideChannelsAudience" xml:space="preserve"><value>Messages reach everyone listening on the channel, not just your room.</value></data>
   <data name="GuideCommand_channel_list_Meaning" xml:space="preserve"><value>Discover visible channels</value></data>
   <data name="GuideCommand_channel_list_Audience" xml:space="preserve"><value>Only you</value></data>
   <data name="GuideCommand_channel_on_Meaning" xml:space="preserve"><value>Join a channel that permits you</value></data>
@@ -9609,12 +9609,13 @@
   <data name="GuideCommand_chat_Meaning" xml:space="preserve"><value>Talk on a channel</value></data>
   <data name="GuideCommand_chat_Audience" xml:space="preserve"><value>People listening to that channel, wherever they are</value></data>
   <data name="GuideLesson_Discord_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
-  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
   <data name="GuideLesson_Mush_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
-  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
   <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
-  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
   <data name="GuideLesson_Explore_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
-  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
   <data name="GuideIdentityArtFallback" xml:space="preserve"><value>Showing the default Sharpie until artwork for your selected style and genre is available.</value></data>
+  <data name="GuideChannelsName" xml:space="preserve"><value>Replace NAME with a channel from the list.</value></data>
 </root>
