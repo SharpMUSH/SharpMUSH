@@ -1,0 +1,15 @@
+.admin-onboarding { max-width: 56rem; margin: auto; padding: clamp(1rem, 3vw, 2.5rem); color: var(--text); }
+.admin-onboarding h1 { font-size: 2rem; }
+.admin-onboarding p { line-height: 1.65; max-width: 70ch; margin-block: .75rem; }
+.admin-checklist { margin-top: 2rem; padding-left: 1.5rem; }
+.admin-checklist li { border-top: 1px solid var(--border); padding: 1.25rem 0; }
+.admin-checklist h2 { font-size: 1.25rem; }
+.admin-check-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.admin-check-actions button { padding: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.admin-check-state { font-weight: 650; }
+.admin-onboarding :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+@container page (max-width: 48rem) {
+    .admin-onboarding { padding: 1rem; }
+    .admin-check-actions { flex-direction: column; align-items: stretch; }
+}

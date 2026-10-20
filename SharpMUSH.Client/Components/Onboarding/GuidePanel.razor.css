@@ -1,0 +1,24 @@
+.guide-panel { padding: clamp(1rem, 3vw, 2rem); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.guide-panel-heading, .guide-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
+.guide-panel-heading { justify-content: space-between; color: var(--text-faint); }
+.guide-lesson { margin: 1.25rem 0; max-width: 68ch; }
+.guide-lesson h2 { font-size: clamp(1.35rem, 3vw, 1.8rem); line-height: 1.25; margin-bottom: .8rem; }
+.guide-lesson p { line-height: 1.7; margin: .75rem 0; }
+.guide-panel button, .guide-action { min-height: 44px; padding: .55rem .85rem; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; text-decoration: none; }
+.guide-panel button:disabled { opacity: .5; cursor: default; }
+.guide-panel .guide-action { font-weight: 650; border-color: var(--accent); }
+.guide-panel :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.guide-reference { margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+.guide-reference summary { cursor: pointer; min-height: 36px; }
+.guide-reference dt { margin-top: .8rem; }
+.guide-reference dd { margin: .2rem 0 .8rem; line-height: 1.6; }
+.guide-panel ::deep .guide-practice { padding: 1rem; margin-block: 1rem; border-left: 3px solid var(--accent); }
+.guide-panel ::deep .guide-practice div { display: flex; flex-wrap: wrap; gap: .5rem; }
+.guide-panel ::deep .guide-practice input { max-width: 100%; min-width: 0; border: 1px solid var(--border); color: var(--text); background: var(--surface); border-radius: 4px; padding: .6rem; }
+.guide-panel ::deep .guide-practice button { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: .6rem; min-height: 44px; }
+.guide-hint { font-size: .9rem; color: var(--text-faint); }
+
+.guide-host { display: inline-flex; align-items: center; gap: .75rem; }
+.guide-mascot { width: 88px; height: 88px; object-fit: contain; flex: none; }
+.guide-mascot-reduced { width: 40px; height: 40px; }
+@container page (max-width: 48rem) { .guide-mascot:not(.guide-mascot-reduced) { width: 64px; height: 64px; } }

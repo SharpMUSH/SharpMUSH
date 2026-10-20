@@ -1,0 +1,4 @@
+.guide-context { margin-block: 1rem; padding: .25rem 1rem; border-left: 3px solid var(--accent); }
+.guide-context p { line-height: 1.6; margin-block: .6rem; }
+.guide-context a { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
+.guide-context a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

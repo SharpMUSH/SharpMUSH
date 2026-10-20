@@ -1,0 +1,93 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject IHttpClientFactory Http
+@inject ServerInfoService ServerInfo
+
+<section class="identity-form" aria-label="@Loc["GuideIdentityLabel"]">
+    @if (_error is not null) { <p role="alert">@_error</p> }
+    @if (!_loaded)
+    {
+        @if (_busy) { <p role="status">@Loc["GuideIdentityLoading"]</p> }
+        else { <button type="button" @onclick="Load">@Loc["GuideIdentityRetry"]</button> }
+    }
+    else
+    {
+        <fieldset disabled="@_busy">
+            <label for="guide-game-name">@Loc["GuideIdentityName"]</label><input id="guide-game-name" @bind="_name" @bind:after="MarkDirty" maxlength="128" />
+            <label for="guide-introduction">@Loc["GuideIdentityIntroduction"]</label><textarea id="guide-introduction" @bind="_introduction" @bind:after="MarkDirty" maxlength="1000" rows="3"></textarea>
+            <div class="identity-columns">
+                <div><label for="guide-genres">@Loc["GuideIdentityGenres"]</label><textarea id="guide-genres" @bind="_genres" @bind:after="MarkDirty" rows="3"></textarea></div>
+                <div><label for="guide-subgenres">@Loc["GuideIdentitySubgenres"]</label><textarea id="guide-subgenres" @bind="_subgenres" @bind:after="MarkDirty" rows="3"></textarea></div>
+            </div>
+            <p>@Loc["GuideIdentityGenreHint"]</p>
+            <label for="guide-art-style">@Loc["GuideIdentityStyle"]</label>
+            <select id="guide-art-style" @bind="_style" @bind:after="MarkDirty">
+                @foreach (var style in SharpieArtCatalog.Styles) { <option value="@style">@StyleName(style)</option> }
+            </select>
+            <p>@Loc["GuideIdentityArtworkHint"] <a href="/admin/config/Cosmetic">@Loc["GuideIdentityAppearance"]</a>.</p>
+            <label for="guide-welcome-page">@Loc["GuideIdentityWelcomePage"]</label><input id="guide-welcome-page" @bind="_welcome" @bind:after="MarkDirty" maxlength="256" placeholder="main/welcome" />
+            <label for="guide-rules-page">@Loc["GuideIdentityRulesPage"]</label><input id="guide-rules-page" @bind="_rules" @bind:after="MarkDirty" maxlength="256" placeholder="main/rules" />
+            <label for="guide-character-page">@Loc["GuideIdentityCharacterPage"]</label><input id="guide-character-page" @bind="_character" @bind:after="MarkDirty" maxlength="256" placeholder="help/character_creation" />
+            <p>@Loc["GuideIdentityWikiHint"]</p>
+            <section class="identity-preview" aria-label="@Loc["GuideIdentityPreviewLabel"]">
+                <p class="identity-preview-label">@Loc["GuideIdentityPreview"]</p>
+                <div class="identity-preview-content">
+                    <div>
+                        <h2>@Loc["GuideWelcomeGame", string.IsNullOrWhiteSpace(_name) ? Loc["GuideIdentityYourGame"].Value : _name]</h2>
+                        @if (!string.IsNullOrWhiteSpace(_introduction)) { <p class="identity-preview-intro">@_introduction</p> }
+                        <p>@Loc["GuideWelcomeIntro"]</p>
+                    </div>
+                    @if (PreviewArt is { } art)
+                    {
+                        <img src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" />
+                    }
+                </div>
+                @if (PreviewArt is null) { <p>@Loc["GuideIdentityNoArt"]</p> }
+                <p>@Loc["GuideIdentityVisibility"]</p>
+            </section>
+            <button type="button" class="identity-save" @onclick="Save">@(_busy ? Loc["GuideIdentitySaving"].Value : SaveLabel ?? Loc["GuideIdentitySave"].Value)</button>
+        </fieldset>
+        @if (_saved) { <p role="status">@Loc["GuideIdentitySaved"]</p> }
+    }
+</section>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public string? SaveLabel { get; set; }
+    private string _name = "", _introduction = "", _genres = "", _subgenres = "", _welcome = "", _rules = "", _character = "", _style = "minimalist", _override = "";
+    private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, Lines(_genres).FirstOrDefault(), Lines(_subgenres).FirstOrDefault(), _override, GuideImagery.Full);
+    private bool _loaded, _busy, _saved;
+    private string? _error;
+    protected override Task OnInitializedAsync() => Load();
+    private async Task Load()
+    {
+        _busy = true; _error = null;
+        switch (await Http.CreateClient("api").GetApiAsync<OnboardingSettings>("api/onboarding/settings", Loc["GuideIdentityLoadEmpty"].Value))
+        {
+            case OnboardingSettings settings:
+                _name = settings.MudName; _introduction = settings.Introduction;
+                _genres = string.Join('\n', settings.Genres); _subgenres = string.Join('\n', settings.Subgenres);
+                _welcome = settings.WelcomePage; _rules = settings.RulesPage; _character = settings.CharacterGuidePage;
+                _style = settings.ArtStyle; _override = settings.ArtOverrideId; _loaded = true;
+                break;
+            case ApiFailure failure: _error = failure.Message; break;
+        }
+        _busy = false;
+    }
+    private void MarkDirty() => _saved = false;
+    private async Task Save()
+    {
+        _busy = true; _saved = false; _error = null;
+        var values = new OnboardingSettings(_name, Lines(_genres), Lines(_subgenres), _introduction, _welcome, _rules, _character, _style,
+            SharpieArtCatalog.Approved.Any(art => art.Id == _override && art.Style == _style) ? _override : "");
+        switch (await Http.CreateClient("api").PutApiAsync<OnboardingSettings, OnboardingSettings>("api/onboarding/settings", values, Loc["GuideIdentitySaveEmpty"].Value))
+        {
+            case OnboardingSettings: _saved = true; ServerInfo.Refresh(); await OnSaved.InvokeAsync(); break;
+            case ApiFailure failure: _error = failure.Message; break;
+        }
+        _busy = false;
+    }
+    private static string[] Lines(string value) => value.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    private string StyleName(string style) => Loc[$"GuideStyle_{style}"];
+}

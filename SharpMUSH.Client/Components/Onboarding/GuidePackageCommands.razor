@@ -1,0 +1,112 @@
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject IAccountAuthState Auth
+@inject IHttpClientFactory Http
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@if (Auth.IsLoggedIn && Auth.ActiveCharacter is { } character)
+{
+    <section class="guide-packages" aria-label="@Loc["GuidePackagesLabel"]">
+        <button type="button" disabled="@_loading" @onclick="Check">@Loc[_loading ? "GuidePackagesLoading" : "GuidePackagesCheck", character.Name]</button>
+        @if (_error)
+        {
+            <p role="status">@Loc["GuidePackagesError"]</p>
+        }
+        else if (_checked)
+        {
+            @if (_capabilities.Length == 0)
+            {
+                <p role="status">@Loc["GuidePackagesEmpty"]</p>
+            }
+            else
+            {
+                <p>@Loc["GuidePackagesExplanation"]</p>
+                <ul>
+                    @foreach (var capability in _capabilities)
+                    {
+                        <li><code>@capability.Command</code> · @Loc["GuidePackagesVersion", capability.PackageId, capability.InstalledVersion]
+                            @(" · ")
+                            @if (capability.HelpUrl is { } reference)
+                            {
+                                <a href="@reference" target="_blank" rel="noopener noreferrer">@Loc["GuidePackagesReference"]</a>
+                            }
+                            else
+                            {
+                                <span>@Loc["GuidePackagesBundled"]</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </section>
+}
+
+@code {
+    private GuideCapability[] _capabilities = [];
+    private bool _loading, _checked, _error, _disposed;
+    private long _generation;
+    private CancellationTokenSource? _pending;
+    private (string? Token, int? Character, long? Created) Authority =>
+        (Auth.IsLoggedIn ? Auth.AccountSessionToken : null, Auth.ActiveCharacter?.DbrefNumber, Auth.ActiveCharacter?.CreationTime);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.AuthStateChanged += Changed;
+        Auth.ActiveCharacterChanged += Changed;
+        await Auth.InitAsync();
+    }
+
+    private async Task Check()
+    {
+        Reset();
+        var authority = Authority;
+        if (authority.Token is null || authority.Character is null || _disposed) return;
+        var generation = _generation;
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        _pending = cancellation;
+        _loading = true;
+        bool Current() => !_disposed && generation == _generation && authority == Authority;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/capabilities");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authority.Token);
+            using var client = Http.CreateClient("api");
+            using var response = await client.SendAsync(request, cancellation.Token);
+            response.EnsureSuccessStatusCode();
+            var capabilities = await response.Content.ReadFromJsonAsync<GuideCapability[]>(cancellation.Token)
+                ?? throw new JsonException("Missing capabilities response.");
+            if (!Current()) return;
+            _capabilities = capabilities;
+            _checked = true;
+        }
+        catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException)
+        {
+            if (Current()) _error = true;
+        }
+        finally
+        {
+            if (generation == _generation) { _loading = false; _pending = null; }
+        }
+    }
+
+    private void Reset()
+    {
+        _generation++;
+        _pending?.Cancel();
+        _pending = null;
+        _capabilities = [];
+        _loading = _checked = _error = false;
+    }
+    private void Changed() => _ = InvokeAsync(() => { Reset(); StateHasChanged(); });
+    public void Dispose()
+    {
+        _disposed = true;
+        Reset();
+        Auth.AuthStateChanged -= Changed;
+        Auth.ActiveCharacterChanged -= Changed;
+    }
+}

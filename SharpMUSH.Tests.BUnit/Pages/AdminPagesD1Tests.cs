@@ -431,7 +431,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var back = cut.FindAll("a.dbimport-continue-setup");
 		await Assert.That(back.Count).IsEqualTo(offered ? 1 : 0);
 		if (offered)
-			await Assert.That(back[0].GetAttribute("href")).IsEqualTo("/setup?step=handlers");
+			await Assert.That(back[0].GetAttribute("href")).IsEqualTo("/setup?step=identity");
 	}
 
 	[Test]

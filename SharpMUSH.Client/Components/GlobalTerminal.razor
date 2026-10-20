@@ -549,6 +549,21 @@
 
     private ElementReference _inputRef;
 
+    /// <summary>Offers the guide's read-only command without replacing a draft or sending it.</summary>
+    public async Task<bool> TryInsertGuideCommandAsync(string line)
+    {
+        if (line != "look" || !Interactive || !_connected || _input.Length != 0) return false;
+        var identity = Terminal.Identity;
+        try
+        {
+            if (await JsRuntime.InvokeAsync<bool>("sharpmushLayout.terminalInputBusy", _inputRef)) return false;
+        }
+        catch (JSException) { return false; }
+        if (!Interactive || !_connected || _input.Length != 0 || identity != Terminal.Identity) return false;
+        await SetInputAsync(line);
+        return true;
+    }
+
     /// <summary>Puts <paramref name="text"/> in the input line and focuses it, for the player to finish (Play's "page Name=").</summary>
     public async Task SetInputAsync(string text)
     {

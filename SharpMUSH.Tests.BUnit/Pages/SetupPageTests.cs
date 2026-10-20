@@ -400,6 +400,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find("a.setup-import").GetAttribute("href")).IsEqualTo("/admin/import?setup=1");
 
 		await cut.Find("button.setup-fresh").ClickAsync();
+		await cut.Find("button.setup-defer-identity").ClickAsync();
 
 		// The handler the game has is kept by default; the one it lacks is created.
 		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();

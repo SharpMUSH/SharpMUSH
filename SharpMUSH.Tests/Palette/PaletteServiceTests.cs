@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Palette;
 
@@ -66,6 +67,35 @@ public class PaletteServiceTests
 		using var entered = budget.Enter();
 		var parser = WebAppFactoryArg.CommandParserFor(scene.Player.Object().DBRef, scene.Handle);
 		await parser.CommandParse(scene.Handle, Connections, MarkupText.Plain(line));
+	}
+
+	[Test]
+	public async ValueTask OnboardingProbeHonorsLiveLocksWithoutRunningCommands()
+	{
+		var scene = await BuildAsync("GuideProbe");
+		var command = "+" + TestIsolationHelpers.GenerateUniqueName("guide").ToLowerInvariant();
+		using var scope = WebAppFactoryArg.Services.CreateScope();
+		var probe = scope.ServiceProvider.GetRequiredService<IOnboardingCommandProbe>();
+		try
+		{
+			await SetAsync(scene.Thing, "CMD`GUIDE", $"${command}:@set me=HALT");
+			var found = await probe.MatchAsync(scene.Player.Object().DBRef, command, default);
+			await Assert.That(found.Count).IsEqualTo(1);
+			await Assert.That(found[0].Objid).IsEqualTo(scene.Thing.Object().DBRef.ToString());
+			await Assert.That(found[0].Attribute).IsEqualTo("CMD`GUIDE");
+			await Assert.That(await scene.Thing.HasFlag("HALT")).IsFalse();
+			using (var budget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+			using (budget.Enter())
+			{
+				await WebAppFactoryArg.CommandParser.CommandParse(1, Connections,
+					MarkupText.Plain($"@lock/use {scene.Thing.Object().DBRef}=#1"));
+			}
+			await Assert.That((await probe.MatchAsync(scene.Player.Object().DBRef, command, default)).Count).IsEqualTo(0);
+		}
+		finally
+		{
+			await Connections.Disconnect(scene.Handle);
+		}
 	}
 
 	[Test]

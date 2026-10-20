@@ -31,6 +31,30 @@ public class PlayComposerTests : BunitContext
 	private static Task Type(IRenderedComponent<PlayComposer> cut, string text) => cut.Find("textarea").InputAsync(text);
 
 	[Test]
+	public async Task GuideInsertionNeverSendsOrOverwritesADraft()
+	{
+		var cut = RenderComposer();
+		await cut.InvokeAsync(async () => await cut.Instance.TryInsertGuideCommandAsync("look"));
+		await Assert.That(cut.Find("textarea").GetAttribute("value")).IsEqualTo("look");
+		await Assert.That(_sent).IsEmpty();
+		var second = await cut.InvokeAsync(() => cut.Instance.TryInsertGuideCommandAsync("look"));
+		await Assert.That(second).IsFalse();
+		await Type(cut, "a half-written pose");
+		await cut.InvokeAsync(async () => await cut.Instance.TryInsertGuideCommandAsync("look"));
+		await Assert.That(cut.Find("textarea").GetAttribute("value")).IsEqualTo("a half-written pose");
+		await Assert.That(_sent).IsEmpty();
+	}
+
+	[Test]
+	public async Task DisconnectedGuideInsertionIsRefused()
+	{
+		var cut = RenderComposer(connected: false);
+		var inserted = await cut.InvokeAsync(() => cut.Instance.TryInsertGuideCommandAsync("look"));
+		await Assert.That(inserted).IsFalse();
+		await Assert.That(_sent).IsEmpty();
+	}
+
+	[Test]
 	public async Task TheChips_AreTheFourTypes_SayFirst()
 	{
 		var cut = RenderComposer();

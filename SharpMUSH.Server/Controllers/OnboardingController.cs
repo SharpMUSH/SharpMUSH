@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models.Portal.Onboarding;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -15,8 +16,16 @@ namespace SharpMUSH.Server.Controllers;
 [RequestSizeLimit(16 * 1024)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class OnboardingController(IMediator mediator, BearerAccountResolver accounts,
-	IAdministrativeCapabilityService capabilities) : ControllerBase
+	IAdministrativeCapabilityService capabilities, OnboardingCapabilityService guideCapabilities) : ControllerBase
 {
+	[HttpGet("/api/onboarding/capabilities")]
+	public async Task<IActionResult> Capabilities(CancellationToken cancellationToken)
+		=> await accounts.ResolveCharacterAsync(this) switch
+		{
+			SignedInCharacter account => Ok(await guideCapabilities.ResolveAsync(account.Character.Object.DBRef, cancellationToken)),
+			ActionResult refused => refused
+		};
+
 	[HttpGet("{journey}")]
 	public async Task<IActionResult> Get(string journey, CancellationToken cancellationToken)
 		=> await accounts.ResolveAsync(this) switch

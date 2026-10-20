@@ -14,6 +14,7 @@
    exactly the pages the sidebar does, in the same groups. *@
 <div class="page-stack page-stack--padded adm-dash">
     <PlainPageHeader Kicker="@Loc["NavBuildManage"]" Title="@Loc["AdmOverview"]" Description="@Loc["AdmOverviewDescription"]" />
+    <AuthorizeView Policy="config.admin"><p><a href="/admin/onboarding">@Loc["GuideAdminEntry"]</a> @Loc["GuideAdminDescription"]</p></AuthorizeView>
 
     @* The first-run wizard is unfinished: an administrator who closed the tab after claiming the game
        finds the way back here, since nothing else sends them to /setup once the game is claimed. *@

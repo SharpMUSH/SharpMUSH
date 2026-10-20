@@ -269,6 +269,22 @@
         return SaveDraftAsync();
     }
 
+    /// <summary>Insert the guide's read-only example without replacing a draft or sending anything.</summary>
+    public async Task<bool> TryInsertGuideCommandAsync(string line)
+    {
+        if (line != "look" || !Connected || !_draft.IsEmpty || _field is null || DraftKey != _loadedKey) return false;
+        var field = _field;
+        var key = DraftKey;
+        try
+        {
+            if (await JS.InvokeAsync<bool>("sharpmushLayout.formattedInputBusy", field.Input)) return false;
+        }
+        catch (JSException) { return false; }
+        if (!Connected || !_draft.IsEmpty || !ReferenceEquals(field, _field) || key != DraftKey) return false;
+        await StartCommandAsync(line);
+        return true;
+    }
+
     // Ctrl/⌘+Enter inserts nothing in a textarea, so it needs no preventDefault. Plain Enter is handled in
     // layout.js (SendFromEnter), which prevents the newline only for the Enter that sends.
     // In Command mode, Up and Down walk the command history while the line is one line, as the terminal's input

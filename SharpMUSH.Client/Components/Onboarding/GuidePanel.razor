@@ -1,0 +1,70 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+@using SharpMUSH.Library.Models.Portal.Onboarding
+
+<section class="guide-panel" aria-label="@Loc["GuidePanelLabel"]">
+    <div class="guide-panel-heading">
+        <span class="guide-host">
+            @if (Imagery != GuideImagery.None && Art is { } art && _failedArt != art.Url)
+            {
+                <img class="guide-mascot @(Imagery == GuideImagery.Reduced ? "guide-mascot-reduced" : "")" src="@ApiUrl.Resolve(art.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = art.Url" />
+            }
+            <span>@Loc["GuideWithSharpie"]</span>
+        </span>
+        <button type="button" @onclick="OnClose">@Loc["GuideClose"]</button>
+    </div>
+    <article class="guide-lesson">
+        <h2 aria-live="polite">@Lesson.Title</h2>
+        <p>@Lesson.Body</p>
+        @Context
+        @if (Lesson.ActionUrl is not null)
+        {
+            <a class="guide-action" href="@Lesson.ActionUrl">@Lesson.ActionLabel</a>
+        }
+        @if (Lesson.Id == "useful-action")
+        {
+            <GuidePractice OnPracticed="() => _practiced = true" />
+            @if (OnInsert.HasDelegate)
+            {
+                <button type="button" class="guide-action" @onclick="OnInsert">@Loc["GuideInsertLook"]</button>
+                <p class="guide-hint">@Loc["GuideDraftHint"]</p>
+            }
+            else
+            {
+                <a href="/play">@Loc["GuideOpenPlay"]</a>
+            }
+        }
+    </article>
+    <div class="guide-panel-actions">
+        <button type="button" disabled="@(!CanGoBack)" @onclick="OnBack">@Loc["GuideBack"]</button>
+        <button type="button" @onclick="OnSkip">@Loc["GuideSkip"]</button>
+        <button type="button" class="guide-action" @onclick="OnComplete">@(Lesson.Id == "useful-action" && !_practiced ? Loc["GuideKnown"] : Loc["GuideUnderstood"])</button>
+    </div>
+    <details class="guide-reference">
+        <summary>@Loc["GuideReference"]</summary>
+        <dl>
+            @foreach (var command in GuideCatalog.Commands)
+            {
+                <dt><code>@command.Command</code></dt>
+                <dd>@Loc[$"GuideCommand_{CommandKey(command.Command)}_Meaning"]. <strong>@Loc[$"GuideCommand_{CommandKey(command.Command)}_Audience"].</strong></dd>
+            }
+        </dl>
+        <p>@Loc["GuideCoreReference"]</p>
+    </details>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public GuideLesson Lesson { get; set; } = null!;
+    [Parameter] public bool CanGoBack { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnComplete { get; set; }
+    [Parameter] public EventCallback OnSkip { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnInsert { get; set; }
+    [Parameter] public RenderFragment? Context { get; set; }
+    [Parameter] public SharpieArt? Art { get; set; } = SharpieArtCatalog.Resolve(null, null, null, null, GuideImagery.Full);
+    [Parameter] public GuideImagery Imagery { get; set; } = GuideImagery.Full;
+    private string? _failedArt;
+    private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0];
+    private bool _practiced;
+}

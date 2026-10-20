@@ -17,6 +17,7 @@ public sealed record OnboardingProgress
 	public string[] SkippedStepIds { get; init; } = [];
 	public bool Dismissed { get; init; }
 	public bool Active { get; init; }
+	public bool AnonymousContinuationHandled { get; init; }
 	public GuideImagery Imagery { get; init; } = GuideImagery.Full;
 	public string? CurrentStepId { get; init; }
 }

@@ -1,0 +1,6 @@
+.guide-companion { flex: 0 0 auto; min-width: 0; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); }
+.guide-companion summary { padding: .65rem .85rem; min-height: 44px; cursor: pointer; }
+.guide-companion-content { max-height: min(45dvh, 24rem); overflow-y: auto; padding: .5rem; }
+.guide-companion-content > p { padding: .5rem; }
+.guide-companion-content > a { display: block; padding: .75rem; }
+.guide-companion :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

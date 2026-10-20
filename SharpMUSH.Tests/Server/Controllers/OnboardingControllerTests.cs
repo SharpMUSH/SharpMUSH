@@ -10,6 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 
@@ -21,7 +22,8 @@ public class OnboardingControllerTests
 		var principal = account is null ? new ClaimsPrincipal() : new ClaimsPrincipal(new ClaimsIdentity(
 			[new Claim(ClaimTypes.NameIdentifier, account)], AccountSessionAuthenticationHandler.SchemeName));
 		return new OnboardingController(mediator,
-			new BearerAccountResolver(Substitute.For<IAccountSessionStore>(), Substitute.For<IAccountService>()), capabilities)
+			new BearerAccountResolver(Substitute.For<IAccountSessionStore>(), Substitute.For<IAccountService>()), capabilities,
+			new OnboardingCapabilityService(Substitute.For<IPackageRegistryService>(), Substitute.For<IOnboardingCommandProbe>()))
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = principal } }
 		};

@@ -6,10 +6,11 @@ by any authorised user.
 :::
 
 ## Getting started
-- Connect with a MU* client on port **4201**
-- Or use the terminal panel below
-- Create a character with `create <name> <password>`
-- Then log in with `connect <name> <password>`
+- [Get started with Sharpie](/welcome) for an optional guide matched to your experience.
+- [Sign in or register](/login), then create or select a character to open [Play](/play).
+- Prefer a MU* client? Ask this game for its connection address and port, then follow
+  the connection screen's account and character instructions.
+- Read this game's rules and character requirements before joining a scene.
 
 ## About SharpMUSH
 SharpMUSH is a modern, open-source MUSH server written in .NET, targeting

@@ -1,0 +1,17 @@
+.identity-form { max-width: 48rem; color: var(--text); }
+.identity-form fieldset { padding: 0; border: 0; min-width: 0; }
+.identity-form label { display: block; margin: 1rem 0 .4rem; font-weight: 600; }
+.identity-form input, .identity-form textarea, .identity-form select { width: 100%; max-width: 100%; padding: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; }
+.identity-form p { line-height: 1.65; margin: .75rem 0; }
+.identity-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.identity-save { margin-top: 1rem; padding: .7rem 1rem; color: var(--text); background: var(--surface); border: 1px solid var(--accent); border-radius: 5px; cursor: pointer; }
+.identity-form :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@container page (max-width: 48rem) { .identity-columns { grid-template-columns: 1fr; gap: 0; } }
+
+.identity-preview { margin-top: 1.5rem; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.identity-preview-label { font-size: .85rem; color: var(--text-faint); }
+.identity-preview-content { display: flex; align-items: center; gap: 1rem; }
+.identity-preview-content > div { min-width: 0; flex: 1; }
+.identity-preview-content h2 { font-size: 1.4rem; overflow-wrap: anywhere; }
+.identity-preview-content img { width: min(25%, 7rem); height: auto; object-fit: contain; }
+.identity-preview-intro { white-space: pre-line; overflow-wrap: anywhere; }

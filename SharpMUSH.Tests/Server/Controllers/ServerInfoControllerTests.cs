@@ -47,7 +47,9 @@ public class ServerInfoControllerTests
 		var guests = Substitute.For<IGuestAvailability>();
 		guests.CanLogInAsync(Arg.Any<CancellationToken>()).Returns(guestsEnabled);
 
-		return new ServerInfoController(wrapper, reader, PortalBuild.For(environment), guests);
+		return new ServerInfoController(wrapper, reader, PortalBuild.For(environment), guests,
+			new OnboardingPresentationService(wrapper, Substitute.For<Mediator.IMediator>(), Substitute.For<IWikiService>(),
+				Substitute.For<IWikiAccessService>(), reader, Microsoft.Extensions.Logging.Abstractions.NullLogger<OnboardingPresentationService>.Instance));
 	}
 
 	[Test]

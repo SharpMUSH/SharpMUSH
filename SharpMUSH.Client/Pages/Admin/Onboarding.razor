@@ -1,0 +1,44 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+@page "/admin/onboarding"
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Components.Onboarding
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject OnboardingService Guide
+@implements IDisposable
+
+<PageTitle>@Loc["GuideAdminTitle"]</PageTitle>
+<div class="admin-onboarding">
+    <h1>@Loc["GuideAdminHeading"]</h1>
+    <p>@Loc["GuideAdminIntro"]</p>
+    <GameIdentityForm OnSaved="IdentitySaved" />
+    @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideAdminReload"]</button></p> }
+    @if (Guide.Ready)
+    {
+        <ol class="admin-checklist">
+            @foreach (var step in GuideLocalization.Administrator(Loc))
+            {
+                <li>
+                    <h2>@step.Title</h2><p>@step.Body</p>
+                    @if (step.ActionUrl is not null && step.Id != "identity") { <a href="@step.ActionUrl">@step.ActionLabel</a> }
+                    <p class="admin-check-state">@(Guide.Progress.CompletedStepIds.Contains(step.Id) ? Loc["GuideAdminVerified"] : Guide.Progress.SkippedStepIds.Contains(step.Id) ? Loc["GuideAdminDeferred"] : Loc["GuideAdminTodo"])</p>
+                    <div class="admin-check-actions">
+                        <button type="button" @onclick="() => Guide.CompleteStepAsync(step.Id)">@(step.Id == "walkthrough" ? Loc["GuideAdminPlayerChecked"] : Loc["GuideAdminChecked"])</button>
+                        <button type="button" @onclick="() => Guide.SkipStepAsync(step.Id)">@Loc["GuideAdminDefer"]</button>
+                    </div>
+                </li>
+            }
+        </ol>
+        <p role="status">@Loc["GuideAdminSummary", Guide.Progress.CompletedStepIds.Length, Guide.Progress.SkippedStepIds.Length]</p>
+        <a href="/welcome?preview=true">@Loc["GuideAdminPreview"]</a>
+    }
+    else if (Guide.Loading) { <p role="status">@Loc["GuideAdminLoading"]</p> }
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync() { Guide.Changed += Changed; await Reload(); }
+    private Task Reload() => Guide.LoadAsync(GuideJourney.Administrator);
+    private Task IdentitySaved() => Guide.CompleteStepAsync("identity");
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Guide.Changed -= Changed;
+}

@@ -2,7 +2,7 @@
 
 Status: onboarding design approved by the user, 2026-10-19. Player onboarding
 comes first; new-administrator onboarding is a separate, required companion
-journey. Artwork direction is being agreed separately before parallel production.
+journey. The six artwork styles are approved; candidate production and independent visual QA run in parallel.
 
 ## Outcome
 
@@ -29,8 +29,39 @@ authored, deterministic and sensitive to the features actually available.
   and no baked-in text. Reduce the style count in collaboration with the user;
   the old atlas is reference material, not the production inventory.
 
-The journey below is approved. Final artwork styles and production breadth remain
-open; recommendations about those are not yet user decisions.
+The journey below is approved. The six artwork styles and production across all 42 genre/subgenre themes are approved.
+Artwork is being generated in parallel and reviewed in batches.
+
+## Refined delivery goal and acceptance gates
+
+Deliver an optional, player-first journey that helps a newcomer join an established
+game, choose or create a character, understand the client, practice safely and
+perform a useful action. Preserve immediate independent exploration. Give MUSH
+veterans a concise, verified explanation of what SharpMUSH adds. Provide a
+separate administrator identity/setup and readiness checklist.
+
+Completion requires:
+
+- All four familiarity paths work end to end, including account/character handoff,
+  dismissal, resumption, explicit anonymous-progress import and account isolation.
+- Guidance reflects enabled features and actual command availability. Practice is
+  local; inserting a command never sends it or replaces an existing draft.
+- Desktop, narrow-screen, keyboard and light/dark journeys have actual runtime
+  evidence and screenshots, including an ordinary player and an administrator.
+- Automated persistence, authorization, conflict, routing, composition and UI
+  regression checks pass. Independent code review findings are addressed.
+- The fresh inventory contains 252 separate, text-free, native-transparent images:
+  42 genre/subgenre themes in six approved styles. Each version has independent
+  anatomy, prop, clipping, palette and light/dark edge QA. Failed candidates stay
+  excluded; QA acceptance never substitutes for the owner's visual approval.
+- Production resolves only approved artwork through a bounded catalog, with a
+  neutral fallback and reduced/no-image options. Artwork review does not block
+  implementation or testing of the functional journey.
+- Supporting documentation, reviewable PRs and validation evidence are delivered.
+  Merging and deployment require separate authorization.
+
+Track functional delivery and artwork acceptance separately. Generated counts,
+passing isolated tests and mock previews do not by themselves close the goal.
 
 ## Experience
 
@@ -112,7 +143,7 @@ help links and actual installed versions as evidence. No package-name-only guess
 Select artwork by explicit admin override, then supported subgenre, supported genre,
 then neutral Sharpie. Subgenre is open-ended; an unknown label is a normal fallback.
 Genre does not determine art style. Admins choose one coherent style from the
-smaller set to be agreed; players can choose reduced imagery or no mascot.
+six approved styles: minimalist, chibi, anime (androgynous non-binary looks), kemono, pixel and comicbook; players can choose reduced imagery or no mascot.
 
 The old atlas has 42 themes and 12 styles, 504 individual images. Use it as visual
 reference while generating new, individually framed illustrations with native
@@ -126,7 +157,7 @@ ink/mint/white identity and the canonical M.
 
 The same guide keeps the same representation across steps. Genre art can head the
 journey and chapter cards; compact instructions do not need a new illustration each.
-Every selected style needs a neutral fallback. Loading errors never block guidance.
+Every selected style needs a neutral fallback. Until that style has an approved shipped asset, use the owner-approved neutral minimalist SVG rather than leaving Sharpie absent. The lesson-card host remains visible after the welcome header scrolls away, including in the expandable play guide. Reduced imagery uses a smaller host; no-art mode omits both header and card illustrations. Loading errors never block guidance.
 No image generation occurs during a user's visit.
 
 Inventory check (2026-10-19): all 504 PNGs decode, with exactly 42 images for each
@@ -254,6 +285,16 @@ Deliver implementation PRs and screenshots; do not merge or deploy without appro
 
 Opt-in entry, a compact contextual guide plus `/welcome`, no mascot chat, no
 automatic execution of example commands, and player-first/admin-second scope are
-approved. Agree the reduced style set, neutral reference poses and per-genre
-production coverage next; run artwork production alongside implementation once
-the art direction is established.
+approved. The user approved six styles and authorized the whole genre inventory in parallel
+with implementation on 2026-10-19. Review new images as they arrive; do not hold
+implementation on completion of the inventory.
+
+### Bundled package provenance
+
+Default packages installed from the reserved `bundled:sharpmush` source are
+eligible for contextual command suggestions. They must still match a reviewed
+version, the package-id source path, the reserved bundled commit marker, the
+installed managed-attribute baseline and the current character's reachable
+command handlers. They display “Included with this server” instead of a fabricated
+Git reference. Git-sourced packages continue to require an approved repository,
+a safe source path and a pinned commit URL. Unknown sources remain unadvertised.

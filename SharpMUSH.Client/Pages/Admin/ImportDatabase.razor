@@ -21,7 +21,7 @@
             @if (FromSetup && !_isConverting && _result?.RequiresPromotion != true)
             {
                 <CapsuleButton Class="dbimport-continue-setup" Primary="@(_result is not null)" Icon="@Icons.Material.Filled.ArrowForward"
-                               Href="/setup?step=handlers">@Loc["AdmSetupContinue"]</CapsuleButton>
+                               Href="/setup?step=identity">@Loc["AdmSetupContinue"]</CapsuleButton>
             }
         </Actions>
     </PlainPageHeader>
