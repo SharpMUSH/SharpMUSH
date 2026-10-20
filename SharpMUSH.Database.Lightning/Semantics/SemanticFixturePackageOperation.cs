@@ -65,7 +65,7 @@ internal sealed partial class SemanticFixtureCapability
 	private readonly Dictionary<SemanticFixtureLease, HashSet<SemanticFixturePackageOperation>> _packageOperations = new(ReferenceEqualityComparer.Instance);
 
 	private bool HasRetainedOperations(SemanticFixtureLease lease)
-		=> _packageOperations.TryGetValue(lease, out var operations) && operations.Count != 0;
+		=> _packageOperations.TryGetValue(lease, out var operations) && operations.Count != 0 || HasAdmittedReads(lease);
 	internal SemanticFixturePackageOperation RetainPackageOperation(SemanticFixtureLease lease)
 	{
 		lock (_gate)

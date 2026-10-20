@@ -10,6 +10,7 @@ public sealed partial class LightningStore
 {
 	// This marker is an invalidation history, never evidence that a lifecycle has settled.
 	private static ReadOnlySpan<byte> FixturePackageStateKey => "prototype.semantic.package-settlement/v1"u8;
+	internal static readonly byte[] FixturePackageStateKeyBytes = FixturePackageStateKey.ToArray();
 	private sealed record FixturePackageWriteTracking(SemanticFixtureLease Lease)
 	{
 		internal SemanticFixtureCapability Owner => Lease.Owner;
@@ -152,8 +153,9 @@ public sealed partial class LightningStore
 			try
 			{
 				if (table.Name == Tables.Meta.Name && (Protects(FixturePackageStateKey, key, prefixDelete)
-					|| Protects("prototype.semantic.fixture.identity/v1"u8, key, prefixDelete)))
+					|| Protects("prototype.semantic.fixture.identity/v1"u8, key, prefixDelete) || IsFixtureVersionKey(key, prefixDelete)))
 					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
+				if (ClassifyFixtureTable(table.Name) is { } version) AdvanceFixtureVersion(version);
 				if (_fixturePackageInvalidated || !(table.Name == "pkg" || table.Name.StartsWith("pkg.", StringComparison.Ordinal))) return;
 				tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
 				if (!tracking.Owner.AdmitPackageMutation()) throw SemanticFixtureCapability.Unavailable();
