@@ -9043,4 +9043,7 @@
   <data name="AdmSignInLoadFailed" xml:space="preserve">
     <value>Couldn't load the sign-in services: {0}</value>
   </data>
+  <data name="AdmSignInIdTaken" xml:space="preserve">
+    <value>A service with this id is set up already. Edit it below, or choose another id.</value>
+  </data>
 </root>

@@ -26,7 +26,8 @@
                     }
                 </MudSelect>
                 <MudTextField T="string" Value="_id" ValueChanged="IdChangedAsync" Label="@Loc["AdmSignInId"]" MaxLength="32"
-                              HelperText="@Loc["AdmSignInIdHelp"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="@Loc["AdmSignInIdHelp"]" Error="IdTaken" ErrorText="@Loc["AdmSignInIdTaken"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
                               Class="signin-field signin-field--mono" Disabled="@(_editing is not null)" />
                 <MudTextField T="string" @bind-Value="_name" Label="@Loc["AdmSignInName"]" Placeholder="@KindName(_kind)" MaxLength="40"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field" />
@@ -71,7 +72,7 @@
                         <CapsuleButton OnClick="ResetAsync">@Loc["Cancel"]</CapsuleButton>
                     }
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Save" Class="signin-save"
-                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_id) || string.IsNullOrWhiteSpace(_clientId)
+                                   Disabled="@(_busy || IdTaken || string.IsNullOrWhiteSpace(_id) || string.IsNullOrWhiteSpace(_clientId)
                                                || (_editing is null && _clientSecret.Length == 0))"
                                    OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
                 </div>
@@ -170,9 +171,13 @@
     private string? _redirectUri;
     private EndpointsForm _endpoints = new();
 
+    /// <summary>A new provider named like one already set up would replace it.</summary>
+    private bool IdTaken => _editing is null && _providers.Any(p => p.Id == _id);
+
     protected override async Task OnInitializedAsync()
     {
-        await Task.WhenAll(LoadAsync(), RedirectUriAsync());
+        await LoadAsync();
+        await ResetAsync();
     }
 
     private async Task LoadAsync()
@@ -228,16 +233,18 @@
         _endpoints = EndpointsForm.Of(provider.Endpoints);
     }
 
+    /// <summary>Empties the form for a new provider, of the first ready-made kind not set up yet.</summary>
     private async Task ResetAsync()
     {
         _editing = null;
-        _kind = ExternalSignInKinds.Discord;
+        _kind = ExternalSignInKinds.All.FirstOrDefault(kind => kind != ExternalSignInKinds.Custom && _providers.All(p => p.Id != kind))
+            ?? ExternalSignInKinds.Custom;
         _name = null;
         _clientId = string.Empty;
         _clientSecret = string.Empty;
         _enabled = true;
         _endpoints = new EndpointsForm();
-        await IdChangedAsync(ExternalSignInKinds.Discord);
+        await IdChangedAsync(_kind == ExternalSignInKinds.Custom ? string.Empty : _kind);
     }
 
     private async Task SaveAsync()
@@ -250,8 +257,8 @@
         {
             case SignInProviderSettings saved:
                 Snackbar.Add(Loc["AdmSignInSaved", saved.Name], Severity.Success);
-                await ResetAsync();
                 await LoadAsync();
+                await ResetAsync();
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc["AdmSignInSaveFailed", failure.Message], Severity.Error);
@@ -270,8 +277,8 @@
         {
             case Success:
                 Snackbar.Add(Loc["AdmSignInRemoved", provider.Name], Severity.Success);
-                if (_editing == provider.Id) await ResetAsync();
                 await LoadAsync();
+                if (_editing is null || _editing == provider.Id) await ResetAsync();
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc["AdmSignInSaveFailed", failure.Message], Severity.Error);

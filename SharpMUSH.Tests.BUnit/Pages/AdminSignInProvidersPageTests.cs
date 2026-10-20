@@ -94,9 +94,10 @@ public class AdminSignInProvidersPageTests : TrackingBunitContext, IAsyncDisposa
 
 		await Assert.That(cut.Find(".signin-row[data-provider='discord']").TextContent).Contains("AdmSignInReady");
 		await Assert.That(cut.Find(".signin-row[data-provider='discord2']").TextContent).Contains("AdmSignInNoSecret");
-		// A new provider's form shows the address to register with the service before anything is saved.
+		// The form starts on the first ready-made service not set up yet, with the address to register with it.
+		cut.WaitForAssertion(() => cut.Find(".signin-redirect-uri").TextContent.Contains("/google/"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".signin-redirect-uri").TextContent)
-			.IsEqualTo("https://game.example/api/auth/external/discord/callback");
+			.IsEqualTo("https://game.example/api/auth/external/google/callback");
 	}
 
 	[Test]
@@ -121,6 +122,23 @@ public class AdminSignInProvidersPageTests : TrackingBunitContext, IAsyncDisposa
 		await Assert.That(body.GetProperty("clientId").GetString()).IsEqualTo("client-1");
 		await Assert.That(body.GetProperty("clientSecret").ValueKind).IsEqualTo(JsonValueKind.Null);
 		await Assert.That(body.GetProperty("endpoints").ValueKind).IsEqualTo(JsonValueKind.Null);
+	}
+
+	/// <summary>Adding a service under an id already set up would replace that one, so the form refuses it.</summary>
+	[Test]
+	public async Task ANewService_CannotTakeAnIdAlreadySetUp()
+	{
+		Seed(new SignInProvidersApiHandler { Providers = [SignInProvidersApiHandler.Provider("discord")] });
+		var cut = RenderPage();
+		cut.WaitForAssertion(() => cut.Find(".signin-row"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".signin-field--mono input").ChangeAsync("discord");
+		await cut.FindAll("input").Single(i => i.GetAttribute("type") == "password").ChangeAsync("secret");
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSignInIdTaken")) throw new InvalidOperationException("the id is not refused yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("button.signin-save").HasAttribute("disabled")).IsTrue();
 	}
 
 	[Test]
