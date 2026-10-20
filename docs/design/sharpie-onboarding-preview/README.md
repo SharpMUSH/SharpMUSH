@@ -1,7 +1,8 @@
 # Sharpie onboarding visual review
 
-Actual isolated client screenshots captured on 2026-10-20. The local game is
-**Sharpie Journey Test**; these are not production pages or generated mockups.
+Actual isolated client screenshots captured on 2026-10-20. The local fixtures are
+**Sharpie Journey Test** and **Imported Journey Pilot**; these are not production
+pages or generated mockups.
 Images are copied unchanged from browser captures. They show the approved
 neutral mascot while genre candidates await quality and owner acceptance.
 
@@ -81,3 +82,18 @@ Setup form. The preview and Save action continue below this viewport.
 See [validation and remaining gates](../sharpie-onboarding-validation.md).
 These screenshots establish appearance of these states, not complete acceptance
 of all routes, accessibility, authentication or artwork.
+
+## Keyboard icon guidance and preview completion
+
+In Imported Journey Pilot, keyboard focus exposes the icon action's tooltip.
+Escape dismisses the tooltip without activating the action or moving focus.
+The measured dark-theme focus outline has 12.49:1 contrast with the panel.
+
+![Keyboard focus and icon tooltip](keyboard-tooltip.png)
+
+The administrator preview now reaches the completion message after completing
+or skipping every lesson, without saving player progress. The published veteran
+preview was exercised through all five lessons; focus lands on the completion
+message.
+
+![Preview completion](preview-completion.png)

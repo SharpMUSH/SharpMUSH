@@ -36,6 +36,17 @@ supersede earlier statements about missing publication or completed checks.
 
 ## Requirement-to-evidence audit (2026-10-20)
 
+### Runtime keyboard tooltip and focus contrast
+
+On the published Discord preview, Tab from Stop bypassed the disabled Back
+control and reached Skip for now. Its computed keyboard focus ring was a 2px
+solid `rgb(0,245,183)` outline with 3px offset against `rgb(22,24,27)`, giving
+12.49:1 contrast. The tooltip named the focused action. Escape removed the tooltip
+without advancing the lesson or moving focus; Tab then reached I've got this.
+[Keyboard focus screenshot](sharpie-onboarding-preview/keyboard-tooltip.png).
+This verifies the current dark theme; it does not establish contrast for every
+administrator-configured palette or screen-reader speech output.
+
 ### Preview completion and short-viewport follow-up
 
 The published other-roleplay preview was checked at 320 by 568 pixels. The
