@@ -60,6 +60,7 @@ public class PackageLifecycleRuntimeTests
 		finally { await mediator.Send(new DeleteObjectCommand(target)); }
 	}
 	[Test]
+	[NotInParallel]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ActualCoordinatorRetainsStoredHookObservation(bool malformed)
@@ -69,6 +70,8 @@ public class PackageLifecycleRuntimeTests
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		AnySharpContainer home = god;
 		var target = await mediator.Send(new CreateThingCommand("coordinator-verdict-" + Guid.NewGuid().ToString("N"), home, god, home));
+		PackageOperationExecution<bool>? owned = null;
+		Exception? failure = null;
 		try
 		{
 			var script = malformed ? "&HOOK_DONE me=before; think [strcat(foo,bar"
@@ -76,7 +79,7 @@ public class PackageLifecycleRuntimeTests
 			await mediator.Send(new SetAttributeCommand(target, ["AINSTALL"], MarkupText.Plain(script), god));
 			var coordinator = Factory.Services.GetRequiredService<IPackageOperationRunner>();
 			if (coordinator is not IPackageOperationLifetime lifetime) throw new InvalidOperationException("Actual coordinator lacks retained lifetime");
-			var owned = await lifetime.StartAsync("verdict-test", _ =>
+			owned = await lifetime.StartAsync("verdict-test", _ =>
 			{
 				if (!PackageLifecycleDeferral.TryDefer(target.ToString(), "AINSTALL")) throw new InvalidOperationException("Not collecting");
 				return Task.FromResult(false);
@@ -106,7 +109,31 @@ public class PackageLifecycleRuntimeTests
 				await Assert.That(marker?.Value.ToPlainText()).IsEqualTo("yes");
 			}
 		}
-		finally { await mediator.Send(new DeleteObjectCommand(target)); }
+		catch (Exception error) { failure = error; throw; }
+		finally
+		{
+			try
+			{
+				if (owned is not null)
+				{
+					// The observer deadline cannot authorize deletion while the actual coordinator is live.
+					using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+					try { await Task.WhenAll(owned.Completion, owned.Observation).WaitAsync(cleanup.Token); }
+					catch (OperationCanceledException) when (failure is not null && owned.Completion.IsCanceled && owned.Observation.IsCompleted) { }
+					if (failure is not null)
+					{
+						var report = await owned.Observation;
+						TestDiagnostics.WriteLine($"coordinator verdict cleanup: coordinator={report.Coordinator}, body={report.Body}, admission={report.BodyAdmission}, hooks={report.HooksReleased}/{report.HooksAdmitted}");
+					}
+				}
+				await mediator.Send(new DeleteObjectCommand(target));
+			}
+			catch (Exception cleanupError) when (failure is not null)
+			{
+				// Preserve both failures. An unfinished join never reaches the deletion above.
+				throw new AggregateException(failure, cleanupError);
+			}
+		}
 	}
 
 }
