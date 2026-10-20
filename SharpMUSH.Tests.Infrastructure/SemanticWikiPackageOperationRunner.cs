@@ -19,6 +19,7 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 {
 	private readonly PackageOperationRunner _inner;
 	private readonly LightningDatabase _provider;
+	private readonly HashSet<Task> _settling = [];
 	internal SemanticFixtureCapability Owner { get; }
 	internal SemanticWikiPackageOperationRunner(PackageOperationRunner inner, SemanticFixtureCapability owner, LightningDatabase provider)
 	{
@@ -67,7 +68,21 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 			throw;
 		}
 
-		return new PackageOperationExecution<T>(SettleAsync(root, inner, cancellationToken), inner.Observation);
+		var settlement = SettleAsync(root, inner, cancellationToken);
+		lock (_settling) _settling.Add(settlement);
+		_ = settlement.ContinueWith(done => { lock (_settling) _settling.Remove(done); }, System.Threading.Tasks.TaskScheduler.Default);
+		return new PackageOperationExecution<T>(settlement, inner.Observation);
+	}
+
+	/// <summary>
+	/// Completes once every operation this coordinator started has joined, settled or not, and released its
+	/// root. A caller whose cancelled observation returned early waits here before closing the world.
+	/// </summary>
+	internal async Task WhenIdleAsync()
+	{
+		Task[] pending;
+		lock (_settling) pending = [.. _settling];
+		await Task.WhenAll(pending).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 	}
 
 	private async Task<PackageOperationOutcome<T>> SettleAsync<T>(SemanticFixturePackageOperation root,

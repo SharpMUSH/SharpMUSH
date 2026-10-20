@@ -246,6 +246,9 @@ public partial class IntegratedWikiMutationTests
 			{
 				// Cancellation was asserted above; cleanup still awaits the actual parent after queue drain.
 			}
+			// The cancelled observation returned early; the coordinator still owns the world until it has
+			// joined the body and released its root, and a close before that is correctly refused busy.
+			await ((SemanticWikiPackageOperationRunner)host.Services.GetRequiredService<IPackageOperationRunner>()).WhenIdleAsync();
 		}
 		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
 	}
