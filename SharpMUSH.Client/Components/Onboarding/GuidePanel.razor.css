@@ -24,6 +24,7 @@
 @container page (max-width: 48rem) { .guide-mascot:not(.guide-mascot-reduced) { width: 64px; height: 64px; } }
 
 .guide-panel .guide-stop { width: 44px; height: 44px; padding: 8px; justify-content: center; }
+.guide-panel .guide-icon { width: 44px; height: 44px; padding: 8px; justify-content: center; }
 
 .guide-channel-commands { margin: 1rem 0; padding: 0; display: grid; gap: 1rem; }
 .guide-channel-commands > div { min-width: 0; }

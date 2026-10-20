@@ -33,7 +33,9 @@
         }
         @if (Lesson.ActionUrl is not null)
         {
-            <a class="guide-action" href="@Lesson.ActionUrl">@Lesson.ActionLabel</a>
+            <GuideTooltip Text="@Lesson.ActionLabel">
+                <a class="guide-action guide-icon" href="@Lesson.ActionUrl" aria-label="@Lesson.ActionLabel"><MudIcon Icon="@(Lesson.ActionUrl == "/play" ? Icons.Material.Outlined.PlayArrow : Icons.Material.Outlined.ArrowForward)" /></a>
+            </GuideTooltip>
         }
         @if (Lesson.Id == "useful-action")
         {
@@ -50,9 +52,15 @@
         }
     </article>
     <div class="guide-panel-actions">
-        <button type="button" disabled="@(!CanGoBack)" @onclick="OnBack">@Loc["GuideBack"]</button>
-        <button type="button" @onclick="OnSkip">@Loc["GuideSkip"]</button>
-        <button type="button" class="guide-action" @onclick="OnComplete">@(Lesson.Id == "useful-action" && !_practiced ? Loc["GuideKnown"] : Loc["GuideUnderstood"])</button>
+        <GuideTooltip Text="@Loc["GuideBack"]">
+            <button type="button" class="guide-icon" aria-label="@Loc["GuideBack"]" disabled="@(!CanGoBack)" @onclick="OnBack"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" /></button>
+        </GuideTooltip>
+        <GuideTooltip Text="@Loc["GuideSkip"]">
+            <button type="button" class="guide-icon guide-skip" aria-label="@Loc["GuideSkip"]" @onclick="OnSkip"><MudIcon Icon="@Icons.Material.Outlined.SkipNext" /></button>
+        </GuideTooltip>
+        <GuideTooltip Text="@CompleteLabel">
+            <button type="button" class="guide-action guide-icon" aria-label="@CompleteLabel" @onclick="OnComplete"><MudIcon Icon="@Icons.Material.Outlined.Check" /></button>
+        </GuideTooltip>
     </div>
     <details class="guide-reference">
         <summary>@Loc["GuideReference"]</summary>
@@ -83,4 +91,5 @@
     public ValueTask FocusHeadingAsync() => _heading.FocusAsync(preventScroll: true);
     private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0].Replace("@", "").Replace("/", "_");
     private bool _practiced;
+    private string CompleteLabel => Lesson.Id == "useful-action" && !_practiced ? Loc["GuideKnown"] : Loc["GuideUnderstood"];
 }

@@ -112,7 +112,7 @@ public class WelcomeTests : BunitContext
 		for (var i = 0; i < 4; i++)
 			await page.Find(".guide-panel-actions .guide-action").ClickAsync();
 		var before = JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus");
-		await page.Find(skip ? ".guide-panel-actions button:nth-child(2)" : ".guide-panel-actions .guide-action").ClickAsync();
+		await page.Find(skip ? ".guide-panel-actions .guide-skip" : ".guide-panel-actions .guide-action").ClickAsync();
 		await Assert.That(page.Find(".welcome-completion").GetAttribute("tabindex")).IsEqualTo("-1");
 		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus")).IsEqualTo(before + 1);
 		await page.Find(".welcome-imagery select").ChangeAsync("Reduced");
