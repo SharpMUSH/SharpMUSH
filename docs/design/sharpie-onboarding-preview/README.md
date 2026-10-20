@@ -68,6 +68,16 @@ change settings or checklist state.
 
 ![Administrator save action focused at 320 pixels](admin-mobile-save-focus.png)
 
+## Editable welcome starters
+
+First Setup and the administrator onboarding page share four optional welcome
+starters. Choosing one fills the draft with the current game name; the
+administrator can edit it before saving. This capture shows Collaborative
+stories selected in the disposable **Imported Journey Pilot** world's First
+Setup form. The preview and Save action continue below this viewport.
+
+![First Setup welcome starter suggestions](welcome-starters-desktop.png)
+
 See [validation and remaining gates](../sharpie-onboarding-validation.md).
 These screenshots establish appearance of these states, not complete acceptance
 of all routes, accessibility, authentication or artwork.
