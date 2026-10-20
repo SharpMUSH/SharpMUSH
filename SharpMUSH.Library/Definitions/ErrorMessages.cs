@@ -485,7 +485,6 @@ public static partial class ErrorMessages
 	public static partial class Notifications
 	{
 		public const string LocalFunctionMessage = "{0}";
-		public const string LocalFunctionHeader = "Owner-local functions (call with localfun):";
 		public const string LocalFunctionReset = "Removed {0} unpreserved owner-local functions.";
 		public const string LocalFunctionChanged = "Owner-local function {0}: {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
