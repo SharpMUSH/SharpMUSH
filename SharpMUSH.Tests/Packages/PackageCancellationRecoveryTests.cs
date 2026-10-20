@@ -50,8 +50,8 @@ public class PackageCancellationRecoveryTests
 		var failure = await CompensationFailureAsync(UnwindAsync());
 		await Assert.That(string.Join(",", attempted)).IsEqualTo("newest,broken,oldest");
 		await Assert.That(string.Join("; ", failure.UnrestoredSteps)).IsEqualTo("broken (inverse could not write)");
-		// The failed attempt has settled and must not replay on subsequent disposal.
-		await writes.DisposeAsync();
+		// Repeated disposal preserves the failure without replaying any inverse.
+		await Assert.That(async () => await writes.DisposeAsync()).Throws<PackageCompensationException>();
 		await Assert.That(attempted.Count).IsEqualTo(3);
 	}
 

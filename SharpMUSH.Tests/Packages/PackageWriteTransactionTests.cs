@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Packages;
 /// returns to the state before its first write, a commit keeps everything, and an exception that
 /// unwinds past an uncommitted transaction reverts it.
 /// </summary>
-public class PackageWriteTransactionTests
+public partial class PackageWriteTransactionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
