@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,925 passed**, zero failed/skipped after the
-  keyboard handoff fixes (`keyboard-handoff-green.log`).
+- Full component suite: **2,997 passed**, zero failed/skipped after integrating
+  current main (`main-merge-bunit.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -784,3 +784,16 @@ Computed dark-theme heading, body and enabled action foreground was
 RGB(233,237,240) on RGB(22,24,27), giving 15.11:1 contrast. This measurement
 does not establish contrast for other themes, focus rings or disabled controls.
 Screenshot: `work/onboarding/welcome-veteran-320-focus.png`.
+
+### Main integration and renewed review (2026-10-20)
+
+GitHub reported the branch conflicting with main. Integrated main at
+`d578d34d5`; the only conflict was adjacent additions to SharedResource.resx.
+Both onboarding resources and WikiStartHere were retained. XML parsing and
+uniqueness checks passed for 3,453 resource keys. The integrated full component
+suite passed 2,997 tests with zero failures or skips.
+
+Four new disposal findings were traced to consumer-owned HTTP responses:
+GuidePackageCommands and OnboardingService dispose their awaited responses with
+`using var`. Ownership evidence was added to each review thread, and all four
+were resolved. Current-head remote CI still requires verification after push.
