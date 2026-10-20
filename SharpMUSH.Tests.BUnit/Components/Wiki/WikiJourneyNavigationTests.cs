@@ -643,6 +643,88 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound))); }
 	}
 
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task InitialPendingNavigationKeepsSameArticleHintsWithoutAuthorizingReturn(bool allowed)
+	{
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		_api.IntroHtmlOverride = JourneyApi.IntroHtml + """
+			<a id="pending-self" href="/wiki/main/intro#costs">Same article costs</a>
+			""";
+		_nav.NavigateTo("/wiki/main/intro?" + Origin + "&expectedPageId=intro");
+		var cut = RenderRoute(this);
+		try
+		{
+			WaitForBody(cut, "Introduction body");
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > 0, "The initial navigation authorization was not started."));
+			await Assert.That(pending.Task.IsCompleted).IsFalse();
+			await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("Reference library");
+			await Assert.That(cut.Markup).DoesNotContain("Article owner");
+
+			foreach (var toc in cut.FindAll(".wiki-toc a"))
+			{
+				await AssertJourney(toc, "fr-CA");
+				await Assert.That(Query(toc)["expectedPageId"]).IsEqualTo("intro");
+			}
+			var locale = cut.Find(".wiki-lang-chips a[lang='de']");
+			await AssertJourney(locale, "de");
+			await Assert.That(Query(locale)["expectedPageId"]).IsEqualTo("intro");
+			await AssertJourney(cut.Find("#pending-self"), "fr-CA");
+			await Assert.That(Query(cut.Find("#pending-self"))["expectedPageId"]).IsEqualTo("intro");
+			// Other destinations do not inherit an origin that has not yet been authorized.
+			await Assert.That(Query(cut.Find("#guide"))["browseCollection"]).IsNull();
+			await Assert.That(Query(cut.Find("#guide"))["expectedPageId"]).IsNull();
+
+			var selected = cut.FindAll(".wiki-toc a").First(a => Address(a).Fragment == "#costs");
+			var target = selected.GetAttribute("href")!;
+			var navigationReads = _api.NavigationRequests.Count;
+			await cut.InvokeAsync(() => _nav.NavigateTo(target));
+			WaitForBody(cut, "Introduction body");
+			await Assert.That(_api.NavigationRequests.Count).IsEqualTo(navigationReads);
+			await Assert.That(Query(new Uri(_nav.Uri))["browseCollection"]).IsEqualTo("package:reference");
+			await Assert.That(Query(new Uri(_nav.Uri))["browseQ"]).IsEqualTo("Règle & C++");
+			await Assert.That(Query(new Uri(_nav.Uri))["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+			await AssertJourney(cut.Find("#pending-self"), "fr-CA");
+
+			await cut.InvokeAsync(() => pending.TrySetResult(allowed));
+			if (allowed)
+			{
+				cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Authorization did not restore the return after same-article navigation."));
+				var back = cut.Find(".wiki-back-results");
+				await Assert.That(Path(back)).IsEqualTo("/wiki/collections/package%3Areference");
+				await Assert.That(Query(back)["q"]).IsEqualTo("Règle & C++");
+				await Assert.That(Query(back)["category"]).IsEqualTo("fighter & feats");
+				await Assert.That(Query(back)["skip"]).IsEqualTo("100");
+				await Assert.That(Query(back)["lang"]).IsEqualTo("fr-CA");
+				await AssertJourney(cut.Find("#pending-self"), "fr-CA");
+				await AssertJourney(cut.Find(".wiki-lang-chips a[lang='de']"), "de");
+				foreach (var toc in cut.FindAll(".wiki-toc a")) await AssertJourney(toc, "fr-CA");
+			}
+			else
+			{
+				// Wait for a completed denial to remove the hints, not merely for the
+				// already-absent return link while the authorization was pending.
+				cut.WaitForAssertion(() => Require(Query(cut.Find("#pending-self"))["browseCollection"] is null
+					&& cut.FindAll(".wiki-toc a, .wiki-lang-chips a").All(a => Query(a)["browseCollection"] is null),
+					"Completed denial retained pending browse hints."));
+				await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+				await Assert.That(cut.Markup).DoesNotContain("Reference library");
+				await Assert.That(cut.Markup).DoesNotContain("Article owner");
+				await Assert.That(Query(cut.Find("#guide"))["browseCollection"]).IsNull();
+			}
+			await Assert.That(Query(cut.Find("#pending-self"))["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(Query(cut.Find(".wiki-lang-chips a[lang='de']"))["expectedPageId"]).IsEqualTo("intro");
+			foreach (var toc in cut.FindAll(".wiki-toc a"))
+				await Assert.That(Query(toc)["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(Query(cut.Find("#guide"))["expectedPageId"]).IsNull();
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
 	private static void RaiseReaderChanged(IAccountAuthState auth, bool characterChange)
 	{
 		if (characterChange)

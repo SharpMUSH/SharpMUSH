@@ -252,6 +252,12 @@ else
     private int _renderVersion;
     private bool _disposed;
 
+    // Same-article navigation may carry the reader's supplied origin while it is being checked.
+    // It remains a hint: only _returnState can produce a return action or cross-article context.
+    // A completed refusal removes the hint from newly rendered same-article controls as well.
+    private WikiBrowseState? SameArticleBrowseState =>
+        _returnState ?? (_navigationLoad.IsCompleted ? null : BrowseState?.Normalize());
+
     private RenderFragment JourneyNavigation => __builder =>
     {
         @if (!Embedded)
@@ -457,7 +463,7 @@ else
         ?? [];
 
     private string LocaleHref(string locale) =>
-        WikiJourneyLinks.SameArticle(PagePath, ExpectedPageId, _returnState, MembersCollection, MembersSkip, locale);
+        WikiJourneyLinks.SameArticle(PagePath, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, locale);
 
     /// <summary>
     /// The locale a "Translate this page" link should target. The raw <c>?lang=</c> wins over
@@ -740,7 +746,7 @@ else
     /// translated page keeps its <c>?lang=</c>) plus the anchor. A bare <c>#anchor</c> would resolve
     /// against <c>&lt;base href="/"&gt;</c> and leave the page.</summary>
     private string TocHref(string anchor) =>
-        $"{WikiJourneyLinks.SameArticle(PagePath + new Uri(Nav.Uri).Query, ExpectedPageId, _returnState, MembersCollection, MembersSkip, Locale)}#{anchor}";
+        $"{WikiJourneyLinks.SameArticle(PagePath + new Uri(Nav.Uri).Query, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, Locale)}#{anchor}";
 
     /// <summary>Whether anything remains to show once the banner has taken the first image. A
     /// directive placeholder is an empty element the body hydrates into a listing, so it counts.</summary>
@@ -806,7 +812,7 @@ else
         var sameArticle = string.Equals(target.Reference[..separator], currentNamespace, StringComparison.OrdinalIgnoreCase)
             && target.Reference[(separator + 1)..] == WikiHelpers.Slugify(Slug);
         var destination = sameArticle
-            ? WikiJourneyLinks.SameArticle(target.Href, ExpectedPageId, _returnState, MembersCollection, MembersSkip, Locale)
+            ? WikiJourneyLinks.SameArticle(target.Href, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, Locale)
             : JourneyHref(target.Href);
         return match.Value[..href.Index] + $"href=\"{WebUtility.HtmlEncode(destination)}\"" + match.Value[(href.Index + href.Length)..];
     });
