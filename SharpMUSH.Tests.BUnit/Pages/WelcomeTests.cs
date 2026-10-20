@@ -127,6 +127,24 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task PreviewFinishesWithoutSavingPlayerProgress(bool skip)
+	{
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/welcome?preview=true");
+		var page = Render<Welcome>();
+		var guide = Services.GetRequiredService<OnboardingService>();
+		var original = guide.Progress;
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		for (var i = 0; i < GuideCatalog.Player(GuidePath.Mush).Count; i++)
+			await page.Find(skip ? ".guide-skip" : ".guide-panel-actions .guide-action").ClickAsync();
+		await Assert.That(page.FindAll(".welcome-completion").Count).IsEqualTo(1);
+		await Assert.That(page.FindAll(".guide-lesson").Count).IsEqualTo(0);
+		await Assert.That(guide.Progress).IsEqualTo(original);
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier.Contains("setItem", StringComparison.Ordinal))).IsFalse();
+	}
+
+	[Test]
 	public async Task VeteranFinishesAfterItsFiveLessons()
 	{
 		var page = Render<Welcome>();

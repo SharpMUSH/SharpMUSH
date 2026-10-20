@@ -145,8 +145,15 @@
     private Task Skip() => Advance(true);
     private async Task Advance(bool skip)
     {
-        if (Preview) { await Select(Lessons[Math.Min(Lessons.Count - 1, CurrentIndex + 1)].Id); return; }
-        if (skip) await Guide.SkipStepAsync(Current.Id);
+        if (Preview)
+        {
+            var step = Current.Id;
+            var completed = skip ? _preview.CompletedStepIds.Except([step]).ToArray() : _preview.CompletedStepIds.Union([step]).ToArray();
+            var skipped = skip ? _preview.SkippedStepIds.Union([step]).ToArray() : _preview.SkippedStepIds.Except([step]).ToArray();
+            var next = Lessons.FirstOrDefault(lesson => !completed.Contains(lesson.Id) && !skipped.Contains(lesson.Id));
+            _preview = _preview with { CompletedStepIds = completed, SkippedStepIds = skipped, CurrentStepId = next?.Id ?? step, Active = next is not null };
+        }
+        else if (skip) await Guide.SkipStepAsync(Current.Id);
         else await Guide.CompleteStepAsync(Current.Id);
         _focusCompletion = !Progress.Active && Lessons.All(lesson =>
             Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id));

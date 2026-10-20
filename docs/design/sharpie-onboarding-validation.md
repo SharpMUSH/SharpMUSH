@@ -36,6 +36,23 @@ supersede earlier statements about missing publication or completed checks.
 
 ## Requirement-to-evidence audit (2026-10-20)
 
+### Preview completion and short-viewport follow-up
+
+The published other-roleplay preview was checked at 320 by 568 pixels. The
+channel lesson and expanded command reference have no horizontal overflow;
+Stop, Back, Skip and completion controls each measure 44 by 44 pixels. Keyboard
+Tab from Stop reaches Back, and Skip advances the lesson. Both neutral Sharpie
+images loaded successfully. These are DOM/keyboard checks, not screen-reader
+speech or actual browser-zoom acceptance.
+
+The preview exposed a final-step no-op: finishing or skipping only advanced to
+the last index and never reached completion. Two regression cases reproduced it.
+Preview now tracks completed/skipped steps in its own state and uses the existing
+completion heading/focus path, without changing saved player progress.
+All 3,017 component tests pass. The refreshed local published client completed
+all five veteran preview lessons, removed the lesson panel, exposed Open the game
+and focused the completion message. Screenshot: [preview completion](sharpie-onboarding-preview/preview-completion.png).
+
 ### Current main compatibility follow-up
 
 Integrated main `63f84be8e8e01dfc3d5e1ad75771f6dc31f52d8c` without conflicts.
