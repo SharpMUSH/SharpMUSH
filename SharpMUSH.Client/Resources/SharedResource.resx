@@ -3918,7 +3918,7 @@
     <value>Account '{0}' status updated.</value>
   </data>
   <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
-    <value>Your account is ready. Creating a character is the last step before you can play.</value>
+    <value>Your account is ready. Create or claim a character to start playing.</value>
   </data>
   <data name="HelpLoadFailed" xml:space="preserve">
     <value>The help files could not be loaded.</value>

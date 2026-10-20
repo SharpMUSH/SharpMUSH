@@ -1062,3 +1062,20 @@ is therefore failed, not merely untested. Repair is tracked in
 [issue #2078](https://github.com/SharpMUSH/SharpMUSH/issues/2078), including
 credential-factor preservation, safe ownership/session handling, and real
 promotion/rollback coverage. No production world was affected.
+
+### Empty-account claim browser acceptance (2026-10-20)
+
+Created a new disposable portal account with zero owned characters and a separate
+unclaimed native character, ClaimPilotThree (#25), through normal local APIs.
+Opened `/characters/claim?returnUrl=%2Fwelcome` while signed out. Login preserved
+the nested claim destination even with zero characters. Entering the existing
+character's password in the claim form linked it and returned to `/welcome`,
+showing ClaimPilotThree as the active account character. The browser offered
+its previous anonymous guide progress separately; choosing account progress
+dismissed that prompt. Screenshot: `work/onboarding/empty-account-claim-return.png`.
+
+Corrected the shared empty-account hint to say “Create or claim a character to
+start playing”; the previous wording incorrectly implied creation was required
+on the claim route. The screenshot predates rebuilding that copy-only change.
+The fixture gateway is unavailable because another process owns port 4202, so
+this check proves the claim/guide handoff, not a new terminal connection.
