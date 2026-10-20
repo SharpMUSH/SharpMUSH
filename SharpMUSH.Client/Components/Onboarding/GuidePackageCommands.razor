@@ -85,7 +85,13 @@
     }
     private void Changed()
     {
-        if (_initialized) _ = InvokeAsync(async () => { await Check(); StateHasChanged(); });
+        if (_initialized) _ = InvokeAsync(async () =>
+        {
+            var check = Check();
+            StateHasChanged();
+            await check;
+            if (!_disposed) StateHasChanged();
+        });
     }
     public void Dispose()
     {

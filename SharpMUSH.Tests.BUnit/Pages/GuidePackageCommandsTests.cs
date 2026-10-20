@@ -121,4 +121,40 @@ public class GuidePackageCommandsTests : BunitContext
 		await page.InvokeAsync(() => Task.CompletedTask);
 		await Assert.That(page.FindAll("code").Count).IsEqualTo(0);
 	}
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DisplayedCommandsClearWhileNewAuthorityRequestIsPending(bool account)
+	{
+		var pending = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var calls = 0;
+		using var handler = new Handler(_ => ++calls == 1 ? Task.FromResult(Reply()) : pending.Task);
+		var auth = Configure(handler);
+		var page = Render<GuidePackageCommands>();
+		await Assert.That(page.Find("code").TextContent).IsEqualTo("+help");
+		try
+		{
+			await page.InvokeAsync(() =>
+			{
+				if (account)
+				{
+					auth.AccountSessionToken.Returns("session-b");
+					auth.AuthStateChanged += Raise.Event<Action>();
+				}
+				else
+				{
+					auth.ActiveCharacter.Returns(new AccountAuthService.CharacterSummary(6, 200, "Blake", ""));
+					auth.ActiveCharacterChanged += Raise.Event<Action>();
+				}
+			});
+			await Assert.That(calls).IsEqualTo(2);
+			await Assert.That(page.FindAll("code").Count).IsEqualTo(0);
+		}
+		finally
+		{
+			pending.SetResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) });
+			await page.InvokeAsync(() => Task.CompletedTask);
+		}
+	}
+
 }
