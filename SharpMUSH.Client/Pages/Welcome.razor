@@ -17,9 +17,9 @@
             @if (Guide.Presentation?.Introduction is { Length: > 0 } introduction) { <p>@introduction</p> }
             <p>@Loc["GuideWelcomeIntro"]</p>
         </div>
-        @if (Art is { } art && !_artFailed)
+        @if (!Progress.Active && !JourneyCompleted && HeaderArt is { } art && _failedArt != art.Url)
         {
-            <img class="welcome-art" src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" @onerror="() => _artFailed = true" />
+            <img class="welcome-art" src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" @onerror="() => _failedArt = art.Url" />
         }
     </header>
     @if (Preview)
@@ -76,9 +76,15 @@
                 <p>@Loc["GuideReturningCharacter"] <a href="@CharacterUrl(true)">@Loc["GuideClaimCharacter"]</a>. @Loc["GuideFreshCharacter"] <a href="@CharacterUrl(false)">@Loc["GuideCreateCharacter"]</a>. @Loc["GuideCharacterOptions"]</p>
             }
         }
-        else if (Lessons.All(lesson => Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id)))
+        else if (JourneyCompleted)
         {
-            <p class="welcome-completion" tabindex="-1" @ref="_completion">@Loc["GuideReady"]</p><a class="welcome-explore" href="@Destination">@Loc["GuideOpenGame"]</a>
+            <div class="welcome-completed">
+                @if (HeaderArt is { } completedArt && _failedArt != completedArt.Url)
+                {
+                    <img class="welcome-completion-art" src="@ApiUrl.Resolve(completedArt.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = completedArt.Url" />
+                }
+                <div><p class="welcome-completion" tabindex="-1" @ref="_completion">@Loc["GuideReady"]</p><a class="welcome-explore" href="@Destination">@Loc["GuideOpenGame"]</a></div>
+            </div>
         }
         <label class="welcome-imagery">@Loc["GuideArtwork"]
             <select value="@Progress.Imagery" @onchange="ChangeImagery">
@@ -93,7 +99,7 @@
     [Parameter, SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
     [Parameter, SupplyParameterFromQuery(Name = "preview")] public bool Preview { get; set; }
     private string _game = "this game";
-    private bool _artFailed;
+    private string? _failedArt;
     private ElementReference _completion;
     private bool _focusCompletion;
     private GuidePanel? _panel;
@@ -109,6 +115,9 @@
     private string Destination => LocalReturn(ReturnUrl);
     private string ResumeUrl => "/welcome?returnUrl=" + Uri.EscapeDataString(Destination);
     private SharpieArt? Art => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery);
+    private bool JourneyCompleted => Lessons.All(lesson => Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id));
+    private SharpieArt? HeaderArt => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery,
+        JourneyCompleted ? SharpieArtMoment.Completion : SharpieArtMoment.Welcome);
     private (GuidePath Path, string Title, string Detail)[] Choices =>
     [
         (GuidePath.Discord, Loc["GuidePathDiscordTitle"], Loc["GuidePathDiscordDetail"]),

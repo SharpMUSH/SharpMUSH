@@ -11,6 +11,22 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class GuideMascotTests : TrackingBunitContext
 {
 	[Test]
+	public async Task GenreApprovalDoesNotCrossStyleBoundaries()
+	{
+		foreach (var genre in new[] { "Fantasy", "Science Fiction" })
+		{
+			var approved = SharpieArtCatalog.Resolve("minimalist", genre, "unapproved-subgenre", null, GuideImagery.Full);
+			await Assert.That(approved?.Theme).IsEqualTo(genre);
+			foreach (var style in SharpieArtCatalog.Styles.Where(style => style != "minimalist"))
+			{
+				var fallback = SharpieArtCatalog.Resolve(style, genre, "unapproved-subgenre", approved!.Id, GuideImagery.Full);
+				await Assert.That(fallback?.Theme).IsEqualTo("neutral");
+				await Assert.That(fallback?.Id).IsEqualTo("sharpie-minimal-neutral");
+			}
+		}
+	}
+
+	[Test]
 	public async Task ChannelLessonTeachesDiscoveryAndAudience()
 	{
 		Services.AddSingleton<IStringLocalizer<SharedResource>>(PortalLocalizer.Create());

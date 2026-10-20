@@ -29,9 +29,9 @@ else if (Guide is { Ready: true, Progress.Active: true })
 else if (Guide is { Ready: true, Progress.Active: false })
 {
     <section class="guide-start" aria-label="@Loc["GuideChoosePath"]">
-        @if (SharpieArtCatalog.Resolve(null, null, null, null, Guide.Progress.Imagery) is { } art)
+        @if (SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, SharpieArtMoment.Welcome) is { } art)
         {
-            <img src="@ApiUrl.Resolve(art.Url)" width="64" height="64" alt="" />
+            <img src="@ApiUrl.Resolve(art.Url)" width="@(Guide.Progress.Imagery == GuideImagery.Reduced ? 40 : 64)" height="@(Guide.Progress.Imagery == GuideImagery.Reduced ? 40 : 64)" alt="" />
         }
         <h2>@Loc["GuideComingFrom"]</h2>
         @foreach (var (path, key) in new[] { (GuidePath.Discord, "Discord"), (GuidePath.Mush, "Mush"), (GuidePath.OtherRoleplay, "Roleplay"), (GuidePath.Explore, "Explore") })

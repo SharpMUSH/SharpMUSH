@@ -26,3 +26,7 @@
 @container page (max-width: 48rem) { .welcome-path-list, .welcome-journey { grid-template-columns: 1fr; } .welcome-steps ol { display: flex; flex-wrap: wrap; gap: .25rem 1.2rem; } .welcome-steps li { flex-basis: 44%; } .welcome-intro { gap: .5rem; } }
 
 .welcome[data-guide-imagery="reduced"] .welcome-art { width: min(20%, 6rem); }
+.welcome-completed { display: flex; align-items: center; gap: 1rem; margin-block: 1.5rem; }
+.welcome-completion-art { width: 88px; height: 88px; object-fit: contain; flex: none; }
+@container page (max-width: 48rem) { .welcome-completion-art { width: 64px; height: 64px; } }
+.welcome[data-guide-imagery="reduced"] .welcome-completion-art { width: 40px; height: 40px; }

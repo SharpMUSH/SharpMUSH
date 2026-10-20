@@ -12,11 +12,12 @@ public class WelcomeTests : BunitContext
 {
 	private sealed class Info(IHttpClientFactory factory) : ServerInfoService(factory)
 	{
+		public string Genre { get; set; } = "Fantasy";
 		public bool FeaturesEnabled { get; set; }
 		public bool FailGuide { get; set; }
 		public override Task<bool> HasFeatureAsync(string feature) => Task.FromResult(FeaturesEnabled);
 		public override Task<string> GameNameAsync() => Task.FromResult("Our shared world");
-		public override Task<OnboardingPresentation?> OnboardingAsync() => FailGuide ? Task.FromResult<OnboardingPresentation?>(null) : Task.FromResult<OnboardingPresentation?>(new("game-1", "Welcome to the harbour.", "Fantasy", "", "minimalist", "", null, null, null));
+		public override Task<OnboardingPresentation?> OnboardingAsync() => FailGuide ? Task.FromResult<OnboardingPresentation?>(null) : Task.FromResult<OnboardingPresentation?>(new("game-1", "Welcome to the harbour.", Genre, "", "minimalist", "", null, null, null));
 	}
 	public WelcomeTests()
 	{
@@ -27,6 +28,19 @@ public class WelcomeTests : BunitContext
 		Services.AddSingleton<ServerInfoService>(new Info(factory));
 		Services.AddScoped<OnboardingService>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
+	}
+
+	[Test]
+	public async Task InactiveCompanionRespectsGenreAndReducedImagery()
+	{
+		var guide = Services.GetRequiredService<OnboardingService>();
+		await guide.LoadAsync(GuideJourney.Player);
+		var panel = Render<GuideCompanion>(p => p.Add(x => x.Guide, guide));
+		await Assert.That(panel.Find("img").GetAttribute("src")).Contains("sharpie-fantasy-minimalist.png");
+		await panel.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
+		await Assert.That(panel.Find("img").GetAttribute("width")).IsEqualTo("40");
+		await panel.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
+		await Assert.That(panel.FindAll("img").Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -142,6 +156,40 @@ public class WelcomeTests : BunitContext
 		await Assert.That(page.FindAll(".guide-lesson").Count).IsEqualTo(0);
 		await Assert.That(guide.Progress).IsEqualTo(original);
 		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier.Contains("setItem", StringComparison.Ordinal))).IsFalse();
+	}
+
+	[Test]
+	[Arguments("Fantasy", "fantasy")]
+	[Arguments("Science Fiction", "science-fiction")]
+	public async Task ApprovedMsspArtworkAppearsWithoutPreview(string genre, string filename)
+	{
+		((Info)Services.GetRequiredService<ServerInfoService>()).Genre = genre;
+		var page = Render<Welcome>();
+		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist.png");
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await Assert.That(page.FindAll("img").Count).IsEqualTo(1);
+		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist.png");
+		await page.Find(".welcome-imagery select").ChangeAsync("None");
+		await Assert.That(page.FindAll("img").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task MascotChangesWithJourneyAndNeverDuplicatesActiveLesson()
+	{
+		((Info)Services.GetRequiredService<ServerInfoService>()).Genre = "Unknown";
+		var page = Render<Welcome>();
+		await Assert.That(page.Find("img.welcome-art").GetAttribute("src")).Contains("sharpie-primary.svg");
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await Assert.That(page.FindAll("img").Count).IsEqualTo(1);
+		await Assert.That(page.Find("img.guide-mascot").GetAttribute("src")).Contains("sharpie-minimal.svg");
+		for (var i = 0; i < 5; i++)
+			await page.Find(".guide-panel-actions .guide-action").ClickAsync();
+		await Assert.That(page.Find(".welcome-completed img").GetAttribute("src")).Contains("sharpie-smile.svg");
+		await page.Find(".welcome-imagery select").ChangeAsync("None");
+		await Assert.That(page.FindAll("img").Count).IsEqualTo(0);
+		await page.Find(".welcome-imagery select").ChangeAsync("Reduced");
+		await Assert.That(page.FindAll("img").Count).IsEqualTo(1);
+		await Assert.That(page.Find(".welcome").GetAttribute("data-guide-imagery")).IsEqualTo("reduced");
 	}
 
 	[Test]

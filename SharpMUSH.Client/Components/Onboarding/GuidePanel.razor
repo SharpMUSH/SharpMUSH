@@ -7,7 +7,7 @@
         <span class="guide-host">
             @if (Imagery != GuideImagery.None && Art is { } art && _failedArt != art.Url)
             {
-                <img class="guide-mascot @(Imagery == GuideImagery.Reduced ? "guide-mascot-reduced" : "")" src="@ApiUrl.Resolve(art.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = art.Url" />
+                <img class="guide-mascot @(art.Theme != "neutral" ? "guide-mascot-themed" : "") @(Imagery == GuideImagery.Reduced ? "guide-mascot-reduced" : "")" src="@ApiUrl.Resolve(art.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = art.Url" />
             }
         </span>
         <GuideTooltip Text="@Loc["GuideStop"]" AlignEnd="true">

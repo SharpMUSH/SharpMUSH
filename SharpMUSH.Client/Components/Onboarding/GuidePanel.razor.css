@@ -20,8 +20,10 @@
 
 .guide-host { display: inline-flex; align-items: center; gap: .75rem; }
 .guide-mascot { width: 88px; height: 88px; object-fit: contain; flex: none; }
+.guide-mascot-themed { width: 128px; height: 128px; }
 .guide-mascot-reduced { width: 40px; height: 40px; }
 @container page (max-width: 48rem) { .guide-mascot:not(.guide-mascot-reduced) { width: 64px; height: 64px; } }
+@container page (max-width: 48rem) { .guide-mascot-themed:not(.guide-mascot-reduced) { width: 96px; height: 96px; } }
 
 .guide-panel .guide-stop { width: 44px; height: 44px; padding: 8px; justify-content: center; }
 .guide-panel .guide-icon { width: 44px; height: 44px; padding: 8px; justify-content: center; }

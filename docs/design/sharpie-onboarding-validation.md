@@ -1,6 +1,59 @@
+# Approved MSSP artwork — 2026-10-20
+
+The inventory remains a six-style × genre/subgenre matrix: Minimalist, Chibi, Anime, Kemono, Pixel, Comicbook. An approval applies only to its individual style/theme/version cell. Selection honors same-style subgenre, then same-style genre; missing cells retain the approved neutral fallback rather than borrowing another genre style. The two new approvals populate only Minimalist/Fantasy and Minimalist/Science Fiction.
+
+Owner approved Fantasy castle-builder v03 and Science Fiction console v02 at onboarding display sizes. These now ship in the approved catalog and resolve from MSSP without preview flags. The temporary Debug review override was removed. Other inventory candidates remain unapproved. Earlier candidate-only notes below describe pre-approval validation.
+
+Approval integration verification: 25 Welcome component tests passed, including ordinary (non-preview) genre selection and hiding imagery. Shipped PNGs are byte-identical to the approved originals.
+
 # Sharpie onboarding validation
 
 Status: implementation in progress; not accepted for merge or deployment.
+
+## Current focus: MSSP Sharpie artwork review
+
+The owner narrowed current work to genre-based Sharpie icons in onboarding.
+Local Debug-only `preview=true&artReview=true` renders candidate artwork using
+the game's actual MSSP genre and configured Minimalist style. Candidate PNGs
+exist only in the isolated published preview's `images/sharpie/review/`; they
+are not shipped client assets or entries in the approved catalog. Release builds
+return no review artwork. This pilot currently covers Fantasy and Science Fiction,
+falling back from the test world's High Fantasy subgenre to its Fantasy genre;
+it does not establish full subgenre/style coverage.
+
+Fresh Fantasy v03 and Science Fiction v02 passed independent anatomy, prop,
+silhouette and alpha-edge checks at native/340px on white and dark backgrounds.
+Interior tonal grain remains; both retain `user_approved=false`.
+
+Changed the disposable world's MSSP settings from Fantasy/High Fantasy to
+Science Fiction/None and verified the rendered image changed to the console
+Sharpie. Original settings are retained in
+`work/onboarding/mssp-icon-original-settings.json`. Onboarding screenshots:
+`work/onboarding/mssp-fantasy-welcome-desktop.png`,
+`work/onboarding/mssp-fantasy-lesson-desktop.png`,
+`work/onboarding/mssp-scifi-welcome-desktop.png`, and
+`work/onboarding/mssp-scifi-lesson-light-mobile.png`.
+
+Themed lesson artwork uses a 128px desktop / 96px mobile contain box so props
+remain legible. In the light mobile preview, viewport and document were both
+390px wide; Full rendered one 96px image, Reduced one 40px image, and None zero
+images. Approved neutral artwork retains its smaller existing sizes. No source
+image pixels were modified. Further style/subgenre coverage, artwork acceptance,
+and final light/dark screenshot comparison remain open.
+
+The matching Science Fiction lesson now has light/dark desktop and mobile
+captures at the revised sizes:
+`work/onboarding/mssp-scifi-lesson-light-desktop.png`,
+`work/onboarding/mssp-scifi-lesson-dark-desktop.png`,
+`work/onboarding/mssp-scifi-lesson-light-mobile.png`, and
+`work/onboarding/mssp-scifi-lesson-dark-mobile.png`.
+Dark mobile also measured 96px with a 390px document/viewport and loaded alpha
+artwork. `/welcome?artReview=true` without `preview=true` displayed only approved
+neutral artwork in the actual browser. Owner review of the two new candidates
+is pending; no production promotion has occurred.
+All 27 Welcome component tests pass, including four preview/opt-in combinations
+and no-artwork omission. The query-driven cases use NavigationManager so the
+actual SupplyParameterFromQuery binding is exercised.
 
 [Review the browser screenshots](sharpie-onboarding-preview/README.md).
 
@@ -1284,3 +1337,9 @@ JS interop, renders Connected=false, then confirms no insertion or send after
 resumption. Retained the guard, replied with this evidence and resolved thread
 `PRRT_kwDOLef2xs6uggzg`. This disposition does not substitute for final human
 review acceptance.
+
+## Approved artwork runtime checks (2026-10-20)
+
+Ordinary `/welcome` loads the shipped Science Fiction PNG without preview flags. Mobile light and dark captures are `work/onboarding/approved-mssp-light-mobile.png` and `work/onboarding/approved-mssp-dark-mobile.png`. Dark view verified at 390px viewport/document width, 96px mascot, panel rgb(22,24,27). Reduced mascot measures 40px; settled No artwork state contains zero welcome images. Desktop captures use the same approved asset at 128px.
+
+Inactive GuideCompanion now resolves the configured style/genre/subgenre and uses 40px under Reduced (previously always neutral and 64px). All 26 Welcome tests pass, including this regression; five GuideMascot tests passed including cross-style exclusion. Local publish succeeded. After refreshing the published client, Play’s inactive guide resolves the shipped Science Fiction PNG at 64px. Its active lesson renders the same asset. Captures: `work/onboarding/approved-mssp-play-dark-desktop.png` and `work/onboarding/approved-mssp-play-dark-mobile.png`. The 390px mobile drawer contains the full mascot and lesson; Back to game closes it and leaves the command field visible.
