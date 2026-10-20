@@ -197,6 +197,35 @@ An optional top-level `wiki_collection_name` supplies the public label for the p
 
 The label is metadata, separate from the package ID, collection URL and wiki ownership. It is persisted on the installed package and in each revision snapshot. An apply or upgrade replaces it, including clearing it when absent; rollback restores the selected snapshot's value, with null as the default for legacy snapshots. The Lightning registry's nullable field reads older records without a migration. Collection navigation and result-row context use the same label lookup; authorization still decides which collections/pages are visible.
 
+### Wiki collection entrance (format 1.14)
+
+An optional top-level `wiki_landing_page` selects one page declared by the same manifest's `wiki:` block:
+
+```yaml
+format: 1.14
+package: independent-rules
+version: 1.0.0
+wiki_landing_page: 'main:guide'
+wiki:
+  - page: main:guide
+    title: Rules guide
+    markdown: Start here.
+```
+
+The value is one nonempty, single-line scalar, with surrounding whitespace trimmed and nothing else normalized. It uses the same canonical authored `namespace:slug` parser as `wiki[].page`: lowercase `main`, `help` or `category`, and an unchanged slug of at most 200 UTF-8 bytes, with no whitespace, controls, slash, backslash, colon, URL query or fragment. A null, list, mapping, undeclared key or duplicate/ambiguous target is invalid. Softcode and application packages may declare it; plugin and UI packages may not. Formats at or below 1.13 warn and ignore the field before inspecting its value, including malformed nodes. A newer minor format still produces its independent format warning.
+
+Omitting the key means no authored entrance. Removing it on an upgrade clears the entrance; changing it explicitly requests a new binding to the newly named declared page. An installed entrance must bind the actual owned page identity rather than following a later page recreated at the same slug. Installed binding, rollback and read authorization belong to the installer and collection reader; the manifest stores only the authored target. Neither a title, category pin nor `wiki_collection_name` selects an entrance. `homepage` remains the external project/documentation URL and is never used as this target.
+
+`PackageManifestService.ValidateWikiLandingPage(PackageManifest)` checks programmatically supplied landing metadata with the same validation core as parsing. The installer checks its errors before any writes or managed plugin/UI deployment. Its read-only preview reports invalid metadata as blocking issues and describes additions, changes and removals using the canonical target keys. The writer checks it before producing YAML, rejects inconsistent metadata with `ArgumentException`, quotes the canonical scalar and preserves the selected format. Existing manifests without this field retain their format and output.
+
+After wiki apply, the installer corroborates the declared target against this package's ownership row and the live page's exact ID, namespace and slug. It records `WikiLandingPage` as `{ Namespace, Slug, PageId }` in the existing tracked installed record and revision snapshot. A failed apply or cancellation before revision commit uses the existing compensation log to restore the old metadata and ownership. Package operations remain compensating operations, with their existing intermediate visibility and crash-recovery limitations.
+
+An update retaining the same authored target cannot bind a different PageId, even when a replacement's content is identical. To deliberately bind a replacement, successfully clear the field first and explicitly re-add it in another apply, or select another declared target. Missing ownership may be repaired by the ordinary planner's explicit adoption of the original still-live ID. Omitting the field clears metadata without independently deleting its page. Uninstall removes the installed binding; existing page-release rules decide whether a page is deleted or retained as game content.
+
+Rollback restores the selected snapshot's captured exact binding only while its ownership and live identity still match. Otherwise it clears the installed binding, reports why to the administrator and records that absence in the new rollback revision. Rollback does not recreate, re-adopt or rewrite wiki pages. Legacy installed records and snapshots missing the optional field read as null; this additive JSON change needs no table, backfill or migration. Navigation supplies a compact authorized live localized descriptor; the portal renders it as Start here before reference browsing. The canonical article read can enforce its exact `expectedPageId`. Optional existing OAuth authentication is limited to Navigation and the canonical article read; collection member reads do not opt into OAuth. Production account sessions resolve authority for the bound active character, or account authority when no character is bound. Navigation, collection members and ordinary canonical articles use that same reader policy. Delegated reads retain their token-scope limits. Development keeps the existing server-issued DebugAuth permission claims. Ordinary member and article actions resolve their reader once; the landing descriptor and exact-ID article additionally perform final finite page/ownership/translation/policy rechecks and withhold changed selections. These service reads do not establish a coherent snapshot or a storage-work bound.
+
+Format change note: 1.14 adds `wiki_landing_page` and the shared authoring validation seam. Format 1.13 collection-name behavior is unchanged. This format number does not assert a released server version or add an inferred `requires_server` requirement.
+
 ### Attribute entries (format 1.5)
 
 `attributes:` maps an attribute name to the standard attribute entry `@attribute` would make:

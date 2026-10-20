@@ -39,6 +39,29 @@ The optional `wiki_collection_name` is trimmed and must contain 1–100 characte
 
 Without this metadata, existing packages keep the package ID with hyphens replaced by spaces as their collection label. An upgrade records the new label; omitting the key on a later upgrade restores that fallback. Rollback restores the label recorded in the selected revision; revisions created before this metadata have no authored label. A manifest below format 1.13 warns and ignores the key.
 
+## Declaring a landing page
+
+Manifest format 1.14 adds an explicit collection entrance, separate from the collection label and category pins:
+
+```yaml
+format: 1.14
+package: independent-rules
+version: 1.0.0
+wiki_landing_page: 'main:guide'
+wiki:
+  - page: main:guide
+    title: Rules guide
+    markdown: Start here.
+```
+
+`wiki_landing_page` must name exactly one `wiki:` page in this manifest. Use lowercase `main:`, `help:` or `category:` and its exact canonical slug, at most 200 UTF-8 bytes. Surrounding whitespace is trimmed; case, spelling and punctuation are not repaired. An empty or null value, list, mapping, multiline value, undeclared page or duplicate target is rejected. Plugin and UI packages cannot declare it; softcode and application packages can. Formats through 1.13 warn and ignore this key, including malformed values.
+
+Omit the key for no entrance; omitting it on an upgrade removes the entrance. Change the value to explicitly request a binding to another declared page. The installed entrance must retain the owned page's identity, so deleting and recreating a page at the same slug does not silently replace it. The package `homepage` is still an external project/documentation URL. Titles, pins and collection labels never infer a target. These authoring rules are separate from the installed binding and reader lifecycle.
+
+The installer binds the page's actual owned ID after creating, adopting or merging its content. Its review preview describes entrance additions, changes and removals. An update to the same target refuses a replacement page even when the content matches. Deliberately binding a replacement requires a successful upgrade clearing the field followed by one re-adding it, or a change to a different declared target.
+
+Rollback restores an old entrance only if its captured page ID is still owned and live; otherwise it withholds the entrance and adds an administrator note. It leaves current wiki content and ownership unchanged. Uninstall removes entrance metadata even when an edited or translated page survives as game content. Older installed records and revisions without entrance metadata have none.
+
 ## Authoring an entrance and next steps
 
 Give readers an entrance by authoring a published Category introduction and setting `pin: true`. The collection displays authorized pinned introductions as **Featured topics**, before search and the complete directory. Its title opens the introduction; **Browse members** remains a separate filter. A category without a readable introduction keeps ordinary member browsing without a featured introduction link. Pins are presentation metadata, so curate the featured set rather than relying on a title or slug to sort an entrance first.
@@ -88,12 +111,12 @@ This first browsing phase preserves the existing global namespace and slug ident
 
 ## Exploration still being developed
 
-Collection browsing supplies isolation, accurate counts and complete directories. Authors can now feature a pinned category introduction and supply explicit next-step links. A dedicated arbitrary collection landing target and structured task metadata remain subsequent work; pins and directory order do not establish those contracts.
+Collection browsing supplies isolation, accurate counts and complete directories. Authors can now feature a pinned category introduction and supply explicit next-step links. Format 1.14 defines an explicit authored landing target with installed identity and revision lifecycle. An authorized landing appears above Featured topics as **Start here**, using the live localized article title. Its link retains the requested language and collection browse context, and requires the installed exact page identity; deleting and recreating the same slug cannot satisfy an old link. A missing, hidden, no-longer-owned or changed target supplies no entrance. Older manifests without an explicit target keep their existing category and member navigation. Structured task metadata remains subsequent work; pins and directory order do not establish those contracts.
 
 The [PF2e organization research](../research/pf2e-wiki-organization.md) recommends measuring content-kind, relationship, facet and source/version metadata before adding filters. Their coverage in the import is not established by this browsing phase. Qualified identity, durable aliases and category-reference rewrites require a separate dry-run migration. These boundaries remain tracked in [#1970](https://github.com/SharpMUSH/SharpMUSH/issues/1970).
 
 For reproducible full-import checks, use the pinned package snapshot and opt-in commands in the [implementation evidence](../superpowers/plans/2026-10-16-wiki-collections.md#reproduce-the-full-import-acceptance-evidence). The recorded evidence covers actual import/API exports, bUnit component callbacks and separate captured-markup/CSS browser checks; it does not claim an authenticated live application journey.
 
-Collection and member responses are paged, but this does not establish bounded server work. Localized search and category counts still inspect candidates, and the article's related-pages panel retains a separate legacy loading path. Request-work measurements and that related-panel replacement remain tracked in [#2044](https://github.com/SharpMUSH/SharpMUSH/issues/2044). Switching the active character refreshes article and collection visibility even when the URL stays the same.
+Collection and member responses are paged, but this does not establish bounded server work. Localized search and category counts still inspect candidates, and the article's related-pages panel retains a separate legacy loading path. Request-work measurements and that related-panel replacement remain tracked in [#2044](https://github.com/SharpMUSH/SharpMUSH/issues/2044). Switching the active character refreshes article and collection visibility even when the URL stays the same. For a bound production account session, the entrance, member directory and canonical article all use the active character's permissions, including character-specific overrides.
 
 Text-only category members omit image placeholders; real images and category/draft/restricted badges remain visible. See the [running-portal navigation captures](assets/wiki-collections/README.md#full-running-portal-navigation-captures-2026-10-19).

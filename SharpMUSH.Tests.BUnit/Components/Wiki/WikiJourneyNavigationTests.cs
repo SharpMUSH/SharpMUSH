@@ -35,6 +35,42 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 	}
 
 	[Test]
+	[Arguments("same-fragment", true)]
+	[Arguments("same-locale", true)]
+	[Arguments("same-forged", true)]
+	[Arguments("encoded-same", true)]
+	[Arguments("same-case-namespace", true)]
+	[Arguments("other-constrained", false)]
+	[Arguments("other-namespace", false)]
+	public async Task AuthoredBodyLinksKeepTrustedIdentityOnlyOnTheSameArticle(string anchorId, bool sameArticle)
+	{
+		_api.IntroHtmlOverride = JourneyApi.IntroHtml + """
+			<a id="same-fragment" href="/wiki/main/intro#costs">Same article costs</a>
+			<a id="same-locale" href="/wiki/main/intro?lang=de">Same article language link</a>
+			<a id="same-forged" href="/wiki/main/intro?expectedPageId=forged#costs">Same article forged identity</a>
+			<a id="encoded-same" href="/wiki/main/%69ntro#costs">Encoded same article</a>
+			<a id="other-constrained" href="/wiki/main/guide?expectedPageId=forged">Other article</a>
+			<a id="other-namespace" href="/wiki/help/intro?expectedPageId=forged">Other namespace</a>
+			<a id="same-case-namespace" href="/wiki/MAIN/intro#costs">Same namespace casing</a>
+			""";
+		_nav.NavigateTo("/wiki/main/intro?" + Origin + "&expectedPageId=intro");
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		var anchor = cut.Find("#" + anchorId);
+		var query = Query(anchor);
+		if (sameArticle)
+		{
+			await Assert.That(query["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(query.GetValues("expectedPageId")!.Length).IsEqualTo(1);
+		}
+		else await Assert.That(query["expectedPageId"]).IsNull();
+		await Assert.That(query["expectedPageId"]).IsNotEqualTo("forged");
+		await AssertJourney(anchor, "fr-CA");
+		if (anchorId == "same-fragment") await Assert.That(Address(anchor).Fragment).IsEqualTo("#costs");
+		await Assert.That(cut.Find("#local").GetAttribute("href")).IsEqualTo("#costs");
+	}
+
+	[Test]
 	public async Task ArticleThenGuideReturnsToTheSameCollectionSearchCategoryOffsetAndRequestedLocale()
 	{
 		_nav.NavigateTo("/wiki/main/intro?" + Origin);
@@ -513,6 +549,182 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 		return account;
 	}
 
+	[Test]
+	[Arguments("generated")]
+	[Arguments("fragment")]
+	[Arguments("key-case")]
+	public async Task FollowingTocRetainsAuthorizedJourneyWithoutAnotherNavigationRead(string variant)
+	{
+		const string original = "/wiki/main/intro?" + Origin + "&expectedPageId=intro&extra=a%26b";
+		_nav.NavigateTo(original);
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Initial return was not authorized."));
+		var back = cut.Find(".wiki-back-results").GetAttribute("href");
+		var reads = _api.NavigationRequests.Count;
+		var articles = _api.ArticleRequests.Count;
+		var href = cut.FindAll(".wiki-toc a").First(a => Address(a).Fragment == "#costs").GetAttribute("href")!;
+		if (variant == "fragment") href = original + "#costs";
+		if (variant == "key-case")
+			href = href.Replace("lang=fr-CA", "LANG=fr-CA", StringComparison.Ordinal)
+				.Replace("extra=a%26b", "EXTRA=a%26b", StringComparison.Ordinal);
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(href));
+			cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "TOC navigation discarded the authorized return."));
+			await Assert.That(cut.Find(".wiki-back-results").GetAttribute("href")).IsEqualTo(back);
+			await Assert.That(_api.NavigationRequests.Count).IsEqualTo(reads);
+			await Assert.That(_api.ArticleRequests.Count).IsEqualTo(articles);
+			await AssertJourney(cut.Find("#guide"), "fr-CA");
+			foreach (var toc in cut.FindAll(".wiki-toc a"))
+			{
+				await AssertJourney(toc, "fr-CA");
+				await Assert.That(Query(toc)["expectedPageId"]).IsEqualTo("intro");
+			}
+			await Assert.That(Query(cut.Find("#guide"))["expectedPageId"]).IsNull();
+			await cut.InvokeAsync(() => _nav.NavigateTo(original + "#wiki-top"));
+			await cut.InvokeAsync(() => _nav.NavigateTo(original));
+			await Assert.That(cut.Find(".wiki-back-results").GetAttribute("href")).IsEqualTo(back);
+			await Assert.That(_api.NavigationRequests.Count).IsEqualTo(reads);
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	[Arguments("extra=a%26b", "extra=A%26b")]
+	[Arguments("extra=a%26b", "unknown=a%26b")]
+	[Arguments("lang=fr-CA", "lang=de")]
+	[Arguments("browseQ=R%C3%A8gle%20%26%20C%2B%2B", "browseQ=Changed")]
+	[Arguments("browseSkip=100", "browseSkip=150")]
+	[Arguments("membersCollection=game", "membersCollection=all")]
+	[Arguments("membersSkip=50", "membersSkip=100")]
+	public async Task ChangedQueryValueStillClearsAndReauthorizesJourney(string before, string after)
+	{
+		const string original = "/wiki/main/intro?" + Origin + "&expectedPageId=intro&extra=a%26b";
+		_nav.NavigateTo(original);
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Initial return was not authorized."));
+		var reads = _api.NavigationRequests.Count;
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(original.Replace(before, after, StringComparison.Ordinal) + "#costs"));
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > reads, "A real context change reused old authorization."));
+			await Assert.That(cut.FindAll(".wiki-back-results")).IsEmpty();
+			await cut.InvokeAsync(() => pending.TrySetResult(false));
+			await Assert.That(cut.FindAll(".wiki-back-results")).IsEmpty();
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	public async Task ChangedExpectedIdentityStartsConstrainedReadAndClearsPreviousJourney()
+	{
+		const string original = "/wiki/main/intro?" + Origin + "&expectedPageId=intro";
+		_nav.NavigateTo(original);
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Initial return was not authorized."));
+		var pending = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.PendingArticle = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(original.Replace("expectedPageId=intro", "expectedPageId=other", StringComparison.Ordinal) + "#costs"));
+			cut.WaitForAssertion(() => Require(_api.ArticleRequests.Any(uri => Query(uri)["expectedPageId"] == "other"), "Changed identity did not start a constrained article read."));
+			await Assert.That(cut.FindAll(".wiki-back-results, .wiki-article-body")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("Introduction body");
+			await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound)));
+			await Assert.That(cut.Markup).DoesNotContain("Introduction body");
+		}
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound))); }
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task InitialPendingNavigationKeepsSameArticleHintsWithoutAuthorizingReturn(bool allowed)
+	{
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		_api.IntroHtmlOverride = JourneyApi.IntroHtml + """
+			<a id="pending-self" href="/wiki/main/intro#costs">Same article costs</a>
+			""";
+		_nav.NavigateTo("/wiki/main/intro?" + Origin + "&expectedPageId=intro");
+		var cut = RenderRoute(this);
+		try
+		{
+			WaitForBody(cut, "Introduction body");
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > 0, "The initial navigation authorization was not started."));
+			await Assert.That(pending.Task.IsCompleted).IsFalse();
+			await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("Reference library");
+			await Assert.That(cut.Markup).DoesNotContain("Article owner");
+
+			foreach (var toc in cut.FindAll(".wiki-toc a"))
+			{
+				await AssertJourney(toc, "fr-CA");
+				await Assert.That(Query(toc)["expectedPageId"]).IsEqualTo("intro");
+			}
+			var locale = cut.Find(".wiki-lang-chips a[lang='de']");
+			await AssertJourney(locale, "de");
+			await Assert.That(Query(locale)["expectedPageId"]).IsEqualTo("intro");
+			await AssertJourney(cut.Find("#pending-self"), "fr-CA");
+			await Assert.That(Query(cut.Find("#pending-self"))["expectedPageId"]).IsEqualTo("intro");
+			// Other destinations do not inherit an origin that has not yet been authorized.
+			await Assert.That(Query(cut.Find("#guide"))["browseCollection"]).IsNull();
+			await Assert.That(Query(cut.Find("#guide"))["expectedPageId"]).IsNull();
+
+			var selected = cut.FindAll(".wiki-toc a").First(a => Address(a).Fragment == "#costs");
+			var target = selected.GetAttribute("href")!;
+			var navigationReads = _api.NavigationRequests.Count;
+			await cut.InvokeAsync(() => _nav.NavigateTo(target));
+			WaitForBody(cut, "Introduction body");
+			await Assert.That(_api.NavigationRequests.Count).IsEqualTo(navigationReads);
+			await Assert.That(Query(new Uri(_nav.Uri))["browseCollection"]).IsEqualTo("package:reference");
+			await Assert.That(Query(new Uri(_nav.Uri))["browseQ"]).IsEqualTo("Règle & C++");
+			await Assert.That(Query(new Uri(_nav.Uri))["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+			await AssertJourney(cut.Find("#pending-self"), "fr-CA");
+
+			await cut.InvokeAsync(() => pending.TrySetResult(allowed));
+			if (allowed)
+			{
+				cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Authorization did not restore the return after same-article navigation."));
+				var back = cut.Find(".wiki-back-results");
+				await Assert.That(Path(back)).IsEqualTo("/wiki/collections/package%3Areference");
+				await Assert.That(Query(back)["q"]).IsEqualTo("Règle & C++");
+				await Assert.That(Query(back)["category"]).IsEqualTo("fighter & feats");
+				await Assert.That(Query(back)["skip"]).IsEqualTo("100");
+				await Assert.That(Query(back)["lang"]).IsEqualTo("fr-CA");
+				await AssertJourney(cut.Find("#pending-self"), "fr-CA");
+				await AssertJourney(cut.Find(".wiki-lang-chips a[lang='de']"), "de");
+				foreach (var toc in cut.FindAll(".wiki-toc a")) await AssertJourney(toc, "fr-CA");
+			}
+			else
+			{
+				// Wait for a completed denial to remove the hints, not merely for the
+				// already-absent return link while the authorization was pending.
+				cut.WaitForAssertion(() => Require(Query(cut.Find("#pending-self"))["browseCollection"] is null
+					&& cut.FindAll(".wiki-toc a, .wiki-lang-chips a").All(a => Query(a)["browseCollection"] is null),
+					"Completed denial retained pending browse hints."));
+				await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+				await Assert.That(cut.Markup).DoesNotContain("Reference library");
+				await Assert.That(cut.Markup).DoesNotContain("Article owner");
+				await Assert.That(Query(cut.Find("#guide"))["browseCollection"]).IsNull();
+			}
+			await Assert.That(Query(cut.Find("#pending-self"))["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(Query(cut.Find(".wiki-lang-chips a[lang='de']"))["expectedPageId"]).IsEqualTo("intro");
+			foreach (var toc in cut.FindAll(".wiki-toc a"))
+				await Assert.That(Query(toc)["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(Query(cut.Find("#guide"))["expectedPageId"]).IsNull();
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
 	private static void RaiseReaderChanged(IAccountAuthState auth, bool characterChange)
 	{
 		if (characterChange)
@@ -600,8 +812,10 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 		public bool RefuseArticle { get; set; }
 		public Task<HttpResponseMessage>? PendingReference { get; set; }
 		public Task<HttpResponseMessage>? PendingNavigation { get; set; }
+		public Task<bool>? NavigationGate { get; set; }
 		public Task<HttpResponseMessage>? PendingArticle { get; set; }
 		public string? NavigationJson { get; set; }
+		public string? IntroHtmlOverride { get; set; }
 
 		public static HttpResponseMessage Navigation(string collection, bool referenceVisible = true) => Json(new WikiNavigationDto(collection, 151,
 			referenceVisible
@@ -609,7 +823,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 				: [new WikiCollectionSummaryDto("package:owner", "Article owner", 3)],
 			[new WikiCategorySummaryDto("guides", "Guides", 3, true, false)]));
 
-		public static HttpResponseMessage Article(string slug, bool privateArticle = false) => Json(new WikiPageDto(slug, slug, slug == "intro" ? "Introduction" : "Guide", "main", "Source stays unchanged", slug == "intro" ? IntroHtml : "<p>Guide body</p>", "body",
+		public static HttpResponseMessage Article(string slug, bool privateArticle = false, string? introHtml = null) => Json(new WikiPageDto(slug, slug, slug == "intro" ? "Introduction" : "Guide", "main", "Source stays unchanged", slug == "intro" ? introHtml ?? IntroHtml : "<p>Guide body</p>", "body",
 			DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, privateArticle, 1, ["guides"], !privateArticle)
 		{
 			Locale = "en", RequestedLocale = "en", IsFallback = true, AvailableLocales = ["en", "de"],
@@ -631,6 +845,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 			{
 				NavigationRequests.Add(uri);
 				NavigationTokens.Add(token);
+				if (NavigationGate is { } gate && !await gate) return new HttpResponseMessage(HttpStatusCode.Forbidden);
 				if (AuthorizeBySession && token != "first-character-session") return new HttpResponseMessage(HttpStatusCode.Forbidden);
 				if (PendingNavigation is { } navigation) return await navigation;
 				if (NavigationJson is { } body) return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) };
@@ -650,7 +865,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 				if (PendingArticle is { } article) return await article;
 				if (RefuseArticle) return new HttpResponseMessage(HttpStatusCode.NotFound);
 				var slug = Uri.UnescapeDataString(uri.AbsolutePath["/api/wiki/ns/main/".Length..]);
-				return Article(slug, privateArticle: AuthorizeBySession);
+				return Article(slug, privateArticle: AuthorizeBySession, introHtml: IntroHtmlOverride);
 			}
 			if (uri.AbsolutePath == "/api/wiki/exists")
 			{

@@ -182,6 +182,9 @@ else
     [Parameter]
     public string? Locale { get; init; }
 
+    /// <summary>Identity retained on this article's language and fragment links only.</summary>
+    [Parameter] public string? ExpectedPageId { get; init; }
+
     [Parameter] public WikiBrowseState? BrowseState { get; init; }
     [Parameter] public string? MembersCollection { get; init; }
     [Parameter] public int MembersSkip { get; init; }
@@ -249,6 +252,12 @@ else
     private int _renderVersion;
     private bool _disposed;
 
+    // Same-article navigation may carry the reader's supplied origin while it is being checked.
+    // It remains a hint: only _returnState can produce a return action or cross-article context.
+    // A completed refusal removes the hint from newly rendered same-article controls as well.
+    private WikiBrowseState? SameArticleBrowseState =>
+        _returnState ?? (_navigationLoad.IsCompleted ? null : BrowseState?.Normalize());
+
     private RenderFragment JourneyNavigation => __builder =>
     {
         @if (!Embedded)
@@ -268,10 +277,11 @@ else
     };
 
     // A successful navigation read authorizes only this displayed destination. It is discarded on
-    // every URI/context change; collection hints never establish article ownership or read permission.
+    // every effective context change; fragments and query ordering do not change that context.
+    // Collection hints never establish article ownership or read permission.
     private Task LoadNavigationAsync()
     {
-        var identity = (PagePath, Nav.Uri, BrowseState, Locale, MembersCollection, MembersSkip);
+        var identity = (PagePath, WikiJourneyLinks.NavigationIdentity(Nav.Uri), BrowseState, Locale, MembersCollection, MembersSkip);
         if (_navigationFor == identity) return _navigationLoad;
         _navigationFor = identity;
         var version = Interlocked.Increment(ref _navigationVersion);
@@ -453,7 +463,7 @@ else
         ?? [];
 
     private string LocaleHref(string locale) =>
-        JourneyHref(PagePath, locale);
+        WikiJourneyLinks.SameArticle(PagePath, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, locale);
 
     /// <summary>
     /// The locale a "Translate this page" link should target. The raw <c>?lang=</c> wins over
@@ -735,7 +745,8 @@ else
     /// <summary>The link for a TOC entry: the page path with the query as addressed now (so a
     /// translated page keeps its <c>?lang=</c>) plus the anchor. A bare <c>#anchor</c> would resolve
     /// against <c>&lt;base href="/"&gt;</c> and leave the page.</summary>
-    private string TocHref(string anchor) => $"{JourneyHref(PagePath + new Uri(Nav.Uri).Query)}#{anchor}";
+    private string TocHref(string anchor) =>
+        $"{WikiJourneyLinks.SameArticle(PagePath + new Uri(Nav.Uri).Query, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, Locale)}#{anchor}";
 
     /// <summary>Whether anything remains to show once the banner has taken the first image. A
     /// directive placeholder is an empty element the body hydrates into a listing, so it counts.</summary>
@@ -796,7 +807,14 @@ else
     {
         if (!TryLinkTarget(match.Value, out var target) || !target.Journey) return match.Value;
         var href = FindAttribute(match.Value, "href");
-        return match.Value[..href.Index] + $"href=\"{WebUtility.HtmlEncode(JourneyHref(target.Href))}\"" + match.Value[(href.Index + href.Length)..];
+        var separator = target.Reference.IndexOf('/');
+        var currentNamespace = string.IsNullOrWhiteSpace(Namespace) ? "main" : Namespace.Trim();
+        var sameArticle = string.Equals(target.Reference[..separator], currentNamespace, StringComparison.OrdinalIgnoreCase)
+            && target.Reference[(separator + 1)..] == WikiHelpers.Slugify(Slug);
+        var destination = sameArticle
+            ? WikiJourneyLinks.SameArticle(target.Href, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, Locale)
+            : JourneyHref(target.Href);
+        return match.Value[..href.Index] + $"href=\"{WebUtility.HtmlEncode(destination)}\"" + match.Value[(href.Index + href.Length)..];
     });
 
     private async Task<string> MarkRedlinksAsync(string html)

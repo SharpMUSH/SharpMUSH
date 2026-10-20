@@ -1,7 +1,7 @@
 namespace SharpMUSH.Library.Models.Packages;
 
 /// <summary>
-/// A parsed and validated softcode package manifest (package.yaml, format 1.13
+/// A parsed and validated softcode package manifest (package.yaml, format 1.14
 /// per decisions 20.11–20.20). Declarative desired state: objects to exist,
 /// attributes they carry, and symbolic <c>{{refs}}</c> in place of dbrefs.
 /// </summary>
@@ -73,6 +73,12 @@ public sealed record PackageManifest(
 	/// or null for the package-id-derived fallback. Does not change collection identity or page ownership.
 	/// </summary>
 	public string? WikiCollectionName { get; init; }
+
+	/// <summary>
+	/// The declared wiki page used as the package collection entrance (<c>wiki_landing_page:</c>, format 1.14),
+	/// or null for no entrance. This authored identity is separate from an installed page binding.
+	/// </summary>
+	public PackageWikiLandingPageSpec? WikiLandingPage { get; init; }
 
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
@@ -191,7 +197,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 13);
+	public static PackageFormatVersion Supported { get; } = new(1, 14);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

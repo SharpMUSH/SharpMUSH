@@ -13,8 +13,8 @@ namespace SharpMUSH.Server.Authentication;
 
 /// <summary>
 /// Authenticates a request carrying an app's access token (<c>Authorization: Bearer smat_…</c>) as the character the
-/// player allowed the app to act as. Only endpoints that name a <see cref="DelegatedPolicies"/> policy accept it; every
-/// other endpoint authenticates with the default scheme alone, which leaves app tokens alone, so an app never reaches
+/// player allowed the app to act as. Endpoints that name a <see cref="DelegatedPolicies"/> policy and the optional
+/// wiki navigation/canonical article reads accept it. Other endpoints use the default scheme alone, so an app never reaches
 /// the account's own settings, sessions or grants.
 /// </summary>
 /// <remarks>

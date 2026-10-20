@@ -1,3 +1,6 @@
+using System.Security.Claims;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Server.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.API;
@@ -17,6 +20,19 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 	IWikiAccessService access, IWikiNameResolver names, IPackageRegistryService packages,
 	ILogger<WikiCollectionsController> logger) : WikiControllerBase(wiki, localization, access, names, logger)
 {
+	private readonly WikiLandingReaderResolver? _landingReaders;
+	private readonly WikiLandingReadService? _landingRead;
+
+	[ActivatorUtilitiesConstructor]
+	public WikiCollectionsController(IWikiService wiki, IWikiLocalizationService localization,
+		IWikiAccessService access, IWikiNameResolver names, IPackageRegistryService packages,
+		ILogger<WikiCollectionsController> logger, WikiLandingReaderResolver landingReaders, WikiLandingReadService landingRead)
+		: this(wiki, localization, access, names, packages, logger)
+	{
+		_landingReaders = landingReaders;
+		_landingRead = landingRead;
+	}
+
 	private sealed record Membership(IReadOnlyDictionary<string, HashSet<string>> Packages, HashSet<string> All,
 		IReadOnlyDictionary<string, string> Labels);
 
@@ -53,6 +69,14 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 	public async Task<IActionResult> Navigation([FromQuery] string? collection = null, [FromQuery] string? lang = null,
 		[FromQuery] string? page = null)
 	{
+		Response.Headers.CacheControl = "private, no-store";
+		if (_landingReaders is { } readers)
+		{
+			if (await readers.AuthenticateAsync(HttpContext) is not ClaimsPrincipal principal) return NotFound();
+			HttpContext.User = principal;
+			UseReader(await readers.ResolveAsync(User, HttpContext.RequestAborted));
+		}
+		else if (OAuthBearerAuthenticationHandler.AppToken(Request) is not null) return NotFound();
 		var visibility = await VisibilityAsync();
 		var membership = await MembershipAsync();
 		if (collection is null && page is { Length: > 0 and <= 512 })
@@ -84,7 +108,12 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 				counts.GetValueOrDefault(key), titled.ContainsKey(key), pinned.Contains(key))
 			{ Image = preview is null ? null : WikiImages.FirstImageUrl(preview.RenderedHtml) });
 		}
-		return Ok(new WikiNavigationDto(collection, total, collections, categories.OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase).ToList()));
+		WikiLandingPageDto? landing = null;
+		if (_landingRead is { } read
+			&& await read.LandingAsync(User, collection, lang, HttpContext.RequestAborted) is WikiLandingPageDto resolvedLanding)
+			landing = resolvedLanding;
+		return Ok(new WikiNavigationDto(collection, total, collections, categories.OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase).ToList())
+		{ LandingPage = landing });
 	}
 
 	private async Task<WikiVisibility> SearchAsync(WikiVisibility visibility, string? search, string? lang)
@@ -115,6 +144,9 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		[FromQuery] string? category = null, [FromQuery] string? search = null, [FromQuery] string? lang = null)
 	{
 		if (search?.Length > 200) return BadRequest("Search must be at most 200 characters.");
+		// Use only the already-authenticated principal here. This endpoint does not opt into OAuth.
+		if (_landingReaders is { } readers)
+			UseReader(await readers.ResolveAsync(User, HttpContext.RequestAborted));
 		var membership = await MembershipAsync();
 		var visibility = Select(await VisibilityAsync(), membership, collection);
 		// Test collection visibility before search: zero search matches must be an empty page, not a missing collection.

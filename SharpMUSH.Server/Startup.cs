@@ -88,6 +88,8 @@ public class Startup(string colorFile, string natsUrl)
 		services.AddSharpMushDataProtection();
 		services.AddSharpMushAuthentication(configuration, environment);
 		services.AddSharpMushWebApi(configuration);
+		services.AddScoped<WikiLandingReaderResolver>();
+		services.AddScoped<WikiLandingReadService>();
 		services.AddSharpMushHostedServices();
 		services.AddSharpMushObservability();
 	}

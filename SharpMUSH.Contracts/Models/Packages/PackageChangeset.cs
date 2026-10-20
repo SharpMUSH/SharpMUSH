@@ -35,6 +35,9 @@ public sealed record PackageChangeset(
 	PackageServerCompatibility? Compatibility = null,
 	IReadOnlyList<PackageLocalHook>? LocalHooks = null)
 {
+	/// <summary>Invalid authored metadata, reported before any writes. Error issues block the apply.</summary>
+	public IReadOnlyList<PackageManifestIssue> ManifestIssues { get; init; } = [];
+
 	/// <summary>
 	/// The attribute the apply runs on each of the package's objects afterwards: <c>AINSTALL</c> on a first install,
 	/// <c>AUPDATE</c> on an upgrade, none otherwise.
@@ -47,10 +50,11 @@ public sealed record PackageChangeset(
 	};
 
 	/// <summary>
-	/// True when dependency/conflict issues, a declared item or setting that cannot be applied, or a server older than
+	/// True when invalid authored metadata, dependency/conflict issues, a declared item or setting that cannot be applied, or a server older than
 	/// the package's <c>requires_server</c>, prevent applying at all.
 	/// </summary>
-	public bool IsBlocked => DependencyIssues.Count > 0
+	public bool IsBlocked => ManifestIssues.Any(issue => issue.Severity == PackageManifestIssueSeverity.Error)
+		|| DependencyIssues.Count > 0
 		|| (Declarations?.Any(d => d.Action == PackageDeclarationAction.Blocked) ?? false)
 		|| (Settings?.Any(s => s.Action == PackageSettingAction.Blocked) ?? false)
 		|| (Wiki?.Any(w => w.Action == PackageWikiAction.Blocked) ?? false)
