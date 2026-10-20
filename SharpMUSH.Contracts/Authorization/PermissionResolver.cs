@@ -70,9 +70,58 @@ public interface IPermissionResolver
 /// </summary>
 public sealed class PermissionResolver : IPermissionResolver
 {
+	/// <remarks>
+	/// Every object's grants are resolved through here when they are first read and again after any role change,
+	/// so it decides each scope as <see cref="Explain"/> does without building the explanation: no arrays, no LINQ.
+	/// </remarks>
 	public IReadOnlySet<string> Resolve(PermissionContext context)
-		=> PortalPermission.AllScopes.Concat(context.CustomScopes)
-			.Where(scope => Explain(context, scope).Allowed).ToHashSet(StringComparer.Ordinal);
+	{
+		var granted = new HashSet<string>(StringComparer.Ordinal);
+		var holdsEverything = context.IsOwner || HoldsAdministrator(context.Roles);
+		foreach (var scope in PortalPermission.AllScopes)
+			if (holdsEverything || Allows(context, scope)) granted.Add(scope);
+		foreach (var scope in context.CustomScopes)
+			if (holdsEverything || Allows(context, scope)) granted.Add(scope);
+		return granted;
+	}
+
+	private static bool HoldsAdministrator(IReadOnlyCollection<SharpRole> roles)
+	{
+		foreach (var role in roles)
+			if (StateOf(role.Permissions, PortalPermission.Administrator) == PermissionState.Allow) return true;
+		return false;
+	}
+
+	/// <summary><see cref="Explain"/>'s verdict below the owner and administrator rules, for a scope the context knows.</summary>
+	private static bool Allows(PermissionContext context, string scope)
+	{
+		switch (StateOf(context.ObjectOverrides, scope))
+		{
+			case PermissionState.Allow: return true;
+			case PermissionState.Deny: return false;
+		}
+
+		switch (StateOf(context.Overrides, scope))
+		{
+			case PermissionState.Allow: return true;
+			case PermissionState.Deny: return false;
+		}
+
+		var heldDenies = false;
+		var everyoneAllows = false;
+		foreach (var role in context.Roles)
+		{
+			var state = StateOf(role.Permissions, scope);
+			if (BuiltInRoles.IsEveryone(role))
+				everyoneAllows |= state == PermissionState.Allow;
+			else if (state == PermissionState.Allow)
+				return true;
+			else
+				heldDenies |= state == PermissionState.Deny;
+		}
+
+		return !heldDenies && everyoneAllows;
+	}
 
 	public PermissionExplanation Explain(PermissionContext context, string scope)
 	{
@@ -118,14 +167,27 @@ public sealed class PermissionResolver : IPermissionResolver
 	/// </summary>
 	public static PermissionState StateOf(IReadOnlyDictionary<string, PermissionState> permissions, string scope)
 	{
-		var explicitState = permissions
-			.Where(p => string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase))
-			.Select(p => p.Value).FirstOrDefault(PermissionState.Inherit);
+		var explicitState = ExplicitState(permissions, scope);
 		if (explicitState != PermissionState.Inherit) return explicitState;
-		var inherited = PortalPermission.ParentScopes(scope).Select(parent => StateOf(permissions, parent)).ToArray();
-		return inherited.Contains(PermissionState.Allow) ? PermissionState.Allow
-			: inherited.Contains(PermissionState.Deny) ? PermissionState.Deny
-			: PermissionState.Inherit;
+		var denied = false;
+		foreach (var parent in PortalPermission.ParentsOf(scope))
+		{
+			switch (StateOf(permissions, parent))
+			{
+				case PermissionState.Allow: return PermissionState.Allow;
+				case PermissionState.Deny: denied = true; break;
+			}
+		}
+
+		return denied ? PermissionState.Deny : PermissionState.Inherit;
+	}
+
+	/// <summary>The first entry naming <paramref name="scope"/> in any case, or Inherit.</summary>
+	private static PermissionState ExplicitState(IReadOnlyDictionary<string, PermissionState> permissions, string scope)
+	{
+		foreach (var (key, state) in permissions)
+			if (string.Equals(key, scope, StringComparison.OrdinalIgnoreCase)) return state;
+		return PermissionState.Inherit;
 	}
 
 	private static PermissionExplanation Decided(bool allowed, IReadOnlyCollection<SharpRole> roles, string reason)
