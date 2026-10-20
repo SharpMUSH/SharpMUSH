@@ -465,3 +465,20 @@ focused its heading. Screenshot:
 `work/onboarding/independent-return-roleplay.png`. This checks anonymous path
 selection, persistence and voluntary re-entry, not a fresh authenticated
 end-to-end journey for every path.
+
+
+### Welcome keyboard and contrast checks (2026-10-20)
+
+Keyboard Enter selected Discord; Tab then Enter selected MUSH and retained
+focus on the selected choice. The four native button elements exposed their
+full title/detail names and exactly one `aria-pressed=true`. At 320×568 the
+document stayed 320px wide; all four choice cards had equal 276px client/scroll
+widths and heights of 91–112px, without horizontal overflow. Screenshot:
+`work/onboarding/welcome-keyboard-narrow.png`. Viewport restored afterward.
+
+The dark Play dialog background was RGB(22,24,27). Main paragraph text
+RGB(233,237,240) measured 15.11:1 contrast; the supporting NAME instruction
+RGB(125,135,144) measured 4.86:1. These are the inspected dark-theme paragraphs,
+not a contrast audit of all themes or controls. Browser zoom shortcuts did not
+change viewport dimensions or device-pixel ratio in this browser; therefore
+200% browser zoom remains unverified.
